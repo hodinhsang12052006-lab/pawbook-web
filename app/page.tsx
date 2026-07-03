@@ -7,6 +7,7 @@ import PostForm from "@/components/feed/PostForm";
 import PostList from "@/components/feed/PostList";
 import JobBoard, { JobType } from "@/components/jobs/JobBoard";
 import { Sparkles, ArrowUpRight, Zap, Target, Users, Key } from "lucide-react";
+import AiSuggest from "@/components/jobs/AiSuggest";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("feed");
@@ -64,7 +65,11 @@ export default function Home() {
           {/* Central content area depending on the active tab */}
           <div className="flex-1 space-y-6">
             {activeTab === "feed" && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="space-y-6">
+                {/* AI Matching recommendations */}
+                <AiSuggest />
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Social Feed + PostForm */}
                 <div className="lg:col-span-2 space-y-6">
                   <PostForm onAddPost={handlePostAdded} />
@@ -131,6 +136,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
             )}
 
             {activeTab === "jobs" && (

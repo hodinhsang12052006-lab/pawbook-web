@@ -28,8 +28,12 @@ const client = createClient({
 });
 
 const statements = [
-  'ALTER TABLE "Job" ADD COLUMN "is_premium" INTEGER NOT NULL DEFAULT 0',
-  'ALTER TABLE "Job" ADD COLUMN "boosted_until" TEXT'
+  'DROP TABLE IF EXISTS "Message"',
+  'CREATE TABLE "Conversation" ( "id" TEXT NOT NULL PRIMARY KEY, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP )',
+  'CREATE TABLE "_UserConversations" ( "A" TEXT NOT NULL, "B" TEXT NOT NULL, CONSTRAINT "_UserConversations_A_fkey" FOREIGN KEY ("A") REFERENCES "Conversation" ("id") ON DELETE CASCADE ON UPDATE CASCADE, CONSTRAINT "_UserConversations_B_fkey" FOREIGN KEY ("B") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE )',
+  'CREATE TABLE "Message" ( "id" TEXT NOT NULL PRIMARY KEY, "body" TEXT NOT NULL, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "senderId" TEXT NOT NULL, "conversationId" TEXT NOT NULL, CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE, CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation" ("id") ON DELETE CASCADE ON UPDATE CASCADE )',
+  'CREATE UNIQUE INDEX IF NOT EXISTS "_UserConversations_AB_unique" ON "_UserConversations"("A", "B")',
+  'CREATE INDEX IF NOT EXISTS "_UserConversations_B_index" ON "_UserConversations"("B")'
 ];
 
 async function run() {

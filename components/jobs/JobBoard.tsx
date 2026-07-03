@@ -238,6 +238,17 @@ export default function JobBoard({ jobs: initialJobs }: JobBoardProps) {
                     Xem & Ứng tuyển
                   </button>
 
+                  {sessionUser && sessionUser.id !== job.employerId && (
+                    <button
+                      onClick={() => {
+                        window.location.href = `/messages?userId=${job.employerId}`;
+                      }}
+                      className="w-full sm:w-auto rounded-xl bg-slate-800 border border-slate-700/60 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all duration-200"
+                    >
+                      💬 Nhắn tin ngay
+                    </button>
+                  )}
+
                   {sessionUser && sessionUser.id === job.employerId && (
                     <button
                       onClick={() => handleBoostJob(job.id)}

@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import { Send, User, Search, MessageSquare, Loader2, AlertCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
+import { getPusherClient } from "@/lib/pusher";
 
 interface UserType {
   id: string;
@@ -22,6 +23,7 @@ interface MessageType {
   createdAt: string;
   sender: UserType;
   receiver: UserType;
+  conversationId?: string;
 }
 
 function MessengerContent() {
@@ -78,13 +80,42 @@ function MessengerContent() {
   useEffect(() => {
     loadData();
 
-    // Auto poll messages every 4 seconds for real-time simulation
-    const interval = setInterval(() => {
-      loadData(true);
-    }, 4000);
-
-    return () => clearInterval(interval);
+    // Commented out polling fallback to use Pusher WebSockets instead:
+    // const interval = setInterval(() => {
+    //   loadData(true);
+    // }, 4000);
+    // return () => clearInterval(interval);
   }, []);
+
+  // Subscribe to real-time messages via Pusher
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const pusher = getPusherClient();
+    if (!pusher) return;
+
+    const activeConversationId = activePartner && messages.find(
+      (m) =>
+        m.conversationId &&
+        ((m.senderId === currentUser.id && m.receiverId === activePartner.id) ||
+         (m.senderId === activePartner.id && m.receiverId === currentUser.id))
+    )?.conversationId;
+
+    if (!activeConversationId) return;
+
+    const channel = pusher.subscribe(activeConversationId);
+    
+    channel.bind("new-message", (newMessage: MessageType) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMessage.id)) return prev;
+        return [...prev, newMessage];
+      });
+    });
+
+    return () => {
+      pusher.unsubscribe(activeConversationId);
+    };
+  }, [activePartner, currentUser, messages]);
 
   // Auto select active partner from search query parameter (?userId=XXXX)
   useEffect(() => {

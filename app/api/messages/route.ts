@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import { pusherServer } from "@/lib/pusher";
 
+// GET all conversations, messages, and other system users
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -16,38 +18,63 @@ export async function GET() {
 
     const userId = (session.user as any).id;
 
-    // Fetch all messages involving the logged-in user
-    const messages = await prisma.message.findMany({
+    // Fetch conversations involving the user
+    const conversations = await prisma.conversation.findMany({
       where: {
-        OR: [
-          { senderId: userId },
-          { receiverId: userId },
-        ],
+        participants: {
+          some: { id: userId },
+        },
       },
       include: {
-        sender: {
+        participants: {
           select: {
             id: true,
             name: true,
             avatarUrl: true,
             role: true,
+            bio: true,
           },
         },
-        receiver: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-            role: true,
+        messages: {
+          orderBy: {
+            createdAt: "asc",
+          },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+                role: true,
+              },
+            },
           },
         },
       },
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
     });
 
-    // Fetch all users in system to enable selecting new chat partners
+    // Translate database conversations to flat messages array for backwards compatibility
+    const flatMessages: any[] = [];
+    conversations.forEach((conv) => {
+      conv.messages.forEach((msg) => {
+        const partner = conv.participants.find((p) => p.id !== msg.senderId);
+        flatMessages.push({
+          id: msg.id,
+          content: msg.body,
+          senderId: msg.senderId,
+          receiverId: partner ? partner.id : "",
+          createdAt: msg.createdAt,
+          sender: msg.sender,
+          receiver: partner || { id: "", name: "User", role: "USER" },
+          conversationId: conv.id,
+        });
+      });
+    });
+
+    // Fetch other system users to enable selecting new chat partners
     const systemUsers = await prisma.user.findMany({
       where: {
         NOT: {
@@ -63,60 +90,11 @@ export async function GET() {
       },
     });
 
-    // Auto-seed initial chats if DB messages are empty
-    if (messages.length === 0 && systemUsers.length > 0) {
-      const firstPartner = systemUsers[0];
-      const initialSeed = [
-        {
-          senderId: firstPartner.id,
-          receiverId: userId,
-          content: "Chào bạn, mình thấy CV của bạn đăng trên PawBook rất ấn tượng. Bạn có sẵn sàng trao đổi chi tiết công việc không?",
-        },
-        {
-          senderId: userId,
-          receiverId: firstPartner.id,
-          content: "Dạ chào anh/chị, em luôn sẵn sàng ạ! Anh/chị có thể cho em xin thêm thông tin mô tả chi tiết job được không ạ?",
-        },
-        {
-          senderId: firstPartner.id,
-          receiverId: userId,
-          content: "Ok em, dự án của tụi anh chủ yếu làm bằng Next.js App Router và tích hợp bot automation. Anh đã gửi link chi tiết qua notification hoặc em check phần Job Board nhé!",
-        }
-      ];
-
-      await Promise.all(
-        initialSeed.map((msg) =>
-          prisma.message.create({
-            data: msg,
-          })
-        )
-      );
-
-      // Re-fetch
-      const refetchedMessages = await prisma.message.findMany({
-        where: {
-          OR: [
-            { senderId: userId },
-            { receiverId: userId },
-          ],
-        },
-        include: {
-          sender: {
-            select: { id: true, name: true, avatarUrl: true, role: true },
-          },
-          receiver: {
-            select: { id: true, name: true, avatarUrl: true, role: true },
-          },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      });
-
-      return NextResponse.json({ messages: refetchedMessages, users: systemUsers });
-    }
-
-    return NextResponse.json({ messages, users: systemUsers });
+    return NextResponse.json({
+      messages: flatMessages,
+      conversations,
+      users: systemUsers,
+    });
   } catch (error: any) {
     console.error("GET messages error:", error);
     return NextResponse.json(
@@ -126,6 +104,7 @@ export async function GET() {
   }
 }
 
+// POST send new message (supports both conversationId and old receiverId)
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -139,49 +118,103 @@ export async function POST(req: Request) {
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const { receiverId, content } = body;
+    const { receiverId, content, message, conversationId } = body;
 
-    if (!receiverId || !content || !content.trim()) {
+    const messageText = content || message || "";
+
+    if (!messageText.trim()) {
       return NextResponse.json(
-        { error: "Người nhận hoặc nội dung tin nhắn không hợp lệ." },
+        { error: "Nội dung tin nhắn không thể bỏ trống." },
         { status: 400 }
       );
     }
 
-    // Verify recipient exists
-    const recipient = await prisma.user.findUnique({
-      where: { id: receiverId },
-    });
+    let activeConversationId = conversationId;
 
-    if (!recipient) {
+    // Fallback: Find or create conversation by receiverId if conversationId is not provided
+    if (!activeConversationId && receiverId) {
+      // Find existing conversation between the two users
+      const existing = await prisma.conversation.findFirst({
+        where: {
+          AND: [
+            { participants: { some: { id: userId } } },
+            { participants: { some: { id: receiverId } } },
+          ],
+        },
+      });
+
+      if (existing) {
+        activeConversationId = existing.id;
+      } else {
+        // Create new conversation
+        const createdConv = await prisma.conversation.create({
+          data: {
+            participants: {
+              connect: [{ id: userId }, { id: receiverId }],
+            },
+          },
+        });
+        activeConversationId = createdConv.id;
+      }
+    }
+
+    if (!activeConversationId) {
       return NextResponse.json(
-        { error: "Người nhận tin nhắn không tồn tại." },
-        { status: 404 }
+        { error: "Mã cuộc trò chuyện (conversationId) hoặc người nhận (receiverId) không hợp lệ." },
+        { status: 400 }
       );
     }
 
-    const newMessage = await prisma.message.create({
+    // Create the message in database
+    const createdMessage = await prisma.message.create({
       data: {
-        content,
+        body: messageText,
         senderId: userId,
-        receiverId,
+        conversationId: activeConversationId,
       },
       include: {
         sender: {
           select: { id: true, name: true, avatarUrl: true, role: true },
         },
-        receiver: {
+      },
+    });
+
+    // Query conversation participants to format backwards compatible receiver object
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: activeConversationId },
+      include: {
+        participants: {
           select: { id: true, name: true, avatarUrl: true, role: true },
         },
       },
     });
 
-    return NextResponse.json(newMessage, { status: 201 });
+    const partner = conversation?.participants.find((p) => p.id !== userId);
+
+    const formattedMessage = {
+      id: createdMessage.id,
+      content: createdMessage.body,
+      senderId: createdMessage.senderId,
+      receiverId: partner ? partner.id : "",
+      createdAt: createdMessage.createdAt,
+      sender: createdMessage.sender,
+      receiver: partner || { id: "", name: "User", role: "USER" },
+      conversationId: activeConversationId,
+    };
+
+    // Trigger Pusher event in the background for real-time messaging updates
+    try {
+      await pusherServer.trigger(activeConversationId, "new-message", formattedMessage);
+    } catch (pushErr) {
+      console.error("Failed to trigger Pusher websocket event:", pushErr);
+    }
+
+    return NextResponse.json(formattedMessage, { status: 201 });
   } catch (error: any) {
     console.error("POST message error:", error);
     return NextResponse.json(
       { error: "Đã xảy ra lỗi hệ thống khi gửi tin nhắn." },
-      { status: 550 }
+      { status: 500 }
     );
   }
 }

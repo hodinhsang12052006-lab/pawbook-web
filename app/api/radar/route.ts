@@ -17,6 +17,7 @@ export async function GET() {
         latitude: true,
         longitude: true,
         is_premium: true,
+        employerId: true,
       },
     });
 

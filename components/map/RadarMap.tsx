@@ -15,6 +15,7 @@ interface MapJob {
   latitude: number;
   longitude: number;
   is_premium?: boolean;
+  employerId?: string;
 }
 
 interface RadarMapProps {
@@ -61,12 +62,22 @@ export default function RadarMap({ jobs }: RadarMapProps) {
                 <p className="text-[10px] text-slate-500 font-semibold">{job.companyName}</p>
                 <div className="flex justify-between items-center pt-1.5 border-t border-slate-100 mt-1">
                   <span className="text-xs font-bold text-emerald-600">{job.salary}</span>
-                  <a
-                    href={`/jobs/${job.id}`}
-                    className="text-[10px] font-bold text-blue-600 hover:underline"
-                  >
-                    Xem & Ứng tuyển &rarr;
-                  </a>
+                   <div className="flex gap-2">
+                    <a
+                      href={`/jobs/${job.id}`}
+                      className="text-[10px] font-bold text-blue-600 hover:underline"
+                    >
+                      Xem & Ứng tuyển &rarr;
+                    </a>
+                    {job.employerId && (
+                      <a
+                        href={`/messages?userId=${job.employerId}`}
+                        className="text-[10px] font-bold text-emerald-600 hover:underline"
+                      >
+                        💬 Chat
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </Popup>

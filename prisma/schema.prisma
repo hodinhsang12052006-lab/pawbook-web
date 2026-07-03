@@ -35,8 +35,10 @@ model User {
   payrolls         Payroll[]      // Payroll history records
   notifications    Notification[] // Notifications received by this user
   comments         Comment[]      // Comments made by this user
-  sentMessages     Message[]      @relation("SentMessages")     // Messages sent by this user
-  receivedMessages Message[]      @relation("ReceivedMessages") // Messages received by this user
+  // sentMessages     Message[]      @relation("SentMessages")     // Messages sent by this user
+  // receivedMessages Message[]      @relation("ReceivedMessages") // Messages received by this user
+  conversations    Conversation[] @relation("UserConversations")
+  messages         Message[]
   gigs             Gig[]          @relation("EmployerGigs")     // Gigs posted by this employer
   bids             Bid[]          // Bids placed by this candidate
   writtenReviews   Review[]       @relation("ReviewerReviews")   // Reviews written by this user
@@ -155,15 +157,32 @@ model Comment {
   createdAt DateTime @default(now())
 }
 
+// model Message {
+//   id         String   @id @default(cuid())
+//   content    String
+//   senderId   String
+//   sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+//   receiverId String
+//   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+//   isRead     Boolean  @default(false)
+//   createdAt  DateTime @default(now())
+// }
+
+model Conversation {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  participants User[]    @relation("UserConversations")
+  messages     Message[]
+}
+
 model Message {
-  id         String   @id @default(cuid())
-  content    String
-  senderId   String
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiverId String
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id             String       @id @default(cuid())
+  body           String
+  createdAt      DateTime     @default(now())
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }
 
 model Gig {

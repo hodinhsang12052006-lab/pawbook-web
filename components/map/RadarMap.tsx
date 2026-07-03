@@ -14,6 +14,7 @@ interface MapJob {
   niche: string;
   latitude: number;
   longitude: number;
+  is_premium?: boolean;
 }
 
 interface RadarMapProps {
@@ -44,9 +45,16 @@ export default function RadarMap({ jobs }: RadarMapProps) {
           >
             <Popup>
               <div className="p-2 space-y-1.5 min-w-[200px] text-slate-800">
-                <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-[9px] font-bold text-blue-600 border border-blue-200 uppercase">
-                  {job.niche}
-                </span>
+                <div className="flex gap-1 items-center">
+                  <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-[9px] font-bold text-blue-600 border border-blue-200 uppercase">
+                    {job.niche}
+                  </span>
+                  {job.is_premium && (
+                    <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-200 uppercase">
+                      🔥 HOT
+                    </span>
+                  )}
+                </div>
                 <h4 className="text-xs font-extrabold text-slate-900 leading-tight">
                   {job.title}
                 </h4>

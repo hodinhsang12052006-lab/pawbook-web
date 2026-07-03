@@ -7,7 +7,7 @@ import PostList, { PostType } from "@/components/feed/PostList";
 import { 
   ArrowLeft, Edit3, MapPin, Link2, Calendar, Briefcase, 
   Award, Sparkles, ShieldCheck, BadgeCheck, Star, Mail, 
-  Phone, FileText, X, Save, Loader2, DollarSign, Clock 
+  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame
 } from "lucide-react";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
@@ -19,6 +19,7 @@ interface JobType {
   salary: string;
   niche: string;
   createdAt: string;
+  is_premium?: boolean;
 }
 
 export default function ProfilePage() {
@@ -231,6 +232,40 @@ export default function ProfilePage() {
     }
   };
 
+  // Job Boosting Action Handler
+  const handleBoostJob = async (jobId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const confirmBoost = confirm(
+      "Bạn có chắc chắn muốn dùng 50 PawCoins để đẩy tin tuyển dụng này lên Top trong 7 ngày không?"
+    );
+    if (!confirmBoost) return;
+
+    try {
+      const res = await fetch("/api/jobs/boost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Đẩy Top tin tuyển dụng thành công! 🔥");
+        loadUserProfile();
+        const txRes = await fetch("/api/wallet/history");
+        if (txRes.ok) {
+          const txData = await txRes.json();
+          setWalletHistory(txData);
+        }
+      } else {
+        toast.error(data.error || "Không thể đẩy Top bài viết.");
+      }
+    } catch (err) {
+      toast.error("Lỗi kết nối khi đẩy Top bài đăng.");
+    }
+  };
+
   // Split skill keywords helper
   const skillsArray: string[] = profile.skills
     ? (typeof profile.skills === "string" ? profile.skills.split(/[,\s]+/) : profile.skills).map((s: string) => s.trim()).filter((s: string) => s.length > 0)
@@ -426,19 +461,35 @@ export default function ProfilePage() {
               ) : (
                 <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                   {profile.jobs.map((job: JobType) => (
-                    <Link
+                    <div
                       key={job.id}
-                      href={`/jobs/${job.id}`}
-                      className="block group rounded-xl border border-slate-850 bg-slate-950/40 p-3 hover:border-blue-500/35 transition-all text-xs"
+                      className="block rounded-xl border border-slate-850 bg-slate-950/40 p-3 hover:border-blue-500/35 transition-all text-xs relative"
                     >
-                      <h4 className="font-bold text-slate-200 group-hover:text-blue-450 transition-colors truncate">
-                        {job.title}
-                      </h4>
-                      <div className="flex justify-between items-center mt-2 text-3xs font-semibold text-slate-500">
-                        <span className="text-emerald-550 font-bold">{job.salary}</span>
-                        <span className="uppercase">{job.niche}</span>
+                      <Link href={`/jobs/${job.id}`} className="group">
+                        <h4 className="font-bold text-slate-200 group-hover:text-blue-450 transition-colors truncate pr-20">
+                          {job.title}
+                        </h4>
+                        <div className="flex justify-between items-center mt-2 text-3xs font-semibold text-slate-500">
+                          <span className="text-emerald-555 font-bold">{job.salary}</span>
+                          <span className="uppercase">{job.niche}</span>
+                        </div>
+                      </Link>
+
+                      <div className="absolute right-3 top-3.5">
+                        {job.is_premium ? (
+                          <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-550/20 px-1.5 py-0.5 text-[9px] font-bold">
+                            ⭐ Đang trên Top
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => handleBoostJob(job.id, e)}
+                            className="inline-flex items-center gap-1 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/35 px-2 py-1 text-[9px] font-extrabold transition-all cursor-pointer"
+                          >
+                            🔥 Đẩy Top
+                          </button>
+                        )}
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}

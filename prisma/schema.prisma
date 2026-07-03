@@ -75,6 +75,8 @@ model Job {
   applications Application[] // Applications submitted for this job
   isBoosted    Boolean       @default(false)
   boostUntil   DateTime?
+  is_premium   Boolean       @default(false)
+  boosted_until DateTime?
   blogPosts    BlogPost[]    // Linked blog posts
   niche        Niche         @default(IT)
   latitude     Float?

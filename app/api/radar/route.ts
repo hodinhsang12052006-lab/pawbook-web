@@ -16,6 +16,7 @@ export async function GET() {
         niche: true,
         latitude: true,
         longitude: true,
+        is_premium: true,
       },
     });
 

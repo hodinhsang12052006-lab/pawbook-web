@@ -161,8 +161,8 @@ export default function JobBoard({ jobs: initialJobs }: JobBoardProps) {
             <div
               key={job.id}
               className={`rounded-2xl border p-5 backdrop-blur-md transition-all duration-300 ${
-                job.isBoosted
-                  ? "border-amber-500/40 bg-gradient-to-r from-amber-500/5 to-yellow-500/5 hover:bg-amber-550/10 shadow-lg shadow-amber-500/5"
+                ((job as any).is_premium || job.isBoosted)
+                  ? "border-amber-500/50 bg-gradient-to-r from-amber-500/5 via-amber-600/5 to-yellow-500/5 hover:bg-amber-600/10 shadow-lg shadow-amber-500/10"
                   : "border-slate-800 bg-slate-900/30 hover:border-blue-500/30 hover:bg-slate-900/40"
               }`}
             >
@@ -174,9 +174,9 @@ export default function JobBoard({ jobs: initialJobs }: JobBoardProps) {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {job.isBoosted && (
-                          <span className="inline-flex items-center rounded bg-amber-500/15 px-1 py-0.2 text-[9px] font-bold text-amber-400 border border-amber-500/20">
-                            TÀI TRỢ
+                        {((job as any).is_premium || job.isBoosted) && (
+                          <span className="inline-flex items-center rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-extrabold text-amber-400 border border-amber-500/35 uppercase tracking-wider">
+                            🔥 HOT / TÀI TRỢ
                           </span>
                         )}
                         <h3

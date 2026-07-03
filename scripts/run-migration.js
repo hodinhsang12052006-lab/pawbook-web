@@ -28,10 +28,8 @@ const client = createClient({
 });
 
 const statements = [
-  'ALTER TABLE "User" ADD COLUMN "address" TEXT',
-  'ALTER TABLE "User" ADD COLUMN "cover_image" TEXT',
-  'ALTER TABLE "User" ADD COLUMN "cv_url" TEXT',
-  'ALTER TABLE "User" ADD COLUMN "phone" TEXT'
+  'ALTER TABLE "Job" ADD COLUMN "is_premium" INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE "Job" ADD COLUMN "boosted_until" TEXT'
 ];
 
 async function run() {

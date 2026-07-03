@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
+import CVManager from "@/components/profile/CVManager";
+import PostList, { PostType } from "@/components/feed/PostList";
 import { 
-  ArrowLeft, Edit3, MapPin, Phone, Mail, FileText, 
-  Sparkles, ShieldCheck, BadgeCheck, Star, Briefcase, 
-  DollarSign, Clock, X, Loader2, Save 
+  ArrowLeft, Edit3, MapPin, Link2, Calendar, Briefcase, 
+  Award, Sparkles, ShieldCheck, BadgeCheck, Star, Mail, 
+  Phone, FileText, X, Save, Loader2, DollarSign, Clock 
 } from "lucide-react";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
@@ -21,15 +23,18 @@ interface JobType {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>({
-    name: "",
-    email: "",
-    role: "USER",
-    bio: "",
+    name: "Nguyễn Văn A",
+    role: "EMPLOYER",
+    bio: "Senior Fullstack Developer | Blockchain & MMO Automation Architect. Đam mê xây dựng các hệ thống tự động hoá và tối ưu hóa trải nghiệm người dùng.",
+    skills: "React / Next.js, TypeScript, Node.js, Prisma, Docker, Automation, Growth Hacking",
+    location: "Hà Nội, Việt Nam",
+    website: "https://github.com/nguyenvana",
+    joinDate: "Tháng 6, 2026",
+    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+    cover_image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80",
     phone: "",
     address: "",
-    cover_image: "",
     cv_url: "",
-    skills: "",
     pawCoin: 150,
     reputation: 10,
     trustScore: 5.0,
@@ -49,7 +54,7 @@ export default function ProfilePage() {
     skills: "",
   });
 
-  const [claiming, setClaiming] = useState(false);
+  const [walletHistory, setWalletHistory] = useState<any[]>([]);
 
   // Load user profile details on mount
   async function loadUserProfile() {
@@ -58,7 +63,10 @@ export default function ProfilePage() {
       const res = await fetch("/api/profile");
       if (res.ok) {
         const data = await res.json();
-        setProfile(data);
+        setProfile((prev: any) => ({
+          ...prev,
+          ...data,
+        }));
         setEditForm({
           name: data.name || "",
           bio: data.bio || "",
@@ -70,8 +78,7 @@ export default function ProfilePage() {
         });
       }
     } catch (err) {
-      console.error("Lỗi khi tải thông tin hồ sơ người dùng:", err);
-      toast.error("Không thể kết nối đến máy chủ.");
+      console.error("Lỗi tải profile:", err);
     } finally {
       setLoading(false);
     }
@@ -81,26 +88,120 @@ export default function ProfilePage() {
     loadUserProfile();
   }, []);
 
-  // Daily Reward claim handler
-  const handleDailyReward = async () => {
+  // Load wallet transaction logs
+  useEffect(() => {
+    async function loadWalletHistory() {
+      try {
+        const res = await fetch("/api/wallet/history");
+        if (res.ok) {
+          const data = await res.json();
+          setWalletHistory(data);
+        }
+      } catch (err) {
+        console.error("Failed to load wallet transaction logs in ProfilePage:", err);
+      }
+    }
+    loadWalletHistory();
+  }, []);
+
+  // User's own posts (Static mockup feed data)
+  const [myPosts, setMyPosts] = useState<PostType[]>([
+    {
+      id: "post-1",
+      content: "Hôm nay chính thức khởi động dự án 'PawBook' - mạng xã hội dành cho dân dev & MMO. Anh em nào muốn join team chia sẻ kinh nghiệm fomo, build tool automation hoặc tìm job freelance xịn thì chuẩn bị tinh thần nhé! 🚀🚀 #pawbook #mmo #startup",
+      mediaUrl: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&auto=format&fit=crop&q=80",
+      mediaType: "image",
+      createdAt: "2 ngày trước",
+      author: {
+        id: "user-1",
+        name: "Nguyễn Văn A",
+        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+        role: "Employer",
+        bio: "Senior Fullstack Developer | PawBook Builder",
+      },
+      likes: 142,
+      commentsCount: 38,
+      hasLiked: true,
+    },
+    {
+      id: "post-2",
+      content: "Sau bao ngày cày cuốc thì UI/UX của PawBook cũng đã hoàn thiện cơ bản. Next.js App Router mượt mà, cấu hình Tailwind v4 cực sướng. Anh em cho mình xin ý kiến đóng góp về tính năng đăng tuyển dụng IT và kết nối MMO nhé! 💻🔥",
+      createdAt: "5 ngày trước",
+      author: {
+        id: "user-1",
+        name: "Nguyễn Văn A",
+        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+        role: "Employer",
+        bio: "Senior Fullstack Developer | PawBook Builder",
+      },
+      likes: 95,
+      commentsCount: 14,
+      hasLiked: false,
+    }
+  ]);
+
+  const handleLikePost = (postId: string) => {
+    setMyPosts(
+      myPosts.map((post) => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            likes: post.hasLiked ? (post.likes || 0) - 1 : (post.likes || 0) + 1,
+            hasLiked: !post.hasLiked,
+          };
+        }
+        return post;
+      })
+    );
+  };
+
+  // AI CV parsing file handler
+  const handleCvUploadAndParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Vui lòng tải lên tệp tin định dạng PDF.");
+      return;
+    }
+
+    const toastId = toast.loading("AI đang phân tích tệp tin CV và bóc tách kỹ năng...");
     try {
-      setClaiming(true);
-      const res = await fetch("/api/wallet/daily-reward", { method: "POST" });
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/cv-parser", {
+        method: "POST",
+        body: formData,
+      });
+
       const data = await res.json();
       if (res.ok) {
-        toast.success(`🎉 Điểm danh thành công! ${data.message}`);
-        // Increment balance locally
-        setProfile((prev: any) => ({
-          ...prev,
-          pawCoin: prev.pawCoin + 20,
-        }));
+        if (data.skills) {
+          toast.success("AI đã bóc tách kỹ năng thành công! ✨", { id: toastId });
+          const existingSkills = editForm.skills
+            ? editForm.skills.split(/[,\s]+/).map(s => s.trim())
+            : [];
+          const newSkills = data.skills
+            .split(/[,\s]+/)
+            .map((s: string) => s.trim());
+          
+          const combined = Array.from(new Set([...existingSkills, ...newSkills]))
+            .filter(s => s.length > 0)
+            .join(", ");
+          
+          setEditForm(prev => ({
+            ...prev,
+            skills: combined
+          }));
+        } else {
+          toast.error("Không phát hiện từ khóa kỹ năng phù hợp nào trong CV.", { id: toastId });
+        }
       } else {
-        toast.error(data.error || "Hôm nay bạn đã nhận thưởng rồi. Hãy quay lại vào ngày mai!");
+        toast.error(data.error || "Lỗi bóc tách CV.", { id: toastId });
       }
     } catch (err) {
-      toast.error("Lỗi kết nối điểm danh.");
-    } finally {
-      setClaiming(false);
+      toast.error("Lỗi kết nối quét CV.", { id: toastId });
     }
   };
 
@@ -130,72 +231,20 @@ export default function ProfilePage() {
     }
   };
 
-  // AI CV parsing file handler
-  const handleCvUploadAndParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== "application/pdf") {
-      toast.error("Vui lòng tải lên tệp tin định dạng PDF.");
-      return;
-    }
-
-    const toastId = toast.loading("AI đang phân tích tệp tin CV và bóc tách kỹ năng...");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/cv-parser", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        if (data.skills) {
-          toast.success("AI đã bóc tách kỹ năng thành công! ✨", { id: toastId });
-          // Combine existing skills with new parsed skills, removing duplicates
-          const existingSkills = editForm.skills
-            ? editForm.skills.split(/[,\s]+/).map(s => s.trim())
-            : [];
-          const newSkills = data.skills
-            .split(/[,\s]+/)
-            .map((s: string) => s.trim());
-          
-          const combined = Array.from(new Set([...existingSkills, ...newSkills]))
-            .filter(s => s.length > 0)
-            .join(", ");
-          
-          setEditForm(prev => ({
-            ...prev,
-            skills: combined
-          }));
-        } else {
-          toast.error("Không phát hiện từ khóa kỹ năng phù hợp nào trong CV.", { id: toastId });
-        }
-      } else {
-        toast.error(data.error || "Lỗi bóc tách CV.", { id: toastId });
-      }
-    } catch (err) {
-      toast.error("Lỗi kết nối quét CV.", { id: toastId });
-    }
-  };
-
   // Split skill keywords helper
   const skillsArray: string[] = profile.skills
-    ? profile.skills.split(/[,\s]+/).map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+    ? (typeof profile.skills === "string" ? profile.skills.split(/[,\s]+/) : profile.skills).map((s: string) => s.trim()).filter((s: string) => s.length > 0)
     : [];
 
   const defaultCover = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80";
-  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || "P")}&background=2563eb&color=ffffff&bold=true`;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 relative">
-      <Toaster position="top-center" />
+    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      {/* Global Navbar */}
       <Navbar />
 
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 mb-20 md:mb-0">
-        {/* Back navigation */}
+      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Back Link */}
         <div className="mb-4">
           <Link
             href="/"
@@ -206,206 +255,250 @@ export default function ProfilePage() {
           </Link>
         </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-20 space-y-4 rounded-2xl border border-slate-800 bg-slate-900/10">
-            <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-            <p className="text-xs text-slate-400">Đang tải hồ sơ chuyên nghiệp...</p>
+        {/* Profile Card Header Section */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/20 overflow-hidden backdrop-blur-md">
+          {/* Cover Photo */}
+          <div className="relative h-48 sm:h-64 w-full bg-slate-900">
+            <img
+              src={profile.cover_image || defaultCover}
+              alt="Cover background"
+              className="h-full w-full object-cover opacity-80"
+            />
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Header section (Facebook style splits) */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/20 overflow-hidden backdrop-blur-md">
-              {/* Cover Photo area */}
-              <div className="relative h-48 sm:h-64 w-full bg-slate-900">
+
+          {/* Profile Details Container */}
+          <div className="relative px-6 pb-6">
+            {/* Avatar positioning (half offset top) */}
+            <div className="absolute top-0 left-6 -translate-y-1/2">
+              <div className="relative h-24 w-24 sm:h-32 sm:w-32 overflow-hidden rounded-2xl border-4 border-slate-950 bg-slate-900 shadow-2xl">
                 <img
-                  src={profile.cover_image || defaultCover}
-                  alt="Ảnh bìa"
-                  className="h-full w-full object-cover opacity-80"
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  className="h-full w-full object-cover"
                 />
               </div>
-
-              {/* Avatar position and name elements wrapper */}
-              <div className="relative px-6 pb-6 pt-4">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between -mt-16 sm:-mt-20 gap-4 mb-4">
-                  {/* Left elements: Avatar and main details */}
-                  <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 text-center sm:text-left">
-                    <div className="h-28 w-28 sm:h-32 sm:w-32 overflow-hidden rounded-2xl border-4 border-slate-950 bg-slate-900 shadow-2xl relative z-10 flex-shrink-0">
-                      <img
-                        src={profile.avatarUrl || defaultAvatar}
-                        alt={profile.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                        <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-1">
-                          {profile.name}
-                          {profile.isVerified && (
-                            <BadgeCheck className="h-5.5 w-5.5 text-blue-500 fill-blue-500/10" />
-                          )}
-                        </h1>
-                        <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-4xs font-extrabold text-blue-400 border border-blue-500/20 uppercase tracking-wider">
-                          {profile.role}
-                        </span>
-                      </div>
-                      <p className="text-2xs text-slate-400 font-medium">Hồ sơ thành viên PawBook</p>
-                    </div>
-                  </div>
-
-                  {/* Right elements: Action Buttons */}
-                  <div className="flex flex-wrap justify-center sm:justify-end gap-2 items-center">
-                    <button
-                      id="btn-daily-reward"
-                      disabled={claiming}
-                      onClick={handleDailyReward}
-                      className="flex items-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 px-4 py-2.5 text-2xs font-extrabold text-amber-400 hover:bg-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      <Sparkles className="h-4 w-4 text-amber-400 animate-spin" />
-                      Điểm danh nhận 20 Coins
-                    </button>
-
-                    <button
-                      onClick={() => setIsEditModalOpen(true)}
-                      className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2.5 text-2xs font-bold text-slate-200 transition-all cursor-pointer"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      Chỉnh sửa hồ sơ
-                    </button>
-                  </div>
-                </div>
-
-                {/* Score Indicators and Reputation Stats */}
-                <div className="flex flex-wrap gap-3 mt-4 border-t border-slate-850/60 pt-4 text-xs font-semibold text-slate-400 justify-center sm:justify-start">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/60 px-3 py-1 border border-slate-800">
-                    👛 Số dư: <span id="user-pawcoin-balance" className="text-slate-200">{profile.pawCoin || 0} PawCoins</span>
-                  </span>
-
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/60 px-3 py-1 border border-slate-800">
-                    <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                    Reputation: <span className="text-yellow-450">{profile.reputation || 0}</span>
-                  </span>
-
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/60 px-3 py-1 border border-slate-800">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    TrustScore: <span className="text-emerald-450">{profile.trustScore ? profile.trustScore.toFixed(1) : "5.0"} / 5.0</span>
-                  </span>
-                </div>
-              </div>
             </div>
 
-            {/* Split layout Content Body */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: Contact and Skills */}
-              <div className="lg:col-span-4 space-y-6">
-                {/* Contact Card info */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thông tin liên hệ</h3>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-center gap-3 text-slate-300">
-                      <Mail className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <span className="truncate">{profile.email}</span>
-                    </div>
+            {/* Top row actions (edit profile button aligned right) */}
+            <div className="flex justify-end pt-4 h-12 sm:h-16">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2 text-2xs font-semibold text-slate-200 transition-all cursor-pointer"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Chỉnh sửa trang cá nhân
+              </button>
+            </div>
 
-                    <div className="flex items-center gap-3 text-slate-300">
-                      <Phone className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <span>{profile.phone || "Chưa cập nhật số điện thoại"}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-slate-300">
-                      <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <span className="line-clamp-2">{profile.address || "Chưa cập nhật địa chỉ"}</span>
-                    </div>
-
-                    {profile.cv_url && (
-                      <div className="flex items-center gap-3 pt-2 border-t border-slate-850/60">
-                        <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        <a
-                          href={profile.cv_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 font-bold hover:underline"
-                        >
-                          Tải xuống CV Đã Lưu
-                        </a>
-                      </div>
+            {/* User Main Metadata */}
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-1.5">
+                    <span>{profile.name}</span>
+                    {profile.isVerified && (
+                      <BadgeCheck className="h-5 w-5 text-blue-500 fill-blue-500/20" />
                     )}
-                  </div>
+                  </h1>
+                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/20">
+                    {profile.role}
+                  </span>
                 </div>
+                <p className="text-sm text-blue-400 mt-1 font-medium">Hồ sơ thành viên PawBook</p>
+                
+                {/* Gamification stats */}
+                <div className="flex flex-wrap gap-2.5 mt-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-2xs font-semibold text-amber-400 border border-amber-500/20">
+                    <Sparkles className="h-3.5 w-3.5 fill-amber-500 text-amber-500 animate-pulse" />
+                    <span id="user-pawcoin-balance">{profile.pawCoin || 0} PawCoins</span>
+                  </span>
 
-                {/* Skills Card info */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md space-y-3">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Kỹ năng / Dịch vụ</h3>
-                  {skillsArray.length === 0 ? (
-                    <p className="text-2xs text-slate-500 italic">Chưa nhập thông tin kỹ năng.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {skillsArray.map((skill: string, index: number) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center rounded-lg bg-blue-500/10 px-2 py-1 text-2xs font-semibold text-blue-400 border border-blue-500/20"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {/* Daily Reward Claim Button */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch("/api/wallet/daily-reward", { method: "POST" });
+                        const data = await res.json();
+                        if (res.ok) {
+                          toast.success(data.message);
+                          setProfile((prev: any) => ({ ...prev, pawCoin: data.newBalance }));
+                          const txRes = await fetch("/api/wallet/history");
+                          if (txRes.ok) {
+                            const txData = await txRes.json();
+                            setWalletHistory(txData);
+                          }
+                        } else {
+                          toast.error(data.error || "Điểm danh thất bại.");
+                        }
+                      } catch (err) {
+                        toast.error("Lỗi kết nối mạng.");
+                      }
+                    }}
+                    id="btn-daily-reward"
+                    className="inline-flex items-center gap-1 px-3 py-0.5 text-2xs font-bold rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 border border-amber-500 hover:from-amber-550 hover:to-yellow-550 text-white shadow-md shadow-amber-500/10 cursor-pointer"
+                  >
+                    🎁 Điểm danh nhận quà (+20)
+                  </button>
+
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-0.5 text-2xs font-semibold text-purple-400 border border-purple-500/20">
+                    <ShieldCheck className="h-3.5 w-3.5 text-purple-500" />
+                    <span>Uy tín: {profile.reputation || 0} XP</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-2xs font-semibold text-emerald-400 border border-emerald-500/20">
+                    <Star className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" />
+                    <span>Tín nhiệm: {profile.trustScore?.toFixed(1) || "5.0"} / 5.0</span>
+                  </span>
                 </div>
               </div>
 
-              {/* Right Column: Bio and Storefront Jobs */}
-              <div className="lg:col-span-8 space-y-6">
-                {/* About Bio Section */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-6 backdrop-blur-md space-y-3">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Giới thiệu bản thân</h3>
-                  <p className="text-xs leading-relaxed text-slate-200 whitespace-pre-line">
-                    {profile.bio || "Thành viên này chưa điền tiểu sử giới thiệu. Nhấp 'Chỉnh sửa hồ sơ' để cập nhật."}
-                  </p>
-                </div>
+              {/* Bio description */}
+              <p className="text-xs sm:text-sm text-slate-350 leading-relaxed max-w-3xl whitespace-pre-line">
+                {profile.bio || "Thành viên này chưa điền tiểu sử giới thiệu."}
+              </p>
 
-                {/* Storefront section: Job postings */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-6 backdrop-blur-md space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                    <Briefcase className="h-4.5 w-4.5 text-blue-500" />
-                    <span>Dịch vụ & Tin tuyển dụng đã đăng ({profile.jobs?.length || 0})</span>
-                  </h3>
-
-                  {(profile.jobs || []).length === 0 ? (
-                    <div className="text-center py-8 border border-dashed border-slate-800 rounded-xl bg-slate-950/20">
-                      <p className="text-xs text-slate-500 italic">Chưa có bài đăng tuyển dụng hay đấu thầu nào.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {profile.jobs.map((job: JobType) => (
-                        <Link
-                          key={job.id}
-                          href={`/jobs/${job.id}`}
-                          className="block group rounded-xl border border-slate-850 bg-slate-950/30 p-4 hover:border-blue-500/30 transition-all"
-                        >
-                          <span className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-4xs font-bold text-blue-400 border border-blue-500/25 uppercase tracking-wider mb-2">
-                            {job.niche}
-                          </span>
-                          <h4 className="text-xs font-bold text-slate-100 group-hover:text-blue-400 transition-colors truncate">
-                            {job.title}
-                          </h4>
-                          <p className="text-4xs text-slate-500 mt-1 font-semibold">{job.companyName}</p>
-
-                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-slate-900 text-3xs font-semibold text-slate-400">
-                            <span className="text-emerald-500 font-bold">{job.salary}</span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {new Date(job.createdAt).toLocaleDateString("vi-VN")}
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              {/* Extra details (Location, website, Calendar join date, phone & address) */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-slate-850/60 text-xs text-slate-450">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-slate-500" />
+                  {profile.address || profile.location || "Chưa cập nhật địa chỉ"}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Phone className="h-4 w-4 text-slate-500" />
+                  {profile.phone || "Chưa cập nhật SĐT"}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Link2 className="h-4 w-4 text-slate-500" />
+                  <a
+                    href={profile.website || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-blue-400 hover:underline transition-colors"
+                  >
+                    {profile.website ? profile.website.replace("https://", "") : "github.com/nguyenvana"}
+                  </a>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-slate-500" />
+                  Đã gia nhập {profile.joinDate || "Tháng 6, 2026"}
+                </span>
               </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Profile Grid content */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+          {/* Left Area: CV Manager & Skills Info (5 cols on desktop) */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* CV Manager Component */}
+            <CVManager />
+
+            {/* Skills Card */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                <Award className="h-5 w-5 text-indigo-400" />
+                Kỹ Năng & Lĩnh Vực
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {skillsArray.length === 0 ? (
+                  <span className="text-3xs text-slate-500 italic">Chưa nhập thông tin kỹ năng.</span>
+                ) : (
+                  skillsArray.map((skill: string, index: number) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300 border border-indigo-500/15 font-medium"
+                    >
+                      {skill}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Dịch vụ & Tin tuyển dụng storefront card */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md space-y-4">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-blue-400" />
+                <span>Việc làm/Dịch vụ đã đăng ({profile.jobs?.length || 0})</span>
+              </h3>
+              {(profile.jobs || []).length === 0 ? (
+                <p className="text-3xs text-slate-500 italic">Chưa có bài đăng nào.</p>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                  {profile.jobs.map((job: JobType) => (
+                    <Link
+                      key={job.id}
+                      href={`/jobs/${job.id}`}
+                      className="block group rounded-xl border border-slate-850 bg-slate-950/40 p-3 hover:border-blue-500/35 transition-all text-xs"
+                    >
+                      <h4 className="font-bold text-slate-200 group-hover:text-blue-450 transition-colors truncate">
+                        {job.title}
+                      </h4>
+                      <div className="flex justify-between items-center mt-2 text-3xs font-semibold text-slate-500">
+                        <span className="text-emerald-550 font-bold">{job.salary}</span>
+                        <span className="uppercase">{job.niche}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Activity Stats Card */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                <Briefcase className="h-5 w-5 text-purple-400" />
+                Thống kê hoạt động
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-850 text-center">
+                  <span className="block text-2xl font-bold text-blue-500">34</span>
+                  <span className="text-3xs text-slate-500 mt-1 block">Bài đã đăng</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-850 text-center">
+                  <span className="block text-2xl font-bold text-indigo-500">1,248</span>
+                  <span className="text-3xs text-slate-500 mt-1 block">Lượt xem Profile</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Wallet History Card */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                <Sparkles className="h-5 w-5 text-amber-500 fill-amber-500/10" />
+                Lịch sử ví PawCoin
+              </h3>
+              
+              {walletHistory.length === 0 ? (
+                <p className="text-center py-6 text-3xs text-slate-500">Chưa có giao dịch ví nào được thực hiện.</p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 divide-y divide-slate-850/40 text-xs">
+                  {walletHistory.map((tx: any) => (
+                    <div key={tx.id} className="pt-2 flex items-center justify-between text-3xs">
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-slate-200">{tx.description}</p>
+                        <span className="text-slate-550 text-4xs">{new Date(tx.createdAt).toLocaleDateString("vi-VN")}</span>
+                      </div>
+                      <span className={`font-bold text-2xs ${tx.type === "INCOME" ? "text-emerald-450" : "text-rose-455"}`}>
+                        {tx.type === "INCOME" ? "+" : ""}{tx.amount}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Area: User's posts list (7 cols on desktop) */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-100">Bài viết của bạn</h2>
+              <span className="text-xs text-slate-400 font-medium">Sắp xếp: Mới nhất</span>
+            </div>
+
+            <PostList posts={myPosts} onLikePost={handleLikePost} />
+          </div>
+        </div>
       </main>
 
       {/* Edit Profile Modal Dialog Overlay */}
@@ -543,6 +636,12 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <footer className="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-650 mt-12">
+        <p>© 2026 PawBook Platform. Build with passion for IT & MMO communities.</p>
+      </footer>
+      <Toaster />
     </div>
   );
 }

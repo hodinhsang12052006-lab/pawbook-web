@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Home, Briefcase, Rocket, Settings, Store, Users, Zap, BookOpen, MapPin } from "lucide-react";
+import { Home, Briefcase, Rocket, Settings, Store, Users, Zap, BookOpen, MapPin, CreditCard } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
 interface SidebarProps {
@@ -22,10 +22,11 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: "gigs", label: "⚡ Chợ Đấu Thầu", icon: Zap, route: "/gigs" },
     { id: "blogs", label: "📝 Blog & Chia sẻ", icon: BookOpen, route: "/blogs" },
     { id: "explore", label: "🗺️ Bản đồ Radar", icon: MapPin, route: "/explore" },
+    { id: "pricing", label: "👛 Nạp PawCoin", icon: CreditCard, route: "/pricing" },
   ];
 
   const handleNavigation = (id: string, route: string) => {
-    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs" && id !== "explore") {
+    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs" && id !== "explore" && id !== "pricing") {
       setActiveTab(id);
       router.push(route, { scroll: false });
     } else {
@@ -46,7 +47,10 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     if (id === "explore") {
       return pathname === "/explore";
     }
-    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs" || pathname === "/explore") {
+    if (id === "pricing") {
+      return pathname === "/pricing";
+    }
+    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs" || pathname === "/explore" || pathname === "/pricing") {
       return false;
     }
     return activeTab === id;

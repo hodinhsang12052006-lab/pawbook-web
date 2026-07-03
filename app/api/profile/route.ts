@@ -90,6 +90,7 @@ export async function PUT(req: Request) {
       cover_image,
       cv_url,
       skills,
+      avatarUrl,
     } = body;
 
     // Build update object dynamically
@@ -104,6 +105,7 @@ export async function PUT(req: Request) {
       updateData.cvUrl = cv_url; // sync camelCase cvUrl too so existing E2E/pages don't break!
     }
     if (skills !== undefined) updateData.skills = skills;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

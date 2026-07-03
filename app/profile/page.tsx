@@ -45,6 +45,7 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
     bio: "",
@@ -53,6 +54,7 @@ export default function ProfilePage() {
     cover_image: "",
     cv_url: "",
     skills: "",
+    avatarUrl: "",
   });
 
   const [walletHistory, setWalletHistory] = useState<any[]>([]);
@@ -76,6 +78,7 @@ export default function ProfilePage() {
           cover_image: data.cover_image || "",
           cv_url: data.cv_url || "",
           skills: data.skills || "",
+          avatarUrl: data.avatarUrl || "",
         });
       }
     } catch (err) {
@@ -203,6 +206,55 @@ export default function ProfilePage() {
       }
     } catch (err) {
       toast.error("Lỗi kết nối quét CV.", { id: toastId });
+    }
+  };
+
+  // Cloudinary File Upload handler
+  const handleCloudinaryUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "avatar" | "cover" | "cv") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate type constraints
+    const allowedTypes = field === "cv" ? ["application/pdf"] : ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(field === "cv" ? "Vui lòng chọn tệp tin định dạng PDF." : "Vui lòng tải lên ảnh có định dạng JPG, PNG hoặc WEBP.");
+      return;
+    }
+
+    setUploading(field);
+    const toastId = toast.loading(`Đang tải tệp tin ${field === "cv" ? "CV" : "ảnh"} lên Cloudinary...`);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        toast.success("Tải lên đám mây Cloudinary thành công! ☁️", { id: toastId });
+        
+        // Update both editForm and locally displayed profile state
+        if (field === "avatar") {
+          setEditForm((prev) => ({ ...prev, avatarUrl: data.url }));
+          setProfile((prev: any) => ({ ...prev, avatarUrl: data.url }));
+        } else if (field === "cover") {
+          setEditForm((prev) => ({ ...prev, cover_image: data.url }));
+          setProfile((prev: any) => ({ ...prev, cover_image: data.url }));
+        } else if (field === "cv") {
+          setEditForm((prev) => ({ ...prev, cv_url: data.url }));
+          setProfile((prev: any) => ({ ...prev, cv_url: data.url }));
+        }
+      } else {
+        toast.error(data.error || "Tải tệp tin lên thất bại.", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Lỗi mạng khi tải tệp tin lên.", { id: toastId });
+    } finally {
+      setUploading(null);
     }
   };
 
@@ -594,6 +646,32 @@ export default function ProfilePage() {
                 />
               </div>
 
+              {/* Avatar file upload */}
+              <div>
+                <label className="block font-bold text-slate-350 mb-1.5 flex items-center justify-between">
+                  <span>Ảnh đại diện (Avatar)</span>
+                  {uploading === "avatar" && (
+                    <span className="text-[10px] text-blue-450 flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Đang tải lên...
+                    </span>
+                  )}
+                </label>
+                <div className="flex items-center gap-3">
+                  {editForm.avatarUrl && (
+                    <div className="h-10 w-10 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 flex-shrink-0">
+                      <img src={editForm.avatarUrl} alt="Preview Avatar" className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(e) => handleCloudinaryUpload(e, "avatar")}
+                    className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/10 file:text-blue-405 hover:file:bg-blue-600/25 file:cursor-pointer"
+                  />
+                </div>
+              </div>
+
               {/* Phone & Address row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -621,23 +699,37 @@ export default function ProfilePage() {
               {/* Cover image & CV link */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-350 mb-1.5">URL Ảnh bìa (Cover Image)</label>
+                  <label className="block font-bold text-slate-350 mb-1.5 flex items-center justify-between">
+                    <span>Ảnh bìa (Cover Image)</span>
+                    {uploading === "cover" && (
+                      <span className="text-[10px] text-blue-450 flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Đang tải...
+                      </span>
+                    )}
+                  </label>
                   <input
-                    type="text"
-                    value={editForm.cover_image}
-                    onChange={(e) => setEditForm({ ...editForm, cover_image: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 placeholder-slate-650 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(e) => handleCloudinaryUpload(e, "cover")}
+                    className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/10 file:text-blue-405 hover:file:bg-blue-600/25 file:cursor-pointer"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-350 mb-1.5">URL Tệp tin CV (PDF)</label>
+                  <label className="block font-bold text-slate-350 mb-1.5 flex items-center justify-between">
+                    <span>Hồ sơ năng lực (CV PDF)</span>
+                    {uploading === "cv" && (
+                      <span className="text-[10px] text-blue-450 flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Đang tải...
+                      </span>
+                    )}
+                  </label>
                   <input
-                    type="text"
-                    value={editForm.cv_url}
-                    onChange={(e) => setEditForm({ ...editForm, cv_url: e.target.value })}
-                    placeholder="https://pawbook.vn/cv/..."
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 placeholder-slate-650 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handleCloudinaryUpload(e, "cv")}
+                    className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600/10 file:text-blue-405 hover:file:bg-blue-600/25 file:cursor-pointer"
                   />
                 </div>
               </div>

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
-// Configure Cloudinary keys
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -15,43 +14,41 @@ export async function POST(req: Request) {
 
     if (!file) {
       return NextResponse.json(
-        { error: "Không tìm thấy file để tải lên." },
+        { error: "Không tìm thấy tệp tin nào để tải lên." },
         { status: 400 }
       );
     }
 
-    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Promise wrapper for Cloudinary upload stream
-    const uploadToCloudinary = () => {
-      return new Promise<any>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "pawbook",
-            resource_type: "auto", // Auto detects image, pdf, docx, video
-          },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result);
-            }
+    // Upload buffer contents using Cloudinary upload stream to bypass local folder writing
+    const uploadResult: any = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "pawbook",
+          resource_type: "auto", // Automatically detects whether resource is PDF or image
+        },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
           }
-        );
-        stream.end(buffer);
-      });
-    };
+        }
+      );
+      stream.end(buffer);
+    });
 
-    const result = await uploadToCloudinary();
-
-    return NextResponse.json({ secure_url: result.secure_url });
-  } catch (error: any) {
-    console.error("Cloudinary upload route error:", error);
+    return NextResponse.json({
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+    });
+  } catch (err: any) {
+    console.error("Cloudinary upload API error:", err);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi khi upload file lên Cloudinary." },
-      { status: 550 }
+      { error: "Lỗi hệ thống trong quá trình tải tệp tin lên đám mây Cloudinary." },
+      { status: 500 }
     );
   }
 }

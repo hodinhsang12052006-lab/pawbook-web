@@ -62,7 +62,9 @@ test.describe("Automated E2E Testing - PawBook", () => {
     await page.goto("http://localhost:3000/register");
     
     // Click vào thẻ Persona đầu tiên (CANDIDATE) bằng locator chính xác
-    await page.locator('div.group').first().click({ force: true });
+    const candidateBtn = page.locator('div.group:has-text("Dân Tech")').first();
+    await candidateBtn.waitFor({ state: "visible", timeout: 10000 });
+    await candidateBtn.click({ force: true });
     
     // Đợi input xuất hiện để xác nhận đã qua Step 2
     await page.waitForSelector('input[placeholder="Nguyễn Văn A"]', { timeout: 5000 });

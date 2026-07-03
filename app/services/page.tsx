@@ -29,6 +29,7 @@ export default function ServicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedProvince, setSelectedProvince] = useState("TP. Hồ Chí Minh");
   const [sessionUser, setSessionUser] = useState<any>(null);
 
   const categories = [
@@ -38,6 +39,20 @@ export default function ServicesPage() {
     { id: "Gia đình", label: "🧹 Dịch vụ gia đình" },
     { id: "Spa", label: "💅 Spa & Làm đẹp" },
     { id: "F&B", label: "☕ F&B & Quán ăn" },
+  ];
+
+  const provinces = [
+    { id: "TP. Hồ Chí Minh", label: "📍 TP. Hồ Chí Minh" },
+    { id: "Hà Nội", label: "📍 Hà Nội" },
+    { id: "Đà Nẵng", label: "📍 Đà Nẵng" },
+    { id: "Cần Thơ", label: "📍 Cần Thơ" },
+    { id: "Hải Phòng", label: "📍 Hải Phòng" },
+    { id: "Nha Trang", label: "📍 Nha Trang" },
+    { id: "Huế", label: "📍 Huế" },
+    { id: "Đà Lạt", label: "📍 Đà Lạt" },
+    { id: "Vinh", label: "📍 Vinh" },
+    { id: "Buôn Ma Thuột", label: "📍 Buôn Ma Thuột" },
+    { id: "all", label: "🌍 Tất cả tỉnh thành" },
   ];
 
   const handleBoost = async (type: string, id: string) => {
@@ -86,7 +101,7 @@ export default function ServicesPage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch("/api/services");
+        const res = await fetch(`/api/services?province=${encodeURIComponent(selectedProvince)}`);
         if (!res.ok) {
           throw new Error("Không thể tải danh sách dịch vụ cửa hàng.");
         }
@@ -106,7 +121,7 @@ export default function ServicesPage() {
       }
     }
     fetchServices();
-  }, []);
+  }, [selectedProvince]);
 
   // Filter logic on live data
   const filteredServices = services.filter((srv) => {
@@ -146,6 +161,25 @@ export default function ServicesPage() {
               <p className="text-xs text-slate-400 mt-1 max-w-xl">
                 Nơi quảng bá và tìm kiếm các cửa hàng dịch vụ chất lượng: Spa, Vận tải xe ôm 0%, Gia đình, F&B, Sửa chữa... giúp kết nối doanh nghiệp địa phương với cộng đồng.
               </p>
+            </div>
+
+            {/* Geo-filter Province Selector */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/20 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4.5 w-4.5 text-blue-400" />
+                <span className="text-xs font-bold text-slate-300">Bộ lọc theo Tỉnh thành:</span>
+              </div>
+              <select
+                value={selectedProvince}
+                onChange={(e) => setSelectedProvince(e.target.value)}
+                className="bg-slate-950/60 border border-slate-800 text-xs text-slate-200 rounded-lg py-1.5 px-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                {provinces.map((prov) => (
+                  <option key={prov.id} value={prov.id} className="bg-slate-950 text-slate-200">
+                    {prov.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Filter and Search Bar */}

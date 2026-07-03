@@ -1,13 +1,27 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    let province = searchParams.get("province");
+
+    // Default to 'TP. Hồ Chí Minh' if not specified
+    if (!province) {
+      province = "TP. Hồ Chí Minh";
+    }
+
+    const whereClause: any = {};
+    if (province && province !== "all") {
+      whereClause.city = province;
+    }
+
     const services = await prisma.service.findMany({
+      where: whereClause,
       orderBy: [
         { isBoosted: "desc" },
         { createdAt: "desc" },
@@ -66,12 +80,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const city = location.split(",")[0].trim();
+
     const newService = await prisma.service.create({
       data: {
         name,
         category,
         description,
         location,
+        city,
         contactInfo,
         ownerId: userId,
       },

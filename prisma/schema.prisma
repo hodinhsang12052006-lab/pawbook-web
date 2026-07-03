@@ -1,6 +1,6 @@
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -94,6 +94,7 @@ model Service {
   category    String   // e.g. Spa, Điện lạnh, Xây dựng, Sửa chữa...
   description String
   location    String
+  city        String?  // Province/City for geo-filtering
   contactInfo String
   imageUrl    String?  // Real Cloudinary image URL
   priceRange  String?  // Pricing estimations

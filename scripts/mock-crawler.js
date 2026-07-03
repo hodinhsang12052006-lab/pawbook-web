@@ -330,6 +330,7 @@ async function main() {
           category: serviceCategory,
           description: jobData.description,
           location: `${city.name}, Việt Nam`,
+          city: city.name,
           contactInfo: "0987.654.321",
           imageUrl: `https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&auto=format&fit=crop&q=60`,
           priceRange: "200.000đ - 1.500.000đ",

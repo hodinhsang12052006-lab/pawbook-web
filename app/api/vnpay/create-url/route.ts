@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const tmnCode = process.env.VNP_TMNCODE || "2QTY7D9L";
     const secretKey = process.env.VNP_HASHSECRET || "GET8K5AZE2Q4E5A8R89Q8Q2W8Q1Q1E21";
     const vnpUrl = process.env.VNP_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    const returnUrl = process.env.VNP_RETURNURL || "http://localhost:3000/api/wallet/vnpay/callback";
+    const returnUrl = process.env.VNP_RETURNURL || "http://localhost:3000/api/vnpay/vnpay-return";
 
     const date = new Date();
     const createDate = moment(date).format("YYYYMMDDHHmmss");

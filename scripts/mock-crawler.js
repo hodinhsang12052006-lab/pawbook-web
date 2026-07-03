@@ -257,31 +257,40 @@ async function main() {
     },
   ];
 
-  console.log(`Crawling and inserting ${mockJobsData.length} multi-niche jobs into Turso...`);
+  const iterationsCount = 8; // 8 * 20 = 160 jobs
+  console.log(`Crawling and inserting ${mockJobsData.length * iterationsCount} multi-niche jobs into Turso...`);
 
-  for (let i = 0; i < mockJobsData.length; i++) {
-    const jobData = mockJobsData[i];
-    const employerId = getRandomEmployer();
+  let insertedCount = 0;
+  for (let cycle = 0; cycle < iterationsCount; cycle++) {
+    for (let i = 0; i < mockJobsData.length; i++) {
+      const jobData = mockJobsData[i];
+      const employerId = getRandomEmployer();
+      insertedCount++;
 
-    await prisma.job.create({
-      data: {
-        title: jobData.title,
-        description: jobData.description,
-        salary: jobData.salary,
-        companyName: jobData.companyName,
-        employerId: employerId,
-        niche: jobData.niche,
-        latitude: jobData.latitude,
-        longitude: jobData.longitude,
-        ai_tags: jobData.ai_tags,
-        isBoosted: Math.random() > 0.7, // Randomly boost 30% of jobs for organic FOMO
-      },
-    });
+      // Introduce coordinate offsets to disperse pins on the map view
+      const latOffset = (Math.random() - 0.5) * 0.015;
+      const lngOffset = (Math.random() - 0.5) * 0.015;
 
-    console.log(`[${i + 1}/${mockJobsData.length}] Inserted: ${jobData.title} (${jobData.niche})`);
+      await prisma.job.create({
+        data: {
+          title: cycle > 0 ? `${jobData.title} (Chi nhánh #${cycle})` : jobData.title,
+          description: jobData.description,
+          salary: jobData.salary,
+          companyName: jobData.companyName,
+          employerId: employerId,
+          niche: jobData.niche,
+          latitude: jobData.latitude ? jobData.latitude + latOffset : null,
+          longitude: jobData.longitude ? jobData.longitude + lngOffset : null,
+          ai_tags: jobData.ai_tags,
+          isBoosted: Math.random() > 0.7, // Randomly boost 30% of jobs for organic FOMO
+        },
+      });
+
+      console.log(`[${insertedCount}/${mockJobsData.length * iterationsCount}] Inserted: ${jobData.title} (${jobData.niche})`);
+    }
   }
 
-  console.log("Mock Crawler synchronization finished! Turso database is populated with multi-niche jobs. 🚀");
+  console.log("Mock Crawler synchronization finished! Turso database is populated with scaled multi-niche jobs. 🚀");
 }
 
 main()

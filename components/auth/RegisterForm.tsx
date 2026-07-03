@@ -349,7 +349,7 @@ export default function RegisterForm() {
       <div className="text-center text-xs text-slate-400 border-t border-slate-900 pt-4">
         Đã có tài khoản?{" "}
         <Link
-          href="/login"
+          href="/auth/login"
           className="font-bold text-blue-400 hover:text-blue-350 hover:underline transition-colors"
         >
           Đăng nhập ngay

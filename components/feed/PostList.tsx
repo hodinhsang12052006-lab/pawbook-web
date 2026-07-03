@@ -277,36 +277,36 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
             </div>
 
             {/* Actions */}
-            <div className="mt-4 flex items-center justify-between border-t border-slate-850/60 pt-3">
+            <div className="mt-4 flex flex-wrap items-center gap-4 sm:gap-6 border-t border-slate-850/60 pt-3 text-xs font-medium text-slate-400">
               <button
                 onClick={() => handleLike(post.id)}
-                className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 transition-colors ${
                   hasLiked
                     ? "text-rose-500 hover:text-rose-450"
                     : "text-slate-400 hover:text-rose-400"
                 }`}
               >
-                <Heart className={`h-4.5 w-4.5 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+                <Heart className={`h-4 w-4 ${hasLiked ? "fill-rose-500 text-rose-500" : ""}`} />
                 <span>{displayLikes}</span>
               </button>
 
               <button
                 onClick={() => toggleComments(post.id)}
-                className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 transition-colors ${
                   activeCommentsPostId === post.id ? "text-blue-400" : "text-slate-400 hover:text-blue-400"
                 }`}
               >
-                <MessageCircle className="h-4.5 w-4.5" />
+                <MessageCircle className="h-4 w-4" />
                 <span>{commentsCount}</span>
               </button>
 
-              <button className="flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-green-400 transition-colors">
-                <Share2 className="h-4.5 w-4.5" />
+              <button className="flex items-center gap-1.5 hover:text-green-400 transition-colors">
+                <Share2 className="h-4 w-4" />
                 <span>Chia sẻ</span>
               </button>
 
-              <button className="flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-yellow-400 transition-colors ml-auto">
-                <Bookmark className="h-4.5 w-4.5" />
+              <button className="flex items-center gap-1.5 hover:text-yellow-400 transition-colors sm:ml-auto">
+                <Bookmark className="h-4 w-4" />
               </button>
             </div>
 

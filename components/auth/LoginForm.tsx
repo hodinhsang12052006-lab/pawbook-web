@@ -131,7 +131,7 @@ export default function LoginForm() {
       <div className="text-center text-sm text-slate-400">
         Chưa có tài khoản?{" "}
         <Link
-          href="/register"
+          href="/auth/register"
           className="font-semibold text-blue-400 hover:text-blue-350 transition-colors"
         >
           Đăng ký ngay

@@ -64,6 +64,7 @@ export async function GET() {
         flatMessages.push({
           id: msg.id,
           content: msg.body,
+          type: msg.type || "TEXT",
           senderId: msg.senderId,
           receiverId: partner ? partner.id : "",
           createdAt: msg.createdAt,
@@ -118,9 +119,10 @@ export async function POST(req: Request) {
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const { receiverId, content, message, conversationId } = body;
+    const { receiverId, content, message, conversationId, type } = body;
 
     const messageText = content || message || "";
+    const msgType = type || "TEXT"; // TEXT, IMAGE, VIDEO
 
     if (!messageText.trim()) {
       return NextResponse.json(
@@ -136,6 +138,7 @@ export async function POST(req: Request) {
       // Find existing conversation between the two users
       const existing = await prisma.conversation.findFirst({
         where: {
+          isGroup: false,
           AND: [
             { participants: { some: { id: userId } } },
             { participants: { some: { id: receiverId } } },
@@ -165,10 +168,36 @@ export async function POST(req: Request) {
       );
     }
 
+    // Security check: Only members are allowed to read/write messages in this conversation
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: activeConversationId },
+      include: {
+        participants: {
+          select: { id: true, name: true, avatarUrl: true, role: true },
+        },
+      },
+    });
+
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Cuộc trò chuyện không tồn tại." },
+        { status: 404 }
+      );
+    }
+
+    const isMember = conversation.participants.some((p) => p.id === userId);
+    if (!isMember) {
+      return NextResponse.json(
+        { error: "Bạn không có thẩm quyền trong cuộc trò chuyện này." },
+        { status: 403 }
+      );
+    }
+
     // Create the message in database
     const createdMessage = await prisma.message.create({
       data: {
         body: messageText,
+        type: msgType,
         senderId: userId,
         conversationId: activeConversationId,
       },
@@ -179,21 +208,12 @@ export async function POST(req: Request) {
       },
     });
 
-    // Query conversation participants to format backwards compatible receiver object
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: activeConversationId },
-      include: {
-        participants: {
-          select: { id: true, name: true, avatarUrl: true, role: true },
-        },
-      },
-    });
-
-    const partner = conversation?.participants.find((p) => p.id !== userId);
+    const partner = conversation.participants.find((p) => p.id !== userId);
 
     const formattedMessage = {
       id: createdMessage.id,
       content: createdMessage.body,
+      type: createdMessage.type,
       senderId: createdMessage.senderId,
       receiverId: partner ? partner.id : "",
       createdAt: createdMessage.createdAt,

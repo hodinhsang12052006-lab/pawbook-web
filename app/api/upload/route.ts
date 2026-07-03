@@ -29,6 +29,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (file.size > 10 * 1024 * 1024) { // 10MB max size limit
+      return NextResponse.json(
+        { error: "File quá lớn (tối đa 10MB)" },
+        { status: 400 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

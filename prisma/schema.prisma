@@ -172,6 +172,8 @@ model Comment {
 
 model Conversation {
   id           String    @id @default(cuid())
+  isGroup      Boolean   @default(false)
+  name         String?
   createdAt    DateTime  @default(now())
   participants User[]    @relation("UserConversations")
   messages     Message[]
@@ -180,6 +182,7 @@ model Conversation {
 model Message {
   id             String       @id @default(cuid())
   body           String
+  type           String       @default("TEXT") // TEXT, IMAGE, VIDEO
   createdAt      DateTime     @default(now())
   senderId       String
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)

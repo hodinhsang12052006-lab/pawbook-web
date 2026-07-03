@@ -26,7 +26,11 @@ export default function LoginForm() {
       });
 
       if (res?.error) {
-        setError(res.error);
+        if (res.error === "CredentialsSignin" || res.error.includes("credential")) {
+          setError("Email hoặc mật khẩu không chính xác.");
+        } else {
+          setError(res.error);
+        }
       } else {
         // Redirect to homepage on success
         router.push("/");

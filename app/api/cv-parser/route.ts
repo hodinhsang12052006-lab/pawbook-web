@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Polyfill DOMMatrix for node environment compatibility with pdf-parse canvas modules
 if (typeof global !== "undefined" && !(global as any).DOMMatrix) {
@@ -34,6 +36,14 @@ const SKILL_KEYWORDS = [
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: "Vui lòng đăng nhập để phân tích CV." },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
 

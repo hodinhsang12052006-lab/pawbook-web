@@ -1,0 +1,223 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+enum Role {
+  USER
+  EMPLOYER
+  ADMIN
+}
+
+model User {
+  id               String         @id @default(cuid())
+  name             String
+  email            String         @unique
+  password         String         // Hashed password for credentials auth
+  avatarUrl        String?        // Optional during sign-up
+  role             Role           @default(USER)
+  cvUrl            String?        // Optional during sign-up
+  skills           String?        // Optional during sign-up
+  bio              String?        // Optional during sign-up
+  posts            Post[]
+  jobs             Job[]          // For employers posting jobs
+  services         Service[]      // Services registered by the user
+  applications     Application[]  // Applications submitted by this user
+  payrolls         Payroll[]      // Payroll history records
+  notifications    Notification[] // Notifications received by this user
+  comments         Comment[]      // Comments made by this user
+  sentMessages     Message[]      @relation("SentMessages")     // Messages sent by this user
+  receivedMessages Message[]      @relation("ReceivedMessages") // Messages received by this user
+  gigs             Gig[]          @relation("EmployerGigs")     // Gigs posted by this employer
+  bids             Bid[]          // Bids placed by this candidate
+  writtenReviews   Review[]       @relation("ReviewerReviews")   // Reviews written by this user
+  receivedReviews  Review[]       @relation("TargetUserReviews") // Reviews received by this user
+  blogPosts        BlogPost[]     // Blog posts written by this user
+  transactions     Transaction[]  // Wallet transactions for credits/debits
+  pawCoin          Int            @default(150) // Default starting coins for gamification
+  reputation       Int            @default(10)  // Default starting reputation
+  trustScore       Float          @default(5.0) // Reputation trust metric (0.0 to 5.0)
+  isVerified       Boolean        @default(false) // Verified checkmark (tick xanh)
+  lastDailyReward  DateTime?      // Last daily reward claim timestamp
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  content   String
+  imageUrl  String?   // Backwards compatibility
+  mediaType String?   // e.g. 'image' or 'video'
+  mediaUrl  String?   // URL of attachment
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[] // Comments associated with this post
+  createdAt DateTime  @default(now())
+}
+
+model Job {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  salary       String
+  companyName  String
+  employerId   String
+  employer     User          @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  applications Application[] // Applications submitted for this job
+  isBoosted    Boolean       @default(false)
+  boostUntil   DateTime?
+  blogPosts    BlogPost[]    // Linked blog posts
+  createdAt    DateTime      @default(now())
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // e.g. Spa, Điện lạnh, Xây dựng, Sửa chữa...
+  description String
+  location    String
+  contactInfo String
+  imageUrl    String?  // Real Cloudinary image URL
+  priceRange  String?  // Pricing estimations
+  rating      Float    @default(5.0)
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  isBoosted   Boolean  @default(false)
+  boostUntil  DateTime?
+  blogPosts   BlogPost[] // Linked blog posts
+  createdAt   DateTime @default(now())
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  applicantId String
+  applicant   User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cvUrl       String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt   DateTime @default(now())
+}
+
+model Payroll {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseSalary  Float
+  bonus       Float
+  total       Float
+  status      String    @default("UNPAID") // PAID, UNPAID
+  paymentDate DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Revenue {
+  id        String   @id @default(cuid())
+  source    String
+  amount    Float
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?  // Optional notification category/header
+  message   String
+  type      String   // MATCH_JOB, SYSTEM, INFO, WALLET
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Gig {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  budget      Float
+  employerId  String
+  employer    User     @relation("EmployerGigs", fields: [employerId], references: [id], onDelete: Cascade)
+  status      String   @default("OPEN") // OPEN, IN_PROGRESS, COMPLETED
+  bids        Bid[]
+  isBoosted   Boolean  @default(false)
+  boostUntil  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Bid {
+  id           String   @id @default(cuid())
+  gigId        String
+  gig          Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  freelancerId String
+  freelancer   User     @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  bidAmount    Float
+  message      String
+  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt    DateTime @default(now())
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  rating       Int      // 1-5 stars
+  content      String
+  reviewerId   String
+  reviewer     User     @relation("ReviewerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User     @relation("TargetUserReviews", fields: [targetUserId], references: [id], onDelete: Cascade)
+  gigId        String?
+  createdAt    DateTime @default(now())
+}
+
+model BlogPost {
+  id              String   @id @default(cuid())
+  title           String
+  content         String
+  authorId        String
+  author          User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  upvotes         Int      @default(0)
+  linkedJobId     String?
+  linkedJob       Job?     @relation(fields: [linkedJobId], references: [id], onDelete: SetNull)
+  linkedServiceId String?
+  linkedService   Service? @relation(fields: [linkedServiceId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Int      // e.g. +5 or -500
+  type          String   // INCOME, EXPENSE
+  description   String
+  amountVND     Float?   // Optional field for payment gateway transactions in VND
+  pawCoinAmount Int?     // Topup coin quantity
+  status        String?  // PENDING, SUCCESS, FAILED
+  provider      String?  // e.g. VNPAY
+  createdAt     DateTime @default(now())
+}

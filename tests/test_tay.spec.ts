@@ -79,15 +79,7 @@ test.describe("Automated E2E Testing - PawBook", () => {
     await page.fill('textarea[placeholder="Tôi có 3 năm kinh nghiệm trong thiết kế phần mềm / làm MMO kiếm tiền ngách..."]', "QA Automation test bio description.");
     await page.click('button[type="submit"]', { force: true });
 
-    // Chờ chuyển hướng sang trang đăng nhập
-    await page.waitForURL("**/login", { timeout: 15000 });
-    
-    // Đăng nhập bằng tài khoản vừa khởi tạo
-    await page.fill('input[id="email"]', testEmail);
-    await page.fill('input[id="password"]', testPassword);
-    await page.click('button[type="submit"]', { force: true });
-    
-    // Đợi chuyển hướng về trang chủ
+    // Expect direct redirect to home page on auto-login
     await page.waitForURL("http://localhost:3000/", { timeout: 15000 });
 
     // Đợi trang chủ tải xong và có sự hiện diện của session
@@ -135,8 +127,12 @@ test.describe("Automated E2E Testing - PawBook", () => {
 
     // Luồng 4: Thử gọi request để Review một tài khoản rác -> Assert bị chặn và báo lỗi 403.
     // Lấy một Spa Owner thực tế từ DB để kích hoạt kiểm tra quan hệ giao dịch (403 instead of 404)
+    const targetJob = jobs[0];
     const spaOwner = await prisma.user.findFirst({
-      where: { email: "another@pawbook.vn" }
+      where: {
+        role: "EMPLOYER",
+        id: { not: targetJob.employerId }
+      }
     });
     const targetUserId = spaOwner ? spaOwner.id : "random-trash-user-id";
 

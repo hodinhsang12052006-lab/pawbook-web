@@ -27,16 +27,7 @@ test.describe("Full E2E User Journey Bot - PawBook", () => {
     await page.fill('textarea[placeholder="Tôi có 3 năm kinh nghiệm trong thiết kế phần mềm / làm MMO kiếm tiền ngách..."]', "Playwright automation bot user experience.");
     await page.click('button[type="submit"]', { force: true });
     
-    // Expect login page redirect
-    await page.waitForURL("**/login", { timeout: 15000 });
-    await page.waitForTimeout(1000);
-
-    // 2. Step 2: Login
-    await page.fill('input[id="email"]', testEmail);
-    await page.fill('input[id="password"]', testPassword);
-    await page.click('button[type="submit"]', { force: true });
-
-    // Expect redirect to home page
+    // Expect direct redirect to home page on auto-login
     await page.waitForURL("http://localhost:3000/", { timeout: 15000 });
     await page.waitForTimeout(2000);
 

@@ -175,99 +175,130 @@ export default function Navbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={handleUploadCV}
-            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/35 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-950 transition-all duration-200"
-          >
-            <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Upload CV</span>
-          </button>
+          {sessionUser ? (
+            <>
+              <button
+                onClick={handleUploadCV}
+                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 transition-all duration-200"
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Upload CV</span>
+              </button>
 
-          <div className="flex items-center gap-2 border-l border-slate-800 pl-4 relative">
-            {/* Bell trigger */}
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="relative rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-              )}
-            </button>
-
-            {/* Notification Dropdown list */}
-            {showDropdown && (
-              <div className="absolute right-0 top-11 w-80 rounded-2xl border border-slate-800 bg-slate-950/95 p-4 shadow-xl z-50 backdrop-blur-md animate-fadeIn">
-                <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-2">
-                  <h4 className="text-xs font-bold text-slate-200">Thông báo ({unreadCount})</h4>
+              <div className="flex items-center gap-2 border-l border-slate-800 pl-4 relative">
+                {/* Bell trigger */}
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="relative rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                >
+                  <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <button
-                      onClick={handleMarkAllRead}
-                      className="text-4xs font-semibold text-blue-400 hover:underline"
-                    >
-                      Đọc tất cả
-                    </button>
+                    <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse"></span>
                   )}
-                </div>
+                </button>
 
-                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-850/40">
-                  {notifications.length === 0 ? (
-                    <p className="text-center py-6 text-3xs text-slate-500">Chưa có thông báo nào.</p>
-                  ) : (
-                    notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        onClick={() => handleMarkAsRead(notif.id, notif.link)}
-                        className={`pt-2 flex flex-col gap-1 cursor-pointer transition-colors ${
-                          notif.isRead ? "opacity-60" : "hover:bg-slate-900/40"
-                        }`}
-                      >
-                        {notif.title && (
-                          <p className="text-[10px] font-bold text-slate-250 flex items-center gap-1.5">
-                            <span className="h-1 w-1 rounded-full bg-blue-500 inline-block"></span>
-                            {notif.title}
-                          </p>
-                        )}
-                        <p className="text-3xs leading-relaxed text-slate-350">{notif.message}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-4xs text-slate-550">{formatTime(notif.createdAt)}</span>
-                          {!notif.isRead && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {/* Notification Dropdown list */}
+                {showDropdown && (
+                  <div className="absolute right-0 top-11 w-80 rounded-2xl border border-slate-800 bg-slate-950/95 p-4 shadow-xl z-50 backdrop-blur-md animate-fadeIn">
+                    <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-2">
+                      <h4 className="text-xs font-bold text-slate-200">Thông báo ({unreadCount})</h4>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          className="text-4xs font-semibold text-blue-400 hover:underline"
+                        >
+                          Đọc tất cả
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-850/40">
+                      {notifications.length === 0 ? (
+                        <p className="text-center py-6 text-3xs text-slate-500">Chưa có thông báo nào.</p>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleMarkAsRead(notif.id, notif.link)}
+                            className={`pt-2 flex flex-col gap-1 cursor-pointer transition-colors ${
+                              notif.isRead ? "opacity-60" : "hover:bg-slate-900/40"
+                            }`}
+                          >
+                            {notif.title && (
+                              <p className="text-[10px] font-bold text-slate-250 flex items-center gap-1.5">
+                                <span className="h-1 w-1 rounded-full bg-blue-500 inline-block"></span>
+                                {notif.title}
+                              </p>
+                            )}
+                            <p className="text-3xs leading-relaxed text-slate-350">{notif.message}</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-4xs text-slate-550">{formatTime(notif.createdAt)}</span>
+                              {!notif.isRead && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Wallet Quick Access */}
+                <button
+                  onClick={() => router.push("/wallet")}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  title="Ví PawCoin"
+                >
+                  <Coins className="h-5 w-5 text-amber-500 fill-amber-500/10" />
+                </button>
+
+                <button className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors">
+                  <MessageSquare className="h-5 w-5" />
+                </button>
               </div>
-            )}
 
-            {/* Wallet Quick Access */}
-            <button
-              onClick={() => router.push("/wallet")}
-              className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
-              title="Ví PawCoin"
-            >
-              <Coins className="h-5 w-5 text-amber-500 fill-amber-500/10" />
-            </button>
-
-            <button className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors">
-              <MessageSquare className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 border-l border-slate-800 pl-4">
-            <div
-              onClick={() => router.push("/profile")}
-              className="h-8 w-8 overflow-hidden rounded-full border border-slate-700 cursor-pointer hover:border-blue-500 transition-colors"
-            >
-              <img
-                src={userAvatar}
-                alt="User Avatar"
-                className="h-full w-full object-cover"
-              />
+              <div className="flex items-center gap-3 border-l border-slate-800 pl-4">
+                <div
+                  onClick={() => router.push("/profile")}
+                  className="h-8 w-8 overflow-hidden rounded-full border border-slate-700 cursor-pointer hover:border-blue-500 transition-colors"
+                >
+                  <img
+                    src={userAvatar}
+                    alt={sessionUser.name || "User Avatar"}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <span 
+                  onClick={() => router.push("/profile")}
+                  className="hidden md:inline text-xs font-semibold text-slate-200 cursor-pointer hover:text-white transition-colors"
+                >
+                  {sessionUser.name}
+                </span>
+                <button
+                  onClick={() => router.push("/profile")}
+                  className="hidden sm:inline-flex items-center rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-200 transition-all cursor-pointer"
+                >
+                  Trang cá nhân
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push("/auth/login")}
+                className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 transition-colors"
+              >
+                Đăng nhập
+              </button>
+              <button
+                onClick={() => router.push("/auth/register")}
+                className="rounded-full bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-200"
+              >
+                Đăng ký
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </header>

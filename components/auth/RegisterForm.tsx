@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { User, Briefcase, Lock, Mail, Loader2, AlertCircle, CheckCircle, ArrowRight, ArrowLeft, Store, Laptop } from "lucide-react";
 
 export default function RegisterForm() {
@@ -81,6 +82,9 @@ export default function RegisterForm() {
         setError(data.error || "Đăng ký thất bại. Vui lòng thử lại.");
       } else {
         setSuccess(true);
+        const currentEmail = email;
+        const currentPassword = password;
+
         // Reset state
         setName("");
         setEmail("");
@@ -89,9 +93,19 @@ export default function RegisterForm() {
         setBio("");
         setShopName("");
 
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
+        // Auto-login
+        const loginRes = await signIn("credentials", {
+          email: currentEmail,
+          password: currentPassword,
+          redirect: false,
+        });
+
+        if (loginRes?.error) {
+          setError("Đăng ký thành công nhưng không thể tự động đăng nhập. Vui lòng đăng nhập thủ công.");
+        } else {
+          router.push("/");
+          router.refresh();
+        }
       }
     } catch (err) {
       setError("Đã xảy ra lỗi kết nối. Vui lòng thử lại.");

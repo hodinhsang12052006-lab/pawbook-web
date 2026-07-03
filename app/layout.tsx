@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawBook - Mạng Xã Hội Tuyển Dụng & HR cho IT/MMO",
-  description: "Nền tảng mạng xã hội kết hợp tuyển dụng, chia sẻ kiến thức và quản lý nhân sự cho giới IT & MMO chuyên nghiệp.",
+  title: "PawBook - App Việc làm & Dịch vụ 0% Chiết Khấu",
+  description: "Kết nối việc làm, dịch vụ bản địa, gọi xe, thợ thuyền toàn quốc. Không chiết khấu, không trung gian.",
 };
 
 import FomoPopup from "@/components/FomoPopup";

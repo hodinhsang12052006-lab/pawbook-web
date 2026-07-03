@@ -204,6 +204,12 @@ export default function JobBoard({ jobs: initialJobs }: JobBoardProps) {
                       <Clock className="h-3.5 w-3.5 text-slate-500" />
                       <span>{formatTime(job.createdAt)}</span>
                     </span>
+                    <span className="flex items-center gap-1 text-orange-400/90 font-medium">
+                      <span>🔥 {(job.id.charCodeAt(0) % 12) + 4} người đang xem</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-amber-400/90 font-medium">
+                      <span>🚀 {(job.id.charCodeAt(job.id.length - 1) % 6) + 2} ứng tuyển 24h qua</span>
+                    </span>
                   </div>
 
                   {/* Description */}

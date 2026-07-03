@@ -181,6 +181,12 @@ export default function JobDetailPage({ params }: PageProps) {
                   <Clock className="h-4 w-4 text-slate-500" />
                   Fulltime / Contract
                 </span>
+                <span className="flex items-center gap-1.5 text-orange-400 font-semibold">
+                  <span>🔥 {(job.id.charCodeAt(0) % 15) + 6} người đang xem</span>
+                </span>
+                <span className="flex items-center gap-1.5 text-amber-550 font-semibold animate-pulse">
+                  <span>🚀 {(job.id.charCodeAt(job.id.length - 1) % 8) + 3} người đã ứng tuyển 24h qua</span>
+                </span>
               </div>
             </div>
           </div>

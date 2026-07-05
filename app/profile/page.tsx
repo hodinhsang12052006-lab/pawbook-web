@@ -58,6 +58,44 @@ export default function ProfilePage() {
   });
 
   const [walletHistory, setWalletHistory] = useState<any[]>([]);
+  const [activeRightTab, setActiveRightTab] = useState<"bookings" | "posts">("bookings");
+  const [bookings, setBookings] = useState<{ received: any[]; sent: any[] }>({ received: [], sent: [] });
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+
+  const fetchBookings = async () => {
+    try {
+      setBookingsLoading(true);
+      const res = await fetch("/api/bookings");
+      if (res.ok) {
+        const data = await res.json();
+        setBookings(data);
+      }
+    } catch (err) {
+      console.error("Failed to load bookings:", err);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const handleUpdateBookingStatus = async (bookingId: string, status: "ACCEPTED" | "REJECTED" | "COMPLETED") => {
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status }),
+      });
+
+      if (res.ok) {
+        toast.success(`Đã cập nhật trạng thái thành công!`);
+        fetchBookings();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Cập nhật trạng thái thất bại.");
+      }
+    } catch (err) {
+      toast.error("Lỗi kết nối mạng.");
+    }
+  };
 
   // Load user profile details on mount
   async function loadUserProfile() {
@@ -90,6 +128,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadUserProfile();
+    fetchBookings();
   }, []);
 
   // Load wallet transaction logs
@@ -595,14 +634,221 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Right Area: User's posts list (7 cols on desktop) */}
+          {/* Right Area: Tabs controls (7 cols on desktop) */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-100">Bài viết của bạn</h2>
-              <span className="text-xs text-slate-400 font-medium">Sắp xếp: Mới nhất</span>
+            {/* Tab switch header */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-2 flex gap-2">
+              <button
+                onClick={() => setActiveRightTab("bookings")}
+                className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  activeRightTab === "bookings"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                📅 Yêu cầu & Đơn hàng
+              </button>
+              <button
+                onClick={() => setActiveRightTab("posts")}
+                className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  activeRightTab === "posts"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                📝 Bài viết của bạn
+              </button>
             </div>
 
-            <PostList posts={myPosts} onLikePost={handleLikePost} />
+            {activeRightTab === "bookings" ? (
+              <div className="space-y-6">
+                {/* 1. Received Bookings (As Provider / Owner) */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/10 p-5 backdrop-blur-md space-y-4">
+                  <h3 className="text-sm font-extrabold text-slate-100 flex items-center gap-2 pb-2 border-b border-slate-850">
+                    <span className="text-blue-400">📥</span> Yêu Cầu Nhận Được (Chủ bài đăng)
+                  </h3>
+
+                  {bookingsLoading ? (
+                    <div className="flex items-center justify-center py-6 text-3xs text-slate-500 gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                      <span>Đang tải danh sách yêu cầu...</span>
+                    </div>
+                  ) : bookings.received.length === 0 ? (
+                    <p className="text-center py-6 text-3xs text-slate-500 italic">Chưa nhận được yêu cầu nào.</p>
+                  ) : (
+                    <div className="space-y-4 divide-y divide-slate-850/50">
+                      {bookings.received.map((req: any, idx: number) => (
+                        <div key={req.id} className={`${idx > 0 ? "pt-4" : ""} space-y-3 text-xs`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={req.sender.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
+                                alt={req.sender.name}
+                                className="h-9 w-9 rounded-full object-cover border border-slate-850"
+                              />
+                              <div>
+                                <h4 className="font-bold text-slate-200">{req.sender.name}</h4>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                  Vai trò: {req.sender.role} • ĐT:{" "}
+                                  <a href={`tel:${req.sender.phone}`} className="text-emerald-450 hover:underline">
+                                    {req.sender.phone || "Chưa cập nhật"}
+                                  </a>
+                                </p>
+                              </div>
+                            </div>
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-extrabold border ${
+                                req.status === "PENDING"
+                                  ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                                  : req.status === "ACCEPTED"
+                                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                  : req.status === "REJECTED"
+                                  ? "bg-rose-500/10 border-rose-500/20 text-rose-450"
+                                  : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                              }`}
+                            >
+                              {req.status === "PENDING" && "CHỜ DUYỆT"}
+                              {req.status === "ACCEPTED" && "ĐÃ NHẬN"}
+                              {req.status === "REJECTED" && "ĐÃ TỪ CHỐI"}
+                              {req.status === "COMPLETED" && "HOÀN THÀNH"}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-950/40 border border-slate-850 p-3 rounded-xl space-y-2">
+                            <p className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">
+                              Đối với bài đăng:{" "}
+                              <span className="text-blue-400">
+                                {req.job?.title || req.service?.name}
+                              </span>
+                            </p>
+                            <p className="text-slate-300 italic text-2xs leading-relaxed">
+                              "{req.message || "Không có lời nhắn kèm theo."}"
+                            </p>
+                          </div>
+
+                          {/* Control buttons for Provider */}
+                          {req.status === "PENDING" && (
+                            <div className="flex items-center gap-2 justify-end">
+                              <button
+                                onClick={() => handleUpdateBookingStatus(req.id, "REJECTED")}
+                                className="px-3 py-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-bold transition-all cursor-pointer"
+                              >
+                                ❌ Từ chối
+                              </button>
+                              <button
+                                onClick={() => handleUpdateBookingStatus(req.id, "ACCEPTED")}
+                                className="px-3 py-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold transition-all cursor-pointer"
+                              >
+                                ✅ Nhận đơn
+                              </button>
+                            </div>
+                          )}
+
+                          {req.status === "ACCEPTED" && (
+                            <div className="flex items-center justify-end">
+                              <button
+                                onClick={() => handleUpdateBookingStatus(req.id, "COMPLETED")}
+                                className="px-3 py-1.5 rounded-lg border border-blue-500/25 bg-blue-550/15 hover:bg-blue-600/30 text-blue-400 text-[10px] font-bold transition-all cursor-pointer"
+                              >
+                                🏁 Đánh dấu hoàn thành
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Sent Bookings (As Client / Candidate) */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/10 p-5 backdrop-blur-md space-y-4">
+                  <h3 className="text-sm font-extrabold text-slate-100 flex items-center gap-2 pb-2 border-b border-slate-850">
+                    <span className="text-emerald-400">📤</span> Yêu Cầu Đã Gửi (Khách hàng)
+                  </h3>
+
+                  {bookingsLoading ? (
+                    <div className="flex items-center justify-center py-6 text-3xs text-slate-550 gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                      <span>Đang tải danh sách yêu cầu...</span>
+                    </div>
+                  ) : bookings.sent.length === 0 ? (
+                    <p className="text-center py-6 text-3xs text-slate-500 italic">Chưa gửi yêu cầu nào.</p>
+                  ) : (
+                    <div className="space-y-4 divide-y divide-slate-850/50">
+                      {bookings.sent.map((req: any, idx: number) => (
+                        <div key={req.id} className={`${idx > 0 ? "pt-4" : ""} space-y-3 text-xs`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={req.receiver.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
+                                alt={req.receiver.name}
+                                className="h-9 w-9 rounded-full object-cover border border-slate-850"
+                              />
+                              <div>
+                                <h4 className="font-bold text-slate-200">Gửi đến: {req.receiver.name}</h4>
+                                <p className="text-[10px] text-slate-550 mt-0.5">
+                                  Vai trò: {req.receiver.role} • ĐT:{" "}
+                                  <a href={`tel:${req.receiver.phone}`} className="text-emerald-450 hover:underline">
+                                    {req.receiver.phone || "Chưa cập nhật"}
+                                  </a>
+                                </p>
+                              </div>
+                            </div>
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-extrabold border ${
+                                req.status === "PENDING"
+                                  ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                                  : req.status === "ACCEPTED"
+                                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                  : req.status === "REJECTED"
+                                  ? "bg-rose-500/10 border-rose-500/20 text-rose-450"
+                                  : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                              }`}
+                            >
+                              {req.status === "PENDING" && "CHỜ PHẢN HỒI"}
+                              {req.status === "ACCEPTED" && "ĐÃ NHẬN ĐƠN"}
+                              {req.status === "REJECTED" && "BỊ TỪ CHỐI"}
+                              {req.status === "COMPLETED" && "HOÀN THÀNH"}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-950/40 border border-slate-850 p-3 rounded-xl space-y-2">
+                            <p className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">
+                              Đối với bài đăng:{" "}
+                              <span className="text-blue-400">
+                                {req.job?.title || req.service?.name}
+                              </span>
+                            </p>
+                            <p className="text-slate-355 text-2xs">
+                              Lời nhắn: "{req.message || "Không có lời nhắn."}"
+                            </p>
+                          </div>
+
+                          {req.status === "ACCEPTED" && (
+                            <div className="flex items-center justify-end">
+                              <button
+                                onClick={() => handleUpdateBookingStatus(req.id, "COMPLETED")}
+                                className="px-3 py-1.5 rounded-lg border border-blue-500/25 bg-blue-550/15 hover:bg-blue-600/30 text-blue-400 text-[10px] font-bold transition-all cursor-pointer"
+                              >
+                                🏁 Đánh dấu hoàn thành
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md flex items-center justify-between">
+                  <h2 className="text-base font-bold text-slate-100">Bài viết của bạn</h2>
+                  <span className="text-xs text-slate-400 font-medium">Sắp xếp: Mới nhất</span>
+                </div>
+                <PostList posts={myPosts} onLikePost={handleLikePost} />
+              </div>
+            )}
           </div>
         </div>
       </main>

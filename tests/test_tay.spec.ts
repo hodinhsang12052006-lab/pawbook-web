@@ -118,7 +118,7 @@ test.describe("Automated E2E Testing - PawBook", () => {
     await page.goto(`http://localhost:3000/jobs/${targetJobId}`);
     
     // Chờ click nút nộp hồ sơ
-    await page.click('button:has-text("Nộp CV ứng tuyển ngay"), button:has-text("Ứng tuyển")', { force: true });
+    await page.click('button:has-text("Nộp nhanh CV mặc định")', { force: true });
     
     // Chờ 2 giây để API hoàn tất
     await page.waitForTimeout(2000);

@@ -50,6 +50,8 @@ model User {
   trustScore       Float          @default(5.0) // Reputation trust metric (0.0 to 5.0)
   isVerified       Boolean        @default(false) // Verified checkmark (tick xanh)
   lastDailyReward  DateTime?      // Last daily reward claim timestamp
+  sentBookings     Booking[]      @relation("SentBookings")
+  receivedBookings Booking[]      @relation("ReceivedBookings")
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 }
@@ -89,6 +91,7 @@ model Job {
   vehicleInfo  String?       // Plate number and car model
   isEmergency  Boolean       @default(false) // 24/7 service emergency badge
   workType     String?       // full-time, hourly, etc.
+  bookings     Booking[]
   createdAt    DateTime      @default(now())
 }
 
@@ -111,6 +114,7 @@ model Service {
   isBoosted   Boolean  @default(false)
   boostUntil  DateTime?
   blogPosts   BlogPost[] // Linked blog posts
+  bookings    Booking[]
   createdAt   DateTime @default(now())
 }
 
@@ -273,5 +277,20 @@ enum Niche {
   MECHANIC
   FNB
   OTHERS
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  jobId       String?  // Linked to Job (nullable)
+  job         Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  serviceId   String?  // Linked to Service (nullable)
+  service     Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User     @relation("SentBookings", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("ReceivedBookings", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, COMPLETED
+  message     String?
+  createdAt   DateTime @default(now())
 }
 

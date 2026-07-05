@@ -16,6 +16,9 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showContact, setShowContact] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState("");
+  const [bookingSending, setBookingSending] = useState(false);
 
   useEffect(() => {
     params.then((p) => setServiceId(p.id));
@@ -63,6 +66,35 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const handleContactClick = () => {
     setShowContact(true);
     toast.success("Thông tin liên hệ đã hiển thị!");
+  };
+
+  const handleSendBooking = async () => {
+    if (!serviceId || bookingSending) return;
+    setBookingSending(true);
+
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceId,
+          message: bookingMessage.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Đặt dịch vụ / Gọi xe thành công! Chủ cửa hàng đã nhận được yêu cầu. 🎉");
+        setIsBookingModalOpen(false);
+        setBookingMessage("");
+      } else {
+        toast.error(data.error || "Gửi yêu cầu đặt đơn thất bại.");
+      }
+    } catch (err) {
+      toast.error("Lỗi kết nối mạng.");
+    } finally {
+      setBookingSending(false);
+    }
   };
 
   if (loading) {
@@ -227,6 +259,13 @@ export default function ServiceDetailPage({ params }: PageProps) {
               )}
 
               <button
+                onClick={() => setIsBookingModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-650 py-3 text-xs font-extrabold text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-500 hover:to-teal-550 transition-all duration-200"
+              >
+                <span>📅 Đặt Dịch Vụ / Gọi Xe</span>
+              </button>
+
+              <button
                 onClick={() => {
                   if (service.ownerId) {
                     window.location.href = `/messages?userId=${service.ownerId}`;
@@ -250,6 +289,54 @@ export default function ServiceDetailPage({ params }: PageProps) {
           </div>
         </div>
       </main>
+
+      {/* Booking Modal */}
+      {isBookingModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 animate-scaleUp text-xs">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-slate-200">
+                Đặt dịch vụ: {service.name}
+              </h3>
+              <button
+                onClick={() => setIsBookingModalOpen(false)}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400"
+              >
+                <span className="text-sm font-bold">✕</span>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-4xs font-bold text-slate-400 mb-1">LỜI NHẮN / YÊU CẦU ĐẶT ĐƠN</label>
+                <textarea
+                  rows={4}
+                  placeholder="Nhập ghi chú yêu cầu cụ thể (Ví dụ: Mình cần xe đi sân bay lúc 5h sáng mai, 1 vali to...)"
+                  value={bookingMessage}
+                  onChange={(e) => setBookingMessage(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-250 placeholder-slate-600 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+              <button
+                onClick={() => setIsBookingModalOpen(false)}
+                className="rounded-lg px-4 py-2 text-3xs font-bold bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleSendBooking}
+                disabled={bookingSending}
+                className="rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-3xs font-bold text-white transition-all disabled:opacity-50"
+              >
+                {bookingSending ? "Đang gửi..." : "Gửi yêu cầu"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-650 mt-12">
         <p>© 2026 PawBook Platform. Build with passion for IT & MMO communities.</p>

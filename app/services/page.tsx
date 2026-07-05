@@ -59,16 +59,16 @@ const MOCK_AVATARS = [
 ];
 
 const mockNames = [
-  { name: "Tiệm sửa xe Thành Đạt", spec: "Sửa xe ga, vá lốp lưu động", phone: "0909 333 444", rating: 4.8, icon: "🛠️", avatar: MOCK_AVATARS[0], niche: "Sửa chữa", distance: "Cách 1.2km" },
-  { name: "Vệ sinh máy lạnh 24h", spec: "Rửa máy lạnh, nạp gas giá rẻ", phone: "0911 555 666", rating: 4.9, icon: "❄️", avatar: MOCK_AVATARS[1], niche: "Gia đình", distance: "Cách 800m" },
-  { name: "Quán phở gia truyền Hà Nội", spec: "Phở bò chín/tái thơm ngon", phone: "0922 777 888", rating: 4.7, icon: "🍜", avatar: MOCK_AVATARS[2], niche: "F&B", distance: "Cách 1.5km" },
-  { name: "Spa & Nail Thùy Lâm", spec: "Làm nail, chăm sóc da mặt chuyên sâu", phone: "0933 999 111", rating: 5.0, icon: "💅", avatar: MOCK_AVATARS[3], niche: "Spa", distance: "Cách 600m" },
-  { name: "Cơm tấm bãi rác Q4", spec: "Sườn bì chả nướng than thơm phức", phone: "0944 222 333", rating: 4.6, icon: "🍛", avatar: MOCK_AVATARS[4], niche: "F&B", distance: "Cách 2km" },
-  { name: "Grab Đội Giao Hàng Siêu Tốc", spec: "Chạy ship, giao tài liệu khẩn cấp", phone: "0955 888 999", rating: 4.9, icon: "🛵", avatar: MOCK_AVATARS[5], niche: "Vận tải", distance: "Cách 500m" },
-  { name: "Điện nước dân dụng Bách Khoa", spec: "Sửa chập điện, ống nước rò rỉ", phone: "0966 111 222", rating: 4.8, icon: "⚡", avatar: MOCK_AVATARS[6], niche: "Gia đình", distance: "Cách 1.8km" },
-  { name: "Cắt tóc nam barber shop", spec: "Tạo kiểu undercut, cạo râu", phone: "0977 444 555", rating: 4.7, icon: "✂️", avatar: MOCK_AVATARS[7], niche: "Spa", distance: "Cách 1km" },
-  { name: "Thú y Pet Clinic & Spa", spec: "Khám chữa bệnh, tỉa lông thú cưng", phone: "0988 666 777", rating: 4.9, icon: "🐶", avatar: MOCK_AVATARS[8], niche: "Spa", distance: "Cách 2.3km" },
-  { name: "Trà sữa DingTea & Snacks", spec: "Trà sữa trân châu, khoai tây chiên", phone: "0999 888 111", rating: 4.5, icon: "🧋", avatar: MOCK_AVATARS[9], niche: "F&B", distance: "Cách 1.1km" }
+  { name: "Tiệm sửa xe Thành Đạt", spec: "Sửa xe ga, vá lốp lưu động", phone: "0909 333 444", rating: 4.8, icon: "🛠️", avatar: MOCK_AVATARS[0], niche: "Sửa chữa", distance: "Cách 1.2km", tags: ["Sửa xe", "Cứu hộ", "24/7"], isOpen: true },
+  { name: "Vệ sinh máy lạnh 24h", spec: "Rửa máy lạnh, nạp gas giá rẻ", phone: "0911 555 666", rating: 4.9, icon: "❄️", avatar: MOCK_AVATARS[1], niche: "Gia đình", distance: "Cách 800m", tags: ["Điện lạnh", "Vệ sinh"], isOpen: true },
+  { name: "Quán phở gia truyền Hà Nội", spec: "Phở bò chín/tái thơm ngon", phone: "0922 777 888", rating: 4.7, icon: "🍜", avatar: MOCK_AVATARS[2], niche: "F&B", distance: "Cách 1.5km", tags: ["Ăn uống", "Phở bò"], isOpen: true },
+  { name: "Spa & Nail Thùy Lâm", spec: "Làm nail, chăm sóc da mặt chuyên sâu", phone: "0933 999 111", rating: 5.0, icon: "💅", avatar: MOCK_AVATARS[3], niche: "Spa", distance: "Cách 600m", tags: ["Nail", "Làm đẹp"], isOpen: false },
+  { name: "Cơm tấm bãi rác Q4", spec: "Sườn bì chả nướng than thơm phức", phone: "0944 222 333", rating: 4.6, icon: "🍛", avatar: MOCK_AVATARS[4], niche: "F&B", distance: "Cách 2km", tags: ["Ăn sáng", "Cơm tấm"], isOpen: true },
+  { name: "Grab Đội Giao Hàng Siêu Tốc", spec: "Chạy ship, giao tài liệu khẩn cấp", phone: "0955 888 999", rating: 4.9, icon: "🛵", avatar: MOCK_AVATARS[5], niche: "Vận tải", distance: "Cách 500m", tags: ["Giao hàng", "Xe ôm"], isOpen: true },
+  { name: "Điện nước dân dụng Bách Khoa", spec: "Sửa chập điện, ống nước rò rỉ", phone: "0966 111 222", rating: 4.8, icon: "⚡", avatar: MOCK_AVATARS[6], niche: "Gia đình", distance: "Cách 1.8km", tags: ["Điện nước", "Sửa chữa"], isOpen: true },
+  { name: "Cắt tóc nam barber shop", spec: "Tạo kiểu undercut, cạo râu", phone: "0977 444 555", rating: 4.7, icon: "✂️", avatar: MOCK_AVATARS[7], niche: "Spa", distance: "Cách 1km", tags: ["Cắt tóc", "Salon"], isOpen: true },
+  { name: "Thú y Pet Clinic & Spa", spec: "Khám chữa bệnh, tỉa lông thú cưng", phone: "0988 666 777", rating: 4.9, icon: "🐶", avatar: MOCK_AVATARS[8], niche: "Spa", distance: "Cách 2.3km", tags: ["Thú cưng", "Bác sĩ"], isOpen: true },
+  { name: "Trà sữa DingTea & Snacks", spec: "Trà sữa trân châu, khoai tây chiên", phone: "0999 888 111", rating: 4.5, icon: "🧋", avatar: MOCK_AVATARS[9], niche: "F&B", distance: "Cách 1.1km", tags: ["Trà sữa", "Ăn vặt"], isOpen: false }
 ];
 
 export default function ServicesPage() {
@@ -157,6 +157,8 @@ export default function ServicesPage() {
           avatarUrl: item.avatar,
           distance: item.distance,
           isMock: true,
+          tags: item.tags,
+          isOpen: item.isOpen
         };
       });
       setMockList(generated);
@@ -210,30 +212,11 @@ export default function ServicesPage() {
 
   const handleAISubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiQuery.trim()) return;
-
-    const query = aiQuery.toLowerCase();
-    let found = false;
-
-    if (query.includes("máy lạnh") || query.includes("điện lạnh") || query.includes("vệ sinh")) {
-      setSelectedCategory("Gia đình");
-      found = true;
-    } else if (query.includes("sửa") || query.includes("thợ") || query.includes("khóa")) {
-      setSelectedCategory("Sửa chữa");
-      found = true;
-    } else if (query.includes("xe") || query.includes("chở") || query.includes("vận chuyển") || query.includes("grab")) {
-      setSelectedCategory("Vận tải");
-      found = true;
-    } else if (query.includes("spa") || query.includes("làm đẹp") || query.includes("tỉa")) {
-      setSelectedCategory("Spa");
-      found = true;
+    if (!aiQuery.trim()) {
+      setAiQuery("");
+      return;
     }
-
-    if (found) {
-      toast.success(`AI: Đã lọc ngành nghề phù hợp cho "${aiQuery}"`);
-    } else {
-      toast.error(`AI: Chưa tìm thấy kết quả phù hợp cho "${aiQuery}". Hãy thử từ khóa khác!`);
-    }
+    toast.success(`AI: Đang tìm dịch vụ tốt nhất cho "${aiQuery}"...`);
   };
 
   // Merge database records with mocks list
@@ -251,21 +234,32 @@ export default function ServicesPage() {
       rating: s.rating || 4.7,
       phone: s.contactInfo,
       avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=2563eb&color=ffffff&bold=true`,
-      distance: "Gần đây",
-      isMock: false
+      distance: "Cách 1km",
+      isMock: false,
+      tags: [s.category, "Hệ thống"],
+      isOpen: true
     })),
     ...mockList
   ];
 
-  // Apply unified search and category filters
+  // Apply unified search and category filters (filtering by name, title, niche and tags)
   const filteredLocations = allLocations.filter((loc) => {
     const matchesSearch =
       loc.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loc.title.toLowerCase().includes(searchQuery.toLowerCase());
+      loc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loc.niche.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loc.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesAISearch =
+      !aiQuery.trim() ||
+      loc.companyName.toLowerCase().includes(aiQuery.toLowerCase()) ||
+      loc.title.toLowerCase().includes(aiQuery.toLowerCase()) ||
+      loc.niche.toLowerCase().includes(aiQuery.toLowerCase()) ||
+      loc.tags.some((tag: string) => tag.toLowerCase().includes(aiQuery.toLowerCase()));
 
     const matchesCategory = selectedCategory === "all" || loc.niche === selectedCategory;
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesAISearch && matchesCategory;
   });
 
   return (
@@ -286,7 +280,7 @@ export default function ServicesPage() {
               <div className="flex items-center justify-between">
                 <h1 className="text-sm font-bold text-slate-200 flex items-center gap-1.5">
                   <Store className="h-4.5 w-4.5 text-blue-500" />
-                  Hợp nhất Dịch vụ & Radar
+                  Hộp dịch vụ AI & Radar
                 </h1>
                 
                 {/* Geo-filter Province Selector */}
@@ -306,7 +300,7 @@ export default function ServicesPage() {
               {/* AI Assistant Chat Box */}
               <div className="rounded-xl border border-slate-850 bg-gradient-to-r from-blue-950/20 to-indigo-950/20 p-3.5 relative overflow-hidden shadow-inner">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-blue-450 animate-pulse" />
+                  <Sparkles className="h-4 w-4 text-blue-455 animate-pulse" />
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">Trợ lý định vị AI</span>
                 </div>
                 
@@ -317,14 +311,14 @@ export default function ServicesPage() {
                 <form onSubmit={handleAISubmit} className="mt-2 flex gap-1.5">
                   <input
                     type="text"
-                    placeholder="Ví dụ: Tìm thợ sửa xe gần đây..."
+                    placeholder="Ví dụ: Tìm sửa xe máy 24/7..."
                     value={aiQuery}
                     onChange={(e) => setAiQuery(e.target.value)}
                     className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-3xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600"
                   />
                   <button
                     type="submit"
-                    className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3 py-1.5 text-3xs font-bold transition-all cursor-pointer animate-fadeIn"
+                    className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3 py-1.5 text-3xs font-bold transition-all cursor-pointer"
                   >
                     Tìm
                   </button>
@@ -337,7 +331,7 @@ export default function ServicesPage() {
                   <Search className="absolute left-3 top-2 h-4 w-4 text-slate-550" />
                   <input
                     type="search"
-                    placeholder="Tìm kiếm nhanh cửa hàng..."
+                    placeholder="Tìm kiếm live, gõ dịch vụ, tags..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg py-1.5 pl-9 pr-3 text-3xs text-slate-200 placeholder-slate-550 focus:outline-none"
@@ -392,7 +386,7 @@ export default function ServicesPage() {
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {loc.is_premium && (
                             <span className="inline-flex items-center rounded bg-amber-500/10 px-1 py-0.2 text-[8px] font-bold text-amber-400 border border-amber-500/20">
                               HOT
@@ -401,10 +395,23 @@ export default function ServicesPage() {
                           <h4 className="text-xs font-bold text-slate-200 truncate leading-tight">
                             {loc.companyName}
                           </h4>
+                          <span className={`inline-block px-1 py-0.2 rounded text-[7px] font-extrabold ${loc.isOpen ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                            {loc.isOpen ? "🟢 Mở cửa" : "🔴 Đóng cửa"}
+                          </span>
                         </div>
                         <p className="text-[10px] text-slate-450 mt-0.5 line-clamp-2 leading-relaxed">
                           {loc.title}
                         </p>
+                        
+                        {/* Tags list display */}
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {loc.tags.map((tag: string) => (
+                            <span key={tag} className="text-[8px] bg-slate-900 border border-slate-800 text-slate-400 px-1.5 py-0.2 rounded">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+
                         <div className="flex items-center gap-2 mt-1.5 text-[9px] text-slate-500">
                           <span className="text-amber-500 font-bold">⭐ {loc.rating}</span>
                           <span>•</span>

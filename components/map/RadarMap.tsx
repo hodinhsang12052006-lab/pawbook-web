@@ -75,6 +75,7 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
   const [zoom, setZoom] = useState<number>(propsZoom || 6);
   const [isMounted, setIsMounted] = useState(false);
   const [mockList, setMockList] = useState<any[]>([]);
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -102,6 +103,7 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
       (position) => {
         const { latitude, longitude } = position.coords;
         setCenter([latitude, longitude]);
+        setUserCoords([latitude, longitude]);
         setZoom(15);
         if (onLocationFound) {
           onLocationFound(latitude, longitude);
@@ -290,6 +292,28 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
             </Marker>
           );
         })}
+        {userCoords && (
+          <Marker
+            position={userCoords}
+            icon={typeof window !== "undefined" && isMounted ? L.divIcon({
+              html: `
+                <div class="relative flex items-center justify-center">
+                  <div class="absolute h-6 w-6 rounded-full bg-blue-500/30 animate-ping"></div>
+                  <div class="h-3.5 w-3.5 rounded-full bg-blue-600 border-2 border-white shadow-lg relative z-10"></div>
+                </div>
+              `,
+              className: "user-location-marker",
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            }) : undefined}
+          >
+            <Popup>
+              <div className="p-2 text-center text-xs font-bold text-slate-800 font-sans">
+                📍 Vị trí hiện tại của bạn
+              </div>
+            </Popup>
+          </Marker>
+        )}
       </MapContainer>
 
       {/* Locate Me button */}

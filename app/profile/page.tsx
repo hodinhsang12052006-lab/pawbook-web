@@ -23,6 +23,7 @@ interface JobType {
 }
 
 export default function ProfilePage() {
+  // No internal getServerSession or useSession redirects are present on the profile client view.
   const [profile, setProfile] = useState<any>({
     name: "Nguyễn Văn A",
     role: "EMPLOYER",

@@ -55,7 +55,7 @@ export default function RadarMap({ jobs, onLocationFound }: RadarMapProps) {
       (position) => {
         const { latitude, longitude } = position.coords;
         setCenter([latitude, longitude]);
-        setZoom(13);
+        setZoom(15);
         if (onLocationFound) {
           onLocationFound(latitude, longitude);
         }

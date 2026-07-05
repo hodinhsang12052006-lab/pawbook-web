@@ -71,7 +71,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET || "pawbook-nextauth-secret-key-321-go",
+  secret: process.env.NEXTAUTH_SECRET || "pawbook_super_secret_key_2026_do_not_share",
 };
 
 const handler = NextAuth(authOptions);

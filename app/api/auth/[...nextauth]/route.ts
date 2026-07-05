@@ -4,7 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   // Ép Vercel tin tưởng Domain để không đánh rơi Cookie
   trustHost: true as any,
 

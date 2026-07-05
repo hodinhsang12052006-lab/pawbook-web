@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import React, { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { Crosshair } from "lucide-react";
+import toast from "react-hot-toast";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import "leaflet-defaulticon-compatibility";
@@ -28,20 +30,65 @@ interface MapJob {
 
 interface RadarMapProps {
   jobs: MapJob[];
+  onLocationFound?: (lat: number, lng: number) => void;
 }
 
-export default function RadarMap({ jobs }: RadarMapProps) {
-  // Center map around Danang city to easily display pins from both Hanoi & HCMC
-  const center: [number, number] = [16.0471, 108.2062];
+function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, zoom, { duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
+}
+
+export default function RadarMap({ jobs, onLocationFound }: RadarMapProps) {
+  const [center, setCenter] = useState<[number, number]>([16.0471, 108.2062]);
+  const [zoom, setZoom] = useState<number>(6);
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Trình duyệt của bạn không hỗ trợ định vị GPS.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setCenter([latitude, longitude]);
+        setZoom(13);
+        if (onLocationFound) {
+          onLocationFound(latitude, longitude);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast("📍 Hãy bật định vị để tìm dịch vụ gần bạn nhất nhé!", {
+          icon: "📍",
+          style: {
+            borderRadius: "12px",
+            background: "#0f172a",
+            color: "#e2e8f0",
+            border: "1px solid #1e293b",
+          },
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  useEffect(() => {
+    requestLocation();
+  }, []);
 
   return (
     <div className="h-full w-full rounded-2xl overflow-hidden border border-slate-800 bg-[#070a13] relative z-10 shadow-2xl min-h-[450px]">
       <MapContainer
         center={center}
-        zoom={6}
+        zoom={zoom}
         scrollWheelZoom={true}
         className="h-full w-full"
       >
+        <ChangeView center={center} zoom={zoom} />
         {/* Premium Dark Matter Tile Layer from CartoDB to align with our dark theme */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -175,6 +222,15 @@ export default function RadarMap({ jobs }: RadarMapProps) {
           </Marker>
         ))}
       </MapContainer>
+
+      {/* Locate Me button */}
+      <button
+        onClick={requestLocation}
+        title="Định vị hiện tại"
+        className="absolute bottom-5 right-5 z-[500] p-3 rounded-full bg-slate-900/90 border border-slate-800 text-slate-200 hover:text-white hover:bg-slate-850 hover:scale-105 transition-all shadow-lg shadow-black/40 cursor-pointer flex items-center justify-center group"
+      >
+        <Crosshair className="h-5 w-5 text-blue-500 group-hover:animate-spin" />
+      </button>
     </div>
   );
 }

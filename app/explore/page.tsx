@@ -65,6 +65,18 @@ export default function ExplorePage() {
     fetchRadarData();
   }, []);
 
+  const handleLocationFound = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`/api/radar?lat=${lat}&lng=${lng}&radius=10`);
+      if (res.ok) {
+        const data = await res.json();
+        setJobs(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch local radar data:", err);
+    }
+  };
+
   const niches = [
     { id: "ALL", label: "Tất cả ngành nghề" },
     { id: "IT", label: "💻 IT & Phần mềm" },
@@ -134,7 +146,7 @@ export default function ExplorePage() {
             ) : (
               <div className="space-y-4">
                 <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-slate-800 relative shadow-2xl">
-                  <RadarMap jobs={filteredJobs} />
+                  <RadarMap jobs={filteredJobs} onLocationFound={handleLocationFound} />
                 </div>
                 <p className="text-4xs text-slate-500 text-right italic">
                   Đang hiển thị {filteredJobs.length} dịch vụ/tin tuyển dụng phù hợp trên bản đồ Việt Nam.

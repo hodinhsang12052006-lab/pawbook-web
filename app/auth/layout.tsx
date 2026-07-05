@@ -13,7 +13,7 @@ export default function CustomAuthLayout({
         {/* Left column: Branding & Visuals */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-900 p-12 lg:col-span-5 lg:flex border-r border-slate-850">
           {/* Glowing blobs */}
-          <div className="absolute top-0 left-0 -translate-x-12 -translate-y-12 h-64 w-64 rounded-full bg-blue-650/10 blur-3xl"></div>
+          <div className="absolute top-0 left-0 -translate-x-12 -translate-y-12 h-64 w-64 rounded-full bg-blue-655/10 blur-3xl"></div>
           <div className="absolute bottom-0 right-0 translate-x-12 translate-y-12 h-80 w-80 rounded-full bg-indigo-655/15 blur-3xl"></div>
 
           {/* Abstract geometric background lines using SVG */}
@@ -38,65 +38,35 @@ export default function CustomAuthLayout({
             </svg>
           </div>
 
-          <div className="relative z-10 flex items-center gap-3.5">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="h-14 w-14 overflow-hidden rounded-xl border border-blue-500/40 bg-blue-500/10 p-0.5 shadow-xl shadow-blue-500/20">
-                <img
-                  src="/cho1.jpg"
-                  alt="PawBook Logo"
-                  className="h-full w-full object-cover rounded-lg"
-                />
-              </div>
-              <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-3xl font-black tracking-widest text-transparent uppercase select-none">
-                PawBook
-              </span>
-            </Link>
-          </div>
-
-          <div className="relative z-10 my-auto max-w-sm space-y-6">
-            <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
-              <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                Nền Tảng Kết Nối Đa Dịch Vụ
-              </span>
-            </h1>
-            <p className="text-sm leading-relaxed text-slate-400">
-              Giải pháp công nghệ toàn diện, kết nối trực tiếp nhu cầu của bạn với mạng lưới đối tác và chuyên gia trên toàn quốc thông qua thuật toán định vị thông minh.
-            </p>
-
-            <div className="space-y-6 pt-6">
-              <div className="flex gap-4 items-start">
-                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex-shrink-0 animate-pulse">
-                  <Sparkles className="h-4 w-4" />
+          <div className="relative z-10 flex flex-col justify-center h-full space-y-8 my-auto">
+            {/* Thành phần 1: Thương hiệu */}
+            <div className="flex items-center gap-3.5">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="h-14 w-14 overflow-hidden rounded-xl border border-blue-500/40 bg-blue-500/10 p-0.5 shadow-xl shadow-blue-500/20">
+                  <img
+                    src="/cho1.jpg"
+                    alt="PawBook Logo"
+                    className="h-full w-full object-cover rounded-lg"
+                  />
                 </div>
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-200">Kết Nối Trực Tiếp & Tối Ưu</h4>
-                  <p className="text-2xs text-slate-400 leading-relaxed mt-0.5">Phá bỏ mọi rào cản trung gian. Công nghệ của chúng tôi tự động phân tích và kết nối bạn với đối tác phù hợp nhất trong thời gian thực.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start">
-                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex-shrink-0">
-                  <MessageSquareCode className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-200">Hệ Sinh Thái Đa Dạng</h4>
-                  <p className="text-2xs text-slate-400 leading-relaxed mt-0.5">Một điểm chạm cho mọi nhu cầu. Từ tiện ích cá nhân đến giải pháp doanh nghiệp, nền tảng cung cấp một không gian số đồng bộ và linh hoạt.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start">
-                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex-shrink-0">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-200">Bảo Mật & Xác Thực Uy Tín</h4>
-                  <p className="text-2xs text-slate-400 leading-relaxed mt-0.5">Hệ thống đánh giá đa chiều và quy trình xác thực danh tính minh bạch, đảm bảo tiêu chuẩn chất lượng và an toàn tuyệt đối cho mọi giao dịch.</p>
-                </div>
-              </div>
+                <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-3xl font-black tracking-widest text-transparent uppercase select-none">
+                  PawBook
+                </span>
+              </Link>
             </div>
+
+            {/* Thành phần 2: Slogan Tối thượng */}
+            <h1 className="text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight">
+              Nền Tảng Đa Dịch Vụ <br />Thế Hệ Mới
+            </h1>
+
+            {/* Thành phần 3: Mô tả ngắn gọn */}
+            <p className="text-lg text-slate-400 font-medium max-w-md">
+              Trải nghiệm hệ sinh thái kết nối không giới hạn. An toàn, tức thì và hoàn toàn không chiết khấu.
+            </p>
           </div>
 
-          <div className="relative z-10 text-xs text-slate-500">
+          <div className="absolute bottom-12 left-12 z-10 text-xs text-slate-500">
             © 2026 PawBook Platform. All rights reserved.
           </div>
         </div>

@@ -116,6 +116,22 @@ export default function RegisterForm() {
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
+      {/* Mobile-only Branding */}
+      <div className="block lg:hidden text-center mb-6">
+        <Link href="/" className="inline-flex items-center gap-3">
+          <div className="h-12 w-12 overflow-hidden rounded-xl border border-blue-500/40 bg-blue-500/10 p-0.5 shadow-lg shadow-blue-500/20">
+            <img
+              src="/cho1.jpg"
+              alt="PawBook Logo"
+              className="h-full w-full object-cover rounded-lg"
+            />
+          </div>
+          <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-2xl font-black tracking-widest text-transparent uppercase select-none">
+            PawBook
+          </span>
+        </Link>
+      </div>
+
       {/* Onboarding Header */}
       <div className="space-y-2 text-center lg:text-left">
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -208,7 +224,7 @@ export default function RegisterForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nguyễn Văn A"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-slate-800/50 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
           </div>
@@ -223,7 +239,7 @@ export default function RegisterForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-slate-800/50 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
           </div>
@@ -239,7 +255,7 @@ export default function RegisterForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tối thiểu 6 ký tự"
                 minLength={6}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-slate-800/50 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>
           </div>

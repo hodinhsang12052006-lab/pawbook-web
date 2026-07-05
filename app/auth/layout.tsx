@@ -38,16 +38,16 @@ export default function CustomAuthLayout({
             </svg>
           </div>
 
-          <div className="relative z-10 flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="h-9 w-9 overflow-hidden rounded-lg border border-blue-500/30 bg-blue-500/10 p-0.5 shadow-lg shadow-blue-500/10">
+          <div className="relative z-10 flex items-center gap-3.5">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="h-14 w-14 overflow-hidden rounded-xl border border-blue-500/40 bg-blue-500/10 p-0.5 shadow-xl shadow-blue-500/20">
                 <img
                   src="/cho1.jpg"
                   alt="PawBook Logo"
-                  className="h-full w-full object-cover rounded-md"
+                  className="h-full w-full object-cover rounded-lg"
                 />
               </div>
-              <span className="bg-gradient-to-r from-blue-450 to-indigo-450 bg-clip-text text-lg font-bold tracking-wider text-transparent">
+              <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-3xl font-black tracking-widest text-transparent uppercase select-none">
                 PawBook
               </span>
             </Link>
@@ -60,38 +60,38 @@ export default function CustomAuthLayout({
                 Dịch Vụ & Việc Làm Bản Địa
               </span>
             </h1>
-            <p className="text-xs leading-relaxed text-slate-400">
+            <p className="text-sm leading-relaxed text-slate-400">
               PawBook kết nối khách hàng với hàng ngàn nhà xe tự do, thợ sửa chữa, giúp việc, spa làm đẹp địa phương trên khắp cả nước với 0% phí chiết khấu nền tảng.
             </p>
 
-            <div className="space-y-4 pt-4">
-              <div className="flex gap-3">
-                <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 flex-shrink-0">
-                  <Sparkles className="h-3.5 w-3.5" />
+            <div className="space-y-6 pt-6">
+              <div className="flex gap-4 items-start">
+                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex-shrink-0 animate-pulse">
+                  <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200">🚕 Gọi xe & Giao nhận 0% chiết khấu</h4>
-                  <p className="text-3xs text-slate-500">Kết nối trực tiếp tài xế và khách hàng, tăng 100% thu nhập.</p>
+                  <h4 className="text-sm font-extrabold text-slate-200">🚕 Gọi xe & Giao nhận 0% chiết khấu</h4>
+                  <p className="text-2xs text-slate-450 leading-relaxed">Kết nối trực tiếp tài xế và khách hàng, tăng 100% thu nhập.</p>
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex-shrink-0">
-                  <MessageSquareCode className="h-3.5 w-3.5" />
+              <div className="flex gap-4 items-start">
+                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex-shrink-0">
+                  <MessageSquareCode className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200">🛠️ Dịch vụ tận cửa</h4>
-                  <p className="text-3xs text-slate-500">Tìm thợ sửa chữa điện nước, giúp việc, dọn sofa, spa làm đẹp... chỉ với 1 chạm.</p>
+                  <h4 className="text-sm font-extrabold text-slate-200">🛠️ Dịch vụ tận cửa</h4>
+                  <p className="text-2xs text-slate-450 leading-relaxed">Tìm thợ sửa chữa điện nước, giúp việc, dọn sofa, spa làm đẹp... chỉ với 1 chạm.</p>
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 flex-shrink-0">
-                  <ShieldCheck className="h-3.5 w-3.5" />
+              <div className="flex gap-4 items-start">
+                <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex-shrink-0">
+                  <ShieldCheck className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200">🌍 Cộng đồng chia sẻ</h4>
-                  <p className="text-3xs text-slate-500">Tham gia mạng lưới kết nối đa ngành nghề lớn nhất Việt Nam.</p>
+                  <h4 className="text-sm font-extrabold text-slate-200">🌍 Cộng đồng chia sẻ</h4>
+                  <p className="text-2xs text-slate-450 leading-relaxed">Tham gia mạng lưới kết nối đa ngành nghề lớn nhất Việt Nam.</p>
                 </div>
               </div>
             </div>

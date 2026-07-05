@@ -92,6 +92,9 @@ test.describe("Automated E2E Testing - PawBook", () => {
     
     console.log("Current page URL after going to /profile:", page.url());
     
+    // Đợi tên QA Tester hiển thị để đảm bảo API profile đã load xong
+    await expect(page.locator("h1")).toContainText(testName, { timeout: 15000 });
+    
     const coinBadge = page.locator("#user-pawcoin-balance");
     try {
       await expect(coinBadge).toContainText("150", { timeout: 10000 });
@@ -102,6 +105,7 @@ test.describe("Automated E2E Testing - PawBook", () => {
     }
 
     // Click nút điểm danh nhận quà
+    await page.waitForSelector("#btn-daily-reward", { state: "visible", timeout: 10000 });
     await page.click("#btn-daily-reward", { force: true });
     
     // Đợi số dư ví tăng lên 170 (+20)

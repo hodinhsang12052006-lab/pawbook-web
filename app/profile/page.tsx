@@ -77,6 +77,47 @@ export default function ProfilePage() {
     }
   };
 
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewTargetUserId, setReviewTargetUserId] = useState<string | null>(null);
+  const [reviewJobId, setReviewJobId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewTargetUserId || !reviewComment.trim() || reviewSubmitting) return;
+
+    setReviewSubmitting(true);
+    const toastId = toast.loading("Đang gửi đánh giá dịch vụ...");
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: reviewTargetUserId,
+          jobId: reviewJobId || undefined,
+          rating: reviewRating,
+          comment: reviewComment.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Gửi đánh giá thành công! Cảm ơn ý kiến của bạn. ⭐", { id: toastId });
+        setIsReviewModalOpen(false);
+        setReviewComment("");
+        setReviewRating(5);
+      } else {
+        toast.error(data.error || "Gửi đánh giá thất bại.", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Lỗi kết nối mạng.", { id: toastId });
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   const handleUpdateBookingStatus = async (bookingId: string, status: "ACCEPTED" | "REJECTED" | "COMPLETED") => {
     try {
       const res = await fetch("/api/bookings", {
@@ -834,6 +875,21 @@ export default function ProfilePage() {
                               </button>
                             </div>
                           )}
+
+                          {req.status === "COMPLETED" && (
+                            <div className="flex items-center justify-end">
+                              <button
+                                onClick={() => {
+                                  setReviewTargetUserId(req.receiver.id);
+                                  setReviewJobId(req.jobId || null);
+                                  setIsReviewModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-450 hover:text-yellow-350 text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-yellow-550/5"
+                              >
+                                <span>⭐️ Đánh giá dịch vụ</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1022,6 +1078,81 @@ export default function ProfilePage() {
                 >
                   <Save className="h-3.5 w-3.5" />
                   Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal Dialog */}
+      {isReviewModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#090e1c] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-850 pb-3">
+              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                <span>⭐ Đánh giá dịch vụ & Đối tác</span>
+              </h2>
+              <button
+                onClick={() => setIsReviewModalOpen(false)}
+                className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
+              {/* Rating stars */}
+              <div>
+                <label className="block font-bold text-slate-350 mb-2">Chấm điểm chất lượng</label>
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star
+                        className={`h-7 w-7 ${
+                          star <= reviewRating
+                            ? "fill-yellow-500 text-yellow-500"
+                            : "text-slate-700"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Review content */}
+              <div>
+                <label className="block font-bold text-slate-350 mb-1.5">Lời nhận xét / Đánh giá chi tiết</label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Hãy chia sẻ trải nghiệm dịch vụ của bạn (Ví dụ: Thợ nhiệt tình, đúng giờ, xe sạch sẽ...)"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-250 placeholder-slate-650 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                />
+              </div>
+
+              {/* Submit action */}
+              <div className="flex gap-2.5 justify-end pt-3 border-t border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(false)}
+                  className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-2xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={reviewSubmitting}
+                  className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-2xs font-semibold text-white hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
                 </button>
               </div>
             </form>

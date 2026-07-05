@@ -123,9 +123,18 @@ export async function POST(req: Request) {
       },
     });
 
-    if (!bidLink && !jobLink) {
+    const bookingLink = await prisma.booking.findFirst({
+      where: {
+        OR: [
+          { senderId: userId, receiverId: targetUserId, status: "COMPLETED" },
+          { senderId: targetUserId, receiverId: userId, status: "COMPLETED" },
+        ],
+      },
+    });
+
+    if (!bidLink && !jobLink && !bookingLink) {
       return NextResponse.json(
-        { error: "Bạn không có thẩm quyền đánh giá người dùng này (Yêu cầu lịch sử giao dịch: đã từng ứng tuyển hoặc đấu thầu dự án của nhau)." },
+        { error: "Bạn không có thẩm quyền đánh giá người dùng này (Yêu cầu lịch sử giao dịch: đã từng ứng tuyển, đấu thầu hoặc hoàn thành đơn đặt hàng của nhau)." },
         { status: 403 }
       );
     }

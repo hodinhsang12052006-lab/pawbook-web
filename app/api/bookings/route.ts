@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import { pusherServer } from "@/lib/pusher";
 
 // GET bookings list (both sent and received requests)
 export async function GET() {
@@ -133,6 +134,13 @@ export async function POST(req: Request) {
           link: "/profile"
         }
       });
+
+      // Trigger Pusher notification
+      await pusherServer.trigger(`user-${receiverId}`, "new-booking", {
+        bookingId: newBooking.id,
+        message: `Bạn nhận được yêu cầu mới từ ${session.user.name}: "${message || "không có lời nhắn"}".`,
+        title: "Yêu cầu đặt đơn mới 📅"
+      });
     } catch (notifErr) {
       console.error("Failed to trigger booking system notification:", notifErr);
     }
@@ -219,6 +227,14 @@ export async function PATCH(req: Request) {
           type: "INFO",
           link: "/profile"
         }
+      });
+
+      // Trigger Pusher notification
+      await pusherServer.trigger(`user-${booking.senderId}`, "booking-updated", {
+        bookingId: booking.id,
+        status: status,
+        message: `Đối tác đã ${statusText} yêu cầu đặt đơn của bạn.`,
+        title: "Cập nhật yêu cầu đặt đơn 📢"
       });
     } catch (notifErr) {
       console.error("Failed to notify user about booking update:", notifErr);

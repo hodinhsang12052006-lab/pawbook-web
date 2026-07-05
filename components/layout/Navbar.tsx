@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Upload, Bell, MessageSquare, Menu, Check, Trash2, ShieldAlert, Coins, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { getPusherClient } from "@/lib/pusher";
 
 interface NotificationType {
   id: string;
@@ -56,6 +57,34 @@ export default function Navbar() {
     }
     loadSession();
   }, []);
+
+  useEffect(() => {
+    if (!sessionUser?.id) return;
+
+    const pusher = getPusherClient();
+    if (!pusher) return;
+
+    const channelName = `user-${sessionUser.id}`;
+    const channel = pusher.subscribe(channelName);
+
+    // Listen to new-booking
+    channel.bind("new-booking", (data: any) => {
+      toast.success(`🔔 Bạn có một yêu cầu đặt dịch vụ mới!`);
+      fetchNotifications();
+    });
+
+    // Listen to booking-updated
+    channel.bind("booking-updated", (data: any) => {
+      toast.success(`✅ Đơn hàng của bạn đã được nhận!`);
+      fetchNotifications();
+    });
+
+    return () => {
+      channel.unbind("new-booking");
+      channel.unbind("booking-updated");
+      pusher.unsubscribe(channelName);
+    };
+  }, [sessionUser]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

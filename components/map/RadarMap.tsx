@@ -32,6 +32,8 @@ interface MapJob {
 interface RadarMapProps {
   jobs: MapJob[];
   onLocationFound?: (lat: number, lng: number) => void;
+  center?: [number, number];
+  zoom?: number;
 }
 
 function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }) {
@@ -68,15 +70,27 @@ const mockNames = [
   { name: "Trà sữa DingTea & Snacks", spec: "Trà sữa trân châu, khoai tây chiên", phone: "0999 888 111", rating: 4.5, icon: "🧋", avatar: MOCK_AVATARS[9] }
 ];
 
-export default function RadarMap({ jobs, onLocationFound }: RadarMapProps) {
-  const [center, setCenter] = useState<[number, number]>([16.0471, 108.2062]);
-  const [zoom, setZoom] = useState<number>(6);
+export default function RadarMap({ jobs, onLocationFound, center: propsCenter, zoom: propsZoom }: RadarMapProps) {
+  const [center, setCenter] = useState<[number, number]>(propsCenter || [16.0471, 108.2062]);
+  const [zoom, setZoom] = useState<number>(propsZoom || 6);
   const [isMounted, setIsMounted] = useState(false);
   const [mockList, setMockList] = useState<any[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (propsCenter) {
+      setCenter(propsCenter);
+    }
+  }, [propsCenter]);
+
+  useEffect(() => {
+    if (propsZoom) {
+      setZoom(propsZoom);
+    }
+  }, [propsZoom]);
 
   const requestLocation = () => {
     if (!navigator.geolocation) {

@@ -42,13 +42,12 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: "services", label: "Dịch vụ & Cửa hàng", icon: Store, route: "/services" },
     { id: "gigs", label: "⚡ Chợ Đấu Thầu", icon: Zap, route: "/gigs" },
     { id: "blogs", label: "📝 Blog & Chia sẻ", icon: BookOpen, route: "/blogs" },
-    { id: "explore", label: "🗺️ Bản đồ Radar", icon: MapPin, route: "/explore" },
     { id: "pricing", label: "👛 Nạp PawCoin", icon: CreditCard, route: "/pricing" },
     { id: "guide", label: "📖 Hướng dẫn sử dụng", icon: BookOpen, route: "/guide" },
   ];
 
   const handleNavigation = (id: string, route: string) => {
-    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs" && id !== "explore" && id !== "pricing" && id !== "guide") {
+    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs" && id !== "pricing" && id !== "guide") {
       setActiveTab(id);
       router.push(route, { scroll: false });
     } else {
@@ -66,16 +65,13 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     if (id === "blogs") {
       return pathname === "/blogs";
     }
-    if (id === "explore") {
-      return pathname === "/explore";
-    }
     if (id === "pricing") {
       return pathname === "/pricing";
     }
     if (id === "guide") {
       return pathname === "/guide";
     }
-    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs" || pathname === "/explore" || pathname === "/pricing" || pathname === "/guide") {
+    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs" || pathname === "/pricing" || pathname === "/guide") {
       return false;
     }
     return activeTab === id;

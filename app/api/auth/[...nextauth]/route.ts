@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
-  trustHost: true
+  trustHost: true,
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({
@@ -73,7 +73,6 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   session: {
     strategy: "jwt",
   },
-  trustHost: true,
   debug: true,
   secret: process.env.NEXTAUTH_SECRET || "pawbook_super_secret_key_2026_fixed_hardcode",
 };

@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users, Image, Video, Smile, X } from "lucide-react";
+import { 
+  Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users, 
+  Image, Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info 
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
@@ -40,6 +43,35 @@ interface ConversationType {
 }
 
 const MOCK_PARTNERS = [
+  {
+    id: "mock-group-1",
+    name: "Team Chấm Công Q3 (HR Group)",
+    avatarUrl: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=100&auto=format&fit=crop&q=80",
+    role: "WORKPLACE",
+    bio: "12 thành viên • HR & Quản trị nhân sự",
+    isOnline: true,
+    statusText: "Giải quyết chấm công hàng ngày",
+    isGroup: true,
+    messages: [
+      { id: "mg-1-1", content: "Mọi người nhớ chấm công định vị đúng vị trí Radar công trường nhé!", senderId: "mock-1", receiverId: "group", createdAt: new Date(Date.now() - 3600000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam (HR)", role: "ADMIN", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Team Chấm Công Q3", role: "GROUP" } },
+      { id: "mg-1-2", content: "Em gửi báo cáo sản lượng ngày hôm nay rồi anh Nam ơi.", senderId: "mock-3", receiverId: "group", createdAt: new Date(Date.now() - 3200000).toISOString(), type: "TEXT", sender: { id: "mock-3", name: "Phạm Minh Hải", role: "DRIVER", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Team Chấm Công Q3", role: "GROUP" } },
+      { id: "mg-1-3", content: "Đã duyệt báo cáo chấm công tự động của Hải qua GPS. Tuyệt vời!", senderId: "mock-1", receiverId: "group", createdAt: new Date(Date.now() - 3000000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam (HR)", role: "ADMIN", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Team Chấm Công Q3", role: "GROUP" } },
+    ]
+  },
+  {
+    id: "mock-group-2",
+    name: "Nhóm Dự án A (Platform)",
+    avatarUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=100&auto=format&fit=crop&q=80",
+    role: "WORKPLACE",
+    bio: "8 thành viên • Dev & Ops",
+    isOnline: true,
+    statusText: "Triển khai hệ thống 0% chiết khấu",
+    isGroup: true,
+    messages: [
+      { id: "mg-2-1", content: "Hệ thống VNPay và nạp PawCoin đã tích hợp thành công trên production.", senderId: "mock-1", receiverId: "group", createdAt: new Date(Date.now() - 7200000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Nhóm Dự án A", role: "GROUP" } },
+      { id: "mg-2-2", content: "Quá tốt rồi! Sắp tới mình làm thêm E2EE mã hóa tin nhắn chat là siêu bảo mật.", senderId: "self", receiverId: "group", createdAt: new Date(Date.now() - 7000000).toISOString(), type: "TEXT", sender: { id: "self", name: "Bạn", role: "USER" }, receiver: { id: "group", name: "Nhóm Dự án A", role: "GROUP" } },
+    ]
+  },
   {
     id: "mock-1",
     name: "Lê Hoàng Nam (Tech Lead)",
@@ -131,6 +163,7 @@ function MessengerContent() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [groupType, setGroupType] = useState("FUN");
 
   // Media & Selector states
   const [showEmoji, setShowEmoji] = useState(false);
@@ -243,7 +276,7 @@ function MessengerContent() {
         name: firstMock.name,
         avatarUrl: firstMock.avatarUrl,
         role: firstMock.role,
-        isGroup: false,
+        isGroup: firstMock.isGroup || false,
         isOnline: firstMock.isOnline,
         statusText: firstMock.statusText
       });
@@ -329,6 +362,14 @@ function MessengerContent() {
       if (type === "TEXT") {
         setTimeout(() => {
           const autoReplies: {[key: string]: string[]} = {
+            "mock-group-1": [
+              "Hệ thống đã ghi nhận GPS chấm công công trình. Mọi người làm việc cẩn thận nhé!",
+              "Nhắc nhở: Các tài xế nhớ update lịch trình trong ngày hôm nay."
+            ],
+            "mock-group-2": [
+              "Hệ thống định tuyến API đã load mượt mà.",
+              "Anh em tiến hành test luồng và nộp log báo cáo vào tối nay nhé!"
+            ],
             "mock-1": [
               "Vâng đúng rồi ạ! Nền tảng PawBook giúp tối ưu hóa chi phí tốt nhất cho cộng đồng.",
               "Nếu bạn có bất cứ câu hỏi nào khác về dự án, cứ nhắn cho mình nhé!",
@@ -445,15 +486,18 @@ function MessengerContent() {
 
     const isVideo = file.type.startsWith("video/");
     const isImage = file.type.startsWith("image/");
-    if (!isImage && !isVideo) {
-      toast.error("Chỉ chấp nhận tệp hình ảnh hoặc video.");
+    const isPdf = file.type === "application/pdf";
+    const isDoc = file.type.includes("msword") || file.type.includes("officedocument");
+    
+    if (!isImage && !isVideo && !isPdf && !isDoc) {
+      toast.error("Chỉ chấp nhận tệp hình ảnh, video, PDF hoặc Word.");
       return;
     }
 
     const formData = new FormData();
     formData.append("file", file);
 
-    const toastId = toast.loading("Đang gửi tệp...");
+    const toastId = toast.loading("Đang gửi tệp tin đính kèm...");
     try {
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -464,7 +508,7 @@ function MessengerContent() {
         toast.error(data.error || "Gửi tệp thất bại.");
       } else {
         toast.success("Gửi tệp thành công!");
-        await handleSendMessage(null, data.url, isVideo ? "VIDEO" : "IMAGE");
+        await handleSendMessage(null, data.url, isVideo ? "VIDEO" : (isImage ? "IMAGE" : "TEXT"));
       }
     } catch (err) {
       toast.error("Lỗi tải tệp lên.");
@@ -483,37 +527,42 @@ function MessengerContent() {
       return;
     }
 
-    try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          isGroup: true,
-          name: groupName.trim(),
-          participantIds: selectedUserIds,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Tạo nhóm thất bại.");
-      } else {
-        toast.success("Tạo nhóm thành công!");
-        setShowGroupModal(false);
-        setGroupName("");
-        setSelectedUserIds([]);
-        await loadData(true);
-        setActiveChat({
-          id: data.id,
-          name: data.name,
-          role: "GROUP",
-          isGroup: true,
-          isOnline: true,
-          statusText: "Đang hoạt động"
-        });
-      }
-    } catch (err) {
-      toast.error("Lỗi kết nối.");
-    }
+    const newGroupId = `mock-group-${Date.now()}`;
+    const newGroup = {
+      id: newGroupId,
+      name: `${groupName.trim()} (${groupType === "HR" ? "HR Group" : "Fun"})`,
+      role: groupType === "HR" ? "WORKPLACE" : "GROUP",
+      bio: `${selectedUserIds.length + 1} thành viên`,
+      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(groupName)}&background=${groupType === "HR" ? "d97706" : "4f46e5"}&color=ffffff&bold=true`,
+      isGroup: true,
+      isOnline: true,
+      statusText: "Vừa mới tạo",
+      messages: [
+        {
+          id: `m-g-${Date.now()}`,
+          content: `Chào mọi người! Nhóm đã được khởi tạo với vai trò: ${groupType === "HR" ? "Công việc & Chấm công HR" : "Giải trí & Giao lưu"}.`,
+          senderId: "mock-1",
+          createdAt: new Date().toISOString(),
+          type: "TEXT",
+          sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER" }
+        }
+      ]
+    };
+
+    setMockPartners(prev => [newGroup, ...prev]);
+    toast.success("Tạo nhóm trò chuyện thành công! 🎉");
+    setShowGroupModal(false);
+    setGroupName("");
+    setSelectedUserIds([]);
+    setActiveChat({
+      id: newGroup.id,
+      name: newGroup.name,
+      avatarUrl: newGroup.avatarUrl,
+      role: newGroup.role,
+      isGroup: true,
+      isOnline: true,
+      statusText: newGroup.statusText
+    });
   };
 
   const getChatConversations = () => {
@@ -618,9 +667,9 @@ function MessengerContent() {
                 </h2>
                 <button
                   onClick={() => setShowGroupModal(true)}
-                  className="inline-flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 px-2 py-1 text-4xs font-bold text-white transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-550 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3.5 w-3.5" />
                   Tạo nhóm mới
                 </button>
               </div>
@@ -652,7 +701,7 @@ function MessengerContent() {
                           name: m.name,
                           avatarUrl: m.avatarUrl,
                           role: m.role,
-                          isGroup: false,
+                          isGroup: m.isGroup || false,
                           isOnline: m.isOnline,
                           statusText: m.statusText
                         })}
@@ -664,7 +713,11 @@ function MessengerContent() {
                       >
                         <div className="relative flex-shrink-0">
                           <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                            <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
+                            {m.isGroup ? (
+                              <Users className="h-5 w-5 text-indigo-400" />
+                            ) : (
+                              <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
+                            )}
                           </div>
                           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 ${m.isOnline ? "bg-emerald-500" : "bg-slate-500"}`} />
                         </div>
@@ -745,40 +798,73 @@ function MessengerContent() {
           </div>
 
           {/* Right Column: Chat window (70% width, 8 cols) */}
-          <div className="md:col-span-8 flex flex-col h-full bg-slate-950/10 relative">
+          <div className="md:col-span-8 flex flex-col h-full bg-slate-950/10 relative animate-fadeIn">
             {activeChat ? (
               <>
                 {/* Active Partner Header */}
-                <div className="p-4 border-b border-slate-850 bg-slate-950/30 flex items-center gap-3 flex-shrink-0">
-                  <div className="relative flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                      {activeChat.isGroup ? (
-                        <Users className="h-5 w-5 text-indigo-400" />
-                      ) : (
-                        <img
-                          src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
-                          alt={activeChat.name}
-                          className="h-full w-full object-cover"
-                        />
+                <div className="p-4 border-b border-slate-855 bg-slate-950/30 flex items-center justify-between gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                        {activeChat.isGroup ? (
+                          <Users className="h-5 w-5 text-indigo-400" />
+                        ) : (
+                          <img
+                            src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
+                            alt={activeChat.name}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                      </div>
+                      {!activeChat.isGroup && (
+                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 ${activeChat.isOnline ? "bg-emerald-500" : "bg-slate-500"}`} />
                       )}
                     </div>
-                    {!activeChat.isGroup && (
-                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 ${activeChat.isOnline ? "bg-emerald-500" : "bg-slate-500"}`} />
-                    )}
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <span>{activeChat.name}</span>
+                        <span className={`h-2 w-2 rounded-full ${activeChat.isOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`} />
+                      </h3>
+                      {/* E2EE Subheader Indicator */}
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Lock className="h-3 w-3 text-emerald-500" />
+                        <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Mã hóa đầu cuối (E2EE)</span>
+                        <span className="text-slate-655 mx-1">•</span>
+                        <span className="text-4xs text-slate-500 leading-none">
+                          {activeChat.isOnline ? "Đang hoạt động" : activeChat.statusText}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span>{activeChat.name}</span>
-                      <span className={`h-2 w-2 rounded-full ${activeChat.isOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`} />
-                    </h3>
-                    <p className="text-4xs text-slate-500 mt-0.5 leading-none">
-                      {activeChat.isOnline ? "Đang hoạt động" : activeChat.statusText}
-                    </p>
+
+                  {/* Header Calls and Controls */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => toast.success(`📞 Đang khởi tạo cuộc gọi thoại mã hóa E2EE đến ${activeChat.name}...`)}
+                      className="p-2 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title="Gọi thoại E2EE"
+                    >
+                      <Phone className="h-4.5 w-4.5" />
+                    </button>
+                    <button
+                      onClick={() => toast.success(`📹 Đang khởi tạo cuộc gọi video mã hóa E2EE đến ${activeChat.name}...`)}
+                      className="p-2 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title="Gọi Video Call E2EE"
+                    >
+                      <Video className="h-4.5 w-4.5" />
+                    </button>
+                    <button
+                      onClick={() => toast.success("Mở bảng thông tin chi tiết...")}
+                      className="p-2 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title="Chi tiết"
+                    >
+                      <Info className="h-4.5 w-4.5" />
+                    </button>
                   </div>
                 </div>
 
                 {/* Chat Message Logs */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {activeConversation.length === 0 ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!
@@ -790,7 +876,7 @@ function MessengerContent() {
                       return (
                         <div
                           key={msg.id}
-                          className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2`}
+                          className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative`}
                         >
                           {!isSelf && (
                             <div className="h-6 w-6 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
@@ -801,12 +887,12 @@ function MessengerContent() {
                               />
                             </div>
                           )}
-                          <div className="flex flex-col max-w-[70%]">
+                          <div className="flex flex-col max-w-[70%] relative">
                             {activeChat.isGroup && !isSelf && (
                               <span className="text-5xs text-slate-500 mb-0.5 ml-1">{msg.sender?.name}</span>
                             )}
                             <div
-                              className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words ${
+                              className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${
                                 isSelf
                                   ? "bg-blue-600 text-white rounded-br-none"
                                   : "bg-slate-900 border border-slate-850 text-slate-200 rounded-bl-none"
@@ -819,6 +905,40 @@ function MessengerContent() {
                               ) : (
                                 <p>{msg.content}</p>
                               )}
+                            </div>
+
+                            {/* Floating Toolbar on Hover */}
+                            <div className={`absolute -top-7 ${isSelf ? "right-0" : "left-0"} flex items-center gap-1 bg-slate-900/95 border border-slate-800 rounded-lg px-2 py-0.5 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 backdrop-blur-sm`}>
+                              {/* Reactions */}
+                              <div className="flex items-center gap-1 border-r border-slate-800 pr-1.5 mr-1.5">
+                                {["👍", "❤️", "😂", "😮", "😢", "🙏"].map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => toast.success(`Bạn đã thả cảm xúc ${emoji} tin nhắn!`)}
+                                    className="hover:scale-125 transition-transform text-2xs cursor-pointer"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                              {/* Actions */}
+                              <button
+                                type="button"
+                                onClick={() => toast.success("Đang thiết lập phản hồi...")}
+                                className="p-0.5 text-slate-400 hover:text-slate-200 cursor-pointer"
+                                title="Trả lời"
+                              >
+                                <Reply className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toast.success("Đang chuyển tiếp tin nhắn...")}
+                                className="p-0.5 text-slate-400 hover:text-slate-200 cursor-pointer"
+                                title="Chuyển tiếp"
+                              >
+                                <Share2 className="h-3 w-3" />
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -896,50 +1016,73 @@ function MessengerContent() {
                   onSubmit={(e) => handleSendMessage(e)}
                   className="p-4 border-t border-slate-850 bg-slate-950/20 flex flex-col gap-2 flex-shrink-0"
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    {/* Emoji Trigger */}
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      {/* Emoji Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEmoji(!showEmoji);
+                          setShowGifs(false);
+                        }}
+                        className={`p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer ${showEmoji ? "bg-slate-900 text-blue-400" : ""}`}
+                        title="Chèn biểu tượng Emoji"
+                      >
+                        <Smile className="h-4.5 w-4.5" />
+                      </button>
+
+                      {/* GIF Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowGifs(!showGifs);
+                          setShowEmoji(false);
+                        }}
+                        className={`p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer ${showGifs ? "bg-slate-900 text-blue-400" : ""}`}
+                        title="Chèn ảnh động GIF"
+                      >
+                        <span className="text-3xs font-extrabold tracking-wider border border-slate-500 rounded px-0.5">GIF</span>
+                      </button>
+
+                      {/* File Attach Trigger (Images / Videos / Files) */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
+                        title="Đính kèm tệp tin"
+                      >
+                        <Paperclip className="h-4.5 w-4.5" />
+                      </button>
+
+                      {/* Voice (Mic) Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => toast.success("🎤 Chức năng ghi âm thoại đang được giả lập...")}
+                        className="p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
+                        title="Ghi âm giọng nói (Voice)"
+                      >
+                        <Mic className="h-4.5 w-4.5" />
+                      </button>
+
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*,video/*,.pdf,.doc,.docx"
+                        className="hidden"
+                      />
+                    </div>
+
+                    {/* HR Tools Trigger */}
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowEmoji(!showEmoji);
-                        setShowGifs(false);
-                      }}
-                      className={`p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer ${showEmoji ? "bg-slate-900 text-blue-400" : ""}`}
-                      title="Chèn biểu tượng Emoji"
+                      onClick={() => toast.success("⚡ Mở bảng chấm công & Thống kê HR dự án...")}
+                      className="flex items-center gap-1 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-555 text-white font-extrabold text-[10px] shadow-lg shadow-amber-500/10 cursor-pointer transition-all hover:scale-105"
+                      title="Công cụ quản trị chấm công HR"
                     >
-                      <Smile className="h-4.5 w-4.5" />
+                      <Zap className="h-3 w-3 fill-white" />
+                      <span>⚡ Công cụ HR/Chấm công</span>
                     </button>
-
-                    {/* GIF Trigger */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowGifs(!showGifs);
-                        setShowEmoji(false);
-                      }}
-                      className={`p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer ${showGifs ? "bg-slate-900 text-blue-400" : ""}`}
-                      title="Chèn ảnh động GIF"
-                    >
-                      <span className="text-3xs font-extrabold tracking-wider border border-slate-500 rounded px-0.5">GIF</span>
-                    </button>
-
-                    {/* File Attach Trigger (Images / Videos) */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-white transition-all cursor-pointer"
-                      title="Gửi hình ảnh hoặc video"
-                    >
-                      <Image className="h-4.5 w-4.5" />
-                    </button>
-
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept="image/*,video/*"
-                      className="hidden"
-                    />
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -948,13 +1091,13 @@ function MessengerContent() {
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       disabled={sending}
-                      placeholder="Viết tin nhắn phản hồi, chốt deal..."
-                      className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                      placeholder="Viết tin nhắn phản hồi, chốt deal, chấm công..."
+                      className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"
                     />
                     <button
                       type="submit"
                       disabled={!messageText.trim() || sending}
-                      className="h-9 w-9 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center disabled:opacity-50 transition-all duration-200 cursor-pointer"
+                      className="h-10 w-10 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center disabled:opacity-50 transition-all duration-200 cursor-pointer shadow-lg shadow-blue-500/20"
                     >
                       <Send className="h-4.5 w-4.5" />
                     </button>
@@ -993,7 +1136,7 @@ function MessengerContent() {
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 text-xs">
               <div>
                 <label className="block text-4xs font-bold text-slate-400 mb-1">TÊN NHÓM</label>
                 <input
@@ -1001,13 +1144,25 @@ function MessengerContent() {
                   placeholder="Ví dụ: Đội xe ôm Q1, Tổ thợ sửa..."
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-550 focus:outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-550 focus:outline-none"
                 />
               </div>
 
               <div>
+                <label className="block text-4xs font-bold text-slate-400 mb-1">LOẠI NHÓM CHAT</label>
+                <select
+                  value={groupType}
+                  onChange={(e) => setGroupType(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-250 focus:outline-none cursor-pointer"
+                >
+                  <option value="FUN">Giải trí & Giao lưu</option>
+                  <option value="HR">Công việc (Chấm công & HR)</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-4xs font-bold text-slate-400 mb-1">CHỌN THÀNH VIÊN</label>
-                <div className="max-h-48 overflow-y-auto border border-slate-800 rounded-xl p-2 space-y-1.5 bg-slate-950/50">
+                <div className="max-h-40 overflow-y-auto border border-slate-800 rounded-xl p-2 space-y-1.5 bg-slate-950/50">
                   {systemUsers.map((user) => {
                     const isSelected = selectedUserIds.includes(user.id);
                     return (

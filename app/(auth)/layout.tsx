@@ -55,13 +55,12 @@ export default function AuthLayout({
 
           <div className="relative z-10 my-auto max-w-sm space-y-6">
             <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
-              Siêu Ứng Dụng <br />
               <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                Dịch Vụ & Việc Làm Bản Địa
+                Kiến Tạo Nền Kinh Tế Bản Địa Đột Phá
               </span>
             </h1>
             <p className="text-sm leading-relaxed text-slate-400">
-              PawBook kết nối khách hàng với hàng ngàn nhà xe tự do, thợ sửa chữa, giúp việc, spa làm đẹp địa phương trên khắp cả nước với 0% phí chiết khấu nền tảng.
+              Trải nghiệm hệ sinh thái dịch vụ toàn diện. PawBook tiên phong kết nối hàng triệu người dùng với mạng lưới chuyên gia, đối tác vận tải và đối tác dịch vụ hàng đầu — cam kết 0% chiết khấu, tối ưu hóa giá trị cho toàn cộng đồng.
             </p>
 
             <div className="space-y-6 pt-6">
@@ -70,8 +69,8 @@ export default function AuthLayout({
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-slate-200">🚕 Gọi xe & Giao nhận 0% chiết khấu</h4>
-                  <p className="text-2xs text-slate-450 leading-relaxed">Kết nối trực tiếp tài xế và khách hàng, tăng 100% thu nhập.</p>
+                  <h4 className="text-sm font-extrabold text-slate-200">Vận Tải & Giao Nhận Trực Tiếp</h4>
+                  <p className="text-2xs text-slate-400 leading-relaxed mt-0.5">Trải nghiệm di chuyển thông minh với mạng lưới tài xế tự do. Chính sách 0% chiết khấu giúp tối đa hóa thu nhập đối tác và tiết kiệm chi phí cho bạn.</p>
                 </div>
               </div>
 
@@ -80,8 +79,8 @@ export default function AuthLayout({
                   <MessageSquareCode className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-slate-200">🛠️ Dịch vụ tận cửa</h4>
-                  <p className="text-2xs text-slate-450 leading-relaxed">Tìm thợ sửa chữa điện nước, giúp việc, dọn sofa, spa làm đẹp... chỉ với 1 chạm.</p>
+                  <h4 className="text-sm font-extrabold text-slate-200">Giải Pháp Tiện Ích Tận Nơi</h4>
+                  <p className="text-2xs text-slate-400 leading-relaxed mt-0.5">Từ sửa chữa chuyên sâu, vệ sinh không gian đến chăm sóc sức khỏe. Đặt lịch dễ dàng, mạng lưới chuyên gia uy tín có mặt ngay khi bạn cần.</p>
                 </div>
               </div>
 
@@ -90,8 +89,8 @@ export default function AuthLayout({
                   <ShieldCheck className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-extrabold text-slate-200">🌍 Cộng đồng chia sẻ</h4>
-                  <p className="text-2xs text-slate-450 leading-relaxed">Tham gia mạng lưới kết nối đa ngành nghề lớn nhất Việt Nam.</p>
+                  <h4 className="text-sm font-extrabold text-slate-200">Hệ Sinh Thái Việc Làm Toàn Diện</h4>
+                  <p className="text-2xs text-slate-400 leading-relaxed mt-0.5">Xây dựng hồ sơ số, xác thực danh tính minh bạch. Tiếp cận hàng ngàn cơ hội phát triển sự nghiệp và mở rộng mạng lưới kinh doanh mỗi ngày.</p>
                 </div>
               </div>
             </div>

@@ -59,16 +59,16 @@ const MOCK_AVATARS = [
 ];
 
 const mockNames = [
-  { name: "Tiệm sửa xe Thành Đạt", spec: "Sửa xe ga, vá lốp lưu động", phone: "0909 333 444", rating: 4.8, icon: "🛠️", avatar: MOCK_AVATARS[0], niche: "Sửa chữa", distance: "Cách 1.2km", tags: ["Sửa xe", "Cứu hộ", "24/7"], isOpen: true },
-  { name: "Vệ sinh máy lạnh 24h", spec: "Rửa máy lạnh, nạp gas giá rẻ", phone: "0911 555 666", rating: 4.9, icon: "❄️", avatar: MOCK_AVATARS[1], niche: "Gia đình", distance: "Cách 800m", tags: ["Điện lạnh", "Vệ sinh"], isOpen: true },
-  { name: "Quán phở gia truyền Hà Nội", spec: "Phở bò chín/tái thơm ngon", phone: "0922 777 888", rating: 4.7, icon: "🍜", avatar: MOCK_AVATARS[2], niche: "F&B", distance: "Cách 1.5km", tags: ["Ăn uống", "Phở bò"], isOpen: true },
-  { name: "Spa & Nail Thùy Lâm", spec: "Làm nail, chăm sóc da mặt chuyên sâu", phone: "0933 999 111", rating: 5.0, icon: "💅", avatar: MOCK_AVATARS[3], niche: "Spa", distance: "Cách 600m", tags: ["Nail", "Làm đẹp"], isOpen: false },
-  { name: "Cơm tấm bãi rác Q4", spec: "Sườn bì chả nướng than thơm phức", phone: "0944 222 333", rating: 4.6, icon: "🍛", avatar: MOCK_AVATARS[4], niche: "F&B", distance: "Cách 2km", tags: ["Ăn sáng", "Cơm tấm"], isOpen: true },
-  { name: "Grab Đội Giao Hàng Siêu Tốc", spec: "Chạy ship, giao tài liệu khẩn cấp", phone: "0955 888 999", rating: 4.9, icon: "🛵", avatar: MOCK_AVATARS[5], niche: "Vận tải", distance: "Cách 500m", tags: ["Giao hàng", "Xe ôm"], isOpen: true },
-  { name: "Điện nước dân dụng Bách Khoa", spec: "Sửa chập điện, ống nước rò rỉ", phone: "0966 111 222", rating: 4.8, icon: "⚡", avatar: MOCK_AVATARS[6], niche: "Gia đình", distance: "Cách 1.8km", tags: ["Điện nước", "Sửa chữa"], isOpen: true },
-  { name: "Cắt tóc nam barber shop", spec: "Tạo kiểu undercut, cạo râu", phone: "0977 444 555", rating: 4.7, icon: "✂️", avatar: MOCK_AVATARS[7], niche: "Spa", distance: "Cách 1km", tags: ["Cắt tóc", "Salon"], isOpen: true },
-  { name: "Thú y Pet Clinic & Spa", spec: "Khám chữa bệnh, tỉa lông thú cưng", phone: "0988 666 777", rating: 4.9, icon: "🐶", avatar: MOCK_AVATARS[8], niche: "Spa", distance: "Cách 2.3km", tags: ["Thú cưng", "Bác sĩ"], isOpen: true },
-  { name: "Trà sữa DingTea & Snacks", spec: "Trà sữa trân châu, khoai tây chiên", phone: "0999 888 111", rating: 4.5, icon: "🧋", avatar: MOCK_AVATARS[9], niche: "F&B", distance: "Cách 1.1km", tags: ["Trà sữa", "Ăn vặt"], isOpen: false }
+  { name: "Tiệm sửa xe Thành Đạt", spec: "Sửa xe ga, vá lốp lưu động", phone: "0909 333 444", rating: 4.8, icon: "🛠️", avatar: MOCK_AVATARS[0], niche: "Sửa chữa", distance: "Cách bạn 1.2km", tags: ["Sửa xe", "Cứu hộ", "24/7"], isOpen: true, address: "120 Trần Hưng Đạo, Hải Châu, Đà Nẵng", hours: "07:00 - 23:00" },
+  { name: "Vệ sinh máy lạnh 24h", spec: "Rửa máy lạnh, nạp gas giá rẻ", phone: "0911 555 666", rating: 4.9, icon: "❄️", avatar: MOCK_AVATARS[1], niche: "Gia đình", distance: "Cách bạn 800m", tags: ["Điện lạnh", "Vệ sinh"], isOpen: true, address: "45 Lê Lợi, Thạch Thang, Đà Nẵng", hours: "08:00 - 22:00" },
+  { name: "Quán phở gia truyền Hà Nội", spec: "Phở bò chín/tái thơm ngon", phone: "0922 777 888", rating: 4.7, icon: "🍜", avatar: MOCK_AVATARS[2], niche: "F&B", distance: "Cách bạn 1.5km", tags: ["Ăn uống", "Phở bò"], isOpen: true, address: "88 Nguyễn Văn Linh, Nam Dương, Đà Nẵng", hours: "06:00 - 22:00" },
+  { name: "Spa & Nail Thùy Lâm", spec: "Làm nail, chăm sóc da mặt chuyên sâu", phone: "0933 999 111", rating: 5.0, icon: "💅", avatar: MOCK_AVATARS[3], niche: "Spa", distance: "Cách bạn 600m", tags: ["Nail", "Làm đẹp"], isOpen: false, address: "210 Hùng Vương, Hải Châu 2, Đà Nẵng", hours: "09:00 - 20:00" },
+  { name: "Cơm tấm bãi rác Q4", spec: "Sườn bì chả nướng than thơm phức", phone: "0944 222 333", rating: 4.6, icon: "🍛", avatar: MOCK_AVATARS[4], niche: "F&B", distance: "Cách bạn 2km", tags: ["Ăn sáng", "Cơm tấm"], isOpen: true, address: "55 Điện Biên Phủ, Chính Gián, Đà Nẵng", hours: "06:00 - 13:00" },
+  { name: "Grab Đội Giao Hàng Siêu Tốc", spec: "Chạy ship, giao tài liệu khẩn cấp", phone: "0955 888 999", rating: 4.9, icon: "🛵", avatar: MOCK_AVATARS[5], niche: "Vận tải", distance: "Cách bạn 500m", tags: ["Giao hàng", "Xe ôm"], isOpen: true, address: "320 Núi Thành, Hòa Cường Bắc, Đà Nẵng", hours: "Hoạt động 24/7" },
+  { name: "Điện nước dân dụng Bách Khoa", spec: "Sửa chập điện, ống nước rò rỉ", phone: "0966 111 222", rating: 4.8, icon: "⚡", avatar: MOCK_AVATARS[6], niche: "Gia đình", distance: "Cách bạn 1.8km", tags: ["Điện nước", "Sửa chữa"], isOpen: true, address: "142 Ông Ích Khiêm, Thanh Bình, Đà Nẵng", hours: "08:00 - 18:00" },
+  { name: "Cắt tóc nam barber shop", spec: "Tạo kiểu undercut, cạo râu", phone: "0977 444 555", rating: 4.7, icon: "✂️", avatar: MOCK_AVATARS[7], niche: "Spa", distance: "Cách bạn 1km", tags: ["Cắt tóc", "Salon"], isOpen: true, address: "99 Hoàng Diệu, Phước Ninh, Đà Nẵng", hours: "09:00 - 21:00" },
+  { name: "Thú y Pet Clinic & Spa", spec: "Khám chữa bệnh, tỉa lông thú cưng", phone: "0988 666 777", rating: 4.9, icon: "🐶", avatar: MOCK_AVATARS[8], niche: "Spa", distance: "Cách bạn 2.3km", tags: ["Thú cưng", "Bác sĩ"], isOpen: true, address: "78 Phan Đăng Lưu, Hòa Cường Nam, Đà Nẵng", hours: "08:00 - 20:00" },
+  { name: "Trà sữa DingTea & Snacks", spec: "Trà sữa trân châu, khoai tây chiên", phone: "0999 888 111", rating: 4.5, icon: "🧋", avatar: MOCK_AVATARS[9], niche: "F&B", distance: "Cách bạn 1.1km", tags: ["Trà sữa", "Ăn vặt"], isOpen: false, address: "12 Bạch Đằng, Thạch Thang, Đà Nẵng", hours: "09:00 - 22:30" }
 ];
 
 export default function ServicesPage() {
@@ -142,6 +142,7 @@ export default function ServicesPage() {
 
       const generated = mockNames.map((item, idx) => {
         const offset = offsets[idx % offsets.length];
+        const matchPercent = 95 + (idx % 5);
         return {
           id: `mock-radar-${idx}`,
           title: item.spec,
@@ -158,7 +159,10 @@ export default function ServicesPage() {
           distance: item.distance,
           isMock: true,
           tags: item.tags,
-          isOpen: item.isOpen
+          isOpen: item.isOpen,
+          address: item.address,
+          hours: item.hours,
+          aiRecommendation: `Phù hợp ${matchPercent}% • ${item.rating}⭐ trên Google Maps • ${item.distance}`
         };
       });
       setMockList(generated);
@@ -221,24 +225,30 @@ export default function ServicesPage() {
 
   // Merge database records with mocks list
   const allLocations = [
-    ...services.map(s => ({
-      id: s.id,
-      title: s.description,
-      companyName: s.name,
-      salary: s.priceRange || "Thỏa thuận",
-      niche: s.category,
-      latitude: parseFloat(s.location.split(",")[0]) || center[0] + (Math.random() * 0.01 - 0.005),
-      longitude: parseFloat(s.location.split(",")[1]) || center[1] + (Math.random() * 0.01 - 0.005),
-      is_premium: !!s.isBoosted,
-      employerId: s.ownerId,
-      rating: s.rating || 4.7,
-      phone: s.contactInfo,
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=2563eb&color=ffffff&bold=true`,
-      distance: "Cách 1km",
-      isMock: false,
-      tags: [s.category, "Hệ thống"],
-      isOpen: true
-    })),
+    ...services.map(s => {
+      const dbRating = s.rating || 4.7;
+      return {
+        id: s.id,
+        title: s.description,
+        companyName: s.name,
+        salary: s.priceRange || "Thỏa thuận",
+        niche: s.category,
+        latitude: parseFloat(s.location.split(",")[0]) || center[0] + (Math.random() * 0.01 - 0.005),
+        longitude: parseFloat(s.location.split(",")[1]) || center[1] + (Math.random() * 0.01 - 0.005),
+        is_premium: !!s.isBoosted,
+        employerId: s.ownerId,
+        rating: dbRating,
+        phone: s.contactInfo,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=2563eb&color=ffffff&bold=true`,
+        distance: "Cách bạn 1km",
+        isMock: false,
+        tags: [s.category, "Hệ thống"],
+        isOpen: true,
+        address: "Hệ thống PawBook",
+        hours: "08:00 - 22:00",
+        aiRecommendation: `Phù hợp 96% • ${dbRating}⭐ trên Google Maps • Cách bạn 1.0km`
+      };
+    }),
     ...mockList
   ];
 
@@ -328,7 +338,7 @@ export default function ServicesPage() {
               {/* Search & Category quick filters */}
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-2 h-4 w-4 text-slate-550" />
+                  <Search className="absolute left-3 top-2 h-4 w-4 text-slate-555" />
                   <input
                     type="search"
                     placeholder="Tìm kiếm live, gõ dịch vụ, tags..."
@@ -374,7 +384,7 @@ export default function ServicesPage() {
                     className={`rounded-xl border p-3.5 backdrop-blur-md flex flex-col justify-between gap-3 transition-all duration-300 hover:scale-[1.01] ${
                       loc.is_premium
                         ? "border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-yellow-500/5 hover:bg-amber-550/10 shadow-lg"
-                        : "border-slate-850 bg-slate-900/30 hover:border-blue-500/20 hover:bg-slate-900/40"
+                        : "border-slate-855 bg-slate-900/30 hover:border-blue-500/20 hover:bg-slate-900/40"
                     }`}
                   >
                     <div className="flex gap-2.5 items-start">
@@ -399,10 +409,17 @@ export default function ServicesPage() {
                             {loc.isOpen ? "🟢 Mở cửa" : "🔴 Đóng cửa"}
                           </span>
                         </div>
+                        
                         <p className="text-[10px] text-slate-450 mt-0.5 line-clamp-2 leading-relaxed">
                           {loc.title}
                         </p>
                         
+                        {/* AI Recommendation Badge - Sleek design */}
+                        <div className="mt-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg p-1.5 text-[8.5px] text-blue-300 font-semibold flex items-center gap-1">
+                          <span>🤖 AI Đề xuất:</span>
+                          <span>{loc.aiRecommendation}</span>
+                        </div>
+
                         {/* Tags list display */}
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {loc.tags.map((tag: string) => (

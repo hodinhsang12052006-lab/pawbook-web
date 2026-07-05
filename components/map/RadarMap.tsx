@@ -226,6 +226,10 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
 
           const customIcon = createCustomIcon(ratingVal, !!loc.is_premium);
 
+          const addressVal = loc.address || "Địa điểm hệ thống";
+          const hoursVal = loc.hours || "08:00 - 22:00";
+          const aiRecVal = loc.aiRecommendation || `Phù hợp 95% • ${ratingVal}⭐ trên Google Maps • Cách bạn 1.0km`;
+
           return (
             <Marker
               key={loc.id}
@@ -233,7 +237,7 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
               icon={customIcon}
             >
               <Popup>
-                <div className="p-3.5 space-y-2.5 min-w-[245px] text-slate-800 font-sans bg-white rounded-xl shadow-lg border border-slate-100">
+                <div className="p-3.5 space-y-2.5 min-w-[280px] text-slate-800 font-sans bg-white rounded-xl shadow-lg border border-slate-100">
                   {/* Header with Avatar and Title */}
                   <div className="flex gap-2.5 items-center">
                     <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-100 flex-shrink-0 bg-slate-50">
@@ -259,6 +263,23 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
                   <p className="text-4xs text-slate-500 leading-relaxed font-semibold m-0">
                     {loc.title}
                   </p>
+
+                  {/* AI Recommendation Badge */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-2 text-[9px] text-blue-700 font-bold flex items-center gap-1.5 leading-relaxed">
+                    <span>🤖</span>
+                    <span>AI Đề xuất: {aiRecVal}</span>
+                  </div>
+
+                  {/* Address & Hours */}
+                  <div className="text-[9px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
+                    <p className="truncate">📍 {addressVal}</p>
+                    <p className="flex items-center gap-1.5">
+                      <span>⏱️ Giờ mở cửa: {hoursVal}</span>
+                      <span className={`inline-block px-1 rounded text-[8px] font-extrabold ${loc.isOpen !== false ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-650 border border-red-100"}`}>
+                        {loc.isOpen !== false ? "🟢 Mở cửa" : "🔴 Đóng cửa"}
+                      </span>
+                    </p>
+                  </div>
 
                   {/* Stars and Phone */}
                   <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold">

@@ -290,7 +290,11 @@ export default function Navbar() {
                   <Coins className="h-5 w-5 text-amber-500 fill-amber-500/10" />
                 </button>
 
-                <button className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors">
+                <button 
+                  onClick={() => router.push("/messages")}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  title="Messenger"
+                >
                   <MessageSquare className="h-5 w-5" />
                 </button>
               </div>

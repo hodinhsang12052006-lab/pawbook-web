@@ -13,9 +13,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0f172a",
+};
+
 export const metadata: Metadata = {
   title: "PawBook - App Việc làm & Dịch vụ 0% Chiết Khấu",
   description: "Kết nối việc làm, dịch vụ bản địa, gọi xe, thợ thuyền toàn quốc. Không chiết khấu, không trung gian.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PawBook",
+  },
+  icons: {
+    apple: "/cho1.jpg",
+  },
 };
 
 import FomoPopup from "@/components/FomoPopup";

@@ -66,12 +66,24 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/login",
-    newUser: "/auth/register"
+    newUser: "/auth/register",
+    error: "/auth/error",
   },
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET || "pawbook_super_secret_key_2026_do_not_share",
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === "production" && process.env.VERCEL === "1" ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === "production" && process.env.VERCEL === "1"
+      }
+    }
+  },
+  secret: process.env.NEXTAUTH_SECRET || "pawbook_super_secret_key_2026_fixed_hardcode",
 };
 
 const handler = NextAuth(authOptions);

@@ -40,97 +40,6 @@ interface ConversationType {
   messages: any[];
 }
 
-const MOCK_PARTNERS = [
-  {
-    id: "mock-group-1",
-    name: "Team Chấm Công Q3 (HR Group)",
-    avatarUrl: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=100&auto=format&fit=crop&q=80",
-    role: "WORKPLACE",
-    bio: "12 thành viên • HR & Quản trị nhân sự",
-    isOnline: true,
-    statusText: "Giải quyết chấm công hàng ngày",
-    isGroup: true,
-    messages: [
-      { id: "mg-1-1", content: "Mọi người nhớ chấm công định vị đúng vị trí Radar công trường nhé!", senderId: "mock-1", receiverId: "group", createdAt: new Date(Date.now() - 3600000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam (HR)", role: "ADMIN", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Team Chấm Công Q3", role: "GROUP" } },
-      { id: "mg-1-2", content: "Em gửi báo cáo sản lượng ngày hôm nay rồi anh Nam ơi.", senderId: "mock-3", receiverId: "group", createdAt: new Date(Date.now() - 3200000).toISOString(), type: "TEXT", sender: { id: "mock-3", name: "Phạm Minh Hải", role: "DRIVER", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Team Chấm Công Q3", role: "GROUP" } },
-      { id: "mg-1-3", content: "Đã duyệt báo cáo chấm công tự động của Hải qua GPS. Tuyệt vời!", senderId: "mock-1", receiverId: "group", createdAt: new Date(Date.now() - 3000000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam (HR)", role: "ADMIN", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Team Chấm Công Q3", role: "GROUP" } },
-    ]
-  },
-  {
-    id: "mock-group-2",
-    name: "Nhóm Dự án A (Platform)",
-    avatarUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=100&auto=format&fit=crop&q=80",
-    role: "WORKPLACE",
-    bio: "8 thành viên • Dev & Ops",
-    isOnline: true,
-    statusText: "Triển khai hệ thống 0% chiết khấu",
-    isGroup: true,
-    messages: [
-      { id: "mg-2-1", content: "Hệ thống VNPay và nạp PawCoin đã tích hợp thành công trên production.", senderId: "mock-1", receiverId: "group", createdAt: new Date(Date.now() - 7200000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "group", name: "Nhóm Dự án A", role: "GROUP" } },
-      { id: "mg-2-2", content: "Quá tốt rồi! Sắp tới mình làm thêm E2EE mã hóa tin nhắn chat là siêu bảo mật.", senderId: "self", receiverId: "group", createdAt: new Date(Date.now() - 7000000).toISOString(), type: "TEXT", sender: { id: "self", name: "Bạn", role: "USER" }, receiver: { id: "group", name: "Nhóm Dự án A", role: "GROUP" } },
-    ]
-  },
-  {
-    id: "mock-1",
-    name: "Lê Hoàng Nam (Tech Lead)",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
-    role: "DEVELOPER",
-    bio: "Hỗ trợ kỹ thuật PawBook",
-    isOnline: true,
-    statusText: "Đang hoạt động",
-    isGroup: false,
-    messages: [
-      { id: "m-1-1", content: "Chào bạn! Mình thấy bạn đang quan tâm dự án PawBook đúng không?", senderId: "mock-1", receiverId: "self", createdAt: new Date(Date.now() - 3600000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-      { id: "m-1-2", content: "Bên mình đang miễn phí 100% chiết khấu cho mọi giao dịch vận chuyển và gọi thợ đó!", senderId: "mock-1", receiverId: "self", createdAt: new Date(Date.now() - 3500000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-      { id: "m-1-3", content: "Chào anh Nam, đúng rồi ạ. Giao diện mượt mà quá, em đang test thử các tính năng.", senderId: "self", receiverId: "mock-1", createdAt: new Date(Date.now() - 3400000).toISOString(), type: "TEXT", sender: { id: "self", name: "Bạn", role: "USER" }, receiver: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER" } },
-      { id: "m-1-4", content: "Cảm ơn bạn nhé! Bạn có thể sử dụng các tiện ích quét CV bằng AI hoặc nâng cấp tài khoản VIP để trải nghiệm đầy đủ nha.", senderId: "mock-1", receiverId: "self", createdAt: new Date(Date.now() - 3300000).toISOString(), type: "TEXT", sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-    ]
-  },
-  {
-    id: "mock-2",
-    name: "Nguyễn Thùy Chi (F&B Owner)",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-    role: "EMPLOYER",
-    bio: "Tìm thợ pha chế Cafe & Delivery",
-    isOnline: false,
-    statusText: "Hoạt động 15 phút trước",
-    isGroup: false,
-    messages: [
-      { id: "m-2-1", content: "Chào bạn, bên mình đang cần tuyển gấp 2 nhân viên pha chế ca tối ở Q3.", senderId: "mock-2", receiverId: "self", createdAt: new Date(Date.now() - 7200000).toISOString(), type: "TEXT", sender: { id: "mock-2", name: "Nguyễn Thùy Chi", role: "EMPLOYER", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-      { id: "m-2-2", content: "Lương 25k - 30k/h cộng thưởng doanh số. Bạn xem hồ sơ của mình có phù hợp không?", senderId: "mock-2", receiverId: "self", createdAt: new Date(Date.now() - 7100000).toISOString(), type: "TEXT", sender: { id: "mock-2", name: "Nguyễn Thùy Chi", role: "EMPLOYER", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-      { id: "m-2-3", content: "Chào chị, em đã nhận được thông tin, để em gửi CV qua hệ thống nhé.", senderId: "self", receiverId: "mock-2", createdAt: new Date(Date.now() - 7000000).toISOString(), type: "TEXT", sender: { id: "self", name: "Bạn", role: "USER" }, receiver: { id: "mock-2", name: "Nguyễn Thùy Chi", role: "EMPLOYER" } },
-    ]
-  },
-  {
-    id: "mock-3",
-    name: "Phạm Minh Hải (Tài Xế Grab)",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    role: "DRIVER",
-    bio: "Đội vận tải công nghệ 0% chiết khấu",
-    isOnline: true,
-    statusText: "Đang hoạt động",
-    isGroup: false,
-    messages: [
-      { id: "m-3-1", content: "Anh ơi, em đang đỗ ở gần Radar của anh tầm 200m nhé.", senderId: "mock-3", receiverId: "self", createdAt: new Date(Date.now() - 1200000).toISOString(), type: "TEXT", sender: { id: "mock-3", name: "Phạm Minh Hải", role: "DRIVER", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-      { id: "m-3-2", content: "Để em chạy xe qua đón anh đi spa cún luôn nhé.", senderId: "mock-3", receiverId: "self", createdAt: new Date(Date.now() - 1100000).toISOString(), type: "TEXT", sender: { id: "mock-3", name: "Phạm Minh Hải", role: "DRIVER", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-    ]
-  },
-  {
-    id: "mock-4",
-    name: "Trần Thị Mai (Thợ Spa Cún)",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
-    role: "SERVICE_PROVIDER",
-    bio: "Dịch vụ làm đẹp thú cưng tại nhà",
-    isOnline: false,
-    statusText: "Hoạt động 3 giờ trước",
-    isGroup: false,
-    messages: [
-      { id: "m-4-1", content: "Chào chị, em chuyên tỉa lông tạo kiểu nghệ thuật cho cún mèo.", senderId: "mock-4", receiverId: "self", createdAt: new Date(Date.now() - 18000000).toISOString(), type: "TEXT", sender: { id: "mock-4", name: "Trần Thị Mai", role: "SERVICE_PROVIDER", avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-      { id: "m-4-2", content: "Cho em xin cân nặng của bé để báo giá chính xác nha chị.", senderId: "mock-4", receiverId: "self", createdAt: new Date(Date.now() - 17900000).toISOString(), type: "TEXT", sender: { id: "mock-4", name: "Trần Thị Mai", role: "SERVICE_PROVIDER", avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" }, receiver: { id: "self", name: "Bạn", role: "USER" } },
-    ]
-  }
-];
-
 const MOCK_STICKERS = [
   { emoji: "🐶", label: "Cún Cười" },
   { emoji: "🐱", label: "Mèo Wow" },
@@ -170,7 +79,6 @@ function MessengerContent() {
   const [systemUsers, setSystemUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mockPartners, setMockPartners] = useState<any[]>(MOCK_PARTNERS);
 
   const [activeChat, setActiveChat] = useState<{
     id: string;
@@ -207,13 +115,11 @@ function MessengerContent() {
   const [micMuted, setMicMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
 
-  // Local Chat Bubble Reactions State for Phase 67
-  const [messageReactions, setMessageReactions] = useState<{[messageId: string]: string[]}>({
-    "mg-1-1": ["👍", "❤️"],
-    "m-1-1": ["👍"],
-    "m-1-3": ["❤️"],
-    "mg-2-1": ["🚀", "🔥"]
-  });
+  // Sidebar Tabs State: chat (Trò chuyện) or contacts (Danh bạ / Lời mời)
+  const [sidebarTab, setSidebarTab] = useState<"chat" | "contacts">("chat");
+
+  // Local Chat Bubble Reactions State
+  const [messageReactions, setMessageReactions] = useState<{[messageId: string]: string[]}>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -260,7 +166,7 @@ function MessengerContent() {
 
   // Subscribe to real-time messages via Pusher
   useEffect(() => {
-    if (!currentUser || !activeChat || activeChat.id.startsWith("mock-")) return;
+    if (!currentUser || !activeChat) return;
 
     const pusher = getPusherClient();
     if (!pusher) return;
@@ -311,26 +217,10 @@ function MessengerContent() {
     }
   }, [systemUsers, searchUserId, activeChat]);
 
-  // Auto select first mock partner on mount if no search query parameter and no active chat
-  useEffect(() => {
-    if (!searchUserId && !activeChat && mockPartners.length > 0) {
-      const firstMock = mockPartners[0];
-      setActiveChat({
-        id: firstMock.id,
-        name: firstMock.name,
-        avatarUrl: firstMock.avatarUrl,
-        role: firstMock.role,
-        isGroup: firstMock.isGroup || false,
-        isOnline: firstMock.isOnline,
-        statusText: firstMock.statusText
-      });
-    }
-  }, [searchUserId, activeChat, mockPartners]);
-
   // Scroll to chat log bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, activeChat, mockPartners]);
+  }, [messages, activeChat]);
 
   // GIF Search Debouncer
   useEffect(() => {
@@ -370,105 +260,6 @@ function MessengerContent() {
 
     if (!content) return;
     if (!customContent) setMessageText("");
-
-    if (activeChat.id.startsWith("mock-")) {
-      const newMessage = {
-        id: `mock-msg-${Date.now()}`,
-        content,
-        type,
-        senderId: "self",
-        receiverId: activeChat.id,
-        createdAt: new Date().toISOString(),
-        sender: {
-          id: currentUser?.id || "self",
-          name: currentUser?.name || "Bạn",
-          role: currentUser?.role || "USER",
-          avatarUrl: currentUser?.avatarUrl
-        },
-        receiver: {
-          id: activeChat.id,
-          name: activeChat.name,
-          role: activeChat.role
-        }
-      };
-
-      setMockPartners(prev => prev.map(m => {
-        if (m.id === activeChat.id) {
-          return {
-            ...m,
-            messages: [...m.messages, newMessage]
-          };
-        }
-        return m;
-      }));
-
-      // Auto response mock simulator
-      if (type === "TEXT") {
-        setTimeout(() => {
-          const autoReplies: {[key: string]: string[]} = {
-            "mock-group-1": [
-              "Hệ thống đã ghi nhận GPS chấm công công trình. Mọi người làm việc cẩn thận nhé!",
-              "Nhắc nhở: Các tài xế nhớ update lịch trình trong ngày hôm nay."
-            ],
-            "mock-group-2": [
-              "Hệ thống định tuyến API đã load mượt mà.",
-              "Anh em tiến hành test luồng và nộp log báo cáo vào tối nay nhé!"
-            ],
-            "mock-1": [
-              "Vâng đúng rồi ạ! Nền tảng PawBook giúp tối ưu hóa chi phí tốt nhất cho cộng đồng.",
-              "Nếu bạn có bất cứ câu hỏi nào khác về dự án, cứ nhắn cho mình nhé!",
-              "Chúc bạn một ngày làm việc hiệu quả! 🚀"
-            ],
-            "mock-2": [
-              "Dạ vâng, bạn gửi CV qua rồi thì mình sẽ phản hồi lại sớm nhất nha.",
-              "Cảm ơn bạn đã quan tâm đến tin tuyển dụng của quán!"
-            ],
-            "mock-3": [
-              "Dạ em đang di chuyển qua rồi anh nhé, khoảng 3 phút nữa em tới nơi.",
-              "Em chạy xe ôm công nghệ uy tín, anh yên tâm nhé!"
-            ],
-            "mock-4": [
-              "Dạ bé nhà mình thuộc giống chó gì thế ạ? Để em chuẩn bị dụng cụ kéo cắt phù hợp nha chị.",
-              "Dịch vụ spa bên em cam kết làm cún cưng dễ chịu, không stress."
-            ]
-          };
-
-          const replies = autoReplies[activeChat.id] || ["Mình đã nhận được tin nhắn của bạn nhé!"];
-          const randomReply = replies[Math.floor(Math.random() * replies.length)];
-
-          const botMessage = {
-            id: `mock-msg-bot-${Date.now()}`,
-            content: randomReply,
-            type: "TEXT",
-            senderId: activeChat.id,
-            receiverId: "self",
-            createdAt: new Date().toISOString(),
-            sender: {
-              id: activeChat.id,
-              name: activeChat.name,
-              role: activeChat.role,
-              avatarUrl: activeChat.avatarUrl
-            },
-            receiver: {
-              id: currentUser?.id || "self",
-              name: currentUser?.name || "Bạn",
-              role: currentUser?.role || "USER"
-            }
-          };
-
-          setMockPartners(prev => prev.map(m => {
-            if (m.id === activeChat.id) {
-              return {
-                ...m,
-                messages: [...m.messages, botMessage]
-              };
-            }
-            return m;
-          }));
-        }, 1000);
-      }
-      return;
-    }
 
     setSending(true);
     setShowEmoji(false);
@@ -579,45 +370,36 @@ function MessengerContent() {
       return;
     }
 
-    const newGroupId = `mock-group-${Date.now()}`;
-    const newGroup = {
-      id: newGroupId,
-      name: `${groupName.trim()} (${groupType === "HR" ? "HR Group" : "Fun"})`,
-      role: groupType === "HR" ? "WORKPLACE" : "GROUP",
-      bio: `${selectedUserIds.length + 1} thành viên`,
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(groupName)}&background=${groupType === "HR" ? "d97706" : "4f46e5"}&color=ffffff&bold=true`,
-      isGroup: true,
-      isOnline: true,
-      statusText: "Vừa mới tạo",
-      messages: [
-        {
-          id: `m-g-${Date.now()}`,
-          content: `Chào mọi người! Nhóm đã được khởi tạo với vai trò: ${groupType === "HR" ? "Công việc & Chấm công HR" : "Giải trí & Giao lưu"}.`,
-          senderId: "mock-1",
-          createdAt: new Date().toISOString(),
-          type: "TEXT",
-          sender: { id: "mock-1", name: "Lê Hoàng Nam", role: "DEVELOPER" }
-        }
-      ]
-    };
+    try {
+      // In private mode, group chat can also be created via backend
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: groupName.trim(),
+          isGroup: true,
+          participantIds: selectedUserIds,
+        }),
+      });
 
-    setMockPartners(prev => [newGroup, ...prev]);
-    toast.success("Tạo nhóm trò chuyện thành công! 🎉");
-    setShowGroupModal(false);
-    setGroupName("");
-    setSelectedUserIds([]);
-    setActiveChat({
-      id: newGroup.id,
-      name: newGroup.name,
-      avatarUrl: newGroup.avatarUrl,
-      role: newGroup.role,
-      isGroup: true,
-      isOnline: true,
-      statusText: newGroup.statusText
-    });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Tạo nhóm thất bại.");
+      } else {
+        toast.success("Tạo nhóm thành công!");
+        setShowGroupModal(false);
+        setGroupName("");
+        setSelectedUserIds([]);
+        loadData();
+      }
+    } catch (err) {
+      toast.error("Lỗi kết nối mạng khi tạo nhóm.");
+    }
   };
 
-  // Add / Toggle reactions state locally for Phase 67
+  // Add / Toggle reactions state locally
   const handleAddReaction = (msgId: string, emoji: string) => {
     setMessageReactions((prev) => {
       const existing = prev[msgId] || [];
@@ -635,7 +417,7 @@ function MessengerContent() {
   };
 
   const getChatConversations = () => {
-    if (!currentUser) return { dbList: [], mockList: [] };
+    if (!currentUser) return { dbList: [] };
     
     const list = [...conversations];
 
@@ -662,22 +444,13 @@ function MessengerContent() {
       }
     });
 
-    const filteredMocks = mockPartners.filter(m => 
-      m.name.toLowerCase().includes(searchFilter.toLowerCase())
-    );
-
     return {
-      dbList: filteredDbList,
-      mockList: filteredMocks
+      dbList: filteredDbList
     };
   };
 
   const getConversationMessages = () => {
     if (!activeChat || !currentUser) return [];
-    if (activeChat.id.startsWith("mock-")) {
-      const mock = mockPartners.find(m => m.id === activeChat.id);
-      return mock ? mock.messages : [];
-    }
     if (activeChat.isGroup) {
       return messages.filter((msg) => msg.conversationId === activeChat.id);
     }
@@ -688,7 +461,7 @@ function MessengerContent() {
     );
   };
 
-  const { dbList, mockList } = getChatConversations();
+  const { dbList } = getChatConversations();
   const activeConversation = getConversationMessages();
 
   if (loading && messages.length === 0) {
@@ -786,133 +559,150 @@ function MessengerContent() {
                   <MessageSquare className="h-4.5 w-4.5 text-blue-500" />
                   Hộp thư Messenger
                 </h2>
+                {sidebarTab === "chat" && (
+                  <button
+                    onClick={() => setShowGroupModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-550 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Tạo nhóm mới
+                  </button>
+                )}
+              </div>
+
+              {/* Sidebar Tabs Selector for Phase 68 */}
+              <div className="grid grid-cols-2 gap-1.5 bg-slate-900/50 p-1 rounded-xl border border-slate-850">
                 <button
-                  onClick={() => setShowGroupModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-550 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
+                  type="button"
+                  onClick={() => setSidebarTab("chat")}
+                  className={`py-1.5 rounded-lg text-3xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    sidebarTab === "chat"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
+                  }`}
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  Tạo nhóm mới
+                  <span>💬</span> Trò chuyện
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSidebarTab("contacts")}
+                  className={`py-1.5 rounded-lg text-3xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    sidebarTab === "contacts"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
+                  }`}
+                >
+                  <span>👥</span> Danh bạ / Lời mời
                 </button>
               </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Tìm hội thoại..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-1.5 pl-9 pr-3 text-xs text-slate-200 placeholder-slate-550 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
 
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-              {/* Online Partners Mock List (Rich aesthetics) */}
-              {mockList.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-2 mb-2">Đoạn Chat Đề Xuất (Bản Địa)</p>
-                  {mockList.map((m) => {
-                    const isActive = activeChat?.id === m.id;
-                    return (
-                      <div
-                        key={m.id}
-                        onClick={() => setActiveChat({
-                          id: m.id,
-                          name: m.name,
-                          avatarUrl: m.avatarUrl,
-                          role: m.role,
-                          isGroup: m.isGroup || false,
-                          isOnline: m.isOnline,
-                          statusText: m.statusText
-                        })}
-                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ease-in-out ${
-                          isActive
-                            ? "bg-blue-600/15 border border-blue-500/25 text-white"
-                            : "hover:bg-slate-900/40 border border-transparent"
-                        }`}
-                      >
-                        <div className="relative flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                            {m.isGroup ? (
-                              <Users className="h-5 w-5 text-indigo-400" />
-                            ) : (
-                              <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover animate-fadeIn" />
-                            )}
-                          </div>
-                          <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 ${m.isOnline ? "bg-emerald-500" : "bg-slate-500"}`} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex justify-between items-start">
-                            <p className="text-xs font-bold text-slate-200 truncate">{m.name}</p>
-                            <span className="text-[9px] text-slate-500">{m.isOnline ? "Online" : "Off"}</span>
-                          </div>
-                          <p className="text-3xs text-slate-500 truncate leading-relaxed">
-                            {m.bio}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {sidebarTab === "chat" && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Tìm hội thoại..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-1.5 pl-9 pr-3 text-xs text-slate-200 placeholder-slate-550 focus:border-blue-500 focus:outline-none"
+                  />
                 </div>
               )}
+            </div>
 
-              {/* Database Real Conversations */}
-              {dbList.length > 0 && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-2 mb-2">Hộp Thư Hệ Thống (Real-time)</p>
-                  {dbList.map((conv) => {
-                    const isGroup = conv.isGroup;
-                    const partner = isGroup ? null : conv.participants.find(p => p.id !== currentUser?.id);
+            {/* Conversations or Contacts List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+              {sidebarTab === "chat" ? (
+                <>
+                  {/* Database Real Conversations (Cleaned from all hardcoded mocks) */}
+                  {dbList.length > 0 ? (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-2 mb-2">Hộp Thư Hệ Thống (Real-time)</p>
+                      {dbList.map((conv) => {
+                        const isGroup = conv.isGroup;
+                        const partner = isGroup ? null : conv.participants.find(p => p.id !== currentUser?.id);
 
-                    if (!isGroup && !partner) return null;
+                        if (!isGroup && !partner) return null;
 
-                    const isActive = activeChat?.id === (isGroup ? conv.id : partner!.id);
-                    const displayName = isGroup ? (conv.name || "Nhóm trò chuyện") : partner!.name;
-                    const displayBio = isGroup ? `${conv.participants.length} thành viên` : (partner!.role + " • " + (partner!.bio || "Không có bio"));
-                    const avatarUrl = isGroup
-                      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=4f46e5&color=ffffff&bold=true`
-                      : (partner!.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2563eb&color=ffffff&bold=true`);
+                        const isActive = activeChat?.id === (isGroup ? conv.id : partner!.id);
+                        const displayName = isGroup ? (conv.name || "Nhóm trò chuyện") : partner!.name;
+                        const displayBio = isGroup ? `${conv.participants.length} thành viên` : (partner!.role + " • " + (partner!.bio || "Không có bio"));
+                        const avatarUrl = isGroup
+                          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=4f46e5&color=ffffff&bold=true`
+                          : (partner!.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2563eb&color=ffffff&bold=true`);
 
-                    return (
-                      <div
-                        key={conv.id}
-                        onClick={() => setActiveChat({
-                          id: isGroup ? conv.id : partner!.id,
-                          name: displayName,
-                          avatarUrl,
-                          role: isGroup ? "GROUP" : partner!.role,
-                          isGroup,
-                          isOnline: true,
-                          statusText: "Đang hoạt động"
-                        })}
-                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ease-in-out ${
-                          isActive
-                            ? "bg-blue-600/15 border border-blue-500/25 text-white"
-                            : "hover:bg-slate-900/40 border border-transparent"
-                        }`}
-                      >
-                        <div className="relative flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                            {isGroup ? (
-                              <Users className="h-5 w-5 text-indigo-400" />
-                            ) : (
-                              <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                            )}
+                        return (
+                          <div
+                            key={conv.id}
+                            onClick={() => setActiveChat({
+                              id: isGroup ? conv.id : partner!.id,
+                              name: displayName,
+                              avatarUrl,
+                              role: isGroup ? "GROUP" : partner!.role,
+                              isGroup,
+                              isOnline: true,
+                              statusText: "Đang hoạt động"
+                            })}
+                            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ease-in-out ${
+                              isActive
+                                ? "bg-blue-600/15 border border-blue-500/25 text-white"
+                                : "hover:bg-slate-900/40 border border-transparent"
+                            }`}
+                          >
+                            <div className="relative flex-shrink-0">
+                              <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                                {isGroup ? (
+                                  <Users className="h-5 w-5 text-indigo-400" />
+                                ) : (
+                                  <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                                )}
+                              </div>
+                              {!isGroup && (
+                                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-slate-255 truncate">{displayName}</p>
+                              <p className="text-3xs text-slate-500 truncate leading-relaxed">
+                                {displayBio}
+                              </p>
+                            </div>
                           </div>
-                          {!isGroup && (
-                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-255 truncate">{displayName}</p>
-                          <p className="text-3xs text-slate-500 truncate leading-relaxed">
-                            {displayBio}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-8 space-y-2 mt-8 animate-fadeIn">
+                      <MessageSquare className="h-8 w-8 text-slate-700" />
+                      <p className="text-3xs font-bold text-slate-400">Không có cuộc trò chuyện nào</p>
+                      <p className="text-4xs text-slate-550 max-w-[200px] leading-relaxed">Hãy kết bạn trên Bảng tin để nhắn tin hoặc chọn một tin đăng để liên hệ.</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* CONTACTS TAB VIEW - Private friends preview for Phase 68 */
+                <div className="space-y-4 p-2 animate-fadeIn text-xs">
+                  {/* Friend Requests Button */}
+                  <button
+                    onClick={() => toast.success("Hiện tại chưa có lời mời kết bạn mới nào.")}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-850 hover:bg-slate-850 transition-all cursor-pointer font-bold text-slate-200"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>🔔</span> Lời mời kết bạn
+                    </div>
+                    <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full text-5xs font-extrabold">0</span>
+                  </button>
+
+                  {/* Empty contacts view */}
+                  <div className="flex flex-col items-center justify-center text-center p-8 space-y-3 bg-slate-900/20 border border-dashed border-slate-850 rounded-2xl mt-4">
+                    <span className="text-3xl animate-bounce" style={{ animationDuration: "3s" }}>👥</span>
+                    <div>
+                      <p className="text-3xs font-bold text-slate-300">Danh bạ trống</p>
+                      <p className="text-4xs text-slate-500 mt-1 max-w-[220px] leading-relaxed">
+                        Chưa có bạn bè nào. Hãy kết bạn trên Bảng tin để trò chuyện!
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1043,7 +833,7 @@ function MessengerContent() {
                                 </div>
                               )}
 
-                              {/* Render Reactions directly overlapping the bubble corner for Phase 67 */}
+                              {/* Render Reactions directly overlapping the bubble corner */}
                               {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
                                 <div 
                                   onClick={() => setMessageReactions(prev => ({ ...prev, [msg.id]: [] }))}
@@ -1051,7 +841,7 @@ function MessengerContent() {
                                   title="Nhấp để xóa cảm xúc"
                                 >
                                   {messageReactions[msg.id].map((emoji, idx) => (
-                                    <span key={idx} className="hover:scale-120 transition-transform duration-100">{emoji}</span>
+                                    <span key={idx} className="hover:scale-125 transition-transform duration-100">{emoji}</span>
                                   ))}
                                 </div>
                               )}
@@ -1100,7 +890,7 @@ function MessengerContent() {
 
                 {/* Unified Telegram-like Media panel (Emoji / Stickers / GIFs) */}
                 {(showEmoji || showGifs) && (
-                  <div className="absolute bottom-24 left-4 right-4 bg-slate-950 border border-slate-850 rounded-2xl p-4 shadow-2xl z-20 h-80 flex flex-col animate-fadeIn">
+                  <div className="absolute bottom-24 left-4 right-4 bg-slate-950 border border-slate-855 rounded-2xl p-4 shadow-2xl z-20 h-80 flex flex-col animate-fadeIn">
                     {/* Panel Header Tabs */}
                     <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
                       <div className="flex items-center gap-3">
@@ -1150,7 +940,7 @@ function MessengerContent() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      {/* Telegram-style Emoji Grid for Phase 67 */}
+                      {/* Telegram-style Emoji Grid */}
                       {chatPanelTab === "emoji" && (
                         <div className="grid grid-cols-8 sm:grid-cols-10 gap-3 p-2 h-full overflow-y-auto custom-scrollbar select-none">
                           {POPULAR_EMOJIS.map((emoji, idx) => (
@@ -1191,7 +981,7 @@ function MessengerContent() {
                             placeholder="Nhập từ khóa tìm kiếm GIF..."
                             value={gifSearch}
                             onChange={(e) => setGifSearch(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-550 focus:outline-none"
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-550 focus:outline-none"
                           />
                           {loadingGifs ? (
                             <div className="flex-1 flex items-center justify-center">
@@ -1347,12 +1137,12 @@ function MessengerContent() {
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
-                <MessageSquare className="h-10 w-10 text-slate-650" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3 animate-fadeIn">
+                <MessageSquare className="h-10 w-10 text-slate-700 animate-pulse" />
                 <div>
                   <p className="text-xs font-bold text-slate-300">Chọn cuộc trò chuyện</p>
-                  <p className="text-3xs text-slate-500 mt-1 max-w-[280px]">
-                    Hãy chọn một liên hệ từ danh sách bên trái hoặc truy cập vào một tin tuyển dụng/gian hàng dịch vụ để kết nối trực tiếp.
+                  <p className="text-3xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                    Hãy chọn một cuộc trò chuyện hoặc bắt đầu kết bạn để nhắn tin.
                   </p>
                 </div>
               </div>
@@ -1360,97 +1150,6 @@ function MessengerContent() {
           </div>
         </div>
       </main>
-
-      {/* CALLING MODAL (Telegram/FaceTime Vibe) */}
-      {showCallingModal && activeChat && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-between z-50 p-6 animate-fadeIn">
-          {/* Header */}
-          <div className="w-full max-w-md flex items-center justify-between text-slate-400 text-3xs font-semibold uppercase tracking-wider">
-            <div className="flex items-center gap-1.5 text-emerald-500">
-              <Lock className="h-3 w-3" />
-              <span>Mã hóa đầu cuối E2EE</span>
-            </div>
-            <span>PawBook Secure Call</span>
-          </div>
-
-          {/* Central Avatar & Status */}
-          <div className="flex flex-col items-center space-y-6">
-            <div className="relative">
-              {/* Outer pulsing rings */}
-              <div className="absolute inset-0 rounded-full bg-blue-500/20 calling-ring" />
-              <div className="absolute inset-0 rounded-full bg-indigo-500/20 calling-ring [animation-delay:0.7s]" />
-              <div className="absolute inset-0 rounded-full bg-blue-600/10 calling-ring [animation-delay:1.4s]" />
-              
-              <div className="h-28 w-28 rounded-full overflow-hidden border-2 border-blue-500/50 bg-slate-900 relative z-10 shadow-2xl">
-                {activeChat.isGroup ? (
-                  <div className="h-full w-full flex items-center justify-center bg-indigo-650 animate-pulse">
-                    <Users className="h-10 w-10 text-white" />
-                  </div>
-                ) : (
-                  <img
-                    src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
-                    alt={activeChat.name}
-                    className="h-full w-full object-cover animate-fadeIn"
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="text-center space-y-1">
-              <h3 className="text-sm font-bold text-slate-100">{activeChat.name}</h3>
-              <p className="text-3xs text-blue-400 font-medium tracking-wide">
-                {callType === "video" ? "Cuộc gọi Video an toàn..." : "Cuộc gọi thoại an toàn..."}
-              </p>
-              <p className="text-4xs text-slate-400 mt-1 animate-pulse">Đang kết nối cuộc gọi an toàn E2EE...</p>
-            </div>
-          </div>
-
-          {/* Controls Panel */}
-          <div className="w-full max-w-md bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 flex items-center justify-around shadow-2xl backdrop-blur-lg mb-8">
-            <button
-              onClick={() => setMicMuted(!micMuted)}
-              className={`p-3.5 rounded-full border transition-all duration-300 ${
-                micMuted
-                  ? "bg-amber-600 border-amber-500 text-white"
-                  : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-              } cursor-pointer`}
-              title={micMuted ? "Bật Mic" : "Tắt Mic"}
-            >
-              {micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </button>
-
-            <button
-              onClick={() => setVideoOff(!videoOff)}
-              className={`p-3.5 rounded-full border transition-all duration-300 ${
-                videoOff
-                  ? "bg-amber-600 border-amber-500 text-white"
-                  : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-              } cursor-pointer`}
-              title={videoOff ? "Bật Cam" : "Tắt Cam"}
-            >
-              {videoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
-            </button>
-
-            <button
-              onClick={() => toast.success("Thay đổi thiết bị đầu ra âm thanh...")}
-              className="p-3.5 rounded-full border bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-300 cursor-pointer"
-            >
-              <Volume2 className="h-5 w-5" />
-            </button>
-
-            <button
-              onClick={() => {
-                setShowCallingModal(false);
-                toast.error("Cuộc gọi đã gác máy.");
-              }}
-              className="p-3.5 rounded-full bg-red-600 hover:bg-red-500 border border-red-500 text-white shadow-lg shadow-red-500/20 hover:scale-110 hover:rotate-12 transition-all duration-300 cursor-pointer"
-              title="Cúp máy"
-            >
-              <PhoneOff className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* CREATE GROUP MODAL */}
       {showGroupModal && (
@@ -1477,7 +1176,7 @@ function MessengerContent() {
                   placeholder="Ví dụ: Đội xe ôm Q1, Tổ thợ sửa..."
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-555 focus:outline-none"
+                  className="w-full bg-slate-950 border border-slate-805 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-555 focus:outline-none"
                 />
               </div>
 

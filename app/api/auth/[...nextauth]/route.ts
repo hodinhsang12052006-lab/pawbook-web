@@ -4,12 +4,19 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
-  trustHost: true,
+export const authOptions: NextAuthOptions = {
+  // Ép Vercel tin tưởng Domain để không đánh rơi Cookie
+  trustHost: true as any,
+
+  // Vẫn giữ Adapter dự phòng cho tương lai nếu ní tích hợp Login Google/Facebook
   adapter: PrismaAdapter(prisma) as any,
+
+  // BẮT BUỘC: Ép dùng JWT để Middleware (Edge) đọc được mà không cần chọc vào Database
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // Ép thời gian sống của thẻ VIP là 30 ngày
   },
+
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -28,8 +35,9 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
           },
         });
 
-        if (!user) {
-          throw new Error("Tài khoản không tồn tại. Vui lòng đăng ký.");
+        // Thêm check !user.password để chặn lỗi nếu acc đó đăng nhập bằng Google trước đây
+        if (!user || !user.password) {
+          throw new Error("Tài khoản không tồn tại hoặc chưa cài mật khẩu. Vui lòng đăng ký.");
         }
 
         const isPasswordMatch = await bcrypt.compare(
@@ -41,7 +49,7 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
           throw new Error("Mật khẩu không chính xác.");
         }
 
-        // Return user object with custom attributes (role, etc.)
+        // Trả về đúng object để nhét vào JWT
         return {
           id: user.id,
           name: user.name,
@@ -54,6 +62,7 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Lúc đăng nhập thành công, nhét id và role vào vé VIP (token)
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
@@ -61,6 +70,7 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
       return token;
     },
     async session({ session, token }) {
+      // Truyền data từ token ra ngoài session để client dùng
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
@@ -73,7 +83,8 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
     newUser: "/auth/register",
     error: "/auth/error",
   },
-  debug: true,
+  // Tắt debug trên Production cho nhẹ server, chỉ bật khi ở máy tính
+  debug: process.env.NODE_ENV === "development",
   secret: process.env.NEXTAUTH_SECRET || "pawbook_super_secret_key_2026_fixed_hardcode",
 };
 

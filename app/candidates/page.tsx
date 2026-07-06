@@ -8,7 +8,8 @@ import toast, { Toaster } from "react-hot-toast";
 interface Candidate {
   id: string;
   name: string;
-  position: string;
+  title: string;
+  position?: string;
   experience: string;
   salary: string;
   location: string;
@@ -16,76 +17,34 @@ interface Candidate {
   avatarUrl: string;
   bio: string;
   skills: string[];
+  fomoTags: string[];
 }
 
-const MOCK_CANDIDATES: Candidate[] = [
-  {
-    id: "candidate-1",
-    name: "Lê Minh Tuấn",
-    position: "Thợ Sửa Khóa Cấp Tốc",
-    experience: "5 năm kinh nghiệm",
-    salary: "15M - 20M VND",
-    location: "Nha Trang",
-    distance: "2.5 km",
-    avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
-    bio: "Chuyên xử lý các loại khóa thông minh, khóa cửa cuốn, khóa ô tô. Tận tâm, chu đáo, hỗ trợ 24/7 bất kể thời tiết.",
-    skills: ["Smartkey", "Khóa cơ", "Mở khóa ô tô", "Hỗ trợ 24/7"]
-  },
-  {
-    id: "candidate-2",
-    name: "Nguyễn Thu Thảo",
-    position: "Kỹ Thuật Viên Spa & Massage",
-    experience: "3 năm kinh nghiệm",
-    salary: "12M - 18M VND",
-    location: "Hà Nội",
-    distance: "1.2 km",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
-    bio: "Chuyên vị trí trị liệu da mặt, massage body Thụy Điển và đá nóng. Có bằng cấp chuyên ngành điều dưỡng và spa cao cấp.",
-    skills: ["Therapy body", "Massage đá nóng", "Skincare", "Tư vấn khách hàng"]
-  },
-  {
-    id: "candidate-3",
-    name: "Phạm Quốc Bảo",
-    position: "Tài Xế Lái Xe Hộ / Cứu Hộ",
-    experience: "8 năm lái xe an toàn",
-    salary: "18M - 25M VND",
-    location: "TP. Hồ Chí Minh",
-    distance: "4.8 km",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-    bio: "Có bằng lái hạng D, kinh nghiệm lái xe đường trường, rành đường thành phố. Sẵn sàng lái hộ khi khách hàng có cồn hoặc cứu hộ ô tô gặp sự cố.",
-    skills: ["Bằng lái hạng D", "Lái xe hộ", "Cứu hộ ô tô", "Định vị GPS"]
-  },
-  {
-    id: "candidate-4",
-    name: "Hoàng Minh Đức",
-    position: "Thợ Điện Nước Khẩn Cấp",
-    experience: "6 năm kinh nghiệm",
-    salary: "14M - 22M VND",
-    location: "Đà Nẵng",
-    distance: "3.1 km",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-    bio: "Khắc phục triệt để mọi sự cố rò rỉ nước chập điện âm tường trong vòng 30 phút. Nhiệt tình, thật thà, bảo hành dài hạn.",
-    skills: ["Sửa điện nước", "Điện âm tường", "Lắp camera", "Bảo hành 1 năm"]
-  },
-  {
-    id: "candidate-5",
-    name: "Trần Bảo Vy",
-    position: "Bác Sĩ Cấp Cứu Thú Y",
-    experience: "4 năm kinh nghiệm",
-    salary: "20M - 30M VND",
-    location: "Cần Thơ",
-    distance: "5.5 km",
-    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&auto=format&fit=crop&q=80",
-    bio: "Tốt nghiệp chuyên ngành Thú y Đại học Cần Thơ. Chuyên phẫu thuật ngoại khoa, chăm sóc nội khoa và cấp cứu thú cưng khẩn cấp.",
-    skills: ["Ngoại khoa", "Cấp cứu thú y", "Tiêm chủng", "Spa thú cưng"]
-  }
-];
+// MOCK_CANDIDATES removed, loading dynamically from public/data/fomo_cvs.json instead
 
 export default function CandidatesSwipePage() {
-  const [candidates, setCandidates] = useState<Candidate[]>(MOCK_CANDIDATES);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [matchedCandidate, setMatchedCandidate] = useState<Candidate | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function loadCandidates() {
+      try {
+        const res = await fetch("/data/fomo_cvs.json");
+        if (res.ok) {
+          const data = await res.json();
+          setCandidates(data);
+        }
+      } catch (err) {
+        console.error("Failed to load FOMO CVs:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCandidates();
+  }, []);
 
   const activeCandidate = candidates[currentIndex];
 
@@ -170,13 +129,27 @@ export default function CandidatesSwipePage() {
 
                 {/* Bottom Information Card Detail */}
                 <div className="relative z-20 space-y-2 text-left">
+                  {/* FOMO Badges at the top of card content */}
+                  {activeCandidate.fomoTags && activeCandidate.fomoTags.length > 0 && (
+                    <div className="relative z-20 flex flex-wrap gap-1 mb-1 bg-transparent">
+                      {activeCandidate.fomoTags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-gradient-to-r from-red-650/40 to-orange-600/40 border border-red-500/50 text-red-400 text-[8.5px] font-extrabold uppercase px-2 py-0.5 rounded shadow-[0_0_8px_rgba(239,68,68,0.3)] animate-pulse tracking-wide"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div>
                     <h2 className="text-lg font-black text-slate-100 leading-tight">
                       {activeCandidate.name}
                     </h2>
                     <p className="text-3xs font-extrabold text-blue-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
                       <Briefcase className="h-3 w-3" />
-                      {activeCandidate.position}
+                      {activeCandidate.title}
                     </p>
                   </div>
 

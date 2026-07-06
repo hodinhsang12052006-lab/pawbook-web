@@ -8,6 +8,16 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import "leaflet-defaulticon-compatibility";
+import MarkerClusterGroup from "react-leaflet-cluster";
+
+const createClusterCustomIcon = (cluster: any) => {
+  const count = cluster.getChildCount();
+  return L.divIcon({
+    html: `<div class="flex items-center justify-center bg-blue-600 border-2 border-white rounded-full text-white text-xs font-bold w-9 h-9 shadow-lg">${count}</div>`,
+    className: "custom-marker-cluster",
+    iconSize: L.point(36, 36, true),
+  });
+};
 
 interface MapJob {
   id: string;
@@ -181,100 +191,102 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
 
-        {allLocations.map((loc) => {
-          const ratingVal = loc.rating || (loc.reviews && loc.reviews.length > 0
-            ? parseFloat((loc.reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / loc.reviews.length).toFixed(1))
-            : parseFloat((4.2 + (loc.id.charCodeAt(0) % 9) / 10).toFixed(1)));
+        <MarkerClusterGroup iconCreateFunction={createClusterCustomIcon} maxClusterRadius={60} chunkedLoading>
+          {allLocations.map((loc) => {
+            const ratingVal = loc.rating || (loc.reviews && loc.reviews.length > 0
+              ? parseFloat((loc.reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / loc.reviews.length).toFixed(1))
+              : parseFloat((4.2 + (loc.id.charCodeAt(0) % 9) / 10).toFixed(1)));
 
-          const customIcon = createCustomIcon(ratingVal, !!loc.is_premium);
+            const customIcon = createCustomIcon(ratingVal, !!loc.is_premium);
 
-          const addressVal = loc.address || "Địa điểm hệ thống";
-          const hoursVal = loc.hours || "08:00 - 22:00";
-          const aiRecVal = loc.aiRecommendation || `Phù hợp 95% • ${ratingVal}⭐ trên Google Maps • Cách bạn 1.0km`;
+            const addressVal = loc.address || "Địa điểm hệ thống";
+            const hoursVal = loc.hours || "08:00 - 22:00";
+            const aiRecVal = loc.aiRecommendation || `Phù hợp 95% • ${ratingVal}⭐ trên Google Maps • Cách bạn 1.0km`;
 
-          return (
-            <Marker
-              key={loc.id}
-              position={[loc.latitude, loc.longitude]}
-              icon={customIcon}
-            >
-              <Popup>
-                <div className="p-3.5 space-y-2.5 min-w-[280px] text-slate-800 font-sans bg-white rounded-xl shadow-lg border border-slate-100">
-                  {/* Header with Avatar and Title */}
-                  <div className="flex gap-2.5 items-center">
-                    <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-100 flex-shrink-0 bg-slate-50">
-                      <img 
-                        src={loc.avatarUrl} 
-                        alt={loc.companyName} 
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className="text-[8px] bg-amber-50 text-amber-700 px-1 py-0.2 rounded font-extrabold uppercase border border-amber-100">
-                          {loc.is_premium ? "🔥 PREMIUM" : "ĐỊA PHƯƠNG"}
-                        </span>
+            return (
+              <Marker
+                key={loc.id}
+                position={[loc.latitude, loc.longitude]}
+                icon={customIcon}
+              >
+                <Popup>
+                  <div className="p-3.5 space-y-2.5 min-w-[280px] text-slate-800 font-sans bg-white rounded-xl shadow-lg border border-slate-100">
+                    {/* Header with Avatar and Title */}
+                    <div className="flex gap-2.5 items-center">
+                      <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-100 flex-shrink-0 bg-slate-50">
+                        <img 
+                          src={loc.avatarUrl} 
+                          alt={loc.companyName} 
+                          className="h-full w-full object-cover"
+                        />
                       </div>
-                      <h4 className="text-xs font-extrabold text-slate-900 leading-tight m-0 truncate mt-0.5">
-                        {loc.companyName}
-                      </h4>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] bg-amber-50 text-amber-700 px-1 py-0.2 rounded font-extrabold uppercase border border-amber-100">
+                            {loc.is_premium ? "🔥 PREMIUM" : "ĐỊA PHƯƠNG"}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-extrabold text-slate-900 leading-tight m-0 truncate mt-0.5">
+                          {loc.companyName}
+                        </h4>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Subinfo specs */}
-                  <p className="text-4xs text-slate-500 leading-relaxed font-semibold m-0">
-                    {loc.title}
-                  </p>
-
-                  {/* AI Recommendation Badge */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-2 text-[9px] text-blue-700 font-bold flex items-center gap-1.5 leading-relaxed">
-                    <span>🤖</span>
-                    <span>AI Đề xuất: {aiRecVal}</span>
-                  </div>
-
-                  {/* Address & Hours */}
-                  <div className="text-[9px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
-                    <p className="truncate">📍 {addressVal}</p>
-                    <p className="flex items-center gap-1.5">
-                      <span>⏱️ Giờ mở cửa: {hoursVal}</span>
-                      <span className={`inline-block px-1 rounded text-[8px] font-extrabold ${loc.isOpen !== false ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-650 border border-red-100"}`}>
-                        {loc.isOpen !== false ? "🟢 Mở cửa" : "🔴 Đóng cửa"}
-                      </span>
+                    {/* Subinfo specs */}
+                    <p className="text-4xs text-slate-500 leading-relaxed font-semibold m-0">
+                      {loc.title}
                     </p>
-                  </div>
 
-                  {/* Stars and Phone */}
-                  <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold">
-                    <div className="flex items-center gap-1 text-slate-700">
-                      <span className="text-amber-500 text-xs">⭐</span>
-                      <span className="text-slate-900">{ratingVal}</span>
+                    {/* AI Recommendation Badge */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-2 text-[9px] text-blue-700 font-bold flex items-center gap-1.5 leading-relaxed">
+                      <span>🤖</span>
+                      <span>AI Đề xuất: {aiRecVal}</span>
                     </div>
-                    <a
-                      href={`tel:${loc.phone || "0900 123 456"}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toast.success(`Đang gọi điện đến ${loc.companyName}...`);
-                      }}
-                      className="text-emerald-600 hover:text-emerald-500 flex items-center gap-0.5"
-                    >
-                      📞 {loc.phone || "Liên hệ SĐT"}
-                    </a>
-                  </div>
 
-                  {/* Chat CTA Button */}
-                  <div className="pt-1.5 flex gap-1.5">
-                    <a
-                      href={loc.isMock ? `/messages` : `/messages?userId=${loc.employerId}`}
-                      className="w-full inline-flex items-center justify-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 py-1.5 text-4xs font-bold text-white shadow-sm transition-all text-center select-none"
-                    >
-                      <span>💬</span> Nhắn tin ngay
-                    </a>
+                    {/* Address & Hours */}
+                    <div className="text-[9px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
+                      <p className="truncate">📍 {addressVal}</p>
+                      <p className="flex items-center gap-1.5">
+                        <span>⏱️ Giờ mở cửa: {hoursVal}</span>
+                        <span className={`inline-block px-1 rounded text-[8px] font-extrabold ${loc.isOpen !== false ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-650 border border-red-100"}`}>
+                          {loc.isOpen !== false ? "🟢 Mở cửa" : "🔴 Đóng cửa"}
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Stars and Phone */}
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold">
+                      <div className="flex items-center gap-1 text-slate-700">
+                        <span className="text-amber-500 text-xs">⭐</span>
+                        <span className="text-slate-900">{ratingVal}</span>
+                      </div>
+                      <a
+                        href={`tel:${loc.phone || "0900 123 456"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.success(`Đang gọi điện đến ${loc.companyName}...`);
+                        }}
+                        className="text-emerald-600 hover:text-emerald-500 flex items-center gap-0.5"
+                      >
+                        📞 {loc.phone || "Liên hệ SĐT"}
+                      </a>
+                    </div>
+
+                    {/* Chat CTA Button */}
+                    <div className="pt-1.5 flex gap-1.5">
+                      <a
+                        href={loc.isMock ? `/messages` : `/messages?userId=${loc.employerId}`}
+                        className="w-full inline-flex items-center justify-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 py-1.5 text-4xs font-bold text-white shadow-sm transition-all text-center select-none"
+                      >
+                        <span>💬</span> Nhắn tin ngay
+                      </a>
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MarkerClusterGroup>
         {userCoords && (
           <Marker
             position={userCoords}

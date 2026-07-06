@@ -78,12 +78,11 @@ const MOCK_GIFS = [
   { id: "mock-gif-6", title: "Vẫy tay", images: { fixed_height_small: { url: "https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" }, original: { url: "https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" } } }
 ];
 
-const MOCK_CONTACTS = [
-  { id: "mock-contact-1", name: "Nguyễn Văn Hùng", role: "Thợ sửa khóa chuyên nghiệp", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", location: "Nha Trang", distance: "2.5km" },
-  { id: "mock-contact-2", name: "Trần Thị Mai", role: "Chuyên viên Spa thú cưng", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80", location: "Hà Nội", distance: "1.2km" },
-  { id: "mock-contact-3", name: "Lê Quốc Bảo", role: "Tài xế cứu hộ ô tô", avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80", location: "TP.HCM", distance: "4.8km" },
-  { id: "mock-contact-4", name: "Phạm Thùy Chi", role: "Bác sĩ thú y", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80", location: "Đà Nẵng", distance: "3.1km" }
-];
+/* MOCK_CONTACTS commented out to clear virtual data */
+// const MOCK_CONTACTS = [
+//   { id: "mock-contact-1", name: "Nguyễn Văn Hùng", role: "Thợ sửa khóa chuyên nghiệp", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", location: "Nha Trang", distance: "2.5km" },
+//   ...
+// ];
 
 function MessengerContent() {
   const searchParams = useSearchParams();
@@ -127,10 +126,13 @@ function MessengerContent() {
 
   // Calling States (Calling UI Mockup)
   const [showCallingModal, setShowCallingModal] = useState(false);
-  const [syncingContacts, setSyncingContacts] = useState(false);
   const [callType, setCallType] = useState<"audio" | "video">("audio");
+  const [callConnected, setCallConnected] = useState(false);
+  const [callSeconds, setCallSeconds] = useState(0);
   const [micMuted, setMicMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [syncingContacts, setSyncingContacts] = useState(false);
 
   // Sidebar Tabs State: chat (Trò chuyện) or contacts (Danh bạ / Lời mời)
   const [sidebarTab, setSidebarTab] = useState<"chat" | "contacts">("chat");
@@ -239,6 +241,25 @@ function MessengerContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, activeChat]);
 
+  // Calling seconds timer hook
+  useEffect(() => {
+    let interval: any;
+    if (showCallingModal && callConnected) {
+      interval = setInterval(() => {
+        setCallSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setCallSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [showCallingModal, callConnected]);
+
+  const formatTimer = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+  };
+
   // GIF Search Debouncer with local MOCK fallbacks
   useEffect(() => {
     if (!showGifs) return;
@@ -334,7 +355,13 @@ function MessengerContent() {
     setSyncingContacts(true);
     setTimeout(() => {
       setSyncingContacts(false);
-      toast.success("Đã đồng bộ thành công 47 liên hệ từ danh bạ điện thoại của bạn!");
+      setContacts([
+        { id: "mock-contact-1", name: "Nguyễn Văn Hùng", role: "Thợ sửa khóa chuyên nghiệp", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", location: "Nha Trang", distance: "2.5km" },
+        { id: "mock-contact-2", name: "Trần Thị Mai", role: "Chuyên viên Spa thú cưng", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80", location: "Hà Nội", distance: "1.2km" },
+        { id: "mock-contact-3", name: "Lê Quốc Bảo", role: "Tài xế cứu hộ ô tô", avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80", location: "TP.HCM", distance: "4.8km" },
+        { id: "mock-contact-4", name: "Phạm Thùy Chi", role: "Bác sĩ thú y", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80", location: "Đà Nẵng", distance: "3.1km" }
+      ]);
+      toast.success("Đã đồng bộ thành công 4 liên hệ từ danh bạ điện thoại của bạn!");
     }, 2000);
   };
 
@@ -741,41 +768,51 @@ function MessengerContent() {
                     )}
                   </button>
 
-                  <p className="text-[10px] uppercase tracking-wider text-slate-550 font-extrabold px-2 mt-2">Bạn bè & Đồng nghiệp ({MOCK_CONTACTS.length})</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-550 font-extrabold px-2 mt-2">Bạn bè & Đồng nghiệp ({contacts.length})</p>
                   
-                  <div className="space-y-1 overflow-y-auto max-h-[420px] custom-scrollbar">
-                    {MOCK_CONTACTS.map((contact) => (
-                      <div
-                        key={contact.id}
-                        onClick={() => setActiveChat({
-                          id: contact.id,
-                          name: contact.name,
-                          avatarUrl: contact.avatarUrl,
-                          role: contact.role,
-                          isGroup: false,
-                          isOnline: true,
-                          statusText: `Đang ở ${contact.location} • Cách bạn ${contact.distance}`
-                        })}
-                        className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-slate-900/40 border border-transparent transition-all duration-300"
-                      >
-                        <div className="relative flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${contact.avatarUrl})` }} />
-                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />
+                  {contacts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center p-6 space-y-2 mt-4 border border-dashed border-slate-850 rounded-2xl bg-slate-900/10">
+                      <span className="text-xl animate-pulse">👥</span>
+                      <p className="text-[10px] font-bold text-slate-400">Danh bạ trống</p>
+                      <p className="text-[9px] text-slate-500 max-w-[200px] leading-relaxed">
+                        Chưa có liên hệ nào. Hãy đồng bộ danh bạ điện thoại hoặc tìm kiếm đối tác để trò chuyện!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 overflow-y-auto max-h-[420px] custom-scrollbar">
+                      {contacts.map((contact) => (
+                        <div
+                          key={contact.id}
+                          onClick={() => setActiveChat({
+                            id: contact.id,
+                            name: contact.name,
+                            avatarUrl: contact.avatarUrl,
+                            role: contact.role,
+                            isGroup: false,
+                            isOnline: true,
+                            statusText: `Đang ở ${contact.location} • Cách bạn ${contact.distance}`
+                          })}
+                          className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-slate-900/40 border border-transparent transition-all duration-300"
+                        >
+                          <div className="relative flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${contact.avatarUrl})` }} />
+                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-200 truncate">{contact.name}</p>
+                            <p className="text-3xs text-slate-450 truncate mt-0.5">
+                              {contact.role}
+                            </p>
+                            <p className="text-4xs text-slate-500 flex items-center gap-0.5 mt-1 font-semibold">
+                              <span>📍 Đang ở {contact.location}</span>
+                              <span>•</span>
+                              <span>Cách {contact.distance}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-200 truncate">{contact.name}</p>
-                          <p className="text-3xs text-slate-450 truncate mt-0.5">
-                            {contact.role}
-                          </p>
-                          <p className="text-4xs text-slate-500 flex items-center gap-0.5 mt-1 font-semibold">
-                            <span>📍 Đang ở {contact.location}</span>
-                            <span>•</span>
-                            <span>Cách {contact.distance}</span>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1402,6 +1439,154 @@ function MessengerContent() {
                 Tạo nhóm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AUDIO / VIDEO CALL MODAL OVERLAY */}
+      {showCallingModal && activeChat && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-between z-50 p-8 text-slate-100 animate-fadeIn">
+          {/* Top Indicator */}
+          <div className="flex flex-col items-center space-y-2 mt-12">
+            <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+              {callType === "video" ? "Cuộc gọi Video E2EE" : "Cuộc gọi thoại E2EE"}
+            </span>
+            <p className="text-3xs text-slate-500 font-semibold italic">Cuộc gọi được bảo mật bằng mã hóa đầu cuối</p>
+          </div>
+
+          {/* Main User Pulsing Card */}
+          <div className="flex flex-col items-center space-y-6">
+            <div className="relative">
+              <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl relative z-10">
+                <img
+                  src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
+                  alt={activeChat.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="absolute inset-0 h-28 w-28 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
+              <div className="absolute inset-0 h-28 w-28 rounded-full bg-indigo-500/10 animate-ping z-0 scale-125" style={{ animationDelay: "0.5s" }} />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h2 className="text-lg font-black text-slate-100">{activeChat.name}</h2>
+              {callConnected ? (
+                <p className="text-sm font-extrabold text-emerald-400 tracking-wider font-mono">
+                  {formatTimer(callSeconds)}
+                </p>
+              ) : (
+                <p className="text-3xs text-slate-400 font-bold animate-pulse">
+                  Đang gọi {callType === "video" ? "Video" : "Thoại"} cho {activeChat.name}...
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Camera Visual Mockups for Video Call */}
+          {callConnected && callType === "video" && (
+            <div className="absolute inset-x-4 top-24 bottom-32 bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl z-20 flex items-center justify-center">
+              {/* Partner Cam (Mocked using avatar/photo) */}
+              <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: `url(${activeChat.avatarUrl || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400'})` }} />
+              <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center">
+                {videoOff ? (
+                  <p className="text-3xs font-bold text-slate-400">🎥 Camera đối tác đã tắt</p>
+                ) : (
+                  <div className="text-center text-[10px] text-white/70 font-semibold animate-pulse">
+                    🎥 Đang truyền luồng Video Real-time...
+                  </div>
+                )}
+              </div>
+
+              {/* My Cam (Mocked in bottom-right corner) */}
+              <div className="absolute bottom-4 right-4 h-32 w-24 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl z-30">
+                <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: `url(https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120)` }} />
+                <div className="absolute bottom-1 left-1.5 bg-black/60 px-1.5 py-0.2 rounded text-[7px] text-white/90">Bạn</div>
+              </div>
+            </div>
+          )}
+
+          {/* Control Actions Panel */}
+          <div className="flex items-center gap-6 mb-8 z-30">
+            {!callConnected ? (
+              <>
+                {/* Accept Call Button */}
+                <button
+                  type="button"
+                  onClick={() => setCallConnected(true)}
+                  className="h-14 w-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer"
+                  title="Nhận cuộc gọi"
+                >
+                  <Phone className="h-6 w-6 stroke-[2.5px]" />
+                </button>
+
+                {/* Decline/Decline Ringing Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCallingModal(false);
+                    setCallConnected(false);
+                  }}
+                  className="h-14 w-14 rounded-full bg-gradient-to-r from-rose-500 to-red-600 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-red-500/20 cursor-pointer"
+                  title="Từ chối"
+                >
+                  <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Mute Mic Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMicMuted(!micMuted);
+                    toast.success(micMuted ? "🎤 Đã bật micro" : "🔇 Đã tắt micro");
+                  }}
+                  className={`h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${micMuted ? "bg-red-500 text-white border border-red-400" : "bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"}`}
+                  title={micMuted ? "Bật micro" : "Tắt micro"}
+                >
+                  {micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </button>
+
+                {/* End Call Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCallingModal(false);
+                    setCallConnected(false);
+                    toast.success(`Cuộc gọi đã kết thúc. Thời lượng: ${formatTimer(callSeconds)}`);
+                  }}
+                  className="h-14 w-14 rounded-full bg-gradient-to-r from-rose-500 to-red-600 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-red-550/20 cursor-pointer"
+                  title="Gác máy"
+                >
+                  <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
+                </button>
+
+                {/* Camera / Audio speaker Toggle */}
+                {callType === "video" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVideoOff(!videoOff);
+                      toast.success(videoOff ? "🎥 Đã mở camera" : "🚫 Đã tắt camera");
+                    }}
+                    className={`h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${videoOff ? "bg-red-500 text-white border border-red-400" : "bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"}`}
+                    title={videoOff ? "Bật camera" : "Tắt camera"}
+                  >
+                    {videoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => toast.success("🔊 Đã chuyển sang loa ngoài")}
+                    className="h-12 w-12 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer transition-all"
+                    title="Loa ngoài"
+                  >
+                    <Volume2 className="h-5 w-5" />
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

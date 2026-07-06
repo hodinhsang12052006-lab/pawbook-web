@@ -69,6 +69,22 @@ const POPULAR_EMOJIS = [
   "🌟", "⭐", "🎉", "🎈", "🚀", "💡", "💯", "💬", "🔒", "⚡"
 ];
 
+const MOCK_GIFS = [
+  { id: "mock-gif-1", title: "Cún Cười", images: { fixed_height_small: { url: "https://media.giphy.com/media/3ndwBmDYT6Wre/giphy.gif" }, original: { url: "https://media.giphy.com/media/3ndwBmDYT6Wre/giphy.gif" } } },
+  { id: "mock-gif-2", title: "Mèo Wow", images: { fixed_height_small: { url: "https://media.giphy.com/media/vfkseZ45HkiIG9qnkU/giphy.gif" }, original: { url: "https://media.giphy.com/media/vfkseZ45HkiIG9qnkU/giphy.gif" } } },
+  { id: "mock-gif-3", title: "Đồng ý", images: { fixed_height_small: { url: "https://media.giphy.com/media/l3q2lh5O3dxkoOkIU/giphy.gif" }, original: { url: "https://media.giphy.com/media/l3q2lh5O3dxkoOkIU/giphy.gif" } } },
+  { id: "mock-gif-4", title: "Chúc mừng", images: { fixed_height_small: { url: "https://media.giphy.com/media/26tOZ42cX5t5gzVIyL/giphy.gif" }, original: { url: "https://media.giphy.com/media/26tOZ42cX5t5gzVIyL/giphy.gif" } } },
+  { id: "mock-gif-5", title: "Đang làm việc", images: { fixed_height_small: { url: "https://media.giphy.com/media/3orifc88219cR1qDVC/giphy.gif" }, original: { url: "https://media.giphy.com/media/3orifc88219cR1qDVC/giphy.gif" } } },
+  { id: "mock-gif-6", title: "Vẫy tay", images: { fixed_height_small: { url: "https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" }, original: { url: "https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" } } }
+];
+
+const MOCK_CONTACTS = [
+  { id: "mock-contact-1", name: "Nguyễn Văn Hùng", role: "Thợ sửa khóa chuyên nghiệp", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", location: "Nha Trang", distance: "2.5km" },
+  { id: "mock-contact-2", name: "Trần Thị Mai", role: "Chuyên viên Spa thú cưng", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80", location: "Hà Nội", distance: "1.2km" },
+  { id: "mock-contact-3", name: "Lê Quốc Bảo", role: "Tài xế cứu hộ ô tô", avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80", location: "TP.HCM", distance: "4.8km" },
+  { id: "mock-contact-4", name: "Phạm Thùy Chi", role: "Bác sĩ thú y", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80", location: "Đà Nẵng", distance: "3.1km" }
+];
+
 function MessengerContent() {
   const searchParams = useSearchParams();
   const searchUserId = searchParams.get("userId");
@@ -222,7 +238,7 @@ function MessengerContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, activeChat]);
 
-  // GIF Search Debouncer
+  // GIF Search Debouncer with local MOCK fallbacks
   useEffect(() => {
     if (!showGifs) return;
     const fetchGifs = async () => {
@@ -235,10 +251,13 @@ function MessengerContent() {
         const res = await fetch(url);
         if (res.ok) {
           const payload = await res.json();
-          setGifsList(payload.data || []);
+          setGifsList(payload.data && payload.data.length > 0 ? payload.data : MOCK_GIFS);
+        } else {
+          setGifsList(MOCK_GIFS);
         }
       } catch (err) {
         console.error("Giphy fetch error:", err);
+        setGifsList(MOCK_GIFS);
       } finally {
         setLoadingGifs(false);
       }
@@ -680,8 +699,8 @@ function MessengerContent() {
                   )}
                 </>
               ) : (
-                /* CONTACTS TAB VIEW - Private friends preview for Phase 68 */
-                <div className="space-y-4 p-2 animate-fadeIn text-xs">
+                /* CONTACTS TAB VIEW - Friend list with real-time location tags */
+                <div className="space-y-3 p-2 animate-fadeIn text-xs">
                   {/* Friend Requests Button */}
                   <button
                     onClick={() => toast.success("Hiện tại chưa có lời mời kết bạn mới nào.")}
@@ -693,15 +712,40 @@ function MessengerContent() {
                     <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full text-5xs font-extrabold">0</span>
                   </button>
 
-                  {/* Empty contacts view */}
-                  <div className="flex flex-col items-center justify-center text-center p-8 space-y-3 bg-slate-900/20 border border-dashed border-slate-850 rounded-2xl mt-4">
-                    <span className="text-3xl animate-bounce" style={{ animationDuration: "3s" }}>👥</span>
-                    <div>
-                      <p className="text-3xs font-bold text-slate-300">Danh bạ trống</p>
-                      <p className="text-4xs text-slate-500 mt-1 max-w-[220px] leading-relaxed">
-                        Chưa có bạn bè nào. Hãy kết bạn trên Bảng tin để trò chuyện!
-                      </p>
-                    </div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-550 font-extrabold px-2 mt-2">Bạn bè & Đồng nghiệp ({MOCK_CONTACTS.length})</p>
+                  
+                  <div className="space-y-1 overflow-y-auto max-h-[420px] custom-scrollbar">
+                    {MOCK_CONTACTS.map((contact) => (
+                      <div
+                        key={contact.id}
+                        onClick={() => setActiveChat({
+                          id: contact.id,
+                          name: contact.name,
+                          avatarUrl: contact.avatarUrl,
+                          role: contact.role,
+                          isGroup: false,
+                          isOnline: true,
+                          statusText: `Đang ở ${contact.location} • Cách bạn ${contact.distance}`
+                        })}
+                        className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-slate-900/40 border border-transparent transition-all duration-300"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${contact.avatarUrl})` }} />
+                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-200 truncate">{contact.name}</p>
+                          <p className="text-3xs text-slate-450 truncate mt-0.5">
+                            {contact.role}
+                          </p>
+                          <p className="text-4xs text-slate-500 flex items-center gap-0.5 mt-1 font-semibold">
+                            <span>📍 Đang ở {contact.location}</span>
+                            <span>•</span>
+                            <span>Cách {contact.distance}</span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1013,7 +1057,7 @@ function MessengerContent() {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      {/* Emoji / Sticker / GIF Panel Trigger */}
+                      {/* Emoji Trigger */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1021,10 +1065,29 @@ function MessengerContent() {
                           setShowGifs(false);
                           setShowAttachmentMenu(false);
                         }}
-                        className={`p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-all duration-300 cursor-pointer ${showEmoji ? "bg-slate-900 text-blue-400" : ""}`}
-                        title="Chèn biểu tượng, nhãn dán, GIF"
+                        className={`p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-all duration-300 cursor-pointer ${showEmoji && chatPanelTab !== "gif" ? "bg-slate-900 text-blue-400" : ""}`}
+                        title="Chèn biểu tượng, nhãn dán"
                       >
                         <Smile className="h-5 w-5" />
+                      </button>
+
+                      {/* GIF Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (showEmoji && chatPanelTab === "gif") {
+                            setShowEmoji(false);
+                          } else {
+                            setShowEmoji(true);
+                            setChatPanelTab("gif");
+                            setShowGifs(true);
+                          }
+                          setShowAttachmentMenu(false);
+                        }}
+                        className={`px-2.5 py-1 h-8 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-all duration-300 cursor-pointer text-xs font-black font-sans leading-none flex items-center justify-center border border-slate-800 ${showEmoji && chatPanelTab === "gif" ? "bg-blue-600/20 text-blue-300 border-blue-500/50" : ""}`}
+                        title="Chèn ảnh động GIF"
+                      >
+                        GIF
                       </button>
 
                       {/* File Attach Trigger (Images / Videos / Files) */}

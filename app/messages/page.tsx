@@ -138,7 +138,9 @@ function MessengerContent() {
     { id: "mock-contact-3", name: "Lê Quốc Bảo", role: "Đối tác Giao hàng tự do", avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80", location: "TP.HCM", distance: "4.8km", isInternal: false, status: "free" },
     { id: "mock-contact-4", name: "Phạm Thùy Chi", role: "Bác sĩ thú y tự do", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80", location: "Đà Nẵng", distance: "3.1km", isInternal: false, status: "busy" }
   ]);
-  const [jobStates, setJobStates] = useState<Record<string, 'OPEN' | 'ACCEPTED' | 'COMPLETED'>>({});
+  const [jobStates, setJobStates] = useState<Record<string, 'OPEN' | 'ACCEPTED' | 'SYNCING' | 'COMPLETED'>>({});
+  const [showSSOModal, setShowSSOModal] = useState(false);
+  const [ssoStep, setSSOStep] = useState(1);
   const [syncingContacts, setSyncingContacts] = useState(false);
   const [showJoinWorkspaceModal, setShowJoinWorkspaceModal] = useState(false);
   const [workspaceCode, setWorkspaceCode] = useState("");
@@ -994,6 +996,82 @@ function MessengerContent() {
                                     <p>💰 Lương dự kiến: Đang tính toán...</p>
                                   </div>
                                 </div>
+                              ) : msg.type === "JOB" ? (
+                                <div className="p-4 bg-blue-950/25 border border-blue-500/50 rounded-2xl space-y-3 min-w-[270px] text-blue-350 font-sans shadow-[0_0_15px_rgba(59,130,246,0.15)] animate-fadeIn text-left">
+                                  <p className="font-extrabold text-[10px] uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                                    <span>⚡</span> BITPAW DISPATCHING JOB CARD
+                                  </p>
+                                  <div className="text-3xs space-y-1.5 text-slate-350 leading-relaxed font-semibold mt-1">
+                                    <p className="flex items-center gap-1"><span className="text-xs">💅</span> <span className="font-bold text-slate-400">Dịch vụ:</span> Gói Massage Cổ Vai Gáy (Khách VIP - Phòng 3)</p>
+                                    <p className="flex items-center gap-1"><span className="text-xs">💰</span> <span className="font-bold text-slate-400">Hoa hồng:</span> 150,000 VNĐ</p>
+                                    <p className="flex items-center gap-1"><span className="text-xs">⏰</span> <span className="font-bold text-slate-400">Thời gian:</span> Bắt đầu ngay</p>
+                                  </div>
+                                  <div className="flex flex-col gap-2 pt-2.5 border-t border-blue-500/20">
+                                    {jobStates[msg.id] === 'ACCEPTED' ? (
+                                      <div className="space-y-2">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="w-full py-1.5 rounded-xl bg-slate-800 text-slate-500 font-extrabold text-[9px] text-center cursor-not-allowed border border-slate-700"
+                                        >
+                                          Đã nhận bởi bạn
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setJobStates(prev => ({ ...prev, [msg.id]: 'SYNCING' }));
+                                            setTimeout(() => {
+                                              setJobStates(prev => ({ ...prev, [msg.id]: 'COMPLETED' }));
+                                              toast.success("💰 Ping! Đã ghi nhận doanh thu 150.000đ vào ví Bitpaw của bạn.", {
+                                                icon: "💰",
+                                                style: {
+                                                  background: "#1e293b",
+                                                  border: "1px solid #10b981",
+                                                  color: "#10b981",
+                                                  fontSize: "11px",
+                                                  fontWeight: "bold"
+                                                }
+                                              });
+                                            }, 2000);
+                                          }}
+                                          className="w-full py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-[9px] transition-all cursor-pointer text-center shadow-md shadow-emerald-555/25"
+                                        >
+                                          ✅ HOÀN THÀNH & CHẤM CÔNG
+                                        </button>
+                                      </div>
+                                    ) : jobStates[msg.id] === 'SYNCING' ? (
+                                      <div className="space-y-2">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="w-full py-1.5 rounded-xl bg-slate-850 text-slate-550 font-extrabold text-[9px] text-center cursor-not-allowed flex items-center justify-center gap-1.5"
+                                        >
+                                          <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                                          <span>⏳ Đang đồng bộ với Bitpaw...</span>
+                                        </button>
+                                      </div>
+                                    ) : jobStates[msg.id] === 'COMPLETED' ? (
+                                      <button
+                                        type="button"
+                                        disabled
+                                        className="w-full py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 font-extrabold text-[9px] text-center cursor-not-allowed"
+                                      >
+                                        ✓ Đã hoàn thành & Lưu doanh thu
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setJobStates(prev => ({ ...prev, [msg.id]: 'ACCEPTED' }));
+                                          toast.success("⚡ Nhận kèo thành công! Đang thực hiện công việc...");
+                                        }}
+                                        className="w-full py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-[9px] transition-all cursor-pointer text-center shadow-md shadow-blue-550/25"
+                                      >
+                                        ⚡ NHẬN KÈO
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
                               ) : msg.type === "QUOTATION" ? (
                                 <div className="p-3.5 bg-amber-950/20 border border-amber-550/30 rounded-2xl space-y-2.5 min-w-[260px] text-amber-300 font-sans shadow-lg animate-fadeIn text-left">
                                   <p className="font-extrabold text-[10px] uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
@@ -1255,8 +1333,18 @@ function MessengerContent() {
                       <button
                         type="button"
                         onClick={() => {
-                          handleSendMessage(null, "GPS_ATTENDANCE_COMPLETED", "ATTENDANCE");
-                          toast.success("✅ Đã chấm công thành công và đồng bộ tọa độ GPS!");
+                          setShowSSOModal(true);
+                          setSSOStep(1);
+                          setTimeout(() => {
+                            setSSOStep(2);
+                            setTimeout(() => {
+                              setShowSSOModal(false);
+                              handleSendMessage(null, "GPS_ATTENDANCE_COMPLETED", "ATTENDANCE");
+                              toast.success("✅ Chấm công thành công! Bạn đã sẵn sàng nhận đơn.");
+                              // Set first user to Free/Online
+                              setContacts(prev => prev.map((c, idx) => idx === 0 ? { ...c, status: "free" } : c));
+                            }, 1500);
+                          }, 1500);
                         }}
                         className="p-2 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-900 transition-all duration-300 cursor-pointer"
                         title="Chấm công GPS"
@@ -1748,6 +1836,35 @@ function MessengerContent() {
                 {joiningWorkspace && <Loader2 className="h-3 w-3 animate-spin" />}
                 <span>Gửi yêu cầu phê duyệt</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SSO REDIRECT MODAL OVERLAY */}
+      {showSSOModal && (
+        <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 p-6 text-slate-100 animate-fadeIn">
+          <div className="text-center space-y-6 max-w-sm">
+            <div className="relative flex justify-center items-center">
+              <div className="h-16 w-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center animate-spin duration-[3000ms]">
+                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xs font-black tracking-wide text-slate-200 flex items-center justify-center gap-1.5 animate-pulse">
+                {ssoStep === 1 ? (
+                  <>
+                    <span>🔄</span>
+                    <span>Đang chuyển hướng an toàn sang Bitpaw HR...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>👤</span>
+                    <span>Đang xác thực sinh trắc học...</span>
+                  </>
+                )}
+              </h3>
+              <p className="text-[9px] text-slate-500 italic">Cổng kết nối bảo mật SSO tích hợp Bitpaw OAuth2</p>
             </div>
           </div>
         </div>

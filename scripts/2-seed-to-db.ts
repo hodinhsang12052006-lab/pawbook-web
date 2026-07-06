@@ -97,6 +97,41 @@ function getJsonFiles(dir: string): string[] {
   return results;
 }
 
+const ALL_SERVICES = [
+  "Cứu hộ xe máy", "Cứu hộ ô tô", "Thợ sửa khóa", "Sửa điện nước khẩn cấp",
+  "Thông tắc vệ sinh", "Nhà thuốc 24/7", "Cấp cứu thú y", "Diệt côn trùng",
+  "Sửa chữa máy lạnh", "Sửa điện máy gia dụng", "Dọn dẹp nhà cửa", "Giặt ủi nội thất",
+  "Thợ xây sửa nhỏ", "Lắp đặt camera", "Sửa cửa cuốn cửa kính",
+  "Cắt tóc nam barber", "Salon tóc nữ", "Spa Massage", "Tiệm Nails",
+  "Phun xăm thẩm mỹ", "Phòng tập Gym Yoga", "Trang điểm Makeup",
+  "Thuê xe máy", "Thuê ô tô tự lái", "Chuyển nhà trọn gói", "Xe tải chở thuê",
+  "Đưa đón sân bay", "Tài xế lái xe hộ", "Chạy xe ôm công nghệ Grab",
+  "Giặt ủi dân dụng", "Giao gas tận nhà", "Giao nước khoáng", "Sửa quần áo giày dép",
+  "In ấn Photocopy", "Rửa xe chăm sóc xe", "Giao đá viên hỏa tốc", "Sửa chữa máy tính laptop",
+  "Spa thú cưng", "Khách sạn thú cưng", "Trông trẻ theo giờ",
+  "Gia sư trung tâm dạy kèm", "Khu vui chơi trẻ em",
+  "Quán ăn đêm", "Cà phê làm việc", "Cyber Gaming tiệm net", "Billiards bida",
+  "Karaoke", "Nấu tiệc tại nhà", "Thuê đồ sự kiện", "Cho thuê trang phục",
+  "Y tế tại nhà", "Dịch vụ giấy tờ pháp lý", "Mua bán sửa chữa điện thoại iphone"
+];
+
+function slugifyKeyword(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .toLowerCase()
+    .trim();
+}
+
+function getExactKeyword(filename: string): string {
+  const cleanName = filename.replace(".json", "");
+  const matched = ALL_SERVICES.find(srv => slugifyKeyword(srv) === slugifyKeyword(cleanName));
+  return matched || cleanName.replace(/_/g, " ");
+}
+
 async function main() {
   console.log("=== STEP 2: NATIONWIDE DATABASE SEEDER ===");
 
@@ -123,6 +158,13 @@ async function main() {
       const fileContent = fs.readFileSync(file, "utf-8");
       const stores = JSON.parse(fileContent);
       if (Array.isArray(stores)) {
+        const filename = path.basename(file);
+        const resolvedKeyword = getExactKeyword(filename);
+        
+        stores.forEach((store: any) => {
+          store.category = resolvedKeyword; // overwrite English category with resolved Vietnamese keyword
+        });
+
         allStores.push(...stores);
       }
     } catch (e: any) {

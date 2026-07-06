@@ -5,7 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import { 
   Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users, 
   Image, Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info,
-  MicOff, VideoOff, PhoneOff, Volume2
+  MicOff, VideoOff, PhoneOff, Volume2, Clock, FileText
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
@@ -888,6 +888,43 @@ function MessengerContent() {
                                 <div className="text-5xl my-2 select-none transform hover:scale-115 hover:-rotate-3 active:scale-95 transition-all cursor-pointer animate-fadeIn" title="Telegram Sticker">
                                   {msg.content}
                                 </div>
+                              ) : msg.type === "ATTENDANCE" ? (
+                                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-2 min-w-[260px] text-emerald-300 font-sans shadow-lg animate-fadeIn text-left">
+                                  <p className="font-extrabold text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                    <span className="text-emerald-500">⏱️</span> GPS Chấm Công Thành Công
+                                  </p>
+                                  <div className="text-3xs space-y-1 mt-1 text-emerald-250/90 leading-relaxed font-semibold">
+                                    <p>✅ Đã chấm công thành công lúc 08:00 AM.</p>
+                                    <p>📍 Vị trí: Trùng khớp với tọa độ Radar.</p>
+                                    <p>💰 Lương dự kiến: Đang tính toán...</p>
+                                  </div>
+                                </div>
+                              ) : msg.type === "QUOTATION" ? (
+                                <div className="p-3.5 bg-amber-950/20 border border-amber-550/30 rounded-2xl space-y-2.5 min-w-[260px] text-amber-300 font-sans shadow-lg animate-fadeIn text-left">
+                                  <p className="font-extrabold text-[10px] uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                    <span className="text-amber-500">📄</span> Báo Giá & Hợp Đồng Gig
+                                  </p>
+                                  <div className="text-3xs space-y-1 mt-1 text-amber-250/90 leading-relaxed font-semibold">
+                                    <p>📄 Báo giá dịch vụ: Vệ sinh máy lạnh 2 bộ.</p>
+                                    <p>💵 Tổng tiền: 450,000 VNĐ.</p>
+                                  </div>
+                                  <div className="flex gap-2 pt-2 border-t border-amber-500/20">
+                                    <button
+                                      type="button"
+                                      onClick={() => toast.success("✅ Đã chấp nhận và thanh toán 450.000 VNĐ thành công!")}
+                                      className="flex-1 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-5xs transition-all cursor-pointer text-center"
+                                    >
+                                      Chấp nhận & Thanh toán
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => toast.error("❌ Đã từ chối báo giá dịch vụ.")}
+                                      className="py-1 px-3 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 font-bold text-5xs transition-all cursor-pointer text-center"
+                                    >
+                                      Từ chối
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
                                 <div
                                   className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${
@@ -1117,6 +1154,32 @@ function MessengerContent() {
                         title="Chèn ảnh động GIF"
                       >
                         GIF
+                      </button>
+
+                      {/* GPS Check-in Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSendMessage(null, "GPS_ATTENDANCE_COMPLETED", "ATTENDANCE");
+                          toast.success("✅ Đã chấm công thành công và đồng bộ tọa độ GPS!");
+                        }}
+                        className="p-2 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-900 transition-all duration-300 cursor-pointer"
+                        title="Chấm công GPS"
+                      >
+                        <Clock className="h-5 w-5" />
+                      </button>
+
+                      {/* Quotation Contract Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSendMessage(null, "QUOTATION_GIG_CONTRACT_V1", "QUOTATION");
+                          toast.success("📄 Đã gửi bản báo giá & hợp đồng dịch vụ!");
+                        }}
+                        className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-900 transition-all duration-300 cursor-pointer"
+                        title="Gửi báo giá / hợp đồng"
+                      >
+                        <FileText className="h-5 w-5" />
                       </button>
 
                       {/* File Attach Trigger (Images / Videos / Files) */}

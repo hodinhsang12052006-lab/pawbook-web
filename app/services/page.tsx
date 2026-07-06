@@ -218,28 +218,21 @@ export default function ServicesPage() {
           dynamicData = await dynRes.json();
         }
 
-        // 2. Fetch merged static crawled stores
-        const staticRes = await fetch("/data/all_services.json");
-        let staticData = [];
-        if (staticRes.ok) {
-          staticData = await staticRes.json();
+        // 2. Fetch crawled stores from database API
+        const storesRes = await fetch(`/api/stores?province=${encodeURIComponent(selectedProvince)}`);
+        let dbStores = [];
+        if (storesRes.ok) {
+          dbStores = await storesRes.json();
         }
 
-        // 3. Filter static stores based on selectedProvince slug
-        let filteredStatic = staticData;
-        if (selectedProvince !== "all") {
-          const slug = PROVINCE_SLUGS[selectedProvince] || selectedProvince;
-          filteredStatic = staticData.filter((store: any) => store.province === slug);
-        }
-
-        // 4. Map static stores to ServiceType schema
-        const mappedStatic = filteredStatic.map((store: any) => ({
+        // 3. Map database stores to ServiceType schema
+        const mappedStatic = dbStores.map((store: any) => ({
           id: store.id,
           name: store.name,
           category: store.category,
           description: `Cửa hàng định vị tự động qua Google Maps • ${store.reviewCount || 0} đánh giá`,
-          location: `${store.latitude},${store.longitude}`,
-          city: store.province.replace(/_/g, " "),
+          location: store.latitude && store.longitude ? `${store.latitude},${store.longitude}` : "12.245,109.195",
+          city: selectedProvince === "all" ? "Toàn quốc" : selectedProvince,
           contactInfo: "0900 123 456",
           rating: store.rating || 4.5,
           ownerId: "google-maps-crawled",

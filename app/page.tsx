@@ -174,22 +174,25 @@ export default function Home() {
             )}
 
             {activeTab === "hr" && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-8 backdrop-blur-md text-center max-w-2xl mx-auto my-8">
-                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-6 w-6 text-indigo-400" />
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-8 backdrop-blur-md text-center max-w-2xl mx-auto my-8 space-y-6">
+                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto">
+                  <Users className="h-6 w-6 text-indigo-400 animate-pulse" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-100">Cổng Quản Lý HR & Tuyển Dụng</h2>
-                <p className="mt-2 text-sm text-slate-400">
-                  Dành riêng cho Employer và Admin. Quản lý danh sách hồ sơ ứng viên, đặt lịch phỏng vấn, theo dõi hiệu quả bài đăng tuyển dụng, và quản trị tổ chức của bạn.
-                </p>
-                <div className="mt-6 p-4 rounded-xl bg-slate-950/80 border border-slate-850 max-w-md mx-auto flex items-center gap-3 text-left">
-                  <Key className="h-8 w-8 text-blue-500 flex-shrink-0" />
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-250">Tính năng yêu cầu quyền Nhà tuyển dụng</h4>
-                    <p className="text-3xs text-slate-500 mt-0.5">
-                      Vui lòng nâng cấp tài khoản của bạn lên vai trò **EMPLOYER** trong mục cài đặt để mở khóa toàn bộ dashboard quản lý nhân sự.
-                    </p>
-                  </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-black text-slate-100 flex items-center gap-2 justify-center">
+                    <span>🔥</span> Tinder Tuyển Dụng
+                  </h2>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                    Trải nghiệm tính năng tuyển dụng cực kỳ độc đáo theo phong cách Tinder. Xem thông tin hồ sơ ứng viên nhanh chóng, quẹt trái để bỏ qua, quẹt phải để liên hệ phỏng vấn trực tiếp!
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <a
+                    href="/candidates"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs px-6 py-3 shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    Bắt đầu quẹt CV ứng viên ngay <ArrowUpRight className="h-4 w-4" />
+                  </a>
                 </div>
               </div>
             )}

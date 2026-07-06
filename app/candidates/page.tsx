@@ -1,0 +1,336 @@
+"use client";
+
+import React, { useState } from "react";
+import Navbar from "@/components/layout/Navbar";
+import { X, Heart, Sparkles, User, Briefcase, DollarSign, MapPin, Star, MessageSquare, RefreshCw } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
+
+interface Candidate {
+  id: string;
+  name: string;
+  position: string;
+  experience: string;
+  salary: string;
+  location: string;
+  distance: string;
+  avatarUrl: string;
+  bio: string;
+  skills: string[];
+}
+
+const MOCK_CANDIDATES: Candidate[] = [
+  {
+    id: "candidate-1",
+    name: "Lê Minh Tuấn",
+    position: "Thợ Sửa Khóa Cấp Tốc",
+    experience: "5 năm kinh nghiệm",
+    salary: "15M - 20M VND",
+    location: "Nha Trang",
+    distance: "2.5 km",
+    avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
+    bio: "Chuyên xử lý các loại khóa thông minh, khóa cửa cuốn, khóa ô tô. Tận tâm, chu đáo, hỗ trợ 24/7 bất kể thời tiết.",
+    skills: ["Smartkey", "Khóa cơ", "Mở khóa ô tô", "Hỗ trợ 24/7"]
+  },
+  {
+    id: "candidate-2",
+    name: "Nguyễn Thu Thảo",
+    position: "Kỹ Thuật Viên Spa & Massage",
+    experience: "3 năm kinh nghiệm",
+    salary: "12M - 18M VND",
+    location: "Hà Nội",
+    distance: "1.2 km",
+    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
+    bio: "Chuyên vị trí trị liệu da mặt, massage body Thụy Điển và đá nóng. Có bằng cấp chuyên ngành điều dưỡng và spa cao cấp.",
+    skills: ["Therapy body", "Massage đá nóng", "Skincare", "Tư vấn khách hàng"]
+  },
+  {
+    id: "candidate-3",
+    name: "Phạm Quốc Bảo",
+    position: "Tài Xế Lái Xe Hộ / Cứu Hộ",
+    experience: "8 năm lái xe an toàn",
+    salary: "18M - 25M VND",
+    location: "TP. Hồ Chí Minh",
+    distance: "4.8 km",
+    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+    bio: "Có bằng lái hạng D, kinh nghiệm lái xe đường trường, rành đường thành phố. Sẵn sàng lái hộ khi khách hàng có cồn hoặc cứu hộ ô tô gặp sự cố.",
+    skills: ["Bằng lái hạng D", "Lái xe hộ", "Cứu hộ ô tô", "Định vị GPS"]
+  },
+  {
+    id: "candidate-4",
+    name: "Hoàng Minh Đức",
+    position: "Thợ Điện Nước Khẩn Cấp",
+    experience: "6 năm kinh nghiệm",
+    salary: "14M - 22M VND",
+    location: "Đà Nẵng",
+    distance: "3.1 km",
+    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+    bio: "Khắc phục triệt để mọi sự cố rò rỉ nước chập điện âm tường trong vòng 30 phút. Nhiệt tình, thật thà, bảo hành dài hạn.",
+    skills: ["Sửa điện nước", "Điện âm tường", "Lắp camera", "Bảo hành 1 năm"]
+  },
+  {
+    id: "candidate-5",
+    name: "Trần Bảo Vy",
+    position: "Bác Sĩ Cấp Cứu Thú Y",
+    experience: "4 năm kinh nghiệm",
+    salary: "20M - 30M VND",
+    location: "Cần Thơ",
+    distance: "5.5 km",
+    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&auto=format&fit=crop&q=80",
+    bio: "Tốt nghiệp chuyên ngành Thú y Đại học Cần Thơ. Chuyên phẫu thuật ngoại khoa, chăm sóc nội khoa và cấp cứu thú cưng khẩn cấp.",
+    skills: ["Ngoại khoa", "Cấp cứu thú y", "Tiêm chủng", "Spa thú cưng"]
+  }
+];
+
+export default function CandidatesSwipePage() {
+  const [candidates, setCandidates] = useState<Candidate[]>(MOCK_CANDIDATES);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  const [matchedCandidate, setMatchedCandidate] = useState<Candidate | null>(null);
+
+  const activeCandidate = candidates[currentIndex];
+
+  const handleSwipe = (direction: "left" | "right") => {
+    if (!activeCandidate) return;
+    setSwipeDirection(direction);
+
+    // After animation, move to next card
+    setTimeout(() => {
+      if (direction === "right") {
+        setMatchedCandidate(activeCandidate);
+      }
+      setCurrentIndex((prev) => prev + 1);
+      setSwipeDirection(null);
+    }, 500);
+  };
+
+  const handleReset = () => {
+    setCurrentIndex(0);
+    setMatchedCandidate(null);
+    setSwipeDirection(null);
+    toast.success("🔄 Đã làm mới danh sách ứng viên!");
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden">
+      {/* Global Navbar */}
+      <Navbar />
+      <Toaster position="top-center" />
+
+      {/* Main Container */}
+      <main className="flex-1 w-full h-[calc(100vh-64px)] flex items-center justify-center p-4 relative bg-radial-gradient">
+        {/* Neon blur background highlights */}
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
+
+        <div className="w-full max-w-sm flex flex-col items-center">
+          
+          {/* Tinder Swiper Header */}
+          <div className="text-center mb-5 flex items-center gap-1.5 justify-center">
+            <Sparkles className="h-5 w-5 text-indigo-400 animate-pulse" />
+            <h1 className="text-base font-extrabold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
+              Tinder Tuyển Dụng
+            </h1>
+          </div>
+
+          {/* Cards Stack Area */}
+          <div className="relative w-full h-[460px] flex items-center justify-center">
+            {activeCandidate ? (
+              <div
+                className={`absolute w-full h-full rounded-3xl border border-slate-805 bg-slate-900 shadow-2xl p-5 flex flex-col justify-between overflow-hidden transition-all duration-500 ease-out select-none cursor-grab active:cursor-grabbing ${
+                  swipeDirection === "left"
+                    ? "transform -translate-x-[150%] rotate-[-20deg] opacity-0"
+                    : swipeDirection === "right"
+                    ? "transform translate-x-[150%] rotate-[20deg] opacity-0"
+                    : "scale-100 opacity-100"
+                }`}
+              >
+                {/* Background Shadow Gradient inside card */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent z-10 pointer-events-none" />
+
+                {/* Candidate Photo */}
+                <div className="absolute inset-0 w-full h-full">
+                  <img
+                    src={activeCandidate.avatarUrl}
+                    alt={activeCandidate.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Top Badge: Distance & Rating */}
+                <div className="relative z-20 flex justify-between items-center">
+                  <span className="bg-slate-950/80 border border-slate-800 px-2.5 py-1 rounded-full text-4xs font-bold text-slate-300 flex items-center gap-1 backdrop-blur-md">
+                    <MapPin className="h-3 w-3 text-red-500" />
+                    Cách {activeCandidate.distance} ({activeCandidate.location})
+                  </span>
+                  <span className="bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full text-4xs font-bold text-amber-400 flex items-center gap-1 backdrop-blur-md">
+                    <Star className="h-3 w-3 fill-current text-amber-500" />
+                    5.0
+                  </span>
+                </div>
+
+                {/* Bottom Information Card Detail */}
+                <div className="relative z-20 space-y-2 text-left">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-100 leading-tight">
+                      {activeCandidate.name}
+                    </h2>
+                    <p className="text-3xs font-extrabold text-blue-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" />
+                      {activeCandidate.position}
+                    </p>
+                  </div>
+
+                  <p className="text-4xs text-slate-350 leading-relaxed line-clamp-3">
+                    {activeCandidate.bio}
+                  </p>
+
+                  {/* Skills tags */}
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {activeCandidate.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="text-[9px] bg-slate-950/90 border border-slate-800 text-slate-400 px-2 py-0.5 rounded"
+                      >
+                        #{skill}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2.5 border-t border-slate-800/80 mt-1">
+                    <span className="text-[10px] text-slate-500 font-bold">{activeCandidate.experience}</span>
+                    <span className="text-xs font-black text-emerald-400 flex items-center gap-0.5">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      {activeCandidate.salary}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* End of candidates list card */
+              <div className="w-full h-full rounded-3xl border border-slate-850 bg-slate-900/50 shadow-2xl p-6 flex flex-col items-center justify-center text-center space-y-4 backdrop-blur-md animate-fadeIn">
+                <div className="h-16 w-16 rounded-full bg-slate-800/50 flex items-center justify-center">
+                  <User className="h-8 w-8 text-slate-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-200">Đã hết hồ sơ ứng viên!</h3>
+                  <p className="text-4xs text-slate-500 mt-1.5 max-w-[200px] leading-relaxed">
+                    Hãy quay lại sau hoặc làm mới danh sách ứng viên để tiếp tục quẹt tìm thợ phù hợp.
+                  </p>
+                </div>
+                <button
+                  onClick={handleReset}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold rounded-xl text-3xs shadow-md transition-all cursor-pointer flex items-center gap-1 hover:scale-105 active:scale-95"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Làm mới danh sách
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Swipe Buttons Controls */}
+          {activeCandidate && (
+            <div className="flex gap-6 mt-6 items-center z-20">
+              <button
+                type="button"
+                onClick={() => handleSwipe("left")}
+                className="h-12 w-12 rounded-full bg-slate-900 border border-slate-800 hover:border-red-500/20 text-red-500 flex items-center justify-center shadow-lg hover:shadow-red-500/10 active:scale-90 hover:scale-110 transition-all duration-300 cursor-pointer"
+                title="Bỏ qua"
+              >
+                <X className="h-6 w-6 stroke-[3px]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSwipe("right")}
+                className="h-14 w-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-xl hover:shadow-emerald-500/20 active:scale-90 hover:scale-110 transition-all duration-300 cursor-pointer animate-pulse"
+                title="Match và Phỏng vấn"
+              >
+                <Heart className="h-6 w-6 stroke-[3px] fill-current" />
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* MATCH CONGRATULATIONS POPUP MODAL */}
+      {matchedCandidate && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="relative w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl text-center space-y-5 animate-scaleIn">
+            <div className="absolute top-3 right-3">
+              <button
+                onClick={() => setMatchedCandidate(null)}
+                className="p-1 hover:bg-slate-850 rounded-lg text-slate-500 hover:text-white cursor-pointer"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-3xl animate-bounce">🎉 MATCH THÀNH CÔNG!</div>
+              <p className="text-4xs text-slate-400">Bạn và ứng viên đã có sự quan tâm lẫn nhau.</p>
+            </div>
+
+            {/* Avatars comparison */}
+            <div className="flex justify-center items-center gap-4 py-2">
+              <div className="relative">
+                <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-indigo-500 shadow-xl bg-slate-800">
+                  <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80" alt="Employer" className="h-full w-full object-cover" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 bg-indigo-600 text-[8px] font-black text-white px-1.5 py-0.2 rounded-full uppercase">Me</span>
+              </div>
+
+              <div className="h-8 w-8 text-rose-500 flex items-center justify-center text-2xl font-black">❤️</div>
+
+              <div className="relative animate-pulse">
+                <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 shadow-xl">
+                  <img src={matchedCandidate.avatarUrl} alt={matchedCandidate.name} className="h-full w-full object-cover" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-[8px] font-black text-white px-1.5 py-0.2 rounded-full uppercase">Thợ</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-slate-200">Đã mở khóa cuộc trò chuyện với {matchedCandidate.name}!</h4>
+              <p className="text-4xs text-slate-500">Giờ đây bạn có thể liên hệ phỏng vấn thử tay nghề.</p>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <a
+                href="/messages"
+                onClick={() => setMatchedCandidate(null)}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-2.5 text-xs font-black text-white shadow-lg transition-all text-center select-none cursor-pointer"
+              >
+                <MessageSquare className="h-4 w-4" /> Nhắn tin phỏng vấn ngay
+              </a>
+              <button
+                type="button"
+                onClick={() => setMatchedCandidate(null)}
+                className="w-full py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-slate-400 font-bold text-3xs border border-slate-850 cursor-pointer"
+              >
+                Tiếp tục quẹt CV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Styled animation keyframes */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+        .animate-scaleIn {
+          animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+      `}</style>
+    </div>
+  );
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Nha Trang 79 Food - Dịch Vụ Giao Nước Uống Tận Nhà",
+    "category": "Grocery delivery service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 33A Đ. Nguyễn Bỉnh Khiêm, Nha Trang, Khánh Hòa 57100, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nasco Express Nha Trang",
+    "category": "Freight forwarding service",
+    "rating": 3.3,
+    "reviewCount": 33,
+    "address": "Address: Nam, P, 148 Hoàng Văn Thụ, Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2502781,
+    "longitude": 109.1862434
+  },
+  {
+    "name": "Gas Mỹ Liên",
+    "category": "Gas shop",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 349 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.279768,
+    "longitude": 109.1953041
+  },
+  {
+    "name": "BB’s mart",
+    "category": "Convenience store",
+    "rating": 3.6,
+    "reviewCount": 36,
+    "address": "Address: 25-26 Đ. Nguyễn Đình Chiểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2694279,
+    "longitude": 109.2013731
+  }
+]

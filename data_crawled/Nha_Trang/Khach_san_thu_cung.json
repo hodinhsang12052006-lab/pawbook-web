@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Smile Pet Shop",
+    "category": "Pet boarding service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 228 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2866724,
+    "longitude": 109.1905946
+  },
+  {
+    "name": "Thanhxuanpet Nha Trang - Shop - Spa - Hotel - Phòng khám thú cưng - Pet Clinic",
+    "category": "Pet boarding service",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 142 Ngô Gia Tự, Nha Trang, Khánh Hòa 652220, Vietnam",
+    "latitude": 12.2417478,
+    "longitude": 109.1886873
+  },
+  {
+    "name": "Pet Nha Trang",
+    "category": "Pet store",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 148 Nguyễn Trãi, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2413086,
+    "longitude": 109.1849151
+  },
+  {
+    "name": "Lona pets",
+    "category": "Pet boarding service",
+    "rating": 3.4,
+    "reviewCount": 34,
+    "address": "Address: 103A Ngô Gia Tự, Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2415402,
+    "longitude": 109.1887465
+  },
+  {
+    "name": "Tiny Town Grooming Spa & Hotel",
+    "category": "Pet boarding service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 32A Đường Lam Sơn, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2357057,
+    "longitude": 109.1828482
+  }
+]

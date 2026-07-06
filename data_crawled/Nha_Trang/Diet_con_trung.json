@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Diệt Mối Tín Phát",
+    "category": "Pest control service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 113 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 570000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Công Ty Diệt Mối Khử Trùng Miền Trung",
+    "category": "Pest control service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 17 Đ. Trần Khánh Dư, phường, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2425858,
+    "longitude": 109.1845091
+  },
+  {
+    "name": "CTY DIỆT MỐI CÔN TRÙNG VIỆT NAM",
+    "category": "Pest control service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 113 Yersin, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2493897,
+    "longitude": 109.1836555
+  },
+  {
+    "name": "CÔNG TY TNHH DIỆT MỐI & CÔN TRÙNG NAM HẢI",
+    "category": "Pest control service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 55 Phương Sài, Tây Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2515424,
+    "longitude": 109.1837174
+  },
+  {
+    "name": "Công Ty TNHH Diệt Mối Côn Trùng Việt Nam",
+    "category": "Manufacturer",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 44 Đường B2, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.223325,
+    "longitude": 109.1816516
+  }
+]

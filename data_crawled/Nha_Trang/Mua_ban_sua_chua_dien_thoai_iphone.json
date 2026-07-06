@@ -1,0 +1,47 @@
+[
+  {
+    "name": "iPhone Nha Trang",
+    "category": "Cell phone store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 503 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2744639,
+    "longitude": 109.1982478
+  },
+  {
+    "name": "Hữu Thọ Mobile",
+    "category": "Phone repair service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 37/8 Đoàn Trần Nghiệp, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2706347,
+    "longitude": 109.2016264
+  },
+  {
+    "name": "Minh Phong Mobile - Chuyên Mua bán, sửa chữa iPhone Chính Hãng tại Nha Trang",
+    "category": "Cell phone store",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 104 Đ. Quang Trung, Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2454163,
+    "longitude": 109.1914886
+  },
+  {
+    "name": "Sửa Chữa Điện Thoại Tại Nhà Giá Rẻ",
+    "category": "Cell phone store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 33 Phạm Tu, Phường Vĩnh Hải, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2810104,
+    "longitude": 109.1930027
+  },
+  {
+    "name": "Hoàng Gia Mobile Nha Trang",
+    "category": "Cell phone store",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 247 Thống Nhất, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2506751,
+    "longitude": 109.1859221
+  }
+]

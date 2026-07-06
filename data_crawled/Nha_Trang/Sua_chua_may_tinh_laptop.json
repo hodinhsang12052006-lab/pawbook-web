@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Văn Minh Computer 35 củ chi nha trang",
+    "category": "Phone repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 35 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2797653,
+    "longitude": 109.1997078
+  },
+  {
+    "name": "Nha Trang Computer (Mua bán sửa chữa máy tính tại Nha Trang)",
+    "category": "Computer store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 321 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2805741,
+    "longitude": 109.1948286
+  },
+  {
+    "name": "Công ty Nguyễn Thanh - Sửa máy tính Nha Trang, máy in, laptop",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 71 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2861438,
+    "longitude": 109.2029042
+  },
+  {
+    "name": "Sửa máy tính Nha Trang - Vi Tính Hưng Thịnh",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 56 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2854996,
+    "longitude": 109.2029553
+  },
+  {
+    "name": "Laptop Gia Nguyen",
+    "category": "Computer repair service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 712 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2709533,
+    "longitude": 109.1979287
+  }
+]

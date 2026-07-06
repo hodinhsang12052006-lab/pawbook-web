@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Điểm hỗ trợ Grab Nha Trang",
+    "category": "Corporate office",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 27 Đường số 8E, Khu đô thị Hà Quang 2, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2474286,
+    "longitude": 109.1785528
+  },
+  {
+    "name": "GRAB, BE, ASIA NHA TRANG, KHÁNH HÒA",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 16 TRẦN TỬ BÌNH KĐT Phước Long A, 16 Trần Tử Bình, KĐT Phước, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2136898,
+    "longitude": 109.1851173
+  }
+]

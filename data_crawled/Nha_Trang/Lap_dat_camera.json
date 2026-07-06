@@ -1,0 +1,47 @@
+[
+  {
+    "name": "LXC Smartlock",
+    "category": "Electronics company",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Shophouse CT1, Căn 1, 07 Đường 19/5, Vĩnh Điềm Trung, Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2555174,
+    "longitude": 109.1699607
+  },
+  {
+    "name": "Chuyên lắp đặt Camera. Thành Phát Technology",
+    "category": "Closed circuit television",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 367 Điện Biên Phủ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.287545,
+    "longitude": 109.1912682
+  },
+  {
+    "name": "Nạp mực máy in Nha Trang - Trụ sở Công ty TNHH Tin Học Công Nghệ Hưng Thịnh",
+    "category": "Computer repair service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 59 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2854842,
+    "longitude": 109.2031468
+  },
+  {
+    "name": "Sửa máy tính Nha Trang - Vi Tính Hưng Thịnh",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 56 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2854996,
+    "longitude": 109.2029553
+  },
+  {
+    "name": "Công ty lắp đặt camera tại nha trang khánh hòa",
+    "category": "Closed circuit television",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 203/14 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2867839,
+    "longitude": 109.1908624
+  }
+]

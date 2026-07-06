@@ -1,0 +1,47 @@
+[
+  {
+    "name": "SPA ĐỒ HIỆU MẠNH HÙNG - RENEW LEATHER",
+    "category": "Shoe repair shop",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 500 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "vệ sinh & sửa giày, dép, túi xách, spa đồ hiệu Nha Trang",
+    "category": "Shoe repair shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 43 Bạch Đằng, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2425932,
+    "longitude": 109.1890249
+  },
+  {
+    "name": "P Care - Trạm vệ sinh giày & đồ hiệu Nha Trang",
+    "category": "Shoe repair shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 40 Lạc Long Quân, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.244315,
+    "longitude": 109.1854339
+  },
+  {
+    "name": "Nội Thất IGEA NHA TRANG",
+    "category": "Furniture store",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 155 Đ. Nguyễn Chích, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2896568,
+    "longitude": 109.1992031
+  },
+  {
+    "name": "PHUDRAW - SNEAKER SPA - THỢ GIÀY",
+    "category": "Shoe repair shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 39 Đ. Lê Đại Hành, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2403878,
+    "longitude": 109.1883415
+  }
+]

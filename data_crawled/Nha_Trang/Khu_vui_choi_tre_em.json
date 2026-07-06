@@ -1,0 +1,47 @@
+[
+  {
+    "name": "KHU VUI CHƠI TRẺ EM SUN KIDS",
+    "category": "Coffee shop",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 142 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2794977,
+    "longitude": 109.1969474
+  },
+  {
+    "name": "Khu vui chơi trẻ em Nguyễn Huy",
+    "category": "Children hall",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: 75PV+GXJ, Trịnh Hoài Đức, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2863096,
+    "longitude": 109.1950106
+  },
+  {
+    "name": "Khu vui chơi CapySarah",
+    "category": "Children hall",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 177-179 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2902921,
+    "longitude": 109.2049563
+  },
+  {
+    "name": "Khu vui chơi trẻ em Kim Phát",
+    "category": "Children's amusement center",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 44 Trần Phú, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.240705,
+    "longitude": 109.1956758
+  },
+  {
+    "name": "Playtime Nha Trang Vincom Lê Thánh Tôn",
+    "category": "Playground",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: Vincom Plaza, 44-46 Đ. Lê Thánh Tôn, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2430917,
+    "longitude": 109.1935386
+  }
+]

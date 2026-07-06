@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Quán nhậu Phố Đêm",
+    "category": "Restaurant",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 101 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2823671,
+    "longitude": 109.1964175
+  },
+  {
+    "name": "BÁNH CANH CUA THỐ ĐÁ Nha Trang - Cơ sở 2",
+    "category": "Bistro",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 120 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2780608,
+    "longitude": 109.1968874
+  },
+  {
+    "name": "Cháo Đêm",
+    "category": "Bistro",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 14 Đặng Tất, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nui & Chao Bistro",
+    "category": "Bistro",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 26 Đ. 23 Tháng 10, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2499738,
+    "longitude": 109.1812573
+  },
+  {
+    "name": "Ăn đêm",
+    "category": "Restaurant",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 3A Quân Trấn, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2344519,
+    "longitude": 109.1963146
+  }
+]

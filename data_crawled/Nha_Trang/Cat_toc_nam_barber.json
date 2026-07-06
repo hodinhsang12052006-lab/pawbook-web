@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Tú Ka Wa - Nha Trang",
+    "category": "Hair salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 150 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2375309,
+    "longitude": 109.1894095
+  },
+  {
+    "name": "Salon Tóc Thi Thơ",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 91 Đ. Hoàng Hoa Thám, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2463887,
+    "longitude": 109.19403
+  },
+  {
+    "name": "K TANA Barber Shop",
+    "category": "Barber shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 66 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2799156,
+    "longitude": 109.1995133
+  },
+  {
+    "name": "Snake Barber Shop",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 18B Đường Nhà Thờ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2776435,
+    "longitude": 109.1992743
+  },
+  {
+    "name": "NT Zen Men's Hair Studio (Men's Hair Designer & Academy)",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 50A Đ. Sao Biển, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2771217,
+    "longitude": 109.2003389
+  }
+]

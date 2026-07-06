@@ -1,0 +1,38 @@
+[
+  {
+    "name": "DV dọn dẹp nhà cửa - Quân Phát Nha Trang",
+    "category": "House cleaning service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 16/8 Đường Mai Thị Dõng, Phường, Tây Nha Trang, Khánh Hòa 57100, Vietnam",
+    "latitude": 12.2845943,
+    "longitude": 109.1780927
+  },
+  {
+    "name": "Dịch vụ dọn dẹp nhà cửa",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 234 Đ. 23 Tháng 10, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2536566,
+    "longitude": 109.1736677
+  },
+  {
+    "name": "SỬA CHỮA SOFA HOME CARE PRO",
+    "category": "Auto upholsterer",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 16 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2843074,
+    "longitude": 109.2027182
+  },
+  {
+    "name": "Công Ty TNHH bTaskee",
+    "category": "House cleaning service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 01 Đ. 12 Nối Đài, Khu đô thị Hà Quang 2, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.24834,
+    "longitude": 109.1769602
+  }
+]

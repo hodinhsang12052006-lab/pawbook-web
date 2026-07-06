@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Karaoke Avatar Best Music",
+    "category": "Karaoke bar",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 224 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Music Box Karaoke",
+    "category": "Karaoke bar",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 01 Đ. Trần Hưng Đạo, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2481451,
+    "longitude": 109.1948614
+  },
+  {
+    "name": "Karaoke EmPire Nha Trang",
+    "category": "Karaoke bar",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 28 Đường Nguyễn Cơ Thạch, Đường Đệ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2926876,
+    "longitude": 109.2127956
+  },
+  {
+    "name": "Lasan Hill Karaoke",
+    "category": "Karaoke bar",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 8 Đ. Nguyễn Đình Chiểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2702501,
+    "longitude": 109.2025999
+  },
+  {
+    "name": "Karaoke Khánh Phương",
+    "category": "Karaoke",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: 548 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2764481,
+    "longitude": 109.1971117
+  }
+]

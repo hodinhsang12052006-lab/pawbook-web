@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nha Trang 79 Food - Dịch Vụ Giao Nước Uống Tận Nhà",
+    "category": "Grocery delivery service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 33A Đ. Nguyễn Bỉnh Khiêm, Nha Trang, Khánh Hòa 57100, Vietnam",
+    "latitude": 12.2573461,
+    "longitude": 109.1929619
+  },
+  {
+    "name": "Điểm bán nước khoáng Vikoda",
+    "category": "Bottled water supplier",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: STH28A.06, Đường số 13, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Điểm bán nước khoáng vikoda",
+    "category": "Mineral water wholesaler",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: 167b Đ. Nguyễn Bỉnh Khiêm, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2567519,
+    "longitude": 109.196565
+  },
+  {
+    "name": "Nước Khoáng Kiềm Vikoda Anh Bảy",
+    "category": "Mineral water wholesaler",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 4 Đ. Đào Duy Từ, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2514451,
+    "longitude": 109.1912693
+  },
+  {
+    "name": "THAP BA MUD BATH",
+    "category": "Spa",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 438 Ngô Đến, Tây Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

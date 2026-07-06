@@ -1,0 +1,20 @@
+[
+  {
+    "name": "CHUYỂN NHÀ TRỌN GÓI NHA TRANG",
+    "category": "Freight forwarding service",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: Đường Võ Nguyên Giáp, Nam Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2398762,
+    "longitude": 109.1720578
+  },
+  {
+    "name": "Công ty TNHH Dịch Vụ Vận Tải Sen Vàng",
+    "category": "Trucking company",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Hương Điền, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2445243,
+    "longitude": 109.1795385
+  }
+]

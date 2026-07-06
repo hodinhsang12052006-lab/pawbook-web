@@ -1,0 +1,38 @@
+[
+  {
+    "name": "K GYM & YOGA",
+    "category": "Gym",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 34 Đ. Sao Biển, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2779864,
+    "longitude": 109.200695
+  },
+  {
+    "name": "CLB THỂ HÌNH - GYM NHA TRANG",
+    "category": "Gym",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 102 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2782769,
+    "longitude": 109.1977544
+  },
+  {
+    "name": "Chandra Yoga",
+    "category": "Yoga studio",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 18 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2786312,
+    "longitude": 109.2019466
+  },
+  {
+    "name": "California Fitness & Yoga Nha Trang",
+    "category": "Gym",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: Tòa nhà Nha Trang Center - Tầng 4, 20 Trần Phú, Phường Lộc Thọ, TP. Nha Trang, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2478303,
+    "longitude": 109.1961512
+  }
+]

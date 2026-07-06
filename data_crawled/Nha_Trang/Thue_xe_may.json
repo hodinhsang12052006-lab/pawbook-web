@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Thuê Xe Máy Nha Trang Ngày Hè Vàng Tourist",
+    "category": "Motorcycle rental agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 120/59 Nguyễn Thiện Thuật, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2336354,
+    "longitude": 109.1938168
+  },
+  {
+    "name": "Thuê Xe Máy Nha Trang An Nhi",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Đ. Sao Biển, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2799145,
+    "longitude": 109.2009547
+  },
+  {
+    "name": "Cửa Hàng Cho Thuê Xe Máy An Khang",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 76J2+293, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2810822,
+    "longitude": 109.2012055
+  },
+  {
+    "name": "Cho thuê xe máy xe đạp Tin Tin",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 75JX+Q7Q, Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2819666,
+    "longitude": 109.198248
+  },
+  {
+    "name": "Cửa Hàng Cho Thuê Xe Máy Phát",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 76Q4+85R, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2808541,
+    "longitude": 109.2023489
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nhà máy cửa cuốn, cửa kéo THP Nha Trang. Lắp đặt và sửa chữa 24h.",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 156 Đ. 23 Tháng 10, P, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2520721,
+    "longitude": 109.1761474
+  },
+  {
+    "name": "Toan Thanh Phat aluminum window",
+    "category": "Aluminum window",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 288 Hương lộ Ngọc Hiệp, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2628598,
+    "longitude": 109.1756722
+  },
+  {
+    "name": "Cửa Đẹp Nha Trang",
+    "category": "Aluminum window",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 62 19 Tháng 5, Tây Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2601928,
+    "longitude": 109.1676412
+  },
+  {
+    "name": "Sửa máy tính Nha Trang - Vi Tính Hưng Thịnh",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 56 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2854996,
+    "longitude": 109.2029553
+  },
+  {
+    "name": "Sửa khóa Nha Trang Key Nguyễn",
+    "category": "Wholesaler",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 43 Đ. Sinh Trung, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2539294,
+    "longitude": 109.1903447
+  }
+]

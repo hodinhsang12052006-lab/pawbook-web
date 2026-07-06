@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Trung Tâm Gia Sư Trí Tuệ Nha Trang",
+    "category": "Tutoring service",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 420/35 Lê Hồng Phong, Nam Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2198996,
+    "longitude": 109.1871247
+  },
+  {
+    "name": "giasunhatrang",
+    "category": "Education",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 98 Đ. Lạc Thiện, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2661851,
+    "longitude": 109.1979304
+  },
+  {
+    "name": "Gia Sư, dạy kèmToán, Lý Nha Trang",
+    "category": "Education center",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 65PV+5QR, Biệt Thự, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2354806,
+    "longitude": 109.1943959
+  },
+  {
+    "name": "Trung Tâm Gia Sư Nha Trang",
+    "category": "Tutoring service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Ngô Gia Tự, Nha Trang, Khánh Hòa 58000, Vietnam",
+    "latitude": 12.2397565,
+    "longitude": 109.1872349
+  }
+]

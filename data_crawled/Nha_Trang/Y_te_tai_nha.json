@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trung Tâm Y Tế Tp. Nha Trang",
+    "category": "Medical Center",
+    "rating": 3.1,
+    "reviewCount": 31,
+    "address": "Address: 13 Lê Lợi, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2534818,
+    "longitude": 109.1943664
+  },
+  {
+    "name": "Lấy Đờm Nha Trang",
+    "category": "Home health care service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 19/5 Hòn Chồng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2752232,
+    "longitude": 109.1997299
+  },
+  {
+    "name": "Cơ sở tiêm chủng Vắc Xin Nhật Hoàng",
+    "category": "Home health care service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 225 Điện Biên Phủ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2882994,
+    "longitude": 109.1970732
+  },
+  {
+    "name": "Truyền dịch tại nhà ở Nha Trang",
+    "category": "Home health care service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 420/12 Lê Hồng Phong, Nam Nha Trang, Khánh Hòa 57106, Vietnam",
+    "latitude": 12.2325337,
+    "longitude": 109.1816483
+  },
+  {
+    "name": "Viện Pasteur Nha Trang - Trung tâm Dịch vụ y tế - Medical Services Center - Pasteur Institute Nha Trang",
+    "category": "Medical Center",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 10 Trần Phú, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2511845,
+    "longitude": 109.196128
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Sửa Chữa Nhà Cửa 5T SHINE",
+    "category": "Building restoration service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 13 Đào Văn Tiến, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2794858,
+    "longitude": 109.1892521
+  },
+  {
+    "name": "Công ty sửa nhà giá rẻ khánh hoà",
+    "category": "Building restoration service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 10 Phong Châu, Nam Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2362992,
+    "longitude": 109.180093
+  },
+  {
+    "name": "Xây dựng nhà ở Nha Trang- NGUYÊN VŨ",
+    "category": "Custom home builder",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 75 Đường Nguyễn Khuyến, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2794516,
+    "longitude": 109.190943
+  },
+  {
+    "name": "Sửa Khóa Nha Trang - Cửa Hàng Khóa Hào",
+    "category": "Locksmith",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 415 Lê Hồng Phong, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2364867,
+    "longitude": 109.1812113
+  }
+]

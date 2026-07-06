@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Công ty luật TNHH Đạt Lý - Chi nhánh Khánh Hoà",
+    "category": "Attorney",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 51 Đ. Phan Bội Châu, Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2540001,
+    "longitude": 109.1930888
+  },
+  {
+    "name": "Thua Phat Lai NHA TRANG",
+    "category": "Corporate office",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 701 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2671546,
+    "longitude": 109.1967113
+  },
+  {
+    "name": "Văn Phòng - DV Thám Tử Nha Trang",
+    "category": "Private investigator",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 05 Đoàn Trần Nghiệp, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.272073,
+    "longitude": 109.203193
+  },
+  {
+    "name": "Công Ty Quảng Cáo In Ấn Quang Thành 1",
+    "category": "Print shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 23 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 57110, Vietnam",
+    "latitude": 12.2784609,
+    "longitude": 109.2010934
+  },
+  {
+    "name": "CÔNG TY TNHH Ý TƯỞNG",
+    "category": "Print shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Đường số 8, Khu đô thị Hà Quang 2, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2438551,
+    "longitude": 109.1784027
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Bệnh viện Thú y Home Vet Nha Trang - Cấp cứu 24/7",
+    "category": "Animal hospital",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 402 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2816302,
+    "longitude": 109.1937308
+  },
+  {
+    "name": "Phòng khám thú y Kokan Pet - Cấp cứu 24/7",
+    "category": "Emergency veterinarian service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Đ. Nguyễn Chích, Bắc Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2905657,
+    "longitude": 109.1958833
+  },
+  {
+    "name": "Phòng Thú Y Cường Uyên",
+    "category": "Veterinary care",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 533 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2726605,
+    "longitude": 109.1981879
+  },
+  {
+    "name": "PetLike -Phogf khám thú y pet shop spa lưu giữ thú cưng",
+    "category": "Veterinary care",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 201 Điện Biên Phủ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2883341,
+    "longitude": 109.1977358
+  },
+  {
+    "name": "Thú y nha trang",
+    "category": "Emergency veterinarian service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 28 Đ. Lương Định Của, Tây Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2547364,
+    "longitude": 109.1731066
+  }
+]

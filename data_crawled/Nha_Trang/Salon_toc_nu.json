@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nhat Huy - Hair Salon Nha Trang",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 270 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2365139,
+    "longitude": 109.1866924
+  },
+  {
+    "name": "Tú Ka Wa - Nha Trang",
+    "category": "Hair salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 150 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.2375309,
+    "longitude": 109.1894095
+  },
+  {
+    "name": "NT Zen Men's Hair Studio (Men's Hair Designer & Academy)",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 50A Đ. Sao Biển, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2771217,
+    "longitude": 109.2003389
+  },
+  {
+    "name": "Salon tóc Trần Hoàng",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 77 Đ. Nguyễn Đình Chiểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2696516,
+    "longitude": 109.1991655
+  },
+  {
+    "name": "Nhat Huy - Hair Salon Nha Trang",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 270 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2365139,
+    "longitude": 109.1866924
+  }
+]

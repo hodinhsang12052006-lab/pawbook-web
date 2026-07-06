@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Ngày Bình Yên - Tiệm cafe và sách cũ",
+    "category": "Coffee shop",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 52/5 Hòn Chồng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2748772,
+    "longitude": 109.1997208
+  },
+  {
+    "name": "Huyền Thoại Núi Cà Phê",
+    "category": "Coffee shop",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 36 Hòn Chồng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2745202,
+    "longitude": 109.2005453
+  },
+  {
+    "name": "ZEN Coffee Nha Trang",
+    "category": "Cafe",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 130 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2781748,
+    "longitude": 109.1964501
+  },
+  {
+    "name": "Nora Coffee",
+    "category": "Coffee shop",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 85 Đoàn Trần Nghiệp, Bắc Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Tiệm cà phê",
+    "category": "Cafe",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 30/17 Đoàn Trần Nghiệp, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2715081,
+    "longitude": 109.2013771
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Oi Nha Trang Spa",
+    "category": "Spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 105/5 Nguyễn Biểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2815047,
+    "longitude": 109.1961662
+  },
+  {
+    "name": "GTO Media Event - Tổ chức sự kiện Nha Trang",
+    "category": "Event planner",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: C10 & C11, Biệt thự Khu Hưng Phú, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.27682,
+    "longitude": 109.195292
+  },
+  {
+    "name": "Nha Trang Computer (Mua bán sửa chữa máy tính tại Nha Trang)",
+    "category": "Computer store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 321 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2805741,
+    "longitude": 109.1948286
+  },
+  {
+    "name": "Bínu Nhà Xám Homestay",
+    "category": "Trông trẻ theo giờ",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 15 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2823137,
+    "longitude": 109.19895
+  },
+  {
+    "name": "Postal Dong De",
+    "category": "Post office",
+    "rating": 3.3,
+    "reviewCount": 33,
+    "address": "Address: 392 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2817851,
+    "longitude": 109.1936199
+  }
+]

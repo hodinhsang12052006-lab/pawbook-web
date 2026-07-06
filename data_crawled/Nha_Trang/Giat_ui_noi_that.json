@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Giặt sấy Tee Lee Laundry Nha Trang",
+    "category": "Laundry service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 172/23A Bạch Đằng, Nha Trang, Khánh Hòa 625080, Vietnam",
+    "latitude": 12.2387867,
+    "longitude": 109.1928748
+  },
+  {
+    "name": "Tiệm Giặt Nhà Bơ",
+    "category": "Laundry service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 131 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2823829,
+    "longitude": 109.1958119
+  },
+  {
+    "name": "Easywash Laundry",
+    "category": "Washer & dryer store",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 40 Đ. Sao Biển, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2778765,
+    "longitude": 109.2006756
+  },
+  {
+    "name": "Giặt sấy Nha Trang - 79 Laundry (Giặt Sấy 79 Nha Trang)",
+    "category": "Laundry service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 84 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2784549,
+    "longitude": 109.1985875
+  },
+  {
+    "name": "Tiệm giặt ủi Belief",
+    "category": "Laundry service",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 54 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2787184,
+    "longitude": 109.2003385
+  }
+]

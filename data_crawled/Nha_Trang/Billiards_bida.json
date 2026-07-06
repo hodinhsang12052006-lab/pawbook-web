@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Queen Billiard",
+    "category": "Billiards supply store",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 42 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2801088,
+    "longitude": 109.2003279
+  },
+  {
+    "name": "CLB BIDA Matrix Billiards Arena Nha Trang",
+    "category": "Entertainment agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 22 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2786554,
+    "longitude": 109.2018259
+  },
+  {
+    "name": "Billiards Club 777 - 47 Đặng Tất",
+    "category": "Club",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 47 Đặng Tất, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2763016,
+    "longitude": 109.1996739
+  },
+  {
+    "name": "MIN Billiards Club - CLB Bida",
+    "category": "Country club",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 227 Điện Biên Phủ, P, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2882795,
+    "longitude": 109.1970117
+  },
+  {
+    "name": "Billiards Duy Khoa",
+    "category": "Pool billard club",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 17 Đặng Tất, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2763855,
+    "longitude": 109.2010087
+  }
+]

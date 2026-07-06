@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Smile Pet Shop",
+    "category": "Pet boarding service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 228 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2866724,
+    "longitude": 109.1905946
+  },
+  {
+    "name": "PetHouse Nha Trang - Pet Spa & Hotel",
+    "category": "Pet groomer",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 21 Đ. Trần Khánh Dư, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2420472,
+    "longitude": 109.1839836
+  },
+  {
+    "name": "PetLike -Phogf khám thú y pet shop spa lưu giữ thú cưng",
+    "category": "Veterinary care",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 201 Điện Biên Phủ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2883341,
+    "longitude": 109.1977358
+  },
+  {
+    "name": "Smile Pet Shop 2",
+    "category": "Pet boarding service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 640 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2730596,
+    "longitude": 109.1979523
+  },
+  {
+    "name": "Kún Pet House Nha Trang - Tiệm spa_lưu trú thú cưng",
+    "category": "Spa",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 11 Đội Cấn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.287563,
+    "longitude": 109.1879176
+  }
+]

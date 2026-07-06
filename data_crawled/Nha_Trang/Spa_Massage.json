@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Massage Nha Trang - RORA Spa",
+    "category": "Spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 16 Đ. Ngô Thời Nhiệm, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2387782,
+    "longitude": 109.190212
+  },
+  {
+    "name": "Nagon Beauty & Spa (나곤 뷰티 앤 스파)",
+    "category": "Spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 57 Đ. Quang Trung, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Oi Nha Trang Spa",
+    "category": "Spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 105/5 Nguyễn Biểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2815047,
+    "longitude": 109.1961662
+  },
+  {
+    "name": "Mimosa Spa - Nha Trang Horizon Hotel",
+    "category": "Spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 102 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2830227,
+    "longitude": 109.2027949
+  },
+  {
+    "name": "Massage Nữ Hoàng",
+    "category": "Massage spa",
+    "rating": 2.9,
+    "reviewCount": 29,
+    "address": "Address: 07 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2822822,
+    "longitude": 109.199076
+  }
+]

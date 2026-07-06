@@ -1,0 +1,47 @@
+[
+  {
+    "name": "79 CAR - Rửa & Chăm sóc xe ô tô",
+    "category": "Car wash",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 23 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2842723,
+    "longitude": 109.2029458
+  },
+  {
+    "name": "Rửa Xe Toàn Nha Trang",
+    "category": "Car wash",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 85A D. Hiến Quyền, P, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2864201,
+    "longitude": 109.2032811
+  },
+  {
+    "name": "Trung Tâm Chăm Sóc Nâng Cấp Xe Nha Trang + Gym - THỔ",
+    "category": "Car wash",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 1 Đường Trần Quốc Toản, Nha Trang, Khánh Hòa 57000, Vietnam",
+    "latitude": 12.24999,
+    "longitude": 109.1895
+  },
+  {
+    "name": "Gara Ôtô Nha Trang",
+    "category": "Auto repair shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 178 Đường Nguyễn Khuyến, Nam Vĩnh Hải, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.280166,
+    "longitude": 109.1887217
+  },
+  {
+    "name": "Rửa xe oto và xe máy ALPHAWASH",
+    "category": "Car wash",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 1 Nguyễn Hiền, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2816069,
+    "longitude": 109.2008709
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Lumi Lux Nail & Spa",
+    "category": "Nail salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 72a Đống Đa, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2391793,
+    "longitude": 109.1919454
+  },
+  {
+    "name": "Miso Nails Room",
+    "category": "Nail salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Bạch Đằng, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2392068,
+    "longitude": 109.1927074
+  },
+  {
+    "name": "Tiệm nail _ Gội bắc nha trang",
+    "category": "Nail salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 71 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "1024.nailroom",
+    "category": "Nail salon",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 73 Đ. Bắc Sơn, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2783194,
+    "longitude": 109.1988519
+  },
+  {
+    "name": "Oi Nha Trang Spa",
+    "category": "Spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 105/5 Nguyễn Biểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2815047,
+    "longitude": 109.1961662
+  }
+]

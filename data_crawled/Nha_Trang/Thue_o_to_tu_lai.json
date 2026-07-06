@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Thuê Xe Sedona - Carnival & Limousine Nha Trang - Boss Luxury",
+    "category": "Car rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 74 Dương Vân Nga, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2761775,
+    "longitude": 109.1947173
+  },
+  {
+    "name": "Thuê xe dịch vụ Vũ Hoàng Travel",
+    "category": "Car rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 28/1K1 Hải Đức, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2526759,
+    "longitude": 109.178952
+  },
+  {
+    "name": "CHO THUÊ XE TỰ LÁI NHA TRANG - YOUR CAR NHA TRANG",
+    "category": "Car rental agency",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 313 đường Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2806818,
+    "longitude": 109.1947208
+  },
+  {
+    "name": "TH Nha Trang City Car (cho thuê xe ôtô tự lái -( xe máy) dịch vụ vận chuyển- tham quan du lịch giá rẻ)",
+    "category": "Car rental agency",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 88 Dương Vân Nga, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2761804,
+    "longitude": 109.1940878
+  },
+  {
+    "name": "HOÀNG NAM 79 - Thuê xe tự lái Nha Trang",
+    "category": "Car rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 23 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2843222,
+    "longitude": 109.2028639
+  }
+]

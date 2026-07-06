@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Xe đưa đón du lịch sân bay Thành Tâm",
+    "category": "Trucking company",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 295/23 đường Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2811492,
+    "longitude": 109.1943941
+  },
+  {
+    "name": "Xe tải chở hàng tại nha trang",
+    "category": "Transportation service",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 390/7 Lê Hồng Phong, Nam Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2217426,
+    "longitude": 109.1855233
+  },
+  {
+    "name": "E-Rent - Ứng dụng Đặt thuê Tài xế Lái hộ",
+    "category": "Chauffeur service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 23 Thái Nguyên, Phường, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2476,
+    "longitude": 109.1872266
+  },
+  {
+    "name": "Công ty TNHH Dịch Vụ Vận Tải Sen Vàng",
+    "category": "Trucking company",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Hương Điền, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2445243,
+    "longitude": 109.1795385
+  },
+  {
+    "name": "Nha Trang Northern Bus Station",
+    "category": "Transportation service",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: 1 Điện Biên Phủ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2885428,
+    "longitude": 109.190607
+  }
+]

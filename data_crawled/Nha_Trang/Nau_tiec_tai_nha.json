@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Làng Tôm Seafood Restaurant",
+    "category": "Seafood restaurant",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: Đường Nguyễn Cơ Thạch, Nha Trang, Khánh Hòa 57111, Vietnam",
+    "latitude": 12.2939146,
+    "longitude": 109.2160763
+  },
+  {
+    "name": "Trung Tâm Hội Nghị Tiệc Cưới Châu Loan",
+    "category": "Convention center",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 03 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.28229,
+    "longitude": 109.2000651
+  },
+  {
+    "name": "Nhà Hàng Vườn Nho",
+    "category": "Restaurant",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 15 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2799043,
+    "longitude": 109.2006154
+  },
+  {
+    "name": "I Like Buffet Restaurant",
+    "category": "Seafood restaurant",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 61 Đặng Tất, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2762557,
+    "longitude": 109.1992034
+  },
+  {
+    "name": "Tiệm Ăn Khói Bếp",
+    "category": "Deli",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 73 Nguyễn Biểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.281538,
+    "longitude": 109.2006874
+  }
+]

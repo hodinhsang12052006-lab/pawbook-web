@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Thuê xe dịch vụ Vũ Hoàng Travel",
+    "category": "Car rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 28/1K1 Hải Đức, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2526759,
+    "longitude": 109.178952
+  },
+  {
+    "name": "Dịch vụ đưa đón sân bay cam ranh (Трансфер из аэропорта Камрани)",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 10 Nguyễn Biểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2812802,
+    "longitude": 109.1996389
+  },
+  {
+    "name": "Xe Đưa Đón Sân Bay Cam Ranh Nha Trang - ECO MT",
+    "category": "Airport shuttle service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 80 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2384704,
+    "longitude": 109.192578
+  },
+  {
+    "name": "Xe đưa đón du lịch sân bay Thành Tâm",
+    "category": "Trucking company",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 295/23 đường Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

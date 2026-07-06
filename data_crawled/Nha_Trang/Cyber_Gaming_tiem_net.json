@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Quán Net HERO GAMING - HERO Esports Center & Coffee Lounge",
+    "category": "Internet cafe",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 7692+QMH, 2 Đ. Nguyễn Đình Chiểu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2692858,
+    "longitude": 109.2017637
+  },
+  {
+    "name": "Net93",
+    "category": "Internet shop",
+    "rating": 2.5,
+    "reviewCount": 25,
+    "address": "Address: 93 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2825314,
+    "longitude": 109.1965451
+  },
+  {
+    "name": "Dragon Arena Gaming Nha Trang",
+    "category": "Internet service provider",
+    "rating": 3,
+    "reviewCount": 30,
+    "address": "Address: 57 Đoàn Trần Nghiệp, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2711006,
+    "longitude": 109.200905
+  },
+  {
+    "name": "Dịch Vụ Internet Hd Gaming Center",
+    "category": "Cyber Gaming tiệm net",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 6 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2794411,
+    "longitude": 109.1969776
+  },
+  {
+    "name": "NJOY STATION",
+    "category": "Internet cafe",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 2 Đường Cù Huân, Bắc Nha Trang, Khánh Hòa 65000, Vietnam",
+    "latitude": 12.2648599,
+    "longitude": 109.1999545
+  }
+]

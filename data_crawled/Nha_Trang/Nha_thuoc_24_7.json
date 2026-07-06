@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nhà Thuốc Đông Y Tái Sanh",
+    "category": "Pharmacy",
+    "rating": 3.4,
+    "reviewCount": 34,
+    "address": "Address: 8 Tháp Bà, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.265243,
+    "longitude": 109.1966337
+  },
+  {
+    "name": "Nhà Thuốc GIA ĐÌNH",
+    "category": "Pharmacy",
+    "rating": 2.4,
+    "reviewCount": 24,
+    "address": "Address: 231 Đ. Số 2, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nhà Thuốc Kim Lan",
+    "category": "Pharmacy",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 70 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nhà Thuốc Đăng Nhật",
+    "category": "Pharmacy",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 20 Đ. Củ Chi, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nhà Thuốc 64",
+    "category": "Pharmacy",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 24 Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2793169,
+    "longitude": 109.1955165
+  }
+]

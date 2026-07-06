@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Thợ Xịn-Sửa nhà, chống thấm Nha Trang",
+    "category": "Machine maintenance service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Scenia Bay Residence, 25-26 Phạm Văn Đồng, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2811855,
+    "longitude": 109.2014255
+  },
+  {
+    "name": "Sửa Ống Nước, Lavabo, Bồn Cầu, Vòi Sen - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 3 Mai Xuân Thưởng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2823157,
+    "longitude": 109.202165
+  },
+  {
+    "name": "Sửa Máy Giặt Tại Nhà - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 156 Ba Làng, Bắc Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2900717,
+    "longitude": 109.2048548
+  },
+  {
+    "name": "Thợ Sửa Điện Nước Nha Trang - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 29/56 Đường Nguyễn Khuyến, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2777257,
+    "longitude": 109.1909052
+  },
+  {
+    "name": "Vệ Sinh Điều Hòa Máy Lạnh Nha Trang - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 119 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.289573,
+    "longitude": 109.1891603
+  }
+]

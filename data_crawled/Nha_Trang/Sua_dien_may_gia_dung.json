@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Tiệm sửa chữa điện gia dụng HÙNG KHÁNH TRANG",
+    "category": "Electrical repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 28 Đ. Võ Trứ, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2437073,
+    "longitude": 109.1886879
+  },
+  {
+    "name": "Thợ Sửa Điện Nước Nha Trang - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 29/56 Đường Nguyễn Khuyến, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2777257,
+    "longitude": 109.1909052
+  },
+  {
+    "name": "Sửa Máy Giặt Tại Nhà - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 156 Ba Làng, Bắc Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2900717,
+    "longitude": 109.2048548
+  },
+  {
+    "name": "Thợ Xịn-Sửa nhà, chống thấm Nha Trang",
+    "category": "Machine maintenance service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Scenia Bay Residence, 25-26 Phạm Văn Đồng, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2811855,
+    "longitude": 109.2014255
+  },
+  {
+    "name": "Tiệm sửa chữa máy hàn đồ gia dụng Điện Tử Tấn Cường",
+    "category": "Electronics company",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 190/2 Đồng Nai, Nha Trang, Khánh Hòa, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2381577,
+    "longitude": 109.1802404
+  }
+]

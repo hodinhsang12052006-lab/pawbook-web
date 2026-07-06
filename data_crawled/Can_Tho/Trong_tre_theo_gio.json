@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Thời trang trẻ TG",
+    "category": "Clothing store",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 56 Đường Số 3, KDC Giảng viên, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0278224,
+    "longitude": 105.7591407
+  },
+  {
+    "name": "Phụ Kiện Trang Trí Sinh Nhật Cần Thơ - Tony Party Store",
+    "category": "Party store",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 116B Đ. Mậu Thân, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0451221,
+    "longitude": 105.7640584
+  },
+  {
+    "name": "Bé Vui Shop",
+    "category": "Toy store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 268 Đ. Nguyễn Văn Cừ, Cái Khế, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0505996,
+    "longitude": 105.7720348
+  },
+  {
+    "name": "Công ty TNHH bTaskee",
+    "category": "House cleaning service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 78 - 80 Đường Số 3, phường, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0385259,
+    "longitude": 105.7491379
+  },
+  {
+    "name": "Trái cây Cần Thơ 24/7 - Giỏ Quà Trái Cây Cao Cấp",
+    "category": "Fruit wholesaler",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 397 Đ. 30 Tháng 4, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0189559,
+    "longitude": 105.7679514
+  }
+]

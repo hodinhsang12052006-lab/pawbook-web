@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Luật Pháp An Cần Thơ - Tư vấn & Dịch vụ pháp lý",
+    "category": "General practice attorney",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 1 /9 Đ. Mậu Thân, P, Ninh Kiều, Cần Thơ 94155, Vietnam",
+    "latitude": 10.0386695,
+    "longitude": 105.7702371
+  },
+  {
+    "name": "Dịch vụ làm giấy tờ nhà đất Cần Thơ",
+    "category": "Legal services",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 26 Đ. Cách Mạng Tháng 8, Cái Khế, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0459873,
+    "longitude": 105.7796607
+  },
+  {
+    "name": "Công ty Luật Tô Vàng",
+    "category": "Law firm",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 388 Lê Bình, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 9.9989915,
+    "longitude": 105.7524481
+  },
+  {
+    "name": "Luật Trung An - Luật sư Cần Thơ",
+    "category": "Legal services",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 234/32 Đ. Hoàng Quốc Việt, An Bình, Cần Thơ, Vietnam",
+    "latitude": 10.0192694,
+    "longitude": 105.7434947
+  },
+  {
+    "name": "Văn Phòng Thừa Phát Lại Cần Thơ",
+    "category": "Attorney",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: lô A1 Đ. Số 4, KDC Nam Long, Cái Răng, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0093602,
+    "longitude": 105.7859367
+  }
+]

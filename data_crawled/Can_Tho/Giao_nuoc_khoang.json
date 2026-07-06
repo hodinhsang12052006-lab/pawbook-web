@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Đại lý Phương Khang- Nước uống đóng bình, đóng chai Tại Cần Thơ",
+    "category": "Bottled water supplier",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 39/3 Nguyễn Việt Hồng, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0315394,
+    "longitude": 105.7797912
+  },
+  {
+    "name": "Đại Lý nước uống Cần Thơ Đức Duy Khang",
+    "category": "Bottled water supplier",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 11a5/2, kv3 Đ. Nguyễn Văn Linh, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nước uống tinh khiết AquaOne (Đại lý Thành Hưng)",
+    "category": "Bottled water supplier",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: Đường B1/B556 P, Khu dân cư 91B, Tân An, Cần Thơ 94116, Vietnam",
+    "latitude": 10.0253409,
+    "longitude": 105.7573143
+  },
+  {
+    "name": "Nước uống Bảo Giang",
+    "category": "Mineral water company",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 216 Đường B4, KDC Hưng Phú 1, Hưng Phú, Cần Thơ, Vietnam",
+    "latitude": 10.0220593,
+    "longitude": 105.7904887
+  },
+  {
+    "name": "Nước Khoáng Bạch Dương",
+    "category": "Mineral water company",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: D8-2 Đ. Số 03, KDC Long Thịnh, Hưng Phú, Cần Thơ, Vietnam",
+    "latitude": 10.0030848,
+    "longitude": 105.7981411
+  }
+]

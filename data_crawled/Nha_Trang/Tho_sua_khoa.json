@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Sửa khoá Anh Vũ - Thợ Sửa Khoá Nha Trang",
+    "category": "Locksmith",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 492 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2785212,
+    "longitude": 109.1957123
+  },
+  {
+    "name": "Hoà Sửa Khoá - Sửa Khoá Nha Trang",
+    "category": "Locksmith",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 625 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2700683,
+    "longitude": 109.1979543
+  },
+  {
+    "name": "Toàn Khoá Nha Trang",
+    "category": "Repair service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 438 đường Hai Tháng Tư, Bắc Nha Trang, Khánh Hòa 57110, Vietnam",
+    "latitude": 12.2805665,
+    "longitude": 109.194385
+  },
+  {
+    "name": "Sửa khóa Nha Trang Key Nguyễn",
+    "category": "Wholesaler",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 43 Đ. Sinh Trung, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2539294,
+    "longitude": 109.1903447
+  },
+  {
+    "name": "Sửa Khóa Nha Trang - Cửa Hàng Khóa Hào",
+    "category": "Locksmith",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 415 Lê Hồng Phong, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Bida Hưng Cần Thơ | Bida Cần Thơ | Billiards Cần Thơ",
+    "category": "Pool billard club",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: khu nhà ở cán bộ giảng viên, Đ. Phạm Sơn Khai đại học, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0273125,
+    "longitude": 105.7613456
+  },
+  {
+    "name": "Billiards Club Milano",
+    "category": "Club",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 230/22b Đ. Trần Ngọc Quế, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.023059,
+    "longitude": 105.769879
+  },
+  {
+    "name": "Master Billiards Club Cần Thơ",
+    "category": "Pool billard club",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 333c Đ. Nguyễn Văn Linh, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0268493,
+    "longitude": 105.7567292
+  },
+  {
+    "name": "Bida Longoni",
+    "category": "Pool billard club",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 2QF9+GQP, Đ. Trần Ngọc Quế, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.023831,
+    "longitude": 105.769461
+  },
+  {
+    "name": "365 Billiards & Coffee Cần Thơ",
+    "category": "Pool billard club",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: Đ. Trần Ngọc Quế, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0249353,
+    "longitude": 105.7683434
+  }
+]

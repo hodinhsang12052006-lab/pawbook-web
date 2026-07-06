@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Hair Salon Nguyễn Vàng 1",
+    "category": "Hairdresser",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 11 Trần Văn Khéo, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0435934,
+    "longitude": 105.782763
+  },
+  {
+    "name": "Hair Salon Giang Sơn Cần Thơ",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 239 Đ. Nguyễn Văn Cừ, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0474756,
+    "longitude": 105.7694161
+  },
+  {
+    "name": "Nguyễn Minh Barber Shop - Hớt Tóc Nam",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 77 Đ. Trần Bình Trọng, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0344192,
+    "longitude": 105.7763439
+  },
+  {
+    "name": "Tóc Nam Quán Cần Thơ",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 1/51, Đ. Đinh Tiên Hoàng, Ninh Kiều, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0427232,
+    "longitude": 105.7797365
+  },
+  {
+    "name": "Traky Hair Salon - Cần Thơ",
+    "category": "Hair salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 133 Đ. Trần Hưng Đạo, Ninh Kiều, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0338933,
+    "longitude": 105.7750914
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Pinky Nails Cần Thơ",
+    "category": "Nail salon",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 169 Nguyễn Việt Hồng, mặt phía sau, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0301824,
+    "longitude": 105.7762804
+  },
+  {
+    "name": "Jun Nail Cần Thơ",
+    "category": "Nail salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Hẻm 15 Đ. Trần Văn Hoài, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "MoonRy Nail Cần Thơ (Thảo Nail cũ)",
+    "category": "Nail salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 27d Đường Châu Văn Liêm, Ninh Kiều, Cần Thơ 90000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Tiệm Nail Trong Hẻm",
+    "category": "Nail salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 61 Đ. Nguyễn Cư Trinh, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0372099,
+    "longitude": 105.7729445
+  },
+  {
+    "name": "Yin Nails Cần Thơ",
+    "category": "Nail salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 2QPJ+4W8, Hẻm 72 Đ. Đề Thám, Ninh Kiều, Cần Thơ 02923, Vietnam",
+    "latitude": 10.0353127,
+    "longitude": 105.7822377
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "LT GAMING",
+    "category": "Internet shop",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 390F9C, Đ. Trần Nam Phú, Khu vực 2, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Black Kingdom Gaming - 62 Lê Bình, Q. Ninh Kiều",
+    "category": "Internet cafe",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 62 Đ. Lê Bình, Tân An, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0220627,
+    "longitude": 105.7680933
+  },
+  {
+    "name": "Tiệm Net LiTi Gaming",
+    "category": "Internet cafe",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: Hẻm 107 Đ. 3 Tháng 2, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0163041,
+    "longitude": 105.7617414
+  },
+  {
+    "name": "Net Huỳnh Chân",
+    "category": "Internet cafe",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 167 Nguyễn Văn Cừ Nối Dài, Tân An, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0365633,
+    "longitude": 105.7577902
+  },
+  {
+    "name": "Tiệm Net Gia Hân",
+    "category": "Internet cafe",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 110 Phan Chu Trinh, Phú Lợi, Cần Thơ, Vietnam",
+    "latitude": 9.6051492,
+    "longitude": 105.972022
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Lái Xe Hộ Cần Thơ",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: hẻm 386 Đ. Trần Nam Phú, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0337011,
+    "longitude": 105.7599009
+  },
+  {
+    "name": "Lái Xe Hộ Cần Thơ 247",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Long Tuyen, Can Tho, Vietnam",
+    "latitude": 10.0558272,
+    "longitude": 105.7523869
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "VỆ SINH GIÀY CẦN THƠ",
+    "category": "Shoe repair shop",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 148 Nguyễn Trãi, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Sửa quần áo chuyên nghiệp tại Cần Thơ",
+    "category": "Tailor",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 8 26 Đ. Nguyễn Đình Chiểu, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "DEEGEE – Vệ Sinh Giày & Sửa Túi Xách Cần Thơ",
+    "category": "Shoe shining service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 51B Đ. Trần Hoàng Na, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0109873,
+    "longitude": 105.7652309
+  },
+  {
+    "name": "SỬA GIÀY DÉP CẦN THƠ",
+    "category": "Shoe store",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 381M1/14B Đ. Trần Nam Phú, P, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0335047,
+    "longitude": 105.7604135
+  },
+  {
+    "name": "Tố Như chuyên giày dép mỹ phẩm quần áo",
+    "category": "Shoe store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Cai Rang, Can Tho, Vietnam",
+    "latitude": 9.9996882,
+    "longitude": 105.7468105
+  }
+]

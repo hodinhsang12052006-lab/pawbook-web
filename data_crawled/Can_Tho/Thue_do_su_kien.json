@@ -1,0 +1,38 @@
+[
+  {
+    "name": "SOLEE.store - Cho Thuê Đồ Dự Tiệc, Du Lịch, Áo Dài Nam Nữ",
+    "category": "Costume rental service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 38/4a Hẻm 38, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0409244,
+    "longitude": 105.7683855
+  },
+  {
+    "name": "Cho Thuê Trang Phục Biểu Diễn Cần Thơ - Phục trang NHÂN ÂN",
+    "category": "Costume rental service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 412b/1 Võ Văn Kiệt, khu vực BÌNH TRUNG, Long Tuyền, Cần Thơ, Vietnam",
+    "latitude": 10.0615476,
+    "longitude": 105.7384334
+  },
+  {
+    "name": "VibeRent - Cho thuê trang phục thiết kế, phụ kiện",
+    "category": "Women's clothing store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 26 Đ. B35, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0184395,
+    "longitude": 105.7529101
+  },
+  {
+    "name": "Cho thuê trang phục văn nghệ",
+    "category": "Clothing store",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 09 Đường B4, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0234236,
+    "longitude": 105.757555
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cứu Hộ Quốc Huy - Cứu hộ giao thông 24/7 Khánh Hòa",
+    "category": "Transportation escort service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 138 Đường Nguyễn Khuyến, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Sửa chữa ô tô lưu động nha trang- Cứu hộ 24/7 Trọng Nguyễn",
+    "category": "Auto repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 19 Mai An Tiêm, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2703599,
+    "longitude": 109.1967256
+  },
+  {
+    "name": "Gara Ôtô Nha Trang",
+    "category": "Auto repair shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 178 Đường Nguyễn Khuyến, Nam Vĩnh Hải, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.280166,
+    "longitude": 109.1887217
+  },
+  {
+    "name": "Cứu Hộ Giao Thông Nha Trang - Quốc Huy",
+    "category": "Transportation service",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 668, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.3425471,
+    "longitude": 109.1956801
+  },
+  {
+    "name": "Dịch vụ Xe Cẩu cứu hộ Nha Trang",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 48 AH1, Bắc Nha Trang, Khánh Hòa, Vietnam",
+    "latitude": 12.2972751,
+    "longitude": 109.162416
+  }
+]

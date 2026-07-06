@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Mekong Health and Beauty",
+    "category": "Massage spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 8 Đ. Ngô Quyền, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0338736,
+    "longitude": 105.7880972
+  },
+  {
+    "name": "Spa Khoẻ - Gội đầu - Massage Cần Thơ",
+    "category": "Massage spa",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 35, đường Trần Văn Khéo, Cái Khế, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0438577,
+    "longitude": 105.7829889
+  },
+  {
+    "name": "MAY XƯA SPA 1 - Massage BODY - FOOT, Gội đầu dưỡng sinh, Tắm tẩy tế bào chết, xông hơi",
+    "category": "Spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 1e Trần Quang Khải, Cái Khế, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0446514,
+    "longitude": 105.7819303
+  },
+  {
+    "name": "Spa Cat Tien",
+    "category": "Skin care clinic",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 105 Trần Văn Khéo, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0451619,
+    "longitude": 105.7847772
+  },
+  {
+    "name": "SPA Thiền Tĩnh 2 | Massage Ninh Kiều | Gội đầu dưỡng sinh Cần Thơ",
+    "category": "Spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 78 Đ. Trần Đại Nghĩa, P, Cái Khế, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0436781,
+    "longitude": 105.7866991
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Cứu Hộ Xe Máy Nha Trang 24/7 - Tiến Khang",
+    "category": "Motorcycle repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Đường 23/10, Phường Tây Nha Trang, Nha Trang, Khánh Hòa 57100, Vietnam",
+    "latitude": 12.2570153,
+    "longitude": 109.1511321
+  },
+  {
+    "name": "Cứu Hộ Xe Máy - Sửa Xe Lưu Động Tiến Tiến",
+    "category": "Motorcycle repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Phường Tây Nha Trang, Hẻm 1010/22, Nha Trang, Khánh Hòa 57100, Vietnam",
+    "latitude": 12.2578127,
+    "longitude": 109.145863
+  },
+  {
+    "name": "Sửa Xe Lưu Động Tiến Văn - Cứu Hộ 24/7 Nha Trang",
+    "category": "Motorcycle repair shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Đ. 23 Tháng 10, chợ Ga, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2579146,
+    "longitude": 109.1491883
+  },
+  {
+    "name": "VỸ moto Sửa chữa xe máy cứu hộ xe máy",
+    "category": "Motorcycle repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 1 Thoại Ngọc Hầu, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2876658,
+    "longitude": 109.195635
+  }
+]

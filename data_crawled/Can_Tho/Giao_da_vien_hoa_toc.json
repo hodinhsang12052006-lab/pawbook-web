@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Nước Đá Dương Phượng",
+    "category": "Giao đá viên hỏa tốc",
+    "rating": 3.3,
+    "reviewCount": 33,
+    "address": "Address: 29 Đ. Mậu Thân, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0401184,
+    "longitude": 105.7679501
+  },
+  {
+    "name": "Công ty CP Bưu Vận Nội Địa và Quốc Tế Đông Dương",
+    "category": "Courier service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 24 Đường B4, Khu dân cư 91B, Tân An, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0237346,
+    "longitude": 105.7574013
+  },
+  {
+    "name": "Nước đá",
+    "category": "Stone supplier",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 21 Đ. Ngô Quyền, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0338884,
+    "longitude": 105.787729
+  },
+  {
+    "name": "Phương Trang FUTA Express Cái Răng",
+    "category": "Courier service",
+    "rating": 3,
+    "reviewCount": 30,
+    "address": "Address: Bến xe khách trung tâm TP, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

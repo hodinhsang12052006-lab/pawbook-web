@@ -1,0 +1,47 @@
+[
+  {
+    "name": "PHUN XĂM THẨM MỸ HUỲNH HIỂN",
+    "category": "Beautician",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 218 Võ Văn Kiệt, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0469924,
+    "longitude": 105.7605381
+  },
+  {
+    "name": "Anna Tran Cần Thơ - Rạch Giá",
+    "category": "Spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 52/1 Hùng Vương, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.044306,
+    "longitude": 105.778549
+  },
+  {
+    "name": "BEAUTY SALON Ngoc Huong - Sun THO",
+    "category": "Beauty salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 196 Đ. Lý Tự Trọng, P, Ninh Kiều, Cần Thơ 94000, Vietnam",
+    "latitude": 10.037813,
+    "longitude": 105.7766303
+  },
+  {
+    "name": "Thẩm Mỹ Viện Thu Minh",
+    "category": "Beauty salon",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 120 - 122 Đ. 30 Tháng 4, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.02897,
+    "longitude": 105.7789245
+  },
+  {
+    "name": "Thẩm Mỹ DIVA Cần Thơ",
+    "category": "Beauty salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 111 Đ. Trần Hưng Đạo, Ninh Kiều, Cần Thơ 94114, Vietnam",
+    "latitude": 10.0364183,
+    "longitude": 105.7760358
+  }
+]

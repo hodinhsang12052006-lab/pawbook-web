@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Karaoke Paradise",
+    "category": "Karaoke",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 18 Lê Lợi, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0492584,
+    "longitude": 105.7871342
+  },
+  {
+    "name": "Karaoke Sinh Đôi Cần Thơ",
+    "category": "Karaoke bar",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Hẻm 51 Đ. 3 Tháng 2, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0256004,
+    "longitude": 105.7663838
+  },
+  {
+    "name": "Karaoke Tít Tót Cần Thơ 1",
+    "category": "Karaoke bar",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 305g Đ. Nguyễn Văn Linh, Ninh Kiều, Cần Thơ 700000, Vietnam",
+    "latitude": 10.0304908,
+    "longitude": 105.7523497
+  },
+  {
+    "name": "Karaoke & Massage Tokyo Cần Thơ",
+    "category": "Massage spa",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 76-78 Đ. Lương Định Của, Cái Khế, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0439001,
+    "longitude": 105.7870021
+  },
+  {
+    "name": "Karaoke Tít Tót Cần Thơ 2",
+    "category": "Video karaoke",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 25 Đ. Phạm Ngọc Thạch, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0444694,
+    "longitude": 105.7857164
+  }
+]

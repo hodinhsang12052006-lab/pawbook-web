@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Thông Tắc Đường Ống Nước - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 38 Đ. Lạc Thiện, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2685041,
+    "longitude": 109.1979106
+  },
+  {
+    "name": "Công Ty Thông cống nghẹt Nha Trang",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 34/1 Mai An Tiêm, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2714381,
+    "longitude": 109.1959237
+  },
+  {
+    "name": "Vệ sinh công nghiệp Nha Trang - Quân Phát Clean",
+    "category": "Sanitation service",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 263/11 Đ. 23 Tháng 10, Tây Nha Trang, Khánh Hòa 57115, Vietnam",
+    "latitude": 12.2525603,
+    "longitude": 109.1729444
+  },
+  {
+    "name": "Bách Bách",
+    "category": "Corporate office",
+    "rating": 3,
+    "reviewCount": 30,
+    "address": "Address: 34 Mai An Tiêm, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2714381,
+    "longitude": 109.1959237
+  }
+]

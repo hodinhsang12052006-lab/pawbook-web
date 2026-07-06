@@ -1,0 +1,47 @@
+[
+  {
+    "name": "California Fitness & Yoga Cần Thơ",
+    "category": "Gym",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 209 Đ. 30 Tháng 4, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Victoria Fitness Cần Thơ",
+    "category": "Gym",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: và KDC Diệu Hiền, A3-30, A3-31, đường Trần Văn Việt, KDC Công An, Phường Hưng Phú, Thành phố Cần Thơ (Nằm giữa, Khu dân Cư Nam Long, Hưng Phú, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0072024,
+    "longitude": 105.7918927
+  },
+  {
+    "name": "Phong GYM",
+    "category": "Gym",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 297 Nguyễn Đệ, 67 Đường Đồng Văn Cống, cũ, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0489969,
+    "longitude": 105.7643113
+  },
+  {
+    "name": "Downtown Fitness Club Cần Thơ",
+    "category": "Gym",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: siêu thị Winmart_số, 42 Đ. 30 Tháng 4, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0307359,
+    "longitude": 105.7807699
+  },
+  {
+    "name": "Lotus Yoga Cần Thơ",
+    "category": "Yoga studio",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Căn hộ số C118 chung cư, Hồng Loan 5C, phường, Cái Răng, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0038354,
+    "longitude": 105.7665806
+  }
+]

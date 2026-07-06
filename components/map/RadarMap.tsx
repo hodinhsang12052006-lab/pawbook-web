@@ -27,6 +27,12 @@ interface MapJob {
   isEmergency?: boolean | null;
   vehicleInfo?: string | null;
   workType?: string | null;
+  rating?: number;
+  address?: string;
+  hours?: string;
+  aiRecommendation?: string;
+  isOpen?: boolean;
+  phone?: string;
 }
 
 interface RadarMapProps {

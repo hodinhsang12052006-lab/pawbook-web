@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Điện nước Dũng",
+    "category": "Corporate office",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Sửa Chữa điện nước 0933.891.691, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2814739,
+    "longitude": 109.2001889
+  },
+  {
+    "name": "Thợ Sửa Điện Nước Nha Trang - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 29/56 Đường Nguyễn Khuyến, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2777257,
+    "longitude": 109.1909052
+  },
+  {
+    "name": "Sửa điện nước Nha Trang - Phong Hùng",
+    "category": "Plumber",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 12/8/8 Đ. Số 3, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2453876,
+    "longitude": 109.1858663
+  },
+  {
+    "name": "Sữa chữa điện nước Nha Trang - Anh Tài",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 44 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 58000, Vietnam",
+    "latitude": 12.2933255,
+    "longitude": 109.1867126
+  },
+  {
+    "name": "Thông Tắc Đường Ống Nước - Điện Lạnh Điện Nước Đức Hải",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 6 Yersin, Xuong Huan, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2494474,
+    "longitude": 109.1945955
+  }
+]

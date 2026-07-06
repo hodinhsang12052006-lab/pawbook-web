@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Motorbike Rental Can Tho",
+    "category": "Motorcycle rental agency",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 103/122/20, Đ. Võ Văn Kiệt, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0454436,
+    "longitude": 105.7562633
+  },
+  {
+    "name": "Cửa Hàng Cho Thuê Xe Máy Cần Thơ - Minh Trí",
+    "category": "Motorcycle rental agency",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 5 Đ. Bà Triệu, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.036256,
+    "longitude": 105.7888371
+  },
+  {
+    "name": "Cho thuê xe máy cần thơ",
+    "category": "Motorcycle rental agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Đối diện ks FIT, Đ. Trần Phú, Cái Khế, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0483228,
+    "longitude": 105.7856109
+  },
+  {
+    "name": "Cho Thuê Xe Máy Cần Thơ - Vivu 65 (Ship Tận Nơi)",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 275/2 Đ. 30 Tháng 4, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.022573,
+    "longitude": 105.7723541
+  },
+  {
+    "name": "CHO THUÊ XE MÁY CẦN THƠ - ( Giá Rẻ ) MÔ TÔ GIA BẢO - CHẤT LƯỢNG- UY TÍN. ( Giao Xe Tận Nơi ).",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 78A Đ. Mậu Thân, P, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0290408,
+    "longitude": 105.7766651
+  }
+]

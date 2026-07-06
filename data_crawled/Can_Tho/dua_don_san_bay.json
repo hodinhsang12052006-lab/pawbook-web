@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Xe đưa đón sân bay cần thơ",
+    "category": "Car rental agency",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 8 Đ. Nguyễn Hùng Minh, KHU DÂN CƯ ĐÔ THỊ MỚI HƯNG PHÚ, Hưng Phú, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0236004,
+    "longitude": 105.7931359
+  },
+  {
+    "name": "Can Tho International Airport",
+    "category": "International airport",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: Terminal of Can Tho International Airport, 179B Lê Hồng Phong, Thới An Đông, Cần Thơ, Vietnam",
+    "latitude": 10.0804831,
+    "longitude": 105.7121776
+  },
+  {
+    "name": "Bến Xe Khách Cần Thơ",
+    "category": "Transportation service",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 36 Đ. Nguyễn Văn Linh, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Xe Đưa Đón Sân Bay Cam Ranh Nha Trang - ECO MT",
+    "category": "Airport shuttle service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 80 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2384704,
+    "longitude": 109.192578
+  }
+]

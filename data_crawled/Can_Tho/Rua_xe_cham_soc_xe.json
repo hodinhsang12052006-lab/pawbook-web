@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Xưởng Độ Xe CWC Auto Cần Thơ",
+    "category": "Car wash",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 16 Nguyễn Văn Cừ Nối Dài, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.017358,
+    "longitude": 105.737287
+  },
+  {
+    "name": "RỬA XE-VÁ VÕ -CHĂM SÓC XE QUANG NGUYỄN",
+    "category": "Car wash",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: Số 202Đ/LO, Tổ 8, Khu Vực Bình Phó, B, P, Long Tuyền, Cần Thơ, Vietnam",
+    "latitude": 10.0211084,
+    "longitude": 105.7395247
+  },
+  {
+    "name": "Rửa xe-Chăm sóc xe TỨ QUÝ",
+    "category": "Car wash",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: bộ Đại Học, Đ. Phạm Sơn Khai, Khu Cán, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0278448,
+    "longitude": 105.7604807
+  },
+  {
+    "name": "Mobile Car Care Cần Thơ - Trung tâm Chăm sóc - Phụ kiện - Nâng cấp xe chuyên nghiệp",
+    "category": "Car wash",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: 241-243-245, 243/241 Đ. Nguyễn Hiền, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0202414,
+    "longitude": 105.7536505
+  }
+]

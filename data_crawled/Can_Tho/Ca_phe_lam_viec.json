@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Quán nước Hoa Yên",
+    "category": "Cafe",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 131 Đ. Lý Tự Trọng, Ninh Kiều, Cần Thơ 290000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Cafe IKoi",
+    "category": "Cafe",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 163e Đ. Nguyễn Văn Cừ, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0379481,
+    "longitude": 105.7591495
+  },
+  {
+    "name": "La Rose Kafe",
+    "category": "Cafe",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: Y58, Đường số 10 , KĐTM Nam sông Cần Thơ, P Q, Đường số 10, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 10.0122761,
+    "longitude": 105.7925668
+  }
+]

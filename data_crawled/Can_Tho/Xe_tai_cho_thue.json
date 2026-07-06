@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Xe tải chở thuê Cần Thơ giá rẻ",
+    "category": "Transportation service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 167K Nguyễn Văn Cừ Nối Dài, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0356375,
+    "longitude": 105.757036
+  },
+  {
+    "name": "Xe Tải Chở Thuê Cần Thơ",
+    "category": "Truck rental agency",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 698/5 Đ. 30 Tháng 4, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0130672,
+    "longitude": 105.7602041
+  },
+  {
+    "name": "Xe tải chở thuê Cần Thơ - Song Nguyễn",
+    "category": "Freight forwarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 35/3B KV Thạnh Mỹ, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 9.9962373,
+    "longitude": 105.7592295
+  },
+  {
+    "name": "Xe tải chở thuê Khanh Võ",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 180 Đ. Cách Mạng Tháng 8, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0565314,
+    "longitude": 105.7691761
+  },
+  {
+    "name": "Xe chở thuê Cần Thơ",
+    "category": "Transportation service",
+    "rating": 3,
+    "reviewCount": 30,
+    "address": "Address: 224 Đ. 3 Tháng 2, Tân An, Cần Thơ 92000, Vietnam",
+    "latitude": 10.0228191,
+    "longitude": 105.7656453
+  }
+]

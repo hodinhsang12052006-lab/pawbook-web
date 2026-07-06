@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Children's play area",
+    "category": "Playground",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 2P5X+7XQ, An Bình, Cần Thơ, Vietnam",
+    "latitude": 10.008213,
+    "longitude": 105.7499923
+  },
+  {
+    "name": "Khu vui chơi Happy Kids",
+    "category": "Children's amusement center",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 128 Võ Văn Kiệt, Long Tuyền, Cần Thơ, Vietnam",
+    "latitude": 10.060547,
+    "longitude": 105.740687
+  },
+  {
+    "name": "tiNiWorld Lotte Mart Cần Thơ",
+    "category": "Children's amusement center",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: TTTM Lotte Mart, Số 84 Đ. Mậu Thân, Cái Khế, Cần Thơ 900000, Vietnam",
+    "latitude": 10.042341,
+    "longitude": 105.7667506
+  },
+  {
+    "name": "KHU VUI CHƠI TRẺ EM KIDS NANA CẦN THƠ",
+    "category": "Children hall",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 9 Sông Hậu, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0478579,
+    "longitude": 105.7915619
+  },
+  {
+    "name": "Khu vui chơi trẻ em Voi Con",
+    "category": "Playground",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 316 Đường Võ Văn Kiệt, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0485535,
+    "longitude": 105.7581825
+  }
+]

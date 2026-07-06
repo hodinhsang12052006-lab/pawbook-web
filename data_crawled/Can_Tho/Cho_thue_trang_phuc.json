@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cho thuê trang phục văn nghệ",
+    "category": "Clothing store",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 09 Đường B4, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0234236,
+    "longitude": 105.757555
+  },
+  {
+    "name": "QN Cho thuê trang phục Cần Thơ",
+    "category": "Costume store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 388i54, Hẻm 388 Đ. Nguyễn Văn Cừ, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0367406,
+    "longitude": 105.7610043
+  },
+  {
+    "name": "Cho Thuê Trang Phục Biểu Diễn Cần Thơ - Phục trang NHÂN ÂN",
+    "category": "Costume rental service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 412b/1 Võ Văn Kiệt, khu vực BÌNH TRUNG, Long Tuyền, Cần Thơ, Vietnam",
+    "latitude": 10.0615476,
+    "longitude": 105.7384334
+  },
+  {
+    "name": "VibeRent - Cho thuê trang phục thiết kế, phụ kiện",
+    "category": "Women's clothing store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 26 Đ. B35, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0184395,
+    "longitude": 105.7529101
+  },
+  {
+    "name": "LYN Store - Cho Thuê Trang Phục Cần Thơ",
+    "category": "Costume rental service",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 138/29/36, Đ. Trần Hưng Đạo, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0382867,
+    "longitude": 105.7748102
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trung Tâm Bếp Gas Thu Hà Cần Thơ",
+    "category": "Gas shop",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 99A Đ. Lý Tự Trọng, Ninh Kiều, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0361321,
+    "longitude": 105.7778348
+  },
+  {
+    "name": "Công ty TNHH Gas Thanh Ngân Sóc Trăng (Gas An Toàn - Uy Tín - Tận Tâm - Sửa bếp gas miễn phí)",
+    "category": "Gas shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 216 Phú Lợi, Cần Thơ 950000, Vietnam",
+    "latitude": 9.5991279,
+    "longitude": 105.9627239
+  },
+  {
+    "name": "Gas Miền Tây",
+    "category": "Gas company",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: Cầu Bùng Binh, Hưng Phú, Cần Thơ 900000, Vietnam",
+    "latitude": 9.987341,
+    "longitude": 105.8158062
+  },
+  {
+    "name": "Cửa hàng Gas4.0 &more P. Hưng Lợi, Q. Ninh Kiều",
+    "category": "Gas shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 55 Đ. Trần Hoàng Na, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0106345,
+    "longitude": 105.7655625
+  },
+  {
+    "name": "Cửa hàng Gas4.0 &more P. Thới Bình, Q. Ninh Kiều",
+    "category": "Gas shop",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 117 Đ. Phạm Ngũ Lão, Ninh Kiều, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0443411,
+    "longitude": 105.7744648
+  }
+]

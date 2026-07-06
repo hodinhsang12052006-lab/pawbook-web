@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Táo Cười sửa chữa điện thoại cần thơ, thay màn hình, thay pin điện thoại cần thơ",
+    "category": "Mobile phone repair shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Số 85 Đ. 30 Tháng 4, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "LĨNH IPHONE - sửa chữa điện thoại giá rẻ cần thơ",
+    "category": "Phone repair service",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 1n Đ. Nguyễn Văn Linh, Tân An, Cần Thơ 90000, Vietnam",
+    "latitude": 10.0216728,
+    "longitude": 105.7641612
+  },
+  {
+    "name": "Thành Duy Store",
+    "category": "Mobile phone repair shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 30E Đ. Mậu Thân, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0354428,
+    "longitude": 105.7729357
+  },
+  {
+    "name": "Hoàng Anh Mobile - Cửa hàng mua bán, sửa chữa điện thoại di động, smartphone, phụ kiện chính hãng Cần Thơ.",
+    "category": "Cell phone store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 73 Đ. Cách Mạng Tháng 8, Cái Khế, Cần Thơ 950000, Vietnam",
+    "latitude": 10.0500803,
+    "longitude": 105.7751681
+  },
+  {
+    "name": "TÁO CƯỜI Trần Út - sửa điện thoại cần thơ, thay pin điện thoại, sửa iphone cần thơ",
+    "category": "Phone repair service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 333 Đ. Nguyễn Văn Linh, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0254971,
+    "longitude": 105.7587119
+  }
+]

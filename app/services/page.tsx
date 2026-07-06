@@ -34,6 +34,7 @@ interface ServiceType {
   vehicleInfo?: string | null;
   isEmergency?: boolean | null;
   workType?: string | null;
+  city?: string | null;
   owner?: {
     id: string;
     name: string;

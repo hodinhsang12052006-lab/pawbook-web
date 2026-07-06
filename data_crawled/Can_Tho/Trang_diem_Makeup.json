@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trang điểm giá rẻ Cần Thơ - Make up Cần Thơ",
+    "category": "Make-up artist",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: Số 14C, Khu dân cư Hàng Bàng, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Tram Tran Wedding",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 15 Đ. Trần Khánh Dư, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "LiA Hồ Makeup & Hair Cần Thơ - Trang Điểm Tại Nhà",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 54A3 hẻm 54, Đ. Hồ Bún Xáng, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Tiệm Make Up Lan Nguyễn",
+    "category": "Permanent make-up clinic",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 125 Đ. Tú Xương, An Bình, Cần Thơ, Vietnam",
+    "latitude": 10.0251698,
+    "longitude": 105.7474443
+  },
+  {
+    "name": "Tanu Makeup - Trang điểm cô dâu, dự tiệc & Đào tạo học viên",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 1262 QL91, Khu Vực Hòa Thạnh A, Ô Môn, Cần Thơ 94000, Vietnam",
+    "latitude": 10.1163693,
+    "longitude": 105.6098117
+  }
+]

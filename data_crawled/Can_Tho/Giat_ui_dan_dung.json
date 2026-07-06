@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Giặt ủi giá rẻ Cần Thơ - Gọi giao nhận tận nơi miễn phí",
+    "category": "Laundry service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: Đ. Cách Mạng Tháng 8, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0666809,
+    "longitude": 105.7590266
+  },
+  {
+    "name": "Giặt Sấy AN",
+    "category": "Laundry",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 418 Đ. 30 Tháng 4, Tân An, Cần Thơ 920000, Vietnam",
+    "latitude": 10.0207856,
+    "longitude": 105.7693904
+  },
+  {
+    "name": "Easywash Laundry",
+    "category": "Washer & dryer store",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 40 Đ. Sao Biển, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2778765,
+    "longitude": 109.2006756
+  },
+  {
+    "name": "GIẶT SẤY CHÚ CLEAN",
+    "category": "Washer & dryer store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Hẻm 132 Đ. 3 Tháng 2, Tân An, Cần Thơ 94116, Vietnam",
+    "latitude": 10.0191726,
+    "longitude": 105.760101
+  },
+  {
+    "name": "Giặt sấy Bunny Laundry Cần Thơ",
+    "category": "Laundry service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 170B3 Nguyễn Văn Cừ Nối Dài, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.038154,
+    "longitude": 105.7594236
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Phòng Chẩn Trị YHCT Hữu Thọ Đường",
+    "category": "Home health care service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Lê Phước Thọ, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0616242,
+    "longitude": 105.7578168
+  },
+  {
+    "name": "Hoa Y Medical Appliance",
+    "category": "Medical equipment supplier",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 10 Trần Bạch Đằng, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0363518,
+    "longitude": 105.7548541
+  },
+  {
+    "name": "SBAY CAN THO",
+    "category": "Home health care service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 15A Đ. Trần Khánh Dư, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0257051,
+    "longitude": 105.7741689
+  },
+  {
+    "name": "Phòng Khám Y Khoa Nam Long II",
+    "category": "Home health care service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Đ. 2B, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 9.9991681,
+    "longitude": 105.7822758
+  }
+]

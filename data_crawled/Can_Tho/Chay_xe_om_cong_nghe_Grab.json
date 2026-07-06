@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Văn phòng Grab CN Cần Thơ (Hỗ trợ tài xế 2 bánh đang hoạt động)",
+    "category": "Corporate office",
+    "rating": 2.5,
+    "reviewCount": 25,
+    "address": "Address: 5 Đường Số 4, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0218216,
+    "longitude": 105.7603138
+  },
+  {
+    "name": "GHN Grab Sóc Trăng",
+    "category": "Transportation service",
+    "rating": 3.6,
+    "reviewCount": 36,
+    "address": "Address: 33 Đường Lê Duẩn, Phú Lợi, Cần Thơ, Vietnam",
+    "latitude": 9.5948641,
+    "longitude": 105.9714703
+  }
+]

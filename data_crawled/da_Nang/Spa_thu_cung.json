@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Phú Spa- Tiệm Cắt Tỉa lông Thú Cưng",
+    "category": "Pet boarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 131 Nguyễn Tất Thành, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.083084,
+    "longitude": 108.2132347
+  },
+  {
+    "name": "Thế Giới Thú Cưng Đà Nẵng",
+    "category": "Animal hospital",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 472 Ông Ích Khiêm, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0651553,
+    "longitude": 108.214629
+  },
+  {
+    "name": "DIỆU THÚ CƯNG - SPA CẮT TỈA - HOTEL LƯU TRÚ 20/24h",
+    "category": "Pet boarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 408/28 Hoàng Diệu, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0548508,
+    "longitude": 108.2158128
+  },
+  {
+    "name": "Tiệm Thú Cưng Đà Nẵng",
+    "category": "Pet boarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 77 Hồ Tỵ, Hòa Xuân, Đà Nẵng 550000, Vietnam",
+    "latitude": 15.9928163,
+    "longitude": 108.2125106
+  }
+]

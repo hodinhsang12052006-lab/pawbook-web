@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trang Cáo Make up Hà Nội",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Ng. 2 P. Nguyễn Hoàng, Từ Liêm, Hà Nội 10000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Trang Điểm Tại Nhà Hà Nội",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: C11 Ng. 88 P. Trung Kính, Yên Hòa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0158903,
+    "longitude": 105.7951151
+  },
+  {
+    "name": "La Maison Makeup",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 102 P. An Trạch, Ô Chợ Dừa, Hà Nội 100000, Vietnam",
+    "latitude": 21.027309,
+    "longitude": 105.828386
+  },
+  {
+    "name": "Hinn Make Up - Make Up Tại Nhà Hà Nội",
+    "category": "Make-up artist",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 2 Ng. 97 Nguyễn Ngọc Nại, Phương Liệt, Hà Nội, Vietnam",
+    "latitude": 20.9997179,
+    "longitude": 105.8247809
+  },
+  {
+    "name": "Trang Kem MakeUp",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 19 Ngõ 57 Mễ Trì, Từ Liêm, Hà Nội 12012, Vietnam",
+    "latitude": 21.0143097,
+    "longitude": 105.7784887
+  }
+]

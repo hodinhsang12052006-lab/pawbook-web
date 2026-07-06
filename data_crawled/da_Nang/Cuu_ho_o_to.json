@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cứu hộ ô tô Đà nẵng",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 187 Lê Trọng Tấn, An Khê, Đà Nẵng, Vietnam",
+    "latitude": 16.0345775,
+    "longitude": 108.1782736
+  },
+  {
+    "name": "CỨU HỘ Ô TÔ GARAGE ĐẠI VIỆT HỘI AN",
+    "category": "Chauffeur service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 416 Nguyễn Tất Thành, Hội An Tây, Đà Nẵng, Vietnam",
+    "latitude": 15.9006251,
+    "longitude": 108.2961324
+  },
+  {
+    "name": "VETC cứu hộ ô tô Đà Nẵng",
+    "category": "Auto repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 286 Phạm Hùng, Hòa Xuân, Đà Nẵng 550000, Vietnam",
+    "latitude": 15.9932395,
+    "longitude": 108.207344
+  },
+  {
+    "name": "Cứu hộ giao thông 24/7 - Trạm Nha Trang",
+    "category": "Auto repair shop",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 52WW+Q5P, CT01, Suối Hiệp, Khánh Hòa 550000, Vietnam",
+    "latitude": 12.1969703,
+    "longitude": 109.04545
+  },
+  {
+    "name": "Cứu hộ Giao thông",
+    "category": "Ambulance service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 394 Điện Biên Phủ, Thanh Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0661425,
+    "longitude": 108.189742
+  }
+]

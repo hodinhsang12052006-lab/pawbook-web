@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Bệnh viện thú y 24h Đà Nẵng My Pet's Animal Hospital",
+    "category": "Animal hospital",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 55 Lý Thái Tổ, phường, Thanh Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0661901,
+    "longitude": 108.2088177
+  },
+  {
+    "name": "PHÒNG KHÁM THÚ Y 24H ĐÀ NẴNG - FamilyPet Clinic - 191/32 Đỗ Quang",
+    "category": "Animal hospital",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 191/32 Đỗ Quang, Thanh Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0565865,
+    "longitude": 108.2122094
+  },
+  {
+    "name": "Bệnh Viện Thú Y City Pet Plus Đà Nẵng - DA DANG CITY PET PLUS CLINIC",
+    "category": "Animal hospital",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 136 Châu Thị Vĩnh Tế, Ngũ Hành Sơn, Đà Nẵng 50000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Phòng Khám Thú Y Pet Cure Đà Nẵng",
+    "category": "Animal hospital",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 381 Phan Châu Trinh, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0561915,
+    "longitude": 108.2188699
+  },
+  {
+    "name": "Phòng khám Thú y Đà Nẵng City Pet",
+    "category": "Animal hospital",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 23 Đặng Dung, Liên Chiểu, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

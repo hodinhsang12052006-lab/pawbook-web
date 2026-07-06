@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trung Tâm Fitness & Yoga No Limits",
+    "category": "Gym",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 162 Huỳnh Ngọc Huệ, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0597025,
+    "longitude": 108.1856266
+  },
+  {
+    "name": "HD Fitness Center - Hải Châu",
+    "category": "Gym",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 20 Nguyễn Thiện Thuật, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0566739,
+    "longitude": 108.2209012
+  },
+  {
+    "name": "43 Fitness and Yoga",
+    "category": "Gymnastics center",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 19-21 Lý Thường Kiệt, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0802605,
+    "longitude": 108.2215824
+  },
+  {
+    "name": "THE CITY Fitness & Yoga Center 1",
+    "category": "Gymnastics center",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 379-381 Ông Ích Khiêm, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0638691,
+    "longitude": 108.2156687
+  },
+  {
+    "name": "Alpha Fitness & Yoga Center",
+    "category": "Gym",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 208 Đ. Trần Hưng Đạo, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0563255,
+    "longitude": 108.2321762
+  }
+]

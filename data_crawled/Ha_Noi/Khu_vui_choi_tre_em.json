@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Khu vui chơi trẻ em Mr Haahoo Times Tower",
+    "category": "Children's amusement center",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: Tòa nhà Times Tower, 35 Đ. Lê Văn Lương, Thanh Xuân, Hà Nội, Vietnam",
+    "latitude": 21.002613,
+    "longitude": 105.8015441
+  },
+  {
+    "name": "AdventureS",
+    "category": "Playground",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 175 P. Nguyễn Thái Học, Ô Chợ Dừa, Hà Nội, Vietnam",
+    "latitude": 21.0306735,
+    "longitude": 105.8310187
+  },
+  {
+    "name": "KizCiti Vincom Royal City",
+    "category": "Children's amusement center",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 72A Đ. Nguyễn Trãi, Khu đô thị Royal City, Thanh Xuân, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Smart Kids Khu Vui Chơi Trẻ Em & Coffee",
+    "category": "Children's amusement center",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Đ. Nguyễn Gia Bồng, Bồ Đề, Hà Nội, Vietnam",
+    "latitude": 21.061965,
+    "longitude": 105.880892
+  },
+  {
+    "name": "Khu Vui Chơi Trẻ Em MARIO",
+    "category": "Children's amusement center",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: G7 Đ. Yên Xá, Khu Đấu Giá, Hà Đông, Hà Nội, Vietnam",
+    "latitude": 20.9655941,
+    "longitude": 105.7945148
+  }
+]

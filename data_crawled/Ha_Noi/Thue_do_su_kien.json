@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Mascot 3D - Cho thuê bộ đồ gấu, trang phục gấu Hà Nội",
+    "category": "Event technology service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 185 Ng. 192 P. Lê Trọng Tấn, Phương Liệt, Hà Nội 10000, Vietnam",
+    "latitude": 20.9903054,
+    "longitude": 105.8282271
+  },
+  {
+    "name": "Goodress - Thuê váy sự kiện Hà Nội",
+    "category": "Women's clothing store",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 16 P. Phạm Ngọc Thạch, Kim Liên, Hà Nội, Vietnam",
+    "latitude": 21.010768,
+    "longitude": 105.836472
+  },
+  {
+    "name": "Cho thuê trang phục Mascot hóa trang tại Hà Nội",
+    "category": "Event planner",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 162 Nguyễn Văn Cừ/50 P. Bồ Đề, Bồ Đề, Hà Nội 100000, Vietnam",
+    "latitude": 21.0410012,
+    "longitude": 105.8728611
+  },
+  {
+    "name": "Cho Thuê Thiết Bị Sự Kiện Tại Hà Nội",
+    "category": "Event technology service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 36 P.Tôn Đức Thắng, Văn Miếu - Quốc Tử Giám, Hà Nội 100000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Thamera Studio - Ao Dai Rental & Photoshoot Hanoi",
+    "category": "Photography studio",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 98 P. Nguyễn Thái Học, Ba Đình, Hà Nội 100000, Vietnam",
+    "latitude": 21.0317034,
+    "longitude": 105.8320654
+  }
+]

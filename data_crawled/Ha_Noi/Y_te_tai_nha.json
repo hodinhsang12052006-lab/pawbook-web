@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Y Tế Tại Nhà Hà Nội",
+    "category": "Internist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 186 P. Trung Kính, Yên Hòa, Hà Nội, Vietnam",
+    "latitude": 21.0211081,
+    "longitude": 105.7916342
+  },
+  {
+    "name": "Y Tế Tại Nhà",
+    "category": "Hospital",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: Cầu Giấy, Huyện Từ Liêm, Thành Phố Hà Nội, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0333333,
+    "longitude": 105.85
+  },
+  {
+    "name": "Truyền Nước Tại Nhà, Tiêm Truyền Y Tế Sức Khoẻ Việt",
+    "category": "Home health care service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 22 Tôn Thất Tùng, Kim Liên, Hà Nội 10000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

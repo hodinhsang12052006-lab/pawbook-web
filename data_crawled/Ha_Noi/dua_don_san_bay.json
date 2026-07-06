@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Xe đưa đón Sân Bay & Liên Tỉnh",
+    "category": "Transportation service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 6Q6M+VMR, QL2A, Xóm Đường, Nội Bài, Hà Nội, Vietnam",
+    "latitude": 21.212163,
+    "longitude": 105.78406
+  },
+  {
+    "name": "Xe Đưa Đón Sân Bay Nội Bài Hoàng Anh",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 133 Trương Định, Tương Mai, Hà Nội 00000, Vietnam",
+    "latitude": 20.9922375,
+    "longitude": 105.8490176
+  },
+  {
+    "name": "Đưa đón sân bay",
+    "category": "Trucking company",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "+84 866 401 500",
+    "latitude": 20.974852,
+    "longitude": 105.65274
+  },
+  {
+    "name": "Xe Đưa Đón Sân Bay Nội Bài & Tỉnh",
+    "category": "Taxi service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: Toà V3 The Vesta, Phú Lương, Hà Nội 100000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Xe đưa đón sân bay & tỉnh",
+    "category": "Car leasing service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 1 Ng. 132 P. Mai Dịch, Phú Diễn, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

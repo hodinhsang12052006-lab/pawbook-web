@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Trung Tâm Lắp Đặt - Sửa Chữa Cửa Cuốn Tại Đà Nẵng",
+    "category": "Store",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 149 Cách Mạng Tháng 8, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "CỬA CUỐN AUSTDOOR ĐÀ NẴNG - HOÀNG GIA",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 853 Nguyễn Hữu Thọ, phường, Cẩm Lệ, Đà Nẵng 555000, Vietnam",
+    "latitude": 16.0226193,
+    "longitude": 108.210163
+  },
+  {
+    "name": "Cửa Cuốn tại Đà Nẵng - Tín Bảo Phát",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 44 Nguyễn Viết Xuân, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0594837,
+    "longitude": 108.1728048
+  },
+  {
+    "name": "SỬA CỬA CUỐN ĐÀ NẴNG",
+    "category": "Building restoration service",
+    "rating": 1,
+    "reviewCount": 10,
+    "address": "Address: 273/12 Tôn Đức Thắng, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0559885,
+    "longitude": 108.1700415
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "PHÒNG KHÁM THÚ Y AN PHÚC - CẤP CỨU 24/24 - THÚ Y CẦN THƠ",
+    "category": "Animal hospital",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 114 Đ. Phạm Ngũ Lão, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0446956,
+    "longitude": 105.7746103
+  },
+  {
+    "name": "TruongDung Pet - Phòng khám Thú y Cần Thơ, Grooming, Pet Shop, Pet Hotel | Cấp Cứu Thú Y Xuyên Đêm 24/24",
+    "category": "Animal hospital",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 97b Đ. Trần Hoàng Na, An Bình, Cần Thơ, Vietnam",
+    "latitude": 10.0240884,
+    "longitude": 105.7510703
+  },
+  {
+    "name": "Bệnh Xá Thú Y Trường Đại học Cần Thơ",
+    "category": "Pet boarding service",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: Khu II, Đại học, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0278506,
+    "longitude": 105.7699111
+  },
+  {
+    "name": "Phòng khám Thú y Đồng Hành Cần Thơ",
+    "category": "Veterinarian",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 26B Đ. Trần Hoàng Na, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "TruongDung Pet - Phòng Khám Thú Y Cần Thơ | Cấp Cứu Thú Y Xuyên Đêm 24/24",
+    "category": "Emergency veterinarian service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: H2-26 Bùi Quang Trinh, KDC 586, Phú Thứ Cái Răng Can Tho City, Hưng Phú, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0022877,
+    "longitude": 105.8043634
+  }
+]

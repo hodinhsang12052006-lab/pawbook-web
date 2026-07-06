@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cửa hàng sửa chữa giày dép - Túi xách Hà Nội",
+    "category": "Shoe store",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 315 vũ tông phan khương đình, Hà Nội 100000, Vietnam",
+    "latitude": 20.9923289,
+    "longitude": 105.8143516
+  },
+  {
+    "name": "MORINO - Vệ sinh giày, sửa túi xách, phục chế đồ hiệu",
+    "category": "Shoe repair shop",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 22 P. Trần Quang Diệu, Đống Đa, Hà Nội 10000, Vietnam",
+    "latitude": 21.0160865,
+    "longitude": 105.8247766
+  },
+  {
+    "name": "Sửa quần áo Thu Mừng-Chuyên sửa áo da,áo vest,áo lông,áo khoác,sơ mi,váy đầm...",
+    "category": "Clothing alteration service",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: Nhà C2, 47 P. Lê Thanh Nghị, Bạch Mai, Hà Nội 100000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Cửa Hàng Sửa Quần Áo Đẹp Nguyễn Hường",
+    "category": "Clothing alteration service",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 62 P. Lò Đúc, Hai Bà Trưng, Hà Nội 10000, Vietnam",
+    "latitude": 21.0161421,
+    "longitude": 105.8561494
+  },
+  {
+    "name": "Sửa chữa quần áo lấy trả tại nhà Repair Clothes",
+    "category": "Clothing alteration service",
+    "rating": 2.4,
+    "reviewCount": 24,
+    "address": "Address: 1 Ng. 161 P. Thái Hà, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0140431,
+    "longitude": 105.8180124
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Dịch Vụ Y Tá Điều Dưỡng Tại Nhà Tuấn Hoàng Hòa Khánh Đà Nẵng",
+    "category": "Doctor",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 41 Hoàng Trung Thông, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.068811,
+    "longitude": 108.1653565
+  },
+  {
+    "name": "Truyền Nước Tại Nhà Đà Nẵng",
+    "category": "Home health care service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 385 Nguyễn Văn Linh, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0586823,
+    "longitude": 108.2065549
+  },
+  {
+    "name": "Dịch vụ chăm sóc tại nhà 24/7 Y tế Xanh",
+    "category": "Emergency care service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 6 Xuân Thủy, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0305853,
+    "longitude": 108.2120185
+  },
+  {
+    "name": "Y Tế Xanh Đà Nẵng",
+    "category": "Family practice physician",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 06 Xuân Thủy, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0305853,
+    "longitude": 108.2120185
+  },
+  {
+    "name": "Preventive Medicine Center City. Versatile",
+    "category": "Local medical services",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: 315 Phan Châu Trinh, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0586635,
+    "longitude": 108.2193796
+  }
+]

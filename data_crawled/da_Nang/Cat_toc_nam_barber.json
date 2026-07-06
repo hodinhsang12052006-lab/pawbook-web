@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Tiệm cắt tóc nam ( HT Barbershop)",
+    "category": "Barber shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 13 Cầu Ngọc Thảo, Cồn Ngọc Thảo, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Cắt Tóc Nam Hoàng Nhật Barber",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 135 Đ. Trần Nguyên Hãn, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2384805,
+    "longitude": 109.1873334
+  },
+  {
+    "name": "KYLEE BARBER SHOP",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 464/20 Trưng Nữ Vương, Hòa Cường, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0509064,
+    "longitude": 108.2140486
+  },
+  {
+    "name": "CLip Barbershop ĐÀ NẴNG",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 242 Trần Cao Vân, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0719533,
+    "longitude": 108.2055078
+  },
+  {
+    "name": "SÂU BARBER SHOP - Cắt Tóc Nam Đà Nẵng.",
+    "category": "Barber shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 25 Mai Hắc Đế, An Hải, Đà Nẵng 50217, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

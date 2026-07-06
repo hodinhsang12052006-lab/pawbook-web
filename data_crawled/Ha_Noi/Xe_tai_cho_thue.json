@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Trà Thái Nguyên - Tân Cương Xanh",
+    "category": "Tea wholesaler",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 20 Hàng Đường, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội 100000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Cho Thuê Xe Tải Hà Nội",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Xuan Phuong, Ha Noi, Vietnam",
+    "latitude": 21.0434124,
+    "longitude": 105.7538133
+  },
+  {
+    "name": "Cho thuê xe tải chở hàng Hà Nội",
+    "category": "Truck rental agency",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 231 Lương Thế Vinh, Đại Mỗ, Hà Nội 129400, Vietnam",
+    "latitude": 20.9916665,
+    "longitude": 105.7953317
+  },
+  {
+    "name": "Cho thuê xe tải - Vận tải 247",
+    "category": "Transportation service",
+    "rating": 3.4,
+    "reviewCount": 34,
+    "address": "Address: Phòng 14 Toàn Nhà CT 16, Khu đô thị Định Công, Phương Liệt, Hà Nội 100000, Vietnam",
+    "latitude": 20.9868287,
+    "longitude": 105.8312314
+  }
+]

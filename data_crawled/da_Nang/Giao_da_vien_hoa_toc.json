@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cơ sở sản xuất đá tinh khiết Ngọc Hưng",
+    "category": "Ice supplier",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 263C+585, Cồn Dầu 8, Hòa Xuân, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0028844,
+    "longitude": 108.2208464
+  },
+  {
+    "name": "Cơ sở sản xuất nước đá viên Khánh Miền",
+    "category": "Ice supplier",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: 25 Thuận An 6, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.068889,
+    "longitude": 108.1984943
+  },
+  {
+    "name": "Nasco Express Đà Nẵng",
+    "category": "Freight forwarding service",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 73 Nguyễn Tri Phương, phường, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0568179,
+    "longitude": 108.2076031
+  },
+  {
+    "name": "Nhập hàng Trung Quốc | Giang Huy Logistics Đà Nẵng",
+    "category": "Corporate office",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 55 Hòa An 19, Hoà An, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0465511,
+    "longitude": 108.1802878
+  },
+  {
+    "name": "Cơ Khí Viễn Đông Đà Nẵng",
+    "category": "Corporate office",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Nguyễn Thái Bình, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0584469,
+    "longitude": 108.1724119
+  }
+]

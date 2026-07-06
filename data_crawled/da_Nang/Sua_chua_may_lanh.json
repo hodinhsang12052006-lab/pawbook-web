@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Sửa Điều Hoà tại Đà Nẵng Uy tín Giá rẻ",
+    "category": "Electronics engineer",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 22 Đ. Vũ Trọng Hoàng, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0567526,
+    "longitude": 108.1773023
+  },
+  {
+    "name": "Sửa điều hòa tại Đà Nẵng",
+    "category": "Air conditioning repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 30 Đào Doãn Địch, Hòa Khánh, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0534936,
+    "longitude": 108.1699164
+  },
+  {
+    "name": "Sửa Điều Hòa Tại Đà Nẵng - Vệ Sinh Máy Lạnh",
+    "category": "Appliance repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 646 Trần Cao Vân, Thanh Khê, Đà Nẵng, Vietnam",
+    "latitude": 16.0713628,
+    "longitude": 108.190058
+  },
+  {
+    "name": "Dịch vụ sửa chữa máy lạnh tại Đà Nẵng - 5Sao",
+    "category": "Refrigerator repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 51 Tố Hữu, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0343554,
+    "longitude": 108.2198565
+  },
+  {
+    "name": "Điện Lạnh Thiên Mai - Sữa chữa máy giặt Đà Nẵng",
+    "category": "Washer & dryer repair service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 15 Đa Mặn 15, Ngũ Hành Sơn, Đà Nẵng 50506, Vietnam",
+    "latitude": 16.0295644,
+    "longitude": 108.2431502
+  }
+]

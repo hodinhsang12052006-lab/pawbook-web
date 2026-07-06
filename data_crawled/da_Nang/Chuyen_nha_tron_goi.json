@@ -1,0 +1,38 @@
+[
+  {
+    "name": "CHUYỂN NHÀ TRỌN GÓI ĐÀ NẴNG",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 26H5+9RX, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0284773,
+    "longitude": 108.2096079
+  },
+  {
+    "name": "CÔNG TY CHUYỂN NHÀ TRỌN GÓI ĐÀ NẴNG",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 143/4 Nguyễn Lương Bằng, Liên Chiểu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0720852,
+    "longitude": 108.1505399
+  },
+  {
+    "name": "Dịch vụ dọn nhà trọn gói uy tín Đà Nẵng, Xe Tải Chở Hàng giá rẻ Đà Nẵng, Vận Tải Minh Quân Đà Nẵng",
+    "category": "Freight forwarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 231 Phan Đăng Lưu, Cẩm Lệ, Đà Nẵng 540000, Vietnam",
+    "latitude": 16.0366604,
+    "longitude": 108.2106184
+  },
+  {
+    "name": "chuyển nhà trọn gói giá rẻ tại Đà Nẵng",
+    "category": "Freight forwarding service",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 43 Ngô Thì Sĩ, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0473396,
+    "longitude": 108.2435145
+  }
+]

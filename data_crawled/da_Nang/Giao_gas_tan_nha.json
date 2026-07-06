@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Gas Đà Nẵng",
+    "category": "Gas shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 71 Nguyễn Khả Trạc, Hòa Xuân, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0007026,
+    "longitude": 108.2055612
+  },
+  {
+    "name": "Gas Petrolimex Đà Nẵng An Nam",
+    "category": "Gas shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 80 Lâm Nhĩ, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0515418,
+    "longitude": 108.1792825
+  },
+  {
+    "name": "Công Ty Cổ phần Gas Thời Đại",
+    "category": "Gas shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Phan Châu Trinh/347 Bình Hiên, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0574438,
+    "longitude": 108.2190208
+  },
+  {
+    "name": "Cửa hàng Gas4.0 &more Phường Khuê Trung, Q. Cẩm Lệ",
+    "category": "Gas shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 1A Bãi Sậy, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0302935,
+    "longitude": 108.2117186
+  },
+  {
+    "name": "Cửa hàng Gas Petrolimex",
+    "category": "Store",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 185 Trưng Nữ Vương, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.054075,
+    "longitude": 108.2195783
+  }
+]

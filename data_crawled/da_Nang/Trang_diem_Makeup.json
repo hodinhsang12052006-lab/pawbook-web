@@ -1,0 +1,47 @@
+[
+  {
+    "name": "FLOW Skinlab & Beauty Spa",
+    "category": "Beauty salon",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 8 đường số 2, khu 30, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2774589,
+    "longitude": 109.201115
+  },
+  {
+    "name": "MAKE-UP LƯU NGUYỄN TPNha Trang",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 98 Bạch Đằng, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2411222,
+    "longitude": 109.1903607
+  },
+  {
+    "name": "TrangHoang Makeup Store - Trang điểm tại nhà Đà Nẵng",
+    "category": "Beautician",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 162/2 Đống Đa, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0794858,
+    "longitude": 108.2177648
+  },
+  {
+    "name": "MAKE UP ĐÀ NẴNG - Trang Nguyen",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 240/11 Lê Duẩn, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0702675,
+    "longitude": 108.2118891
+  },
+  {
+    "name": "Ý Huỳnh Makeup Đà nẵng",
+    "category": "Make-up artist",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 141 Dương Đức Hiền, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0836185,
+    "longitude": 108.1593582
+  }
+]

@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
       whereClause.city = province;
     }
 
+    // 1. Fetch user registered services
     const services = await prisma.service.findMany({
       where: whereClause,
       orderBy: [
@@ -41,7 +42,57 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(services);
+    // 2. Fetch crawled stores
+    const storeWhereClause: any = {};
+    if (province && province !== "all") {
+      // Normalize search query for common spelling variations
+      let citySearch = province;
+      if (province === "TP.HCM" || province === "TP. Hồ Chí Minh") {
+        citySearch = "Hồ Chí Minh";
+      }
+      storeWhereClause.address = {
+        contains: citySearch,
+      };
+    }
+
+    const stores = await prisma.store.findMany({
+      where: storeWhereClause,
+      orderBy: {
+        rating: "desc",
+      },
+    });
+
+    // 3. Map stores to standard service schema
+    const mappedStores = stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      description: `Cửa hàng định vị tự động qua Google Maps • ${store.reviewCount || 0} đánh giá`,
+      location: store.latitude && store.longitude ? `${store.latitude},${store.longitude}` : "12.245,109.195",
+      city: province === "all" ? "Toàn quốc" : province,
+      contactInfo: "0900 123 456",
+      rating: store.rating || 4.5,
+      imageUrl: null,
+      priceRange: "Liên hệ thỏa thuận",
+      vehicleInfo: null,
+      isEmergency: false,
+      workType: "Toàn thời gian",
+      isBoosted: false,
+      owner: {
+        id: "crawled-google-maps",
+        name: "Google Maps Verified",
+        email: "crawled@pawbook.com",
+        avatarUrl: null,
+        role: "EMPLOYER",
+        bio: "Thông tin vị trí tự động từ Google Maps",
+        isVerified: true,
+      },
+    }));
+
+    // Merge both lists, placing user services first
+    const combined = [...services, ...mappedStores];
+
+    return NextResponse.json(combined);
   } catch (error: any) {
     console.error("Fetch services API error:", error);
     return NextResponse.json(

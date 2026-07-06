@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Dịch Vụ Nấu Ăn - Đặt Tiệc Tại Nhà Đà Nẵng",
+    "category": "Restaurant",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 281 Trường Chinh, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Dịch Vụ Nấu Tiệc Hiền Anh - Nhận Đặt Tiệc Tại Nhà Tại Đà Nẵng",
+    "category": "Restaurant",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 5 Trần Đình Nam, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.044523,
+    "longitude": 108.1795231
+  },
+  {
+    "name": "Dịch Vụ Nấu Ăn Quang Hùng ! Đặt Tiệc Tại Nhà Đà Nẵng",
+    "category": "Vietnamese restaurant",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 73/2 Châu Thị Vĩnh Tế, Q Ngũ Hành Sơn, 90 Nguyễn Quang Diêu, Cầm Lệ, Đà Nẵng 02363, Vietnam",
+    "latitude": 16.0533064,
+    "longitude": 108.2393582
+  },
+  {
+    "name": "DỊCH VỤ NẤU TIỆC KIM THỦY",
+    "category": "Restaurant",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 98 Tôn Đản, An Khê, Đà Nẵng 100000, Vietnam",
+    "latitude": 16.0563376,
+    "longitude": 108.1780172
+  },
+  {
+    "name": "Dịch Vụ Nấu Tiệc Tại Nhà Ánh Mười",
+    "category": "Restaurant",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 161k Thanh Thủy, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0851711,
+    "longitude": 108.2147358
+  }
+]

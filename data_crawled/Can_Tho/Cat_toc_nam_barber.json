@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Hiếu Barber Shop 9 - Cắt tóc nam Cần Thơ",
+    "category": "Barber shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 64 Đ. Đồng Văn Cống, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0515123,
+    "longitude": 105.7566383
+  },
+  {
+    "name": "Nguyễn Minh Barber Shop - Hớt Tóc Nam",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 77 Đ. Trần Bình Trọng, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0344192,
+    "longitude": 105.7763439
+  },
+  {
+    "name": "Hieu Barber Shop 3",
+    "category": "Barber shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Đ. Trần Nam Phú, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Hớt Tóc Nam Cần Thơ - Trung Nghĩa Barbershop",
+    "category": "Barber shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 62/24 Đ. Trần Việt Châu, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0464118,
+    "longitude": 105.7745377
+  },
+  {
+    "name": "Tóc Nam Quán Cần Thơ",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 1/51, Đ. Đinh Tiên Hoàng, Ninh Kiều, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0427232,
+    "longitude": 105.7797365
+  }
+]

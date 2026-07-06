@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Kin Pet Shop & SPA ( Hotel ) - Khách Sạn Thú Cưng",
+    "category": "Pet sitter",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 97 Nguyễn Lương Bằng, Liên Chiểu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0748997,
+    "longitude": 108.1489891
+  },
+  {
+    "name": "DIỆU THÚ CƯNG - SPA CẮT TỈA - HOTEL LƯU TRÚ 20/24h",
+    "category": "Pet boarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 408/28 Hoàng Diệu, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0548508,
+    "longitude": 108.2158128
+  },
+  {
+    "name": "Bột Pet - Khách sạn lưu trú và spa chó mèo tại Đà Nẵng",
+    "category": "Pet store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 354/51 Trưng Nữ Vương, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0533336,
+    "longitude": 108.2166753
+  },
+  {
+    "name": "Woof N' Whiskers - Pet Hotel & Spa",
+    "category": "Pet boarding service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 49 Phạm Kiệt, Ngũ Hành Sơn, Đà Nẵng, Vietnam",
+    "latitude": 16.0379104,
+    "longitude": 108.248058
+  },
+  {
+    "name": "BossCity PetShop - Siêu Thị Thú Cưng (Spa & Grooming)",
+    "category": "Pet store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 174 Đ. 3 Tháng 2, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0866819,
+    "longitude": 108.2172802
+  }
+]

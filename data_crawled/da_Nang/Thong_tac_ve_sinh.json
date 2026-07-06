@@ -1,0 +1,47 @@
+[
+  {
+    "name": "THÔNG TẮC CẦU CỐNG NHANH",
+    "category": "Plumber",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 77 Dũng Sĩ Thanh Khê, Thanh Khê, Đà Nẵng, Vietnam",
+    "latitude": 16.0734229,
+    "longitude": 108.1772062
+  },
+  {
+    "name": "Công ty Hút Hầm Cầu Đà Nẵng - VSMT Miền Trung",
+    "category": "Septic system service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 203 Phạm Thị Lam Anh, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Hút Hầm Cầu Đà Nẵng - Môi Trường 365",
+    "category": "Water tank cleaning service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 26W9+VXP, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Thông Tắc Trường An",
+    "category": "Corporate office",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 450 Điện Biên Phủ, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.066019,
+    "longitude": 108.1882192
+  },
+  {
+    "name": "Thông Cống Nghẹt F24",
+    "category": "Sanitation service",
+    "rating": 2.6,
+    "reviewCount": 26,
+    "address": "Address: 94 Non Nước, Ngũ Hành Sơn, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0004163,
+    "longitude": 108.2642232
+  }
+]

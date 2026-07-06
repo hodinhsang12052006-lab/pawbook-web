@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Đỗ Copy Print Shop",
+    "category": "Print shop",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 109 Đ. Trần Duy Hưng, Trung Hòa Nhân Chính, Yên Hòa, Hà Nội, Vietnam",
+    "latitude": 21.0107438,
+    "longitude": 105.8001202
+  },
+  {
+    "name": "In ấn - Photocopy Bảo Hân",
+    "category": "Print shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: P. Đình Quán/21 Ngõ 86, Tổ 5, Phú Diễn, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "in màu, photocopy ở Hà Nội - In Hoa Hồng",
+    "category": "Print shop",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: số 34, Ngõ 167, Giải Phóng, 139 P. Lê Thanh Nghị, Bạch Mai, Hà Nội, Vietnam",
+    "latitude": 21.0013036,
+    "longitude": 105.8419639
+  },
+  {
+    "name": "PHOTOCOPY - IN ẤN THU HÀ - VĂN PHÒNG PHẨM",
+    "category": "Print shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 391 Ng. 192 P. Lê Trọng Tấn, Thanh Xuân, Hà Nội, Vietnam",
+    "latitude": 20.9874421,
+    "longitude": 105.8255165
+  },
+  {
+    "name": "In Nhanh Thủ Đô - Xưởng In ấn card visit, Catalogue, Tờ rơi, Tem nhãn tại Hà Nội",
+    "category": "Print shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 277/8/4, P. Vũ Tông Phan, Khương Đình, Hà Nội 10000, Vietnam",
+    "latitude": 20.9938231,
+    "longitude": 105.81546
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Giao Nước Tận Nhà Đà Nẵng",
+    "category": "Bottled water supplier",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: K45B, 5 Dũng Sĩ Thanh Khê, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0677369,
+    "longitude": 108.1818854
+  },
+  {
+    "name": "Giao nước uống Đà Nẵng",
+    "category": "Bottled water supplier",
+    "rating": 1.8,
+    "reviewCount": 18,
+    "address": "Address: 06 Nguyễn Phước Nguyên, An Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0612456,
+    "longitude": 108.1797113
+  },
+  {
+    "name": "Giao Nước Đà Nẵng",
+    "category": "Bottled water supplier",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 26 Trịnh Hoài Đức, P, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0246635,
+    "longitude": 108.2150554
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Dịch Vụ Lý Lịch Tư Pháp",
+    "category": "Translation service",
+    "rating": 1,
+    "reviewCount": 10,
+    "address": "Address: 6A Ng. 5 P. Láng Hạ, Ô Chợ Dừa, Hà Nội, Vietnam",
+    "latitude": 21.0217484,
+    "longitude": 105.8195471
+  },
+  {
+    "name": "Luật sư Hà Nội (Luật sư YP)",
+    "category": "Legal services",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Chung cư Học viện Quốc Phòng, P219 Tháp Đông, Nghĩa Đô, Hà Nội 10000, Vietnam",
+    "latitude": 21.0503339,
+    "longitude": 105.8001561
+  },
+  {
+    "name": "Pháp Lý Thủ Đô",
+    "category": "Estate planning attorney",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 566 Đ. Kim Giang, Thanh Quang, Thanh Liệt, Hà Nội 100000, Vietnam",
+    "latitude": 20.9681944,
+    "longitude": 105.8229713
+  },
+  {
+    "name": "Nguyen Hue Public Notary Office",
+    "category": "Notary public",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 165 P. Giảng Võ, Ô Chợ Dừa, Hà Nội, Vietnam",
+    "latitude": 21.0281097,
+    "longitude": 105.825596
+  },
+  {
+    "name": "Văn Phòng Thừa Phát Lại Thủ Đô",
+    "category": "Legal services",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 6A P. Vũ Phạm Hàm, Yên Hòa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0147409,
+    "longitude": 105.7967563
+  }
+]

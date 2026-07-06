@@ -1,0 +1,47 @@
+[
+  {
+    "name": "PHOTOCOPY - IN ẤN ALI",
+    "category": "Print shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Kiệt 230/22 Nguyễn Công Trứ, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0656177,
+    "longitude": 108.236704
+  },
+  {
+    "name": "In ấn - Photocopy",
+    "category": "Print shop",
+    "rating": 2.5,
+    "reviewCount": 25,
+    "address": "Address: 38 Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.051741,
+    "longitude": 108.2370735
+  },
+  {
+    "name": "IN ẤN - PHOTOCOPY GIA KHANG",
+    "category": "Print shop",
+    "rating": 3.1,
+    "reviewCount": 31,
+    "address": "Address: 83 Ngũ Hành Sơn, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0466107,
+    "longitude": 108.2392031
+  },
+  {
+    "name": "IN ẤN - THIẾT KẾ - PHOTOCOPY MINH KHÔI",
+    "category": "Digital printing service",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 198 Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "In Ấn - In Màu - Photocopy Kinh Tế",
+    "category": "Print shop",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: 194A Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0469371,
+    "longitude": 108.2384817
+  }
+]

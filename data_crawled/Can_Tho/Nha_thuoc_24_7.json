@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nhà thuốc Pharmacity",
+    "category": "Medical supply store",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 167I Đ. Nguyễn Văn Cừ, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Nhà thuốc Pharmacity",
+    "category": "Medical supply store",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 9 Đ. Nguyễn Văn Linh, Tân An, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0285971,
+    "longitude": 105.7541852
+  },
+  {
+    "name": "Nhà Thuốc Kim Lợi",
+    "category": "Pharmacy",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 192D Đ. 30 Tháng 4, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.0274975,
+    "longitude": 105.7770911
+  },
+  {
+    "name": "Nhà Thuốc Thái Hân",
+    "category": "Pharmacy",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 313 Đ. Nguyễn Văn Linh, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0285178,
+    "longitude": 105.754109
+  },
+  {
+    "name": "Nhà thuốc Pharmacity",
+    "category": "Medical supply store",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 54A Hùng Vương, Phường, Ninh Kiều, Cần Thơ 900000, Vietnam",
+    "latitude": 10.0439892,
+    "longitude": 105.7784678
+  }
+]

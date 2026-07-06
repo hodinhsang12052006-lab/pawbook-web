@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Queen Palace Karaoke Đà Nẵng",
+    "category": "Karaoke bar",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 179 Xô Viết Nghệ Tĩnh, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Karaoke SHANGHAI KTV Đà Nẵng",
+    "category": "Restaurant",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 10.2 Đ. 2 Tháng 9, Hòa Cường, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0450213,
+    "longitude": 108.2234077
+  },
+  {
+    "name": "Karaoke Idol - Đà Nẵng",
+    "category": "Karaoke bar",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: 184 Đống Đa, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0789127,
+    "longitude": 108.2173038
+  },
+  {
+    "name": "THE 9 KTV - Da Nang Karaoke",
+    "category": "Karaoke bar",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 35 Lý Thánh Tông, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0718404,
+    "longitude": 108.2358863
+  },
+  {
+    "name": "K Box Đà Nẵng",
+    "category": "Musical club",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 35 Đặng Vũ Hỷ, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0603357,
+    "longitude": 108.2399186
+  }
+]

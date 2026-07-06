@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Sửa máy tính Nha Trang - Vi Tính Hưng Thịnh",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 56 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2854996,
+    "longitude": 109.2029553
+  },
+  {
+    "name": "Sửa chữa Laptop 24h Lê Thanh Nghị",
+    "category": "Computer store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 176 P. Lê Thanh Nghị, Bạch Mai, Hà Nội 10000, Vietnam",
+    "latitude": 21.0019719,
+    "longitude": 105.8439789
+  },
+  {
+    "name": "Sửa Máy Tính Tại Nhà - Hà Nội",
+    "category": "Computer repair service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 40B P. Lê Thanh Nghị, Bạch Mai, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Công ty Nguyễn Thanh - Sửa máy tính Nha Trang, máy in, laptop",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 71 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2861438,
+    "longitude": 109.2029042
+  },
+  {
+    "name": "Sửa Chữa Máy Tính - Laptop Uy Tín Tại Hà Nội - Lấy Ngay",
+    "category": "Computer store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 34 Ng. 61 P. Khương Trung, Khương Đình, Hà Nội 10000, Vietnam",
+    "latitude": 21.0000885,
+    "longitude": 105.8189965
+  }
+]

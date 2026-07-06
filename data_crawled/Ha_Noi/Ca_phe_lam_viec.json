@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Tranquil Books & Coffee - 5 Nguyễn Quang Bích",
+    "category": "Cafe",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 5 P. Nguyễn Quang Bích, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Book In Bar",
+    "category": "Coffee shop",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: B5 P. Hoàng Tích Trí, Khu tập thể Kim Liên, Kim Liên, Hà Nội, Vietnam",
+    "latitude": 21.0088839,
+    "longitude": 105.8364891
+  },
+  {
+    "name": "Le Petit Café",
+    "category": "Coffee shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 289 P. Kim Mã, Khu tập thể Giảng Võ, Giảng Võ, Hà Nội, Vietnam",
+    "latitude": 21.0304724,
+    "longitude": 105.8182646
+  },
+  {
+    "name": "Xofa Cafe",
+    "category": "Coffee shop",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 14 P. Tống Duy Tân, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0293721,
+    "longitude": 105.8435468
+  },
+  {
+    "name": "Cà Phê Lâm",
+    "category": "Cafe",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 60 P. Nguyễn Hữu Huân, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0332749,
+    "longitude": 105.8542999
+  }
+]

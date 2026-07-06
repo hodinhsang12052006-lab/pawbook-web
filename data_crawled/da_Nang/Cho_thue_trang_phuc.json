@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cho Thuê Trang Phục Biểu Diễn Đà Nẵng",
+    "category": "Dance company",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 3667+PM6, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0617765,
+    "longitude": 108.2141318
+  },
+  {
+    "name": "Tấm Shop - Showroom Trang Phục Đà Nẵng",
+    "category": "Costume rental service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 266 Hùng Vương, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Phuong Tran costumes",
+    "category": "Costume rental service",
+    "rating": 3.4,
+    "reviewCount": 34,
+    "address": "Address: 130 Quang Trung, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Trang Phục Biểu Diễn Xuân Hoà",
+    "category": "Clothing store",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 85 Nguyễn Bỉnh Khiêm, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0641487,
+    "longitude": 108.232666
+  },
+  {
+    "name": "Thuê trang phục iZi - Trang phục biểu diễn múa văn nghệ Đà Nẵng - Váy đầm dự tiệc check-in",
+    "category": "Costume store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 79 Tô Hiệu, Hòa Khánh, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0595962,
+    "longitude": 108.1677668
+  }
+]

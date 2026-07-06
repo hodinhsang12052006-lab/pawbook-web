@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Tet Restaurant Vietnamese And Vegetarian Food",
+    "category": "Vietnamese restaurant",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 29 P. Lãn Ông, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0352265,
+    "longitude": 105.8492673
+  },
+  {
+    "name": "Nhậu Ba Tùng Quán-Chuyên Ship Đồ Ăn Đêm Hà Nội Và Phục Vụ Tại Quán",
+    "category": "Brunch restaurant",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 269 P. Kim Mã, Khu tập thể Giảng Võ, Giảng Võ, Hà Nội 100000, Vietnam",
+    "latitude": 21.0308858,
+    "longitude": 105.8211984
+  },
+  {
+    "name": "Hà Nội Ship Đồ Ăn Đêm 24h",
+    "category": "Takeout Restaurant",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 35 Ngõ 77 P. Bùi Xương Trạch, Khương Đình, Hà Nội 10000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Quán ăn đêm",
+    "category": "Tiffin center",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 106, Văn Miếu - Quốc Tử Giám, Hà Nội 100000, Vietnam",
+    "latitude": 21.0164304,
+    "longitude": 105.8359487
+  },
+  {
+    "name": "Thế giới ăn đêm Hà Nội",
+    "category": "Restaurant",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: Ngõ 82 P.Yên Lãng, Đống Đa, Hà Nội, Vietnam",
+    "latitude": 21.011112,
+    "longitude": 105.8162844
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "DD WONDERLAND",
+    "category": "Indoor playground",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 78b Quang Trung, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0746815,
+    "longitude": 108.2188584
+  },
+  {
+    "name": "Helio Amusement Center",
+    "category": "Amusement center",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: Tòa nhà Helio, 01 Đ. 2 Tháng 9, Hòa Cường, Hải Châu, Đà Nẵng, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Khu Vui Chơi Trẻ Em Minions Kids Hải Châu",
+    "category": "Children's amusement center",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 14 - 16 Đ. 30/4, Hòa Cường, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0408495,
+    "longitude": 108.2202956
+  },
+  {
+    "name": "Khu vui chơi trẻ em - cafe vườn Eco Kidplays & Coffee",
+    "category": "Coffee shop",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 131 Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0429864,
+    "longitude": 108.2408729
+  },
+  {
+    "name": "NICKY KIDS - Khu Vui Chơi Dành Cho Bé",
+    "category": "Children's amusement center",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 363C+XWG, Đ. 2 Tháng 9, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0549151,
+    "longitude": 108.2223728
+  }
+]

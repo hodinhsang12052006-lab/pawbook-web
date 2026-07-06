@@ -1,0 +1,47 @@
+[
+  {
+    "name": "MEOW BILLIARDS CLUB NHA TRANG - CÂU LẠC BỘ BIDA BI-A LỖ",
+    "category": "Pool billard club",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 71/10 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Bida Đà Nẵng - Sapphire Billiard Club",
+    "category": "Pool billard club",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 42 Phan Đình Phùng, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.070613,
+    "longitude": 108.2216022
+  },
+  {
+    "name": "9Pool Billiards - Đà Nẵng",
+    "category": "Pool billard club",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 219 Nguyễn Tất Thành, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0806634,
+    "longitude": 108.2116881
+  },
+  {
+    "name": "SUN CLUB BILLIARDS ĐÀ NẴNG - CÂU LẠC BỘ BIDA BI-A 3 PHĂNG LỖ",
+    "category": "Club",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 366 Đ. Lê Quảng Chí, Hòa Xuân, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.011519,
+    "longitude": 108.2176388
+  },
+  {
+    "name": "Bida Đà Nẵng - 535 BILLIARDS CENTER",
+    "category": "Restaurant",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 535 Nguyễn Tất Thành, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0739448,
+    "longitude": 108.2035917
+  }
+]

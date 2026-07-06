@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Sửa máy tính Nha Trang - Vi Tính Hưng Thịnh",
+    "category": "Computer repair service",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 56 Phó Đức Chính, Ba Làng, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2854996,
+    "longitude": 109.2029553
+  },
+  {
+    "name": "43Fix|Sửa Bếp Từ, Lò Vi Sóng, Lò Nướng, Nồi Cơm Điện, Máy Hút Mùi Bếp, Quạt Hơi Nước, Sửa Điện Máy Gia Dụng Đà Nẵng Tại Nhà",
+    "category": "Electrical repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 24 Lạc Long Quân, Liên Chiểu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0767932,
+    "longitude": 108.1471228
+  },
+  {
+    "name": "Sửa Điều Hoà tại Đà Nẵng Uy tín Giá rẻ",
+    "category": "Electronics engineer",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 22 Đ. Vũ Trọng Hoàng, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0567526,
+    "longitude": 108.1773023
+  },
+  {
+    "name": "Sửa Điều Hoà Giá Rẻ Tại Đà Nẵng, Gọi Có Mặt Sau 20 Phút",
+    "category": "Air conditioning repair service",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 137 90 Châu Thị Vĩnh Tế, Ngũ Hành Sơn, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0487735,
+    "longitude": 108.2411278
+  }
+]

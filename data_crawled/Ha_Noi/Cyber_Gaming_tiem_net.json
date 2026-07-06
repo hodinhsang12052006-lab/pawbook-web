@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Gaming X Internet",
+    "category": "Internet cafe",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 139 Cầu Giấy, Hà Nội 100000, Vietnam",
+    "latitude": 21.0318481,
+    "longitude": 105.7991156
+  },
+  {
+    "name": "Cyber T-rex Gaming",
+    "category": "Internet cafe",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: Ngõ 75 Phố Trần Thái Tông, Cầu Giấy, Hà Nội 10000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Cyber Game Nét Nuôn - 12 Trần Tử Bình (Tầng 3)",
+    "category": "Video arcade",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 12 P. Trần Tử Bình, Khu tập thể Nghĩa Tân, Nghĩa Đô, Hà Nội 100000, Vietnam",
+    "latitude": 21.0454746,
+    "longitude": 105.7916475
+  },
+  {
+    "name": "Gaming X 424 Nguyễn Trãi",
+    "category": "Internet cafe",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 424 Nguyễn Trãi, Thanh Xuân, Hà Nội 11416, Vietnam",
+    "latitude": 20.9932475,
+    "longitude": 105.8046712
+  }
+]

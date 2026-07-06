@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Văn Phòng Đăng Ký Grabcar Hà Nội",
+    "category": "Corporate office",
+    "rating": 3,
+    "reviewCount": 30,
+    "address": "Address: Toà nhà Kim Ánh, 1 Ngõ 78 Duy Tân, Cầu Giấy, Hà Nội 10000, Vietnam",
+    "latitude": 21.0320202,
+    "longitude": 105.783058
+  },
+  {
+    "name": "GRAB, BE, ASIA NHA TRANG, KHÁNH HÒA",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 16 TRẦN TỬ BÌNH KĐT Phước Long A, 16 Trần Tử Bình, KĐT Phước, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2136898,
+    "longitude": 109.1851173
+  }
+]

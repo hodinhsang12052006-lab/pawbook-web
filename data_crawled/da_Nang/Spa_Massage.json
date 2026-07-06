@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Chill Out Spa",
+    "category": "Spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 60 Đỗ Bá, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0515934,
+    "longitude": 108.2451999
+  },
+  {
+    "name": "RORA Spa & Massage Da Nang",
+    "category": "Massage spa",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 16-18 An Thượng 26, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0551642,
+    "longitude": 108.244671
+  },
+  {
+    "name": "Panda Spa Body & Foot Massage Danang",
+    "category": "Massage spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Panda Spa, 229 Nguyễn Văn Thoại, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Jang Mi Spa & Massage",
+    "category": "Massage spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 77 D. Đình Nghệ, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0686421,
+    "longitude": 108.241679
+  }
+]

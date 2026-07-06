@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Giá Gas - Giao gas toàn Hà Nội",
+    "category": "Gas shop",
+    "rating": 3.4,
+    "reviewCount": 34,
+    "address": "Address: 40 P. Tây Sơn, Đống Đa, Hà Nội, Vietnam",
+    "latitude": 21.0131451,
+    "longitude": 105.8265812
+  },
+  {
+    "name": "Công ty TNHH Gas Petrolimex Hà Nội",
+    "category": "Oil & natural gas company",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 775 Đ. Giải Phóng, Tương Mai, Hà Nội 10000, Vietnam",
+    "latitude": 20.9864421,
+    "longitude": 105.8412877
+  },
+  {
+    "name": "Gia dụng PT Hà Nội - Bếp gas Paloma",
+    "category": "Kitchen supply store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 44 ngách 1 Ng. 31 Nguyễn Chí Thanh, Giảng Võ, Hà Nội 100000, Vietnam",
+    "latitude": 21.0281106,
+    "longitude": 105.8134556
+  },
+  {
+    "name": "Đổi gas - Giao gas tận nơi Bình Dương",
+    "category": "Gas shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Ô 33 D1, Khu Dân Cư Viet Sing, An Phú, Hồ Chí Minh 820000, Vietnam",
+    "latitude": 10.9424841,
+    "longitude": 106.7303177
+  },
+  {
+    "name": "Trung tâm bán lẻ gas petrovietnam",
+    "category": "Gas shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Ngõ 82 P. Quang Tiến, Đại Mỗ, Hà Nội 100000, Vietnam",
+    "latitude": 20.9998002,
+    "longitude": 105.756836
+  }
+]

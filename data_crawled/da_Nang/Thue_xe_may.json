@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Andy Motorbike Rental Da Nang",
+    "category": "Motorcycle rental agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 30 Lê Thước, Sơn Trà, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Thuê Xe Máy Đà Nẵng Bình Minh",
+    "category": "Motorcycle rental agency",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 18 Phan Bôi, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0679991,
+    "longitude": 108.2346589
+  },
+  {
+    "name": "Thuê xe máy Đà nẵng Minh Long",
+    "category": "Motorcycle rental agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 133 Dương Trí Trạch, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0721375,
+    "longitude": 108.2404254
+  },
+  {
+    "name": "Cho Thuê Xe Máy Đà Nẵng Văn Khoa",
+    "category": "Motorcycle rental agency",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 210 Núi Thành, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0447991,
+    "longitude": 108.2212765
+  },
+  {
+    "name": "Son Tra Motorbike Rental",
+    "category": "Motorcycle rental agency",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Ngõ 34/58 Thi Sách, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0527416,
+    "longitude": 108.2047595
+  }
+]

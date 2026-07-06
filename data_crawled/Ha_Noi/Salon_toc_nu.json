@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Omnia Hair Boutique Tay Ho - Organic Hair Salon",
+    "category": "Hair salon",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: D'El Dorado Tân Hoàng Minh, E1.S08, 659A Tòa E1, Tây Hồ, Hà Nội 10000, Vietnam",
+    "latitude": 21.0696913,
+    "longitude": 105.8112992
+  },
+  {
+    "name": "Zina Hair Salon ジーナヘア ベトナム",
+    "category": "Hairdresser",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 39 Ng. Trạm, Phường, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0304024,
+    "longitude": 105.8450949
+  },
+  {
+    "name": "Sinh Anh Hair Salon",
+    "category": "Barber shop",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 145 P. Chùa Láng, Láng, Hà Nội 100000, Vietnam",
+    "latitude": 21.0234232,
+    "longitude": 105.8041103
+  },
+  {
+    "name": "Quang Liên Hair Salon",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 9 P. Phan Đình Giót, Thanh Xuân, Hà Nội 10000, Vietnam",
+    "latitude": 20.9909468,
+    "longitude": 105.8393512
+  },
+  {
+    "name": "HaLi Hair Salon - 21 Ngõ Trạm - Hoàn Kiếm - HN",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 21 Ng. Trạm, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội 11000, Vietnam",
+    "latitude": 21.0305656,
+    "longitude": 105.8457492
+  }
+]

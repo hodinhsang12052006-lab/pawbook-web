@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nha Trang Northern Bus Station",
+    "category": "Transportation service",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: 1 Điện Biên Phủ, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2885428,
+    "longitude": 109.190607
+  },
+  {
+    "name": "Công Ty TNHH Cúc Tùng",
+    "category": "Trucking company",
+    "rating": 1.8,
+    "reviewCount": 18,
+    "address": "Address: 198 - 200 Ngô Gia Tự, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2399147,
+    "longitude": 109.1870188
+  },
+  {
+    "name": "Huy Hung Nha Trang Trading And Service Co., Ltd",
+    "category": "Bus stop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 104 Bùi Huy Bích, Vĩnh Hải, Thành phố Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2888275,
+    "longitude": 109.203843
+  },
+  {
+    "name": "Bến xe phía Bắc",
+    "category": "Bus station",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: 1 Hai Tháng Tư, Tp. Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2884715,
+    "longitude": 109.1904204
+  },
+  {
+    "name": "Dịch vụ dọn nhà trọn gói uy tín Đà Nẵng, Xe Tải Chở Hàng giá rẻ Đà Nẵng, Vận Tải Minh Quân Đà Nẵng",
+    "category": "Freight forwarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 231 Phan Đăng Lưu, Cẩm Lệ, Đà Nẵng 540000, Vietnam",
+    "latitude": 16.0366604,
+    "longitude": 108.2106184
+  }
+]

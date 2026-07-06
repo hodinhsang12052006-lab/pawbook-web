@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Hanoi Spa - Massage",
+    "category": "Massage spa",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 17 P. Hàng Hòm, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội 11000, Vietnam",
+    "latitude": 21.0319729,
+    "longitude": 105.8488041
+  },
+  {
+    "name": "Rice Spa",
+    "category": "Health spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 10a P. Đinh Liệt, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội 10000, Vietnam",
+    "latitude": 21.0333239,
+    "longitude": 105.8519042
+  },
+  {
+    "name": "Spas Hanoi",
+    "category": "Day spa",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 189 P. Hàng Bông, Hoàn Kiếm, Hà Nội 100000, Vietnam",
+    "latitude": 21.0289242,
+    "longitude": 105.8447502
+  },
+  {
+    "name": "Elys Spa | Massage Old Quarter Hà Nội",
+    "category": "Massage spa",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 54 P. Hàng Quạt, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0327663,
+    "longitude": 105.8492404
+  }
+]

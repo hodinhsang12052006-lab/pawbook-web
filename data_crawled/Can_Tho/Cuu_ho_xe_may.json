@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Cứu hộ giao thông cần thơ 24/24",
+    "category": "Transmission shop",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: Đ. Nguyễn Văn Linh, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0296921,
+    "longitude": 105.7528206
+  },
+  {
+    "name": "Cửa Hàng Xe Gắn Máy Hồng Đức",
+    "category": "Motorcycle shop",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 10-10E Nguyễn Trãi, Cái Khế, Cần Thơ, Vietnam",
+    "latitude": 10.0433935,
+    "longitude": 105.7822803
+  },
+  {
+    "name": "GARAGE ÔTÔ VI NHẤT - CỨU HỘ ẮC QUY - KÍCH BÌNH - ĐIỆN - MÁY LẠNH",
+    "category": "Auto repair shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 196 Đường D25, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 9.9995049,
+    "longitude": 105.7744853
+  }
+]

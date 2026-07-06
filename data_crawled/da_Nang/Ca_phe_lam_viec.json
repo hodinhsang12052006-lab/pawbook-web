@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Phê Coffee",
+    "category": "Coffee shop",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 03 Nguyễn Bá Học, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0546513,
+    "longitude": 108.2208819
+  },
+  {
+    "name": "The Hideout Cafe",
+    "category": "Cafe",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 72/24 Nguyễn Văn Thoại, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0534047,
+    "longitude": 108.2404308
+  },
+  {
+    "name": "Soncha Roastery",
+    "category": "Coffee shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: K21/20 Ông Ích Khiêm, Phường Thanh Bình, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0765155,
+    "longitude": 108.2129435
+  },
+  {
+    "name": "Đây Là - Photobooth Coffee & Bed",
+    "category": "Coffee shop",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 116 Phạm Văn Đồng, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0709769,
+    "longitude": 108.2351731
+  }
+]

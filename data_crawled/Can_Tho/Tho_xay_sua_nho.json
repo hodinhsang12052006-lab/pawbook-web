@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Thợ sửa chữa nhà nhỏ lẻ tại Cần Thơ",
+    "category": "Building restoration service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: Đ. Xô Viết Nghệ Tĩnh, Ninh Kiều, Cần Thơ, Vietnam",
+    "latitude": 10.037883,
+    "longitude": 105.7833674
+  },
+  {
+    "name": "Sửa Nhà Cần Thơ - Cty Anh Em",
+    "category": "Building restoration service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 2Q5G+9V2, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 10.0083766,
+    "longitude": 105.7771388
+  }
+]

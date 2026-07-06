@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Cyber ToBi Gaming ( Game , net , điện tử , internet Đà Nẵng )",
+    "category": "Internet cafe",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 103 Đặng Như Mai, An Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Cybertron Gaming - Cyber Gaming Đà Nẵng",
+    "category": "Internet cafe",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 171 Xô Viết Nghệ Tĩnh, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0311816,
+    "longitude": 108.2103882
+  },
+  {
+    "name": "Cybertron Gaming",
+    "category": "Internet cafe",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 202 Thái Thị Bôi, Thanh Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0685159,
+    "longitude": 108.1958968
+  }
+]

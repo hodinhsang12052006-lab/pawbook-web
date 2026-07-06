@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cho thuê trang phục biểu diễn Nha Trang - Thu Hà",
+    "category": "Furniture store",
+    "rating": 1.4,
+    "reviewCount": 14,
+    "address": "Address: 521 Đ. 2/4, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.273081,
+    "longitude": 109.198318
+  },
+  {
+    "name": "Trang Phục Biểu Diễn Ấn Tượng",
+    "category": "Costume rental service",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 49A Ng. 198 P. Thái Hà, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0142902,
+    "longitude": 105.8202291
+  },
+  {
+    "name": "Trang phục biểu diễn Hà Lê",
+    "category": "Traditional Kostume store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 5 Ng. 18 Huỳnh Thúc Kháng, Giảng Võ, Hà Nội 100000, Vietnam",
+    "latitude": 21.0197755,
+    "longitude": 105.8097526
+  },
+  {
+    "name": "Trang Phục Biểu Diễn Anh Thư",
+    "category": "Costume rental service",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 5 Ng. Hoà Bình, Văn Miếu - Quốc Tử Giám, Hà Nội, Vietnam",
+    "latitude": 21.0192718,
+    "longitude": 105.8351024
+  },
+  {
+    "name": "Trang phục biểu diễn Đặng Thu Hà",
+    "category": "Costume rental service",
+    "rating": 2.9,
+    "reviewCount": 29,
+    "address": "Address: 73 Mai Dịch, Phú Diễn, Hà Nội 100000, Vietnam",
+    "latitude": 21.0398141,
+    "longitude": 105.77436
+  }
+]

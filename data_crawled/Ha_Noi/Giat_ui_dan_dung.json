@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Giặt Là 3 Siêu Cầu Giấy",
+    "category": "Laundry service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 16 Ng. 48 Đ. Nguyễn Khánh Toàn, Cầu Giấy, Hà Nội, Vietnam",
+    "latitude": 21.0366447,
+    "longitude": 105.8035705
+  },
+  {
+    "name": "Giặt là Thu Hương-Cơ sở Đống Đa",
+    "category": "Washer & dryer store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Ng. Thịnh Quang, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0064052,
+    "longitude": 105.8193747
+  },
+  {
+    "name": "Giặt Là SUNSHINE LAUNDRY | giao nhận tận nơi (cơ sở 2)",
+    "category": "Dry cleaner",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 161 Đ. La Thành, Ô Chợ Dừa, Hà Nội, Vietnam",
+    "latitude": 21.0203982,
+    "longitude": 105.8273503
+  },
+  {
+    "name": "Q - Laundry",
+    "category": "Laundry service",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 18 P. Gầm Cầu, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội 11014, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "CAKA Laundry service",
+    "category": "Laundry service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 35 Hàng Đậu, Phố cổ Hà Nội, Hoàn Kiếm, Hà Nội, Vietnam",
+    "latitude": 21.0402118,
+    "longitude": 105.8486765
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Shop Thú Cưng Mập Pet House | Địa Chỉ Bán Chó Mèo Cảnh & DV Khách Sạn Thú Cưng Uy Tín",
+    "category": "Cattery",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 505 P. Vũ Tông Phan, Khương Đình, Hà Nội, Vietnam",
+    "latitude": 20.9862412,
+    "longitude": 105.8143191
+  },
+  {
+    "name": "ILU PET - Tiệm Thú Cưng, Spa & Khách Sạn Chó Mèo",
+    "category": "Pet boarding service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 126 P.Yên Lãng, Đống Đa, Hà Nội, Vietnam",
+    "latitude": 21.0099649,
+    "longitude": 105.8153183
+  },
+  {
+    "name": "ILU PET - Tiệm Thú Cưng, Spa & Khách Sạn Chó Mèo - CS2 Tô Hiệu",
+    "category": "Pet boarding service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 2 Ng. 215 P. Tô Hiệu, Nghĩa Đô, Hà Nội 10000, Vietnam",
+    "latitude": 21.0413572,
+    "longitude": 105.7930005
+  },
+  {
+    "name": "Shiny Pet Spa & Hotel - Spa thú cưng cao cấp Đống Đa Hà Nội",
+    "category": "Pet boarding service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 135 P. Hoàng Cầu, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0162182,
+    "longitude": 105.8214762
+  },
+  {
+    "name": "MUMA PAW - Tiệm spa & chăm sóc thú cưng",
+    "category": "Pet sitter",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 631 Đ. Nguyễn Hoàng Tôn, Xuân Đỉnh, Hà Nội 10000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

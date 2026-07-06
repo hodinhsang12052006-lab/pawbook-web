@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Hải ăn đêm",
+    "category": "Vietnamese restaurant",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: Nam Trân, Hòa Khánh, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0664805,
+    "longitude": 108.1703403
+  },
+  {
+    "name": "Cà Mèn - Quán nhậu đêm Đà Nẵng",
+    "category": "Restaurant",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 97 Tôn Thất Thiệp, Ngũ Hành Sơn, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0461705,
+    "longitude": 108.2413096
+  },
+  {
+    "name": "Ăn vặt đêm Đà Nẵng - Nguyễn Tất Thành - Đà Nẵng",
+    "category": "Bistro",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 1041 Nguyễn Tất Thành, Thanh Khê, Đà Nẵng, Vietnam",
+    "latitude": 16.0727453,
+    "longitude": 108.1894494
+  },
+  {
+    "name": "Nhậu đêm BoongKe",
+    "category": "Restaurant",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 491 Đ. Trần Hưng Đạo, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

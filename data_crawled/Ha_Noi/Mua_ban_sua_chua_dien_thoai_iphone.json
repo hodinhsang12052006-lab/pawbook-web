@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Sửa Điện Thoại iPhone Gần Đây - SmartPhone 24h Thái Hà",
+    "category": "Mobile phone repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 3 Ngõ 178 Thái Hà, Đống Đa, Hà Nội 117130, Vietnam",
+    "latitude": 21.0136075,
+    "longitude": 105.8200759
+  },
+  {
+    "name": "Mua Bán Điện Thoại 24h - Thái Hà",
+    "category": "Cell phone store",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 2 Ngõ 178 Thái Hà, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0133726,
+    "longitude": 105.8199053
+  },
+  {
+    "name": "Minh Anh Mobile",
+    "category": "Mobile phone repair shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 50 Cầu Giấy, Nghĩa Đô, Hà Nội, Vietnam",
+    "latitude": 21.0308896,
+    "longitude": 105.8007632
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Nhôm Kính Cường Lực - Cửa Cuốn",
+    "category": "Corporate office",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 176 Đ. Nguyễn Hiền, Khu dân cư 91B, Tân An, Cần Thơ 94000, Vietnam",
+    "latitude": 10.0221187,
+    "longitude": 105.7550392
+  },
+  {
+    "name": "Cửa cuốn, cửa kéo Cần Thơ",
+    "category": "Corporate office",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 601 Đ. Nguyễn Văn Linh, Long Tuyền, Cần Thơ, Vietnam",
+    "latitude": 10.0408192,
+    "longitude": 105.7401197
+  },
+  {
+    "name": "Công ty Cửa cuốn MTDoor - Sửa chữa, cung cấp cửa cuốn Cần Thơ",
+    "category": "Tool repair shop",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 26 Đ. Nguyễn Đệ, P, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0496958,
+    "longitude": 105.7653755
+  },
+  {
+    "name": "LẮP ĐẶT SỬA CHỮA CỬA CUỐN TẠI CẦN THƠ 24/24",
+    "category": "Corporate office",
+    "rating": 3.5,
+    "reviewCount": 35,
+    "address": "Address: QL1A/11 Số 11QL1A, Hưng Phú, Cần Thơ, Vietnam",
+    "latitude": 10.0241251,
+    "longitude": 105.7992802
+  },
+  {
+    "name": "SỮA CỬA CUỐN PHÚ QUÝ 24 GIỜ",
+    "category": "Corporate office",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 140 Nguyễn Văn Cừ Nối Dài, An Bình, Cần Thơ, Vietnam",
+    "latitude": 10.0218165,
+    "longitude": 105.7429853
+  }
+]

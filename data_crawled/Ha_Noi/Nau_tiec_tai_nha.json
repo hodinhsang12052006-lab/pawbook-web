@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Quán cơm Cô Hương",
+    "category": "Bistro",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 53 Đ. Phạm Ngọc Thạch, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2807342,
+    "longitude": 109.2000265
+  },
+  {
+    "name": "I Like Buffet Restaurant",
+    "category": "Seafood restaurant",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 61 Đặng Tất, Bắc Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2762557,
+    "longitude": 109.1992034
+  },
+  {
+    "name": "Nấu cỗ 29 - Chuyên nấu cỗ tại nhà ở Hà Nội",
+    "category": "Food court",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: P. Thái Thịnh, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.011205,
+    "longitude": 105.8176977
+  },
+  {
+    "name": "Dịch Vụ Nấu Cỗ Tại Nhà",
+    "category": "Culinary school",
+    "rating": 3.7,
+    "reviewCount": 37,
+    "address": "Address: 82, Mễ Trì Hạ, Từ Liêm, Hà Nội 10000, Vietnam",
+    "latitude": 21.008796,
+    "longitude": 105.7770377
+  },
+  {
+    "name": "Trung Tâm Hội Nghị Âu Lạc Thịnh",
+    "category": "Event venue",
+    "rating": 4.3,
+    "reviewCount": 43,
+    "address": "Address: 99 Nguyễn Thị Minh Khai, Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2371805,
+    "longitude": 109.1893662
+  }
+]

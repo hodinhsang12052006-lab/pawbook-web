@@ -1,0 +1,47 @@
+[
+  {
+    "name": "KARAOKE 47 NGHI TÀM",
+    "category": "Karaoke bar",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 47 Đ. Nghi Tàm, Tây Hồ, Hà Nội, Vietnam",
+    "latitude": 21.0517907,
+    "longitude": 105.838873
+  },
+  {
+    "name": "Karaoke Pattaya Club",
+    "category": "Karaoke bar",
+    "rating": 3.9,
+    "reviewCount": 39,
+    "address": "Address: 192 Đ. Nguyễn Tuân, Làng sinh viên Hacinco, Thanh Xuân, Hà Nội, Vietnam",
+    "latitude": 21.0002507,
+    "longitude": 105.8021937
+  },
+  {
+    "name": "Karaoke Golden Crown",
+    "category": "Karaoke bar",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 299 P. Xã Đàn, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Ly Thai To Garden",
+    "category": "Karaoke bar",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 97 Cầu Giấy, Hà Nội 117000, Vietnam",
+    "latitude": 21.0310921,
+    "longitude": 105.799984
+  },
+  {
+    "name": "Karaoke 39 Bùi Thị Xuân",
+    "category": "Karaoke bar",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 39 P. Bùi Thị Xuân, Hai Bà Trưng, Hà Nội 100000, Vietnam",
+    "latitude": 21.0173783,
+    "longitude": 105.8499491
+  }
+]

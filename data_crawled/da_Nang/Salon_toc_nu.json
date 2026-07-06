@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Tun Beauty Salon & Spa",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 238 Đ. Trần Hưng Đạo, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0556859,
+    "longitude": 108.2322146
+  },
+  {
+    "name": "HAI STYLIST Hair Salon",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 36 Châu Thị Vĩnh Tế, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0523649,
+    "longitude": 108.23983
+  },
+  {
+    "name": "BEAUTY SALON LỘC",
+    "category": "Barber shop",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 65 Trưng Nữ Vương, Phường, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Hai Stylist Đà Nẵng - 43b Nguyễn Thế Lộc - Salon Tóc Đà Nẵng",
+    "category": "Hair salon",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 43B Nguyễn Thế Lộc, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0784055,
+    "longitude": 108.2316588
+  },
+  {
+    "name": "Hair Salon Trí Hoàng Vũ",
+    "category": "Hair salon",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 59 Thái Phiên, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0650503,
+    "longitude": 108.2216202
+  }
+]

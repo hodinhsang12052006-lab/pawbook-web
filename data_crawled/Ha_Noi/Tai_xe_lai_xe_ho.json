@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Cho thuê tài xế lái xe cao cấp GOCheap DriverX!",
+    "category": "Transportation service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Khu nhà ở thấp tầng Licogi 13, Ngõ 164 Đ. Khuất Duy Tiến, Thanh Xuân, Hà Nội 03000, Vietnam",
+    "latitude": 20.9992731,
+    "longitude": 105.7993966
+  },
+  {
+    "name": "Cho Thuê Tài Xế Lái Xe Hộ 24H Online",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Ng. Quỳnh/11C 37 P. Bạch Mai, P, Bạch Mai, Hà Nội 11624, Vietnam",
+    "latitude": 21.0055922,
+    "longitude": 105.8516875
+  },
+  {
+    "name": "Gọi Lái Xe Hộ",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 400 Đ. Thụy Khuê, Tây Hồ, Hà Nội 100000, Vietnam",
+    "latitude": 21.0470284,
+    "longitude": 105.8115723
+  },
+  {
+    "name": "Lái Xe Hộ Hà Nội - Hải Đăng Driver Service",
+    "category": "Transportation escort service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 43 Chùa Bộc/6 P. Xã Đàn, Kim Liên, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Dịch Vụ Lái Xe Hộ 24H",
+    "category": "Transportation service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Tòa nhà PVOIL TOWER, 148 Hoàng Quốc Việt, Nghĩa Đô, Hà Nội 11300, Vietnam",
+    "latitude": 21.0463569,
+    "longitude": 105.7906541
+  }
+]

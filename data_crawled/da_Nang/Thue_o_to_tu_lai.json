@@ -1,0 +1,47 @@
+[
+  {
+    "name": "HOÀNG PHÚ AN Travel - Cho thuê xe tự lái, xe du lịch Đà Nẵng",
+    "category": "Car rental agency",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 31 Mai Thúc Lân, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Thuê xe ô tô tự lái Đà Nẵng - Đại Gia Định",
+    "category": "Car rental agency",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 119 Mẹ Nhu, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.067349,
+    "longitude": 108.1778125
+  },
+  {
+    "name": "Thuê Xe Ôtô Tự Lái Đà Nẵng-Quảng Thuận",
+    "category": "Car rental agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 20 An Thượng 39, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Thuê xe ô tô tự lái tại Đà Nẵng - Hoàng Linh Travel Car",
+    "category": "Car rental agency",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 02 Mỹ An 2, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0491787,
+    "longitude": 108.2360722
+  },
+  {
+    "name": "Thuê Xe Tự Lái - Xe Du Lịch tại Đà Nẵng - Da Nang Travel Car",
+    "category": "Car rental agency",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 10 Bùi Tá Hán, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0317256,
+    "longitude": 108.2455946
+  }
+]

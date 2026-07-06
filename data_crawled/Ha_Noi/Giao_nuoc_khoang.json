@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Đại lý Lavie Khương Đình",
+    "category": "Mineral water company",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 8 Ng. 102 P. Hoàng Đạo Thành, Thanh Xuân, Hà Nội, Vietnam",
+    "latitude": 20.9826715,
+    "longitude": 105.8110255
+  },
+  {
+    "name": "Nước tinh khiết Miru - Giao Nước Uống Tận Nơi",
+    "category": "Corporate office",
+    "rating": 3.8,
+    "reviewCount": 38,
+    "address": "Address: 100 P. Trung Kính, Yên Hòa, Hà Nội, Vietnam",
+    "latitude": 21.0160567,
+    "longitude": 105.7946831
+  },
+  {
+    "name": "Đại lý nước khoáng Cầu Giấy - Giao nước tận nơi 24/7",
+    "category": "Bottled water supplier",
+    "rating": 1,
+    "reviewCount": 10,
+    "address": "Address: 29 Ng. 47 P. Nguyễn Khả Trạc, Phú Diễn, Hà Nội 11300, Vietnam",
+    "latitude": 21.045462,
+    "longitude": 105.7775999
+  },
+  {
+    "name": "Tổng Đại Lý La Vie Hùng Liên",
+    "category": "Bottled water supplier",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 75 Ng. 25 P. Vũ Ngọc Phan, Láng, Hà Nội 10000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

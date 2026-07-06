@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Cơ Thủ Billiard",
+    "category": "Pool billard club",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 12 Ng. 187 Đ. Nguyễn Tuân, Thanh Xuân, Hà Nội 100000, Vietnam",
+    "latitude": 21.0001545,
+    "longitude": 105.7992606
+  },
+  {
+    "name": "Bi-A BATUNA Club 30 Bàn bi-a 72 Trần Đại Nghĩa",
+    "category": "Pool billard club",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 72 Trần Đại Nghĩa, Bạch Mai, Hà Nội 100000, Vietnam",
+    "latitude": 21.0006673,
+    "longitude": 105.8448653
+  },
+  {
+    "name": "MEOW BILLIARDS CLUB TRÂU QUỲ - CÂU LẠC BỘ BIDA BI-A LỖ",
+    "category": "Pool billard club",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Số 195 Đ. Trâu Quỳ, Phường, Gia Lâm, Hà Nội 100000, Vietnam",
+    "latitude": 21.005688,
+    "longitude": 105.9376004
+  },
+  {
+    "name": "Tầng 6 47 Thái Hà - TeeDii Billiards Club",
+    "category": "Pool billard club",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: 47 P. Thái Hà, Đống Đa, Hà Nội 100000, Vietnam",
+    "latitude": 21.0114225,
+    "longitude": 105.8213471
+  }
+]

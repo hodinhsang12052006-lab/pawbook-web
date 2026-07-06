@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Laundry An An",
+    "category": "Laundry service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 04 Phước Trường 9, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0761384,
+    "longitude": 108.244081
+  },
+  {
+    "name": "Giặt ủi Đà Nẵng - Susan's Laundry",
+    "category": "Laundry service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 132 Hoàng Dư Khương, Cẩm Lệ, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0259864,
+    "longitude": 108.2105876
+  },
+  {
+    "name": "giặt ủi đà nẵng - Multi Laundry",
+    "category": "Laundry service",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 44 Phan Bá Phiến, Sơn Trà, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0942607,
+    "longitude": 108.2463496
+  },
+  {
+    "name": "GIẶT ỦI HOÀN HẢO (Chuyên xử lý vết bẩn và spa áo quần,giày,túi xáchcao cấp)",
+    "category": "Laundry service",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 127 Núi Thành, Hòa Cường, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0484583,
+    "longitude": 108.2209942
+  }
+]

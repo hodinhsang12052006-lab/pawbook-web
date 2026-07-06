@@ -68,24 +68,10 @@ const MOCK_AVATARS = [
   "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80"
 ];
 
-const mockNames = [
-  { name: "Tiệm sửa xe Thành Đạt", spec: "Sửa xe ga, vá lốp lưu động", phone: "0909 333 444", rating: 4.8, icon: "🛠️", avatar: MOCK_AVATARS[0] },
-  { name: "Vệ sinh máy lạnh 24h", spec: "Rửa máy lạnh, nạp gas giá rẻ", phone: "0911 555 666", rating: 4.9, icon: "❄️", avatar: MOCK_AVATARS[1] },
-  { name: "Quán phở gia truyền Hà Nội", spec: "Phở bò chín/tái thơm ngon", phone: "0922 777 888", rating: 4.7, icon: "🍜", avatar: MOCK_AVATARS[2] },
-  { name: "Spa & Nail Thùy Lâm", spec: "Làm nail, chăm sóc da mặt chuyên sâu", phone: "0933 999 111", rating: 5.0, icon: "💅", avatar: MOCK_AVATARS[3] },
-  { name: "Cơm tấm bãi rác Q4", spec: "Sườn bì chả nướng than thơm phức", phone: "0944 222 333", rating: 4.6, icon: "🍛", avatar: MOCK_AVATARS[4] },
-  { name: "Grab Đội Giao Hàng Siêu Tốc", spec: "Chạy ship, giao tài liệu khẩn cấp", phone: "0955 888 999", rating: 4.9, icon: "🛵", avatar: MOCK_AVATARS[5] },
-  { name: "Điện nước dân dụng Bách Khoa", spec: "Sửa chập điện, ống nước rò rỉ", phone: "0966 111 222", rating: 4.8, icon: "⚡", avatar: MOCK_AVATARS[6] },
-  { name: "Cắt tóc nam barber shop", spec: "Tạo kiểu undercut, cạo râu", phone: "0977 444 555", rating: 4.7, icon: "✂️", avatar: MOCK_AVATARS[7] },
-  { name: "Thú y Pet Clinic & Spa", spec: "Khám chữa bệnh, tỉa lông thú cưng", phone: "0988 666 777", rating: 4.9, icon: "🐶", avatar: MOCK_AVATARS[8] },
-  { name: "Trà sữa DingTea & Snacks", spec: "Trà sữa trân châu, khoai tây chiên", phone: "0999 888 111", rating: 4.5, icon: "🧋", avatar: MOCK_AVATARS[9] }
-];
-
 export default function RadarMap({ jobs, onLocationFound, center: propsCenter, zoom: propsZoom, activeLocation }: RadarMapProps) {
   const [center, setCenter] = useState<[number, number]>(propsCenter || [16.0471, 108.2062]);
   const [zoom, setZoom] = useState<number>(propsZoom || 6);
   const [isMounted, setIsMounted] = useState(false);
-  const [mockList, setMockList] = useState<any[]>([]);
   const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
 
   useEffect(() => {
@@ -140,54 +126,12 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
     requestLocation();
   }, []);
 
-  // Generate 10 mock services dynamically around the GPS map center
-  useEffect(() => {
-    if (center && mockList.length === 0) {
-      const [lat, lng] = center;
-      const offsets = [
-        [0.003, -0.005],
-        [-0.004, 0.006],
-        [0.006, 0.004],
-        [-0.007, -0.003],
-        [0.002, 0.009],
-        [-0.005, -0.008],
-        [0.008, -0.006],
-        [-0.002, 0.005],
-        [0.005, -0.002],
-        [-0.009, 0.008],
-      ];
-
-      const generated = mockNames.map((item, idx) => {
-        const offset = offsets[idx % offsets.length];
-        return {
-          id: `mock-radar-${idx}`,
-          title: item.spec,
-          companyName: item.name,
-          salary: "Liên hệ thỏa thuận",
-          niche: "LOCAL",
-          latitude: lat + offset[0],
-          longitude: lng + offset[1],
-          is_premium: idx % 3 === 0,
-          employerId: "self",
-          rating: item.rating,
-          phone: item.phone,
-          avatarUrl: item.avatar,
-          isMock: true,
-        };
-      });
-      setMockList(generated);
-    }
-  }, [center, mockList]);
-
-  // Combine database jobs and mock services list
-  const allLocations = [
-    ...jobs.map(j => ({
-      ...j,
-      isMock: false,
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(j.companyName)}&background=2563eb&color=ffffff&bold=true`
-    })),
-    ...mockList
-  ];
+  // Map database and crawled stores directly to locations
+  const allLocations = jobs.map(j => ({
+    ...j,
+    isMock: false,
+    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(j.companyName)}&background=2563eb&color=ffffff&bold=true`
+  }));
 
   // Helper to construct custom HTML leaflet DivIcon displaying rating
   const createCustomIcon = (rating: number, isPremium: boolean) => {

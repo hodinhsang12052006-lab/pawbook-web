@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Công Ty Diệt Côn Trùng Sao Nam - CN Cần Thơ",
+    "category": "Pest control service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 29B Đ. Mậu Thân, Ninh Kiều, Cần Thơ 92000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Công ty TNHH TM-DV Diệt Côn Trùng Cần Thơ",
+    "category": "Corporate office",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 2Q2X+HJX, Đường số 11, Long Thịnh, Hưng Phú, Cần Thơ, Vietnam",
+    "latitude": 10.0014971,
+    "longitude": 105.799095
+  },
+  {
+    "name": "Diệt Mối Tín Phát",
+    "category": "Pest control service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 113 D. Hiến Quyền, Ba Làng, Bắc Nha Trang, Khánh Hòa 570000, Vietnam",
+    "latitude": 12.2874662,
+    "longitude": 109.2036479
+  },
+  {
+    "name": "CESCO Cần Thơ",
+    "category": "Pest control service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 45 Đường B21, Khu dân cư 91B, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0242704,
+    "longitude": 105.753186
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "YK Production | Công Ty Truyền Thông & Tổ Chức Sự Kiện Nha Trang",
+    "category": "Event planner",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 04 Đường số 5D, Khu đô thị Hà Quang 2, Nam Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2450208,
+    "longitude": 109.1776815
+  },
+  {
+    "name": "Tiệm Nhà Pun - Cho Thuê Đồ Thiết Kế Đà Nẵng",
+    "category": "Full dress rental service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 119/2 Phạm Như Xương, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.064116,
+    "longitude": 108.1522281
+  },
+  {
+    "name": "Team Building Nha Trang",
+    "category": "Event planner",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 603/6 Đ. 23 Tháng 10, Tây Nha Trang, Khánh Hòa 650000, Vietnam",
+    "latitude": 12.2561373,
+    "longitude": 109.1566095
+  },
+  {
+    "name": "DiDi Event Cho thuê mascot Đà Nẵng, Robot, Trang phục PG, Đầm kim sa, áo dài PG, Roadshow xe, tiệc tea break, setup sự kiện",
+    "category": "Event planner",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 02 Đ. Nguyễn Đình Chiểu, Ngũ Hành Sơn, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0305303,
+    "longitude": 108.2465537
+  },
+  {
+    "name": "Thuê trang phục iZi - Trang phục biểu diễn múa văn nghệ Đà Nẵng - Váy đầm dự tiệc check-in",
+    "category": "Costume store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 79 Tô Hiệu, Hòa Khánh, Đà Nẵng 50000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  }
+]

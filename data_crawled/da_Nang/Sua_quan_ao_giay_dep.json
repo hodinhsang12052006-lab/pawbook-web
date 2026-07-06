@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Thủy Đóng Sửa Áo Quần - Giày Dép",
+    "category": "Shoe store",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 170 Kỳ Đồng, Thanh Khê, Đà Nẵng, Vietnam",
+    "latitude": 16.0702878,
+    "longitude": 108.1867558
+  },
+  {
+    "name": "Ni Nhận giặt sửa giày và túi tại Đà Nẵng",
+    "category": "Shoe repair shop",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 260 Mẹ Thứ, Hòa Xuân, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0000878,
+    "longitude": 108.2150049
+  },
+  {
+    "name": "Hype Sneakers & Accessories",
+    "category": "Shoe store",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 379 Trưng Nữ Vương, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Clean world - Chăm sóc giày & túi xách Đà Nẵng",
+    "category": "Shoe repair shop",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 05 Hoàng Văn Thụ, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Saikou Sneaker Spa - Vệ sinh giày chuyên nghiệp Đà Nẵng",
+    "category": "Shoe repair shop",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 35 Tản Đà, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0629738,
+    "longitude": 108.2091977
+  }
+]

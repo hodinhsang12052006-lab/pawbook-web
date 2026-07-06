@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trung Tâm Gia Sư Sư Phạm Hà Nội",
+    "category": "Education center",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 19 Phố Duy Tân, Dịch Vọng Hậu, Cầu Giấy, Ngõ 40 Tạ Quang Bửu, Cầu Giấy, Hà Nội 03000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Trung Tâm Gia Sư Hà Nội VietEdu",
+    "category": "Private tutor",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 102 Ngh. 95/8 P. Chùa Bộc, Kim Liên, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Gia Sư Trí Tuệ 24H ( Trung Tâm Gia Sư Dạy Kèm Tại Nhà Hà Nội Uy Tín)",
+    "category": "Tutoring service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: Phòng 2809, A3 Mon City, P. Nguyễn Cơ Thạch, Từ Liêm, Hà Nội 100000, Vietnam",
+    "latitude": 21.0355818,
+    "longitude": 105.7667151
+  },
+  {
+    "name": "Trung tâm gia sư uy tín tại Hà Nội- Gia Sư Myteacher",
+    "category": "Education center",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: P. Hoàng Đạo Thúy P.Trung Hòa, Trung Hòa Nhân Chính, Yên Hòa, Hà Nội, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Gia Sư Dạy Kèm Tại Nhà Hà Nội",
+    "category": "Training center",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Ngõ 313 P. Thanh Nhàn, Bạch Mai, Hà Nội, Vietnam",
+    "latitude": 21.0031656,
+    "longitude": 105.8516641
+  }
+]

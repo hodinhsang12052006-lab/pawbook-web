@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Nhà thuốc WellCare - Chi nhánh Đà Nẵng (WellCare Pharmacy)",
+    "category": "Pharmacy",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 206 Hà Huy Tập, Thanh Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0620791,
+    "longitude": 108.1917149
+  },
+  {
+    "name": "Nhà thuốc Pharmacity",
+    "category": "Medical supply store",
+    "rating": 4.2,
+    "reviewCount": 42,
+    "address": "Address: 189 Nguyễn Văn Thoại, An Hải, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0553828,
+    "longitude": 108.2428577
+  },
+  {
+    "name": "Nhà thuốc Circa Central Đống Đa Đà Nẵng - Giao hàng 30 phút - Mở cửa 24/7",
+    "category": "Pharmacy",
+    "rating": 4.1,
+    "reviewCount": 41,
+    "address": "Address: 306 Đống Đa, Hải Châu, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0755702,
+    "longitude": 108.2150984
+  },
+  {
+    "name": "Nhà Thuốc Khang Thạnh",
+    "category": "Pharmacy",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 02 Hòa Minh 10, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0817337,
+    "longitude": 108.1580803
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "NoVa Fitness & Yoga Nguyễn Lương Bằng",
+    "category": "Gym",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: 187 Nguyễn Lương Bằng, Đống Đa, Hà Nội, Vietnam",
+    "latitude": 21.0133818,
+    "longitude": 105.8276371
+  },
+  {
+    "name": "Home Fitness & Yoga",
+    "category": "Gym",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: Toà nhà Yên Hoà - Parkview, 3 P. Vũ Phạm Hàm, Yên Hòa, Hà Nội, Vietnam",
+    "latitude": 21.0154728,
+    "longitude": 105.7969988
+  },
+  {
+    "name": "Air Fitness & Yoga",
+    "category": "Gym",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: Chung cư Phú Thịnh Green park, Hà Đông, Hà Nội, Vietnam",
+    "latitude": 20.961815,
+    "longitude": 105.7742158
+  },
+  {
+    "name": "Energy Fitness Yoga - Gym",
+    "category": "Gym",
+    "rating": 4.7,
+    "reviewCount": 47,
+    "address": "Address: hateco Apollo, Chung cư, Xuân Phương, Hà Nội, Vietnam",
+    "latitude": 21.0474749,
+    "longitude": 105.7349217
+  },
+  {
+    "name": "Fitness & Yoga Center Igym",
+    "category": "Gymnastics center",
+    "rating": 4.6,
+    "reviewCount": 46,
+    "address": "Address: tòa 17t1 Hapulico, 81 Đ. Vũ Trọng Phụng, Khu chung cư Hapulico, Thanh Xuân, Hà Nội, Vietnam",
+    "latitude": 21.0003291,
+    "longitude": 105.8071753
+  }
+]

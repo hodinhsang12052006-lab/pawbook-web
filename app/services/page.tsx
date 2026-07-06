@@ -45,13 +45,6 @@ interface ServiceType {
   } | null;
 }
 
-const MOCK_SERVICES = [
-  { id: 1, name: "Sửa xe máy 24/7 Anh Tuấn", category: "Sửa chữa", lat: 12.245, lng: 109.195, rating: 4.8, address: "Đường 2/4, Vĩnh Hải", tags: ["Sửa xe", "Cứu hộ"], status: "Đang mở cửa", ai_desc: "Phù hợp 98% - Thợ lành nghề, đang rảnh việc gần bạn." },
-  { id: 2, name: "Vệ Sinh Máy Lạnh Chớp Nhoáng", category: "Điện lạnh", lat: 12.238, lng: 109.198, rating: 4.9, address: "Trần Phú, Lộc Thọ", tags: ["Vệ sinh", "Bơm gas"], status: "Đang mở cửa", ai_desc: "Phù hợp 95% - Đánh giá cao nhất khu vực." },
-  { id: 3, name: "Cơm Tấm Sườn Bì Chả Cô Ba", category: "F&B", lat: 12.252, lng: 109.190, rating: 4.7, address: "Lê Hồng Phong, Phước Hải", tags: ["Ăn uống", "Ngon"], status: "Đang mở cửa", ai_desc: "Đề xuất - Quán ăn được yêu thích." },
-  { id: 4, name: "Cứu Hộ Ô Tô Xuyên Đêm", category: "Vận tải", lat: 12.260, lng: 109.200, rating: 5.0, address: "Phạm Văn Đồng", tags: ["Cẩu xe", "Kéo xe"], status: "24/24", ai_desc: "Khẩn cấp - Có mặt sau 15 phút." },
-  { id: 5, name: "Spa Thú Cưng PawCare", category: "Thú cưng", lat: 12.230, lng: 109.185, rating: 4.6, address: "Thái Nguyên", tags: ["Tắm chó", "Cắt tỉa"], status: "Đóng cửa lúc 22:00", ai_desc: "Đề xuất - Dịch vụ chuẩn 5 sao." }
-];
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -218,60 +211,31 @@ export default function ServicesPage() {
     toast.success(`AI: Đang tìm dịch vụ tốt nhất cho "${aiQuery}"...`);
   };
 
-  // Convert MOCK_SERVICES list to unified structure
-  const mockList = MOCK_SERVICES.map((item) => {
-    const isSpecialPremium = item.rating >= 4.9;
+  // Map database records and crawled stores to unified layout
+  const allLocations = services.map(s => {
+    const dbRating = s.rating || 4.7;
     return {
-      id: `mock-radar-${item.id}`,
-      title: item.ai_desc,
-      companyName: item.name,
-      salary: "Liên hệ thỏa thuận",
-      niche: item.category,
-      latitude: item.lat,
-      longitude: item.lng,
-      is_premium: isSpecialPremium,
-      employerId: "self",
-      rating: item.rating,
-      phone: "0909 123 456",
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=${isSpecialPremium ? "d97706" : "2563eb"}&color=ffffff&bold=true`,
-      distance: item.id === 1 ? "Cách bạn 1.2km" : item.id === 2 ? "Cách bạn 800m" : item.id === 3 ? "Cách bạn 1.5km" : item.id === 4 ? "Cách bạn 2.0km" : "Cách bạn 2.3km",
-      isMock: true,
-      tags: item.tags,
-      isOpen: item.status.includes("mở cửa") || item.status.includes("24/24"),
-      address: item.address,
-      hours: item.status,
-      aiRecommendation: item.ai_desc
+      id: s.id,
+      title: s.description,
+      companyName: s.name,
+      salary: s.priceRange || "Thỏa thuận",
+      niche: s.category,
+      latitude: parseFloat(s.location.split(",")[0]) || center[0] + (Math.random() * 0.01 - 0.005),
+      longitude: parseFloat(s.location.split(",")[1]) || center[1] + (Math.random() * 0.01 - 0.005),
+      is_premium: !!s.isBoosted,
+      employerId: s.ownerId,
+      rating: dbRating,
+      phone: s.contactInfo,
+      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=2563eb&color=ffffff&bold=true`,
+      distance: "Cách bạn 1km",
+      isMock: false,
+      tags: [s.category, "Hệ thống"],
+      isOpen: true,
+      address: s.city ? `${s.city}, Việt Nam` : "Hệ thống PawBook",
+      hours: "08:00 - 22:00",
+      aiRecommendation: `Phù hợp 96% • ${dbRating}⭐ trên Google Maps • Cách bạn 1.0km`
     };
   });
-
-  // Merge database records with mocks list
-  const allLocations = [
-    ...services.map(s => {
-      const dbRating = s.rating || 4.7;
-      return {
-        id: s.id,
-        title: s.description,
-        companyName: s.name,
-        salary: s.priceRange || "Thỏa thuận",
-        niche: s.category,
-        latitude: parseFloat(s.location.split(",")[0]) || center[0] + (Math.random() * 0.01 - 0.005),
-        longitude: parseFloat(s.location.split(",")[1]) || center[1] + (Math.random() * 0.01 - 0.005),
-        is_premium: !!s.isBoosted,
-        employerId: s.ownerId,
-        rating: dbRating,
-        phone: s.contactInfo,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=2563eb&color=ffffff&bold=true`,
-        distance: "Cách bạn 1km",
-        isMock: false,
-        tags: [s.category, "Hệ thống"],
-        isOpen: true,
-        address: "Hệ thống PawBook",
-        hours: "08:00 - 22:00",
-        aiRecommendation: `Phù hợp 96% • ${dbRating}⭐ trên Google Maps • Cách bạn 1.0km`
-      };
-    }),
-    ...mockList
-  ];
 
   // Apply unified search and category filters (filtering by name, title, niche and tags)
   const filteredLocations = allLocations.filter((loc) => {

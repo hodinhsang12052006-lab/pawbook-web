@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Trung Tâm Gia Sư Đà Nẵng",
+    "category": "Tutoring service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 91 Cù Chính Lan, Thanh Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.0649594,
+    "longitude": 108.1866305
+  },
+  {
+    "name": "Trung tâm Gia sư Giỏi Đà Nẵng",
+    "category": "Tutoring service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 45 đường Nguyễn Phước Thái, An Khê, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0601726,
+    "longitude": 108.1839455
+  },
+  {
+    "name": "Trung Tâm Gia Sư Ông Thầy",
+    "category": "Personal trainer",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 51 Tôn Đức Thắng, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "Gia sư Đà Nẵng - Hội Gia sư Đà Nẵng",
+    "category": "Tutoring service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 109 Tô Hiệu, Hòa Khánh, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0606906,
+    "longitude": 108.1670906
+  },
+  {
+    "name": "TRUNG TÂM GIA SƯ ĐÀ NẴNG - TRUNG TÂM GIA SƯ ĐHSP- BÁCH KHOA ĐÀ NẴNG",
+    "category": "Tutoring service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 326 Trường Chinh, An Khê, Đà Nẵng 50000, Vietnam",
+    "latitude": 16.050682,
+    "longitude": 108.1821866
+  }
+]

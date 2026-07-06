@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Điện lạnh An Phú",
+    "category": "Refrigerator repair service",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 22/1 Khu Vực 3, Cái Răng, Cần Thơ, Vietnam",
+    "latitude": 10.0084684,
+    "longitude": 105.7823828
+  },
+  {
+    "name": "Điện Tử - Điện Gia Dụng Hoàng Mau",
+    "category": "Small appliance repair service",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 70 Đ. Tô Hiến Thành, Tân An, Cần Thơ, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "SỬA ĐIỆN LẠNH TẠI NHÀ",
+    "category": "Appliance repair service",
+    "rating": 4.5,
+    "reviewCount": 45,
+    "address": "Address: 2QG4+WVQ, Đ. Nguyễn Văn Linh, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0273297,
+    "longitude": 105.7572479
+  },
+  {
+    "name": "Cửa Hàng Cơ Điện Lạnh Gia Cường",
+    "category": "Refrigerator repair service",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 390 Đ. Nguyễn Văn Cừ, Tân An, Cần Thơ 90000, Vietnam",
+    "latitude": null,
+    "longitude": null
+  },
+  {
+    "name": "CÔNG TY TNHH ĐIỆN LẠNH GIA THỊNH",
+    "category": "Refrigerator repair service",
+    "rating": 4.9,
+    "reviewCount": 49,
+    "address": "Address: 95 Đường B13, KDC Hưng Phú 1, Hưng Phú, Cần Thơ 905420, Vietnam",
+    "latitude": 10.0160371,
+    "longitude": 105.7875452
+  }
+]

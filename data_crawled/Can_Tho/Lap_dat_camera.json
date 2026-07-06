@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Camera An Ninh 365 - Lắp Đặt & Sửa Chữa Camera Cần Thơ",
+    "category": "Closed circuit television",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: Hẻm 65 Đ. Trần Hưng Đạo, Ninh Kiều, Cần Thơ 94110, Vietnam",
+    "latitude": 10.0379462,
+    "longitude": 105.7771159
+  },
+  {
+    "name": "Lắp Camera Cần Thơ 24H",
+    "category": "Closed circuit television",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 86 Đ. 3 Tháng 2, An Binh, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0163376,
+    "longitude": 105.7599515
+  },
+  {
+    "name": "Lắp Đặt Camera Cần Thơ AVN",
+    "category": "Closed circuit television",
+    "rating": 4,
+    "reviewCount": 40,
+    "address": "Address: Đ. Ngọc Sứ/431 Trần Quang Diệu, Bình Thủy, Cần Thơ, Vietnam",
+    "latitude": 10.0566232,
+    "longitude": 105.7572382
+  },
+  {
+    "name": "Camera An Khang - lắp đặt, sửa chữa camera Cần Thơ",
+    "category": "Closed circuit television",
+    "rating": 4.8,
+    "reviewCount": 48,
+    "address": "Address: 54q1/3, Đ. Hồ Bún Xáng, Tân An, Cần Thơ, Vietnam",
+    "latitude": 10.0333276,
+    "longitude": 105.7632367
+  },
+  {
+    "name": "Camera Phan Nhan - lắp đặt camera cần thơ",
+    "category": "Store",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: Trung Hung, Can Tho 904338, Vietnam",
+    "latitude": 10.2111462,
+    "longitude": 105.5178145
+  }
+]

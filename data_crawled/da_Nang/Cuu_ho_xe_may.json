@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Sửa xe máy lưu động Đà Nẵng 24/7 - Sửa chữa xe máy tận nơi - Hải Châu",
+    "category": "Motorcycle repair shop",
+    "rating": 4.4,
+    "reviewCount": 44,
+    "address": "Address: 75/7 Nguyễn Văn Linh, Hải Châu, Đà Nẵng 550000, Vietnam",
+    "latitude": 16.0606778,
+    "longitude": 108.2200747
+  },
+  {
+    "name": "Cứu Hộ Xe Máy, Sửa Xe Máy Tại Nhà",
+    "category": "Motorcycle repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 313 Hoàng Thị Loan, Thanh Khê, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0680741,
+    "longitude": 108.1696204
+  },
+  {
+    "name": "Cứu Hộ Xe Máy, Sửa Xe Máy Tại Nhà",
+    "category": "Motorcycle repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 45 Nguyễn Văn Linh, Hải Châu, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0607775,
+    "longitude": 108.2208276
+  },
+  {
+    "name": "Cứu Hộ Xe Máy, Sửa Xe Máy Tại Nhà",
+    "category": "Motorcycle repair shop",
+    "rating": 5,
+    "reviewCount": 50,
+    "address": "Address: 40 Lê Trọng Tấn, An Khê, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0368387,
+    "longitude": 108.1864973
+  },
+  {
+    "name": "Cứu Hộ Xe Máy, Sửa Xe Máy 24/24",
+    "category": "Motorcycle repair shop",
+    "rating": null,
+    "reviewCount": 0,
+    "address": "Address: 156 Đ. 2 Tháng 9, Hòa Cường, Đà Nẵng 55000, Vietnam",
+    "latitude": 16.0508846,
+    "longitude": 108.2219567
+  }
+]

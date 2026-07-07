@@ -28,7 +28,7 @@ export default function CandidatesSwipePage() {
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [matchedCandidate, setMatchedCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isCvModalOpen, setIsCvModalOpen] = useState(false);
   const [submittingCv, setSubmittingCv] = useState(false);
   const [desiredPosition, setDesiredPosition] = useState("");
   const [expectedSalary, setExpectedSalary] = useState("");
@@ -44,7 +44,7 @@ export default function CandidatesSwipePage() {
     setSubmittingCv(true);
     setTimeout(() => {
       setSubmittingCv(false);
-      setShowUploadModal(false);
+      setIsCvModalOpen(false);
       // Reset form
       setDesiredPosition("");
       setExpectedSalary("");
@@ -331,7 +331,7 @@ export default function CandidatesSwipePage() {
       {/* Floating Action Button for Uploading CV */}
       <button
         type="button"
-        onClick={() => setShowUploadModal(true)}
+        onClick={() => setIsCvModalOpen(true)}
         className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold text-xs px-4.5 py-3 rounded-full shadow-lg shadow-pink-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer border border-pink-400/20"
       >
         <span>🚀</span>
@@ -339,7 +339,7 @@ export default function CandidatesSwipePage() {
       </button>
 
       {/* UPLOAD CV MODAL */}
-      {showUploadModal && (
+      {isCvModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form
             onSubmit={handleUploadCv}
@@ -353,7 +353,7 @@ export default function CandidatesSwipePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setShowUploadModal(false);
+                  setIsCvModalOpen(false);
                 }}
                 className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer transition-colors"
               >
@@ -419,7 +419,7 @@ export default function CandidatesSwipePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setShowUploadModal(false);
+                  setIsCvModalOpen(false);
                 }}
                 className="rounded-xl px-4 py-2.5 text-3xs font-bold bg-slate-950 text-slate-400 hover:text-white border border-slate-800 cursor-pointer transition-colors"
               >

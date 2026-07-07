@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Navbar from "@/components/layout/Navbar";
+import { BitpawMiniApp } from "./BitpawMiniApp";
 import { 
   Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users, 
   Image, Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info,
@@ -139,6 +140,7 @@ function MessengerContent() {
     { id: "mock-contact-4", name: "Phạm Thùy Chi", role: "Bác sĩ thú y tự do", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80", location: "Đà Nẵng", distance: "3.1km", isInternal: false, status: "busy" }
   ]);
   const [jobStates, setJobStates] = useState<Record<string, 'OPEN' | 'ACCEPTED' | 'SYNCING' | 'COMPLETED'>>({});
+  const [isMiniAppOpen, setIsMiniAppOpen] = useState(false);
   const [showSSOModal, setShowSSOModal] = useState(false);
   const [ssoStep, setSSOStep] = useState(1);
   const [syncingContacts, setSyncingContacts] = useState(false);
@@ -1332,20 +1334,7 @@ function MessengerContent() {
                       {/* GPS Check-in Trigger */}
                       <button
                         type="button"
-                        onClick={() => {
-                          setShowSSOModal(true);
-                          setSSOStep(1);
-                          setTimeout(() => {
-                            setSSOStep(2);
-                            setTimeout(() => {
-                              setShowSSOModal(false);
-                              handleSendMessage(null, "GPS_ATTENDANCE_COMPLETED", "ATTENDANCE");
-                              toast.success("✅ Chấm công thành công! Bạn đã sẵn sàng nhận đơn.");
-                              // Set first user to Free/Online
-                              setContacts(prev => prev.map((c, idx) => idx === 0 ? { ...c, status: "free" } : c));
-                            }, 1500);
-                          }, 1500);
-                        }}
+                        onClick={() => setIsMiniAppOpen(true)}
                         className="p-2 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-900 transition-all duration-300 cursor-pointer"
                         title="Chấm công GPS"
                       >
@@ -1869,6 +1858,7 @@ function MessengerContent() {
           </div>
         </div>
       )}
+    <BitpawMiniApp isOpen={isMiniAppOpen} onClose={() => setIsMiniAppOpen(false)} />
     </div>
   );
 }

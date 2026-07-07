@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { X, Heart, Sparkles, User, Briefcase, DollarSign, MapPin, Star, MessageSquare, RefreshCw } from "lucide-react";
+import { X, Heart, Sparkles, User, Briefcase, DollarSign, MapPin, Star, MessageSquare, RefreshCw, Loader2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 interface Candidate {
@@ -28,6 +28,30 @@ export default function CandidatesSwipePage() {
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [matchedCandidate, setMatchedCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [submittingCv, setSubmittingCv] = useState(false);
+  const [desiredPosition, setDesiredPosition] = useState("");
+  const [expectedSalary, setExpectedSalary] = useState("");
+  const [keySkills, setKeySkills] = useState("");
+  const [allowMatching, setAllowMatching] = useState(true);
+
+  const handleUploadCv = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!desiredPosition.trim() || !expectedSalary.trim() || !keySkills.trim()) {
+      toast.error("Vui lòng điền đầy đủ các trường thông tin!");
+      return;
+    }
+    setSubmittingCv(true);
+    setTimeout(() => {
+      setSubmittingCv(false);
+      setShowUploadModal(false);
+      // Reset form
+      setDesiredPosition("");
+      setExpectedSalary("");
+      setKeySkills("");
+      toast.success("🎉 Hồ sơ của bạn đã lọt top tìm kiếm!");
+    }, 1000);
+  };
 
   React.useEffect(() => {
     async function loadCandidates() {
@@ -304,6 +328,115 @@ export default function CandidatesSwipePage() {
           animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
       `}</style>
+      {/* Floating Action Button for Uploading CV */}
+      <button
+        type="button"
+        onClick={() => setShowUploadModal(true)}
+        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold text-xs px-4.5 py-3 rounded-full shadow-lg shadow-pink-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer border border-pink-400/20"
+      >
+        <span>🚀</span>
+        <span>Đăng hồ sơ lên sàn</span>
+      </button>
+
+      {/* UPLOAD CV MODAL */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <form
+            onSubmit={handleUploadCv}
+            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 animate-scaleIn text-slate-100 text-left"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-xs font-black text-slate-200 flex items-center gap-2">
+                <span>🚀</span>
+                Bật chế độ tìm việc & Đưa CV lên sàn
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUploadModal(false);
+                }}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="block text-4xs font-bold text-slate-400">VỊ TRÍ MONG MUỐN</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Thợ sửa khóa, Kỹ thuật viên Spa..."
+                  value={desiredPosition}
+                  onChange={(e) => setDesiredPosition(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-4xs font-bold text-slate-400">MỨC LƯƠNG YÊU CẦU</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: 15,000,000đ - 22,000,000đ..."
+                  value={expectedSalary}
+                  onChange={(e) => setExpectedSalary(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-4xs font-bold text-slate-400">KỸ NĂNG NỔI BẬT</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Smartkey, ReactJS, Massage body..."
+                  value={keySkills}
+                  onChange={(e) => setKeySkills(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-850/60 mt-1">
+                <div>
+                  <h5 className="text-[10px] font-bold text-slate-200">Cho phép nhà tuyển dụng tìm kiếm</h5>
+                  <p className="text-[8px] text-slate-500 mt-0.5 leading-tight">Hồ sơ của bạn sẽ hiển thị trong danh sách quẹt thẻ.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowMatching}
+                    onChange={(e) => setAllowMatching(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-800 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white border border-slate-700"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUploadModal(false);
+                }}
+                className="rounded-xl px-4 py-2.5 text-3xs font-bold bg-slate-950 text-slate-400 hover:text-white border border-slate-800 cursor-pointer transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={submittingCv}
+                className="rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 disabled:opacity-50 px-4 py-2.5 text-3xs font-black text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-pink-500/20"
+              >
+                {submittingCv && <Loader2 className="h-3 w-3 animate-spin" />}
+                <span>Lưu & Đưa lên sàn</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

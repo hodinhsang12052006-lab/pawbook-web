@@ -412,10 +412,10 @@ export default function ServicesPage() {
 
       {/* Main Full-Screen Layout */}
       <main className="flex-1 w-full h-[calc(100vh-64px)] overflow-hidden">
-        <div className="flex h-full w-full overflow-hidden flex-col md:flex-row">
+        <div className="flex h-full w-full overflow-y-auto md:overflow-hidden flex-col md:flex-row">
           
           {/* Left Column (400px width): AI search, Filters, List */}
-          <div className="w-full md:w-[400px] flex flex-col h-full bg-slate-955 border-r border-slate-850 overflow-hidden flex-shrink-0">
+          <div className="w-full md:w-[400px] flex flex-col h-[520px] md:h-full bg-slate-955 border-r border-slate-850 overflow-hidden flex-shrink-0">
             
             {/* Header, AI Chat Box, Filters */}
             <div className="p-4 border-b border-slate-850 space-y-3.5 flex-shrink-0 bg-slate-955">
@@ -643,7 +643,7 @@ export default function ServicesPage() {
           </div>
 
           {/* Right Column (Remaining width): Interactive Map Radar */}
-          <div className="flex-1 h-full relative">
+          <div className="w-full md:flex-1 h-[400px] md:h-full relative flex-shrink-0">
             <RadarMap
               jobs={filteredLocations}
               center={center}

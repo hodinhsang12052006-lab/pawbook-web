@@ -37,7 +37,7 @@ export function BitpawMiniApp({ isOpen, onClose }: BitpawMiniAppProps) {
       {/* Sliding bottom sheet container */}
       <div className="fixed bottom-0 inset-x-0 h-[75vh] bg-slate-50 dark:bg-slate-900 rounded-t-3xl shadow-2xl z-50 p-4 flex flex-col transform transition-transform">
         {/* Decorative Drag Handle */}
-        <div className="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
+        <div className="w-12 h-1 bg-slate-355 dark:bg-slate-700 rounded-full mx-auto mb-3" />
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
@@ -55,6 +55,14 @@ export function BitpawMiniApp({ isOpen, onClose }: BitpawMiniAppProps) {
 
         {/* Mock Iframe Simulator Body */}
         <div className="flex-1 flex flex-col items-center justify-center space-y-6 text-center">
+          {/* Prepared Secure Iframe container for future implementation */}
+          <iframe
+            allow="camera; geolocation; microphone"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            src="https://your-bitpaw-domain.com/mini-app?token=MOCK_JWT_TOKEN_USER_123"
+            className="hidden w-full h-full border-none rounded-b-3xl"
+          />
+
           {/* GPS Icon Simulation */}
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
@@ -64,10 +72,10 @@ export function BitpawMiniApp({ isOpen, onClose }: BitpawMiniAppProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-350 flex items-center justify-center gap-1.5 animate-pulse">
+            <p className="text-sm font-semibold text-slate-750 dark:text-slate-300 flex items-center justify-center gap-1.5 animate-pulse">
               <span>📍 Đang lấy tọa độ...</span>
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-450 max-w-xs">
+            <p className="text-xs text-slate-550 dark:text-slate-450 max-w-xs">
               Hệ thống đang đồng bộ định vị GPS của bạn để thực hiện check-in vào ca làm việc.
             </p>
           </div>
@@ -79,6 +87,12 @@ export function BitpawMiniApp({ isOpen, onClose }: BitpawMiniAppProps) {
           >
             <span>👆 CHẠM ĐỂ CHẤM CÔNG</span>
           </button>
+          
+          {/* Security Status Indicator */}
+          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-2 select-none flex items-center gap-1">
+            <span>🔐</span>
+            <span>Đã cấp quyền GPS/Camera & Token Auth</span>
+          </div>
         </div>
       </div>
     </>

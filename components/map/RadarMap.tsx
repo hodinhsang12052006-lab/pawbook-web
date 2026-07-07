@@ -175,7 +175,7 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
   };
 
   return (
-    <div className="h-full w-full rounded-2xl overflow-hidden border border-slate-800 bg-[#f4f6f8] relative z-10 shadow-2xl min-h-[500px]">
+    <div className="h-full w-full rounded-2xl overflow-hidden border border-slate-800 bg-[#f4f6f8] relative z-10 shadow-2xl">
       <MapContainer
         center={center}
         zoom={zoom}

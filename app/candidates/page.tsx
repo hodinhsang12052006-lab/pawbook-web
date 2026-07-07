@@ -335,7 +335,7 @@ export default function CandidatesSwipePage() {
         className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold text-xs px-4.5 py-3 rounded-full shadow-lg shadow-pink-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer border border-pink-400/20"
       >
         <span>🚀</span>
-        <span>Đăng hồ sơ lên sàn</span>
+        <span>Đăng hồ sơ của bạn lên sàn</span>
       </button>
 
       {/* UPLOAD CV MODAL */}
@@ -397,10 +397,10 @@ export default function CandidatesSwipePage() {
                   required
                 />
               </div>
-
+              
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-850/60 mt-1">
                 <div>
-                  <h5 className="text-[10px] font-bold text-slate-200">Cho phép nhà tuyển dụng tìm kiếm</h5>
+                  <h5 className="text-[10px] font-bold text-slate-200">Cho phép nhà tuyển dụng nhìn thấy và quẹt CV của tôi</h5>
                   <p className="text-[8px] text-slate-500 mt-0.5 leading-tight">Hồ sơ của bạn sẽ hiển thị trong danh sách quẹt thẻ.</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">

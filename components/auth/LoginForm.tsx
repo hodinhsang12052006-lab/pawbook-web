@@ -48,30 +48,30 @@ export default function LoginForm() {
       {/* Mobile-only Branding */}
       <div className="block lg:hidden text-center mb-6">
         <Link href="/" className="inline-flex items-center gap-3">
-          <div className="h-12 w-12 overflow-hidden rounded-xl border border-blue-500/40 bg-blue-500/10 p-0.5 shadow-lg shadow-blue-500/20">
+          <div className="h-12 w-12 overflow-hidden rounded-xl border border-blue-500/20 bg-blue-50 p-0.5 shadow-lg shadow-blue-500/10">
             <img
               src="/cho1.jpg"
               alt="PawBook Logo"
               className="h-full w-full object-cover rounded-lg"
             />
           </div>
-          <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-2xl font-black tracking-widest text-transparent uppercase select-none">
+          <span className="bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-2xl font-black tracking-widest text-transparent uppercase select-none">
             PawBook
           </span>
         </Link>
       </div>
 
       <div className="space-y-2 text-center lg:text-left">
-        <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           Chào mừng trở lại!
         </h2>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-500">
           Nhập email và mật khẩu của bạn để truy cập PawBook.
         </p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+        <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-650">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -81,13 +81,13 @@ export default function LoginForm() {
         <div>
           <label
             htmlFor="email"
-            className="block text-xs font-semibold text-slate-350"
+            className="block text-xs font-bold text-slate-700"
           >
             Địa chỉ Email
           </label>
           <div className="relative mt-1">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Mail className="h-4 w-4 text-slate-500" />
+              <Mail className="h-4 w-4 text-slate-400" />
             </div>
             <input
               id="email"
@@ -96,7 +96,7 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="block w-full rounded-xl border border-slate-800 bg-slate-800/50 py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="block w-full rounded-xl border border-slate-200 bg-white h-12 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
         </div>
@@ -105,20 +105,20 @@ export default function LoginForm() {
           <div className="flex items-center justify-between">
             <label
               htmlFor="password"
-              className="block text-xs font-semibold text-slate-350"
+              className="block text-xs font-bold text-slate-700"
             >
               Mật khẩu
             </label>
             <a
               href="#"
-              className="text-xs font-semibold text-blue-400 hover:text-blue-350 transition-colors"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-500 transition-colors"
             >
               Quên mật khẩu?
             </a>
           </div>
           <div className="relative mt-1">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Lock className="h-4 w-4 text-slate-500" />
+              <Lock className="h-4 w-4 text-slate-400" />
             </div>
             <input
               id="password"
@@ -127,7 +127,7 @@ export default function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="block w-full rounded-xl border border-slate-800 bg-slate-800/50 py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="block w-full rounded-xl border border-slate-200 bg-white h-12 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-650 h-12 text-sm font-bold text-white shadow-lg shadow-blue-600/15 hover:from-blue-500 hover:to-indigo-550 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 cursor-pointer"
         >
           {loading ? (
             <>
@@ -148,11 +148,11 @@ export default function LoginForm() {
         </button>
       </form>
 
-      <div className="text-center text-sm text-slate-400">
+      <div className="text-center text-sm text-slate-500">
         Chưa có tài khoản?{" "}
         <Link
           href="/auth/register"
-          className="font-semibold text-blue-400 hover:text-blue-350 transition-colors"
+          className="font-bold text-blue-600 hover:text-blue-500 transition-colors"
         >
           Đăng ký ngay
         </Link>

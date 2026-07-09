@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  serverExternalPackages: ['pdf-parse', 'canvas'],
+  serverExternalPackages: ['canvas'],
 };
 
 export default withPWA(nextConfig);

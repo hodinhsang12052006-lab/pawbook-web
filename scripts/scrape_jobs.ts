@@ -77,6 +77,13 @@ async function scrapeJobs() {
 
     // Save jobs to MongoDB using upsert logic based on URL
     for (const item of jobs) {
+      // Check time limit (Kill switch at 10:00 AM Asia/Ho_Chi_Minh)
+      const nowInVN = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+      if (nowInVN.getHours() >= 10) {
+        console.log("⏰ Time limit reached (>= 10:00 AM Asia/Ho_Chi_Minh). Stopping execution...");
+        break;
+      }
+
       if (!item.sourceUrl) continue;
 
       await collection.updateOne(

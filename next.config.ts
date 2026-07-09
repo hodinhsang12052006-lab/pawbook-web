@@ -22,10 +22,16 @@ const nextConfig: any = {
     };
     return config;
   },
-  experimental: {
-    serverComponentsExternalPackages: ['canvas'],
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/@swc/core-linux-x64-gnu/**/*',
+      'node_modules/@swc/core-linux-x64-musl/**/*',
+      'node_modules/@swc/wasm/**/*',
+      'node_modules/canvas/**/*',
+      'node_modules/pdf-parse/**/*'
+    ],
   },
-  serverExternalPackages: ['canvas'],
+  serverExternalPackages: ['canvas', 'pdf-parse'],
   eslint: {
     ignoreDuringBuilds: true,
   },

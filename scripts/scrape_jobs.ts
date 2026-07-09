@@ -1,8 +1,8 @@
 import { chromium } from "playwright-extra";
-import stealthPlugin from "puppeteer-extra-plugin-stealth";
 import { MongoClient } from "mongodb";
 
-// Add stealth plugin to Playwright
+// Add stealth plugin to Playwright using CommonJS require to avoid default import runtime errors
+const stealthPlugin = require("puppeteer-extra-plugin-stealth");
 // @ts-ignore
 chromium.use(stealthPlugin());
 

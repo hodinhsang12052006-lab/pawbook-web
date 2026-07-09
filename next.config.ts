@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {}, // <-- Bùa bình an Vercel đòi đây!
   images: {
     remotePatterns: [
       {
@@ -20,7 +21,6 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  // Khai báo chuẩn cho cả Next 14 và 15 để không bị bắt lỗi syntax
   experimental: {
     serverComponentsExternalPackages: ['canvas'],
   },

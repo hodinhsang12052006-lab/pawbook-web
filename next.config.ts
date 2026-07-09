@@ -1,16 +1,6 @@
 import type { NextConfig } from "next";
-// @ts-ignore
-import withPWAInit from "next-pwa";
 
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-  skipWaiting: true,
-});
-
-const nextConfig: any = {
-  turbopack: {},
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
@@ -23,12 +13,16 @@ const nextConfig: any = {
       },
     ],
   },
-  webpack: (config: any) => {
+  webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       canvas: false,
     };
     return config;
+  },
+  // Khai báo chuẩn cho cả Next 14 và 15 để không bị bắt lỗi syntax
+  experimental: {
+    serverComponentsExternalPackages: ['canvas'],
   },
   serverExternalPackages: ['canvas'],
   eslint: {
@@ -39,4 +33,4 @@ const nextConfig: any = {
   },
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;

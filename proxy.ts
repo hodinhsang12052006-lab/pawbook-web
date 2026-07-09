@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export function middleware() {
+export function proxy() {
   // Tạm thời "sa thải" bảo vệ Edge để trị dứt điểm bộ nhớ đệm của Vercel
   return NextResponse.next();
 }

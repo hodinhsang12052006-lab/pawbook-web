@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const nextConfig: any = {
+  output: 'standalone',
   turbopack: {}, // <-- Bùa bình an Vercel đòi đây!
   images: {
     remotePatterns: [
@@ -14,7 +15,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config) => {
+  webpack: (config: any) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       canvas: false,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import PostForm from "@/components/feed/PostForm";
@@ -17,6 +17,7 @@ export default function Home() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+  /*
   // State for jobs, pre-populated with realistic mock data
   const [jobs, setJobs] = useState<JobType[]>([
     {
@@ -50,6 +51,32 @@ export default function Home() {
       createdAt: "3 ngày trước",
     },
   ]);
+  */
+
+  const [jobs, setJobs] = useState<JobType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadJobs() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch("/api/jobs");
+        if (!res.ok) {
+          throw new Error("Không thể tải danh sách việc làm.");
+        }
+        const data = await res.json();
+        setJobs(data);
+      } catch (err: any) {
+        console.error("Lỗi khi tải jobs:", err);
+        setError(err.message || "Không thể kết nối API.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadJobs();
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
@@ -70,73 +97,105 @@ export default function Home() {
                 <AiSuggest />
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Social Feed + PostForm */}
-                <div className="lg:col-span-2 space-y-6">
-                  <PostForm onAddPost={handlePostAdded} />
-                  <PostList refreshTrigger={refreshTrigger} />
-                </div>
-
-                {/* Job Board mini widget */}
-                <div className="space-y-6">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md">
-                    <h3 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-blue-500" />
-                      Xu hướng MMO hot nhất
-                    </h3>
-                    <ul className="space-y-3 text-xs">
-                      <li className="flex justify-between items-center py-2 border-b border-slate-850">
-                        <span className="text-slate-400">#BuildInPublic</span>
-                        <span className="text-blue-400 font-semibold flex items-center">
-                          +245% <ArrowUpRight className="h-3 w-3" />
-                        </span>
-                      </li>
-                      <li className="flex justify-between items-center py-2 border-b border-slate-850">
-                        <span className="text-slate-400">#AIAutomation</span>
-                        <span className="text-blue-400 font-semibold flex items-center">
-                          +180% <ArrowUpRight className="h-3 w-3" />
-                        </span>
-                      </li>
-                      <li className="flex justify-between items-center py-2 border-b border-slate-850">
-                        <span className="text-slate-400">#NextjsAppRouter</span>
-                        <span className="text-blue-400 font-semibold flex items-center">
-                          +95% <ArrowUpRight className="h-3 w-3" />
-                        </span>
-                      </li>
-                      <li className="flex justify-between items-center py-2">
-                        <span className="text-slate-400">#CryptoAffiliate</span>
-                        <span className="text-blue-400 font-semibold flex items-center">
-                          +120% <ArrowUpRight className="h-3 w-3" />
-                        </span>
-                      </li>
-                    </ul>
+                  {/* Social Feed + PostForm */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <PostForm onAddPost={handlePostAdded} />
+                    <PostList refreshTrigger={refreshTrigger} />
                   </div>
 
-                  {/* Quick Jobs list preview */}
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md">
-                    <h3 className="text-sm font-bold text-slate-200 mb-4">Việc làm mới ứng tuyển nhanh</h3>
-                    <div className="space-y-3">
-                      {jobs.slice(0, 2).map((job) => (
-                        <div key={job.id} className="group cursor-pointer">
-                          <p className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
-                            {job.title}
-                          </p>
-                          <div className="flex items-center justify-between text-3xs text-slate-400 mt-1">
-                            <span>{job.companyName}</span>
-                            <span className="text-emerald-400 font-semibold">{job.salary}</span>
-                          </div>
-                        </div>
-                      ))}
+                  {/* Job Board mini widget */}
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md">
+                      <h3 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-blue-500" />
+                        Xu hướng MMO hot nhất
+                      </h3>
+                      <ul className="space-y-3 text-xs">
+                        <li className="flex justify-between items-center py-2 border-b border-slate-850">
+                          <span className="text-slate-400">#BuildInPublic</span>
+                          <span className="text-blue-400 font-semibold flex items-center">
+                            +245% <ArrowUpRight className="h-3 w-3" />
+                          </span>
+                        </li>
+                        <li className="flex justify-between items-center py-2 border-b border-slate-850">
+                          <span className="text-slate-400">#AIAutomation</span>
+                          <span className="text-blue-400 font-semibold flex items-center">
+                            +180% <ArrowUpRight className="h-3 w-3" />
+                          </span>
+                        </li>
+                        <li className="flex justify-between items-center py-2 border-b border-slate-850">
+                          <span className="text-slate-400">#NextjsAppRouter</span>
+                          <span className="text-blue-400 font-semibold flex items-center">
+                            +95% <ArrowUpRight className="h-3 w-3" />
+                          </span>
+                        </li>
+                        <li className="flex justify-between items-center py-2">
+                          <span className="text-slate-400">#CryptoAffiliate</span>
+                          <span className="text-blue-400 font-semibold flex items-center">
+                            +120% <ArrowUpRight className="h-3 w-3" />
+                          </span>
+                        </li>
+                      </ul>
                     </div>
-                    <button
-                      onClick={() => setActiveTab("jobs")}
-                      className="w-full mt-4 rounded-xl border border-slate-800 bg-slate-950/40 py-2 text-center text-xs font-semibold text-slate-300 hover:bg-slate-900 hover:text-white transition-colors"
-                    >
-                      Xem tất cả việc làm
-                    </button>
+
+                    {/* Quick Jobs list preview */}
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md">
+                      <h3 className="text-sm font-bold text-slate-200 mb-4">Việc làm mới ứng tuyển nhanh</h3>
+                      <div className="space-y-3">
+                        {/*
+                        {jobs.slice(0, 2).map((job) => (
+                          <div key={job.id} className="group cursor-pointer">
+                            <p className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
+                              {job.title}
+                            </p>
+                            <div className="flex items-center justify-between text-3xs text-slate-400 mt-1">
+                              <span>{job.companyName}</span>
+                              <span className="text-emerald-400 font-semibold">{job.salary}</span>
+                            </div>
+                          </div>
+                        ))}
+                        */}
+
+                        {loading ? (
+                          <div className="space-y-3 animate-pulse">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <div key={n} className="space-y-2">
+                                <div className="h-3 bg-slate-800 rounded w-5/6"></div>
+                                <div className="flex justify-between">
+                                  <div className="h-2 bg-slate-850 rounded w-1/3"></div>
+                                  <div className="h-2 bg-slate-850 rounded w-1/4"></div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : error ? (
+                          <p className="text-xs text-rose-450">Lỗi tải danh sách việc làm.</p>
+                        ) : jobs.length === 0 ? (
+                          <p className="text-xs text-slate-500">Chưa có việc làm nào.</p>
+                        ) : (
+                          jobs.slice(0, 6).map((job) => (
+                            <div key={job.id} className="group cursor-pointer">
+                              <p className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
+                                {job.title}
+                              </p>
+                              <div className="flex items-center justify-between text-3xs text-slate-400 mt-1">
+                                <span>{job.companyName}</span>
+                                <span className="text-emerald-400 font-semibold">{job.salary}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("jobs")}
+                        className="w-full mt-4 rounded-xl border border-slate-800 bg-slate-950/40 py-2 text-center text-xs font-semibold text-slate-300 hover:bg-slate-900 hover:text-white transition-colors"
+                      >
+                        Xem tất cả việc làm
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             )}
 
             {activeTab === "jobs" && (

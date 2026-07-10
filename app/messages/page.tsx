@@ -161,6 +161,11 @@ function MessengerContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileTypeRef = useRef<"image" | "video" | "document" | "">("");
+  
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
   // Fetch session & current user ID
   useEffect(() => {
@@ -276,6 +281,77 @@ function MessengerContent() {
     const mins = Math.floor(secs / 60);
     const remainingSecs = secs % 60;
     return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+  };
+
+  const handleAcceptCall = async () => {
+    try {
+      const isVideoCall = callType === "video";
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: isVideoCall ? { width: 640, height: 480 } : false
+      });
+      localStreamRef.current = stream;
+
+      setCallConnected(true);
+
+      setTimeout(() => {
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      }, 300);
+
+      const pc = new RTCPeerConnection();
+      peerConnectionRef.current = pc;
+
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.ontrack = (event) => {
+        const streams = event.streams;
+        if (remoteVideoRef.current && streams[0]) {
+          remoteVideoRef.current.srcObject = streams[0];
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      console.log("Simulating signaling emit offer...");
+      
+      setTimeout(async () => {
+        await pc.setRemoteDescription(offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        
+        console.log("Simulating signaling emit answer & Ice Candidates...");
+        
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+        }
+        
+        toast.success("Cuộc gọi đã kết nối thành công! 📞");
+      }, 600);
+
+    } catch (err: any) {
+      console.error("WebRTC getUserMedia / Connection error:", err);
+      toast.error("Lỗi thiết bị: " + (err.message || "Không thể truy cập Camera/Microphone."));
+      setCallConnected(true);
+    }
+  };
+
+  const handleEndCall = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    setShowCallingModal(false);
+    setCallConnected(false);
+    toast.success(`Cuộc gọi đã kết thúc. Thời lượng: ${formatTimer(callSeconds)}`);
   };
 
   // GIF Search Debouncer with local MOCK fallbacks
@@ -975,7 +1051,7 @@ function MessengerContent() {
                 </div>
 
                 {/* Chat Message Logs */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-gray-900 via-slate-950 to-blue-900/20">
                   {activeConversation.length === 0 ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!
@@ -1138,8 +1214,8 @@ function MessengerContent() {
                                 <div
                                   className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${
                                     isSelf
-                                      ? "bg-blue-600 text-white rounded-br-none shadow-md shadow-blue-650/10"
-                                      : "bg-slate-900 border border-slate-850 text-slate-200 rounded-bl-none"
+                                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-br-sm shadow-md shadow-blue-500/10"
+                                      : "bg-slate-800 text-white rounded-bl-sm border border-slate-750"
                                   }`}
                                 >
                                   {msg.type === "IMAGE" ? (
@@ -1700,9 +1776,14 @@ function MessengerContent() {
           {/* Camera Visual Mockups for Video Call */}
           {callConnected && callType === "video" && (
             <div className="absolute inset-x-4 top-24 bottom-32 bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl z-20 flex items-center justify-center">
-              {/* Partner Cam (Mocked using avatar/photo) */}
-              <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: `url(${activeChat.avatarUrl || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400'})` }} />
-              <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center">
+              {/* Partner Cam (Loopback remote stream) */}
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover opacity-80"
+              />
+              <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
                 {videoOff ? (
                   <p className="text-3xs font-bold text-slate-400">🎥 Camera đối tác đã tắt</p>
                 ) : (
@@ -1712,10 +1793,16 @@ function MessengerContent() {
                 )}
               </div>
 
-              {/* My Cam (Mocked in bottom-right corner) */}
-              <div className="absolute bottom-4 right-4 h-32 w-24 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl z-30">
-                <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: `url(https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120)` }} />
-                <div className="absolute bottom-1 left-1.5 bg-black/60 px-1.5 py-0.2 rounded text-[7px] text-white/90">Bạn</div>
+              {/* My Cam (Local video preview) */}
+              <div className="absolute bottom-4 right-4 h-32 w-24 bg-slate-955 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl z-30">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-1 left-1.5 bg-black/60 px-1.5 py-0.2 rounded text-[7px] text-white/90 pointer-events-none">Bạn</div>
               </div>
             </div>
           )}
@@ -1727,7 +1814,7 @@ function MessengerContent() {
                 {/* Accept Call Button */}
                 <button
                   type="button"
-                  onClick={() => setCallConnected(true)}
+                  onClick={handleAcceptCall}
                   className="h-14 w-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer"
                   title="Nhận cuộc gọi"
                 >
@@ -1737,10 +1824,7 @@ function MessengerContent() {
                 {/* Decline/Decline Ringing Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCallingModal(false);
-                    setCallConnected(false);
-                  }}
+                  onClick={handleEndCall}
                   className="h-14 w-14 rounded-full bg-gradient-to-r from-rose-500 to-red-600 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-red-500/20 cursor-pointer"
                   title="Từ chối"
                 >
@@ -1753,8 +1837,12 @@ function MessengerContent() {
                 <button
                   type="button"
                   onClick={() => {
-                    setMicMuted(!micMuted);
-                    toast.success(micMuted ? "🎤 Đã bật micro" : "🔇 Đã tắt micro");
+                    const nextMute = !micMuted;
+                    setMicMuted(nextMute);
+                    if (localStreamRef.current) {
+                      localStreamRef.current.getAudioTracks().forEach(track => track.enabled = !nextMute);
+                    }
+                    toast.success(nextMute ? "🔇 Đã tắt micro" : "🎤 Đã bật micro");
                   }}
                   className={`h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${micMuted ? "bg-red-500 text-white border border-red-400" : "bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"}`}
                   title={micMuted ? "Bật micro" : "Tắt micro"}
@@ -1765,11 +1853,7 @@ function MessengerContent() {
                 {/* End Call Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCallingModal(false);
-                    setCallConnected(false);
-                    toast.success(`Cuộc gọi đã kết thúc. Thời lượng: ${formatTimer(callSeconds)}`);
-                  }}
+                  onClick={handleEndCall}
                   className="h-14 w-14 rounded-full bg-gradient-to-r from-rose-500 to-red-600 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-red-550/20 cursor-pointer"
                   title="Gác máy"
                 >
@@ -1781,8 +1865,12 @@ function MessengerContent() {
                   <button
                     type="button"
                     onClick={() => {
-                      setVideoOff(!videoOff);
-                      toast.success(videoOff ? "🎥 Đã mở camera" : "🚫 Đã tắt camera");
+                      const nextVideoOff = !videoOff;
+                      setVideoOff(nextVideoOff);
+                      if (localStreamRef.current) {
+                        localStreamRef.current.getVideoTracks().forEach(track => track.enabled = !nextVideoOff);
+                      }
+                      toast.success(nextVideoOff ? "🚫 Đã tắt camera" : "🎥 Đã mở camera");
                     }}
                     className={`h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${videoOff ? "bg-red-500 text-white border border-red-400" : "bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"}`}
                     title={videoOff ? "Bật camera" : "Tắt camera"}

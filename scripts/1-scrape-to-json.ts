@@ -23,7 +23,8 @@ const KEYWORDS = [
   "Spa thú cưng", "Khách sạn thú cưng", "Trông trẻ theo giờ", "Gia sư trung tâm dạy kèm", "Khu vui chơi trẻ em",
   "Quán ăn đêm", "Cà phê làm việc", "Cyber Gaming tiệm net", "Billiards bida", "Karaoke",
   "Nấu tiệc tại nhà", "Thuê đồ sự kiện", "Cho thuê trang phục", "Y tế tại nhà", "Dịch vụ giấy tờ pháp lý",
-  "Mua bán sửa chữa điện thoại iphone", "Chạy xe ôm công nghệ Grab", "Sửa chữa máy tính laptop"
+  "Mua bán sửa chữa điện thoại iphone", "Chạy xe ôm công nghệ Grab", "Sửa chữa máy tính laptop",
+  "Taxi xe ôm chở thú cưng"
 ];
 
 // Configurable options
@@ -39,6 +40,9 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // Slugify helper to create safe folder/file names
 function slugify(text: string): string {
+  if (text === "Taxi xe ôm chở thú cưng") {
+    return "Xe_om_thu_cung";
+  }
   return text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove Vietnamese accents

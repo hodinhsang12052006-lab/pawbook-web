@@ -112,10 +112,14 @@ const ALL_SERVICES = [
   "Gia sư trung tâm dạy kèm", "Khu vui chơi trẻ em",
   "Quán ăn đêm", "Cà phê làm việc", "Cyber Gaming tiệm net", "Billiards bida",
   "Karaoke", "Nấu tiệc tại nhà", "Thuê đồ sự kiện", "Cho thuê trang phục",
-  "Y tế tại nhà", "Dịch vụ giấy tờ pháp lý", "Mua bán sửa chữa điện thoại iphone"
+  "Y tế tại nhà", "Dịch vụ giấy tờ pháp lý", "Mua bán sửa chữa điện thoại iphone",
+  "Taxi xe ôm chở thú cưng"
 ];
 
 function slugifyKeyword(str: string): string {
+  if (str === "Taxi xe ôm chở thú cưng") {
+    return "xe_om_thu_cung";
+  }
   return str
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

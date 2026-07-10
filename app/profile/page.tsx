@@ -381,12 +381,22 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       });
 
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.user) {
         toast.success("Cập nhật thông tin hồ sơ thành công! ✨");
         setProfile((prev: any) => ({
           ...prev,
           ...data.user,
         }));
+        setEditForm({
+          name: data.user.name || "",
+          bio: data.user.bio || "",
+          phone: data.user.phone || "",
+          address: data.user.address || "",
+          cover_image: data.user.cover_image || "",
+          cv_url: data.user.cv_url || "",
+          skills: data.user.skills || "",
+          avatarUrl: data.user.avatarUrl || "",
+        });
         setIsEditModalOpen(false);
       } else {
         toast.error(data.error || "Cập nhật thất bại.");
@@ -490,7 +500,19 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                 </Link>
               ) : (
                 <button
-                  onClick={() => setIsEditModalOpen(true)}
+                  onClick={() => {
+                    setEditForm({
+                      name: profile.name || "",
+                      bio: profile.bio || "",
+                      phone: profile.phone || "",
+                      address: profile.address || "",
+                      cover_image: profile.cover_image || "",
+                      cv_url: profile.cv_url || "",
+                      skills: profile.skills || "",
+                      avatarUrl: profile.avatarUrl || "",
+                    });
+                    setIsEditModalOpen(true);
+                  }}
                   className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2 text-2xs font-semibold text-slate-200 transition-all cursor-pointer"
                 >
                   <Edit3 className="h-3.5 w-3.5" />

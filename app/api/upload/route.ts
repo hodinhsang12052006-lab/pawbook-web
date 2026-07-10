@@ -39,6 +39,18 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Fallback if Cloudinary is not configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      console.log("Cloudinary not configured. Falling back to Base64 upload representation.");
+      const mimeType = file.type || "application/octet-stream";
+      const base64String = buffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64String}`;
+      return NextResponse.json({
+        url: dataUrl,
+        publicId: "fallback_base64",
+      });
+    }
+
     // Upload buffer contents using Cloudinary upload stream to bypass local folder writing
     const uploadResult: any = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(

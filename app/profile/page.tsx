@@ -7,7 +7,7 @@ import PostList, { PostType } from "@/components/feed/PostList";
 import { 
   ArrowLeft, Edit3, MapPin, Link2, Calendar, Briefcase, 
   Award, Sparkles, ShieldCheck, BadgeCheck, Star, Mail, 
-  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame
+  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame, MessageSquare, Eye
 } from "lucide-react";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
@@ -22,9 +22,36 @@ interface JobType {
   is_premium?: boolean;
 }
 
-export default function ProfilePage() {
+export default function ProfilePage({ params }: { params?: Promise<{ uid: string }> }) {
+  const [resolvedUid, setResolvedUid] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    if (params) {
+      params.then((p) => setResolvedUid(p.uid));
+    }
+  }, [params]);
+
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (res.ok) {
+          const session = await res.json();
+          setCurrentUser(session.user);
+        }
+      } catch (err) {
+        console.error("Failed to load session:", err);
+      }
+    }
+    loadSession();
+  }, []);
+
+  const isOwnProfile = !resolvedUid || (currentUser && currentUser.id === resolvedUid);
+
   // No internal getServerSession or useSession redirects are present on the profile client view.
   const [profile, setProfile] = useState<any>({
+    id: "",
     name: "Nguyễn Văn A",
     role: "EMPLOYER",
     bio: "Senior Fullstack Developer | Blockchain & MMO Automation Architect. Đam mê xây dựng các hệ thống tự động hoá và tối ưu hóa trải nghiệm người dùng.",
@@ -59,7 +86,7 @@ export default function ProfilePage() {
   });
 
   const [walletHistory, setWalletHistory] = useState<any[]>([]);
-  const [activeRightTab, setActiveRightTab] = useState<"bookings" | "posts">("bookings");
+  const [activeRightTab, setActiveRightTab] = useState<"bookings" | "posts">("posts");
   const [bookings, setBookings] = useState<{ received: any[]; sent: any[] }>({ received: [], sent: [] });
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
@@ -143,7 +170,8 @@ export default function ProfilePage() {
   async function loadUserProfile() {
     try {
       setLoading(true);
-      const res = await fetch("/api/profile");
+      const url = resolvedUid ? `/api/profile?id=${resolvedUid}` : "/api/profile";
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setProfile((prev: any) => ({
@@ -170,12 +198,15 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadUserProfile();
-    fetchBookings();
-  }, []);
+    if (isOwnProfile) {
+      fetchBookings();
+    }
+  }, [resolvedUid, isOwnProfile]);
 
   // Load wallet transaction logs
   useEffect(() => {
     async function loadWalletHistory() {
+      if (!isOwnProfile) return;
       try {
         const res = await fetch("/api/wallet/history");
         if (res.ok) {
@@ -187,7 +218,7 @@ export default function ProfilePage() {
       }
     }
     loadWalletHistory();
-  }, []);
+  }, [resolvedUid, isOwnProfile]);
 
   // User's own posts (Static mockup feed data)
   const [myPosts, setMyPosts] = useState<PostType[]>([
@@ -448,14 +479,24 @@ export default function ProfilePage() {
             </div>
 
             {/* Top row actions (edit profile button aligned right) */}
-            <div className="flex justify-end pt-4 h-12 sm:h-16">
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2 text-2xs font-semibold text-slate-200 transition-all cursor-pointer"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                Chỉnh sửa trang cá nhân
-              </button>
+            <div className="flex justify-end pt-4 h-12 sm:h-16 gap-2">
+              {!isOwnProfile ? (
+                <Link
+                  href={`/messages?to=${profile.id || resolvedUid}`}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-650 to-indigo-650 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 text-2xs font-semibold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Nhắn tin
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2 text-2xs font-semibold text-slate-200 transition-all cursor-pointer"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Chỉnh sửa trang cá nhân
+                </button>
+              )}
             </div>
 
             {/* User Main Metadata */}
@@ -484,32 +525,34 @@ export default function ProfilePage() {
                     <span id="user-pawcoin-balance">{profile.pawCoin || 0} PawCoins</span>
                   </span>
 
-                  {/* Daily Reward Claim Button */}
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch("/api/wallet/daily-reward", { method: "POST" });
-                        const data = await res.json();
-                        if (res.ok) {
-                          toast.success(data.message);
-                          setProfile((prev: any) => ({ ...prev, pawCoin: data.newBalance }));
-                          const txRes = await fetch("/api/wallet/history");
-                          if (txRes.ok) {
-                            const txData = await txRes.json();
-                            setWalletHistory(txData);
+                   {/* Daily Reward Claim Button */}
+                  {isOwnProfile && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/wallet/daily-reward", { method: "POST" });
+                          const data = await res.json();
+                          if (res.ok) {
+                            toast.success(data.message);
+                            setProfile((prev: any) => ({ ...prev, pawCoin: data.newBalance }));
+                            const txRes = await fetch("/api/wallet/history");
+                            if (txRes.ok) {
+                              const txData = await txRes.json();
+                              setWalletHistory(txData);
+                            }
+                          } else {
+                            toast.error(data.error || "Điểm danh thất bại.");
                           }
-                        } else {
-                          toast.error(data.error || "Điểm danh thất bại.");
+                        } catch (err) {
+                          toast.error("Lỗi kết nối mạng.");
                         }
-                      } catch (err) {
-                        toast.error("Lỗi kết nối mạng.");
-                      }
-                    }}
-                    id="btn-daily-reward"
-                    className="inline-flex items-center gap-1 px-3 py-0.5 text-2xs font-bold rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 border border-amber-500 hover:from-amber-550 hover:to-yellow-550 text-white shadow-md shadow-amber-500/10 cursor-pointer"
-                  >
-                    🎁 Điểm danh nhận quà (+20)
-                  </button>
+                      }}
+                      id="btn-daily-reward"
+                      className="inline-flex items-center gap-1 px-3 py-0.5 text-2xs font-bold rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 border border-amber-500 hover:from-amber-550 hover:to-yellow-550 text-white shadow-md shadow-amber-500/10 cursor-pointer"
+                    >
+                      🎁 Điểm danh nhận quà (+20)
+                    </button>
+                  )}
 
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-0.5 text-2xs font-semibold text-purple-400 border border-purple-500/20">
                     <ShieldCheck className="h-3.5 w-3.5 text-purple-500" />
@@ -561,8 +604,28 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
           {/* Left Area: CV Manager & Skills Info (5 cols on desktop) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* CV Manager Component */}
-            <CVManager />
+            {/* CV Manager Component (Only for own profile) or Candidate CV download link (for public profiles) */}
+            {isOwnProfile ? (
+              <CVManager />
+            ) : (
+              profile.cv_url && (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                    <FileText className="h-5 w-5 text-indigo-400" />
+                    Hồ Sơ CV Ứng Viên
+                  </h3>
+                  <a
+                    href={profile.cv_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Xem & Tải xuống CV (PDF)
+                  </a>
+                </div>
+              )
+            )}
 
             {/* Skills Card */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
@@ -617,12 +680,14 @@ export default function ProfilePage() {
                             ⭐ Đang trên Top
                           </span>
                         ) : (
-                          <button
-                            onClick={(e) => handleBoostJob(job.id, e)}
-                            className="inline-flex items-center gap-1 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/35 px-2 py-1 text-[9px] font-extrabold transition-all cursor-pointer"
-                          >
-                            🔥 Đẩy Top
-                          </button>
+                          isOwnProfile && (
+                            <button
+                              onClick={(e) => handleBoostJob(job.id, e)}
+                              className="inline-flex items-center gap-1 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/35 px-2 py-1 text-[9px] font-extrabold transition-all cursor-pointer"
+                            >
+                              🔥 Đẩy Top
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
@@ -632,77 +697,83 @@ export default function ProfilePage() {
             </div>
 
             {/* Activity Stats Card */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
-              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
-                <Briefcase className="h-5 w-5 text-purple-400" />
-                Thống kê hoạt động
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-850 text-center">
-                  <span className="block text-2xl font-bold text-blue-500">34</span>
-                  <span className="text-3xs text-slate-500 mt-1 block">Bài đã đăng</span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-850 text-center">
-                  <span className="block text-2xl font-bold text-indigo-500">1,248</span>
-                  <span className="text-3xs text-slate-500 mt-1 block">Lượt xem Profile</span>
+            {isOwnProfile && (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
+                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                  <Briefcase className="h-5 w-5 text-purple-400" />
+                  Thống kê hoạt động
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-850 text-center">
+                    <span className="block text-2xl font-bold text-blue-500">34</span>
+                    <span className="text-3xs text-slate-500 mt-1 block">Bài đã đăng</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-850 text-center">
+                    <span className="block text-2xl font-bold text-indigo-500">1,248</span>
+                    <span className="text-3xs text-slate-500 mt-1 block">Lượt xem Profile</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Wallet History Card */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
-              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-amber-500 fill-amber-500/10" />
-                Lịch sử ví PawCoin
-              </h3>
-              
-              {walletHistory.length === 0 ? (
-                <p className="text-center py-6 text-3xs text-slate-500">Chưa có giao dịch ví nào được thực hiện.</p>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 divide-y divide-slate-850/40 text-xs">
-                  {walletHistory.map((tx: any) => (
-                    <div key={tx.id} className="pt-2 flex items-center justify-between text-3xs">
-                      <div className="space-y-0.5">
-                        <p className="font-semibold text-slate-200">{tx.description}</p>
-                        <span className="text-slate-550 text-4xs">{new Date(tx.createdAt).toLocaleDateString("vi-VN")}</span>
+            {isOwnProfile && (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-6 backdrop-blur-md">
+                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                  <Sparkles className="h-5 w-5 text-amber-500 fill-amber-500/10" />
+                  Lịch sử ví PawCoin
+                </h3>
+                
+                {walletHistory.length === 0 ? (
+                  <p className="text-center py-6 text-3xs text-slate-500">Chưa có giao dịch ví nào được thực hiện.</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1 divide-y divide-slate-850/40 text-xs">
+                    {walletHistory.map((tx: any) => (
+                      <div key={tx.id} className="pt-2 flex items-center justify-between text-3xs">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-200">{tx.description}</p>
+                          <span className="text-slate-550 text-4xs">{new Date(tx.createdAt).toLocaleDateString("vi-VN")}</span>
+                        </div>
+                        <span className={`font-bold text-2xs ${tx.type === "INCOME" ? "text-emerald-450" : "text-rose-455"}`}>
+                          {tx.type === "INCOME" ? "+" : ""}{tx.amount}
+                        </span>
                       </div>
-                      <span className={`font-bold text-2xs ${tx.type === "INCOME" ? "text-emerald-450" : "text-rose-455"}`}>
-                        {tx.type === "INCOME" ? "+" : ""}{tx.amount}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Area: Tabs controls (7 cols on desktop) */}
           <div className="lg:col-span-7 space-y-6">
             {/* Tab switch header */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-2 flex gap-2">
-              <button
-                onClick={() => setActiveRightTab("bookings")}
-                className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  activeRightTab === "bookings"
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                📅 Yêu cầu & Đơn hàng
-              </button>
-              <button
-                onClick={() => setActiveRightTab("posts")}
-                className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  activeRightTab === "posts"
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                📝 Bài viết của bạn
-              </button>
-            </div>
+            {isOwnProfile && (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-2 flex gap-2">
+                <button
+                  onClick={() => setActiveRightTab("bookings")}
+                  className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    activeRightTab === "bookings"
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  📅 Yêu cầu & Đơn hàng
+                </button>
+                <button
+                  onClick={() => setActiveRightTab("posts")}
+                  className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    activeRightTab === "posts"
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  📝 Bài viết của bạn
+                </button>
+              </div>
+            )}
 
-            {activeRightTab === "bookings" ? (
+            {isOwnProfile && activeRightTab === "bookings" ? (
               <div className="space-y-6">
                 {/* 1. Received Bookings (As Provider / Owner) */}
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/10 p-5 backdrop-blur-md space-y-4">
@@ -745,7 +816,7 @@ export default function ProfilePage() {
                                   : req.status === "ACCEPTED"
                                   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                                   : req.status === "REJECTED"
-                                  ? "bg-rose-500/10 border-rose-500/20 text-rose-450"
+                                  ? "bg-rose-500/10 border-rose-500/20 text-rose-455"
                                   : "bg-blue-500/10 border-blue-500/20 text-blue-400"
                               }`}
                             >
@@ -828,7 +899,7 @@ export default function ProfilePage() {
                               />
                               <div>
                                 <h4 className="font-bold text-slate-200">Gửi đến: {req.receiver.name}</h4>
-                                <p className="text-[10px] text-slate-550 mt-0.5">
+                                <p className="text-[10px] text-slate-555 mt-0.5">
                                   Vai trò: {req.receiver.role} • ĐT:{" "}
                                   <a href={`tel:${req.receiver.phone}`} className="text-emerald-450 hover:underline">
                                     {req.receiver.phone || "Chưa cập nhật"}
@@ -843,19 +914,19 @@ export default function ProfilePage() {
                                   : req.status === "ACCEPTED"
                                   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                                   : req.status === "REJECTED"
-                                  ? "bg-rose-500/10 border-rose-500/20 text-rose-450"
+                                  ? "bg-rose-500/10 border-rose-500/20 text-rose-455"
                                   : "bg-blue-500/10 border-blue-500/20 text-blue-400"
                               }`}
                             >
-                              {req.status === "PENDING" && "CHỜ PHẢN HỒI"}
-                              {req.status === "ACCEPTED" && "ĐÃ NHẬN ĐƠN"}
-                              {req.status === "REJECTED" && "BỊ TỪ CHỐI"}
+                              {req.status === "PENDING" && "ĐANG CHỜ"}
+                              {req.status === "ACCEPTED" && "ĐÃ DUYỆT"}
+                              {req.status === "REJECTED" && "TỪ CHỐI"}
                               {req.status === "COMPLETED" && "HOÀN THÀNH"}
                             </span>
                           </div>
 
                           <div className="bg-slate-950/40 border border-slate-850 p-3 rounded-xl space-y-2">
-                            <p className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <p className="text-3xs font-semibold text-slate-550 uppercase tracking-wider">
                               Đối với bài đăng:{" "}
                               <span className="text-blue-400">
                                 {req.job?.title || req.service?.name}
@@ -885,7 +956,7 @@ export default function ProfilePage() {
                                   setReviewJobId(req.jobId || null);
                                   setIsReviewModalOpen(true);
                                 }}
-                                className="px-3 py-1.5 rounded-lg border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-450 hover:text-yellow-350 text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-yellow-550/5"
+                                className="px-3 py-1.5 rounded-lg border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-455 hover:text-yellow-355 text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-yellow-555/5"
                               >
                                 <span>⭐️ Đánh giá dịch vụ</span>
                               </button>
@@ -900,7 +971,9 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-6">
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md flex items-center justify-between">
-                  <h2 className="text-base font-bold text-slate-100">Bài viết của bạn</h2>
+                  <h2 className="text-base font-bold text-slate-100">
+                    {isOwnProfile ? "Bài viết của bạn" : "Bài viết của thành viên"}
+                  </h2>
                   <span className="text-xs text-slate-400 font-medium">Sắp xếp: Mới nhất</span>
                 </div>
                 <PostList posts={myPosts} onLikePost={handleLikePost} />

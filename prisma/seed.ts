@@ -12,6 +12,25 @@ async function main() {
   await prisma.user.deleteMany({});
 
   const hashedPassword = await bcrypt.hash("password123", 10);
+  const adminHashedPassword = await bcrypt.hash("0794678904", 10);
+
+  // 0. Admin User
+  const admin = await prisma.user.create({
+    data: {
+      id: "10000000001",
+      name: "BITPAWOS",
+      email: "bitpawos30052003@gmail.com",
+      password: adminHashedPassword,
+      role: Role.ADMIN,
+      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      skills: "admin, moderation, security",
+      bio: "Tài khoản quản trị viên tối cao của hệ thống BitPaw.",
+      pawCoin: 99999,
+      reputation: 100,
+      trustScore: 5.0,
+      isVerified: true,
+    },
+  });
 
   // 1. Candidate User
   const candidate = await prisma.user.create({

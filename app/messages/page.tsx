@@ -87,7 +87,7 @@ const MOCK_GIFS = [
 
 function MessengerContent() {
   const searchParams = useSearchParams();
-  const searchUserId = searchParams.get("userId");
+  const searchUserId = searchParams.get("userId") || searchParams.get("to");
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [messages, setMessages] = useState<MessageType[]>([]);

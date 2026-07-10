@@ -104,7 +104,7 @@ export default function CustomAuthLayout({
                     />
                   </div>
                   <span className="text-white text-3xl font-black tracking-widest uppercase select-none">
-                    PawBook
+                    BITPAWOS
                   </span>
                 </Link>
               </div>
@@ -121,7 +121,7 @@ export default function CustomAuthLayout({
             </div>
 
             <div className="absolute bottom-12 left-12 z-10 text-xs text-blue-200/60">
-              © 2026 PawBook Platform. All rights reserved.
+              © 2026 BITPAWOS Platform. All rights reserved.
             </div>
           </div>
 

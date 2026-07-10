@@ -42,51 +42,40 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email: adminEmail }
+  // Delete first to avoid primary key update constraint errors and ensure ID is 10000000001
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: adminEmail },
+        { id: adminId }
+      ]
+    }
   });
 
   if (existingUser) {
-    console.log(`Admin user with email ${adminEmail} already exists. Updating role and ID...`);
-    const updated = await prisma.user.update({
-      where: { email: adminEmail },
-      data: {
-        id: adminId, // Note: Prisma/SQLite doesn't always allow updating primary keys directly if constraint check fails, so upsert is safer if we delete first or just recreate
-        name: "BITPAWOS",
-        password: hashedPassword,
-        role: Role.ADMIN,
-        isVerified: true
-      }
+    console.log(`Deleting existing user with email "${existingUser.email}" or ID "${existingUser.id}" to avoid key constraint conflicts...`);
+    await prisma.user.delete({
+      where: { id: existingUser.id }
     });
-    console.log("Admin updated successfully:", updated.email);
-  } else {
-    // Check if ID is taken
-    const existingById = await prisma.user.findUnique({
-      where: { id: adminId }
-    });
-    if (existingById) {
-      console.log(`User with ID ${adminId} already exists. Deleting it to create admin user...`);
-      await prisma.user.delete({ where: { id: adminId } });
-    }
-
-    const created = await prisma.user.create({
-      data: {
-        id: adminId,
-        name: "BITPAWOS",
-        email: adminEmail,
-        password: hashedPassword,
-        role: Role.ADMIN,
-        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
-        bio: "Tài khoản quản trị viên tối cao của hệ thống BitPaw.",
-        skills: "admin, moderation, security",
-        pawCoin: 99999,
-        reputation: 100,
-        trustScore: 5.0,
-        isVerified: true,
-      }
-    });
-    console.log("Admin created successfully:", created.email, "with ID:", created.id);
   }
+
+  const created = await prisma.user.create({
+    data: {
+      id: adminId,
+      name: "BITPAWOS",
+      email: adminEmail,
+      password: hashedPassword,
+      role: Role.ADMIN,
+      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      bio: "Tài khoản quản trị viên tối cao của hệ thống BitPaw.",
+      skills: "admin, moderation, security",
+      pawCoin: 99999,
+      reputation: 100,
+      trustScore: 5.0,
+      isVerified: true,
+    }
+  });
+  console.log("Admin created successfully:", created.email, "with ID:", created.id);
 
   console.log("=== ADMIN SYNC COMPLETE ===");
 }

@@ -10,7 +10,7 @@ import { AuthSettingsContext } from "@/app/auth/layout";
 const translations = {
   vi: {
     welcome: "Chào mừng trở lại!",
-    desc: "Nhập email và mật khẩu của bạn để truy cập PawBook.",
+    desc: "Nhập email và mật khẩu của bạn để truy cập BITPAWOS.",
     emailLabel: "Địa chỉ Email",
     placeholderEmail: "name@example.com",
     passwordLabel: "Mật khẩu",
@@ -26,7 +26,7 @@ const translations = {
   },
   en: {
     welcome: "Welcome back!",
-    desc: "Enter your email and password to access PawBook.",
+    desc: "Enter your email and password to access BITPAWOS.",
     emailLabel: "Email Address",
     placeholderEmail: "name@example.com",
     passwordLabel: "Password",
@@ -108,7 +108,7 @@ export default function LoginForm() {
             />
           </div>
           <span className={`bg-gradient-to-r ${theme === "dark" ? "from-blue-400 to-indigo-500" : "from-blue-600 to-indigo-700"} bg-clip-text text-2xl font-black tracking-widest text-transparent uppercase select-none`}>
-            PawBook
+            BITPAWOS
           </span>
         </Link>
       </div>

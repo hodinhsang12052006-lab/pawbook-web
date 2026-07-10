@@ -25,38 +25,43 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Vui lòng nhập đầy đủ email và mật khẩu.");
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            throw new Error("Vui lòng nhập đầy đủ email và mật khẩu.");
+          }
+
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email,
+            },
+          });
+
+          // Thêm check !user.password để chặn lỗi nếu acc đó đăng nhập bằng Google trước đây
+          if (!user || !user.password) {
+            throw new Error("Tài khoản không tồn tại hoặc chưa cài mật khẩu. Vui lòng đăng ký.");
+          }
+
+          const isPasswordMatch = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordMatch) {
+            throw new Error("Mật khẩu không chính xác.");
+          }
+
+          // Trả về đúng object để nhét vào JWT
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            image: user.avatarUrl,
+          };
+        } catch (err: any) {
+          console.error("NextAuth Authorize error:", err);
+          throw new Error(err.message || "Lỗi hệ thống xác thực thông tin đăng nhập.");
         }
-
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
-
-        // Thêm check !user.password để chặn lỗi nếu acc đó đăng nhập bằng Google trước đây
-        if (!user || !user.password) {
-          throw new Error("Tài khoản không tồn tại hoặc chưa cài mật khẩu. Vui lòng đăng ký.");
-        }
-
-        const isPasswordMatch = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordMatch) {
-          throw new Error("Mật khẩu không chính xác.");
-        }
-
-        // Trả về đúng object để nhét vào JWT
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          image: user.avatarUrl,
-        };
       }
     })
   ],

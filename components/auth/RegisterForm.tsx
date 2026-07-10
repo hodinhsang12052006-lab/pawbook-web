@@ -237,7 +237,7 @@ export default function RegisterForm() {
             />
           </div>
           <span className={`bg-gradient-to-r ${theme === "dark" ? "from-blue-400 to-indigo-500" : "from-blue-600 to-indigo-700"} bg-clip-text text-2xl font-black tracking-widest text-transparent uppercase select-none`}>
-            PawBook
+            BITPAWOS
           </span>
         </Link>
       </div>

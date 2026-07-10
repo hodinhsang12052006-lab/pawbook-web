@@ -444,47 +444,28 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
         );
       }
 
-      // Convert cropped canvas representation to JPEG blob file
-      const croppedBase64 = canvas.toDataURL("image/jpeg", 0.9);
-      const blobRes = await fetch(croppedBase64);
-      const blob = await blobRes.blob();
-      const croppedFile = new File([blob], "avatar.jpg", {
-        type: "image/jpeg",
-      });
+      // Export canvas representation as compressed JPEG Base64 representation (quality 0.8)
+      const base64String = canvas.toDataURL("image/jpeg", 0.8);
 
-      const formData = new FormData();
-      formData.append("file", croppedFile);
-
-      // 1. Upload cropped file
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok || !uploadData.url) {
-        throw new Error(uploadData.error || "Không thể tải ảnh lên máy chủ.");
-      }
-
-      // 2. Synchronize directly into Prisma User Database representation
+      // Send direct update-avatar API call with base64 payload representation
       const dbRes = await fetch("/api/user/update-avatar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ avatarUrl: uploadData.url }),
+        body: JSON.stringify({ image: base64String }),
       });
 
       const dbData = await dbRes.json();
-      if (!dbRes.ok) {
-        throw new Error(dbData.error || "Không thể lưu ảnh đại diện vào cơ sở dữ liệu.");
+      if (!dbRes.ok || !dbData.success) {
+        throw new Error(dbData.error || "Không thể đồng bộ ảnh đại diện vào máy chủ.");
       }
 
       toast.success("Đồng bộ ảnh đại diện thành công! 🖼️", { id: toastId });
 
       // Update forms and profile views
-      setEditForm((prev) => ({ ...prev, avatarUrl: uploadData.url }));
-      setProfile((prev: any) => ({ ...prev, avatarUrl: uploadData.url }));
+      setEditForm((prev) => ({ ...prev, avatarUrl: dbData.avatarUrl }));
+      setProfile((prev: any) => ({ ...prev, avatarUrl: dbData.avatarUrl }));
 
       // Dispatch window event so Header Navbar updates in real-time!
       window.dispatchEvent(new Event("profile-updated"));

@@ -16,11 +16,11 @@ export async function POST(req: Request) {
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const { avatarUrl } = body;
+    const { image } = body;
 
-    if (!avatarUrl) {
+    if (!image) {
       return NextResponse.json(
-        { error: "Vui lòng cung cấp đường dẫn ảnh đại diện mới." },
+        { error: "Vui lòng cung cấp chuỗi dữ liệu ảnh đại diện mới." },
         { status: 400 }
       );
     }
@@ -29,19 +29,19 @@ export async function POST(req: Request) {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        avatarUrl: avatarUrl,
+        avatarUrl: image,
       },
     });
 
     return NextResponse.json({
-      message: "Cập nhật ảnh đại diện vào cơ sở dữ liệu thành công! 🖼️",
-      user: updatedUser,
+      success: true,
+      avatarUrl: updatedUser.avatarUrl,
     });
   } catch (err: any) {
     console.error("Update avatar API error:", err);
     return NextResponse.json(
       { error: "Lỗi hệ thống khi cập nhật ảnh đại diện." },
-      { status: 500 }
+      { status: 550 }
     );
   }
 }

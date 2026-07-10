@@ -412,7 +412,7 @@ export default function ServicesPage() {
 
       {/* Main Full-Screen Layout */}
       <main className="flex-1 w-full h-[calc(100vh-64px)] overflow-hidden">
-        <div className="flex h-full w-full overflow-y-auto md:overflow-hidden flex-col-reverse md:flex-row">
+        <div className="flex h-full w-full overflow-hidden flex-col-reverse md:flex-row">
           
           {/* Left Column (400px width): AI search, Filters, List */}
           <div className="w-full md:w-[400px] flex flex-col h-[55vh] md:h-full bg-slate-955 border-r border-slate-850 overflow-hidden flex-shrink-0">
@@ -546,7 +546,7 @@ export default function ServicesPage() {
             </div>
 
             {/* Scrollable store list */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-950/20">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-950/20 pb-24">
               {loading && services.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 space-y-2">
                   <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />

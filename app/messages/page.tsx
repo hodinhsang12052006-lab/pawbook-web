@@ -510,9 +510,34 @@ function MessengerContent() {
   const getChatConversations = () => {
     if (!currentUser) return { dbList: [] };
     
-    const list = [...conversations];
+    let list = [...conversations];
 
-    if (searchUserId && !list.some(c => !c.isGroup && c.participants.some(p => p.id === searchUserId))) {
+    // Find and extract admin BITPAWOS (10000000001) conversation to pin at top
+    const adminIndex = list.findIndex(c => !c.isGroup && c.participants.some(p => p.id === "10000000001"));
+    let adminConv: any = null;
+
+    if (adminIndex > -1) {
+      adminConv = list.splice(adminIndex, 1)[0];
+    } else if (currentUser.id !== "10000000001") {
+      // Generate a default pinned admin conversation block if currentUser is not the admin itself
+      const adminUser = systemUsers.find(u => u.id === "10000000001") || {
+        id: "10000000001",
+        name: "BITPAWOS (Admin)",
+        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+        role: "ADMIN",
+        bio: "Tài khoản quản trị viên tối cao của hệ thống BitPaw."
+      };
+      adminConv = {
+        id: "temp-10000000001",
+        isGroup: false,
+        name: null,
+        createdAt: new Date().toISOString(),
+        participants: [currentUser, adminUser],
+        messages: [],
+      };
+    }
+
+    if (searchUserId && searchUserId !== "10000000001" && !list.some(c => !c.isGroup && c.participants.some(p => p.id === searchUserId))) {
       const targetUser = systemUsers.find(u => u.id === searchUserId);
       if (targetUser) {
         list.unshift({
@@ -534,6 +559,11 @@ function MessengerContent() {
         return partner?.name.toLowerCase().includes(searchFilter.toLowerCase());
       }
     });
+
+    // Pinned Admin BITPAWOS at the top of the inbox list
+    if (adminConv) {
+      filteredDbList.unshift(adminConv);
+    }
 
     return {
       dbList: filteredDbList

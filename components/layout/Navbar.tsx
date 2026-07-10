@@ -22,6 +22,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
 
   const fetchNotifications = async () => {
     try {
@@ -46,6 +47,7 @@ export default function Navbar() {
   useEffect(() => {
     async function loadSession() {
       try {
+        setLoadingSession(true);
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const session = await res.json();
@@ -61,6 +63,8 @@ export default function Navbar() {
         }
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoadingSession(false);
       }
     }
     loadSession();
@@ -215,7 +219,12 @@ export default function Navbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-4">
-          {sessionUser ? (
+          {loadingSession ? (
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-800 animate-pulse">
+              <div className="h-8 w-8 rounded-full bg-slate-800"></div>
+              <div className="h-3 w-16 bg-slate-800 rounded hidden md:block"></div>
+            </div>
+          ) : sessionUser ? (
             <>
               <button
                 onClick={() => router.push("/jobs/create")}

@@ -239,10 +239,10 @@ export default function Home() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-xl font-black text-slate-100 flex items-center gap-2 justify-center">
-                    <span>🔥</span> Tinder Tuyển Dụng
+                    <span>🔥</span> BitPaw Swipe
                   </h2>
                   <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                    Trải nghiệm tính năng tuyển dụng cực kỳ độc đáo theo phong cách Tinder. Xem thông tin hồ sơ ứng viên nhanh chóng, quẹt trái để bỏ qua, quẹt phải để liên hệ phỏng vấn trực tiếp!
+                    Trải nghiệm tính năng tuyển dụng cực kỳ độc đáo theo phong cách BitPaw Swipe. Xem thông tin hồ sơ ứng viên nhanh chóng, quẹt trái để bỏ qua, quẹt phải để liên hệ phỏng vấn trực tiếp!
                   </p>
                 </div>
                 <div className="pt-2">
@@ -250,7 +250,7 @@ export default function Home() {
                     href="/candidates"
                     className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs px-6 py-3 shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   >
-                    Bắt đầu quẹt CV ứng viên ngay <ArrowUpRight className="h-4 w-4" />
+                    Bắt đầu quẹt tìm kiếm đối tác ngay <ArrowUpRight className="h-4 w-4" />
                   </a>
                 </div>
               </div>

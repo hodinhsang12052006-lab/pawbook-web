@@ -1128,7 +1128,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       {/* Edit Profile Modal Dialog Overlay */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-[#090e1c] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-[#090e1c] p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-850 pb-3">
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <Edit3 className="h-4.5 w-4.5 text-blue-500" />

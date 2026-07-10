@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Search, Upload, Bell, MessageSquare, Menu, Check, Trash2, ShieldAlert, Coins, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -23,6 +23,13 @@ export default function Navbar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [loadingSession, setLoadingSession] = useState(true);
+  const [searchResults, setSearchResults] = useState<{
+    users: any[];
+    jobs: any[];
+    services: any[];
+  } | null>(null);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
     try {
@@ -100,6 +107,41 @@ export default function Navbar() {
       pusher.unsubscribe(channelName);
     };
   }, [sessionUser]);
+
+  // Global search suggestions debounce effect
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      setShowSearchSuggestions(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data);
+          setShowSearchSuggestions(true);
+        }
+      } catch (err) {
+        console.error("Failed to query global search:", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  // Close search suggestions on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSearchSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,27 +240,121 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Center: Search Bar */}
-        <form
-          onSubmit={handleSearch}
-          className="hidden max-w-md flex-1 px-4 md:block lg:max-w-lg"
-        >
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-5 w-5 text-slate-400" aria-hidden="true" />
+        {/* Center: Search Bar with Suggestions */}
+        <div ref={searchContainerRef} className="hidden max-w-md flex-1 px-4 md:block lg:max-w-lg relative">
+          <form
+            onSubmit={handleSearch}
+            className="w-full"
+          >
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Search className="h-5 w-5 text-slate-400" aria-hidden="true" />
+              </div>
+              <input
+                type="search"
+                placeholder="Tìm kiếm bài viết, việc làm, ứng viên..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full rounded-full border border-slate-800 bg-slate-900/60 py-2 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
+              />
             </div>
-            <input
-              type="search"
-              placeholder="Tìm kiếm bài viết, việc làm, ứng viên..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full rounded-full border border-slate-800 bg-slate-900/60 py-2 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
-            />
-          </div>
-        </form>
+          </form>
+
+          {showSearchSuggestions && searchResults && (
+            <div className="absolute top-12 left-4 right-4 bg-[#090e1c]/95 border border-slate-800 rounded-2xl p-4 shadow-2xl z-[999] backdrop-blur-md space-y-3 max-h-96 overflow-y-auto custom-scrollbar animate-fadeIn">
+              
+              {/* 1. Users Suggestion Section */}
+              {searchResults.users.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5">
+                    <span>👥 Người dùng</span>
+                  </p>
+                  <div className="space-y-1">
+                    {searchResults.users.map((u) => (
+                      <div
+                        key={u.id}
+                        onClick={() => {
+                          router.push(`/profile/${u.id}`);
+                          setSearchQuery("");
+                          setShowSearchSuggestions(false);
+                        }}
+                        className="flex items-center gap-2.5 p-2 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors animate-fadeIn"
+                      >
+                        <img
+                          src={u.avatarUrl || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=100&auto=format&fit=crop&q=80"}
+                          alt={u.name}
+                          className="h-7 w-7 rounded-full object-cover border border-slate-800"
+                        />
+                        <div className="min-w-0 flex-1 text-[11px]">
+                          <p className="font-bold text-slate-200 truncate">{u.name}</p>
+                          <p className="text-slate-500 truncate text-[10px]">{u.role}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Jobs Suggestion Section */}
+              {searchResults.jobs.length > 0 && (
+                <div className="space-y-1.5 border-t border-slate-850/50 pt-2">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5">
+                    <span>💼 Tin tuyển dụng</span>
+                  </p>
+                  <div className="space-y-1">
+                    {searchResults.jobs.map((j) => (
+                      <div
+                        key={j.id}
+                        onClick={() => {
+                          router.push(`/jobs/${j.id}`);
+                          setSearchQuery("");
+                          setShowSearchSuggestions(false);
+                        }}
+                        className="p-2 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors text-[11px] animate-fadeIn"
+                      >
+                        <p className="font-bold text-slate-200 truncate">{j.title}</p>
+                        <p className="text-slate-500 truncate text-[10px]">{j.companyName}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Services Suggestion Section */}
+              {searchResults.services.length > 0 && (
+                <div className="space-y-1.5 border-t border-slate-850/50 pt-2">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5">
+                    <span>🏪 Dịch vụ</span>
+                  </p>
+                  <div className="space-y-1">
+                    {searchResults.services.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          router.push(`/services/${s.id}`);
+                          setSearchQuery("");
+                          setShowSearchSuggestions(false);
+                        }}
+                        className="p-2 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors text-[11px] flex justify-between items-center animate-fadeIn"
+                      >
+                        <p className="font-bold text-slate-200 truncate pr-2">{s.name}</p>
+                        {s.priceRange && <span className="text-emerald-400 font-bold text-[10px] flex-shrink-0">{s.priceRange}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {searchResults.users.length === 0 && searchResults.jobs.length === 0 && searchResults.services.length === 0 && (
+                <p className="text-center py-4 text-slate-500 text-[10px] italic">Không tìm thấy kết quả phù hợp.</p>
+              )}
+
+            </div>
+          )}
+        </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4">
           {loadingSession ? (
             <div className="flex items-center gap-3 pl-4 border-l border-slate-800 animate-pulse">
               <div className="h-8 w-8 rounded-full bg-slate-800"></div>
@@ -228,29 +364,31 @@ export default function Navbar() {
             <>
               <button
                 onClick={() => router.push("/jobs/create")}
-                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-650 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-500 hover:to-teal-550 transition-all duration-200"
+                className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-650 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-500 hover:to-teal-550 transition-all duration-200 cursor-pointer"
+                title="Đăng tin tuyển dụng"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Đăng tin</span>
+                <span className="hidden md:inline">Đăng tin</span>
               </button>
 
               <button
                 onClick={handleUploadCV}
-                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-650 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-550 transition-all duration-200"
+                className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-650 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-550 transition-all duration-200 cursor-pointer"
+                title="Tải lên hồ sơ CV"
               >
                 <Upload className="h-4 w-4" />
-                <span className="hidden sm:inline">Upload CV</span>
+                <span className="hidden md:inline">Upload CV</span>
               </button>
 
-              <div className="flex items-center gap-2 border-l border-slate-800 pl-4 relative">
+              <div className="flex items-center gap-1 sm:gap-2 border-l border-slate-850 pl-2 sm:pl-4 relative">
                 {/* Bell trigger */}
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="relative rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  className="relative rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
                 >
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-4.5 w-4.5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
                   )}
                 </button>
 
@@ -304,22 +442,22 @@ export default function Navbar() {
                 {/* Wallet Quick Access */}
                 <button
                   onClick={() => router.push("/wallet")}
-                  className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
                   title="Ví PawCoin"
                 >
-                  <Coins className="h-5 w-5 text-amber-500 fill-amber-500/10" />
+                  <Coins className="h-4.5 w-4.5 text-amber-500 fill-amber-500/10" />
                 </button>
 
                 <button 
                   onClick={() => router.push("/messages")}
-                  className="rounded-full p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
                   title="Messenger"
                 >
-                  <MessageSquare className="h-5 w-5" />
+                  <MessageSquare className="h-4.5 w-4.5" />
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 border-l border-slate-800 pl-4">
+              <div className="flex items-center gap-1.5 sm:gap-3 border-l border-slate-850 pl-2 sm:pl-4">
                 <div
                   onClick={() => router.push("/profile")}
                   className="h-8 w-8 overflow-hidden rounded-full border border-slate-700 cursor-pointer hover:border-blue-500 transition-colors"
@@ -332,29 +470,29 @@ export default function Navbar() {
                 </div>
                 <span 
                   onClick={() => router.push("/profile")}
-                  className="hidden md:inline text-xs font-semibold text-slate-200 cursor-pointer hover:text-white transition-colors"
+                  className="hidden lg:inline text-xs font-semibold text-slate-200 cursor-pointer hover:text-white transition-colors"
                 >
                   {sessionUser.name}
                 </span>
                 <button
                   onClick={() => router.push("/profile")}
-                  className="hidden sm:inline-flex items-center rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-200 transition-all cursor-pointer"
+                  className="hidden xl:inline-flex items-center rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-200 transition-all cursor-pointer"
                 >
                   Trang cá nhân
                 </button>
               </div>
             </>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/auth/login")}
-                className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 transition-colors"
+                className="text-xs font-semibold text-slate-300 hover:text-white px-2.5 py-1.5 transition-colors cursor-pointer"
               >
                 Đăng nhập
               </button>
               <button
                 onClick={() => router.push("/auth/register")}
-                className="rounded-full bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-200"
+                className="rounded-full bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-200 cursor-pointer"
               >
                 Đăng ký
               </button>

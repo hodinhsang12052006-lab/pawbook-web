@@ -61,7 +61,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json({
+      ...user,
+      location: user.address,
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: "Lỗi hệ thống khi tải thông tin hồ sơ." },
@@ -90,6 +93,7 @@ export async function PUT(req: Request) {
       bio,
       phone,
       address,
+      location,
       cover_image,
       cv_url,
       skills,
@@ -101,7 +105,10 @@ export async function PUT(req: Request) {
     if (name !== undefined) updateData.name = name;
     if (bio !== undefined) updateData.bio = bio;
     if (phone !== undefined) updateData.phone = phone;
-    if (address !== undefined) updateData.address = address;
+    
+    const addressValue = address !== undefined ? address : location;
+    if (addressValue !== undefined) updateData.address = addressValue;
+
     if (cover_image !== undefined) updateData.cover_image = cover_image;
     if (cv_url !== undefined) {
       updateData.cv_url = cv_url;
@@ -117,7 +124,10 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({
       message: "Cập nhật hồ sơ thành công! 🎉",
-      user: updatedUser,
+      user: {
+        ...updatedUser,
+        location: updatedUser.address,
+      },
     });
   } catch (err: any) {
     return NextResponse.json(

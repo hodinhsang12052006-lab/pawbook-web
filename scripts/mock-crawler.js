@@ -278,6 +278,7 @@ async function main() {
     { name: "Buôn Ma Thuột", lat: 12.6853, lng: 108.0383 },
   ];
 
+  /*
   const iterationsCount = 3; // 3 * 20 = 60 items
   console.log(`Crawling and inserting ${mockJobsData.length * iterationsCount} multi-niche jobs & services into Turso...`);
 
@@ -343,8 +344,8 @@ async function main() {
       console.log(`[${insertedCount}/${mockJobsData.length * iterationsCount}] Inserted Job & Service: ${jobData.title} in ${city.name} (${jobData.niche} / ${serviceCategory})`);
     }
   }
-
-  console.log("Mock Crawler synchronization finished! Turso database is populated with scaled multi-niche jobs and services. 🚀");
+  */
+  console.log("Mock Crawler script ran with inserts disabled.");
 }
 
 main()

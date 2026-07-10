@@ -62,6 +62,7 @@ async function main() {
     },
   });
 
+  /*
   // 4. Sample Jobs posted by HR
   await prisma.job.create({
     data: {
@@ -98,8 +99,9 @@ async function main() {
       isBoosted: true,
     },
   });
+  */
 
-  console.log("Seeding complete! Provisioned Candidate, HR, Spa Owner, Jobs, and Services.");
+  console.log("Seeding complete! Provisioned Candidate, HR, Spa Owner.");
 }
 
 main()

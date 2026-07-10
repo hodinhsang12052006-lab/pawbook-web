@@ -217,6 +217,7 @@ async function main() {
   // 4. Create 8 attractive Jobs
   console.log("Seeding jobs...");
 
+  /*
   await prisma.job.create({
     data: {
       title: "Senior Next.js Developer",
@@ -304,6 +305,7 @@ async function main() {
       isBoosted: false,
     }
   });
+  */
 
   console.log("Seeded 8 jobs.");
 

@@ -67,6 +67,7 @@ async function main() {
   });
   console.log("Seeded another employer user:", anotherEmployer.email);
 
+  /*
   // 2. Create a Job
   const job = await prisma.job.create({
     data: {
@@ -79,6 +80,7 @@ async function main() {
     },
   });
   console.log("Seeded job:", job.title);
+  */
 
   console.log("Seeding complete! 🎉");
 }

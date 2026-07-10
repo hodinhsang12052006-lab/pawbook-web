@@ -133,12 +133,16 @@ function MessengerContent() {
   const [callSeconds, setCallSeconds] = useState(0);
   const [micMuted, setMicMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
+  // MOCK_CONTACTS commented out to clear virtual data
+  /*
   const [contacts, setContacts] = useState<any[]>([
     { id: "mock-contact-1", name: "Nguyễn Văn Hùng", role: "Trưởng phòng Kỹ thuật", avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", location: "Nha Trang", distance: "2.5km", isInternal: true, status: "free" },
     { id: "mock-contact-2", name: "Trần Thị Mai", role: "Chuyên viên Spa nội bộ", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80", location: "Hà Nội", distance: "1.2km", isInternal: true, status: "busy" },
     { id: "mock-contact-3", name: "Lê Quốc Bảo", role: "Đối tác Giao hàng tự do", avatarUrl: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80", location: "TP.HCM", distance: "4.8km", isInternal: false, status: "free" },
     { id: "mock-contact-4", name: "Phạm Thùy Chi", role: "Bác sĩ thú y tự do", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80", location: "Đà Nẵng", distance: "3.1km", isInternal: false, status: "busy" }
   ]);
+  */
+  const [contacts, setContacts] = useState<any[]>([]);
   const [jobStates, setJobStates] = useState<Record<string, 'OPEN' | 'ACCEPTED' | 'SYNCING' | 'COMPLETED'>>({});
   const [isMiniAppOpen, setIsMiniAppOpen] = useState(false);
   const [showSSOModal, setShowSSOModal] = useState(false);
@@ -816,8 +820,8 @@ function MessengerContent() {
                     <div className="flex flex-col items-center justify-center text-center p-6 space-y-2 mt-4 border border-dashed border-slate-850 rounded-2xl bg-slate-900/10">
                       <span className="text-xl animate-pulse">👥</span>
                       <p className="text-[10px] font-bold text-slate-400">Danh bạ trống</p>
-                      <p className="text-[9px] text-slate-500 max-w-[200px] leading-relaxed">
-                        Chưa có liên hệ nào. Hãy đồng bộ danh bạ điện thoại hoặc tìm kiếm đối tác để trò chuyện!
+                      <p className="text-[9px] text-slate-550 max-w-[200px] leading-relaxed">
+                        Bạn chưa có cuộc trò chuyện nào. Hãy kết nối thêm bạn bè!
                       </p>
                     </div>
                   ) : (

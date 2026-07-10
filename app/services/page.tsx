@@ -415,7 +415,7 @@ export default function ServicesPage() {
         <div className="flex h-full w-full overflow-hidden flex-col-reverse md:flex-row">
           
           {/* Left Column (400px width): AI search, Filters, List */}
-          <div className="flex-1 flex flex-col min-h-0 w-full md:w-[400px] md:h-full bg-slate-955 border-r border-slate-850 overflow-hidden md:flex-shrink-0">
+          <div className="flex-1 overflow-y-auto pb-28 flex flex-col space-y-4 w-full md:w-[400px] md:flex md:flex-col md:h-full bg-slate-955 border-r border-slate-850 md:overflow-hidden md:pb-0 md:space-y-0 md:flex-shrink-0">
             
             {/* Header, AI Chat Box, Filters */}
             <div className="p-4 border-b border-slate-850 space-y-3.5 flex-shrink-0 bg-slate-955">
@@ -546,7 +546,7 @@ export default function ServicesPage() {
             </div>
 
             {/* Scrollable store list */}
-            <div className="flex-1 overflow-y-auto pb-32 pt-2 custom-scrollbar p-3 space-y-3 bg-slate-950/20">
+            <div className="p-3 space-y-3 bg-slate-950/20 md:flex-1 md:overflow-y-auto md:pb-32 md:pt-2 md:custom-scrollbar">
               {loading && services.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 space-y-2">
                   <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
@@ -643,7 +643,7 @@ export default function ServicesPage() {
           </div>
 
           {/* Right Column (Remaining width): Interactive Map Radar */}
-          <div className="h-[40vh] min-h-[300px] shrink-0 relative w-full md:flex-1 md:h-full md:shrink">
+          <div className="h-[35vh] w-full shrink-0 relative md:flex-1 md:h-full md:shrink">
             <RadarMap
               jobs={filteredLocations}
               center={center}

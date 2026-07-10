@@ -8,7 +8,7 @@ chromium.use(stealthPlugin());
 
 // 5 Key Cities of Vietnam for focused crawling
 const PROVINCES = [
-  "TP.HCM", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Nha Trang"
+  "Nha Trang", "TP.HCM", "Hà Nội", "Đà Nẵng", "Cần Thơ"
 ];
 
 // 53 Service keywords
@@ -24,7 +24,7 @@ const KEYWORDS = [
   "Quán ăn đêm", "Cà phê làm việc", "Cyber Gaming tiệm net", "Billiards bida", "Karaoke",
   "Nấu tiệc tại nhà", "Thuê đồ sự kiện", "Cho thuê trang phục", "Y tế tại nhà", "Dịch vụ giấy tờ pháp lý",
   "Mua bán sửa chữa điện thoại iphone", "Chạy xe ôm công nghệ Grab", "Sửa chữa máy tính laptop",
-  "Taxi xe ôm chở thú cưng"
+  "Taxi xe ôm chở thú cưng", "Khách sạn", "Khách sạn 5 sao", "Resort", "Homestay", "Nhà nghỉ", "Điểm du lịch"
 ];
 
 // Configurable options

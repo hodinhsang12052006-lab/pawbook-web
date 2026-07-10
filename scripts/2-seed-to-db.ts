@@ -113,7 +113,8 @@ const ALL_SERVICES = [
   "Quán ăn đêm", "Cà phê làm việc", "Cyber Gaming tiệm net", "Billiards bida",
   "Karaoke", "Nấu tiệc tại nhà", "Thuê đồ sự kiện", "Cho thuê trang phục",
   "Y tế tại nhà", "Dịch vụ giấy tờ pháp lý", "Mua bán sửa chữa điện thoại iphone",
-  "Taxi xe ôm chở thú cưng"
+  "Taxi xe ôm chở thú cưng",
+  "Khách sạn", "Khách sạn 5 sao", "Resort", "Homestay", "Nhà nghỉ", "Điểm du lịch"
 ];
 
 function slugifyKeyword(str: string): string {

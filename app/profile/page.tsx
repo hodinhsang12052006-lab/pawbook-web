@@ -229,41 +229,48 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
     loadWalletHistory();
   }, [resolvedUid, isOwnProfile]);
 
-  // User's own posts (Static mockup feed data)
-  const [myPosts, setMyPosts] = useState<PostType[]>([
-    {
-      id: "post-1",
-      content: "Hôm nay chính thức khởi động dự án 'PawBook' - mạng xã hội dành cho dân dev & MMO. Anh em nào muốn join team chia sẻ kinh nghiệm fomo, build tool automation hoặc tìm job freelance xịn thì chuẩn bị tinh thần nhé! 🚀🚀 #pawbook #mmo #startup",
-      mediaUrl: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&auto=format&fit=crop&q=80",
-      mediaType: "image",
-      createdAt: "2 ngày trước",
-      author: {
-        id: "user-1",
-        name: "Nguyễn Văn A",
-        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
-        role: "Employer",
-        bio: "Senior Fullstack Developer | PawBook Builder",
-      },
-      likes: 142,
-      commentsCount: 38,
-      hasLiked: true,
-    },
-    {
-      id: "post-2",
-      content: "Sau bao ngày cày cuốc thì UI/UX của PawBook cũng đã hoàn thiện cơ bản. Next.js App Router mượt mà, cấu hình Tailwind v4 cực sướng. Anh em cho mình xin ý kiến đóng góp về tính năng đăng tuyển dụng IT và kết nối MMO nhé! 💻🔥",
-      createdAt: "5 ngày trước",
-      author: {
-        id: "user-1",
-        name: "Nguyễn Văn A",
-        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
-        role: "Employer",
-        bio: "Senior Fullstack Developer | PawBook Builder",
-      },
-      likes: 95,
-      commentsCount: 14,
-      hasLiked: false,
+  // User's own posts (Fetched from database dynamically)
+  const [myPosts, setMyPosts] = useState<PostType[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      try {
+        setLoadingPosts(true);
+        const targetId = resolvedUid || profile.id;
+        if (!targetId) return;
+
+        const res = await fetch(`/api/posts?authorId=${targetId}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Map to PostType expected by the React component
+          const formattedPosts = data.map((post: any) => ({
+            id: post.id,
+            content: post.content,
+            mediaUrl: post.mediaUrl,
+            mediaType: post.mediaType,
+            createdAt: new Date(post.createdAt).toLocaleDateString("vi-VN") + " " + new Date(post.createdAt).toLocaleTimeString("vi-VN", {hour: '2-digit', minute:'2-digit'}),
+            author: {
+              id: post.author.id,
+              name: post.author.name,
+              avatarUrl: post.author.avatarUrl,
+              role: post.author.role,
+              bio: post.author.bio,
+            },
+            likes: Math.floor(Math.random() * 20) + 5, // Mocked dynamically
+            commentsCount: post.commentsCount || 0,
+            hasLiked: false,
+          }));
+          setMyPosts(formattedPosts);
+        }
+      } catch (err) {
+        console.error("Failed to load user posts:", err);
+      } finally {
+        setLoadingPosts(false);
+      }
     }
-  ]);
+    fetchPosts();
+  }, [resolvedUid, profile.id]);
 
   const handleLikePost = (postId: string) => {
     setMyPosts(
@@ -1118,7 +1125,19 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                   </h2>
                   <span className="text-xs text-slate-400 font-medium">Sắp xếp: Mới nhất</span>
                 </div>
-                <PostList posts={myPosts} onLikePost={handleLikePost} />
+                {loadingPosts ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-2 bg-slate-900/10 border border-slate-850 rounded-2xl">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    <span className="text-xs text-slate-450">Đang tải bài viết...</span>
+                  </div>
+                ) : myPosts.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/10 p-12 text-center flex flex-col items-center justify-center space-y-2">
+                    <span className="text-xl">📭</span>
+                    <p className="text-xs text-slate-450 italic">Thành viên này chưa có bài viết nào.</p>
+                  </div>
+                ) : (
+                  <PostList posts={myPosts} onLikePost={handleLikePost} />
+                )}
               </div>
             )}
           </div>

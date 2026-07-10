@@ -3,9 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const authorId = searchParams.get("authorId");
+
+    const whereClause = authorId ? { authorId } : {};
+
     const posts = await prisma.post.findMany({
+      where: whereClause,
       orderBy: {
         createdAt: "desc",
       },

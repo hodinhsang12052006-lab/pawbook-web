@@ -49,13 +49,24 @@ export default function Navbar() {
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const session = await res.json();
-          setSessionUser(session.user);
+          if (session?.user?.id) {
+            const userRes = await fetch(`/api/profile?id=${session.user.id}`);
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              setSessionUser(userData);
+              return;
+            }
+          }
+          setSessionUser(session?.user || null);
         }
       } catch (err) {
         console.error(err);
       }
     }
     loadSession();
+
+    window.addEventListener("profile-updated", loadSession);
+    return () => window.removeEventListener("profile-updated", loadSession);
   }, []);
 
   useEffect(() => {

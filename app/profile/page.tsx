@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import CVManager from "@/components/profile/CVManager";
 import PostList, { PostType } from "@/components/feed/PostList";
 import { 
   ArrowLeft, Edit3, MapPin, Link2, Calendar, Briefcase, 
   Award, Sparkles, ShieldCheck, BadgeCheck, Star, Mail, 
-  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame, MessageSquare, Eye
+  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame, MessageSquare, Eye, Check
 } from "lucide-react";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
@@ -84,6 +84,15 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
     skills: "",
     avatarUrl: "",
   });
+
+  // Cropper states for zoom/pan canvas avatar cropping
+  const [cropperSrc, setCropperSrc] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [cropperOriginalFile, setCropperOriginalFile] = useState<File | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const [walletHistory, setWalletHistory] = useState<any[]>([]);
   const [activeRightTab, setActiveRightTab] = useState<"bookings" | "posts">("posts");
@@ -333,6 +342,21 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       return;
     }
 
+    if (field === "avatar") {
+      // Intercept avatar upload and open zoom/pan cropper
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropperSrc(reader.result as string);
+        setZoom(1);
+        setOffset({ x: 0, y: 0 });
+        setCropperOriginalFile(file);
+      };
+      reader.readAsDataURL(file);
+      // Reset input value
+      e.target.value = "";
+      return;
+    }
+
     setUploading(field);
     const toastId = toast.loading(`Đang tải tệp tin ${field === "cv" ? "CV" : "ảnh"} lên Cloudinary...`);
 
@@ -350,10 +374,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
         toast.success("Tải lên đám mây Cloudinary thành công! ☁️", { id: toastId });
         
         // Update both editForm and locally displayed profile state
-        if (field === "avatar") {
-          setEditForm((prev) => ({ ...prev, avatarUrl: data.url }));
-          setProfile((prev: any) => ({ ...prev, avatarUrl: data.url }));
-        } else if (field === "cover") {
+        if (field === "cover") {
           setEditForm((prev) => ({ ...prev, cover_image: data.url }));
           setProfile((prev: any) => ({ ...prev, cover_image: data.url }));
         } else if (field === "cv") {
@@ -365,6 +386,115 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       }
     } catch (err) {
       toast.error("Lỗi mạng khi tải tệp tin lên.", { id: toastId });
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  // Render cropped region on HTML5 canvas and call upload & direct DB update APIs
+  const handleCropAndSaveAvatar = async () => {
+    if (!cropperSrc || !imgRef.current || !cropperOriginalFile) return;
+
+    setUploading("avatar");
+    const toastId = toast.loading("Đang xử lý cắt ảnh và tải lên...");
+
+    try {
+      const img = imgRef.current;
+      const canvas = document.createElement("canvas");
+      const size = 300; // Optimal profile crop resolution
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      if (ctx) {
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(0, 0, size, size);
+
+        const imgWidth = img.naturalWidth;
+        const imgHeight = img.naturalHeight;
+        
+        const containerSize = 250;
+        
+        let drawWidth = containerSize;
+        let drawHeight = containerSize;
+        const aspectRatio = imgWidth / imgHeight;
+        if (aspectRatio > 1) {
+          drawWidth = containerSize * aspectRatio;
+        } else {
+          drawHeight = containerSize / aspectRatio;
+        }
+
+        drawWidth *= zoom;
+        drawHeight *= zoom;
+
+        const centerX = containerSize / 2;
+        const centerY = containerSize / 2;
+        
+        const startX = centerX - (drawWidth / 2) + offset.x;
+        const startY = centerY - (drawHeight / 2) + offset.y;
+
+        const ratio = size / containerSize;
+        
+        ctx.drawImage(
+          img,
+          startX * ratio,
+          startY * ratio,
+          drawWidth * ratio,
+          drawHeight * ratio
+        );
+      }
+
+      // Convert cropped canvas representation to JPEG blob file
+      const croppedBase64 = canvas.toDataURL("image/jpeg", 0.9);
+      const blobRes = await fetch(croppedBase64);
+      const blob = await blobRes.blob();
+      const croppedFile = new File([blob], "avatar.jpg", {
+        type: "image/jpeg",
+      });
+
+      const formData = new FormData();
+      formData.append("file", croppedFile);
+
+      // 1. Upload cropped file
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.url) {
+        throw new Error(uploadData.error || "Không thể tải ảnh lên máy chủ.");
+      }
+
+      // 2. Synchronize directly into Prisma User Database representation
+      const dbRes = await fetch("/api/user/update-avatar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ avatarUrl: uploadData.url }),
+      });
+
+      const dbData = await dbRes.json();
+      if (!dbRes.ok) {
+        throw new Error(dbData.error || "Không thể lưu ảnh đại diện vào cơ sở dữ liệu.");
+      }
+
+      toast.success("Đồng bộ ảnh đại diện thành công! 🖼️", { id: toastId });
+
+      // Update forms and profile views
+      setEditForm((prev) => ({ ...prev, avatarUrl: uploadData.url }));
+      setProfile((prev: any) => ({ ...prev, avatarUrl: uploadData.url }));
+
+      // Dispatch window event so Header Navbar updates in real-time!
+      window.dispatchEvent(new Event("profile-updated"));
+
+      // Close cropper modal
+      setCropperSrc(null);
+      setCropperOriginalFile(null);
+    } catch (err: any) {
+      console.error("Avatar cropper error:", err);
+      toast.error(err.message || "Lỗi trong quá trình xử lý ảnh.", { id: toastId });
     } finally {
       setUploading(null);
     }
@@ -397,6 +527,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
           skills: data.user.skills || "",
           avatarUrl: data.user.avatarUrl || "",
         });
+        window.dispatchEvent(new Event("profile-updated"));
         setIsEditModalOpen(false);
       } else {
         toast.error(data.error || "Cập nhật thất bại.");
@@ -1177,6 +1308,131 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Avatar Cropper Modal */}
+      {cropperSrc && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#090e1c] p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-850 pb-3">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span>✂️ Cắt chỉnh ảnh đại diện</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setCropperSrc(null);
+                  setCropperOriginalFile(null);
+                }}
+                className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-3xs text-slate-400 leading-relaxed">
+              Kéo thả để di chuyển ảnh hoặc dùng thanh trượt zoom phía dưới để căn chỉnh góc mặt đẹp nhất vào vòng tròn crop.
+            </p>
+
+            {/* Cropper viewport container */}
+            <div 
+              className="relative w-full h-[280px] bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center cursor-move select-none border border-slate-850"
+              onMouseDown={(e) => {
+                setIsDragging(true);
+                setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging) return;
+                setOffset({
+                  x: e.clientX - dragStart.x,
+                  y: e.clientY - dragStart.y
+                });
+              }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                setIsDragging(true);
+                setDragStart({ x: touch.clientX - offset.x, y: touch.clientY - offset.y });
+              }}
+              onTouchMove={(e) => {
+                if (!isDragging) return;
+                const touch = e.touches[0];
+                setOffset({
+                  x: touch.clientX - dragStart.x,
+                  y: touch.clientY - dragStart.y
+                });
+              }}
+              onTouchEnd={() => setIsDragging(false)}
+            >
+              {/* Image component with transform scale & translate */}
+              <img
+                ref={imgRef}
+                src={cropperSrc}
+                alt="Avatar Source"
+                className="max-w-none origin-center pointer-events-none transition-transform duration-75"
+                style={{
+                  transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+                  width: "250px", // Baseline container size match
+                }}
+              />
+
+              {/* Crop circular guide overlay */}
+              <div className="absolute inset-0 pointer-events-none border-[15px] border-slate-950/80 flex items-center justify-center">
+                <div className="w-[250px] h-[250px] rounded-full border-2 border-dashed border-blue-500/60 shadow-[0_0_0_9999px_rgba(2,6,23,0.7)]"></div>
+              </div>
+            </div>
+
+            {/* Slider zoom scale controls */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-4xs font-bold text-slate-400">
+                <span>Phóng to / Thu nhỏ (Zoom)</span>
+                <span>{zoom.toFixed(1)}x</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.05"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3 justify-end border-t border-slate-850 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setCropperSrc(null);
+                  setCropperOriginalFile(null);
+                }}
+                className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-2xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
+                disabled={uploading === "avatar"}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleCropAndSaveAvatar}
+                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-2xs font-semibold text-white hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-50"
+                disabled={uploading === "avatar"}
+              >
+                {uploading === "avatar" ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3.5 w-3.5" />
+                    Cắt & Lưu
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

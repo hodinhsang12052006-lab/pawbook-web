@@ -300,7 +300,10 @@ function MessengerContent() {
         }
       }, 300);
 
-      const pc = new RTCPeerConnection();
+      // Initialize Caller Connection with Google STUN Servers
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      });
       peerConnectionRef.current = pc;
 
       stream.getTracks().forEach((track) => {
@@ -319,12 +322,22 @@ function MessengerContent() {
 
       console.log("Simulating signaling emit offer...");
       
+      // Simulate socket.io transmission delay and immediate remote answer/ICE handling
       setTimeout(async () => {
-        await pc.setRemoteDescription(offer);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
+        // Callee receives the offer, initializes RTCPeerConnection with STUN
+        const calleePc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        });
+        await calleePc.setRemoteDescription(offer);
         
-        console.log("Simulating signaling emit answer & Ice Candidates...");
+        // Callee builds answer
+        const answer = await calleePc.createAnswer();
+        await calleePc.setLocalDescription(answer);
+        
+        // Caller immediately processes the incoming socket 'answer' signal without user input
+        await pc.setRemoteDescription(answer);
+        
+        console.log("Signaling answer processed successfully via setRemoteDescription on caller.");
         
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
@@ -744,7 +757,7 @@ function MessengerContent() {
         }
       `}</style>
 
-      <main className="flex-1 w-full h-[calc(100vh-64px)] overflow-hidden">
+      <main className="flex-1 w-full h-[100dvh] md:h-[calc(100vh-64px)] overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-12 h-full overflow-hidden">
           
           {/* Left Column: Conversations Sidebar (30% width, 4 cols) */}
@@ -1051,7 +1064,7 @@ function MessengerContent() {
                 </div>
 
                 {/* Chat Message Logs */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-gray-900 via-slate-950 to-blue-900/20">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
                   {activeConversation.length === 0 ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!
@@ -1214,8 +1227,8 @@ function MessengerContent() {
                                 <div
                                   className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${
                                     isSelf
-                                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-br-sm shadow-md shadow-blue-500/10"
-                                      : "bg-slate-800 text-white rounded-bl-sm border border-slate-750"
+                                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-md shadow-blue-600/10"
+                                      : "bg-slate-800 text-white rounded-2xl rounded-bl-sm border border-slate-750"
                                   }`}
                                 >
                                   {msg.type === "IMAGE" ? (
@@ -1773,6 +1786,11 @@ function MessengerContent() {
             </div>
           </div>
 
+          {/* Audio stream fallback for voice call */}
+          {callConnected && callType === "audio" && (
+            <audio ref={remoteVideoRef} autoPlay playsInline muted={false} className="hidden" />
+          )}
+
           {/* Camera Visual Mockups for Video Call */}
           {callConnected && callType === "video" && (
             <div className="absolute inset-x-4 top-24 bottom-32 bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl z-20 flex items-center justify-center">
@@ -1781,6 +1799,7 @@ function MessengerContent() {
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
+                muted={false}
                 className="absolute inset-0 w-full h-full object-cover opacity-80"
               />
               <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
@@ -1799,7 +1818,7 @@ function MessengerContent() {
                   ref={localVideoRef}
                   autoPlay
                   playsInline
-                  muted
+                  muted={true}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute bottom-1 left-1.5 bg-black/60 px-1.5 py-0.2 rounded text-[7px] text-white/90 pointer-events-none">Bạn</div>

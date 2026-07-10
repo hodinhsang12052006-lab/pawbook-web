@@ -1,10 +1,11 @@
 import { PrismaClient, Role } from "@prisma/client";
 import { createClient } from "@libsql/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 
-// 1. Parse environmental configurations
+// 1. Load environmental variables
 const envPath = path.join(process.cwd(), ".env");
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, "utf-8");
@@ -46,131 +47,204 @@ const CLONE_NAMES = [
   "Hiếu Python", "Hà Cún Miêu Spa", "Trung MMO Builder", "Vy HR Tech", "Kiên Tự Do"
 ];
 
-// Unsplash profile picture sources
-const AVATAR_POOL = [
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+// Content templates pool as safe fallback
+const FALLBACK_POSTS = [
+  "Cay thật sự! Làm việc cật lực cả tháng xong công ty nợ lương, nhắn tin đòi thì sếp khất hết tuần này đến tuần khác. Ai định vào né gấp nhé!",
+  "Mới đi phỏng vấn về. Bắt làm test 3 tiếng xong kêu chờ kết quả, cuối cùng im re luôn. Đúng kiểu HR vô trách nhiệm, phí thời gian ghê.",
+  "Dịch vụ khách sạn Nha Trang đợt này tệ kinh khủng. Điều hòa hỏng gọi sửa thì lờ đi, ga trải giường bẩn. Đi nghỉ dưỡng mà rước bực vào người.",
+  "Tìm thợ sửa xe máy có tâm ở Hà Nội khó dã man. Vào tiệm dọc đường thay cái bugi thôi mà nó chém cho mấy trăm nghìn xót hết cả ruột.",
+  "Cảnh báo tiệm spa thú cưng chó mèo làm ăn tắc trách. Tắm sấy xong làm lở loét cả da tai cún nhà mình. Cạch mặt luôn!"
 ];
 
-// Content Matrix: Real pains (văn phong đời thường, không robot)
-const CONTENT_TEMPLATES = [
-  // Việc làm & MMO
-  "Cay thật sự anh em ơi! Làm outsource cho ông dev kia xong việc rồi ổng khất nợ lương cả tháng nay không trả. Inbox thì seen xong kêu dự án chưa giải ngân. Red flag to đùng né gấp nha mọi người!",
-  "Mới đi phỏng vấn bên quận 3 về. HR hỏi xoáy đáp xoay cả tiếng đồng hồ, bắt làm bài test mút chỉ xong bảo chờ kết quả. Cuối cùng im lặng luôn, đúng là phí thời gian.",
-  "Tin vui đầu ngày! Em vừa chốt được job freelance thiết kế landing page cho bên đại lý du lịch, nhận cọc 50% luôn rồi. Công nhận chịu khó build uy tín trên này có quả ngọt ngay.",
-  "Làm MMO ròng rã 3 tháng trời, tài khoản ads cứ lên là die. Hôm qua đổi sang proxy dân cư của bác chia sẻ trong group thì chạy mượt hẳn. Húp nhẹ được 500$ đầu tiên rồi anh em ạ!",
-  "Bên công ty mình đang tuyển gấp 3 bạn CTV đăng bài tìm việc làm & dịch vụ tại Nha Trang. Việc nhẹ lương ngày, không cần kinh nghiệm, có tài liệu hướng dẫn từ A đến Z nhé.",
-  "Đời dev khổ lắm các bác. Sếp kêu tối ưu lại cái API map load cho mượt mà không cho nâng cấp server. Ngồi fix query muốn hói đầu mới giảm được tí latency.",
-  "Mấy nay thấy phong trào cày coin Airdrop xôm tụ quá, có bác nào chia sẻ tool auto click bypass cloudflare uy tín chút được không? Đang muốn dựng dàn VPS cày thử.",
-  "Né gấp công ty công nghệ gia đình nha anh em. Vào làm mà sếp tổng là chồng, kế toán là vợ, trưởng phòng là em họ. KPI thì ép trên trời mà lương trễ liên tục.",
-
-  // Du lịch Nha Trang
-  "Vừa từ Nha Trang về mà ấm ức quá. Đặt cái phòng homestay gần biển trên app thấy hình lung linh lắm, tới nơi thì phòng ẩm mốc, điều hòa hỏng, cách âm kém. Nói chung treo đầu dê bán thịt chó!",
-  "Hỏi nhỏ anh em Nha Trang: Có quán hải sản nào tươi ngon khu Tháp Bà mà bán đúng giá, không chặt chém du khách không ạ? Sợ mấy vụ vô ăn xong hóa đơn tính tiền triệu lắm rồi.",
-  "Review resort 5 sao Nha Trang siêu rẻ cho anh em đi trốn nóng. Đợt này họ đang kích cầu du lịch nên book combo phòng + buffet sáng rẻ dã man. Bãi biển riêng sạch bóng không một cọng rác.",
-  "Mùa này Nha Trang nắng đẹp dã man, mỗi tội đông khách du lịch quá. Đi tắm biển mà người đông như kiến cỏ, chụp tấm hình toàn dính người khác.",
-  "Có ai biết địa chỉ thuê xe máy uy tín ở ga Nha Trang không ạ? Yêu cầu xe đời mới chút chứ đi mấy xe nát chạy leo dốc hòn Chồng run tay lắm.",
-
-  // Dịch vụ Thú cưng / Xe ôm
-  "Đêm hôm 12h đêm bé cún nhà em bị ngộ độc nôn mửa liên tục mà cuống cuồng không biết gọi phòng khám thú y nào cấp cứu 24/7. May nhờ app radar quét được một tiệm cách nhà 2km chạy vội qua cứu kịp.",
-  "Bực mình ghê! Sáng nay vội đi làm đặt xe ôm ngoài đường thì bị hét giá gấp đôi bình thường. Kêu là xăng tăng giá với giờ cao điểm. Từ nay cạch mặt, cứ bật app lên đặt cho minh bạch.",
-  "Cho em hỏi tiệm spa thú cưng nào ở quận 1 cắt tỉa lông với tắm sấy chó mèo uy tín nhẹ tay tí ạ? Bé mèo nhà em nhát lắm, đi tiệm cũ về bị trầy xước cả tai xót hết cả ruột.",
-  "Dịch vụ tắm sấy chó mèo tận nhà mùa này đắt khách ghê. Tiện lợi đỡ phải chở bé đi xa nắng nôi, giá cả nhỉnh hơn tí nhưng cún cưng thoải mái là ok rồi.",
-  "Hôm nay chạy xe ôm chở khách mang theo cái lồng mèo to đùng. Đường kẹt nhưng mèo cứ kêu ngoao ngoao làm cả đoạn đường ai cũng nhìn cười. Thấy vui vui!",
-  "Cảnh báo tiệm phụ kiện chó mèo giá rẻ khu vực Bình Thạnh. Bán hạt thức ăn cận date làm cún nhà em ăn vô bị tiêu chảy mất mấy ngày liền. Mọi người mua đồ nhớ check kỹ date nhé.",
-  "Nhận chở thú cưng (chó mèo lợn kiểng) đi spa hoặc đi khám bệnh bằng xe máy có rào chắn an toàn nha mọi người. Khu vực Sài Gòn giá hạt dẻ, tài xế siêu yêu động vật."
+const FALLBACK_COMMENTS = [
+  "Chuẩn luôn bác ơi, thời nay đi làm sợ nhất mấy vụ này.",
+  "Thôi bớt giận bác, tìm chỗ khác uy tín mà làm cho lành.",
+  "Haha đúng là trải nghiệm nhớ đời, chia buồn cùng thớt nhé."
 ];
 
 // Helper to pick random item
 const randomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
+async function getCloneUsers() {
+  let users = await prisma.user.findMany({
+    where: {
+      email: {
+        startsWith: "clone"
+      }
+    }
+  });
+
+  // If no clone users exist, create them
+  if (users.length === 0) {
+    console.log("No clone users found. Creating 50 virtual accounts first...");
+    const avatarUrls = [
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
+    ];
+
+    for (let i = 0; i < CLONE_NAMES.length; i++) {
+      try {
+        const u = await prisma.user.create({
+          data: {
+            name: CLONE_NAMES[i],
+            email: `clone${i + 1}@pawbook.vn`,
+            password: "$2a$10$U7vS547B2hH/yP65iV5jbeo.uRUp885G.4t5fA55P3qQz/uU67H4G", // password123
+            role: Role.USER,
+            avatarUrl: randomItem(avatarUrls),
+            bio: "Thành viên tích cực chia sẻ kinh nghiệm trên mạng xã hội BitPaw.",
+            pawCoin: 200,
+            reputation: 20,
+            trustScore: 4.8,
+            isVerified: Math.random() > 0.8
+          }
+        });
+        users.push(u);
+      } catch (e) {
+        // Suppress unique constraint logs
+      }
+    }
+  }
+  return users;
+}
+
+// Resilient fallback execution function
+function generateStaticFomoPost(): string {
+  console.log("Using static template seeder fallback...");
+  return randomItem(FALLBACK_POSTS);
+}
+
 async function main() {
   console.log("=== FOMO AUTO CONTENT ENGINE ===");
 
-  // 1. Ensure 50 clone users exist in database
-  console.log("Syncing clone users...");
-  const cloneUsers = [];
-  
-  for (let i = 0; i < CLONE_NAMES.length; i++) {
-    const name = CLONE_NAMES[i];
-    const email = `clone${i + 1}@pawbook.vn`;
-    const avatarUrl = randomItem(AVATAR_POOL);
-
-    try {
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {}, // Keep existing if already present
-        create: {
-          name,
-          email,
-          password: "$2a$10$U7vS547B2hH/yP65iV5jbeo.uRUp885G.4t5fA55P3qQz/uU67H4G", // password123
-          role: Role.USER,
-          avatarUrl,
-          bio: `Thành viên tích cực chia sẻ kinh nghiệm trên mạng xã hội BitPaw.`,
-          pawCoin: 200,
-          reputation: 20,
-          trustScore: 4.8,
-          isVerified: Math.random() > 0.8, // 20% verified badge chance
-        }
-      });
-      cloneUsers.push(user);
-    } catch (err: any) {
-      console.error(`Failed to sync clone user ${name}: ${err.message}`);
-    }
-  }
-
-  console.log(`Successfully synced ${cloneUsers.length} clone users in database.`);
-
+  const cloneUsers = await getCloneUsers();
   if (cloneUsers.length === 0) {
-    console.error("No clone users available. Exiting Fomo Engine.");
-    return;
+    console.error("Failed to fetch or seed clone users. Exiting.");
+    process.exit(1);
   }
 
-  // 2. Generate and inject 10 to 20 random posts spread across the last 24 hours
-  const postsCount = Math.floor(Math.random() * 11) + 10; // 10 to 20 posts
-  console.log(`Generating and inserting ${postsCount} realistic FOMO posts...`);
+  // 1. Initialize Gemini AI
+  const apiKey = process.env.GEMINI_API_KEY;
+  let genAI: GoogleGenerativeAI | null = null;
+  if (apiKey) {
+    console.log("Gemini API key found. Initializing GoogleGenerativeAI...");
+    genAI = new GoogleGenerativeAI(apiKey);
+  } else {
+    console.warn("GEMINI_API_KEY not set in environment variables. Falling back to local data matrix.");
+  }
 
-  let successfulInserts = 0;
-  
-  for (let i = 0; i < postsCount; i++) {
-    const author = randomItem(cloneUsers);
-    const content = randomItem(CONTENT_TEMPLATES);
+  const topics = [
+    "áp lực công việc hàng ngày / bị công ty nợ lương",
+    "gặp nhà nghỉ du lịch Nha Trang chặt chém chặt đẹp",
+    "bị tài xế công nghệ hoặc xe ôm hét giá ảo",
+    "spa chăm sóc thú cưng làm lông chó mèo xơ xác"
+  ];
+  const selectedTopic = randomItem(topics);
+  console.log(`Selected Topic: ${selectedTopic}`);
 
-    // Randomize time inside the last 24h
-    const currentMillis = Date.now();
-    const randomHoursAgo = Math.random() * 24;
-    const createdAtDate = new Date(currentMillis - randomHoursAgo * 60 * 60 * 1000);
-
+  // 2. AI Post Content Generation
+  let postContent = "";
+  if (genAI) {
     try {
-      await prisma.post.create({
-        data: {
-          content,
-          authorId: author.id,
-          createdAt: createdAtDate
-        }
-      });
-      successfulInserts++;
-      console.log(`  📝 [${successfulInserts}/${postsCount}] Created post by "${author.name}" dated ${createdAtDate.toLocaleTimeString()}`);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Đóng vai một người dùng mạng xã hội tại Việt Nam, viết 1 status (dưới 80 chữ) phàn nàn chân thực về: ${selectedTopic}. Ngôn ngữ đời thường, tiếng lóng Việt Nam, giọng điệu tức giận hoặc châm biếm của người thật, không dùng hashtag, không có tiêu đề, không chào hỏi trịnh trọng.`;
+      
+      const result = await model.generateContent(prompt);
+      postContent = result.response.text().trim();
+      if (postContent.startsWith('"') && postContent.endsWith('"')) {
+        postContent = postContent.slice(1, -1);
+      }
     } catch (err: any) {
-      console.error(`Failed to insert post by ${author.name}: ${err.message}`);
+      console.error("Gemini API post generation failed or timed out:", err.message);
+      postContent = generateStaticFomoPost();
+    }
+  } else {
+    postContent = generateStaticFomoPost();
+  }
+
+  // Insert post into database under a random clone
+  const postAuthor = randomItem(cloneUsers);
+  console.log(`Creating post by clone user: ${postAuthor.name}`);
+
+  const createdPost = await prisma.post.create({
+    data: {
+      content: postContent,
+      authorId: postAuthor.id,
+      createdAt: new Date()
+    }
+  });
+  console.log(`Successfully created Post ID: ${createdPost.id}`);
+  console.log(`Content: "${postContent}"`);
+
+  // 3. Simulated Likes (15-35)
+  const likesCount = Math.floor(Math.random() * 21) + 15; // 15 to 35
+  console.log(`Auto Likes: Selected ${likesCount} clone users to simulated reaction list. (Handled on client-side state)`);
+
+  // 4. AI Comments Generation
+  console.log("Generating comments...");
+  let comments: string[] = [];
+
+  if (genAI) {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Dựa vào status phàn nàn này: "${postContent}", hãy viết 3 bình luận ngắn gọn từ 3 người dùng khác nhau trên mạng xã hội Việt Nam (đặc biệt giọng điệu gen Z).
+Một người đồng tình/chia sẻ, một người khuyên nhủ/bình tĩnh, một người châm biếm/mỉa mai.
+Giọng điệu đời thường, tự nhiên, cực kỳ ngắn gọn (mỗi bình luận dưới 20 chữ).
+Trả về chính xác 3 dòng, mỗi dòng là một bình luận, không ghi số thứ tự, không có ngoặc kép ở đầu dòng.`;
+
+      const result = await model.generateContent(prompt);
+      const rawCommentsText = result.response.text();
+      comments = rawCommentsText
+        .split("\n")
+        .map(line => line.replace(/^\d+[\.\-\)]\s*/, "").replace(/^["']|["']$/g, "").trim())
+        .filter(line => line.length > 0)
+        .slice(0, 3);
+    } catch (err: any) {
+      console.error("Gemini API comment generation failed or timed out:", err.message);
     }
   }
 
-  console.log(`\n=== STAGE COMPLETE. Successfully seeded ${successfulInserts} FOMO posts! 🚀 ===`);
+  // Fallback if comments generation failed or has fewer than 3 items
+  if (comments.length < 3) {
+    comments = [...comments, ...FALLBACK_COMMENTS].slice(0, 3);
+  }
+
+  // Pick 3 random distinct clones for comments
+  const candidatesForComments = cloneUsers.filter(u => u.id !== postAuthor.id);
+  const selectedClonesForComments: typeof cloneUsers = [];
+  while (selectedClonesForComments.length < 3 && candidatesForComments.length > 0) {
+    const idx = Math.floor(Math.random() * candidatesForComments.length);
+    selectedClonesForComments.push(candidatesForComments.splice(idx, 1)[0]);
+  }
+
+  // Insert comments into database
+  for (let i = 0; i < comments.length; i++) {
+    const commentator = selectedClonesForComments[i] || randomItem(cloneUsers);
+    const commentText = comments[i];
+
+    try {
+      await prisma.comment.create({
+        data: {
+          content: commentText,
+          postId: createdPost.id,
+          authorId: commentator.id,
+          createdAt: new Date(Date.now() + (i + 1) * 60 * 1000)
+        }
+      });
+      console.log(`  💬 Comment by "${commentator.name}": "${commentText}"`);
+    } catch (e: any) {
+      console.error(`Failed to insert comment: ${e.message}`);
+    }
+  }
+
+  console.log("\n=== FOMO CYCLE COMPLETE. EXITING SUCCESS ===\n");
+  process.exit(0);
 }
 
 main()
   .catch((err) => {
     console.error("Fomo Engine crash:", err);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
+    process.exit(1);
   });

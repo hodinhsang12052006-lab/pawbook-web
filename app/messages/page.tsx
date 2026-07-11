@@ -187,16 +187,18 @@ function MessengerContent() {
   useEffect(() => {
     if (typeof window === "undefined" || !currentUser) return;
 
-    const socketUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-      ? "http://localhost:3001"
-      : `${window.location.protocol}//${window.location.hostname}:3001`;
-
-    const socketInstance = io(socketUrl);
+    // Ép cứng URL kết nối để đảm bảo không bị sai cổng
+    const socketUrl = "http://localhost:3001";
+    const socketInstance = io(socketUrl, {
+      transports: ['websocket'], // Bắt buộc dùng websocket để chống đứt kết nối
+      upgrade: false
+    });
     socketRef.current = socketInstance;
 
-    // Send add_user and join payloads to map this socket connection immediately
-    socketInstance.emit("add_user", currentUser.id);
-    socketInstance.emit("join", currentUser.id);
+    // Gắn ID user vào Socket với log kiểm tra
+    console.log("🔗 ĐANG KẾT NỐI SOCKET CHO USER:", currentUser.id);
+    socketInstance.emit("add_user", String(currentUser.id));
+    socketInstance.emit("join", String(currentUser.id));
 
     socketInstance.on("receive_message", (newMessage: any) => {
       if (activeChatRef.current === newMessage.senderId || activeChatRef.current === newMessage.receiverId) {
@@ -640,11 +642,16 @@ function MessengerContent() {
       conversationId: bodyPayload.conversationId || "",
     };
 
+    // 1. Bắn lên màn hình mình
     setMessages((prev) => [...prev, tempMessage]);
+    if (!customContent) setMessageText("");
 
-    // Zero-delay socket emission
+    // 2. ÉP BẮN SOCKET NGAY LẬP TỨC (KHÔNG CHỜ API)
     if (socketRef.current) {
+      console.log("🚀 ĐANG BẮN TIN NHẮN QUA SOCKET:", tempMessage);
       socketRef.current.emit("send_message", tempMessage);
+    } else {
+      console.error("❌ SOCKET REF BỊ NULL! Không thể bắn tin nhắn.");
     }
 
     try {

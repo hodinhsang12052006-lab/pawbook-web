@@ -199,17 +199,11 @@ function MessengerContent() {
     socketInstance.emit("join", currentUser.id);
 
     socketInstance.on("receive_message", (newMessage: any) => {
-      console.log("📥 TỔNG ĐÀI ĐÃ BẮN TIN NHẮN TỚI:", newMessage);
-      
-      // BỘ LỌC SỐNG CÒN: Chỉ hiển thị lên UI nếu tin nhắn thuộc về đoạn chat đang mở
       if (activeChatRef.current === newMessage.senderId || activeChatRef.current === newMessage.receiverId) {
-        setMessages((prevMessages) => {
-          const isExist = prevMessages.some(msg => msg.id === newMessage.id);
-          if (isExist) return prevMessages;
-          return [...prevMessages, newMessage];
+        setMessages((prev) => {
+          if (prev.some(msg => msg.id === newMessage.id)) return prev;
+          return [...prev, newMessage];
         });
-      } else {
-        console.log("Tin nhắn từ người khác, không render vào màn hình hiện tại.");
       }
     });
 

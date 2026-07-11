@@ -218,37 +218,24 @@ function MessengerContent() {
       console.log("DEBUG: Pusher BỊ CHẶN vì chưa có User hoặc chưa chọn Chat");
       return;
     }
-
+    
     const pusher = getPusherClient();
     if (!pusher) return;
 
-    let activeConversationId = "";
-    if (activeChat.isGroup) {
-      activeConversationId = activeChat.id;
-    } else {
-      activeConversationId = messages.find(
-        (m) =>
-          m.conversationId &&
-          ((m.senderId === currentUser.id && m.receiverId === activeChat.id) ||
-            (m.senderId === activeChat.id && m.receiverId === currentUser.id))
-      )?.conversationId || "";
-    }
+    // SỬA: Lấy channel dựa trên ID của người đang chat (activeChat.id)
+    // Vì backend đang trigger theo conversationId, hãy đảm bảo tính thống nhất ID
+    const channelName = activeChat.id; 
 
-    if (!activeConversationId) return;
-
-    const channel = pusher.subscribe(activeConversationId);
-
-    channel.bind("new-message", (newMessage: MessageType) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMessage.id)) return prev;
-        return [...prev, newMessage];
-      });
+    console.log("📡 Pusher đang kết nối vào phòng:", channelName);
+    const channel = pusher.subscribe(channelName);
+    
+    channel.bind("new-message", (newMessage: any) => {
+      console.log("📥 TIN NHẮN MỚI ĐÃ VỀ:", newMessage);
+      setMessages((prev) => [...prev, newMessage]);
     });
 
-    return () => {
-      pusher.unsubscribe(activeConversationId);
-    };
-  }, [activeChat, currentUser, messages]);
+    return () => { pusher.unsubscribe(channelName); };
+  }, [currentUser, activeChat?.id]);
 
   // Auto select active partner from search query parameter (?userId=XXXX)
   useEffect(() => {

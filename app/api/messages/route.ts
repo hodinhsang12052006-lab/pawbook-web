@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { pusherServer } from "@/lib/pusher";
+import Pusher from "pusher";
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID as string,
+  key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY as string,
+  secret: process.env.PUSHER_SECRET as string,
+  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER as string,
+  useTLS: true,
+});
 
 // GET all conversations, messages, and other system users
 export async function GET() {
@@ -222,18 +230,24 @@ export async function POST(req: Request) {
       conversationId: activeConversationId,
     };
 
-    // Trigger Pusher: Bắn trực tiếp vào kênh cá nhân của Người Gửi và Người Nhận
+    // 🚀 BẮN TÍN HIỆU REAL-TIME BẰNG PUSHER
     try {
-      await pusherServer.trigger(userId, "new-message", formattedMessage);
-      if (partner) {
-        await pusherServer.trigger(partner.id, "new-message", formattedMessage);
+      const senderId = String(userId);
+      const receiverId = partner ? String(partner.id) : "";
+      
+      console.log(`🚀 [BACKEND] Đang bắn Pusher tới kênh: ${senderId} và ${receiverId}`);
+      
+      // Bắn cho người gửi (để tab khác của chính họ cũng nhận được)
+      await pusher.trigger(senderId, "new-message", formattedMessage);
+      
+      // Bắn cho người nhận
+      if (receiverId) {
+        await pusher.trigger(receiverId, "new-message", formattedMessage);
       }
-      // Fallback cho Group Chat
-      if (conversation.isGroup) {
-        await pusherServer.trigger(activeConversationId, "new-message", formattedMessage);
-      }
-    } catch (pushErr) {
-      console.error("Failed to trigger Pusher websocket event:", pushErr);
+      
+      console.log("✅ [BACKEND] Bắn Pusher THÀNH CÔNG!");
+    } catch (pusherError) {
+      console.error("❌ [BACKEND] LỖI BẮN PUSHER SẤP MẶT:", pusherError);
     }
 
     return NextResponse.json(formattedMessage, { status: 201 });

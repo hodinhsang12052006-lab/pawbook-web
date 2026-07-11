@@ -11,7 +11,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
-import { io } from "socket.io-client";
+
 
 interface UserType {
   id: string;
@@ -169,91 +169,7 @@ function MessengerContent() {
     activeChatRef.current = activeChat?.id;
   }, [activeChat]);
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !currentUser) return;
 
-    // Ép cứng URL kết nối để đảm bảo không bị sai cổng
-    const socketUrl = "http://localhost:3001";
-    const socketInstance = io(socketUrl, {
-      transports: ['websocket'], // Bắt buộc dùng websocket để chống đứt kết nối
-      upgrade: false
-    });
-    socketRef.current = socketInstance;
-
-    // Gắn ID user vào Socket với log kiểm tra
-    console.log("🔗 ĐANG KẾT NỐI SOCKET CHO USER:", currentUser.id);
-    socketInstance.emit("add_user", String(currentUser.id));
-    socketInstance.emit("join", String(currentUser.id));
-
-    socketInstance.on("receive_message", (newMessage: any) => {
-      if (activeChatRef.current === newMessage.senderId || activeChatRef.current === newMessage.receiverId) {
-        setMessages((prev) => {
-          if (prev.some(msg => msg.id === newMessage.id)) return prev;
-          return [...prev, newMessage];
-        });
-      }
-    });
-
-    socketInstance.on("user_typing", (data: any) => {
-      if (activeChatRef.current === data.senderId) {
-        setIsTyping(true);
-      }
-    });
-
-    socketInstance.on("user_stopped_typing", (data: any) => {
-      if (activeChatRef.current === data.senderId) {
-        setIsTyping(false);
-      }
-    });
-
-    socketInstance.on("incoming_call", (data: any) => {
-      console.log("Đã nhận cuộc gọi từ: ", data);
-
-      setReceivingCall(true);
-      callerSignalRef.current = data.signal;
-      setCallerSignal(data.signal);
-      setCallerInfo({ id: data.from, name: data.callerName });
-
-      try {
-        if (ringtoneRef.current) {
-          ringtoneRef.current.pause();
-        }
-        const audio = new Audio("/ringtone.mp3");
-        audio.loop = true;
-        audio.play().catch(err => console.log("Autoplay blocked, waiting for click."));
-        ringtoneRef.current = audio;
-      } catch (err) {
-        console.error("Audio playback error:", err);
-      }
-    });
-
-    socketInstance.on("call_accepted", async (data: any) => {
-      console.log("Cuộc gọi đã được chấp nhận bởi receiver: ", data);
-      setCallConnected(true);
-
-      if (peerConnectionRef.current && data.signal) {
-        try {
-          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.signal));
-          console.log("WebRTC Peer Connection remote answer set successfully.");
-        } catch (error) {
-          console.error("Error setting remote description on caller:", error);
-        }
-      }
-
-      if (localStreamRef.current) {
-        setTimeout(() => {
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = localStreamRef.current;
-          }
-        }, 500);
-      }
-      toast.success("Cuộc gọi đã kết nối thành công! 📞");
-    });
-
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, [currentUser]);
 
   // Fetch session & current user ID
   useEffect(() => {
@@ -414,14 +330,8 @@ function MessengerContent() {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      if (socketRef.current) {
-        socketRef.current.emit("call_user", {
-          userToCall: activeChat.id,
-          signalData: offer,
-          from: currentUser?.id,
-          name: currentUser?.name
-        });
-      }
+      // Call feature disabled on socket
+      toast.error("Tính năng gọi qua socket tạm thời bị vô hiệu hóa.");
 
       console.log(`[Socket] Call offer emitted to receiver ${activeChat.id}`);
 
@@ -479,16 +389,7 @@ function MessengerContent() {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      if (socketRef.current) {
-        socketRef.current.emit("answer_call", { signal: answer, to: callerInfo?.id });
-
-        // Backward compatible emit
-        socketRef.current.emit("answer", {
-          to: callerInfo?.id,
-          from: currentUser?.id,
-          signal: answer
-        });
-      }
+      // Answer calls signal emitters disabled on socket
 
       console.log(`[Socket] Call answer accepted and returned to caller ${callerInfo?.id}`);
 
@@ -611,10 +512,7 @@ function MessengerContent() {
     // 1. Cập nhật UI lập tức (Optimistic UI)
     setMessages((prev) => [...prev, tempMessage]);
 
-    // 2. ÉP BẮN SOCKET NGAY LẬP TỨC CHO ĐỐI TÁC (KHÔNG CHỜ API)
-    if (socketRef.current) {
-      socketRef.current.emit("send_message", tempMessage);
-    }
+
 
     // 3. API lưu Database chạy ngầm
     try {
@@ -1749,29 +1647,7 @@ function MessengerContent() {
                   <input
                     type="text"
                     value={messageText}
-                    onChange={(e) => {
-                      setMessageText(e.target.value);
-
-                      if (socketRef.current && currentUser && activeChat) {
-                        socketRef.current.emit("typing", {
-                          senderId: currentUser.id,
-                          receiverId: activeChat.id
-                        });
-                      }
-
-                      if (typingTimeoutRef.current) {
-                        clearTimeout(typingTimeoutRef.current);
-                      }
-
-                      typingTimeoutRef.current = setTimeout(() => {
-                        if (socketRef.current && currentUser && activeChat) {
-                          socketRef.current.emit("stop_typing", {
-                            senderId: currentUser.id,
-                            receiverId: activeChat.id
-                          });
-                        }
-                      }, 2000);
-                    }}
+                    onChange={(e) => setMessageText(e.target.value)}
                     disabled={sending}
                     placeholder="Viết tin nhắn phản hồi, chốt deal, chấm công..."
                     className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"

@@ -173,6 +173,7 @@ function MessengerContent() {
   const [callerInfo, setCallerInfo] = useState<any>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
 
+  const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
 
   useEffect(() => {
@@ -193,6 +194,7 @@ function MessengerContent() {
       console.log("Đã nhận cuộc gọi từ: ", data);
       
       setReceivingCall(true);
+      callerSignalRef.current = data.signal;
       setCallerSignal(data.signal);
       setCallerInfo({ id: data.from, name: data.callerName });
 
@@ -454,15 +456,17 @@ function MessengerContent() {
         }
       };
 
+      const activeSignal = callerSignalRef.current || callerSignal;
+
       // Verification of input signaling data to prevent crashed sessions
-      if (!callerSignal) {
+      if (!activeSignal) {
         console.error("Mất tín hiệu Offer!");
         toast.error("Thiếu thông tin kết nối WebRTC (Offer).");
         return;
       }
 
       // Step 1: Bind remote offer description from caller
-      await pc.setRemoteDescription(new RTCSessionDescription(callerSignal));
+      await pc.setRemoteDescription(new RTCSessionDescription(activeSignal));
 
       // Step 2: Create WebRTC answer payload
       const answer = await pc.createAnswer();
@@ -470,15 +474,17 @@ function MessengerContent() {
       // Step 3: Bind local answer description
       await pc.setLocalDescription(answer);
 
-      // Step 4: Emit answer signaling back to the caller
-      socket.emit("answer_call", { signal: answer, to: callerInfo?.id });
+      // Step 4: Emit answer signaling back to the caller using socketRef.current to avoid scope errors
+      if (socketRef.current) {
+        socketRef.current.emit("answer_call", { signal: answer, to: callerInfo?.id });
 
-      // Backward compatible emit
-      socket.emit("answer", {
-        to: callerInfo?.id,
-        from: currentUser?.id,
-        signal: answer
-      });
+        // Backward compatible emit
+        socketRef.current.emit("answer", {
+          to: callerInfo?.id,
+          from: currentUser?.id,
+          signal: answer
+        });
+      }
 
       console.log(`[Socket] Call answer accepted and returned to caller ${callerInfo?.id}`);
 

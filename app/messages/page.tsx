@@ -167,6 +167,66 @@ function MessengerContent() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
+  const [receivingCall, setReceivingCall] = useState(false);
+  const [callerSignal, setCallerSignal] = useState<any>(null);
+  const [callerInfo, setCallerInfo] = useState<any>(null);
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+
+  const socket = {
+    emit: (event: string, data: any) => {
+      console.log(`[Socket Mock] Emitting: ${event}`, data);
+      if (typeof window !== "undefined") {
+        const bc = new BroadcastChannel("webrtc_socket_signaling");
+        bc.postMessage({ event, data });
+        bc.close();
+      }
+    },
+    on: (event: string, callback: (data: any) => void) => {
+      if (typeof window !== "undefined") {
+        if (!(window as any)._socketListeners) {
+          (window as any)._socketListeners = {};
+        }
+        (window as any)._socketListeners[event] = callback;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const bc = new BroadcastChannel("webrtc_socket_signaling");
+    bc.onmessage = (e) => {
+      const { event, data } = e.data;
+      if (event === "call_user" && data.userToCall === currentUser?.id) {
+        const incomingCallback = (window as any)._socketListeners?.["call_incoming"];
+        if (incomingCallback) incomingCallback(data);
+      } else if (event === "answer" && data.userToCall === currentUser?.id) {
+        const answerCallback = (window as any)._socketListeners?.["answer"];
+        if (answerCallback) answerCallback(data);
+      }
+    };
+
+    socket.on("call_incoming", (data) => {
+      setReceivingCall(true);
+      setCallerSignal(data.signalData);
+      setCallerInfo({ id: data.from, name: data.name });
+
+      // Automatically play the ringtone
+      try {
+        const audio = new Audio("/ringtone.mp3");
+        audio.loop = true;
+        audio.play().catch(err => console.log("Audio play blocked by browser autoplay policy, waiting for user interaction."));
+        ringtoneRef.current = audio;
+      } catch (err) {
+        console.error("Audio playback error:", err);
+      }
+    });
+
+    return () => {
+      bc.close();
+    };
+  }, [currentUser]);
+
   // Fetch session & current user ID
   useEffect(() => {
     async function loadSession() {
@@ -761,7 +821,7 @@ function MessengerContent() {
         <div className="grid grid-cols-1 md:grid-cols-12 h-full overflow-hidden">
           
           {/* Left Column: Conversations Sidebar (30% width, 4 cols) */}
-          <div className="md:col-span-4 border-r border-slate-850 flex flex-col h-full bg-slate-950/20">
+          <div className={`md:col-span-4 border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
             {/* Search & Actions Header */}
             <div className="p-4 border-b border-slate-850 space-y-3 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -992,12 +1052,18 @@ function MessengerContent() {
           </div>
 
           {/* Right Column: Chat window (70% width, 8 cols) */}
-          <div className="md:col-span-8 flex flex-col h-full bg-slate-950/10 relative">
+          <div className={`md:col-span-8 flex flex-col h-full bg-slate-950/10 relative ${activeChat ? "flex" : "hidden md:flex"}`}>
             {activeChat ? (
               <>
                 {/* Active Partner Header */}
                 <div className="p-4 border-b border-slate-855 bg-slate-950/30 flex items-center justify-between gap-3 flex-shrink-0">
                   <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setActiveChat(null)}
+                      className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white md:hidden cursor-pointer mr-1 flex items-center gap-1.5 text-xs font-bold transition-all border border-slate-800"
+                    >
+                      ⬅️
+                    </button>
                     <div className="relative flex-shrink-0">
                       <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
                         {activeChat.isGroup ? (
@@ -1037,6 +1103,12 @@ function MessengerContent() {
                       onClick={() => {
                         setCallType("audio");
                         setShowCallingModal(true);
+                        socket.emit("call_user", {
+                          userToCall: activeChat.id,
+                          signalData: { type: "offer" },
+                          from: currentUser?.id,
+                          name: currentUser?.name
+                        });
                       }}
                       className="p-2.5 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
                       title="Gọi thoại E2EE"
@@ -1047,6 +1119,12 @@ function MessengerContent() {
                       onClick={() => {
                         setCallType("video");
                         setShowCallingModal(true);
+                        socket.emit("call_user", {
+                          userToCall: activeChat.id,
+                          signalData: { type: "offer" },
+                          from: currentUser?.id,
+                          name: currentUser?.name
+                        });
                       }}
                       className="p-2.5 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
                       title="Gọi Video Call E2EE"
@@ -1585,7 +1663,7 @@ function MessengerContent() {
                     <button
                       type="button"
                       onClick={() => toast.success("⚡ Mở bảng chấm công & Thống kê HR dự án...")}
-                      className="flex items-center gap-1 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-555 text-white font-extrabold text-[10px] shadow-lg shadow-amber-500/10 cursor-pointer transition-all hover:scale-105 duration-305"
+                      className="hidden md:flex items-center gap-1 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-555 text-white font-extrabold text-[10px] shadow-lg shadow-amber-500/10 cursor-pointer transition-all hover:scale-105 duration-305"
                       title="Công cụ quản trị chấm công HR"
                     >
                       <Zap className="h-3 w-3 fill-white" />
@@ -1908,6 +1986,70 @@ function MessengerContent() {
                 )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* INCOMING CALL MODAL OVERLAY */}
+      {receivingCall && callerInfo && (
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-[2000] p-8 text-slate-100 animate-fadeIn">
+          <div className="flex flex-col items-center space-y-6 max-w-sm text-center">
+            <div className="relative">
+              <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-blue-500 shadow-2xl relative z-10">
+                <img
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(callerInfo.name)}&background=2563eb&color=ffffff&bold=true`}
+                  alt={callerInfo.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="absolute inset-0 h-24 w-24 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="bg-blue-650/20 border border-blue-500/35 px-3 py-1 rounded-full text-[9px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5 justify-center">
+                📞 Đang đổ chuông...
+              </span>
+              <h2 className="text-base font-extrabold text-slate-200">Cuộc gọi đến</h2>
+              <p className="text-sm font-black text-slate-100">{callerInfo.name} đang gọi cho bạn...</p>
+            </div>
+
+            {/* Accept / Decline Ringing Buttons */}
+            <div className="flex items-center gap-6 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (ringtoneRef.current) {
+                    ringtoneRef.current.pause();
+                    ringtoneRef.current = null;
+                  }
+                  setReceivingCall(false);
+                  
+                  // Accept and show WebRTC modal
+                  setCallType("video");
+                  setShowCallingModal(true);
+                  handleAcceptCall();
+                }}
+                className="h-14 w-14 rounded-full bg-emerald-500 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer animate-bounce"
+                title="Trả lời"
+              >
+                <Phone className="h-6 w-6 stroke-[2.5px]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (ringtoneRef.current) {
+                    ringtoneRef.current.pause();
+                    ringtoneRef.current = null;
+                  }
+                  setReceivingCall(false);
+                }}
+                className="h-14 w-14 rounded-full bg-rose-500 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-rose-500/20 cursor-pointer"
+                title="Từ chối"
+              >
+                <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
+              </button>
+            </div>
           </div>
         </div>
       )}

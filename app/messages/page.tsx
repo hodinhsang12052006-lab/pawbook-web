@@ -648,6 +648,11 @@ function MessengerContent() {
 
     setMessages((prev) => [...prev, tempMessage]);
 
+    // Zero-delay socket emission
+    if (socketRef.current) {
+      socketRef.current.emit("send_message", tempMessage);
+    }
+
     try {
       const res = await fetch("/api/messages", {
         method: "POST",
@@ -665,12 +670,6 @@ function MessengerContent() {
       } else {
         // Swap out optimistic temp message with database confirmed data
         setMessages((prev) => prev.map((m) => (m.id === tempId ? data : m)));
-
-        // Broadcast to receiver via real-time WebSocket signaling
-        if (socketRef.current) {
-          console.log("Đã lưu DB, chuẩn bị bắn Socket:", data);
-          socketRef.current.emit("send_message", data);
-        }
 
         loadData(true);
       }

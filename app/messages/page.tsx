@@ -11,6 +11,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
+import { io } from "socket.io-client";
 
 interface UserType {
   id: string;
@@ -172,60 +173,71 @@ function MessengerContent() {
   const [callerInfo, setCallerInfo] = useState<any>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
 
-  const socket = {
-    emit: (event: string, data: any) => {
-      console.log(`[Socket Mock] Emitting: ${event}`, data);
-      if (typeof window !== "undefined") {
-        const bc = new BroadcastChannel("webrtc_socket_signaling");
-        bc.postMessage({ event, data });
-        bc.close();
-      }
-    },
-    on: (event: string, callback: (data: any) => void) => {
-      if (typeof window !== "undefined") {
-        if (!(window as any)._socketListeners) {
-          (window as any)._socketListeners = {};
-        }
-        (window as any)._socketListeners[event] = callback;
-      }
-    }
-  };
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !currentUser) return;
 
-    const bc = new BroadcastChannel("webrtc_socket_signaling");
-    bc.onmessage = (e) => {
-      const { event, data } = e.data;
-      if (event === "call_user" && data.userToCall === currentUser?.id) {
-        const incomingCallback = (window as any)._socketListeners?.["call_incoming"];
-        if (incomingCallback) incomingCallback(data);
-      } else if (event === "answer" && data.userToCall === currentUser?.id) {
-        const answerCallback = (window as any)._socketListeners?.["answer"];
-        if (answerCallback) answerCallback(data);
-      }
-    };
+    const socketUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://localhost:3001"
+      : `${window.location.protocol}//${window.location.hostname}:3001`;
 
-    socket.on("call_incoming", (data) => {
+    const socketInstance = io(socketUrl);
+    socketRef.current = socketInstance;
+
+    socketInstance.emit("join", currentUser.id);
+
+    socketInstance.on("incoming_call", (data: any) => {
+      console.log("Đã nhận cuộc gọi từ: ", data);
+      
       setReceivingCall(true);
-      setCallerSignal(data.signalData);
-      setCallerInfo({ id: data.from, name: data.name });
+      setCallerSignal(data.signal);
+      setCallerInfo({ id: data.from, name: data.callerName });
 
-      // Automatically play the ringtone
       try {
+        if (ringtoneRef.current) {
+          ringtoneRef.current.pause();
+        }
         const audio = new Audio("/ringtone.mp3");
         audio.loop = true;
-        audio.play().catch(err => console.log("Audio play blocked by browser autoplay policy, waiting for user interaction."));
+        audio.play().catch(err => console.log("Autoplay blocked, waiting for click."));
         ringtoneRef.current = audio;
       } catch (err) {
         console.error("Audio playback error:", err);
       }
     });
 
+    socketInstance.on("call_accepted", (data: any) => {
+      console.log("Cuộc gọi đã được chấp nhận bởi receiver: ", data);
+      setCallConnected(true);
+      
+      if (localStreamRef.current) {
+        setTimeout(() => {
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = localStreamRef.current;
+          }
+        }, 500);
+      }
+      toast.success("Cuộc gọi đã kết nối thành công! 📞");
+    });
+
     return () => {
-      bc.close();
+      socketInstance.disconnect();
     };
   }, [currentUser]);
+
+  const socket = {
+    emit: (event: string, data: any) => {
+      if (socketRef.current) {
+        socketRef.current.emit(event, data);
+      }
+    },
+    on: (event: string, callback: (data: any) => void) => {
+      if (socketRef.current) {
+        socketRef.current.on(event, callback);
+      }
+    }
+  };
 
   // Fetch session & current user ID
   useEffect(() => {
@@ -399,6 +411,14 @@ function MessengerContent() {
         
         console.log("Signaling answer processed successfully via setRemoteDescription on caller.");
         
+        if (socketRef.current && callerInfo) {
+          socketRef.current.emit("answer", {
+            to: callerInfo.id,
+            from: currentUser?.id,
+            signal: answer
+          });
+        }
+
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
         }

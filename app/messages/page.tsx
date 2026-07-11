@@ -185,6 +185,8 @@ function MessengerContent() {
     const socketInstance = io(socketUrl);
     socketRef.current = socketInstance;
 
+    // Send add_user and join payloads to map this socket connection immediately
+    socketInstance.emit("add_user", currentUser.id);
     socketInstance.emit("join", currentUser.id);
 
     socketInstance.on("incoming_call", (data: any) => {
@@ -207,10 +209,19 @@ function MessengerContent() {
       }
     });
 
-    socketInstance.on("call_accepted", (data: any) => {
+    socketInstance.on("call_accepted", async (data: any) => {
       console.log("Cuộc gọi đã được chấp nhận bởi receiver: ", data);
       setCallConnected(true);
       
+      if (peerConnectionRef.current && data.signal) {
+        try {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.signal));
+          console.log("WebRTC Peer Connection remote answer set successfully.");
+        } catch (error) {
+          console.error("Error setting remote description on caller:", error);
+        }
+      }
+
       if (localStreamRef.current) {
         setTimeout(() => {
           if (remoteVideoRef.current) {
@@ -355,16 +366,19 @@ function MessengerContent() {
     return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
   };
 
-  const handleAcceptCall = async () => {
+  const handleStartCall = async (type: "audio" | "video") => {
+    if (!activeChat) return;
     try {
-      const isVideoCall = callType === "video";
+      setCallType(type);
+      setShowCallingModal(true);
+      setCallConnected(false); // Start caller in Calling/Ringing state, NOT connected yet!
+
+      const isVideoCall = type === "video";
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: isVideoCall ? { width: 640, height: 480 } : false
       });
       localStreamRef.current = stream;
-
-      setCallConnected(true);
 
       setTimeout(() => {
         if (localVideoRef.current) {
@@ -372,7 +386,6 @@ function MessengerContent() {
         }
       }, 300);
 
-      // Initialize Caller Connection with Google STUN Servers
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
       });
@@ -392,43 +405,78 @@ function MessengerContent() {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      console.log("Simulating signaling emit offer...");
-      
-      // Simulate socket.io transmission delay and immediate remote answer/ICE handling
-      setTimeout(async () => {
-        // Callee receives the offer, initializes RTCPeerConnection with STUN
-        const calleePc = new RTCPeerConnection({
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-        });
-        await calleePc.setRemoteDescription(offer);
-        
-        // Callee builds answer
-        const answer = await calleePc.createAnswer();
-        await calleePc.setLocalDescription(answer);
-        
-        // Caller immediately processes the incoming socket 'answer' signal without user input
-        await pc.setRemoteDescription(answer);
-        
-        console.log("Signaling answer processed successfully via setRemoteDescription on caller.");
-        
-        if (socketRef.current && callerInfo) {
-          socketRef.current.emit("answer", {
-            to: callerInfo.id,
-            from: currentUser?.id,
-            signal: answer
-          });
-        }
+      socket.emit("call_user", {
+        userToCall: activeChat.id,
+        signalData: offer,
+        from: currentUser?.id,
+        name: currentUser?.name
+      });
 
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = stream;
-        }
-        
-        toast.success("Cuộc gọi đã kết nối thành công! 📞");
-      }, 600);
+      console.log(`[Socket] Call offer emitted to receiver ${activeChat.id}`);
 
     } catch (err: any) {
-      console.error("WebRTC getUserMedia / Connection error:", err);
-      toast.error("Lỗi thiết bị: " + (err.message || "Không thể truy cập Camera/Microphone."));
+      console.error("Failed to start WebRTC call:", err);
+      toast.error("Không thể mở Camera/Microphone: " + err.message);
+      setShowCallingModal(false);
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    try {
+      const isVideoCall = callType === "video";
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: isVideoCall ? { width: 640, height: 480 } : false
+      });
+      localStreamRef.current = stream;
+
+      setCallConnected(true);
+
+      setTimeout(() => {
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      }, 300);
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      });
+      peerConnectionRef.current = pc;
+
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.ontrack = (event) => {
+        const streams = event.streams;
+        if (remoteVideoRef.current && streams[0]) {
+          remoteVideoRef.current.srcObject = streams[0];
+        }
+      };
+
+      if (callerSignal) {
+        await pc.setRemoteDescription(new RTCSessionDescription(callerSignal));
+      }
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit("answer", {
+        to: callerInfo?.id,
+        from: currentUser?.id,
+        signal: answer
+      });
+
+      console.log(`[Socket] Answer emitted back to caller ${callerInfo?.id}`);
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+      }
+      toast.success("Cuộc gọi đã kết nối thành công! 📞");
+
+    } catch (err: any) {
+      console.error("WebRTC accept call connection error:", err);
+      toast.error("Lỗi thiết bị: " + (err.message || "Không thể kết nối."));
       setCallConnected(true);
     }
   };
@@ -1120,32 +1168,14 @@ function MessengerContent() {
                   {/* Header Calls and Controls */}
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => {
-                        setCallType("audio");
-                        setShowCallingModal(true);
-                        socket.emit("call_user", {
-                          userToCall: activeChat.id,
-                          signalData: { type: "offer" },
-                          from: currentUser?.id,
-                          name: currentUser?.name
-                        });
-                      }}
+                      onClick={() => handleStartCall("audio")}
                       className="p-2.5 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
                       title="Gọi thoại E2EE"
                     >
                       <Phone className="h-4.5 w-4.5" />
                     </button>
                     <button
-                      onClick={() => {
-                        setCallType("video");
-                        setShowCallingModal(true);
-                        socket.emit("call_user", {
-                          userToCall: activeChat.id,
-                          signalData: { type: "offer" },
-                          from: currentUser?.id,
-                          name: currentUser?.name
-                        });
-                      }}
+                      onClick={() => handleStartCall("video")}
                       className="p-2.5 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
                       title="Gọi Video Call E2EE"
                     >

@@ -212,6 +212,7 @@ function MessengerContent() {
 
   console.log("DEBUG: File page.tsx đã được load!");
 
+  /*
   // 🚀 ĐẠI TU PUSHER: LUÔN LẮNG NGHE TRÊN KÊNH CÁ NHÂN
   useEffect(() => {
     if (!currentUser) return;
@@ -246,6 +247,36 @@ function MessengerContent() {
       pusher.unsubscribe(channelName);
     };
   }, [currentUser]); // Khóa dependency: Chỉ chạy 1 lần duy nhất khi có user
+  */
+
+  // 🧨 GIẢ LẬP REAL-TIME BẰNG POLLING ĐỂ TEST UI MÀ KHÔNG DÙNG PUSHER
+  useEffect(() => {
+    if (!currentUser || !activeChat) return;
+    
+    console.log("🔄 Bắt đầu Polling kiểm tra tin nhắn mới mỗi 2 giây...");
+    const interval = setInterval(async () => {
+      try {
+        // Fetch lại tin nhắn của phòng hiện tại
+        const res = await fetch(`/api/messages?conversationId=${activeChat.isGroup ? activeChat.id : ''}&partnerId=${!activeChat.isGroup ? activeChat.id : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          const freshMessages = data.messages || [];
+          // Chỉ update nếu có tin nhắn mới (so sánh độ dài mảng)
+          setMessages((prev) => {
+            if (freshMessages.length > prev.length) {
+              console.log("📥 [POLLING] ĐÃ TÌM THẤY TIN NHẮN MỚI!");
+              return freshMessages;
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+      }
+    }, 2000); // 2 giây fetch 1 lần
+
+    return () => clearInterval(interval);
+  }, [currentUser, activeChat]);
 
   // Auto select active partner from search query parameter (?userId=XXXX)
   useEffect(() => {

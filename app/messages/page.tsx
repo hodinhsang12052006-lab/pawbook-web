@@ -199,14 +199,17 @@ function MessengerContent() {
     socketInstance.emit("join", currentUser.id);
 
     socketInstance.on("receive_message", (newMessage: any) => {
-      console.log("Đã nhận tin nhắn mới từ socket:", newMessage);
-      // DÙNG REF ĐỂ SO SÁNH, TUYỆT ĐỐI KHÔNG DÙNG BIẾN activeChat TRỰC TIẾP
-      if (activeChatRef.current === newMessage.senderId || activeChatRef.current === newMessage.receiverId) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === newMessage.id)) return prev;
-          return [...prev, newMessage];
-        });
-      }
+      console.log("📥 TỔNG ĐÀI ĐÃ BẮN TIN NHẮN TỚI:", newMessage);
+      
+      // Ép UI cập nhật bằng hàm callback (prev) để luôn lấy state mới nhất
+      setMessages((prevMessages) => {
+        // Kiểm tra chống trùng lặp tin nhắn
+        const isExist = prevMessages.some(msg => msg.id === newMessage.id);
+        if (isExist) return prevMessages;
+        
+        // Thêm tin nhắn mới vào mảng
+        return [...prevMessages, newMessage];
+      });
     });
 
     socketInstance.on("user_typing", (data: any) => {
@@ -664,6 +667,7 @@ function MessengerContent() {
 
         // Broadcast to receiver via real-time WebSocket signaling
         if (socketRef.current) {
+          console.log("Đã lưu DB, chuẩn bị bắn Socket:", data);
           socketRef.current.emit("send_message", data);
         }
 

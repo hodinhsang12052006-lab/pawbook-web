@@ -210,9 +210,14 @@ function MessengerContent() {
     loadData();
   }, []);
 
-  // Subscribe to real-time messages via Pusher
+  console.log("DEBUG: File page.tsx đã được load!");
+
   useEffect(() => {
-    if (!currentUser || !activeChat) return;
+    console.log("DEBUG: Bắt đầu khởi tạo Pusher. User:", currentUser, "ActiveChat:", activeChat);
+    if (!currentUser || !activeChat) {
+      console.log("DEBUG: Pusher BỊ CHẶN vì chưa có User hoặc chưa chọn Chat");
+      return;
+    }
 
     const pusher = getPusherClient();
     if (!pusher) return;

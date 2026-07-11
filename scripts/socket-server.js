@@ -98,6 +98,20 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("typing", (data) => {
+    const receiverSocketId = userSocketMap.get(data.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("user_typing", { senderId: data.senderId });
+    }
+  });
+
+  socket.on("stop_typing", (data) => {
+    const receiverSocketId = userSocketMap.get(data.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("user_stopped_typing", { senderId: data.senderId });
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`[Socket] Connection closed: ${socket.id}`);
     for (const [uid, sid] of userSocketMap.entries()) {

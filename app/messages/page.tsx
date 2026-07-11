@@ -173,6 +173,9 @@ function MessengerContent() {
   const [callerInfo, setCallerInfo] = useState<any>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
 
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<any>(null);
+
   const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
 
@@ -203,6 +206,18 @@ function MessengerContent() {
           if (prev.some((m) => m.id === newMessage.id)) return prev;
           return [...prev, newMessage];
         });
+      }
+    });
+
+    socketInstance.on("user_typing", (data: any) => {
+      if (activeChatRef.current === data.senderId) {
+        setIsTyping(true);
+      }
+    });
+
+    socketInstance.on("user_stopped_typing", (data: any) => {
+      if (activeChatRef.current === data.senderId) {
+        setIsTyping(false);
       }
     });
 
@@ -1494,6 +1509,18 @@ function MessengerContent() {
                       );
                     })
                   )}
+                  {isTyping && (
+                    <div className="flex items-center gap-2 text-slate-400 text-sm p-3 bg-slate-800 w-fit rounded-2xl rounded-bl-sm mb-4 animate-fadeIn">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-350">Đang soạn tin</span>
+                        <div className="flex gap-1">
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75"></span>
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150"></span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -1798,7 +1825,31 @@ function MessengerContent() {
                     <input
                       type="text"
                       value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
+                      onChange={(e) => {
+                        setMessageText(e.target.value);
+
+                        // Broadcast typing state to the conversation partner
+                        if (socketRef.current && currentUser && activeChat) {
+                          socketRef.current.emit("typing", {
+                            senderId: currentUser.id,
+                            receiverId: activeChat.id
+                          });
+                        }
+
+                        // Debounce stop_typing event emitter
+                        if (typingTimeoutRef.current) {
+                          clearTimeout(typingTimeoutRef.current);
+                        }
+
+                        typingTimeoutRef.current = setTimeout(() => {
+                          if (socketRef.current && currentUser && activeChat) {
+                            socketRef.current.emit("stop_typing", {
+                              senderId: currentUser.id,
+                              receiverId: activeChat.id
+                            });
+                          }
+                        }, 2000);
+                      }}
                       disabled={sending}
                       placeholder="Viết tin nhắn phản hồi, chốt deal, chấm công..."
                       className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"

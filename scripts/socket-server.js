@@ -13,105 +13,104 @@ const io = new Server(server, {
   }
 });
 
+// Bản đồ lưu trữ ID người dùng và Socket ID
 const userSocketMap = new Map();
 
 io.on("connection", (socket) => {
   console.log(`[Socket] New connection established: ${socket.id}`);
 
-  // Map userId to socket.id
+  // 1. ÉP KIỂU STRING KHI THÊM USER VÀO BẢN ĐỒ CHỐNG LỖI TYPE
   socket.on("add_user", (userId) => {
     if (userId) {
-      userSocketMap.set(userId, socket.id);
-      console.log(`[Socket] User ${userId} mapped to socket.id ${socket.id}`);
-      socket.join(userId);
+      const strUserId = String(userId);
+      userSocketMap.set(strUserId, socket.id);
+      socket.join(strUserId); // Join room bằng String
+      console.log(`[Socket] User ${strUserId} mapped to socket.id ${socket.id}`);
     }
   });
 
   socket.on("join", (userId) => {
     if (userId) {
-      userSocketMap.set(userId, socket.id);
-      console.log(`[Socket] User ${userId} joined and mapped to socket.id ${socket.id}`);
-      socket.join(userId);
+      const strUserId = String(userId);
+      userSocketMap.set(strUserId, socket.id);
+      socket.join(strUserId);
+      console.log(`[Socket] User ${strUserId} joined and mapped to socket.id ${socket.id}`);
     }
   });
 
-  // Listener for incoming call triggers
+  // 2. LUỒNG CUỘC GỌI WEBRTC
   socket.on("call_user", (data) => {
-    console.log(`[Socket] Call request from user ${data.from} (${data.name}) to user ${data.userToCall}`);
-    
-    const receiverSocketId = userSocketMap.get(data.userToCall);
+    const targetId = String(data.userToCall);
+    console.log(`[Socket] Call request from user ${data.from} to user ${targetId}`);
+
+    const receiverSocketId = userSocketMap.get(targetId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("incoming_call", {
         signal: data.signalData,
-        from: data.from,
+        from: String(data.from),
         callerName: data.name
       });
-      console.log(`[Socket] Signalled call to mapped socket ${receiverSocketId}`);
     } else {
-      // Fallback to room routing
-      io.to(data.userToCall).emit("incoming_call", {
+      io.to(targetId).emit("incoming_call", {
         signal: data.signalData,
-        from: data.from,
+        from: String(data.from),
         callerName: data.name
-      });
-      console.log(`[Socket] Receiver ${data.userToCall} fallback to room routing`);
-    }
-  });
-
-  // Listener for accept/answer signaling responses
-  socket.on("answer", (data) => {
-    console.log(`[Socket] Call answer from user ${data.from} to caller ${data.to}`);
-    
-    const callerSocketId = userSocketMap.get(data.to);
-    if (callerSocketId) {
-      io.to(callerSocketId).emit("call_accepted", {
-        signal: data.signal,
-        from: data.from
-      });
-    } else {
-      io.to(data.to).emit("call_accepted", {
-        signal: data.signal,
-        from: data.from
       });
     }
   });
 
   socket.on("answer_call", (data) => {
-    console.log(`[Socket] Call answer_call to caller socket: ${data.to}`);
-    
-    // Broadcast answer to the caller
-    io.to(data.to).emit("call_accepted", {
-      signal: data.signal,
-      from: socket.id // or map back user ID
-    });
+    const targetId = String(data.to);
+    const callerSocketId = userSocketMap.get(targetId);
+
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("call_accepted", { signal: data.signal, from: String(socket.id) });
+    } else {
+      io.to(targetId).emit("call_accepted", { signal: data.signal, from: String(socket.id) });
+    }
   });
 
+  socket.on("answer", (data) => {
+    const targetId = String(data.to);
+    const callerSocketId = userSocketMap.get(targetId);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("call_accepted", { signal: data.signal, from: data.from });
+    } else {
+      io.to(targetId).emit("call_accepted", { signal: data.signal, from: data.from });
+    }
+  });
+
+  // 3. LUỒNG TIN NHẮN REAL-TIME
   socket.on("send_message", (messageData) => {
-    console.log(`[Socket] Text message from ${messageData.senderId} to ${messageData.receiverId}`);
-    const receiverSocketId = userSocketMap.get(messageData.receiverId);
+    const recId = String(messageData.receiverId);
+    console.log(`[Socket] Text message from ${messageData.senderId} to ${recId}`);
+
+    const receiverSocketId = userSocketMap.get(recId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("receive_message", messageData);
-      console.log(`[Socket] Forwarded message directly to receiver socket ${receiverSocketId}`);
+      console.log(`[Socket] -> Forwarded directly to socket ${receiverSocketId}`);
     } else {
-      io.to(messageData.receiverId).emit("receive_message", messageData);
-      console.log(`[Socket] Fallback forwarded message to receiver room ${messageData.receiverId}`);
+      io.to(recId).emit("receive_message", messageData);
+      console.log(`[Socket] -> Fallback forwarded to room ${recId}`);
     }
   });
 
+  // 4. LUỒNG TYPING (DẤU BA CHẤM)
   socket.on("typing", (data) => {
-    const receiverSocketId = userSocketMap.get(data.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("user_typing", { senderId: data.senderId });
-    }
+    const recId = String(data.receiverId);
+    const receiverSocketId = userSocketMap.get(recId);
+    if (receiverSocketId) io.to(receiverSocketId).emit("user_typing", { senderId: String(data.senderId) });
+    else io.to(recId).emit("user_typing", { senderId: String(data.senderId) });
   });
 
   socket.on("stop_typing", (data) => {
-    const receiverSocketId = userSocketMap.get(data.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("user_stopped_typing", { senderId: data.senderId });
-    }
+    const recId = String(data.receiverId);
+    const receiverSocketId = userSocketMap.get(recId);
+    if (receiverSocketId) io.to(receiverSocketId).emit("user_stopped_typing", { senderId: String(data.senderId) });
+    else io.to(recId).emit("user_stopped_typing", { senderId: String(data.senderId) });
   });
 
+  // 5. NGẮT KẾT NỐI
   socket.on("disconnect", () => {
     console.log(`[Socket] Connection closed: ${socket.id}`);
     for (const [uid, sid] of userSocketMap.entries()) {

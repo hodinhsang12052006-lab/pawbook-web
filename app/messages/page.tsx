@@ -201,15 +201,16 @@ function MessengerContent() {
     socketInstance.on("receive_message", (newMessage: any) => {
       console.log("📥 TỔNG ĐÀI ĐÃ BẮN TIN NHẮN TỚI:", newMessage);
       
-      // Ép UI cập nhật bằng hàm callback (prev) để luôn lấy state mới nhất
-      setMessages((prevMessages) => {
-        // Kiểm tra chống trùng lặp tin nhắn
-        const isExist = prevMessages.some(msg => msg.id === newMessage.id);
-        if (isExist) return prevMessages;
-        
-        // Thêm tin nhắn mới vào mảng
-        return [...prevMessages, newMessage];
-      });
+      // BỘ LỌC SỐNG CÒN: Chỉ hiển thị lên UI nếu tin nhắn thuộc về đoạn chat đang mở
+      if (activeChatRef.current === newMessage.senderId || activeChatRef.current === newMessage.receiverId) {
+        setMessages((prevMessages) => {
+          const isExist = prevMessages.some(msg => msg.id === newMessage.id);
+          if (isExist) return prevMessages;
+          return [...prevMessages, newMessage];
+        });
+      } else {
+        console.log("Tin nhắn từ người khác, không render vào màn hình hiện tại.");
+      }
     });
 
     socketInstance.on("user_typing", (data: any) => {

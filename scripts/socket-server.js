@@ -76,6 +76,16 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("answer_call", (data) => {
+    console.log(`[Socket] Call answer_call to caller socket: ${data.to}`);
+    
+    // Broadcast answer to the caller
+    io.to(data.to).emit("call_accepted", {
+      signal: data.signal,
+      from: socket.id // or map back user ID
+    });
+  });
+
   socket.on("disconnect", () => {
     console.log(`[Socket] Connection closed: ${socket.id}`);
     for (const [uid, sid] of userSocketMap.entries()) {

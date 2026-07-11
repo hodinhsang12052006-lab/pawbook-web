@@ -176,6 +176,11 @@ function MessengerContent() {
   const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
 
+  const activeChatRef = useRef<any>(null);
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
   useEffect(() => {
     if (typeof window === "undefined" || !currentUser) return;
 
@@ -189,6 +194,16 @@ function MessengerContent() {
     // Send add_user and join payloads to map this socket connection immediately
     socketInstance.emit("add_user", currentUser.id);
     socketInstance.emit("join", currentUser.id);
+
+    socketInstance.on("receive_message", (newMessage: any) => {
+      console.log("[Socket] Nhận tin nhắn mới: ", newMessage);
+      if (activeChatRef.current && activeChatRef.current.id === newMessage.senderId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMessage.id)) return prev;
+          return [...prev, newMessage];
+        });
+      }
+    });
 
     socketInstance.on("incoming_call", (data: any) => {
       console.log("Đã nhận cuộc gọi từ: ", data);
@@ -548,41 +563,68 @@ function MessengerContent() {
 
   const handleSendMessage = async (e: React.FormEvent | null, customContent?: string, customType?: string) => {
     if (e) e.preventDefault();
-    if (!activeChat || sending) return;
+    if (!activeChat) return;
 
     const content = customContent || messageText.trim();
     const type = customType || "TEXT";
 
     if (!content) return;
+    
+    // Clear input field immediately for maximum responsiveness
     if (!customContent) setMessageText("");
 
-    setSending(true);
     setShowEmoji(false);
     setShowGifs(false);
 
-    try {
-      const bodyPayload: any = {
-        content,
-        type,
-      };
+    // Build body payload first to determine conversation info
+    const bodyPayload: any = {
+      content,
+      type,
+    };
 
-      if (activeChat.isGroup) {
-        bodyPayload.conversationId = activeChat.id;
+    if (activeChat.isGroup) {
+      bodyPayload.conversationId = activeChat.id;
+    } else {
+      const existingConv = messages.find(
+        (m) =>
+          m.conversationId &&
+          ((m.senderId === currentUser?.id && m.receiverId === activeChat.id) ||
+           (m.senderId === activeChat.id && m.receiverId === currentUser?.id))
+      )?.conversationId;
+
+      if (existingConv) {
+        bodyPayload.conversationId = existingConv;
       } else {
-        const existingConv = messages.find(
-          (m) =>
-            m.conversationId &&
-            ((m.senderId === currentUser?.id && m.receiverId === activeChat.id) ||
-             (m.senderId === activeChat.id && m.receiverId === currentUser?.id))
-        )?.conversationId;
-
-        if (existingConv) {
-          bodyPayload.conversationId = existingConv;
-        } else {
-          bodyPayload.receiverId = activeChat.id;
-        }
+        bodyPayload.receiverId = activeChat.id;
       }
+    }
 
+    // Create optimistic message to update the UI instantly (zero delay)
+    const tempId = `optimistic-${Date.now()}`;
+    const tempMessage = {
+      id: tempId,
+      content,
+      type,
+      senderId: currentUser?.id || "",
+      receiverId: activeChat.id,
+      createdAt: new Date().toISOString(),
+      sender: {
+        id: currentUser?.id || "",
+        name: currentUser?.name || "Bạn",
+        avatarUrl: currentUser?.avatarUrl || null,
+        role: currentUser?.role || "USER",
+      },
+      receiver: {
+        id: activeChat.id,
+        name: activeChat.name,
+        role: activeChat.role || "USER",
+      },
+      conversationId: bodyPayload.conversationId || "",
+    };
+
+    setMessages((prev) => [...prev, tempMessage]);
+
+    try {
       const res = await fetch("/api/messages", {
         method: "POST",
         headers: {
@@ -593,15 +635,23 @@ function MessengerContent() {
 
       const data = await res.json();
       if (!res.ok) {
+        // Rollback optimistic message if error occurs
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
         toast.error(data.error || "Gửi tin nhắn thất bại.");
       } else {
-        setMessages((prev) => [...prev, data]);
+        // Swap out optimistic temp message with database confirmed data
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? data : m)));
+
+        // Broadcast to receiver via real-time WebSocket signaling
+        if (socketRef.current) {
+          socketRef.current.emit("send_message", data);
+        }
+
         loadData(true);
       }
     } catch (err) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("Lỗi kết nối mạng.");
-    } finally {
-      setSending(false);
     }
   };
 

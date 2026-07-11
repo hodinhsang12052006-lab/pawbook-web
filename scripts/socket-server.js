@@ -86,6 +86,18 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("send_message", (messageData) => {
+    console.log(`[Socket] Text message from ${messageData.senderId} to ${messageData.receiverId}`);
+    const receiverSocketId = userSocketMap.get(messageData.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("receive_message", messageData);
+      console.log(`[Socket] Forwarded message directly to receiver socket ${receiverSocketId}`);
+    } else {
+      io.to(messageData.receiverId).emit("receive_message", messageData);
+      console.log(`[Socket] Fallback forwarded message to receiver room ${messageData.receiverId}`);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`[Socket] Connection closed: ${socket.id}`);
     for (const [uid, sid] of userSocketMap.entries()) {

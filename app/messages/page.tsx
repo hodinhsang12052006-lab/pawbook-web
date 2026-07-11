@@ -176,9 +176,9 @@ function MessengerContent() {
   const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
 
-  const activeChatRef = useRef<any>(null);
+  const activeChatRef = useRef(activeChat?.id);
   useEffect(() => {
-    activeChatRef.current = activeChat;
+    activeChatRef.current = activeChat?.id;
   }, [activeChat]);
 
   useEffect(() => {
@@ -196,8 +196,9 @@ function MessengerContent() {
     socketInstance.emit("join", currentUser.id);
 
     socketInstance.on("receive_message", (newMessage: any) => {
-      console.log("[Socket] Nhận tin nhắn mới: ", newMessage);
-      if (activeChatRef.current && activeChatRef.current.id === newMessage.senderId) {
+      console.log("Đã nhận tin nhắn mới từ socket:", newMessage);
+      // DÙNG REF ĐỂ SO SÁNH, TUYỆT ĐỐI KHÔNG DÙNG BIẾN activeChat TRỰC TIẾP
+      if (activeChatRef.current === newMessage.senderId || activeChatRef.current === newMessage.receiverId) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMessage.id)) return prev;
           return [...prev, newMessage];

@@ -212,19 +212,19 @@ function MessengerContent() {
 
   console.log("DEBUG: File page.tsx đã được load!");
 
-  /*
-  // 🚀 ĐẠI TU PUSHER: LUÔN LẮNG NGHE TRÊN KÊNH CÁ NHÂN
+  // 🚀 CHẠY PUSHER CHÍNH THỨC TRÊN KÊNH CÁ NHÂN CỦA USER
   useEffect(() => {
     if (!currentUser) return;
     const pusher = getPusherClient();
     if (!pusher) return;
 
-    const channelName = currentUser.id; // Kênh vĩnh cửu của User
-    console.log("📡 Pusher đã bật ống nghe tại kênh cá nhân:", channelName);
+    const channelName = String(currentUser.id);
+    console.log("📡 [PUSHER] Bật ống nghe tại kênh:", channelName);
     const channel = pusher.subscribe(channelName);
     
     const messageHandler = (newMessage: any) => {
-      console.log("📥 TỔNG ĐÀI BÁO TIN:", newMessage);
+      console.log("📥 [PUSHER] TING! NHẬN TIN NHẮN MỚI:", newMessage);
+      
       // BỘ LỌC UI: Chỉ hiển thị nếu tin nhắn thuộc về màn hình đang mở
       if (
         activeChatRef.current === newMessage.senderId || 
@@ -235,48 +235,17 @@ function MessengerContent() {
           if (prev.some((m) => m.id === newMessage.id)) return prev;
           return [...prev, newMessage];
         });
-      } else {
-        console.log("Tin nhắn từ hộp thoại khác, đang chạy ngầm...");
       }
     };
 
     channel.bind("new-message", messageHandler);
 
     return () => {
+      console.log("🔌 [PUSHER] Tắt ống nghe kênh:", channelName);
       channel.unbind("new-message", messageHandler);
       pusher.unsubscribe(channelName);
     };
-  }, [currentUser]); // Khóa dependency: Chỉ chạy 1 lần duy nhất khi có user
-  */
-
-  // 🧨 GIẢ LẬP REAL-TIME BẰNG POLLING ĐỂ TEST UI MÀ KHÔNG DÙNG PUSHER
-  useEffect(() => {
-    if (!currentUser || !activeChat) return;
-    
-    console.log("🔄 Bắt đầu Polling kiểm tra tin nhắn mới mỗi 2 giây...");
-    const interval = setInterval(async () => {
-      try {
-        // Fetch lại tin nhắn của phòng hiện tại
-        const res = await fetch(`/api/messages?conversationId=${activeChat.isGroup ? activeChat.id : ''}&partnerId=${!activeChat.isGroup ? activeChat.id : ''}`);
-        if (res.ok) {
-          const data = await res.json();
-          const freshMessages = data.messages || [];
-          // Chỉ update nếu có tin nhắn mới (so sánh độ dài mảng)
-          setMessages((prev) => {
-            if (freshMessages.length > prev.length) {
-              console.log("📥 [POLLING] ĐÃ TÌM THẤY TIN NHẮN MỚI!");
-              return freshMessages;
-            }
-            return prev;
-          });
-        }
-      } catch (error) {
-        console.error("Polling error:", error);
-      }
-    }, 2000); // 2 giây fetch 1 lần
-
-    return () => clearInterval(interval);
-  }, [currentUser, activeChat]);
+  }, [currentUser]); // Khóa dependency chỉ gọi 1 lần khi có User
 
   // Auto select active partner from search query parameter (?userId=XXXX)
   useEffect(() => {

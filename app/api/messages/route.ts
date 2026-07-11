@@ -7,11 +7,12 @@ import Pusher from "pusher";
 // BỘ LỌC CHỐNG LỖI COPY-PASTE (Xóa ngoặc kép và khoảng trắng)
 const clean = (val?: string) => (val || "").replace(/['"]/g, "").trim();
 
+// 1. KHỞI TẠO PUSHER (Có fallback cứng để chống Vercel Cache)
 const pusherServer = new Pusher({
-  appId: clean(process.env.PUSHER_APP_ID),
-  key: clean(process.env.NEXT_PUBLIC_PUSHER_APP_KEY),
-  secret: clean(process.env.PUSHER_SECRET),
-  cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER),
+  appId: clean(process.env.PUSHER_APP_ID) || "2175600",
+  key: clean(process.env.NEXT_PUBLIC_PUSHER_APP_KEY) || "c0aeac77207466ef74e9",
+  secret: clean(process.env.PUSHER_SECRET) as string,
+  cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER) || "ap1",
   useTLS: true,
 });
 
@@ -233,20 +234,26 @@ export async function POST(req: Request) {
       conversationId: activeConversationId,
     };
 
-    // 🚀 BẮN TÍN HIỆU REAL-TIME
+    // 🚀 2. BẮN TÍN HIỆU (Gộp kênh và ép kiểu Payload siêu nhẹ)
     try {
-      const senderId = String(userId);
-      const receiverId = partner ? String(partner.id) : "";
-      
-      // Bắn cho kênh người gửi
-      await pusherServer.trigger(senderId, "new-message", formattedMessage);
-      
-      // Bắn cho kênh người nhận (nếu có)
-      if (receiverId) {
-        await pusherServer.trigger(receiverId, "new-message", formattedMessage);
+      // Gom kênh người gửi và người nhận, loại bỏ khoảng trắng rác
+      const channels = [String(userId).trim()];
+      if (partner && partner.id) {
+        channels.push(String(partner.id).trim());
       }
-    } catch (pusherError) {
-      console.error("❌ PUSHER ERROR [Backend]:", pusherError);
+
+      // ÉP KIỂU JSON: Tẩy rửa sạch sẽ các Object ẩn của Database để tránh lỗi 400 Payload Too Large
+      const safePayload = JSON.parse(JSON.stringify(formattedMessage));
+      
+      console.log(`🚀 [BACKEND] Bắn Pusher tới các kênh:`, channels);
+      
+      // Bắn 1 phát ăn 2 kênh luôn cho tối ưu
+      await pusherServer.trigger(channels, "new-message", safePayload);
+      
+      console.log("✅ [BACKEND] Bắn Pusher THÀNH CÔNG RỰC RỠ!");
+    } catch (pusherError: any) {
+      // In ra chi tiết tận răng xem Pusher nó chửi cái gì
+      console.error("❌ PUSHER ERROR CHI TIẾT:", pusherError?.body || pusherError);
     }
 
     return NextResponse.json(formattedMessage, { status: 201 });

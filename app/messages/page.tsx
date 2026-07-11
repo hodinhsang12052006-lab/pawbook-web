@@ -212,30 +212,40 @@ function MessengerContent() {
 
   console.log("DEBUG: File page.tsx đã được load!");
 
+  // 🚀 ĐẠI TU PUSHER: LUÔN LẮNG NGHE TRÊN KÊNH CÁ NHÂN
   useEffect(() => {
-    console.log("DEBUG: Bắt đầu khởi tạo Pusher. User:", currentUser, "ActiveChat:", activeChat);
-    if (!currentUser || !activeChat) {
-      console.log("DEBUG: Pusher BỊ CHẶN vì chưa có User hoặc chưa chọn Chat");
-      return;
-    }
-    
+    if (!currentUser) return;
     const pusher = getPusherClient();
     if (!pusher) return;
 
-    // SỬA: Lấy channel dựa trên ID của người đang chat (activeChat.id)
-    // Vì backend đang trigger theo conversationId, hãy đảm bảo tính thống nhất ID
-    const channelName = activeChat.id; 
-
-    console.log("📡 Pusher đang kết nối vào phòng:", channelName);
+    const channelName = currentUser.id; // Kênh vĩnh cửu của User
+    console.log("📡 Pusher đã bật ống nghe tại kênh cá nhân:", channelName);
     const channel = pusher.subscribe(channelName);
     
-    channel.bind("new-message", (newMessage: any) => {
-      console.log("📥 TIN NHẮN MỚI ĐÃ VỀ:", newMessage);
-      setMessages((prev) => [...prev, newMessage]);
-    });
+    const messageHandler = (newMessage: any) => {
+      console.log("📥 TỔNG ĐÀI BÁO TIN:", newMessage);
+      // BỘ LỌC UI: Chỉ hiển thị nếu tin nhắn thuộc về màn hình đang mở
+      if (
+        activeChatRef.current === newMessage.senderId || 
+        activeChatRef.current === newMessage.receiverId ||
+        (newMessage.conversationId && activeChatRef.current === newMessage.conversationId)
+      ) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMessage.id)) return prev;
+          return [...prev, newMessage];
+        });
+      } else {
+        console.log("Tin nhắn từ hộp thoại khác, đang chạy ngầm...");
+      }
+    };
 
-    return () => { pusher.unsubscribe(channelName); };
-  }, [currentUser, activeChat?.id]);
+    channel.bind("new-message", messageHandler);
+
+    return () => {
+      channel.unbind("new-message", messageHandler);
+      pusher.unsubscribe(channelName);
+    };
+  }, [currentUser]); // Khóa dependency: Chỉ chạy 1 lần duy nhất khi có user
 
   // Auto select active partner from search query parameter (?userId=XXXX)
   useEffect(() => {

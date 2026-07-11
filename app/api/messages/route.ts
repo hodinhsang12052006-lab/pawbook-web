@@ -222,9 +222,16 @@ export async function POST(req: Request) {
       conversationId: activeConversationId,
     };
 
-    // Trigger Pusher event in the background for real-time messaging updates
+    // Trigger Pusher: Bắn trực tiếp vào kênh cá nhân của Người Gửi và Người Nhận
     try {
-      await pusherServer.trigger(activeConversationId, "new-message", formattedMessage);
+      await pusherServer.trigger(userId, "new-message", formattedMessage);
+      if (partner) {
+        await pusherServer.trigger(partner.id, "new-message", formattedMessage);
+      }
+      // Fallback cho Group Chat
+      if (conversation.isGroup) {
+        await pusherServer.trigger(activeConversationId, "new-message", formattedMessage);
+      }
     } catch (pushErr) {
       console.error("Failed to trigger Pusher websocket event:", pushErr);
     }

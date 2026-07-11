@@ -903,7 +903,7 @@ function MessengerContent() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-slate-100">
       <Navbar />
       <Toaster position="top-center" />
 
@@ -959,11 +959,10 @@ function MessengerContent() {
         }
       `}</style>
 
-      <main className="flex-1 w-full h-[100dvh] md:h-[calc(100vh-64px)] overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-12 h-full overflow-hidden">
+      <main className="flex-1 flex overflow-hidden">
           
-          {/* Left Column: Conversations Sidebar (30% width, 4 cols) */}
-          <div className={`md:col-span-4 border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
+          {/* Left Column: Conversations Sidebar (30% width) */}
+          <div className={`w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
             {/* Search & Actions Header */}
             <div className="p-4 border-b border-slate-850 space-y-3 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -1193,8 +1192,8 @@ function MessengerContent() {
             </div>
           </div>
 
-          {/* Right Column: Chat window (70% width, 8 cols) */}
-          <div className={`md:col-span-8 flex flex-col h-full bg-slate-950/10 relative ${activeChat ? "flex" : "hidden md:flex"}`}>
+          {/* Right Column: Chat window */}
+          <div className={`flex-1 flex flex-col h-full bg-slate-900 relative ${activeChat ? "flex" : "hidden md:flex"}`}>
             {activeChat ? (
               <>
                 {/* Active Partner Header */}
@@ -1266,7 +1265,7 @@ function MessengerContent() {
                 </div>
 
                 {/* Chat Message Logs */}
-                <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
                   {activeConversation.length === 0 ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!
@@ -1826,7 +1825,6 @@ function MessengerContent() {
               </div>
             )}
           </div>
-        </div>
       </main>
 
       {/* CREATE GROUP MODAL */}

@@ -4,11 +4,14 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import Pusher from "pusher";
 
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID as string,
-  key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY as string,
-  secret: process.env.PUSHER_SECRET as string,
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER as string,
+// BỘ LỌC CHỐNG LỖI COPY-PASTE (Xóa ngoặc kép và khoảng trắng)
+const clean = (val?: string) => (val || "").replace(/['"]/g, "").trim();
+
+const pusherServer = new Pusher({
+  appId: clean(process.env.PUSHER_APP_ID),
+  key: clean(process.env.NEXT_PUBLIC_PUSHER_APP_KEY),
+  secret: clean(process.env.PUSHER_SECRET),
+  cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER),
   useTLS: true,
 });
 
@@ -230,24 +233,20 @@ export async function POST(req: Request) {
       conversationId: activeConversationId,
     };
 
-    // 🚀 BẮN TÍN HIỆU REAL-TIME BẰNG PUSHER
+    // 🚀 BẮN TÍN HIỆU REAL-TIME
     try {
       const senderId = String(userId);
       const receiverId = partner ? String(partner.id) : "";
       
-      console.log(`🚀 [BACKEND] Đang bắn Pusher tới kênh: ${senderId} và ${receiverId}`);
+      // Bắn cho kênh người gửi
+      await pusherServer.trigger(senderId, "new-message", formattedMessage);
       
-      // Bắn cho người gửi (để tab khác của chính họ cũng nhận được)
-      await pusher.trigger(senderId, "new-message", formattedMessage);
-      
-      // Bắn cho người nhận
+      // Bắn cho kênh người nhận (nếu có)
       if (receiverId) {
-        await pusher.trigger(receiverId, "new-message", formattedMessage);
+        await pusherServer.trigger(receiverId, "new-message", formattedMessage);
       }
-      
-      console.log("✅ [BACKEND] Bắn Pusher THÀNH CÔNG!");
     } catch (pusherError) {
-      console.error("❌ [BACKEND] LỖI BẮN PUSHER SẤP MẶT:", pusherError);
+      console.error("❌ PUSHER ERROR [Backend]:", pusherError);
     }
 
     return NextResponse.json(formattedMessage, { status: 201 });

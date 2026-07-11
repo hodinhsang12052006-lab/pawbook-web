@@ -360,9 +360,13 @@ function MessengerContent() {
     }
   }, [systemUsers, searchUserId, activeChat]);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   // Scroll to chat log bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
   }, [messages, activeChat]);
 
   // Calling seconds timer hook
@@ -1262,7 +1266,7 @@ function MessengerContent() {
                 </div>
 
                 {/* Chat Message Logs */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
+                <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
                   {activeConversation.length === 0 ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!

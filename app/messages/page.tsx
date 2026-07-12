@@ -506,7 +506,13 @@ function MessengerContent() {
       }, 300);
 
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          { urls: "stun:stun2.l.google.com:19302" },
+          { urls: "stun:stun3.l.google.com:19302" },
+          { urls: "stun:stun4.l.google.com:19302" },
+        ]
       });
       peerConnectionRef.current = pc;
 
@@ -581,7 +587,13 @@ function MessengerContent() {
       }, 300);
 
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          { urls: "stun:stun2.l.google.com:19302" },
+          { urls: "stun:stun3.l.google.com:19302" },
+          { urls: "stun:stun4.l.google.com:19302" },
+        ]
       });
       peerConnectionRef.current = pc;
 
@@ -641,9 +653,7 @@ function MessengerContent() {
         console.log(`[Pusher Call] Call answer accepted and returned to caller ${callerInfo?.id}`);
       }
 
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = stream;
-      }
+
       toast.success("Cuộc gọi đã kết nối thành công! 📞");
 
     } catch (err: any) {

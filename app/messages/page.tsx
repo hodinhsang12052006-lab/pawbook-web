@@ -524,9 +524,11 @@ function MessengerContent() {
         const streams = event.streams;
         if (remoteVideoRef.current && streams[0]) {
           remoteVideoRef.current.srcObject = streams[0];
-          remoteVideoRef.current.play().catch((err) => {
-            console.log("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
-          });
+          setTimeout(() => {
+            remoteVideoRef.current?.play().catch((err) => {
+              console.log("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
+            });
+          }, 100);
         }
       };
 
@@ -608,9 +610,11 @@ function MessengerContent() {
         const streams = event.streams;
         if (remoteVideoRef.current && streams[0]) {
           remoteVideoRef.current.srcObject = streams[0];
-          remoteVideoRef.current.play().catch((err) => {
-            console.warn("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
-          });
+          setTimeout(() => {
+            remoteVideoRef.current?.play().catch((err) => {
+              console.warn("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
+            });
+          }, 100);
         }
       };
 

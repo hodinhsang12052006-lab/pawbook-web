@@ -359,8 +359,8 @@ function MessengerContent() {
 
       if (localStreamRef.current) {
         setTimeout(() => {
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = localStreamRef.current;
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = localStreamRef.current;
           }
         }, 500);
       }

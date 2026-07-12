@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense, startTransition } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { BitpawMiniApp } from "./BitpawMiniApp";
 import {
@@ -316,6 +316,11 @@ function MessengerContent() {
           return [...safePrev, safeMsg];
         });
       }
+
+      // BỌC START TRANSITION CHO ROUTER REFRESH ĐỂ CHỐNG LỖI 310
+      startTransition(() => {
+        router.refresh();
+      });
     };
 
     const incomingCallHandler = (data: any) => {
@@ -406,12 +411,19 @@ function MessengerContent() {
       }
     };
 
+    const conversationUpdateHandler = () => {
+      startTransition(() => {
+        router.refresh();
+      });
+    };
+
     channel.bind("new-message", messageHandler);
     channel.bind("message-updated", updateHandler);
     channel.bind("incoming-call", incomingCallHandler);
     channel.bind("call-accepted", callAcceptedHandler);
     channel.bind("call-rejected", callRejectedHandler);
     channel.bind("ice-candidate", iceCandidateHandler);
+    channel.bind("conversation-update", conversationUpdateHandler);
 
     return () => {
       console.log("🔌 [PUSHER] Tắt ống nghe kênh:", channelName);
@@ -421,6 +433,7 @@ function MessengerContent() {
       channel.unbind("call-accepted", callAcceptedHandler);
       channel.unbind("call-rejected", callRejectedHandler);
       channel.unbind("ice-candidate", iceCandidateHandler);
+      channel.unbind("conversation-update", conversationUpdateHandler);
       pusher.unsubscribe(channelName);
     };
   }, [currentUser]); // Khóa dependency chỉ gọi 1 lần khi có User

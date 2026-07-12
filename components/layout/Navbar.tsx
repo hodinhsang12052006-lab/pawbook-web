@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, startTransition } from "react";
 import { Search, Upload, Bell, MessageSquare, Menu, Check, Trash2, ShieldAlert, Coins, Plus } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import toast from "react-hot-toast";
@@ -127,12 +127,18 @@ export default function Navbar() {
     channel.bind("new-booking", (data: any) => {
       toast.success(`🔔 Bạn có một yêu cầu đặt dịch vụ mới!`);
       fetchNotifications();
+      startTransition(() => {
+        router.refresh();
+      });
     });
 
     // Listen to booking-updated
     channel.bind("booking-updated", (data: any) => {
       toast.success(`✅ Đơn hàng của bạn đã được nhận!`);
       fetchNotifications();
+      startTransition(() => {
+        router.refresh();
+      });
     });
 
     return () => {
@@ -173,6 +179,9 @@ export default function Navbar() {
           );
         }
       }
+      startTransition(() => {
+        router.refresh();
+      });
     };
 
     channel.bind("new-message", newMessageHandler);

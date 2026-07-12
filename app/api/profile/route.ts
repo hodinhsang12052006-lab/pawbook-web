@@ -10,15 +10,14 @@ export async function GET(req: NextRequest) {
     const targetUserId = searchParams.get("id");
 
     const session = await getServerSession(authOptions);
+    const userId = targetUserId || (session?.user as any)?.id;
 
-    if (!session || !session.user) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Vui lòng đăng nhập để xem hồ sơ." },
         { status: 401 }
       );
     }
-
-    const userId = targetUserId || (session.user as any).id;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

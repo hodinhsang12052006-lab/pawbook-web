@@ -53,20 +53,20 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
   // No internal getServerSession or useSession redirects are present on the profile client view.
   const [profile, setProfile] = useState<any>({
     id: "",
-    name: "Nguyễn Văn A",
-    role: "EMPLOYER",
-    bio: "Senior Fullstack Developer | Blockchain & MMO Automation Architect. Đam mê xây dựng các hệ thống tự động hoá và tối ưu hóa trải nghiệm người dùng.",
-    skills: "React / Next.js, TypeScript, Node.js, Prisma, Docker, Automation, Growth Hacking",
-    location: "Hà Nội, Việt Nam",
-    website: "https://github.com/nguyenvana",
-    joinDate: "Tháng 6, 2026",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-    cover_image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80",
+    name: "",
+    role: "",
+    bio: "",
+    skills: "",
+    location: "",
+    website: "",
+    joinDate: "",
+    avatarUrl: "",
+    cover_image: "",
     phone: "",
     address: "",
     cv_url: "",
-    pawCoin: 150,
-    reputation: 10,
+    pawCoin: 0,
+    reputation: 0,
     trustScore: 5.0,
     isVerified: false,
     jobs: [],
@@ -588,11 +588,15 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
         <div className="rounded-2xl border border-slate-800 bg-slate-900/20 overflow-hidden backdrop-blur-md">
           {/* Cover Photo */}
           <div className="relative h-48 sm:h-64 w-full bg-slate-900">
-            <img
-              src={profile.cover_image || defaultCover}
-              alt="Cover background"
-              className="h-full w-full object-cover opacity-80"
-            />
+            {loading ? (
+              <div className="h-full w-full bg-slate-850 animate-pulse" />
+            ) : (
+              <img
+                src={profile.cover_image || defaultCover}
+                alt="Cover background"
+                className="h-full w-full object-cover opacity-80"
+              />
+            )}
           </div>
 
           {/* Profile Details Container */}
@@ -661,17 +665,25 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-1.5">
-                    <span>{profile.name}</span>
-                    {profile.isVerified && (
-                      <span className="flex items-center gap-1">
-                        <BadgeCheck className="h-5 w-5 text-blue-500 fill-blue-500/20" />
-                        <span className="text-blue-400 text-sm" title="Tài khoản đã xác minh">💎</span>
-                      </span>
+                    {loading ? (
+                      <div className="h-7 w-48 bg-slate-850 rounded animate-pulse" />
+                    ) : (
+                      <>
+                        <span>{profile.name || "Thành viên PawBook"}</span>
+                        {profile.isVerified && (
+                          <span className="flex items-center gap-1">
+                            <BadgeCheck className="h-5 w-5 text-blue-500 fill-blue-500/20" />
+                            <span className="text-blue-400 text-sm" title="Tài khoản đã xác minh">💎</span>
+                          </span>
+                        )}
+                      </>
                     )}
                   </h1>
-                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/20">
-                    {profile.role}
-                  </span>
+                  {!loading && profile.role && (
+                    <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/20 animate-fadeIn">
+                      {profile.role}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-blue-400 mt-1 font-medium">Hồ sơ thành viên PawBook</p>
                 
@@ -723,36 +735,47 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
               </div>
 
               {/* Bio description */}
-              <p className="text-xs sm:text-sm text-slate-350 leading-relaxed max-w-3xl whitespace-pre-line">
-                {profile.bio || "Thành viên này chưa điền tiểu sử giới thiệu."}
-              </p>
+              {loading ? (
+                <div className="space-y-2 max-w-xl">
+                  <div className="h-4 bg-slate-850 rounded animate-pulse w-full"></div>
+                  <div className="h-4 bg-slate-850 rounded animate-pulse w-5/6"></div>
+                </div>
+              ) : (
+                <p className="text-xs sm:text-sm text-slate-350 leading-relaxed max-w-3xl whitespace-pre-line animate-fadeIn">
+                  {profile.bio || "Thành viên này chưa điền tiểu sử giới thiệu."}
+                </p>
+              )}
 
               {/* Extra details (Location, website, Calendar join date, phone & address) */}
-              <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-slate-850/60 text-xs text-slate-450">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-slate-500" />
-                  {profile.address || profile.location || "Chưa cập nhật địa chỉ"}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-4 w-4 text-slate-500" />
-                  {profile.phone || "Chưa cập nhật SĐT"}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Link2 className="h-4 w-4 text-slate-500" />
-                  <a
-                    href={profile.website || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-blue-400 hover:underline transition-colors"
-                  >
-                    {profile.website ? profile.website.replace("https://", "") : "github.com/nguyenvana"}
-                  </a>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-slate-500" />
-                  Đã gia nhập {profile.joinDate || "Tháng 6, 2026"}
-                </span>
-              </div>
+              {loading ? (
+                <div className="h-4 bg-slate-850 rounded animate-pulse w-1/2 mt-4" />
+              ) : (
+                <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-slate-850/60 text-xs text-slate-450 animate-fadeIn">
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-slate-500" />
+                    {profile.address || profile.location || "Chưa cập nhật địa chỉ"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Phone className="h-4 w-4 text-slate-500" />
+                    {profile.phone || "Chưa cập nhật SĐT"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Link2 className="h-4 w-4 text-slate-500" />
+                    <a
+                      href={profile.website || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-blue-400 hover:underline transition-colors"
+                    >
+                      {profile.website ? profile.website.replace("https://", "") : "github.com"}
+                    </a>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-slate-500" />
+                    Đã gia nhập {profile.joinDate || "Tháng 6, 2026"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

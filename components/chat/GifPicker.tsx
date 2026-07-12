@@ -3,8 +3,7 @@ import { useState } from 'react';
 import { GiphyFetch } from '@giphy/js-fetch-api';
 import { Grid } from '@giphy/react-components';
 
-const apiKey = "PFGXbrldYpvja6pFa2tO1gepJ9efvMca";
-const gf = new GiphyFetch(apiKey); 
+const gf = new GiphyFetch('PFGXbrldYpvja6pFa2tO1gepJ9efvMca'); 
 
 export default function GifPicker({ onGifClick }: { onGifClick: (gifUrl: string) => void }) {
   const [searchTerm, setSearchTerm] = useState('');

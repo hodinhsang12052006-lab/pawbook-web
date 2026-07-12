@@ -312,7 +312,21 @@ function MessengerContent() {
       }
     };
 
+    const updateHandler = (updatedMessage: any) => {
+      console.log("🔄 [PUSHER] Có tin nhắn được thả icon/update:", updatedMessage);
+      setMessages((prev) => 
+        prev.map((msg) => (msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg))
+      );
+      if (updatedMessage.reactions) {
+        setMessageReactions((prev) => ({
+          ...prev,
+          [updatedMessage.id]: updatedMessage.reactions
+        }));
+      }
+    };
+
     channel.bind("new-message", messageHandler);
+    channel.bind("message-updated", updateHandler);
     channel.bind("incoming-call", incomingCallHandler);
     channel.bind("call-accepted", callAcceptedHandler);
     channel.bind("call-rejected", callRejectedHandler);
@@ -321,6 +335,7 @@ function MessengerContent() {
     return () => {
       console.log("🔌 [PUSHER] Tắt ống nghe kênh:", channelName);
       channel.unbind("new-message", messageHandler);
+      channel.unbind("message-updated", updateHandler);
       channel.unbind("incoming-call", incomingCallHandler);
       channel.unbind("call-accepted", callAcceptedHandler);
       channel.unbind("call-rejected", callRejectedHandler);
@@ -819,15 +834,24 @@ function MessengerContent() {
   const handleAddReaction = (msgId: string, emoji: string) => {
     setMessageReactions((prev) => {
       const existing = prev[msgId] || [];
-      if (existing.includes(emoji)) {
-        return {
-          ...prev,
-          [msgId]: existing.filter((e) => e !== emoji)
-        };
-      }
+      const updated = existing.includes(emoji)
+        ? existing.filter((e) => e !== emoji)
+        : [...existing, emoji];
+
+      fetch("/api/messages/react", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: msgId,
+          emoji,
+          reactions: updated,
+          partnerId: activeChat?.id,
+        }),
+      }).catch((err) => console.error("Reaction sync error:", err));
+
       return {
         ...prev,
-        [msgId]: [...existing, emoji]
+        [msgId]: updated
       };
     });
   };

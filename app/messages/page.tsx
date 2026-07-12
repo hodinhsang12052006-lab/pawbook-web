@@ -169,6 +169,7 @@ function MessengerContent() {
 
   const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
+  const pendingCandidatesRef = useRef<any[]>([]);
 
   const activeChatRef = useRef(activeChat?.id);
   useEffect(() => {
@@ -352,6 +353,17 @@ function MessengerContent() {
         try {
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.signal));
           console.log("WebRTC Peer Connection remote description answer set successfully.");
+
+          // Drain queued pending candidates
+          for (const candidate of pendingCandidatesRef.current) {
+            try {
+              await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+              console.log("🔌 Drained queued ICE candidate successfully on caller.");
+            } catch (iceErr) {
+              console.error("Error adding queued ICE candidate on caller:", iceErr);
+            }
+          }
+          pendingCandidatesRef.current = [];
         } catch (error) {
           console.error("Error setting remote description on caller:", error);
         }
@@ -391,7 +403,12 @@ function MessengerContent() {
       console.log("📞 [PUSHER] Nhận ICE Candidate:", data);
       if (peerConnectionRef.current && data.signal) {
         try {
-          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.signal));
+          if (peerConnectionRef.current.remoteDescription) {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.signal));
+          } else {
+            console.log("⏳ Remote description is not set yet. Queueing ICE candidate.");
+            pendingCandidatesRef.current.push(data.signal);
+          }
         } catch (err) {
           console.error("Error adding ICE candidate:", err);
         }
@@ -643,6 +660,18 @@ function MessengerContent() {
 
       // Đã CHUẨN HÓA thứ tự async/await của luồng nạp Offer -> tạo Answer
       await pc.setRemoteDescription(new RTCSessionDescription(activeSignal));
+
+      // Drain queued pending candidates
+      for (const candidate of pendingCandidatesRef.current) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log("🔌 Drained queued ICE candidate successfully on receiver.");
+        } catch (iceErr) {
+          console.error("Error adding queued ICE candidate on receiver:", iceErr);
+        }
+      }
+      pendingCandidatesRef.current = [];
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 

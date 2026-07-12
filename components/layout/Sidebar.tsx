@@ -21,7 +21,15 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const session = await res.json();
-          setSessionUser(session.user);
+          if (session?.user?.id) {
+            const profileRes = await fetch(`/api/profile?id=${session.user.id}`);
+            if (profileRes.ok) {
+              const profileData = await profileRes.json();
+              setSessionUser(profileData);
+              return;
+            }
+          }
+          setSessionUser(session?.user || null);
         }
       } catch (err) {
         console.error(err);
@@ -30,18 +38,18 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
     loadSession();
   }, []);
 
-  const userName = currentUser?.name || sessionUser?.name || "Khách ghé chơi";
-  const userRole = currentUser?.role || sessionUser?.role || "GUEST";
-  const userAvatar = currentUser?.avatarUrl || currentUser?.image || sessionUser?.avatarUrl || sessionUser?.image || "/images/placeholder.jpg";
-  const userBio = currentUser ? (currentUser.role === "EMPLOYER" ? "Chủ cửa hàng dịch vụ" : "Thành viên PawBook") : (sessionUser ? (sessionUser.role === "EMPLOYER" ? "Chủ cửa hàng dịch vụ" : "Thành viên PawBook") : "Thành viên PawBook");
+  const userName = currentUser?.name || sessionUser?.name || "Thành viên";
+  const userRole = currentUser?.role || sessionUser?.role || "USER";
+  const userAvatar = currentUser?.avatarUrl || currentUser?.image || sessionUser?.avatarUrl || sessionUser?.image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80";
+  const userBio = currentUser?.bio || sessionUser?.bio || "Thành viên PawBook";
 
   const menuItems = [
     { id: "feed", label: "Bảng tin", icon: Home, route: "/?tab=feed" },
     { id: "jobs", label: "Tuyển dụng & Việc làm", icon: Briefcase, route: "/?tab=jobs" },
     { id: "hr", label: "Quản lý HR", icon: Settings, route: "/?tab=hr" },
     { id: "services", label: "Dịch vụ & Cửa hàng", icon: Store, route: "/services" },
-    { id: "gigs", label: "⚡ Chợ Đấu Thầu", icon: Zap, route: "/gigs" },
-    { id: "blogs", label: "📝 Blog & Chia sẻ", icon: BookOpen, route: "/blogs" },
+    { id: "gigs", label: "Chợ Đấu Thầu", icon: Zap, route: "/gigs" },
+    { id: "blogs", label: "Blog & Chia sẻ", icon: BookOpen, route: "/blogs" },
   ];
 
   const handleNavigation = (id: string, route: string) => {

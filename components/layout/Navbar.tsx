@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Upload, Bell, MessageSquare, Menu, Check, Trash2, ShieldAlert, Coins, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
 
@@ -18,6 +18,8 @@ interface NotificationType {
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
+  const [hasUnread, setHasUnread] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -107,6 +109,47 @@ export default function Navbar() {
       pusher.unsubscribe(channelName);
     };
   }, [sessionUser]);
+
+  // Reset unread message indicator when navigating to chat page
+  useEffect(() => {
+    if (pathname && pathname.startsWith("/messages")) {
+      setHasUnread(false);
+    }
+  }, [pathname]);
+
+  // Global Real-time Message notifications listener via Pusher
+  useEffect(() => {
+    if (!sessionUser?.id) return;
+
+    const pusher = getPusherClient();
+    if (!pusher) return;
+
+    const channelName = String(sessionUser.id).trim();
+    const channel = pusher.subscribe(channelName);
+
+    const newMessageHandler = (message: any) => {
+      // If the incoming message is not sent by the logged-in user, and they are not on /messages
+      if (message.senderId !== sessionUser.id) {
+        if (!pathname || !pathname.startsWith("/messages")) {
+          setHasUnread(true);
+          toast.success(
+            `Tin nhắn mới từ ${message.sender?.name || "ai đó"}: ${message.content.substring(0, 20)}...`,
+            {
+              icon: "💬",
+              position: "top-right",
+            }
+          );
+        }
+      }
+    };
+
+    channel.bind("new-message", newMessageHandler);
+
+    return () => {
+      channel.unbind("new-message", newMessageHandler);
+      pusher.unsubscribe(channelName);
+    };
+  }, [sessionUser?.id, pathname]);
 
   // Global search suggestions debounce effect
   useEffect(() => {
@@ -449,11 +492,19 @@ export default function Navbar() {
                 </button>
 
                 <button 
-                  onClick={() => router.push("/messages")}
-                  className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  onClick={() => {
+                    setHasUnread(false);
+                    router.push("/messages");
+                  }}
+                  className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors relative"
                   title="Messenger"
                 >
-                  <MessageSquare className="h-4.5 w-4.5" />
+                  <div className="relative">
+                    <MessageSquare className="h-4.5 w-4.5" />
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-slate-950 animate-pulse"></span>
+                    )}
+                  </div>
                 </button>
               </div>
 

@@ -232,7 +232,21 @@ function MessengerContent() {
         (newMessage.conversationId && activeChatRef.current === newMessage.conversationId)
       ) {
         setMessages((prev) => {
+          // Tránh trùng lặp ID thật
           if (prev.some((m) => m.id === newMessage.id)) return prev;
+
+          // Kiểm tra xem có tin nhắn Optimistic tương ứng gửi bởi chính mình không
+          const isFromSelf = newMessage.senderId === currentUser.id;
+          if (isFromSelf) {
+            const optimisticIndex = prev.findIndex(
+              (m) => m.id.startsWith("optimistic-") && m.content === newMessage.content
+            );
+            if (optimisticIndex > -1) {
+              // Thay thế tin nhắn optimistic bằng tin nhắn thật từ Pusher
+              return prev.map((m, idx) => (idx === optimisticIndex ? newMessage : m));
+            }
+          }
+
           return [...prev, newMessage];
         });
       }

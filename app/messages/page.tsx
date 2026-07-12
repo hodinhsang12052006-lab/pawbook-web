@@ -252,8 +252,9 @@ function MessengerContent() {
         (newMessage.conversationId && activeChatRef.current === newMessage.conversationId)
       ) {
         setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
           // Tránh trùng lặp ID thật
-          if (prev.some((m) => m.id === newMessage.id)) return prev;
+          if (safePrev.some((m) => m.id === newMessage.id)) return safePrev;
 
           const safeMsg = {
             ...newMessage,
@@ -263,16 +264,16 @@ function MessengerContent() {
           // Kiểm tra xem có tin nhắn Optimistic tương ứng gửi bởi chính mình không
           const isFromSelf = newMessage.senderId === currentUser?.id;
           if (isFromSelf) {
-            const optimisticIndex = prev.findIndex(
+            const optimisticIndex = safePrev.findIndex(
               (m) => m.id.startsWith("optimistic-") && m.content === newMessage.content
             );
             if (optimisticIndex > -1) {
               // Thay thế tin nhắn optimistic bằng tin nhắn thật từ Pusher
-              return prev.map((m, idx) => (idx === optimisticIndex ? safeMsg : m));
+              return safePrev.map((m, idx) => (idx === optimisticIndex ? safeMsg : m));
             }
           }
 
-          return [...prev, safeMsg];
+          return [...safePrev, safeMsg];
         });
       }
     };
@@ -353,9 +354,10 @@ function MessengerContent() {
 
     const updateHandler = (updatedMessage: any) => {
       console.log("🔄 [PUSHER] Có tin nhắn được thả icon/update:", updatedMessage);
-      setMessages((prev) => 
-        prev.map((msg) => (msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg))
-      );
+      setMessages((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return safePrev.map((msg) => (msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg));
+      });
       if (updatedMessage.reactions) {
         setMessageReactions((prev) => ({
           ...prev,
@@ -724,9 +726,10 @@ function MessengerContent() {
     };
 
     // 1. Cập nhật UI lập tức (Optimistic UI)
-    setMessages((prev) => [...prev, tempMessage]);
-
-
+    setMessages((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      return [...safePrev, tempMessage];
+    });
 
     // 3. API lưu Database chạy ngầm
     try {
@@ -739,7 +742,10 @@ function MessengerContent() {
       const data = await res.json();
       if (!res.ok) {
         // Nếu API lỗi, xóa tin nhắn ảo đi
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return safePrev.filter((m) => m.id !== tempId);
+        });
         toast.error(data.error || "Gửi tin nhắn thất bại.");
       } else {
         // Cập nhật lại ID chuẩn từ DB
@@ -747,10 +753,16 @@ function MessengerContent() {
           ...data,
           createdAt: new Date(data.createdAt).toISOString()
         };
-        setMessages((prev) => prev.map((m) => (m.id === tempId ? safeData : m)));
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return safePrev.map((m) => (m.id === tempId ? safeData : m));
+        });
       }
     } catch (err) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setMessages((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return safePrev.filter((m) => m.id !== tempId);
+      });
       toast.error("Lỗi kết nối mạng.");
     }
   };
@@ -1405,12 +1417,12 @@ function MessengerContent() {
               {/* Chat Message Logs - Đã KHÓA CHẶT THẺ CHA BẰNG FLEX ĐỂ CUỘN */}
               <div className="flex-1 flex flex-col h-0 min-h-0 bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 custom-scrollbar scroll-smooth">
-                  {activeConversation.length === 0 ? (
+                  {(!activeConversation || activeConversation.length === 0) ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!
                     </div>
                   ) : (
-                    activeConversation.map((msg: any, idx: number) => {
+                    (activeConversation || []).map((msg: any, idx: number) => {
                       const isSelf = msg.senderId === "self" || msg.senderId === currentUser?.id;
                       const senderAvatar = msg.sender?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || "U")}&background=2563eb&color=ffffff&bold=true`;
 

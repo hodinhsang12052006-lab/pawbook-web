@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 
 export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
-    console.error("Global Error boundary caught an error in messages:", error);
+    console.error("Global Error boundary caught an error:", error);
   }, [error]);
 
   return (

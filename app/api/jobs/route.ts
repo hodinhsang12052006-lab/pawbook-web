@@ -61,7 +61,16 @@ export async function GET() {
       }
     });
 
-    const mergedJobs = [...jobs, ...staticJobs];
+    const safeDbJobs = jobs.map((job) => ({
+      ...job,
+      createdAt: job.createdAt.toISOString(),
+      reviews: job.reviews.map((rev) => ({
+        ...rev,
+        createdAt: rev.createdAt.toISOString(),
+      })),
+    }));
+
+    const mergedJobs = [...safeDbJobs, ...staticJobs];
     return NextResponse.json(mergedJobs);
   } catch (error: any) {
     console.error("Fetch jobs API error:", error);

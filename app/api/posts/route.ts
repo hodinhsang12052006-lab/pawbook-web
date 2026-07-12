@@ -29,7 +29,12 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json(posts);
+    const safePosts = posts.map((post) => ({
+      ...post,
+      createdAt: post.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(safePosts);
   } catch (error: any) {
     console.error("Fetch posts API error:", error);
     return NextResponse.json(
@@ -90,7 +95,12 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(newPost, { status: 201 });
+    const safeNewPost = {
+      ...newPost,
+      createdAt: newPost.createdAt.toISOString(),
+    };
+
+    return NextResponse.json(safeNewPost, { status: 201 });
   } catch (error: any) {
     console.error("Create post API error:", error);
     return NextResponse.json(

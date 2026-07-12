@@ -51,26 +51,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
   const isOwnProfile = !resolvedUid || (currentUser && currentUser.id === resolvedUid);
 
   // No internal getServerSession or useSession redirects are present on the profile client view.
-  const [profile, setProfile] = useState<any>({
-    id: "",
-    name: "",
-    role: "",
-    bio: "",
-    skills: "",
-    location: "",
-    website: "",
-    joinDate: "",
-    avatarUrl: "",
-    cover_image: "",
-    phone: "",
-    address: "",
-    cv_url: "",
-    pawCoin: 0,
-    reputation: 0,
-    trustScore: 5.0,
-    isVerified: false,
-    jobs: [],
-  });
+  const [profile, setProfile] = useState<any | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -184,10 +165,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setProfile((prev: any) => ({
-          ...prev,
-          ...data,
-        }));
+        setProfile(data);
         setEditForm({
           name: data.name || "",
           bio: data.bio || "",
@@ -559,6 +537,44 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       toast.error("Lỗi kết nối khi đẩy Top bài đăng.");
     }
   };
+
+  if (loading || !profile) {
+    return (
+      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 select-none">
+        <Navbar />
+        <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+          {/* Skeleton Card Header */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/20 overflow-hidden backdrop-blur-md animate-pulse">
+            <div className="h-48 sm:h-64 w-full bg-slate-850" />
+            <div className="relative px-6 pb-6 pt-16 sm:pt-20">
+              <div className="absolute top-0 left-6 -translate-y-1/2 h-24 w-24 sm:h-32 sm:w-32 rounded-2xl border-4 border-slate-950 bg-slate-800" />
+              <div className="space-y-4">
+                <div className="h-6 w-48 bg-slate-800 rounded" />
+                <div className="h-4 w-32 bg-slate-850 rounded" />
+                <div className="space-y-2 max-w-xl">
+                  <div className="h-4 bg-slate-800 rounded w-full" />
+                  <div className="h-4 bg-slate-850 rounded w-5/6" />
+                </div>
+                <div className="h-4 bg-slate-800 rounded w-1/2 pt-2" />
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+            <div className="lg:col-span-5 space-y-6 animate-pulse">
+              <div className="h-48 rounded-2xl border border-slate-800 bg-slate-900/20 p-6" />
+              <div className="h-40 rounded-2xl border border-slate-800 bg-slate-900/20 p-6" />
+            </div>
+            <div className="lg:col-span-7 space-y-6 animate-pulse">
+              <div className="h-12 rounded-xl bg-slate-900/30 border border-slate-850" />
+              <div className="h-96 rounded-2xl border border-slate-800 bg-slate-900/20 p-6" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Split skill keywords helper
   const skillsArray: string[] = profile.skills

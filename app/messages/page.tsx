@@ -213,11 +213,51 @@ function MessengerContent() {
       }
       const data = await res.json();
       const safeMsgs = (data.messages || []).map((m: any) => ({
-        ...m,
-        createdAt: new Date(m.createdAt).toISOString()
+        id: m.id,
+        content: m.content || m.body || "",
+        type: m.type || "TEXT",
+        senderId: m.senderId,
+        receiverId: m.receiverId || "",
+        createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+        sender: m.sender ? {
+          id: m.sender.id,
+          name: m.sender.name,
+          avatarUrl: m.sender.avatarUrl || null,
+          role: m.sender.role,
+        } : { id: "", name: "User", role: "USER" },
+        receiver: m.receiver ? {
+          id: m.receiver.id,
+          name: m.receiver.name,
+          avatarUrl: m.receiver.avatarUrl || null,
+          role: m.receiver.role,
+        } : { id: "", name: "User", role: "USER" },
+        conversationId: m.conversationId,
       }));
+
+      const safeConvs = (data.conversations || []).map((conv: any) => ({
+        id: conv.id,
+        isGroup: conv.isGroup || false,
+        name: conv.name || null,
+        createdAt: conv.createdAt ? new Date(conv.createdAt).toISOString() : new Date().toISOString(),
+        participants: (conv.participants || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          avatarUrl: p.avatarUrl || null,
+          role: p.role,
+          bio: p.bio || null,
+        })),
+        messages: (conv.messages || []).map((m: any) => ({
+          id: m.id,
+          body: m.body,
+          type: m.type || "TEXT",
+          senderId: m.senderId,
+          conversationId: m.conversationId,
+          createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+        })),
+      }));
+
       setMessages(safeMsgs);
-      setConversations(data.conversations || []);
+      setConversations(safeConvs);
       setSystemUsers(data.users || []);
     } catch (err: any) {
       setError(err.message || "Đã xảy ra lỗi.");

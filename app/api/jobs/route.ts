@@ -62,10 +62,31 @@ export async function GET() {
     });
 
     const safeDbJobs = jobs.map((job) => ({
-      ...job,
+      id: job.id,
+      title: job.title,
+      description: job.description,
+      salary: job.salary,
+      location: "",
+      companyName: job.companyName,
+      priceRange: (job as any).priceRange || null,
+      vehicleInfo: (job as any).vehicleInfo || null,
+      isEmergency: (job as any).isEmergency || false,
+      workType: (job as any).workType || "ONCE",
+      isBoosted: job.isBoosted,
       createdAt: job.createdAt.toISOString(),
-      reviews: job.reviews.map((rev) => ({
-        ...rev,
+      employerId: job.employerId,
+      employer: job.employer ? {
+        id: job.employer.id,
+        name: job.employer.name,
+        avatarUrl: job.employer.avatarUrl,
+        isVerified: job.employer.isVerified,
+        reputation: job.employer.reputation,
+        trustScore: job.employer.trustScore,
+      } : null,
+      reviews: (job.reviews || []).map((rev) => ({
+        id: rev.id,
+        rating: rev.rating,
+        content: rev.content,
         createdAt: rev.createdAt.toISOString(),
       })),
     }));

@@ -70,11 +70,30 @@ export async function GET() {
 
     // Ensure all conversations and nested messages are serialized with safe string dates
     const safeConversations = conversations.map((conv) => ({
-      ...conv,
+      id: conv.id,
+      isGroup: conv.isGroup,
+      name: conv.name,
       createdAt: conv.createdAt.toISOString(),
+      participants: conv.participants.map((p) => ({
+        id: p.id,
+        name: p.name,
+        avatarUrl: p.avatarUrl,
+        role: p.role,
+        bio: p.bio,
+      })),
       messages: conv.messages.map((msg) => ({
-        ...msg,
+        id: msg.id,
+        body: msg.body,
+        type: msg.type,
+        senderId: msg.senderId,
+        conversationId: msg.conversationId,
         createdAt: msg.createdAt.toISOString(),
+        sender: msg.sender ? {
+          id: msg.sender.id,
+          name: msg.sender.name,
+          avatarUrl: msg.sender.avatarUrl,
+          role: msg.sender.role,
+        } : null,
       })),
     }));
 

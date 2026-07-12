@@ -24,11 +24,43 @@ export default function Home() {
             const userRes = await fetch(`/api/profile?id=${session.user.id}`);
             if (userRes.ok) {
               const userData = await userRes.json();
-              setCurrentUser(userData);
+              const safeUser = {
+                id: userData.id,
+                name: userData.name,
+                email: userData.email,
+                role: userData.role,
+                avatarUrl: userData.avatarUrl || null,
+                bio: userData.bio || null,
+                phone: userData.phone || null,
+                address: userData.address || null,
+                cover_image: userData.cover_image || null,
+                cv_url: userData.cv_url || null,
+                skills: userData.skills || null,
+                reputation: userData.reputation || 0,
+                trustScore: userData.trustScore || 5.0,
+                isVerified: userData.isVerified || false,
+                pawCoin: userData.pawCoin || 0,
+                jobs: (userData.jobs || []).map((j: any) => ({
+                  id: j.id,
+                  title: j.title,
+                  companyName: j.companyName,
+                  salary: j.salary,
+                  niche: j.niche,
+                  createdAt: j.createdAt ? new Date(j.createdAt).toISOString() : new Date().toISOString(),
+                })),
+              };
+              setCurrentUser(safeUser);
               return;
             }
           }
-          setCurrentUser(session?.user || null);
+          const safeSessionUser = session?.user ? {
+            id: session.user.id,
+            name: session.user.name || "User",
+            email: session.user.email || "",
+            role: (session.user as any).role || "USER",
+            avatarUrl: session.user.image || null,
+          } : null;
+          setCurrentUser(safeSessionUser);
         }
       } catch (err) {
         console.error("Failed to load user:", err);

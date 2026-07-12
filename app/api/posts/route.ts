@@ -30,8 +30,20 @@ export async function GET(req: Request) {
     });
 
     const safePosts = posts.map((post) => ({
-      ...post,
+      id: post.id,
+      content: post.content,
+      mediaType: post.mediaType,
+      mediaUrl: post.mediaUrl,
+      authorId: post.authorId,
       createdAt: post.createdAt.toISOString(),
+      author: post.author ? {
+        id: post.author.id,
+        name: post.author.name,
+        email: post.author.email,
+        avatarUrl: post.author.avatarUrl,
+        role: post.author.role,
+        bio: post.author.bio,
+      } : null,
     }));
 
     return NextResponse.json(safePosts);
@@ -96,8 +108,20 @@ export async function POST(req: Request) {
     });
 
     const safeNewPost = {
-      ...newPost,
+      id: newPost.id,
+      content: newPost.content,
+      mediaType: newPost.mediaType,
+      mediaUrl: newPost.mediaUrl,
+      authorId: newPost.authorId,
       createdAt: newPost.createdAt.toISOString(),
+      author: newPost.author ? {
+        id: newPost.author.id,
+        name: newPost.author.name,
+        email: newPost.author.email,
+        avatarUrl: newPost.author.avatarUrl,
+        role: newPost.author.role,
+        bio: newPost.author.bio,
+      } : null,
     };
 
     return NextResponse.json(safeNewPost, { status: 201 });

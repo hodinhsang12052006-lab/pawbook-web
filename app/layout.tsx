@@ -24,16 +24,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "PawBook - App Việc làm & Dịch vụ 0% Chiết Khấu",
-  description: "Kết nối việc làm, dịch vụ bản địa, gọi xe, thợ thuyền toàn quốc. Không chiết khấu, không trung gian.",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "PawBook",
-  },
+  title: 'BitPawOS',
+  description: 'Mạng xã hội MMO & Công nghệ',
+  manifest: '/manifest.json',
   icons: {
-    apple: "/cho1.jpg",
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png', // Rất quan trọng cho iOS
   },
 };
 

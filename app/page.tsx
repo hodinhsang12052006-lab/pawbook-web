@@ -196,51 +196,68 @@ export default function Home() {
 
                     {/* Quick Jobs list preview */}
                     <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md">
-                      <h3 className="text-sm font-bold text-slate-200 mb-4">Việc làm mới ứng tuyển nhanh</h3>
+                      <h3 className="text-sm font-bold text-slate-200 mb-4">🚀 Job MMO / Web3 Tuyển Dụng</h3>
                       <div className="space-y-3">
-                        {/*
-                        {jobs.slice(0, 2).map((job) => (
-                          <div key={job.id} className="group cursor-pointer">
-                            <p className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
-                              {job.title}
-                            </p>
-                            <div className="flex items-center justify-between text-3xs text-slate-400 mt-1">
-                              <span>{job.companyName}</span>
-                              <span className="text-emerald-400 font-semibold">{job.salary}</span>
+                        {[
+                          {
+                            id: "mmo-job-1",
+                            title: "Cày Airdrop/Retroactive hệ ZkSync",
+                            companyName: "Airdrop Hunters Hub",
+                            location: "Remote / Tự do",
+                            salary: "10M - 15M"
+                          },
+                          {
+                            id: "mmo-job-2",
+                            title: "Quản lý Cộng đồng (CM) Group Crypto Telegram",
+                            companyName: "Crypto Global Community",
+                            location: "Kênh Discord/Tele",
+                            salary: "500$ - 800$"
+                          },
+                          {
+                            id: "mmo-job-3",
+                            title: "Code Tool Auto Checkout/Bypass Cloudflare",
+                            companyName: "BitPaw Tech Labs",
+                            location: "Remote",
+                            salary: "20M - 35M"
+                          },
+                          {
+                            id: "mmo-job-4",
+                            title: "Tuyển 5 anh em chạy Node Validator dự án mới",
+                            companyName: "Alpha Node Team",
+                            location: "Đội nhóm MMO",
+                            salary: "Thỏa thuận"
+                          },
+                          {
+                            id: "mmo-job-5",
+                            title: "KOC/KOL Affiliate Marketing mảng Tài chính",
+                            companyName: "FinNetwork Agency",
+                            location: "TikTok/X",
+                            salary: "Hoa hồng + Cứng"
+                          }
+                        ].map((job) => (
+                          <div
+                            key={job.id}
+                            onClick={() => setActiveTab("jobs")}
+                            className="group flex items-start justify-between gap-3 p-2.5 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-700"
+                          >
+                            {/* Phần Text (Trái) */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-bold text-slate-200 line-clamp-2 group-hover:text-blue-400 transition-colors leading-snug">
+                                {job.title}
+                              </h4>
+                              <p className="text-4xs text-slate-400 mt-1 truncate font-semibold uppercase tracking-wider">
+                                {job.companyName} • {job.location}
+                              </p>
+                            </div>
+
+                            {/* Phần Lương (Phải) - Đóng cục Badge */}
+                            <div className="flex-shrink-0 pt-0.5">
+                              <span className="inline-block px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold rounded-md whitespace-nowrap">
+                                {job.salary}
+                              </span>
                             </div>
                           </div>
                         ))}
-                        */}
-
-                        {loading ? (
-                          <div className="space-y-3 animate-pulse">
-                            {[1, 2, 3, 4, 5].map((n) => (
-                              <div key={n} className="space-y-2">
-                                <div className="h-3 bg-slate-800 rounded w-5/6"></div>
-                                <div className="flex justify-between">
-                                  <div className="h-2 bg-slate-850 rounded w-1/3"></div>
-                                  <div className="h-2 bg-slate-850 rounded w-1/4"></div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : error ? (
-                          <p className="text-xs text-rose-450">Lỗi tải danh sách việc làm.</p>
-                        ) : jobs.length === 0 ? (
-                          <p className="text-xs text-slate-500">Chưa có việc làm nào.</p>
-                        ) : (
-                          jobs.slice(0, 6).map((job) => (
-                            <div key={job.id} className="group cursor-pointer">
-                              <p className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
-                                {job.title}
-                              </p>
-                              <div className="flex items-center justify-between text-3xs text-slate-400 mt-1">
-                                <span>{job.companyName}</span>
-                                <span className="text-emerald-400 font-semibold">{job.salary}</span>
-                              </div>
-                            </div>
-                          ))
-                        )}
                       </div>
                       <button
                         onClick={() => setActiveTab("jobs")}

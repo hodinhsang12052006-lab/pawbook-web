@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, startTransition } from "react";
 import { Search, Upload, Bell, MessageSquare, Menu, Check, Trash2, ShieldAlert, Coins, Plus } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
 
@@ -676,10 +677,11 @@ export default function Navbar() {
                   <Coins className="h-4.5 w-4.5 text-amber-500 fill-amber-500/10" />
                 </button>
 
-                <button 
+                <Link 
+                  href="/messages"
+                  prefetch={true}
                   onClick={() => {
                     setHasUnread(false);
-                    router.push("/messages");
                   }}
                   className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors relative"
                   title="Messenger"
@@ -690,7 +692,7 @@ export default function Navbar() {
                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-slate-950 animate-pulse"></span>
                     )}
                   </div>
-                </button>
+                </Link>
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-3 border-l border-slate-850 pl-2 sm:pl-4">

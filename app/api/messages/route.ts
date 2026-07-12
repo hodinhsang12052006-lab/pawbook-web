@@ -37,6 +37,7 @@ export async function GET() {
           some: { id: userId },
         },
       },
+      take: 20,
       include: {
         participants: {
           select: {
@@ -48,8 +49,9 @@ export async function GET() {
           },
         },
         messages: {
+          take: 1,
           orderBy: {
-            createdAt: "asc",
+            createdAt: "desc",
           },
           include: {
             sender: {

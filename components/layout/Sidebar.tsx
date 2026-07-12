@@ -7,9 +7,10 @@ import { useRouter, usePathname } from "next/navigation";
 interface SidebarProps {
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
+  currentUser?: any;
 }
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, currentUser }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [sessionUser, setSessionUser] = React.useState<any>(null);
@@ -29,10 +30,10 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     loadSession();
   }, []);
 
-  const userName = sessionUser?.name || "Khách ghé chơi";
-  const userRole = sessionUser?.role || "GUEST";
-  const userAvatar = sessionUser?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80";
-  const userBio = sessionUser ? (sessionUser.role === "EMPLOYER" ? "Chủ cửa hàng dịch vụ" : "Thành viên PawBook") : "Thành viên PawBook";
+  const userName = currentUser?.name || sessionUser?.name || "Khách ghé chơi";
+  const userRole = currentUser?.role || sessionUser?.role || "GUEST";
+  const userAvatar = currentUser?.avatarUrl || currentUser?.image || sessionUser?.avatarUrl || sessionUser?.image || "/images/placeholder.jpg";
+  const userBio = currentUser ? (currentUser.role === "EMPLOYER" ? "Chủ cửa hàng dịch vụ" : "Thành viên PawBook") : (sessionUser ? (sessionUser.role === "EMPLOYER" ? "Chủ cửa hàng dịch vụ" : "Thành viên PawBook") : "Thành viên PawBook");
 
   const menuItems = [
     { id: "feed", label: "Bảng tin", icon: Home, route: "/?tab=feed" },

@@ -6,9 +6,10 @@ import toast from "react-hot-toast";
 
 interface PostFormProps {
   onAddPost?: () => void;
+  currentUser?: any;
 }
 
-export default function PostForm({ onAddPost }: PostFormProps) {
+export default function PostForm({ onAddPost, currentUser }: PostFormProps) {
   const [content, setContent] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
@@ -145,7 +146,7 @@ export default function PostForm({ onAddPost }: PostFormProps) {
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
               <img
-                src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
+                src={currentUser?.avatarUrl || currentUser?.image || "/images/placeholder.jpg"}
                 alt="Avatar"
                 className="h-full w-full object-cover"
               />

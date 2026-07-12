@@ -12,6 +12,30 @@ import AiSuggest from "@/components/jobs/AiSuggest";
 export default function Home() {
   const [activeTab, setActiveTab] = useState("feed");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (res.ok) {
+          const session = await res.json();
+          if (session?.user?.id) {
+            const userRes = await fetch(`/api/profile?id=${session.user.id}`);
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              setCurrentUser(userData);
+              return;
+            }
+          }
+          setCurrentUser(session?.user || null);
+        }
+      } catch (err) {
+        console.error("Failed to load user:", err);
+      }
+    }
+    loadUser();
+  }, []);
 
   const handlePostAdded = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -87,7 +111,7 @@ export default function Home() {
       <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6 md:flex-row">
           {/* Left Sidebar */}
-          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} />
 
           {/* Central content area depending on the active tab */}
           <div className="flex-1 space-y-6">
@@ -99,7 +123,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Social Feed + PostForm */}
                   <div className="lg:col-span-2 space-y-6">
-                    <PostForm onAddPost={handlePostAdded} />
+                    <PostForm onAddPost={handlePostAdded} currentUser={currentUser} />
                     <PostList refreshTrigger={refreshTrigger} />
                   </div>
 

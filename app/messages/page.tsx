@@ -437,7 +437,7 @@ function MessengerContent() {
       channel.unbind("conversation-update", conversationUpdateHandler);
       pusher.unsubscribe(channelName);
     };
-  }, [currentUser]); // Khóa dependency chỉ gọi 1 lần khi có User
+  }, [currentUser?.id]); // Khóa dependency chỉ gọi 1 lần khi có User ID
 
   // Auto select active partner from search query parameter (?userId=XXXX)
   useEffect(() => {
@@ -2316,6 +2316,32 @@ function MessengerContent() {
                     ringtoneRef.current = null;
                   }
                   setReceivingCall(false);
+
+                  // Auto select caller as activeChat so that the calling modal and video refs mount in the DOM
+                  if (callerInfo) {
+                    const partner = systemUsers.find((u) => u.id === callerInfo.id);
+                    if (partner) {
+                      setActiveChat({
+                        id: partner.id,
+                        name: partner.name,
+                        avatarUrl: partner.avatarUrl,
+                        role: partner.role,
+                        isGroup: false,
+                        isOnline: true,
+                        statusText: "Đang hoạt động"
+                      });
+                    } else {
+                      setActiveChat({
+                        id: callerInfo.id,
+                        name: callerInfo.name,
+                        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(callerInfo.name)}&background=2563eb&color=ffffff&bold=true`,
+                        role: "USER",
+                        isGroup: false,
+                        isOnline: true,
+                        statusText: "Đang hoạt động"
+                      });
+                    }
+                  }
 
                   // Accept and show WebRTC modal
                   setCallType(callerInfo?.callType || "video");

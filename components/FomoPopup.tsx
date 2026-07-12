@@ -2,10 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import { Sparkles, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export default function FomoPopup() {
+  const pathname = usePathname();
+
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState("");
+
+  if (pathname && pathname.startsWith("/messages")) {
+    return null;
+  }
 
   const events = [
     "👤 Nguyễn V*** vừa nộp CV cho vị trí ReactJS Developer",

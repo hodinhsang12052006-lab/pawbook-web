@@ -947,12 +947,68 @@ function MessengerContent() {
 
   if (loading && messages.length === 0) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 animate-pulse">
+      <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-slate-100 select-none">
         <Navbar />
-        <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-12 flex flex-col items-center justify-center space-y-3">
-          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-          <p className="text-xs text-slate-400">Đang khởi tạo khu chat...</p>
-        </main>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Sidebar Skeleton */}
+          <div className="w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20">
+            <div className="p-4 border-b border-slate-850 space-y-4 flex-shrink-0">
+              <div className="h-4 w-1/2 bg-slate-800 rounded animate-pulse" />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="h-8 bg-slate-900 rounded-xl animate-pulse" />
+                <div className="h-8 bg-slate-900 rounded-xl animate-pulse" />
+              </div>
+              <div className="h-8 bg-slate-900 rounded-xl animate-pulse" />
+            </div>
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+              {[1, 2, 3, 4, 5].map((idx) => (
+                <div key={idx} className="flex items-center gap-3 animate-pulse">
+                  <div className="h-10 w-10 rounded-full bg-slate-800 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-slate-800 rounded w-2/3" />
+                    <div className="h-2 bg-slate-900 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Main Chat Window Skeleton */}
+          <div className="hidden md:flex flex-1 flex-col h-full bg-slate-900">
+            <div className="p-4 border-b border-slate-855 bg-slate-950/30 flex items-center justify-between flex-shrink-0 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-slate-800" />
+                <div className="space-y-2">
+                  <div className="h-3 bg-slate-800 rounded w-32" />
+                  <div className="h-2 bg-slate-850 rounded w-48" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-slate-800" />
+                <div className="h-8 w-8 rounded-full bg-slate-800" />
+              </div>
+            </div>
+            <div className="flex-1 bg-gradient-to-b from-[#0f172a] to-[#1e293b] p-6 space-y-6 overflow-y-auto flex flex-col justify-end">
+              <div className="flex items-start gap-3 max-w-md animate-pulse">
+                <div className="h-8 w-8 rounded-full bg-slate-800 flex-shrink-0" />
+                <div className="h-12 bg-slate-800 rounded-2xl rounded-tl-sm flex-1" />
+              </div>
+              <div className="flex items-start gap-3 max-w-md ml-auto flex-row-reverse animate-pulse">
+                <div className="h-8 w-8 rounded-full bg-slate-800 flex-shrink-0" />
+                <div className="h-16 bg-blue-600/30 rounded-2xl rounded-tr-sm flex-1" />
+              </div>
+              <div className="flex items-start gap-3 max-w-md animate-pulse">
+                <div className="h-8 w-8 rounded-full bg-slate-800 flex-shrink-0" />
+                <div className="h-10 bg-slate-800 rounded-2xl rounded-tl-sm flex-1" />
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-855 bg-slate-950/20 flex items-center gap-3 flex-shrink-0 animate-pulse">
+              <div className="h-10 w-10 rounded-full bg-slate-800" />
+              <div className="h-10 bg-slate-900 rounded-xl flex-1" />
+              <div className="h-10 w-10 rounded-full bg-slate-800" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

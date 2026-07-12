@@ -65,12 +65,12 @@ export default function VideoCallRoom({
           },
           turnOnCameraWhenJoining: true,
           turnOnMicrophoneWhenJoining: true,
-          showMyCameraToggleButton: false, // Handle via our custom controls
-          showMyMicrophoneToggleButton: false, // Handle via our custom controls
+          showMyCameraToggleButton: true,
+          showMyMicrophoneToggleButton: true,
           showAudioVideoSettingsButton: true,
+          useAppForwardsSplash: false,
           showScreenSharingButton: false,
           showUserList: false,
-          showTextChat: false,
           showPreJoinView: false, // Direct join
           onLeaveRoom: () => {
             if (onLeave) onLeave();

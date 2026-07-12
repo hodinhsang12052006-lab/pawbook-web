@@ -216,7 +216,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
     async function fetchPosts() {
       try {
         setLoadingPosts(true);
-        const targetId = resolvedUid || profile.id;
+        const targetId = resolvedUid || profile?.id;
         if (!targetId) return;
 
         const res = await fetch(`/api/posts?authorId=${targetId}`);
@@ -249,7 +249,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
       }
     }
     fetchPosts();
-  }, [resolvedUid, profile.id]);
+  }, [resolvedUid, profile?.id]);
 
   const handleLikePost = (postId: string) => {
     setMyPosts(

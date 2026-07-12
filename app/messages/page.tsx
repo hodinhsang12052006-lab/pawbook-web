@@ -238,11 +238,93 @@ function MessengerContent() {
       }
     };
 
+    const incomingCallHandler = (data: any) => {
+      console.log("📞 [PUSHER] Đang nhận cuộc gọi từ:", data);
+      setReceivingCall(true);
+      callerSignalRef.current = data.signal;
+      setCallerSignal(data.signal);
+      setCallerInfo({ id: data.from, name: data.callerName, callType: data.callType });
+
+      try {
+        if (ringtoneRef.current) {
+          ringtoneRef.current.pause();
+        }
+        const audio = new Audio("/ringtone.mp3");
+        audio.loop = true;
+        audio.play().catch(err => console.log("Autoplay ringtone blocked, waiting for action."));
+        ringtoneRef.current = audio;
+      } catch (err) {
+        console.error("Audio playback error:", err);
+      }
+    };
+
+    const callAcceptedHandler = async (data: any) => {
+      console.log("📞 [PUSHER] Cuộc gọi đã được chấp nhận bởi:", data);
+      setCallConnected(true);
+
+      if (peerConnectionRef.current && data.signal) {
+        try {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.signal));
+          console.log("WebRTC Peer Connection remote description answer set successfully.");
+        } catch (error) {
+          console.error("Error setting remote description on caller:", error);
+        }
+      }
+
+      if (localStreamRef.current) {
+        setTimeout(() => {
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = localStreamRef.current;
+          }
+        }, 500);
+      }
+      toast.success("Cuộc gọi đã kết nối thành công! 📞");
+    };
+
+    const callRejectedHandler = () => {
+      console.log("📞 [PUSHER] Cuộc gọi bị từ chối.");
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+        ringtoneRef.current = null;
+      }
+      setShowCallingModal(false);
+      setReceivingCall(false);
+      setCallConnected(false);
+      toast.error("Đối phương đã từ chối hoặc kết thúc cuộc gọi.");
+    };
+
+    const iceCandidateHandler = async (data: any) => {
+      console.log("📞 [PUSHER] Nhận ICE Candidate:", data);
+      if (peerConnectionRef.current && data.signal) {
+        try {
+          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.signal));
+        } catch (err) {
+          console.error("Error adding ICE candidate:", err);
+        }
+      }
+    };
+
     channel.bind("new-message", messageHandler);
+    channel.bind("incoming-call", incomingCallHandler);
+    channel.bind("call-accepted", callAcceptedHandler);
+    channel.bind("call-rejected", callRejectedHandler);
+    channel.bind("ice-candidate", iceCandidateHandler);
 
     return () => {
       console.log("🔌 [PUSHER] Tắt ống nghe kênh:", channelName);
       channel.unbind("new-message", messageHandler);
+      channel.unbind("incoming-call", incomingCallHandler);
+      channel.unbind("call-accepted", callAcceptedHandler);
+      channel.unbind("call-rejected", callRejectedHandler);
+      channel.unbind("ice-candidate", iceCandidateHandler);
       pusher.unsubscribe(channelName);
     };
   }, [currentUser]); // Khóa dependency chỉ gọi 1 lần khi có User
@@ -329,13 +411,40 @@ function MessengerContent() {
         }
       };
 
+      pc.onicecandidate = async (event) => {
+        if (event.candidate) {
+          await fetch("/api/calls", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: activeChat.id,
+              type: "ice-candidate",
+              signal: event.candidate,
+            }),
+          });
+        }
+      };
+
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Call feature disabled on socket
-      toast.error("Tính năng gọi qua socket tạm thời bị vô hiệu hóa.");
+      const res = await fetch("/api/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: activeChat.id,
+          type: "incoming-call",
+          signal: offer,
+          callerName: currentUser?.name || "Người dùng",
+          callType: type,
+        }),
+      });
 
-      console.log(`[Socket] Call offer emitted to receiver ${activeChat.id}`);
+      if (!res.ok) {
+        toast.error("Không thể gửi yêu cầu kết nối cuộc gọi.");
+      } else {
+        console.log(`[Pusher Call] Call offer emitted to receiver ${activeChat.id}`);
+      }
 
     } catch (err: any) {
       console.error("Failed to start WebRTC call:", err);
@@ -377,6 +486,20 @@ function MessengerContent() {
         }
       };
 
+      pc.onicecandidate = async (event) => {
+        if (event.candidate) {
+          await fetch("/api/calls", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: callerInfo?.id,
+              type: "ice-candidate",
+              signal: event.candidate,
+            }),
+          });
+        }
+      };
+
       const activeSignal = callerSignalRef.current || callerSignal;
 
       // Verification of input signaling data to prevent crashed sessions
@@ -391,9 +514,22 @@ function MessengerContent() {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      // Answer calls signal emitters disabled on socket
+      // Gửi tín hiệu chấp nhận cuộc gọi qua API
+      const res = await fetch("/api/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: callerInfo?.id,
+          type: "call-accepted",
+          signal: answer,
+        }),
+      });
 
-      console.log(`[Socket] Call answer accepted and returned to caller ${callerInfo?.id}`);
+      if (!res.ok) {
+        toast.error("Không thể kết nối đến máy chủ cuộc gọi.");
+      } else {
+        console.log(`[Pusher Call] Call answer accepted and returned to caller ${callerInfo?.id}`);
+      }
 
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
@@ -407,7 +543,7 @@ function MessengerContent() {
     }
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -416,7 +552,29 @@ function MessengerContent() {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+    if (ringtoneRef.current) {
+      ringtoneRef.current.pause();
+      ringtoneRef.current = null;
+    }
+
+    const targetUserId = activeChat?.id || callerInfo?.id;
+    if (targetUserId) {
+      try {
+        await fetch("/api/calls", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: targetUserId,
+            type: "call-rejected",
+          }),
+        });
+      } catch (err) {
+        console.error("Error sending call-rejected signaling:", err);
+      }
+    }
+
     setShowCallingModal(false);
+    setReceivingCall(false);
     setCallConnected(false);
     toast.success(`Cuộc gọi đã kết thúc. Thời lượng: ${formatTimer(callSeconds)}`);
   };
@@ -1984,7 +2142,7 @@ function MessengerContent() {
                   setReceivingCall(false);
 
                   // Accept and show WebRTC modal
-                  setCallType("video");
+                  setCallType(callerInfo?.callType || "video");
                   setShowCallingModal(true);
                   handleAcceptCall();
                 }}
@@ -1996,13 +2154,7 @@ function MessengerContent() {
 
               <button
                 type="button"
-                onClick={() => {
-                  if (ringtoneRef.current) {
-                    ringtoneRef.current.pause();
-                    ringtoneRef.current = null;
-                  }
-                  setReceivingCall(false);
-                }}
+                onClick={handleEndCall}
                 className="h-14 w-14 rounded-full bg-rose-500 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-rose-500/20 cursor-pointer"
                 title="Từ chối"
               >

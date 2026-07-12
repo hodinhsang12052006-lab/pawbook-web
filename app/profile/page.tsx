@@ -616,11 +616,19 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
             </div>
 
             {/* Top row actions (edit profile button aligned right) */}
-            <div className="flex justify-end pt-4 h-12 sm:h-16 gap-2">
-              {!isOwnProfile ? (
+            <div className="flex justify-end pt-4 h-auto sm:h-16 gap-2 w-full sm:w-auto">
+              {!currentUser ? (
+                <Link
+                  href="/auth/login"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-650 to-indigo-650 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 text-2xs font-semibold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer w-full sm:w-auto justify-center"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Đăng nhập để nhắn tin
+                </Link>
+              ) : !isOwnProfile ? (
                 <Link
                   href={`/messages?to=${profile.id || resolvedUid}`}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-650 to-indigo-650 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 text-2xs font-semibold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-650 to-indigo-650 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 text-2xs font-semibold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer w-full sm:w-auto justify-center"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   Nhắn tin
@@ -640,7 +648,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                     });
                     setIsEditModalOpen(true);
                   }}
-                  className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2 text-2xs font-semibold text-slate-200 transition-all cursor-pointer"
+                  className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-4 py-2 text-2xs font-semibold text-slate-200 transition-all cursor-pointer w-full sm:w-auto justify-center"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                   Chỉnh sửa trang cá nhân
@@ -664,14 +672,6 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                   <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/20">
                     {profile.role}
                   </span>
-                  {!isOwnProfile && (
-                    <Link
-                      href={`/messages?to=${profile.id || resolvedUid}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-550 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-blue-500/10 cursor-pointer ml-1 select-none"
-                    >
-                      💬 Nhắn tin
-                    </Link>
-                  )}
                 </div>
                 <p className="text-sm text-blue-400 mt-1 font-medium">Hồ sơ thành viên PawBook</p>
                 

@@ -697,8 +697,8 @@ function MessengerContent() {
         setLoadingGifs(true);
         const query = gifSearch.trim();
         const url = query
-          ? `https://api.giphy.com/v1/gifs/search?api_key=dc6zaTOxFJmzC&q=${encodeURIComponent(query)}&limit=12`
-          : `https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=12`;
+          ? `https://api.giphy.com/v1/gifs/search?api_key=PFGXbrldYpvja6pFa2tO1gepJ9efvMca&q=${encodeURIComponent(query)}&limit=12`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=PFGXbrldYpvja6pFa2tO1gepJ9efvMca&limit=12`;
         const res = await fetch(url);
         if (res.ok) {
           const payload = await res.json();

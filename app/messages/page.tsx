@@ -512,6 +512,12 @@ function MessengerContent() {
   const handleStartCall = async (type: "audio" | "video") => {
     if (!activeChat) return;
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errMsg = "Thiết bị không hỗ trợ Media API (Yêu cầu kết nối HTTPS bảo mật trên Mobile/Safari).";
+        alert(errMsg);
+        throw new Error(errMsg);
+      }
+
       setCallType(type);
       setShowCallingModal(true);
       setCallConnected(false); // Start caller in Calling/Ringing state, NOT connected yet!
@@ -574,8 +580,10 @@ function MessengerContent() {
       };
 
       const offer = await pc.createOffer();
+      console.log("Offer created on mobile:", offer);
       await pc.setLocalDescription(offer);
 
+      console.log("Posting offer. isNull?", !offer);
       const res = await fetch("/api/calls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -596,6 +604,7 @@ function MessengerContent() {
 
     } catch (err: any) {
       console.error("Failed to start WebRTC call:", err);
+      alert("Failed to start WebRTC call: " + err.message);
       toast.error("Không thể mở Camera/Microphone: " + err.message);
       setShowCallingModal(false);
     }

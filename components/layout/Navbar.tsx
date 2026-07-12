@@ -31,6 +31,7 @@ export default function Navbar() {
     services: any[];
   } | null>(null);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
@@ -301,6 +302,140 @@ export default function Navbar() {
 
   const userAvatar = sessionUser?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80";
 
+  if (showMobileSearch) {
+    return (
+      <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950 backdrop-blur-md">
+        <div ref={searchContainerRef} className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
+          <button
+            onClick={() => {
+              setShowMobileSearch(false);
+              setSearchQuery("");
+              setShowSearchSuggestions(false);
+            }}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+          >
+            ←
+          </button>
+          <div className="flex-1 relative">
+            <form
+              onSubmit={handleSearch}
+              className="w-full"
+            >
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Search className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="search"
+                  autoFocus
+                  placeholder="Tìm kiếm bài viết, việc làm, ứng viên..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="block w-full rounded-full border border-slate-800 bg-slate-900/60 py-2 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                />
+              </div>
+            </form>
+
+            {showSearchSuggestions && searchResults && (
+              <div className="absolute top-12 left-0 right-0 bg-[#090e1c]/95 border border-slate-800 rounded-2xl p-4 shadow-2xl z-[999] backdrop-blur-md space-y-3 max-h-96 overflow-y-auto custom-scrollbar animate-fadeIn">
+                
+                {/* 1. Users Suggestion Section */}
+                {searchResults.users.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5">
+                      <span>👥 Người dùng</span>
+                    </p>
+                    <div className="space-y-1">
+                      {searchResults.users.map((u) => (
+                        <div
+                          key={u.id}
+                          onClick={() => {
+                            router.push(`/profile/${u.id}`);
+                            setSearchQuery("");
+                            setShowSearchSuggestions(false);
+                            setShowMobileSearch(false);
+                          }}
+                          className="flex items-center gap-2.5 p-2 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors text-left"
+                        >
+                          <img
+                            src={u.avatarUrl || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=100&auto=format&fit=crop&q=80"}
+                            alt={u.name}
+                            className="h-7 w-7 rounded-full object-cover border border-slate-800"
+                          />
+                          <div className="min-w-0 flex-1 text-[11px]">
+                            <p className="font-bold text-slate-200 truncate">{u.name}</p>
+                            <p className="text-slate-500 truncate text-[10px]">{u.role}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Jobs Suggestion Section */}
+                {searchResults.jobs.length > 0 && (
+                  <div className="space-y-1.5 border-t border-slate-850/50 pt-2">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5">
+                      <span>💼 Việc làm</span>
+                    </p>
+                    <div className="space-y-1">
+                      {searchResults.jobs.map((j) => (
+                        <div
+                          key={j.id}
+                          onClick={() => {
+                            router.push(`/jobs`);
+                            setSearchQuery("");
+                            setShowSearchSuggestions(false);
+                            setShowMobileSearch(false);
+                          }}
+                          className="p-2 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors text-[11px] text-left animate-fadeIn"
+                        >
+                          <p className="font-bold text-slate-200 truncate">{j.title}</p>
+                          <p className="text-slate-500 truncate text-[10px]">{j.companyName}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Services Suggestion Section */}
+                {searchResults.services.length > 0 && (
+                  <div className="space-y-1.5 border-t border-slate-850/50 pt-2">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5">
+                      <span>🏪 Dịch vụ</span>
+                    </p>
+                    <div className="space-y-1">
+                      {searchResults.services.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => {
+                            router.push(`/services/${s.id}`);
+                            setSearchQuery("");
+                            setShowSearchSuggestions(false);
+                            setShowMobileSearch(false);
+                          }}
+                          className="p-2 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors text-[11px] flex justify-between items-center text-left"
+                        >
+                          <p className="font-bold text-slate-200 truncate pr-2">{s.name}</p>
+                          {s.priceRange && <span className="text-emerald-400 font-bold text-[10px] flex-shrink-0">{s.priceRange}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {searchResults.users.length === 0 && searchResults.jobs.length === 0 && searchResults.services.length === 0 && (
+                  <p className="text-center py-4 text-slate-500 text-[10px] italic">Không tìm thấy kết quả phù hợp.</p>
+                )}
+
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -465,6 +600,15 @@ export default function Navbar() {
               </button>
 
               <div className="flex items-center gap-1 sm:gap-2 border-l border-slate-850 pl-2 sm:pl-4 relative">
+                {/* Mobile Search Button */}
+                <button
+                  onClick={() => setShowMobileSearch(true)}
+                  className="md:hidden rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors"
+                  title="Tìm kiếm"
+                >
+                  <Search className="h-4.5 w-4.5" />
+                </button>
+
                 {/* Bell trigger */}
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}

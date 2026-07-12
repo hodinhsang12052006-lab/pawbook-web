@@ -8,7 +8,7 @@ import {
   Image, Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info,
   MicOff, VideoOff, PhoneOff, Volume2, Clock, FileText, Cpu, Briefcase
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
 
@@ -81,6 +81,7 @@ const MOCK_GIFS = [
 ];
 
 function MessengerContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const searchUserId = searchParams.get("userId") || searchParams.get("to");
 
@@ -178,10 +179,17 @@ function MessengerContent() {
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const session = await res.json();
-          setCurrentUser(session.user);
+          if (session?.user?.id) {
+            setCurrentUser(session.user);
+          } else {
+            router.replace("/auth/login");
+          }
+        } else {
+          router.replace("/auth/login");
         }
       } catch (err) {
         console.error("Failed to load session:", err);
+        router.replace("/auth/login");
       }
     }
     loadSession();
@@ -192,6 +200,10 @@ function MessengerContent() {
     try {
       if (!isSilent) setLoading(true);
       const res = await fetch("/api/messages");
+      if (res.status === 401) {
+        router.replace("/auth/login");
+        return;
+      }
       if (!res.ok) {
         throw new Error("Không thể tải danh sách cuộc trò chuyện. Hãy đăng nhập trước.");
       }
@@ -236,7 +248,7 @@ function MessengerContent() {
           if (prev.some((m) => m.id === newMessage.id)) return prev;
 
           // Kiểm tra xem có tin nhắn Optimistic tương ứng gửi bởi chính mình không
-          const isFromSelf = newMessage.senderId === currentUser.id;
+          const isFromSelf = newMessage.senderId === currentUser?.id;
           if (isFromSelf) {
             const optimisticIndex = prev.findIndex(
               (m) => m.id.startsWith("optimistic-") && m.content === newMessage.content

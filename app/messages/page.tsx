@@ -7,6 +7,7 @@ export const fetchCache = 'force-no-store';
 import React, { useState, useEffect, useRef, Suspense, startTransition } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { BitpawMiniApp } from "./BitpawMiniApp";
+import GifPicker from "@/components/chat/GifPicker";
 import {
   Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users,
   Image, Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info,
@@ -1790,31 +1791,8 @@ function MessengerContent() {
                     )}
 
                     {chatPanelTab === "gif" && (
-                      <div className="space-y-3 h-full flex flex-col">
-                        <input
-                          type="text"
-                          placeholder="Nhập từ khóa tìm kiếm GIF..."
-                          value={gifSearch}
-                          onChange={(e) => setGifSearch(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-550 focus:outline-none"
-                        />
-                        {loadingGifs ? (
-                          <div className="flex-1 flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
-                          </div>
-                        ) : (
-                          <div className="flex-1 overflow-y-auto grid grid-cols-3 gap-2 custom-scrollbar">
-                            {gifsList.map((gif) => (
-                              <img
-                                key={gif.id}
-                                src={gif.images.fixed_height_small.url}
-                                alt={gif.title}
-                                onClick={() => handleSendMessage(null, gif.images.original.url, "IMAGE")}
-                                className="h-20 w-full object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                              />
-                            ))}
-                          </div>
-                        )}
+                      <div className="h-full py-1">
+                        <GifPicker onGifClick={(url) => handleSendMessage(null, url, "IMAGE")} />
                       </div>
                     )}
                   </div>

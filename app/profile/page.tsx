@@ -10,6 +10,7 @@ import {
   Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame, MessageSquare, Eye, Check
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import toast, { Toaster } from "react-hot-toast";
 
 interface JobType {
@@ -598,12 +599,19 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
           <div className="relative px-6 pb-6">
             {/* Avatar positioning (half offset top) */}
             <div className="absolute top-0 left-6 -translate-y-1/2">
-              <div className="relative h-24 w-24 sm:h-32 sm:w-32 overflow-hidden rounded-2xl border-4 border-slate-950 bg-slate-900 shadow-2xl">
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.name}
-                  className="h-full w-full object-cover"
-                />
+              <div className="relative h-24 w-24 sm:h-32 sm:w-32 overflow-hidden rounded-2xl border-4 border-slate-950 bg-slate-900 shadow-2xl animate-fadeIn">
+                {loading ? (
+                  <div className="h-full w-full bg-slate-800 animate-pulse" />
+                ) : (
+                  <Image
+                    src={profile.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"}
+                    alt={profile.name || "User Avatar"}
+                    width={128}
+                    height={128}
+                    priority={true}
+                    className="h-full w-full object-cover"
+                  />
+                )}
               </div>
             </div>
 

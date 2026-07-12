@@ -1402,7 +1402,7 @@ function MessengerContent() {
           {activeChat ? (
             <>
               {/* Active Partner Header */}
-              <div className="p-4 border-b border-slate-855 bg-slate-950/30 flex items-center justify-between gap-3 flex-shrink-0">
+              <div className="p-4 border-b border-slate-855 bg-slate-950 flex items-center justify-between gap-3 flex-none z-10">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setActiveChat(null)}

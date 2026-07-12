@@ -591,6 +591,9 @@ function MessengerContent() {
     }
   };
 
+  // Callee WebRTC Answer flow order:
+  // 1. Get user media stream -> 2. Initialize RTCPeerConnection -> 3. Add stream tracks
+  // 4. setRemoteDescription (Offer) -> 5. createAnswer -> 6. setLocalDescription (Answer) -> 7. Drain candidate queue
   const handleAcceptCall = async () => {
     try {
       const isVideoCall = callType === "video";

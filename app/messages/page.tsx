@@ -208,7 +208,11 @@ function MessengerContent() {
         throw new Error("Không thể tải danh sách cuộc trò chuyện. Hãy đăng nhập trước.");
       }
       const data = await res.json();
-      setMessages(data.messages || []);
+      const safeMsgs = (data.messages || []).map((m: any) => ({
+        ...m,
+        createdAt: new Date(m.createdAt).toISOString()
+      }));
+      setMessages(safeMsgs);
       setConversations(data.conversations || []);
       setSystemUsers(data.users || []);
     } catch (err: any) {
@@ -247,6 +251,11 @@ function MessengerContent() {
           // Tránh trùng lặp ID thật
           if (prev.some((m) => m.id === newMessage.id)) return prev;
 
+          const safeMsg = {
+            ...newMessage,
+            createdAt: new Date(newMessage.createdAt).toISOString()
+          };
+
           // Kiểm tra xem có tin nhắn Optimistic tương ứng gửi bởi chính mình không
           const isFromSelf = newMessage.senderId === currentUser?.id;
           if (isFromSelf) {
@@ -255,11 +264,11 @@ function MessengerContent() {
             );
             if (optimisticIndex > -1) {
               // Thay thế tin nhắn optimistic bằng tin nhắn thật từ Pusher
-              return prev.map((m, idx) => (idx === optimisticIndex ? newMessage : m));
+              return prev.map((m, idx) => (idx === optimisticIndex ? safeMsg : m));
             }
           }
 
-          return [...prev, newMessage];
+          return [...prev, safeMsg];
         });
       }
     };
@@ -730,7 +739,11 @@ function MessengerContent() {
         toast.error(data.error || "Gửi tin nhắn thất bại.");
       } else {
         // Cập nhật lại ID chuẩn từ DB
-        setMessages((prev) => prev.map((m) => (m.id === tempId ? data : m)));
+        const safeData = {
+          ...data,
+          createdAt: new Date(data.createdAt).toISOString()
+        };
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? safeData : m)));
       }
     } catch (err) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));

@@ -234,26 +234,44 @@ export async function POST(req: Request) {
       conversationId: activeConversationId,
     };
 
-    // 🚀 2. BẮN TÍN HIỆU (Gộp kênh và ép kiểu Payload siêu nhẹ)
+    // 🚀 1. LỌC DANH SÁCH KÊNH (Tránh rỗng, null, undefined)
     try {
-      // Gom kênh người gửi và người nhận, loại bỏ khoảng trắng rác
       const channels = [String(userId).trim()];
-      if (partner && partner.id) {
+      if (partner?.id) {
         channels.push(String(partner.id).trim());
       }
+      // Lọc ra các kênh hợp lệ
+      const validChannels = channels.filter(c => c && c.length > 0);
 
-      // ÉP KIỂU JSON: Tẩy rửa sạch sẽ các Object ẩn của Database để tránh lỗi 400 Payload Too Large
-      const safePayload = JSON.parse(JSON.stringify(formattedMessage));
-      
-      console.log(`🚀 [BACKEND] Bắn Pusher tới các kênh:`, channels);
-      
-      // Bắn 1 phát ăn 2 kênh luôn cho tối ưu
-      await pusherServer.trigger(channels, "new-message", safePayload);
-      
-      console.log("✅ [BACKEND] Bắn Pusher THÀNH CÔNG RỰC RỠ!");
+      // 🚀 2. ÉP CÂN PAYLOAD (< 10KB)
+      // Không gửi nguyên cục formattedMessage. Chỉ trích xuất các trường cần thiết để UI hiển thị
+      const miniPayload = {
+        id: formattedMessage.id,
+        content: formattedMessage.content,
+        senderId: formattedMessage.senderId,
+        receiverId: formattedMessage.receiverId || "",
+        conversationId: formattedMessage.conversationId,
+        createdAt: formattedMessage.createdAt,
+        type: formattedMessage.type || "TEXT",
+        // Nếu UI cần thông tin sender, chỉ truyền thông tin cơ bản, TUYỆT ĐỐI KHÔNG truyền toàn bộ object
+        sender: {
+          id: formattedMessage.sender.id,
+          name: formattedMessage.sender.name || "User",
+          // Không gửi image/avatar ở đây nếu nó là Base64 dài để tránh vượt quá 10KB
+        }
+      };
+
+      console.log(`🚀 [BACKEND] Chuẩn bị bắn Pusher tới:`, validChannels);
+
+      if (validChannels.length > 0) {
+        await pusherServer.trigger(validChannels, "new-message", miniPayload);
+        console.log("✅ [BACKEND] Bắn Pusher THÀNH CÔNG RỰC RỠ!");
+      } else {
+        console.error("⚠️ [BACKEND] Không có kênh hợp lệ để bắn Pusher.");
+      }
     } catch (pusherError: any) {
-      // In ra chi tiết tận răng xem Pusher nó chửi cái gì
-      console.error("❌ PUSHER ERROR CHI TIẾT:", pusherError?.body || pusherError);
+      // In chi tiết lỗi để bắt bệnh
+      console.error("❌ PUSHER LỖI TỪ SERVER:", pusherError?.body || pusherError);
     }
 
     return NextResponse.json(formattedMessage, { status: 201 });

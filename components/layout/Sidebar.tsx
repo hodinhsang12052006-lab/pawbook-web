@@ -38,17 +38,14 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
   const menuItems = [
     { id: "feed", label: "Bảng tin", icon: Home, route: "/?tab=feed" },
     { id: "jobs", label: "Tuyển dụng & Việc làm", icon: Briefcase, route: "/?tab=jobs" },
-    { id: "tools", label: "Tools Marketing", icon: Rocket, route: "/?tab=tools" },
     { id: "hr", label: "Quản lý HR", icon: Settings, route: "/?tab=hr" },
     { id: "services", label: "Dịch vụ & Cửa hàng", icon: Store, route: "/services" },
     { id: "gigs", label: "⚡ Chợ Đấu Thầu", icon: Zap, route: "/gigs" },
     { id: "blogs", label: "📝 Blog & Chia sẻ", icon: BookOpen, route: "/blogs" },
-    { id: "pricing", label: "👛 Nạp PawCoin", icon: CreditCard, route: "/pricing" },
-    { id: "guide", label: "📖 Hướng dẫn sử dụng", icon: BookOpen, route: "/guide" },
   ];
 
   const handleNavigation = (id: string, route: string) => {
-    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs" && id !== "pricing" && id !== "guide") {
+    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs") {
       setActiveTab(id);
       router.push(route, { scroll: false });
     } else {
@@ -66,13 +63,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
     if (id === "blogs") {
       return pathname === "/blogs";
     }
-    if (id === "pricing") {
-      return pathname === "/pricing";
-    }
-    if (id === "guide") {
-      return pathname === "/guide";
-    }
-    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs" || pathname === "/pricing" || pathname === "/guide") {
+    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs") {
       return false;
     }
     return activeTab === id;
@@ -141,7 +132,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
 
       {/* Mobile Bottom Navigation Bar: fixed, space-saving icon-only panel */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#0a0f1d]/95 border-t border-slate-850 py-1.5 px-2 flex items-center justify-around backdrop-blur-lg shadow-2xl">
-        {menuItems.map((item) => {
+        {menuItems.slice(0, 5).map((item) => {
           const Icon = item.icon;
           const isActive = checkIsActive(item.id);
           return (

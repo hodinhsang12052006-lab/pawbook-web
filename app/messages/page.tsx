@@ -502,6 +502,9 @@ function MessengerContent() {
     return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
   };
 
+  // Caller WebRTC Offer flow order:
+  // 1. Get user media stream -> 2. Initialize RTCPeerConnection -> 3. Add stream tracks
+  // 4. createOffer -> 5. setLocalDescription (Offer) -> 6. Post offer signal to Callee
   const handleStartCall = async (type: "audio" | "video") => {
     if (!activeChat) return;
     try {

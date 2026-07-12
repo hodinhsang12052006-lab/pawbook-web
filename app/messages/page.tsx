@@ -350,22 +350,26 @@ function MessengerContent() {
       setCallConnected(true);
 
       if (peerConnectionRef.current && data.signal) {
-        try {
-          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.signal));
-          console.log("WebRTC Peer Connection remote description answer set successfully.");
+        if (peerConnectionRef.current.signalingState === "have-local-offer") {
+          try {
+            await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.signal));
+            console.log("WebRTC Peer Connection remote description answer set successfully.");
 
-          // Drain queued pending candidates
-          for (const candidate of pendingCandidatesRef.current) {
-            try {
-              await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-              console.log("🔌 Drained queued ICE candidate successfully on caller.");
-            } catch (iceErr) {
-              console.error("Error adding queued ICE candidate on caller:", iceErr);
+            // Drain queued pending candidates
+            for (const candidate of pendingCandidatesRef.current) {
+              try {
+                await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log("🔌 Drained queued ICE candidate successfully on caller.");
+              } catch (iceErr) {
+                console.error("Error adding queued ICE candidate on caller:", iceErr);
+              }
             }
+            pendingCandidatesRef.current = [];
+          } catch (error) {
+            console.error("Error setting remote description on caller:", error);
           }
-          pendingCandidatesRef.current = [];
-        } catch (error) {
-          console.error("Error setting remote description on caller:", error);
+        } else {
+          console.warn("Discarded duplicate or out-of-state Call Answer. Current signalingState:", peerConnectionRef.current.signalingState);
         }
       }
 

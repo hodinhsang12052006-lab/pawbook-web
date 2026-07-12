@@ -68,9 +68,19 @@ export async function GET() {
       },
     });
 
+    // Ensure all conversations and nested messages are serialized with safe string dates
+    const safeConversations = conversations.map((conv) => ({
+      ...conv,
+      createdAt: conv.createdAt.toISOString(),
+      messages: conv.messages.map((msg) => ({
+        ...msg,
+        createdAt: msg.createdAt.toISOString(),
+      })),
+    }));
+
     // Translate database conversations to flat messages array for backwards compatibility
     const flatMessages: any[] = [];
-    conversations.forEach((conv) => {
+    safeConversations.forEach((conv) => {
       conv.messages.forEach((msg) => {
         const partner = conv.participants.find((p) => p.id !== msg.senderId);
         flatMessages.push({
@@ -105,7 +115,7 @@ export async function GET() {
 
     return NextResponse.json({
       messages: flatMessages,
-      conversations,
+      conversations: safeConversations,
       users: systemUsers,
     });
   } catch (error: any) {

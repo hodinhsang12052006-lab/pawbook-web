@@ -60,8 +60,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Ensure nested jobs Date fields are serialized to ISO strings
+    const safeJobs = (user.jobs || []).map((job) => ({
+      ...job,
+      createdAt: job.createdAt.toISOString(),
+    }));
+
     return NextResponse.json({
       ...user,
+      jobs: safeJobs,
       location: user.address,
     });
   } catch (err: any) {

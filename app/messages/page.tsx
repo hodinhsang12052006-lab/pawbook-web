@@ -1,5 +1,9 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
+
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { BitpawMiniApp } from "./BitpawMiniApp";

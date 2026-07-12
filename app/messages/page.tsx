@@ -541,15 +541,18 @@ function MessengerContent() {
       });
 
       pc.ontrack = (event) => {
-        const streams = event.streams;
-        if (remoteVideoRef.current && streams[0]) {
-          remoteVideoRef.current.srcObject = streams[0];
-          setTimeout(() => {
-            remoteVideoRef.current?.play().catch((err) => {
-              console.log("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
-            });
-          }, 100);
+        if (!remoteVideoRef.current) return;
+        let streamObj = remoteVideoRef.current.srcObject as MediaStream;
+        if (!streamObj) {
+          streamObj = new MediaStream();
+          remoteVideoRef.current.srcObject = streamObj;
         }
+        streamObj.addTrack(event.track);
+        setTimeout(() => {
+          remoteVideoRef.current?.play().catch((err) => {
+            console.log("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
+          });
+        }, 100);
       };
 
       pc.onicecandidate = async (event) => {
@@ -630,15 +633,18 @@ function MessengerContent() {
       });
 
       pc.ontrack = (event) => {
-        const streams = event.streams;
-        if (remoteVideoRef.current && streams[0]) {
-          remoteVideoRef.current.srcObject = streams[0];
-          setTimeout(() => {
-            remoteVideoRef.current?.play().catch((err) => {
-              console.warn("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
-            });
-          }, 100);
+        if (!remoteVideoRef.current) return;
+        let streamObj = remoteVideoRef.current.srcObject as MediaStream;
+        if (!streamObj) {
+          streamObj = new MediaStream();
+          remoteVideoRef.current.srcObject = streamObj;
         }
+        streamObj.addTrack(event.track);
+        setTimeout(() => {
+          remoteVideoRef.current?.play().catch((err) => {
+            console.warn("Autoplay is blocked by browser policies. Awaiting click context interaction:", err);
+          });
+        }, 100);
       };
 
       pc.onicecandidate = async (event) => {
@@ -2223,6 +2229,7 @@ function MessengerContent() {
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
+                disablePictureInPicture
                 muted={false}
                 className="absolute inset-0 w-full h-full object-cover opacity-80"
               />

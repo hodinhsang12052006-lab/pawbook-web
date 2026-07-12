@@ -7,7 +7,7 @@ import PostList, { PostType } from "@/components/feed/PostList";
 import { 
   ArrowLeft, Edit3, MapPin, Link2, Calendar, Briefcase, 
   Award, Sparkles, ShieldCheck, BadgeCheck, Star, Mail, 
-  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame, MessageSquare, Eye, Check
+  Phone, FileText, X, Save, Loader2, DollarSign, Clock, Flame, MessageSquare, Eye, Check, UserPlus
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -622,13 +622,14 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
             {/* Top row actions (edit profile button aligned right) */}
             <div className="flex justify-end pt-4 h-auto sm:h-16 gap-2 w-full sm:w-auto">
               {!currentUser ? (
-                <Link
-                  href="/auth/login"
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-650 to-indigo-650 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 text-2xs font-semibold text-white transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer w-full sm:w-auto justify-center"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  Đăng nhập để nhắn tin
-                </Link>
+                <div className="w-full sm:w-auto">
+                  <Link href="/auth/login">
+                    <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 py-2 shadow-md transition-all font-semibold flex items-center justify-center gap-2 text-2xs cursor-pointer">
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Đăng nhập để kết nối
+                    </button>
+                  </Link>
+                </div>
               ) : !isOwnProfile ? (
                 <Link
                   href={`/messages?to=${profile.id || resolvedUid}`}

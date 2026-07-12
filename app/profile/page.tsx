@@ -176,6 +176,27 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
           skills: data.skills || "",
           avatarUrl: data.avatarUrl || "",
         });
+        if (data.posts) {
+          const formattedPosts = data.posts.map((post: any) => ({
+            id: post.id,
+            content: post.content,
+            mediaUrl: post.mediaUrl,
+            mediaType: post.mediaType,
+            createdAt: new Date(post.createdAt).toLocaleDateString("vi-VN") + " " + new Date(post.createdAt).toLocaleTimeString("vi-VN", {hour: '2-digit', minute:'2-digit'}),
+            author: post.author ? {
+              id: post.author.id,
+              name: post.author.name,
+              avatarUrl: post.author.avatarUrl,
+              role: post.author.role,
+              bio: post.author.role + " • " + (post.author.bio || "Không có tiểu sử"),
+            } : null,
+            likes: Math.floor(Math.random() * 20) + 5,
+            commentsCount: post.commentsCount || 0,
+            hasLiked: false,
+          }));
+          setMyPosts(formattedPosts);
+          setLoadingPosts(false);
+        }
       }
     } catch (err) {
       console.error("Lỗi tải profile:", err);
@@ -603,7 +624,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
         {/* Profile Card Header Section */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/20 overflow-hidden backdrop-blur-md">
           {/* Cover Photo */}
-          <div className="relative h-48 sm:h-64 w-full bg-slate-900">
+          <div className="relative h-48 sm:h-64 w-full bg-slate-900 mb-16 sm:mb-0">
             {loading ? (
               <div className="h-full w-full bg-slate-850 animate-pulse" />
             ) : (
@@ -636,7 +657,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
             </div>
 
             {/* Top row actions (edit profile button aligned right) */}
-            <div className="flex justify-end pt-4 h-auto sm:h-16 gap-2 w-full sm:w-auto">
+            <div className="flex justify-end pt-16 sm:pt-4 h-auto sm:h-16 gap-2 w-full sm:w-auto">
               {!currentUser ? null : !isOwnProfile ? (
                 <Link
                   href={`/messages?to=${profile.id || resolvedUid}`}
@@ -669,7 +690,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
             </div>
 
             {/* User Main Metadata */}
-            <div className="mt-14 sm:mt-4 space-y-4">
+            <div className="mt-4 space-y-4">
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-1.5">
@@ -791,7 +812,7 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
         {/* Profile Grid content */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
           {/* Left Area: CV Manager & Skills Info (5 cols on desktop) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="hidden lg:block lg:col-span-5 space-y-6">
             {/* CV Manager Component (Only for own profile) or Candidate CV download link (for public profiles) */}
             {isOwnProfile ? (
               <CVManager />

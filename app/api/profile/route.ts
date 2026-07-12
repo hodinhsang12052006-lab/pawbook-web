@@ -19,39 +19,58 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        avatarUrl: true,
-        bio: true,
-        phone: true,
-        address: true,
-        cover_image: true,
-        cv_url: true,
-        skills: true,
-        reputation: true,
-        trustScore: true,
-        isVerified: true,
-        pawCoin: true,
-        jobs: {
-          select: {
-            id: true,
-            title: true,
-            companyName: true,
-            salary: true,
-            niche: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: "desc"
+    const [user, posts] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          avatarUrl: true,
+          bio: true,
+          phone: true,
+          address: true,
+          cover_image: true,
+          cv_url: true,
+          skills: true,
+          reputation: true,
+          trustScore: true,
+          isVerified: true,
+          pawCoin: true,
+          jobs: {
+            select: {
+              id: true,
+              title: true,
+              companyName: true,
+              salary: true,
+              niche: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: "desc"
+            }
+          }
+        },
+      }),
+      prisma.post.findMany({
+        where: { authorId: userId },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+              role: true,
+              bio: true,
+            }
           }
         }
-      },
-    });
+      })
+    ]);
 
     if (!user) {
       return NextResponse.json(
@@ -66,9 +85,15 @@ export async function GET(req: NextRequest) {
       createdAt: job.createdAt.toISOString(),
     }));
 
+    const safePosts = (posts || []).map((post) => ({
+      ...post,
+      createdAt: post.createdAt.toISOString(),
+    }));
+
     return NextResponse.json({
       ...user,
       jobs: safeJobs,
+      posts: safePosts,
       location: user.address,
     });
   } catch (err: any) {

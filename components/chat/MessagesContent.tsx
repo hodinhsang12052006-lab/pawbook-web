@@ -515,9 +515,8 @@ export default function MessagesContent({
       setLoadingChatMessages(false);
     });
 
-    // Incoming messages
     channel.bind("new-message", (data: any) => {
-      if (!data?.message) return;
+      if (!data || !data.message || !data.message.id) return;
       const m = data.message;
       const safeNewMsg: MessageType = {
         id: m.id,
@@ -571,25 +570,25 @@ export default function MessagesContent({
       });
     });
 
-    // Message reactions binder
     channel.bind("message-updated", (data: any) => {
-      if (data?.id) {
-        // Sync message reactions list
-        if (data.reactions) {
-          setMessageReactions(prev => ({
+      if (!data || (!data.id && !data.messageId)) return;
+      const targetId = data.id || data.messageId;
+      
+      // Sync message reactions list
+      if (data.reactions) {
+        setMessageReactions(prev => ({
+          ...prev,
+          [targetId]: data.reactions
+        }));
+      } else if (data.emoji) {
+        setMessageReactions(prev => {
+          const current = prev[targetId] || [];
+          if (current.includes(data.emoji)) return prev;
+          return {
             ...prev,
-            [data.id]: data.reactions
-          }));
-        } else if (data.emoji) {
-          setMessageReactions(prev => {
-            const current = prev[data.id] || [];
-            if (current.includes(data.emoji)) return prev;
-            return {
-              ...prev,
-              [data.id]: [...current, data.emoji]
-            };
-          });
-        }
+            [targetId]: [...current, data.emoji]
+          };
+        });
       }
     });
 
@@ -1480,8 +1479,9 @@ export default function MessagesContent({
 
                     {chatPanelTab === "gif" && (
                       <div className="h-full py-1">
-                        <GifPicker onGifClick={(url) => {
+                        <GifPicker onSelect={(url) => {
                           handleSendMessage(null, url, "IMAGE");
+                        }} onClose={() => {
                           setShowEmoji(false);
                           setShowGifs(false);
                         }} />

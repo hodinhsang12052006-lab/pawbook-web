@@ -1,5 +1,6 @@
-import React from "react";
+import React from 'react';
 
+// Hardcode vĩnh viễn mảng GIF tĩnh không dùng API
 const PERMANENT_GIFS = [
   "https://media.tenor.com/PZzXj23J590AAAAC/okay-ok.gif",
   "https://media.tenor.com/y1Xz97E98XMAAAAC/ch%C3%B3-ch%C3%B3-c%C6%B0%E1%BB%9Di.gif",
@@ -15,34 +16,12 @@ const PERMANENT_GIFS = [
   "https://media.tenor.com/N1_QcEa-u08AAAAC/huh-cat.gif"
 ];
 
-interface GifPickerProps {
-  onSelect?: (url: string) => void;
-  onGifClick?: (url: string) => void;
-  onClose?: () => void;
-}
-
-export default function GifPicker({ onSelect, onGifClick, onClose }: GifPickerProps) {
-  const handleSelect = (url: string) => {
-    if (onSelect) onSelect(url);
-    if (onGifClick) onGifClick(url);
-    if (onClose) onClose();
-  };
-
+export default function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void, onClose: () => void }) {
   return (
     <div className="p-2 h-64 overflow-y-auto grid grid-cols-2 gap-2 bg-[#0b1426] rounded-lg border border-slate-700">
       {PERMANENT_GIFS.map((url, idx) => (
-        <div 
-          key={idx} 
-          className="relative w-full h-24 cursor-pointer hover:opacity-80 rounded overflow-hidden" 
-          onClick={() => handleSelect(url)}
-        >
-          <img 
-            src={url} 
-            alt="gif" 
-            loading="lazy" 
-            className="w-full h-full object-cover" 
-            onError={(e) => { e.currentTarget.style.display = 'none'; }} 
-          />
+        <div key={idx} className="relative w-full h-24 cursor-pointer hover:opacity-80 rounded overflow-hidden" onClick={() => { onSelect(url); onClose(); }}>
+          <img src={url} alt="gif" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         </div>
       ))}
     </div>

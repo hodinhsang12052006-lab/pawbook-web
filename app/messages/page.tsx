@@ -487,24 +487,7 @@ function MessengerContent() {
     scrollToBottom();
   }, [messages, activeChat, isTyping]);
 
-  // Calling seconds timer hook
-  useEffect(() => {
-    let interval: any;
-    if (showCallingModal && callConnected) {
-      interval = setInterval(() => {
-        setCallSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      setCallSeconds(0);
-    }
-    return () => clearInterval(interval);
-  }, [showCallingModal, callConnected]);
-
-  const formatTimer = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remainingSecs = secs % 60;
-    return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
-  };
+  // Calling timer logic is now isolated inside the memoized CallTimer component.
 
   // Caller WebRTC Offer flow order:
   // 1. Get user media stream -> 2. Initialize RTCPeerConnection -> 3. Add stream tracks
@@ -2221,9 +2204,7 @@ function MessengerContent() {
             <div className="text-center space-y-2">
               <h2 className="text-lg font-black text-slate-100">{activeChat.name}</h2>
               {callConnected ? (
-                <p className="text-sm font-extrabold text-emerald-400 tracking-wider font-mono">
-                  {formatTimer(callSeconds)}
-                </p>
+                <CallTimer active={callConnected && showCallingModal} />
               ) : (
                 <p className="text-3xs text-slate-400 font-bold animate-pulse">
                   Đang gọi {callType === "video" ? "Video" : "Thoại"} cho {activeChat.name}...

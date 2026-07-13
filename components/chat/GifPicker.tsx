@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Image from "next/image";
 
 interface GifPickerProps {
   onSelect?: (url: string) => void;
@@ -11,7 +10,6 @@ export default function GifPicker({ onSelect, onGifClick, onClose }: GifPickerPr
   const [gifs, setGifs] = useState<string[]>([]);
 
   useEffect(() => {
-    // Đọc file tĩnh siêu tốc không cần API Key
     fetch('/meme-data.json')
       .then(res => res.json())
       .then(data => setGifs(data))
@@ -30,13 +28,17 @@ export default function GifPicker({ onSelect, onGifClick, onClose }: GifPickerPr
         <p className="text-slate-400 text-center col-span-2 py-8 text-xs font-semibold">Đang nạp Meme...</p>
       ) : null}
       {gifs.map((url, idx) => (
-        <div
+        <img
           key={idx}
-          className="relative w-full h-24 cursor-pointer hover:opacity-80 rounded-xl overflow-hidden border border-slate-800 transition-all duration-300 hover:scale-103 hover:border-slate-700"
+          src={url}
+          alt="gif"
+          loading="lazy"
+          className="w-full h-24 object-cover cursor-pointer hover:opacity-80 rounded-xl border border-slate-800 transition-all duration-300 hover:scale-103 hover:border-slate-700"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'; // Ẩn ảnh lỗi
+          }}
           onClick={() => handleSelect(url)}
-        >
-          <Image src={url} alt="meme" fill sizes="50vw" className="object-cover" unoptimized />
-        </div>
+        />
       ))}
     </div>
   );

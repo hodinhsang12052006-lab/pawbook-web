@@ -1196,7 +1196,7 @@ export default function MessagesContent({
                 )}
 
                 {loadingChatMessages && (
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-800 rounded-full px-3 py-1 text-[10px] text-slate-300 flex items-center gap-1.5 shadow-lg z-50 animate-fadeIn backdrop-blur-sm">
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-800 rounded-full px-3 py-1 text-[10px] text-slate-300 flex items-center gap-1.5 shadow-lg z-50 animate-fadeIn backdrop-blur-sm pointer-events-none">
                     <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
                     <span className="font-bold tracking-wider uppercase">Đang nạp tin nhắn mới...</span>
                   </div>
@@ -1349,7 +1349,7 @@ export default function MessagesContent({
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2 text-slate-500 animate-fadeIn">
                     <span className="text-xl">👋</span>
-                    <p className="text-xs font-bold text-slate-400">Bắt đầu cuộc trò chuyện</p>
+                    <p className="text-xs font-bold text-slate-400">Chưa có tin nhắn nào</p>
                     <p className="text-4xs text-slate-600 max-w-[200px] leading-relaxed">Gửi tin nhắn chào hỏi để bắt đầu thảo luận công việc & MMO.</p>
                   </div>
                 )}

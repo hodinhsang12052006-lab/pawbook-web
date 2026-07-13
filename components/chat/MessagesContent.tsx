@@ -298,6 +298,7 @@ export default function MessagesContent({
       const res = await fetch(`/api/messages?conversationId=${convId}`);
       if (res.ok) {
         const data = await res.json();
+        console.log("📥 Data API trả về (loadInitialChatMessages):", data);
         const safeMsgs = (data.messages || []).map((m: any) => ({
           id: m.id,
           content: m.content || m.body || "",
@@ -419,8 +420,56 @@ export default function MessagesContent({
         if (convId && !convId.startsWith("temp-")) {
           await loadInitialChatMessages(convId);
         } else {
-          setMessages([]);
-          setChatNextCursor(null);
+          // If no local conversation id is resolved, check with the backend using partnerId
+          const res = await fetch(`/api/messages?partnerId=${activeChat.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            console.log("📥 Data API trả về (partnerId query):", data);
+            const safeMsgs = (data.messages || []).map((m: any) => ({
+              id: m.id,
+              content: m.content || m.body || "",
+              type: m.type || "TEXT",
+              senderId: m.senderId,
+              receiverId: m.receiverId || "",
+              createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+              sender: m.sender ? {
+                id: m.sender.id,
+                name: m.sender.name,
+                avatarUrl: m.sender.avatarUrl || null,
+                role: m.sender.role,
+              } : { id: "", name: "User", role: "USER" },
+              receiver: m.receiver ? {
+                id: m.receiver.id,
+                name: m.receiver.name,
+                avatarUrl: m.receiver.avatarUrl || null,
+                role: m.receiver.role,
+              } : { id: "", name: "User", role: "USER" },
+              conversationId: m.conversationId,
+            }));
+
+            setMessages((prev) => {
+              const safePrev = Array.isArray(prev) ? prev : [];
+              const otherMsgs = safePrev.filter((m) => m.conversationId !== data.messages?.[0]?.conversationId);
+              return [...otherMsgs, ...safeMsgs];
+            });
+            setChatNextCursor(data.nextCursor || null);
+
+            // Update the activeChat conversationId if it exists in the fetched payload
+            if (data.messages && data.messages.length > 0) {
+              const fetchedConvId = data.messages[0].conversationId;
+              if (fetchedConvId) {
+                setActiveChat((prev: any) => {
+                  if (prev && prev.id === activeChat.id) {
+                    return { ...prev, conversationId: fetchedConvId };
+                  }
+                  return prev;
+                });
+              }
+            }
+          } else {
+            setMessages([]);
+            setChatNextCursor(null);
+          }
         }
       } catch (e) {
         console.error("Lỗi fetch:", e);

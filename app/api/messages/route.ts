@@ -31,14 +31,40 @@ export async function GET(req: Request) {
     const userId = (session.user as any).id;
     const { searchParams } = new URL(req.url);
     const conversationId = searchParams.get("conversationId");
+    const partnerId = searchParams.get("partnerId");
     const cursor = searchParams.get("cursor") || undefined;
     const limit = 15;
 
+    let targetConversationId = conversationId;
+
+    if (!targetConversationId && partnerId) {
+      // Find conversation containing both users
+      const matchedConv = await prisma.conversation.findFirst({
+        where: {
+          isGroup: false,
+          AND: [
+            { participants: { some: { id: userId } } },
+            { participants: { some: { id: partnerId } } }
+          ]
+        },
+        select: { id: true }
+      });
+      if (matchedConv) {
+        targetConversationId = matchedConv.id;
+      } else {
+        // No conversation exists yet, return empty list
+        return NextResponse.json({
+          messages: [],
+          nextCursor: null
+        });
+      }
+    }
+
     // IF fetching on-demand messages for a specific conversation
-    if (conversationId) {
+    if (targetConversationId) {
       // Security check: Verify membership first
       const conversation = await prisma.conversation.findUnique({
-        where: { id: conversationId },
+        where: { id: targetConversationId },
         include: {
           participants: { select: { id: true } }
         }
@@ -60,7 +86,7 @@ export async function GET(req: Request) {
       }
 
       const queryOptions: any = {
-        where: { conversationId },
+        where: { conversationId: targetConversationId },
         take: limit + 1,
         orderBy: {
           createdAt: "desc", // Newest first for cursor pagination
@@ -94,7 +120,7 @@ export async function GET(req: Request) {
       const chronMessages = messages.reverse();
 
       const partner = await prisma.conversation.findUnique({
-        where: { id: conversationId },
+        where: { id: targetConversationId },
         include: {
           participants: {
             where: { NOT: { id: userId } },

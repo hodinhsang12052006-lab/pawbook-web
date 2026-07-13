@@ -50,7 +50,7 @@ export default function HomeContent({ initialUser, initialJobs }: HomeContentPro
                   </div>
 
                   {/* Job Board mini widget */}
-                  <div className="space-y-6">
+                  <div className="space-y-6 sticky top-20 h-max overflow-visible self-start">
                     <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 backdrop-blur-md">
                       <h3 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-blue-500" />

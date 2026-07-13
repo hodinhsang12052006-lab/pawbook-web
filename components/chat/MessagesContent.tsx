@@ -1302,18 +1302,37 @@ export default function MessagesContent({
                                   <p>📍 Vị trí: Trùng khớp với tọa độ Radar.</p>
                                 </div>
                               </div>
-                            ) : msg.type === "CALL_LOG_AUDIO" || msg.type === "CALL_LOG_VIDEO" ? (
-                              <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800/80 text-xs flex items-center gap-2.5 text-slate-350 min-w-[220px] shadow-md animate-fadeIn">
-                                <span className="h-8 w-8 rounded-full bg-slate-850 flex items-center justify-center text-sm border border-slate-800">
-                                  📞
-                                </span>
-                                <div>
-                                  <p className="font-bold text-slate-200">
-                                    {msg.type === "CALL_LOG_VIDEO" ? "Cuộc gọi Video" : "Cuộc gọi thoại"}
-                                  </p>
-                                  <p className="text-[10px] text-slate-500 mt-0.5">{msg.content}</p>
-                                </div>
-                              </div>
+                            ) : (msg.type || "").toUpperCase().includes("CALL") && msg.type !== "CALL_PROMPT_INCOMING" ? (
+                              (() => {
+                                const isMissedCall = (msg.content || "").toLowerCase().includes("nhỡ") || (msg.content || "").toLowerCase().includes("missed");
+                                const isVideo = (msg.type || "").toUpperCase().includes("VIDEO") || (msg.content || "").toLowerCase().includes("video");
+                                return (
+                                  <div className="flex flex-col bg-[#242526] text-white rounded-2xl p-3 w-[250px] shadow-sm border border-slate-700/50 text-left animate-fadeIn">
+                                    {/* Phần Header: Icon + Tiêu đề */}
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <div className={`p-2 rounded-full ${isMissedCall ? 'bg-red-500/20 text-red-500' : 'bg-slate-700 text-white'}`}>
+                                        {isVideo ? <Video size={20} /> : <Phone size={20} />}
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="font-semibold text-sm">
+                                          {isMissedCall ? (isVideo ? "Đã nhỡ cuộc gọi video" : "Đã nhỡ cuộc gọi thoại") : (isVideo ? "Cuộc gọi video" : "Cuộc gọi thoại")}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                          {msg.content}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Phần Button: Nút GỌI LẠI */}
+                                    <button 
+                                      onClick={() => handleStartCall(isVideo ? "video" : "audio")}
+                                      className="w-full bg-[#3a3b3c] hover:bg-[#4e4f50] transition-colors py-2 rounded-lg text-xs font-semibold text-white cursor-pointer"
+                                    >
+                                      Gọi lại
+                                    </button>
+                                  </div>
+                                );
+                              })()
                             ) : msg.type === "CALL_PROMPT_INCOMING" ? (
                               <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs space-y-2 text-left min-w-[240px] shadow-xl border-l-4 border-l-blue-500 animate-fadeIn">
                                 <p className="font-black text-slate-100 flex items-center gap-1">

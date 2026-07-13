@@ -242,9 +242,10 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
 
         const res = await fetch(`/api/posts?authorId=${targetId}`);
         if (res.ok) {
-          const data = await res.json();
+          const payload = await res.json();
+          const postData = payload.posts || [];
           // Map to PostType expected by the React component
-          const formattedPosts = data.map((post: any) => ({
+          const formattedPosts = postData.map((post: any) => ({
             id: post.id,
             content: post.content,
             mediaUrl: post.mediaUrl,

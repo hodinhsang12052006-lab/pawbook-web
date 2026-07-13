@@ -32,6 +32,8 @@ interface PostListProps {
 export default function PostList({ posts: propPosts, onLikePost, refreshTrigger = 0, authorId }: PostListProps) {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [likesState, setLikesState] = useState<Record<string, { count: number; active: boolean }>>({});
 
@@ -42,6 +44,7 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
   const [newCommentText, setNewCommentText] = useState("");
 
   const isSelfManaged = !propPosts;
+  const observerTarget = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isSelfManaged) return;
@@ -50,21 +53,19 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch("/api/posts");
+        const url = authorId ? `/api/posts?authorId=${authorId}` : "/api/posts";
+        const res = await fetch(url);
         if (!res.ok) {
           throw new Error("Không thể tải danh sách bài viết.");
         }
-        let data = await res.json();
-
-        if (authorId) {
-          data = data.filter((post: PostType) => post.author?.id === authorId);
-        }
-
-        setPosts(data);
+        const data = await res.json();
+        const postData = data.posts || [];
+        setPosts(postData);
+        setNextCursor(data.nextCursor || null);
 
         // Initialize likes state locally for demo purposes
         const initialLikes: Record<string, { count: number; active: boolean }> = {};
-        data.forEach((post: any) => {
+        postData.forEach((post: any) => {
           initialLikes[post.id] = {
             count: Math.floor(Math.random() * 50) + 10,
             active: Math.random() > 0.7,
@@ -80,6 +81,63 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
 
     fetchPosts();
   }, [refreshTrigger, isSelfManaged, authorId]);
+
+  const loadMorePosts = async () => {
+    if (loadingMore || !nextCursor) return;
+
+    try {
+      setLoadingMore(true);
+      const url = authorId 
+        ? `/api/posts?authorId=${authorId}&cursor=${nextCursor}` 
+        : `/api/posts?cursor=${nextCursor}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error("Không thể tải thêm bài viết.");
+      }
+      const data = await res.json();
+      const postData = data.posts || [];
+      
+      setPosts((prev) => [...prev, ...postData]);
+      setNextCursor(data.nextCursor || null);
+
+      // Initialize likes for the new posts
+      setLikesState((prevLikes) => {
+        const updated = { ...prevLikes };
+        postData.forEach((post: any) => {
+          if (!updated[post.id]) {
+            updated[post.id] = {
+              count: Math.floor(Math.random() * 50) + 10,
+              active: Math.random() > 0.7,
+            };
+          }
+        });
+        return updated;
+      });
+    } catch (err) {
+      console.error("Failed to load more posts:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    const target = observerTarget.current;
+    if (!target || !nextCursor || !isSelfManaged) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(target);
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [nextCursor, loadingMore, isSelfManaged, authorId]);
 
   const handleLike = (postId: string) => {
     if (onLikePost) {
@@ -382,6 +440,11 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
           </article>
         );
       })}
+      {nextCursor && (
+        <div ref={observerTarget} className="flex justify-center py-6">
+          {loadingMore && <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />}
+        </div>
+      )}
     </div>
   );
 }

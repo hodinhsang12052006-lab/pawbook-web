@@ -85,6 +85,38 @@ const MOCK_GIFS = [
   { id: "mock-gif-6", title: "Vẫy tay", images: { fixed_height_small: { url: "https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" }, original: { url: "https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif" } } }
 ];
 
+interface CallTimerProps {
+  active: boolean;
+}
+
+const CallTimer = React.memo(({ active }: CallTimerProps) => {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    let interval: any;
+    if (active) {
+      setSeconds(0);
+      interval = setInterval(() => {
+        setSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [active]);
+
+  const mins = Math.floor(seconds / 60);
+  const remainingSecs = seconds % 60;
+  const durationStr = `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+
+  return (
+    <p className="text-sm font-extrabold text-emerald-400 tracking-wider font-mono">
+      {durationStr}
+    </p>
+  );
+});
+CallTimer.displayName = "CallTimer";
+
 function MessengerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -175,8 +207,10 @@ function MessengerContent() {
   useEffect(() => {
     activeChatRef.current = activeChat?.id;
   }, [activeChat]);
-
-
+  const [loadingChatMessages, setLoadingChatMessages] = useState(false);
+  const [loadingMoreChatMessages, setLoadingMoreChatMessages] = useState(false);
+  const [chatNextCursor, setChatNextCursor] = useState<string | null>(null);
+  const chatObserverTarget = useRef<HTMLDivElement>(null);
 
   // Fetch session & current user ID
   useEffect(() => {
@@ -271,6 +305,130 @@ function MessengerContent() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const loadInitialChatMessages = async (convId: string) => {
+    try {
+      setLoadingChatMessages(true);
+      const res = await fetch(`/api/messages?conversationId=${convId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const safeMsgs = (data.messages || []).map((m: any) => ({
+          id: m.id,
+          content: m.content || m.body || "",
+          type: m.type || "TEXT",
+          senderId: m.senderId,
+          receiverId: m.receiverId || "",
+          createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+          sender: m.sender ? {
+            id: m.sender.id,
+            name: m.sender.name,
+            avatarUrl: m.sender.avatarUrl || null,
+            role: m.sender.role,
+          } : { id: "", name: "User", role: "USER" },
+          receiver: m.receiver ? {
+            id: m.receiver.id,
+            name: m.receiver.name,
+            avatarUrl: m.receiver.avatarUrl || null,
+            role: m.receiver.role,
+          } : { id: "", name: "User", role: "USER" },
+          conversationId: m.conversationId,
+        }));
+
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          // Filter out old messages from this conversation to prevent duplicate rendering
+          const otherMsgs = safePrev.filter((m) => m.conversationId !== convId);
+          return [...otherMsgs, ...safeMsgs];
+        });
+        setChatNextCursor(data.nextCursor || null);
+      }
+    } catch (err) {
+      console.error("Failed to load initial messages:", err);
+    } finally {
+      setLoadingChatMessages(false);
+    }
+  };
+
+  const loadMoreChatMessages = async () => {
+    if (loadingMoreChatMessages || !chatNextCursor || !activeChat) return;
+
+    const conversation = conversations.find(c => 
+      activeChat.isGroup ? c.id === activeChat.id : (!c.isGroup && c.participants.some(p => p.id === activeChat.id))
+    );
+    if (!conversation) return;
+
+    try {
+      setLoadingMoreChatMessages(true);
+      const res = await fetch(`/api/messages?conversationId=${conversation.id}&cursor=${chatNextCursor}`);
+      if (res.ok) {
+        const data = await res.json();
+        const safeMsgs = (data.messages || []).map((m: any) => ({
+          id: m.id,
+          content: m.content || m.body || "",
+          type: m.type || "TEXT",
+          senderId: m.senderId,
+          receiverId: m.receiverId || "",
+          createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+          sender: m.sender ? {
+            id: m.sender.id,
+            name: m.sender.name,
+            avatarUrl: m.sender.avatarUrl || null,
+            role: m.sender.role,
+          } : { id: "", name: "User", role: "USER" },
+          receiver: m.receiver ? {
+            id: m.receiver.id,
+            name: m.receiver.name,
+            avatarUrl: m.receiver.avatarUrl || null,
+            role: m.receiver.role,
+          } : { id: "", name: "User", role: "USER" },
+          conversationId: m.conversationId,
+        }));
+
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          // Filter duplicates
+          const newMsgs = safeMsgs.filter((m: any) => !safePrev.some(pm => pm.id === m.id));
+          return [...newMsgs, ...safePrev];
+        });
+        setChatNextCursor(data.nextCursor || null);
+      }
+    } catch (err) {
+      console.error("Failed to load more chat messages:", err);
+    } finally {
+      setLoadingMoreChatMessages(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeChat || !currentUser) return;
+    const conversation = conversations.find(c => 
+      activeChat.isGroup ? c.id === activeChat.id : (!c.isGroup && c.participants.some(p => p.id === activeChat.id))
+    );
+    if (conversation && !conversation.id.startsWith("temp-")) {
+      loadInitialChatMessages(conversation.id);
+    } else {
+      setChatNextCursor(null);
+    }
+  }, [activeChat?.id, currentUser?.id, conversations]);
+
+  useEffect(() => {
+    const target = chatObserverTarget.current;
+    if (!target || !chatNextCursor) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreChatMessages();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(target);
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [chatNextCursor, loadingMoreChatMessages, activeChat?.id]);
 
   console.log("DEBUG: File page.tsx đã được load!");
 
@@ -1528,6 +1686,11 @@ function MessengerContent() {
               {/* Chat Message Logs - Đã KHÓA CHẶT THẺ CHA BẰNG FLEX ĐỂ CUỘN */}
               <div className="flex-1 flex flex-col h-0 min-h-0 bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 custom-scrollbar scroll-smooth">
+                  {chatNextCursor && (
+                    <div ref={chatObserverTarget} className="flex justify-center py-2 w-full">
+                      {loadingMoreChatMessages && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
+                    </div>
+                  )}
                   {(!activeConversation || activeConversation.length === 0) ? (
                     <div className="text-center py-12 text-3xs text-slate-555">
                       Bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn chào mừng phía dưới!

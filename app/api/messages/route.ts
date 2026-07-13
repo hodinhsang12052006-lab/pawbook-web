@@ -16,8 +16,8 @@ const pusherServer = new Pusher({
   useTLS: true,
 });
 
-// GET all conversations, messages, and other system users
-export async function GET() {
+// GET conversations, messages (filtered by conversationId with cursor), and other system users
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -29,7 +29,105 @@ export async function GET() {
     }
 
     const userId = (session.user as any).id;
+    const { searchParams } = new URL(req.url);
+    const conversationId = searchParams.get("conversationId");
+    const cursor = searchParams.get("cursor") || undefined;
+    const limit = 15;
 
+    // IF fetching on-demand messages for a specific conversation
+    if (conversationId) {
+      // Security check: Verify membership first
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          participants: { select: { id: true } }
+        }
+      });
+
+      if (!conversation) {
+        return NextResponse.json(
+          { error: "Cuộc trò chuyện không tồn tại." },
+          { status: 404 }
+        );
+      }
+
+      const isMember = conversation.participants.some((p) => p.id === userId);
+      if (!isMember) {
+        return NextResponse.json(
+          { error: "Bạn không có quyền truy cập cuộc trò chuyện này." },
+          { status: 403 }
+        );
+      }
+
+      const queryOptions: any = {
+        where: { conversationId },
+        take: limit + 1,
+        orderBy: {
+          createdAt: "desc", // Newest first for cursor pagination
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+              role: true,
+            },
+          },
+        },
+      };
+
+      if (cursor) {
+        queryOptions.cursor = { id: cursor };
+        queryOptions.skip = 1;
+      }
+
+      const messages = await prisma.message.findMany(queryOptions);
+
+      let nextCursor: string | null = null;
+      if (messages.length > limit) {
+        const nextItem = messages.pop();
+        nextCursor = nextItem!.id;
+      }
+
+      // Reverse messages array to return them in chronological order (oldest first)
+      const chronMessages = messages.reverse();
+
+      const partner = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          participants: {
+            where: { NOT: { id: userId } },
+            select: { id: true, name: true, avatarUrl: true, role: true, bio: true }
+          }
+        }
+      });
+      const partnerUser = partner?.participants[0];
+
+      const safeMessages = chronMessages.map((msg) => ({
+        id: msg.id,
+        content: msg.body,
+        type: msg.type || "TEXT",
+        senderId: msg.senderId,
+        receiverId: partnerUser ? partnerUser.id : "",
+        createdAt: msg.createdAt.toISOString(),
+        sender: msg.sender ? {
+          id: msg.sender.id,
+          name: msg.sender.name,
+          avatarUrl: msg.sender.avatarUrl,
+          role: msg.sender.role,
+        } : null,
+        receiver: partnerUser || { id: "", name: "User", role: "USER" },
+        conversationId: msg.conversationId,
+      }));
+
+      return NextResponse.json({
+        messages: safeMessages,
+        nextCursor,
+      });
+    }
+
+    // Default list fetch (backward-compatible dashboard payload with conversation previews)
     // Fetch conversations involving the user
     const conversations = await prisma.conversation.findMany({
       where: {
@@ -50,8 +148,9 @@ export async function GET() {
         },
         messages: {
           orderBy: {
-            createdAt: "asc",
+            createdAt: "desc", // Get the latest messages for preview
           },
+          take: 15, // Preview only the last 15 messages initially
           include: {
             sender: {
               select: {
@@ -70,33 +169,37 @@ export async function GET() {
     });
 
     // Ensure all conversations and nested messages are serialized with safe string dates
-    const safeConversations = conversations.map((conv) => ({
-      id: conv.id,
-      isGroup: conv.isGroup,
-      name: conv.name,
-      createdAt: conv.createdAt.toISOString(),
-      participants: conv.participants.map((p) => ({
-        id: p.id,
-        name: p.name,
-        avatarUrl: p.avatarUrl,
-        role: p.role,
-        bio: p.bio,
-      })),
-      messages: conv.messages.map((msg) => ({
-        id: msg.id,
-        body: msg.body,
-        type: msg.type,
-        senderId: msg.senderId,
-        conversationId: msg.conversationId,
-        createdAt: msg.createdAt.toISOString(),
-        sender: msg.sender ? {
-          id: msg.sender.id,
-          name: msg.sender.name,
-          avatarUrl: msg.sender.avatarUrl,
-          role: msg.sender.role,
-        } : null,
-      })),
-    }));
+    const safeConversations = conversations.map((conv) => {
+      // Reverse messages so they are chronologically correct in preview
+      const sortedMessages = [...conv.messages].reverse();
+      return {
+        id: conv.id,
+        isGroup: conv.isGroup,
+        name: conv.name,
+        createdAt: conv.createdAt.toISOString(),
+        participants: conv.participants.map((p) => ({
+          id: p.id,
+          name: p.name,
+          avatarUrl: p.avatarUrl,
+          role: p.role,
+          bio: p.bio,
+        })),
+        messages: sortedMessages.map((msg) => ({
+          id: msg.id,
+          body: msg.body,
+          type: msg.type,
+          senderId: msg.senderId,
+          conversationId: msg.conversationId,
+          createdAt: msg.createdAt.toISOString(),
+          sender: msg.sender ? {
+            id: msg.sender.id,
+            name: msg.sender.name,
+            avatarUrl: msg.sender.avatarUrl,
+            role: msg.sender.role,
+          } : null,
+        })),
+      };
+    });
 
     // Translate database conversations to flat messages array for backwards compatibility
     const flatMessages: any[] = [];

@@ -7,12 +7,14 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const authorId = searchParams.get("authorId");
+    const cursor = searchParams.get("cursor") || undefined;
+    const limit = 10;
 
     const whereClause = authorId ? { authorId } : {};
 
-    const posts = await prisma.post.findMany({
+    const queryOptions: any = {
       where: whereClause,
-      take: authorId ? 10 : undefined,
+      take: limit + 1,
       orderBy: {
         createdAt: "desc",
       },
@@ -28,7 +30,20 @@ export async function GET(req: Request) {
           },
         },
       },
-    });
+    };
+
+    if (cursor) {
+      queryOptions.cursor = { id: cursor };
+      queryOptions.skip = 1;
+    }
+
+    const posts = await prisma.post.findMany(queryOptions);
+
+    let nextCursor: string | null = null;
+    if (posts.length > limit) {
+      const nextItem = posts.pop();
+      nextCursor = nextItem!.id;
+    }
 
     const safePosts = posts.map((post) => ({
       id: post.id,
@@ -47,7 +62,10 @@ export async function GET(req: Request) {
       } : null,
     }));
 
-    return NextResponse.json(safePosts);
+    return NextResponse.json({
+      posts: safePosts,
+      nextCursor,
+    });
   } catch (error: any) {
     console.error("Fetch posts API error:", error);
     return NextResponse.json(

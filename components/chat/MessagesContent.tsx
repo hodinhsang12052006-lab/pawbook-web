@@ -283,6 +283,10 @@ export default function MessagesContent({
   }, [router]);
 
   const loadInitialChatMessages = useCallback(async (convId: string) => {
+    if (!convId) {
+      setLoadingChatMessages(false);
+      return;
+    }
     try {
       setLoadingChatMessages(true);
       const res = await fetch(`/api/messages?conversationId=${convId}`);
@@ -480,16 +484,24 @@ export default function MessagesContent({
     });
 
     // Message reactions binder
-    channel.bind("reaction-added", (data: any) => {
-      if (data?.messageId && data?.emoji) {
-        setMessageReactions(prev => {
-          const current = prev[data.messageId] || [];
-          if (current.includes(data.emoji)) return prev;
-          return {
+    channel.bind("message-updated", (data: any) => {
+      if (data?.id) {
+        // Sync message reactions list
+        if (data.reactions) {
+          setMessageReactions(prev => ({
             ...prev,
-            [data.messageId]: [...current, data.emoji]
-          };
-        });
+            [data.id]: data.reactions
+          }));
+        } else if (data.emoji) {
+          setMessageReactions(prev => {
+            const current = prev[data.id] || [];
+            if (current.includes(data.emoji)) return prev;
+            return {
+              ...prev,
+              [data.id]: [...current, data.emoji]
+            };
+          });
+        }
       }
     });
 
@@ -869,14 +881,17 @@ export default function MessagesContent({
       const res = await fetch("/api/messages/react", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId, emoji }),
+        body: JSON.stringify({ messageId, emoji, partnerId: activeChat.id }),
       });
 
       if (!res.ok) {
+        const errText = await res.text();
+        console.error("Reaction server error status:", res.status, errText);
         toast.error("Không thể ghi nhận phản hồi.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.log("Reaction error:", error);
+      toast.error("Không thể ghi nhận phản hồi.");
     }
   }, [activeChat, currentUser]);
 

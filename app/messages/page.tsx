@@ -1,4 +1,5 @@
 import MessagesContent from "@/components/chat/MessagesContent";
+import Navbar from "@/components/layout/Navbar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
@@ -80,11 +81,16 @@ export default async function MessagesPage() {
   }));
 
   return (
-    <MessagesContent
-      initialSessionUser={session.user}
-      initialConversations={initialConversations}
-      initialMessages={[]} // Will be loaded dynamically per chat conversation
-      initialSystemUsers={initialSystemUsers}
-    />
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 select-none overflow-hidden">
+      <Navbar />
+      <main className="flex h-[calc(100vh-73px)] w-full overflow-hidden">
+        <MessagesContent
+          initialSessionUser={session.user}
+          initialConversations={initialConversations}
+          initialMessages={[]} // Will be loaded dynamically per chat conversation
+          initialSystemUsers={initialSystemUsers}
+        />
+      </main>
+    </div>
   );
 }

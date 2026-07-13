@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense, startTransition } from "react";
+import React, { useState, useEffect, useRef, Suspense, startTransition, useCallback } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { BitpawMiniApp } from "@/app/messages/BitpawMiniApp";
 import GifPicker from "@/components/chat/GifPicker";
@@ -184,7 +184,7 @@ export default function MessagesContent({
   const chatObserverTarget = useRef<HTMLDivElement>(null);
 
   // Fetch messages and conversations list from DB
-  const loadData = async (isSilent = false) => {
+  const loadData = useCallback(async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
       const res = await fetch("/api/messages");
@@ -248,9 +248,9 @@ export default function MessagesContent({
     } finally {
       if (!isSilent) setLoading(false);
     }
-  };
+  }, [router]);
 
-  const loadInitialChatMessages = async (convId: string) => {
+  const loadInitialChatMessages = useCallback(async (convId: string) => {
     try {
       setLoadingChatMessages(true);
       const res = await fetch(`/api/messages?conversationId=${convId}`);
@@ -290,9 +290,9 @@ export default function MessagesContent({
     } finally {
       setLoadingChatMessages(false);
     }
-  };
+  }, []);
 
-  const loadMoreChatMessages = async () => {
+  const loadMoreChatMessages = useCallback(async () => {
     if (!activeChat?.conversationId || !chatNextCursor || loadingMoreChatMessages) return;
     try {
       setLoadingMoreChatMessages(true);
@@ -333,7 +333,7 @@ export default function MessagesContent({
     } finally {
       setLoadingMoreChatMessages(false);
     }
-  };
+  }, [activeChat?.conversationId, chatNextCursor, loadingMoreChatMessages]);
 
   // Scroll observer for infinite chat history loading
   useEffect(() => {
@@ -350,14 +350,15 @@ export default function MessagesContent({
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [chatNextCursor, activeChat?.conversationId, loadingMoreChatMessages]);
+  }, [chatNextCursor, loadMoreChatMessages]);
 
   // Load message logs when activeChat is toggled
   useEffect(() => {
-    if (activeChat?.conversationId) {
+    if (!activeChat || !currentUser) return;
+    if (activeChat.conversationId) {
       loadInitialChatMessages(activeChat.conversationId);
     }
-  }, [activeChat?.conversationId]);
+  }, [activeChat?.conversationId, currentUser, loadInitialChatMessages]);
 
   // Auto scroll to bottom
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -795,7 +796,8 @@ export default function MessagesContent({
     }
   };
 
-  const handleAddReaction = async (messageId: string, emoji: string) => {
+  const handleAddReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!messageId || !activeChat || !currentUser) return;
     try {
       // Optimistic state updates
       setMessageReactions(prev => {
@@ -819,7 +821,7 @@ export default function MessagesContent({
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [activeChat, currentUser]);
 
   // Create group chat action
   const handleCreateGroup = async () => {
@@ -860,29 +862,30 @@ export default function MessagesContent({
 
   // Direct route redirect handling (?to=partnerId)
   useEffect(() => {
-    if (directPartnerId && systemUsers.length > 0) {
-      const partner = systemUsers.find((u) => u.id === directPartnerId);
-      if (partner) {
-        // Resolve target conversation if exists
-        const matchedConv = conversations.find(
-          (c) =>
-            !c.isGroup &&
-            c.participants.some((p) => p.id === partner.id)
-        );
+    if (!directPartnerId || !currentUser || systemUsers.length === 0) return;
+    if (activeChat && activeChat.id === directPartnerId) return;
 
-        setActiveChat({
-          id: partner.id,
-          name: partner.name,
-          avatarUrl: partner.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name)}&background=2563eb&color=ffffff&bold=true`,
-          role: partner.role,
-          isGroup: false,
-          isOnline: true,
-          statusText: "Đang hoạt động",
-          conversationId: matchedConv?.id,
-        });
-      }
+    const partner = systemUsers.find((u) => u.id === directPartnerId);
+    if (partner) {
+      // Resolve target conversation if exists
+      const matchedConv = conversations.find(
+        (c) =>
+          !c.isGroup &&
+          c.participants.some((p) => p.id === partner.id)
+      );
+
+      setActiveChat({
+        id: partner.id,
+        name: partner.name,
+        avatarUrl: partner.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name)}&background=2563eb&color=ffffff&bold=true`,
+        role: partner.role,
+        isGroup: false,
+        isOnline: true,
+        statusText: "Đang hoạt động",
+        conversationId: matchedConv?.id,
+      });
     }
-  }, [directPartnerId, systemUsers, conversations]);
+  }, [directPartnerId, systemUsers, conversations, activeChat, currentUser]);
 
   // Filter messages for currently active conversation
   const chatMessages = messages.filter((m) => {
@@ -901,31 +904,26 @@ export default function MessagesContent({
   });
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 select-none overflow-hidden">
-      {/* Global Navbar */}
-      <Navbar />
-
-      {/* Main Grid Container */}
-      <main className="flex-1 flex w-full max-w-7xl mx-auto p-4 sm:p-6 gap-4 overflow-hidden">
-        {/* LEFT COLUMN: CONVERSATION LIST & DISCOVER SIDEBAR (4 cols) */}
-        <div className={`w-full md:w-80 flex flex-col gap-4 flex-shrink-0 overflow-hidden ${activeChat ? "hidden md:flex" : "flex"}`}>
-          {/* Chat Headers controls */}
-          <div className="p-4 rounded-2xl border border-slate-850 bg-slate-900/20 backdrop-blur-md flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-black text-slate-100">BitPaw Messenger</h2>
-              <p className="text-[10px] text-slate-500 font-semibold tracking-wide uppercase mt-0.5">Tin nhắn mã hóa E2EE</p>
-            </div>
-            <button
-              onClick={() => setShowGroupModal(true)}
-              className="p-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 hover:text-blue-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold shadow-sm shadow-blue-500/5 uppercase tracking-wide"
-              title="Tạo nhóm chat mới"
-            >
-              <Plus className="h-4 w-4" /> Nhóm
-            </button>
+    <>
+      {/* LEFT COLUMN: CONVERSATION LIST & DISCOVER SIDEBAR (4 cols) */}
+      <div className={`w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
+        {/* Chat Headers controls */}
+        <div className="p-4 border-b border-slate-850 flex items-center justify-between gap-3 flex-shrink-0 bg-slate-900/10">
+          <div>
+            <h2 className="text-sm font-black text-slate-100">BitPaw Messenger</h2>
+            <p className="text-[10px] text-slate-500 font-semibold tracking-wide uppercase mt-0.5">Tin nhắn mã hóa E2EE</p>
           </div>
+          <button
+            onClick={() => setShowGroupModal(true)}
+            className="p-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 hover:text-blue-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold shadow-sm shadow-blue-500/5 uppercase tracking-wide"
+            title="Tạo nhóm chat mới"
+          >
+            <Plus className="h-4 w-4" /> Nhóm
+          </button>
+        </div>
 
-          {/* Conversations History List */}
-          <div className="flex-1 rounded-2xl border border-slate-850 bg-slate-900/20 backdrop-blur-md flex flex-col overflow-hidden">
+        {/* Conversations History List */}
+        <div className="flex-1 flex flex-col overflow-hidden">
             <div className="p-3.5 border-b border-slate-850/60 bg-slate-950/20 flex items-center gap-2">
               <Search className="h-4 w-4 text-slate-600" />
               <input
@@ -1011,7 +1009,7 @@ export default function MessagesContent({
         </div>
 
         {/* RIGHT COLUMN: MAIN CHAT PANEL (8 cols) */}
-        <div className={`flex-1 flex flex-col rounded-3xl border border-slate-850 bg-slate-900/25 backdrop-blur-md overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
+        <div className={`flex-1 flex flex-col h-full overflow-hidden bg-slate-900 relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
           {activeChat ? (
             <>
               {/* Active Partner Header */}
@@ -1440,7 +1438,7 @@ export default function MessagesContent({
             </div>
           )}
         </div>
-      </main>
+
 
       {/* CREATE GROUP MODAL */}
       {showGroupModal && (
@@ -1740,6 +1738,6 @@ export default function MessagesContent({
       )}
 
       <Toaster />
-    </div>
+    </>
   );
 }

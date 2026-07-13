@@ -49,7 +49,8 @@ export default function FomoPopup() {
     };
   }, []);
 
-  if (pathname && pathname.startsWith("/messages")) {
+  const isHomePage = pathname === '/' || pathname === '/index';
+  if (!isHomePage) {
     return null;
   }
 

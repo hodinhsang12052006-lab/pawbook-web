@@ -387,10 +387,25 @@ export default function MessagesContent({
   // Load message logs when activeChat is toggled
   useEffect(() => {
     if (!activeChat || !currentUser) return;
-    if (activeChat.conversationId) {
-      loadInitialChatMessages(activeChat.conversationId);
+
+    let convId = activeChat.conversationId;
+    if (!convId) {
+      const conversation = conversations.find(c =>
+        activeChat.isGroup ? c.id === activeChat.id : (!c.isGroup && c.participants.some(p => p.id === activeChat.id))
+      );
+      if (conversation) {
+        convId = conversation.id;
+      }
     }
-  }, [activeChat?.conversationId, currentUser, loadInitialChatMessages]);
+
+    if (convId && !convId.startsWith("temp-")) {
+      loadInitialChatMessages(convId);
+    } else {
+      setMessages([]);
+      setChatNextCursor(null);
+      setLoadingChatMessages(false); // Ensure loading is turned off if no conversation exists yet
+    }
+  }, [activeChat?.id, currentUser?.id, conversations, loadInitialChatMessages]);
 
   // Auto scroll to bottom
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Loader2, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
 export interface PostType {
   id: string;
@@ -287,11 +288,13 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex gap-3">
-                <div className="h-10 w-10 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
-                  <img
+                <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
+                  <Image
                     src={authorAvatar}
                     alt={post.author?.name || "Author"}
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="40px"
+                    className="object-cover"
                   />
                 </div>
                 <div>
@@ -316,18 +319,21 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
             <div className="mt-4">
               <p className="text-sm leading-relaxed text-slate-200 whitespace-pre-wrap">{post.content}</p>
               {post.mediaUrl && (
-                <div className="mt-3 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/40">
+                <div className="mt-3 relative overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/40 h-64 sm:h-[350px] w-full">
                   {post.mediaType === "video" ? (
                     <video
                       src={post.mediaUrl}
                       controls
-                      className="max-h-[350px] w-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    <img
+                    <Image
                       src={post.mediaUrl}
                       alt="Attached media"
-                      className="max-h-[350px] w-full object-cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 700px"
+                      quality={75}
+                      className="object-cover"
                     />
                   )}
                 </div>
@@ -388,11 +394,13 @@ export default function PostList({ posts: propPosts, onLikePost, refreshTrigger 
                               key={comment.id}
                               className="flex gap-2 text-xs items-start bg-slate-950/20 p-2.5 rounded-xl border border-slate-900"
                             >
-                              <div className="h-6 w-6 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
-                                <img
+                              <div className="relative h-6 w-6 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
+                                <Image
                                   src={cAvatar}
                                   alt={comment.author?.name}
-                                  className="h-full w-full object-cover"
+                                  fill
+                                  sizes="24px"
+                                  className="object-cover"
                                 />
                               </div>
                               <div className="space-y-0.5 flex-1 min-w-0">

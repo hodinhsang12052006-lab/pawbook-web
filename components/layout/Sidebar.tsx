@@ -4,6 +4,8 @@ import React from "react";
 import { Home, Briefcase, Rocket, Settings, Store, Users, Zap, BookOpen, MapPin, CreditCard } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
+import Image from "next/image";
+
 interface SidebarProps {
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
@@ -85,10 +87,13 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
           {/* Profile Card Summary */}
           <div className="mb-6 flex flex-col items-center border-b border-slate-800 pb-5 text-center">
             <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-blue-500/50 shadow-md cursor-pointer hover:opacity-85 transition-opacity" onClick={() => router.push("/profile")}>
-              <img
+              <Image
                 src={userAvatar}
                 alt="User Profile"
-                className="h-full w-full object-cover"
+                fill
+                priority
+                sizes="(max-width: 768px) 64px, 64px"
+                className="object-cover"
               />
             </div>
             <h2 className="mt-3 text-sm font-semibold text-slate-100 cursor-pointer hover:underline animate-pulse" onClick={() => router.push("/profile")}>

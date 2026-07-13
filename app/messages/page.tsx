@@ -16,6 +16,7 @@ import {
 import { useSearchParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
+import NextImage from "next/image";
 
 
 interface UserType {
@@ -1488,11 +1489,11 @@ function MessengerContent() {
                             }`}
                         >
                           <div className="relative flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                            <div className="relative h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
                               {isGroup ? (
                                 <Users className="h-5 w-5 text-indigo-400" />
                               ) : (
-                                <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                                <NextImage src={avatarUrl} alt={displayName} fill sizes="40px" className="object-cover" />
                               )}
                             </div>
                             {!isGroup && (
@@ -1627,14 +1628,16 @@ function MessengerContent() {
                     ⬅️
                   </button>
                   <div className="relative flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                    <div className="relative h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
                       {activeChat.isGroup ? (
                         <Users className="h-5 w-5 text-indigo-400" />
                       ) : (
-                        <img
+                        <NextImage
                           src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
                           alt={activeChat.name}
-                          className="h-full w-full object-cover"
+                          fill
+                          sizes="40px"
+                          className="object-cover"
                         />
                       )}
                     </div>
@@ -1717,11 +1720,13 @@ function MessengerContent() {
                           className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative message-bounce-in`}
                         >
                           {!isSelf && (
-                            <div className="h-6 w-6 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
-                              <img
+                            <div className="relative h-6 w-6 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
+                              <NextImage
                                 src={senderAvatar}
                                 alt={msg.sender?.name || "User"}
-                                className="h-full w-full object-cover"
+                                fill
+                                sizes="24px"
+                                className="object-cover"
                               />
                             </div>
                           )}
@@ -1856,7 +1861,16 @@ function MessengerContent() {
                                     }`}
                                 >
                                   {msg.type === "IMAGE" ? (
-                                    <img src={msg.content} alt="Media Attachment" className="max-w-full rounded-lg object-contain max-h-60" />
+                                    <div className="relative w-60 h-40 max-w-full overflow-hidden rounded-lg">
+                                      <NextImage
+                                        src={msg.content}
+                                        alt="Media Attachment"
+                                        fill
+                                        sizes="(max-width: 768px) 240px, 240px"
+                                        quality={75}
+                                        className="object-contain"
+                                      />
+                                    </div>
                                   ) : msg.type === "VIDEO" ? (
                                     <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
                                   ) : (
@@ -2290,11 +2304,15 @@ function MessengerContent() {
                           className={`flex items-center justify-between p-2 rounded-lg hover:bg-slate-900 transition-all duration-300 ${isDisabled ? "opacity-35 cursor-not-allowed select-none" : "cursor-pointer"}`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563eb&color=ffffff&bold=true`}
-                              alt={user.name}
-                              className="h-6.5 w-6.5 rounded-full object-cover"
-                            />
+                            <div className="relative h-6.5 w-6.5 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
+                              <NextImage
+                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563eb&color=ffffff&bold=true`}
+                                alt={user.name}
+                                fill
+                                sizes="26px"
+                                className="object-cover"
+                              />
+                            </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="block text-3xs font-bold text-slate-200 truncate">{user.name}</span>
@@ -2353,11 +2371,14 @@ function MessengerContent() {
 
           <div className="flex flex-col items-center space-y-6">
             <div className="relative">
-              <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl relative z-10">
-                <img
+              <div className="relative h-28 w-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl z-10">
+                <NextImage
                   src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
                   alt={activeChat.name}
-                  className="h-full w-full object-cover"
+                  fill
+                  priority
+                  sizes="112px"
+                  className="object-cover"
                 />
               </div>
               <div className="absolute inset-0 h-28 w-28 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
@@ -2498,11 +2519,14 @@ function MessengerContent() {
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-[2000] p-8 text-slate-100 animate-fadeIn">
           <div className="flex flex-col items-center space-y-6 max-w-sm text-center">
             <div className="relative">
-              <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-blue-500 shadow-2xl relative z-10">
-                <img
+              <div className="relative h-24 w-24 rounded-full overflow-hidden border-4 border-blue-500 shadow-2xl z-10">
+                <NextImage
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(callerInfo.name)}&background=2563eb&color=ffffff&bold=true`}
                   alt={callerInfo.name}
-                  className="h-full w-full object-cover"
+                  fill
+                  priority
+                  sizes="96px"
+                  className="object-cover"
                 />
               </div>
               <div className="absolute inset-0 h-24 w-24 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />

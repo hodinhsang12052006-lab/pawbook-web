@@ -629,10 +629,13 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
             {loading ? (
               <div className="h-full w-full bg-slate-850 animate-pulse" />
             ) : (
-              <img
+              <Image
                 src={profile.cover_image || defaultCover}
                 alt="Cover background"
-                className="h-full w-full object-cover opacity-80"
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover opacity-80"
               />
             )}
           </div>
@@ -1004,11 +1007,15 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                         <div key={req.id} className={`${idx > 0 ? "pt-4" : ""} space-y-3 text-xs`}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-2.5">
-                              <img
-                                src={req.sender.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
-                                alt={req.sender.name}
-                                className="h-9 w-9 rounded-full object-cover border border-slate-850"
-                              />
+                              <div className="relative h-9 w-9 overflow-hidden rounded-full border border-slate-850 flex-shrink-0">
+                                <Image
+                                  src={req.sender.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
+                                  alt={req.sender.name}
+                                  fill
+                                  sizes="36px"
+                                  className="object-cover"
+                                />
+                              </div>
                               <div>
                                 <h4 className="font-bold text-slate-200">{req.sender.name}</h4>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
@@ -1102,11 +1109,15 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                         <div key={req.id} className={`${idx > 0 ? "pt-4" : ""} space-y-3 text-xs`}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-2.5">
-                              <img
-                                src={req.receiver.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
-                                alt={req.receiver.name}
-                                className="h-9 w-9 rounded-full object-cover border border-slate-850"
-                              />
+                              <div className="relative h-9 w-9 overflow-hidden rounded-full border border-slate-850 flex-shrink-0">
+                                <Image
+                                  src={req.receiver.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"}
+                                  alt={req.receiver.name}
+                                  fill
+                                  sizes="36px"
+                                  className="object-cover"
+                                />
+                              </div>
                               <div>
                                 <h4 className="font-bold text-slate-200">Gửi đến: {req.receiver.name}</h4>
                                 <p className="text-[10px] text-slate-555 mt-0.5">
@@ -1260,8 +1271,8 @@ export default function ProfilePage({ params }: { params?: Promise<{ uid: string
                 </label>
                 <div className="flex items-center gap-3">
                   {editForm.avatarUrl && (
-                    <div className="h-10 w-10 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 flex-shrink-0">
-                      <img src={editForm.avatarUrl} alt="Preview Avatar" className="h-full w-full object-cover" />
+                    <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 flex-shrink-0">
+                      <Image src={editForm.avatarUrl} alt="Preview Avatar" fill sizes="40px" className="object-cover" />
                     </div>
                   )}
                   <input

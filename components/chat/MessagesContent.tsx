@@ -278,7 +278,10 @@ export default function MessagesContent({
     } catch (err: any) {
       setError(err.message || "Đã xảy ra lỗi.");
     } finally {
-      if (!isSilent) setLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+        setLoadingChatMessages(false);
+      }
     }
   }, [router]);
 
@@ -329,6 +332,7 @@ export default function MessagesContent({
     } finally {
       clearTimeout(fallbackTimer);
       setLoadingChatMessages(false);
+      setLoading(false);
     }
   }, []);
 
@@ -372,6 +376,8 @@ export default function MessagesContent({
       console.error("Failed to load older messages on scroll-up:", err);
     } finally {
       setLoadingMoreChatMessages(false);
+      setLoadingChatMessages(false);
+      setLoading(false);
     }
   }, [activeChat?.conversationId, chatNextCursor, loadingMoreChatMessages]);
 
@@ -422,6 +428,19 @@ export default function MessagesContent({
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages.length, activeChat?.id]);
+
+  // Safety net to prevent infinite loading deadlock
+  useEffect(() => {
+    if (!activeChat) return;
+    setLoadingChatMessages(true);
+
+    const safetyTimer = setTimeout(() => {
+      setLoadingChatMessages(false);
+      setLoading(false);
+    }, 2500);
+
+    return () => clearTimeout(safetyTimer);
+  }, [activeChat]);
 
   // Pusher Real-time signaling & Messaging handler
   useEffect(() => {

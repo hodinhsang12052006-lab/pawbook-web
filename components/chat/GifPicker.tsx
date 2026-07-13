@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { GiphyFetch } from '@giphy/js-fetch-api';
 import { Grid } from '@giphy/react-components';
 
-const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
-if (!GIPHY_API_KEY) {
-  console.warn("Thiếu NEXT_PUBLIC_GIPHY_API_KEY trong file .env");
+const GIPHY_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
+if (!GIPHY_KEY) {
+  console.error("LỖI CHÍ MẠNG: NEXT_PUBLIC_GIPHY_API_KEY đang bị undefined ở Client Component!");
 }
-const apiKey = GIPHY_API_KEY || 'PFGXbrldYpvja6pFa2tO1gepJ9efvMca';
+const apiKey = GIPHY_KEY || 'PFGXbrldYpvja6pFa2tO1gepJ9efvMca';
 const gf = new GiphyFetch(apiKey); 
 
 export default function GifPicker({ onGifClick }: { onGifClick: (gifUrl: string) => void }) {

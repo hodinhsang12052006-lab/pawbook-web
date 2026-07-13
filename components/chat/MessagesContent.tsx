@@ -7,7 +7,8 @@ import GifPicker from "@/components/chat/GifPicker";
 import {
   Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users,
   Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info,
-  MicOff, VideoOff, PhoneOff, Volume2, Clock, FileText, Cpu, Briefcase
+  MicOff, VideoOff, PhoneOff, Volume2, Clock, FileText, Cpu, Briefcase,
+  Image as ImageIcon
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
@@ -24,6 +25,32 @@ const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
     </div>
   ),
 });
+
+const POPULAR_EMOJIS = [
+  "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+  "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
+  "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
+  "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
+  "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬",
+  "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗",
+  "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯",
+  "✍️", "👍", "👎", "👊", "✊", "🤛", "🤜", "🤝", "👏", "🙌",
+  "👐", "🤲", "🙏", "💅", "🤳", "💪", "🦾", "🦿", "❤️", "🧡",
+  "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "🔥", "✨",
+];
+
+const MOCK_STICKERS = [
+  { emoji: "🐶", label: "Cún Cười" },
+  { emoji: "🐱", label: "Mèo Wow" },
+  { emoji: "🚀", label: "Thăng Tiến" },
+  { emoji: "💎", label: "VIP Deal" },
+  { emoji: "💼", label: "Duyệt Công" },
+  { emoji: "🚗", label: "Vận Chuyển" },
+  { emoji: "🛠️", label: "Đang Tới" },
+  { emoji: "🔥", label: "Hot Deal" },
+  { emoji: "🎉", label: "Chốt Deal" },
+  { emoji: "👍", label: "Cực Tốt" },
+];
 
 interface UserType {
   id: string;
@@ -166,6 +193,11 @@ export default function MessagesContent({
 
   // Message Reactions
   const [messageReactions, setMessageReactions] = useState<{ [msgId: string]: string[] }>({});
+
+  // Media & Selector states
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [showGifs, setShowGifs] = useState(false);
+  const [chatPanelTab, setChatPanelTab] = useState<"emoji" | "sticker" | "gif">("emoji");
 
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<any>(null);
@@ -705,9 +737,19 @@ export default function MessagesContent({
     cleanupCall();
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!messageText.trim() || !activeChat || sending) return;
+  const handleSendMessage = async (e: React.FormEvent | null, customContent?: string, customType?: string) => {
+    if (e) e.preventDefault();
+    if (!activeChat || sending) return;
+
+    const content = customContent || messageText.trim();
+    const type = customType || "TEXT";
+
+    if (!content) return;
+
+    if (!customContent) setMessageText("");
+
+    setShowEmoji(false);
+    setShowGifs(false);
 
     setSending(true);
     try {
@@ -716,7 +758,8 @@ export default function MessagesContent({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: messageText.trim(),
+          content: content,
+          type: type,
           receiverId: isGroup ? undefined : activeChat.id,
           conversationId: isGroup ? activeChat.conversationId : undefined,
           isGroup,
@@ -724,7 +767,6 @@ export default function MessagesContent({
       });
 
       if (res.ok) {
-        setMessageText("");
         const data = await res.json();
         const m = data.message;
         const safeNewMsg: MessageType = {
@@ -982,7 +1024,7 @@ export default function MessagesContent({
                           {isGroup ? (
                             <Users className="h-5 w-5 text-indigo-400" />
                           ) : (
-                            <NextImage src={avatarUrl} alt={displayName} fill sizes="40px" className="object-cover" />
+                            <img src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2563eb&color=ffffff&bold=true`} alt={displayName} className="object-cover w-full h-full rounded-full" />
                           )}
                         </div>
                         {!isGroup && (
@@ -1026,12 +1068,10 @@ export default function MessagesContent({
                       {activeChat.isGroup ? (
                         <Users className="h-5 w-5 text-indigo-400" />
                       ) : (
-                        <NextImage
+                        <img
                           src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
                           alt={activeChat.name}
-                          fill
-                          sizes="40px"
-                          className="object-cover"
+                          className="object-cover w-full h-full rounded-full"
                         />
                       )}
                     </div>
@@ -1118,12 +1158,10 @@ export default function MessagesContent({
                       >
                         {!isSelf && (
                           <div className="relative h-6 w-6 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
-                            <NextImage
+                            <img
                               src={senderAvatar}
                               alt={msg.sender?.name || "User"}
-                              fill
-                              sizes="24px"
-                              className="object-cover"
+                              className="object-cover w-full h-full rounded-full"
                             />
                           </div>
                         )}
@@ -1249,6 +1287,92 @@ export default function MessagesContent({
                 <div ref={scrollRef} className="h-2 w-full flex-none" />
               </div>
 
+              {/* Unified Telegram-like Media panel (Emoji / Stickers / GIFs) */}
+              {(showEmoji || showGifs) && (
+                <div className="absolute bottom-24 left-4 right-4 bg-slate-950 border border-slate-855 rounded-2xl p-4 shadow-2xl z-20 h-80 flex flex-col animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setChatPanelTab("emoji"); setShowEmoji(true); setShowGifs(false); }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${chatPanelTab === "emoji" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"}`}
+                      >
+                        😀 Emojis
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setChatPanelTab("sticker"); setShowEmoji(false); setShowGifs(false); }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${chatPanelTab === "sticker" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"}`}
+                      >
+                        ✨ Stickers
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setChatPanelTab("gif"); setShowGifs(true); setShowEmoji(false); }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${chatPanelTab === "gif" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"}`}
+                      >
+                        🎬 GIFs
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEmoji(false);
+                        setShowGifs(false);
+                      }}
+                      className="p-1 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    {chatPanelTab === "emoji" && (
+                      <div className="grid grid-cols-8 sm:grid-cols-10 gap-3 p-2 h-full overflow-y-auto custom-scrollbar select-none">
+                        {POPULAR_EMOJIS.map((emoji, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setMessageText((prev) => prev + emoji)}
+                            className="text-2xl p-2 rounded-xl hover:bg-slate-900 hover:scale-125 active:scale-95 transition-transform duration-200 cursor-pointer text-center flex items-center justify-center"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {chatPanelTab === "sticker" && (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 p-1">
+                        {MOCK_STICKERS.map((stk) => (
+                          <div
+                            key={stk.label}
+                            onClick={() => {
+                              handleSendMessage(null, stk.emoji, "STICKER");
+                              setShowEmoji(false);
+                            }}
+                            className="hover:scale-125 hover:-rotate-3 active:scale-95 transition-all duration-300 cursor-pointer p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-1.5 shadow-md select-none hover:shadow-indigo-500/10 hover:border-indigo-500/30"
+                          >
+                            <span className="text-4xl animate-bounce" style={{ animationDuration: "2s" }}>{stk.emoji}</span>
+                            <span className="text-[9px] text-slate-500 tracking-wider font-semibold uppercase">{stk.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {chatPanelTab === "gif" && (
+                      <div className="h-full py-1">
+                        <GifPicker onGifClick={(url) => {
+                          handleSendMessage(null, url, "IMAGE");
+                          setShowEmoji(false);
+                          setShowGifs(false);
+                        }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Chat Textbox Entry Bar */}
               <div className="p-4 border-t border-slate-855 bg-slate-950 flex-none z-10">
                 {isTyping && (
@@ -1257,17 +1381,37 @@ export default function MessagesContent({
                     <span>Đối phương đang soạn tin nhắn...</span>
                   </div>
                 )}
-
-                <form onSubmit={handleSendMessage} className="space-y-3">
+                <form onSubmit={(e) => handleSendMessage(e)} className="space-y-3">
                   <div className="flex items-center gap-2">
-                    {/* Add Custom Sticker Shortcut */}
+                    {/* Add Custom Emoji/Sticker Shortcut */}
                     <button
                       type="button"
-                      onClick={() => handleAddReaction("", "👍")}
-                      className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                      title="Gửi Sticker nhanh"
+                      onClick={() => {
+                        setShowEmoji(!showEmoji);
+                        setShowGifs(false);
+                      }}
+                      className={`p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer ${showEmoji && chatPanelTab !== "gif" ? "bg-slate-900 text-blue-400 border-blue-500/30" : ""}`}
+                      title="Chèn biểu tượng, nhãn dán"
                     >
                       <Smile className="h-4 w-4" />
+                    </button>
+
+                    {/* GIF Picker Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (showEmoji && chatPanelTab === "gif") {
+                          setShowEmoji(false);
+                        } else {
+                          setShowEmoji(true);
+                          setChatPanelTab("gif");
+                          setShowGifs(true);
+                        }
+                      }}
+                      className={`px-2.5 py-1 h-8 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-all duration-300 cursor-pointer text-xs font-black font-sans leading-none flex items-center justify-center border border-slate-800 ${showEmoji && chatPanelTab === "gif" ? "bg-blue-600/20 text-blue-300 border-blue-500/50" : ""}`}
+                      title="Chèn ảnh động GIF"
+                    >
+                      GIF
                     </button>
 
                     <button
@@ -1493,12 +1637,10 @@ export default function MessagesContent({
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="relative h-6.5 w-6.5 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
-                              <NextImage
+                              <img
                                 src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563eb&color=ffffff&bold=true`}
                                 alt={user.name}
-                                fill
-                                sizes="26px"
-                                className="object-cover"
+                                className="object-cover w-full h-full rounded-full"
                               />
                             </div>
                             <div className="min-w-0">
@@ -1560,13 +1702,10 @@ export default function MessagesContent({
           <div className="flex flex-col items-center space-y-6">
             <div className="relative">
               <div className="relative h-28 w-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl z-10">
-                <NextImage
+                <img
                   src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
                   alt={activeChat.name}
-                  fill
-                  priority
-                  sizes="112px"
-                  className="object-cover"
+                  className="object-cover w-full h-full rounded-full"
                 />
               </div>
               <div className="absolute inset-0 h-28 w-28 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
@@ -1694,13 +1833,10 @@ export default function MessagesContent({
           <div className="flex flex-col items-center space-y-6 max-w-sm text-center">
             <div className="relative">
               <div className="relative h-24 w-24 rounded-full overflow-hidden border-4 border-blue-500 shadow-2xl z-10">
-                <NextImage
+                <img
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(callerInfo.name)}&background=2563eb&color=ffffff&bold=true`}
                   alt={callerInfo.name}
-                  fill
-                  priority
-                  sizes="96px"
-                  className="object-cover"
+                  className="object-cover w-full h-full rounded-full"
                 />
               </div>
               <div className="absolute inset-0 h-24 w-24 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />

@@ -287,6 +287,9 @@ export default function MessagesContent({
       setLoadingChatMessages(false);
       return;
     }
+    const fallbackTimer = setTimeout(() => {
+      setLoadingChatMessages(false);
+    }, 3000);
     try {
       setLoadingChatMessages(true);
       const res = await fetch(`/api/messages?conversationId=${convId}`);
@@ -324,6 +327,7 @@ export default function MessagesContent({
     } catch (err) {
       console.error("Failed to load initial messages:", err);
     } finally {
+      clearTimeout(fallbackTimer);
       setLoadingChatMessages(false);
     }
   }, []);

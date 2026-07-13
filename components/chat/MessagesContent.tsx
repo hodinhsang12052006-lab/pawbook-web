@@ -400,8 +400,9 @@ export default function MessagesContent({
 
   // Load message logs when activeChat is toggled
   useEffect(() => {
-    if (!activeChat || !currentUser) return;
+    if (!activeChat?.id) return;
 
+    const controller = new AbortController();
     let convId = activeChat.conversationId;
     if (!convId) {
       const conversation = conversations.find(c =>
@@ -412,14 +413,36 @@ export default function MessagesContent({
       }
     }
 
-    if (convId && !convId.startsWith("temp-")) {
-      loadInitialChatMessages(convId);
-    } else {
-      setMessages([]);
-      setChatNextCursor(null);
-      setLoadingChatMessages(false); // Ensure loading is turned off if no conversation exists yet
+    async function fetchData() {
+      setLoadingChatMessages(true);
+      try {
+        if (convId && !convId.startsWith("temp-")) {
+          await loadInitialChatMessages(convId);
+        } else {
+          setMessages([]);
+          setChatNextCursor(null);
+        }
+      } catch (e) {
+        console.error("Lỗi fetch:", e);
+      } finally {
+        setLoadingChatMessages(false);
+        setLoading(false);
+      }
     }
-  }, [activeChat?.id, currentUser?.id, conversations, loadInitialChatMessages]);
+
+    fetchData();
+
+    // Safety net: Force disable connecting spinner after 2.5s (Safety Net)
+    const safetyTimer = setTimeout(() => {
+      setLoadingChatMessages(false);
+      setLoading(false);
+    }, 2500);
+
+    return () => {
+      controller.abort();
+      clearTimeout(safetyTimer);
+    };
+  }, [activeChat?.id]);
 
   // Auto scroll to bottom
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -428,19 +451,6 @@ export default function MessagesContent({
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages.length, activeChat?.id]);
-
-  // Safety net to prevent infinite loading deadlock
-  useEffect(() => {
-    if (!activeChat) return;
-    setLoadingChatMessages(true);
-
-    const safetyTimer = setTimeout(() => {
-      setLoadingChatMessages(false);
-      setLoading(false);
-    }, 2500);
-
-    return () => clearTimeout(safetyTimer);
-  }, [activeChat]);
 
   // Pusher Real-time signaling & Messaging handler
   useEffect(() => {
@@ -1003,7 +1013,7 @@ export default function MessagesContent({
   });
 
   return (
-    <>
+    <div key={activeChat?.id} className="flex w-full h-full overflow-hidden">
       {/* LEFT COLUMN: CONVERSATION LIST & DISCOVER SIDEBAR (4 cols) */}
       <div className={`w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
         {/* Chat Headers controls */}
@@ -1174,7 +1184,7 @@ export default function MessagesContent({
               </div>
 
               {/* Chat Message Logs Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0 relative">
                 {/* Scroll observer target for history load */}
                 <div ref={chatObserverTarget} className="h-2 w-full flex-none" />
 
@@ -1185,12 +1195,14 @@ export default function MessagesContent({
                   </div>
                 )}
 
-                {loadingChatMessages ? (
-                  <div className="flex-1 flex flex-col items-center justify-center space-y-2 text-slate-400">
-                    <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
-                    <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest">Đang kết nối hội thoại...</span>
+                {loadingChatMessages && (
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-800 rounded-full px-3 py-1 text-[10px] text-slate-300 flex items-center gap-1.5 shadow-lg z-50 animate-fadeIn backdrop-blur-sm">
+                    <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
+                    <span className="font-bold tracking-wider uppercase">Đang nạp tin nhắn mới...</span>
                   </div>
-                ) : chatMessages.length > 0 ? (
+                )}
+
+                {chatMessages.length > 0 ? (
                   chatMessages.map((msg, idx) => {
                     const isSelf = msg.senderId === currentUser?.id;
                     const senderAvatar = isSelf
@@ -1931,6 +1943,6 @@ export default function MessagesContent({
       )}
 
       <Toaster />
-    </>
+    </div>
   );
 }

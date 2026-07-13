@@ -1446,13 +1446,13 @@ export default function MessagesContent({
                       </div>
                     );
                   })
-                ) : (
+                ) : !loadingChatMessages ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2 text-slate-500 animate-fadeIn">
                     <span className="text-xl">👋</span>
                     <p className="text-xs font-bold text-slate-400">Chưa có tin nhắn nào</p>
                     <p className="text-4xs text-slate-600 max-w-[200px] leading-relaxed">Gửi tin nhắn chào hỏi để bắt đầu thảo luận công việc & MMO.</p>
                   </div>
-                )}
+                ) : null}
                 <div ref={scrollRef} className="h-2 w-full flex-none" />
               </div>
 

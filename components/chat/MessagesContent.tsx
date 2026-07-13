@@ -888,39 +888,37 @@ export default function MessagesContent({
         toast.error(errData.error || "Gửi tin nhắn thất bại.");
       }
     } catch (err) {
-      toast.error("Lỗi kết nối mạng.");
+      console.error("Lỗi kết nối mạng:", err);
     } finally {
       setSending(false);
     }
   };
 
-  const handleAddReaction = useCallback(async (messageId: string, emoji: string) => {
+  const handleAddReaction = useCallback(async (messageId: string, icon: string) => {
     if (!messageId || !activeChat || !currentUser) return;
     try {
       // Optimistic state updates
       setMessageReactions(prev => {
         const current = prev[messageId] || [];
-        if (current.includes(emoji)) return prev;
+        if (current.includes(icon)) return prev;
         return {
           ...prev,
-          [messageId]: [...current, emoji]
+          [messageId]: [...current, icon]
         };
       });
 
       const res = await fetch("/api/messages/react", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId, emoji, partnerId: activeChat.id }),
+        body: JSON.stringify({ messageId, emoji: icon, icon, partnerId: activeChat.id }),
       });
 
       if (!res.ok) {
         const errText = await res.text();
         console.error("Reaction server error status:", res.status, errText);
-        toast.error("Không thể ghi nhận phản hồi.");
       }
     } catch (error) {
-      console.log("Reaction error:", error);
-      toast.error("Không thể ghi nhận phản hồi.");
+      console.error("Reaction error:", error);
     }
   }, [activeChat, currentUser]);
 

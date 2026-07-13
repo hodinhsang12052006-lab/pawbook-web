@@ -1,50 +1,33 @@
-"use client";
-import { useState } from 'react';
-import { GiphyFetch } from '@giphy/js-fetch-api';
-import { Grid } from '@giphy/react-components';
+import React from "react";
 
-const GIPHY_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
-if (!GIPHY_KEY) {
-  console.error("LỖI CHÍ MẠNG: NEXT_PUBLIC_GIPHY_API_KEY đang bị undefined ở Client Component!");
-}
-const apiKey = GIPHY_KEY || 'PFGXbrldYpvja6pFa2tO1gepJ9efvMca';
-const gf = new GiphyFetch(apiKey); 
-
-export default function GifPicker({ onGifClick }: { onGifClick: (gifUrl: string) => void }) {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const fetchGifs = (offset: number) => {
-    if (searchTerm) {
-      return gf.search(searchTerm, { offset, limit: 10 });
-    }
-    // Default trending GIFs
-    return gf.trending({ offset, limit: 10 });
-  };
+export default function GifPicker({ onGifClick, onClose }: { onGifClick: (url: string) => void, onClose?: () => void }) {
+  const TELEGRAM_GIFS = [
+    "https://media.giphy.com/media/11ISwbgCxEzMyY/giphy.gif", // Cười
+    "https://media.giphy.com/media/3o6Zt4HU9uwXmXSAuI/giphy.gif", // Khóc
+    "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif", // Suy nghĩ
+    "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif", // Wow
+    "https://media.giphy.com/media/VbnUQpnihPSIgIXuZv/giphy.gif", // OK
+    "https://media.giphy.com/media/xT0GqssRweIhlz209i/giphy.gif", // Chào
+    "https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif", // Giận
+    "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif", // Buồn
+    "https://media.giphy.com/media/wW95fEq09hOI8/giphy.gif", // Dance
+    "https://media.giphy.com/media/5Govl2ixf25Co/giphy.gif", // Happy
+  ];
 
   return (
-    <div className="w-full flex flex-col gap-3">
-      <input 
-        type="text"
-        placeholder="Tìm kiếm GIF (như Telegram)..."
-        className="w-full p-2 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 focus:outline-none focus:border-blue-500 text-xs placeholder-slate-500"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-      
-      <div className="h-[250px] overflow-y-auto custom-scrollbar flex justify-center">
-        {/* Thêm key={searchTerm} để ép Grid re-render khi search đổi */}
-        <Grid 
-          key={searchTerm}
-          width={280} 
-          columns={2} 
-          fetchGifs={fetchGifs} 
-          onGifClick={(gif, e) => {
-            e.preventDefault();
-            // Lấy link original chất lượng để gửi
-            onGifClick(gif.images.original.url);
-          }} 
+    <div className="p-2 h-64 overflow-y-auto grid grid-cols-2 gap-2 bg-slate-900/60 rounded-xl custom-scrollbar border border-slate-800/80">
+      {TELEGRAM_GIFS.map((url, idx) => (
+        <img
+          key={idx}
+          src={url}
+          alt="gif"
+          className="w-full h-24 object-cover cursor-pointer hover:opacity-80 rounded-xl border border-slate-800 transition-all duration-300 hover:scale-103"
+          onClick={() => {
+            onGifClick(url);
+            if (onClose) onClose();
+          }}
         />
-      </div>
+      ))}
     </div>
   );
 }

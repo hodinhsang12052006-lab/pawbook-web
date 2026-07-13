@@ -401,95 +401,83 @@ export default function MessagesContent({
 
   // Load message logs when activeChat is toggled
   useEffect(() => {
-    if (!activeChat?.id) return;
+    if (!activeChat || !activeChat.id) return;
 
-    const controller = new AbortController();
-    let convId = activeChat.conversationId;
-    if (!convId) {
-      const conversation = conversations.find(c =>
-        activeChat.isGroup ? c.id === activeChat.id : (!c.isGroup && c.participants.some(p => p.id === activeChat.id))
-      );
-      if (conversation) {
-        convId = conversation.id;
-      }
-    }
+    let isMounted = true;
 
-    async function fetchData() {
+    async function fetchMessages() {
       setLoadingChatMessages(true);
       try {
-        if (convId && !convId.startsWith("temp-")) {
-          await loadInitialChatMessages(convId);
-        } else {
-          // If no local conversation id is resolved, check with the backend using partnerId
-          const res = await fetch(`/api/messages?partnerId=${activeChat.id}`);
-          if (res.ok) {
-            const data = await res.json();
-            console.log("📥 Data API trả về (partnerId query):", data);
-            const safeMsgs = (data.messages || []).map((m: any) => ({
-              id: m.id,
-              content: m.content || m.body || "",
-              type: m.type || "TEXT",
-              senderId: m.senderId,
-              receiverId: m.receiverId || "",
-              createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
-              sender: m.sender ? {
-                id: m.sender.id,
-                name: m.sender.name,
-                avatarUrl: m.sender.avatarUrl || null,
-                role: m.sender.role,
-              } : { id: "", name: "User", role: "USER" },
-              receiver: m.receiver ? {
-                id: m.receiver.id,
-                name: m.receiver.name,
-                avatarUrl: m.receiver.avatarUrl || null,
-                role: m.receiver.role,
-              } : { id: "", name: "User", role: "USER" },
-              conversationId: m.conversationId,
-            }));
+        const queryParam = activeChat.isGroup 
+          ? `conversationId=${activeChat.id}` 
+          : (activeChat.conversationId 
+              ? `conversationId=${activeChat.conversationId}` 
+              : `partnerId=${activeChat.id}`);
+        const res = await fetch(`/api/messages?${queryParam}`);
+        const data = await res.json();
+        console.log("📥 Data API trả về (activeChat load):", data);
 
-            setMessages((prev) => {
-              const safePrev = Array.isArray(prev) ? prev : [];
-              const otherMsgs = safePrev.filter((m) => m.conversationId !== data.messages?.[0]?.conversationId);
-              return [...otherMsgs, ...safeMsgs];
-            });
-            setChatNextCursor(data.nextCursor || null);
+        if (isMounted) {
+          let msgList = [];
+          if (Array.isArray(data)) {
+            msgList = data;
+          } else if (data && Array.isArray(data.messages)) {
+            msgList = data.messages;
+          }
 
-            // Update the activeChat conversationId if it exists in the fetched payload
-            if (data.messages && data.messages.length > 0) {
-              const fetchedConvId = data.messages[0].conversationId;
-              if (fetchedConvId) {
-                setActiveChat((prev: any) => {
-                  if (prev && prev.id === activeChat.id) {
-                    return { ...prev, conversationId: fetchedConvId };
-                  }
-                  return prev;
-                });
-              }
+          const safeMsgs = msgList.map((m: any) => ({
+            id: m.id,
+            content: m.content || m.body || "",
+            type: m.type || "TEXT",
+            senderId: m.senderId,
+            receiverId: m.receiverId || "",
+            createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+            sender: m.sender ? {
+              id: m.sender.id,
+              name: m.sender.name,
+              avatarUrl: m.sender.avatarUrl || null,
+              role: m.sender.role,
+            } : { id: "", name: "User", role: "USER" },
+            receiver: m.receiver ? {
+              id: m.receiver.id,
+              name: m.receiver.name,
+              avatarUrl: m.receiver.avatarUrl || null,
+              role: m.receiver.role,
+            } : { id: "", name: "User", role: "USER" },
+            conversationId: m.conversationId,
+          }));
+
+          setMessages(safeMsgs);
+          setChatNextCursor(data.nextCursor || null);
+
+          // Update the activeChat conversationId if it is found on the backend!
+          if (safeMsgs.length > 0 && !activeChat.conversationId) {
+            const fetchedConvId = safeMsgs[0].conversationId;
+            if (fetchedConvId) {
+              setActiveChat((prev: any) => {
+                if (prev && prev.id === activeChat.id) {
+                  return { ...prev, conversationId: fetchedConvId };
+                }
+                return prev;
+              });
             }
-          } else {
-            setMessages([]);
-            setChatNextCursor(null);
           }
         }
-      } catch (e) {
-        console.error("Lỗi fetch:", e);
+      } catch (error) {
+        console.error("Lỗi tải tin nhắn:", error);
+        if (isMounted) setMessages([]);
       } finally {
-        setLoadingChatMessages(false);
-        setLoading(false);
+        if (isMounted) {
+          setLoadingChatMessages(false);
+          setLoading(false);
+        }
       }
     }
 
-    fetchData();
-
-    // Safety net: Force disable connecting spinner after 2.5s (Safety Net)
-    const safetyTimer = setTimeout(() => {
-      setLoadingChatMessages(false);
-      setLoading(false);
-    }, 2500);
+    fetchMessages();
 
     return () => {
-      controller.abort();
-      clearTimeout(safetyTimer);
+      isMounted = false; // Tránh memory leak
     };
   }, [activeChat?.id]);
 
@@ -543,7 +531,9 @@ export default function MessagesContent({
       setMessages((prev) => {
         const safePrev = Array.isArray(prev) ? prev : [];
         if (safePrev.some((existing) => existing.id === safeNewMsg.id)) return safePrev;
-        return [...safePrev, safeNewMsg];
+        // Deduplication: remove optimistic temp message if content matches
+        const filtered = safePrev.filter((msg: any) => msg.isOptimistic !== true || msg.content !== safeNewMsg.content);
+        return [...filtered, safeNewMsg];
       });
 
       // Update conversations preview item list
@@ -865,6 +855,37 @@ export default function MessagesContent({
     setShowEmoji(false);
     setShowGifs(false);
 
+    // 1. Tạo tin nhắn TẠM THỜI (Fake Message) để hiện ngay lập tức lên màn hình
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage: MessageType = {
+      id: tempId,
+      content: content,
+      type: type,
+      senderId: currentUser.id,
+      receiverId: activeChat.isGroup ? "" : activeChat.id,
+      createdAt: new Date().toISOString(),
+      sender: {
+        id: currentUser.id,
+        name: currentUser.name,
+        avatarUrl: currentUser.avatarUrl || null,
+        role: currentUser.role,
+      },
+      receiver: {
+        id: activeChat.isGroup ? "" : activeChat.id,
+        name: activeChat.name,
+        avatarUrl: activeChat.avatarUrl || null,
+        role: activeChat.isGroup ? "GROUP" : activeChat.role,
+      },
+      conversationId: activeChat.conversationId || "",
+      isOptimistic: true // Cờ đánh dấu tin nhắn đang gửi
+    } as any;
+
+    // 2. Nhét ngay vào state để render mượt mà (Độ trễ 0s)
+    setMessages((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      return [...safePrev, optimisticMessage];
+    });
+
     setSending(true);
     try {
       const isGroup = activeChat.isGroup;
@@ -899,10 +920,12 @@ export default function MessagesContent({
           conversationId: m.conversationId,
         };
 
+        // Replace temp message with server message
         setMessages((prev) => {
           const safePrev = Array.isArray(prev) ? prev : [];
-          if (safePrev.some((existing) => existing.id === safeNewMsg.id)) return safePrev;
-          return [...safePrev, safeNewMsg];
+          const filtered = safePrev.filter((msg) => msg.id !== tempId);
+          if (filtered.some((existing) => existing.id === safeNewMsg.id)) return filtered;
+          return [...filtered, safeNewMsg];
         });
 
         // Set activeChat conversationId if it was not present
@@ -942,11 +965,21 @@ export default function MessagesContent({
           }
         });
       } else {
+        // Nếu API lỗi, xóa tin nhắn ảo đi
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return safePrev.filter((msg) => msg.id !== tempId);
+        });
         const errData = await res.json();
         toast.error(errData.error || "Gửi tin nhắn thất bại.");
       }
     } catch (err) {
-      console.error("Lỗi kết nối mạng:", err);
+      console.error("Gửi lỗi:", err);
+      // Nếu rớt mạng, xóa tin nhắn ảo đi
+      setMessages((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return safePrev.filter((msg) => msg.id !== tempId);
+      });
     } finally {
       setSending(false);
     }

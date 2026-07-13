@@ -24,6 +24,7 @@ export const getPusherClient = () => {
     PusherClient.logToConsole = true; // Ép hiện Log để theo dõi
     pusherInstance = new PusherClient(key, {
       cluster: cluster,
+      authEndpoint: "/api/pusher/auth",
     });
   }
   return pusherInstance;

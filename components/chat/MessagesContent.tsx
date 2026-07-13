@@ -427,6 +427,12 @@ export default function MessagesContent({
     const channelName = `private-chat-${currentUser.id}`;
     const channel = pusher.subscribe(channelName);
 
+    // Pusher Subscription Error Handler
+    channel.bind("pusher:subscription_error", (error: any) => {
+      console.error("Pusher subscription error:", error);
+      setLoadingChatMessages(false);
+    });
+
     // Incoming messages
     channel.bind("new-message", (data: any) => {
       if (!data?.message) return;

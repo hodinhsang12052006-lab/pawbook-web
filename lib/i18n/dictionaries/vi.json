@@ -1,0 +1,49 @@
+{
+  "menu": {
+    "home": "Trang chủ",
+    "messages": "Tin nhắn",
+    "jobs": "Việc làm",
+    "profile": "Hồ sơ",
+    "notifications": "Thông báo",
+    "logout": "Đăng xuất",
+    "login": "Đăng nhập",
+    "register": "Đăng ký"
+  },
+  "messenger": {
+    "title": "BitPaw Messenger",
+    "subtitle": "Tin nhắn mã hóa E2EE",
+    "searchPlaceholder": "Tìm kiếm tin nhắn, đối tác...",
+    "newGroup": "Nhóm",
+    "loadingConversations": "Đang tải cuộc hội thoại...",
+    "noConversations": "Không có cuộc trò chuyện nào",
+    "selectConversation": "Chọn cuộc trò chuyện",
+    "selectConversationHint": "Hãy chọn một cuộc trò chuyện hoặc bắt đầu kết bạn để nhắn tin.",
+    "noMessagesYet": "Chưa có tin nhắn nào",
+    "noMessagesHint": "Gửi tin nhắn chào hỏi để bắt đầu thảo luận công việc & MMO.",
+    "typing": "Đối phương đang soạn tin nhắn...",
+    "loadingHistory": "ĐANG CUỘN TẢI LỊCH SỬ TIN NHẮN...",
+    "loadingMessages": "Đang nạp tin nhắn mới...",
+    "inputPlaceholder": "Viết tin nhắn phản hồi, chốt deal, chấm công...",
+    "replyingTo": "Trả lời {name}",
+    "cancelReply": "Hủy trả lời",
+    "seen": "Đã xem",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua"
+  },
+  "callUI": {
+    "audioCallSecure": "Cuộc gọi thoại E2EE",
+    "videoCallSecure": "Cuộc gọi Video E2EE",
+    "encryptedNote": "Cuộc gọi được bảo mật bằng mã hóa đầu cuối",
+    "calling": "Đang gọi",
+    "incoming": "Cuộc gọi đến",
+    "ringing": "Đang đổ chuông...",
+    "accept": "Trả lời",
+    "decline": "Từ chối",
+    "endCall": "Kết thúc cuộc gọi",
+    "mute": "Tắt micro",
+    "unmute": "Bật micro",
+    "cameraOn": "Bật camera",
+    "cameraOff": "Tắt camera",
+    "speaker": "Loa ngoài"
+  }
+}

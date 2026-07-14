@@ -3,6 +3,21 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+// A hardcoded fallback secret shipped in source is publicly known to anyone
+// who can read this repo — it lets an attacker forge valid session JWTs for
+// ANY user if NEXTAUTH_SECRET is ever unset in an environment. Falling back
+// to a per-process random secret instead means a missing env var degrades to
+// "everyone gets logged out on restart" (annoying but safe) rather than
+// "sessions are forgeable" (a full auth bypass).
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error(
+    "❌ NEXTAUTH_SECRET is not set — falling back to a random per-process secret. " +
+    "Sessions will not survive a restart/redeploy until this is configured."
+  );
+}
+const authSecret = process.env.NEXTAUTH_SECRET || crypto.randomBytes(32).toString("hex");
 
 export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   // Ép Vercel tin tưởng Domain để không đánh rơi Cookie
@@ -90,7 +105,7 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   },
   // Tắt debug trên Production cho nhẹ server, chỉ bật khi ở máy tính
   debug: process.env.NODE_ENV === "development",
-  secret: process.env.NEXTAUTH_SECRET || "pawbook_super_secret_key_2026_fixed_hardcode",
+  secret: authSecret,
 };
 
 const handler = NextAuth(authOptions);

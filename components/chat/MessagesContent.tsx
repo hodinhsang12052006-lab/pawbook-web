@@ -15,6 +15,8 @@ import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
 import NextImage from "next/image";
 import dynamic from "next/dynamic";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import LanguageToggle from "@/components/layout/LanguageToggle";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
   ssr: false,
@@ -177,6 +179,7 @@ export default function MessagesContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const directPartnerId = searchParams.get("to");
+  const { t, locale } = useLanguage();
 
   // Authentication & Data Loading
   const [currentUser] = useState<any>(initialSessionUser);
@@ -1185,16 +1188,19 @@ export default function MessagesContent({
         {/* Chat Headers controls */}
         <div className="p-4 border-b border-slate-850 flex items-center justify-between gap-3 flex-shrink-0 bg-slate-900/10">
           <div>
-            <h2 className="text-sm font-black text-slate-100">BitPaw Messenger</h2>
-            <p className="text-[10px] text-slate-500 font-semibold tracking-wide uppercase mt-0.5">Tin nhắn mã hóa E2EE</p>
+            <h2 className="text-sm font-black text-slate-100">{t("messenger.title")}</h2>
+            <p className="text-[10px] text-slate-500 font-semibold tracking-wide uppercase mt-0.5">{t("messenger.subtitle")}</p>
           </div>
-          <button
-            onClick={() => setShowGroupModal(true)}
-            className="p-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 hover:text-blue-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold shadow-sm shadow-blue-500/5 uppercase tracking-wide"
-            title="Tạo nhóm chat mới"
-          >
-            <Plus className="h-4 w-4" /> Nhóm
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <button
+              onClick={() => setShowGroupModal(true)}
+              className="p-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 hover:text-blue-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold shadow-sm shadow-blue-500/5 uppercase tracking-wide"
+              title="Tạo nhóm chat mới"
+            >
+              <Plus className="h-4 w-4" /> {t("messenger.newGroup")}
+            </button>
+          </div>
         </div>
 
         {/* Conversations History List */}
@@ -1203,7 +1209,7 @@ export default function MessagesContent({
             <Search className="h-4 w-4 text-slate-600" />
             <input
               type="text"
-              placeholder="Tìm kiếm tin nhắn, đối tác..."
+              placeholder={t("messenger.searchPlaceholder")}
               className="w-full bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none"
             />
           </div>
@@ -1211,7 +1217,7 @@ export default function MessagesContent({
           {loading ? (
             <div className="flex-1 flex flex-col items-center justify-center space-y-3 text-slate-400">
               <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
-              <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest">Đang tải cuộc hội thoại...</span>
+              <span className="text-4xs font-bold text-slate-500 uppercase tracking-widest">{t("messenger.loadingConversations")}</span>
             </div>
           ) : conversations.length > 0 ? (
             <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
@@ -1277,7 +1283,7 @@ export default function MessagesContent({
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 space-y-2 mt-8 animate-fadeIn">
               <MessageSquare className="h-8 w-8 text-slate-700" />
-              <p className="text-3xs font-bold text-slate-400">Không có cuộc trò chuyện nào</p>
+              <p className="text-3xs font-bold text-slate-400">{t("messenger.noConversations")}</p>
             </div>
           )}
         </div>
@@ -1357,14 +1363,14 @@ export default function MessagesContent({
               {loadingMoreChatMessages && (
                 <div className="flex items-center justify-center py-2 text-4xs font-bold text-slate-550 gap-1.5 animate-fadeIn flex-none">
                   <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
-                  <span>ĐANG CUỘN TẢI LỊCH SỬ TIN NHẮN...</span>
+                  <span>{t("messenger.loadingHistory")}</span>
                 </div>
               )}
 
               {loadingChatMessages && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-800 rounded-full px-3 py-1 text-[10px] text-slate-300 flex items-center gap-1.5 shadow-lg z-50 animate-fadeIn backdrop-blur-sm pointer-events-none">
                   <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
-                  <span className="font-bold tracking-wider uppercase">Đang nạp tin nhắn mới...</span>
+                  <span className="font-bold tracking-wider uppercase">{t("messenger.loadingMessages")}</span>
                 </div>
               )}
 
@@ -1385,9 +1391,9 @@ export default function MessagesContent({
                     const d = new Date(msg.createdAt);
                     const today = new Date().toDateString();
                     const yesterday = new Date(Date.now() - 86400000).toDateString();
-                    if (msgDay === today) return "Hôm nay";
-                    if (msgDay === yesterday) return "Hôm qua";
-                    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "long", year: "numeric" });
+                    if (msgDay === today) return t("messenger.today");
+                    if (msgDay === yesterday) return t("messenger.yesterday");
+                    return d.toLocaleDateString(locale === "en" ? "en-US" : "vi-VN", { day: "2-digit", month: "long", year: "numeric" });
                   })();
 
                   const dateSeparator = showDateSeparator ? (
@@ -1591,7 +1597,7 @@ export default function MessagesContent({
 
                         {isSeenByPartner && (
                           <span className="absolute -bottom-4 right-1 text-[8px] text-slate-500 font-semibold select-none">
-                            Đã xem
+                            {t("messenger.seen")}
                           </span>
                         )}
                       </div>
@@ -1603,8 +1609,8 @@ export default function MessagesContent({
                 // Chỉ hiển thị "Chưa có tin nhắn nào" khi KHÔNG CÓ TIN NHẮN và KHÔNG ĐANG LOAD
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2 text-slate-500 animate-fadeIn">
                   <span className="text-xl">👋</span>
-                  <p className="text-xs font-bold text-slate-400">Chưa có tin nhắn nào</p>
-                  <p className="text-4xs text-slate-600 max-w-[200px] leading-relaxed">Gửi tin nhắn chào hỏi để bắt đầu thảo luận công việc & MMO.</p>
+                  <p className="text-xs font-bold text-slate-400">{t("messenger.noMessagesYet")}</p>
+                  <p className="text-4xs text-slate-600 max-w-[200px] leading-relaxed">{t("messenger.noMessagesHint")}</p>
                 </div>
               ) : null}
               <div ref={scrollRef} className="h-2 w-full flex-none" />
@@ -1697,14 +1703,14 @@ export default function MessagesContent({
               {replyingTo && (
                 <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-800 border-l-2 border-l-blue-500 animate-fadeIn">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-blue-400">Trả lời {replyingTo.senderName}</p>
+                    <p className="text-[10px] font-bold text-blue-400">{t("messenger.replyingTo", { name: replyingTo.senderName })}</p>
                     <p className="text-[10px] text-slate-400 truncate max-w-[280px]">{replyingTo.preview}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setReplyingTo(null)}
                     className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer flex-shrink-0"
-                    title="Hủy trả lời"
+                    title={t("messenger.cancelReply")}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -1713,7 +1719,7 @@ export default function MessagesContent({
               {isTyping && (
                 <div className="text-[10px] text-slate-400 font-semibold mb-2 ml-1 flex items-center gap-1.5 animate-pulse">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                  <span>Đối phương đang soạn tin nhắn...</span>
+                  <span>{t("messenger.typing")}</span>
                 </div>
               )}
               <form onSubmit={(e) => handleSendMessage(e)} className="space-y-3">
@@ -1891,7 +1897,7 @@ export default function MessagesContent({
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     disabled={sending}
-                    placeholder="Viết tin nhắn phản hồi, chốt deal, chấm công..."
+                    placeholder={t("messenger.inputPlaceholder")}
                     className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"
                   />
                   <button
@@ -1909,9 +1915,9 @@ export default function MessagesContent({
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3 animate-fadeIn">
             <MessageSquare className="h-10 w-10 text-slate-700 animate-pulse" />
             <div>
-              <p className="text-xs font-bold text-slate-300">Chọn cuộc trò chuyện</p>
+              <p className="text-xs font-bold text-slate-300">{t("messenger.selectConversation")}</p>
               <p className="text-3xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
-                Hãy chọn một cuộc trò chuyện hoặc bắt đầu kết bạn để nhắn tin.
+                {t("messenger.selectConversationHint")}
               </p>
             </div>
           </div>
@@ -2042,9 +2048,9 @@ export default function MessagesContent({
           <div className="flex flex-col items-center space-y-2 pt-[max(3rem,env(safe-area-inset-top))] animate-scaleUp">
             <span className="bg-white/5 border border-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-              {callType === "video" ? "Cuộc gọi Video E2EE" : "Cuộc gọi thoại E2EE"}
+              {callType === "video" ? t("callUI.videoCallSecure") : t("callUI.audioCallSecure")}
             </span>
-            <p className="text-3xs text-slate-400 font-semibold italic">Cuộc gọi được bảo mật bằng mã hóa đầu cuối</p>
+            <p className="text-3xs text-slate-400 font-semibold italic">{t("callUI.encryptedNote")}</p>
           </div>
 
           <div className="flex flex-col items-center space-y-6">
@@ -2066,7 +2072,7 @@ export default function MessagesContent({
                 <CallTimer active={callConnected && showCallingModal} />
               ) : (
                 <p className="text-xs text-slate-300 font-semibold animate-pulse">
-                  Đang gọi {callType === "video" ? "Video" : "Thoại"}...
+                  {t("callUI.calling")} {callType === "video" ? "Video" : "Audio"}...
                 </p>
               )}
             </div>
@@ -2095,7 +2101,7 @@ export default function MessagesContent({
                   type="button"
                   onClick={handleAcceptCall}
                   className="h-16 w-16 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 hover:scale-105 active:scale-90 transition-transform duration-200 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 cursor-pointer"
-                  title="Nhận cuộc gọi"
+                  title={t("callUI.accept")}
                 >
                   <Phone className="h-6 w-6 stroke-[2.5px]" />
                 </button>
@@ -2104,7 +2110,7 @@ export default function MessagesContent({
                   type="button"
                   onClick={handleEndCall}
                   className="h-16 w-16 rounded-full bg-gradient-to-b from-rose-500 to-red-600 hover:scale-105 active:scale-90 transition-transform duration-200 text-white flex items-center justify-center shadow-xl shadow-red-500/30 cursor-pointer"
-                  title="Từ chối"
+                  title={t("callUI.decline")}
                 >
                   <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
                 </button>
@@ -2122,7 +2128,7 @@ export default function MessagesContent({
                     toast.success(nextMute ? "🔇 Đã tắt micro" : "🎤 Đã bật micro");
                   }}
                   className={`h-13 w-13 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${micMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
-                  title={micMuted ? "Bật micro" : "Tắt micro"}
+                  title={micMuted ? t("callUI.unmute") : t("callUI.mute")}
                 >
                   {micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </button>
@@ -2131,7 +2137,7 @@ export default function MessagesContent({
                   type="button"
                   onClick={handleEndCall}
                   className="h-16 w-16 rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white flex items-center justify-center cursor-pointer shadow-xl shadow-red-500/30 transition-transform duration-200 hover:scale-105 active:scale-90"
-                  title="Kết thúc cuộc gọi"
+                  title={t("callUI.endCall")}
                 >
                   <PhoneOff className="h-6 w-6" />
                 </button>
@@ -2141,7 +2147,7 @@ export default function MessagesContent({
                     type="button"
                     onClick={() => toast.success("🔊 Đã chuyển sang loa ngoài")}
                     className="h-13 w-13 rounded-full bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15 flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
-                    title="Loa ngoài"
+                    title={t("callUI.speaker")}
                   >
                     <Volume2 className="h-5 w-5" />
                   </button>
@@ -2165,7 +2171,7 @@ export default function MessagesContent({
                       });
                     }}
                     className={`h-13 w-13 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${cameraMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
-                    title={cameraMuted ? "Bật camera" : "Tắt camera"}
+                    title={cameraMuted ? t("callUI.cameraOn") : t("callUI.cameraOff")}
                   >
                     {cameraMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
                   </button>
@@ -2193,7 +2199,7 @@ export default function MessagesContent({
 
           <div className="flex flex-col items-center space-y-2 pt-[max(3rem,env(safe-area-inset-top))] animate-scaleUp">
             <span className="bg-blue-500/15 border border-blue-500/30 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-blue-300 uppercase tracking-widest flex items-center gap-1.5">
-              📞 Đang đổ chuông...
+              📞 {t("callUI.ringing")}
             </span>
           </div>
 
@@ -2211,7 +2217,7 @@ export default function MessagesContent({
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-sm font-semibold text-slate-300">Cuộc gọi đến</h2>
+              <h2 className="text-sm font-semibold text-slate-300">{t("callUI.incoming")}</h2>
               <p className="text-xl font-black text-slate-100 tracking-tight">{callerInfo.name}</p>
             </div>
           </div>
@@ -2223,11 +2229,11 @@ export default function MessagesContent({
                 type="button"
                 onClick={handleEndCall}
                 className="h-16 w-16 rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white flex items-center justify-center shadow-xl shadow-red-500/30 cursor-pointer hover:scale-105 active:scale-90 transition-transform duration-200"
-                title="Từ chối"
+                title={t("callUI.decline")}
               >
                 <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
               </button>
-              <span className="text-[10px] font-semibold text-slate-400">Từ chối</span>
+              <span className="text-[10px] font-semibold text-slate-400">{t("callUI.decline")}</span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
@@ -2235,11 +2241,11 @@ export default function MessagesContent({
                 type="button"
                 onClick={handleAcceptCall}
                 className="h-16 w-16 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 cursor-pointer hover:scale-105 active:scale-90 transition-transform duration-200 animate-pulse"
-                title="Nhận cuộc gọi"
+                title={t("callUI.accept")}
               >
                 <Phone className="h-6 w-6 stroke-[2.5px]" />
               </button>
-              <span className="text-[10px] font-semibold text-slate-400">Trả lời</span>
+              <span className="text-[10px] font-semibold text-slate-400">{t("callUI.accept")}</span>
             </div>
           </div>
         </div>

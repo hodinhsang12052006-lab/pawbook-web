@@ -1,4 +1,14 @@
 import type { NextConfig } from "next";
+// next-pwa ships no TypeScript declarations.
+// @ts-expect-error - untyped CommonJS module
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   images: {
@@ -34,7 +44,13 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com;",
+            // NOTE: script-src still carries 'unsafe-eval'/'unsafe-inline' —
+            // removing them would meaningfully strengthen XSS mitigation, but
+            // Next's inline hydration scripts and the ZegoCloud call SDK may
+            // depend on one or both. That needs a nonce-based CSP + a real
+            // build/runtime test before flipping, so it's left as-is here;
+            // object-src/base-uri/form-action below are safe, no-risk additions.
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },
@@ -42,4 +58,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

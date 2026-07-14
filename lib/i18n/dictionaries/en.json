@@ -1,0 +1,49 @@
+{
+  "menu": {
+    "home": "Home",
+    "messages": "Messages",
+    "jobs": "Jobs",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "logout": "Log out",
+    "login": "Log in",
+    "register": "Sign up"
+  },
+  "messenger": {
+    "title": "BitPaw Messenger",
+    "subtitle": "End-to-end encrypted chat",
+    "searchPlaceholder": "Search messages, contacts...",
+    "newGroup": "Group",
+    "loadingConversations": "Loading conversations...",
+    "noConversations": "No conversations yet",
+    "selectConversation": "Select a conversation",
+    "selectConversationHint": "Pick a conversation or start a new one to begin chatting.",
+    "noMessagesYet": "No messages yet",
+    "noMessagesHint": "Send a message to start the conversation.",
+    "typing": "is typing...",
+    "loadingHistory": "LOADING OLDER MESSAGES...",
+    "loadingMessages": "Loading messages...",
+    "inputPlaceholder": "Write a reply, close a deal, check in...",
+    "replyingTo": "Replying to {name}",
+    "cancelReply": "Cancel reply",
+    "seen": "Seen",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "callUI": {
+    "audioCallSecure": "Encrypted voice call",
+    "videoCallSecure": "Encrypted video call",
+    "encryptedNote": "This call is end-to-end encrypted",
+    "calling": "Calling",
+    "incoming": "Incoming call",
+    "ringing": "Ringing...",
+    "accept": "Accept",
+    "decline": "Decline",
+    "endCall": "End call",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "cameraOn": "Turn camera on",
+    "cameraOff": "Turn camera off",
+    "speaker": "Speaker"
+  }
+}

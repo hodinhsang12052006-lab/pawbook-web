@@ -35,6 +35,7 @@ export const metadata: Metadata = {
 };
 
 import FomoPopup from "@/components/FomoPopup";
+import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 
 export default function RootLayout({
   children,
@@ -47,9 +48,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
-        <Toaster position="top-center" />
-        <FomoPopup />
-        {children}
+        <LanguageProvider>
+          <Toaster position="top-center" />
+          <FomoPopup />
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );

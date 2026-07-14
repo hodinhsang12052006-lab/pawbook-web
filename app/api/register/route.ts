@@ -3,10 +3,13 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_PERSONAS = ["CANDIDATE", "SPECIALIST", "BUSINESS"];
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const {
+    let {
       name,
       email,
       password,
@@ -17,12 +20,29 @@ export async function POST(req: Request) {
       category,
     } = body;
 
-    // Validation
+    // Validation — trim/normalize first so whitespace-only strings and
+    // stray casing don't slip past the required-field checks below.
+    name = typeof name === "string" ? name.trim() : "";
+    email = typeof email === "string" ? email.trim().toLowerCase() : "";
+    password = typeof password === "string" ? password : "";
+
     if (!name || !email || !password || !persona) {
       return NextResponse.json(
         { error: "Vui lòng điền đầy đủ thông tin bắt buộc." },
         { status: 400 }
       );
+    }
+    if (name.length > 80) {
+      return NextResponse.json({ error: "Tên quá dài (tối đa 80 ký tự)." }, { status: 400 });
+    }
+    if (!EMAIL_RE.test(email) || email.length > 254) {
+      return NextResponse.json({ error: "Địa chỉ email không hợp lệ." }, { status: 400 });
+    }
+    if (password.length < 8 || password.length > 128) {
+      return NextResponse.json({ error: "Mật khẩu phải từ 8 đến 128 ký tự." }, { status: 400 });
+    }
+    if (!VALID_PERSONAS.includes(persona)) {
+      return NextResponse.json({ error: "Loại tài khoản không hợp lệ." }, { status: 400 });
     }
 
     // Check if user already exists

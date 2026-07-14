@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# next-pwa build output (generated at build time, don't commit)
+/public/sw.js
+/public/workbox-*.js
+/public/sw.js.map
+/public/fallback-*.js
+
 # production
 /build
 

@@ -5,7 +5,9 @@ import { Search, Upload, Bell, MessageSquare, Menu, Check, Trash2, ShieldAlert, 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { getPusherClient } from "@/lib/pusher";
+import { getPusherClient, chatChannelName } from "@/lib/pusher";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import LanguageToggle from "@/components/layout/LanguageToggle";
 
 interface NotificationType {
   id: string;
@@ -20,6 +22,7 @@ interface NotificationType {
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [hasUnread, setHasUnread] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
@@ -164,16 +167,22 @@ export default function Navbar() {
     const pusher = getPusherClient();
     if (!pusher) return;
 
-    const channelName = String(sessionUser.id).trim();
+    // Must match the exact channel name the server triggers "new-message" to
+    // (see lib/pusher.ts chatChannelName) — this previously subscribed to the
+    // bare user id, which the server never sends to, so this toast/unread
+    // badge silently never fired.
+    const channelName = chatChannelName(String(sessionUser.id).trim());
     const channel = pusher.subscribe(channelName);
 
-    const newMessageHandler = (message: any) => {
+    const newMessageHandler = (data: any) => {
+      const message = data?.message || data;
+      if (!message) return;
       // If the incoming message is not sent by the logged-in user, and they are not on /messages
       if (message.senderId !== sessionUser.id) {
         if (!pathname || !pathname.startsWith("/messages")) {
           setHasUnread(true);
           toast.success(
-            `Tin nhắn mới từ ${message.sender?.name || "ai đó"}: ${message.content.substring(0, 20)}...`,
+            `Tin nhắn mới từ ${message.sender?.name || "ai đó"}: ${(message.content || "").substring(0, 20)}...`,
             {
               icon: "💬",
               position: "top-right",
@@ -677,14 +686,14 @@ export default function Navbar() {
                   <Coins className="h-4.5 w-4.5 text-amber-500 fill-amber-500/10" />
                 </button>
 
-                <Link 
+                <Link
                   href="/messages"
                   prefetch={true}
                   onClick={() => {
                     setHasUnread(false);
                   }}
                   className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors relative"
-                  title="Messenger"
+                  title={t("menu.messages")}
                 >
                   <div className="relative">
                     <MessageSquare className="h-4.5 w-4.5" />
@@ -716,23 +725,25 @@ export default function Navbar() {
                   onClick={() => router.push("/profile")}
                   className="hidden xl:inline-flex items-center rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-200 transition-all cursor-pointer"
                 >
-                  Trang cá nhân
+                  {t("menu.profile")}
                 </button>
               </div>
+              <LanguageToggle className="ml-1" />
             </>
           ) : (
             <div className="flex items-center gap-2">
+              <LanguageToggle />
               <button
                 onClick={() => router.push("/auth/login")}
                 className="text-xs font-semibold text-slate-300 hover:text-white px-2.5 py-1.5 transition-colors cursor-pointer"
               >
-                Đăng nhập
+                {t("menu.login")}
               </button>
               <button
                 onClick={() => router.push("/auth/register")}
                 className="rounded-full bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 transition-all duration-200 cursor-pointer"
               >
-                Đăng ký
+                {t("menu.register")}
               </button>
             </div>
           )}

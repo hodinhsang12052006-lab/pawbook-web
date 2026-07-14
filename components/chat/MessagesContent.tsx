@@ -1030,6 +1030,14 @@ export default function MessagesContent({
 
     if (!rawContent) return;
 
+    // Validate absolute URL format for IMAGE/GIF content types
+    if (type === "IMAGE" || type === "GIF") {
+      if (!/^https?:\/\//i.test(rawContent)) {
+        toast.error("Đường dẫn hình ảnh không hợp lệ (Phải là đường dẫn tuyệt đối bắt đầu bằng http/https).");
+        return;
+      }
+    }
+
     if (!customContent) setMessageText("");
 
     // Only free-typed text replies carry the quoted-message envelope —
@@ -1177,6 +1185,10 @@ export default function MessagesContent({
   // thumbnails re-reconcile) on every unrelated MessagesContent render while
   // the media panel is open.
   const handleGifSelect = useCallback((url: string) => {
+    if (!url || !url.trim() || !/^https?:\/\//i.test(url)) {
+      toast.error("Định dạng ảnh GIF không hợp lệ (Phải là đường dẫn tuyệt đối bắt đầu bằng http/https).");
+      return;
+    }
     handleSendMessage(null, url, "IMAGE");
   }, [handleSendMessage]);
 
@@ -1625,6 +1637,19 @@ export default function MessagesContent({
                                     sizes="(max-width: 768px) 240px, 240px"
                                     quality={75}
                                     className="object-contain"
+                                    onError={(e) => {
+                                      const imgEl = e.currentTarget;
+                                      imgEl.style.display = "none";
+                                      const parent = imgEl.parentElement;
+                                      if (parent) {
+                                        if (!parent.querySelector(".img-fallback")) {
+                                          const fallback = document.createElement("div");
+                                          fallback.className = "img-fallback absolute inset-0 flex flex-col items-center justify-center w-full h-full bg-slate-950/40 text-slate-500 gap-1.5 text-[10px] border border-slate-800 rounded-lg";
+                                          fallback.innerHTML = "⚠️ <span class='font-semibold text-slate-400'>Ảnh lỗi hoặc không tìm thấy</span>";
+                                          parent.appendChild(fallback);
+                                        }
+                                      }
+                                    }}
                                   />
                                 </div>
                               ) : msg.type === "VIDEO" ? (
@@ -1872,6 +1897,10 @@ export default function MessagesContent({
                           });
                           const uploadData = await uploadRes.json();
                           if (uploadRes.ok && uploadData.url) {
+                            if (!/^https?:\/\//i.test(uploadData.url)) {
+                              toast.error("Lỗi: Đường dẫn hình ảnh tải lên không đúng định dạng.", { id: toastId });
+                              return;
+                            }
                             toast.success("Tải ảnh lên thành công! ☁️", { id: toastId });
 
                             // Send image message

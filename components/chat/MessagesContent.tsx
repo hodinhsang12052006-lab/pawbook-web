@@ -108,6 +108,29 @@ interface MessagesContentProps {
   initialSystemUsers: any[];
 }
 
+// Per-chat message cache. Keyed by conversationId once known; a brand-new 1-1
+// chat that hasn't sent/received a first message yet has no conversationId,
+// so it's keyed by `partner:<userId>` until the server resolves a real one
+// (see rekeyCache usage below). This is the "instant, no spinner" cache: once
+// a chat's key has an entry here, switching back to it renders immediately
+// from this object — never re-fetches into a blank array first.
+function getChatKeyFor(chat: { id: string; conversationId?: string } | null | undefined): string | null {
+  if (!chat) return null;
+  return chat.conversationId || `partner:${chat.id}`;
+}
+
+// Dedupes by id (last write wins) and keeps chronological order — used for
+// every cache write so appends, prepends (older-history pagination), and
+// realtime pushes never need to worry about ordering or duplicates.
+function mergeMessageLists(a: MessageType[], b: MessageType[]): MessageType[] {
+  const map = new Map<string, MessageType>();
+  a.forEach((m) => map.set(m.id, m));
+  b.forEach((m) => map.set(m.id, m));
+  return Array.from(map.values()).sort(
+    (x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime()
+  );
+}
+
 // Reply envelope stored as JSON inside a type="REPLY" message's body/content —
 // see the note on `replyingTo` state for why this avoids a schema change.
 interface ReplyEnvelope {
@@ -184,7 +207,21 @@ export default function MessagesContent({
   // Authentication & Data Loading
   const [currentUser] = useState<any>(initialSessionUser);
   const [conversations, setConversations] = useState<ConversationType[]>(initialConversations);
-  const [messages, setMessages] = useState<MessageType[]>(initialMessages);
+
+  // Per-chat message cache (see getChatKeyFor/mergeMessageLists above). This
+  // replaces a single flat `messages` array that got wholesale REPLACED with
+  // just the active chat's messages on every switch — meaning switching back
+  // to a chat you'd already viewed always re-fetched and re-rendered from an
+  // empty list, which is exactly the "vòng xoay loading mỗi lần đổi chat"
+  // complaint. Now every chat's messages persist here for the whole session.
+  const [messagesCache, setMessagesCache] = useState<Record<string, MessageType[]>>(() => {
+    const seed: Record<string, MessageType[]> = {};
+    (initialMessages || []).forEach((m: any) => {
+      const key = m.conversationId || `partner:${m.senderId}`;
+      seed[key] = mergeMessageLists(seed[key] || [], [m]);
+    });
+    return seed;
+  });
   const [systemUsers, setSystemUsers] = useState<UserType[]>(initialSystemUsers);
 
   const [loading, setLoading] = useState(false);
@@ -265,10 +302,52 @@ export default function MessagesContent({
   const receivingCallRef = useRef(receivingCall);
   receivingCallRef.current = receivingCall;
 
-  const activeChatRef = useRef(activeChat?.id);
+  // Holds the FULL active chat object (not just id) so the Pusher effect
+  // below — deliberately subscribed only once per session, not re-bound on
+  // every activeChat change — can still read the current chat/conversationId
+  // without going stale.
+  const activeChatRef = useRef(activeChat);
   useEffect(() => {
-    activeChatRef.current = activeChat?.id;
+    activeChatRef.current = activeChat;
   }, [activeChat]);
+
+  // Cache write helpers — every message mutation in this component goes
+  // through one of these three instead of touching messagesCache directly.
+  const mergeIntoCache = useCallback((key: string | null, incoming: MessageType[]) => {
+    if (!key) return;
+    setMessagesCache((prev) => ({ ...prev, [key]: mergeMessageLists(prev[key] || [], incoming) }));
+  }, []);
+
+  const removeFromCache = useCallback((key: string | null, predicate: (m: MessageType) => boolean) => {
+    if (!key) return;
+    setMessagesCache((prev) => {
+      if (!prev[key]) return prev;
+      return { ...prev, [key]: prev[key].filter((m) => !predicate(m)) };
+    });
+  }, []);
+
+  // Migrates a chat's cache entry from a temporary `partner:<id>` key to its
+  // real conversationId once the server resolves one (first send/receive),
+  // merging with anything already cached under the real key.
+  const rekeyCache = useCallback((oldKey: string | null, newKey: string | null) => {
+    if (!oldKey || !newKey || oldKey === newKey) return;
+    setMessagesCache((prev) => {
+      if (!prev[oldKey]) return prev;
+      const merged = mergeMessageLists(prev[newKey] || [], prev[oldKey]);
+      const next = { ...prev };
+      delete next[oldKey];
+      next[newKey] = merged;
+      return next;
+    });
+  }, []);
+
+  // Messages for the currently active chat — a direct cache lookup instead of
+  // a filter over every conversation's history, so it's O(1) and correct by
+  // construction (no more re-deriving "which messages belong to this chat").
+  const chatMessages = React.useMemo(() => {
+    const key = getChatKeyFor(activeChat);
+    return key ? messagesCache[key] || [] : [];
+  }, [messagesCache, activeChat]);
 
   // Reset per-conversation draft/UI state on chat switch. Previously this was
   // done by remounting the whole component via `key={activeChat?.id}` on the
@@ -344,7 +423,18 @@ export default function MessagesContent({
         })),
       }));
 
-      setMessages(safeMsgs);
+      // Merge into each conversation's cache entry rather than replacing a
+      // flat list — this can run while a chat is open (loadData(true) after
+      // creating a group/new conversation) and must not blank out whatever
+      // is currently displayed.
+      setMessagesCache((prev) => {
+        const next = { ...prev };
+        safeMsgs.forEach((m: any) => {
+          const key = m.conversationId || `partner:${m.senderId}`;
+          next[key] = mergeMessageLists(next[key] || [], [m]);
+        });
+        return next;
+      });
       setConversations(safeConvs);
       setSystemUsers(data.users || []);
     } catch (err: any) {
@@ -392,11 +482,9 @@ export default function MessagesContent({
           conversationId: m.conversationId,
         }));
 
-        setMessages((prev) => {
-          const safePrev = Array.isArray(prev) ? prev : [];
-          // Prepend newly fetched older messages
-          return [...safeMsgs, ...safePrev];
-        });
+        // mergeMessageLists re-sorts by createdAt, so merging older messages
+        // in naturally "prepends" them — no manual ordering needed.
+        mergeIntoCache(activeChat.conversationId, safeMsgs);
         setChatNextCursor(data.nextCursor || null);
       }
     } catch (err) {
@@ -405,7 +493,7 @@ export default function MessagesContent({
       loadingMoreRef.current = false;
       setLoadingMoreChatMessages(false);
     }
-  }, [activeChat?.conversationId, chatNextCursor]);
+  }, [activeChat?.conversationId, chatNextCursor, mergeIntoCache]);
 
   // Scroll observer for infinite chat history loading
   useEffect(() => {
@@ -425,11 +513,21 @@ export default function MessagesContent({
   }, [chatNextCursor, loadMoreChatMessages]);
 
   // Load message logs when activeChat is toggled
-  // useLayoutEffect (not useEffect): flips loadingChatMessages=true synchronously
-  // before paint, so the stale "empty" state can never flash between switching
-  // activeChat and the fetch actually starting.
+  // useLayoutEffect (not useEffect): decides synchronously, before paint,
+  // whether this chat switch needs a spinner at all.
+  //
+  // Telegram-style instant switching: if this chat's key already has cached
+  // messages, render them immediately (chatMessages below reads straight from
+  // messagesCache) and refresh in the background with NO spinner and NO
+  // clearing — the fetch below only ever merges into the cache, it never
+  // resets it. The spinner only appears the very first time a given chat is
+  // opened this session, when there's genuinely nothing to show yet.
   useLayoutEffect(() => {
     if (!activeChat || !activeChat.id) return;
+    const chat = activeChat; // narrowed local — `activeChat` itself isn't narrowed inside the nested async function below
+
+    const key = getChatKeyFor(chat)!;
+    const isFirstOpen = !messagesCache[key]?.length;
 
     let isMounted = true;
     // Safety net: if the request ever hangs (dropped connection, server never
@@ -438,13 +536,13 @@ export default function MessagesContent({
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     async function fetchMessages() {
-      setLoadingChatMessages(true);
+      if (isFirstOpen) setLoadingChatMessages(true);
       try {
-        const queryParam = activeChat.isGroup
-          ? `conversationId=${activeChat.id}`
-          : (activeChat.conversationId
-            ? `conversationId=${activeChat.conversationId}`
-            : `partnerId=${activeChat.id}`);
+        const queryParam = chat.isGroup
+          ? `conversationId=${chat.id}`
+          : (chat.conversationId
+            ? `conversationId=${chat.conversationId}`
+            : `partnerId=${chat.id}`);
         const res = await fetch(`/api/messages?${queryParam}`, { signal: controller.signal });
         const data = await res.json();
 
@@ -478,25 +576,26 @@ export default function MessagesContent({
             conversationId: m.conversationId,
           }));
 
-          setMessages(safeMsgs);
+          const fetchedConvId = safeMsgs[0]?.conversationId;
+          const effectiveKey = chat.conversationId || fetchedConvId || key;
+          if (effectiveKey !== key) rekeyCache(key, effectiveKey);
+          mergeIntoCache(effectiveKey, safeMsgs);
           setChatNextCursor(data.nextCursor || null);
 
           // Update the activeChat conversationId if it is found on the backend!
-          if (safeMsgs.length > 0 && !activeChat.conversationId) {
-            const fetchedConvId = safeMsgs[0].conversationId;
-            if (fetchedConvId) {
-              setActiveChat((prev: any) => {
-                if (prev && prev.id === activeChat.id) {
-                  return { ...prev, conversationId: fetchedConvId };
-                }
-                return prev;
-              });
-            }
+          if (!chat.conversationId && fetchedConvId) {
+            setActiveChat((prev: any) => {
+              if (prev && prev.id === chat.id) {
+                return { ...prev, conversationId: fetchedConvId };
+              }
+              return prev;
+            });
           }
         }
       } catch (error) {
         console.error("Lỗi tải tin nhắn:", error);
-        if (isMounted) setMessages([]);
+        // Deliberately NOT clearing the cache here — a stale-but-present chat
+        // history beats wiping the screen blank on a transient network error.
       } finally {
         clearTimeout(timeoutId);
         if (isMounted) {
@@ -512,6 +611,8 @@ export default function MessagesContent({
       clearTimeout(timeoutId);
       controller.abort();
     };
+    // messagesCache/mergeIntoCache/rekeyCache deliberately omitted: this must
+    // only re-run when the chat itself changes, not on every cache write.
   }, [activeChat?.id]);
 
   // Auto scroll to bottom
@@ -520,7 +621,7 @@ export default function MessagesContent({
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages.length, activeChat?.id]);
+  }, [chatMessages.length, activeChat?.id]);
 
   // Ping "seen" whenever the open conversation gains messages (initial load
   // or a new one arriving while it's the active chat) — see `seenMap` note.
@@ -531,7 +632,7 @@ export default function MessagesContent({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conversationId: activeChat.conversationId }),
     }).catch(() => {});
-  }, [activeChat?.conversationId, messages.length]);
+  }, [activeChat?.conversationId, chatMessages.length]);
 
   // Pusher Real-time signaling & Messaging handler
   useEffect(() => {
@@ -570,13 +671,32 @@ export default function MessagesContent({
         conversationId: m.conversationId,
       };
 
-      setMessages((prev) => {
-        const safePrev = Array.isArray(prev) ? prev : [];
-        if (safePrev.some((existing) => existing.id === safeNewMsg.id)) return safePrev;
-        // Deduplication: remove optimistic temp message if content matches
-        const filtered = safePrev.filter((msg: any) => msg.isOptimistic !== true || msg.content !== safeNewMsg.content);
-        return [...filtered, safeNewMsg];
-      });
+      // This handler is bound once per session (effect deps: [currentUser?.id]
+      // only, deliberately — see the effect's closing comment), so `activeChat`
+      // read directly here would be frozen at whatever it was on first bind.
+      // activeChatRef.current always has the live value instead.
+      const liveActiveChat = activeChatRef.current;
+      let targetKey: string | null = m.conversationId || null;
+
+      // First message ever for a chat still keyed by `partner:<id>` (no
+      // conversationId resolved client-side yet) — migrate it now that the
+      // server has told us the real conversationId.
+      if (
+        targetKey &&
+        liveActiveChat &&
+        !liveActiveChat.conversationId &&
+        (m.senderId === liveActiveChat.id || m.receiverId === liveActiveChat.id)
+      ) {
+        rekeyCache(getChatKeyFor(liveActiveChat), targetKey);
+        setActiveChat((prev: any) => (prev && prev.id === liveActiveChat.id ? { ...prev, conversationId: targetKey } : prev));
+      }
+
+      if (targetKey) {
+        // Drop any optimistic placeholder this message supersedes, then merge
+        // the real one in (mergeMessageLists also dedupes by id).
+        removeFromCache(targetKey, (msg: any) => msg.isOptimistic === true && msg.content === safeNewMsg.content);
+        mergeIntoCache(targetKey, [safeNewMsg]);
+      }
 
       // Update conversations preview item list
       setConversations((prev) => {
@@ -954,11 +1074,9 @@ export default function MessagesContent({
       isOptimistic: true // Cờ đánh dấu tin nhắn đang gửi
     } as any;
 
-    // 2. Nhét ngay vào state để render mượt mà (Độ trễ 0s)
-    setMessages((prev) => {
-      const safePrev = Array.isArray(prev) ? prev : [];
-      return [...safePrev, optimisticMessage];
-    });
+    // 2. Nhét ngay vào cache để render mượt mà (Độ trễ 0s)
+    const sendKey = getChatKeyFor(activeChat)!;
+    mergeIntoCache(sendKey, [optimisticMessage]);
 
     setSending(true);
     try {
@@ -994,13 +1112,15 @@ export default function MessagesContent({
           conversationId: m.conversationId,
         };
 
-        // Replace temp message with server message
-        setMessages((prev) => {
-          const safePrev = Array.isArray(prev) ? prev : [];
-          const filtered = safePrev.filter((msg) => msg.id !== tempId);
-          if (filtered.some((existing) => existing.id === safeNewMsg.id)) return filtered;
-          return [...filtered, safeNewMsg];
-        });
+        // Replace temp message with the confirmed server message. If this was
+        // the chat's first message, its key was a temporary `partner:<id>` —
+        // rekey to the real conversationId (merging any interleaved cache
+        // writes, e.g. a Pusher echo that arrived first) before removing the
+        // optimistic placeholder and adding the confirmed one.
+        const finalKey = m.conversationId || sendKey;
+        if (finalKey !== sendKey) rekeyCache(sendKey, finalKey);
+        removeFromCache(finalKey, (msg) => msg.id === tempId);
+        mergeIntoCache(finalKey, [safeNewMsg]);
 
         // Set activeChat conversationId if it was not present
         if (!activeChat.conversationId) {
@@ -1040,24 +1160,18 @@ export default function MessagesContent({
         });
       } else {
         // Nếu API lỗi, xóa tin nhắn ảo đi
-        setMessages((prev) => {
-          const safePrev = Array.isArray(prev) ? prev : [];
-          return safePrev.filter((msg) => msg.id !== tempId);
-        });
+        removeFromCache(sendKey, (msg) => msg.id === tempId);
         const errData = await res.json();
         toast.error(errData.error || "Gửi tin nhắn thất bại.");
       }
     } catch (err) {
       console.error("Gửi lỗi:", err);
       // Nếu rớt mạng, xóa tin nhắn ảo đi
-      setMessages((prev) => {
-        const safePrev = Array.isArray(prev) ? prev : [];
-        return safePrev.filter((msg) => msg.id !== tempId);
-      });
+      removeFromCache(sendKey, (msg) => msg.id === tempId);
     } finally {
       setSending(false);
     }
-  }, [activeChat, sending, currentUser, loadData, replyingTo]);
+  }, [activeChat, sending, currentUser, loadData, replyingTo, mergeIntoCache, removeFromCache, rekeyCache]);
 
   // Stable references so the memoized GifPicker doesn't re-render (and its 12
   // thumbnails re-reconcile) on every unrelated MessagesContent render while
@@ -1162,24 +1276,6 @@ export default function MessagesContent({
       });
     }
   }, [directPartnerId, systemUsers, conversations, activeChat, currentUser]);
-
-  // Filter messages for currently active conversation.
-  // Memoized: `messages` can hold every conversation's history, so this filter
-  // shouldn't re-run on renders unrelated to messages/activeChat (e.g. typing).
-  const chatMessages = React.useMemo(() => messages.filter((m) => {
-    if (!activeChat) return false;
-    if (activeChat.isGroup) {
-      return m.conversationId === activeChat.conversationId;
-    } else {
-      if (activeChat.conversationId) {
-        return m.conversationId === activeChat.conversationId;
-      }
-      return (
-        (m.senderId === currentUser?.id && m.receiverId === activeChat.id) ||
-        (m.senderId === activeChat.id && m.receiverId === currentUser?.id)
-      );
-    }
-  }), [messages, activeChat, currentUser?.id]);
 
   return (
     <div className="flex w-full h-full overflow-hidden">
@@ -1811,7 +1907,7 @@ export default function MessagesContent({
                                 conversationId: m.conversationId,
                               };
 
-                              setMessages((prev) => [...prev, safeNewMsg]);
+                              mergeIntoCache(m.conversationId || getChatKeyFor(activeChat), [safeNewMsg]);
                             }
                           } else {
                             toast.error(uploadData.error || "Tải ảnh lên thất bại.", { id: toastId });
@@ -1867,7 +1963,7 @@ export default function MessagesContent({
                                 conversationId: m.conversationId,
                               };
 
-                              setMessages((prev) => [...prev, safeNewMsg]);
+                              mergeIntoCache(m.conversationId || getChatKeyFor(activeChat), [safeNewMsg]);
                               resolve("Chấm công thành công! ⏱️");
                             } else {
                               reject("Lỗi lưu chấm công.");

@@ -90,11 +90,66 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { jobId, cvUrl } = body;
+    const { jobId, cvUrl, applicantId } = body;
 
-    if (!jobId || !cvUrl) {
+    if (!jobId) {
       return NextResponse.json(
-        { error: "Thông tin công việc hoặc CV không được trống." },
+        { error: "Thông tin công việc không được trống." },
+        { status: 400 }
+      );
+    }
+
+    // Employer-initiated match: swiping right on a candidate card (candidates
+    // topic in /candidates) has no "self-apply" semantics — the employer is
+    // choosing a candidate for one of THEIR jobs, not applying to their own
+    // posting. This branch creates the Application on the candidate's behalf.
+    // It intentionally skips the PawCoin anti-spam charge below (that fee
+    // models a candidate paying to apply, not an employer's own action).
+    if (applicantId) {
+      const userRole = (session.user as any).role;
+      if (userRole !== "EMPLOYER") {
+        return NextResponse.json(
+          { error: "Chỉ nhà tuyển dụng mới có thể chủ động match ứng viên." },
+          { status: 403 }
+        );
+      }
+
+      const job = await prisma.job.findUnique({ where: { id: jobId } });
+      if (!job) {
+        return NextResponse.json({ error: "Công việc không tồn tại." }, { status: 404 });
+      }
+      if (job.employerId !== userId) {
+        return NextResponse.json({ error: "Bạn không sở hữu tin tuyển dụng này." }, { status: 403 });
+      }
+
+      const applicant = await prisma.user.findUnique({ where: { id: applicantId } });
+      if (!applicant) {
+        return NextResponse.json({ error: "Ứng viên không tồn tại." }, { status: 404 });
+      }
+
+      const existingMatch = await prisma.application.findFirst({
+        where: { applicantId, jobId },
+      });
+      if (existingMatch) {
+        return NextResponse.json({ error: "Bạn đã match với ứng viên này cho vị trí đó rồi." }, { status: 400 });
+      }
+
+      const application = await prisma.application.create({
+        data: {
+          applicantId,
+          jobId,
+          cvUrl: applicant.cvUrl || applicant.cv_url || "Chưa cập nhật CV",
+          status: "MATCHED",
+        },
+        include: { job: true, applicant: true },
+      });
+
+      return NextResponse.json(application, { status: 201 });
+    }
+
+    if (!cvUrl) {
+      return NextResponse.json(
+        { error: "Thông tin CV không được trống." },
         { status: 400 }
       );
     }

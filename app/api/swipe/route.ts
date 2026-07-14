@@ -4,6 +4,14 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
+import { generateFakeCandidates, generateFakeJobs, jitterCoords } from "@/lib/mockDataGenerator";
+
+// Ho Chi Minh City center — used to place a Map Mode pin for any card that
+// has no real geocoded coordinates (jittered, see mockDataGenerator).
+const HCMC_CENTER: [number, number] = [10.7769, 106.7009];
+// Below this many cards, top up from the DB / auto-seed real filler records
+// so the deck never runs visibly dry ("chống rỗng").
+const MIN_DECK_SIZE = 12;
 
 export async function GET(req: Request) {
   try {
@@ -11,14 +19,79 @@ export async function GET(req: Request) {
     const topic = searchParams.get("topic") || "candidates";
 
     if (topic === "candidates") {
-      // 1. Candidate CVs
+      // 1. Static hand-authored candidate CVs (existing fixture)
+      let staticCards: any[] = [];
       const cvFilePath = path.join(process.cwd(), "public", "data", "fomo_cvs.json");
       if (fs.existsSync(cvFilePath)) {
         const content = fs.readFileSync(cvFilePath, "utf-8");
-        const data = JSON.parse(content);
-        return NextResponse.json(data);
+        staticCards = JSON.parse(content);
       }
-      return NextResponse.json([]);
+
+      // 2. Real candidate users already in the DB (role USER, has a bio/skills
+      // set — i.e. actually opted into being discoverable).
+      const realUsers = await prisma.user.findMany({
+        where: { role: "USER", OR: [{ bio: { not: null } }, { skills: { not: null } }] },
+        take: 40,
+        orderBy: { createdAt: "desc" },
+      });
+      const realCards = realUsers.map((u, idx) => {
+        const [lat, lng] = jitterCoords(HCMC_CENTER[0], HCMC_CENTER[1], idx);
+        return {
+          id: u.id,
+          isRealUser: true, // lets the client know a "match" here can create a real Application
+          name: u.name,
+          title: (u.skills || "Ứng viên đa năng").split(",")[0].trim(),
+          experience: "Đã cập nhật hồ sơ trên PawBook",
+          salary: "Thỏa thuận",
+          location: u.address || "TP. Hồ Chí Minh",
+          distance: `${(0.5 + (idx % 8) * 0.5).toFixed(1)} km`,
+          avatarUrl: u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2563eb&color=ffffff&bold=true`,
+          bio: u.bio || "Ứng viên chưa cập nhật mô tả chi tiết.",
+          skills: (u.skills || "").split(",").map((s) => s.trim()).filter(Boolean),
+          fomoTags: ["Hồ Sơ Thật"],
+          latitude: lat,
+          longitude: lng,
+        };
+      });
+
+      let combined = [...realCards, ...staticCards];
+
+      // 3. Auto-seed: still short of a full deck? Generate + persist real
+      // filler candidates via faker so the deck never dead-ends, and so a
+      // match on one of these can still create a genuine Application.
+      if (combined.length < MIN_DECK_SIZE) {
+        const seeded = await generateFakeCandidates(MIN_DECK_SIZE - combined.length);
+        const seededCards = seeded.map((u, idx) => {
+          const [lat, lng] = jitterCoords(HCMC_CENTER[0], HCMC_CENTER[1], realCards.length + idx);
+          return {
+            id: u.id,
+            isRealUser: true,
+            name: u.name,
+            title: (u.skills || "Ứng viên đa năng").split(",")[0].trim(),
+            experience: "Ứng viên mới tham gia BitPaw",
+            salary: "Thỏa thuận",
+            location: u.address || "TP. Hồ Chí Minh",
+            distance: `${(0.5 + (idx % 8) * 0.5).toFixed(1)} km`,
+            avatarUrl: u.avatarUrl,
+            bio: u.bio,
+            skills: (u.skills || "").split(",").map((s) => s.trim()).filter(Boolean),
+            fomoTags: ["Mới Tham Gia"],
+            latitude: lat,
+            longitude: lng,
+          };
+        });
+        combined = [...combined, ...seededCards];
+      }
+
+      // Static fixture cards have no coordinates — jitter them too so Map
+      // Mode always has a pin for every card.
+      combined = combined.map((c, idx) => {
+        if (typeof c.latitude === "number" && typeof c.longitude === "number") return c;
+        const [lat, lng] = jitterCoords(HCMC_CENTER[0], HCMC_CENTER[1], idx + 100);
+        return { ...c, latitude: lat, longitude: lng };
+      });
+
+      return NextResponse.json(combined);
     } else if (topic === "jobs") {
       // 2. Job Posts
       const jobs = await prisma.job.findMany({
@@ -62,11 +135,24 @@ export async function GET(req: Request) {
         }
       });
 
-      const mergedJobs = [...jobs, ...staticJobs];
+      // Auto-seed: still short of a full deck after real + static jobs?
+      // Generate + persist real filler Job rows (see mockDataGenerator) so a
+      // swipe-right "apply" on one of these can create a genuine Application
+      // instead of being a dead-end mock.
+      let seededJobs: any[] = [];
+      if (jobs.length + staticJobs.length < MIN_DECK_SIZE) {
+        seededJobs = await generateFakeJobs(MIN_DECK_SIZE - (jobs.length + staticJobs.length));
+      }
+
+      const mergedJobs = [...jobs, ...seededJobs, ...staticJobs];
       const mappedJobs = mergedJobs.map((job: any, index: number) => {
         const compName = job.companyName || "Đối tác BitPaw";
+        const [jLat, jLng] = typeof job.latitude === "number" && typeof job.longitude === "number"
+          ? [job.latitude, job.longitude]
+          : jitterCoords(HCMC_CENTER[0], HCMC_CENTER[1], index);
         return {
           id: job.id || `job-${index}`,
+          isRealJob: Boolean(job.id), // real Prisma Job rows (DB or seeded) vs. static crawled fixtures
           name: job.title || "Nhân viên Dịch vụ",
           title: compName,
           experience: job.workType || "Làm việc tự do",
@@ -76,7 +162,9 @@ export async function GET(req: Request) {
           avatarUrl: job.employer?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(compName)}&background=0284c7&color=ffffff&bold=true`,
           bio: job.description || "Mô tả công việc đang được cập nhật...",
           skills: job.tags || ["Grooming", "Pet care", "Local Service"],
-          fomoTags: job.isBoosted ? ["Tin Gấp", "Hot Match"] : ["Tuyển dụng"]
+          fomoTags: job.isBoosted ? ["Tin Gấp", "Hot Match"] : ["Tuyển dụng"],
+          latitude: jLat,
+          longitude: jLng,
         };
       });
 

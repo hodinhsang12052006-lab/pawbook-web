@@ -29,7 +29,11 @@ export default function MessagesLoading() {
           </div>
         </div>
 
-        {/* Right Main Chat Window Skeleton */}
+        {/* Right Main Chat Window Skeleton — faint message-bubble shapes
+            instead of a blocking spinner + "connecting..." text. This is only
+            ever shown while the server component (app/messages/page.tsx) is
+            doing its initial DB fetch; MessagesContent's own client-side chat
+            switching never re-triggers this file. */}
         <div className="hidden md:flex flex-1 flex-col h-full bg-slate-900">
           <div className="p-4 border-b border-slate-855 bg-slate-950/30 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -40,9 +44,12 @@ export default function MessagesLoading() {
               </div>
             </div>
           </div>
-          <div className="flex-1 bg-gradient-to-b from-[#0f172a] to-[#1e293b] p-6 space-y-6 flex flex-col justify-center items-center">
-            <div className="h-12 w-12 rounded-full border-4 border-slate-800 border-t-blue-500 animate-spin" />
-            <p className="text-2xs text-slate-550 mt-3 font-semibold animate-pulse">Đang kết nối cổng dữ liệu chat...</p>
+          <div className="flex-1 p-6 space-y-4 flex flex-col justify-end overflow-hidden">
+            <div className="h-8 w-2/5 bg-slate-800/60 rounded-2xl rounded-bl-sm" />
+            <div className="h-8 w-1/3 bg-slate-800/60 rounded-2xl rounded-bl-sm" />
+            <div className="h-8 w-2/5 self-end bg-blue-600/20 rounded-2xl rounded-tr-sm" />
+            <div className="h-8 w-1/4 self-end bg-blue-600/20 rounded-2xl rounded-tr-sm" />
+            <div className="h-8 w-1/3 bg-slate-800/60 rounded-2xl rounded-bl-sm" />
           </div>
         </div>
       </div>

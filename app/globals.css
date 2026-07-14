@@ -36,3 +36,41 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+/* These utility classes were referenced throughout the chat UI (message
+   bubbles, modals, panels) but never defined — every "smooth animation" was
+   silently a no-op. Defining them here makes existing markup actually animate,
+   with no JSX changes required. */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out both;
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scaleUp {
+  animation: scaleUp 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes messageBounceIn {
+  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  60% { opacity: 1; transform: translateY(-1px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.message-bounce-in {
+  animation: messageBounceIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* iOS-style call sheet: slides up from the bottom on mobile-width screens. */
+@keyframes callSheetUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-callSheetUp {
+  animation: callSheetUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

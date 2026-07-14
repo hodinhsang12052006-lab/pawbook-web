@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import Pusher from "pusher";
+import { pusherServer, chatChannelName } from "@/lib/pusher";
 
-const clean = (val?: string) => (val || "").replace(/['"]/g, "").trim();
-
-const pusherServer = new Pusher({
-  appId: clean(process.env.PUSHER_APP_ID) || "2175600",
-  key: clean(process.env.NEXT_PUBLIC_PUSHER_APP_KEY) || "c0aeac77207466ef74e9",
-  secret: clean(process.env.PUSHER_SECRET) as string,
-  cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER) || "ap1",
-  useTLS: true,
-});
+// Maps the client's call `action` (MessagesContent.tsx's handleStartCall /
+// handleAcceptCall / handleEndCall / camera toggle) to the Pusher event name
+// the client's channel.bind() calls actually listen for. The two were
+// previously named differently on each side ({to, type, signal} here vs
+// {targetId, action, sdp, candidate} sent by the client), so no call
+// signaling ever reached the client — offers, answers, and ICE candidates
+// were all silently dropped.
+const ACTION_TO_EVENT: Record<string, string> = {
+  offer: "incoming-call",
+  candidate: "call-candidate",
+  accept: "call-accepted",
+  reject: "call-rejected",
+  camera: "camera-status",
+};
 
 export async function POST(req: Request) {
   try {
@@ -22,23 +27,32 @@ export async function POST(req: Request) {
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const { to, type, signal, callerName, callType } = body;
+    const { targetId, action, sdp, candidate, callType, videoOff } = body;
 
-    if (!to || !type) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const eventName = ACTION_TO_EVENT[action];
+    if (!targetId || !eventName) {
+      return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
     }
 
-    // Broadcast signaling event via Pusher to target user's personal channel
-    const eventName = type; // incoming-call, call-accepted, call-rejected, ice-candidate
-    const payload = {
-      from: userId,
-      callerName: callerName || session.user.name || "User",
-      signal,
-      callType,
-    };
+    let payload: Record<string, any>;
+    switch (action) {
+      case "offer":
+        payload = { callerId: userId, callerName: session.user.name || "User", callType, sdp };
+        break;
+      case "candidate":
+        payload = { candidate };
+        break;
+      case "accept":
+        payload = { sdp };
+        break;
+      case "camera":
+        payload = { videoOff };
+        break;
+      default:
+        payload = {};
+    }
 
-    console.log(`📡 [CALL SIGNAL] Broadcasting event ${eventName} to channel ${to} from ${userId}`);
-    await pusherServer.trigger(String(to).trim(), eventName, payload);
+    await pusherServer.trigger(chatChannelName(String(targetId).trim()), eventName, payload);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

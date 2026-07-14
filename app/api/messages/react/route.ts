@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import Pusher from "pusher";
-
-const clean = (val?: string) => (val || "").replace(/['"]/g, "").trim();
-
-const pusherServer = new Pusher({
-  appId: clean(process.env.PUSHER_APP_ID) || "2175600",
-  key: clean(process.env.NEXT_PUBLIC_PUSHER_APP_KEY) || "c0aeac77207466ef74e9",
-  secret: clean(process.env.PUSHER_SECRET) as string,
-  cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER) || "ap1",
-  useTLS: true,
-});
+import prisma from "@/lib/prisma";
+import { pusherServer, chatChannelName } from "@/lib/pusher";
 
 export async function POST(req: Request) {
   try {
@@ -20,16 +11,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = (session.user as any).id;
     const body = await req.json();
-    const { messageId, emoji, reactions, partnerId } = body;
+    const { messageId, emoji, reactions } = body;
 
-    if (!messageId || !partnerId) {
+    if (!messageId) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // Tính toán kênh của 2 người chat (giống hệt lúc gửi tin nhắn mới)
-    const channels = [String(userId), String(partnerId)].filter(Boolean);
+    // Resolve the actual conversation participants from the message itself
+    // instead of trusting the client-supplied partnerId — for group chats
+    // that field is a conversation id, not a user id, so it can't be turned
+    // directly into a channel name.
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { conversation: { select: { participants: { select: { id: true } } } } },
+    });
+    if (!message) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+
+    const channels = Array.from(
+      new Set(message.conversation.participants.map((p) => chatChannelName(p.id)))
+    );
 
     const updatedMessage = {
       id: messageId,

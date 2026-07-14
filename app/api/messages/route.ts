@@ -2,19 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import Pusher from "pusher";
-
-// BỘ LỌC CHỐNG LỖI COPY-PASTE (Xóa ngoặc kép và khoảng trắng)
-const clean = (val?: string) => (val || "").replace(/['"]/g, "").trim();
-
-// 1. KHỞI TẠO PUSHER (Có fallback cứng để chống Vercel Cache)
-const pusherServer = new Pusher({
-  appId: clean(process.env.PUSHER_APP_ID) || "2175600",
-  key: clean(process.env.NEXT_PUBLIC_PUSHER_APP_KEY) || "c0aeac77207466ef74e9",
-  secret: clean(process.env.PUSHER_SECRET) as string,
-  cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER) || "ap1",
-  useTLS: true,
-});
+import { pusherServer, chatChannelName } from "@/lib/pusher";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -393,17 +381,23 @@ export async function POST(req: Request) {
       conversationId: activeConversationId,
     };
 
-    // 🚀 1. LỌC DANH SÁCH KÊNH (Tránh rỗng, null, undefined)
+    // Broadcast to every participant's private channel (not just a single
+    // "partner" — that missed everyone else in group chats), using the SAME
+    // channel name the client subscribes to (private-chat-<id>). Previously
+    // this triggered to the bare user id, which no client ever subscribed to,
+    // so new messages never arrived in real time for the recipient.
     try {
-      const channels = [String(userId).trim()];
-      if (partner?.id) {
-        channels.push(String(partner.id).trim());
-      }
-      // Lọc ra các kênh hợp lệ
-      const validChannels = channels.filter(c => c && c.length > 0);
+      const validChannels = Array.from(
+        new Set(
+          conversation.participants
+            .map((p) => p.id)
+            .filter(Boolean)
+            .map((id) => chatChannelName(String(id).trim()))
+        )
+      );
 
-      // 🚀 2. ÉP CÂN PAYLOAD (< 10KB)
-      // Không gửi nguyên cục formattedMessage. Chỉ trích xuất các trường cần thiết để UI hiển thị
+      // Trim the payload (avoid Pusher's 10KB event size limit) — no large
+      // fields like base64 avatars.
       const miniPayload = {
         id: formattedMessage.id,
         content: formattedMessage.content,
@@ -412,28 +406,26 @@ export async function POST(req: Request) {
         conversationId: formattedMessage.conversationId,
         createdAt: formattedMessage.createdAt,
         type: formattedMessage.type || "TEXT",
-        // Nếu UI cần thông tin sender, chỉ truyền thông tin cơ bản, TUYỆT ĐỐI KHÔNG truyền toàn bộ object
         sender: {
           id: formattedMessage.sender.id,
           name: formattedMessage.sender.name || "User",
-          // Không gửi image/avatar ở đây nếu nó là Base64 dài để tránh vượt quá 10KB
         }
       };
 
-      console.log(`🚀 [BACKEND] Chuẩn bị bắn Pusher tới:`, validChannels);
-
       if (validChannels.length > 0) {
-        await pusherServer.trigger(validChannels, "new-message", miniPayload);
-        console.log("✅ [BACKEND] Bắn Pusher THÀNH CÔNG RỰC RỠ!");
-      } else {
-        console.error("⚠️ [BACKEND] Không có kênh hợp lệ để bắn Pusher.");
+        // Client's handler reads `data.message`, so the payload must be nested.
+        await pusherServer.trigger(validChannels, "new-message", { message: miniPayload });
       }
     } catch (pusherError: any) {
-      // In chi tiết lỗi để bắt bệnh
       console.error("❌ PUSHER LỖI TỪ SERVER:", pusherError?.body || pusherError);
     }
 
-    return NextResponse.json(formattedMessage, { status: 201 });
+    // Every client call site (handleSendMessage, image upload, GPS check-in)
+    // reads `data.message` — returning the bare object here made every
+    // successful send throw inside the `res.ok` branch, which the outer
+    // catch treated as a network failure and deleted the optimistic bubble,
+    // even though the message had already been saved.
+    return NextResponse.json({ message: formattedMessage }, { status: 201 });
   } catch (error: any) {
     console.error("POST message error:", error);
     return NextResponse.json(

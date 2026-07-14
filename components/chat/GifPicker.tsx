@@ -16,14 +16,20 @@ const PERMANENT_GIFS = [
   "https://media.tenor.com/N1_QcEa-u08AAAAC/huh-cat.gif"
 ];
 
-export default function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void, onClose: () => void }) {
+// Memoized: the parent (MessagesContent) re-renders on every incoming
+// message/keystroke while this panel is open. Without memo + stable
+// onSelect/onClose references from the parent, all 12 thumbnails would
+// reconcile on every unrelated parent render.
+function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void, onClose: () => void }) {
   return (
     <div className="p-2 h-64 overflow-y-auto grid grid-cols-2 gap-2 bg-[#0b1426] rounded-lg border border-slate-700">
       {PERMANENT_GIFS.map((url, idx) => (
-        <div key={idx} className="relative w-full h-24 cursor-pointer hover:opacity-80 rounded overflow-hidden" onClick={() => { onSelect(url); onClose(); }}>
-          <img src={url} alt="gif" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        <div key={idx} className="relative w-full h-24 cursor-pointer hover:opacity-80 active:scale-95 transition-transform rounded overflow-hidden" onClick={() => { onSelect(url); onClose(); }}>
+          <img src={url} alt="gif" loading="lazy" decoding="async" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         </div>
       ))}
     </div>
   );
 }
+
+export default React.memo(GifPicker);

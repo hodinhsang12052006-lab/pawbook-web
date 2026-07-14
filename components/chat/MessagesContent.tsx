@@ -106,6 +106,41 @@ interface MessagesContentProps {
   initialSystemUsers: any[];
 }
 
+// Reply envelope stored as JSON inside a type="REPLY" message's body/content —
+// see the note on `replyingTo` state for why this avoids a schema change.
+interface ReplyEnvelope {
+  text: string;
+  replyToId: string;
+  replyToSenderName: string;
+  replyToPreview: string;
+}
+
+function parseReplyEnvelope(content: string): ReplyEnvelope | null {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed.text === "string") return parsed;
+  } catch {
+    // Not a reply envelope (or corrupted) — treat as plain text.
+  }
+  return null;
+}
+
+// Short preview text used both for the "replying to" bar and quoted blocks.
+function getMessagePreview(msg: { type: string; content: string }): string {
+  switch (msg.type) {
+    case "IMAGE": return "🖼️ Hình ảnh";
+    case "VIDEO": return "🎥 Video";
+    case "STICKER": return `${msg.content} Nhãn dán`;
+    case "ATTENDANCE": return "⏱️ Đã chấm công";
+    case "REPLY": {
+      const parsed = parseReplyEnvelope(msg.content);
+      return parsed ? parsed.text : msg.content;
+    }
+    default:
+      return (msg.content || "").slice(0, 80);
+  }
+}
+
 function CallTimer({ active }: { active: boolean }) {
   const [seconds, setSeconds] = useState(0);
 
@@ -203,14 +238,47 @@ export default function MessagesContent({
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<any>(null);
 
+  // Reply-to-message. No schema change needed: replies are persisted as a
+  // type="REPLY" message whose body is a JSON envelope
+  // { text, replyToId, replyToSenderName, replyToPreview } — the existing
+  // `type`/`body` columns are free-form strings already, so this needs no
+  // Prisma migration against the live Turso database.
+  const [replyingTo, setReplyingTo] = useState<{ id: string; senderName: string; preview: string } | null>(null);
+
+  // Ephemeral (non-persisted) read receipts: { [conversationId]: { [userId]: isoTimestamp } }.
+  // Reset on refresh — there's no DB column to persist "last read" against
+  // without a schema migration, so this is best-effort, session-only.
+  const [seenMap, setSeenMap] = useState<{ [conversationId: string]: { [userId: string]: string } }>({});
+
   const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
   const pendingCandidatesRef = useRef<any[]>([]);
+
+  // Mirrors for use inside the Pusher effect's handlers, so those handlers can
+  // read the latest call state WITHOUT forcing the subscription effect to
+  // depend on (and re-subscribe whenever) showCallingModal/receivingCall change.
+  const showCallingModalRef = useRef(showCallingModal);
+  showCallingModalRef.current = showCallingModal;
+  const receivingCallRef = useRef(receivingCall);
+  receivingCallRef.current = receivingCall;
 
   const activeChatRef = useRef(activeChat?.id);
   useEffect(() => {
     activeChatRef.current = activeChat?.id;
   }, [activeChat]);
+
+  // Reset per-conversation draft/UI state on chat switch. Previously this was
+  // done by remounting the whole component via `key={activeChat?.id}` on the
+  // root element, which also tore down and re-created the Pusher subscription
+  // and refetched the conversation list on every click — replaced with a
+  // targeted reset so only the ephemeral input UI clears.
+  useEffect(() => {
+    setMessageText("");
+    setShowEmoji(false);
+    setShowGifs(false);
+    setChatPanelTab("emoji");
+    setReplyingTo(null);
+  }, [activeChat?.id]);
   const [loadingChatMessages, setLoadingChatMessages] = useState(false);
   const [loadingMoreChatMessages, setLoadingMoreChatMessages] = useState(false);
   const [chatNextCursor, setChatNextCursor] = useState<string | null>(null);
@@ -285,9 +353,16 @@ export default function MessagesContent({
     }
   }, [router]);
 
+  // Ref-based guard (instead of the loadingMoreChatMessages state) so this
+  // callback's identity only changes when conversationId/cursor change, not on
+  // every loading start/stop — otherwise the IntersectionObserver effect below
+  // (which depends on this callback) tears down and rebuilds on every cycle.
+  const loadingMoreRef = useRef(false);
+
   const loadMoreChatMessages = useCallback(async () => {
-    if (!activeChat?.conversationId || !chatNextCursor || loadingMoreChatMessages) return;
+    if (!activeChat?.conversationId || !chatNextCursor || loadingMoreRef.current) return;
     try {
+      loadingMoreRef.current = true;
       setLoadingMoreChatMessages(true);
       const res = await fetch(`/api/messages?conversationId=${activeChat.conversationId}&cursor=${chatNextCursor}`);
       if (res.ok) {
@@ -324,9 +399,10 @@ export default function MessagesContent({
     } catch (err) {
       console.error("Failed to load older messages on scroll-up:", err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMoreChatMessages(false);
     }
-  }, [activeChat?.conversationId, chatNextCursor, loadingMoreChatMessages]);
+  }, [activeChat?.conversationId, chatNextCursor]);
 
   // Scroll observer for infinite chat history loading
   useEffect(() => {
@@ -353,6 +429,10 @@ export default function MessagesContent({
     if (!activeChat || !activeChat.id) return;
 
     let isMounted = true;
+    // Safety net: if the request ever hangs (dropped connection, server never
+    // responds), abort it so loadingChatMessages can't get stuck forever.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     async function fetchMessages() {
       setLoadingChatMessages(true);
@@ -362,7 +442,7 @@ export default function MessagesContent({
           : (activeChat.conversationId
             ? `conversationId=${activeChat.conversationId}`
             : `partnerId=${activeChat.id}`);
-        const res = await fetch(`/api/messages?${queryParam}`);
+        const res = await fetch(`/api/messages?${queryParam}`, { signal: controller.signal });
         const data = await res.json();
 
         if (isMounted) {
@@ -415,6 +495,7 @@ export default function MessagesContent({
         console.error("Lỗi tải tin nhắn:", error);
         if (isMounted) setMessages([]);
       } finally {
+        clearTimeout(timeoutId);
         if (isMounted) {
           setLoadingChatMessages(false);
         }
@@ -425,6 +506,8 @@ export default function MessagesContent({
 
     return () => {
       isMounted = false; // Tránh memory leak
+      clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [activeChat?.id]);
 
@@ -435,6 +518,17 @@ export default function MessagesContent({
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages.length, activeChat?.id]);
+
+  // Ping "seen" whenever the open conversation gains messages (initial load
+  // or a new one arriving while it's the active chat) — see `seenMap` note.
+  useEffect(() => {
+    if (!activeChat?.conversationId) return;
+    fetch("/api/messages/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: activeChat.conversationId }),
+    }).catch(() => {});
+  }, [activeChat?.conversationId, messages.length]);
 
   // Pusher Real-time signaling & Messaging handler
   useEffect(() => {
@@ -529,7 +623,7 @@ export default function MessagesContent({
 
     // Handle incoming WebRTC calling requests
     channel.bind("incoming-call", (data: any) => {
-      if (showCallingModal || receivingCall) return; // Prevent interruption if busy
+      if (showCallingModalRef.current || receivingCallRef.current) return; // Prevent interruption if busy
       setReceivingCall(true);
       setCallerInfo({ id: data.callerId, name: data.callerName });
       setCallType(data.callType || "audio");
@@ -581,14 +675,32 @@ export default function MessagesContent({
       setVideoOff(data.videoOff);
     });
 
+    channel.bind("message-seen", (data: any) => {
+      if (!data || !data.conversationId || !data.seenBy || !data.seenAt) return;
+      setSeenMap((prev) => ({
+        ...prev,
+        [data.conversationId]: {
+          ...(prev[data.conversationId] || {}),
+          [data.seenBy]: data.seenAt,
+        },
+      }));
+    });
+
     return () => {
       channel.unbind_all();
       pusher.unsubscribe(channelName);
     };
-  }, [currentUser?.id, showCallingModal, receivingCall]);
+    // Deliberately depends ONLY on currentUser?.id: this must subscribe exactly
+    // once per user session. showCallingModal/receivingCall are read via refs
+    // above instead of being deps, since this same effect is what sets them —
+    // including them here caused unsubscribe/resubscribe on every call event.
+  }, [currentUser?.id]);
 
   // Clean WebRTC states
-  const cleanupCall = () => {
+  // useCallback: this is called from (and closed over by) the other call
+  // handlers below, which are themselves memoized — an unstable cleanupCall
+  // would defeat that memoization.
+  const cleanupCall = useCallback(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -606,9 +718,9 @@ export default function MessagesContent({
     setCameraMuted(false);
     setVideoOff(false);
     pendingCandidatesRef.current = [];
-  };
+  }, []);
 
-  const handleStartCall = async (type: "audio" | "video") => {
+  const handleStartCall = useCallback(async (type: "audio" | "video") => {
     if (!activeChat || activeChat.isGroup) return;
     setCallType(type);
     setShowCallingModal(true);
@@ -680,9 +792,9 @@ export default function MessagesContent({
       toast.error("Không thể truy cập camera hoặc micro.");
       cleanupCall();
     }
-  };
+  }, [activeChat, cleanupCall]);
 
-  const handleAcceptCall = async () => {
+  const handleAcceptCall = useCallback(async () => {
     if (!callerInfo) return;
     setReceivingCall(false);
     setShowCallingModal(true);
@@ -765,9 +877,9 @@ export default function MessagesContent({
       toast.error("Không thể kết nối cuộc gọi.");
       cleanupCall();
     }
-  };
+  }, [callerInfo, callType, cleanupCall]);
 
-  const handleEndCall = async () => {
+  const handleEndCall = useCallback(async () => {
     const targetId = activeChat?.id || callerInfo?.id;
     if (targetId) {
       try {
@@ -784,18 +896,32 @@ export default function MessagesContent({
       }
     }
     cleanupCall();
-  };
+  }, [activeChat, callerInfo, cleanupCall]);
 
-  const handleSendMessage = async (e: React.FormEvent | null, customContent?: string, customType?: string) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent | null, customContent?: string, customType?: string) => {
     if (e) e.preventDefault();
     if (!activeChat || sending) return;
 
-    const content = customContent || messageText.trim();
-    const type = customType || "TEXT";
+    const rawContent = customContent || messageText.trim();
+    let type = customType || "TEXT";
 
-    if (!content) return;
+    if (!rawContent) return;
 
     if (!customContent) setMessageText("");
+
+    // Only free-typed text replies carry the quoted-message envelope —
+    // programmatic sends (stickers/GIFs/attendance) skip it.
+    const activeReply = !customContent ? replyingTo : null;
+    const content = activeReply
+      ? JSON.stringify({
+          text: rawContent,
+          replyToId: activeReply.id,
+          replyToSenderName: activeReply.senderName,
+          replyToPreview: activeReply.preview,
+        })
+      : rawContent;
+    if (activeReply) type = "REPLY";
+    setReplyingTo(null);
 
     setShowEmoji(false);
     setShowGifs(false);
@@ -928,7 +1054,19 @@ export default function MessagesContent({
     } finally {
       setSending(false);
     }
-  };
+  }, [activeChat, sending, currentUser, loadData, replyingTo]);
+
+  // Stable references so the memoized GifPicker doesn't re-render (and its 12
+  // thumbnails re-reconcile) on every unrelated MessagesContent render while
+  // the media panel is open.
+  const handleGifSelect = useCallback((url: string) => {
+    handleSendMessage(null, url, "IMAGE");
+  }, [handleSendMessage]);
+
+  const handleCloseMediaPanel = useCallback(() => {
+    setShowEmoji(false);
+    setShowGifs(false);
+  }, []);
 
   const handleAddReaction = useCallback(async (messageId: string, icon: string) => {
     if (!messageId || !activeChat || !currentUser) return;
@@ -959,7 +1097,7 @@ export default function MessagesContent({
   }, [activeChat, currentUser]);
 
   // Create group chat action
-  const handleCreateGroup = async () => {
+  const handleCreateGroup = useCallback(async () => {
     if (!groupName.trim() || selectedUserIds.length === 0 || creatingGroup) {
       toast.error("Vui lòng nhập tên nhóm và chọn ít nhất 1 thành viên.");
       return;
@@ -993,7 +1131,7 @@ export default function MessagesContent({
     } finally {
       setCreatingGroup(false);
     }
-  };
+  }, [groupName, selectedUserIds, creatingGroup, loadData]);
 
   // Direct route redirect handling (?to=partnerId)
   useEffect(() => {
@@ -1022,8 +1160,10 @@ export default function MessagesContent({
     }
   }, [directPartnerId, systemUsers, conversations, activeChat, currentUser]);
 
-  // Filter messages for currently active conversation
-  const chatMessages = messages.filter((m) => {
+  // Filter messages for currently active conversation.
+  // Memoized: `messages` can hold every conversation's history, so this filter
+  // shouldn't re-run on renders unrelated to messages/activeChat (e.g. typing).
+  const chatMessages = React.useMemo(() => messages.filter((m) => {
     if (!activeChat) return false;
     if (activeChat.isGroup) {
       return m.conversationId === activeChat.conversationId;
@@ -1036,10 +1176,10 @@ export default function MessagesContent({
         (m.senderId === activeChat.id && m.receiverId === currentUser?.id)
       );
     }
-  });
+  }), [messages, activeChat, currentUser?.id]);
 
   return (
-    <div key={activeChat?.id} className="flex w-full h-full overflow-hidden">
+    <div className="flex w-full h-full overflow-hidden">
       {/* LEFT COLUMN: CONVERSATION LIST & DISCOVER SIDEBAR (4 cols) */}
       <div className={`w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
         {/* Chat Headers controls */}
@@ -1235,20 +1375,55 @@ export default function MessagesContent({
                     ? currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=2563eb&color=ffffff&bold=true`
                     : msg.sender?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || "U")}&background=2563eb&color=ffffff&bold=true`;
 
+                  // Date separator: render once per calendar day, right before
+                  // the first message of that day.
+                  const prevMsg = idx > 0 ? chatMessages[idx - 1] : null;
+                  const msgDay = new Date(msg.createdAt).toDateString();
+                  const showDateSeparator = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== msgDay;
+                  const dateSeparatorLabel = (() => {
+                    if (!showDateSeparator) return null;
+                    const d = new Date(msg.createdAt);
+                    const today = new Date().toDateString();
+                    const yesterday = new Date(Date.now() - 86400000).toDateString();
+                    if (msgDay === today) return "Hôm nay";
+                    if (msgDay === yesterday) return "Hôm qua";
+                    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "long", year: "numeric" });
+                  })();
+
+                  const dateSeparator = showDateSeparator ? (
+                    <div key={`sep-${msg.id || idx}`} className="flex items-center justify-center my-4 w-full">
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/70 border border-slate-850 px-3 py-1 rounded-full shadow-sm">
+                        {dateSeparatorLabel}
+                      </span>
+                    </div>
+                  ) : null;
+
                   if (msg.type === "SYSTEM") {
                     return (
-                      <div key={msg.id || idx} className="flex justify-center my-3 w-full animate-fadeIn">
-                        <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-900/60 border border-slate-850 text-[10px] text-slate-400 font-semibold tracking-wide font-sans shadow-inner">
-                          <span>🤖</span>
-                          <span>{msg.content}</span>
+                      <React.Fragment key={msg.id || idx}>
+                        {dateSeparator}
+                        <div className="flex justify-center my-3 w-full animate-fadeIn">
+                          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-900/60 border border-slate-850 text-[10px] text-slate-400 font-semibold tracking-wide font-sans shadow-inner">
+                            <span>🤖</span>
+                            <span>{msg.content}</span>
+                          </div>
                         </div>
-                      </div>
+                      </React.Fragment>
                     );
                   }
 
+                  // Is this the most recent message sent by me? Used to anchor
+                  // the "Đã xem" (seen) read-receipt indicator.
+                  const isLastOwnMessage = isSelf && !chatMessages.slice(idx + 1).some((m) => m.senderId === currentUser?.id);
+                  const partnerSeenAt = !activeChat.isGroup && activeChat.conversationId
+                    ? seenMap[activeChat.conversationId]?.[activeChat.id]
+                    : undefined;
+                  const isSeenByPartner = isLastOwnMessage && !msg.isOptimistic && partnerSeenAt && new Date(partnerSeenAt) >= new Date(msg.createdAt);
+
                   return (
+                    <React.Fragment key={msg.id || idx}>
+                    {dateSeparator}
                     <div
-                      key={msg.id || idx}
                       className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative message-bounce-in`}
                     >
                       {!isSelf && (
@@ -1352,6 +1527,20 @@ export default function MessagesContent({
                                 </div>
                               ) : msg.type === "VIDEO" ? (
                                 <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
+                              ) : msg.type === "REPLY" ? (
+                                (() => {
+                                  const parsed = parseReplyEnvelope(msg.content);
+                                  if (!parsed) return <p>{msg.content}</p>;
+                                  return (
+                                    <div className="space-y-1.5">
+                                      <div className={`rounded-lg px-2.5 py-1.5 text-[10px] border-l-2 ${isSelf ? "bg-white/10 border-white/40" : "bg-slate-900/60 border-blue-500/50"}`}>
+                                        <p className="font-bold opacity-80">{parsed.replyToSenderName}</p>
+                                        <p className="opacity-70 truncate max-w-[220px]">{parsed.replyToPreview}</p>
+                                      </div>
+                                      <p>{parsed.text}</p>
+                                    </div>
+                                  );
+                                })()
                               ) : (
                                 <p>{msg.content}</p>
                               )}
@@ -1383,12 +1572,31 @@ export default function MessagesContent({
                               </button>
                             ))}
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => setReplyingTo({
+                              id: msg.id,
+                              senderName: isSelf ? "Bạn" : (msg.sender?.name || "Người dùng"),
+                              preview: getMessagePreview(msg),
+                            })}
+                            className="text-slate-400 hover:text-blue-400 transition-colors cursor-pointer pr-1.5 mr-0.5 border-r border-slate-800"
+                            title="Trả lời tin nhắn"
+                          >
+                            <Reply className="h-3 w-3" />
+                          </button>
                           <span className="text-[8px] text-slate-500 font-mono select-none">
                             {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
+
+                        {isSeenByPartner && (
+                          <span className="absolute -bottom-4 right-1 text-[8px] text-slate-500 font-semibold select-none">
+                            Đã xem
+                          </span>
+                        )}
                       </div>
                     </div>
+                    </React.Fragment>
                   );
                 })
               ) : !loadingChatMessages ? (
@@ -1477,12 +1685,7 @@ export default function MessagesContent({
 
                   {chatPanelTab === "gif" && (
                     <div className="h-full py-1">
-                      <GifPicker onSelect={(url) => {
-                        handleSendMessage(null, url, "IMAGE");
-                      }} onClose={() => {
-                        setShowEmoji(false);
-                        setShowGifs(false);
-                      }} />
+                      <GifPicker onSelect={handleGifSelect} onClose={handleCloseMediaPanel} />
                     </div>
                   )}
                 </div>
@@ -1491,6 +1694,22 @@ export default function MessagesContent({
 
             {/* Chat Textbox Entry Bar */}
             <div className="p-4 border-t border-slate-855 bg-slate-950 flex-none z-10">
+              {replyingTo && (
+                <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-800 border-l-2 border-l-blue-500 animate-fadeIn">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-blue-400">Trả lời {replyingTo.senderName}</p>
+                    <p className="text-[10px] text-slate-400 truncate max-w-[280px]">{replyingTo.preview}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(null)}
+                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer flex-shrink-0"
+                    title="Hủy trả lời"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               {isTyping && (
                 <div className="text-[10px] text-slate-400 font-semibold mb-2 ml-1 flex items-center gap-1.5 animate-pulse">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping"></span>
@@ -1804,37 +2023,50 @@ export default function MessagesContent({
         </div>
       )}
 
-      {/* AUDIO / VIDEO CALL MODAL OVERLAY */}
+      {/* AUDIO / VIDEO CALL MODAL OVERLAY — iOS-style full-screen call card:
+          blurred cover photo backdrop, breathing avatar, frosted bottom sheet
+          control bar with safe-area padding for notched phones. */}
       {showCallingModal && activeChat && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-between z-50 p-8 text-slate-100 animate-fadeIn">
-          <div className="flex flex-col items-center space-y-2 mt-12">
-            <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-between text-slate-100 overflow-hidden animate-fadeIn">
+          {/* Blurred cover backdrop */}
+          <div className="absolute inset-0 -z-10">
+            <img
+              src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
+              alt=""
+              aria-hidden
+              className="w-full h-full object-cover scale-125 blur-2xl opacity-40"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950" />
+          </div>
+
+          <div className="flex flex-col items-center space-y-2 pt-[max(3rem,env(safe-area-inset-top))] animate-scaleUp">
+            <span className="bg-white/5 border border-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
               {callType === "video" ? "Cuộc gọi Video E2EE" : "Cuộc gọi thoại E2EE"}
             </span>
-            <p className="text-3xs text-slate-500 font-semibold italic">Cuộc gọi được bảo mật bằng mã hóa đầu cuối</p>
+            <p className="text-3xs text-slate-400 font-semibold italic">Cuộc gọi được bảo mật bằng mã hóa đầu cuối</p>
           </div>
 
           <div className="flex flex-col items-center space-y-6">
             <div className="relative">
-              <div className="relative h-28 w-28 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl z-10">
+              <div className="relative h-32 w-32 rounded-full overflow-hidden border-4 border-white/10 shadow-2xl z-10 ring-4 ring-black/20">
                 <img
                   src={activeChat.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeChat.name)}&background=2563eb&color=ffffff&bold=true`}
                   alt={activeChat.name}
                   className="object-cover w-full h-full rounded-full"
                 />
               </div>
-              <div className="absolute inset-0 h-28 w-28 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
-              <div className="absolute inset-0 h-28 w-28 rounded-full bg-indigo-500/10 animate-ping z-0 scale-125" style={{ animationDelay: "0.5s" }} />
+              <div className="absolute inset-0 h-32 w-32 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
+              <div className="absolute inset-0 h-32 w-32 rounded-full bg-indigo-500/10 animate-ping z-0 scale-125" style={{ animationDelay: "0.5s" }} />
             </div>
 
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-black text-slate-100">{activeChat.name}</h2>
+              <h2 className="text-xl font-black text-slate-100 tracking-tight">{activeChat.name}</h2>
               {callConnected ? (
                 <CallTimer active={callConnected && showCallingModal} />
               ) : (
-                <p className="text-3xs text-slate-400 font-bold animate-pulse">
-                  Đang gọi {callType === "video" ? "Video" : "Thoại"} cho {activeChat.name}...
+                <p className="text-xs text-slate-300 font-semibold animate-pulse">
+                  Đang gọi {callType === "video" ? "Video" : "Thoại"}...
                 </p>
               )}
             </div>
@@ -1845,7 +2077,7 @@ export default function MessagesContent({
           )}
 
           {callConnected && callType === "video" && (
-            <div className="absolute inset-x-4 top-24 bottom-32 bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl z-20 flex items-center justify-center">
+            <div className="absolute inset-x-3 top-28 bottom-36 bg-slate-900 border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl z-20 flex items-center justify-center">
               <VideoCallRoom
                 roomId={activeChat.conversationId || "call-room-" + activeChat.id}
                 userId={currentUser?.id}
@@ -1855,13 +2087,14 @@ export default function MessagesContent({
             </div>
           )}
 
-          <div className="flex items-center gap-6 mb-8 z-30">
+          {/* Frosted bottom control sheet (iOS Control Center style) */}
+          <div className="w-full flex items-center justify-center gap-6 z-30 pb-[max(2rem,env(safe-area-inset-bottom))] pt-5 px-6 bg-white/[0.03] backdrop-blur-2xl border-t border-white/10 rounded-t-[2rem] animate-callSheetUp">
             {!callConnected ? (
               <>
                 <button
                   type="button"
                   onClick={handleAcceptCall}
-                  className="h-14 w-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer"
+                  className="h-16 w-16 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 hover:scale-105 active:scale-90 transition-transform duration-200 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 cursor-pointer"
                   title="Nhận cuộc gọi"
                 >
                   <Phone className="h-6 w-6 stroke-[2.5px]" />
@@ -1870,7 +2103,7 @@ export default function MessagesContent({
                 <button
                   type="button"
                   onClick={handleEndCall}
-                  className="h-14 w-14 rounded-full bg-gradient-to-r from-rose-500 to-red-600 hover:scale-105 active:scale-95 transition-all text-white flex items-center justify-center shadow-lg shadow-red-500/20 cursor-pointer"
+                  className="h-16 w-16 rounded-full bg-gradient-to-b from-rose-500 to-red-600 hover:scale-105 active:scale-90 transition-transform duration-200 text-white flex items-center justify-center shadow-xl shadow-red-500/30 cursor-pointer"
                   title="Từ chối"
                 >
                   <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
@@ -1888,7 +2121,7 @@ export default function MessagesContent({
                     }
                     toast.success(nextMute ? "🔇 Đã tắt micro" : "🎤 Đã bật micro");
                   }}
-                  className={`h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${micMuted ? "bg-red-500 text-white border border-red-400" : "bg-slate-900 border border-slate-800 text-slate-350 hover:text-white"}`}
+                  className={`h-13 w-13 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${micMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
                   title={micMuted ? "Bật micro" : "Tắt micro"}
                 >
                   {micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -1897,7 +2130,7 @@ export default function MessagesContent({
                 <button
                   type="button"
                   onClick={handleEndCall}
-                  className="h-14 w-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer shadow-lg shadow-rose-600/20 transition-all hover:scale-105"
+                  className="h-16 w-16 rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white flex items-center justify-center cursor-pointer shadow-xl shadow-red-500/30 transition-transform duration-200 hover:scale-105 active:scale-90"
                   title="Kết thúc cuộc gọi"
                 >
                   <PhoneOff className="h-6 w-6" />
@@ -1907,7 +2140,7 @@ export default function MessagesContent({
                   <button
                     type="button"
                     onClick={() => toast.success("🔊 Đã chuyển sang loa ngoài")}
-                    className="h-12 w-12 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer transition-all"
+                    className="h-13 w-13 rounded-full bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15 flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
                     title="Loa ngoài"
                   >
                     <Volume2 className="h-5 w-5" />
@@ -1931,7 +2164,7 @@ export default function MessagesContent({
                         }),
                       });
                     }}
-                    className={`h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${cameraMuted ? "bg-red-500 text-white border border-red-400" : "bg-slate-900 border border-slate-800 text-slate-350 hover:text-white"}`}
+                    className={`h-13 w-13 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${cameraMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
                     title={cameraMuted ? "Bật camera" : "Tắt camera"}
                   >
                     {cameraMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
@@ -1943,47 +2176,70 @@ export default function MessagesContent({
         </div>
       )}
 
-      {/* INCOMING CALL MODAL OVERLAY */}
+      {/* INCOMING CALL MODAL OVERLAY — iOS-style "ringing" screen: blurred
+          cover photo, breathing avatar, bottom accept/decline sheet with
+          safe-area padding. */}
       {receivingCall && callerInfo && (
-        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-[2000] p-8 text-slate-100 animate-fadeIn">
-          <div className="flex flex-col items-center space-y-6 max-w-sm text-center">
+        <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-between text-slate-100 overflow-hidden animate-fadeIn">
+          <div className="absolute inset-0 -z-10">
+            <img
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(callerInfo.name)}&background=2563eb&color=ffffff&bold=true`}
+              alt=""
+              aria-hidden
+              className="w-full h-full object-cover scale-125 blur-2xl opacity-40"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950" />
+          </div>
+
+          <div className="flex flex-col items-center space-y-2 pt-[max(3rem,env(safe-area-inset-top))] animate-scaleUp">
+            <span className="bg-blue-500/15 border border-blue-500/30 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-blue-300 uppercase tracking-widest flex items-center gap-1.5">
+              📞 Đang đổ chuông...
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center space-y-6 max-w-sm text-center px-6">
             <div className="relative">
-              <div className="relative h-24 w-24 rounded-full overflow-hidden border-4 border-blue-500 shadow-2xl z-10">
+              <div className="relative h-32 w-32 rounded-full overflow-hidden border-4 border-white/10 shadow-2xl z-10 ring-4 ring-black/20">
                 <img
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(callerInfo.name)}&background=2563eb&color=ffffff&bold=true`}
                   alt={callerInfo.name}
                   className="object-cover w-full h-full rounded-full"
                 />
               </div>
-              <div className="absolute inset-0 h-24 w-24 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
+              <div className="absolute inset-0 h-32 w-32 rounded-full bg-blue-500/20 animate-ping z-0 scale-110" />
+              <div className="absolute inset-0 h-32 w-32 rounded-full bg-indigo-500/10 animate-ping z-0 scale-125" style={{ animationDelay: "0.5s" }} />
             </div>
 
-            <div className="space-y-2">
-              <span className="bg-blue-650/20 border border-blue-500/35 px-3 py-1 rounded-full text-[9px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5 justify-center">
-                📞 Đang đổ chuông...
-              </span>
-              <h2 className="text-base font-extrabold text-slate-200">Cuộc gọi đến</h2>
-              <p className="text-sm font-black text-slate-100">{callerInfo.name} đang gọi cho bạn...</p>
+            <div className="space-y-1.5">
+              <h2 className="text-sm font-semibold text-slate-300">Cuộc gọi đến</h2>
+              <p className="text-xl font-black text-slate-100 tracking-tight">{callerInfo.name}</p>
             </div>
+          </div>
 
-            <div className="flex items-center gap-6 pt-4">
-              <button
-                type="button"
-                onClick={handleAcceptCall}
-                className="h-14 w-14 rounded-full bg-emerald-500 hover:bg-emerald-450 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer hover:scale-105 active:scale-95 transition-all"
-                title="Nhận cuộc gọi"
-              >
-                <Phone className="h-6 w-6 stroke-[2.5px]" />
-              </button>
-
+          {/* Frosted bottom accept/decline sheet */}
+          <div className="w-full flex items-center justify-around gap-6 z-30 pb-[max(2rem,env(safe-area-inset-bottom))] pt-5 px-10 bg-white/[0.03] backdrop-blur-2xl border-t border-white/10 rounded-t-[2rem] animate-callSheetUp">
+            <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
                 onClick={handleEndCall}
-                className="h-14 w-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/20 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+                className="h-16 w-16 rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white flex items-center justify-center shadow-xl shadow-red-500/30 cursor-pointer hover:scale-105 active:scale-90 transition-transform duration-200"
                 title="Từ chối"
               >
                 <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
               </button>
+              <span className="text-[10px] font-semibold text-slate-400">Từ chối</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAcceptCall}
+                className="h-16 w-16 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 cursor-pointer hover:scale-105 active:scale-90 transition-transform duration-200 animate-pulse"
+                title="Nhận cuộc gọi"
+              >
+                <Phone className="h-6 w-6 stroke-[2.5px]" />
+              </button>
+              <span className="text-[10px] font-semibold text-slate-400">Trả lời</span>
             </div>
           </div>
         </div>

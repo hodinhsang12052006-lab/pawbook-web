@@ -19,37 +19,31 @@ interface RateLimitRule {
 // Checked most-specific-prefix-first — ORDER MATTERS, more specific prefixes
 // must come before their parent prefix or they'll never match.
 //
-// /api/messages/seen and /api/messages/react used to fall through to the
-// /api/messages bucket below (prefix match), sharing its 30/min budget with
-// actual message sends. The chat cache refactor fires a "seen" ping on every
-// message received/sent and a background refetch on every chat switch — под
-// normal use that alone could saturate a shared 30/min bucket and get real
-// sends throttled. Split them out so a burst of pings/re-fetches can never
-// block sending.
+// Chat (/api/messages and everything under it) is deliberately NOT rate
+// limited here: it's core product functionality, not an abuse surface worth
+// risking false-positive throttling on. Only auth endpoints (credential
+// stuffing / mass signup) get a limit.
 const RATE_LIMIT_RULES: Array<{ prefix: string; rule: RateLimitRule }> = [
   { prefix: "/api/auth/callback/credentials", rule: { bucket: "login", limit: 8, windowMs: 60 * 1000 } },
   { prefix: "/api/register", rule: { bucket: "register", limit: 5, windowMs: 5 * 60 * 1000 } },
-  { prefix: "/api/messages/seen", rule: { bucket: "messages-seen", limit: 120, windowMs: 60 * 1000 } },
-  { prefix: "/api/messages/react", rule: { bucket: "messages-react", limit: 120, windowMs: 60 * 1000 } },
-  { prefix: "/api/messages", rule: { bucket: "messages", limit: 120, windowMs: 60 * 1000 } },
-  { prefix: "/api", rule: { bucket: "default", limit: 60, windowMs: 60 * 1000 } },
 ];
 
-function resolveRule(pathname: string): RateLimitRule {
+function resolveRule(pathname: string): RateLimitRule | null {
   const match = RATE_LIMIT_RULES.find((r) => pathname.startsWith(r.prefix));
-  return match ? match.rule : { bucket: "default", limit: 60, windowMs: 60 * 1000 };
+  return match ? match.rule : null;
 }
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const rule = resolveRule(pathname);
 
-  if (pathname.startsWith("/api")) {
+  if (rule) {
+    const { bucket, limit, windowMs } = rule;
     // x-forwarded-for is attacker-controllable unless the platform in front
     // of this app (Vercel, a trusted reverse proxy) strips/overwrites it —
     // confirm that's the case in your deployment, otherwise this can be
     // spoofed to bypass per-IP limiting entirely.
     const ip = (request as any).ip || request.headers.get("x-forwarded-for") || "127.0.0.1";
-    const { bucket, limit, windowMs } = resolveRule(pathname);
     const bucketKey = `${bucket}:${ip}`;
 
     const currentTime = Date.now();

@@ -4,9 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { pusherServer, chatChannelName } from "@/lib/pusher";
 
-const ALLOWED_MESSAGE_TYPES = ["TEXT", "IMAGE", "VIDEO", "STICKER", "ATTENDANCE", "REPLY", "SYSTEM"];
-const MAX_MESSAGE_LENGTH = 5000;
-
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
   try {
@@ -283,28 +280,14 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { receiverId, content, message, conversationId, type } = body;
 
+    // Accept Text, Image URL, or GIF URL content as-is — no artificial type
+    // allowlist or URL-scheme gate. The only real requirement is "not empty".
     const messageText = (content || message || "").toString().trim();
-    const msgType = ALLOWED_MESSAGE_TYPES.includes(type) ? type : "TEXT";
+    const msgType = type || "TEXT";
 
     if (!messageText) {
       return NextResponse.json(
         { error: "Nội dung tin nhắn không thể bỏ trống." },
-        { status: 400 }
-      );
-    }
-    if (messageText.length > MAX_MESSAGE_LENGTH) {
-      return NextResponse.json(
-        { error: `Tin nhắn quá dài (tối đa ${MAX_MESSAGE_LENGTH} ký tự).` },
-        { status: 400 }
-      );
-    }
-    // IMAGE/VIDEO content is rendered directly as an <img>/<video> src — only
-    // allow https:// URLs, rejecting javascript:/data:/other schemes that
-    // could otherwise be smuggled in by a client bypassing the normal upload
-    // flow and calling this API directly.
-    if ((msgType === "IMAGE" || msgType === "VIDEO") && !/^https:\/\//i.test(messageText)) {
-      return NextResponse.json(
-        { error: "URL đính kèm không hợp lệ (phải bắt đầu bằng https://)." },
         { status: 400 }
       );
     }

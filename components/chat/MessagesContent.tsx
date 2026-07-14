@@ -1,19 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition, useCallback } from "react";
+import React, { useState, useEffect, useRef, Suspense, startTransition, useCallback } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { BitpawMiniApp } from "@/app/messages/BitpawMiniApp";
 import GifPicker from "@/components/chat/GifPicker";
 import {
   Send, User, Search, MessageSquare, Loader2, AlertCircle, Plus, Users,
-  Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Reply, Share2, Info,
+  Video, Smile, X, Lock, Phone, Paperclip, Mic, Zap, Share2,
   MicOff, VideoOff, PhoneOff, Volume2, Clock, FileText, Cpu, Briefcase,
   Image as ImageIcon
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusher";
-import NextImage from "next/image";
 import dynamic from "next/dynamic";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import LanguageToggle from "@/components/layout/LanguageToggle";
@@ -108,64 +107,6 @@ interface MessagesContentProps {
   initialSystemUsers: any[];
 }
 
-// Per-chat message cache. Keyed by conversationId once known; a brand-new 1-1
-// chat that hasn't sent/received a first message yet has no conversationId,
-// so it's keyed by `partner:<userId>` until the server resolves a real one
-// (see rekeyCache usage below). This is the "instant, no spinner" cache: once
-// a chat's key has an entry here, switching back to it renders immediately
-// from this object — never re-fetches into a blank array first.
-function getChatKeyFor(chat: { id: string; conversationId?: string } | null | undefined): string | null {
-  if (!chat) return null;
-  return chat.conversationId || `partner:${chat.id}`;
-}
-
-// Dedupes by id (last write wins) and keeps chronological order — used for
-// every cache write so appends, prepends (older-history pagination), and
-// realtime pushes never need to worry about ordering or duplicates.
-function mergeMessageLists(a: MessageType[], b: MessageType[]): MessageType[] {
-  const map = new Map<string, MessageType>();
-  a.forEach((m) => map.set(m.id, m));
-  b.forEach((m) => map.set(m.id, m));
-  return Array.from(map.values()).sort(
-    (x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime()
-  );
-}
-
-// Reply envelope stored as JSON inside a type="REPLY" message's body/content —
-// see the note on `replyingTo` state for why this avoids a schema change.
-interface ReplyEnvelope {
-  text: string;
-  replyToId: string;
-  replyToSenderName: string;
-  replyToPreview: string;
-}
-
-function parseReplyEnvelope(content: string): ReplyEnvelope | null {
-  try {
-    const parsed = JSON.parse(content);
-    if (parsed && typeof parsed.text === "string") return parsed;
-  } catch {
-    // Not a reply envelope (or corrupted) — treat as plain text.
-  }
-  return null;
-}
-
-// Short preview text used both for the "replying to" bar and quoted blocks.
-function getMessagePreview(msg: { type: string; content: string }): string {
-  switch (msg.type) {
-    case "IMAGE": return "🖼️ Hình ảnh";
-    case "VIDEO": return "🎥 Video";
-    case "STICKER": return `${msg.content} Nhãn dán`;
-    case "ATTENDANCE": return "⏱️ Đã chấm công";
-    case "REPLY": {
-      const parsed = parseReplyEnvelope(msg.content);
-      return parsed ? parsed.text : msg.content;
-    }
-    default:
-      return (msg.content || "").slice(0, 80);
-  }
-}
-
 function CallTimer({ active }: { active: boolean }) {
   const [seconds, setSeconds] = useState(0);
 
@@ -208,20 +149,10 @@ export default function MessagesContent({
   const [currentUser] = useState<any>(initialSessionUser);
   const [conversations, setConversations] = useState<ConversationType[]>(initialConversations);
 
-  // Per-chat message cache (see getChatKeyFor/mergeMessageLists above). This
-  // replaces a single flat `messages` array that got wholesale REPLACED with
-  // just the active chat's messages on every switch — meaning switching back
-  // to a chat you'd already viewed always re-fetched and re-rendered from an
-  // empty list, which is exactly the "vòng xoay loading mỗi lần đổi chat"
-  // complaint. Now every chat's messages persist here for the whole session.
-  const [messagesCache, setMessagesCache] = useState<Record<string, MessageType[]>>(() => {
-    const seed: Record<string, MessageType[]> = {};
-    (initialMessages || []).forEach((m: any) => {
-      const key = m.conversationId || `partner:${m.senderId}`;
-      seed[key] = mergeMessageLists(seed[key] || [], [m]);
-    });
-    return seed;
-  });
+  // Messages for the currently active chat only. Simple on purpose: fetched
+  // fresh (replaced) whenever activeChat changes, appended to on send/receive.
+  // No cross-chat cache — one sender, one receiver, update the UI.
+  const [chatMessages, setChatMessages] = useState<MessageType[]>(initialMessages);
   const [systemUsers, setSystemUsers] = useState<UserType[]>(initialSystemUsers);
 
   const [loading, setLoading] = useState(false);
@@ -278,18 +209,6 @@ export default function MessagesContent({
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<any>(null);
 
-  // Reply-to-message. No schema change needed: replies are persisted as a
-  // type="REPLY" message whose body is a JSON envelope
-  // { text, replyToId, replyToSenderName, replyToPreview } — the existing
-  // `type`/`body` columns are free-form strings already, so this needs no
-  // Prisma migration against the live Turso database.
-  const [replyingTo, setReplyingTo] = useState<{ id: string; senderName: string; preview: string } | null>(null);
-
-  // Ephemeral (non-persisted) read receipts: { [conversationId]: { [userId]: isoTimestamp } }.
-  // Reset on refresh — there's no DB column to persist "last read" against
-  // without a schema migration, so this is best-effort, session-only.
-  const [seenMap, setSeenMap] = useState<{ [conversationId: string]: { [userId: string]: string } }>({});
-
   const callerSignalRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
   const pendingCandidatesRef = useRef<any[]>([]);
@@ -311,45 +230,7 @@ export default function MessagesContent({
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
-  // Cache write helpers — every message mutation in this component goes
-  // through one of these three instead of touching messagesCache directly.
-  const mergeIntoCache = useCallback((key: string | null, incoming: MessageType[]) => {
-    if (!key) return;
-    setMessagesCache((prev) => ({ ...prev, [key]: mergeMessageLists(prev[key] || [], incoming) }));
-  }, []);
-
-  const removeFromCache = useCallback((key: string | null, predicate: (m: MessageType) => boolean) => {
-    if (!key) return;
-    setMessagesCache((prev) => {
-      if (!prev[key]) return prev;
-      return { ...prev, [key]: prev[key].filter((m) => !predicate(m)) };
-    });
-  }, []);
-
-  // Migrates a chat's cache entry from a temporary `partner:<id>` key to its
-  // real conversationId once the server resolves one (first send/receive),
-  // merging with anything already cached under the real key.
-  const rekeyCache = useCallback((oldKey: string | null, newKey: string | null) => {
-    if (!oldKey || !newKey || oldKey === newKey) return;
-    setMessagesCache((prev) => {
-      if (!prev[oldKey]) return prev;
-      const merged = mergeMessageLists(prev[newKey] || [], prev[oldKey]);
-      const next = { ...prev };
-      delete next[oldKey];
-      next[newKey] = merged;
-      return next;
-    });
-  }, []);
-
-  // Messages for the currently active chat — a direct cache lookup instead of
-  // a filter over every conversation's history, so it's O(1) and correct by
-  // construction (no more re-deriving "which messages belong to this chat").
-  const chatMessages = React.useMemo(() => {
-    const key = getChatKeyFor(activeChat);
-    return key ? messagesCache[key] || [] : [];
-  }, [messagesCache, activeChat]);
-
-  // Reset per-conversation draft/UI state on chat switch. Previously this was
+  // Reset per-conversation draft UI state on chat switch. Previously this was
   // done by remounting the whole component via `key={activeChat?.id}` on the
   // root element, which also tore down and re-created the Pusher subscription
   // and refetched the conversation list on every click — replaced with a
@@ -359,7 +240,6 @@ export default function MessagesContent({
     setShowEmoji(false);
     setShowGifs(false);
     setChatPanelTab("emoji");
-    setReplyingTo(null);
   }, [activeChat?.id]);
   const [loadingChatMessages, setLoadingChatMessages] = useState(false);
   const [loadingMoreChatMessages, setLoadingMoreChatMessages] = useState(false);
@@ -379,28 +259,11 @@ export default function MessagesContent({
         throw new Error("Không thể tải danh sách cuộc trò chuyện. Hãy đăng nhập trước.");
       }
       const data = await res.json();
-      const safeMsgs = (data.messages || []).map((m: any) => ({
-        id: m.id,
-        content: m.content || m.body || "",
-        type: m.type || "TEXT",
-        senderId: m.senderId,
-        receiverId: m.receiverId || "",
-        createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
-        sender: m.sender ? {
-          id: m.sender.id,
-          name: m.sender.name,
-          avatarUrl: m.sender.avatarUrl || null,
-          role: m.sender.role,
-        } : { id: "", name: "User", role: "USER" },
-        receiver: m.receiver ? {
-          id: m.receiver.id,
-          name: m.receiver.name,
-          avatarUrl: m.receiver.avatarUrl || null,
-          role: m.receiver.role,
-        } : { id: "", name: "User", role: "USER" },
-        conversationId: m.conversationId,
-      }));
 
+      // This only refreshes the sidebar (conversation list + system users) —
+      // called after creating a group or discovering a brand-new conversation.
+      // It deliberately doesn't touch chatMessages: that's fetched separately
+      // per-chat by the effect below and must not be disturbed by this.
       const safeConvs = (data.conversations || []).map((conv: any) => ({
         id: conv.id,
         isGroup: conv.isGroup || false,
@@ -423,18 +286,6 @@ export default function MessagesContent({
         })),
       }));
 
-      // Merge into each conversation's cache entry rather than replacing a
-      // flat list — this can run while a chat is open (loadData(true) after
-      // creating a group/new conversation) and must not blank out whatever
-      // is currently displayed.
-      setMessagesCache((prev) => {
-        const next = { ...prev };
-        safeMsgs.forEach((m: any) => {
-          const key = m.conversationId || `partner:${m.senderId}`;
-          next[key] = mergeMessageLists(next[key] || [], [m]);
-        });
-        return next;
-      });
       setConversations(safeConvs);
       setSystemUsers(data.users || []);
     } catch (err: any) {
@@ -482,9 +333,8 @@ export default function MessagesContent({
           conversationId: m.conversationId,
         }));
 
-        // mergeMessageLists re-sorts by createdAt, so merging older messages
-        // in naturally "prepends" them — no manual ordering needed.
-        mergeIntoCache(activeChat.conversationId, safeMsgs);
+        // Older messages go at the front of the list.
+        setChatMessages((prev) => [...safeMsgs, ...prev]);
         setChatNextCursor(data.nextCursor || null);
       }
     } catch (err) {
@@ -493,7 +343,7 @@ export default function MessagesContent({
       loadingMoreRef.current = false;
       setLoadingMoreChatMessages(false);
     }
-  }, [activeChat?.conversationId, chatNextCursor, mergeIntoCache]);
+  }, [activeChat?.conversationId, chatNextCursor]);
 
   // Scroll observer for infinite chat history loading
   useEffect(() => {
@@ -513,21 +363,12 @@ export default function MessagesContent({
   }, [chatNextCursor, loadMoreChatMessages]);
 
   // Load message logs when activeChat is toggled
-  // useLayoutEffect (not useEffect): decides synchronously, before paint,
-  // whether this chat switch needs a spinner at all.
-  //
-  // Telegram-style instant switching: if this chat's key already has cached
-  // messages, render them immediately (chatMessages below reads straight from
-  // messagesCache) and refresh in the background with NO spinner and NO
-  // clearing — the fetch below only ever merges into the cache, it never
-  // resets it. The spinner only appears the very first time a given chat is
-  // opened this session, when there's genuinely nothing to show yet.
-  useLayoutEffect(() => {
+  // Load message history whenever the active chat changes. Simple and direct:
+  // fetch, replace chatMessages, done. One sender, one receiver, one chat's
+  // messages on screen at a time — no cross-chat cache to keep in sync.
+  useEffect(() => {
     if (!activeChat || !activeChat.id) return;
-    const chat = activeChat; // narrowed local — `activeChat` itself isn't narrowed inside the nested async function below
-
-    const key = getChatKeyFor(chat)!;
-    const isFirstOpen = !messagesCache[key]?.length;
+    const chat = activeChat; // narrowed local for the nested async function below
 
     let isMounted = true;
     // Safety net: if the request ever hangs (dropped connection, server never
@@ -536,7 +377,7 @@ export default function MessagesContent({
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     async function fetchMessages() {
-      if (isFirstOpen) setLoadingChatMessages(true);
+      setLoadingChatMessages(true);
       try {
         const queryParam = chat.isGroup
           ? `conversationId=${chat.id}`
@@ -576,13 +417,11 @@ export default function MessagesContent({
             conversationId: m.conversationId,
           }));
 
-          const fetchedConvId = safeMsgs[0]?.conversationId;
-          const effectiveKey = chat.conversationId || fetchedConvId || key;
-          if (effectiveKey !== key) rekeyCache(key, effectiveKey);
-          mergeIntoCache(effectiveKey, safeMsgs);
+          setChatMessages(safeMsgs);
           setChatNextCursor(data.nextCursor || null);
 
           // Update the activeChat conversationId if it is found on the backend!
+          const fetchedConvId = safeMsgs[0]?.conversationId;
           if (!chat.conversationId && fetchedConvId) {
             setActiveChat((prev: any) => {
               if (prev && prev.id === chat.id) {
@@ -594,8 +433,7 @@ export default function MessagesContent({
         }
       } catch (error) {
         console.error("Lỗi tải tin nhắn:", error);
-        // Deliberately NOT clearing the cache here — a stale-but-present chat
-        // history beats wiping the screen blank on a transient network error.
+        if (isMounted) setChatMessages([]);
       } finally {
         clearTimeout(timeoutId);
         if (isMounted) {
@@ -611,8 +449,6 @@ export default function MessagesContent({
       clearTimeout(timeoutId);
       controller.abort();
     };
-    // messagesCache/mergeIntoCache/rekeyCache deliberately omitted: this must
-    // only re-run when the chat itself changes, not on every cache write.
   }, [activeChat?.id]);
 
   // Auto scroll to bottom
@@ -622,17 +458,6 @@ export default function MessagesContent({
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages.length, activeChat?.id]);
-
-  // Ping "seen" whenever the open conversation gains messages (initial load
-  // or a new one arriving while it's the active chat) — see `seenMap` note.
-  useEffect(() => {
-    if (!activeChat?.conversationId) return;
-    fetch("/api/messages/seen", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: activeChat.conversationId }),
-    }).catch(() => {});
-  }, [activeChat?.conversationId, chatMessages.length]);
 
   // Pusher Real-time signaling & Messaging handler
   useEffect(() => {
@@ -676,26 +501,23 @@ export default function MessagesContent({
       // read directly here would be frozen at whatever it was on first bind.
       // activeChatRef.current always has the live value instead.
       const liveActiveChat = activeChatRef.current;
-      let targetKey: string | null = m.conversationId || null;
-
-      // First message ever for a chat still keyed by `partner:<id>` (no
-      // conversationId resolved client-side yet) — migrate it now that the
-      // server has told us the real conversationId.
-      if (
-        targetKey &&
+      const belongsToActiveChat =
         liveActiveChat &&
-        !liveActiveChat.conversationId &&
-        (m.senderId === liveActiveChat.id || m.receiverId === liveActiveChat.id)
-      ) {
-        rekeyCache(getChatKeyFor(liveActiveChat), targetKey);
-        setActiveChat((prev: any) => (prev && prev.id === liveActiveChat.id ? { ...prev, conversationId: targetKey } : prev));
-      }
+        (liveActiveChat.conversationId
+          ? liveActiveChat.conversationId === m.conversationId
+          : (m.senderId === liveActiveChat.id || m.receiverId === liveActiveChat.id));
 
-      if (targetKey) {
-        // Drop any optimistic placeholder this message supersedes, then merge
-        // the real one in (mergeMessageLists also dedupes by id).
-        removeFromCache(targetKey, (msg: any) => msg.isOptimistic === true && msg.content === safeNewMsg.content);
-        mergeIntoCache(targetKey, [safeNewMsg]);
+      if (belongsToActiveChat) {
+        // First message ever for a 1-1 chat resolves its conversationId.
+        if (!liveActiveChat.conversationId && m.conversationId) {
+          setActiveChat((prev: any) => (prev && prev.id === liveActiveChat.id ? { ...prev, conversationId: m.conversationId } : prev));
+        }
+        setChatMessages((prev) => {
+          if (prev.some((existing) => existing.id === safeNewMsg.id)) return prev;
+          // Drop any optimistic placeholder this message supersedes.
+          const filtered = prev.filter((msg: any) => !(msg.isOptimistic === true && msg.content === safeNewMsg.content));
+          return [...filtered, safeNewMsg];
+        });
       }
 
       // Update conversations preview item list
@@ -796,17 +618,6 @@ export default function MessagesContent({
 
     channel.bind("camera-status", (data: any) => {
       setVideoOff(data.videoOff);
-    });
-
-    channel.bind("message-seen", (data: any) => {
-      if (!data || !data.conversationId || !data.seenBy || !data.seenAt) return;
-      setSeenMap((prev) => ({
-        ...prev,
-        [data.conversationId]: {
-          ...(prev[data.conversationId] || {}),
-          [data.seenBy]: data.seenAt,
-        },
-      }));
     });
 
     return () => {
@@ -1025,34 +836,12 @@ export default function MessagesContent({
     if (e) e.preventDefault();
     if (!activeChat || sending) return;
 
-    const rawContent = customContent || messageText.trim();
-    let type = customType || "TEXT";
+    const content = customContent || messageText.trim();
+    const type = customType || "TEXT";
 
-    if (!rawContent) return;
-
-    // Validate absolute URL format for IMAGE/GIF content types
-    if (type === "IMAGE" || type === "GIF") {
-      if (!/^https?:\/\//i.test(rawContent)) {
-        toast.error("Đường dẫn hình ảnh không hợp lệ (Phải là đường dẫn tuyệt đối bắt đầu bằng http/https).");
-        return;
-      }
-    }
+    if (!content) return;
 
     if (!customContent) setMessageText("");
-
-    // Only free-typed text replies carry the quoted-message envelope —
-    // programmatic sends (stickers/GIFs/attendance) skip it.
-    const activeReply = !customContent ? replyingTo : null;
-    const content = activeReply
-      ? JSON.stringify({
-          text: rawContent,
-          replyToId: activeReply.id,
-          replyToSenderName: activeReply.senderName,
-          replyToPreview: activeReply.preview,
-        })
-      : rawContent;
-    if (activeReply) type = "REPLY";
-    setReplyingTo(null);
 
     setShowEmoji(false);
     setShowGifs(false);
@@ -1082,9 +871,8 @@ export default function MessagesContent({
       isOptimistic: true // Cờ đánh dấu tin nhắn đang gửi
     } as any;
 
-    // 2. Nhét ngay vào cache để render mượt mà (Độ trễ 0s)
-    const sendKey = getChatKeyFor(activeChat)!;
-    mergeIntoCache(sendKey, [optimisticMessage]);
+    // 2. Nhét ngay vào state để render mượt mà (Độ trễ 0s)
+    setChatMessages((prev) => [...prev, optimisticMessage]);
 
     setSending(true);
     try {
@@ -1120,15 +908,12 @@ export default function MessagesContent({
           conversationId: m.conversationId,
         };
 
-        // Replace temp message with the confirmed server message. If this was
-        // the chat's first message, its key was a temporary `partner:<id>` —
-        // rekey to the real conversationId (merging any interleaved cache
-        // writes, e.g. a Pusher echo that arrived first) before removing the
-        // optimistic placeholder and adding the confirmed one.
-        const finalKey = m.conversationId || sendKey;
-        if (finalKey !== sendKey) rekeyCache(sendKey, finalKey);
-        removeFromCache(finalKey, (msg) => msg.id === tempId);
-        mergeIntoCache(finalKey, [safeNewMsg]);
+        // Replace temp message with server message
+        setChatMessages((prev) => {
+          const filtered = prev.filter((msg) => msg.id !== tempId);
+          if (filtered.some((existing) => existing.id === safeNewMsg.id)) return filtered;
+          return [...filtered, safeNewMsg];
+        });
 
         // Set activeChat conversationId if it was not present
         if (!activeChat.conversationId) {
@@ -1168,27 +953,23 @@ export default function MessagesContent({
         });
       } else {
         // Nếu API lỗi, xóa tin nhắn ảo đi
-        removeFromCache(sendKey, (msg) => msg.id === tempId);
+        setChatMessages((prev) => prev.filter((msg) => msg.id !== tempId));
         const errData = await res.json();
         toast.error(errData.error || "Gửi tin nhắn thất bại.");
       }
     } catch (err) {
       console.error("Gửi lỗi:", err);
       // Nếu rớt mạng, xóa tin nhắn ảo đi
-      removeFromCache(sendKey, (msg) => msg.id === tempId);
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempId));
     } finally {
       setSending(false);
     }
-  }, [activeChat, sending, currentUser, loadData, replyingTo, mergeIntoCache, removeFromCache, rekeyCache]);
+  }, [activeChat, sending, currentUser, loadData]);
 
   // Stable references so the memoized GifPicker doesn't re-render (and its 12
   // thumbnails re-reconcile) on every unrelated MessagesContent render while
   // the media panel is open.
   const handleGifSelect = useCallback((url: string) => {
-    if (!url || !url.trim() || !/^https?:\/\//i.test(url)) {
-      toast.error("Định dạng ảnh GIF không hợp lệ (Phải là đường dẫn tuyệt đối bắt đầu bằng http/https).");
-      return;
-    }
     handleSendMessage(null, url, "IMAGE");
   }, [handleSendMessage]);
 
@@ -1526,14 +1307,6 @@ export default function MessagesContent({
                     );
                   }
 
-                  // Is this the most recent message sent by me? Used to anchor
-                  // the "Đã xem" (seen) read-receipt indicator.
-                  const isLastOwnMessage = isSelf && !chatMessages.slice(idx + 1).some((m) => m.senderId === currentUser?.id);
-                  const partnerSeenAt = !activeChat.isGroup && activeChat.conversationId
-                    ? seenMap[activeChat.conversationId]?.[activeChat.id]
-                    : undefined;
-                  const isSeenByPartner = isLastOwnMessage && !msg.isOptimistic && partnerSeenAt && new Date(partnerSeenAt) >= new Date(msg.createdAt);
-
                   return (
                     <React.Fragment key={msg.id || idx}>
                     {dateSeparator}
@@ -1629,45 +1402,32 @@ export default function MessagesContent({
                                 }`}
                             >
                               {msg.type === "IMAGE" ? (
-                                <div className="relative w-60 h-40 max-w-full overflow-hidden rounded-lg">
-                                  <NextImage
+                                // Plain <img>, not next/image: this content comes from
+                                // arbitrary external hosts (Tenor GIFs, Cloudinary
+                                // uploads, ...). next/image's optimizer 400s on any
+                                // hostname not explicitly allowlisted in next.config.ts —
+                                // a plain <img> just loads the URL directly, no allowlist.
+                                <div className="relative w-60 max-w-full overflow-hidden rounded-lg">
+                                  <img
                                     src={msg.content}
-                                    alt="Media Attachment"
-                                    fill
-                                    sizes="(max-width: 768px) 240px, 240px"
-                                    quality={75}
-                                    className="object-contain"
+                                    alt="Hình ảnh"
+                                    loading="lazy"
+                                    className="w-full h-auto max-h-60 object-contain rounded-lg"
                                     onError={(e) => {
                                       const imgEl = e.currentTarget;
                                       imgEl.style.display = "none";
                                       const parent = imgEl.parentElement;
-                                      if (parent) {
-                                        if (!parent.querySelector(".img-fallback")) {
-                                          const fallback = document.createElement("div");
-                                          fallback.className = "img-fallback absolute inset-0 flex flex-col items-center justify-center w-full h-full bg-slate-950/40 text-slate-500 gap-1.5 text-[10px] border border-slate-800 rounded-lg";
-                                          fallback.innerHTML = "⚠️ <span class='font-semibold text-slate-400'>Ảnh lỗi hoặc không tìm thấy</span>";
-                                          parent.appendChild(fallback);
-                                        }
+                                      if (parent && !parent.querySelector(".img-fallback")) {
+                                        const fallback = document.createElement("div");
+                                        fallback.className = "img-fallback flex flex-col items-center justify-center w-full h-32 bg-slate-950/40 text-slate-500 gap-1.5 text-[10px] border border-slate-800 rounded-lg";
+                                        fallback.innerHTML = "⚠️ <span class='font-semibold text-slate-400'>Ảnh lỗi hoặc không tìm thấy</span>";
+                                        parent.appendChild(fallback);
                                       }
                                     }}
                                   />
                                 </div>
                               ) : msg.type === "VIDEO" ? (
                                 <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
-                              ) : msg.type === "REPLY" ? (
-                                (() => {
-                                  const parsed = parseReplyEnvelope(msg.content);
-                                  if (!parsed) return <p>{msg.content}</p>;
-                                  return (
-                                    <div className="space-y-1.5">
-                                      <div className={`rounded-lg px-2.5 py-1.5 text-[10px] border-l-2 ${isSelf ? "bg-white/10 border-white/40" : "bg-slate-900/60 border-blue-500/50"}`}>
-                                        <p className="font-bold opacity-80">{parsed.replyToSenderName}</p>
-                                        <p className="opacity-70 truncate max-w-[220px]">{parsed.replyToPreview}</p>
-                                      </div>
-                                      <p>{parsed.text}</p>
-                                    </div>
-                                  );
-                                })()
                               ) : (
                                 <p>{msg.content}</p>
                               )}
@@ -1699,28 +1459,10 @@ export default function MessagesContent({
                               </button>
                             ))}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setReplyingTo({
-                              id: msg.id,
-                              senderName: isSelf ? "Bạn" : (msg.sender?.name || "Người dùng"),
-                              preview: getMessagePreview(msg),
-                            })}
-                            className="text-slate-400 hover:text-blue-400 transition-colors cursor-pointer pr-1.5 mr-0.5 border-r border-slate-800"
-                            title="Trả lời tin nhắn"
-                          >
-                            <Reply className="h-3 w-3" />
-                          </button>
                           <span className="text-[8px] text-slate-500 font-mono select-none">
                             {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-
-                        {isSeenByPartner && (
-                          <span className="absolute -bottom-4 right-1 text-[8px] text-slate-500 font-semibold select-none">
-                            {t("messenger.seen")}
-                          </span>
-                        )}
                       </div>
                     </div>
                     </React.Fragment>
@@ -1821,22 +1563,6 @@ export default function MessagesContent({
 
             {/* Chat Textbox Entry Bar */}
             <div className="p-4 border-t border-slate-855 bg-slate-950 flex-none z-10">
-              {replyingTo && (
-                <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-800 border-l-2 border-l-blue-500 animate-fadeIn">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-blue-400">{t("messenger.replyingTo", { name: replyingTo.senderName })}</p>
-                    <p className="text-[10px] text-slate-400 truncate max-w-[280px]">{replyingTo.preview}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setReplyingTo(null)}
-                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer flex-shrink-0"
-                    title={t("messenger.cancelReply")}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
               {isTyping && (
                 <div className="text-[10px] text-slate-400 font-semibold mb-2 ml-1 flex items-center gap-1.5 animate-pulse">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping"></span>
@@ -1936,7 +1662,7 @@ export default function MessagesContent({
                                 conversationId: m.conversationId,
                               };
 
-                              mergeIntoCache(m.conversationId || getChatKeyFor(activeChat), [safeNewMsg]);
+                              setChatMessages((prev) => [...prev, safeNewMsg]);
                             }
                           } else {
                             toast.error(uploadData.error || "Tải ảnh lên thất bại.", { id: toastId });
@@ -1992,7 +1718,7 @@ export default function MessagesContent({
                                 conversationId: m.conversationId,
                               };
 
-                              mergeIntoCache(m.conversationId || getChatKeyFor(activeChat), [safeNewMsg]);
+                              setChatMessages((prev) => [...prev, safeNewMsg]);
                               resolve("Chấm công thành công! ⏱️");
                             } else {
                               reject("Lỗi lưu chấm công.");

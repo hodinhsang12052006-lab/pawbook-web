@@ -16,13 +16,22 @@ interface RateLimitRule {
   windowMs: number;
 }
 
-// Checked most-specific-prefix-first. Auth and message-send are the two
-// endpoints most worth throttling harder than generic API traffic:
-// credential stuffing / brute-force login attempts, and message-flood spam.
+// Checked most-specific-prefix-first — ORDER MATTERS, more specific prefixes
+// must come before their parent prefix or they'll never match.
+//
+// /api/messages/seen and /api/messages/react used to fall through to the
+// /api/messages bucket below (prefix match), sharing its 30/min budget with
+// actual message sends. The chat cache refactor fires a "seen" ping on every
+// message received/sent and a background refetch on every chat switch — под
+// normal use that alone could saturate a shared 30/min bucket and get real
+// sends throttled. Split them out so a burst of pings/re-fetches can never
+// block sending.
 const RATE_LIMIT_RULES: Array<{ prefix: string; rule: RateLimitRule }> = [
   { prefix: "/api/auth/callback/credentials", rule: { bucket: "login", limit: 8, windowMs: 60 * 1000 } },
   { prefix: "/api/register", rule: { bucket: "register", limit: 5, windowMs: 5 * 60 * 1000 } },
-  { prefix: "/api/messages", rule: { bucket: "messages", limit: 30, windowMs: 60 * 1000 } },
+  { prefix: "/api/messages/seen", rule: { bucket: "messages-seen", limit: 120, windowMs: 60 * 1000 } },
+  { prefix: "/api/messages/react", rule: { bucket: "messages-react", limit: 120, windowMs: 60 * 1000 } },
+  { prefix: "/api/messages", rule: { bucket: "messages", limit: 120, windowMs: 60 * 1000 } },
   { prefix: "/api", rule: { bucket: "default", limit: 60, windowMs: 60 * 1000 } },
 ];
 

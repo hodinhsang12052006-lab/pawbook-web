@@ -18,6 +18,7 @@ export async function GET() {
       orderBy: {
         createdAt: "desc",
       },
+      take: 100,
     });
 
     // Auto-seed revenues if empty
@@ -41,6 +42,7 @@ export async function GET() {
         orderBy: {
           createdAt: "desc",
         },
+        take: 100,
       });
     }
 

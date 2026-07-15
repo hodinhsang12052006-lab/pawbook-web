@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     const crawlerEmail = "crawler@pawbook.vn";
     let crawlerUser = await prisma.user.findUnique({
       where: { email: crawlerEmail },
+      select: { id: true },
     });
 
     if (!crawlerUser) {

@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         { isBoosted: "desc" },
         { createdAt: "desc" },
       ],
+      take: 100,
       include: {
         owner: {
           select: {

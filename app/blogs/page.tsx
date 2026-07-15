@@ -229,7 +229,7 @@ export default function BlogsPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
-                            <img src={authorAvatar} alt={blog.author.name} className="h-full w-full object-cover" />
+                            <img src={authorAvatar} alt={blog.author.name} loading="lazy" className="h-full w-full object-cover" />
                           </div>
                           <div className="text-3xs">
                             <p className="font-bold text-slate-200 flex items-center gap-1">

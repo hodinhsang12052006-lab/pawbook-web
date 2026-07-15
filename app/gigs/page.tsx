@@ -444,7 +444,7 @@ export default function GigsPage() {
                               <div className="flex items-start justify-between gap-3 flex-wrap">
                                 <div className="flex items-center gap-2">
                                   <div className="h-7 w-7 rounded-full overflow-hidden border border-slate-800">
-                                    <img src={freelancerAvatar} alt={bid.freelancer.name} className="h-full w-full object-cover" />
+                                    <img src={freelancerAvatar} alt={bid.freelancer.name} loading="lazy" className="h-full w-full object-cover" />
                                   </div>
                                   <div className="text-4xs">
                                     <p className="font-bold text-slate-200 flex items-center gap-1">

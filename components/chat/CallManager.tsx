@@ -95,6 +95,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const localStreamRef = useRef<MediaStream | null>(null);
   const callerSignalRef = useRef<any>(null);
   const pendingCandidatesRef = useRef<any[]>([]);
+  // Outgoing ICE candidates are buffered here and flushed as ONE batched
+  // POST instead of one HTTP request per candidate — a single ICE gathering
+  // pass can emit many candidates in a burst, which was spamming /api/calls
+  // (and the resulting Pusher triggers) on every call start.
+  const outgoingCandidateBufferRef = useRef<any[]>([]);
+  const candidateFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showCallingModalRef = useRef(showCallingModal);
   showCallingModalRef.current = showCallingModal;
@@ -119,6 +125,11 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     setMicMuted(false);
     setCameraMuted(false);
     pendingCandidatesRef.current = [];
+    if (candidateFlushTimerRef.current) {
+      clearTimeout(candidateFlushTimerRef.current);
+      candidateFlushTimerRef.current = null;
+    }
+    outgoingCandidateBufferRef.current = [];
   }, []);
 
   // Own Pusher subscription — bound once for the whole session (deps: just
@@ -138,17 +149,20 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       callerSignalRef.current = data.sdp;
     });
 
-    channel.bind("call-candidate", async (data: any) => {
+    channel.bind("call-candidate-batch", async (data: any) => {
       if (!peerConnection.current) return;
-      const candidate = new RTCIceCandidate(data.candidate);
-      if (peerConnection.current.remoteDescription) {
-        try {
-          await peerConnection.current.addIceCandidate(candidate);
-        } catch (e) {
-          console.error("Error adding candidate:", e);
+      const candidates: any[] = Array.isArray(data.candidates) ? data.candidates : [];
+      for (const raw of candidates) {
+        const candidate = new RTCIceCandidate(raw);
+        if (peerConnection.current.remoteDescription) {
+          try {
+            await peerConnection.current.addIceCandidate(candidate);
+          } catch (e) {
+            console.error("Error adding candidate:", e);
+          }
+        } else {
+          pendingCandidatesRef.current.push(candidate);
         }
-      } else {
-        pendingCandidatesRef.current.push(candidate);
       }
     });
 
@@ -201,13 +215,34 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       });
     };
 
-    pc.onicecandidate = (event) => {
-      if (!event.candidate) return;
+    const flushCandidates = () => {
+      if (candidateFlushTimerRef.current) {
+        clearTimeout(candidateFlushTimerRef.current);
+        candidateFlushTimerRef.current = null;
+      }
+      if (outgoingCandidateBufferRef.current.length === 0) return;
+      const batch = outgoingCandidateBufferRef.current;
+      outgoingCandidateBufferRef.current = [];
       fetch("/api/calls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetId: remoteTargetId, action: "candidate", candidate: event.candidate }),
+        body: JSON.stringify({ targetId: remoteTargetId, action: "candidate-batch", candidates: batch }),
       });
+    };
+
+    pc.onicecandidate = (event) => {
+      if (!event.candidate) {
+        // ICE gathering finished — flush immediately so the last candidates
+        // aren't held up by the debounce window.
+        flushCandidates();
+        return;
+      }
+      outgoingCandidateBufferRef.current.push(event.candidate.toJSON());
+      if (candidateFlushTimerRef.current) clearTimeout(candidateFlushTimerRef.current);
+      // Short debounce: coalesces the burst of candidates a single ICE
+      // gathering pass emits into one request without noticeably delaying
+      // delivery (connection setup tolerates this easily).
+      candidateFlushTimerRef.current = setTimeout(flushCandidates, 200);
     };
 
     return pc;

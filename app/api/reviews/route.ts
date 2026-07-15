@@ -95,6 +95,7 @@ export async function POST(req: Request) {
 
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId },
+      select: { id: true },
     });
 
     if (!targetUser) {
@@ -211,6 +212,7 @@ export async function GET(req: Request) {
 
     const reviews = await prisma.review.findMany({
       where: { jobId },
+      take: 100,
       include: {
         reviewer: {
           select: { id: true, name: true, avatarUrl: true },

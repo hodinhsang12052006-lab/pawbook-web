@@ -330,7 +330,7 @@ export default function HRManagementPage() {
                           <tr key={app.id} className="hover:bg-slate-900/10 transition-colors">
                             <td className="p-4 flex items-center gap-3">
                               <div className="h-9 w-9 rounded-lg overflow-hidden border border-slate-800 flex-shrink-0">
-                                <img src={avatar} alt={app.applicant?.name} className="h-full w-full object-cover" />
+                                <img src={avatar} alt={app.applicant?.name} loading="lazy" className="h-full w-full object-cover" />
                               </div>
                               <div>
                                 <p className="font-bold text-slate-200">{app.applicant?.name}</p>
@@ -455,7 +455,7 @@ export default function HRManagementPage() {
                             <tr key={p.id} className="hover:bg-slate-900/10 transition-colors">
                               <td className="p-4 flex items-center gap-3">
                                 <div className="h-9 w-9 rounded-lg overflow-hidden border border-slate-800 flex-shrink-0">
-                                  <img src={avatar} alt={p.user?.name} className="h-full w-full object-cover" />
+                                  <img src={avatar} alt={p.user?.name} loading="lazy" className="h-full w-full object-cover" />
                                 </div>
                                 <div>
                                   <span className="font-bold text-slate-200 block">{p.user?.name}</span>

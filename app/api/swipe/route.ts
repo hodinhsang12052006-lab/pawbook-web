@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import fs from "fs";
+import { promises as fs } from "fs";
 import path from "path";
 import { generateFakeCandidates, generateFakeJobs, jitterCoords } from "@/lib/mockDataGenerator";
 
@@ -13,6 +13,16 @@ const HCMC_CENTER: [number, number] = [10.7769, 106.7009];
 // so the deck never runs visibly dry ("chống rỗng").
 const MIN_DECK_SIZE = 12;
 
+// Non-blocking existence check (fs.promises has no direct existsSync equivalent).
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -22,8 +32,8 @@ export async function GET(req: Request) {
       // 1. Static hand-authored candidate CVs (existing fixture)
       let staticCards: any[] = [];
       const cvFilePath = path.join(process.cwd(), "public", "data", "fomo_cvs.json");
-      if (fs.existsSync(cvFilePath)) {
-        const content = fs.readFileSync(cvFilePath, "utf-8");
+      if (await pathExists(cvFilePath)) {
+        const content = await fs.readFile(cvFilePath, "utf-8");
         staticCards = JSON.parse(content);
       }
 
@@ -33,6 +43,14 @@ export async function GET(req: Request) {
         where: { role: "USER", OR: [{ bio: { not: null } }, { skills: { not: null } }] },
         take: 40,
         orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          skills: true,
+          address: true,
+          avatarUrl: true,
+          bio: true,
+        },
       });
       const realCards = realUsers.map((u, idx) => {
         const [lat, lng] = jitterCoords(HCMC_CENTER[0], HCMC_CENTER[1], idx);
@@ -95,6 +113,7 @@ export async function GET(req: Request) {
     } else if (topic === "jobs") {
       // 2. Job Posts
       const jobs = await prisma.job.findMany({
+        take: 100,
         include: {
           employer: {
             select: {
@@ -111,11 +130,11 @@ export async function GET(req: Request) {
       const tpHcmDir = path.join(process.cwd(), "data_crawled", "TP_HCM");
       const filesToRead = ["Spa_thu_cung.json", "Khach_san_thu_cung.json", "Cap_cuu_thu_y.json"];
 
-      filesToRead.forEach((file) => {
+      for (const file of filesToRead) {
         const filePath = path.join(tpHcmDir, file);
-        if (fs.existsSync(filePath)) {
+        if (await pathExists(filePath)) {
           try {
-            const content = fs.readFileSync(filePath, "utf-8");
+            const content = await fs.readFile(filePath, "utf-8");
             const items = JSON.parse(content);
             items.forEach((item: any, idx: number) => {
               staticJobs.push({
@@ -133,7 +152,7 @@ export async function GET(req: Request) {
             console.error("Error reading static jobs for swipe", file, e);
           }
         }
-      });
+      }
 
       // Auto-seed: still short of a full deck after real + static jobs?
       // Generate + persist real filler Job rows (see mockDataGenerator) so a
@@ -174,13 +193,13 @@ export async function GET(req: Request) {
       const nhaTrangDir = path.join(process.cwd(), "data_crawled", "Nha_Trang");
       const mappedTravel: any[] = [];
 
-      if (fs.existsSync(nhaTrangDir)) {
-        const files = fs.readdirSync(nhaTrangDir);
-        files.forEach((file) => {
+      if (await pathExists(nhaTrangDir)) {
+        const files = await fs.readdir(nhaTrangDir);
+        for (const file of files) {
           if (file.endsWith(".json")) {
             try {
               const filenameClean = file.replace(".json", "").replace(/_/g, " ");
-              const content = fs.readFileSync(path.join(nhaTrangDir, file), "utf-8");
+              const content = await fs.readFile(path.join(nhaTrangDir, file), "utf-8");
               const items = JSON.parse(content);
               items.forEach((item: any, idx: number) => {
                 let imgUrl = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=80"; // Hotel default
@@ -215,7 +234,7 @@ export async function GET(req: Request) {
               console.error("Error reading Nha Trang file in API:", file, err);
             }
           }
-        });
+        }
       }
 
       return NextResponse.json(mappedTravel);

@@ -26,6 +26,7 @@ export async function GET(
       orderBy: {
         createdAt: "asc",
       },
+      take: 100,
     });
 
     return NextResponse.json(comments);

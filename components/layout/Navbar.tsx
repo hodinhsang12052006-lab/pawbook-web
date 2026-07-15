@@ -370,6 +370,7 @@ export default function Navbar() {
                           <img
                             src={u.avatarUrl || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=100&auto=format&fit=crop&q=80"}
                             alt={u.name}
+                            loading="lazy"
                             className="h-7 w-7 rounded-full object-cover border border-slate-800"
                           />
                           <div className="min-w-0 flex-1 text-[11px]">
@@ -512,6 +513,7 @@ export default function Navbar() {
                         <img
                           src={u.avatarUrl || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=100&auto=format&fit=crop&q=80"}
                           alt={u.name}
+                          loading="lazy"
                           className="h-7 w-7 rounded-full object-cover border border-slate-800"
                         />
                         <div className="min-w-0 flex-1 text-[11px]">

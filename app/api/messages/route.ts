@@ -248,6 +248,7 @@ export async function GET(req: Request) {
         role: true,
         bio: true,
       },
+      take: 100,
     });
 
     return NextResponse.json({

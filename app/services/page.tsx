@@ -571,6 +571,7 @@ export default function ServicesPage() {
                         <img
                           src={loc.avatarUrl}
                           alt={loc.companyName}
+                          loading="lazy"
                           className="h-full w-full object-cover"
                         />
                       </div>

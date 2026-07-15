@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
 
     const stores = await prisma.store.findMany({
       where: whereClause,
+      take: 100,
       orderBy: {
         rating: "desc",
       },

@@ -29,12 +29,16 @@ export async function GET() {
       orderBy: {
         createdAt: "desc",
       },
+      take: 100,
     });
 
     // Auto-seed payrolls if DB is empty
     if (payrolls.length === 0) {
       const users = await prisma.user.findMany({
         take: 4,
+        select: {
+          id: true,
+        },
       });
 
       if (users.length > 0) {
@@ -73,6 +77,7 @@ export async function GET() {
           orderBy: {
             createdAt: "desc",
           },
+          take: 100,
         });
       }
     }

@@ -19,6 +19,7 @@ export async function POST() {
     // 1. Fetch User status
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      select: { lastDailyReward: true },
     });
 
     if (!user) {

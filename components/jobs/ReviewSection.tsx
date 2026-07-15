@@ -154,7 +154,7 @@ export default function ReviewSection({ jobId, employerId }: ReviewSectionProps)
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-full overflow-hidden border border-slate-850">
-                      <img src={avatar} alt={rev.reviewer.name} className="h-full w-full object-cover" />
+                      <img src={avatar} alt={rev.reviewer.name} loading="lazy" className="h-full w-full object-cover" />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-200">{rev.reviewer.name}</h4>

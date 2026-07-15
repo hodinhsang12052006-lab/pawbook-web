@@ -26,6 +26,7 @@ export async function GET() {
         { isBoosted: "desc" },
         { createdAt: "desc" },
       ],
+      take: 100,
     });
 
     if (gigs.length === 0) {
@@ -89,6 +90,7 @@ export async function GET() {
           { isBoosted: "desc" },
           { createdAt: "desc" },
         ],
+        take: 100,
       });
     }
 

@@ -68,6 +68,7 @@ export async function PUT(request: Request) {
           data: {
             pawCoin: { increment: topupCoins },
           },
+          select: { pawCoin: true },
         }),
         prisma.notification.create({
           data: {

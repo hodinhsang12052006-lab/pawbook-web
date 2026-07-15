@@ -37,6 +37,7 @@ export async function GET(req: Request) {
 
     const jobs = await prisma.job.findMany({
       where: whereClause,
+      take: 100,
       select: {
         id: true,
         title: true,

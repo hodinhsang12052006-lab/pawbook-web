@@ -37,12 +37,14 @@ export async function GET() {
       orderBy: {
         createdAt: "desc",
       },
+      take: 100,
     });
 
     if (posts.length === 0) {
       const crawlerEmail = "crawler@pawbook.vn";
       let crawlerUser = await prisma.user.findUnique({
         where: { email: crawlerEmail },
+        select: { id: true },
       });
 
       if (crawlerUser) {
@@ -82,6 +84,7 @@ export async function GET() {
             },
           },
           orderBy: { createdAt: "desc" },
+          take: 100,
         });
       }
     }

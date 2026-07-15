@@ -41,6 +41,11 @@ export async function POST(req: Request) {
       where: {
         role: "USER",
       },
+      select: {
+        id: true,
+        skills: true,
+        bio: true,
+      },
     });
 
     const notificationsToCreate = [];

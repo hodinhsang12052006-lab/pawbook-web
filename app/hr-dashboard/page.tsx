@@ -147,6 +147,7 @@ export default function HrDashboardPage() {
                               <img
                                 src={app.applicant.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(app.applicant.name)}&background=2563eb&color=ffffff&bold=true`}
                                 alt={app.applicant.name}
+                                loading="lazy"
                                 className="h-8 w-8 rounded-full object-cover border border-slate-800 flex-shrink-0"
                               />
                               <div className="min-w-0 flex-1">

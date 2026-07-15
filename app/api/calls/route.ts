@@ -12,7 +12,7 @@ import { pusherServer, chatChannelName } from "@/lib/pusher";
 // were all silently dropped.
 const ACTION_TO_EVENT: Record<string, string> = {
   offer: "incoming-call",
-  candidate: "call-candidate",
+  "candidate-batch": "call-candidate-batch",
   accept: "call-accepted",
   reject: "call-rejected",
   camera: "camera-status",
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const { targetId, action, sdp, candidate, callType, videoOff } = body;
+    const { targetId, action, sdp, candidates, callType, videoOff } = body;
 
     const eventName = ACTION_TO_EVENT[action];
     if (!targetId || !eventName) {
@@ -39,8 +39,8 @@ export async function POST(req: Request) {
       case "offer":
         payload = { callerId: userId, callerName: session.user.name || "User", callType, sdp };
         break;
-      case "candidate":
-        payload = { candidate };
+      case "candidate-batch":
+        payload = { candidates };
         break;
       case "accept":
         payload = { sdp };

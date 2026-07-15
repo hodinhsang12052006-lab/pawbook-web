@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       data: {
         avatarUrl: image,
       },
+      select: { avatarUrl: true },
     });
 
     return NextResponse.json({

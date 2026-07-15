@@ -122,7 +122,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Bạn không sở hữu tin tuyển dụng này." }, { status: 403 });
       }
 
-      const applicant = await prisma.user.findUnique({ where: { id: applicantId } });
+      const applicant = await prisma.user.findUnique({
+        where: { id: applicantId },
+        select: { cvUrl: true, cv_url: true },
+      });
       if (!applicant) {
         return NextResponse.json({ error: "Ứng viên không tồn tại." }, { status: 404 });
       }
@@ -141,7 +144,20 @@ export async function POST(req: Request) {
           cvUrl: applicant.cvUrl || applicant.cv_url || "Chưa cập nhật CV",
           status: "MATCHED",
         },
-        include: { job: true, applicant: true },
+        include: {
+          job: true,
+          applicant: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+              role: true,
+              bio: true,
+              skills: true,
+            },
+          },
+        },
       });
 
       return NextResponse.json(application, { status: 201 });

@@ -214,9 +214,10 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
                     {/* Header with Avatar and Title */}
                     <div className="flex gap-2.5 items-center">
                       <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-100 flex-shrink-0 bg-slate-50">
-                        <img 
-                          src={loc.avatarUrl} 
-                          alt={loc.companyName} 
+                        <img
+                          src={loc.avatarUrl}
+                          alt={loc.companyName}
+                          loading="lazy"
                           className="h-full w-full object-cover"
                         />
                       </div>

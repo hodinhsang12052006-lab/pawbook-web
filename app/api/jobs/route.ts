@@ -12,7 +12,14 @@ export async function GET() {
   try {
     const jobs = await prisma.job.findMany({
       include: {
-        reviews: true,
+        reviews: {
+          select: {
+            id: true,
+            rating: true,
+            content: true,
+            createdAt: true,
+          },
+        },
         employer: {
           select: {
             id: true,
@@ -28,18 +35,19 @@ export async function GET() {
         { isBoosted: "desc" },
         { createdAt: "desc" },
       ],
+      take: 100,
     });
 
-    // Read static jobs from data_crawled
+    // Read static jobs from data_crawled (parallel, non-blocking reads)
     const staticJobs: any[] = [];
     const tpHcmDir = path.join(process.cwd(), "data_crawled", "TP_HCM");
     const filesToRead = ["Spa_thu_cung.json", "Khach_san_thu_cung.json", "Cap_cuu_thu_y.json"];
-    
-    filesToRead.forEach((file) => {
-      const filePath = path.join(tpHcmDir, file);
-      if (fs.existsSync(filePath)) {
+
+    await Promise.all(
+      filesToRead.map(async (file) => {
+        const filePath = path.join(tpHcmDir, file);
         try {
-          const content = fs.readFileSync(filePath, "utf-8");
+          const content = await fs.promises.readFile(filePath, "utf-8");
           const items = JSON.parse(content);
           items.forEach((item: any, idx: number) => {
             staticJobs.push({
@@ -58,15 +66,15 @@ export async function GET() {
         } catch (e) {
           console.error("Error reading static file", file, e);
         }
-      }
-    });
+      })
+    );
 
     const safeDbJobs = jobs.map((job) => ({
       id: job.id,
       title: job.title,
       description: job.description,
       salary: job.salary,
-      location: "",
+      location: job.latitude ? (job.latitude > 20.0 ? "Hà Nội" : job.latitude > 15.0 ? "Đà Nẵng" : "TP. Hồ Chí Minh") : "Việt Nam",
       companyName: job.companyName,
       priceRange: (job as any).priceRange || null,
       vehicleInfo: (job as any).vehicleInfo || null,

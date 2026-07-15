@@ -36,13 +36,29 @@ async function main() {
   console.log("Initializing Mock Crawler engine...");
 
   // Query existing employers to attach to crawled jobs
-  const employers = await prisma.user.findMany({
+  let employers = await prisma.user.findMany({
     where: { role: "EMPLOYER" },
   });
 
   if (employers.length === 0) {
-    console.error("Error: No employers found in database. Please run seeding first.");
-    process.exit(1);
+    console.log("No employers found in database. Querying any user...");
+    const fallbackUser = await prisma.user.findFirst();
+    if (fallbackUser) {
+      employers = [fallbackUser];
+    } else {
+      console.log("No users found in database. Creating a mock employer...");
+      const mockEmployer = await prisma.user.create({
+        data: {
+          name: "MMO Recruiter System",
+          email: "recruiter@bitpawos.com",
+          role: "EMPLOYER",
+          reputation: 100,
+          trustScore: 5.0,
+          isVerified: true,
+        },
+      });
+      employers = [mockEmployer];
+    }
   }
 
   const getRandomEmployer = () => employers[Math.floor(Math.random() * employers.length)].id;
@@ -278,16 +294,15 @@ async function main() {
     { name: "Buôn Ma Thuột", lat: 12.6853, lng: 108.0383 },
   ];
 
-  /*
   const iterationsCount = 3; // 3 * 20 = 60 items
   console.log(`Crawling and inserting ${mockJobsData.length * iterationsCount} multi-niche jobs & services into Turso...`);
 
-  let insertedCount = 0;
+  let insertedJobsCount = 0;
+  let insertedServicesCount = 0;
   for (let cycle = 0; cycle < iterationsCount; cycle++) {
     for (let i = 0; i < mockJobsData.length; i++) {
       const jobData = mockJobsData[i];
       const employerId = getRandomEmployer();
-      insertedCount++;
 
       // Pick a random city to assign geographic coordinates spanning Vietnam
       const city = cities[Math.floor(Math.random() * cities.length)];
@@ -300,20 +315,25 @@ async function main() {
       const randomRating = parseFloat((Math.random() * 1.0 + 4.0).toFixed(1)); // 4.0 to 5.0 stars
 
       // 1. Create Job Listing
-      await prisma.job.create({
-        data: {
-          title: cycle > 0 ? `${jobData.title} (Chi nhánh #${cycle})` : jobData.title,
-          description: jobData.description,
-          salary: jobData.salary,
-          companyName: jobData.companyName,
-          employerId: employerId,
-          niche: jobData.niche,
-          latitude: finalLat,
-          longitude: finalLng,
-          ai_tags: jobData.ai_tags,
-          isBoosted: Math.random() > 0.7,
-        },
-      });
+      try {
+        await prisma.job.create({
+          data: {
+            title: cycle > 0 ? `${jobData.title} (Chi nhánh #${cycle})` : jobData.title,
+            description: jobData.description,
+            salary: jobData.salary,
+            companyName: jobData.companyName,
+            employerId: employerId,
+            niche: jobData.niche,
+            latitude: finalLat,
+            longitude: finalLng,
+            ai_tags: jobData.ai_tags,
+            isBoosted: Math.random() > 0.7,
+          },
+        });
+        insertedJobsCount++;
+      } catch (err) {
+        console.error(`Error inserting job [${jobData.title}]:`, err.message);
+      }
 
       // 2. Determine Service Category
       let serviceCategory = "Khác";
@@ -325,27 +345,32 @@ async function main() {
       else if (titleLower.includes("giúp việc") || titleLower.includes("sofa") || titleLower.includes("dọn")) serviceCategory = "Gia đình";
 
       // 3. Create Corresponding Service Listing
-      await prisma.service.create({
-        data: {
-          name: cycle > 0 ? `${jobData.companyName} (Cơ sở #${cycle})` : jobData.companyName,
-          category: serviceCategory,
-          description: jobData.description,
-          location: `${city.name}, Việt Nam`,
-          city: city.name,
-          contactInfo: "0987.654.321",
-          imageUrl: `https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&auto=format&fit=crop&q=60`,
-          priceRange: "200.000đ - 1.500.000đ",
-          rating: randomRating,
-          ownerId: employerId,
-          isBoosted: Math.random() > 0.7,
-        },
-      });
+      try {
+        await prisma.service.create({
+          data: {
+            name: cycle > 0 ? `${jobData.companyName} (Cơ sở #${cycle})` : jobData.companyName,
+            category: serviceCategory,
+            description: jobData.description,
+            location: `${city.name}, Việt Nam`,
+            city: city.name,
+            contactInfo: "0987.654.321",
+            imageUrl: `https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&auto=format&fit=crop&q=60`,
+            priceRange: "200.000đ - 1.500.000đ",
+            rating: randomRating,
+            ownerId: employerId,
+            isBoosted: Math.random() > 0.7,
+          },
+        });
+        insertedServicesCount++;
+      } catch (err) {
+        console.error(`Error inserting service [${jobData.companyName}]:`, err.message);
+      }
 
-      console.log(`[${insertedCount}/${mockJobsData.length * iterationsCount}] Inserted Job & Service: ${jobData.title} in ${city.name} (${jobData.niche} / ${serviceCategory})`);
+      console.log(`[Cycle ${cycle + 1}] Inserted Job & Service: ${jobData.title} in ${city.name} (${jobData.niche} / ${serviceCategory})`);
     }
   }
-  */
-  console.log("Mock Crawler script ran with inserts disabled.");
+
+  console.log(`Mock Crawler script ran successfully. Inserted ${insertedJobsCount} jobs and ${insertedServicesCount} services into Database.`);
 }
 
 main()

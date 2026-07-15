@@ -842,7 +842,7 @@ export default function MessagesContent({
                     <div className="relative flex-shrink-0">
                       <div className="relative h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
                         {isGroup ? <Users className="h-5 w-5 text-indigo-400" /> : (
-                          <img src={avatarUrl || AVATAR_FALLBACK(displayName)} alt={displayName} className="object-cover w-full h-full rounded-full" />
+                          <img src={avatarUrl || AVATAR_FALLBACK(displayName)} alt={displayName} loading="lazy" className="object-cover w-full h-full rounded-full" />
                         )}
                       </div>
                       {!isGroup && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />}
@@ -879,7 +879,7 @@ export default function MessagesContent({
                 <div className="relative flex-shrink-0">
                   <div className="relative h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
                     {activeChat.isGroup ? <Users className="h-5 w-5 text-indigo-400" /> : (
-                      <img src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt={activeChat.name} className="object-cover w-full h-full rounded-full" />
+                      <img src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt={activeChat.name} loading="lazy" className="object-cover w-full h-full rounded-full" />
                     )}
                   </div>
                   {!activeChat.isGroup && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-500" />}
@@ -985,7 +985,7 @@ export default function MessagesContent({
                       <div className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${animClass}`}>
                         {!isSelf && (
                           <div className="relative h-6 w-6 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
-                            <img src={senderAvatar} alt={msg.sender?.name || "User"} className="object-cover w-full h-full rounded-full" />
+                            <img src={senderAvatar} alt={msg.sender?.name || "User"} loading="lazy" className="object-cover w-full h-full rounded-full" />
                           </div>
                         )}
                         <div className="flex flex-col max-w-[70%] relative pb-1">
@@ -1306,7 +1306,7 @@ export default function MessagesContent({
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="relative h-6.5 w-6.5 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
-                              <img src={user.avatarUrl || AVATAR_FALLBACK(user.name)} alt={user.name} className="object-cover w-full h-full rounded-full" />
+                              <img src={user.avatarUrl || AVATAR_FALLBACK(user.name)} alt={user.name} loading="lazy" className="object-cover w-full h-full rounded-full" />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">

@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     // 1. Fetch user to check coin balance
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      select: { pawCoin: true, role: true },
     });
 
     if (!user) {

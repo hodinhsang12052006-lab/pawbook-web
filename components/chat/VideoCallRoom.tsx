@@ -121,9 +121,12 @@ export default function VideoCallRoom({
     setBeautyEnabled(!beautyEnabled);
   };
 
-  // Apply real-time CSS beauty filter adjustment overlays to native video elements
+  // Apply real-time CSS beauty filter adjustment overlays to native video elements.
+  // Scoped to this call's own container (not `document`) — querying the whole
+  // page on every slider tick (onChange fires continuously while dragging)
+  // was doing a full-document DOM scan dozens of times per second.
   useEffect(() => {
-    const videos = document.querySelectorAll("video");
+    const videos = containerRef.current?.querySelectorAll("video") ?? [];
     videos.forEach((video) => {
       if (beautyEnabled) {
         // Apply smooth blur, contrast, brightness, and soft glow

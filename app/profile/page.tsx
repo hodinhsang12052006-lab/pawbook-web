@@ -4,6 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePage({ params }: { params?: Promise<{ uid: string }> }) {
   const resolvedParams = params ? await params : null;
   const resolvedUid = resolvedParams?.uid || null;

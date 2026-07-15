@@ -28,9 +28,9 @@ export const metadata: Metadata = {
   description: 'Mạng xã hội MMO & Công nghệ',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png', // Rất quan trọng cho iOS
+    icon: '/cho1.jpg',
+    shortcut: '/cho1.jpg',
+    apple: '/cho1.jpg',
   },
 };
 

@@ -57,6 +57,7 @@ export async function GET() {
       orderBy: {
         createdAt: "desc",
       },
+      take: 100,
     });
 
     return NextResponse.json(applications);

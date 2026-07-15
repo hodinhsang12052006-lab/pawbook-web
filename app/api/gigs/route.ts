@@ -33,6 +33,7 @@ export async function GET() {
       const crawlerEmail = "crawler@pawbook.vn";
       let crawlerUser = await prisma.user.findUnique({
         where: { email: crawlerEmail },
+        select: { id: true },
       });
 
       if (!crawlerUser) {

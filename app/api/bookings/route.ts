@@ -28,7 +28,8 @@ export async function GET() {
         job: { select: { id: true, title: true } },
         service: { select: { id: true, name: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 100
     });
 
     // Fetch sent bookings (where user is the client/candidate)
@@ -41,7 +42,8 @@ export async function GET() {
         job: { select: { id: true, title: true } },
         service: { select: { id: true, name: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 100
     });
 
     return NextResponse.json({ received, sent });

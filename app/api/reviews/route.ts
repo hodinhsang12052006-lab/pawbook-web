@@ -159,6 +159,10 @@ export async function POST(req: Request) {
     // Recalculate average trust rating
     const allReviews = await prisma.review.findMany({
       where: { targetUserId },
+      // Every review for this user must be included for the average rating
+      // to be accurate — the cap below is a defensive ceiling against
+      // unbounded growth, not a page size.
+      take: 2000,
     });
 
     const totalRating = allReviews.reduce((sum, r) => sum + r.rating, 0);

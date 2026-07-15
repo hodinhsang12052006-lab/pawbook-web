@@ -46,6 +46,10 @@ export async function POST(req: Request) {
         skills: true,
         bio: true,
       },
+      // This scan must cover every USER to match correctly against a newly
+      // posted job — a `take` here would silently skip real candidates. The
+      // cap is a defensive ceiling against unbounded growth, not a page size.
+      take: 2000,
     });
 
     const notificationsToCreate = [];

@@ -33,6 +33,7 @@ export async function GET() {
         ai_tags: true,
         createdAt: true,
       },
+      take: 100,
     });
 
     // Run AI Matchmaking on jobs

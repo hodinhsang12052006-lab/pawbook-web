@@ -52,6 +52,10 @@ export async function GET(req: Request) {
         { isBoosted: "desc" },
         { createdAt: "desc" },
       ],
+      // Every job must be scanned to match the candidate's skills correctly —
+      // a small `take` would silently hide real matches. The cap below is a
+      // defensive ceiling against unbounded growth, not a page size.
+      take: 2000,
     });
 
     // 4. Perform keyword-matching on Job Title & Description

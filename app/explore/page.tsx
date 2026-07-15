@@ -43,7 +43,7 @@ export default function ExplorePage() {
   const [jobs, setJobs] = useState<JobType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedNiche, setSelectedNiche] = useState<string>("ALL");
+  const [selectedType, setSelectedType] = useState<string>("ALL");
 
   useEffect(() => {
     async function fetchRadarData() {
@@ -77,18 +77,15 @@ export default function ExplorePage() {
     }
   };
 
-  const niches = [
-    { id: "ALL", label: "Tất cả ngành nghề" },
-    { id: "IT", label: "💻 IT & Phần mềm" },
-    { id: "MMO", label: "🚀 MMO & Airdrop" },
-    { id: "SPA", label: "💅 Spa & Làm đẹp" },
-    { id: "MECHANIC", label: "🔧 Sửa chữa & Cơ khí" },
-    { id: "FNB", label: "☕ F&B / Ăn uống" },
+  const types = [
+    { id: "ALL", label: "🌐 Tất cả đối tượng" },
+    { id: "JOB", label: "💼 Tin tuyển dụng (Jobs)" },
+    { id: "CANDIDATE", label: "👤 Người tìm việc (Candidates)" },
   ];
 
-  const filteredJobs = selectedNiche === "ALL" 
+  const filteredJobs = selectedType === "ALL" 
     ? jobs 
-    : jobs.filter(j => j.niche === selectedNiche);
+    : jobs.filter(j => (j as any).type === selectedType);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
@@ -117,17 +114,17 @@ export default function ExplorePage() {
 
             {/* Filter pills */}
             <div className="flex flex-wrap gap-2 p-3 bg-slate-900/20 border border-slate-800 rounded-xl backdrop-blur-sm">
-              {niches.map((n) => (
+              {types.map((t) => (
                 <button
-                  key={n.id}
-                  onClick={() => setSelectedNiche(n.id)}
+                  key={t.id}
+                  onClick={() => setSelectedType(t.id)}
                   className={`rounded-lg px-3 py-1.5 text-2xs font-bold transition-all cursor-pointer ${
-                    selectedNiche === n.id
+                    selectedType === t.id
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
                       : "bg-slate-900/60 text-slate-400 hover:bg-slate-850 hover:text-slate-200 border border-slate-800"
                   }`}
                 >
-                  {n.label}
+                  {t.label}
                 </button>
               ))}
             </div>

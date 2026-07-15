@@ -245,6 +245,7 @@ export default function CandidatesSwipePage() {
       latitude: c.latitude!,
       longitude: c.longitude!,
       address: c.location,
+      type: activeTopic === "candidates" ? ("CANDIDATE" as const) : ("JOB" as const),
     }));
 
   return (

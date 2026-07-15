@@ -145,26 +145,34 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
   // Map database and crawled stores directly to locations
   const allLocations = jobs.map(j => ({
     ...j,
-    isMock: false,
-    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(j.companyName)}&background=2563eb&color=ffffff&bold=true`
+    avatarUrl: j.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(j.companyName)}&background=${(j as any).type === "CANDIDATE" ? "10b981" : "2563eb"}&color=ffffff&bold=true`
   }));
 
   // Helper to construct custom HTML leaflet DivIcon displaying rating
-  const createCustomIcon = (rating: number, isPremium: boolean) => {
+  const createCustomIcon = (rating: number, isPremium: boolean, type?: string) => {
     if (typeof window === "undefined" || !isMounted) return undefined;
+    
+    let badgeClass = "bg-blue-600 border-blue-500 text-white";
+    let arrowClass = "bg-blue-600 border-blue-500";
+    let icon = "💼";
+
+    if (type === "CANDIDATE") {
+      badgeClass = "bg-emerald-600 border-emerald-500 text-white";
+      arrowClass = "bg-emerald-600 border-emerald-500";
+      icon = "👤";
+    } else if (isPremium) {
+      badgeClass = "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400";
+      arrowClass = "bg-orange-500 border-amber-400";
+      icon = "🔥";
+    }
+
     return L.divIcon({
       html: `
-        <div class="relative flex flex-col items-center select-none">
-          <div class="flex items-center gap-0.5 rounded-full px-2 py-0.5 shadow-md border ${
-            isPremium
-              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400"
-              : "bg-blue-600 text-white border-blue-500"
-          } text-[9px] font-bold">
-            <span>⭐</span><span>${rating}</span>
+        <div class="relative flex flex-col items-center select-none animate-fadeIn">
+          <div class="flex items-center gap-0.5 rounded-full px-2 py-0.5 shadow-md border ${badgeClass} text-[9px] font-bold">
+            <span>${icon}</span><span>${rating}</span>
           </div>
-          <div class="-mt-1 h-2.5 w-2.5 rotate-45 border-r border-b ${
-            isPremium ? "bg-orange-500 border-amber-400" : "bg-blue-600 border-blue-500"
-          }"></div>
+          <div class="-mt-1 h-2.5 w-2.5 rotate-45 border-r border-b ${arrowClass}"></div>
         </div>
       `,
       className: "custom-leaflet-rating-icon",
@@ -193,15 +201,14 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
 
         <MarkerClusterGroup iconCreateFunction={createClusterCustomIcon} maxClusterRadius={60} chunkedLoading>
           {allLocations.map((loc) => {
-            const ratingVal = loc.rating || (loc.reviews && loc.reviews.length > 0
-              ? parseFloat((loc.reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / loc.reviews.length).toFixed(1))
-              : parseFloat((4.2 + (loc.id.charCodeAt(0) % 9) / 10).toFixed(1)));
+            const ratingVal = loc.rating || 5.0;
+            const customIcon = createCustomIcon(ratingVal, !!loc.is_premium, (loc as any).type);
 
-            const customIcon = createCustomIcon(ratingVal, !!loc.is_premium);
+            const addressVal = loc.address || "Việt Nam";
+            const hoursVal = loc.hours || "Tự do / Full-time";
+            const aiRecVal = loc.aiRecommendation || `Phù hợp 98% • Khớp với kỹ năng yêu cầu`;
 
-            const addressVal = loc.address || "Địa điểm hệ thống";
-            const hoursVal = loc.hours || "08:00 - 22:00";
-            const aiRecVal = loc.aiRecommendation || `Phù hợp 95% • ${ratingVal}⭐ trên Google Maps • Cách bạn 1.0km`;
+            const isCandidate = (loc as any).type === "CANDIDATE";
 
             return (
               <Marker
@@ -223,8 +230,14 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
-                          <span className="text-[8px] bg-amber-50 text-amber-700 px-1 py-0.2 rounded font-extrabold uppercase border border-amber-100">
-                            {loc.is_premium ? "🔥 PREMIUM" : "ĐỊA PHƯƠNG"}
+                          <span className={`text-[8px] px-1 py-0.2 rounded font-extrabold uppercase border ${
+                            isCandidate 
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+                              : loc.is_premium 
+                                ? "bg-amber-50 text-amber-700 border-amber-100" 
+                                : "bg-blue-50 text-blue-700 border-blue-100"
+                          }`}>
+                            {isCandidate ? "👤 ỨNG VIÊN" : loc.is_premium ? "🔥 PREMIUM" : "💼 VIỆC LÀM"}
                           </span>
                         </div>
                         <h4 className="text-xs font-extrabold text-slate-900 leading-tight m-0 truncate mt-0.5">
@@ -234,23 +247,23 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
                     </div>
 
                     {/* Subinfo specs */}
-                    <p className="text-4xs text-slate-500 leading-relaxed font-semibold m-0">
-                      {loc.title}
+                    <p className="text-[10px] text-slate-600 font-bold leading-relaxed m-0">
+                      {isCandidate ? `Kỹ năng: ${loc.title}` : loc.title}
                     </p>
 
                     {/* AI Recommendation Badge */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-2 text-[9px] text-blue-700 font-bold flex items-center gap-1.5 leading-relaxed">
                       <span>🤖</span>
-                      <span>AI Đề xuất: {aiRecVal}</span>
+                      <span>AI Gợi ý: {aiRecVal}</span>
                     </div>
 
                     {/* Address & Hours */}
                     <div className="text-[9px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
                       <p className="truncate">📍 {addressVal}</p>
                       <p className="flex items-center gap-1.5">
-                        <span>⏱️ Giờ mở cửa: {hoursVal}</span>
+                        <span>⏱️ Hình thức: {hoursVal}</span>
                         <span className={`inline-block px-1 rounded text-[8px] font-extrabold ${loc.isOpen !== false ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-650 border border-red-100"}`}>
-                          {loc.isOpen !== false ? "🟢 Mở cửa" : "🔴 Đóng cửa"}
+                          {loc.isOpen !== false ? "🟢 Sẵn sàng" : "🔴 Bận"}
                         </span>
                       </p>
                     </div>
@@ -261,25 +274,30 @@ export default function RadarMap({ jobs, onLocationFound, center: propsCenter, z
                         <span className="text-amber-500 text-xs">⭐</span>
                         <span className="text-slate-900">{ratingVal}</span>
                       </div>
-                      <a
-                        href={`tel:${loc.phone || "0900 123 456"}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toast.success(`Đang gọi điện đến ${loc.companyName}...`);
-                        }}
-                        className="text-emerald-600 hover:text-emerald-500 flex items-center gap-0.5"
-                      >
-                        📞 {loc.phone || "Liên hệ SĐT"}
-                      </a>
+                      <span className="text-emerald-600 flex items-center gap-0.5">
+                        💵 {loc.salary}
+                      </span>
                     </div>
 
-                    {/* Chat CTA Button */}
+                    {/* Chat and Details CTA Button */}
                     <div className="pt-1.5 flex gap-1.5">
                       <a
-                        href={loc.isMock ? `/messages` : `/messages?userId=${loc.employerId}`}
-                        className="w-full inline-flex items-center justify-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 py-1.5 text-4xs font-bold text-white shadow-sm transition-all text-center select-none"
+                        href={`/messages?userId=${loc.employerId}`}
+                        onClick={(e) => {
+                          if (!loc.employerId) {
+                            e.preventDefault();
+                            toast.error("Không tìm thấy thông tin liên hệ!");
+                          }
+                        }}
+                        className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 py-1.5 text-[10px] font-bold text-white shadow-sm transition-all text-center select-none"
                       >
-                        <span>💬</span> Nhắn tin ngay
+                        <span>💬</span> Nhắn tin
+                      </a>
+                      <a
+                        href={isCandidate ? `/profile/${loc.id}` : `/jobs/${loc.id}`}
+                        className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 py-1.5 text-[10px] font-bold text-slate-300 hover:text-white shadow-sm transition-all text-center select-none"
+                      >
+                        Xem chi tiết
                       </a>
                     </div>
                   </div>

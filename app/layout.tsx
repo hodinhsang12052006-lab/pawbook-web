@@ -27,11 +27,6 @@ export const metadata: Metadata = {
   title: 'BitPawOS',
   description: 'Mạng xã hội MMO & Công nghệ',
   manifest: '/manifest.json',
-  icons: {
-    icon: '/cho1.jpg',
-    shortcut: '/cho1.jpg',
-    apple: '/cho1.jpg',
-  },
 };
 
 import FomoPopup from "@/components/FomoPopup";

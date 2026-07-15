@@ -1,19 +1,19 @@
 import React from 'react';
 
-// Hardcode vĩnh viễn mảng GIF tĩnh không dùng API
+// Hardcode vĩnh viễn mảng GIF tĩnh không dùng API (Giphy CDN short links)
 const PERMANENT_GIFS = [
-  "https://media.tenor.com/PZzXj23J590AAAAC/okay-ok.gif",
-  "https://media.tenor.com/y1Xz97E98XMAAAAC/ch%C3%B3-ch%C3%B3-c%C6%B0%E1%BB%9Di.gif",
-  "https://media.tenor.com/7L4a8_xZ4tQAAAAC/c%C3%B2n-c%C3%A1i-n%E1%BB%8Bt-ti%E1%BA%BFn-b%E1%BB%8Bp.gif",
-  "https://media.tenor.com/gK9qC-d69PMAAAAC/huhu-crying.gif",
-  "https://media.tenor.com/9vB4DttQk7UAAAAC/sad-cat.gif",
-  "https://media.tenor.com/k6Pq-b5y_1EAAAAC/what-cat-what.gif",
-  "https://media.tenor.com/7T0P4H3mFzUAAAAC/clapping-leonardo-dicaprio.gif",
-  "https://media.tenor.com/mS9hU_uS88kAAAAC/dog-doge.gif",
-  "https://media.tenor.com/1O8kK967rK0AAAAC/cat-dance.gif",
-  "https://media.tenor.com/R_YjGZ7L_z4AAAAC/thumbs-up-cat.gif",
-  "https://media.tenor.com/r33lOikv7B0AAAAC/pepe-sad-pepe-crying.gif",
-  "https://media.tenor.com/N1_QcEa-u08AAAAC/huh-cat.gif"
+  "https://i.giphy.com/11ISwbgCxEzMyY.gif",
+  "https://i.giphy.com/3o7TKSjRrfIPjei1IQ.gif",
+  "https://i.giphy.com/26gR2f01UTX9R7VyU.gif",
+  "https://i.giphy.com/3o7abKhOpu0NXS3WY0.gif",
+  "https://i.giphy.com/26n6Gx9moCgs1pUuk.gif",
+  "https://i.giphy.com/l3q2zVr6cu95nF6O4.gif",
+  "https://i.giphy.com/2WxWfiavndgcM.gif",
+  "https://i.giphy.com/11N0ycAEVs3dbO.gif",
+  "https://i.giphy.com/XgBx22IJ2yHzG.gif",
+  "https://i.giphy.com/7YBZCh1TIoC8U.gif",
+  "https://i.giphy.com/t3s3uEQ5j181C.gif",
+  "https://i.giphy.com/3oEjI6SIIHBdRxXI40.gif"
 ];
 
 // Memoized: the parent (MessagesContent) re-renders on every incoming

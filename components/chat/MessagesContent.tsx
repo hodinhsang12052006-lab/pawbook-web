@@ -640,7 +640,7 @@ export default function MessagesContent({
     } finally {
       setSending(false);
     }
-  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket]);
+  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket, messageText]);
 
   const handleGifSelect = useCallback((url: string) => {
     handleSendMessage(null, url, "IMAGE");
@@ -1031,11 +1031,17 @@ export default function MessagesContent({
                                         const imgEl = e.currentTarget;
                                         imgEl.style.display = "none";
                                         const parent = imgEl.parentElement;
-                                        if (parent && !parent.querySelector(".img-fallback")) {
-                                          const fallback = document.createElement("div");
-                                          fallback.className = "img-fallback flex flex-col items-center justify-center w-full h-32 bg-slate-950/40 text-slate-500 gap-1.5 text-[10px] border border-slate-800 rounded-lg";
-                                          fallback.innerHTML = "⚠️ <span class='font-semibold text-slate-400'>Ảnh lỗi hoặc không tìm thấy</span>";
-                                          parent.appendChild(fallback);
+                                        if (parent) {
+                                          const bubble = parent.parentElement;
+                                          if (bubble) {
+                                            bubble.style.background = "none";
+                                            bubble.style.backgroundColor = "#0f172a";
+                                            bubble.style.border = "1px solid #1e293b";
+                                            bubble.style.padding = "6px 12px";
+                                            bubble.style.boxShadow = "none";
+                                            bubble.style.maxWidth = "220px";
+                                            bubble.innerHTML = "<span class='flex items-center gap-1.5 text-[10px] text-slate-400 font-medium'>⚠️ Ảnh không hiển thị được</span>";
+                                          }
                                         }
                                       }}
                                     />
@@ -1220,6 +1226,14 @@ export default function MessagesContent({
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (messageText.trim()) {
+                          handleSendMessage(null);
+                        }
+                      }
+                    }}
                     disabled={sending}
                     placeholder={t("messenger.inputPlaceholder")}
                     className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"

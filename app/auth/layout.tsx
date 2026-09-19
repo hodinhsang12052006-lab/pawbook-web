@@ -3,25 +3,7 @@
 import React, { createContext, useState, useEffect } from "react";
 import Link from "next/link";
 import { Sun, Moon, Globe } from "lucide-react";
-
-// Vị trí cố định (không random) — nếu random mỗi lần render, HTML server và
-// client sẽ lệch nhau và React báo lỗi hydration mismatch.
-const SPARKLE_DOTS = [
-  { top: "12%", left: "18%", delay: "0s" },
-  { top: "22%", left: "68%", delay: "-0.8s" },
-  { top: "8%", left: "42%", delay: "-1.6s" },
-  { top: "35%", left: "85%", delay: "-2.2s" },
-  { top: "48%", left: "10%", delay: "-0.4s" },
-  { top: "58%", left: "55%", delay: "-1.2s" },
-  { top: "64%", left: "30%", delay: "-2.6s" },
-  { top: "72%", left: "78%", delay: "-1.8s" },
-  { top: "82%", left: "22%", delay: "-0.6s" },
-  { top: "88%", left: "60%", delay: "-2.0s" },
-  { top: "28%", left: "5%", delay: "-1.4s" },
-  { top: "16%", left: "92%", delay: "-2.8s" },
-  { top: "44%", left: "35%", delay: "-1.0s" },
-  { top: "68%", left: "48%", delay: "-0.2s" },
-];
+import { SPARKLE_DOTS } from "@/lib/sparkleDots";
 
 export const AuthSettingsContext = createContext<{
   theme: "light" | "dark";
@@ -154,7 +136,7 @@ export default function CustomAuthLayout({
           </div>
 
           {/* Right column: Auth Forms */}
-          <div className={`relative flex flex-col justify-center px-4 py-12 sm:px-6 lg:col-span-7 lg:px-12 xl:col-span-7 transition-colors duration-300 overflow-hidden ${
+          <div className={`relative flex flex-col pt-6 pb-12 lg:py-12 lg:justify-center px-4 sm:px-6 lg:col-span-7 lg:px-12 xl:col-span-7 transition-colors duration-300 overflow-hidden ${
             theme === "dark" ? "bg-slate-950" : "bg-gray-50"
           }`}>
             {/* Ambient glow — echoes the left panel's aurora at low opacity
@@ -164,6 +146,32 @@ export default function CustomAuthLayout({
               <div className={`absolute -top-20 -right-20 h-96 w-96 rounded-full blur-[120px] animate-breathe ${theme === "dark" ? "bg-pink-600/10" : "bg-pink-400/10"}`} />
               <div className={`absolute -bottom-24 -left-16 h-80 w-80 rounded-full blur-[120px] animate-breathe ${theme === "dark" ? "bg-fuchsia-600/10" : "bg-indigo-300/10"}`} style={{ animationDelay: "-3.5s" }} />
             </div>
+
+            {/* Mobile-only branding banner — the left aurora panel above is
+                `hidden lg:flex`, so on mobile (now the true front door for
+                every anonymous visitor since proxy.ts redirects "/" here)
+                there was previously zero logo/brand visible, just a bare
+                form. */}
+            <div className="lg:hidden relative z-10 -mx-4 sm:-mx-6 mb-8 overflow-hidden border-b border-slate-800/60 bg-slate-950 px-4 py-5 sm:px-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+              <div className="absolute -top-10 -right-6 h-40 w-40 rounded-full bg-pink-600/25 blur-[70px] animate-aurora-a" />
+              <div className="absolute -bottom-14 -left-6 h-36 w-36 rounded-full bg-fuchsia-600/20 blur-[70px] animate-aurora-b" />
+              <div className="absolute inset-0 pointer-events-none">
+                {SPARKLE_DOTS.slice(0, 5).map((dot, i) => (
+                  <span key={i} className="absolute h-1 w-1 rounded-full bg-white animate-twinkle" style={{ top: dot.top, left: dot.left, animationDelay: dot.delay }} />
+                ))}
+              </div>
+              <Link href="/" className="relative z-10 flex items-center gap-2.5">
+                <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-lg border border-white/20 bg-white/10 p-0.5">
+                  <img src="/cho1.jpg" alt="PawNail Jobs" className="h-full w-full object-cover rounded-md" />
+                </div>
+                <div>
+                  <span className="block text-white text-base font-black tracking-widest uppercase leading-none">PawNail Jobs</span>
+                  <span className="block text-[11px] text-slate-400 mt-0.5">Việc Làm Nail Mỹ 🇺🇸 &amp; Úc 🇦🇺</span>
+                </div>
+              </Link>
+            </div>
+
             <div className="relative z-10">
               {children}
             </div>

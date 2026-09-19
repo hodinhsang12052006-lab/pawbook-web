@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface FomoMessage {
   icon: string;
@@ -33,10 +34,17 @@ function randomDelay() {
 }
 
 export default function FomoToast() {
+  const pathname = usePathname();
   const [current, setCurrent] = useState<FomoMessage | null>(null);
   const [visible, setVisible] = useState(false);
   const lastIndexRef = useRef<number>(-1);
   const timersRef = useRef<{ show?: ReturnType<typeof setTimeout>; hide?: ReturnType<typeof setTimeout> }>({});
+
+  // Toast quảng cáo "bằng chứng xã hội" này chỉ hợp lý khi khách đang lướt
+  // job board — trên các trang /auth/* nó chỉ đè lên form/chữ thương hiệu
+  // (đây chính là lỗi khách báo: toast che mất chữ "Việc Làm Nail" ở góc
+  // trái trang đăng ký vì toast dùng position: fixed toàn viewport).
+  const isAuthRoute = pathname?.startsWith("/auth") ?? false;
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +79,7 @@ export default function FomoToast() {
     };
   }, []);
 
-  if (!current) return null;
+  if (!current || isAuthRoute) return null;
 
   return (
     <div

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 // In-memory sliding-window counters, keyed by `${bucketName}:${ip}`.
 // CAVEAT: this only protects a single long-running Node process. On
@@ -33,8 +34,21 @@ function resolveRule(pathname: string): RateLimitRule | null {
   return match ? match.rule : null;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Khách chưa đăng nhập vào thẳng root domain -> đẩy sang trang đăng ký
+  // ngay tại edge (trước khi page.tsx kịp render job board), tránh nháy
+  // trắng "thấy trang chủ rồi mới bị đá đi" nếu làm phía client.
+  // Quyết định sản phẩm: đánh đổi SEO/duyệt công khai job board để lấy tỷ lệ
+  // đăng ký cao hơn ngay từ domain gốc.
+  if (pathname === "/") {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/register", request.url));
+    }
+  }
+
   const rule = resolveRule(pathname);
 
   if (rule) {
@@ -75,6 +89,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Protect all API routes
-  matcher: "/api/:path*",
+  // Bảo vệ mọi API route + chặn riêng route "/" để redirect khách chưa đăng
+  // nhập (xem nhánh if (pathname === "/") ở trên).
+  matcher: ["/api/:path*", "/"],
 };

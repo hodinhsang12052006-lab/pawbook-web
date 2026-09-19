@@ -62,6 +62,34 @@ function TechnicianGridSkeleton() {
   );
 }
 
+// Chủ tiệm quét lưới ảnh cực nhanh — badge trạng thái phải nói được ngay
+// "gọi được không" mà không cần bấm vào xem hồ sơ.
+function StatusBadge({ status }: { status: string }) {
+  if (status === "URGENT") {
+    return (
+      <span className="absolute top-2 left-2 max-w-[calc(100%-1rem)] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
+        <Flame className="h-2.5 w-2.5 flex-shrink-0" /> Tìm việc gấp
+      </span>
+    );
+  }
+  if (status === "AVAILABLE") {
+    return (
+      <span className="absolute top-2 left-2 max-w-[calc(100%-1rem)] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
+        <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse" />
+        <span>Đang rảnh hôm nay – Gọi thử tay nghề ngay</span>
+      </span>
+    );
+  }
+  if (status === "BETTER") {
+    return (
+      <span className="absolute top-2 left-2 max-w-[calc(100%-1rem)] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
+        Đang tìm chỗ tốt hơn
+      </span>
+    );
+  }
+  return null;
+}
+
 function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const media = firstMedia(tech.portfolioImages as any[]);
@@ -103,16 +131,27 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
         </div>
       )}
 
+      {/* Chuyên môn — badge tay nghề hiện ngay ngoài lưới ảnh, chủ tiệm
+          không cần bấm vào hồ sơ mới biết thợ chuyên gì. */}
+      {tech.specialties.length > 0 && (
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[55%]">
+          {tech.specialties.slice(0, 2).map((s, i) => (
+            <span
+              key={s}
+              className="rounded-full bg-black/60 backdrop-blur-sm border border-white/15 px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-full"
+            >
+              {i === 0 ? `Chuyên ${s}` : s}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
         <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
         <p className="text-[10px] text-slate-300 truncate">{tech.city}, {tech.state} · {tech.yearsOfExperience} năm KN</p>
       </div>
 
-      {tech.status === "URGENT" && (
-        <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-bold text-white">
-          <Flame className="h-2.5 w-2.5" /> Tìm việc gấp
-        </span>
-      )}
+      <StatusBadge status={tech.status} />
     </button>
   );
 }

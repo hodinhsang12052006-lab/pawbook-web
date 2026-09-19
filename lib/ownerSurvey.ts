@@ -14,41 +14,41 @@ export const SURVEY: SurveyQuestion[] = [
   {
     key: "booking",
     title: "Smart Booking & Khóa lịch tự động",
-    question: "Khách đặt hẹn trước (Appointment) tại tiệm đang được ghi nhận thế nào?",
-    optionA: "Ghi sổ tay hoặc tin nhắn; thỉnh thoảng bị trùng giờ hoặc thợ bận không kịp làm.",
-    optionB: "Đã có hệ thống Booking online tự động khóa lịch khi thợ đang bận.",
+    question: "Cuối tuần tiệm đông, khách hẹn trước có hay bị trùng giờ, thợ trở tay không kịp làm khách phàn nàn không?",
+    optionA: "Có, ghi sổ tay/nhắn tin dễ lộn xộn, khách phải ngồi đợi quạu quọ.",
+    optionB: "Tiệm có hệ thống tự khóa lịch khi thợ bận, không bao giờ trùng.",
     tag: "NEED_AUTO_BOOKING",
   },
   {
     key: "turn_tip",
     title: "Xoay tua thợ & POS tính tip minh bạch",
-    question: "Việc chia lượt làm (xoay tua) cho thợ và tính tiền tip tại quầy đang xử lý ra sao?",
-    optionA: "Xếp lượt thủ công, thợ đôi lúc tị nạnh nhau; tiền tip tính tay dễ nhầm lẫn.",
-    optionB: "Có máy POS tự động xoay tua thợ công bằng và hiển thị tip rõ ràng, minh bạch.",
+    question: "Thợ trong tiệm có hay tị nạnh nhau từng lượt khách, nhìn ngó ai làm khách sộp rồi cãi vã mất vui không?",
+    optionA: "Có, thợ hay soi turn nhau, chia bằng tay rất mệt mỏi và đau đầu.",
+    optionB: "Có bảng chia turn tự động trên màn hình, thợ tự xem không ai cãi ai.",
     tag: "NEED_TURN_AND_TIP_POS",
   },
   {
     key: "supply_bill",
     title: "Trừ chi phí supply trên bill & In bill nhiệt",
-    question: "Tiền vật tư (supply) khấu trừ vào thợ và khâu in hóa đơn tại tiệm thực hiện thế nào?",
-    optionA: "Cuối tuần ngồi cộng tay/trừ tay tiền bột, đá; viết hóa đơn tay hoặc không in bill.",
-    optionB: "Phần mềm tự trừ chi phí supply trực tiếp trên bill tính tiền và in ngay hóa đơn giấy nhiệt.",
+    question: "Cuối tuần tính lương, bạn có phải ngồi bấm máy tính tới khuya để trừ tiền bột đá, lo thợ thắc mắc không?",
+    optionA: "Rất ngán khoản này, bấm máy tính mỏi mắt mà thợ vẫn hay nghi ngờ trừ sai.",
+    optionB: "Tiệm in bill nhiệt, tự trừ tiền supply trực tiếp trên từng hóa đơn.",
     tag: "NEED_SUPPLY_BILL_PRINT",
   },
   {
     key: "gps_refund",
     title: "Chấm công GPS & Quản lý hoàn tiền",
-    question: "Khâu quản lý giờ giấc thợ và giải quyết khiếu nại hoàn tiền (refund) của khách ra sao?",
-    optionA: "Khó kiểm soát chính xác giờ thợ đến/về; khách đòi trả tiền/khiếu nại xử lý theo cảm tính.",
-    optionB: "Thợ chấm công chuẩn bằng định vị GPS tại tiệm; hoàn tiền/hủy đơn chuẩn theo mã đơn rõ ràng.",
+    question: "Thợ đi trễ về sớm hoặc khách làm xong vài ngày quay lại đòi trả tiền (refund) tiệm xử lý thế nào?",
+    optionA: "Khó kiểm soát giờ giấc thợ; khách đòi tiền thì bấm bụng chịu vì sợ bị 1 sao.",
+    optionB: "Thợ chấm công GPS chuẩn giờ; có mã bill rõ ràng để đối chất chống quỵt.",
     tag: "NEED_GPS_REFUND",
   },
   {
     key: "crm_qr",
     title: "QR Check-in, CRM & AI nhắc dặm gel",
-    question: "Khâu tiếp đón khách tại cửa và chăm sóc khách cũ quay lại tiệm đang làm gì?",
-    optionA: "Khách vào tự ngồi chờ; không lưu lịch sử làm móng; không có ai nhắn khách đi dặm lại.",
-    optionB: "Khách quét QR check-in xem menu; có hệ thống lưu lịch sử + tích điểm SĐT và AI tự động nhắc khách dặm gel.",
+    question: "Những ngày đầu tuần (Thứ 2 - Thứ 4) tiệm vắng, bạn làm gì để kéo khách cũ quay lại?",
+    optionA: "Thợ ngồi bấm điện thoại chờ khách walk-in, không ai rảnh nhắn tin gọi khách.",
+    optionB: "Có hệ thống tự bắn tin nhắn SMS nhắc khách sau 3 tuần đi dặm lại móng.",
     tag: "NEED_AI_CRM_QR",
   },
 ];
@@ -63,6 +63,9 @@ export interface PainTagMeta {
   // chiếu đúng nỗi đau họ vừa chọn kèm giải pháp tương ứng.
   problem: string;
   solution: string;
+  // "Trojan Horse" — lời mời kích hoạt nhanh 1 tính năng cụ thể ngay dưới
+  // giải pháp, thay vì chỉ nói chung chung "có giải pháp cho vấn đề này".
+  trojanHorse: string;
 }
 
 export const PAIN_TAG_META: Record<string, PainTagMeta> = {
@@ -74,6 +77,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-red-500/40 bg-red-500/10 text-red-400",
     problem: "Khách đặt hẹn bị chồng chéo giờ cao điểm, thợ bị quá tải hoặc để khách đợi lâu.",
     solution: "Smart Booking Online tự động khóa lịch khi thợ đang có khách, gửi SMS xác nhận lịch hẹn chuẩn giờ.",
+    trojanHorse: "Bật Smart Booking khóa lịch tự động cho tiệm ngay hôm nay (không cần cài đặt gì thêm)",
   },
   NEED_TURN_AND_TIP_POS: {
     tag: "NEED_TURN_AND_TIP_POS",
@@ -83,6 +87,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-purple-500/40 bg-purple-500/10 text-purple-400",
     problem: "Nguy cơ mất thợ giỏi và mâu thuẫn nội bộ do chia turn thủ công, tính tip dễ nhầm lẫn.",
     solution: "Hệ thống POS tự động xoay tua thợ công bằng theo giá trị bill. Tách bạch 100% Cash Tip & Credit Tip trên màn hình iPad. Thợ tự xem, không tị nạnh.",
+    trojanHorse: "Tặng tiệm 14 ngày dùng thử Bảng Chia Turn Công Bằng trên iPad (cài đặt trong 30 giây)",
   },
   NEED_SUPPLY_BILL_PRINT: {
     tag: "NEED_SUPPLY_BILL_PRINT",
@@ -92,6 +97,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-orange-500/40 bg-orange-500/10 text-orange-400",
     problem: "Thất thoát chi phí vật tư và tốn thời gian bấm máy tính cộng trừ tiền bột/đá cuối tuần.",
     solution: "Tự động khấu trừ chi phí supply trực tiếp trên từng hóa đơn tính tiền. Xuất bill in nhiệt chuyên nghiệp 1-click.",
+    trojanHorse: "Bật tính năng Tự động khấu trừ Supply trên Bill tính tiền cho tiệm",
   },
   NEED_GPS_REFUND: {
     tag: "NEED_GPS_REFUND",
@@ -101,6 +107,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
     problem: "Khó kiểm soát giờ giấc ra vào của thợ, xử lý khách khiếu nại hoàn tiền dễ thất thoát.",
     solution: "Chấm công bằng định vị GPS chuẩn xác ngay tại tiệm. Cơ chế hoàn tiền/hủy đơn chuẩn theo mã hóa đơn.",
+    trojanHorse: "Kích hoạt Chấm công GPS & Mã bill chống quỵt cho tiệm ngay",
   },
   NEED_AI_CRM_QR: {
     tag: "NEED_AI_CRM_QR",
@@ -110,6 +117,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-blue-500/40 bg-blue-500/10 text-blue-400",
     problem: "Khách làm xong rồi quên quay lại; ngày Thứ 2 - Thứ 4 tiệm vắng thợ ngồi bấm điện thoại.",
     solution: "QR Check-in tích điểm theo SĐT + AI tự động gửi SMS nhắc khách quay lại dặm gel sau 3 tuần.",
+    trojanHorse: "Tải mẫu QR Check-in để bàn tiệm & Tự động nhắc khách dặm gel",
   },
 };
 

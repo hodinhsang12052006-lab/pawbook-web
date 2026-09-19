@@ -2,9 +2,19 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Radar, Sparkles, XCircle, CheckCircle2, Rocket, X, Gift, ArrowRight, PartyPopper,
+  Radar, Sparkles, XCircle, CheckCircle2, X, ArrowRight, PartyPopper, Zap, Play,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { SURVEY, PAIN_TAG_META } from "@/lib/ownerSurvey";
+
+// Mockup "Bảng Chia Turn" cho popup Demo — không phải screenshot thật, chỉ
+// dựng bằng CSS để cho chủ tiệm hình dung giao diện thật trông thế nào mà
+// không cần tải ảnh/video nặng.
+const DEMO_TURN_ROWS = [
+  { name: "Chị Linda", tip: 52 },
+  { name: "Anh Tony", tip: 44 },
+  { name: "Chị Kim", tip: 38 },
+];
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 
@@ -29,6 +39,16 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
   const [progress, setProgress] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
   const [showDemoTeaser, setShowDemoTeaser] = useState(false);
+  const [activatedTags, setActivatedTags] = useState<Set<string>>(new Set());
+
+  // "Trojan Horse" — mời kích hoạt ngay 1 tính năng cụ thể thay vì chỉ đọc
+  // giải pháp chung chung. Chưa có backend thật để bật tính năng nên đây là
+  // ghi nhận nhu cầu (giống form đăng ký quan tâm) + phản hồi tức thì cho
+  // cảm giác "đã làm được something" ngay trong lúc xem báo cáo.
+  const activateTrojan = (tag: string) => {
+    setActivatedTags((prev) => new Set(prev).add(tag));
+    toast.success("Đã ghi nhận! Đội ngũ sẽ set up tính năng này cho tiệm trong 24h.", { icon: "⚡", duration: 3500 });
+  };
 
   // Chỉ những câu họ chọn đáp án "có vấn đề" mới xuất hiện — báo cáo cá
   // nhân hoá 100% theo đúng thứ tự khảo sát, không hiện phần họ đã ổn.
@@ -145,6 +165,29 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                         <p className="text-sm text-slate-200 leading-relaxed">{meta.solution}</p>
                       </div>
                     </div>
+
+                    {/* Trojan Horse — mời bấm kích hoạt ngay 1 tính năng cụ
+                        thể, không chỉ đọc rồi lướt qua */}
+                    <div className="flex items-center gap-2.5 p-4 border-t border-dashed border-pink-500/20 bg-gradient-to-r from-pink-500/10 via-fuchsia-500/5 to-transparent">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-pink-500/15">
+                        <Zap className="h-4 w-4 text-pink-400" />
+                      </div>
+                      <p className="flex-1 text-xs sm:text-[13px] font-bold text-pink-200 leading-snug">
+                        {meta.trojanHorse}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => activateTrojan(meta.tag)}
+                        disabled={activatedTags.has(meta.tag)}
+                        className={`flex-shrink-0 rounded-full px-3 py-2 text-[11px] font-extrabold whitespace-nowrap ${PRESS} ${
+                          activatedTags.has(meta.tag)
+                            ? "bg-emerald-500/20 text-emerald-300 cursor-default"
+                            : "bg-pink-500 text-white hover:bg-pink-400"
+                        }`}
+                      >
+                        {activatedTags.has(meta.tag) ? "✅ Đã bật" : "Kích hoạt"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -164,18 +207,17 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
               <button
                 type="button"
                 onClick={() => setShowDemoTeaser(true)}
-                className={`w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 via-fuchsia-600 to-amber-500 hover:brightness-110 px-6 py-4 text-sm sm:text-base font-extrabold text-white shadow-xl shadow-pink-600/25 ${PRESS}`}
+                className={`w-full min-h-[52px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 via-fuchsia-600 to-amber-500 hover:brightness-110 px-6 py-4 text-sm sm:text-base font-extrabold text-white shadow-xl shadow-pink-600/25 ${PRESS}`}
               >
-                <Rocket className="h-5 w-5 flex-shrink-0" />
-                Kích hoạt dùng thử Giải Pháp Quản Lý Tiệm Nail
-                <span className="hidden sm:inline text-white/80 font-semibold">(Miễn phí)</span>
+                <Play className="h-5 w-5 flex-shrink-0 fill-white" />
+                Trải nghiệm ngay bản Demo Quản Lý Tiệm Nail
               </button>
               <button
                 type="button"
                 onClick={onFinish}
-                className={`w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900/60 hover:border-slate-500 px-6 py-3.5 text-sm font-bold text-slate-200 ${PRESS}`}
+                className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900/60 hover:border-slate-500 px-6 py-3.5 text-sm font-bold text-slate-200 ${PRESS}`}
               >
-                Tiếp tục vào Sàn Tìm Thợ Gấp
+                Tiếp tục tìm thợ quanh tiệm của bạn
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -196,31 +238,40 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                   <X className="h-5 w-5" />
                 </button>
 
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-600 to-amber-500">
-                  <Gift className="h-6 w-6 text-white" />
-                </div>
-
                 <div className="space-y-1">
-                  <h3 className="text-lg font-extrabold text-white">Ưu đãi thành viên mới</h3>
+                  <h3 className="text-lg font-extrabold text-white">Xem trước: Bảng Chia Turn Công Bằng</h3>
                   <p className="text-sm text-slate-400">
-                    Dùng thử miễn phí trọn bộ POS + Booking + CRM cho tiệm — không cần thẻ thanh toán.
+                    Giao diện thật chạy trên iPad tại quầy — thợ tự xem lượt và tiền tip của mình, không ai tị nạnh ai.
                   </p>
                 </div>
 
+                {/* Mockup CSS thuần — không phải screenshot thật, chỉ mô
+                    phỏng đúng bố cục để chủ tiệm hình dung sản phẩm. */}
+                <div className="rounded-2xl border border-slate-700 bg-slate-950 p-3 space-y-2">
+                  <div className="flex items-center justify-between px-1 pb-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Turn hôm nay — {salonName || "Tiệm của bạn"}</span>
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+                    </span>
+                  </div>
+                  {DEMO_TURN_ROWS.map((row, i) => (
+                    <div key={row.name} className="flex items-center gap-2 rounded-lg bg-slate-900 px-2.5 py-2">
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-pink-500/20 text-[11px] font-black text-pink-300">
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 text-xs font-bold text-white truncate">{row.name}</span>
+                      <span className="text-[10px] font-bold text-emerald-400">${row.tip} tip</span>
+                    </div>
+                  ))}
+                </div>
+
                 <ul className="space-y-2 text-sm text-slate-300">
-                  {painCards.slice(0, 3).length > 0
-                    ? painCards.slice(0, 3).map((meta) => (
-                        <li key={meta.tag} className="flex items-start gap-2">
-                          <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
-                          <span>{meta.shortLabel}: {meta.solution}</span>
-                        </li>
-                      ))
-                    : (
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
-                        <span>Booking, POS xoay tua, CRM & chấm công GPS trong một app duy nhất.</span>
-                      </li>
-                    )}
+                  {painCards.slice(0, 3).map((meta) => (
+                    <li key={meta.tag} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
+                      <span>{meta.shortLabel}: {meta.solution}</span>
+                    </li>
+                  ))}
                 </ul>
 
                 <button
@@ -229,9 +280,9 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                     setShowDemoTeaser(false);
                     onFinish();
                   }}
-                  className={`w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-amber-500 py-3 text-sm font-extrabold text-white ${PRESS}`}
+                  className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-amber-500 text-sm font-extrabold text-white ${PRESS}`}
                 >
-                  Đã ghi nhận, liên hệ em sau nhé!
+                  Tiếp tục tìm thợ quanh tiệm của bạn
                 </button>
               </div>
             </div>

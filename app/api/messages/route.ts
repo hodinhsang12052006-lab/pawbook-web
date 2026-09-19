@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { pusherServer, chatChannelName } from "@/lib/pusher";
+import { getPusherServer } from "@/lib/pusherServer";
+import { chatChannelName } from "@/lib/pusherChannel";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -112,7 +113,7 @@ export async function GET(req: Request) {
         include: {
           participants: {
             where: { NOT: { id: userId } },
-            select: { id: true, name: true, avatarUrl: true, role: true, bio: true }
+            select: { id: true, name: true, avatarUrl: true, role: true }
           }
         }
       });
@@ -157,7 +158,6 @@ export async function GET(req: Request) {
             name: true,
             avatarUrl: true,
             role: true,
-            bio: true,
           },
         },
         messages: {
@@ -196,7 +196,6 @@ export async function GET(req: Request) {
           name: p.name,
           avatarUrl: p.avatarUrl,
           role: p.role,
-          bio: p.bio,
         })),
         messages: sortedMessages.map((msg) => ({
           id: msg.id,
@@ -246,7 +245,6 @@ export async function GET(req: Request) {
         name: true,
         avatarUrl: true,
         role: true,
-        bio: true,
       },
       take: 100,
     });
@@ -417,7 +415,7 @@ export async function POST(req: Request) {
 
       if (validChannels.length > 0) {
         // Client's handler reads `data.message`, so the payload must be nested.
-        await pusherServer.trigger(validChannels, "new-message", { message: miniPayload });
+        await getPusherServer()?.trigger(validChannels, "new-message", { message: miniPayload });
       }
     } catch (pusherError: any) {
       console.error("❌ PUSHER LỖI TỪ SERVER:", pusherError?.body || pusherError);

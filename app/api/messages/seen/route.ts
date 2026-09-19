@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { pusherServer, chatChannelName } from "@/lib/pusher";
+import { getPusherServer } from "@/lib/pusherServer";
+import { chatChannelName } from "@/lib/pusherChannel";
 
 // Ephemeral (non-persisted) read receipts: broadcasts "message-seen" to the
 // other participants' private channels so their UI can show "Đã xem" on the
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
 
     const seenAt = new Date().toISOString();
     if (otherChannels.length > 0) {
-      await pusherServer.trigger(otherChannels, "message-seen", { conversationId, seenBy: userId, seenAt });
+      await getPusherServer()?.trigger(otherChannels, "message-seen", { conversationId, seenBy: userId, seenAt });
     }
 
     return NextResponse.json({ success: true, seenAt });

@@ -11,20 +11,28 @@ export async function GET(
     const { id } = await params;
     const job = await prisma.job.findUnique({
       where: { id },
+      include: {
+        owner: { select: { id: true, name: true, avatarUrl: true, phone: true } },
+      },
     });
 
     if (!job) {
       return NextResponse.json(
-        { error: "Công việc không tồn tại." },
+        { error: "Tin tuyển dụng không tồn tại." },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(job);
+    return NextResponse.json({
+      ...job,
+      skills: job.skills ? job.skills.split(",").filter(Boolean) : [],
+      benefits: job.benefits ? job.benefits.split(",").filter(Boolean) : [],
+      createdAt: job.createdAt.toISOString(),
+    });
   } catch (error: any) {
     console.error("Fetch job detail API error:", error);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi khi lấy chi tiết công việc." },
+      { error: "Đã xảy ra lỗi khi lấy chi tiết tin tuyển dụng." },
       { status: 500 }
     );
   }
@@ -36,25 +44,30 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const isDev = process.env.NODE_ENV === "development";
-    const isAdmin = session?.user && (session.user as any).role === "ADMIN";
-
-    if (!isDev && !isAdmin) {
-      return NextResponse.json({ error: "Chỉ quản trị viên mới có quyền thực hiện hành động này." }, { status: 403 });
-    }
-
     const { id } = await params;
 
-    // Delete job from database
-    await prisma.job.delete({
-      where: { id },
-    });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+    }
 
-    return NextResponse.json({ message: "Xóa công việc thành công!" });
+    const job = await prisma.job.findUnique({ where: { id }, select: { ownerId: true } });
+    const isOwner = job?.ownerId === (session.user as any).id;
+    const isAdmin = (session.user as any).role === "ADMIN";
+
+    if (!job) {
+      return NextResponse.json({ error: "Tin tuyển dụng không tồn tại." }, { status: 404 });
+    }
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Bạn không có quyền xóa tin này." }, { status: 403 });
+    }
+
+    await prisma.job.delete({ where: { id } });
+
+    return NextResponse.json({ message: "Xóa tin tuyển dụng thành công!" });
   } catch (error: any) {
     console.error("Delete job API error:", error);
     return NextResponse.json(
-      { error: "Không thể xóa bài đăng. Vui lòng thử lại." },
+      { error: "Không thể xóa tin. Vui lòng thử lại." },
       { status: 500 }
     );
   }

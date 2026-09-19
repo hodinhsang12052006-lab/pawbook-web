@@ -24,13 +24,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'BitPawOS',
-  description: 'Mạng xã hội MMO & Công nghệ',
+  title: 'PawNail Jobs — Việc Làm & Tay Nghề Nail US/AU',
+  description: 'Nền tảng tuyển dụng & sàn tay nghề ngành Nail cho thị trường Mỹ (US) và Úc (AU).',
   manifest: '/manifest.json',
 };
 
-import FomoPopup from "@/components/FomoPopup";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
+import { SessionUserProvider } from "@/lib/SessionUserContext";
+import FomoToast from "@/components/FomoToast";
 
 export default function RootLayout({
   children,
@@ -40,13 +41,16 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
         <LanguageProvider>
-          <Toaster position="top-center" />
-          <FomoPopup />
-          {children}
+          <SessionUserProvider>
+            <Toaster position="top-center" />
+            {children}
+            <FomoToast />
+          </SessionUserProvider>
         </LanguageProvider>
       </body>
     </html>

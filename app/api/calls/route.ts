@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { pusherServer, chatChannelName } from "@/lib/pusher";
+import { getPusherServer } from "@/lib/pusherServer";
+import { chatChannelName } from "@/lib/pusherChannel";
 
 // Maps the client's call `action` (MessagesContent.tsx's handleStartCall /
 // handleAcceptCall / handleEndCall / camera toggle) to the Pusher event name
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
         payload = {};
     }
 
-    await pusherServer.trigger(chatChannelName(String(targetId).trim()), eventName, payload);
+    await getPusherServer()?.trigger(chatChannelName(String(targetId).trim()), eventName, payload);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

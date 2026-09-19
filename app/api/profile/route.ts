@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 
-// GET user profile data
+// GET user profile data (own profile, or ?id=<userId> for public view)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -19,84 +19,63 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [user, posts] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          avatarUrl: true,
-          bio: true,
-          phone: true,
-          address: true,
-          cover_image: true,
-          cv_url: true,
-          skills: true,
-          reputation: true,
-          trustScore: true,
-          isVerified: true,
-          pawCoin: true,
-          jobs: {
-            select: {
-              id: true,
-              title: true,
-              companyName: true,
-              salary: true,
-              niche: true,
-              createdAt: true,
-            },
-            orderBy: {
-              createdAt: "desc"
-            }
-          }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        phone: true,
+        market: true,
+        state: true,
+        city: true,
+        diagnosedPains: true,
+        jobs: {
+          select: {
+            id: true,
+            title: true,
+            salonName: true,
+            market: true,
+            state: true,
+            city: true,
+            salaryType: true,
+            salaryAmount: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
         },
-      }),
-      prisma.post.findMany({
-        where: { authorId: userId },
-        take: 10,
-        orderBy: { createdAt: "desc" },
-        include: {
-          author: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              avatarUrl: true,
-              role: true,
-              bio: true,
-            }
-          }
-        }
-      })
-    ]);
+        technicianProfile: true,
+      },
+    });
 
     if (!user) {
       return NextResponse.json(
         { error: "Tài khoản người dùng không tồn tại." },
-        { status: 444 }
+        { status: 404 }
       );
     }
 
-    // Ensure nested jobs Date fields are serialized to ISO strings
     const safeJobs = (user.jobs || []).map((job) => ({
       ...job,
       createdAt: job.createdAt.toISOString(),
     }));
 
-    const safePosts = (posts || []).map((post) => ({
-      ...post,
-      createdAt: post.createdAt.toISOString(),
-    }));
-
     return NextResponse.json({
       ...user,
       jobs: safeJobs,
-      posts: safePosts,
-      location: user.address,
+      technicianProfile: user.technicianProfile
+        ? {
+            ...user.technicianProfile,
+            portfolioImages: JSON.parse(user.technicianProfile.portfolioImages || "[]"),
+            createdAt: user.technicianProfile.createdAt.toISOString(),
+            updatedAt: user.technicianProfile.updatedAt.toISOString(),
+          }
+        : null,
     });
   } catch (err: any) {
+    console.error("GET profile error:", err);
     return NextResponse.json(
       { error: "Lỗi hệ thống khi tải thông tin hồ sơ." },
       { status: 500 }
@@ -104,7 +83,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PUT/PATCH update user profile
+// PUT update user profile (basic info) + technician profile (portfolio/specialties/status)
 export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -119,69 +98,74 @@ export async function PUT(req: Request) {
     const userId = (session.user as any).id;
     const body = await req.json();
 
-    const {
-      name,
-      bio,
-      phone,
-      address,
-      location,
-      cover_image,
-      cv_url,
-      skills,
-      avatarUrl,
-    } = body;
+    const { name, phone, state, city, avatarUrl, technician } = body;
 
-    // Build update object dynamically
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
-    if (bio !== undefined) updateData.bio = bio;
     if (phone !== undefined) updateData.phone = phone;
-    
-    const addressValue = address !== undefined ? address : location;
-    if (addressValue !== undefined) updateData.address = addressValue;
-
-    if (cover_image !== undefined) updateData.cover_image = cover_image;
-    if (cv_url !== undefined) {
-      updateData.cv_url = cv_url;
-      updateData.cvUrl = cv_url; // sync camelCase cvUrl too so existing E2E/pages don't break!
-    }
-    if (skills !== undefined) updateData.skills = skills;
+    if (state !== undefined) updateData.state = state;
+    if (city !== undefined) updateData.city = city;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
       select: {
-        id: true,
-        name: true,
-        email: true,
-        avatarUrl: true,
-        role: true,
-        cvUrl: true,
-        skills: true,
-        bio: true,
-        phone: true,
-        address: true,
-        cover_image: true,
-        cv_url: true,
-        pawCoin: true,
-        reputation: true,
-        trustScore: true,
-        isVerified: true,
-        lastDailyReward: true,
-        createdAt: true,
-        updatedAt: true,
+        id: true, name: true, email: true, avatarUrl: true, role: true,
+        phone: true, market: true, state: true, city: true,
       },
     });
 
+    let updatedTechnicianProfile = null;
+    if (technician && updatedUser.role === "TECHNICIAN") {
+      const {
+        bio, yearsOfExperience, specialties, status, portfolioImages,
+        desiredSalaryType, desiredSalaryAmount, desiredBenefits,
+      } = technician;
+      const techUpdateData: any = {};
+      if (bio !== undefined) techUpdateData.bio = bio;
+      if (yearsOfExperience !== undefined) techUpdateData.yearsOfExperience = Number(yearsOfExperience) || 0;
+      if (specialties !== undefined) techUpdateData.specialties = specialties;
+      if (status !== undefined) techUpdateData.status = status;
+      if (portfolioImages !== undefined) techUpdateData.portfolioImages = JSON.stringify(portfolioImages);
+      if (desiredSalaryType !== undefined) techUpdateData.desiredSalaryType = desiredSalaryType;
+      if (desiredSalaryAmount !== undefined) techUpdateData.desiredSalaryAmount = desiredSalaryAmount;
+      if (desiredBenefits !== undefined) techUpdateData.desiredBenefits = desiredBenefits;
+      if (state !== undefined) techUpdateData.state = state;
+      if (city !== undefined) techUpdateData.city = city;
+
+      updatedTechnicianProfile = await prisma.technicianProfile.upsert({
+        where: { userId },
+        update: techUpdateData,
+        create: {
+          userId,
+          bio: bio || "",
+          yearsOfExperience: Number(yearsOfExperience) || 0,
+          specialties: specialties || "",
+          status: status || "AVAILABLE",
+          desiredSalaryType: desiredSalaryType || null,
+          desiredSalaryAmount: desiredSalaryAmount || null,
+          desiredBenefits: desiredBenefits || null,
+          market: updatedUser.market,
+          state: state || updatedUser.state || "",
+          city: city || updatedUser.city || "",
+          portfolioImages: JSON.stringify(portfolioImages || []),
+        },
+      });
+    }
+
     return NextResponse.json({
       message: "Cập nhật hồ sơ thành công! 🎉",
-      user: {
-        ...updatedUser,
-        location: updatedUser.address,
-      },
+      user: updatedUser,
+      technicianProfile: updatedTechnicianProfile
+        ? {
+            ...updatedTechnicianProfile,
+            portfolioImages: JSON.parse(updatedTechnicianProfile.portfolioImages || "[]"),
+          }
+        : undefined,
     });
   } catch (err: any) {
+    console.error("PUT profile error:", err);
     return NextResponse.json(
       { error: "Lỗi hệ thống khi cập nhật hồ sơ." },
       { status: 500 }

@@ -104,24 +104,24 @@ export default function CustomAuthLayout({
                     />
                   </div>
                   <span className="text-white text-3xl font-black tracking-widest uppercase select-none">
-                    BITPAWOS
+                    PawNail Jobs
                   </span>
                 </Link>
               </div>
 
               {/* Slogan Tối thượng */}
               <h1 className="text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight">
-                Nền Tảng Đa Dịch Vụ <br />Thế Hệ Mới
+                Việc Làm Nail <br />Mỹ 🇺🇸 &amp; Úc 🇦🇺
               </h1>
 
               {/* Mô tả ngắn gọn */}
               <p className="text-lg text-blue-100 font-medium max-w-md">
-                Trải nghiệm hệ sinh thái kết nối không giới hạn. An toàn, tức thì và hoàn toàn không chiết khấu.
+                Kết nối chủ tiệm cần thợ gấp và thợ nail đang tìm việc — chỉ trong vài phút.
               </p>
             </div>
 
             <div className="absolute bottom-12 left-12 z-10 text-xs text-blue-200/60">
-              © 2026 BITPAWOS Platform. All rights reserved.
+              © 2026 PawNail Jobs. All rights reserved.
             </div>
           </div>
 

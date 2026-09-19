@@ -9,177 +9,101 @@ generator client {
 }
 
 enum Role {
-  USER
-  EMPLOYER
+  OWNER       // Chủ tiệm nail — đăng tin tuyển thợ
+  TECHNICIAN  // Thợ nail — đăng portfolio tìm việc
   ADMIN
 }
 
+enum Market {
+  US
+  AU
+}
+
 model User {
-  id               String         @id @default(cuid())
-  name             String
-  email            String         @unique
-  password         String         // Hashed password for credentials auth
-  avatarUrl        String?        // Optional during sign-up
-  role             Role           @default(USER)
-  cvUrl            String?        // Optional during sign-up
-  skills           String?        // Optional during sign-up
-  bio              String?        // Optional during sign-up
-  phone            String?
-  address          String?
-  cover_image      String?
-  cv_url           String?
-  posts            Post[]
-  jobs             Job[]          // For employers posting jobs
-  services         Service[]      // Services registered by the user
-  applications     Application[]  // Applications submitted by this user
-  payrolls         Payroll[]      // Payroll history records
-  notifications    Notification[] // Notifications received by this user
-  comments         Comment[]      // Comments made by this user
-  // sentMessages     Message[]      @relation("SentMessages")     // Messages sent by this user
-  // receivedMessages Message[]      @relation("ReceivedMessages") // Messages received by this user
-  conversations    Conversation[] @relation("UserConversations")
-  messages         Message[]
-  gigs             Gig[]          @relation("EmployerGigs")     // Gigs posted by this employer
-  bids             Bid[]          // Bids placed by this candidate
-  writtenReviews   Review[]       @relation("ReviewerReviews")   // Reviews written by this user
-  receivedReviews  Review[]       @relation("TargetUserReviews") // Reviews received by this user
-  blogPosts        BlogPost[]     // Blog posts written by this user
-  transactions     Transaction[]  // Wallet transactions for credits/debits
-  pawCoin          Int            @default(150) // Default starting coins for gamification
-  reputation       Int            @default(10)  // Default starting reputation
-  trustScore       Float          @default(5.0) // Reputation trust metric (0.0 to 5.0)
-  isVerified       Boolean        @default(false) // Verified checkmark (tick xanh)
-  lastDailyReward  DateTime?      // Last daily reward claim timestamp
-  sentBookings     Booking[]      @relation("SentBookings")
-  receivedBookings Booking[]      @relation("ReceivedBookings")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                String             @id @default(cuid())
+  name              String
+  email             String             @unique
+  password          String             // Hashed password for credentials auth
+  avatarUrl         String?
+  role              Role               @default(TECHNICIAN)
+  phone             String?
+  market            Market             @default(US)
+  state             String?            // US: CA, TX, FL... | AU: NSW, VIC, QLD...
+  city              String?            // City/Suburb
+
+  jobs              Job[]              // Tin tuyển dụng do chủ tiệm (OWNER) đăng
+  technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN
+
+  // "Nỗi đau" vận hành tiệm được chẩn đoán qua khảo sát 5 câu lúc đăng ký
+  // (chỉ áp dụng cho role = OWNER), phân tách bởi dấu phẩy. VD:
+  // "NEED_AUTO_BOOKING,NEED_TURN_AND_TIP_POS"
+  diagnosedPains    String?
+
+  // Chi tiết đầy đủ 5 câu trả lời khảo sát (role = OWNER) — JSON-encoded
+  // array [{ key, title, answer: "A"|"B", tag, answeredAt }] — dùng cho
+  // trang Admin Lead Radar để xem lại từng câu họ chọn A hay B lúc mấy giờ.
+  surveyAnswers     String?
+
+  conversations     Conversation[]     @relation("UserConversations")
+  messages          Message[]
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
-model Post {
-  id        String    @id @default(cuid())
-  content   String
-  imageUrl  String?   // Backwards compatibility
-  mediaType String?   // e.g. 'image' or 'video'
-  mediaUrl  String?   // URL of attachment
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  comments  Comment[] // Comments associated with this post
-  createdAt DateTime  @default(now())
-}
-
+// Tin tuyển thợ do chủ tiệm (OWNER) đăng
 model Job {
-  id           String        @id @default(cuid())
-  title        String
+  id           String   @id @default(cuid())
+  title        String   // VD: "Cần thợ Bột/Dip gấp"
+  salonName    String
   description  String
-  salary       String
-  companyName  String
-  employerId   String
-  employer     User          @relation(fields: [employerId], references: [id], onDelete: Cascade)
-  applications Application[] // Applications submitted for this job
-  isBoosted    Boolean       @default(false)
-  boostUntil   DateTime?
-  is_premium   Boolean       @default(false)
-  boosted_until DateTime?
-  blogPosts    BlogPost[]    // Linked blog posts
-  niche        Niche         @default(IT)
-  latitude     Float?
-  longitude    Float?
-  ai_tags      String?
-  reviews      Review[]
-  priceRange   String?       // Pricing estimations
-  vehicleInfo  String?       // Plate number and car model
-  isEmergency  Boolean       @default(false) // 24/7 service emergency badge
-  workType     String?       // full-time, hourly, etc.
-  bookings     Booking[]
-  createdAt    DateTime      @default(now())
+
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  market       Market
+  state        String
+  city         String
+
+  salaryType   String   // "Bao lương tuần" | "% Ăn chia" | "Theo giờ AUD" | "Theo tuần AUD"...
+  salaryAmount String   // Text tự do, VD: "$1,200-1,500/tuần" hoặc "$28-32/giờ"
+
+  skills       String   // Danh sách kỹ năng, phân tách bởi dấu phẩy: "Bột/Acrylic,Dip/SNS,Gel-X,Design,Chân tay nước"
+  benefits     String   // Danh sách quyền lợi, phân tách bởi dấu phẩy: "Có chỗ ở,Bao lương,Hỗ trợ đổi bang,Hỗ trợ Visa"
+
+  phone        String   // Số điện thoại liên hệ trực tiếp (nút "Gọi ngay")
+  isUrgent     Boolean  @default(true)
+
+  createdAt    DateTime @default(now())
 }
 
-model Service {
-  id          String   @id @default(cuid())
-  name        String
-  category    String   // e.g. Spa, Điện lạnh, Xây dựng, Sửa chữa...
-  description String
-  location    String
-  city        String?  // Province/City for geo-filtering
-  contactInfo String
-  imageUrl    String?  // Real Cloudinary image URL
-  priceRange  String?  // Pricing estimations
-  vehicleInfo String?  // Plate number and car model
-  isEmergency Boolean  @default(false) // 24/7 service emergency badge
-  workType    String?  // full-time, hourly, etc.
-  rating      Float    @default(5.0)
-  ownerId     String
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  isBoosted   Boolean  @default(false)
-  boostUntil  DateTime?
-  blogPosts   BlogPost[] // Linked blog posts
-  bookings    Booking[]
-  createdAt   DateTime @default(now())
-}
+// Hồ sơ tay nghề / portfolio ảnh móng của thợ (role = TECHNICIAN)
+model TechnicianProfile {
+  id                String   @id @default(cuid())
 
-model Application {
-  id          String   @id @default(cuid())
-  applicantId String
-  applicant   User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  jobId       String
-  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  cvUrl       String
-  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  createdAt   DateTime @default(now())
-}
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model Payroll {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseSalary  Float
-  bonus       Float
-  total       Float
-  status      String    @default("UNPAID") // PAID, UNPAID
-  paymentDate DateTime?
-  createdAt   DateTime  @default(now())
-}
+  bio               String?
+  yearsOfExperience Int      @default(0)
+  specialties       String   // Kỹ năng sở trường, phân tách bởi dấu phẩy
 
-model Revenue {
-  id        String   @id @default(cuid())
-  source    String
-  amount    Float
-  createdAt DateTime @default(now())
-}
+  status            String   @default("AVAILABLE") // "URGENT" (Cần việc ngay) | "AVAILABLE" (Đang rảnh tay) | "BETTER" (Tìm chỗ tốt hơn)
 
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?  // Optional notification category/header
-  message   String
-  type      String   // MATCH_JOB, SYSTEM, INFO, WALLET
-  isRead    Boolean  @default(false)
-  link      String?
-  createdAt DateTime @default(now())
-}
+  // Mong muốn về đãi ngộ khi tìm việc mới (khai báo lúc đăng ký)
+  desiredSalaryType   String? // "Bao lương" | "Ăn chia %"
+  desiredSalaryAmount String? // Số tiền/mức % mong muốn, text tự do
+  desiredBenefits     String? // Quyền lợi mong muốn, phân tách bởi dấu phẩy: "Có chỗ ở,Hỗ trợ dời bang,Cần bảo lãnh Visa"
 
-model Comment {
-  id        String   @id @default(cuid())
-  content   String
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-}
+  market            Market
+  state             String
+  city              String
 
-// model Message {
-//   id         String   @id @default(cuid())
-//   content    String
-//   senderId   String
-//   sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-//   receiverId String
-//   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-//   isRead     Boolean  @default(false)
-//   createdAt  DateTime @default(now())
-// }
+  portfolioImages   String   // JSON-encoded array các URL ảnh/video Cloudinary
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
 
 model Conversation {
   id           String    @id @default(cuid())
@@ -200,112 +124,3 @@ model Message {
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }
-
-model Gig {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  budget      Float
-  employerId  String
-  employer    User     @relation("EmployerGigs", fields: [employerId], references: [id], onDelete: Cascade)
-  status      String   @default("OPEN") // OPEN, IN_PROGRESS, COMPLETED
-  bids        Bid[]
-  isBoosted   Boolean  @default(false)
-  boostUntil  DateTime?
-  createdAt   DateTime @default(now())
-}
-
-model Bid {
-  id           String   @id @default(cuid())
-  gigId        String
-  gig          Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
-  freelancerId String
-  freelancer   User     @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
-  bidAmount    Float
-  message      String
-  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
-  createdAt    DateTime @default(now())
-}
-
-model Review {
-  id           String   @id @default(cuid())
-  rating       Int      // 1-5 stars
-  content      String
-  comment      String?  // nullable comment support
-  reviewerId   String
-  reviewer     User     @relation("ReviewerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
-  targetUserId String?  // nullable for User rating reviews compatibility
-  targetUser   User?    @relation("TargetUserReviews", fields: [targetUserId], references: [id], onDelete: Cascade)
-  gigId        String?
-  jobId        String?
-  job          Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-}
-
-model BlogPost {
-  id              String   @id @default(cuid())
-  title           String
-  content         String
-  authorId        String
-  author          User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  upvotes         Int      @default(0)
-  linkedJobId     String?
-  linkedJob       Job?     @relation(fields: [linkedJobId], references: [id], onDelete: SetNull)
-  linkedServiceId String?
-  linkedService   Service? @relation(fields: [linkedServiceId], references: [id], onDelete: SetNull)
-  createdAt       DateTime @default(now())
-}
-
-model Transaction {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount        Int      // e.g. +5 or -500
-  type          String   // INCOME, EXPENSE
-  description   String
-  amountVND     Float?   // Optional field for payment gateway transactions in VND
-  pawCoinAmount Int?     // Topup coin quantity
-  status        String?  // PENDING, SUCCESS, FAILED
-  provider      String?  // e.g. VNPAY
-  createdAt     DateTime @default(now())
-}
-
-enum Niche {
-  IT
-  MMO
-  SPA
-  MECHANIC
-  FNB
-  OTHERS
-}
-
-model Booking {
-  id          String   @id @default(cuid())
-  jobId       String?  // Linked to Job (nullable)
-  job         Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  serviceId   String?  // Linked to Service (nullable)
-  service     Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  senderId    String
-  sender      User     @relation("SentBookings", fields: [senderId], references: [id], onDelete: Cascade)
-  receiverId  String
-  receiver    User     @relation("ReceivedBookings", fields: [receiverId], references: [id], onDelete: Cascade)
-  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, COMPLETED
-  message     String?
-  createdAt   DateTime @default(now())
-}
-
-model Store {
-  id          String   @id @default(cuid())
-  name        String
-  category    String
-  rating      Float?
-  reviewCount Int?     @default(0)
-  address     String
-  latitude    Float?
-  longitude   Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([name, address])
-}
-

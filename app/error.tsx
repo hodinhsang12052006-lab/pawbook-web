@@ -2,9 +2,13 @@
 
 import React, { useEffect } from "react";
 
-export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
+export default function RouteError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error("Global Error boundary caught an error:", error);
+    // Production Server Component errors arrive with the message redacted
+    // ("...omitted in production builds...") — the digest is the only thing
+    // that ties this to a specific server-side log line, so it must be
+    // logged even though it looks redundant with error.message.
+    console.error(`Route error boundary caught an error (digest: ${error.digest ?? "none"}):`, error);
   }, [error]);
 
   return (

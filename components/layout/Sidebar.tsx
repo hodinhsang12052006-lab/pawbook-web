@@ -1,61 +1,35 @@
 "use client";
 
 import React from "react";
-import { Home, Briefcase, Rocket, Settings, Store, Users, Zap, BookOpen, MapPin, CreditCard } from "lucide-react";
+import { Briefcase, Store } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import { useSessionUser } from "@/lib/SessionUserContext";
 
 import Image from "next/image";
 
 interface SidebarProps {
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
-  currentUser?: any;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, currentUser }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [sessionUser, setSessionUser] = React.useState<any>(null);
+  const { user: effectiveUser } = useSessionUser();
 
-  React.useEffect(() => {
-    async function loadSession() {
-      try {
-        const res = await fetch("/api/auth/session");
-        if (res.ok) {
-          const session = await res.json();
-          if (session?.user?.id) {
-            const profileRes = await fetch(`/api/profile?id=${session.user.id}`);
-            if (profileRes.ok) {
-              const profileData = await profileRes.json();
-              setSessionUser(profileData);
-              return;
-            }
-          }
-          setSessionUser(session?.user || null);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    loadSession();
-  }, []);
-
-  const userName = currentUser?.name || sessionUser?.name || "Thành viên";
-  const userRole = currentUser?.role || sessionUser?.role || "USER";
-  const userAvatar = currentUser?.avatarUrl || currentUser?.image || sessionUser?.avatarUrl || sessionUser?.image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80";
-  const userBio = currentUser?.bio || sessionUser?.bio || "Thành viên PawBook";
+  const userName = effectiveUser?.name || "Thành viên";
+  const userRole = effectiveUser?.role || "TECHNICIAN";
+  const userAvatar = effectiveUser?.avatarUrl || effectiveUser?.image || "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=100&auto=format&fit=crop&q=80";
+  const userLocation = [effectiveUser?.city, effectiveUser?.state].filter(Boolean).join(", ") || "Chưa cập nhật khu vực";
+  const roleLabel = userRole === "OWNER" ? "Chủ tiệm" : userRole === "ADMIN" ? "Quản trị" : "Thợ Nail";
 
   const menuItems = [
-    { id: "feed", label: "Bảng tin", icon: Home, route: "/?tab=feed" },
-    { id: "jobs", label: "Tuyển dụng & Việc làm", icon: Briefcase, route: "/?tab=jobs" },
-    { id: "hr", label: "Quản lý HR", icon: Settings, route: "/?tab=hr" },
-    { id: "services", label: "Dịch vụ & Cửa hàng", icon: Store, route: "/services" },
-    { id: "gigs", label: "Chợ Đấu Thầu", icon: Zap, route: "/gigs" },
-    { id: "blogs", label: "Blog & Chia sẻ", icon: BookOpen, route: "/blogs" },
+    { id: "jobs", label: "Cần Thợ Gấp", icon: Briefcase, route: "/?tab=jobs" },
+    { id: "portfolio", label: "Thợ Đang Rảnh", icon: Store, route: "/?tab=portfolio" },
   ];
 
   const handleNavigation = (id: string, route: string) => {
-    if (pathname === "/" && setActiveTab && id !== "services" && id !== "gigs" && id !== "blogs") {
+    if (pathname === "/" && setActiveTab) {
       setActiveTab(id);
       router.push(route, { scroll: false });
     } else {
@@ -64,18 +38,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
   };
 
   const checkIsActive = (id: string) => {
-    if (id === "services") {
-      return pathname === "/services";
-    }
-    if (id === "gigs") {
-      return pathname === "/gigs";
-    }
-    if (id === "blogs") {
-      return pathname === "/blogs";
-    }
-    if (pathname === "/services" || pathname === "/gigs" || pathname === "/blogs") {
-      return false;
-    }
+    if (pathname !== "/") return false;
     return activeTab === id;
   };
 
@@ -99,10 +62,10 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
             <h2 className="mt-3 text-sm font-semibold text-slate-100 cursor-pointer hover:underline animate-pulse" onClick={() => router.push("/profile")}>
               {userName}
             </h2>
-            <p className="text-xs text-slate-400 font-semibold">{userBio}</p>
-            {sessionUser && (
-              <span className="mt-2 inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-2xs font-medium text-blue-400 border border-blue-500/20 uppercase tracking-wider">
-                {userRole}
+            <p className="text-xs text-slate-400 font-semibold">📍 {userLocation}</p>
+            {effectiveUser && (
+              <span className="mt-2 inline-flex items-center rounded-full bg-pink-500/10 px-2 py-0.5 text-2xs font-medium text-pink-400 border border-pink-500/20 uppercase tracking-wider">
+                {roleLabel}
               </span>
             )}
           </div>
@@ -116,9 +79,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
                 <button
                   key={item.id}
                   onClick={() => handleNavigation(item.id, item.route)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 active:scale-95 ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/15"
+                      ? "bg-pink-600 text-white shadow-lg shadow-pink-600/15"
                       : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
                   }`}
                 >
@@ -128,18 +91,6 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
               );
             })}
           </nav>
-
-          {/* Quick Stats or Footer */}
-          <div className="mt-6 border-t border-slate-800 pt-4 text-xs text-slate-500">
-            <div className="flex justify-between py-1">
-              <span>Lượt xem trang cá nhân</span>
-              <span className="font-semibold text-slate-300">1,248</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span>Lượt xem bài viết</span>
-              <span className="font-semibold text-slate-300">12.5k</span>
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -153,9 +104,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
               key={item.id}
               onClick={() => handleNavigation(item.id, item.route)}
               title={item.label}
-              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 ${
+              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 active:scale-95 ${
                 isActive
-                  ? "bg-blue-600/10 border border-blue-500/20 text-blue-400"
+                  ? "bg-pink-600/10 border border-pink-500/20 text-pink-400"
                   : "text-slate-500 hover:text-slate-300 border border-transparent"
               }`}
             >

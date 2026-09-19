@@ -4,7 +4,7 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
 import dynamic from "next/dynamic";
 import { Phone, Video, PhoneOff, Mic, MicOff, VideoOff, Volume2, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getPusherClient } from "@/lib/pusher";
+import { getPusherClient } from "@/lib/pusherClient";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
@@ -60,7 +60,7 @@ function CallTimer({ active }: { active: boolean }) {
 }
 
 const AVATAR_FALLBACK = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=ffffff&bold=true`;
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=ffffff&bold=true&format=png`;
 
 // Entirely self-contained: owns its own Pusher subscription for call
 // signaling (separate from the messaging channel binding in

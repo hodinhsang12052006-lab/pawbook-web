@@ -1,139 +1,79 @@
-export const dynamic = 'force-dynamic';
-
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import { Market, Role } from "@prisma/client";
 
-import fs from "fs";
-import path from "path";
-
-export async function GET() {
+// GET /api/jobs?market=US&state=CA&city=...  — danh sách tin tuyển thợ
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const market = searchParams.get("market");
+    const state = searchParams.get("state");
+    const city = searchParams.get("city");
+
+    const where: any = {};
+    if (market === "US" || market === "AU") where.market = market as Market;
+    if (state) where.state = state;
+    if (city) where.city = { contains: city };
+
     const jobs = await prisma.job.findMany({
+      where,
       include: {
-        reviews: {
-          select: {
-            id: true,
-            rating: true,
-            content: true,
-            createdAt: true,
-          },
-        },
-        employer: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-            isVerified: true,
-            reputation: true,
-            trustScore: true,
-          },
+        owner: {
+          select: { id: true, name: true, avatarUrl: true },
         },
       },
-      orderBy: [
-        { isBoosted: "desc" },
-        { createdAt: "desc" },
-      ],
+      orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
       take: 100,
     });
 
-    // Read static jobs from data_crawled (parallel, non-blocking reads)
-    const staticJobs: any[] = [];
-    const tpHcmDir = path.join(process.cwd(), "data_crawled", "TP_HCM");
-    const filesToRead = ["Spa_thu_cung.json", "Khach_san_thu_cung.json", "Cap_cuu_thu_y.json"];
-
-    await Promise.all(
-      filesToRead.map(async (file) => {
-        const filePath = path.join(tpHcmDir, file);
-        try {
-          const content = await fs.promises.readFile(filePath, "utf-8");
-          const items = JSON.parse(content);
-          items.forEach((item: any, idx: number) => {
-            staticJobs.push({
-              id: `static-${file.replace(".json", "")}-${idx}`,
-              title: `Tuyển nhân viên ${item.category || "dịch vụ"} tại ${item.name}`,
-              companyName: item.name,
-              description: `Địa chỉ: ${item.address}. Xếp hạng: ${item.rating || 5.0} sao (${item.reviewCount || 0} reviews). Liên hệ làm việc ngay.`,
-              salary: "12M - 20M VND",
-              location: item.address || "TP. Hồ Chí Minh",
-              tags: ["Grooming", "Pet Care", "Spa", "Tuyển Dụng"],
-              isBoosted: idx % 3 === 0,
-              createdAt: new Date().toISOString(),
-              reviews: []
-            });
-          });
-        } catch (e) {
-          console.error("Error reading static file", file, e);
-        }
-      })
-    );
-
-    const safeDbJobs = jobs.map((job) => ({
-      id: job.id,
-      title: job.title,
-      description: job.description,
-      salary: job.salary,
-      location: job.latitude ? (job.latitude > 20.0 ? "Hà Nội" : job.latitude > 15.0 ? "Đà Nẵng" : "TP. Hồ Chí Minh") : "Việt Nam",
-      companyName: job.companyName,
-      priceRange: (job as any).priceRange || null,
-      vehicleInfo: (job as any).vehicleInfo || null,
-      isEmergency: (job as any).isEmergency || false,
-      workType: (job as any).workType || "ONCE",
-      isBoosted: job.isBoosted,
+    const safeJobs = jobs.map((job) => ({
+      ...job,
+      skills: job.skills ? job.skills.split(",").filter(Boolean) : [],
+      benefits: job.benefits ? job.benefits.split(",").filter(Boolean) : [],
       createdAt: job.createdAt.toISOString(),
-      employerId: job.employerId,
-      employer: job.employer ? {
-        id: job.employer.id,
-        name: job.employer.name,
-        avatarUrl: job.employer.avatarUrl,
-        isVerified: job.employer.isVerified,
-        reputation: job.employer.reputation,
-        trustScore: job.employer.trustScore,
-      } : null,
-      reviews: (job.reviews || []).map((rev) => ({
-        id: rev.id,
-        rating: rev.rating,
-        content: rev.content,
-        createdAt: rev.createdAt.toISOString(),
-      })),
     }));
 
-    const mergedJobs = [...safeDbJobs, ...staticJobs];
-    return NextResponse.json(mergedJobs);
+    return NextResponse.json(safeJobs);
   } catch (error: any) {
     console.error("Fetch jobs API error:", error);
     return NextResponse.json(
-      { error: "Không thể tải danh sách công việc." },
+      { error: "Không thể tải danh sách tin tuyển dụng." },
       { status: 500 }
     );
   }
 }
 
+// POST /api/jobs — đăng tin tuyển thợ (chỉ chủ tiệm - role OWNER)
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để đăng bài tuyển dụng." },
+        { error: "Vui lòng đăng nhập để đăng tin tuyển dụng." },
         { status: 401 }
       );
     }
 
     const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
 
-    if (!userId) {
+    if (userRole !== Role.OWNER) {
       return NextResponse.json(
-        { error: "Không tìm thấy thông tin định danh." },
-        { status: 401 }
+        { error: "Chỉ tài khoản Chủ tiệm mới có thể đăng tin tuyển thợ." },
+        { status: 403 }
       );
     }
 
     const body = await req.json();
-    const { title, description, salary, companyName, priceRange, vehicleInfo, isEmergency, workType } = body;
+    const {
+      title, salonName, description, market, state, city,
+      salaryType, salaryAmount, skills, benefits, phone, isUrgent,
+    } = body;
 
-    if (!title || !description || !salary || !companyName) {
+    if (!title || !salonName || !market || !state || !city || !salaryType || !salaryAmount || !phone) {
       return NextResponse.json(
         { error: "Vui lòng nhập đầy đủ thông tin bắt buộc." },
         { status: 400 }
@@ -143,36 +83,27 @@ export async function POST(req: Request) {
     const newJob = await prisma.job.create({
       data: {
         title,
-        description,
-        salary,
-        companyName,
-        employerId: userId,
-        priceRange,
-        vehicleInfo,
-        isEmergency: !!isEmergency,
-        workType,
+        salonName,
+        description: description || "",
+        ownerId: userId,
+        market: market === "AU" ? Market.AU : Market.US,
+        state,
+        city,
+        salaryType,
+        salaryAmount,
+        skills: Array.isArray(skills) ? skills.join(",") : (skills || ""),
+        benefits: Array.isArray(benefits) ? benefits.join(",") : (benefits || ""),
+        phone,
+        isUrgent: isUrgent !== undefined ? !!isUrgent : true,
       },
     });
-
-    // Trigger PawBot matchmaking in background asynchronously
-    const host = req.headers.get("host") || "localhost:3000";
-    const protocol = req.headers.get("x-forwarded-proto") || "http";
-    const baseUrl = `${protocol}://${host}`;
-
-    fetch(`${baseUrl}/api/bot/match`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ jobId: newJob.id }),
-    }).catch((err) => console.error("Error triggering PawBot Matchmaker in background:", err));
 
     return NextResponse.json(newJob, { status: 201 });
   } catch (error: any) {
     console.error("Create job API error:", error);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi hệ thống khi thêm bài tuyển dụng." },
-      { status: 550 }
+      { error: "Đã xảy ra lỗi hệ thống khi đăng tin tuyển dụng." },
+      { status: 500 }
     );
   }
 }

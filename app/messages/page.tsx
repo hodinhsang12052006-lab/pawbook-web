@@ -7,6 +7,38 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+function mapConversation(conv: any) {
+  return {
+    id: conv.id,
+    isGroup: conv.isGroup,
+    name: conv.name || null,
+    createdAt: conv.createdAt.toISOString(),
+    participants: conv.participants.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      avatarUrl: p.avatarUrl || null,
+      role: p.role,
+    })),
+    messages: conv.messages.map((m: any) => ({
+      id: m.id,
+      body: m.body,
+      type: m.type,
+      senderId: m.senderId,
+      conversationId: m.conversationId,
+      createdAt: m.createdAt.toISOString(),
+    })),
+  };
+}
+
+function mapUser(user: any) {
+  return {
+    id: user.id,
+    name: user.name,
+    avatarUrl: user.avatarUrl || null,
+    role: user.role,
+  };
+}
+
 export default async function MessagesPage() {
   const session = await getServerSession(authOptions);
 
@@ -16,71 +48,61 @@ export default async function MessagesPage() {
 
   const userId = session.user.id;
 
-  // Query conversations
-  const conversationsData = await prisma.conversation.findMany({
-    where: {
-      participants: {
-        some: { id: userId },
-      },
-    },
-    include: {
-      participants: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          role: true,
+  // Cả hai query dưới đây từng chạy trực tiếp, không try/catch — nếu Turso
+  // timeout hoặc trả lỗi thoáng qua, Server Component ném exception thẳng ra
+  // và Next.js hiện màn hình đỏ "Server Components render" cho toàn bộ
+  // trang thay vì chỉ riêng phần tin nhắn. Fallback về mảng rỗng để trang
+  // vẫn tải được (khung chat trống) thay vì crash toàn bộ.
+  let initialConversations: ReturnType<typeof mapConversation>[] = [];
+  let initialSystemUsers: ReturnType<typeof mapUser>[] = [];
+
+  try {
+    const conversationsData = await prisma.conversation.findMany({
+      where: {
+        participants: {
+          some: { id: userId },
         },
       },
-      messages: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
+      include: {
+        participants: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+            role: true,
+          },
+        },
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  const initialConversations = conversationsData.map((conv) => ({
-    id: conv.id,
-    isGroup: conv.isGroup,
-    name: conv.name || null,
-    createdAt: conv.createdAt.toISOString(),
-    participants: conv.participants.map((p) => ({
-      id: p.id,
-      name: p.name,
-      avatarUrl: p.avatarUrl || null,
-      role: p.role,
-    })),
-    messages: conv.messages.map((m) => ({
-      id: m.id,
-      body: m.body,
-      type: m.type,
-      senderId: m.senderId,
-      conversationId: m.conversationId,
-      createdAt: m.createdAt.toISOString(),
-    })),
-  }));
+    initialConversations = conversationsData.map(mapConversation);
+  } catch (err) {
+    console.error("MessagesPage: failed to load conversations:", err);
+  }
 
-  // Query system users
-  const usersData = await prisma.user.findMany({
-    where: {
-      id: { not: userId },
-    },
-    select: {
-      id: true,
-      name: true,
-      avatarUrl: true,
-      role: true,
-    },
-    take: 30, // Limit to initial list to speed up loading
-  });
+  try {
+    const usersData = await prisma.user.findMany({
+      where: {
+        id: { not: userId },
+      },
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+      },
+      take: 30, // Limit to initial list to speed up loading
+    });
 
-  const initialSystemUsers = usersData.map((user) => ({
-    id: user.id,
-    name: user.name,
-    avatarUrl: user.avatarUrl || null,
-    role: user.role,
-  }));
+    initialSystemUsers = usersData.map(mapUser);
+  } catch (err) {
+    console.error("MessagesPage: failed to load system users:", err);
+  }
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-slate-100 select-none overflow-hidden">

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { pusherServer, chatChannelName } from "@/lib/pusher";
+import { getPusherServer } from "@/lib/pusherServer";
+import { chatChannelName } from "@/lib/pusherChannel";
 
 export async function POST(req: Request) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     };
 
     // Bắn sự kiện "message-updated" kèm theo tin nhắn đã có reaction mới
-    await pusherServer.trigger(channels, "message-updated", updatedMessage);
+    await getPusherServer()?.trigger(channels, "message-updated", updatedMessage);
 
     return NextResponse.json({ success: true });
   } catch (error) {

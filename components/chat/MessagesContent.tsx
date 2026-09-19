@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
-import { getPusherClient } from "@/lib/pusher";
+import { getPusherClient } from "@/lib/pusherClient";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 
@@ -137,7 +137,7 @@ function mapServerMessage(m: any): MessageType {
 }
 
 const AVATAR_FALLBACK = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=ffffff&bold=true`;
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=ffffff&bold=true&format=png`;
 
 export default function MessagesContent({
   initialSessionUser,
@@ -727,16 +727,6 @@ export default function MessagesContent({
     fileInput.click();
   }, [activeChat, handleSendMessage]);
 
-  const handleGpsCheckin = useCallback(async () => {
-    if (!activeChat) return;
-    // handleSendMessage already reports its own errors via toast — don't wrap
-    // it in toast.promise too, that would show a false "success" afterwards
-    // since handleSendMessage catches its own failures instead of rejecting.
-    const toastId = toast.loading("Đang dò tìm vệ tinh GPS...");
-    await handleSendMessage(null, "Đã chấm công qua vệ tinh GPS thành công.", "ATTENDANCE");
-    toast.success("Chấm công thành công! ⏱️", { id: toastId });
-  }, [activeChat, handleSendMessage]);
-
   // Direct route redirect handling (?to=partnerId)
   useEffect(() => {
     if (!directPartnerId || !currentUser || systemUsers.length === 0) return;
@@ -1210,15 +1200,6 @@ export default function MessagesContent({
                     <Paperclip className="h-4 w-4" />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleGpsCheckin}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white border border-slate-800 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-                    title="Điểm danh chấm công GPS"
-                  >
-                    <Zap className="h-3 w-3 fill-white" />
-                    <span>⚡ Công cụ HR/Chấm công</span>
-                  </button>
                 </div>
 
                 <div className="flex items-center gap-2">

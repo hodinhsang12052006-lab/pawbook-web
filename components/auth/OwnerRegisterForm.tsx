@@ -12,6 +12,7 @@ import {
 import { AuthSettingsContext } from "@/app/auth/layout";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
+import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -37,8 +38,9 @@ export default function OwnerRegisterForm() {
   const { refresh: refreshSession } = useSessionUser();
   const isDark = theme === "dark";
 
-  // phase: "setup" (screen 1) | "survey" (screen 2, 5 questions)
-  const [phase, setPhase] = useState<"setup" | "survey">("setup");
+  // phase: "setup" (screen 1) -> "survey" (screen 2, 5 questions) ->
+  // "diagnostic" (màn hình chẩn đoán sau khi tạo tài khoản thành công)
+  const [phase, setPhase] = useState<"setup" | "survey" | "diagnostic">("setup");
   const [surveyIndex, setSurveyIndex] = useState(0);
   const [pains, setPains] = useState<string[]>([]);
   const [answers, setAnswers] = useState<SurveyAnswerRecord[]>([]);
@@ -143,9 +145,10 @@ export default function OwnerRegisterForm() {
       if (signInResult?.ok) {
         // Cập nhật session dùng chung (Navbar/Sidebar) ngay lập tức
         refreshSession();
-        toast.success("Chào mừng bạn đến với cộng đồng Nail! Đang mở bảng tin...", { duration: 3000, icon: "🎉" });
-        // router.push (client-side, không full-page reload) — zero flash trắng màn hình
-        router.push("/?tab=jobs");
+        setLoading(false);
+        // Không chuyển hướng ngay — hiện màn hình chẩn đoán vận hành trước,
+        // điều hướng thật sự xảy ra khi họ bấm CTA trong SalonDiagnosticModal.
+        setPhase("diagnostic");
       } else {
         setLoading(false);
         router.push("/auth/login");
@@ -155,6 +158,18 @@ export default function OwnerRegisterForm() {
       setLoading(false);
     }
   };
+
+  // CTA cuối màn hình chẩn đoán — đưa họ về sàn với market/state của tiệm
+  // đã điền sẵn để bộ lọc trang chủ tự khớp luôn, khỏi phải chọn lại.
+  const handleFinishDiagnostic = () => {
+    toast.success("Chào mừng bạn đến với cộng đồng Nail! Đang mở bảng tin...", { duration: 3000, icon: "🎉" });
+    const params = new URLSearchParams({ tab: "jobs", market, state });
+    router.push(`/?${params.toString()}`);
+  };
+
+  if (phase === "diagnostic") {
+    return <SalonDiagnosticModal salonName={salonName} pains={pains} onFinish={handleFinishDiagnostic} />;
+  }
 
   if (phase === "survey") {
     const q = SURVEY[surveyIndex];

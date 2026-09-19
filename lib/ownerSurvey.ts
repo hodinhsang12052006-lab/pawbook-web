@@ -59,6 +59,10 @@ export interface PainTagMeta {
   shortLabel: string;
   color: "red" | "purple" | "orange" | "yellow" | "blue";
   classes: string; // border+bg+text Tailwind classes cho badge
+  // Dùng cho màn hình chẩn đoán sau đăng ký (SalonDiagnosticModal) — phản
+  // chiếu đúng nỗi đau họ vừa chọn kèm giải pháp tương ứng.
+  problem: string;
+  solution: string;
 }
 
 export const PAIN_TAG_META: Record<string, PainTagMeta> = {
@@ -68,6 +72,8 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     shortLabel: "Auto Booking",
     color: "red",
     classes: "border-red-500/40 bg-red-500/10 text-red-400",
+    problem: "Khách đặt hẹn bị chồng chéo giờ cao điểm, thợ bị quá tải hoặc để khách đợi lâu.",
+    solution: "Smart Booking Online tự động khóa lịch khi thợ đang có khách, gửi SMS xác nhận lịch hẹn chuẩn giờ.",
   },
   NEED_TURN_AND_TIP_POS: {
     tag: "NEED_TURN_AND_TIP_POS",
@@ -75,6 +81,8 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     shortLabel: "Turn & Tip POS",
     color: "purple",
     classes: "border-purple-500/40 bg-purple-500/10 text-purple-400",
+    problem: "Nguy cơ mất thợ giỏi và mâu thuẫn nội bộ do chia turn thủ công, tính tip dễ nhầm lẫn.",
+    solution: "Hệ thống POS tự động xoay tua thợ công bằng theo giá trị bill. Tách bạch 100% Cash Tip & Credit Tip trên màn hình iPad. Thợ tự xem, không tị nạnh.",
   },
   NEED_SUPPLY_BILL_PRINT: {
     tag: "NEED_SUPPLY_BILL_PRINT",
@@ -82,6 +90,8 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     shortLabel: "Supply & Bill",
     color: "orange",
     classes: "border-orange-500/40 bg-orange-500/10 text-orange-400",
+    problem: "Thất thoát chi phí vật tư và tốn thời gian bấm máy tính cộng trừ tiền bột/đá cuối tuần.",
+    solution: "Tự động khấu trừ chi phí supply trực tiếp trên từng hóa đơn tính tiền. Xuất bill in nhiệt chuyên nghiệp 1-click.",
   },
   NEED_GPS_REFUND: {
     tag: "NEED_GPS_REFUND",
@@ -89,6 +99,8 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     shortLabel: "GPS & Refund",
     color: "yellow",
     classes: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
+    problem: "Khó kiểm soát giờ giấc ra vào của thợ, xử lý khách khiếu nại hoàn tiền dễ thất thoát.",
+    solution: "Chấm công bằng định vị GPS chuẩn xác ngay tại tiệm. Cơ chế hoàn tiền/hủy đơn chuẩn theo mã hóa đơn.",
   },
   NEED_AI_CRM_QR: {
     tag: "NEED_AI_CRM_QR",
@@ -96,6 +108,8 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     shortLabel: "AI CRM & QR",
     color: "blue",
     classes: "border-blue-500/40 bg-blue-500/10 text-blue-400",
+    problem: "Khách làm xong rồi quên quay lại; ngày Thứ 2 - Thứ 4 tiệm vắng thợ ngồi bấm điện thoại.",
+    solution: "QR Check-in tích điểm theo SĐT + AI tự động gửi SMS nhắc khách quay lại dặm gel sau 3 tuần.",
   },
 };
 

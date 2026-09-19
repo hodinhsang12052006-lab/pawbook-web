@@ -4,6 +4,25 @@ import React, { createContext, useState, useEffect } from "react";
 import Link from "next/link";
 import { Sun, Moon, Globe } from "lucide-react";
 
+// Vị trí cố định (không random) — nếu random mỗi lần render, HTML server và
+// client sẽ lệch nhau và React báo lỗi hydration mismatch.
+const SPARKLE_DOTS = [
+  { top: "12%", left: "18%", delay: "0s" },
+  { top: "22%", left: "68%", delay: "-0.8s" },
+  { top: "8%", left: "42%", delay: "-1.6s" },
+  { top: "35%", left: "85%", delay: "-2.2s" },
+  { top: "48%", left: "10%", delay: "-0.4s" },
+  { top: "58%", left: "55%", delay: "-1.2s" },
+  { top: "64%", left: "30%", delay: "-2.6s" },
+  { top: "72%", left: "78%", delay: "-1.8s" },
+  { top: "82%", left: "22%", delay: "-0.6s" },
+  { top: "88%", left: "60%", delay: "-2.0s" },
+  { top: "28%", left: "5%", delay: "-1.4s" },
+  { top: "16%", left: "92%", delay: "-2.8s" },
+  { top: "44%", left: "35%", delay: "-1.0s" },
+  { top: "68%", left: "48%", delay: "-0.2s" },
+];
+
 export const AuthSettingsContext = createContext<{
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -64,39 +83,45 @@ export default function CustomAuthLayout({
         </div>
 
         <div className="grid w-full grid-cols-1 lg:grid-cols-12">
-          {/* Left column: Branding & Visuals */}
-          <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-800 p-12 lg:col-span-5 lg:flex">
-            {/* Glowing blobs */}
-            <div className="absolute top-0 left-0 -translate-x-12 -translate-y-12 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
-            <div className="absolute bottom-0 right-0 translate-x-12 translate-y-12 h-80 w-80 rounded-full bg-white/10 blur-3xl"></div>
+          {/* Left column: Branding & Visuals — layered "aurora" background:
+              deep slate base + slow-drifting blurred color blobs + a faint
+              drifting grid + a scatter of twinkling sparkle dots. Everything
+              animates via transform/opacity only (see globals.css) so it
+              stays smooth without a JS render loop. */}
+          <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 lg:col-span-5 lg:flex">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
 
-            {/* Abstract geometric background lines using SVG */}
-            <div className="absolute inset-0 opacity-10 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]">
-              <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern
-                    id="custom-grid"
-                    width="40"
-                    height="40"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <path
-                      d="M 40 0 L 0 0 0 40"
-                      fill="none"
-                      stroke="#ffffff"
-                      strokeWidth="1"
-                    />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#custom-grid)" />
-              </svg>
+            <div className="absolute -top-24 -left-16 h-96 w-96 rounded-full bg-pink-600/30 blur-[100px] animate-aurora-a" />
+            <div className="absolute top-1/3 -right-24 h-[28rem] w-[28rem] rounded-full bg-fuchsia-600/25 blur-[110px] animate-aurora-b" />
+            <div className="absolute -bottom-24 left-1/4 h-80 w-80 rounded-full bg-amber-500/15 blur-[100px] animate-aurora-c" />
+            <div className="absolute bottom-1/4 -left-12 h-64 w-64 rounded-full bg-purple-600/20 blur-[90px] animate-aurora-b" style={{ animationDelay: "-9s" }} />
+
+            {/* Faint drifting grid for a premium "tech platform" texture */}
+            <div
+              className="absolute inset-0 opacity-[0.07] [mask-image:radial-gradient(ellipse_at_center,white,transparent_75%)] animate-grid-drift"
+              style={{
+                backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+                backgroundSize: "40px 40px",
+              }}
+            />
+
+            {/* Sparkle glitter — nod to the nail industry, fixed positions
+                (never randomized) so server/client markup always matches. */}
+            <div className="absolute inset-0 pointer-events-none">
+              {SPARKLE_DOTS.map((dot, i) => (
+                <span
+                  key={i}
+                  className="absolute h-1 w-1 rounded-full bg-white animate-twinkle"
+                  style={{ top: dot.top, left: dot.left, animationDelay: dot.delay }}
+                />
+              ))}
             </div>
 
             <div className="relative z-10 flex flex-col justify-center h-full space-y-8 my-auto">
               {/* Thương hiệu */}
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3.5 animate-fadeIn">
                 <Link href="/" className="flex items-center gap-3">
-                  <div className="h-14 w-14 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-0.5 shadow-xl shadow-black/10">
+                  <div className="h-14 w-14 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-0.5 shadow-xl shadow-pink-950/30">
                     <img
                       src="/cho1.jpg"
                       alt="PawBook Logo"
@@ -110,26 +135,35 @@ export default function CustomAuthLayout({
               </div>
 
               {/* Slogan Tối thượng */}
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight">
-                Việc Làm Nail <br />Mỹ 🇺🇸 &amp; Úc 🇦🇺
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight animate-fadeIn" style={{ animationDelay: "0.1s" }}>
+                Việc Làm Nail <br />
+                <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">
+                  Mỹ 🇺🇸 &amp; Úc 🇦🇺
+                </span>
               </h1>
 
               {/* Mô tả ngắn gọn */}
-              <p className="text-lg text-blue-100 font-medium max-w-md">
+              <p className="text-lg text-slate-300 font-medium max-w-md animate-fadeIn" style={{ animationDelay: "0.2s" }}>
                 Kết nối chủ tiệm cần thợ gấp và thợ nail đang tìm việc — chỉ trong vài phút.
               </p>
             </div>
 
-            <div className="absolute bottom-12 left-12 z-10 text-xs text-blue-200/60">
+            <div className="absolute bottom-12 left-12 z-10 text-xs text-slate-500">
               © 2026 PawNail Jobs. All rights reserved.
             </div>
           </div>
 
           {/* Right column: Auth Forms */}
-          <div className={`relative flex flex-col justify-center px-4 py-12 sm:px-6 lg:col-span-7 lg:px-12 xl:col-span-7 transition-colors duration-300 ${
+          <div className={`relative flex flex-col justify-center px-4 py-12 sm:px-6 lg:col-span-7 lg:px-12 xl:col-span-7 transition-colors duration-300 overflow-hidden ${
             theme === "dark" ? "bg-slate-950" : "bg-gray-50"
           }`}>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_120%,rgba(37,99,235,0.03),transparent)] pointer-events-none"></div>
+            {/* Ambient glow — echoes the left panel's aurora at low opacity
+                so the split feels like one continuous background, not two
+                unrelated panels bolted together. */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className={`absolute -top-20 -right-20 h-96 w-96 rounded-full blur-[120px] animate-breathe ${theme === "dark" ? "bg-pink-600/10" : "bg-pink-400/10"}`} />
+              <div className={`absolute -bottom-24 -left-16 h-80 w-80 rounded-full blur-[120px] animate-breathe ${theme === "dark" ? "bg-fuchsia-600/10" : "bg-indigo-300/10"}`} style={{ animationDelay: "-3.5s" }} />
+            </div>
             <div className="relative z-10">
               {children}
             </div>

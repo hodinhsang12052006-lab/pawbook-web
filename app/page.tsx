@@ -21,12 +21,18 @@ export default function HomePage() {
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
 
-  // Đọc ?tab= trên URL phía client (không dùng useSearchParams để tránh
-  // buộc bọc Suspense — kết hợp với client component gây double-render/
-  // kẹt loading trên Next 16 trong dev mode).
+  // Đọc ?tab=/?market=/?state= trên URL phía client (không dùng
+  // useSearchParams để tránh buộc bọc Suspense — kết hợp với client
+  // component gây double-render/kẹt loading trên Next 16 trong dev mode).
+  // market/state đến từ SalonDiagnosticModal sau khi Chủ tiệm đăng ký xong,
+  // để bộ lọc trang chủ tự khớp luôn với khu vực tiệm của họ.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("tab") === "portfolio") setTab("portfolio");
+    const urlMarket = params.get("market");
+    if (urlMarket === "US" || urlMarket === "AU") setMarket(urlMarket);
+    const urlState = params.get("state");
+    if (urlState) setState(urlState);
   }, []);
 
   const states = market === "US" ? US_STATES : AU_STATES;

@@ -10,18 +10,22 @@ import {
   ArrowRight, Home, CheckCircle2,
 } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Đây vừa là nhãn hiển thị vừa là giá trị lưu DB (salaryType/urgentRole) —
+// hiển thị cho MỌI người xem bất kể locale (JobBoard render verbatim), nên
+// cố tình giữ tiếng Việt, không đưa vào t() để tránh dữ liệu lẫn ngôn ngữ.
 const ROLE_OPTIONS = ["Thợ Bột", "Thợ Dip", "Thợ Nước", "All-around"];
 const SALARY_TYPES_US = ["Bao lương tuần", "% Ăn chia"];
 const SALARY_TYPES_AU = ["Theo giờ AUD", "Theo tuần AUD"];
 
 // Hiệu ứng bấm nút kiểu app native — dùng chung cho mọi nút chạm-để-chọn
-const PRESS = "active:scale-95 transition-transform duration-100";
+const PRESS = "active:scale-[0.98] transition-transform duration-100";
 const ANSWER_DELAY_MS = 250;
 
 interface SurveyAnswerRecord {
@@ -35,6 +39,7 @@ interface SurveyAnswerRecord {
 export default function OwnerRegisterForm() {
   const router = useRouter();
   const { theme } = useContext(AuthSettingsContext);
+  const { t } = useLanguage();
   const { refresh: refreshSession } = useSessionUser();
   const isDark = theme === "dark";
 
@@ -70,7 +75,7 @@ export default function OwnerRegisterForm() {
 
   const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
   const labelClass = isDark ? "text-slate-300" : "text-slate-700";
-  const inputClass = `w-full rounded-xl border px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all ${
+  const inputClass = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all ${
     isDark ? "border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500" : "border-slate-300 bg-white text-slate-900 placeholder-slate-400"
   }`;
 
@@ -79,7 +84,7 @@ export default function OwnerRegisterForm() {
   const handleStartSurvey = () => {
     setError("");
     if (!name.trim() || !salonName.trim() || !email.trim() || !password || !phone.trim() || !city.trim()) {
-      setError("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      setError(t("auth.common.requiredFieldsError"));
       return;
     }
     setPhase("survey");
@@ -137,7 +142,7 @@ export default function OwnerRegisterForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Đăng ký thất bại. Vui lòng thử lại.");
+        setError(data.error || t("auth.owner.registerFailed"));
         setLoading(false);
         return;
       }
@@ -154,7 +159,7 @@ export default function OwnerRegisterForm() {
         router.push("/auth/login");
       }
     } catch {
-      setError("Lỗi kết nối mạng. Vui lòng thử lại.");
+      setError(t("auth.common.networkError"));
       setLoading(false);
     }
   };
@@ -177,14 +182,14 @@ export default function OwnerRegisterForm() {
       <div className="mx-auto w-full max-w-md space-y-6">
         <div className="space-y-2">
           <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-pink-400" : "text-pink-600"}`}>
-            Khảo sát nhanh 30 giây để hệ thống tối ưu ghép thợ và vận hành cho tiệm
+            {t("auth.owner.surveyIntro")}
           </p>
           <div className="flex gap-1.5">
             {SURVEY.map((_, idx) => (
               <div key={idx} className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${idx <= surveyIndex ? "bg-pink-500" : isDark ? "bg-slate-800" : "bg-slate-200"}`} />
             ))}
           </div>
-          <p className={`text-xs ${labelClass}`}>Câu {surveyIndex + 1}/{SURVEY.length} — {q.title}</p>
+          <p className={`text-xs ${labelClass}`}>{t("auth.owner.surveyProgress", { current: surveyIndex + 1, total: SURVEY.length, title: q.title })}</p>
         </div>
 
         {error && (
@@ -230,7 +235,7 @@ export default function OwnerRegisterForm() {
         {loading && (
           <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Đang khởi tạo tiệm của bạn...</span>
+            <span>{t("auth.owner.creatingShop")}</span>
           </div>
         )}
       </div>
@@ -241,10 +246,10 @@ export default function OwnerRegisterForm() {
     <div className="mx-auto w-full max-w-md space-y-6">
       <div className="space-y-2 text-center lg:text-left">
         <h2 className={`text-2xl font-extrabold ${isDark ? "text-white" : "text-slate-900"}`}>
-          🏪 Khởi tạo tiệm & đăng tin gấp
+          {t("auth.owner.heading")}
         </h2>
         <p className={isDark ? "text-slate-400 text-sm" : "text-slate-500 text-sm"}>
-          Điền 1 lần — tin tuyển thợ lên ngay lập tức
+          {t("auth.owner.subheading")}
         </p>
       </div>
 
@@ -257,18 +262,18 @@ export default function OwnerRegisterForm() {
 
       <div className="space-y-4">
         <div>
-          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>Tên chủ tiệm</label>
+          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.nameLabel")}</label>
           <div className="relative">
             <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nguyễn Văn A" className={`${inputClass} pl-11`} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.owner.namePlaceholder")} className={`${inputClass} pl-11`} />
           </div>
         </div>
 
         <div>
-          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>Tên tiệm</label>
+          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.salonLabel")}</label>
           <div className="relative">
             <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-            <input value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder="VD: Happy Nails & Spa" className={`${inputClass} pl-11`} />
+            <input value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder={t("auth.owner.salonPlaceholder")} className={`${inputClass} pl-11`} />
           </div>
         </div>
 
@@ -276,59 +281,59 @@ export default function OwnerRegisterForm() {
           <button
             type="button"
             onClick={() => { setMarket("US"); setState(US_STATES[0]); setCountryCode("+1"); setSalaryType(SALARY_TYPES_US[0]); }}
-            className={`rounded-xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "US" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
+            className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "US" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
           >
-            🇺🇸 Mỹ (US)
+            {t("auth.common.marketUS")}
           </button>
           <button
             type="button"
             onClick={() => { setMarket("AU"); setState(AU_STATES[0]); setCountryCode("+61"); setSalaryType(SALARY_TYPES_AU[0]); }}
-            className={`rounded-xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "AU" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
+            className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "AU" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
           >
-            🇦🇺 Úc (AU)
+            {t("auth.common.marketAU")}
           </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>Bang</label>
+            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.stateLabel")}</label>
             <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
               {states.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>Thành phố</label>
-            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="VD: Los Angeles" className={inputClass} />
+            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.cityLabel")}</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
           </div>
         </div>
 
         <div>
-          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>SĐT chủ tiệm</label>
+          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.phoneLabel")}</label>
           <div className="flex gap-2">
             <select
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value as "+1" | "+61")}
-              className={`rounded-xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}
+              className={`min-h-[48px] rounded-2xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}
             >
               <option value="+1">🇺🇸 +1</option>
               <option value="+61">🇦🇺 +61</option>
             </select>
             <div className="relative flex-1">
               <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555 123 4567" className={`${inputClass} pl-11`} />
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className={`${inputClass} pl-11`} />
             </div>
           </div>
         </div>
 
         <div>
-          <label className={`block text-sm font-bold mb-2 ${labelClass}`}>Vị trí cần tuyển gấp</label>
+          <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.owner.urgentRoleLabel")}</label>
           <div className="flex flex-wrap gap-2">
             {ROLE_OPTIONS.map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => toggleRole(r)}
-                className={`rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${urgentRole.includes(r) ? "border-pink-500 bg-pink-500/15 text-pink-400" : `${cardClass} ${labelClass}`}`}
+                className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${urgentRole.includes(r) ? "border-pink-500 bg-pink-500/15 text-pink-400" : `${cardClass} ${labelClass}`}`}
               >
                 {r}
               </button>
@@ -337,44 +342,44 @@ export default function OwnerRegisterForm() {
         </div>
 
         <div>
-          <label className={`block text-sm font-bold mb-2 ${labelClass}`}>Mức lương</label>
+          <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.owner.salaryLabel")}</label>
           <div className="grid grid-cols-2 gap-2 mb-2">
             {salaryTypes.map((st) => (
               <button
                 key={st}
                 type="button"
                 onClick={() => setSalaryType(st)}
-                className={`rounded-xl py-2.5 text-xs font-bold border-2 ${PRESS} ${salaryType === st ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
+                className={`min-h-[48px] rounded-2xl py-2.5 text-xs font-bold border-2 ${PRESS} ${salaryType === st ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
               >
                 {st}
               </button>
             ))}
           </div>
-          <input value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder="VD: $1,200-1,500/tuần" className={inputClass} />
+          <input value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder={t("auth.owner.salaryPlaceholder")} className={inputClass} />
         </div>
 
         <button
           type="button"
           onClick={() => setHasHousing(!hasHousing)}
-          className={`w-full flex items-center gap-3 rounded-xl p-4 border-2 ${PRESS} ${hasHousing ? "border-emerald-500 bg-emerald-500/10" : cardClass}`}
+          className={`w-full min-h-[48px] flex items-center gap-3 rounded-2xl p-4 border-2 ${PRESS} ${hasHousing ? "border-emerald-500 bg-emerald-500/10" : cardClass}`}
         >
           <Home className={`h-5 w-5 ${hasHousing ? "text-emerald-400" : "text-slate-500"}`} />
-          <span className={`font-bold ${hasHousing ? "text-emerald-300" : labelClass}`}>Có chỗ ở (Housing) cho thợ</span>
+          <span className={`font-bold ${hasHousing ? "text-emerald-300" : labelClass}`}>{t("auth.owner.housing")}</span>
         </button>
 
         <div className="pt-2 border-t border-slate-800/60 space-y-4">
           <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>Email đăng nhập</label>
+            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.emailLoginLabel")}</label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ban@email.com" className={`${inputClass} pl-11`} />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className={`${inputClass} pl-11`} />
             </div>
           </div>
           <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>Mật khẩu</label>
+            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.passwordLabel")}</label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tối thiểu 8 ký tự" className={`${inputClass} pl-11`} />
+              <input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className={`${inputClass} pl-11`} />
             </div>
           </div>
         </div>
@@ -382,17 +387,17 @@ export default function OwnerRegisterForm() {
         <button
           type="button"
           onClick={handleStartSurvey}
-          className={`w-full flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-600/25 ${PRESS}`}
+          className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 py-3.5 text-base font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 ${PRESS}`}
         >
-          <span>Tiếp tục khảo sát nhanh</span>
+          <span>{t("auth.owner.startSurveyButton")}</span>
           <ArrowRight className="h-5 w-5" />
         </button>
       </div>
 
       <p className={`text-center text-sm ${labelClass}`}>
-        Đã có tài khoản?{" "}
-        <Link href="/auth/login" className="font-bold text-pink-500 hover:underline">
-          Đăng nhập ngay
+        {t("auth.common.alreadyHaveAccount")}{" "}
+        <Link href="/auth/login" className="font-bold text-purple-500 hover:text-purple-400 transition-colors">
+          {t("auth.common.loginNow")}
         </Link>
       </p>
     </div>

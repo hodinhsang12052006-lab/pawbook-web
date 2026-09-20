@@ -172,3 +172,33 @@ export async function PUT(req: Request) {
     );
   }
 }
+
+// DELETE own account — required by both App Store (Guideline 5.1.1(v)) and
+// Google Play for any app that supports account creation: users must be able
+// to delete their account from inside the app, not just via a support email.
+// Cascades (see prisma/schema.prisma onDelete: Cascade) take care of Job,
+// TechnicianProfile, Message (sent by this user), and UnlockContact rows.
+// Conversations/messages from the OTHER participant are intentionally left
+// untouched — deleting your account doesn't erase someone else's data.
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: "Vui lòng đăng nhập để xóa tài khoản." },
+        { status: 401 }
+      );
+    }
+
+    const userId = (session.user as any).id;
+    await prisma.user.delete({ where: { id: userId } });
+
+    return NextResponse.json({ message: "Đã xóa tài khoản thành công." });
+  } catch (err: any) {
+    console.error("DELETE profile error:", err);
+    return NextResponse.json(
+      { error: "Lỗi hệ thống khi xóa tài khoản." },
+      { status: 500 }
+    );
+  }
+}

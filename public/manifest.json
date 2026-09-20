@@ -1,21 +1,20 @@
 {
-  "name": "BitPawOS",
-  "short_name": "BitPaw",
-  "description": "Mạng xã hội MMO & Web3",
+  "name": "PawNail Jobs",
+  "short_name": "PawNail",
+  "description": "Sàn kết nối chủ tiệm nail và thợ nail tại Mỹ & Úc — đăng tin tuyển thợ gấp, đăng portfolio tìm việc, nhắn tin và gọi trực tiếp.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#4c1d3d",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "categories": ["business", "productivity"],
   "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "/icons/icon-48.webp", "type": "image/webp", "sizes": "48x48", "purpose": "any maskable" },
+    { "src": "/icons/icon-72.webp", "type": "image/webp", "sizes": "72x72", "purpose": "any maskable" },
+    { "src": "/icons/icon-96.webp", "type": "image/webp", "sizes": "96x96", "purpose": "any maskable" },
+    { "src": "/icons/icon-128.webp", "type": "image/webp", "sizes": "128x128", "purpose": "any maskable" },
+    { "src": "/icons/icon-192.webp", "type": "image/webp", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "/icons/icon-256.webp", "type": "image/webp", "sizes": "256x256", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.webp", "type": "image/webp", "sizes": "512x512", "purpose": "any maskable" }
   ]
 }

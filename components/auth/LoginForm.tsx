@@ -6,46 +6,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lock, Mail, Loader2, AlertCircle } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
-const translations = {
-  vi: {
-    welcome: "Chào mừng trở lại!",
-    desc: "Nhập email và mật khẩu của bạn để truy cập PawNail Jobs.",
-    emailLabel: "Địa chỉ Email",
-    placeholderEmail: "name@example.com",
-    passwordLabel: "Mật khẩu",
-    placeholderPassword: "••••••••",
-    forgotPassword: "Quên mật khẩu?",
-    loginButton: "Đăng nhập",
-    processing: "Đang xử lý...",
-    noAccount: "Chưa có tài khoản?",
-    registerNow: "Đăng ký ngay",
-    errorEmpty: "Vui lòng nhập Email và Mật khẩu.",
-    errorInvalid: "Email hoặc mật khẩu không chính xác.",
-    errorUnknown: "Đã xảy ra lỗi không xác định. Vui lòng thử lại."
-  },
-  en: {
-    welcome: "Welcome back!",
-    desc: "Enter your email and password to access PawNail Jobs.",
-    emailLabel: "Email Address",
-    placeholderEmail: "name@example.com",
-    passwordLabel: "Password",
-    placeholderPassword: "••••••••",
-    forgotPassword: "Forgot password?",
-    loginButton: "Login",
-    processing: "Processing...",
-    noAccount: "Don't have an account?",
-    registerNow: "Register now",
-    errorEmpty: "Please enter Email and Password.",
-    errorInvalid: "Incorrect email or password.",
-    errorUnknown: "Unknown error occurred. Please try again."
-  }
-};
+const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { theme, lang } = useContext(AuthSettingsContext);
-  const t = translations[lang];
+  const { theme } = useContext(AuthSettingsContext);
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,7 +26,7 @@ export default function LoginForm() {
     setLoading(true);
 
     if (!email || !password) {
-      setError(t.errorEmpty);
+      setError(t("auth.login.errorEmpty"));
       setLoading(false);
       return;
     }
@@ -72,7 +40,7 @@ export default function LoginForm() {
 
       if (res?.error) {
         if (res.error === "CredentialsSignin" || res.error.includes("credential")) {
-          setError(t.errorInvalid);
+          setError(t("auth.login.errorInvalid"));
         } else {
           setError(res.error);
         }
@@ -81,7 +49,7 @@ export default function LoginForm() {
         router.refresh();
       }
     } catch (err) {
-      setError(t.errorUnknown);
+      setError(t("auth.login.errorUnknown"));
     } finally {
       setLoading(false);
     }
@@ -95,30 +63,12 @@ export default function LoginForm() {
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
-      {/* Mobile-only Branding */}
-      <div className="block lg:hidden text-center mb-6">
-        <Link href="/" className="inline-flex items-center gap-3">
-          <div className={`h-12 w-12 overflow-hidden rounded-xl border p-0.5 shadow-lg ${
-            theme === "dark" ? "border-blue-500/40 bg-blue-500/10 shadow-blue-500/20" : "border-blue-500/20 bg-blue-50 shadow-blue-500/10"
-          }`}>
-            <img
-              src="/cho1.jpg"
-              alt="PawBook Logo"
-              className="h-full w-full object-cover rounded-lg"
-            />
-          </div>
-          <span className={`bg-gradient-to-r ${theme === "dark" ? "from-blue-400 to-indigo-500" : "from-blue-600 to-indigo-700"} bg-clip-text text-2xl font-black tracking-widest text-transparent uppercase select-none`}>
-            PawNail Jobs
-          </span>
-        </Link>
-      </div>
-
       <div className="space-y-2 text-center lg:text-left">
         <h2 className={`text-2xl font-bold tracking-tight sm:text-3xl ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
-          {t.welcome}
+          {t("auth.login.welcome")}
         </h2>
         <p className={`text-sm ${textClass}`}>
-          {t.desc}
+          {t("auth.login.desc")}
         </p>
       </div>
 
@@ -137,10 +87,10 @@ export default function LoginForm() {
             htmlFor="email"
             className={`block text-xs font-bold ${labelClass}`}
           >
-            {t.emailLabel}
+            {t("auth.login.emailLabel")}
           </label>
           <div className="relative mt-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
               <Mail className="h-4 w-4 text-slate-400" />
             </div>
             <input
@@ -149,8 +99,8 @@ export default function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={t.placeholderEmail}
-              className={`block w-full rounded-xl h-12 pl-10 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${inputBgClass}`}
+              placeholder={t("auth.common.emailPlaceholder")}
+              className={`block w-full min-h-[48px] rounded-2xl h-12 pl-10 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all ${inputBgClass}`}
             />
           </div>
         </div>
@@ -161,17 +111,17 @@ export default function LoginForm() {
               htmlFor="password"
               className={`block text-xs font-bold ${labelClass}`}
             >
-              {t.passwordLabel}
+              {t("auth.login.passwordLabel")}
             </label>
             <a
               href="#"
-              className="text-xs font-semibold text-blue-600 hover:text-blue-500 transition-colors"
+              className="text-xs font-semibold text-purple-500 hover:text-purple-400 transition-colors"
             >
-              {t.forgotPassword}
+              {t("auth.login.forgotPassword")}
             </a>
           </div>
           <div className="relative mt-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
               <Lock className="h-4 w-4 text-slate-400" />
             </div>
             <input
@@ -180,8 +130,8 @@ export default function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={t.placeholderPassword}
-              className={`block w-full rounded-xl h-12 pl-10 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${inputBgClass}`}
+              placeholder="••••••••"
+              className={`block w-full min-h-[48px] rounded-2xl h-12 pl-10 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all ${inputBgClass}`}
             />
           </div>
         </div>
@@ -189,26 +139,26 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 h-12 text-sm font-bold text-white shadow-lg shadow-blue-600/15 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+          className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 min-h-[48px] h-12 text-sm font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 transition-all duration-200 cursor-pointer ${PRESS}`}
         >
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{t.processing}</span>
+              <span>{t("auth.login.processing")}</span>
             </>
           ) : (
-            <span>{t.loginButton}</span>
+            <span>{t("auth.login.loginButton")}</span>
           )}
         </button>
       </form>
 
       <div className={`text-center text-sm border-t pt-4 ${dividerClass} ${textClass}`}>
-        {t.noAccount}{" "}
+        {t("auth.login.noAccount")}{" "}
         <Link
           href="/auth/register"
-          className="font-bold text-blue-600 hover:text-blue-500 transition-colors"
+          className="font-bold text-purple-500 hover:text-purple-400 transition-colors"
         >
-          {t.registerNow}
+          {t("auth.login.registerNow")}
         </Link>
       </div>
     </div>

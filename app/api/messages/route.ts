@@ -355,6 +355,30 @@ export async function POST(req: Request) {
       );
     }
 
+    // Chặn hoạt động 2 chiều: nếu MỘT trong hai người đã chặn người kia (bất
+    // kể ai chặn ai), không ai gửi được tin nhắn mới trong đoạn chat đó nữa.
+    // Chỉ áp dụng cho chat 1-1 — nhóm chat không có khái niệm "chặn 1 người"
+    // rõ ràng như vậy.
+    if (!conversation.isGroup) {
+      const otherParticipant = conversation.participants.find((p) => p.id !== userId);
+      if (otherParticipant) {
+        const blockExists = await prisma.blockedUser.findFirst({
+          where: {
+            OR: [
+              { blockerId: userId, blockedUserId: otherParticipant.id },
+              { blockerId: otherParticipant.id, blockedUserId: userId },
+            ],
+          },
+        });
+        if (blockExists) {
+          return NextResponse.json(
+            { error: "Không thể gửi tin nhắn — một trong hai người đã chặn." },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     // Create the message in database
     const createdMessage = await prisma.message.create({
       data: {

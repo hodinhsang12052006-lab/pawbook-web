@@ -2,10 +2,13 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
+
+const DELETE_CONFIRM_PHRASE = "XÓA TÀI KHOẢN";
 
 const SKILL_OPTIONS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước", "Wax", "Mi/Lông mày"];
 
@@ -28,6 +31,10 @@ export default function ProfilePage() {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [status, setStatus] = useState("AVAILABLE");
   const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -114,6 +121,30 @@ export default function ProfilePage() {
       toast.error("Lỗi mạng khi lưu hồ sơ.", { id: toastId });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Bắt buộc theo chính sách App Store (Guideline 5.1.1(v)) và Google Play —
+  // app cho tạo tài khoản thì phải có đường xóa tài khoản ngay trong app.
+  // Gõ đúng cụm xác nhận (thay vì chỉ 1 nút bấm) để tránh xóa nhầm — đây là
+  // hành động không thể hoàn tác.
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim() !== DELETE_CONFIRM_PHRASE) return;
+    setDeletingAccount(true);
+    try {
+      const res = await fetch("/api/profile", { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Đã xóa tài khoản. Hẹn gặp lại bạn! 👋");
+        await signOut({ redirect: false });
+        router.push("/");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Không thể xóa tài khoản.");
+        setDeletingAccount(false);
+      }
+    } catch {
+      toast.error("Lỗi mạng khi xóa tài khoản.");
+      setDeletingAccount(false);
     }
   };
 
@@ -282,7 +313,69 @@ export default function ProfilePage() {
         >
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> Lưu hồ sơ</>}
         </button>
+
+        {/* Danger zone */}
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5 space-y-3">
+          <h2 className="text-sm font-bold text-red-400 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" /> Vùng nguy hiểm
+          </h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Xóa tài khoản sẽ xóa vĩnh viễn hồ sơ, tin tuyển dụng/portfolio, và tin nhắn bạn đã gửi. Hành động này không thể hoàn tác.
+          </p>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-xs font-bold text-red-400 hover:text-red-300 hover:underline"
+          >
+            Xóa tài khoản
+          </button>
+        </div>
       </main>
+
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm px-0 sm:px-4"
+          onClick={() => !deletingAccount && setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl border border-red-500/30 bg-slate-950 p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/30">
+              <AlertTriangle className="h-6 w-6 text-red-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-extrabold text-white">Xóa tài khoản vĩnh viễn?</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Toàn bộ hồ sơ, tin tuyển dụng/portfolio và tin nhắn của bạn sẽ bị xóa hoàn toàn, không thể khôi phục.
+                Gõ <span className="font-mono font-bold text-red-300">{DELETE_CONFIRM_PHRASE}</span> để xác nhận.
+              </p>
+            </div>
+            <input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder={DELETE_CONFIRM_PHRASE}
+              disabled={deletingAccount}
+              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
+                disabled={deletingAccount}
+                className="flex-1 min-h-[48px] rounded-xl border border-slate-800 text-sm font-bold text-slate-300 disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText.trim() !== DELETE_CONFIRM_PHRASE || deletingAccount}
+                className="flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {deletingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Xóa vĩnh viễn"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

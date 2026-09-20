@@ -5,7 +5,7 @@ import GifPicker from "@/components/chat/GifPicker";
 import CallManager, { CallManagerHandle } from "@/components/chat/CallManager";
 import {
   Send, User, Search, MessageSquare, Loader2, Plus, Users,
-  Smile, X, Lock, Paperclip, Zap, Phone, Video,
+  Smile, X, Lock, Paperclip, Zap, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -190,6 +190,14 @@ export default function MessagesContent({
   const [showGifs, setShowGifs] = useState(false);
   const [chatPanelTab, setChatPanelTab] = useState<"emoji" | "sticker" | "gif">("emoji");
 
+  // Chặn/Báo cáo — bắt buộc theo App Store Guideline 1.2 cho app có nhắn tin
+  // giữa người dùng với nhau.
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [blockActionLoading, setBlockActionLoading] = useState(false);
+
   const chatObserverTarget = useRef<HTMLDivElement>(null);
   const callManagerRef = useRef<CallManagerHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -297,6 +305,78 @@ export default function MessagesContent({
       if (!isSilent) setLoading(false);
     }
   }, [router]);
+
+  // Danh sách userId đã chặn — tải 1 lần lúc mount để biết disable khung
+  // nhập tin nhắn cho đúng conversation (server vẫn là chốt chặn thật, đây
+  // chỉ là UX để không cho gõ tin nhắn vào chat đã chặn).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/block")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.blockedUserIds) setBlockedUserIds(new Set(data.blockedUserIds));
+      })
+      .catch((err) => console.error("Failed to load blocked users:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const isActiveChatBlocked = !!(activeChat && !activeChat.isGroup && blockedUserIds.has(activeChat.id));
+
+  const handleToggleBlock = useCallback(async () => {
+    if (!activeChat || activeChat.isGroup || blockActionLoading) return;
+    setBlockActionLoading(true);
+    setShowChatMenu(false);
+    const wasBlocked = blockedUserIds.has(activeChat.id);
+    try {
+      const res = await fetch(`/api/block${wasBlocked ? `?userId=${activeChat.id}` : ""}`, {
+        method: wasBlocked ? "DELETE" : "POST",
+        headers: wasBlocked ? undefined : { "Content-Type": "application/json" },
+        body: wasBlocked ? undefined : JSON.stringify({ userId: activeChat.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Không thể cập nhật trạng thái chặn.");
+        return;
+      }
+      setBlockedUserIds((prev) => {
+        const next = new Set(prev);
+        if (wasBlocked) next.delete(activeChat.id);
+        else next.add(activeChat.id);
+        return next;
+      });
+      toast.success(wasBlocked ? "Đã bỏ chặn." : "Đã chặn người dùng này.");
+    } catch {
+      toast.error("Lỗi mạng.");
+    } finally {
+      setBlockActionLoading(false);
+    }
+  }, [activeChat, blockedUserIds, blockActionLoading]);
+
+  const handleSubmitReport = useCallback(async () => {
+    if (!activeChat || activeChat.isGroup || !reportReason.trim()) return;
+    setBlockActionLoading(true);
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: activeChat.id, reason: reportReason.trim() }),
+      });
+      if (res.ok) {
+        toast.success("Đã gửi báo cáo — đội ngũ sẽ xem xét sớm.");
+        setShowReportModal(false);
+        setReportReason("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Không thể gửi báo cáo.");
+      }
+    } catch {
+      toast.error("Lỗi mạng.");
+    } finally {
+      setBlockActionLoading(false);
+    }
+  }, [activeChat, reportReason]);
 
   // -------------------------------------------------------------------------
   // Load message history whenever the active chat changes. Zero-latency:
@@ -909,6 +989,41 @@ export default function MessagesContent({
                   >
                     <Video className="h-4.5 w-4.5" />
                   </button>
+
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowChatMenu((v) => !v)}
+                      className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
+                      title="Thêm tùy chọn"
+                    >
+                      <MoreVertical className="h-4.5 w-4.5" />
+                    </button>
+
+                    {showChatMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
+                        <div className="absolute right-0 top-full mt-2 z-50 w-48 rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
+                          <button
+                            onClick={() => { setShowChatMenu(false); setShowReportModal(true); }}
+                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
+                          >
+                            <Flag className="h-4 w-4 text-amber-400" /> Báo cáo người dùng
+                          </button>
+                          <button
+                            onClick={handleToggleBlock}
+                            disabled={blockActionLoading}
+                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-red-400 hover:bg-slate-850 transition-colors disabled:opacity-50"
+                          >
+                            {isActiveChatBlocked ? (
+                              <><ShieldCheck className="h-4 w-4" /> Bỏ chặn người dùng</>
+                            ) : (
+                              <><ShieldOff className="h-4 w-4" /> Chặn người dùng</>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1165,6 +1280,20 @@ export default function MessagesContent({
               </div>
             )}
 
+            {isActiveChatBlocked ? (
+              <div className="p-4 border-t border-slate-850 bg-slate-950 flex-none z-10 flex items-center justify-between gap-3">
+                <p className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                  <ShieldOff className="h-4 w-4 text-red-400 flex-shrink-0" /> Bạn đã chặn người này.
+                </p>
+                <button
+                  onClick={handleToggleBlock}
+                  disabled={blockActionLoading}
+                  className="flex-shrink-0 rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-900 transition-colors disabled:opacity-50"
+                >
+                  Bỏ chặn
+                </button>
+              </div>
+            ) : (
             <div className="p-4 border-t border-slate-850 bg-slate-950 flex-none z-10">
               <form onSubmit={(e) => handleSendMessage(e)} className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -1232,6 +1361,7 @@ export default function MessagesContent({
                 </div>
               </form>
             </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3 animate-fadeIn">
@@ -1243,6 +1373,44 @@ export default function MessagesContent({
           </div>
         )}
       </div>
+
+      {/* REPORT USER MODAL */}
+      {showReportModal && activeChat && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4">
+          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4 animate-scaleUp">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/30">
+              <Flag className="h-6 w-6 text-amber-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-extrabold text-white">Báo cáo {activeChat.name}</h3>
+              <p className="text-sm text-slate-400">Mô tả ngắn gọn lý do báo cáo — đội ngũ sẽ xem xét sớm nhất.</p>
+            </div>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              rows={4}
+              placeholder="VD: Gửi nội dung quấy rối, lừa đảo..."
+              className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowReportModal(false); setReportReason(""); }}
+                disabled={blockActionLoading}
+                className="flex-1 min-h-[48px] rounded-xl border border-slate-800 text-sm font-bold text-slate-300 disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmitReport}
+                disabled={!reportReason.trim() || blockActionLoading}
+                className="flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-sm font-bold text-white disabled:opacity-40 transition-all"
+              >
+                {blockActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gửi báo cáo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CREATE GROUP MODAL */}
       {showGroupModal && (

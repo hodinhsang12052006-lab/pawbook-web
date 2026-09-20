@@ -52,6 +52,13 @@ model User {
   unlocksMade       UnlockContact[]    @relation("UnlockOwner")
   unlocksReceived   UnlockContact[]    @relation("UnlockTechnician")
 
+  // Chặn/Báo cáo — bắt buộc theo App Store Guideline 1.2 (User Generated
+  // Content) cho app có nhắn tin giữa người dùng với nhau.
+  blocksMade        BlockedUser[]      @relation("BlocksMade")
+  blocksReceived    BlockedUser[]      @relation("BlocksReceived")
+  reportsMade       UserReport[]       @relation("ReportsMade")
+  reportsReceived   UserReport[]       @relation("ReportsReceived")
+
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }
@@ -133,6 +140,38 @@ model UnlockContact {
   unlockedAt       DateTime @default(now())
 
   @@unique([ownerId, technicianUserId])
+}
+
+// Chặn — 1 chiều theo ý định người chặn. Enforcement thực tế (chặn gửi tin
+// nhắn) kiểm tra cả 2 chiều giữa 2 user trong app/api/messages/route.ts.
+model BlockedUser {
+  id            String   @id @default(cuid())
+
+  blockerId     String
+  blocker       User     @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  blockedUserId String
+  blockedUser   User     @relation("BlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+
+  @@unique([blockerId, blockedUserId])
+}
+
+// Báo cáo — chỉ lưu lại để đội ngũ vận hành xem xét thủ công, không tự
+// động hành động (không tự khóa tài khoản bị báo cáo).
+model UserReport {
+  id             String   @id @default(cuid())
+
+  reporterId     String
+  reporter       User     @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  reportedUserId String
+  reportedUser   User     @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  reason         String
+
+  createdAt      DateTime @default(now())
 }
 
 model Conversation {

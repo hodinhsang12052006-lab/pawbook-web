@@ -35,6 +35,21 @@ export default function HomePage() {
     if (urlState) setState(urlState);
   }, []);
 
+  // BottomNav (mounted globally in the root layout, outside this component's
+  // tree — unlike Sidebar, which is a direct child here and gets setTab via
+  // prop) can't reach this state directly. Tapping "Thợ"/"Trang chủ" there
+  // while already on "/" is a same-route navigation, so the effect above
+  // (mount-only) never re-runs to pick up the new ?tab= — this event is how
+  // it gets through instead.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const nextTab = (e as CustomEvent<string>).detail;
+      if (nextTab === "jobs" || nextTab === "portfolio") setTab(nextTab);
+    };
+    window.addEventListener("hometab-change", handler);
+    return () => window.removeEventListener("hometab-change", handler);
+  }, []);
+
   const states = market === "US" ? US_STATES : AU_STATES;
   const showHero = !sessionLoading && !sessionUser;
 

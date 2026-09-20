@@ -9,7 +9,7 @@ import {
   Store, Phone, Lock, Mail, User as UserIcon, Loader2, AlertCircle,
   ArrowRight, Home, CheckCircle2,
 } from "lucide-react";
-import { AuthSettingsContext } from "@/app/auth/layout";
+import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";

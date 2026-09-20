@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 // next-pwa ships no TypeScript declarations.
 // @ts-expect-error - untyped CommonJS module
 import withPWAInit from "next-pwa";
@@ -8,9 +9,19 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Default 2MB limit silently skipped our largest vendor chunk (ZegoCloud
+  // call SDK + map/AI libs bundled together, ~5MB) from the offline
+  // precache list every build — bumped just above that chunk's real size so
+  // the service worker actually caches it instead of only warning about it.
+  maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
 });
 
 const nextConfig: NextConfig = {
+  // Next.js was misdetecting the monorepo root because a stray
+  // package-lock.json sits one directory up (in the user's home folder),
+  // outside this project entirely — pin it explicitly instead of letting
+  // Next guess and warn about it on every build.
+  outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
@@ -26,7 +37,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.tenor.com" },
     ],
   },
-  typescript: { ignoreBuildErrors: true },
   async headers() {
     return [
       {

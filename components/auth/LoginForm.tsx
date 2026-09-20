@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lock, Mail, Loader2, AlertCircle } from "lucide-react";
-import { AuthSettingsContext } from "@/app/auth/layout";
+import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 
 const translations = {
   vi: {
@@ -124,7 +124,7 @@ export default function LoginForm() {
 
       {error && (
         <div className={`flex items-center gap-2.5 rounded-xl border p-4 text-sm ${
-          theme === "dark" ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-red-200 bg-red-50 text-red-650"
+          theme === "dark" ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-red-200 bg-red-50 text-red-600"
         }`}>
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <span>{error}</span>
@@ -189,7 +189,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-655 h-12 text-sm font-bold text-white shadow-lg shadow-blue-600/15 hover:from-blue-500 hover:to-indigo-550 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 h-12 text-sm font-bold text-white shadow-lg shadow-blue-600/15 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 cursor-pointer"
         >
           {loading ? (
             <>

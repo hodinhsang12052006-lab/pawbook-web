@@ -71,7 +71,7 @@ export default function JobDetailPage({ params }: PageProps) {
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       <Navbar />
 
-      <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-6 sm:px-6">
+      <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-6 pb-24 md:pb-6 sm:px-6">
         <div className="mb-4">
           <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200">
             <ArrowLeft className="h-4 w-4" /> Quay lại danh sách tin
@@ -106,7 +106,7 @@ export default function JobDetailPage({ params }: PageProps) {
           {job.description && (
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-slate-200">Mô tả công việc</h3>
-              <p className="text-sm leading-relaxed text-slate-350 whitespace-pre-line">{job.description}</p>
+              <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-line">{job.description}</p>
             </div>
           )}
 

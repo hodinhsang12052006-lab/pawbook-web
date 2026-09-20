@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
 
@@ -74,7 +75,12 @@ export async function GET(req: Request) {
         );
       }
 
-      const queryOptions: any = {
+      // `satisfies` (not a `: Prisma.MessageFindManyArgs` annotation) keeps
+      // the literal `include` shape intact for Prisma's return-type
+      // inference — widening to the general Args interface (or `any`, as
+      // this used to be) makes `findMany` fall back to the bare Message
+      // type with no `sender`, even though the query itself does include it.
+      const queryOptions = {
         where: { conversationId: targetConversationId },
         take: limit + 1,
         orderBy: {
@@ -90,12 +96,8 @@ export async function GET(req: Request) {
             },
           },
         },
-      };
-
-      if (cursor) {
-        queryOptions.cursor = { id: cursor };
-        queryOptions.skip = 1;
-      }
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      } satisfies Prisma.MessageFindManyArgs;
 
       const messages = await prisma.message.findMany(queryOptions);
 

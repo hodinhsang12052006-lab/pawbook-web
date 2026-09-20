@@ -46,3 +46,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor native projects — the android/ and ios/ project files themselves
+# ARE meant to be committed (they're not regenerated from nothing; icons,
+# permissions, native config live there), only their local build caches.
+android/.gradle
+android/local.properties
+android/app/build
+android/build
+android/.idea
+android/*.iml
+android/capacitor-cordova-android-plugins/build
+ios/App/Pods
+ios/App/build
+ios/App/*.xcworkspace/xcuserdata
+ios/App/*.xcodeproj/xcuserdata
+ios/App/App/public

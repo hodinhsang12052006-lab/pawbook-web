@@ -37,7 +37,7 @@ export function BitpawMiniApp({ isOpen, onClose }: BitpawMiniAppProps) {
       {/* Sliding bottom sheet container */}
       <div className="fixed bottom-0 inset-x-0 h-[75vh] bg-slate-50 dark:bg-slate-900 rounded-t-3xl shadow-2xl z-50 p-4 flex flex-col transform transition-transform">
         {/* Decorative Drag Handle */}
-        <div className="w-12 h-1 bg-slate-355 dark:bg-slate-700 rounded-full mx-auto mb-3" />
+        <div className="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
@@ -72,10 +72,10 @@ export function BitpawMiniApp({ isOpen, onClose }: BitpawMiniAppProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-750 dark:text-slate-300 flex items-center justify-center gap-1.5 animate-pulse">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 animate-pulse">
               <span>📍 Đang lấy tọa độ...</span>
             </p>
-            <p className="text-xs text-slate-550 dark:text-slate-450 max-w-xs">
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
               Hệ thống đang đồng bộ định vị GPS của bạn để thực hiện check-in vào ca làm việc.
             </p>
           </div>

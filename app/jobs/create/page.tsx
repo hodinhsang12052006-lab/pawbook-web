@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { ArrowLeft, ArrowRight, Loader2, Save, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Link from "next/link";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
@@ -105,9 +105,8 @@ export default function CreateJobPage() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       <Navbar />
-      <Toaster position="top-center" />
 
-      <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8">
+      <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 pb-24 md:pb-8">
         <div className="mb-4">
           <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200">
             <ArrowLeft className="h-4 w-4" /> Quay lại Trang chủ
@@ -117,7 +116,7 @@ export default function CreateJobPage() {
         <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-6 space-y-6">
           <div>
             <h1 className="text-lg font-bold text-white">📢 Đăng Tin Tuyển Thợ — Bước {step}/3</h1>
-            <p className="text-xs text-slate-450 mt-1">Chỉ mất chưa đến 2 phút để tin của bạn lên top.</p>
+            <p className="text-xs text-slate-400 mt-1">Chỉ mất chưa đến 2 phút để tin của bạn lên top.</p>
           </div>
 
           {/* STEP 1: Location */}
@@ -141,19 +140,19 @@ export default function CreateJobPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Bang / Tiểu bang *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Bang / Tiểu bang *</label>
                 <select value={state} onChange={(e) => setState(e.target.value)} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200">
                   {states.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Thành phố *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Thành phố *</label>
                 <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="VD: Los Angeles" className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200 placeholder-slate-600" />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Tên tiệm *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Tên tiệm *</label>
                 <input required value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder="VD: Happy Nails & Spa" className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200 placeholder-slate-600" />
               </div>
 
@@ -172,12 +171,12 @@ export default function CreateJobPage() {
           {step === 2 && (
             <div className="space-y-4 text-sm">
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Tiêu đề tin tuyển dụng *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Tiêu đề tin tuyển dụng *</label>
                 <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VD: Cần thợ Bột/Dip gấp" className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200 placeholder-slate-600" />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Hình thức trả lương *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Hình thức trả lương *</label>
                 <div className="grid grid-cols-2 gap-2">
                   {salaryTypes.map((st) => (
                     <button
@@ -193,17 +192,17 @@ export default function CreateJobPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Mức lương *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Mức lương *</label>
                 <input required value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder={market === "US" ? "VD: $1,200-1,500/tuần" : "VD: $28-32/giờ"} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200 placeholder-slate-600" />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Số điện thoại liên hệ *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Số điện thoại liên hệ *</label>
                 <input required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200 placeholder-slate-600" />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-1.5">Mô tả thêm (không bắt buộc)</label>
+                <label className="block font-bold text-slate-300 mb-1.5">Mô tả thêm (không bắt buộc)</label>
                 <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Yêu cầu kinh nghiệm, môi trường làm việc..." className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200 placeholder-slate-600" />
               </div>
 
@@ -227,7 +226,7 @@ export default function CreateJobPage() {
           {step === 3 && (
             <div className="space-y-5 text-sm">
               <div>
-                <label className="block font-bold text-slate-350 mb-2">Kỹ năng cần tuyển (tick chọn)</label>
+                <label className="block font-bold text-slate-300 mb-2">Kỹ năng cần tuyển (tick chọn)</label>
                 <div className="flex flex-wrap gap-2">
                   {SKILL_OPTIONS.map((s) => (
                     <button
@@ -243,7 +242,7 @@ export default function CreateJobPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-350 mb-2">Quyền lợi (tick chọn)</label>
+                <label className="block font-bold text-slate-300 mb-2">Quyền lợi (tick chọn)</label>
                 <div className="flex flex-wrap gap-2">
                   {BENEFIT_OPTIONS.map((b) => (
                     <button

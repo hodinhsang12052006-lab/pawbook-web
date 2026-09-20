@@ -53,7 +53,7 @@ function CallTimer({ active }: { active: boolean }) {
   const secs = seconds % 60;
 
   return (
-    <p className="text-3xs text-emerald-450 font-bold tracking-widest font-mono uppercase bg-slate-900 border border-slate-800 px-3 py-1 rounded-full animate-pulse shadow-md">
+    <p className="text-3xs text-emerald-400 font-bold tracking-widest font-mono uppercase bg-slate-900 border border-slate-800 px-3 py-1 rounded-full animate-pulse shadow-md">
       🟢 Thời lượng cuộc gọi: {mins.toString().padStart(2, "0")}:{secs.toString().padStart(2, "0")}
     </p>
   );
@@ -138,6 +138,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     if (!currentUserId) return;
 
     const pusher = getPusherClient();
+    if (!pusher) return;
     const channelName = `private-chat-${currentUserId}`;
     const channel = pusher.subscribe(channelName);
 
@@ -227,7 +228,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetId: remoteTargetId, action: "candidate-batch", candidates: batch }),
-      });
+      }).catch((err) => console.error("Failed to flush ICE candidates:", err));
     };
 
     pc.onicecandidate = (event) => {
@@ -355,7 +356,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetId, action: "camera", videoOff: nextMute }),
-      });
+      }).catch((err) => console.error("Failed to broadcast camera status:", err));
     }
   };
 
@@ -451,7 +452,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                 <button
                   type="button"
                   onClick={toggleMic}
-                  className={`h-13 w-13 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${micMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
+                  className={`h-[52px] w-[52px] rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${micMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
                   title={micMuted ? t("callUI.unmute") : t("callUI.mute")}
                 >
                   {micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -470,7 +471,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                   <button
                     type="button"
                     onClick={() => toast.success("🔊 Đã chuyển sang loa ngoài")}
-                    className="h-13 w-13 rounded-full bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15 flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
+                    className="h-[52px] w-[52px] rounded-full bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15 flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
                     title={t("callUI.speaker")}
                   >
                     <Volume2 className="h-5 w-5" />
@@ -479,7 +480,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                   <button
                     type="button"
                     onClick={toggleCamera}
-                    className={`h-13 w-13 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${cameraMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
+                    className={`h-[52px] w-[52px] rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${cameraMuted ? "bg-white text-slate-900" : "bg-white/10 border border-white/10 text-slate-100 hover:bg-white/15"}`}
                     title={cameraMuted ? t("callUI.cameraOn") : t("callUI.cameraOff")}
                   >
                     {cameraMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}

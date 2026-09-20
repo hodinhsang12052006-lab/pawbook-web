@@ -1,64 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, startTransition } from "react";
+import React from "react";
 import { Plus, MessageSquare, Sparkles } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import toast from "react-hot-toast";
-import { getPusherClient } from "@/lib/pusherClient";
-import { chatChannelName } from "@/lib/pusherChannel";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 
 export default function Navbar() {
   const router = useRouter();
-  const pathname = usePathname();
   const { t } = useLanguage();
-  const [hasUnread, setHasUnread] = useState(false);
   const { user: sessionUser, loading: loadingSession } = useSessionUser();
-
-  // Reset unread message indicator when navigating to chat page
-  useEffect(() => {
-    if (pathname && pathname.startsWith("/messages")) {
-      setHasUnread(false);
-    }
-  }, [pathname]);
-
-  // Global Real-time Message notifications listener via Pusher
-  useEffect(() => {
-    if (!sessionUser?.id) return;
-
-    const pusher = getPusherClient();
-    if (!pusher) return;
-
-    const channelName = chatChannelName(String(sessionUser.id).trim());
-    const channel = pusher.subscribe(channelName);
-
-    const newMessageHandler = (data: any) => {
-      const message = data?.message || data;
-      if (!message) return;
-      if (message.senderId !== sessionUser.id) {
-        if (!pathname || !pathname.startsWith("/messages")) {
-          setHasUnread(true);
-          toast.success(
-            `Tin nhắn mới từ ${message.sender?.name || "ai đó"}: ${(message.content || "").substring(0, 20)}...`,
-            { icon: "💬", position: "top-right" }
-          );
-        }
-      }
-      startTransition(() => {
-        router.refresh();
-      });
-    };
-
-    channel.bind("new-message", newMessageHandler);
-
-    return () => {
-      channel.unbind("new-message", newMessageHandler);
-      pusher.unsubscribe(channelName);
-    };
-  }, [sessionUser?.id, pathname]);
+  const { unreadCount, resetUnread } = useUnreadMessages();
 
   const userAvatar = sessionUser?.avatarUrl || "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=100&auto=format&fit=crop&q=80";
 
@@ -87,7 +42,7 @@ export default function Navbar() {
               {sessionUser.role === "OWNER" ? (
                 <button
                   onClick={() => router.push("/jobs/create")}
-                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-650 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-550 transition-all duration-200 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
                   title="Đăng tin tuyển thợ"
                 >
                   <Plus className="h-4 w-4" />
@@ -96,7 +51,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push("/profile")}
-                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-650 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-550 transition-all duration-200 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
                   title="Đăng ảnh portfolio"
                 >
                   <Plus className="h-4 w-4" />
@@ -108,14 +63,16 @@ export default function Navbar() {
                 <Link
                   href="/messages"
                   prefetch={true}
-                  onClick={() => setHasUnread(false)}
+                  onClick={resetUnread}
                   className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors relative"
                   title={t("menu.messages")}
                 >
                   <div className="relative">
                     <MessageSquare className="h-4.5 w-4.5" />
-                    {hasUnread && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-slate-950 animate-pulse"></span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-slate-950 bg-red-500 px-1 text-[9px] font-bold leading-none text-white animate-pulse">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
                     )}
                   </div>
                 </Link>

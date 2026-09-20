@@ -249,7 +249,7 @@ export default function VideoCallRoom({
           className={`flex items-center justify-center h-10 w-10 rounded-full transition-all active:scale-95 cursor-pointer ${
             beautyEnabled 
               ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 border border-amber-400/20" 
-              : "bg-slate-800 hover:bg-slate-700 text-slate-350"
+              : "bg-slate-800 hover:bg-slate-700 text-slate-300"
           }`}
           title="Bật/Tắt Beauty Filter"
         >
@@ -259,7 +259,7 @@ export default function VideoCallRoom({
         {/* End Call Button */}
         <button
           onClick={endCall}
-          className="flex items-center justify-center h-10 w-12 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white transition-all active:scale-95 cursor-pointer shadow-lg shadow-rose-650/20"
+          className="flex items-center justify-center h-10 w-12 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white transition-all active:scale-95 cursor-pointer shadow-lg shadow-rose-600/20"
           title="Kết thúc cuộc gọi"
         >
           <PhoneOff className="h-4.5 w-4.5" />

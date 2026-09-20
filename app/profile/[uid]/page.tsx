@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play } from "lucide-react";
+import { Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSessionUser } from "@/lib/SessionUserContext";
+import UnlockChatModal from "@/components/profile/UnlockChatModal";
 
 interface PageProps {
   params: Promise<{ uid: string }>;
@@ -12,10 +14,19 @@ interface PageProps {
 
 export default function PublicProfilePage({ params }: PageProps) {
   const router = useRouter();
+  const { user: viewer } = useSessionUser();
   const [uid, setUid] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Paywall "Mở khóa kết nối trực tiếp" — chỉ áp dụng khi Chủ tiệm xem hồ
+  // sơ của Thợ (chiều ngược lại — thợ ứng tuyển job của chủ — vẫn nhắn tin
+  // tự do, không gate, vì đó là hành động cốt lõi cần frictionless).
+  const isOwnerViewingTechnician = viewer?.role === "OWNER" && profile?.role === "TECHNICIAN" && viewer.id !== profile.id;
+  const [unlocked, setUnlocked] = useState(false);
+  const [checkingUnlock, setCheckingUnlock] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
 
   useEffect(() => {
     params.then((p) => setUid(p.uid));
@@ -37,6 +48,41 @@ export default function PublicProfilePage({ params }: PageProps) {
     }
     load();
   }, [uid]);
+
+  useEffect(() => {
+    if (!isOwnerViewingTechnician) return;
+    let cancelled = false;
+    async function checkUnlock() {
+      setCheckingUnlock(true);
+      try {
+        const res = await fetch(`/api/unlock?technicianUserId=${profile.id}`);
+        const data = await res.json();
+        if (!cancelled) setUnlocked(Boolean(data.unlocked));
+      } catch {
+        // Fail open to "locked" — nếu API lỗi thì vẫn hiện paywall thay vì
+        // giả định đã mở khóa và lộ luôn quyền nhắn tin.
+      } finally {
+        if (!cancelled) setCheckingUnlock(false);
+      }
+    }
+    checkUnlock();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwnerViewingTechnician, profile?.id]);
+
+  const ownerPains: string[] = viewer?.diagnosedPains ? String(viewer.diagnosedPains).split(",").filter(Boolean) : [];
+
+  const goToChat = () => router.push(`/messages?to=${profile.id}`);
+
+  const handleContactClick = () => {
+    if (isOwnerViewingTechnician && !unlocked) {
+      setShowUnlockModal(true);
+      return;
+    }
+    goToChat();
+  };
 
   if (loading) {
     return (
@@ -67,7 +113,7 @@ export default function PublicProfilePage({ params }: PageProps) {
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       <Navbar />
 
-      <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 space-y-6">
+      <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 pb-24 md:pb-8 space-y-6">
         <div className="flex items-center gap-4">
           <img src={profile.avatarUrl} alt={profile.name} className="h-20 w-20 rounded-full object-cover border-2 border-pink-500/50" />
           <div className="min-w-0">
@@ -82,11 +128,35 @@ export default function PublicProfilePage({ params }: PageProps) {
         </div>
 
         <button
-          onClick={() => router.push(`/messages?to=${profile.id}`)}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-600/25 transition-all"
+          onClick={handleContactClick}
+          disabled={isOwnerViewingTechnician && checkingUnlock}
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pink-500 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-600/25 transition-all disabled:opacity-60"
         >
-          <MessageCircle className="h-5 w-5" /> Nhắn tin {profile.role === "TECHNICIAN" ? "tuyển dụng" : "liên hệ"}
+          {isOwnerViewingTechnician && checkingUnlock ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isOwnerViewingTechnician && !unlocked ? (
+            <Lock className="h-5 w-5" />
+          ) : (
+            <MessageCircle className="h-5 w-5" />
+          )}
+          {isOwnerViewingTechnician && !unlocked && !checkingUnlock
+            ? "Mở khóa liên hệ trực tiếp"
+            : `Nhắn tin ${profile.role === "TECHNICIAN" ? "tuyển dụng" : "liên hệ"}`}
         </button>
+
+        {showUnlockModal && (
+          <UnlockChatModal
+            technicianUserId={profile.id}
+            technicianName={profile.name}
+            ownerPains={ownerPains}
+            onClose={() => setShowUnlockModal(false)}
+            onUnlocked={() => {
+              setUnlocked(true);
+              setShowUnlockModal(false);
+              goToChat();
+            }}
+          />
+        )}
 
         {/* Technician portfolio */}
         {profile.role === "TECHNICIAN" && tech && (

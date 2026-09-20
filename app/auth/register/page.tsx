@@ -2,7 +2,7 @@
 
 import React, { useContext, useEffect, useState } from "react";
 import { Sparkles, Store, ArrowRight } from "lucide-react";
-import { AuthSettingsContext } from "@/app/auth/layout";
+import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
 import OwnerRegisterForm from "@/components/auth/OwnerRegisterForm";
 

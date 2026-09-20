@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
+import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import {
   Phone, Lock, Mail, User as UserIcon, Loader2, AlertCircle,
   ArrowLeft, ArrowRight, Upload, X, Flame, CheckCircle2, RefreshCw,
 } from "lucide-react";
-import { AuthSettingsContext } from "@/app/auth/layout";
+import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
@@ -107,13 +108,20 @@ export default function TechnicianRegisterForm() {
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      for (const file of Array.from(files).slice(0, 5 - portfolioImages.length)) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (res.ok && data.url) {
-          setPortfolioImages((prev) => [...prev, data.url]);
+      for (const rawFile of Array.from(files).slice(0, 5 - portfolioImages.length)) {
+        try {
+          const file = await prepareFileForUpload(rawFile);
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          const data = await res.json();
+          if (res.ok && data.url) {
+            setPortfolioImages((prev) => [...prev, data.url]);
+          } else {
+            toast.error(data.error || `Không thể tải "${rawFile.name}" lên.`);
+          }
+        } catch (err) {
+          toast.error(err instanceof FileTooLargeError ? err.message : `Lỗi mạng khi tải "${rawFile.name}" lên.`);
         }
       }
     } finally {

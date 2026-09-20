@@ -93,28 +93,10 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           </nav>
         </div>
       </aside>
-
-      {/* Mobile Bottom Navigation Bar: fixed, space-saving icon-only panel */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#0a0f1d]/95 border-t border-slate-850 py-1.5 px-2 flex items-center justify-around backdrop-blur-lg shadow-2xl">
-        {menuItems.slice(0, 5).map((item) => {
-          const Icon = item.icon;
-          const isActive = checkIsActive(item.id);
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleNavigation(item.id, item.route)}
-              title={item.label}
-              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 active:scale-95 ${
-                isActive
-                  ? "bg-pink-600/10 border border-pink-500/20 text-pink-400"
-                  : "text-slate-500 hover:text-slate-300 border border-transparent"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-            </button>
-          );
-        })}
-      </nav>
+      {/* Mobile bottom navigation now lives globally in
+          components/layout/BottomNav.tsx (mounted once in app/layout.tsx) —
+          this local one only ever covered the 2 homepage tabs and vanished
+          on every other route (messages, profile, job detail...). */}
     </>
   );
 }

@@ -1,7 +1,7 @@
 import MessagesContent from "@/components/chat/MessagesContent";
 import Navbar from "@/components/layout/Navbar";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 

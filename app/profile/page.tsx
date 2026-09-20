@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 
 const SKILL_OPTIONS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước", "Wax", "Mi/Lông mày"];
 
@@ -63,11 +64,12 @@ export default function ProfilePage() {
   const toggleSpecialty = (s: string) => setSpecialties((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
     setUploading(true);
     const toastId = toast.loading("Đang tải ảnh lên...");
     try {
+      const file = await prepareFileForUpload(rawFile);
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: formData });
@@ -78,8 +80,8 @@ export default function ProfilePage() {
       } else {
         toast.error(data.error || "Tải ảnh thất bại.", { id: toastId });
       }
-    } catch {
-      toast.error("Lỗi mạng khi tải ảnh.", { id: toastId });
+    } catch (err) {
+      toast.error(err instanceof FileTooLargeError ? err.message : "Lỗi mạng khi tải ảnh.", { id: toastId });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -140,7 +142,6 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       <Navbar />
-      <Toaster position="top-center" />
 
       <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 space-y-6 pb-24">
         <div className="flex items-center gap-4">

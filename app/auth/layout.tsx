@@ -1,21 +1,10 @@
 "use client";
 
-import React, { createContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Sun, Moon, Globe } from "lucide-react";
 import { SPARKLE_DOTS } from "@/lib/sparkleDots";
-
-export const AuthSettingsContext = createContext<{
-  theme: "light" | "dark";
-  toggleTheme: () => void;
-  lang: "vi" | "en";
-  setLang: (l: "vi" | "en") => void;
-}>({
-  theme: "dark",
-  toggleTheme: () => {},
-  lang: "vi",
-  setLang: () => {}
-});
+import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 
 export default function CustomAuthLayout({
   children,
@@ -56,7 +45,7 @@ export default function CustomAuthLayout({
           <button
             onClick={toggleTheme}
             className={`flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200/20 bg-white/10 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 ${
-              theme === "dark" ? "text-amber-400" : "text-indigo-650"
+              theme === "dark" ? "text-amber-400" : "text-indigo-600"
             }`}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >

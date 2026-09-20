@@ -8,8 +8,9 @@ import {
   Smile, X, Lock, Paperclip, Zap, Phone, Video,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { getPusherClient } from "@/lib/pusherClient";
+import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 
@@ -482,6 +483,7 @@ export default function MessagesContent({
     if (!currentUser?.id) return;
 
     const pusher = getPusherClient();
+    if (!pusher) return;
     const channelName = `private-chat-${currentUser.id}`;
     const channel = pusher.subscribe(channelName);
 
@@ -706,10 +708,11 @@ export default function MessagesContent({
     fileInput.type = "file";
     fileInput.accept = "image/*";
     fileInput.onchange = async () => {
-      const file = fileInput.files?.[0];
-      if (!file) return;
+      const rawFile = fileInput.files?.[0];
+      if (!rawFile) return;
       const toastId = toast.loading("Đang tải ảnh đính kèm lên Cloudinary...");
       try {
+        const file = await prepareFileForUpload(rawFile);
         const formData = new FormData();
         formData.append("file", file);
         const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
@@ -721,7 +724,7 @@ export default function MessagesContent({
           toast.error(uploadData.error || "Tải ảnh lên thất bại.", { id: toastId });
         }
       } catch (err) {
-        toast.error("Lỗi mạng khi tải ảnh.", { id: toastId });
+        toast.error(err instanceof FileTooLargeError ? err.message : "Lỗi mạng khi tải ảnh.", { id: toastId });
       }
     };
     fileInput.click();
@@ -858,7 +861,7 @@ export default function MessagesContent({
       <div className={`flex-1 flex flex-col h-full overflow-hidden bg-slate-900 relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
         {activeChat ? (
           <>
-            <div className="p-4 border-b border-slate-855 bg-slate-950 flex items-center justify-between gap-3 flex-none z-10">
+            <div className="p-4 border-b border-slate-850 bg-slate-950 flex items-center justify-between gap-3 flex-none z-10">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveChat(null)}
@@ -894,14 +897,14 @@ export default function MessagesContent({
                 <div className="flex items-center gap-2.5">
                   <button
                     onClick={() => callManagerRef.current?.startCall("audio")}
-                    className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-350 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
+                    className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
                     title="Cuộc gọi thoại bảo mật"
                   >
                     <Phone className="h-4.5 w-4.5" />
                   </button>
                   <button
                     onClick={() => callManagerRef.current?.startCall("video")}
-                    className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-350 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
+                    className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
                     title="Cuộc gọi video thời gian thực"
                   >
                     <Video className="h-4.5 w-4.5" />
@@ -914,7 +917,7 @@ export default function MessagesContent({
               <div ref={chatObserverTarget} className="h-2 w-full flex-none" />
 
               {loadingMoreChatMessages && (
-                <div className="flex items-center justify-center py-2 text-4xs font-bold text-slate-550 gap-1.5 animate-fadeIn flex-none">
+                <div className="flex items-center justify-center py-2 text-4xs font-bold text-slate-500 gap-1.5 animate-fadeIn flex-none">
                   <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
                   <span>{t("messenger.loadingHistory")}</span>
                 </div>
@@ -993,7 +996,7 @@ export default function MessagesContent({
                                 <p className="font-extrabold text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                                   <span className="text-emerald-500">⏱️</span> GPS Chấm Công Thành Công
                                 </p>
-                                <div className="text-3xs space-y-1 mt-1 text-emerald-250/90 leading-relaxed font-semibold">
+                                <div className="text-3xs space-y-1 mt-1 text-emerald-300/90 leading-relaxed font-semibold">
                                   <p>✅ Đã chấm công thành công lúc 08:00 AM.</p>
                                   <p>📍 Vị trí: Trùng khớp với tọa độ Radar.</p>
                                 </div>
@@ -1002,7 +1005,7 @@ export default function MessagesContent({
                               <div
                                 className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${isSelf
                                   ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-md shadow-blue-600/10"
-                                  : "bg-slate-800 text-white rounded-2xl rounded-bl-sm border border-slate-750"
+                                  : "bg-slate-800 text-white rounded-2xl rounded-bl-sm border border-slate-700"
                                   }`}
                               >
                                 {msg.type === "IMAGE" ? (
@@ -1088,7 +1091,7 @@ export default function MessagesContent({
             </div>
 
             {(showEmoji || showGifs) && (
-              <div className="absolute bottom-24 left-4 right-4 bg-slate-950 border border-slate-855 rounded-2xl p-4 shadow-2xl z-20 h-80 flex flex-col animate-fadeIn">
+              <div className="absolute bottom-24 left-4 right-4 bg-slate-950 border border-slate-850 rounded-2xl p-4 shadow-2xl z-20 h-80 flex flex-col animate-fadeIn">
                 <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
                   <div className="flex items-center gap-3">
                     <button
@@ -1162,7 +1165,7 @@ export default function MessagesContent({
               </div>
             )}
 
-            <div className="p-4 border-t border-slate-855 bg-slate-950 flex-none z-10">
+            <div className="p-4 border-t border-slate-850 bg-slate-950 flex-none z-10">
               <form onSubmit={(e) => handleSendMessage(e)} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <button
@@ -1217,7 +1220,7 @@ export default function MessagesContent({
                     }}
                     disabled={sending}
                     placeholder={t("messenger.inputPlaceholder")}
-                    className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-550 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"
+                    className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-inner"
                   />
                   <button
                     type="submit"
@@ -1293,7 +1296,7 @@ export default function MessagesContent({
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="block text-3xs font-bold text-slate-200 truncate">{user.name}</span>
                                 {user.isInternal && (
-                                  <span className="inline-flex items-center text-[7px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-450 px-1 py-0.1 rounded-full">
+                                  <span className="inline-flex items-center text-[7px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded-full">
                                     ✓ Nội bộ
                                   </span>
                                 )}
@@ -1334,7 +1337,6 @@ export default function MessagesContent({
         </div>
       )}
 
-      <Toaster />
     </div>
   );
 }

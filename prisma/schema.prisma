@@ -47,6 +47,11 @@ model User {
   conversations     Conversation[]     @relation("UserConversations")
   messages          Message[]
 
+  // Paywall "Mở khóa kết nối trực tiếp" — chủ tiệm (OWNER) unlock quyền
+  // nhắn tin/gọi 1 thợ cụ thể sau khi hoàn tất khảo sát chuyên sâu.
+  unlocksMade       UnlockContact[]    @relation("UnlockOwner")
+  unlocksReceived   UnlockContact[]    @relation("UnlockTechnician")
+
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }
@@ -103,6 +108,31 @@ model TechnicianProfile {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// Paywall "Mở khóa kết nối trực tiếp": 1 bản ghi = 1 chủ tiệm (OWNER) đã mở
+// khóa quyền nhắn tin/gọi 1 thợ cụ thể. @@unique đảm bảo mở 1 lần là xong,
+// không bao giờ bị hỏi lại khảo sát cho cùng cặp owner-thợ đó lần thứ 2.
+model UnlockContact {
+  id               String   @id @default(cuid())
+
+  ownerId          String
+  owner            User     @relation("UnlockOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  technicianUserId String
+  technician       User     @relation("UnlockTechnician", fields: [technicianUserId], references: [id], onDelete: Cascade)
+
+  // Danh sách tag giải pháp họ tick muốn kích hoạt trong bước khảo sát
+  // chuyên sâu (con của diagnosedPains), JSON-encoded string[]. VD:
+  // ["NEED_TURN_AND_TIP_POS","NEED_AI_CRM_QR"]
+  deepSurveyAnswers String?
+
+  // "THIS_WEEK" | "NEXT_WEEK" | "URGENT_24H"
+  hiringTimeline   String?
+
+  unlockedAt       DateTime @default(now())
+
+  @@unique([ownerId, technicianUserId])
 }
 
 model Conversation {

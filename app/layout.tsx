@@ -31,7 +31,9 @@ export const metadata: Metadata = {
 
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { SessionUserProvider } from "@/lib/SessionUserContext";
+import { UnreadMessagesProvider } from "@/lib/UnreadMessagesContext";
 import FomoToast from "@/components/FomoToast";
+import BottomNav from "@/components/layout/BottomNav";
 
 export default function RootLayout({
   children,
@@ -47,9 +49,12 @@ export default function RootLayout({
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
         <LanguageProvider>
           <SessionUserProvider>
-            <Toaster position="top-center" />
-            {children}
-            <FomoToast />
+            <UnreadMessagesProvider>
+              <Toaster position="top-center" />
+              {children}
+              <FomoToast />
+              <BottomNav />
+            </UnreadMessagesProvider>
           </SessionUserProvider>
         </LanguageProvider>
       </body>

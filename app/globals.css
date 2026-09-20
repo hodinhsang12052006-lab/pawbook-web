@@ -8,6 +8,21 @@
   --color-text-light: #f8fafc; /* slate-50 */
   --color-text-muted: #94a3b8; /* slate-400 */
   --color-border-dark: #1e293b; /* slate-800 */
+
+  /* `slate-850` was used as a subtle divider tone (between slate-800 and
+     slate-900) across ~10 files, but Tailwind's default palette has no such
+     shade — every one of those classes was silently dropped (no CSS emitted
+     at all), so those borders/dividers never actually rendered. Defining it
+     for real here fixes every existing usage without touching those files. */
+  --color-slate-850: #172033;
+
+  /* Same story for `text-3xs`/`text-4xs`, used ~17 times in the chat/call UI
+     for the smallest captions/badges below Tailwind's default `text-xs` —
+     never rendered any font-size at all until defined here. */
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.875rem;
+  --text-4xs: 0.5625rem;
+  --text-4xs--line-height: 0.75rem;
 }
 
 :root {

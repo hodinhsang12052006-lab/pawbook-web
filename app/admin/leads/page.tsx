@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   Loader2, ArrowLeft, Phone, Copy, Star, X, ChevronRight, Clock,
   Flame, Home, CheckCircle2, XCircle, Sparkles, ShieldAlert,
@@ -491,7 +491,6 @@ export default function AdminLeadsPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <Toaster position="top-center" />
 
       <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
@@ -509,7 +508,7 @@ export default function AdminLeadsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-5">
+      <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6 sm:px-6 space-y-5">
         {/* Tabs */}
         <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900/40 border border-slate-850 max-w-md">
           <button

@@ -40,7 +40,7 @@ export default function BottomNav() {
   const isHome = pathname === "/";
   const isTechsTabActive = isHome && tab === "portfolio";
 
-  const goToTab = (nextTab: "jobs" | "portfolio") => {
+  const goToTab = (nextTab: "feed" | "jobs" | "portfolio") => {
     setTab(nextTab); // optimistic — không cần đợi navigation round-trip
     if (isHome) {
       // Cùng route "/" — Next không remount app/page.tsx nên effect đọc
@@ -56,7 +56,7 @@ export default function BottomNav() {
       id: "home",
       label: "Trang chủ",
       icon: Home,
-      onClick: () => goToTab("jobs"),
+      onClick: () => goToTab("feed"),
       active: isHome && !isTechsTabActive,
     },
     {

@@ -66,15 +66,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<!-- Bắt buộc phải có mô tả — thiếu key này App Store review sẽ reject
-	     thẳng ngay khi thấy app gọi API camera/thư viện ảnh/vị trí. -->
+	<!-- Bắt buộc phải có mô tả — thiếu key này khiến app CRASH ngay lập tức
+	     (không chỉ bị reject) khi code gọi API camera/mic/thư viện ảnh tương
+	     ứng, vì iOS chặn cứng ở tầng hệ điều hành, không phải chỉ ở review. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Cho phép chụp ảnh để tải lên portfolio tay nghề của bạn.</string>
+	<string>Cho phép chụp ảnh để tải lên portfolio tay nghề, và dùng camera khi gọi video với chủ tiệm/thợ khác.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Cho phép dùng micro để thực hiện cuộc gọi thoại/video với chủ tiệm và thợ khác trên PawNail Jobs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Cho phép chọn ảnh/video từ thư viện để tải lên portfolio tay nghề.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Cho phép lưu ảnh vào thư viện của bạn.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Dùng vị trí để hỗ trợ chấm công GPS và gợi ý tiệm/thợ gần bạn.</string>
 </dict>
 </plist>

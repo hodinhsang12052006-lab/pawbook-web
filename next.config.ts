@@ -14,6 +14,13 @@ const withPWA = withPWAInit({
   // precache list every build — bumped just above that chunk's real size so
   // the service worker actually caches it instead of only warning about it.
   maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+  // Without this, a fully-offline visit to an uncached route showed the
+  // browser's generic native offline error page instead of anything
+  // PawNail-branded. Workbox serves this static, precached page for any
+  // navigation request that fails purely because there's no network.
+  fallbacks: {
+    document: "/offline",
+  },
 });
 
 const nextConfig: NextConfig = {

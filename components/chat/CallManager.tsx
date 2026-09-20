@@ -17,7 +17,7 @@ const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
   ),
 });
 
-interface CallPartner {
+export interface CallPartner {
   id: string;
   name: string;
   avatarUrl: string;
@@ -29,12 +29,10 @@ interface CallManagerProps {
   currentUserId: string;
   currentUserName: string;
   currentUserAvatar: string | null;
-  activePartner: CallPartner | null;
 }
 
 export interface CallManagerHandle {
-  startCall: (type: "audio" | "video") => void;
-  canCall: boolean;
+  startCall: (partner: CallPartner, type: "audio" | "video") => void;
 }
 
 function CallTimer({ active }: { active: boolean }) {
@@ -63,16 +61,19 @@ const AVATAR_FALLBACK = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=ffffff&bold=true&format=png`;
 
 // Entirely self-contained: owns its own Pusher subscription for call
-// signaling (separate from the messaging channel binding in
-// MessagesContent), its own WebRTC peer connection, and its own render tree.
-// MessagesContent mounts exactly ONE instance of this UNCONDITIONALLY at the
-// top of its JSX (not nested inside "activeChat ? ... : ..."), so neither
-// switching chats, receiving a message, nor deselecting the chat entirely
-// (e.g. the mobile "Back" button) ever unmounts it mid-call. The header's
-// call-trigger buttons live in MessagesContent and reach this component via
-// the imperative `startCall` handle exposed below.
+// signaling, its own WebRTC peer connection, and its own render tree. Mounted
+// exactly ONCE, globally, by CallManagerProvider (lib/CallManagerContext.tsx)
+// at the root layout — NOT inside any single page — so the incoming-call
+// subscription and this component's full-screen ringing/call overlay stay
+// alive no matter what route the user is currently on, not just while
+// /messages is open. Any page that needs to start an outgoing call (e.g. the
+// chat header in MessagesContent) reaches this instance via the
+// `useCallManager()` hook, which forwards to the imperative `startCall`
+// handle exposed below — the target partner is passed in per-call rather
+// than held as a prop, since this component no longer belongs to any one
+// chat screen.
 const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function CallManager(
-  { currentUserId, currentUserName, currentUserAvatar, activePartner },
+  { currentUserId, currentUserName, currentUserAvatar },
   ref
 ) {
   const { t } = useLanguage();
@@ -249,9 +250,9 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     return pc;
   }, []);
 
-  const handleStartCall = useCallback(async (type: "audio" | "video") => {
-    if (!activePartner || activePartner.isGroup) return;
-    setCalleeSnapshot(activePartner);
+  const handleStartCall = useCallback(async (partner: CallPartner, type: "audio" | "video") => {
+    if (!partner || partner.isGroup) return;
+    setCalleeSnapshot(partner);
     setCallType(type);
     setShowCallingModal(true);
     setCallConnected(false);
@@ -263,7 +264,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       });
       localStreamRef.current = stream;
 
-      const pc = setupPeerConnection(activePartner.id);
+      const pc = setupPeerConnection(partner.id);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       const offer = await pc.createOffer();
@@ -272,14 +273,14 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       await fetch("/api/calls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetId: activePartner.id, action: "offer", callType: type, sdp: offer }),
+        body: JSON.stringify({ targetId: partner.id, action: "offer", callType: type, sdp: offer }),
       });
     } catch (err) {
       console.error("Start call failed:", err);
       toast.error("Không thể truy cập camera hoặc micro.");
       cleanupCall();
     }
-  }, [activePartner, setupPeerConnection, cleanupCall]);
+  }, [setupPeerConnection, cleanupCall]);
 
   const handleAcceptCall = useCallback(async () => {
     if (!callerInfo) return;
@@ -364,13 +365,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const displayAvatar = calleeSnapshot?.avatarUrl || AVATAR_FALLBACK(displayName);
   const roomId = calleeSnapshot?.conversationId || "call-room-" + (calleeSnapshot?.id || callerInfo?.id || "unknown");
 
-  // Exposed to MessagesContent so the header (which only exists while a chat
-  // is open) can trigger a call without this component needing to live
-  // inside that conditional — this component itself stays mounted always.
+  // Exposed via useCallManager() (lib/CallManagerContext.tsx) so any page —
+  // not just a chat header — can trigger an outgoing call without this
+  // component needing to live inside that page's tree.
   useImperativeHandle(ref, () => ({
     startCall: handleStartCall,
-    canCall: Boolean(activePartner && !activePartner.isGroup),
-  }), [handleStartCall, activePartner]);
+  }), [handleStartCall]);
 
   return (
     <>

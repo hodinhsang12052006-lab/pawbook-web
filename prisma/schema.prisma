@@ -59,6 +59,20 @@ model User {
   reportsMade       UserReport[]       @relation("ReportsMade")
   reportsReceived   UserReport[]       @relation("ReportsReceived")
 
+  // Newsfeed xã hội trang chủ
+  posts             Post[]             @relation("PostAuthor")
+  postLikes         PostLike[]         @relation("PostLikes")
+  postComments      PostComment[]      @relation("PostComments")
+
+  // Kho hàng Supply (chỉ OWNER đăng bán trên thực tế, nhưng không khoá
+  // cứng ở DB — kiểm tra role ở API để giữ model đơn giản)
+  supplyProducts    SupplyProduct[]    @relation("SupplyProducts")
+
+  // Đánh giá tiệm/thợ — 1 người chỉ đánh giá 1 người khác 1 lần (@@unique
+  // bên dưới), sửa bằng cách gửi lại (upsert) chứ không cho spam nhiều review.
+  reviewsGiven      Review[]           @relation("ReviewsGiven")
+  reviewsReceived   Review[]           @relation("ReviewsReceived")
+
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }
@@ -192,4 +206,85 @@ model Message {
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+enum PostType {
+  GENERAL   // Bài đăng thường
+  SHOWCASE  // Khoe tác phẩm móng / cảnh tiệm — cũng dùng làm "Gallery" trên profile Chủ tiệm
+  JOB       // Chia sẻ lại 1 tin tuyển dụng lên newsfeed
+}
+
+// Bài đăng newsfeed trang chủ (thay cho JobBoard/TechnicianGrid thuần liệt
+// kê — đây là dòng nội dung xã hội: khoe tay nghề, khoe tiệm, cập nhật đời
+// thường). postType=SHOWCASE của 1 OWNER được dùng lại làm Gallery "Bằng
+// chứng tiệm đông khách" trên app/profile/[uid]/page.tsx — không tạo bảng
+// riêng để tránh trùng lặp dữ liệu.
+model Post {
+  id         String        @id @default(cuid())
+  authorId   String
+  author     User          @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content    String
+  postType   PostType      @default(GENERAL)
+  mediaUrls  String        // JSON-encoded string[] — ảnh/video, cùng quy ước với TechnicianProfile.portfolioImages
+  market     Market?
+  state      String?
+  city       String?
+  likes      PostLike[]
+  comments   PostComment[]
+  createdAt  DateTime      @default(now())
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("PostLikes", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("PostComments", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+// Kho hàng Supply — chủ tiệm đăng bán sỉ vật tư nail, xen kẽ trong newsfeed
+// và liệt kê đầy đủ ở /supply. Không có luồng thanh toán trong app (tránh
+// vướng chính sách In-App Purchase của Apple) — CTA chỉ dẫn tới nhắn tin.
+model SupplyProduct {
+  id            String   @id @default(cuid())
+  sellerId      String
+  seller        User     @relation("SupplyProducts", fields: [sellerId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  imageUrl      String
+  price         Float
+  originalPrice Float?   // Nếu có, hiển thị gạch giá + badge "Tiết kiệm X%"
+  createdAt     DateTime @default(now())
+}
+
+// Đánh giá cộng đồng cho 1 tiệm/thợ — 3 tiêu chí riêng (sòng phẳng, môi
+// trường làm việc, công bằng chia turn) + 1 điểm tổng thể, đúng yêu cầu sản
+// phẩm thay vì gộp chung 1 con số sao duy nhất.
+model Review {
+  id                 String   @id @default(cuid())
+  authorId           String
+  author             User     @relation("ReviewsGiven", fields: [authorId], references: [id], onDelete: Cascade)
+  targetUserId       String
+  targetUser         User     @relation("ReviewsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+  rating             Int      // Điểm tổng thể 1-5
+  fairnessRating     Int      // Độ sòng phẳng của chủ 1-5
+  environmentRating  Int      // Môi trường làm việc 1-5
+  turnFairnessRating Int      // Công bằng khi chia turn 1-5
+  comment            String
+  createdAt          DateTime @default(now())
+
+  @@unique([authorId, targetUserId])
 }

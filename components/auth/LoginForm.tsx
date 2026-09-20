@@ -4,6 +4,7 @@ import React, { useState, useContext } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { Lock, Mail, Loader2, AlertCircle } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -113,12 +114,15 @@ export default function LoginForm() {
             >
               {t("auth.login.passwordLabel")}
             </label>
-            <a
-              href="#"
-              className="text-xs font-semibold text-purple-500 hover:text-purple-400 transition-colors"
+            <button
+              type="button"
+              onClick={() =>
+                toast(t("auth.login.forgotPasswordHint"), { icon: "🔒", duration: 6000 })
+              }
+              className="text-xs font-semibold text-purple-500 hover:text-purple-400 transition-colors cursor-pointer"
             >
               {t("auth.login.forgotPassword")}
-            </a>
+            </button>
           </div>
           <div className="relative mt-1">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">

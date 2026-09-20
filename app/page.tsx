@@ -6,17 +6,23 @@ import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import JobBoard from "@/components/jobs/JobBoard";
 import TechnicianGrid from "@/components/technicians/TechnicianGrid";
+import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { Sparkles, Search, Flame } from "lucide-react";
+import { Sparkles, Search, Flame, Newspaper } from "lucide-react";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+
+type HomeTab = "feed" | "jobs" | "portfolio";
 
 export default function HomePage() {
   const router = useRouter();
   const { user: sessionUser, loading: sessionLoading } = useSessionUser();
 
-  const [tab, setTab] = useState<"jobs" | "portfolio">("jobs");
+  // "feed" là mặc định mới — trang chủ giờ mở ra bằng newsfeed xã hội thay
+  // vì bảng tin tuyển dụng thuần. Các luồng cũ (SalonDiagnosticModal, form
+  // đăng ký) vẫn điều hướng thẳng bằng ?tab=jobs nên không bị ảnh hưởng.
+  const [tab, setTab] = useState<HomeTab>("feed");
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
@@ -28,7 +34,8 @@ export default function HomePage() {
   // để bộ lọc trang chủ tự khớp luôn với khu vực tiệm của họ.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "portfolio") setTab("portfolio");
+    const urlTab = params.get("tab");
+    if (urlTab === "jobs" || urlTab === "portfolio" || urlTab === "feed") setTab(urlTab);
     const urlMarket = params.get("market");
     if (urlMarket === "US" || urlMarket === "AU") setMarket(urlMarket);
     const urlState = params.get("state");
@@ -44,7 +51,7 @@ export default function HomePage() {
   useEffect(() => {
     const handler = (e: Event) => {
       const nextTab = (e as CustomEvent<string>).detail;
-      if (nextTab === "jobs" || nextTab === "portfolio") setTab(nextTab);
+      if (nextTab === "jobs" || nextTab === "portfolio" || nextTab === "feed") setTab(nextTab);
     };
     window.addEventListener("hometab-change", handler);
     return () => window.removeEventListener("hometab-change", handler);
@@ -162,28 +169,39 @@ export default function HomePage() {
             </div>
 
             {/* Tabs */}
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900/40 border border-slate-850 sticky top-[68px] z-30 backdrop-blur-md">
+            <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-900/40 border border-slate-850 sticky top-[68px] z-30 backdrop-blur-md">
+              <button
+                onClick={() => setTab("feed")}
+                className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+                  tab === "feed" ? "bg-pink-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Newspaper className="h-4 w-4" />
+                <span className="hidden sm:inline">Bảng Tin</span>
+              </button>
               <button
                 onClick={() => setTab("jobs")}
-                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all active:scale-95 ${
+                className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
                   tab === "jobs" ? "bg-pink-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Flame className="h-4 w-4" />
-                Cần Thợ Gấp
+                <span className="hidden sm:inline">Cần Thợ Gấp</span>
               </button>
               <button
                 onClick={() => setTab("portfolio")}
-                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all active:scale-95 ${
+                className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
                   tab === "portfolio" ? "bg-pink-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
-                Thợ Đang Rảnh
+                <span className="hidden sm:inline">Thợ Đang Rảnh</span>
               </button>
             </div>
 
-            {tab === "jobs" ? (
+            {tab === "feed" ? (
+              <SocialFeed market={market} state={state} city={city} />
+            ) : tab === "jobs" ? (
               <JobBoard market={market} state={state} city={city} />
             ) : (
               <TechnicianGrid market={market} state={state} city={city} />

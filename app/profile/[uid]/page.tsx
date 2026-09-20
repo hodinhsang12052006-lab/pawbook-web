@@ -2,14 +2,305 @@
 
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play, Lock } from "lucide-react";
+import {
+  Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play, Lock,
+  Star, Images, ShieldCheck, Send,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import UnlockChatModal from "@/components/profile/UnlockChatModal";
 
 interface PageProps {
   params: Promise<{ uid: string }>;
+}
+
+const AVATAR_FALLBACK = (name: string) =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ec4899&color=ffffff&bold=true&format=png`;
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov)$/i.test(url);
+}
+
+// 5 sao chạm-để-chọn, dùng chung cho cả hiển thị (readOnly) lẫn form đánh giá.
+function StarPicker({ value, onChange, readOnly, size = "h-5 w-5" }: { value: number; onChange?: (v: number) => void; readOnly?: boolean; size?: string }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={readOnly}
+          onClick={() => onChange?.(n)}
+          className={readOnly ? "cursor-default" : "cursor-pointer active:scale-90 transition-transform"}
+        >
+          <Star className={`${size} ${n <= value ? "fill-amber-400 text-amber-400" : "text-slate-700"}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface ReviewType {
+  id: string;
+  rating: number;
+  fairnessRating: number;
+  environmentRating: number;
+  turnFairnessRating: number;
+  comment: string;
+  createdAt: string;
+  author: { id: string; name: string; avatarUrl: string | null; role: string };
+}
+
+interface ReviewSummary {
+  count: number;
+  avgRating: number | null;
+  avgFairness: number | null;
+  avgEnvironment: number | null;
+  avgTurnFairness: number | null;
+}
+
+interface GalleryPost {
+  id: string;
+  content: string;
+  mediaUrls: string[];
+  createdAt: string;
+}
+
+// Bảng đánh giá cộng đồng + form gửi đánh giá — chỉ render cho profile
+// role=OWNER. Điểm số tổng hợp lấy thật từ bảng Review, KHÔNG có số liệu
+// "lượng khách/ngày" hay "tỉ lệ tip cao" giả định vì hệ thống chưa có nguồn
+// dữ liệu POS/booking thật nào để tính — tránh hiển thị số liệu bịa đặt như
+// thể là thật.
+function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; viewerId: string | null }) {
+  const [reviews, setReviews] = useState<ReviewType[]>([]);
+  const [summary, setSummary] = useState<ReviewSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [rating, setRating] = useState(0);
+  const [fairnessRating, setFairnessRating] = useState(0);
+  const [environmentRating, setEnvironmentRating] = useState(0);
+  const [turnFairnessRating, setTurnFairnessRating] = useState(0);
+  const [comment, setComment] = useState("");
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/reviews?targetUserId=${targetUserId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.reviews);
+        setSummary(data.summary);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetUserId]);
+
+  const canReview = viewerId && viewerId !== targetUserId;
+
+  const handleSubmit = async () => {
+    if (!rating || !fairnessRating || !environmentRating || !turnFairnessRating) {
+      toast.error("Vui lòng chấm đủ cả 4 tiêu chí.");
+      return;
+    }
+    if (!comment.trim()) {
+      toast.error("Vui lòng viết vài dòng nhận xét.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId, rating, fairnessRating, environmentRating, turnFairnessRating,
+          comment: comment.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Không thể gửi đánh giá.");
+        return;
+      }
+      toast.success("Đã gửi đánh giá — cảm ơn bạn! 🙏");
+      setShowForm(false);
+      setRating(0); setFairnessRating(0); setEnvironmentRating(0); setTurnFairnessRating(0); setComment("");
+      load();
+    } catch {
+      toast.error("Lỗi mạng. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 text-pink-500 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Tóm tắt điểm trung bình theo từng tiêu chí */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Sòng phẳng", value: summary?.avgFairness },
+          { label: "Môi trường", value: summary?.avgEnvironment },
+          { label: "Chia turn", value: summary?.avgTurnFairness },
+        ].map((item) => (
+          <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+            <p className="text-lg font-black text-amber-400">{item.value ?? "—"}</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {canReview && !showForm && (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="w-full min-h-[48px] rounded-2xl border-2 border-dashed border-slate-700 text-sm font-bold text-slate-300 hover:border-pink-500/50 hover:text-pink-300 transition-all"
+        >
+          ✍️ Viết đánh giá cho tiệm này
+        </button>
+      )}
+
+      {showForm && (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 space-y-4 animate-fadeIn">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
+              <span className="text-xs font-bold text-slate-300">Điểm tổng thể</span>
+              <StarPicker value={rating} onChange={setRating} />
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
+              <span className="text-xs font-bold text-slate-300">Sòng phẳng của chủ</span>
+              <StarPicker value={fairnessRating} onChange={setFairnessRating} />
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
+              <span className="text-xs font-bold text-slate-300">Môi trường làm việc</span>
+              <StarPicker value={environmentRating} onChange={setEnvironmentRating} />
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
+              <span className="text-xs font-bold text-slate-300">Công bằng chia turn</span>
+              <StarPicker value={turnFairnessRating} onChange={setTurnFairnessRating} />
+            </div>
+          </div>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            maxLength={1000}
+            placeholder="Chia sẻ trải nghiệm thật của bạn tại tiệm này..."
+            className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-pink-500"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              disabled={submitting}
+              className="flex-1 min-h-[44px] rounded-xl border border-slate-800 text-sm font-bold text-slate-300 disabled:opacity-50"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex-1 min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-sm font-bold text-white disabled:opacity-50"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Gửi đánh giá
+            </button>
+          </div>
+        </div>
+      )}
+
+      {reviews.length === 0 ? (
+        <p className="text-xs text-slate-500 text-center py-6">Chưa có đánh giá nào — hãy là người đầu tiên chia sẻ trải nghiệm.</p>
+      ) : (
+        <div className="space-y-3">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-2xl border border-slate-850 bg-slate-950/30 p-4 space-y-2">
+              <div className="flex items-center gap-2.5">
+                <img src={r.author.avatarUrl || AVATAR_FALLBACK(r.author.name)} alt={r.author.name} className="h-8 w-8 rounded-full object-cover border border-slate-800" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-200 truncate">{r.author.name}</p>
+                  <StarPicker value={r.rating} readOnly size="h-3 w-3" />
+                </div>
+              </div>
+              <p className="text-sm text-slate-300 leading-relaxed">{r.comment}</p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">Sòng phẳng {r.fairnessRating}★</span>
+                <span className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">Môi trường {r.environmentRating}★</span>
+                <span className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">Chia turn {r.turnFairnessRating}★</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// "Bằng chứng tiệm đông khách" — tái dùng Post(postType=SHOWCASE) của chính
+// chủ tiệm này làm gallery, không tạo bảng riêng để tránh trùng dữ liệu với
+// newsfeed (xem comment trong prisma/schema.prisma tại model Post).
+function GallerySection({ ownerId }: { ownerId: string }) {
+  const [posts, setPosts] = useState<GalleryPost[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/posts?authorId=${ownerId}&postType=SHOWCASE`)
+      .then((res) => (res.ok ? res.json() : { posts: [] }))
+      .then((data) => {
+        if (!cancelled) setPosts(data.posts);
+      })
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId]);
+
+  const media = (posts || []).flatMap((p) => p.mediaUrls);
+
+  if (posts === null) {
+    return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 text-pink-500 animate-spin" /></div>;
+  }
+
+  if (media.length === 0) {
+    return (
+      <div className="text-center py-10 space-y-2">
+        <Images className="h-8 w-8 text-slate-700 mx-auto" />
+        <p className="text-xs text-slate-500">Tiệm chưa đăng ảnh/video "Khoe tiệm" nào trên bảng tin.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-1.5">
+      {media.map((url, idx) => (
+        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+          {isVideoUrl(url) ? (
+            <>
+              <video src={url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
+              <Play className="absolute inset-0 m-auto h-6 w-6 text-white drop-shadow" />
+            </>
+          ) : (
+            <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function PublicProfilePage({ params }: PageProps) {
@@ -19,6 +310,11 @@ export default function PublicProfilePage({ params }: PageProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<"overview" | "gallery" | "reviews">("overview");
+
+  // Trust card — số liệu THẬT tính từ Review (không fabricate lượng khách/tip).
+  const [trustSummary, setTrustSummary] = useState<ReviewSummary | null>(null);
+  const [galleryCount, setGalleryCount] = useState<number | null>(null);
 
   // Paywall "Mở khóa kết nối trực tiếp" — chỉ áp dụng khi Chủ tiệm xem hồ
   // sơ của Thợ (chiều ngược lại — thợ ứng tuyển job của chủ — vẫn nhắn tin
@@ -48,6 +344,24 @@ export default function PublicProfilePage({ params }: PageProps) {
     }
     load();
   }, [uid]);
+
+  // Số liệu thẻ tóm tắt "sức khỏe tiệm" cho profile Chủ tiệm — tải song song,
+  // độc lập với việc người xem có bấm vào tab Gallery/Đánh giá hay không.
+  useEffect(() => {
+    if (!profile || profile.role !== "OWNER") return;
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/reviews?targetUserId=${profile.id}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/posts?authorId=${profile.id}&postType=SHOWCASE`).then((r) => (r.ok ? r.json() : null)),
+    ]).then(([reviewData, postData]) => {
+      if (cancelled) return;
+      if (reviewData) setTrustSummary(reviewData.summary);
+      if (postData) setGalleryCount((postData.posts || []).reduce((sum: number, p: any) => sum + p.mediaUrls.length, 0));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile]);
 
   useEffect(() => {
     if (!isOwnerViewingTechnician) return;
@@ -108,6 +422,7 @@ export default function PublicProfilePage({ params }: PageProps) {
   }
 
   const tech = profile.technicianProfile;
+  const isOwnerProfile = profile.role === "OWNER";
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
@@ -126,6 +441,34 @@ export default function PublicProfilePage({ params }: PageProps) {
             )}
           </div>
         </div>
+
+        {/* Thẻ tóm tắt "sức khỏe tiệm" — chỉ số liệu THẬT tính được từ hệ
+            thống (điểm đánh giá trung bình, số lượt đánh giá, số ảnh gallery,
+            số tin đang tuyển) — cố tình không hiển thị "lượng khách/ngày" hay
+            "tỉ lệ tip cao" vì không có nguồn dữ liệu POS/booking thật nào để
+            tính, tránh bịa số liệu trông như thật. */}
+        {isOwnerProfile && (
+          <div className="grid grid-cols-4 gap-2">
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
+              <p className="text-lg font-black text-amber-400 flex items-center justify-center gap-1">
+                {trustSummary?.avgRating ?? "—"} <Star className="h-4 w-4 fill-amber-400" />
+              </p>
+              <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Điểm uy tín</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+              <p className="text-lg font-black text-white">{trustSummary?.count ?? 0}</p>
+              <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Đánh giá</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+              <p className="text-lg font-black text-white">{galleryCount ?? 0}</p>
+              <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Ảnh Gallery</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+              <p className="text-lg font-black text-white">{profile.jobs?.length ?? 0}</p>
+              <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Đang tuyển</p>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleContactClick}
@@ -190,7 +533,7 @@ export default function PublicProfilePage({ params }: PageProps) {
                 <div className="grid grid-cols-3 gap-2">
                   {tech.portfolioImages.map((url: string, idx: number) => (
                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-800">
-                      {/\.(mp4|webm|mov)$/i.test(url) ? (
+                      {isVideoUrl(url) ? (
                         <>
                           <video src={url} className="h-full w-full object-cover" muted playsInline />
                           <Play className="absolute inset-0 m-auto h-6 w-6 text-white drop-shadow" />
@@ -208,28 +551,56 @@ export default function PublicProfilePage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Owner's jobs */}
-        {profile.role === "OWNER" && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-pink-400" /> Tin tuyển dụng đang đăng
-            </h3>
-            {(!profile.jobs || profile.jobs.length === 0) ? (
-              <p className="text-xs text-slate-500">Chưa có tin tuyển dụng nào.</p>
-            ) : (
-              <div className="space-y-2">
-                {profile.jobs.map((job: any) => (
-                  <Link
-                    key={job.id}
-                    href={`/jobs/${job.id}`}
-                    className="block rounded-xl border border-slate-850 bg-slate-950/40 px-3.5 py-2.5 hover:border-pink-500/40 transition-colors"
-                  >
-                    <p className="text-sm font-bold text-slate-200">{job.title}</p>
-                    <p className="text-xs text-slate-500">{job.city}, {job.state} · {job.salaryAmount}</p>
-                  </Link>
-                ))}
+        {/* Owner: Tổng quan / Gallery / Đánh giá */}
+        {isOwnerProfile && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-900/40 border border-slate-850">
+              <button
+                onClick={() => setSubTab("overview")}
+                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${subTab === "overview" ? "bg-pink-600 text-white" : "text-slate-400"}`}
+              >
+                <Briefcase className="h-3.5 w-3.5" /> Tin tuyển
+              </button>
+              <button
+                onClick={() => setSubTab("gallery")}
+                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${subTab === "gallery" ? "bg-pink-600 text-white" : "text-slate-400"}`}
+              >
+                <Images className="h-3.5 w-3.5" /> Gallery
+              </button>
+              <button
+                onClick={() => setSubTab("reviews")}
+                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${subTab === "reviews" ? "bg-pink-600 text-white" : "text-slate-400"}`}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" /> Đánh giá
+              </button>
+            </div>
+
+            {subTab === "overview" && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-pink-400" /> Tin tuyển dụng đang đăng
+                </h3>
+                {(!profile.jobs || profile.jobs.length === 0) ? (
+                  <p className="text-xs text-slate-500">Chưa có tin tuyển dụng nào.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {profile.jobs.map((job: any) => (
+                      <Link
+                        key={job.id}
+                        href={`/jobs/${job.id}`}
+                        className="block rounded-xl border border-slate-850 bg-slate-950/40 px-3.5 py-2.5 hover:border-pink-500/40 transition-colors"
+                      >
+                        <p className="text-sm font-bold text-slate-200">{job.title}</p>
+                        <p className="text-xs text-slate-500">{job.city}, {job.state} · {job.salaryAmount}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            {subTab === "gallery" && <GallerySection ownerId={profile.id} />}
+            {subTab === "reviews" && <ReviewsSection targetUserId={profile.id} viewerId={viewer?.id ?? null} />}
           </div>
         )}
       </main>

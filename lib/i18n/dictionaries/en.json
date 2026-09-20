@@ -73,6 +73,7 @@
       "emailLabel": "Email Address",
       "passwordLabel": "Password",
       "forgotPassword": "Forgot password?",
+      "forgotPasswordHint": "Self-service password reset is coming soon. Please email support@bitpawos.com and we'll get you back in right away.",
       "loginButton": "Log in",
       "processing": "Processing...",
       "noAccount": "Don't have an account?",

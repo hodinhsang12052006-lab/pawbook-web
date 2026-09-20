@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   Lock, Unlock, X, Sparkles, ArrowRight, Loader2, PartyPopper, Square, CheckSquare,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { SURVEY, PAIN_TAG_META, HIRING_TIMELINE_OPTIONS } from "@/lib/ownerSurvey";
+
+// Modal này chỉ bao giờ mount sau khi người dùng bấm nút (showUnlockModal
+// bắt đầu là false) — không bao giờ có trong lần render SSR đầu tiên, nên
+// gọi thẳng Capacitor.isNativePlatform() ở đây an toàn, không cần
+// useEffect/useState để né hydration mismatch như LanguageProvider phải làm.
+const IS_NATIVE_APP = typeof window !== "undefined" && Capacitor.isNativePlatform();
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 
@@ -101,11 +108,28 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
             </div>
 
             <div className="rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-500/10 via-fuchsia-500/5 to-transparent p-5 space-y-1.5">
-              <p className="text-base text-slate-500 line-through">$4.99 USD</p>
-              <p className="text-4xl font-black bg-gradient-to-r from-pink-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">
-                $0 — MIỄN PHÍ 100%
-              </p>
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Ưu đãi đặc quyền hôm nay</p>
+              {/* Trong app native, KHÔNG hiện số tiền gạch ngang — Apple review
+                  dễ đọc nhầm thành 1 mức giá thật đang được "giảm giá" ngay
+                  trong app (rủi ro Guideline 2.3.1 Accurate Metadata / nghi
+                  vấn né In-App Purchase), dù backend không hề thu tiền. Trên
+                  web/PWA vẫn giữ nguyên khung "$4.99 → $0" vì đó chỉ là trang
+                  web thường, không thuộc phạm vi review của Apple. */}
+              {IS_NATIVE_APP ? (
+                <>
+                  <p className="text-4xl font-black bg-gradient-to-r from-pink-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">
+                    Đặc quyền Hội viên
+                  </p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Miễn phí mở khóa</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-base text-slate-500 line-through">$4.99 USD</p>
+                  <p className="text-4xl font-black bg-gradient-to-r from-pink-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">
+                    $0 — MIỄN PHÍ 100%
+                  </p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Ưu đãi đặc quyền hôm nay</p>
+                </>
+              )}
             </div>
 
             <p className="text-sm text-slate-400 leading-relaxed">

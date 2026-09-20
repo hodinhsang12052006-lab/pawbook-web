@@ -32,8 +32,11 @@ export const metadata: Metadata = {
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { SessionUserProvider } from "@/lib/SessionUserContext";
 import { UnreadMessagesProvider } from "@/lib/UnreadMessagesContext";
+import { CallManagerProvider } from "@/lib/CallManagerContext";
 import FomoToast from "@/components/FomoToast";
 import BottomNav from "@/components/layout/BottomNav";
+import PusherStatusBanner from "@/components/PusherStatusBanner";
+import NativeAppBridge from "@/components/NativeAppBridge";
 
 export default function RootLayout({
   children,
@@ -49,12 +52,16 @@ export default function RootLayout({
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
         <LanguageProvider>
           <SessionUserProvider>
-            <UnreadMessagesProvider>
-              <Toaster position="top-center" />
-              {children}
-              <FomoToast />
-              <BottomNav />
-            </UnreadMessagesProvider>
+            <CallManagerProvider>
+              <UnreadMessagesProvider>
+                <Toaster position="top-center" />
+                <PusherStatusBanner />
+                <NativeAppBridge />
+                {children}
+                <FomoToast />
+                <BottomNav />
+              </UnreadMessagesProvider>
+            </CallManagerProvider>
           </SessionUserProvider>
         </LanguageProvider>
       </body>

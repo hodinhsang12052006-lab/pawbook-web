@@ -73,6 +73,7 @@
       "emailLabel": "Địa chỉ Email",
       "passwordLabel": "Mật khẩu",
       "forgotPassword": "Quên mật khẩu?",
+      "forgotPasswordHint": "Tính năng tự đặt lại mật khẩu đang được hoàn thiện. Vui lòng liên hệ support@bitpawos.com để được cấp lại mật khẩu ngay.",
       "loginButton": "Đăng nhập",
       "processing": "Đang xử lý...",
       "noAccount": "Chưa có tài khoản?",

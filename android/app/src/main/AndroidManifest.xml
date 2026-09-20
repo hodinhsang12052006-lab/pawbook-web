@@ -34,17 +34,28 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Tải ảnh portfolio: input[type=file accept="image/*,video/*"] mở
-         camera hoặc thư viện qua @capacitor/camera. -->
+         camera hoặc thư viện qua bộ chọn file gốc của hệ điều hành. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Cuộc gọi thoại/video WebRTC trong CallManager.tsx gọi
+         getUserMedia({audio:true,...}) — thiếu quyền này thì WebView từ
+         chối truy cập mic, cuộc gọi thoại câm lặng thất bại (không crash,
+         không log lỗi rõ ràng, chỉ đơn giản là không nghe được gì). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Android 13+ (API 33) dùng quyền media theo loại thay cho
          READ_EXTERNAL_STORAGE cũ. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
-    <!-- GPS chấm công (tính năng "Chấm công GPS" quảng cáo trong khảo sát
-         chủ tiệm) + có thể dùng để lọc thợ/tiệm theo khoảng cách sau này. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- KHÔNG khai báo ACCESS_FINE/COARSE_LOCATION: tính năng "Chấm công
+         GPS" chỉ tồn tại dưới dạng copy quảng cáo trong khảo sát 5 câu
+         (lib/ownerSurvey.ts, tag NEED_GPS_REFUND) và 1 bong bóng chat tĩnh
+         (ATTENDANCE) — không có lệnh gọi navigator.geolocation/Capacitor
+         Geolocation nào trong toàn bộ codebase. Khai báo quyền vị trí
+         (permission nhạy cảm nhất, bắt buộc Play Console yêu cầu form giải
+         trình + video minh hoạ riêng) cho 1 tính năng không có thật là rủi
+         ro bị Google Play từ chối/khoá app thẳng — không phải rủi ro lý
+         thuyết. Nếu sau này xây tính năng GPS chấm công thật, thêm lại 2
+         dòng quyền này + Usage Description tương ứng lúc đó. -->
 </manifest>

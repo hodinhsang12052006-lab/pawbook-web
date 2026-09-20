@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Briefcase, Store } from "lucide-react";
+import { Briefcase, Store, Newspaper } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
@@ -24,6 +24,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const roleLabel = userRole === "OWNER" ? "Chủ tiệm" : userRole === "ADMIN" ? "Quản trị" : "Thợ Nail";
 
   const menuItems = [
+    { id: "feed", label: "Bảng Tin", icon: Newspaper, route: "/?tab=feed" },
     { id: "jobs", label: "Cần Thợ Gấp", icon: Briefcase, route: "/?tab=jobs" },
     { id: "portfolio", label: "Thợ Đang Rảnh", icon: Store, route: "/?tab=portfolio" },
   ];

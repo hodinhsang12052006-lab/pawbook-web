@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -182,6 +183,24 @@ export default function ProfilePage() {
             <p className="text-xs text-slate-400">{profile?.role === "OWNER" ? "🏪 Chủ tiệm" : "💅 Thợ Nail"} · {profile?.email}</p>
           </div>
         </div>
+
+        {/* Bảng tính thu nhập & Tip — công cụ hằng ngày, đặt ngay đầu trang
+            profile để dễ thấy nhất (thay vì chôn dưới đáy sau form dài). */}
+        {profile?.role === "TECHNICIAN" && (
+          <Link
+            href="/tools/income-tracker"
+            className="flex items-center gap-3.5 rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-950/40 via-slate-900/40 to-indigo-950/40 p-4 hover:border-purple-500/40 transition-all group"
+          >
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-purple-500/15 border border-purple-500/30">
+              <Wallet className="h-5 w-5 text-purple-300" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white">Bảng tính thu nhập & Tip</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Ghi turn + tip mỗi tối, đối chiếu phiếu lương cuối tuần</p>
+            </div>
+            <ArrowRight className="h-4.5 w-4.5 text-slate-500 group-hover:text-purple-400 transition-colors flex-shrink-0" />
+          </Link>
+        )}
 
         {/* Basic info */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-4">

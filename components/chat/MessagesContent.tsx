@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import GifPicker from "@/components/chat/GifPicker";
-import CallManager, { CallManagerHandle } from "@/components/chat/CallManager";
 import {
   Send, User, Search, MessageSquare, Loader2, Plus, Users,
-  Smile, X, Lock, Paperclip, Zap, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck,
+  Smile, X, Lock, Paperclip, Zap, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -13,6 +12,7 @@ import { getPusherClient } from "@/lib/pusherClient";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import LanguageToggle from "@/components/layout/LanguageToggle";
+import { useCallManager } from "@/lib/CallManagerContext";
 
 const POPULAR_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
@@ -59,6 +59,7 @@ interface MessageType {
   receiver?: { id: string; name: string; avatarUrl: string | null; role: string };
   conversationId: string;
   isOptimistic?: boolean;
+  sendError?: boolean;
 }
 
 interface ConversationType {
@@ -198,8 +199,8 @@ export default function MessagesContent({
   const [reportReason, setReportReason] = useState("");
   const [blockActionLoading, setBlockActionLoading] = useState(false);
 
+  const { startCall } = useCallManager();
   const chatObserverTarget = useRef<HTMLDivElement>(null);
-  const callManagerRef = useRef<CallManagerHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const prevChatKeyRef = useRef<string | null>(null);
@@ -712,17 +713,34 @@ export default function MessagesContent({
           return prev;
         });
       } else {
-        removeFromBucket(sendKey, (msg) => msg.id === tempId);
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         toast.error(errData.error || "Gửi tin nhắn thất bại.");
+        patchBucket(sendKey, (bucket) => ({
+          ...bucket,
+          messages: bucket.messages.map((m) => (m.id === tempId ? { ...m, sendError: true } : m)),
+        }));
       }
     } catch (err) {
       console.error("Gửi lỗi:", err);
-      removeFromBucket(sendKey, (msg) => msg.id === tempId);
+      toast.error("Không thể gửi tin nhắn. Vui lòng kiểm tra lại kết nối mạng!");
+      // Giữ lại bong bóng tin nhắn (đánh dấu sendError) thay vì xóa mất tích —
+      // người dùng bấm "Thử lại" thay vì phải gõ lại từ đầu.
+      patchBucket(sendKey, (bucket) => ({
+        ...bucket,
+        messages: bucket.messages.map((m) => (m.id === tempId ? { ...m, sendError: true } : m)),
+      }));
     } finally {
       setSending(false);
     }
-  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket, messageText]);
+  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket, messageText, patchBucket]);
+
+  // Bấm "Thử lại" trên 1 tin nhắn gửi lỗi — bỏ bong bóng lỗi cũ, gửi lại y
+  // nguyên nội dung như 1 lần gửi mới (tạo bong bóng optimistic mới).
+  const retrySendMessage = useCallback((msg: MessageType) => {
+    const key = chatKeyFor(activeChat);
+    removeFromBucket(key, (m) => m.id === msg.id);
+    handleSendMessage(null, msg.content, msg.type);
+  }, [activeChat, removeFromBucket, handleSendMessage]);
 
   const handleGifSelect = useCallback((url: string) => {
     handleSendMessage(null, url, "IMAGE");
@@ -837,20 +855,6 @@ export default function MessagesContent({
 
   return (
     <div className="flex w-full h-full overflow-hidden">
-      {/* Mounted unconditionally — NOT inside "activeChat ? ... : ...". An
-          active call must survive switching chats, receiving messages, or
-          hitting the mobile "Back" button (which clears activeChat entirely).
-          Its full-screen overlays render on top of everything else regardless
-          of where in the tree it lives; the header buttons that trigger it
-          live below and reach it via the ref. */}
-      <CallManager
-        ref={callManagerRef}
-        currentUserId={currentUser?.id}
-        currentUserName={currentUser?.name}
-        currentUserAvatar={currentUser?.avatarUrl || null}
-        activePartner={callPartner}
-      />
-
       {/* LEFT COLUMN: CONVERSATION LIST */}
       <div className={`w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
         <div className="p-4 border-b border-slate-850 flex items-center justify-between gap-3 flex-shrink-0 bg-slate-900/10">
@@ -970,20 +974,21 @@ export default function MessagesContent({
               </div>
 
               {/* Trigger buttons only — the CallManager instance itself is
-                  mounted once, unconditionally, at the top of the tree above
-                  (see comment there) so it survives this header disappearing
-                  entirely (e.g. mobile "Back" clears activeChat mid-call). */}
+                  mounted once, globally, at the root layout (see
+                  lib/CallManagerContext.tsx) so it survives this header
+                  disappearing entirely (e.g. mobile "Back" clears activeChat
+                  mid-call, or navigating away from /messages altogether). */}
               {!activeChat.isGroup && (
                 <div className="flex items-center gap-2.5">
                   <button
-                    onClick={() => callManagerRef.current?.startCall("audio")}
+                    onClick={() => callPartner && startCall(callPartner, "audio")}
                     className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
                     title="Cuộc gọi thoại bảo mật"
                   >
                     <Phone className="h-4.5 w-4.5" />
                   </button>
                   <button
-                    onClick={() => callManagerRef.current?.startCall("video")}
+                    onClick={() => callPartner && startCall(callPartner, "video")}
                     className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
                     title="Cuộc gọi video thời gian thực"
                   >
@@ -1174,6 +1179,16 @@ export default function MessagesContent({
                               </div>
                             )}
                           </div>
+
+                          {isSelf && msg.sendError && (
+                            <button
+                              type="button"
+                              onClick={() => retrySendMessage(msg)}
+                              className="mt-1 flex items-center gap-1 self-end text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                            >
+                              <RefreshCw className="h-3 w-3" /> Gửi thất bại · Thử lại
+                            </button>
+                          )}
 
                           <div className={`absolute -top-7 ${isSelf ? "right-0" : "left-0"} flex items-center gap-1 bg-slate-900/95 border border-slate-800 rounded-lg px-2 py-0.5 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-30 backdrop-blur-sm`}>
                             <div className="flex items-center gap-1 border-r border-slate-800 pr-1.5 mr-1.5">

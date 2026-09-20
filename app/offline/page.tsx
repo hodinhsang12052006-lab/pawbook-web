@@ -17,7 +17,7 @@ export default function OfflinePage() {
 
       <div className="relative z-10 flex flex-col items-center gap-5 max-w-sm">
         <div className="h-16 w-16 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-0.5 shadow-xl shadow-pink-950/30">
-          <img src="/cho1.jpg" alt="PawNail Jobs" className="h-full w-full object-cover rounded-lg" />
+          <img src="/logo_b.jpg" alt="PawNail Jobs" className="h-full w-full object-cover rounded-lg" />
         </div>
 
         <div className="flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">

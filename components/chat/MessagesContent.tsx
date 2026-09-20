@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { getPusherClient } from "@/lib/pusherClient";
+import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
+import { playNotifySound } from "@/lib/notifySound";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import LanguageToggle from "@/components/layout/LanguageToggle";
@@ -555,24 +556,24 @@ export default function MessagesContent({
   }, [chatMessages]);
 
   // -------------------------------------------------------------------------
-  // Realtime messaging channel. Deliberately bound ONLY to currentUser?.id —
-  // this must subscribe exactly once per session. Call signaling lives
-  // entirely in CallManager's own separate subscription to the same channel,
-  // so nothing here can ever interrupt an active call.
+  // Realtime messaging channel — DÙNG CHUNG với CallManager/
+  // UnreadMessagesContext qua lib/pusherUserChannel.ts (xem comment ở đó).
+  // Chỉ bind/unbind ĐÚNG 3 handler của component này bằng tham chiếu hàm,
+  // không bao giờ unbind_all()/unsubscribe() — trước đây làm vậy sẽ xóa mất
+  // listener "incoming-call" của CallManager mỗi khi rời trang /messages,
+  // khiến chuông gọi đến chết vĩnh viễn cho tới khi F5 lại trang.
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    const pusher = getPusherClient();
-    if (!pusher) return;
-    const channelName = `private-chat-${currentUser.id}`;
-    const channel = pusher.subscribe(channelName);
+    const channel = acquireUserChannel(currentUser.id);
+    if (!channel) return;
 
-    channel.bind("pusher:subscription_error", (error: any) => {
+    const handleSubscriptionError = (error: any) => {
       console.error("Pusher subscription error:", error);
-    });
+    };
 
-    channel.bind("new-message", (data: any) => {
+    const handleNewMessage = (data: any) => {
       if (!data || !data.message || !data.message.id) return;
       const m = data.message;
       const safeNewMsg = mapServerMessage(m);
@@ -595,10 +596,27 @@ export default function MessagesContent({
           removeFromBucket(key, (msg: any) => msg.isOptimistic === true && msg.content === safeNewMsg.content);
           mergeIntoBucket(key, [safeNewMsg]);
         }
+      } else if (m.senderId !== currentUser.id) {
+        // Tin nhắn thuộc 1 cuộc hội thoại KHÁC cuộc đang mở — vẫn đang ở
+        // /messages nên UnreadMessagesContext tự bỏ qua (coi như "đang đọc
+        // tin nhắn"), nhưng người dùng thực ra không nhìn thấy tin này, nên
+        // tự phát âm thanh ở đây thay vì im lặng bỏ qua hoàn toàn.
+        playNotifySound();
       }
 
-      setConversations((prev) =>
-        prev.map((conv) =>
+      setConversations((prev) => {
+        const exists = prev.some((conv) => conv.id === m.conversationId);
+        // Tin nhắn đầu tiên của 1 cuộc hội thoại HOÀN TOÀN MỚI (chưa từng
+        // nhắn qua lại) — .map() bên dưới không thể "thêm" 1 hội thoại chưa
+        // tồn tại trong state, nên trước đây sidebar bên nhận không bao giờ
+        // hiện hội thoại mới trong thời gian thực, phải F5 mới thấy. Refetch
+        // toàn bộ danh sách 1 lần cho đúng trường hợp hiếm này thay vì tự
+        // đoán hình dạng participants từ mỗi payload new-message.
+        if (!exists) {
+          loadData(true);
+          return prev;
+        }
+        return prev.map((conv) =>
           conv.id === m.conversationId
             ? {
                 ...conv,
@@ -609,11 +627,11 @@ export default function MessagesContent({
                 }],
               }
             : conv
-        )
-      );
-    });
+        );
+      });
+    };
 
-    channel.bind("message-updated", (data: any) => {
+    const handleMessageUpdated = (data: any) => {
       if (!data || (!data.id && !data.messageId)) return;
       const targetId = data.id || data.messageId;
       if (data.reactions) {
@@ -625,13 +643,19 @@ export default function MessagesContent({
           return { ...prev, [targetId]: [...current, data.emoji] };
         });
       }
-    });
+    };
+
+    channel.bind("pusher:subscription_error", handleSubscriptionError);
+    channel.bind("new-message", handleNewMessage);
+    channel.bind("message-updated", handleMessageUpdated);
 
     return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(channelName);
+      channel.unbind("pusher:subscription_error", handleSubscriptionError);
+      channel.unbind("new-message", handleNewMessage);
+      channel.unbind("message-updated", handleMessageUpdated);
+      releaseUserChannel(currentUser.id);
     };
-  }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket]);
+  }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket, loadData]);
 
   // -------------------------------------------------------------------------
   // Optimistic send: bubble appears instantly (slide-up animation via
@@ -1160,7 +1184,7 @@ export default function MessagesContent({
                                     />
                                   </div>
                                 ) : msg.type === "VIDEO" ? (
-                                  <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
+                                  <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/logo_b.jpg" />
                                 ) : (
                                   <p>{msg.content}</p>
                                 )}

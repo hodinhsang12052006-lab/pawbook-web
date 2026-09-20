@@ -109,7 +109,7 @@ export default function CustomAuthLayout({
                 <Link href="/" className="flex items-center gap-3.5">
                   <div className="h-14 w-14 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-0.5 shadow-xl shadow-pink-950/30">
                     <img
-                      src="/cho1.jpg"
+                      src="/logo_b.jpg"
                       alt="PawNail Jobs Logo"
                       className="h-full w-full object-cover rounded-lg"
                     />
@@ -179,7 +179,7 @@ export default function CustomAuthLayout({
               <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-2">
                 <Link href="/" className="flex items-center gap-2.5">
                   <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-[22%] border border-white/20 bg-white/10 p-0.5 shadow-lg shadow-pink-950/30">
-                    <img src="/cho1.jpg" alt="PawNail Jobs" className="h-full w-full object-cover rounded-[20%]" />
+                    <img src="/logo_b.jpg" alt="PawNail Jobs" className="h-full w-full object-cover rounded-[20%]" />
                   </div>
                   <span className="text-white text-base font-black tracking-widest uppercase leading-none whitespace-nowrap">PawNail Jobs</span>
                 </Link>

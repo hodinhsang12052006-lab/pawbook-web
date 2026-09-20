@@ -4,7 +4,7 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
 import dynamic from "next/dynamic";
 import { Phone, Video, PhoneOff, Mic, MicOff, VideoOff, Volume2, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getPusherClient } from "@/lib/pusherClient";
+import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
@@ -107,6 +107,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   showCallingModalRef.current = showCallingModal;
   const receivingCallRef = useRef(receivingCall);
   receivingCallRef.current = receivingCall;
+  // Kênh Pusher chỉ bind 1 lần lúc mount (xem effect bên dưới) nên handler
+  // "call-accepted" đóng closure với callType tại thời điểm bind — dùng ref
+  // để luôn đọc được giá trị mới nhất, tránh nhánh video/audio bị lệch khi
+  // callType đổi sau lúc bind.
+  const callTypeRef = useRef(callType);
+  callTypeRef.current = callType;
 
   const cleanupCall = useCallback(() => {
     if (localStreamRef.current) {
@@ -133,25 +139,25 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     outgoingCandidateBufferRef.current = [];
   }, []);
 
-  // Own Pusher subscription — bound once for the whole session (deps: just
-  // currentUserId), fully independent of the messaging channel binding.
+  // Kênh Pusher DÙNG CHUNG với MessagesContent/UnreadMessagesContext (xem
+  // lib/pusherUserChannel.ts) — chỉ bind/unbind ĐÚNG 5 handler của riêng
+  // component này bằng tham chiếu hàm, không bao giờ unbind_all(), để không
+  // xóa mất listener của 2 nơi kia khi component khác unmount hoặc ngược lại.
   useEffect(() => {
     if (!currentUserId) return;
 
-    const pusher = getPusherClient();
-    if (!pusher) return;
-    const channelName = `private-chat-${currentUserId}`;
-    const channel = pusher.subscribe(channelName);
+    const channel = acquireUserChannel(currentUserId);
+    if (!channel) return;
 
-    channel.bind("incoming-call", (data: any) => {
+    const handleIncomingCall = (data: any) => {
       if (showCallingModalRef.current || receivingCallRef.current) return;
       setReceivingCall(true);
       setCallerInfo({ id: data.callerId, name: data.callerName });
       setCallType(data.callType || "audio");
       callerSignalRef.current = data.sdp;
-    });
+    };
 
-    channel.bind("call-candidate-batch", async (data: any) => {
+    const handleCandidateBatch = async (data: any) => {
       if (!peerConnection.current) return;
       const candidates: any[] = Array.isArray(data.candidates) ? data.candidates : [];
       for (const raw of candidates) {
@@ -166,9 +172,18 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           pendingCandidatesRef.current.push(candidate);
         }
       }
-    });
+    };
 
-    channel.bind("call-accepted", async (data: any) => {
+    const handleCallAccepted = async (data: any) => {
+      // Video call: ZEGOCLOUD (VideoCallRoom) sở hữu toàn bộ media/room join
+      // thật sự — không có RTCPeerConnection thủ công nào được tạo cho
+      // nhánh video (xem handleStartCall/handleAcceptCall bên dưới), nên chỉ
+      // cần chuyển sang "đã kết nối" để <VideoCallRoom> mount và tự join
+      // phòng theo roomId (đối xứng 2 bên, xem tính `roomId` bên dưới).
+      if (callTypeRef.current === "video") {
+        setCallConnected(true);
+        return;
+      }
       if (!peerConnection.current || peerConnection.current.signalingState !== "have-local-offer") return;
       try {
         await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.sdp));
@@ -184,25 +199,41 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       } catch (err) {
         console.error("Failed to accept call answer sdp:", err);
       }
-    });
+    };
 
-    channel.bind("call-rejected", () => {
+    const handleCallRejected = () => {
       toast.error("Cuộc gọi đã bị từ chối hoặc kết thúc.");
       cleanupCall();
-    });
+    };
 
-    channel.bind("camera-status", (data: any) => {
+    const handleCameraStatus = (data: any) => {
       setCameraMuted(Boolean(data.videoOff));
-    });
+    };
+
+    channel.bind("incoming-call", handleIncomingCall);
+    channel.bind("call-candidate-batch", handleCandidateBatch);
+    channel.bind("call-accepted", handleCallAccepted);
+    channel.bind("call-rejected", handleCallRejected);
+    channel.bind("camera-status", handleCameraStatus);
 
     return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(channelName);
+      channel.unbind("incoming-call", handleIncomingCall);
+      channel.unbind("call-candidate-batch", handleCandidateBatch);
+      channel.unbind("call-accepted", handleCallAccepted);
+      channel.unbind("call-rejected", handleCallRejected);
+      channel.unbind("camera-status", handleCameraStatus);
+      releaseUserChannel(currentUserId);
     };
   }, [currentUserId, cleanupCall]);
 
   const setupPeerConnection = useCallback((remoteTargetId: string) => {
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+      ],
+    });
     peerConnection.current = pc;
 
     pc.ontrack = (event) => {
@@ -257,11 +288,28 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     setShowCallingModal(true);
     setCallConnected(false);
 
+    // Video: ZEGOCLOUD (<VideoCallRoom>) tự quản lý getUserMedia + kết nối
+    // media khi vào phòng — dựng thêm 1 RTCPeerConnection thủ công ở đây chỉ
+    // tranh giành quyền truy cập camera/mic với Zego (từng khiến 1 bên bị
+    // đen màn hình vì thua cuộc giành thiết bị). Nhánh video chỉ cần bắn
+    // "offer" qua Pusher để bên kia đổ chuông, không đụng WebRTC thủ công.
+    if (type === "video") {
+      try {
+        await fetch("/api/calls", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetId: partner.id, action: "offer", callType: type }),
+        });
+      } catch (err) {
+        console.error("Start video call failed:", err);
+        toast.error("Không thể bắt đầu cuộc gọi video.");
+        cleanupCall();
+      }
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === "video" ? { width: 640, height: 480 } : false,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       localStreamRef.current = stream;
 
       const pc = setupPeerConnection(partner.id);
@@ -287,11 +335,25 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     setReceivingCall(false);
     setShowCallingModal(true);
 
+    // Cùng lý do ở handleStartCall — video giao hết cho ZEGOCLOUD, không tạo
+    // RTCPeerConnection thủ công. Chuyển thẳng sang "đã kết nối" để
+    // <VideoCallRoom> mount và tự join phòng (roomId đối xứng, xem bên dưới).
+    if (callType === "video") {
+      setCallConnected(true);
+      try {
+        await fetch("/api/calls", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetId: callerInfo.id, action: "accept" }),
+        });
+      } catch (err) {
+        console.error("Accept video call failed:", err);
+      }
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: callType === "video" ? { width: 640, height: 480 } : false,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       localStreamRef.current = stream;
 
       const pc = setupPeerConnection(callerInfo.id);
@@ -363,7 +425,16 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
   const displayName = calleeSnapshot?.name || callerInfo?.name || "";
   const displayAvatar = calleeSnapshot?.avatarUrl || AVATAR_FALLBACK(displayName);
-  const roomId = calleeSnapshot?.conversationId || "call-room-" + (calleeSnapshot?.id || callerInfo?.id || "unknown");
+  // Đối xứng 2 chiều: cả người gọi lẫn người nhận phải tính ra CÙNG 1 roomId
+  // để ZEGOCLOUD ghép chung 1 phòng. Trước đây roomId ưu tiên
+  // `calleeSnapshot?.conversationId` — nhưng chỉ bên GỌI có `calleeSnapshot`
+  // (bên NHẬN luôn có giá trị này là null, chỉ có `callerInfo`), nên 2 bên
+  // tính ra 2 chuỗi khác nhau → vào nhầm 2 phòng khác nhau → mỗi người chỉ
+  // thấy camera của chính mình, tưởng "bên kia bị đen màn hình". Sắp xếp cặp
+  // userId theo thứ tự cố định (sort) để công thức luôn ra cùng 1 chuỗi bất
+  // kể ai là người bấm gọi.
+  const otherPartyId = calleeSnapshot?.id || callerInfo?.id || null;
+  const roomId = otherPartyId ? "call-" + [currentUserId, otherPartyId].sort().join("-") : "call-room-unknown";
 
   // Exposed via useCallManager() (lib/CallManagerContext.tsx) so any page —
   // not just a chat header — can trigger an outgoing call without this

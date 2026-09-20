@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Video, VideoOff, Mic, MicOff, Sparkles, PhoneOff, Settings, Shield } from "lucide-react";
+import { Video, VideoOff, Mic, MicOff, Sparkles, PhoneOff, Settings, Shield, WifiOff, MessageCircle, RefreshCw } from "lucide-react";
 
 interface VideoCallRoomProps {
   roomId?: string;
@@ -23,7 +23,9 @@ export default function VideoCallRoom({
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [beautyEnabled, setBeautyEnabled] = useState(false);
   const [callActive, setCallActive] = useState(false);
-  
+  const [callError, setCallError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
   // Zego Instance
   const zegoInstanceRef = useRef<any>(null);
 
@@ -34,15 +36,29 @@ export default function VideoCallRoom({
   useEffect(() => {
     if (typeof window === "undefined" || !containerRef.current) return;
 
+    // React StrictMode (bật mặc định ở dev) cố tình chạy effect → cleanup →
+    // effect lại để phát hiện side-effect không idempotent. Vì initCall() là
+    // async, effect lần 1 đã bị "cleanup" (zp lúc đó vẫn null, chưa kịp
+    // import xong SDK) trước khi initCall lần 1 kịp gọi joinRoom() — nếu
+    // không có cờ `cancelled`, CẢ 2 lần initCall đều tiếp tục chạy tới
+    // zp.joinRoom() với cùng roomId, ZEGOCLOUD báo lỗi "joinRoom repeat" và
+    // kết nối media có thể vào trạng thái không ổn định (đúng hiện tượng "1
+    // bên bị đen màn hình" quan sát được khi test 2 browser thật).
+    let cancelled = false;
     let zp: any = null;
+    let readyCheckTimer: ReturnType<typeof setTimeout> | null = null;
+    let videoWatcher: MutationObserver | null = null;
 
     async function initCall() {
       try {
+        setCallError(null);
+
         // Dynamically import Zego Prebuilt UIKit on client-side to prevent Next.js SSR build crashes
         const { ZegoUIKitPrebuilt } = await import("@zegocloud/zego-uikit-prebuilt");
+        if (cancelled) return;
 
-        const appID = Number(process.env.NEXT_PUBLIC_ZEGO_APP_ID || 123456789); // Fallback ID
-        const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET || "mock_server_secret_key_123456";
+        const appID = Number(process.env.NEXT_PUBLIC_ZEGO_APP_ID);
+        const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET || "";
 
         // Generate Kit Token for testing
         const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
@@ -54,7 +70,12 @@ export default function VideoCallRoom({
         );
 
         // Create prebuilt call instance
-        zp = ZegoUIKitPrebuilt.create(kitToken);
+        const instance = ZegoUIKitPrebuilt.create(kitToken);
+        if (cancelled) {
+          try { instance.destroy(); } catch {}
+          return;
+        }
+        zp = instance;
         zegoInstanceRef.current = zp;
 
         // Join video call room
@@ -78,14 +99,56 @@ export default function VideoCallRoom({
         });
 
         setCallActive(true);
+
+        // ZegoUIKitPrebuilt (bản 2.17.x) không phát ra bất kỳ callback/sự
+        // kiện nào khi zg.loginRoom() nội bộ thất bại (vd. lỗi 1001004
+        // "appid invalid") — joinRoom() không trả Promise reject, và không
+        // có onError/onRoomStateChanged nào được document hay tồn tại trong
+        // API công khai (đã xác nhận trực tiếp từ mã nguồn SDK đã build).
+        // Khi đó UI mặc định chỉ đứng im, đen màn hình vô thời hạn — đúng
+        // triệu chứng người dùng báo cáo. Vì không có cách bắt lỗi async
+        // trực tiếp, ta dùng một watcher: nếu sau READY_TIMEOUT_MS mà SDK
+        // vẫn chưa render được thẻ <video> nào bên trong container, xem như
+        // kết nối thất bại và chuyển sang trạng thái báo lỗi thân thiện.
+        const READY_TIMEOUT_MS = 12000;
+        const container = containerRef.current;
+        const clearReadyWatch = () => {
+          if (readyCheckTimer) { clearTimeout(readyCheckTimer); readyCheckTimer = null; }
+          if (videoWatcher) { videoWatcher.disconnect(); videoWatcher = null; }
+        };
+
+        if (container) {
+          videoWatcher = new MutationObserver(() => {
+            if (container.querySelector("video")) clearReadyWatch();
+          });
+          videoWatcher.observe(container, { childList: true, subtree: true });
+        }
+
+        readyCheckTimer = setTimeout(() => {
+          if (cancelled) return;
+          if (!container?.querySelector("video")) {
+            setCallError(
+              "Dịch vụ Video Call đang bảo trì kết nối hạ tầng. Vui lòng thử lại sau hoặc chuyển sang chat trực tiếp."
+            );
+          }
+          clearReadyWatch();
+        }, READY_TIMEOUT_MS);
       } catch (err) {
         console.error("❌ Error initializing ZEGOCLOUD call:", err);
+        if (!cancelled) {
+          setCallError(
+            "Dịch vụ Video Call đang bảo trì kết nối hạ tầng. Vui lòng thử lại sau hoặc chuyển sang chat trực tiếp."
+          );
+        }
       }
     }
 
     initCall();
 
     return () => {
+      cancelled = true;
+      if (readyCheckTimer) clearTimeout(readyCheckTimer);
+      if (videoWatcher) videoWatcher.disconnect();
       if (zp) {
         try {
           zp.destroy();
@@ -94,7 +157,7 @@ export default function VideoCallRoom({
         }
       }
     };
-  }, [roomId, userId, userName, onLeave]);
+  }, [roomId, userId, userName, onLeave, retryKey]);
 
   // Handle local microphone mute/unmute
   const toggleMic = () => {
@@ -168,11 +231,37 @@ export default function VideoCallRoom({
       </div>
 
       {/* Main Video Prebuilt Call Frame Container */}
-      <div 
-        ref={containerRef} 
+      <div
+        ref={containerRef}
         className="w-full h-full bg-slate-900/40"
         style={{ minHeight: "480px" }}
       />
+
+      {/* Friendly fallback shown when ZEGOCLOUD fails to connect (no video
+          track ever appears) instead of leaving the caller stuck staring at
+          a black screen with no explanation. */}
+      {callError && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-slate-950/95 backdrop-blur-md p-8 text-center">
+          <div className="h-14 w-14 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
+            <WifiOff className="h-6 w-6 text-rose-400" />
+          </div>
+          <p className="text-sm font-semibold text-slate-100 max-w-xs">{callError}</p>
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              onClick={() => { setCallError(null); setRetryKey((k) => k + 1); }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition-all cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Thử lại
+            </button>
+            <button
+              onClick={() => onLeave?.()}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all cursor-pointer"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Chuyển sang chat
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Dynamic AI Beauty Settings Adjustment Overlay (Slide Panel) */}
       {beautyEnabled && (

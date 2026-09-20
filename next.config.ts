@@ -76,7 +76,14 @@ const nextConfig: NextConfig = {
             // Added media.tenor.com to img-src — the GifPicker's raw <img>
             // thumbnails (components/chat/GifPicker.tsx) point there directly
             // and were being silently CSP-blocked in the browser as well.
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            // Added *.coolbcloud.com (wss+https) to connect-src — confirmed via
+            // live 2-browser video call testing that ZEGOCLOUD's SDK also opens
+            // WebSocket connections to its own logging/access-hub infra on this
+            // separate domain (weblogger-wss / accesshub-wss*.coolbcloud.com),
+            // outside *.zegocloud.com — CSP was silently blocking those,
+            // visible as repeated "violates Content Security Policy" console
+            // errors during a live call.
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

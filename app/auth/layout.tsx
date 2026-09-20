@@ -69,8 +69,18 @@ export default function CustomAuthLayout({
               deep slate base + slow-drifting blurred color blobs + a faint
               drifting grid + a scatter of twinkling sparkle dots. Everything
               animates via transform/opacity only (see globals.css) so it
-              stays smooth without a JS render loop. */}
-          <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 lg:col-span-5 lg:flex">
+              stays smooth without a JS render loop.
+
+              `lg:self-start` opts this grid item out of the default
+              `align-items: stretch` — without it, this column's box would
+              stretch to match the right column's full content height (a
+              long form can run well past 100vh), so `justify-center`
+              centered against that oversized box instead of the actual
+              viewport. `lg:sticky lg:top-0 lg:h-screen` then pins it to
+              exactly one screen's height for the scroll duration, so it
+              stays put and correctly centered while the form scrolls past
+              on the right. */}
+          <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 lg:col-span-5 lg:flex lg:sticky lg:top-0 lg:h-screen lg:self-start">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
 
             <div className="absolute -top-24 -left-16 h-96 w-96 rounded-full bg-pink-600/30 blur-[100px] animate-aurora-a" />
@@ -99,7 +109,7 @@ export default function CustomAuthLayout({
               ))}
             </div>
 
-            <div className="relative z-10 flex flex-col justify-center h-full space-y-8 my-auto">
+            <div className="relative z-10 flex flex-col justify-center items-start h-full space-y-8">
               {/* Thương hiệu */}
               <div className="flex items-center gap-3.5 animate-fadeIn">
                 <Link href="/" className="flex items-center gap-3">

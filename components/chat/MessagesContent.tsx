@@ -427,8 +427,14 @@ export default function MessagesContent({
         if (!chat.conversationId && fetchedConvId) {
           setActiveChat((prev) => (prev && prev.id === chat.id ? { ...prev, conversationId: fetchedConvId } : prev));
         }
-      } catch (error) {
-        console.error("Lỗi tải tin nhắn:", error);
+      } catch (error: any) {
+        // AbortError fires every time the user switches chats before this
+        // fetch resolves (cleanup below calls controller.abort()) — that's
+        // the intended, constant behavior of fast chat-switching, not a
+        // failure, so it must not be logged as one.
+        if (error?.name !== "AbortError") {
+          console.error("Lỗi tải tin nhắn:", error);
+        }
         // Deliberately not clearing the bucket — a stale-but-present history
         // beats a blank screen on a transient network error.
       } finally {
@@ -475,8 +481,12 @@ export default function MessagesContent({
       } else {
         pendingScrollAdjustRef.current = null;
       }
-    } catch (err) {
-      console.error("Failed to load older messages on scroll-up:", err);
+    } catch (err: any) {
+      // "TypeError: Failed to fetch" fires here whenever the browser cancels
+      // in-flight requests on navigation/unload — expected, not a bug.
+      if (err?.name !== "AbortError") {
+        console.error("Failed to load older messages on scroll-up:", err);
+      }
       pendingScrollAdjustRef.current = null;
     } finally {
       loadingMoreRef.current = false;

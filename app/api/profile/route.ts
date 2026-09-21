@@ -32,6 +32,9 @@ export async function GET(req: NextRequest) {
         state: true,
         city: true,
         diagnosedPains: true,
+        turnSplitPolicy: true,
+        clientTypePolicy: true,
+        housingSupport: true,
         jobs: {
           select: {
             id: true,
@@ -98,7 +101,7 @@ export async function PUT(req: Request) {
     const userId = (session.user as any).id;
     const body = await req.json();
 
-    const { name, phone, state, city, avatarUrl, technician } = body;
+    const { name, phone, state, city, avatarUrl, technician, turnSplitPolicy, clientTypePolicy, housingSupport } = body;
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -106,6 +109,11 @@ export async function PUT(req: Request) {
     if (state !== undefined) updateData.state = state;
     if (city !== undefined) updateData.city = city;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    // "Chính sách tiệm" — chỉ có ý nghĩa với OWNER nhưng không cần chặn ở
+    // đây vì trường rỗng/null với TECHNICIAN cũng vô hại.
+    if (turnSplitPolicy !== undefined) updateData.turnSplitPolicy = turnSplitPolicy;
+    if (clientTypePolicy !== undefined) updateData.clientTypePolicy = clientTypePolicy;
+    if (housingSupport !== undefined) updateData.housingSupport = Boolean(housingSupport);
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -113,6 +121,7 @@ export async function PUT(req: Request) {
       select: {
         id: true, name: true, email: true, avatarUrl: true, role: true,
         phone: true, market: true, state: true, city: true,
+        turnSplitPolicy: true, clientTypePolicy: true, housingSupport: true,
       },
     });
 
@@ -120,7 +129,7 @@ export async function PUT(req: Request) {
     if (technician && updatedUser.role === "TECHNICIAN") {
       const {
         bio, yearsOfExperience, specialties, status, portfolioImages,
-        desiredSalaryType, desiredSalaryAmount, desiredBenefits,
+        desiredSalaryType, desiredSalaryAmount, desiredBenefits, avgTenureMonths,
       } = technician;
       const techUpdateData: any = {};
       if (bio !== undefined) techUpdateData.bio = bio;
@@ -131,6 +140,7 @@ export async function PUT(req: Request) {
       if (desiredSalaryType !== undefined) techUpdateData.desiredSalaryType = desiredSalaryType;
       if (desiredSalaryAmount !== undefined) techUpdateData.desiredSalaryAmount = desiredSalaryAmount;
       if (desiredBenefits !== undefined) techUpdateData.desiredBenefits = desiredBenefits;
+      if (avgTenureMonths !== undefined) techUpdateData.avgTenureMonths = avgTenureMonths === null || avgTenureMonths === "" ? null : Number(avgTenureMonths);
       if (state !== undefined) techUpdateData.state = state;
       if (city !== undefined) techUpdateData.city = city;
 
@@ -146,6 +156,7 @@ export async function PUT(req: Request) {
           desiredSalaryType: desiredSalaryType || null,
           desiredSalaryAmount: desiredSalaryAmount || null,
           desiredBenefits: desiredBenefits || null,
+          avgTenureMonths: avgTenureMonths ? Number(avgTenureMonths) : null,
           market: updatedUser.market,
           state: state || updatedUser.state || "",
           city: city || updatedUser.city || "",

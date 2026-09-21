@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -32,6 +32,13 @@ export default function ProfilePage() {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [status, setStatus] = useState("AVAILABLE");
   const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
+  const [avgTenureMonths, setAvgTenureMonths] = useState("");
+
+  // "Chính sách tiệm" — chỉ hiển thị cho OWNER, tự khai báo để hiển thị lại
+  // ở thẻ "Sức Khỏe Tiệm & Văn Hóa Làm Việc" trên hồ sơ công khai.
+  const [turnSplitPolicy, setTurnSplitPolicy] = useState("");
+  const [clientTypePolicy, setClientTypePolicy] = useState("");
+  const [housingSupport, setHousingSupport] = useState(false);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -54,12 +61,16 @@ export default function ProfilePage() {
           setPhone(data.phone || "");
           setState(data.state || "");
           setCity(data.city || "");
+          setTurnSplitPolicy(data.turnSplitPolicy || "");
+          setClientTypePolicy(data.clientTypePolicy || "");
+          setHousingSupport(Boolean(data.housingSupport));
           if (data.technicianProfile) {
             setBio(data.technicianProfile.bio || "");
             setYears(data.technicianProfile.yearsOfExperience || 0);
             setSpecialties(data.technicianProfile.specialties ? data.technicianProfile.specialties.split(",").filter(Boolean) : []);
             setStatus(data.technicianProfile.status || "AVAILABLE");
             setPortfolioImages(data.technicianProfile.portfolioImages || []);
+            setAvgTenureMonths(data.technicianProfile.avgTenureMonths ? String(data.technicianProfile.avgTenureMonths) : "");
           }
         }
       } finally {
@@ -104,7 +115,15 @@ export default function ProfilePage() {
     try {
       const payload: any = { name, phone, state, city };
       if (profile?.role === "TECHNICIAN") {
-        payload.technician = { bio, yearsOfExperience: years, specialties: specialties.join(","), status, portfolioImages };
+        payload.technician = {
+          bio, yearsOfExperience: years, specialties: specialties.join(","), status, portfolioImages,
+          avgTenureMonths: avgTenureMonths.trim() === "" ? null : Number(avgTenureMonths),
+        };
+      }
+      if (profile?.role === "OWNER") {
+        payload.turnSplitPolicy = turnSplitPolicy;
+        payload.clientTypePolicy = clientTypePolicy;
+        payload.housingSupport = housingSupport;
       }
       const res = await fetch("/api/profile", {
         method: "PUT",
@@ -202,6 +221,23 @@ export default function ProfilePage() {
           </Link>
         )}
 
+        {/* Nail Radar — công cụ tham khảo mức bao lương/chia turn theo bang,
+            hữu ích cho cả Thợ (cân nhắc trước khi bay) lẫn Chủ (biết mức
+            cạnh tranh khi đăng tin). */}
+        <Link
+          href="/tools/radar"
+          className="flex items-center gap-3.5 rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-950/40 via-slate-900/40 to-orange-950/40 p-4 hover:border-amber-500/40 transition-all group"
+        >
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30">
+            <Radar className="h-5 w-5 text-amber-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Nail Radar</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Chỉ số bao lương & chia turn tham khảo theo tiểu bang</p>
+          </div>
+          <ArrowRight className="h-4.5 w-4.5 text-slate-500 group-hover:text-amber-400 transition-colors flex-shrink-0" />
+        </Link>
+
         {/* Basic info */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-4">
           <h2 className="text-sm font-bold text-slate-200">Thông tin cơ bản</h2>
@@ -245,9 +281,22 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Số năm kinh nghiệm</label>
-              <input type="number" min={0} value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Số năm kinh nghiệm</label>
+                <input type="number" min={0} value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Gắn bó TB (tháng/tiệm)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={avgTenureMonths}
+                  onChange={(e) => setAvgTenureMonths(e.target.value)}
+                  placeholder="VD: 8"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600"
+                />
+              </div>
             </div>
 
             <div>
@@ -295,6 +344,42 @@ export default function ProfilePage() {
               </div>
               <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleUploadPhoto} />
             </div>
+          </div>
+        )}
+
+        {/* Chính sách tiệm — hiển thị lại trên hồ sơ công khai ở thẻ "Sức
+            Khỏe Tiệm & Văn Hóa Làm Việc". Tự khai báo vì hệ thống không có
+            nguồn dữ liệu chấm công/booking thật để tự suy ra các mục này. */}
+        {profile?.role === "OWNER" && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-4">
+            <h2 className="text-sm font-bold text-slate-200">Chính sách tiệm</h2>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">Tỉ lệ chia turn</label>
+              <input
+                value={turnSplitPolicy}
+                onChange={(e) => setTurnSplitPolicy(e.target.value)}
+                placeholder="VD: 6/4 (thợ nhận 60%), hoặc Bao lương không chia turn"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">Loại khách chủ yếu</label>
+              <input
+                value={clientTypePolicy}
+                onChange={(e) => setClientTypePolicy(e.target.value)}
+                placeholder="VD: Khách sang, tip cao / Khách vãng lai, khu đông dân"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600"
+              />
+            </div>
+            <button
+              onClick={() => setHousingSupport((v) => !v)}
+              className={`w-full flex items-center justify-between rounded-xl border-2 px-3.5 py-2.5 transition-all ${
+                housingSupport ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-slate-800 text-slate-400"
+              }`}
+            >
+              <span className="text-xs font-bold">Có chỗ ở/bao ăn ở cho thợ ở xa</span>
+              <span className="text-xs font-black">{housingSupport ? "CÓ" : "KHÔNG"}</span>
+            </button>
           </div>
         )}
 

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import {
   Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play, Lock,
-  Star, Images, ShieldCheck, Send,
+  Star, Images, ShieldCheck, Send, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -42,23 +42,31 @@ function StarPicker({ value, onChange, readOnly, size = "h-5 w-5" }: { value: nu
   );
 }
 
-interface ReviewType {
+interface ReviewItem {
   id: string;
-  rating: number;
-  fairnessRating: number;
-  environmentRating: number;
-  turnFairnessRating: number;
+  type: "SALON_REVIEW" | "TECHNICIAN_REVIEW";
+  overall: number;
+  punctualityOrPay: number | null;
+  environment: number | null;
+  turnFairness: number | null;
+  skillAccuracy: number | null;
+  workEthic: number | null;
+  customerAttitude: number | null;
   comment: string;
+  isVerifiedConnection: boolean;
   createdAt: string;
   author: { id: string; name: string; avatarUrl: string | null; role: string };
 }
 
 interface ReviewSummary {
   count: number;
-  avgRating: number | null;
-  avgFairness: number | null;
+  avgOverall: number | null;
+  avgPunctualityOrPay: number | null;
   avgEnvironment: number | null;
   avgTurnFairness: number | null;
+  avgSkillAccuracy: number | null;
+  avgWorkEthic: number | null;
+  avgCustomerAttitude: number | null;
 }
 
 interface GalleryPost {
@@ -68,22 +76,59 @@ interface GalleryPost {
   createdAt: string;
 }
 
-// Bảng đánh giá cộng đồng + form gửi đánh giá — chỉ render cho profile
-// role=OWNER. Điểm số tổng hợp lấy thật từ bảng Review, KHÔNG có số liệu
-// "lượng khách/ngày" hay "tỉ lệ tip cao" giả định vì hệ thống chưa có nguồn
-// dữ liệu POS/booking thật nào để tính — tránh hiển thị số liệu bịa đặt như
-// thể là thật.
-function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; viewerId: string | null }) {
-  const [reviews, setReviews] = useState<ReviewType[]>([]);
+// Cấu hình 2 bộ tiêu chí theo chiều đánh giá — targetRole quyết định chiều:
+// target=OWNER → viewer (Thợ) chấm SALON_REVIEW; target=TECHNICIAN → viewer
+// (Chủ tiệm) chấm TECHNICIAN_REVIEW. Field key khớp 1-1 với app/api/reviews.
+const CRITERIA_BY_TARGET_ROLE: Record<
+  "OWNER" | "TECHNICIAN",
+  { key: "punctualityOrPay" | "environment" | "turnFairness" | "skillAccuracy" | "workEthic" | "customerAttitude"; label: string; summaryLabel: string }[]
+> = {
+  OWNER: [
+    { key: "punctualityOrPay", label: "Sòng phẳng lương/giờ giấc", summaryLabel: "Sòng phẳng" },
+    { key: "environment", label: "Môi trường làm việc", summaryLabel: "Môi trường" },
+    { key: "turnFairness", label: "Công bằng chia turn", summaryLabel: "Chia turn" },
+  ],
+  TECHNICIAN: [
+    { key: "skillAccuracy", label: "Tay nghề đúng như quảng cáo", summaryLabel: "Tay nghề" },
+    { key: "workEthic", label: "Chăm chỉ, đúng giờ", summaryLabel: "Chăm chỉ" },
+    { key: "customerAttitude", label: "Thái độ với khách", summaryLabel: "Thái độ" },
+  ],
+};
+
+const SUMMARY_KEY_FOR: Record<string, keyof ReviewSummary> = {
+  punctualityOrPay: "avgPunctualityOrPay",
+  environment: "avgEnvironment",
+  turnFairness: "avgTurnFairness",
+  skillAccuracy: "avgSkillAccuracy",
+  workEthic: "avgWorkEthic",
+  customerAttitude: "avgCustomerAttitude",
+};
+
+// Bảng đánh giá 2 chiều minh bạch + form gửi đánh giá. `targetRole` quyết
+// định bộ 3 tiêu chí + ai được phép gửi (chiều ngược lại với targetRole).
+// Điểm số tổng hợp lấy thật từ bảng Review, KHÔNG có số liệu "lượng
+// khách/ngày" hay "tỉ lệ tip cao" giả định vì hệ thống chưa có nguồn dữ
+// liệu POS/booking thật nào để tính.
+function ReviewsSection({
+  targetUserId,
+  targetRole,
+  viewerId,
+  viewerRole,
+}: {
+  targetUserId: string;
+  targetRole: "OWNER" | "TECHNICIAN";
+  viewerId: string | null;
+  viewerRole: string | null;
+}) {
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [rating, setRating] = useState(0);
-  const [fairnessRating, setFairnessRating] = useState(0);
-  const [environmentRating, setEnvironmentRating] = useState(0);
-  const [turnFairnessRating, setTurnFairnessRating] = useState(0);
+  const criteria = CRITERIA_BY_TARGET_ROLE[targetRole];
+  const [overall, setOverall] = useState(0);
+  const [criteriaValues, setCriteriaValues] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
 
   const load = async () => {
@@ -105,10 +150,13 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetUserId]);
 
-  const canReview = viewerId && viewerId !== targetUserId;
+  // Chủ tiệm chỉ được review Thợ, Thợ chỉ được review Chủ tiệm — không cho
+  // cùng vai trò tự chấm nhau (VD: 2 chủ tiệm không review được nhau).
+  const requiredViewerRole = targetRole === "OWNER" ? "TECHNICIAN" : "OWNER";
+  const canReview = Boolean(viewerId && viewerId !== targetUserId && viewerRole === requiredViewerRole);
 
   const handleSubmit = async () => {
-    if (!rating || !fairnessRating || !environmentRating || !turnFairnessRating) {
+    if (!overall || criteria.some((c) => !criteriaValues[c.key])) {
       toast.error("Vui lòng chấm đủ cả 4 tiêu chí.");
       return;
     }
@@ -121,10 +169,7 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetUserId, rating, fairnessRating, environmentRating, turnFairnessRating,
-          comment: comment.trim(),
-        }),
+        body: JSON.stringify({ targetUserId, overall, comment: comment.trim(), ...criteriaValues }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -133,7 +178,9 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
       }
       toast.success("Đã gửi đánh giá — cảm ơn bạn! 🙏");
       setShowForm(false);
-      setRating(0); setFairnessRating(0); setEnvironmentRating(0); setTurnFairnessRating(0); setComment("");
+      setOverall(0);
+      setCriteriaValues({});
+      setComment("");
       load();
     } catch {
       toast.error("Lỗi mạng. Vui lòng thử lại.");
@@ -150,14 +197,10 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
     <div className="space-y-4">
       {/* Tóm tắt điểm trung bình theo từng tiêu chí */}
       <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Sòng phẳng", value: summary?.avgFairness },
-          { label: "Môi trường", value: summary?.avgEnvironment },
-          { label: "Chia turn", value: summary?.avgTurnFairness },
-        ].map((item) => (
-          <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
-            <p className="text-lg font-black text-amber-400">{item.value ?? "—"}</p>
-            <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{item.label}</p>
+        {criteria.map((c) => (
+          <div key={c.key} className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+            <p className="text-lg font-black text-amber-400">{summary?.[SUMMARY_KEY_FOR[c.key]] ?? "—"}</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{c.summaryLabel}</p>
           </div>
         ))}
       </div>
@@ -168,7 +211,7 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
           onClick={() => setShowForm(true)}
           className="w-full min-h-[48px] rounded-2xl border-2 border-dashed border-slate-700 text-sm font-bold text-slate-300 hover:border-pink-500/50 hover:text-pink-300 transition-all"
         >
-          ✍️ Viết đánh giá cho tiệm này
+          ✍️ Viết đánh giá cho {targetRole === "OWNER" ? "tiệm này" : "thợ này"}
         </button>
       )}
 
@@ -177,27 +220,24 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
               <span className="text-xs font-bold text-slate-300">Điểm tổng thể</span>
-              <StarPicker value={rating} onChange={setRating} />
+              <StarPicker value={overall} onChange={setOverall} />
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
-              <span className="text-xs font-bold text-slate-300">Sòng phẳng của chủ</span>
-              <StarPicker value={fairnessRating} onChange={setFairnessRating} />
-            </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
-              <span className="text-xs font-bold text-slate-300">Môi trường làm việc</span>
-              <StarPicker value={environmentRating} onChange={setEnvironmentRating} />
-            </div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
-              <span className="text-xs font-bold text-slate-300">Công bằng chia turn</span>
-              <StarPicker value={turnFairnessRating} onChange={setTurnFairnessRating} />
-            </div>
+            {criteria.map((c) => (
+              <div key={c.key} className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
+                <span className="text-xs font-bold text-slate-300">{c.label}</span>
+                <StarPicker
+                  value={criteriaValues[c.key] || 0}
+                  onChange={(v) => setCriteriaValues((prev) => ({ ...prev, [c.key]: v }))}
+                />
+              </div>
+            ))}
           </div>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={3}
             maxLength={1000}
-            placeholder="Chia sẻ trải nghiệm thật của bạn tại tiệm này..."
+            placeholder={`Chia sẻ trải nghiệm thật của bạn với ${targetRole === "OWNER" ? "tiệm này" : "thợ này"}...`}
             className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-pink-500"
           />
           <div className="flex gap-2">
@@ -231,15 +271,24 @@ function ReviewsSection({ targetUserId, viewerId }: { targetUserId: string; view
               <div className="flex items-center gap-2.5">
                 <img src={r.author.avatarUrl || AVATAR_FALLBACK(r.author.name)} alt={r.author.name} className="h-8 w-8 rounded-full object-cover border border-slate-800" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-200 truncate">{r.author.name}</p>
-                  <StarPicker value={r.rating} readOnly size="h-3 w-3" />
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-slate-200 truncate">{r.author.name}</p>
+                    {r.isVerifiedConnection && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 flex-shrink-0">
+                        <BadgeCheck className="h-2.5 w-2.5" /> Verified Connection
+                      </span>
+                    )}
+                  </div>
+                  <StarPicker value={r.overall} readOnly size="h-3 w-3" />
                 </div>
               </div>
               <p className="text-sm text-slate-300 leading-relaxed">{r.comment}</p>
               <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">Sòng phẳng {r.fairnessRating}★</span>
-                <span className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">Môi trường {r.environmentRating}★</span>
-                <span className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">Chia turn {r.turnFairnessRating}★</span>
+                {criteria.map((c) => (
+                  <span key={c.key} className="text-[10px] rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-slate-400">
+                    {c.summaryLabel} {r[c.key]}★
+                  </span>
+                ))}
               </div>
             </div>
           ))}
@@ -345,15 +394,18 @@ export default function PublicProfilePage({ params }: PageProps) {
     load();
   }, [uid]);
 
-  // Số liệu thẻ tóm tắt "sức khỏe tiệm" cho profile Chủ tiệm — tải song song,
-  // độc lập với việc người xem có bấm vào tab Gallery/Đánh giá hay không.
+  // Số liệu thẻ tóm tắt "Trust Passport" — tải song song, độc lập với việc
+  // người xem có bấm vào tab Gallery/Đánh giá hay không. Áp dụng cho cả 2
+  // vai trò (trước đây chỉ OWNER có, giờ TECHNICIAN cũng cần cho "Hộ Chiếu
+  // Tay Nghề").
   useEffect(() => {
-    if (!profile || profile.role !== "OWNER") return;
+    if (!profile) return;
     let cancelled = false;
-    Promise.all([
-      fetch(`/api/reviews?targetUserId=${profile.id}`).then((r) => (r.ok ? r.json() : null)),
-      fetch(`/api/posts?authorId=${profile.id}&postType=SHOWCASE`).then((r) => (r.ok ? r.json() : null)),
-    ]).then(([reviewData, postData]) => {
+    const tasks: Promise<any>[] = [fetch(`/api/reviews?targetUserId=${profile.id}`).then((r) => (r.ok ? r.json() : null))];
+    if (profile.role === "OWNER") {
+      tasks.push(fetch(`/api/posts?authorId=${profile.id}&postType=SHOWCASE`).then((r) => (r.ok ? r.json() : null)));
+    }
+    Promise.all(tasks).then(([reviewData, postData]) => {
       if (cancelled) return;
       if (reviewData) setTrustSummary(reviewData.summary);
       if (postData) setGalleryCount((postData.posts || []).reduce((sum: number, p: any) => sum + p.mediaUrls.length, 0));
@@ -451,7 +503,7 @@ export default function PublicProfilePage({ params }: PageProps) {
           <div className="grid grid-cols-4 gap-2">
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
               <p className="text-lg font-black text-amber-400 flex items-center justify-center gap-1">
-                {trustSummary?.avgRating ?? "—"} <Star className="h-4 w-4 fill-amber-400" />
+                {trustSummary?.avgOverall ?? "—"} <Star className="h-4 w-4 fill-amber-400" />
               </p>
               <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Điểm uy tín</p>
             </div>
@@ -466,6 +518,48 @@ export default function PublicProfilePage({ params }: PageProps) {
             <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
               <p className="text-lg font-black text-white">{profile.jobs?.length ?? 0}</p>
               <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Đang tuyển</p>
+            </div>
+          </div>
+        )}
+
+        {/* "Sức Khỏe Tiệm & Văn Hóa Làm Việc" — thẻ tín nhiệm cho Chủ tiệm:
+            3 tiêu chí minh bạch (chấm bởi Thợ từng làm) + chính sách tiệm tự
+            khai báo. Chính sách hiển thị "Chưa cập nhật" thay vì bịa mặc
+            định, vì đây là dữ liệu chủ tiệm phải tự nhập, không suy ra được. */}
+        {isOwnerProfile && (
+          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-3.5">
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <HeartHandshake className="h-4 w-4 text-emerald-400" /> Sức Khỏe Tiệm &amp; Văn Hóa Làm Việc
+            </h3>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Tổng thể", value: trustSummary?.avgOverall },
+                { label: "Sòng phẳng", value: trustSummary?.avgPunctualityOrPay },
+                { label: "Môi trường", value: trustSummary?.avgEnvironment },
+                { label: "Chia turn", value: trustSummary?.avgTurnFairness },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl bg-slate-950/40 border border-slate-800 p-2.5 text-center">
+                  <p className="text-base font-black text-emerald-400">{item.value ?? "—"}</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">{item.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2 pt-1 border-t border-slate-800/60">
+              <div className="flex items-center gap-2 text-xs">
+                <Users2 className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                <span className="text-slate-500">Chia turn:</span>
+                <span className="text-slate-200 font-semibold">{profile.turnSplitPolicy || "Chưa cập nhật"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <Users2 className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                <span className="text-slate-500">Loại khách:</span>
+                <span className="text-slate-200 font-semibold">{profile.clientTypePolicy || "Chưa cập nhật"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <HomeIcon className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                <span className="text-slate-500">Chỗ ở cho thợ xa:</span>
+                <span className="text-slate-200 font-semibold">{profile.housingSupport ? "Có" : "Không"}</span>
+              </div>
             </div>
           </div>
         )}
@@ -527,6 +621,34 @@ export default function PublicProfilePage({ params }: PageProps) {
               </div>
             )}
 
+            {/* "Hộ Chiếu Tay Nghề" — thẻ tín nhiệm cho Thợ: điểm đánh giá từ
+                Chủ tiệm cũ + kỹ năng thế mạnh + thời gian gắn bó trung bình
+                (tự khai báo — hệ thống không có bảng chấm công/lịch sử làm
+                việc thật nào để tự tính con số này). */}
+            <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-3.5">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <Award className="h-4 w-4 text-indigo-400" /> Hộ Chiếu Tay Nghề
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-slate-950/40 border border-slate-800 p-2.5 text-center">
+                  <p className="text-base font-black text-indigo-400 flex items-center justify-center gap-1">
+                    {trustSummary?.avgOverall ?? "—"} <Star className="h-3.5 w-3.5 fill-indigo-400" />
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Điểm từ Chủ tiệm</p>
+                </div>
+                <div className="rounded-xl bg-slate-950/40 border border-slate-800 p-2.5 text-center">
+                  <p className="text-base font-black text-white">{trustSummary?.count ?? 0}</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Lượt đánh giá</p>
+                </div>
+                <div className="rounded-xl bg-slate-950/40 border border-slate-800 p-2.5 text-center">
+                  <p className="text-base font-black text-white">
+                    {tech.avgTenureMonths ? `~${tech.avgTenureMonths}` : "—"}
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Tháng/tiệm (TB)</p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <h3 className="text-sm font-bold text-slate-200 mb-2">Portfolio ({tech.portfolioImages?.length || 0})</h3>
               {tech.portfolioImages?.length > 0 ? (
@@ -547,6 +669,19 @@ export default function PublicProfilePage({ params }: PageProps) {
               ) : (
                 <p className="text-xs text-slate-500">Thợ chưa đăng ảnh portfolio nào.</p>
               )}
+            </div>
+
+            {/* Nhận xét thực tế từ Chủ tiệm — chiều TECHNICIAN_REVIEW. */}
+            <div>
+              <h3 className="text-sm font-bold text-slate-200 mb-2 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-indigo-400" /> Đánh giá từ Chủ tiệm
+              </h3>
+              <ReviewsSection
+                targetUserId={profile.id}
+                targetRole="TECHNICIAN"
+                viewerId={viewer?.id ?? null}
+                viewerRole={viewer?.role ?? null}
+              />
             </div>
           </div>
         )}
@@ -600,7 +735,14 @@ export default function PublicProfilePage({ params }: PageProps) {
             )}
 
             {subTab === "gallery" && <GallerySection ownerId={profile.id} />}
-            {subTab === "reviews" && <ReviewsSection targetUserId={profile.id} viewerId={viewer?.id ?? null} />}
+            {subTab === "reviews" && (
+              <ReviewsSection
+                targetUserId={profile.id}
+                targetRole="OWNER"
+                viewerId={viewer?.id ?? null}
+                viewerRole={viewer?.role ?? null}
+              />
+            )}
           </div>
         )}
       </main>

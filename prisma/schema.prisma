@@ -9,8 +9,8 @@ generator client {
 }
 
 enum Role {
-  OWNER       // Chủ tiệm nail — đăng tin tuyển thợ
-  TECHNICIAN  // Thợ nail — đăng portfolio tìm việc
+  OWNER // Chủ tiệm nail — đăng tin tuyển thợ
+  TECHNICIAN // Thợ nail — đăng portfolio tìm việc
   ADMIN
 }
 
@@ -20,128 +20,141 @@ enum Market {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  name              String
-  email             String             @unique
-  password          String             // Hashed password for credentials auth
-  avatarUrl         String?
-  role              Role               @default(TECHNICIAN)
-  phone             String?
-  market            Market             @default(US)
-  state             String?            // US: CA, TX, FL... | AU: NSW, VIC, QLD...
-  city              String?            // City/Suburb
+  id        String  @id @default(cuid())
+  name      String
+  email     String  @unique
+  password  String // Hashed password for credentials auth
+  avatarUrl String?
+  role      Role    @default(TECHNICIAN)
+  phone     String?
+  market    Market  @default(US)
+  state     String? // US: CA, TX, FL... | AU: NSW, VIC, QLD...
+  city      String? // City/Suburb
 
-  jobs              Job[]              // Tin tuyển dụng do chủ tiệm (OWNER) đăng
+  jobs              Job[] // Tin tuyển dụng do chủ tiệm (OWNER) đăng
   technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN
 
   // "Nỗi đau" vận hành tiệm được chẩn đoán qua khảo sát 5 câu lúc đăng ký
   // (chỉ áp dụng cho role = OWNER), phân tách bởi dấu phẩy. VD:
   // "NEED_AUTO_BOOKING,NEED_TURN_AND_TIP_POS"
-  diagnosedPains    String?
+  diagnosedPains String?
 
   // Chi tiết đầy đủ 5 câu trả lời khảo sát (role = OWNER) — JSON-encoded
   // array [{ key, title, answer: "A"|"B", tag, answeredAt }] — dùng cho
   // trang Admin Lead Radar để xem lại từng câu họ chọn A hay B lúc mấy giờ.
-  surveyAnswers     String?
+  surveyAnswers String?
 
-  conversations     Conversation[]     @relation("UserConversations")
-  messages          Message[]
+  // "Chính sách tiệm" — chỉ áp dụng cho role = OWNER, tự khai báo trong
+  // Profile, hiển thị lại ở thẻ "Sức Khỏe Tiệm & Văn Hóa Làm Việc" trên
+  // trang hồ sơ công khai. Không thể tự động tính từ dữ liệu hệ thống
+  // (không có bảng chấm công/booking thật) nên để tự khai báo, minh bạch.
+  turnSplitPolicy  String? // VD: "6/4 (thợ 6 - chủ 4)", "Bao lương, không chia turn"
+  clientTypePolicy String? // VD: "Khách sang, tip cao", "Khách vãng lai, khu đông dân"
+  housingSupport   Boolean @default(false) // Có chỗ ở/bao ăn ở cho thợ ở xa
+
+  conversations Conversation[] @relation("UserConversations")
+  messages      Message[]
 
   // Paywall "Mở khóa kết nối trực tiếp" — chủ tiệm (OWNER) unlock quyền
   // nhắn tin/gọi 1 thợ cụ thể sau khi hoàn tất khảo sát chuyên sâu.
-  unlocksMade       UnlockContact[]    @relation("UnlockOwner")
-  unlocksReceived   UnlockContact[]    @relation("UnlockTechnician")
+  unlocksMade     UnlockContact[] @relation("UnlockOwner")
+  unlocksReceived UnlockContact[] @relation("UnlockTechnician")
 
   // Chặn/Báo cáo — bắt buộc theo App Store Guideline 1.2 (User Generated
   // Content) cho app có nhắn tin giữa người dùng với nhau.
-  blocksMade        BlockedUser[]      @relation("BlocksMade")
-  blocksReceived    BlockedUser[]      @relation("BlocksReceived")
-  reportsMade       UserReport[]       @relation("ReportsMade")
-  reportsReceived   UserReport[]       @relation("ReportsReceived")
+  blocksMade      BlockedUser[] @relation("BlocksMade")
+  blocksReceived  BlockedUser[] @relation("BlocksReceived")
+  reportsMade     UserReport[]  @relation("ReportsMade")
+  reportsReceived UserReport[]  @relation("ReportsReceived")
 
   // Newsfeed xã hội trang chủ
-  posts             Post[]             @relation("PostAuthor")
-  postLikes         PostLike[]         @relation("PostLikes")
-  postComments      PostComment[]      @relation("PostComments")
+  posts        Post[]        @relation("PostAuthor")
+  postLikes    PostLike[]    @relation("PostLikes")
+  postComments PostComment[] @relation("PostComments")
 
   // Kho hàng Supply (chỉ OWNER đăng bán trên thực tế, nhưng không khoá
   // cứng ở DB — kiểm tra role ở API để giữ model đơn giản)
-  supplyProducts    SupplyProduct[]    @relation("SupplyProducts")
+  supplyProducts SupplyProduct[] @relation("SupplyProducts")
 
   // Đánh giá tiệm/thợ — 1 người chỉ đánh giá 1 người khác 1 lần (@@unique
   // bên dưới), sửa bằng cách gửi lại (upsert) chứ không cho spam nhiều review.
-  reviewsGiven      Review[]           @relation("ReviewsGiven")
-  reviewsReceived   Review[]           @relation("ReviewsReceived")
+  reviewsGiven    Review[] @relation("ReviewsGiven")
+  reviewsReceived Review[] @relation("ReviewsReceived")
 
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Tin tuyển thợ do chủ tiệm (OWNER) đăng
 model Job {
-  id           String   @id @default(cuid())
-  title        String   // VD: "Cần thợ Bột/Dip gấp"
-  salonName    String
-  description  String
+  id          String @id @default(cuid())
+  title       String // VD: "Cần thợ Bột/Dip gấp"
+  salonName   String
+  description String
 
-  ownerId      String
-  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  market       Market
-  state        String
-  city         String
+  market Market
+  state  String
+  city   String
 
-  salaryType   String   // "Bao lương tuần" | "% Ăn chia" | "Theo giờ AUD" | "Theo tuần AUD"...
-  salaryAmount String   // Text tự do, VD: "$1,200-1,500/tuần" hoặc "$28-32/giờ"
+  salaryType   String // "Bao lương tuần" | "% Ăn chia" | "Theo giờ AUD" | "Theo tuần AUD"...
+  salaryAmount String // Text tự do, VD: "$1,200-1,500/tuần" hoặc "$28-32/giờ"
 
-  skills       String   // Danh sách kỹ năng, phân tách bởi dấu phẩy: "Bột/Acrylic,Dip/SNS,Gel-X,Design,Chân tay nước"
-  benefits     String   // Danh sách quyền lợi, phân tách bởi dấu phẩy: "Có chỗ ở,Bao lương,Hỗ trợ đổi bang,Hỗ trợ Visa"
+  skills   String // Danh sách kỹ năng, phân tách bởi dấu phẩy: "Bột/Acrylic,Dip/SNS,Gel-X,Design,Chân tay nước"
+  benefits String // Danh sách quyền lợi, phân tách bởi dấu phẩy: "Có chỗ ở,Bao lương,Hỗ trợ đổi bang,Hỗ trợ Visa"
 
-  phone        String   // Số điện thoại liên hệ trực tiếp (nút "Gọi ngay")
-  isUrgent     Boolean  @default(true)
+  phone    String // Số điện thoại liên hệ trực tiếp (nút "Gọi ngay")
+  isUrgent Boolean @default(true)
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 // Hồ sơ tay nghề / portfolio ảnh móng của thợ (role = TECHNICIAN)
 model TechnicianProfile {
-  id                String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   bio               String?
-  yearsOfExperience Int      @default(0)
-  specialties       String   // Kỹ năng sở trường, phân tách bởi dấu phẩy
+  yearsOfExperience Int     @default(0)
+  specialties       String // Kỹ năng sở trường, phân tách bởi dấu phẩy
 
-  status            String   @default("AVAILABLE") // "URGENT" (Cần việc ngay) | "AVAILABLE" (Đang rảnh tay) | "BETTER" (Tìm chỗ tốt hơn)
+  status String @default("AVAILABLE") // "URGENT" (Cần việc ngay) | "AVAILABLE" (Đang rảnh tay) | "BETTER" (Tìm chỗ tốt hơn)
 
   // Mong muốn về đãi ngộ khi tìm việc mới (khai báo lúc đăng ký)
   desiredSalaryType   String? // "Bao lương" | "Ăn chia %"
   desiredSalaryAmount String? // Số tiền/mức % mong muốn, text tự do
   desiredBenefits     String? // Quyền lợi mong muốn, phân tách bởi dấu phẩy: "Có chỗ ở,Hỗ trợ dời bang,Cần bảo lãnh Visa"
 
-  market            Market
-  state             String
-  city              String
+  market Market
+  state  String
+  city   String
 
-  portfolioImages   String   // JSON-encoded array các URL ảnh/video Cloudinary
+  portfolioImages String // JSON-encoded array các URL ảnh/video Cloudinary
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  // "Hộ Chiếu Tay Nghề" — tự khai báo thời gian gắn bó trung bình mỗi tiệm
+  // (tháng). Hệ thống không có bảng lịch sử làm việc/chấm công thật nào để
+  // tự tính con số này, nên để thợ tự khai báo thay vì bịa số liệu.
+  avgTenureMonths Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Paywall "Mở khóa kết nối trực tiếp": 1 bản ghi = 1 chủ tiệm (OWNER) đã mở
 // khóa quyền nhắn tin/gọi 1 thợ cụ thể. @@unique đảm bảo mở 1 lần là xong,
 // không bao giờ bị hỏi lại khảo sát cho cùng cặp owner-thợ đó lần thứ 2.
 model UnlockContact {
-  id               String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  ownerId          String
-  owner            User     @relation("UnlockOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+  owner   User   @relation("UnlockOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   technicianUserId String
-  technician       User     @relation("UnlockTechnician", fields: [technicianUserId], references: [id], onDelete: Cascade)
+  technician       User   @relation("UnlockTechnician", fields: [technicianUserId], references: [id], onDelete: Cascade)
 
   // Danh sách tag giải pháp họ tick muốn kích hoạt trong bước khảo sát
   // chuyên sâu (con của diagnosedPains), JSON-encoded string[]. VD:
@@ -149,9 +162,9 @@ model UnlockContact {
   deepSurveyAnswers String?
 
   // "THIS_WEEK" | "NEXT_WEEK" | "URGENT_24H"
-  hiringTimeline   String?
+  hiringTimeline String?
 
-  unlockedAt       DateTime @default(now())
+  unlockedAt DateTime @default(now())
 
   @@unique([ownerId, technicianUserId])
 }
@@ -159,15 +172,15 @@ model UnlockContact {
 // Chặn — 1 chiều theo ý định người chặn. Enforcement thực tế (chặn gửi tin
 // nhắn) kiểm tra cả 2 chiều giữa 2 user trong app/api/messages/route.ts.
 model BlockedUser {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  blockerId     String
-  blocker       User     @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId String
+  blocker   User   @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
 
   blockedUserId String
-  blockedUser   User     @relation("BlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
+  blockedUser   User   @relation("BlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([blockerId, blockedUserId])
 }
@@ -175,17 +188,17 @@ model BlockedUser {
 // Báo cáo — chỉ lưu lại để đội ngũ vận hành xem xét thủ công, không tự
 // động hành động (không tự khóa tài khoản bị báo cáo).
 model UserReport {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  reporterId     String
-  reporter       User     @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter   User   @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
 
   reportedUserId String
-  reportedUser   User     @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reportedUser   User   @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
 
-  reason         String
+  reason String
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Conversation {
@@ -209,9 +222,9 @@ model Message {
 }
 
 enum PostType {
-  GENERAL   // Bài đăng thường
-  SHOWCASE  // Khoe tác phẩm móng / cảnh tiệm — cũng dùng làm "Gallery" trên profile Chủ tiệm
-  JOB       // Chia sẻ lại 1 tin tuyển dụng lên newsfeed
+  GENERAL // Bài đăng thường
+  SHOWCASE // Khoe tác phẩm móng / cảnh tiệm — cũng dùng làm "Gallery" trên profile Chủ tiệm
+  JOB // Chia sẻ lại 1 tin tuyển dụng lên newsfeed
 }
 
 // Bài đăng newsfeed trang chủ (thay cho JobBoard/TechnicianGrid thuần liệt
@@ -220,18 +233,18 @@ enum PostType {
 // chứng tiệm đông khách" trên app/profile/[uid]/page.tsx — không tạo bảng
 // riêng để tránh trùng lặp dữ liệu.
 model Post {
-  id         String        @id @default(cuid())
-  authorId   String
-  author     User          @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  content    String
-  postType   PostType      @default(GENERAL)
-  mediaUrls  String        // JSON-encoded string[] — ảnh/video, cùng quy ước với TechnicianProfile.portfolioImages
-  market     Market?
-  state      String?
-  city       String?
-  likes      PostLike[]
-  comments   PostComment[]
-  createdAt  DateTime      @default(now())
+  id        String        @id @default(cuid())
+  authorId  String
+  author    User          @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  postType  PostType      @default(GENERAL)
+  mediaUrls String // JSON-encoded string[] — ảnh/video, cùng quy ước với TechnicianProfile.portfolioImages
+  market    Market?
+  state     String?
+  city      String?
+  likes     PostLike[]
+  comments  PostComment[]
+  createdAt DateTime      @default(now())
 }
 
 model PostLike {
@@ -266,25 +279,47 @@ model SupplyProduct {
   description   String?
   imageUrl      String
   price         Float
-  originalPrice Float?   // Nếu có, hiển thị gạch giá + badge "Tiết kiệm X%"
+  originalPrice Float? // Nếu có, hiển thị gạch giá + badge "Tiết kiệm X%"
   createdAt     DateTime @default(now())
 }
 
-// Đánh giá cộng đồng cho 1 tiệm/thợ — 3 tiêu chí riêng (sòng phẳng, môi
-// trường làm việc, công bằng chia turn) + 1 điểm tổng thể, đúng yêu cầu sản
-// phẩm thay vì gộp chung 1 con số sao duy nhất.
+// Đánh giá 2 chiều minh bạch: Thợ đánh giá Chủ tiệm (SALON_REVIEW) và Chủ
+// tiệm đánh giá Thợ (TECHNICIAN_REVIEW) — 2 chiều dùng chung 1 bảng nhưng
+// khác bộ tiêu chí, vì mỗi chiều chấm những khía cạnh hoàn toàn khác nhau.
+// Chiều nào cũng có đúng 1 bản ghi mỗi cặp (author, target) — gửi lại là
+// sửa đánh giá cũ (upsert), không cho spam nhiều bản ghi.
+enum ReviewType {
+  SALON_REVIEW // Thợ chấm Chủ tiệm
+  TECHNICIAN_REVIEW // Chủ tiệm chấm Thợ
+}
+
 model Review {
-  id                 String   @id @default(cuid())
-  authorId           String
-  author             User     @relation("ReviewsGiven", fields: [authorId], references: [id], onDelete: Cascade)
-  targetUserId       String
-  targetUser         User     @relation("ReviewsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
-  rating             Int      // Điểm tổng thể 1-5
-  fairnessRating     Int      // Độ sòng phẳng của chủ 1-5
-  environmentRating  Int      // Môi trường làm việc 1-5
-  turnFairnessRating Int      // Công bằng khi chia turn 1-5
-  comment            String
-  createdAt          DateTime @default(now())
+  id           String     @id @default(cuid())
+  type         ReviewType
+  authorId     String
+  author       User       @relation("ReviewsGiven", fields: [authorId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User       @relation("ReviewsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  // Tiêu chí SALON_REVIEW (Thợ chấm Chủ tiệm) — null khi type = TECHNICIAN_REVIEW
+  punctualityOrPay Int? // Sòng phẳng lương/giờ giấc 1-5
+  environment      Int? // Môi trường làm việc 1-5
+  turnFairness     Int? // Công bằng khi chia turn 1-5
+
+  // Tiêu chí TECHNICIAN_REVIEW (Chủ tiệm chấm Thợ) — null khi type = SALON_REVIEW
+  skillAccuracy    Int? // Tay nghề đúng như quảng cáo 1-5
+  workEthic        Int? // Chăm chỉ, đúng giờ 1-5
+  customerAttitude Int? // Thái độ với khách 1-5
+
+  overall Int // Điểm tổng thể 1-5 — luôn có ở cả 2 chiều
+  comment String
+
+  // "Verified Connection" — 2 người đã từng nhắn tin hoặc mở khóa liên hệ
+  // với nhau trong hệ thống trước khi review, chống review khống/bịa đặt.
+  // Tính 1 lần lúc tạo/sửa review, không tự cập nhật lại sau đó.
+  isVerifiedConnection Boolean @default(false)
+
+  createdAt DateTime @default(now())
 
   @@unique([authorId, targetUserId])
 }

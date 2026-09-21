@@ -28,6 +28,11 @@ export default function VideoCallRoom({
 
   // Zego Instance
   const zegoInstanceRef = useRef<any>(null);
+  // True only once a real <video> track has actually rendered — lets
+  // onLeaveRoom (below) tell a genuine user-initiated hangup apart from
+  // ZegoCloud's own internal cleanup after a failed login (see comment at
+  // onLeaveRoom for why that distinction matters).
+  const hasConnectedRef = useRef(false);
 
   // Soft beauty filter values
   const [skinSoftness, setSkinSoftness] = useState(60);
@@ -52,6 +57,7 @@ export default function VideoCallRoom({
     async function initCall() {
       try {
         setCallError(null);
+        hasConnectedRef.current = false;
 
         // Dynamically import Zego Prebuilt UIKit on client-side to prevent Next.js SSR build crashes
         const { ZegoUIKitPrebuilt } = await import("@zegocloud/zego-uikit-prebuilt");
@@ -93,8 +99,17 @@ export default function VideoCallRoom({
           showScreenSharingButton: false,
           showUserList: false,
           showPreJoinView: false, // Direct join
+          // ZegoCloud gọi callback này cả khi NGƯỜI DÙNG chủ động rời phòng
+          // (trường hợp hợp lệ, cần forward onLeave) LẪN nội bộ tự dọn dẹp
+          // sau khi loginRoom thất bại (VD lỗi 1001004) — quan sát thực tế
+          // cho thấy SDK tự bắn callback này ~12-15s sau khi login lỗi, dù
+          // chưa từng có video nào render. Nếu forward thẳng onLeave() trong
+          // trường hợp đó, handleEndCall (CallManager) sẽ gửi tín hiệu
+          // "reject" cho phía kia và đóng sập TOÀN BỘ khung cuộc gọi — xóa
+          // mất banner fallback thân thiện đúng lúc nó vừa/sắp hiện. Chỉ
+          // forward khi cuộc gọi từng thực sự có video (hasConnectedRef).
           onLeaveRoom: () => {
-            if (onLeave) onLeave();
+            if (onLeave && hasConnectedRef.current) onLeave();
           }
         });
 
@@ -119,7 +134,10 @@ export default function VideoCallRoom({
 
         if (container) {
           videoWatcher = new MutationObserver(() => {
-            if (container.querySelector("video")) clearReadyWatch();
+            if (container.querySelector("video")) {
+              hasConnectedRef.current = true;
+              clearReadyWatch();
+            }
           });
           videoWatcher.observe(container, { childList: true, subtree: true });
         }

@@ -1184,7 +1184,7 @@ export default function MessagesContent({
                                     />
                                   </div>
                                 ) : msg.type === "VIDEO" ? (
-                                  <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/logo_b.jpg" />
+                                  <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
                                 ) : (
                                   <p>{msg.content}</p>
                                 )}

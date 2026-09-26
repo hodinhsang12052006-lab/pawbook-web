@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame } from "lucide-react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 
 export interface JobType {
   id: string;
@@ -46,6 +47,39 @@ const BENEFIT_ICON_RULES: Array<{ match: RegExp; icon: string }> = [
 
 function benefitIcon(text: string): string {
   return BENEFIT_ICON_RULES.find((r) => r.match.test(text))?.icon || "🎁";
+}
+
+// "Mới đăng X trước" — tính thật từ createdAt, không phải số bịa, nhưng vẫn
+// tạo cảm giác khan hiếm/mới tự nhiên (tin càng mới càng dễ khiến thợ bấm
+// vào ngay thay vì lướt qua rồi quên).
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "vừa đăng";
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  return `${days} ngày trước`;
+}
+
+// Banner "cầu thợ thực tế" — tái dùng đúng số liệu tổng hợp/ẩn danh đã tính
+// cho Nail Radar (lib/nailRadarData.ts), để tab "Cần Thợ Gấp" mở ra là thợ
+// thấy ngay bằng chứng có thật rằng thị trường đang khát nhân lực, thay vì
+// chỉ có mỗi danh sách tin — đúng tinh thần giữ chân thợ mới vào nền tảng.
+function DemandFomoBanner({ market, state }: { market: "US" | "AU"; state: string }) {
+  const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
+  const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
+  const scopeLabel = stateSignal ? `tại ${state}` : market === "US" ? "tại Mỹ" : "tại Úc";
+
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3">
+      <TrendingUp className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+      <p className="text-xs sm:text-sm text-slate-200">
+        <span className="font-black text-emerald-400">{count}+ tiệm</span> {scopeLabel} đang cần tuyển thợ ngay bây giờ — ứng tuyển sớm để không bị tiệm khác giành mất suất.
+      </p>
+    </div>
+  );
 }
 
 // Khung skeleton đúng kích thước card thật — tránh layout shift/nhảy giật
@@ -132,16 +166,23 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
 
   if (jobs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-        <p className="text-4xl">💅</p>
-        <p className="text-base font-bold text-slate-300">Chưa có tin tuyển thợ ở khu vực này</p>
-        <p className="text-sm text-slate-500">Hãy thử đổi bang hoặc thành phố khác.</p>
+      <div className="space-y-4">
+        <DemandFomoBanner market={market} state={state} />
+        <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+          <p className="text-4xl">💅</p>
+          <p className="text-base font-bold text-slate-300">Chưa có tin tuyển thợ ở khu vực này</p>
+          <p className="text-sm text-slate-500">
+            Nhưng đừng bỏ cuộc — thử đổi bang hoặc thành phố khác, {market === "US" ? "toàn nước Mỹ" : "toàn nước Úc"} vẫn còn rất nhiều tiệm đang cần thợ.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+    <div className="space-y-4 animate-fadeIn">
+      <DemandFomoBanner market={market} state={state} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {jobs.map((job) => (
         <div
           key={job.id}
@@ -152,11 +193,16 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
               <h3 className="text-base font-bold text-white leading-snug truncate">{job.title}</h3>
               <p className="text-sm text-slate-400 font-semibold truncate">{job.salonName}</p>
             </div>
-            {job.isUrgent && (
-              <span className="flex-shrink-0 inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/30">
-                <Flame className="h-3 w-3" /> Gấp
+            <div className="flex-shrink-0 flex flex-col items-end gap-1">
+              {job.isUrgent && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/30">
+                  <Flame className="h-3 w-3" /> Gấp
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+                <Clock className="h-3 w-3" /> {timeAgo(job.createdAt)}
               </span>
-            )}
+            </div>
           </div>
 
           {/* Con số lương — thứ đầu tiên thợ nhìn vào, phải to/đậm/tương
@@ -220,6 +266,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Loader2, Newspaper } from "lucide-react";
+import { AlertCircle, Loader2, Newspaper, Sparkles } from "lucide-react";
 import FeedPostCard, { FeedPost } from "./FeedPostCard";
 import SupplyProductCard, { SupplyProductType } from "./SupplyProductCard";
 import CreatePostComposer from "./CreatePostComposer";
+import { useSessionUser } from "@/lib/SessionUserContext";
+import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 
 interface SocialFeedProps {
   market: "US" | "AU";
@@ -39,6 +41,8 @@ function FeedSkeleton() {
 }
 
 export default function SocialFeed({ market, state, city }: SocialFeedProps) {
+  const { user } = useSessionUser();
+  const isTech = user?.role === "TECHNICIAN";
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [supplyProducts, setSupplyProducts] = useState<SupplyProductType[]>([]);
@@ -147,6 +151,18 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
 
   return (
     <div className="space-y-4">
+      {/* Chỉ THỢ mới thấy — số liệu thật (xem lib/nailRadarData.ts) cho thấy
+          tỉ lệ "chủ tìm thợ" áp đảo "thợ tìm việc" trên thị trường, nên đây
+          chính là lúc đúng nhất để nhắc thợ đăng bài — họ đang là bên được
+          săn đón, chỉ cần xuất hiện là dễ được chủ để ý ngay. */}
+      {isTech && (
+        <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
+          <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />
+          <p className="text-xs sm:text-sm text-slate-200">
+            <span className="font-black text-pink-400">{TOTAL_DEMAND_COUNT[market]}+ tiệm</span> tại {market === "US" ? "Mỹ" : "Úc"} đang tìm thợ ngay lúc này — đăng ảnh tay nghề để chủ tiệm dễ tìm thấy bạn hơn.
+          </p>
+        </div>
+      )}
       <CreatePostComposer onPosted={handlePosted} />
 
       {loading ? (

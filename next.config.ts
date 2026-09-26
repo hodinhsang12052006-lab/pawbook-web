@@ -91,7 +91,15 @@ const nextConfig: NextConfig = {
             // Added api.dicebear.com to img-src — avatar mặc định lúc đăng ký
             // đổi sang DiceBear fun-emoji (xem app/api/register/route.ts),
             // domain này chưa có sẵn nên ảnh sẽ bị CSP chặn nếu không thêm.
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            // Added *.coolgcloud.com + *.coolzcloud.com to connect-src — test
+            // gọi video 2-browser thật phát hiện ZegoCloud SDK còn dùng CẢ 3
+            // domain logging khác nhau (coolbcloud/coolgcloud/coolzcloud —
+            // chỉ khác 1 chữ cái, trước đây chỉ thêm coolbcloud) nên vẫn còn
+            // bị CSP chặn. LƯU Ý: các domain này chỉ phục vụ log/telemetry
+            // nội bộ của SDK — không phải nguyên nhân cuộc gọi thất bại (xem
+            // lỗi thật "appid invalid" 1001004 đã báo riêng, cần sửa ở phía
+            // ZegoCloud console/env, không phải ở CSP).
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

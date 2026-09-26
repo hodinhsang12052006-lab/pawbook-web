@@ -64,26 +64,33 @@ function TechnicianGridSkeleton() {
 
 // Chủ tiệm quét lưới ảnh cực nhanh — badge trạng thái phải nói được ngay
 // "gọi được không" mà không cần bấm vào xem hồ sơ.
+//
+// max-w giới hạn ở 48% (thay vì gần full-width trước đây) vì badge chuyên
+// môn bên phải (xem tech.specialties bên dưới) cũng absolute top-2 right-2
+// độc lập, không nằm chung flex layout — nếu badge trái được phép rộng gần
+// hết thẻ, câu dài như "Đang rảnh hôm nay – Gọi thử tay nghề ngay" sẽ đè
+// chồng lên chữ badge phải, cắt chữ lem nhem cả 2 bên. truncate để câu dài
+// bị cắt gọn bằng dấu "…" thay vì tràn ra ngoài khung.
 function StatusBadge({ status }: { status: string }) {
   if (status === "URGENT") {
     return (
-      <span className="absolute top-2 left-2 max-w-[calc(100%-1rem)] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
-        <Flame className="h-2.5 w-2.5 flex-shrink-0" /> Tìm việc gấp
+      <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
+        <Flame className="h-2.5 w-2.5 flex-shrink-0" /> <span className="truncate">Tìm việc gấp</span>
       </span>
     );
   }
   if (status === "AVAILABLE") {
     return (
-      <span className="absolute top-2 left-2 max-w-[calc(100%-1rem)] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
+      <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
         <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse" />
-        <span>Đang rảnh hôm nay – Gọi thử tay nghề ngay</span>
+        <span className="line-clamp-2">Đang rảnh hôm nay</span>
       </span>
     );
   }
   if (status === "BETTER") {
     return (
-      <span className="absolute top-2 left-2 max-w-[calc(100%-1rem)] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
-        Đang tìm chỗ tốt hơn
+      <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
+        <span className="truncate">Đang tìm chỗ tốt hơn</span>
       </span>
     );
   }

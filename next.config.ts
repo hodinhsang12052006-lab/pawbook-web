@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import path from "path";
 // next-pwa ships no TypeScript declarations.
@@ -96,9 +97,12 @@ const nextConfig: NextConfig = {
             // domain logging khác nhau (coolbcloud/coolgcloud/coolzcloud —
             // chỉ khác 1 chữ cái, trước đây chỉ thêm coolbcloud) nên vẫn còn
             // bị CSP chặn. LƯU Ý: các domain này chỉ phục vụ log/telemetry
-            // nội bộ của SDK — không phải nguyên nhân cuộc gọi thất bại (xem
-            // lỗi thật "appid invalid" 1001004 đã báo riêng, cần sửa ở phía
-            // ZegoCloud console/env, không phải ở CSP).
+            // nội bộ của SDK — không phải nguyên nhân cuộc gọi video thất bại.
+            // Nguyên nhân thật là App ID trong .env.local bị gõ sai 1 số
+            // (1829171707 thay vì 1829174707 thật trên console ZegoCloud) —
+            // đã sửa cả .env và .env.local, đã verify bằng Playwright 2 tài
+            // khoản thật kết nối thành công (xem log "appid invalid" 1001004
+            // biến mất sau khi sửa).
             value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
@@ -107,4 +111,40 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+export default withSentryConfig(withPWA(nextConfig), {
+  // For all available options, see:
+  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+
+  org: "bitpaw",
+
+  project: "javascript-nextjs-nm",
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+
+  // For all available options, see:
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  widenClientFileUpload: true,
+
+  // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  // This can increase your server load as well as your hosting bill.
+  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+  // side errors will fail.
+  // tunnelRoute: "/monitoring",
+
+  webpack: {
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true,
+
+    // Tree-shaking options for reducing bundle size
+    treeshake: {
+      // Automatically tree-shake Sentry logger statements to reduce bundle size
+      removeDebugLogging: true,
+    },
+  },
+});

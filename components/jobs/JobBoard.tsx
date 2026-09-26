@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock } from "lucide-react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 
@@ -123,6 +123,8 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   const [jobs, setJobs] = useState<JobType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +152,46 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
       cancelled = true;
     };
   }, [market, state, city]);
+
+  // Nạp danh sách đã lưu 1 lần khi mount — không phụ thuộc bộ lọc market/
+  // state/city vì "đã lưu" là của riêng người dùng, không đổi theo bộ lọc.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/jobs/saved")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((ids: string[]) => {
+        if (!cancelled) setSavedIds(new Set(ids));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function toggleSave(jobId: string) {
+    const isSaved = savedIds.has(jobId);
+    // Optimistic update — thao tác lưu tin phải phản hồi tức thì, không đợi
+    // network, vì đây chính là hành động "tôi sẽ quay lại xem cái này".
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (isSaved) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+    try {
+      await fetch(`/api/jobs/${jobId}/save`, { method: isSaved ? "DELETE" : "POST" });
+    } catch {
+      // Rollback nếu request lỗi
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (isSaved) next.add(jobId);
+        else next.delete(jobId);
+        return next;
+      });
+    }
+  }
+
+  const visibleJobs = showSavedOnly ? jobs.filter((j) => savedIds.has(j.id)) : jobs;
 
   if (loading) {
     return <JobBoardSkeleton />;
@@ -182,17 +224,44 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   return (
     <div className="space-y-4 animate-fadeIn">
       <DemandFomoBanner market={market} state={state} />
+
+      <button
+        onClick={() => setShowSavedOnly((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold border transition-colors ${
+          showSavedOnly
+            ? "border-pink-500 bg-pink-500/15 text-pink-300"
+            : "border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-200"
+        }`}
+      >
+        <Bookmark className={`h-3.5 w-3.5 ${showSavedOnly ? "fill-pink-400" : ""}`} />
+        Đã lưu {savedIds.size > 0 && `(${savedIds.size})`}
+      </button>
+
+      {showSavedOnly && visibleJobs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+          <Bookmark className="h-8 w-8 text-slate-700" />
+          <p className="text-base font-bold text-slate-300">Bạn chưa lưu tin nào</p>
+          <p className="text-sm text-slate-500">Bấm biểu tượng bookmark trên tin ưng ý để xem lại sau.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {jobs.map((job) => (
+      {visibleJobs.map((job) => (
         <div
           key={job.id}
           className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 sm:p-5 space-y-3 hover:border-pink-500/40 transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h3 className="text-base font-bold text-white leading-snug truncate">{job.title}</h3>
               <p className="text-sm text-slate-400 font-semibold truncate">{job.salonName}</p>
             </div>
+            <button
+              onClick={() => toggleSave(job.id)}
+              aria-label={savedIds.has(job.id) ? "Bỏ lưu tin" : "Lưu tin"}
+              className="flex-shrink-0 p-1.5 -m-1.5 text-slate-500 hover:text-pink-400 active:scale-90 transition-all"
+            >
+              <Bookmark className={`h-5 w-5 ${savedIds.has(job.id) ? "fill-pink-400 text-pink-400" : ""}`} />
+            </button>
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
               {job.isUrgent && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/30">
@@ -267,6 +336,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
         </div>
       ))}
       </div>
+      )}
     </div>
   );
 }

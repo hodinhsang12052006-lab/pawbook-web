@@ -33,6 +33,7 @@ model User {
 
   jobs              Job[] // Tin tuyển dụng do chủ tiệm (OWNER) đăng
   technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN
+  savedJobs         SavedJob[]         @relation("SavedJobs")
 
   // "Nỗi đau" vận hành tiệm được chẩn đoán qua khảo sát 5 câu lúc đăng ký
   // (chỉ áp dụng cho role = OWNER), phân tách bởi dấu phẩy. VD:
@@ -109,6 +110,24 @@ model Job {
   isUrgent Boolean @default(true)
 
   createdAt DateTime @default(now())
+
+  savedBy SavedJob[]
+}
+
+// Tin đã lưu — thợ thấy tin ưng ý nhưng chưa tiện gọi ngay có thể lưu lại
+// xem sau. Lý do giữ chân đơn giản nhất: cho người dùng 1 chỗ CHẮC CHẮN có
+// nội dung của riêng họ để quay lại, không phụ thuộc dịch vụ ngoài (push/
+// email) — an toàn để thêm ngay trước khi nộp store.
+model SavedJob {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("SavedJobs", fields: [userId], references: [id], onDelete: Cascade)
+  jobId  String
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId])
 }
 
 // Hồ sơ tay nghề / portfolio ảnh móng của thợ (role = TECHNICIAN)

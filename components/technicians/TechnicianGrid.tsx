@@ -6,6 +6,7 @@ import { AlertCircle, Flame, Play, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
+import { stateName } from "@/lib/stateNames";
 
 export interface TechnicianType {
   id: string;
@@ -38,7 +39,7 @@ const PRESS = "active:scale-95 transition-transform duration-100";
 function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: string }) {
   const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
   const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
-  const scopeLabel = stateSignal ? `tại ${state}` : market === "US" ? "tại Mỹ" : "tại Úc";
+  const scopeLabel = stateSignal ? `tại ${stateName(market, state)}` : market === "US" ? "tại Mỹ" : "tại Úc";
 
   return (
     <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3 mb-3">
@@ -177,7 +178,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
         <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
-        <p className="text-[10px] text-slate-300 truncate">{tech.city}, {tech.state} · {tech.yearsOfExperience} năm KN</p>
+        <p className="text-[10px] text-slate-300 truncate">{tech.city}, {stateName(tech.market, tech.state)} · {tech.yearsOfExperience} năm KN</p>
       </div>
 
       <StatusBadge status={tech.status} />

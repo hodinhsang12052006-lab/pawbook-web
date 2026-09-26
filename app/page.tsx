@@ -8,6 +8,7 @@ import JobBoard from "@/components/jobs/JobBoard";
 import TechnicianGrid from "@/components/technicians/TechnicianGrid";
 import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { stateName } from "@/lib/stateNames";
 import { Sparkles, Search, Flame, Newspaper } from "lucide-react";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
@@ -151,7 +152,7 @@ export default function HomePage() {
                       state === s ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950 border-slate-800 text-slate-400"
                     }`}
                   >
-                    {s}
+                    {stateName(market, s)}
                   </button>
                 ))}
               </div>

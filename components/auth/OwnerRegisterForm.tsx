@@ -13,6 +13,7 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
+import { stateName } from "@/lib/stateNames";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
@@ -298,7 +299,7 @@ export default function OwnerRegisterForm() {
           <div>
             <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.stateLabel")}</label>
             <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
-              {states.map((s) => <option key={s} value={s}>{s}</option>)}
+              {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
             </select>
           </div>
           <div>

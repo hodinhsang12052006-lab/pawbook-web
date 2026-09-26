@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import { ArrowLeft, MapPin, DollarSign, Phone, MessageCircle, Loader2, AlertCircle, Flame, Building } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { stateName } from "@/lib/stateNames";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -96,7 +97,7 @@ export default function JobDetailPage({ params }: PageProps) {
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-300 border-y border-slate-850 py-4">
             <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-slate-500" /> {job.city}, {job.state} ({job.market})
+              <MapPin className="h-4 w-4 text-slate-500" /> {job.city}, {stateName(job.market, job.state)} ({job.market})
             </span>
             <span className="flex items-center gap-1.5 font-bold text-emerald-400">
               <DollarSign className="h-4 w-4" /> {job.salaryAmount} <span className="text-slate-500 font-normal">({job.salaryType})</span>

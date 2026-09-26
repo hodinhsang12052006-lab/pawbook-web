@@ -4,6 +4,7 @@ import React from "react";
 import { Briefcase, Store, Newspaper } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { stateName } from "@/lib/stateNames";
 
 import Image from "next/image";
 
@@ -20,7 +21,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const userName = effectiveUser?.name || "Thành viên";
   const userRole = effectiveUser?.role || "TECHNICIAN";
   const userAvatar = effectiveUser?.avatarUrl || effectiveUser?.image || "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=100&auto=format&fit=crop&q=80";
-  const userLocation = [effectiveUser?.city, effectiveUser?.state].filter(Boolean).join(", ") || "Chưa cập nhật khu vực";
+  const userLocation = [effectiveUser?.city, stateName(effectiveUser?.market, effectiveUser?.state)].filter(Boolean).join(", ") || "Chưa cập nhật khu vực";
   const roleLabel = userRole === "OWNER" ? "Chủ tiệm" : userRole === "ADMIN" ? "Quản trị" : "Thợ Nail";
 
   const menuItems = [

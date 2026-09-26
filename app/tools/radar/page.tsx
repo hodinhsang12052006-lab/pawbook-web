@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Radar, Loader2, DollarSign, Users, Package, Lightbulb, ClipboardList, AlertCircle, Info, TrendingUp } from "lucide-react";
+import { stateName } from "@/lib/stateNames";
 
 type MarketKey = "US" | "AU";
 type SkillKey = "BOT" | "DIP" | "TAY_NUOC";
@@ -124,7 +125,7 @@ export default function NailRadarPage() {
                   state === s ? "border-amber-500 bg-amber-500/15 text-amber-300" : "border-slate-800 text-slate-400"
                 }`}
               >
-                {s}
+                {stateName(market, s)}
               </button>
             ))}
           </div>
@@ -171,7 +172,7 @@ export default function NailRadarPage() {
               <p className="text-3xl font-black text-white">
                 {currencySymbol}{result.rateMin.toLocaleString("en-US")} – {currencySymbol}{result.rateMax.toLocaleString("en-US")}
               </p>
-              <p className="text-[10px] text-slate-500">{result.currency} / tuần · {state}</p>
+              <p className="text-[10px] text-slate-500">{result.currency} / tuần · {stateName(market, state)}</p>
             </div>
 
             {/* Demand signal — số tin tuyển thợ thật ghi nhận từ cộng đồng */}
@@ -185,7 +186,7 @@ export default function NailRadarPage() {
                     {result.demandSignal.demandCount} tin tuyển thợ
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    ghi nhận tại {state} qua các nhóm cộng đồng ngành nail
+                    ghi nhận tại {stateName(market, state)} qua các nhóm cộng đồng ngành nail
                     {result.demandSignal.wageMentions > 0 && (
                       <> · {result.demandSignal.wageMentions} tin có nhắc mức lương cụ thể</>
                     )}

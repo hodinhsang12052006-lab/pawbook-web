@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
+import { stateName } from "@/lib/stateNames";
 
 export interface JobType {
   id: string;
@@ -70,7 +71,7 @@ function timeAgo(iso: string): string {
 function DemandFomoBanner({ market, state }: { market: "US" | "AU"; state: string }) {
   const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
   const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
-  const scopeLabel = stateSignal ? `tại ${state}` : market === "US" ? "tại Mỹ" : "tại Úc";
+  const scopeLabel = stateSignal ? `tại ${stateName(market, state)}` : market === "US" ? "tại Mỹ" : "tại Úc";
 
   return (
     <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3">
@@ -289,7 +290,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
 
           <span className="flex items-center gap-1.5 text-sm text-slate-300">
             <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
-            {job.city}, {job.state}
+            {job.city}, {stateName(job.market, job.state)}
           </span>
 
           {job.skills.length > 0 && (

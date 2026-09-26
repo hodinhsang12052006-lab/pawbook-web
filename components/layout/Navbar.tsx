@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Plus, MessageSquare, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { Plus, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -22,8 +23,8 @@ export default function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Logo & Brand */}
         <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-fuchsia-600 shadow-lg shadow-pink-500/20">
-            <Sparkles className="h-5 w-5 text-white" />
+          <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-pink-500/20">
+            <Image src="/cho1.jpg" alt="PawNail Jobs" fill sizes="40px" className="object-cover" />
           </div>
           <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-lg font-extrabold tracking-wide text-transparent hidden sm:inline">
             PawNail Jobs

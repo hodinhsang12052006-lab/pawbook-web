@@ -12,6 +12,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import UnlockChatModal from "@/components/profile/UnlockChatModal";
+import { stateName } from "@/lib/stateNames";
 
 interface PageProps {
   params: Promise<{ uid: string }>;
@@ -489,7 +490,7 @@ export default function PublicProfilePage({ params }: PageProps) {
             <p className="text-xs text-slate-400">{profile.role === "OWNER" ? "🏪 Chủ tiệm" : "💅 Thợ Nail"}</p>
             {(profile.city || profile.state) && (
               <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3" /> {[profile.city, profile.state].filter(Boolean).join(", ")}
+                <MapPin className="h-3 w-3" /> {[profile.city, stateName(profile.market, profile.state)].filter(Boolean).join(", ")}
               </p>
             )}
           </div>
@@ -727,7 +728,7 @@ export default function PublicProfilePage({ params }: PageProps) {
                         className="block rounded-xl border border-slate-850 bg-slate-950/40 px-3.5 py-2.5 hover:border-pink-500/40 transition-colors"
                       >
                         <p className="text-sm font-bold text-slate-200">{job.title}</p>
-                        <p className="text-xs text-slate-500">{job.city}, {job.state} · {job.salaryAmount}</p>
+                        <p className="text-xs text-slate-500">{job.city}, {stateName(job.market, job.state)} · {job.salaryAmount}</p>
                       </Link>
                     ))}
                   </div>

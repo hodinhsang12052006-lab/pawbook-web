@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Loader2, Save, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { stateName } from "@/lib/stateNames";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -142,7 +143,7 @@ export default function CreateJobPage() {
               <div>
                 <label className="block font-bold text-slate-300 mb-1.5">Bang / Tiểu bang *</label>
                 <select value={state} onChange={(e) => setState(e.target.value)} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200">
-                  {states.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
                 </select>
               </div>
 

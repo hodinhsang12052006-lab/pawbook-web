@@ -11,6 +11,7 @@ import {
   ArrowLeft, ArrowRight, Upload, X, Flame, CheckCircle2, RefreshCw,
 } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
+import { stateName } from "@/lib/stateNames";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
@@ -240,7 +241,7 @@ export default function TechnicianRegisterForm() {
             <div>
               <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.stateLabel")}</label>
               <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
-                {states.map((s) => <option key={s} value={s}>{s}</option>)}
+                {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
               </select>
             </div>
             <div>

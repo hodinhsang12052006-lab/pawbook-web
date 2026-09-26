@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
+import { stateName } from "@/lib/stateNames";
 
 const DELETE_CONFIRM_PHRASE = "XÓA TÀI KHOẢN";
 
@@ -398,7 +399,7 @@ export default function ProfilePage() {
                   <div key={job.id} className="flex items-center justify-between rounded-xl border border-slate-850 bg-slate-950/40 px-3.5 py-2.5">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-200 truncate">{job.title}</p>
-                      <p className="text-xs text-slate-500">{job.city}, {job.state} · {job.salaryAmount}</p>
+                      <p className="text-xs text-slate-500">{job.city}, {stateName(job.market, job.state)} · {job.salaryAmount}</p>
                     </div>
                     <button onClick={() => handleDeleteJob(job.id)} className="p-2 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0">
                       <Trash2 className="h-4 w-4" />

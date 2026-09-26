@@ -38,8 +38,9 @@ function nailPhoto(seedIndex: number, w = 800): string {
 }
 
 function avatar(name: string): string {
-  const initial = encodeURIComponent(name.charAt(0).toUpperCase());
-  return `https://ui-avatars.com/api/?name=${initial}&background=ec4899&color=ffffff&size=128&bold=true&format=png`;
+  // DiceBear fun-emoji — cùng nguồn avatar mặc định với app/api/register/route.ts
+  // để demo account trông giống hệt trải nghiệm người dùng thật.
+  return `https://api.dicebear.com/9.x/fun-emoji/png?seed=${encodeURIComponent(name)}&size=128&backgroundColor=ec4899,f472b6,fb923c,a78bfa,34d399,60a5fa`;
 }
 
 const SALON_OWNERS_US: { name: string; salonName: string; state: string; city: string }[] = [

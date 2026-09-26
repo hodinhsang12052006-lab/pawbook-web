@@ -62,8 +62,11 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const marketEnum = market === "AU" ? Market.AU : Market.US;
 
-    const initial = encodeURIComponent(name.charAt(0).toUpperCase());
-    const defaultAvatar = `https://ui-avatars.com/api/?name=${initial}&background=ec4899&color=ffffff&size=128&bold=true&format=png`;
+    // Avatar mặc định "vui nhộn" (DiceBear fun-emoji) thay vì chỉ chữ cái đầu
+    // tên trên nền màu trơn — seed bằng email nên MỖI người 1 mặt riêng cố
+    // định (không đổi qua lần load lại), đủ đa dạng để người dùng có thể
+    // thấy hợp mắt và giữ nguyên luôn thay vì thấy nhàm chán rồi bỏ qua.
+    const defaultAvatar = `https://api.dicebear.com/9.x/fun-emoji/png?seed=${encodeURIComponent(email)}&size=128&backgroundColor=ec4899,f472b6,fb923c,a78bfa,34d399,60a5fa`;
 
     if (role === "TECHNICIAN") {
       const {

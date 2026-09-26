@@ -15,6 +15,17 @@ export const SKILL_LABELS: Record<SkillKey, string> = {
   TAY_NUOC: "Thợ Chân Tay Nước",
 };
 
+// Nhãn kỹ năng mở rộng — riêng cho Demand Signal bên dưới, vì Gel-X/Builder
+// Gel xuất hiện rất nhiều trong tin tuyển thợ thật nhưng chưa có ô chọn
+// riêng trong bộ ước tính bao lương (SkillKey ở trên).
+export type TrendSkillKey = SkillKey | "GEL_X";
+export const TREND_SKILL_LABELS: Record<TrendSkillKey, string> = {
+  BOT: "Bột/Acrylic",
+  DIP: "Dip/SNS",
+  TAY_NUOC: "Chân Tay Nước",
+  GEL_X: "Gel-X/Builder Gel",
+};
+
 export const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 export const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 
@@ -86,6 +97,53 @@ export const OWNER_CHECKLIST = [
   "Lịch làm việc: mấy ngày/tuần, giờ mở-đóng cửa cụ thể?",
 ];
 
+// ===== DEMAND SIGNAL — tín hiệu cung/cầu thực tế theo bang =====
+// Nguồn: đếm TỔNG HỢP ~1,040 bài đăng công khai "chủ tìm thợ nail" quét từ
+// các nhóm Facebook cộng đồng ngành nail US/AU (đợt quét 23/09/2026). Đây
+// CHỈ là số đếm theo bang + kỹ năng được nhắc tới trong nội dung bài đăng —
+// KHÔNG lưu, không hiển thị bất kỳ tên người đăng/tiệm, số điện thoại, hay
+// link Facebook cá nhân nào từ nguồn quét (những thông tin đó chỉ ở trong
+// file quét gốc, không đưa vào code/DB của app). Đây là snapshot MỘT LẦN,
+// không phải dữ liệu live — cần quét lại định kỳ để cập nhật con số mới.
+// Bang không có trong danh sách dưới đây (hoặc mẫu quá nhỏ, đã lọc bỏ)
+// nghĩa là chưa đủ dữ liệu cộng đồng, UI sẽ hiện thông báo tương ứng.
+export interface DemandSignal {
+  demandCount: number; // số tin "chủ tìm thợ" ghi nhận được trong đợt quét
+  wageMentions: number; // trong đó có bao nhiêu tin nhắc số lương/bao lương cụ thể
+  topSkills: TrendSkillKey[]; // kỹ năng được nhắc tới nhiều nhất, giảm dần
+}
+
+// Tổng số tin "chủ tìm thợ" ghi nhận được trên toàn bộ đợt quét (kể cả các
+// bang mẫu quá nhỏ không liệt kê riêng ở dưới) — dùng cho các câu FOMO tổng
+// quát kiểu "hơn 1,000 tiệm đang cần thợ" (xem components/FomoToast.tsx).
+export const TOTAL_DEMAND_COUNT: Record<Market, number> = {
+  US: 639,
+  AU: 387,
+};
+
+export const DEMAND_SIGNAL: Record<Market, Partial<Record<string, DemandSignal>>> = {
+  US: {
+    TX: { demandCount: 99, wageMentions: 36, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    CA: { demandCount: 70, wageMentions: 18, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    GA: { demandCount: 54, wageMentions: 11, topSkills: ["BOT", "DIP", "GEL_X", "TAY_NUOC"] },
+    FL: { demandCount: 47, wageMentions: 13, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    VA: { demandCount: 9, wageMentions: 1, topSkills: ["TAY_NUOC", "DIP", "GEL_X", "BOT"] },
+    NC: { demandCount: 5, wageMentions: 1, topSkills: ["BOT", "DIP", "GEL_X"] },
+    IL: { demandCount: 4, wageMentions: 2, topSkills: ["BOT"] },
+  },
+  AU: {
+    NSW: { demandCount: 81, wageMentions: 7, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    VIC: { demandCount: 75, wageMentions: 2, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    QLD: { demandCount: 35, wageMentions: 7, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    WA: { demandCount: 12, wageMentions: 2, topSkills: ["BOT", "GEL_X", "TAY_NUOC", "DIP"] },
+    SA: { demandCount: 11, wageMentions: 0, topSkills: ["BOT", "TAY_NUOC", "GEL_X", "DIP"] },
+  },
+};
+
+export function getDemandSignal(market: Market, state: string): DemandSignal | null {
+  return DEMAND_SIGNAL[market]?.[state] ?? null;
+}
+
 export interface RadarResult {
   market: Market;
   state: string;
@@ -98,6 +156,7 @@ export interface RadarResult {
   supplyPolicy: string;
   negotiationTips: string[];
   ownerChecklist: string[];
+  demandSignal: DemandSignal | null;
 }
 
 export function getRadarEstimate(market: Market, state: string, skill: SkillKey): RadarResult | null {
@@ -121,5 +180,6 @@ export function getRadarEstimate(market: Market, state: string, skill: SkillKey)
     supplyPolicy: SUPPLY_POLICY_BY_SKILL[skill],
     negotiationTips: NEGOTIATION_TIPS,
     ownerChecklist: OWNER_CHECKLIST,
+    demandSignal: getDemandSignal(market, state),
   };
 }

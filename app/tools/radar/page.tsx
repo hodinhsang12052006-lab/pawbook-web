@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { Radar, Loader2, DollarSign, Users, Package, Lightbulb, ClipboardList, AlertCircle, Info } from "lucide-react";
+import { Radar, Loader2, DollarSign, Users, Package, Lightbulb, ClipboardList, AlertCircle, Info, TrendingUp } from "lucide-react";
 
 type MarketKey = "US" | "AU";
 type SkillKey = "BOT" | "DIP" | "TAY_NUOC";
@@ -16,6 +16,12 @@ const SKILL_OPTIONS: { key: SkillKey; label: string; emoji: string }[] = [
   { key: "TAY_NUOC", label: "Thợ Chân Tay Nước", emoji: "🦶" },
 ];
 
+interface DemandSignal {
+  demandCount: number;
+  wageMentions: number;
+  topSkills: string[];
+}
+
 interface RadarResult {
   rateMin: number;
   rateMax: number;
@@ -24,7 +30,15 @@ interface RadarResult {
   supplyPolicy: string;
   negotiationTips: string[];
   ownerChecklist: string[];
+  demandSignal: DemandSignal | null;
 }
+
+const TREND_SKILL_LABEL: Record<string, string> = {
+  BOT: "Bột/Acrylic",
+  DIP: "Dip/SNS",
+  TAY_NUOC: "Chân Tay Nước",
+  GEL_X: "Gel-X/Builder Gel",
+};
 
 export default function NailRadarPage() {
   const [market, setMarket] = useState<MarketKey>("US");
@@ -158,6 +172,37 @@ export default function NailRadarPage() {
                 {currencySymbol}{result.rateMin.toLocaleString("en-US")} – {currencySymbol}{result.rateMax.toLocaleString("en-US")}
               </p>
               <p className="text-[10px] text-slate-500">{result.currency} / tuần · {state}</p>
+            </div>
+
+            {/* Demand signal — số tin tuyển thợ thật ghi nhận từ cộng đồng */}
+            <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-2.5">
+              <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-emerald-400" /> Cầu thợ thực tế từ cộng đồng
+              </p>
+              {result.demandSignal ? (
+                <>
+                  <p className="text-2xl font-black text-emerald-400">
+                    {result.demandSignal.demandCount} tin tuyển thợ
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    ghi nhận tại {state} qua các nhóm cộng đồng ngành nail
+                    {result.demandSignal.wageMentions > 0 && (
+                      <> · {result.demandSignal.wageMentions} tin có nhắc mức lương cụ thể</>
+                    )}
+                  </p>
+                  {result.demandSignal.topSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {result.demandSignal.topSkills.map((sk) => (
+                        <span key={sk} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                          {TREND_SKILL_LABEL[sk] || sk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">Chưa đủ dữ liệu cộng đồng cho bang này trong đợt quét gần nhất.</p>
+              )}
             </div>
 
             {/* Turn split */}

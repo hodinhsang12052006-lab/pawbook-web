@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 
 interface FomoMessage {
   icon: string;
@@ -23,6 +24,32 @@ const FOMO_MESSAGES: FomoMessage[] = [
   { icon: "🔥", text: "Tiệm Happy Nails tại Brisbane, QLD vừa đăng tin tuyển thợ bao lương $1,300 AUD/tuần" },
   { icon: "📸", text: "Anh Tony (Thợ Gel-X/Biab) vừa tải thêm ảnh mẫu móng mới tại Dallas, TX" },
   { icon: "🎉", text: "1 thợ nail tại Perth, WA vừa được nhận việc qua PawNail Jobs (2 phút trước)" },
+];
+
+// Nhóm câu FOMO RIÊNG nhắm vào THỢ đang tìm việc — dựa trên số liệu tổng
+// hợp/ẩn danh THẬT từ đợt quét cộng đồng ngành nail (xem
+// lib/nailRadarData.ts, DEMAND_SIGNAL/TOTAL_DEMAND_COUNT). Data quét được
+// cho thấy lệch hẳn về phía "chủ tìm thợ" (chủ tiệm đăng tin tuyển) so với
+// "thợ tìm việc" — tức thợ đang là bên khan hiếm, nên đây chính là bằng
+// chứng thật (không phải số bịa) để nhấn mạnh với thợ mới vào: "rất nhiều
+// tiệm đang cần bạn". Không giống các câu mô phỏng ở trên, nhóm này gắn với
+// con số có thật tại thời điểm quét — nếu quét lại, cập nhật số ở đây theo.
+const REAL_DEMAND_MESSAGES: FomoMessage[] = [
+  { icon: "📢", text: `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin tuyển thợ nail ghi nhận tại Mỹ & Úc — ngành đang khát nhân lực chưa từng thấy` },
+  { icon: "🔥", text: `${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tiệm tại Texas đang tranh nhau tìm thợ Bột/Acrylic ngay lúc này` },
+  { icon: "🔥", text: `${DEMAND_SIGNAL.US?.CA?.demandCount ?? 0} tiệm tại California đăng tin cần tuyển thợ nail gấp` },
+  { icon: "🔥", text: `${DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0} tiệm tại NSW đang cần tuyển thợ ngay bây giờ` },
+  { icon: "🔥", text: `${DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0} tiệm tại Victoria đang thiếu thợ, sẵn sàng bao lương cao` },
+];
+
+// Data quét thật cho thấy thợ đang là bên khan hiếm (rất nhiều tiệm đăng
+// tin tuyển, rất ít thợ đăng tin tìm việc) — nên trọng số ưu tiên nhóm câu
+// dựa trên số liệu thật này (REAL_DEMAND_MESSAGES) làm nội dung CHỦ YẾU,
+// nhóm câu mô phỏng ở trên chỉ xen kẽ cho đỡ lặp.
+const ALL_MESSAGES: FomoMessage[] = [
+  ...REAL_DEMAND_MESSAGES,
+  ...REAL_DEMAND_MESSAGES,
+  ...FOMO_MESSAGES,
 ];
 
 const MIN_DELAY_MS = 15_000;
@@ -53,13 +80,13 @@ export default function FomoToast() {
       timersRef.current.show = setTimeout(() => {
         if (cancelled) return;
 
-        let idx = Math.floor(Math.random() * FOMO_MESSAGES.length);
-        if (FOMO_MESSAGES.length > 1 && idx === lastIndexRef.current) {
-          idx = (idx + 1) % FOMO_MESSAGES.length;
+        let idx = Math.floor(Math.random() * ALL_MESSAGES.length);
+        if (ALL_MESSAGES.length > 1 && idx === lastIndexRef.current) {
+          idx = (idx + 1) % ALL_MESSAGES.length;
         }
         lastIndexRef.current = idx;
 
-        setCurrent(FOMO_MESSAGES[idx]);
+        setCurrent(ALL_MESSAGES[idx]);
         setVisible(true);
 
         timersRef.current.hide = setTimeout(() => {

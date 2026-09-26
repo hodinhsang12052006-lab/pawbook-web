@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -196,7 +197,18 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
                   <Play className="absolute inset-0 m-auto h-10 w-10 text-white drop-shadow-lg" />
                 </>
               ) : (
-                <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                // next/image thay vì <img> thô — ảnh feed là nội dung tốn băng
+                // thông lưu lượng nhất trên trang chủ (cuộn qua hàng chục bài
+                // mỗi phiên); fill+sizes cho phép Next.js tự sinh srcset đúng
+                // độ phân giải hiển thị thay vì luôn tải nguyên bản 800-900px.
+                <Image
+                  src={url}
+                  alt=""
+                  fill
+                  loading="lazy"
+                  sizes="(max-width: 640px) 85vw, 60vw"
+                  className="object-cover"
+                />
               )}
               {post.mediaUrls.length > 1 && (
                 <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">

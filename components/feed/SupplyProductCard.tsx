@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Package, MessageCircle, Store } from "lucide-react";
@@ -32,7 +33,14 @@ export default function SupplyProductCard({ product }: { product: SupplyProductT
   return (
     <article className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.04] via-slate-900/30 to-slate-900/30 overflow-hidden">
       <div className="relative aspect-[16/10] bg-slate-950">
-        <img src={product.imageUrl} alt={product.title} loading="lazy" className="h-full w-full object-cover" />
+        <Image
+          src={product.imageUrl}
+          alt={product.title}
+          fill
+          loading="lazy"
+          sizes="(max-width: 640px) 100vw, 50vw"
+          className="object-cover"
+        />
         <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-black text-amber-950 shadow">
           <Package className="h-3 w-3" /> Hàng Sỉ Tiệm Nail
         </span>

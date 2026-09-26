@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
   Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play, Lock,
@@ -344,7 +345,7 @@ function GallerySection({ ownerId }: { ownerId: string }) {
               <Play className="absolute inset-0 m-auto h-6 w-6 text-white drop-shadow" />
             </>
           ) : (
-            <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+            <Image src={url} alt="" fill loading="lazy" sizes="33vw" className="object-cover" />
           )}
         </div>
       ))}
@@ -661,7 +662,7 @@ export default function PublicProfilePage({ params }: PageProps) {
                           <Play className="absolute inset-0 m-auto h-6 w-6 text-white drop-shadow" />
                         </>
                       ) : (
-                        <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        <Image src={url} alt="" fill loading="lazy" sizes="33vw" className="object-cover" />
                       )}
                     </div>
                   ))}

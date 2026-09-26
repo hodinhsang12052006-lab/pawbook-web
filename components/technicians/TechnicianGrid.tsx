@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { AlertCircle, Flame, Play } from "lucide-react";
+import { AlertCircle, Flame, Play, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSessionUser } from "@/lib/SessionUserContext";
+import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 
 export interface TechnicianType {
   id: string;
@@ -27,6 +29,26 @@ interface TechnicianGridProps {
 
 // Hiệu ứng bấm nút kiểu app native
 const PRESS = "active:scale-95 transition-transform duration-100";
+
+// FOMO ngược cho CHỦ TIỆM (đối xứng với banner "cầu thợ" bên JobBoard dành
+// cho thợ) — cùng data quét thật cho thấy lượng "chủ tìm thợ" áp đảo hẳn
+// "thợ tìm việc", tức thợ mới là bên khan hiếm. Nhắn nhẹ điều đó với chủ
+// tiệm đang lướt "Thợ Đang Rảnh" để họ nhắn tin/unlock sớm thay vì lưỡng lự,
+// không bịa số "X tiệm khác đang xem" vì app chưa có tracking lượt xem thật.
+function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: string }) {
+  const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
+  const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
+  const scopeLabel = stateSignal ? `tại ${state}` : market === "US" ? "tại Mỹ" : "tại Úc";
+
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3 mb-3">
+      <Zap className="h-5 w-5 text-amber-400 flex-shrink-0" />
+      <p className="text-xs sm:text-sm text-slate-200">
+        <span className="font-black text-amber-400">{count}+ tiệm</span> {scopeLabel} đang tranh nhau tìm thợ — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.
+      </p>
+    </div>
+  );
+}
 
 function firstMedia(images: any[]): { url: string; isVideo: boolean } | null {
   if (!images || images.length === 0) return null;
@@ -165,6 +187,8 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 
 export default function TechnicianGrid({ market, state, city }: TechnicianGridProps) {
   const router = useRouter();
+  const { user } = useSessionUser();
+  const isOwner = user?.role === "OWNER";
   const [techs, setTechs] = useState<TechnicianType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,19 +235,25 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
 
   if (techs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-        <p className="text-4xl">💅</p>
-        <p className="text-base font-bold text-slate-300">Chưa có thợ nào đăng portfolio ở khu vực này</p>
-        <p className="text-sm text-slate-500">Hãy thử đổi bang hoặc thành phố khác.</p>
+      <div>
+        {isOwner && <OwnerScarcityBanner market={market} state={state} />}
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+          <p className="text-4xl">💅</p>
+          <p className="text-base font-bold text-slate-300">Chưa có thợ nào đăng portfolio ở khu vực này</p>
+          <p className="text-sm text-slate-500">Hãy thử đổi bang hoặc thành phố khác.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 animate-fadeIn">
-      {techs.map((tech) => (
-        <TechnicianCard key={tech.id} tech={tech} onClick={() => router.push(`/profile/${tech.userId}`)} />
-      ))}
+    <div className="animate-fadeIn">
+      {isOwner && <OwnerScarcityBanner market={market} state={state} />}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+        {techs.map((tech) => (
+          <TechnicianCard key={tech.id} tech={tech} onClick={() => router.push(`/profile/${tech.userId}`)} />
+        ))}
+      </div>
     </div>
   );
 }

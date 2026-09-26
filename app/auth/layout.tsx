@@ -6,6 +6,13 @@ import { Sun, Moon, Globe } from "lucide-react";
 import { SPARKLE_DOTS } from "@/lib/sparkleDots";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
+
+// Trang đăng nhập/đăng ký này chính là "trang chủ" thật sự với khách vãng
+// lai — mọi lượt vào "/" khi chưa đăng nhập đều redirect thẳng về đây, nên
+// con số FOMO đầu tiên khách thấy PHẢI là số thật (không còn "2.500+ Thợ &
+// Chủ" bịa) để nhất quán với Nail Radar/JobBoard/FomoToast đã dùng data thật.
+const TOTAL_DEMAND_ALL_MARKETS = TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU;
 
 export default function CustomAuthLayout({
   children,
@@ -133,7 +140,7 @@ export default function CustomAuthLayout({
 
               {/* Trust badges */}
               <div className="flex flex-wrap gap-2.5 animate-fadeIn" style={{ animationDelay: "0.15s" }}>
-                {[t("auth.brand.trustBadge1"), t("auth.brand.trustBadge2"), t("auth.brand.trustBadge3")].map((badge) => (
+                {[t("auth.brand.trustBadge1", { count: TOTAL_DEMAND_ALL_MARKETS }), t("auth.brand.trustBadge2"), t("auth.brand.trustBadge3")].map((badge) => (
                   <span
                     key={badge}
                     className="rounded-full border border-white/10 bg-white/[0.05] backdrop-blur-md px-4 py-2 text-xs font-semibold text-slate-200 shadow-lg"

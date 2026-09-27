@@ -67,6 +67,28 @@ export default function CustomRegisterPage() {
     setReady(true);
   }, []);
 
+  // Chặn đứng: phát hiện qua test thật trên production rằng người dùng ĐÃ
+  // đăng nhập thành công (session hợp lệ) vẫn có thể bị điều hướng tới đây
+  // (nguyên nhân sâu xa chưa xác định được — chỉ xảy ra trên hạ tầng
+  // production/Vercel, không tái hiện được ở local `next start`, và chỉ xảy
+  // ra với request dạng RSC soft-navigation chứ không phải document load
+  // thường — đã thử: xoá pages.newUser, tắt service worker, context trình
+  // duyệt hoàn toàn sạch, đều không hết). Vì fetch thẳng "/" bằng document
+  // request LUÔN trả đúng nội dung (đã verify bằng curl + fetch trực tiếp),
+  // chốt chặn này bắt đúng triệu chứng: nếu phát hiện có session hợp lệ mà
+  // lại đang đứng ở trang đăng ký, buộc HARD RELOAD (không dùng router.push)
+  // để né hẳn đường dẫn RSC bị lỗi, đưa thẳng người dùng về trang chủ.
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((session) => {
+        if (session?.user?.id) {
+          window.location.replace("/");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const pickRole = (r: Role) => {
     setRole(r);
     const url = new URL(window.location.href);

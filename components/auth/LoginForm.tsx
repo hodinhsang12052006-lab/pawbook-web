@@ -2,7 +2,6 @@
 
 import React, { useState, useContext } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { Lock, Mail, Loader2, AlertCircle } from "lucide-react";
@@ -12,7 +11,6 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
 export default function LoginForm() {
-  const router = useRouter();
   const { theme } = useContext(AuthSettingsContext);
   const { t } = useLanguage();
 
@@ -46,8 +44,15 @@ export default function LoginForm() {
           setError(res.error);
         }
       } else {
-        router.push("/");
-        router.refresh();
+        // Test thật trên production phát hiện router.push("/") + router.refresh()
+        // (điều hướng "mềm" qua RSC của Next.js) đôi lúc bị máy chủ redirect
+        // sai sang /auth/register — chỉ xảy ra trên hạ tầng production, không
+        // tái hiện được ở local, và chỉ với request dạng RSC chứ không phải
+        // tải trang thường (đã verify: fetch thẳng "/" bằng document request
+        // luôn đúng). Dùng window.location thay vì router của Next.js để né
+        // hẳn đường dẫn RSC bị lỗi đó — tải lại toàn trang nhưng đảm bảo luôn
+        // vào đúng nơi.
+        window.location.href = "/";
       }
     } catch (err) {
       setError(t("auth.login.errorUnknown"));

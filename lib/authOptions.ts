@@ -126,8 +126,17 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   },
   pages: {
     signIn: "/auth/login",
-    newUser: "/auth/register",
     error: "/auth/error",
+    // KHÔNG khai `newUser` — trang đăng ký thật của app đi qua
+    // /api/register (route riêng, không qua NextAuth adapter) TRƯỚC khi
+    // signIn() được gọi, nên NextAuth không bao giờ cần tự "tạo user mới"
+    // qua adapter. Nhưng vì `adapter: PrismaAdapter(prisma)` vẫn được khai
+    // (dự phòng cho OAuth sau này) trong khi Credentials Provider không bao
+    // giờ gọi `adapter.linkAccount()`, NextAuth luôn thấy "chưa có Account
+    // nào link với user này" ở MỌI lần đăng nhập bằng mật khẩu — và hiểu
+    // nhầm thành "user mới", đá thẳng về `pages.newUser` dù đây là tài
+    // khoản cũ đăng nhập bình thường. Đây chính là lỗi "đăng nhập xong lại
+    // bị đá về trang đăng ký" phát hiện khi test thật trên production.
   },
   // Tắt debug trên Production cho nhẹ server, chỉ bật khi ở máy tính
   debug: process.env.NODE_ENV === "development",

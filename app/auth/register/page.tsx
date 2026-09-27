@@ -79,10 +79,21 @@ export default function CustomRegisterPage() {
   // lại đang đứng ở trang đăng ký, buộc HARD RELOAD (không dùng router.push)
   // để né hẳn đường dẫn RSC bị lỗi, đưa thẳng người dùng về trang chủ.
   useEffect(() => {
+    // Chặn vòng lặp: nếu "/" TỰ NÓ cũng đang bị đá về đây (nguyên nhân gốc
+    // chưa xác định chắc chắn 100%, nghi do cold-start phía Vercel — có lúc
+    // tái hiện, có lúc không), redirect thẳng lại "/" mà không kiểm tra gì
+    // sẽ tạo vòng lặp vô hạn /→/auth/register→/→/auth/register... còn TỆ
+    // HƠN bug gốc (trước chỉ là sai trang, giờ là treo hẳn không dùng được).
+    // Chỉ bounce 1 lần trong mỗi 5 giây; nếu quay lại đây quá nhanh, dừng
+    // hẳn và hiện trang đăng ký bình thường thay vì lặp mãi.
+    const lastBounceAt = Number(sessionStorage.getItem("authBounceAt") || 0);
+    if (Date.now() - lastBounceAt < 5000) return;
+
     fetch("/api/auth/session")
       .then((r) => (r.ok ? r.json() : null))
       .then((session) => {
         if (session?.user?.id) {
+          sessionStorage.setItem("authBounceAt", String(Date.now()));
           window.location.replace("/");
         }
       })

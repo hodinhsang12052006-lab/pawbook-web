@@ -63,17 +63,23 @@ export default function VideoCallRoom({
         const { ZegoUIKitPrebuilt } = await import("@zegocloud/zego-uikit-prebuilt");
         if (cancelled) return;
 
-        const appID = Number(process.env.NEXT_PUBLIC_ZEGO_APP_ID);
-        const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET || "";
-
-        // Generate Kit Token for testing
-        const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-          appID,
-          serverSecret,
-          roomId,
-          userId,
-          userName
-        );
+        // Token được sinh PHÍA SERVER (xem app/api/zego/token) — trước đây
+        // gọi ZegoUIKitPrebuilt.generateKitTokenForTest() thẳng ở đây với
+        // APP_ID/SERVER_SECRET đọc từ biến NEXT_PUBLIC_*, nghĩa là secret đó
+        // nằm ngay trong bundle JS công khai, ai xem source cũng lấy được
+        // rồi tự mint token vào BẤT KỲ phòng gọi nào. Route mới chỉ cấp token
+        // sau khi xác thực đúng người đang đăng nhập và đúng quyền vào phòng.
+        const tokenRes = await fetch("/api/zego/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId, userName }),
+        });
+        if (cancelled) return;
+        if (!tokenRes.ok) {
+          const err = await tokenRes.json().catch(() => ({}));
+          throw new Error(err.error || "Không lấy được token cuộc gọi.");
+        }
+        const { token: kitToken } = await tokenRes.json();
 
         // Create prebuilt call instance
         const instance = ZegoUIKitPrebuilt.create(kitToken);

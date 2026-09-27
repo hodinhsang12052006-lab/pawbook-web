@@ -17,8 +17,13 @@ export async function GET(req: NextRequest) {
 
     const profiles = await prisma.technicianProfile.findMany({
       where,
+      // KHÔNG select `phone` ở đây — đây là endpoint danh sách công khai,
+      // không cần đăng nhập. Số điện thoại thợ chỉ được lộ ra sau khi chủ
+      // tiệm hoàn tất "Mở khóa liên hệ" (xem app/api/unlock/route.ts); trả
+      // thẳng phone ở đây từng làm tính năng trả phí đó vô nghĩa và phát tán
+      // SĐT hàng loạt (tối đa 100 thợ/request) cho bất kỳ ai gọi API.
       include: {
-        user: { select: { id: true, name: true, avatarUrl: true, phone: true } },
+        user: { select: { id: true, name: true, avatarUrl: true } },
       },
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       take: 100,

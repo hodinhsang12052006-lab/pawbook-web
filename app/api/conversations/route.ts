@@ -27,6 +27,31 @@ export async function POST(req: Request) {
 
     // Include current user in the participants list
     const uniqueIds = Array.from(new Set([...participantIds, currentUserId]));
+    const otherIds = uniqueIds.filter((id) => id !== currentUserId);
+
+    // /api/messages đã chặn gửi tin nhắn 2 chiều nếu 1 trong 2 người đã
+    // chặn nhau, nhưng CHỈ áp dụng cho chat 1-1 (comment gốc ở đó ghi rõ
+    // "nhóm chat không có khái niệm chặn 1 người rõ ràng") — nghĩa là người
+    // bị chặn có thể lách bằng cách tạo một NHÓM chứa cả mình và người đã
+    // chặn mình, phá vỡ hoàn toàn tính năng Chặn (vốn dựng lên để đáp ứng
+    // yêu cầu compliance của Apple/Google). Chặn việc TẠO bất kỳ hội thoại
+    // nào — 1-1 hay nhóm — nếu người tạo và bất kỳ ai trong đó đã chặn nhau.
+    if (otherIds.length > 0) {
+      const blockExists = await prisma.blockedUser.findFirst({
+        where: {
+          OR: [
+            { blockerId: currentUserId, blockedUserId: { in: otherIds } },
+            { blockedUserId: currentUserId, blockerId: { in: otherIds } },
+          ],
+        },
+      });
+      if (blockExists) {
+        return NextResponse.json(
+          { error: "Không thể tạo cuộc trò chuyện — một trong hai người đã chặn." },
+          { status: 403 }
+        );
+      }
+    }
 
     // 1-to-1 Conversation
     if (!isGroup && uniqueIds.length === 2) {

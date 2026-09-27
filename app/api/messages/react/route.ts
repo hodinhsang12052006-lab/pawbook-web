@@ -31,6 +31,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
+    // Trước đây route này không kiểm tra người gọi có thực sự thuộc cuộc
+    // trò chuyện chứa messageId hay không — chỉ cần biết (hoặc đoán) 1
+    // messageId ở đoạn chat khác là bắn được sự kiện "message-updated" giả
+    // (reaction/emoji tùy ý) vào đúng kênh riêng của 2 người xa lạ đó.
+    const userId = (session.user as any).id;
+    const isMember = message.conversation.participants.some((p) => p.id === userId);
+    if (!isMember) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const channels = Array.from(
       new Set(message.conversation.participants.map((p) => chatChannelName(p.id)))
     );

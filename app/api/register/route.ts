@@ -2,10 +2,18 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role, Market } from "@prisma/client";
+import { isRateLimited, recordAttempt, getClientIp } from "@/lib/rateLimit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_ROLES = ["OWNER", "TECHNICIAN"];
 const VALID_MARKETS = ["US", "AU"];
+
+// Không giới hạn tốc độ trước đây — bcrypt.hash(password, 10) cố tình chậm
+// (~50-100ms/lần), nên spam POST liên tục (đổi email mỗi lần để né check
+// trùng) là cách rẻ tiền để ghim CPU server, làm chậm/nghẽn cho toàn bộ
+// người dùng thật khác — một kiểu "sập server" thực tế hơn cả DDoS network.
+const REGISTER_LIMIT = 10;
+const REGISTER_WINDOW_MS = 15 * 60 * 1000;
 
 function toCsv(val: unknown): string {
   if (Array.isArray(val)) return val.filter(Boolean).join(",");
@@ -15,6 +23,15 @@ function toCsv(val: unknown): string {
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIp(req);
+    if (isRateLimited(clientIp, REGISTER_LIMIT, REGISTER_WINDOW_MS)) {
+      return NextResponse.json(
+        { error: "Quá nhiều yêu cầu đăng ký. Vui lòng thử lại sau ít phút." },
+        { status: 429 }
+      );
+    }
+    recordAttempt(clientIp, REGISTER_WINDOW_MS);
+
     const body = await req.json();
     let { name, email, password, role, market, phone, state, city } = body;
 

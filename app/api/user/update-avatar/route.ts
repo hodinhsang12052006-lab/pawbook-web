@@ -18,9 +18,18 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { image } = body;
 
-    if (!image) {
+    if (!image || typeof image !== "string") {
       return NextResponse.json(
         { error: "Vui lòng cung cấp chuỗi dữ liệu ảnh đại diện mới." },
+        { status: 400 }
+      );
+    }
+    // avatarUrl được echo lại trong nhiều danh sách công khai (tới 100
+    // user/request ở /api/messages, /api/jobs...) — không giới hạn độ dài
+    // cho phép 1 user "phình" mọi response đó bằng 1 chuỗi khổng lồ.
+    if (image.length > 500_000) {
+      return NextResponse.json(
+        { error: "Dữ liệu ảnh đại diện quá lớn." },
         { status: 400 }
       );
     }

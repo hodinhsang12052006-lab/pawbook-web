@@ -36,6 +36,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Trước đây không kiểm tra loại file — `resource_type: "auto"` của
+    // Cloudinary nhận BẤT KỲ file gì (SVG chứa <script>, HTML, thực thi...)
+    // rồi host lại trên URL công khai. Toàn bộ nơi gọi route này (avatar,
+    // portfolio, ảnh bài đăng, ảnh sản phẩm) chỉ cần ảnh — chặn cứng còn lại.
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF." },
+        { status: 400 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -56,7 +68,14 @@ export async function POST(req: Request) {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: "pawbook",
-          resource_type: "auto", // Automatically detects whether resource is PDF or image
+          // Ép "image" thay vì "auto" — Content-Type ở trên là do CLIENT tự
+          // khai (attacker tạo multipart request tay có thể khai man thành
+          // "image/png" trong khi thân file là gì cũng được). "auto" từng
+          // chấp nhận bất kỳ file nhị phân nào (SVG có <script>, HTML, thực
+          // thi...) miễn Content-Type header khớp. resource_type: "image" ép
+          // chính Cloudinary tự giải mã/xác thực đúng là ảnh, từ chối nếu
+          // không phải — không dựa vào lời khai của client nữa.
+          resource_type: "image",
         },
         (error, result) => {
           if (error) {

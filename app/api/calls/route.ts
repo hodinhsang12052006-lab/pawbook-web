@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
+import prisma from "@/lib/prisma";
 
 // Maps the client's call `action` (MessagesContent.tsx's handleStartCall /
 // handleAcceptCall / handleEndCall / camera toggle) to the Pusher event name
@@ -33,6 +34,26 @@ export async function POST(req: Request) {
     const eventName = ACTION_TO_EVENT[action];
     if (!targetId || !eventName) {
       return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
+    }
+
+    // Chỉ cần biết userId của người khác (lộ công khai qua /profile/<id>) là
+    // trước đây gọi được API này để đổ chuông/gửi tín hiệu cuộc gọi tới BẤT
+    // KỲ ai — kể cả người đã chủ động Chặn mình. Áp cùng luật chặn 2 chiều
+    // như /api/messages, chỉ ở bước khởi tạo cuộc gọi ("offer") vì đó là véc-tơ
+    // quấy rối thật (đổ chuông giả liên tục); các action tiếp theo trong cùng
+    // 1 cuộc gọi (accept/candidate/camera) không cần lặp lại kiểm tra này.
+    if (action === "offer") {
+      const blockExists = await prisma.blockedUser.findFirst({
+        where: {
+          OR: [
+            { blockerId: userId, blockedUserId: targetId },
+            { blockerId: targetId, blockedUserId: userId },
+          ],
+        },
+      });
+      if (blockExists) {
+        return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn." }, { status: 403 });
+      }
     }
 
     let payload: Record<string, any>;

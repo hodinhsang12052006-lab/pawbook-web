@@ -11,8 +11,14 @@ export async function GET(
     const { id } = await params;
     const job = await prisma.job.findUnique({
       where: { id },
+      // KHÔNG select `phone` của owner — đây là endpoint công khai (không
+      // yêu cầu đăng nhập). SĐT liên hệ thật cho tin này là `job.phone` (cột
+      // riêng, chủ tiệm cố tình để công khai lúc đăng tin, dùng cho nút "Gọi
+      // ngay"). `owner.phone` là SĐT TÀI KHOẢN — trang chi tiết tin
+      // (app/jobs/[id]/page.tsx) không hề đọc field này, chỉ đọc job.phone —
+      // để lọt qua đây chỉ là lộ thêm PII vô ích, không phục vụ chức năng gì.
       include: {
-        owner: { select: { id: true, name: true, avatarUrl: true, phone: true } },
+        owner: { select: { id: true, name: true, avatarUrl: true } },
       },
     });
 

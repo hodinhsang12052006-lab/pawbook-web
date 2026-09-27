@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
     const targetUserId = searchParams.get("id");
 
     const session = await getServerSession(authOptions);
-    const userId = targetUserId || (session?.user as any)?.id;
+    const sessionUserId = (session?.user as any)?.id as string | undefined;
+    const userId = targetUserId || sessionUserId;
 
     if (!userId) {
       return NextResponse.json(
@@ -19,19 +20,28 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Viewing your own profile (no `id`, or `id` matches your session) gets
+    // the full record. Viewing someone ELSE's profile — reachable with no
+    // login at all, since /profile/[uid] is a public listing page — must
+    // never include email/phone/private survey data: this endpoint used to
+    // return those raw regardless of viewer, which both leaked PII to any
+    // anonymous caller AND made the paid "Mở khóa liên hệ" feature pointless
+    // (the phone number was already sitting in this response for free).
+    const isSelf = !targetUserId || targetUserId === sessionUserId;
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         name: true,
-        email: true,
+        email: isSelf,
         role: true,
         avatarUrl: true,
-        phone: true,
+        phone: isSelf,
         market: true,
         state: true,
         city: true,
-        diagnosedPains: true,
+        diagnosedPains: isSelf,
         turnSplitPolicy: true,
         clientTypePolicy: true,
         housingSupport: true,
@@ -65,17 +75,25 @@ export async function GET(req: NextRequest) {
       createdAt: job.createdAt.toISOString(),
     }));
 
+    const technicianProfile = user.technicianProfile
+      ? {
+          ...user.technicianProfile,
+          // Desired salary is the technician's own negotiation preference —
+          // relevant only to themselves (and Admin's lead radar via a
+          // separate, already-gated endpoint), not to public viewers.
+          desiredSalaryType: isSelf ? user.technicianProfile.desiredSalaryType : null,
+          desiredSalaryAmount: isSelf ? user.technicianProfile.desiredSalaryAmount : null,
+          desiredBenefits: isSelf ? user.technicianProfile.desiredBenefits : null,
+          portfolioImages: JSON.parse(user.technicianProfile.portfolioImages || "[]"),
+          createdAt: user.technicianProfile.createdAt.toISOString(),
+          updatedAt: user.technicianProfile.updatedAt.toISOString(),
+        }
+      : null;
+
     return NextResponse.json({
       ...user,
       jobs: safeJobs,
-      technicianProfile: user.technicianProfile
-        ? {
-            ...user.technicianProfile,
-            portfolioImages: JSON.parse(user.technicianProfile.portfolioImages || "[]"),
-            createdAt: user.technicianProfile.createdAt.toISOString(),
-            updatedAt: user.technicianProfile.updatedAt.toISOString(),
-          }
-        : null,
+      technicianProfile,
     });
   } catch (err: any) {
     console.error("GET profile error:", err);

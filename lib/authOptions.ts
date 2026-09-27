@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { isRateLimited, recordAttempt, clearAttempts } from "@/lib/rateLimit";
 
 // Sống ở đây (không phải trong app/api/auth/[...nextauth]/route.ts) vì Next.js
 // typegen cho route handler chỉ chấp nhận export GET/POST/config/... — export
@@ -23,6 +24,14 @@ if (!process.env.NEXTAUTH_SECRET) {
   );
 }
 const authSecret = process.env.NEXTAUTH_SECRET || crypto.randomBytes(32).toString("hex");
+
+// Không có bất kỳ giới hạn nào cho số lần đăng nhập sai trước đây — 1 kẻ tấn
+// công có thể dò mật khẩu (brute-force) 1 tài khoản với tốc độ chỉ giới hạn
+// bởi băng thông mạng. Khóa tạm 1 email sau nhiều lần sai liên tiếp (dùng
+// chung bộ đếm với lib/rateLimit.ts — xem giới hạn về multi-instance ở đó).
+const FAILED_LOGIN_LIMIT = 5;
+const FAILED_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const loginKey = (email: string) => `login:${email}`;
 
 export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   // Ép Vercel tin tưởng Domain để không đánh rơi Cookie
@@ -45,20 +54,29 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        // Thông báo lỗi CHUNG cho cả 2 trường hợp "email không tồn tại" và
+        // "sai mật khẩu" — trước đây 2 thông báo khác nhau để lộ email nào
+        // đã đăng ký trên hệ thống hay chưa (user enumeration), giúp kẻ tấn
+        // công xây danh sách mục tiêu để phishing/brute-force.
+        const genericError = "Email hoặc mật khẩu không chính xác.";
         try {
           if (!credentials?.email || !credentials?.password) {
             throw new Error("Vui lòng nhập đầy đủ email và mật khẩu.");
           }
+          const email = credentials.email;
+
+          if (isRateLimited(loginKey(email), FAILED_LOGIN_LIMIT, FAILED_LOGIN_WINDOW_MS)) {
+            throw new Error("Tài khoản tạm khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.");
+          }
 
           const user = await prisma.user.findUnique({
-            where: {
-              email: credentials.email,
-            },
+            where: { email },
           });
 
           // Thêm check !user.password để chặn lỗi nếu acc đó đăng nhập bằng Google trước đây
           if (!user || !user.password) {
-            throw new Error("Tài khoản không tồn tại hoặc chưa cài mật khẩu. Vui lòng đăng ký.");
+            recordAttempt(loginKey(email), FAILED_LOGIN_WINDOW_MS);
+            throw new Error(genericError);
           }
 
           const isPasswordMatch = await bcrypt.compare(
@@ -67,8 +85,11 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
           );
 
           if (!isPasswordMatch) {
-            throw new Error("Mật khẩu không chính xác.");
+            recordAttempt(loginKey(email), FAILED_LOGIN_WINDOW_MS);
+            throw new Error(genericError);
           }
+
+          clearAttempts(loginKey(email));
 
           // Trả về đúng object để nhét vào JWT
           return {

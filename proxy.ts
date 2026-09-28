@@ -44,27 +44,25 @@ export async function proxy(request: NextRequest) {
   // đăng ký cao hơn ngay từ domain gốc.
   if (pathname === "/") {
     // getToken() tự đoán tên cookie session (`next-auth.session-token` hay
-    // `__Secure-next-auth.session-token`) dựa trên việc request có "vẻ" là
-    // HTTPS hay không — suy đoán này KHÔNG đáng tin cậy trong Edge Runtime
-    // khi app đứng sau 2 lớp proxy (Cloudflare -> Vercel), và ĐẶC BIỆT sai
-    // lệch với request dạng RSC soft-navigation của Next.js (khác pipeline
-    // xử lý header/protocol so với document request thường). Hậu quả thực
-    // tế đã xác nhận qua test production: getToken() trả về null (tưởng
-    // chưa đăng nhập) dù session hợp lệ, khiến người dùng ĐÃ đăng nhập vẫn
-    // bị đá về /auth/register — chỉ xảy ra với RSC request, không xảy ra
-    // với document request thường. Ép `secureCookie: true` ở production
-    // (luôn phục vụ qua HTTPS) để loại bỏ hẳn việc suy đoán sai này.
+    // `__Secure-next-auth.session-token`) dựa trên protocol của TỪNG
+    // request — suy đoán này không đáng tin cậy trong Edge Runtime khi app
+    // đứng sau 2 lớp proxy (Cloudflare -> Vercel), và sai lệch riêng với
+    // request dạng RSC soft-navigation của Next.js client router. Hậu quả
+    // đã xác nhận qua test production: getToken() trả null (tưởng chưa
+    // đăng nhập) dù session hợp lệ, đá nhầm người ĐÃ đăng nhập về
+    // /auth/register — chỉ với RSC request, không với document request
+    // thường. Đã thử ép cứng qua NODE_ENV rồi NEXTAUTH_URL, cả 2 đều
+    // không khớp giá trị thật trên Vercel (không xem được để xác nhận).
+    // Cách chắc chắn nhất: đọc THẲNG cookie nào THỰC SỰ có mặt trong
+    // chính request này — không đoán qua bất kỳ nguồn gián tiếp nào nữa.
+    const hasSecureCookie = request.cookies.has("__Secure-next-auth.session-token");
+    const hasPlainCookie = request.cookies.has("next-auth.session-token");
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
-      // Lấy từ NEXTAUTH_URL (giá trị cấu hình cố định) thay vì để getToken()
-      // tự đoán qua protocol của TỪNG request — dùng NODE_ENV cũng sai vì
-      // `next start` local set NODE_ENV=production trong khi vẫn chạy HTTP
-      // (NextAuth khi đó set cookie KHÔNG có tiền tố `__Secure-`, mismatch
-      // với secureCookie:true ép cứng theo NODE_ENV).
-      secureCookie: (process.env.NEXTAUTH_URL || "").startsWith("https://"),
+      secureCookie: hasSecureCookie,
     });
-    if (!token) {
+    if (!token && !hasSecureCookie && !hasPlainCookie) {
       return NextResponse.redirect(new URL("/auth/register", request.url));
     }
   }

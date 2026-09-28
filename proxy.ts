@@ -43,7 +43,27 @@ export async function proxy(request: NextRequest) {
   // Quyết định sản phẩm: đánh đổi SEO/duyệt công khai job board để lấy tỷ lệ
   // đăng ký cao hơn ngay từ domain gốc.
   if (pathname === "/") {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    // getToken() tự đoán tên cookie session (`next-auth.session-token` hay
+    // `__Secure-next-auth.session-token`) dựa trên việc request có "vẻ" là
+    // HTTPS hay không — suy đoán này KHÔNG đáng tin cậy trong Edge Runtime
+    // khi app đứng sau 2 lớp proxy (Cloudflare -> Vercel), và ĐẶC BIỆT sai
+    // lệch với request dạng RSC soft-navigation của Next.js (khác pipeline
+    // xử lý header/protocol so với document request thường). Hậu quả thực
+    // tế đã xác nhận qua test production: getToken() trả về null (tưởng
+    // chưa đăng nhập) dù session hợp lệ, khiến người dùng ĐÃ đăng nhập vẫn
+    // bị đá về /auth/register — chỉ xảy ra với RSC request, không xảy ra
+    // với document request thường. Ép `secureCookie: true` ở production
+    // (luôn phục vụ qua HTTPS) để loại bỏ hẳn việc suy đoán sai này.
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      // Lấy từ NEXTAUTH_URL (giá trị cấu hình cố định) thay vì để getToken()
+      // tự đoán qua protocol của TỪNG request — dùng NODE_ENV cũng sai vì
+      // `next start` local set NODE_ENV=production trong khi vẫn chạy HTTP
+      // (NextAuth khi đó set cookie KHÔNG có tiền tố `__Secure-`, mismatch
+      // với secureCookie:true ép cứng theo NODE_ENV).
+      secureCookie: (process.env.NEXTAUTH_URL || "").startsWith("https://"),
+    });
     if (!token) {
       return NextResponse.redirect(new URL("/auth/register", request.url));
     }

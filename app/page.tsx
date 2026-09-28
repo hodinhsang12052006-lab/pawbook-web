@@ -1,5 +1,14 @@
 "use client";
 
+// Không có route segment config nào (dynamic/revalidate) trước đây, khác
+// với app/messages/page.tsx (có `dynamic = "force-dynamic"` vì phụ thuộc
+// session). Thử ép "/" luôn dynamic — nghi ngờ liên quan tới bug redirect
+// sai sang /auth/register phát hiện qua test thật trên production (chỉ
+// xảy ra với request dạng RSC, không phải document request thường), có
+// thể do "/" bị coi là static/prerender-được trong khi thực chất phụ
+// thuộc session phía client.
+export const dynamic = "force-dynamic";
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";

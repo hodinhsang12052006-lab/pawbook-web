@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { notifyUser } from "@/lib/notify";
 import { Role } from "@prisma/client";
 
 // GET /api/unlock?technicianUserId=xxx — chủ tiệm kiểm tra đã mở khóa liên
@@ -87,6 +88,8 @@ export async function POST(req: NextRequest) {
         hiringTimeline: hiringTimeline || null,
       },
     });
+
+    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} đã mở khoá liên hệ với bạn`);
 
     return NextResponse.json({ unlocked: true, unlockedAt: unlock.unlockedAt }, { status: 201 });
   } catch (err) {

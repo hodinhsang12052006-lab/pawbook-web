@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import LanguageToggle from "@/components/layout/LanguageToggle";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 export default function Navbar() {
   const router = useRouter();
@@ -70,6 +71,7 @@ export default function Navbar() {
               )}
 
               <div className="flex items-center gap-1 sm:gap-2 border-l border-slate-850 pl-2 sm:pl-4">
+                <NotificationBell />
                 <Link
                   href="/messages"
                   prefetch={true}

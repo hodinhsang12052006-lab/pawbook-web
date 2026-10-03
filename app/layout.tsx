@@ -63,6 +63,9 @@ export default function RootLayout({
                     sửa từng nơi. */}
                 <Toaster
                   position="top-center"
+                  // Hiện NGAY DƯỚI Navbar (64px) — trước đây toast đè lên thanh
+                  // trên cùng, che mất chuông 🔔 / nút tin nhắn trên điện thoại.
+                  containerStyle={{ top: 76 }}
                   toastOptions={{
                     style: {
                       background: "rgba(15, 23, 42, 0.92)",

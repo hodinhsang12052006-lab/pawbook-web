@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { notifyUser } from "@/lib/notify";
 
 // POST /api/posts/[id]/like — toggle thả tim (like/unlike). Idempotent theo
 // ý nghĩa: gọi lại nhiều lần chỉ đảo trạng thái, không tích lũy nhiều like
@@ -24,7 +25,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Bài viết có thể đã bị xóa giữa lúc người dùng đang xem — bắt lỗi FK
       // trả 404 thay vì 500 mù mờ.
       try {
-        await prisma.postLike.create({ data: { postId, userId: session.user.id } });
+        const like = await prisma.postLike.create({
+          data: { postId, userId: session.user.id },
+          select: { post: { select: { authorId: true } } },
+        });
+        await notifyUser(like.post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã thích bài viết của bạn`);
       } catch {
         return NextResponse.json({ error: "Bài viết không còn tồn tại." }, { status: 404 });
       }

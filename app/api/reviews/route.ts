@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { notifyUser } from "@/lib/notify";
 import { Role, ReviewType } from "@prisma/client";
 
 function round1(n: number) {
@@ -190,6 +191,8 @@ export async function POST(req: NextRequest) {
         author: { select: { id: true, name: true, avatarUrl: true, role: true } },
       },
     });
+
+    await notifyUser(targetUserId, session.user.id, `${session.user.name || "Ai đó"} đã đánh giá bạn`);
 
     return NextResponse.json(
       {

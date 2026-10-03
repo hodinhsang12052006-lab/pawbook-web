@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { notifyUser } from "@/lib/notify";
 
 // POST /api/jobs/[id]/save — lưu 1 tin tuyển dụng (bất kỳ role nào cũng lưu
 // được, nhưng thực tế chỉ THỢ dùng — không khoá cứng role để giữ đơn giản,
@@ -18,16 +19,19 @@ export async function POST(
     const userId = (session.user as any).id;
     const { id: jobId } = await params;
 
-    const job = await prisma.job.findUnique({ where: { id: jobId }, select: { id: true } });
+    const job = await prisma.job.findUnique({ where: { id: jobId }, select: { id: true, ownerId: true, title: true } });
     if (!job) {
       return NextResponse.json({ error: "Tin tuyển dụng không tồn tại." }, { status: 404 });
     }
 
+    const existed = await prisma.savedJob.findUnique({ where: { userId_jobId: { userId, jobId } }, select: { id: true } });
     const saved = await prisma.savedJob.upsert({
       where: { userId_jobId: { userId, jobId } },
       update: {},
       create: { userId, jobId },
     });
+    // Chỉ báo lần lưu đầu tiên (không báo lại khi bấm lưu nhiều lần).
+    if (!existed) await notifyUser(job.ownerId, userId, `Một thợ nail vừa lưu tin "${job.title}" của bạn`);
 
     return NextResponse.json(saved, { status: 201 });
   } catch (error: any) {

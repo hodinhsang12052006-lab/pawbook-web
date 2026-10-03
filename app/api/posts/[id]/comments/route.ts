@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { notifyUser } from "@/lib/notify";
 
 // GET /api/posts/[id]/comments — danh sách bình luận 1 bài viết, cũ→mới
 // (đúng thứ tự đọc hội thoại), giới hạn 200 để tránh 1 bài viral kéo sập
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Bình luận quá dài (tối đa 500 ký tự)." }, { status: 400 });
     }
 
-    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true, authorId: true } });
     if (!post) {
       return NextResponse.json({ error: "Bài viết không còn tồn tại." }, { status: 404 });
     }
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         author: { select: { id: true, name: true, avatarUrl: true, role: true } },
       },
     });
+
+    await notifyUser(post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã bình luận bài viết của bạn`);
 
     return NextResponse.json(
       {

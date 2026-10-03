@@ -80,10 +80,14 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
 
       setUnreadCount((c) => c + 1);
       playNotifySound();
-      toast.success(
-        `Tin nhắn mới từ ${message.sender?.name || "ai đó"}: ${(message.content || "").substring(0, 20)}...`,
-        { icon: "💬", position: "top-right" }
-      );
+      const who = message.sender?.name || "ai đó";
+      if (message.type === "CALL") {
+        // Nhật ký cuộc gọi — không hiện chuỗi thô "missed:audio".
+        if (/^(missed|declined)/.test(message.content || "")) toast(`Cuộc gọi nhỡ từ ${who}`, { icon: "📞", position: "top-right" });
+      } else {
+        const preview = message.type === "IMAGE" ? "📷 Ảnh" : (message.content || "").substring(0, 40);
+        toast.success(`Tin nhắn mới từ ${who}: ${preview}`, { icon: "💬", position: "top-right" });
+      }
     };
 
     channel.bind("new-message", handler);

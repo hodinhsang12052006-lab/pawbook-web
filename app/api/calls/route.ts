@@ -18,6 +18,8 @@ const ACTION_TO_EVENT: Record<string, string> = {
   accept: "call-accepted",
   reject: "call-rejected",
   camera: "camera-status",
+  // Người nhận đang trong cuộc gọi khác → báo cho người gọi thay vì để họ chờ.
+  busy: "call-busy",
 };
 
 export async function POST(req: Request) {
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const { targetId, action, sdp, candidates, callType, videoOff } = body;
+    const { targetId, action, sdp, candidates, callType, videoOff, callId } = body;
 
     const eventName = ACTION_TO_EVENT[action];
     if (!targetId || !eventName) {
@@ -60,9 +62,20 @@ export async function POST(req: Request) {
     // hiện tại, chặn kẻ lạ chèn tín hiệu giả vào cuộc gọi đang diễn ra.
     let payload: Record<string, any>;
     switch (action) {
-      case "offer":
-        payload = { fromId: userId, callerId: userId, callerName: session.user.name || "User", callType, sdp };
+      case "offer": {
+        // Tên + avatar thật từ DB cho màn hình đổ chuông (trước đây chỉ có chữ
+        // cái viết tắt).
+        const caller = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, avatarUrl: true } });
+        payload = {
+          fromId: userId,
+          callerId: userId,
+          callerName: caller?.name || session.user.name || "User",
+          callerAvatar: caller?.avatarUrl || null,
+          callType: callType === "video" ? "video" : "audio",
+          callId: typeof callId === "string" && /^[a-z0-9]{4,16}$/.test(callId) ? callId : "",
+        };
         break;
+      }
       case "candidate-batch":
         payload = { fromId: userId, candidates };
         break;

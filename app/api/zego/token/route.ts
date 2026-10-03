@@ -36,9 +36,14 @@ export async function POST(req: NextRequest) {
     if (!roomId.startsWith("call-")) {
       return NextResponse.json({ error: "roomId không hợp lệ." }, { status: 400 });
     }
-    const participantIds = roomId.slice("call-".length).split("-");
+    // "call-<idA>-<idB>" hoặc "call-<idA>-<idB>-<callId>" (mỗi cuộc gọi 1 phòng
+    // riêng — xem CallManager). callId chỉ là chữ thường/số.
+    const parts = roomId.slice("call-".length).split("-");
+    const callIdPart = parts.length === 3 ? parts[2] : null;
+    const participantIds = parts.slice(0, 2);
     if (
-      participantIds.length !== 2 ||
+      (parts.length !== 2 && parts.length !== 3) ||
+      (callIdPart !== null && !/^[a-z0-9]{4,16}$/.test(callIdPart)) ||
       participantIds[0] === participantIds[1] ||
       !participantIds.includes(userId)
     ) {
@@ -67,7 +72,11 @@ export async function POST(req: NextRequest) {
 
     // 1 giờ là đủ cho 1 phiên gọi; token chỉ dùng để join phòng, không phải
     // phiên đăng nhập dài hạn.
-    const token04 = generateToken04(appId, userId, secret, 3600, "");
+    // ZEGOCLOUD chỉ cho 1 phiên / userID: gọi lại ngay sau khi cúp máy mà
+    // dùng chung userID thì phiên cũ (chưa kịp thoát hẳn) đá phiên mới →
+    // màn hình kẹt "Joining Room". Mỗi cuộc gọi dùng userID riêng gắn callId.
+    const zegoUserId = callIdPart ? `${userId}_${callIdPart}` : userId;
+    const token04 = generateToken04(appId, zegoUserId, secret, 3600, "");
 
     // ZegoUIKitPrebuilt.create() KHÔNG nhận thẳng chuỗi Token04 — SDK parse
     // theo format "<token04>#<base64 JSON metadata>" (xem
@@ -76,7 +85,7 @@ export async function POST(req: NextRequest) {
     // định dạng này.
     const metadata = Buffer.from(
       JSON.stringify({
-        userID: userId,
+        userID: zegoUserId,
         roomID: roomId,
         userName: encodeURIComponent(userName || ""),
         appID: appId,
@@ -84,7 +93,7 @@ export async function POST(req: NextRequest) {
     ).toString("base64");
     const kitToken = `${token04}#${metadata}`;
 
-    return NextResponse.json({ token: kitToken, userId, userName });
+    return NextResponse.json({ token: kitToken, userId: zegoUserId, userName });
   } catch (err) {
     console.error("POST /api/zego/token error:", err);
     return NextResponse.json({ error: "Lỗi hệ thống khi tạo token cuộc gọi." }, { status: 500 });

@@ -102,6 +102,17 @@ function TypingDots({ className = "" }: { className?: string }) {
   );
 }
 
+// "missed:audio" | "declined:video" | "ended:audio:125" → mô tả hiển thị.
+function describeCall(body: string) {
+  const [outcome, kind, secs] = body.split(":");
+  const label = kind === "video" ? "Cuộc gọi video" : "Cuộc gọi thoại";
+  if (outcome === "ended") {
+    const n = Number(secs) || 0;
+    return { missed: false, kind: kind === "video" ? "video" : "audio", text: `${label} · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` };
+  }
+  return { missed: true, kind: kind === "video" ? "video" : "audio", text: outcome === "declined" ? `${label} bị từ chối` : `${label} nhỡ` };
+}
+
 const ROLE_VI: Record<string, string> = { OWNER: "Chủ tiệm", TECHNICIAN: "Thợ Nail", ADMIN: "Quản trị viên" };
 
 interface ConversationType {
@@ -1132,7 +1143,7 @@ export default function MessagesContent({
                 const unread = isActive ? 0 : conv.unreadCount || 0;
                 const isTyping = typingByConv[conv.id] !== undefined;
                 const preview = lastMsg
-                  ? `${fromMe ? "Bạn: " : ""}${lastMsg.type === "IMAGE" ? "📷 Ảnh" : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.body}`
+                  ? `${fromMe ? "Bạn: " : ""}${lastMsg.type === "IMAGE" ? "📷 Ảnh" : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : lastMsg.body}`
                   : isGroup
                   ? `${conv.participants.length} thành viên`
                   : "Bắt đầu trò chuyện";
@@ -1376,6 +1387,37 @@ export default function MessagesContent({
                       </span>
                     </div>
                   ) : null;
+
+                  if (msg.type === "CALL") {
+                    const call = describeCall(msg.content);
+                    return (
+                      <React.Fragment key={msg.id || idx}>
+                        {dateSeparator}
+                        <div className={`my-2 flex w-full justify-center ${animClass}`}>
+                          <div className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 ${call.missed ? "border-rose-500/30 bg-rose-500/10" : "border-white/10 bg-slate-900/70"}`}>
+                            <span className={`flex h-8 w-8 items-center justify-center rounded-full ${call.missed ? "bg-rose-500/20 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                              {call.kind === "video" ? <Video className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
+                            </span>
+                            <div className="text-left">
+                              <p className={`text-xs font-bold ${call.missed ? "text-rose-200" : "text-slate-100"}`}>{call.text}</p>
+                              <p className="text-[10px] text-slate-500">
+                                {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            {!activeChat.isGroup && callPartner && (
+                              <button
+                                type="button"
+                                onClick={() => startCall(callPartner, call.kind as "audio" | "video")}
+                                className="ml-1 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3 py-1 text-[11px] font-bold text-white"
+                              >
+                                Gọi lại
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    );
+                  }
 
                   if (msg.type === "SYSTEM") {
                     return (

@@ -295,7 +295,11 @@ export async function POST(req: Request) {
     // Accept Text, Image URL, or GIF URL content as-is — no artificial type
     // allowlist or URL-scheme gate. The only real requirement is "not empty".
     const messageText = (content || message || "").toString().trim();
-    const msgType = typeof type === "string" && type.length <= 20 ? type : "TEXT";
+    // Chỉ các loại tin client được phép gửi. Trước đây nhận mọi chuỗi — kẻ
+    // xấu gửi type "SYSTEM" sẽ hiện thành dòng "thông báo hệ thống" 🤖 ở giữa
+    // khung chat (dễ dùng để lừa đảo: "Tài khoản bị khoá, chuyển tiền…").
+    const ALLOWED_TYPES = ["TEXT", "IMAGE", "VIDEO", "STICKER", "CALL"];
+    const msgType = typeof type === "string" && ALLOWED_TYPES.includes(type) ? type : "TEXT";
 
     if (!messageText) {
       return NextResponse.json(
@@ -321,6 +325,14 @@ export async function POST(req: Request) {
     // và trạng thái online của người nhận cho người gửi (tracking beacon).
     // Ảnh/GIF hợp lệ chỉ đến từ Cloudinary (upload) hoặc Tenor/Giphy (GifPicker)
     // hoặc data URL ảnh (fallback khi chưa cấu hình Cloudinary) — chặn phần còn lại.
+    // Nhật ký cuộc gọi do CallManager ghi: "missed:audio", "ended:video:125"…
+    if (msgType === "CALL" && !/^(missed|declined|ended):(audio|video)(:\d{1,6})?$/.test(messageText)) {
+      return NextResponse.json({ error: "Nhật ký cuộc gọi không hợp lệ." }, { status: 400 });
+    }
+    if (msgType === "STICKER" && messageText.length > 16) {
+      return NextResponse.json({ error: "Sticker không hợp lệ." }, { status: 400 });
+    }
+
     if (msgType === "IMAGE" || msgType === "VIDEO") {
       const ALLOWED_MEDIA = /^(https:\/\/res\.cloudinary\.com\/|https:\/\/[a-z0-9-]+\.tenor\.com\/|https:\/\/media\.tenor\.com\/|https:\/\/[a-z0-9-]+\.giphy\.com\/|data:image\/|data:video\/)/i;
       if (!ALLOWED_MEDIA.test(messageText)) {

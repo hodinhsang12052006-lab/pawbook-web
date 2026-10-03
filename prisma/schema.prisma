@@ -301,11 +301,21 @@ model Post {
   city      String?
   likes     PostLike[]
   comments  PostComment[]
+  stat      PostStat?
   createdAt DateTime      @default(now())
 
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
   @@index([createdAt])
   @@index([authorId])
+}
+
+// Lượt xem THẬT của bài đăng (mỗi thiết bị tính 1 lần/ngày) — tách bảng riêng
+// để cộng dồn không phải ghi vào bảng Post.
+model PostStat {
+  postId    String   @id
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  views     Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 model PostLike {

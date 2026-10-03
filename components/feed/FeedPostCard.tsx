@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
+import { trackPostView } from "@/lib/viewTracker";
 
 export interface FeedPost {
   id: string;
@@ -24,7 +25,12 @@ export interface FeedPost {
   likedByMe: boolean;
   recentLikers?: { id: string; name: string; avatarUrl: string | null }[];
   isHot?: boolean;
+  views?: number;
 }
+
+// 1234 → "1,2K" (lượt xem thật).
+const compactCount = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(".", ",")}M` : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".", ",")}K` : String(n);
 
 interface CommentType {
   id: string;
@@ -53,6 +59,10 @@ const REPORT_REASONS = ["Lừa đảo / spam", "Nội dung phản cảm", "Thôn
 export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDeleted?: (postId: string) => void }) {
   const router = useRouter();
   const { user: currentUser } = useSessionUser();
+
+  // Ghi nhận lượt xem thật khi bài hiện trên màn hình đủ lâu.
+  const articleRef = useRef<HTMLElement>(null);
+  useEffect(() => trackPostView(articleRef.current, post.id), [post.id]);
 
   const [liked, setLiked] = useState(post.likedByMe);
   const [likers, setLikers] = useState(post.recentLikers ?? []);
@@ -205,7 +215,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   };
 
   return (
-    <article className="glass-card rounded-2xl overflow-hidden animate-fadeIn">
+    <article ref={articleRef} className="glass-card rounded-2xl overflow-hidden animate-fadeIn">
       {/* HEADER */}
       <div className="flex items-start gap-3 p-4">
         <Link href={`/profile/${post.author.id}`} className="flex-shrink-0">
@@ -358,9 +368,10 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         </div>
       )}
 
-      {/* NGƯỜI THẬT ĐÃ THÍCH — bằng chứng xã hội từ dữ liệu thật */}
-      {likeCount > 0 && likers.length > 0 && (
+      {/* NGƯỜI THẬT ĐÃ THÍCH + LƯỢT XEM THẬT — bằng chứng xã hội từ dữ liệu thật */}
+      {((likeCount > 0 && likers.length > 0) || (post.views ?? 0) > 0) && (
         <div className="flex items-center gap-2 px-4 pb-2 text-[11px] text-slate-400">
+          {likeCount > 0 && likers.length > 0 && (<>
           <div className="flex -space-x-2">
             {likers.map((l) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -371,6 +382,12 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <span className="font-semibold text-slate-200">{likers.map((l) => l.name).slice(0, 2).join(", ")}</span>
             {likeCount > Math.min(2, likers.length) ? ` và ${likeCount - Math.min(2, likers.length)} người khác` : ""} đã thích
           </span>
+          </>)}
+          {(post.views ?? 0) > 0 && (
+            <span className="ml-auto flex-shrink-0 text-slate-500" title="Lượt xem thật (mỗi người tính 1 lần/ngày)">
+              👁 {compactCount(post.views!)} lượt xem
+            </span>
+          )}
         </div>
       )}
 

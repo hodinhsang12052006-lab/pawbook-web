@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { getViews } from "@/lib/postStats";
 import { Market, PostType } from "@prisma/client";
 
 const PAGE_SIZE = 12;
@@ -14,7 +15,7 @@ type Liker = { id: string; name: string; avatarUrl: string | null };
 const HOT_WINDOW_MS = 48 * 60 * 60 * 1000;
 const HOT_SCORE = 5;
 
-function mapPost(post: any, viewerId: string | null, likers: Liker[] = []) {
+function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0) {
   const likeCount = post._count?.likes ?? 0;
   const commentCount = post._count?.comments ?? 0;
   const isRecent = Date.now() - post.createdAt.getTime() < HOT_WINDOW_MS;
@@ -33,6 +34,7 @@ function mapPost(post: any, viewerId: string | null, likers: Liker[] = []) {
     likedByMe: viewerId ? (post.likes?.length ?? 0) > 0 : false,
     // Tối đa 3 người thích gần nhất (người thật) cho dòng "A, B và N người khác".
     recentLikers: likers,
+    views,
     isHot: isRecent && likeCount + commentCount * 2 >= HOT_SCORE,
   };
 }
@@ -84,6 +86,7 @@ export async function GET(req: NextRequest) {
           select: { postId: true, user: { select: { id: true, name: true, avatarUrl: true } } },
         })
       : [];
+    const viewsByPost = await getViews(posts.map((p) => p.id));
     const likersByPost = new Map<string, Liker[]>();
     for (const like of recentLikes) {
       const list = likersByPost.get(like.postId) ?? [];
@@ -92,7 +95,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      posts: posts.map((p) => mapPost(p, viewerId, likersByPost.get(p.id))),
+      posts: posts.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0)),
       nextCursor,
     });
   } catch (error) {

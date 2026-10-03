@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // xem qua) trước khi dùng làm căn cứ pháp lý chính thức hoặc nộp store.
 export default function TermsOfServicePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
       <main className="mx-auto w-full max-w-3xl px-4 py-10 pb-24 md:pb-10 space-y-8 text-sm leading-relaxed text-slate-300">
         <div>

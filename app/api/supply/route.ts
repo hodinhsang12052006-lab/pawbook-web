@@ -74,6 +74,14 @@ export async function POST(req: NextRequest) {
     if (!imageUrl || typeof imageUrl !== "string") {
       return NextResponse.json({ error: "Vui lòng tải ảnh sản phẩm." }, { status: 400 });
     }
+    // Ảnh chỉ đến từ /api/upload (URL https Cloudinary hoặc data URL ảnh khi
+    // chưa cấu hình Cloudinary) — chặn scheme lạ và chuỗi khổng lồ.
+    if (imageUrl.length > 2_000_000 || !/^(https:\/\/|data:image\/)/.test(imageUrl)) {
+      return NextResponse.json({ error: "Ảnh sản phẩm không hợp lệ." }, { status: 400 });
+    }
+    if (title.length > 200 || (description !== undefined && description !== null && (typeof description !== "string" || description.length > 5000))) {
+      return NextResponse.json({ error: "Tên hoặc mô tả sản phẩm quá dài." }, { status: 400 });
+    }
     const safePrice = Number(price);
     if (!Number.isFinite(safePrice) || safePrice <= 0) {
       return NextResponse.json({ error: "Giá bán không hợp lệ." }, { status: 400 });

@@ -168,14 +168,14 @@ export default function IncomeTrackerPage() {
 
   if (checkingSession) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 text-purple-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
       <main className="mx-auto w-full max-w-2xl px-4 py-8 pb-28 md:pb-10 space-y-6">
         <div className="space-y-1.5">
@@ -268,7 +268,7 @@ export default function IncomeTrackerPage() {
         </div>
 
         {/* CẤU HÌNH % ĂN CHIA — thợ tự cấu hình, dùng để ước tính phần nhận */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 flex items-center justify-between gap-3">
+        <div className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold text-slate-300">Bạn ăn chia bao nhiêu % dịch vụ?</p>
             <p className="text-[10px] text-slate-500 mt-0.5">Tip mặc định tính 100% về bạn.</p>

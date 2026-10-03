@@ -112,6 +112,11 @@ model Job {
   createdAt DateTime @default(now())
 
   savedBy SavedJob[]
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([ownerId])
+  @@index([isUrgent, createdAt])
+  @@index([market, state])
 }
 
 // Tin đã lưu — thợ thấy tin ưng ý nhưng chưa tiện gọi ngay có thể lưu lại
@@ -128,6 +133,8 @@ model SavedJob {
   createdAt DateTime @default(now())
 
   @@unique([userId, jobId])
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([jobId])
 }
 
 // Hồ sơ tay nghề / portfolio ảnh móng của thợ (role = TECHNICIAN)
@@ -161,6 +168,9 @@ model TechnicianProfile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([market, state])
 }
 
 // Paywall "Mở khóa kết nối trực tiếp": 1 bản ghi = 1 chủ tiệm (OWNER) đã mở
@@ -186,6 +196,8 @@ model UnlockContact {
   unlockedAt DateTime @default(now())
 
   @@unique([ownerId, technicianUserId])
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([technicianUserId])
 }
 
 // Chặn — 1 chiều theo ý định người chặn. Enforcement thực tế (chặn gửi tin
@@ -202,6 +214,8 @@ model BlockedUser {
   createdAt DateTime @default(now())
 
   @@unique([blockerId, blockedUserId])
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([blockedUserId])
 }
 
 // Báo cáo — chỉ lưu lại để đội ngũ vận hành xem xét thủ công, không tự
@@ -218,6 +232,10 @@ model UserReport {
   reason String
 
   createdAt DateTime @default(now())
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([reporterId])
+  @@index([reportedUserId])
 }
 
 model Conversation {
@@ -238,6 +256,10 @@ model Message {
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }
 
 enum PostType {
@@ -264,6 +286,10 @@ model Post {
   likes     PostLike[]
   comments  PostComment[]
   createdAt DateTime      @default(now())
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([createdAt])
+  @@index([authorId])
 }
 
 model PostLike {
@@ -275,6 +301,8 @@ model PostLike {
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([userId])
 }
 
 model PostComment {
@@ -285,6 +313,10 @@ model PostComment {
   author    User     @relation("PostComments", fields: [authorId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime @default(now())
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([postId, createdAt])
+  @@index([authorId])
 }
 
 // Kho hàng Supply — chủ tiệm đăng bán sỉ vật tư nail, xen kẽ trong newsfeed
@@ -300,6 +332,10 @@ model SupplyProduct {
   price         Float
   originalPrice Float? // Nếu có, hiển thị gạch giá + badge "Tiết kiệm X%"
   createdAt     DateTime @default(now())
+
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([createdAt])
+  @@index([sellerId])
 }
 
 // Đánh giá 2 chiều minh bạch: Thợ đánh giá Chủ tiệm (SALON_REVIEW) và Chủ
@@ -341,4 +377,6 @@ model Review {
   createdAt DateTime @default(now())
 
   @@unique([authorId, targetUserId])
+  // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
+  @@index([targetUserId])
 }

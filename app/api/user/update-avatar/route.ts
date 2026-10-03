@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     console.error("Update avatar API error:", err);
     return NextResponse.json(
       { error: "Lỗi hệ thống khi cập nhật ảnh đại diện." },
-      { status: 550 }
+      { status: 500 }
     );
   }
 }

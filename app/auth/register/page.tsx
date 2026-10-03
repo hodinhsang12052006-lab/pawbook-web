@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useContext, useEffect, useState } from "react";
-import { Sparkles, Store, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Store, ArrowRight, UserPlus, SlidersHorizontal, MessageCircle, ChevronDown } from "lucide-react";
+import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
@@ -34,6 +36,7 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <div className="flex-1">
           <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.technicianTitle")}</p>
           <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.technicianDesc")}</p>
+          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.technicianPerks")}</p>
         </div>
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
@@ -47,9 +50,65 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <div className="flex-1">
           <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.ownerTitle")}</p>
           <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.ownerDesc")}</p>
+          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.ownerPerks")}</p>
         </div>
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
+
+      <p className={`text-center text-sm ${labelClass}`}>
+        {t("auth.rolePicker.haveAccount")}{" "}
+        <Link href="/auth/login" className="font-bold text-pink-500 hover:underline">{t("auth.rolePicker.login")}</Link>
+      </p>
+
+      {/* Số liệu thật (lấy từ nailRadarData, cùng nguồn với badge bên trái) —
+          không bịa số người dùng. */}
+      <div className={`grid grid-cols-3 divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
+        {[
+          { value: `${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")}+`, label: t("auth.rolePicker.statJobs") },
+          { value: "2", label: t("auth.rolePicker.statMarkets") },
+          { value: "100%", label: t("auth.rolePicker.statFree") },
+        ].map((stat) => (
+          <div key={stat.label} className="px-2 py-3 text-center">
+            <p className={`text-lg font-black ${isDark ? "text-white" : "text-slate-900"}`}>{stat.value}</p>
+            <p className={`text-[10px] leading-tight ${labelClass}`}>{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <section className="space-y-3">
+        <h3 className={`text-sm font-bold ${isDark ? "text-slate-200" : "text-slate-800"}`}>{t("auth.rolePicker.howTitle")}</h3>
+        <ol className="space-y-2.5">
+          {[
+            { icon: UserPlus, title: t("auth.rolePicker.how1Title"), desc: t("auth.rolePicker.how1Desc") },
+            { icon: SlidersHorizontal, title: t("auth.rolePicker.how2Title"), desc: t("auth.rolePicker.how2Desc") },
+            { icon: MessageCircle, title: t("auth.rolePicker.how3Title"), desc: t("auth.rolePicker.how3Desc") },
+          ].map(({ icon: Icon, title, desc }, i) => (
+            <li key={title} className="flex items-start gap-3">
+              <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500/20 to-violet-500/20 border border-pink-500/20">
+                <Icon className="h-4 w-4 text-pink-400" />
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-pink-600 text-[9px] font-black text-white">{i + 1}</span>
+              </span>
+              <div>
+                <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>{title}</p>
+                <p className={`text-xs ${labelClass}`}>{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="space-y-2">
+        <h3 className={`text-sm font-bold ${isDark ? "text-slate-200" : "text-slate-800"}`}>{t("auth.rolePicker.faqTitle")}</h3>
+        {[1, 2, 3, 4].map((n) => (
+          <details key={n} className={`group rounded-xl border px-4 py-3 ${isDark ? "border-slate-800 bg-slate-900/30" : "border-slate-200 bg-white"}`}>
+            <summary className={`flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold ${isDark ? "text-slate-100" : "text-slate-900"}`}>
+              {t(`auth.rolePicker.faq${n}Q`)}
+              <ChevronDown className="h-4 w-4 flex-shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+            </summary>
+            <p className={`mt-2 text-xs leading-relaxed ${labelClass}`}>{t(`auth.rolePicker.faq${n}A`)}</p>
+          </details>
+        ))}
+      </section>
     </div>
   );
 }

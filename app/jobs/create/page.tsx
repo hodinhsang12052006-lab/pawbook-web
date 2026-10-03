@@ -94,7 +94,7 @@ export default function CreateJobPage() {
 
   if (checkingSession) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-col min-h-screen text-slate-100">
         <Navbar />
         <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-12 flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 text-pink-500 animate-spin" />
@@ -104,7 +104,7 @@ export default function CreateJobPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
       <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 pb-24 md:pb-8">
@@ -114,7 +114,7 @@ export default function CreateJobPage() {
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-6 space-y-6">
+        <div className="glass-card rounded-2xl p-6 space-y-6">
           <div>
             <h1 className="text-lg font-bold text-white">📢 Đăng Tin Tuyển Thợ — Bước {step}/3</h1>
             <p className="text-xs text-slate-400 mt-1">Chỉ mất chưa đến 2 phút để tin của bạn lên top.</p>

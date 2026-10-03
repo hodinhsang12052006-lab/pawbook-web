@@ -15,10 +15,17 @@ const config: CapacitorConfig = {
   // giao diện lên bitpawos.com tự động phản ánh trong app, không cần build
   // lại/nộp bản mới lên store — trừ khi thay đổi bản thân native shell này
   // (icon, splash, quyền, plugin).
+  // Phải là "www." — domain trần bitpawos.com trả 308 sang www.bitpawos.com
+  // (cấu hình Vercel/Cloudflare). Capacitor coi mọi điều hướng sang host KHÁC
+  // host của server.url là link ngoài và mở bằng trình duyệt hệ thống — trỏ
+  // vào domain trần khiến app vừa mở đã bị đá ra Chrome/Safari (màn trắng
+  // trong app). allowNavigation giữ cả 2 host bên trong WebView phòng khi
+  // redirect đổi chiều sau này.
   server: {
-    url: "https://bitpawos.com",
+    url: "https://www.bitpawos.com",
     androidScheme: "https",
     cleartext: false,
+    allowNavigation: ["bitpawos.com", "www.bitpawos.com"],
   },
 
   plugins: {

@@ -121,6 +121,44 @@ export async function PUT(req: Request) {
 
     const { name, phone, state, city, avatarUrl, technician, turnSplitPolicy, clientTypePolicy, housingSupport } = body;
 
+    // Các trường này được echo lại công khai (profile, job board, chat) —
+    // chặn kiểu lạ (object làm Prisma ném 500) và chuỗi khổng lồ.
+    const textLimits: Record<string, [unknown, number]> = {
+      name: [name, 80],
+      phone: [phone, 40],
+      state: [state, 100],
+      city: [city, 100],
+      turnSplitPolicy: [turnSplitPolicy, 200],
+      clientTypePolicy: [clientTypePolicy, 200],
+      avatarUrl: [avatarUrl, 500_000],
+      bio: [technician?.bio, 2000],
+      specialties: [technician?.specialties, 500],
+      status: [technician?.status, 20],
+      desiredSalaryType: [technician?.desiredSalaryType, 100],
+      desiredSalaryAmount: [technician?.desiredSalaryAmount, 100],
+      desiredBenefits: [technician?.desiredBenefits, 500],
+    };
+    for (const [key, [value, max]] of Object.entries(textLimits)) {
+      if (value === undefined || value === null) continue;
+      if (typeof value !== "string" || value.length > max) {
+        return NextResponse.json({ error: `Trường "${key}" không hợp lệ hoặc quá dài.` }, { status: 400 });
+      }
+    }
+    if (name !== undefined && !String(name).trim()) {
+      return NextResponse.json({ error: "Tên không được để trống." }, { status: 400 });
+    }
+    const portfolio = technician?.portfolioImages;
+    if (portfolio !== undefined) {
+      if (
+        !Array.isArray(portfolio) ||
+        portfolio.length > 30 ||
+        portfolio.some((u: unknown) => typeof u !== "string") ||
+        JSON.stringify(portfolio).length > 8_000_000
+      ) {
+        return NextResponse.json({ error: "Danh sách ảnh portfolio không hợp lệ (tối đa 30 ảnh)." }, { status: 400 });
+      }
+    }
+
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;

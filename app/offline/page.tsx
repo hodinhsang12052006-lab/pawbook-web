@@ -10,7 +10,7 @@ import { WifiOff, RefreshCw } from "lucide-react";
 // precache with nothing that can itself fail while offline.
 export default function OfflinePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-6 text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-6 text-center">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
       <div className="absolute -top-24 -left-16 h-96 w-96 rounded-full bg-fuchsia-600/20 blur-[100px]" />
       <div className="absolute -bottom-24 -right-16 h-96 w-96 rounded-full bg-indigo-600/20 blur-[100px]" />

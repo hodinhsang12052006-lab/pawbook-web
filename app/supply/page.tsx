@@ -223,7 +223,7 @@ export default function SupplyPage() {
   }, [nextCursor, loadMore]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
       <main className="mx-auto flex-1 w-full max-w-6xl px-4 py-8 pb-24 md:pb-8 space-y-6">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -247,7 +247,7 @@ export default function SupplyPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-slate-800 bg-slate-900/30 aspect-[16/10] animate-pulse" />
+              <div key={i} className="glass-card rounded-2xl aspect-[16/10] animate-pulse" />
             ))}
           </div>
         ) : error ? (

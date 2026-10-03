@@ -16,14 +16,17 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <html lang="vi">
-      <body className="bg-gray-900">
-        <div className="p-10 flex flex-col items-center justify-center min-h-screen text-white select-none">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">🚨 ỨNG DỤNG BỊ CRASH</h2>
-          <p className="bg-black p-4 rounded text-red-300 font-mono text-sm max-w-2xl overflow-auto w-full break-words">
-            {error.message || "Lỗi không xác định"}
-          </p>
-          <button onClick={() => reset()} className="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-full font-bold transition-all active:scale-95 cursor-pointer">
-            🔄 Tải lại trang
+      {/* Style inline — layout gốc (và globals.css) không chạy khi trang này hiện. */}
+      <body style={{ margin: 0, background: "#020617", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24, textAlign: "center" }}>
+          <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Đã có lỗi xảy ra</h2>
+          <p style={{ fontSize: 14, color: "#94a3b8", margin: 0, maxWidth: 360 }}>Vui lòng thử tải lại. Nếu vẫn lỗi, hãy quay lại sau ít phút.</p>
+          {error.digest && <p style={{ fontSize: 10, color: "#475569", fontFamily: "monospace", margin: 0 }}>Mã lỗi: {error.digest}</p>}
+          <button
+            onClick={() => reset()}
+            style={{ minHeight: 48, width: "100%", maxWidth: 360, border: 0, borderRadius: 16, background: "linear-gradient(90deg,#9333ea,#4f46e5,#db2777)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+          >
+            Tải lại trang
           </button>
         </div>
       </body>

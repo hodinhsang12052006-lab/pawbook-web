@@ -4,12 +4,34 @@ import path from "path";
 // next-pwa ships no TypeScript declarations.
 // @ts-expect-error - untyped CommonJS module
 import withPWAInit from "next-pwa";
+// @ts-expect-error - untyped CommonJS module
+import defaultRuntimeCaching from "next-pwa/cache";
+
+// Mặc định next-pwa ghi MỌI phản hồi /api/* (trừ /api/auth/*) vào Cache
+// Storage của trình duyệt trong 24h — gồm cả /api/profile (email, SĐT),
+// /api/messages (nội dung chat riêng tư) và /api/admin/leads (PII toàn bộ
+// user). Trên máy dùng chung/công cộng, dữ liệu này còn lại SAU KHI đăng
+// xuất và đọc được qua DevTools. Thay quy tắc "apis" bằng NetworkOnly để các
+// phản hồi cần đăng nhập KHÔNG BAO GIỜ nằm trên đĩa; các asset tĩnh (ảnh,
+// JS, CSS, font) vẫn được cache bình thường cho tốc độ/offline.
+const runtimeCaching = (defaultRuntimeCaching as Array<{ options?: Record<string, unknown>; handler?: string }>).map(
+  (entry) => {
+    if (entry?.options?.cacheName !== "apis") return entry;
+    // NetworkOnly (không bao giờ ghi phản hồi vào đĩa) không dùng chung được
+    // với networkTimeoutSeconds (Workbox báo lỗi build) — bỏ key đó, giữ
+    // nguyên object options để Workbox vẫn đọc được các trường khác.
+    const { networkTimeoutSeconds, ...keptOptions } = entry.options as Record<string, unknown>;
+    void networkTimeoutSeconds;
+    return { ...entry, handler: "NetworkOnly", options: keptOptions };
+  }
+);
 
 const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  runtimeCaching,
   // Default 2MB limit silently skipped our largest vendor chunk (ZegoCloud
   // call SDK + map/AI libs bundled together, ~5MB) from the offline
   // precache list every build — bumped just above that chunk's real size so
@@ -30,6 +52,8 @@ const nextConfig: NextConfig = {
   // outside this project entirely — pin it explicitly instead of letting
   // Next guess and warn about it on every build.
   outputFileTracingRoot: path.join(__dirname),
+  // Không quảng cáo framework/phiên bản cho kẻ dò lỗ hổng.
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
@@ -43,6 +67,10 @@ const nextConfig: NextConfig = {
       // ("Media Attachment") in a broken image box.
       { protocol: "https", hostname: "media.tenor.com" },
       { protocol: "https", hostname: "*.tenor.com" },
+      // Avatar mặc định lúc đăng ký (app/api/register) — đã có trong CSP
+      // img-src nhưng thiếu ở đây, nên mọi <NextImage> avatar mặc định bị
+      // image-optimizer trả 400 (ảnh vỡ) cho toàn bộ user mới.
+      { protocol: "https", hostname: "api.dicebear.com" },
     ],
   },
   async headers() {
@@ -92,6 +120,10 @@ const nextConfig: NextConfig = {
             // Added api.dicebear.com to img-src — avatar mặc định lúc đăng ký
             // đổi sang DiceBear fun-emoji (xem app/api/register/route.ts),
             // domain này chưa có sẵn nên ảnh sẽ bị CSP chặn nếu không thêm.
+            // Added cloudflareinsights.com (script-src + connect-src) —
+            // Cloudflare tự chèn beacon Web Analytics vào mọi trang, CSP cũ
+            // chặn nó nên console production báo lỗi ở mọi trang và analytics
+            // không ghi nhận lượt truy cập nào.
             // Added *.coolgcloud.com + *.coolzcloud.com to connect-src — test
             // gọi video 2-browser thật phát hiện ZegoCloud SDK còn dùng CẢ 3
             // domain logging khác nhau (coolbcloud/coolgcloud/coolzcloud —
@@ -103,7 +135,7 @@ const nextConfig: NextConfig = {
             // đã sửa cả .env và .env.local, đã verify bằng Playwright 2 tài
             // khoản thật kết nối thành công (xem log "appid invalid" 1001004
             // biến mất sau khi sửa).
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

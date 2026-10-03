@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { getClientIp } from "@/lib/rateLimit";
 
 // In-memory sliding-window counters, keyed by `${bucketName}:${ip}`.
 // CAVEAT: this only protects a single long-running Node process. On
@@ -71,14 +72,20 @@ export async function proxy(request: NextRequest) {
 
   if (rule) {
     const { bucket, limit, windowMs } = rule;
-    // x-forwarded-for is attacker-controllable unless the platform in front
-    // of this app (Vercel, a trusted reverse proxy) strips/overwrites it —
-    // confirm that's the case in your deployment, otherwise this can be
-    // spoofed to bypass per-IP limiting entirely.
-    const ip = (request as any).ip || request.headers.get("x-forwarded-for") || "127.0.0.1";
+    // getClientIp ưu tiên cf-connecting-ip (IP thật sau Cloudflare) — trước
+    // đây đọc nguyên chuỗi x-forwarded-for, tức IP edge Cloudflare, khiến
+    // mọi người dùng cùng 1 PoP chung 1 bộ đếm đăng nhập/đăng ký.
+    const ip = getClientIp(request);
     const bucketKey = `${bucket}:${ip}`;
 
     const currentTime = Date.now();
+    // Mỗi IP mới thêm 1 entry không bao giờ tự xóa — dọn entry hết hạn khi
+    // Map phình to để bộ nhớ instance không tăng mãi dưới tải lớn/tấn công.
+    if (rateLimitCache.size > 10_000) {
+      for (const [key, value] of rateLimitCache) {
+        if (currentTime > value.resetTime) rateLimitCache.delete(key);
+      }
+    }
     const rateLimitData = rateLimitCache.get(bucketKey);
 
     if (!rateLimitData || currentTime > rateLimitData.resetTime) {

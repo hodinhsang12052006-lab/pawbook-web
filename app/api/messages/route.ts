@@ -284,13 +284,40 @@ export async function POST(req: Request) {
     // Accept Text, Image URL, or GIF URL content as-is — no artificial type
     // allowlist or URL-scheme gate. The only real requirement is "not empty".
     const messageText = (content || message || "").toString().trim();
-    const msgType = type || "TEXT";
+    const msgType = typeof type === "string" && type.length <= 20 ? type : "TEXT";
 
     if (!messageText) {
       return NextResponse.json(
         { error: "Nội dung tin nhắn không thể bỏ trống." },
         { status: 400 }
       );
+    }
+    // Không giới hạn trước đây — 1 request có thể nhét hàng chục MB vào DB
+    // (mỗi lần mở hội thoại lại kéo nguyên khối đó về cho cả 2 bên). Tin
+    // ảnh/GIF được nới rộng vì /api/upload trả data URL base64 khi chưa cấu
+    // hình Cloudinary.
+    const maxLength = msgType === "TEXT" ? 5000 : 2_000_000;
+    if (messageText.length > maxLength) {
+      return NextResponse.json(
+        { error: "Tin nhắn quá dài." },
+        { status: 400 }
+      );
+    }
+
+    // Tin IMAGE/VIDEO được client render thành <img>/<video src=...>. Nếu cho
+    // phép URL tùy ý, người gửi có thể nhét 1 URL trỏ về máy chủ của họ —
+    // khi người nhận MỞ đoạn chat, trình duyệt tự tải URL đó, LỘ địa chỉ IP
+    // và trạng thái online của người nhận cho người gửi (tracking beacon).
+    // Ảnh/GIF hợp lệ chỉ đến từ Cloudinary (upload) hoặc Tenor/Giphy (GifPicker)
+    // hoặc data URL ảnh (fallback khi chưa cấu hình Cloudinary) — chặn phần còn lại.
+    if (msgType === "IMAGE" || msgType === "VIDEO") {
+      const ALLOWED_MEDIA = /^(https:\/\/res\.cloudinary\.com\/|https:\/\/[a-z0-9-]+\.tenor\.com\/|https:\/\/media\.tenor\.com\/|https:\/\/[a-z0-9-]+\.giphy\.com\/|data:image\/|data:video\/)/i;
+      if (!ALLOWED_MEDIA.test(messageText)) {
+        return NextResponse.json(
+          { error: "Chỉ chấp nhận ảnh/video tải lên qua ứng dụng." },
+          { status: 400 }
+        );
+      }
     }
 
     let activeConversationId = conversationId;

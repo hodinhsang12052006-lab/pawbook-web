@@ -23,7 +23,7 @@ function FeedSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Đang tải bảng tin">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-3 animate-pulse">
+        <div key={i} className="glass-card rounded-2xl p-4 space-y-3 animate-pulse">
           <div className="flex items-center gap-3">
             <div className="h-11 w-11 rounded-full bg-slate-800" />
             <div className="space-y-2 flex-1">

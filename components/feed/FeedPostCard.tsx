@@ -138,7 +138,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
   };
 
   return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-900/30 overflow-hidden animate-fadeIn">
+    <article className="glass-card rounded-2xl overflow-hidden animate-fadeIn">
       {/* HEADER */}
       <div className="flex items-start gap-3 p-4">
         <Link href={`/profile/${post.author.id}`} className="flex-shrink-0">
@@ -185,11 +185,28 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,
           không cần thư viện carousel nặng nề. */}
       {post.mediaUrls.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto snap-x snap-mandatory px-4 pb-3 custom-scrollbar">
+        // 1 ảnh: full khung 4:3 · 2 ảnh: lưới 2 cột cân đối · ≥3 ảnh: vuốt
+        // ngang. Trước đây mọi trường hợp đều là carousel 85%/60%, nên bài 1
+        // ảnh bị lệch trái và bài 2 ảnh trông như ảnh thứ 2 bị cắt mất.
+        <div
+          className={
+            post.mediaUrls.length === 1
+              ? "px-4 pb-3"
+              : post.mediaUrls.length === 2
+              ? "grid grid-cols-2 gap-1.5 px-4 pb-3"
+              : "flex gap-1.5 overflow-x-auto snap-x snap-mandatory px-4 pb-3 custom-scrollbar"
+          }
+        >
           {post.mediaUrls.map((url, idx) => (
             <div
               key={idx}
-              className="relative flex-shrink-0 snap-center w-[85%] sm:w-[60%] aspect-square rounded-2xl overflow-hidden border border-slate-800 bg-slate-950"
+              className={`skeleton relative overflow-hidden rounded-2xl border border-slate-800 ${
+                post.mediaUrls.length === 1
+                  ? "w-full aspect-[4/3]"
+                  : post.mediaUrls.length === 2
+                  ? "aspect-[4/5]"
+                  : "flex-shrink-0 snap-center w-[78%] sm:w-[46%] aspect-square"
+              }`}
             >
               {isVideo(url) ? (
                 <>
@@ -206,11 +223,11 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
                   alt=""
                   fill
                   loading="lazy"
-                  sizes="(max-width: 640px) 85vw, 60vw"
+                  sizes={post.mediaUrls.length === 1 ? "(max-width: 640px) 100vw, 640px" : "(max-width: 640px) 80vw, 320px"}
                   className="object-cover"
                 />
               )}
-              {post.mediaUrls.length > 1 && (
+              {post.mediaUrls.length > 2 && (
                 <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
                   {idx + 1}/{post.mediaUrls.length}
                 </span>
@@ -225,6 +242,8 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
         <button
           type="button"
           onClick={handleToggleLike}
+          aria-label={liked ? "Bỏ thích" : "Thích"}
+          aria-pressed={liked}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${PRESS} ${
             liked ? "text-pink-400" : "text-slate-400 hover:text-pink-300"
           }`}
@@ -236,6 +255,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
         <button
           type="button"
           onClick={handleToggleComments}
+          aria-label="Bình luận"
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-blue-300 transition-colors ${PRESS}`}
         >
           <MessageCircle className="h-4.5 w-4.5" />
@@ -246,6 +266,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
           <button
             type="button"
             onClick={() => router.push(`/messages?to=${post.author.id}`)}
+            aria-label="Nhắn tin cho tác giả"
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-emerald-300 transition-colors ${PRESS}`}
           >
             <Send className="h-4.5 w-4.5" />

@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     recordAttempt(clientIp, REGISTER_WINDOW_MS);
 
     const body = await req.json();
-    let { name, email, password, role, market, phone, state, city } = body;
+    const { role, market } = body;
+    let { name, email, password, phone, state, city } = body;
 
     name = typeof name === "string" ? name.trim() : "";
     email = typeof email === "string" ? email.trim().toLowerCase() : "";
@@ -62,6 +63,21 @@ export async function POST(req: Request) {
     }
     if (!VALID_MARKETS.includes(market)) {
       return NextResponse.json({ error: "Thị trường không hợp lệ." }, { status: 400 });
+    }
+    if (phone.length > 40 || state.length > 100 || city.length > 100) {
+      return NextResponse.json({ error: "Thông tin liên hệ quá dài." }, { status: 400 });
+    }
+    // portfolioImages / surveyAnswers được lưu nguyên khối JSON — giới hạn để
+    // 1 request đăng ký không thể nhét hàng chục MB vào DB.
+    const { portfolioImages: rawPortfolio, surveyAnswers: rawSurvey } = body;
+    if (
+      rawPortfolio !== undefined &&
+      (!Array.isArray(rawPortfolio) || rawPortfolio.length > 30 || JSON.stringify(rawPortfolio).length > 8_000_000)
+    ) {
+      return NextResponse.json({ error: "Danh sách ảnh portfolio không hợp lệ (tối đa 30 ảnh)." }, { status: 400 });
+    }
+    if (rawSurvey !== undefined && JSON.stringify(rawSurvey).length > 50_000) {
+      return NextResponse.json({ error: "Dữ liệu khảo sát quá lớn." }, { status: 400 });
     }
 
     const existingUser = await prisma.user.findUnique({

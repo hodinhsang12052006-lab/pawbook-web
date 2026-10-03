@@ -89,7 +89,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nội dung bài đăng quá dài (tối đa 2000 ký tự)." }, { status: 400 });
     }
     const safePostType: PostType = VALID_POST_TYPES.includes(postType) ? postType : "GENERAL";
-    const safeMediaUrls = Array.isArray(mediaUrls) ? mediaUrls.filter((u) => typeof u === "string") : [];
+    const safeMediaUrls = Array.isArray(mediaUrls)
+      ? mediaUrls.filter((u) => typeof u === "string" && /^(https:\/\/|data:image\/)/.test(u))
+      : [];
+    // Mỗi trang feed kéo 12 bài kèm toàn bộ mediaUrls — giới hạn số ảnh và
+    // tổng dung lượng để 1 bài không làm nặng feed của mọi người.
+    if (safeMediaUrls.length > 10 || JSON.stringify(safeMediaUrls).length > 8_000_000) {
+      return NextResponse.json({ error: "Tối đa 10 ảnh mỗi bài đăng." }, { status: 400 });
+    }
 
     const author = await prisma.user.findUnique({
       where: { id: session.user.id },

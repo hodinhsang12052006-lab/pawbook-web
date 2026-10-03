@@ -84,7 +84,7 @@ export default function NailRadarPage() {
   const currencySymbol = market === "US" ? "$" : "A$";
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
       <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 pb-24 md:pb-8 space-y-6">
@@ -207,7 +207,7 @@ export default function NailRadarPage() {
             </div>
 
             {/* Turn split */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-2.5">
+            <div className="glass-card rounded-2xl p-4 space-y-2.5">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <Users className="h-4 w-4 text-pink-400" /> Mức chia turn phổ biến
               </p>
@@ -221,7 +221,7 @@ export default function NailRadarPage() {
             </div>
 
             {/* Supply policy */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-2">
+            <div className="glass-card rounded-2xl p-4 space-y-2">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <Package className="h-4 w-4 text-indigo-400" /> Ai bao supply?
               </p>
@@ -229,7 +229,7 @@ export default function NailRadarPage() {
             </div>
 
             {/* Negotiation tips */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-2.5">
+            <div className="glass-card rounded-2xl p-4 space-y-2.5">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <Lightbulb className="h-4 w-4 text-amber-400" /> Mẹo thỏa thuận trước khi bay
               </p>
@@ -243,7 +243,7 @@ export default function NailRadarPage() {
             </div>
 
             {/* Owner checklist */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-2.5">
+            <div className="glass-card rounded-2xl p-4 space-y-2.5">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <ClipboardList className="h-4 w-4 text-emerald-400" /> Checklist hỏi chủ trước khi nhận việc
               </p>

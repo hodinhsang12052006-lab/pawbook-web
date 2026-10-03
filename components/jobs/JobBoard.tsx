@@ -87,7 +87,7 @@ function DemandFomoBanner({ market, state }: { market: "US" | "AU"; state: strin
 // scroll khi đổi tab hoặc đổi vùng US/AU.
 function JobCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 space-y-3 animate-pulse">
+    <div className="glass-card rounded-2xl p-5 space-y-3 animate-pulse">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-2 flex-1">
           <div className="h-4 w-2/3 rounded bg-slate-800" />
@@ -249,7 +249,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
       {visibleJobs.map((job) => (
         <div
           key={job.id}
-          className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 sm:p-5 space-y-3 hover:border-pink-500/40 transition-colors"
+          className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 hover:border-pink-500/40 transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">

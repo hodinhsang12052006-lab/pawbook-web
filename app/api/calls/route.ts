@@ -37,41 +37,43 @@ export async function POST(req: Request) {
     }
 
     // Chỉ cần biết userId của người khác (lộ công khai qua /profile/<id>) là
-    // trước đây gọi được API này để đổ chuông/gửi tín hiệu cuộc gọi tới BẤT
-    // KỲ ai — kể cả người đã chủ động Chặn mình. Áp cùng luật chặn 2 chiều
-    // như /api/messages, chỉ ở bước khởi tạo cuộc gọi ("offer") vì đó là véc-tơ
-    // quấy rối thật (đổ chuông giả liên tục); các action tiếp theo trong cùng
-    // 1 cuộc gọi (accept/candidate/camera) không cần lặp lại kiểm tra này.
-    if (action === "offer") {
-      const blockExists = await prisma.blockedUser.findFirst({
-        where: {
-          OR: [
-            { blockerId: userId, blockedUserId: targetId },
-            { blockerId: targetId, blockedUserId: userId },
-          ],
-        },
-      });
-      if (blockExists) {
-        return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn." }, { status: 403 });
-      }
+    // gửi được tín hiệu cuộc gọi tới BẤT KỲ ai. Trước đây chỉ chặn ở bước
+    // "offer", nên 1 kẻ xấu (kể cả người đã bị chặn) vẫn bắn được
+    // reject/candidate/camera vào máy nạn nhân — "reject" chạy cleanupCall()
+    // vô điều kiện nên có thể NGẮT cuộc gọi hợp lệ nạn nhân đang nói với
+    // người thứ ba (DoS cuộc gọi), còn camera/candidate thì quấy rối/nhiễu
+    // kết nối. Áp luật chặn 2 chiều cho MỌI action.
+    const blockExists = await prisma.blockedUser.findFirst({
+      where: {
+        OR: [
+          { blockerId: userId, blockedUserId: targetId },
+          { blockerId: targetId, blockedUserId: userId },
+        ],
+      },
+    });
+    if (blockExists) {
+      return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn." }, { status: 403 });
     }
 
+    // fromId do SERVER gắn từ session (không phải client khai) — client dùng
+    // nó để bỏ qua mọi tín hiệu không đến từ đúng đối phương của cuộc gọi
+    // hiện tại, chặn kẻ lạ chèn tín hiệu giả vào cuộc gọi đang diễn ra.
     let payload: Record<string, any>;
     switch (action) {
       case "offer":
-        payload = { callerId: userId, callerName: session.user.name || "User", callType, sdp };
+        payload = { fromId: userId, callerId: userId, callerName: session.user.name || "User", callType, sdp };
         break;
       case "candidate-batch":
-        payload = { candidates };
+        payload = { fromId: userId, candidates };
         break;
       case "accept":
-        payload = { sdp };
+        payload = { fromId: userId, sdp };
         break;
       case "camera":
-        payload = { videoOff };
+        payload = { fromId: userId, videoOff };
         break;
       default:
-        payload = {};
+        payload = { fromId: userId };
     }
 
     await getPusherServer()?.trigger(chatChannelName(String(targetId).trim()), eventName, payload);

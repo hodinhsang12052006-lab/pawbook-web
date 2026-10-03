@@ -114,6 +114,15 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const callTypeRef = useRef(callType);
   callTypeRef.current = callType;
 
+  // Id đối phương của cuộc gọi ĐANG diễn ra (người mình đang gọi, hoặc người
+  // đang gọi tới mình). Mọi handler tín hiệu (bind 1 lần) đọc ref này để BỎ
+  // QUA tín hiệu đến từ bất kỳ ai khác — chặn kẻ lạ bắn reject/candidate/
+  // camera giả vào cuộc gọi hợp lệ (server đã gắn fromId từ session).
+  const activePeerIdRef = useRef<string | null>(null);
+  activePeerIdRef.current = calleeSnapshot?.id || callerInfo?.id || null;
+  const isFromActivePeer = (data: any) =>
+    !activePeerIdRef.current || !data?.fromId || data.fromId === activePeerIdRef.current;
+
   const cleanupCall = useCallback(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -158,6 +167,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     };
 
     const handleCandidateBatch = async (data: any) => {
+      if (!isFromActivePeer(data)) return;
       if (!peerConnection.current) return;
       const candidates: any[] = Array.isArray(data.candidates) ? data.candidates : [];
       for (const raw of candidates) {
@@ -175,6 +185,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     };
 
     const handleCallAccepted = async (data: any) => {
+      if (!isFromActivePeer(data)) return;
       // Video call: ZEGOCLOUD (VideoCallRoom) sở hữu toàn bộ media/room join
       // thật sự — không có RTCPeerConnection thủ công nào được tạo cho
       // nhánh video (xem handleStartCall/handleAcceptCall bên dưới), nên chỉ
@@ -201,12 +212,16 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       }
     };
 
-    const handleCallRejected = () => {
+    const handleCallRejected = (data: any) => {
+      // Chỉ chấp nhận "từ chối" từ đúng đối phương của cuộc gọi hiện tại —
+      // nếu không, kẻ lạ có thể bắn reject để NGẮT cuộc gọi hợp lệ của mình.
+      if (!isFromActivePeer(data)) return;
       toast.error("Cuộc gọi đã bị từ chối hoặc kết thúc.");
       cleanupCall();
     };
 
     const handleCameraStatus = (data: any) => {
+      if (!isFromActivePeer(data)) return;
       setCameraMuted(Boolean(data.videoOff));
     };
 

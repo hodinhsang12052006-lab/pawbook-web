@@ -200,7 +200,7 @@ function ReviewsSection({
       {/* Tóm tắt điểm trung bình theo từng tiêu chí */}
       <div className="grid grid-cols-3 gap-2">
         {criteria.map((c) => (
-          <div key={c.key} className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+          <div key={c.key} className="glass-card rounded-2xl p-3 text-center">
             <p className="text-lg font-black text-amber-400">{summary?.[SUMMARY_KEY_FOR[c.key]] ?? "—"}</p>
             <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{c.summaryLabel}</p>
           </div>
@@ -218,7 +218,7 @@ function ReviewsSection({
       )}
 
       {showForm && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 space-y-4 animate-fadeIn">
+        <div className="glass-card rounded-2xl p-4 space-y-4 animate-fadeIn">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2.5">
               <span className="text-xs font-bold text-slate-300">Điểm tổng thể</span>
@@ -454,7 +454,7 @@ export default function PublicProfilePage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-col min-h-screen text-slate-100">
         <Navbar />
         <main className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 text-pink-500 animate-spin" /></main>
       </div>
@@ -463,7 +463,7 @@ export default function PublicProfilePage({ params }: PageProps) {
 
   if (error || !profile) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-col min-h-screen text-slate-100">
         <Navbar />
         <main className="mx-auto max-w-2xl w-full px-4 py-12">
           <div className="flex items-center gap-3 p-5 rounded-2xl border border-red-500/30 bg-red-500/10 text-sm text-red-400">
@@ -479,7 +479,7 @@ export default function PublicProfilePage({ params }: PageProps) {
   const isOwnerProfile = profile.role === "OWNER";
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
       <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 pb-24 md:pb-8 space-y-6">
@@ -509,15 +509,15 @@ export default function PublicProfilePage({ params }: PageProps) {
               </p>
               <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Điểm uy tín</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+            <div className="glass-card rounded-2xl p-3 text-center">
               <p className="text-lg font-black text-white">{trustSummary?.count ?? 0}</p>
               <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Đánh giá</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+            <div className="glass-card rounded-2xl p-3 text-center">
               <p className="text-lg font-black text-white">{galleryCount ?? 0}</p>
               <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Ảnh Gallery</p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 text-center">
+            <div className="glass-card rounded-2xl p-3 text-center">
               <p className="text-lg font-black text-white">{profile.jobs?.length ?? 0}</p>
               <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Đang tuyển</p>
             </div>

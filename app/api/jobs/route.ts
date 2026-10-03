@@ -79,6 +79,18 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    // Tin tuyển dụng hiển thị công khai trong danh sách 100 tin/request —
+    // chặn kiểu dữ liệu lạ (object/array làm Prisma ném lỗi 500) và chuỗi
+    // khổng lồ làm phình mọi response của job board.
+    const shortFields = { title, salonName, state, city, salaryType, salaryAmount, phone };
+    for (const [key, value] of Object.entries(shortFields)) {
+      if (typeof value !== "string" || value.length > 200) {
+        return NextResponse.json({ error: `Trường "${key}" không hợp lệ.` }, { status: 400 });
+      }
+    }
+    if (description !== undefined && (typeof description !== "string" || description.length > 5000)) {
+      return NextResponse.json({ error: "Mô tả quá dài (tối đa 5000 ký tự)." }, { status: 400 });
+    }
 
     const newJob = await prisma.job.create({
       data: {

@@ -14,12 +14,12 @@ export const metadata: Metadata = {
 // thức.
 export default function PrivacyPolicyPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
       <main className="mx-auto w-full max-w-3xl px-4 py-10 pb-24 md:pb-10 space-y-8 text-sm leading-relaxed text-slate-300">
         <div>
           <h1 className="text-2xl font-black text-white mb-2">Chính sách bảo mật</h1>
-          <p className="text-xs text-slate-500">Cập nhật lần cuối: 20/09/2026</p>
+          <p className="text-xs text-slate-500">Cập nhật lần cuối: 03/10/2026</p>
         </div>
 
         <p>
@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
             <li><strong className="text-slate-100">Hồ sơ Thợ Nail:</strong> giới thiệu bản thân, số năm kinh nghiệm, chuyên môn, ảnh/video portfolio, mức lương và quyền lợi mong muốn.</li>
             <li><strong className="text-slate-100">Nội dung nhắn tin:</strong> tin nhắn văn bản, ảnh, GIF/sticker bạn gửi trong cuộc trò chuyện với người dùng khác trên nền tảng.</li>
             <li><strong className="text-slate-100">Dữ liệu cuộc gọi:</strong> khi bạn gọi thoại/video qua app, dữ liệu tín hiệu kết nối (không phải nội dung âm thanh/hình ảnh cuộc gọi) được truyền qua hạ tầng của Pusher và ZegoCloud để thiết lập kết nối trực tiếp giữa hai máy.</li>
-            <li><strong className="text-slate-100">Vị trí (GPS):</strong> nếu bạn cấp quyền vị trí trên ứng dụng di động, chúng tôi có thể dùng để gợi ý tiệm/thợ gần bạn hoặc hỗ trợ tính năng chấm công theo vị trí trong tương lai. Bạn có thể từ chối/thu hồi quyền này bất cứ lúc nào trong cài đặt thiết bị.</li>
+            <li><strong className="text-slate-100">Vị trí:</strong> ứng dụng <strong>không</strong> truy cập vị trí GPS của thiết bị. Khu vực (bang, thành phố) chỉ là thông tin bạn tự nhập vào hồ sơ.</li>
           </ul>
         </section>
 

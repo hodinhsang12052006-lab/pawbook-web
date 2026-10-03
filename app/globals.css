@@ -21,6 +21,8 @@
      never rendered any font-size at all until defined here. */
   --text-3xs: 0.625rem;
   --text-3xs--line-height: 0.875rem;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
   --text-4xs: 0.5625rem;
   --text-4xs--line-height: 0.75rem;
 }
@@ -153,4 +155,76 @@ body {
   .animate-grid-drift, .animate-twinkle, .animate-breathe {
     animation: none;
   }
+}
+
+/* ===== App backdrop (toàn bộ trang trong app) =====
+   Trước đây mọi trang là 1 mảng đen phẳng #020617 — không chiều sâu, không
+   nhận diện thương hiệu. Lớp nền cố định này (mounted 1 lần ở layout) gồm:
+   3 quầng sáng hồng/tím/xanh rất nhẹ ở mép màn hình, lưới chấm mờ dần về
+   phía dưới (gợi "studio" gọn gàng), và vignette tối viền để nội dung giữa
+   nổi lên. Hoàn toàn tĩnh (không animation) — rẻ cho WebView máy yếu. */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(56rem 36rem at 0% -8%, rgba(219, 39, 119, 0.16), transparent 62%),
+    radial-gradient(48rem 32rem at 100% 0%, rgba(124, 58, 237, 0.14), transparent 60%),
+    radial-gradient(52rem 34rem at 50% 115%, rgba(14, 165, 233, 0.07), transparent 60%),
+    #020617;
+}
+.app-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.13) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 25%, transparent 78%);
+}
+.app-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(2, 6, 23, 0.7) 100%);
+}
+
+/* @layer components: để utility Tailwind (hover:border-*, bg-*) vẫn ghi đè được. */
+@layer components {
+  /* Thẻ "kính mờ" dùng chung cho khối nội dung đặt trên nền mới. */
+  .glass-card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.52));
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  /* Mobile: bỏ blur (đắt khi cuộn feed dài trên WebView máy yếu), bù bằng
+     nền đặc hơn — nhìn gần như giống hệt. */
+  @media (max-width: 767px) {
+    .glass-card {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8));
+    }
+  }
+
+  /* Skeleton shimmer cho trạng thái đang tải (thay cho khối trống/spinner). */
+}
+
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+@layer components {
+  .skeleton {
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(51, 65, 85, 0.6) 50%, rgba(30, 41, 59, 0.6) 100%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 0.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
 }

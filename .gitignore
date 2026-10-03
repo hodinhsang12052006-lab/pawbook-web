@@ -65,3 +65,8 @@ ios/App/App/public
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# QA (Playwright) — ảnh chụp/báo cáo sinh ra mỗi lần chạy
+/scripts/qa/reports/
+/scripts/qa/.xss_post_id
+/public/workbox-*.js.map

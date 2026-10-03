@@ -88,7 +88,7 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
   };
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-3">
+    <div className="glass-card rounded-2xl p-4 space-y-3">
       <div className="flex items-start gap-3">
         <img
           src={user.avatarUrl || AVATAR_FALLBACK(user.name)}
@@ -123,12 +123,14 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
       )}
 
       <div className="flex items-center justify-between gap-2 pl-[52px] flex-wrap">
-        <div className="flex items-center gap-2">
+        {/* flex-wrap + whitespace-nowrap: màn 390px không đủ chỗ cho cả 3 nút
+            trên 1 hàng — trước đây nút "Chia sẻ" bị bóp méo thành 2 dòng chữ. */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || mediaUrls.length >= 5}
-            className={`flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300 hover:text-white disabled:opacity-40 ${PRESS}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300 hover:text-white disabled:opacity-40 ${PRESS}`}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
             Ảnh/Video
@@ -141,7 +143,7 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
                 key={opt.value}
                 type="button"
                 onClick={() => setPostType(opt.value)}
-                className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
                   postType === opt.value ? "bg-pink-600 text-white" : "text-slate-400"
                 }`}
               >
@@ -155,7 +157,7 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
           type="button"
           onClick={handleSubmit}
           disabled={posting || uploading}
-          className={`flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-black text-white shadow-lg shadow-pink-600/20 disabled:opacity-50 ${PRESS}`}
+          className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-black text-white shadow-lg shadow-pink-600/20 disabled:opacity-50 ${PRESS}`}
         >
           {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Đăng bài

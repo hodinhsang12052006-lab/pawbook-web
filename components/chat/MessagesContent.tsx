@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import GifPicker from "@/components/chat/GifPicker";
 import {
@@ -202,6 +203,8 @@ export default function MessagesContent({
 
   const { startCall } = useCallManager();
   const chatObserverTarget = useRef<HTMLDivElement>(null);
+  // ?to= ngoài danh sách systemUsers → tra hồ sơ 1 lần duy nhất mỗi partner.
+  const directPartnerLookupRef = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
   const prevChatKeyRef = useRef<string | null>(null);
@@ -867,8 +870,7 @@ export default function MessagesContent({
     if (!directPartnerId || !currentUser || systemUsers.length === 0) return;
     if (activeChat && activeChat.id === directPartnerId) return;
 
-    const partner = systemUsers.find((u) => u.id === directPartnerId);
-    if (partner) {
+    const openWith = (partner: { id: string; name: string; avatarUrl?: string | null; role: string }) => {
       const matchedConv = conversations.find((c) => !c.isGroup && c.participants.some((p) => p.id === partner.id));
       setActiveChat({
         id: partner.id,
@@ -880,7 +882,27 @@ export default function MessagesContent({
         statusText: "Đang hoạt động",
         conversationId: matchedConv?.id,
       });
+    };
+
+    // systemUsers chỉ là 100 user đầu tiên server trả về — khi hệ thống có
+    // hơn 100 tài khoản, bấm "Nhắn tin" với người nằm ngoài danh sách đó
+    // trước đây không làm gì cả. Tìm tiếp trong người tham gia các hội thoại
+    // sẵn có, rồi cuối cùng lấy hồ sơ công khai của họ từ server.
+    const partner =
+      systemUsers.find((u) => u.id === directPartnerId) ||
+      conversations.flatMap((c) => c.participants).find((p) => p.id === directPartnerId);
+    if (partner) {
+      openWith(partner);
+      return;
     }
+    if (directPartnerLookupRef.current === directPartnerId) return;
+    directPartnerLookupRef.current = directPartnerId;
+    fetch(`/api/profile?id=${encodeURIComponent(directPartnerId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((user) => {
+        if (user?.id && user.id !== currentUser.id) openWith(user);
+      })
+      .catch(() => {});
   }, [directPartnerId, systemUsers, conversations, activeChat, currentUser]);
 
   const callPartner = activeChat
@@ -968,8 +990,16 @@ export default function MessagesContent({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 space-y-2 mt-8 animate-fadeIn">
-              <MessageSquare className="h-8 w-8 text-slate-700" />
-              <p className="text-3xs font-bold text-slate-400">{t("messenger.noConversations")}</p>
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/15 to-violet-500/15 border border-pink-500/20">
+                <MessageSquare className="h-6 w-6 text-pink-400" />
+              </span>
+              <p className="text-sm font-bold text-slate-200">{t("messenger.noConversations")}</p>
+              <p className="text-xs text-slate-500 max-w-[240px] leading-relaxed">{t("messenger.noConversationsHint")}</p>
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                <Link href={currentUser?.role === "OWNER" ? "/?tab=portfolio" : "/?tab=jobs"} className="rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20">
+                  {currentUser?.role === "OWNER" ? t("messenger.ctaFindTechs") : t("messenger.ctaFindJobs")}
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -985,7 +1015,7 @@ export default function MessagesContent({
                   onClick={() => setActiveChat(null)}
                   className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white md:hidden cursor-pointer mr-1 flex items-center gap-1.5 text-xs font-bold transition-all border border-slate-800"
                 >
-                  ⬅️ Back
+                  ⬅️ {locale === "vi" ? "Quay lại" : "Back"}
                 </button>
                 <div className="relative flex-shrink-0">
                   <div className="relative h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
@@ -1002,7 +1032,7 @@ export default function MessagesContent({
                   </h3>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Lock className="h-3 w-3 text-emerald-500" />
-                    <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Mã hóa đầu cuối (E2EE)</span>
+                    <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">{t("messenger.subtitle")}</span>
                   </div>
                 </div>
               </div>
@@ -1414,10 +1444,12 @@ export default function MessagesContent({
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3 animate-fadeIn">
-            <MessageSquare className="h-10 w-10 text-slate-700 animate-pulse" />
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/15 to-violet-500/15 border border-pink-500/20">
+              <MessageSquare className="h-7 w-7 text-pink-400" />
+            </span>
             <div>
-              <p className="text-xs font-bold text-slate-300">{t("messenger.selectConversation")}</p>
-              <p className="text-3xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">{t("messenger.selectConversationHint")}</p>
+              <p className="text-base font-bold text-slate-200">{t("messenger.selectConversation")}</p>
+              <p className="text-xs text-slate-500 mt-1 max-w-[300px] leading-relaxed">{t("messenger.selectConversationHint")}</p>
             </div>
           </div>
         )}

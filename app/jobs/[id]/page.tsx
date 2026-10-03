@@ -2,19 +2,47 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
-import { ArrowLeft, MapPin, DollarSign, Phone, MessageCircle, Loader2, AlertCircle, Flame, Building } from "lucide-react";
+import {
+  ArrowLeft, MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Building, Clock,
+  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { stateName } from "@/lib/stateNames";
+import { timeAgo } from "@/lib/feedFormat";
+import { useSessionUser } from "@/lib/SessionUserContext";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+interface JobDetail {
+  id: string;
+  title: string;
+  salonName: string;
+  description: string;
+  market: "US" | "AU";
+  state: string;
+  city: string;
+  salaryType: string;
+  salaryAmount: string;
+  skills: string[];
+  benefits: string[];
+  phone: string;
+  isUrgent: boolean;
+  createdAt: string;
+  ownerId: string;
+  owner?: { id: string; name: string; avatarUrl: string | null };
+}
+
 export default function JobDetailPage({ params }: PageProps) {
   const router = useRouter();
+  const { user } = useSessionUser();
   const [jobId, setJobId] = useState<string | null>(null);
-  const [job, setJob] = useState<any>(null);
+  const [job, setJob] = useState<JobDetail | null>(null);
+  const [similar, setSimilar] = useState<JobDetail[]>([]);
+  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,28 +52,88 @@ export default function JobDetailPage({ params }: PageProps) {
 
   useEffect(() => {
     if (!jobId) return;
+    let cancelled = false;
     async function fetchJobDetail() {
       try {
         setLoading(true);
         setError(null);
         const res = await fetch(`/api/jobs/${jobId}`);
         if (!res.ok) throw new Error("Tin tuyển dụng không tồn tại hoặc đã bị gỡ bỏ.");
-        setJob(await res.json());
-      } catch (err: any) {
-        setError(err.message || "Đã xảy ra lỗi.");
+        const data: JobDetail = await res.json();
+        if (cancelled) return;
+        setJob(data);
+        // Tin tương tự cùng bang — giữ người dùng tiếp tục khám phá thay vì
+        // "đọc xong 1 tin là hết đường".
+        const listRes = await fetch(`/api/jobs?market=${data.market}&state=${encodeURIComponent(data.state)}`);
+        if (listRes.ok && !cancelled) {
+          const list: JobDetail[] = await listRes.json();
+          setSimilar(list.filter((j) => j.id !== data.id).slice(0, 3));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Đã xảy ra lỗi.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchJobDetail();
+    return () => {
+      cancelled = true;
+    };
   }, [jobId]);
+
+  useEffect(() => {
+    if (!jobId || !user?.id) return;
+    fetch("/api/jobs/saved")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((ids: string[]) => setSaved(Array.isArray(ids) && ids.includes(jobId)))
+      .catch(() => {});
+  }, [jobId, user?.id]);
+
+  const toggleSave = async () => {
+    if (!user?.id) {
+      router.push("/auth/login");
+      return;
+    }
+    const next = !saved;
+    setSaved(next);
+    const res = await fetch(`/api/jobs/${jobId}/save`, { method: next ? "POST" : "DELETE" }).catch(() => null);
+    if (!res?.ok) {
+      setSaved(!next);
+      toast.error("Không lưu được tin, vui lòng thử lại.");
+    } else {
+      toast.success(next ? "Đã lưu tin — xem lại trong mục \"Đã lưu\"." : "Đã bỏ lưu tin.");
+    }
+  };
+
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: job?.title, text: `${job?.title} — ${job?.salonName}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Đã sao chép link tin tuyển dụng.");
+      }
+    } catch {
+      /* người dùng huỷ chia sẻ */
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-col min-h-screen text-slate-100">
         <Navbar />
-        <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-12 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="h-8 w-8 text-pink-500 animate-spin" />
+        <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-6 sm:px-6 space-y-4" aria-busy="true">
+          <div className="skeleton h-4 w-40" />
+          <div className="glass-card rounded-2xl p-6 space-y-4">
+            <div className="skeleton h-6 w-24" />
+            <div className="skeleton h-8 w-3/4" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-16" />)}
+            </div>
+            <div className="skeleton h-20" />
+            <div className="skeleton h-12" />
+          </div>
         </main>
       </div>
     );
@@ -53,106 +141,176 @@ export default function JobDetailPage({ params }: PageProps) {
 
   if (error || !job) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-col min-h-screen text-slate-100">
         <Navbar />
         <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-12 space-y-4">
           <div className="flex items-center gap-3 p-5 rounded-2xl border border-red-500/30 bg-red-500/10 text-sm text-red-400">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span>{error || "Tin tuyển dụng không khả dụng."}</span>
           </div>
-          <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-pink-400 hover:underline">
-            <ArrowLeft className="h-4 w-4" /> Quay lại trang chủ
+          <Link href="/?tab=jobs" className="inline-flex items-center gap-2 text-xs font-semibold text-pink-400 hover:underline">
+            <ArrowLeft className="h-4 w-4" /> Xem các tin tuyển dụng khác
           </Link>
         </main>
       </div>
     );
   }
 
+  const facts = [
+    { icon: MapPin, label: "Khu vực", value: `${job.city}, ${stateName(job.market, job.state)}` },
+    { icon: DollarSign, label: "Mức lương", value: job.salaryAmount, accent: true },
+    { icon: Wallet, label: "Hình thức", value: job.salaryType },
+    { icon: Globe2, label: "Thị trường", value: job.market === "US" ? "🇺🇸 Mỹ" : "🇦🇺 Úc" },
+  ];
+  const isOwnJob = user?.id && user.id === job.ownerId;
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
-      <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-6 pb-24 md:pb-6 sm:px-6">
-        <div className="mb-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200">
-            <ArrowLeft className="h-4 w-4" /> Quay lại danh sách tin
-          </Link>
-        </div>
+      <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-6 pb-28 md:pb-10 sm:px-6 space-y-4">
+        <Link href="/?tab=jobs" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200">
+          <ArrowLeft className="h-4 w-4" /> Quay lại danh sách tin
+        </Link>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-6 space-y-5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-2">
+        <article className="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+          <header className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
               {job.isUrgent && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400 border border-red-500/30">
-                  <Flame className="h-3.5 w-3.5" /> Cần Gấp
+                  <Flame className="h-3.5 w-3.5" /> Cần gấp
                 </span>
               )}
-              <h1 className="text-2xl font-extrabold text-white leading-tight">{job.title}</h1>
-              <div className="flex items-center gap-2 text-slate-300">
-                <Building className="h-4.5 w-4.5 text-pink-400" />
-                <span className="font-semibold">{job.salonName}</span>
+              <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                <Clock className="h-3.5 w-3.5" /> Đăng {timeAgo(job.createdAt)}
+              </span>
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  onClick={toggleSave}
+                  aria-label={saved ? "Bỏ lưu tin" : "Lưu tin"}
+                  aria-pressed={saved}
+                  className={`rounded-xl border p-2 transition-colors ${saved ? "border-pink-500/40 bg-pink-500/10 text-pink-300" : "border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"}`}
+                >
+                  {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                </button>
+                <button onClick={share} aria-label="Chia sẻ tin" className="rounded-xl border border-slate-800 p-2 text-slate-400 hover:text-white hover:border-slate-700 transition-colors">
+                  <Share2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">{job.title}</h1>
+            <p className="flex items-center gap-2 text-slate-300">
+              <Building className="h-4 w-4 text-pink-400" />
+              <span className="font-semibold">{job.salonName}</span>
+            </p>
+          </header>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-300 border-y border-slate-850 py-4">
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-slate-500" /> {job.city}, {stateName(job.market, job.state)} ({job.market})
-            </span>
-            <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-              <DollarSign className="h-4 w-4" /> {job.salaryAmount} <span className="text-slate-500 font-normal">({job.salaryType})</span>
-            </span>
-          </div>
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {facts.map(({ icon: Icon, label, value, accent }) => (
+              <div key={label} className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3">
+                <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <Icon className="h-3.5 w-3.5" /> {label}
+                </dt>
+                <dd className={`mt-1 text-sm font-bold leading-snug break-words ${accent ? "text-emerald-400" : "text-slate-100"}`}>{value}</dd>
+              </div>
+            ))}
+          </dl>
 
           {job.description && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-slate-200">Mô tả công việc</h3>
+            <section className="space-y-2">
+              <h2 className="text-sm font-bold text-slate-200">Mô tả công việc</h2>
               <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-line">{job.description}</p>
-            </div>
+            </section>
           )}
 
           {job.skills?.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-slate-200">Kỹ năng yêu cầu</h3>
+            <section className="space-y-2">
+              <h2 className="text-sm font-bold text-slate-200">Kỹ năng yêu cầu</h2>
               <div className="flex flex-wrap gap-2">
-                {job.skills.map((s: string) => (
+                {job.skills.map((s) => (
                   <span key={s} className="rounded-full bg-pink-500/10 border border-pink-500/25 px-3 py-1 text-xs font-semibold text-pink-300">{s}</span>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {job.benefits?.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-slate-200">Quyền lợi</h3>
+            <section className="space-y-2">
+              <h2 className="text-sm font-bold text-slate-200">Quyền lợi</h2>
               <div className="flex flex-wrap gap-2">
-                {job.benefits.map((b: string) => (
+                {job.benefits.map((b) => (
                   <span key={b} className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 text-xs font-semibold text-emerald-300">🎁 {b}</span>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-850">
-            <a
-              href={`tel:${job.phone}`}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition-all"
-            >
-              <Phone className="h-5 w-5" /> Gọi ngay {job.phone}
-            </a>
-            <button
-              onClick={() => router.push(`/messages?to=${job.ownerId}`)}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 py-3.5 text-base font-bold text-slate-100 transition-all"
-            >
-              <MessageCircle className="h-5 w-5" /> Nhắn tin qua App
-            </button>
-          </div>
-        </div>
-      </main>
+          {!isOwnJob && (
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
+              <a
+                href={`tel:${job.phone}`}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition-all"
+              >
+                <Phone className="h-5 w-5" /> Gọi ngay {job.phone}
+              </a>
+              <button
+                onClick={() => router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login")}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 py-3.5 text-base font-bold text-slate-100 transition-all"
+              >
+                <MessageCircle className="h-5 w-5" /> Nhắn tin qua App
+              </button>
+            </div>
+          )}
+        </article>
 
-      <footer className="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-600 mt-8">
-        <p>© 2026 PawNail Jobs.</p>
-      </footer>
+        {job.owner && (
+          <Link
+            href={`/profile/${job.owner.id}`}
+            className="glass-card group flex items-center gap-3 rounded-2xl p-4 hover:border-pink-500/30 transition-colors"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={job.owner.avatarUrl || "/cho1.jpg"} alt={job.owner.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-pink-500/30" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Đăng bởi chủ tiệm</p>
+              <p className="truncate text-sm font-bold text-white">{job.owner.name}</p>
+              <p className="text-xs text-slate-400">Xem hồ sơ tiệm, chính sách chia turn & đánh giá từ thợ</p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-pink-400 transition-colors" />
+          </Link>
+        )}
+
+        <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-emerald-300">
+            <ShieldCheck className="h-4 w-4" /> Trước khi nhận việc
+          </h2>
+          <ul className="mt-2 grid gap-1.5 text-xs leading-relaxed text-slate-300 sm:grid-cols-2">
+            <li>• Hỏi rõ cách chia turn, tip tiền mặt hay qua thẻ.</li>
+            <li>• Xác nhận chỗ ở / xe đưa đón (nếu có) bằng tin nhắn.</li>
+            <li>• Không chuyển tiền đặt cọc dưới bất kỳ hình thức nào.</li>
+            <li>• So mức lương với <Link href="/tools/radar" className="text-emerald-300 underline">Nail Radar</Link> của bang.</li>
+          </ul>
+        </section>
+
+        {similar.length > 0 && (
+          <section className="space-y-2.5">
+            <h2 className="px-1 text-sm font-bold text-slate-200">Tin tương tự tại {stateName(job.market, job.state)}</h2>
+            {similar.map((s) => (
+              <Link
+                key={s.id}
+                href={`/jobs/${s.id}`}
+                className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 hover:border-pink-500/30 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">{s.title}</p>
+                  <p className="truncate text-xs text-slate-400">{s.salonName} · {s.city}</p>
+                </div>
+                <span className="flex-shrink-0 text-xs font-bold text-emerald-400">{s.salaryAmount}</span>
+                <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600 group-hover:text-pink-400" />
+              </Link>
+            ))}
+          </section>
+        )}
+      </main>
     </div>
   );
 }

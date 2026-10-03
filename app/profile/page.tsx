@@ -3,7 +3,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye } from "lucide-react";
+import { getProfileCompleteness } from "@/lib/profileCompleteness";
+import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -17,6 +19,8 @@ const SKILL_OPTIONS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay
 export default function ProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,6 +84,54 @@ export default function ProfilePage() {
     }
     load();
   }, [router]);
+
+  // Đổi ảnh đại diện — API /api/user/update-avatar có sẵn từ trước nhưng
+  // chưa từng có UI gọi tới, nên mọi người dùng kẹt mãi với avatar ngẫu nhiên.
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
+    setAvatarUploading(true);
+    const toastId = toast.loading("Đang cập nhật ảnh đại diện...");
+    try {
+      const file = await prepareFileForUpload(rawFile);
+      const formData = new FormData();
+      formData.append("file", file);
+      const up = await fetch("/api/upload", { method: "POST", body: formData });
+      const upData = await up.json();
+      if (!up.ok || !upData.url) throw new Error(upData.error || "Tải ảnh thất bại.");
+      const res = await fetch("/api/user/update-avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: upData.url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Không cập nhật được ảnh đại diện.");
+      setProfile((prev: any) => ({ ...prev, avatarUrl: data.avatarUrl }));
+      window.dispatchEvent(new Event("profile-updated"));
+      toast.success("Đã đổi ảnh đại diện!", { id: toastId });
+    } catch (err) {
+      toast.error(err instanceof FileTooLargeError || err instanceof Error ? err.message : "Lỗi mạng khi tải ảnh.", { id: toastId });
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  // Tính % hoàn thiện theo giá trị ĐANG NHẬP trong form (không chờ lưu) để
+  // người dùng thấy tiến độ tăng ngay khi điền.
+  const liveCompleteness = profile
+    ? getProfileCompleteness({
+        ...profile,
+        phone,
+        state,
+        city,
+        turnSplitPolicy,
+        clientTypePolicy,
+        technicianProfile: profile.technicianProfile
+          ? { ...profile.technicianProfile, bio, yearsOfExperience: years, specialties: specialties.join(","), portfolioImages }
+          : null,
+      })
+    : null;
 
   const toggleSpecialty = (s: string) => setSpecialties((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
@@ -182,7 +234,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+      <div className="flex flex-col min-h-screen text-slate-100">
         <Navbar />
         <main className="mx-auto flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 text-pink-500 animate-spin" />
@@ -192,17 +244,40 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
       <main className="mx-auto flex-1 w-full max-w-2xl px-4 py-8 space-y-6 pb-24">
-        <div className="flex items-center gap-4">
-          <img src={profile?.avatarUrl} alt={name} className="h-16 w-16 rounded-full object-cover border-2 border-pink-500/50" />
-          <div>
-            <h1 className="text-xl font-extrabold text-white">{name}</h1>
-            <p className="text-xs text-slate-400">{profile?.role === "OWNER" ? "🏪 Chủ tiệm" : "💅 Thợ Nail"} · {profile?.email}</p>
+        <div className="glass-card flex flex-wrap items-center gap-4 rounded-2xl p-4">
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarUploading}
+            aria-label="Đổi ảnh đại diện"
+            className="group relative h-16 w-16 flex-shrink-0 rounded-full"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={profile?.avatarUrl} alt={name} className="h-16 w-16 rounded-full object-cover ring-2 ring-pink-500/50" />
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-950 bg-pink-600 text-white">
+              {avatarUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+            </span>
+          </button>
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-extrabold text-white">{name}</h1>
+            <p className="truncate text-xs text-slate-400">{profile?.role === "OWNER" ? "🏪 Chủ tiệm" : "💅 Thợ Nail"} · {profile?.email}</p>
           </div>
+          {profile?.id && (
+            <Link
+              href={`/profile/${profile.id}`}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-pink-500/50 hover:text-white transition-colors"
+            >
+              <Eye className="h-4 w-4" /> Xem hồ sơ công khai
+            </Link>
+          )}
         </div>
+
+        {liveCompleteness && <ProfileCompletenessCard completeness={liveCompleteness} role={profile?.role} />}
 
         {/* Bảng tính thu nhập & Tip — công cụ hằng ngày, đặt ngay đầu trang
             profile để dễ thấy nhất (thay vì chôn dưới đáy sau form dài). */}
@@ -240,7 +315,7 @@ export default function ProfilePage() {
         </Link>
 
         {/* Basic info */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-4">
+        <div className="glass-card rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-bold text-slate-200">Thông tin cơ bản</h2>
           <div>
             <label className="block text-xs font-bold text-slate-400 mb-1.5">Họ và Tên</label>
@@ -264,7 +339,7 @@ export default function ProfilePage() {
 
         {/* Technician portfolio */}
         {profile?.role === "TECHNICIAN" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-4">
+          <div className="glass-card rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-bold text-slate-200">Hồ sơ tay nghề</h2>
 
             <div className="grid grid-cols-2 gap-2">
@@ -352,7 +427,7 @@ export default function ProfilePage() {
             Khỏe Tiệm & Văn Hóa Làm Việc". Tự khai báo vì hệ thống không có
             nguồn dữ liệu chấm công/booking thật để tự suy ra các mục này. */}
         {profile?.role === "OWNER" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-4">
+          <div className="glass-card rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-bold text-slate-200">Chính sách tiệm</h2>
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1.5">Tỉ lệ chia turn</label>
@@ -386,7 +461,7 @@ export default function ProfilePage() {
 
         {/* Owner's posted jobs */}
         {profile?.role === "OWNER" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-5 space-y-3">
+          <div className="glass-card rounded-2xl p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-200">Tin tuyển dụng đã đăng</h2>
               <button onClick={() => router.push("/jobs/create")} className="text-xs font-bold text-pink-400 hover:underline">+ Đăng tin mới</button>

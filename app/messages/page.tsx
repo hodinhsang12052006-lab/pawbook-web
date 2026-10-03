@@ -105,7 +105,7 @@ export default async function MessagesPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 select-none overflow-hidden">
+    <div className="flex flex-col h-screen text-slate-100 select-none overflow-hidden">
       <Navbar />
       <main className="flex h-[calc(100vh-73px)] w-full overflow-hidden">
         <MessagesContent

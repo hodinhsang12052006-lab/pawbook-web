@@ -9,7 +9,25 @@ import TechnicianGrid from "@/components/technicians/TechnicianGrid";
 import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
-import { Sparkles, Search, Flame, Newspaper } from "lucide-react";
+import RightRail from "@/components/layout/RightRail";
+import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
+import { getProfileCompleteness } from "@/lib/profileCompleteness";
+import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
+
+// Lời chào theo giờ địa phương — chi tiết nhỏ giúp app có "hơi người".
+function greeting(date = new Date()) {
+  const h = date.getHours();
+  if (h < 11) return "Chào buổi sáng";
+  if (h < 14) return "Chào buổi trưa";
+  if (h < 18) return "Chào buổi chiều";
+  return "Chào buổi tối";
+}
+
+const TAB_SUBTITLE: Record<"feed" | "jobs" | "portfolio", { owner: string; tech: string }> = {
+  feed: { owner: "Cập nhật mới nhất từ cộng đồng nail quanh bạn.", tech: "Khoe tay nghề và xem tiệm nào đang tuyển quanh bạn." },
+  jobs: { owner: "Xem các tiệm khác đang tuyển để đặt mức lương cạnh tranh.", tech: "Tin tuyển gấp mới nhất — gọi hoặc nhắn tin ngay cho tiệm." },
+  portfolio: { owner: "Thợ đang sẵn sàng nhận việc — xem portfolio và nhắn tin trực tiếp.", tech: "Xem portfolio thợ khác để lấy cảm hứng mẫu mới." },
+};
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -58,11 +76,33 @@ export default function HomePage() {
     return () => window.removeEventListener("hometab-change", handler);
   }, []);
 
+  // Banner hoàn thiện hồ sơ trên mobile (Sidebar chỉ hiện ở desktop) — cho
+  // phép ẩn trong 1 ngày để không làm phiền.
+  const [hideCompleteness, setHideCompleteness] = useState(true);
+  useEffect(() => {
+    try {
+      const until = Number(localStorage.getItem("pn_hide_completeness_until") || 0);
+      setHideCompleteness(Date.now() < until);
+    } catch {
+      setHideCompleteness(false);
+    }
+  }, []);
+  const dismissCompleteness = () => {
+    setHideCompleteness(true);
+    try {
+      localStorage.setItem("pn_hide_completeness_until", String(Date.now() + 86_400_000));
+    } catch {}
+  };
+  const completeness = getProfileCompleteness(sessionUser);
+  // Tên đầy đủ — tên Việt (tên gọi ở cuối) và tên Anh (tên gọi ở đầu) không
+  // tách chung 1 quy tắc được.
+  const displayName = (sessionUser?.name || "").trim();
+
   const states = market === "US" ? US_STATES : AU_STATES;
   const showHero = !sessionLoading && !sessionUser;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
       {/* HERO — chỉ hiện cho khách chưa đăng nhập, đánh thẳng thị giác 3 giây đầu */}
@@ -111,35 +151,60 @@ export default function HomePage() {
 
           <div className="flex-1 min-w-0 space-y-5">
             {/* Region Switcher — nổi bật, chữ to, tương phản cao */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+            {sessionUser && (
+              <div className="px-1">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  {greeting()}{displayName ? `, ${displayName}` : ""} 👋
+                </h1>
+                <p className="mt-0.5 text-sm text-slate-400">{TAB_SUBTITLE[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
+              </div>
+            )}
+
+            {completeness && completeness.percent < 100 && !hideCompleteness && (
+              <div className="relative md:hidden">
+                <ProfileCompletenessCard completeness={completeness} compact role={sessionUser?.role} />
+                <button
+                  onClick={dismissCompleteness}
+                  aria-label="Ẩn gợi ý hoàn thiện hồ sơ"
+                  className="absolute right-2 top-2 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <div className="glass-card rounded-2xl p-3 sm:p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-950/60 p-1 border border-slate-800/80">
                 <button
                   onClick={() => { setMarket("US"); setState(""); }}
-                  className={`flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-extrabold transition-all active:scale-95 ${
+                  aria-pressed={market === "US"}
+                  className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${
                     market === "US"
-                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-xl shadow-pink-600/25 scale-[1.02]"
-                      : "bg-slate-950 text-slate-400 border-2 border-slate-800"
+                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/25"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <span className="text-2xl">🇺🇸</span> Mỹ <span className="text-xs font-semibold opacity-80">(US)</span>
+                  <span className="text-lg leading-none">🇺🇸</span> Mỹ · US
                 </button>
                 <button
                   onClick={() => { setMarket("AU"); setState(""); }}
-                  className={`flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-extrabold transition-all active:scale-95 ${
+                  aria-pressed={market === "AU"}
+                  className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${
                     market === "AU"
-                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-xl shadow-pink-600/25 scale-[1.02]"
-                      : "bg-slate-950 text-slate-400 border-2 border-slate-800"
+                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/25"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <span className="text-2xl">🇦🇺</span> Úc <span className="text-xs font-semibold opacity-80">(AU)</span>
+                  <span className="text-lg leading-none">🇦🇺</span> Úc · AU
                 </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Mobile: 1 hàng vuốt ngang thay vì 4 hàng chip chiếm nửa màn hình. */}
+              <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
                   onClick={() => setState("")}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold border transition-all active:scale-95 ${
-                    state === "" ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950 border-slate-800 text-slate-400"
+                  className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold border transition-all active:scale-95 ${
+                    state === "" ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
                   }`}
                 >
                   Tất cả bang
@@ -148,8 +213,8 @@ export default function HomePage() {
                   <button
                     key={s}
                     onClick={() => setState(s)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold border transition-all active:scale-95 ${
-                      state === s ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950 border-slate-800 text-slate-400"
+                    className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold border transition-all active:scale-95 ${
+                      state === s ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
                     }`}
                   >
                     {stateName(market, s)}
@@ -164,39 +229,39 @@ export default function HomePage() {
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="Tìm theo thành phố... (VD: Los Angeles, Sydney)"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500"
                 />
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-900/40 border border-slate-850 sticky top-[68px] z-30 backdrop-blur-md">
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-900/70 border border-slate-800/80 sticky top-[68px] z-30 backdrop-blur-md shadow-lg shadow-black/20">
               <button
                 onClick={() => setTab("feed")}
                 className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                  tab === "feed" ? "bg-pink-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  tab === "feed" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Newspaper className="h-4 w-4" />
-                <span className="hidden sm:inline">Bảng Tin</span>
+                <span>Bảng tin</span>
               </button>
               <button
                 onClick={() => setTab("jobs")}
                 className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                  tab === "jobs" ? "bg-pink-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  tab === "jobs" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Flame className="h-4 w-4" />
-                <span className="hidden sm:inline">Cần Thợ Gấp</span>
+                <span><span className="sm:hidden">Việc gấp</span><span className="hidden sm:inline">Cần thợ gấp</span></span>
               </button>
               <button
                 onClick={() => setTab("portfolio")}
                 className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                  tab === "portfolio" ? "bg-pink-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  tab === "portfolio" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">Thợ Đang Rảnh</span>
+                <span><span className="sm:hidden">Thợ rảnh</span><span className="hidden sm:inline">Thợ đang rảnh</span></span>
               </button>
             </div>
 
@@ -208,10 +273,12 @@ export default function HomePage() {
               <TechnicianGrid market={market} state={state} city={city} />
             )}
           </div>
+
+          {sessionUser && <RightRail market={market} state={state} />}
         </div>
       </main>
 
-      <footer className="hidden md:block border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-600">
+      <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-600">
         <p>© 2026 PawNail Jobs. Nền tảng việc làm &amp; tay nghề Nail cho thị trường Mỹ &amp; Úc.</p>
       </footer>
     </div>

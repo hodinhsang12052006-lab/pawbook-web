@@ -271,13 +271,13 @@ await step("F20", "Trang chi tiết tin: lưu tin + có tin tương tự + khố
   return saved.includes(target.id);
 });
 
-await step("F21", "Desktop: Sidebar có % hoàn thiện + công cụ, cột phải có Mẹo hôm nay & tin gấp", async () => {
+await step("F21", "Desktop: Sidebar có Tin nhắn + % hoàn thiện, cột phải có Mẹo hôm nay & tin gấp", async () => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "vi-VN" });
   await ctx.addCookies(await ownerCtx.cookies());
   const p = await ctx.newPage();
   await p.goto(BASE_URL + "/");
   await p.getByText("Mẹo hôm nay").waitFor({ timeout: 15000 });
-  await p.getByRole("navigation", { name: "Công cụ" }).waitFor();
+  await p.getByRole("navigation", { name: "Khám phá" }).getByRole("link", { name: /Tin nhắn/ }).waitFor();
   await p.getByText(/Tin gấp mới nhất/).waitFor();
   await p.locator('aside a[href^="/jobs/"]').first().waitFor({ timeout: 10000 });
   await p.screenshot({ path: fileURLToPath(new URL("16_desktop_home.png", SHOTS)) });

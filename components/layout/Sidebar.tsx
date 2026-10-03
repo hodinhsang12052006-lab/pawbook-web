@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Briefcase, Store, Newspaper, MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert } from "lucide-react";
+import { Briefcase, Store, Newspaper, MessageCircle } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -34,19 +34,6 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: "feed", label: "Bảng Tin", icon: Newspaper, route: "/?tab=feed" },
     { id: "jobs", label: "Cần Thợ Gấp", icon: Briefcase, route: "/?tab=jobs" },
     { id: "portfolio", label: "Thợ Đang Rảnh", icon: Store, route: "/?tab=portfolio" },
-  ];
-
-  // Công cụ hằng ngày — trước đây chỉ nằm sâu trong /profile, người dùng
-  // desktop gần như không biết tới.
-  const tools = [
-    { href: "/messages", label: "Tin nhắn", icon: MessageCircle, badge: unreadCount },
-    ...(userRole === "ADMIN"
-      ? [{ href: "/admin/reports", label: "Báo cáo vi phạm", icon: ShieldAlert, badge: 0 }]
-      : userRole === "OWNER"
-      ? [{ href: "/jobs/create", label: "Đăng tin tuyển thợ", icon: PlusCircle, badge: 0 }]
-      : [{ href: "/tools/income-tracker", label: "Bảng tính thu nhập", icon: Wallet, badge: 0 }]),
-    { href: "/tools/radar", label: "Nail Radar · mức lương", icon: Radar, badge: 0 },
-    { href: "/supply", label: "Kho hàng vật tư", icon: ShoppingBag, badge: 0 },
   ];
 
   const handleNavigation = (id: string, route: string) => {
@@ -106,26 +93,19 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                   </button>
                 );
               })}
-            </nav>
-
-            <p className="mt-5 mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Công cụ</p>
-            <nav className="space-y-0.5" aria-label="Công cụ">
-              {tools.map((tool) => {
-                const Icon = tool.icon;
-                return (
-                  <Link
-                    key={tool.href}
-                    href={tool.href}
-                    className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-[13px] font-medium text-slate-400 hover:bg-white/5 hover:text-slate-100 transition-colors"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="flex-1 truncate">{tool.label}</span>
-                    {tool.badge > 0 && (
-                      <span className="rounded-full bg-pink-600 px-1.5 text-[10px] font-bold text-white">{tool.badge > 9 ? "9+" : tool.badge}</span>
-                    )}
-                  </Link>
-                );
-              })}
+              {/* Tin nhắn là lối tắt duy nhất ở đây — các công cụ khác (Radar,
+                  thu nhập, kho hàng, đăng tin) đã có lối vào riêng ở Navbar,
+                  trang Tài khoản và bảng tin, không lặp lại cho đỡ rối. */}
+              <Link
+                href="/messages"
+                className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-400 hover:bg-white/5 hover:text-slate-100 transition-all duration-200 active:scale-95"
+              >
+                <MessageCircle className="h-[18px] w-[18px]" />
+                <span className="flex-1">Tin nhắn</span>
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-pink-600 px-1.5 text-[10px] font-bold text-white">{unreadCount > 9 ? "9+" : unreadCount}</span>
+                )}
+              </Link>
             </nav>
           </div>
 

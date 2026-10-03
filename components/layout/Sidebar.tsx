@@ -2,10 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { Briefcase, Store, Newspaper, MessageCircle } from "lucide-react";
+import { Briefcase, Store, Newspaper } from "lucide-react";
+import ToolsPanel from "@/components/layout/ToolsPanel";
 import { useRouter, usePathname } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import { stateName } from "@/lib/stateNames";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
@@ -21,7 +21,6 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user: effectiveUser } = useSessionUser();
-  const { unreadCount } = useUnreadMessages();
 
   const userName = effectiveUser?.name || "Thành viên";
   const userRole = effectiveUser?.role || "TECHNICIAN";
@@ -93,20 +92,10 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                   </button>
                 );
               })}
-              {/* Tin nhắn là lối tắt duy nhất ở đây — các công cụ khác (Radar,
-                  thu nhập, kho hàng, đăng tin) đã có lối vào riêng ở Navbar,
-                  trang Tài khoản và bảng tin, không lặp lại cho đỡ rối. */}
-              <Link
-                href="/messages"
-                className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-400 hover:bg-white/5 hover:text-slate-100 transition-all duration-200 active:scale-95"
-              >
-                <MessageCircle className="h-[18px] w-[18px]" />
-                <span className="flex-1">Tin nhắn</span>
-                {unreadCount > 0 && (
-                  <span className="rounded-full bg-pink-600 px-1.5 text-[10px] font-bold text-white">{unreadCount > 9 ? "9+" : unreadCount}</span>
-                )}
-              </Link>
             </nav>
+
+            <p className="mt-5 mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Công cụ</p>
+            <ToolsPanel variant="list" />
           </div>
 
           {completeness && <ProfileCompletenessCard completeness={completeness} compact role={userRole} />}

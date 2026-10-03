@@ -228,3 +228,39 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
 }
+
+/* ===== Hiệu ứng thả tim (chỉ phản hồi tương tác thật của người dùng) ===== */
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.45); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.heart-pop { animation: heartPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes heartFloat {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.6); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -34px) scale(1.1); }
+}
+.heart-float { animation: heartFloat 0.8s ease-out forwards; opacity: 0; }
+
+@keyframes heartBig {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  45% { transform: translate(-50%, -50%) scale(0.95); }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+}
+.heart-big { animation: heartBig 0.9s ease-out forwards; opacity: 0; }
+
+@keyframes countBump {
+  0% { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.count-bump { display: inline-block; animation: countBump 0.25s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-pop, .heart-float, .heart-big, .count-bump { animation: none; }
+  .heart-float, .heart-big { display: none; }
+}

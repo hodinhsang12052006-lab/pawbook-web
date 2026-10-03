@@ -271,13 +271,16 @@ await step("F20", "Trang chi tiết tin: lưu tin + có tin tương tự + khố
   return saved.includes(target.id);
 });
 
-await step("F21", "Desktop: Sidebar có Tin nhắn + % hoàn thiện, cột phải có Mẹo hôm nay & tin gấp", async () => {
+await step("F21", "Desktop: Sidebar có Công cụ (Tin nhắn, Đăng tin, Radar) + % hoàn thiện, cột phải có Mẹo & tin gấp", async () => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "vi-VN" });
   await ctx.addCookies(await ownerCtx.cookies());
   const p = await ctx.newPage();
   await p.goto(BASE_URL + "/");
   await p.getByText("Mẹo hôm nay").waitFor({ timeout: 15000 });
-  await p.getByRole("navigation", { name: "Khám phá" }).getByRole("link", { name: /Tin nhắn/ }).waitFor();
+  const tools = p.getByRole("navigation", { name: "Công cụ" });
+  await tools.getByRole("link", { name: /Tin nhắn/ }).waitFor();
+  await tools.getByRole("link", { name: /Nail Radar/ }).waitFor();
+  await tools.getByRole("link", { name: /Đăng tin tuyển thợ/ }).waitFor();
   await p.getByText(/Tin gấp mới nhất/).waitFor();
   await p.locator('aside a[href^="/jobs/"]').first().waitFor({ timeout: 10000 });
   await p.screenshot({ path: fileURLToPath(new URL("16_desktop_home.png", SHOTS)) });
@@ -319,6 +322,36 @@ await step("F24", "Menu ⋮: báo cáo bài người khác với lý do có sẵ
   await op.getByRole("menuitem", { name: "Lừa đảo / spam" }).click();
   await op.getByText(/Đã gửi báo cáo/).waitFor({ timeout: 10000 });
   await shot(op, "17_report_sent");
+});
+
+await step("F25", "Thả tim: hiện dòng 'Bạn… đã thích' (người thật), double-tap ảnh hiện tim lớn", async () => {
+  await op.goto(BASE_URL + "/?tab=feed");
+  const card = op.locator("article").filter({ has: op.locator("img[sizes]") }).first();
+  await card.waitFor({ timeout: 15000 });
+  if ((await card.getByRole("button", { name: "Bỏ thích" }).count()) > 0) {
+    await card.getByRole("button", { name: "Bỏ thích" }).click();
+    await card.getByRole("button", { name: "Thích", exact: true }).waitFor();
+  }
+  await card.locator("img[sizes]").first().dblclick();
+  await card.locator(".heart-big").waitFor({ state: "attached", timeout: 5000 });
+  await card.getByRole("button", { name: "Bỏ thích" }).waitFor({ timeout: 10000 });
+  await card.getByText(/đã thích/).waitFor({ timeout: 5000 });
+  await shot(op, "18_like_effect");
+});
+
+await step("F26", "Job board: lưu tin → hiện '👀 N người đã lưu tin này'", async () => {
+  await op.goto(BASE_URL + "/?tab=jobs");
+  const card = op.locator("div.glass-card").filter({ has: op.getByRole("button", { name: /lưu tin$/i }) }).first();
+  await card.waitFor({ timeout: 15000 });
+  if ((await card.getByRole("button", { name: "Bỏ lưu tin" }).count()) === 0) await card.getByRole("button", { name: "Lưu tin" }).click();
+  await card.getByText(/người đã lưu tin này/).waitFor({ timeout: 10000 });
+});
+
+await step("F27", "Mobile: hàng thẻ Công cụ hiện trên trang chủ", async () => {
+  await op.goto(BASE_URL + "/");
+  const row = op.getByRole("navigation", { name: "Công cụ" });
+  await row.getByRole("link", { name: /Nail Radar/ }).waitFor({ timeout: 15000 });
+  await shot(op, "19_mobile_tools");
 });
 
 R.check("F18", "Không có lỗi JS / HTTP 5xx trong suốt các luồng", pageErrors.length === 0, pageErrors.join(" | "));

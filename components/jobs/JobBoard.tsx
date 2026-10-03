@@ -23,7 +23,10 @@ export interface JobType {
   createdAt: string;
   ownerId: string;
   owner?: { id: string; name: string; avatarUrl: string | null } | null;
+  saveCount?: number;
 }
+
+const NEW_JOB_MS = 24 * 60 * 60 * 1000;
 
 interface JobBoardProps {
   market: "US" | "AU";
@@ -125,6 +128,9 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  // Tập "đã lưu" lúc tải — saveCount từ server đã tính cả lượt lưu của chính
+  // người xem, nên chỉ cộng/trừ phần chênh lệch khi họ bấm lưu/bỏ lưu.
+  const [initialSaved, setInitialSaved] = useState<Set<string>>(new Set());
   const [showSavedOnly, setShowSavedOnly] = useState(false);
 
   useEffect(() => {
@@ -161,7 +167,10 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     fetch("/api/jobs/saved")
       .then((res) => (res.ok ? res.json() : []))
       .then((ids: string[]) => {
-        if (!cancelled) setSavedIds(new Set(ids));
+        if (!cancelled) {
+          setInitialSaved(new Set(ids));
+          setSavedIds(new Set(ids));
+        }
       })
       .catch(() => {});
     return () => {
@@ -264,11 +273,18 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
               <Bookmark className={`h-5 w-5 ${savedIds.has(job.id) ? "fill-pink-400 text-pink-400" : ""}`} />
             </button>
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
-              {job.isUrgent && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/30">
-                  <Flame className="h-3 w-3" /> Gấp
-                </span>
-              )}
+              <div className="flex items-center gap-1">
+                {Date.now() - new Date(job.createdAt).getTime() < NEW_JOB_MS && (
+                  <span className="inline-flex items-center rounded-full bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300 border border-sky-500/30">
+                    ✨ Mới
+                  </span>
+                )}
+                {job.isUrgent && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/30">
+                    <Flame className="h-3 w-3" /> Gấp
+                  </span>
+                )}
+              </div>
               <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
                 <Clock className="h-3 w-3" /> {timeAgo(job.createdAt)}
               </span>
@@ -292,6 +308,18 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
             <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
             {job.city}, {stateName(job.market, job.state)}
           </span>
+
+          {(() => {
+            const count =
+              (job.saveCount ?? 0) +
+              (savedIds.has(job.id) ? 1 : 0) -
+              (initialSaved.has(job.id) ? 1 : 0);
+            return count > 0 ? (
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-300/90">
+                👀 {count} người đã lưu tin này
+              </span>
+            ) : null;
+          })()}
 
           {job.skills.length > 0 && (
             <div className="flex flex-wrap gap-1.5">

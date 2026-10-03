@@ -7,7 +7,17 @@ import { Market, PostType } from "@prisma/client";
 const PAGE_SIZE = 12;
 const VALID_POST_TYPES = ["GENERAL", "SHOWCASE", "JOB"];
 
-function mapPost(post: any, viewerId: string | null) {
+type Liker = { id: string; name: string; avatarUrl: string | null };
+
+// "Đang hot" tính từ tương tác THẬT trong 48h đầu (bình luận nặng hơn like
+// vì tốn công hơn) — không có số ảo.
+const HOT_WINDOW_MS = 48 * 60 * 60 * 1000;
+const HOT_SCORE = 5;
+
+function mapPost(post: any, viewerId: string | null, likers: Liker[] = []) {
+  const likeCount = post._count?.likes ?? 0;
+  const commentCount = post._count?.comments ?? 0;
+  const isRecent = Date.now() - post.createdAt.getTime() < HOT_WINDOW_MS;
   return {
     id: post.id,
     content: post.content,
@@ -18,9 +28,12 @@ function mapPost(post: any, viewerId: string | null) {
     city: post.city,
     createdAt: post.createdAt.toISOString(),
     author: post.author,
-    likeCount: post._count?.likes ?? 0,
-    commentCount: post._count?.comments ?? 0,
+    likeCount,
+    commentCount,
     likedByMe: viewerId ? (post.likes?.length ?? 0) > 0 : false,
+    // Tối đa 3 người thích gần nhất (người thật) cho dòng "A, B và N người khác".
+    recentLikers: likers,
+    isHot: isRecent && likeCount + commentCount * 2 >= HOT_SCORE,
   };
 }
 
@@ -61,8 +74,25 @@ export async function GET(req: NextRequest) {
 
     const nextCursor = posts.length === PAGE_SIZE ? posts[posts.length - 1].id : null;
 
+    // 1 query cho cả trang (không N+1): lấy like mới nhất của các bài này rồi
+    // gom tối đa 3 người/bài.
+    const recentLikes = posts.length
+      ? await prisma.postLike.findMany({
+          where: { postId: { in: posts.map((p) => p.id) } },
+          orderBy: { createdAt: "desc" },
+          take: 300,
+          select: { postId: true, user: { select: { id: true, name: true, avatarUrl: true } } },
+        })
+      : [];
+    const likersByPost = new Map<string, Liker[]>();
+    for (const like of recentLikes) {
+      const list = likersByPost.get(like.postId) ?? [];
+      if (list.length < 3) list.push(like.user);
+      likersByPost.set(like.postId, list);
+    }
+
     return NextResponse.json({
-      posts: posts.map((p) => mapPost(p, viewerId)),
+      posts: posts.map((p) => mapPost(p, viewerId, likersByPost.get(p.id))),
       nextCursor,
     });
   } catch (error) {

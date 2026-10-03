@@ -23,13 +23,16 @@ export async function GET(req: NextRequest) {
         owner: {
           select: { id: true, name: true, avatarUrl: true },
         },
+        // Số người THẬT đã lưu tin — tín hiệu "nhiều người quan tâm".
+        _count: { select: { savedBy: true } },
       },
       orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
       take: 100,
     });
 
-    const safeJobs = jobs.map((job) => ({
+    const safeJobs = jobs.map(({ _count, ...job }) => ({
       ...job,
+      saveCount: _count.savedBy,
       skills: job.skills ? job.skills.split(",").filter(Boolean) : [],
       benefits: job.benefits ? job.benefits.split(",").filter(Boolean) : [],
       createdAt: job.createdAt.toISOString(),

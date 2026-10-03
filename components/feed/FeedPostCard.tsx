@@ -22,6 +22,8 @@ export interface FeedPost {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  recentLikers?: { id: string; name: string; avatarUrl: string | null }[];
+  isHot?: boolean;
 }
 
 interface CommentType {
@@ -53,6 +55,11 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   const { user: currentUser } = useSessionUser();
 
   const [liked, setLiked] = useState(post.likedByMe);
+  const [likers, setLikers] = useState(post.recentLikers ?? []);
+  // Hiệu ứng thả tim: tim nhỏ bay lên quanh nút + tim lớn giữa ảnh khi
+  // double-tap. Chỉ phản hồi tương tác THẬT của người dùng.
+  const [burstKey, setBurstKey] = useState(0);
+  const [bigHeartKey, setBigHeartKey] = useState(0);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [likeBusy, setLikeBusy] = useState(false);
 
@@ -122,6 +129,12 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     const nextLiked = !liked;
     setLiked(nextLiked);
     setLikeCount((c) => c + (nextLiked ? 1 : -1));
+    if (nextLiked) {
+      setBurstKey((k) => k + 1);
+      setLikers((prev) => [{ id: currentUser.id, name: "Bạn", avatarUrl: currentUser.avatarUrl ?? null }, ...prev.filter((l) => l.id !== currentUser.id)].slice(0, 3));
+    } else {
+      setLikers((prev) => prev.filter((l) => l.id !== currentUser.id));
+    }
     setLikeBusy(true);
     try {
       const res = await fetch(`/api/posts/${post.id}/like`, { method: "POST" });
@@ -137,6 +150,12 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     } finally {
       setLikeBusy(false);
     }
+  };
+
+  // Double-tap vào ảnh để thả tim (kiểu Instagram) — chỉ thả, không bỏ tim.
+  const handleDoubleTapMedia = () => {
+    setBigHeartKey((k) => k + 1);
+    if (!liked) handleToggleLike();
   };
 
   const handleToggleComments = async () => {
@@ -214,6 +233,11 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             )}
             <span>·</span>
             <span>{timeAgo(post.createdAt)}</span>
+            {post.isHot && (
+              <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
+                🔥 Đang hot
+              </span>
+            )}
           </div>
         </div>
         {badge?.label && (
@@ -276,6 +300,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         // 1 ảnh: full khung 4:3 · 2 ảnh: lưới 2 cột cân đối · ≥3 ảnh: vuốt
         // ngang. Trước đây mọi trường hợp đều là carousel 85%/60%, nên bài 1
         // ảnh bị lệch trái và bài 2 ảnh trông như ảnh thứ 2 bị cắt mất.
+        <div className="relative" onDoubleClick={handleDoubleTapMedia}>
         <div
           className={
             post.mediaUrls.length === 1
@@ -323,6 +348,30 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             </div>
           ))}
         </div>
+          {bigHeartKey > 0 && (
+            <Heart
+              key={bigHeartKey}
+              aria-hidden
+              className="heart-big pointer-events-none absolute left-1/2 top-1/2 h-24 w-24 fill-pink-500 text-pink-500 drop-shadow-[0_6px_24px_rgba(236,72,153,0.6)]"
+            />
+          )}
+        </div>
+      )}
+
+      {/* NGƯỜI THẬT ĐÃ THÍCH — bằng chứng xã hội từ dữ liệu thật */}
+      {likeCount > 0 && likers.length > 0 && (
+        <div className="flex items-center gap-2 px-4 pb-2 text-[11px] text-slate-400">
+          <div className="flex -space-x-2">
+            {likers.map((l) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={l.id} src={l.avatarUrl || AVATAR_FALLBACK(l.name)} alt="" className="h-5 w-5 rounded-full border-2 border-slate-900 object-cover" />
+            ))}
+          </div>
+          <span className="truncate">
+            <span className="font-semibold text-slate-200">{likers.map((l) => l.name).slice(0, 2).join(", ")}</span>
+            {likeCount > Math.min(2, likers.length) ? ` và ${likeCount - Math.min(2, likers.length)} người khác` : ""} đã thích
+          </span>
+        </div>
       )}
 
       {/* FOOTER TƯƠNG TÁC */}
@@ -336,8 +385,19 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             liked ? "text-pink-400" : "text-slate-400 hover:text-pink-300"
           }`}
         >
-          <Heart className={`h-4.5 w-4.5 ${liked ? "fill-pink-500 text-pink-500" : ""}`} />
-          {likeCount > 0 && <span>{likeCount}</span>}
+          <span className="relative inline-flex">
+            <Heart key={`h-${burstKey}`} className={`h-4.5 w-4.5 ${liked ? "fill-pink-500 text-pink-500" : ""} ${burstKey > 0 && liked ? "heart-pop" : ""}`} />
+            {burstKey > 0 && liked && (
+              <span key={`b-${burstKey}`} aria-hidden className="pointer-events-none absolute inset-0">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span key={i} className="heart-float absolute left-1/2 top-0 text-[10px]" style={{ ["--dx" as string]: `${(i - 2) * 9}px`, animationDelay: `${i * 40}ms` }}>
+                    {i % 2 ? "💖" : "❤️"}
+                  </span>
+                ))}
+              </span>
+            )}
+          </span>
+          {likeCount > 0 && <span key={`c-${likeCount}`} className="count-bump">{likeCount}</span>}
         </button>
 
         <button

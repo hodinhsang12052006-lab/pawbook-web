@@ -120,6 +120,24 @@ const msgId = seed.data?.message?.id;
   R.check("MOD2", "Ẩn danh xem danh sách báo cáo → 401", repAnon.status === 401, `status=${repAnon.status}`);
 }
 
+// ---------- 7c. Hiệu ứng đám đông chỉ từ dữ liệu THẬT ----------
+{
+  const act = await new Client().req("/api/activity");
+  const blob = JSON.stringify(act.data);
+  R.check("ACT1", "/api/activity trả sự kiện thật (mảng) công khai", act.status === 200 && Array.isArray(act.data), `status=${act.status}`);
+  R.check("ACT2", "/api/activity không lộ email/SĐT", !/@[a-z0-9.-]+.[a-z]{2,}/i.test(blob) && !/(d{3})s?d{3}-d{4}/.test(blob), "");
+  R.check("ACT3", "Không còn sự kiện bịa ('Chị Linda', 'Anh Minh'…)", !/Chị Linda|Anh Minh|Anh Tony/.test(blob), "");
+  const created = await tech.req("/api/posts", { method: "POST", json: { content: "QA likers" } });
+  await other.req(`/api/posts/${created.data.id}/like`, { method: "POST" });
+  const feed = await new Client().req("/api/posts");
+  const post = feed.data.posts.find((p) => p.id === created.data.id);
+  R.check("LIKE1", "Danh sách 'đã thích' là người thật vừa thả tim", post?.likeCount === 1 && post?.recentLikers?.[0]?.id === other.userId, JSON.stringify(post?.recentLikers));
+  R.check("LIKE2", "recentLikers không kèm email", !JSON.stringify(post?.recentLikers || []).includes("@"), "");
+  await tech.req(`/api/posts/${created.data.id}`, { method: "DELETE" });
+  const jobs = await new Client().req("/api/jobs");
+  R.check("SAVE1", "Job board trả saveCount là số thật (không âm)", Array.isArray(jobs.data) && jobs.data.every((j) => Number.isInteger(j.saveCount) && j.saveCount >= 0), "");
+}
+
 // ---------- 8. CSRF: đổi dữ liệu không kèm cookie session ----------
 {
   const noCookie = await fetch(BASE_URL_SAFE() + "/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "csrf" }) });

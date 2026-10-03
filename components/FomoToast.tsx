@@ -2,29 +2,16 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
+import { timeAgo } from "@/lib/feedFormat";
 
 interface FomoMessage {
   icon: string;
   text: string;
+  href?: string;
+  at?: string; // ISO — sự kiện thật thì hiện "x phút trước"
 }
-
-// Nội dung minh hoạ hoạt động cộng đồng — dữ liệu MÔ PHỎNG (không phải sự
-// kiện thật theo thời gian thực). Trước khi đưa lên production thật, nên
-// thay bằng feed lấy từ hoạt động thật gần đây (Job/TechnicianProfile mới
-// nhất trong DB) để tránh hiển thị "bằng chứng xã hội" không có thật —
-// FTC (Mỹ) và các quy định bảo vệ người tiêu dùng tương tự ở Úc đều coi
-// social proof giả là hành vi quảng cáo gây hiểu lầm nếu dùng lâu dài.
-const FOMO_MESSAGES: FomoMessage[] = [
-  { icon: "💅", text: "Chị Linda (Thợ Dip/Gel-X) tại Melbourne vừa kết nối với 1 tiệm bao lương $1,500 AUD (3 phút trước)" },
-  { icon: "🏪", text: "Tiệm Nail tại Houston, TX vừa nhận được 3 hồ sơ thợ bột rảnh tay (vừa xong)" },
-  { icon: "✨", text: "Anh Minh (Thợ Bột Ombre) vừa cập nhật portfolio tại Garden Grove, CA" },
-  { icon: "📩", text: "Một chủ tiệm tại Sydney vừa gửi lời mời phỏng vấn cho thợ bột (1 phút trước)" },
-  { icon: "💬", text: "Chị Kim (Thợ Chân Tay Nước) tại San Jose, CA vừa nhắn tin với 1 tiệm đang tuyển gấp (vừa xong)" },
-  { icon: "🔥", text: "Tiệm Happy Nails tại Brisbane, QLD vừa đăng tin tuyển thợ bao lương $1,300 AUD/tuần" },
-  { icon: "📸", text: "Anh Tony (Thợ Gel-X/Biab) vừa tải thêm ảnh mẫu móng mới tại Dallas, TX" },
-  { icon: "🎉", text: "1 thợ nail tại Perth, WA vừa được nhận việc qua PawNail Jobs (2 phút trước)" },
-];
 
 // Nhóm câu FOMO RIÊNG nhắm vào THỢ đang tìm việc — dựa trên số liệu tổng
 // hợp/ẩn danh THẬT từ đợt quét cộng đồng ngành nail (xem
@@ -42,15 +29,10 @@ const REAL_DEMAND_MESSAGES: FomoMessage[] = [
   { icon: "🔥", text: `${DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0} tiệm tại Victoria đang thiếu thợ, sẵn sàng bao lương cao` },
 ];
 
-// Data quét thật cho thấy thợ đang là bên khan hiếm (rất nhiều tiệm đăng
-// tin tuyển, rất ít thợ đăng tin tìm việc) — nên trọng số ưu tiên nhóm câu
-// dựa trên số liệu thật này (REAL_DEMAND_MESSAGES) làm nội dung CHỦ YẾU,
-// nhóm câu mô phỏng ở trên chỉ xen kẽ cho đỡ lặp.
-const ALL_MESSAGES: FomoMessage[] = [
-  ...REAL_DEMAND_MESSAGES,
-  ...REAL_DEMAND_MESSAGES,
-  ...FOMO_MESSAGES,
-];
+// Trước đây xen kẽ 8 "sự kiện" BỊA (tên người, số tiền, "3 phút trước"
+// không hề xảy ra) — social proof giả, bị FTC/ACCC coi là gây hiểu lầm và
+// rủi ro bị App Store/Google Play từ chối. Giờ CHỈ còn: hoạt động thật lấy
+// từ /api/activity + số liệu tổng hợp thật của đợt quét ngành.
 
 const MIN_DELAY_MS = 15_000;
 const MAX_DELAY_MS = 25_000;
@@ -65,6 +47,7 @@ export default function FomoToast() {
   const [current, setCurrent] = useState<FomoMessage | null>(null);
   const [visible, setVisible] = useState(false);
   const lastIndexRef = useRef<number>(-1);
+  const messagesRef = useRef<FomoMessage[]>(REAL_DEMAND_MESSAGES);
   const timersRef = useRef<{ show?: ReturnType<typeof setTimeout>; hide?: ReturnType<typeof setTimeout> }>({});
 
   // Toast quảng cáo "bằng chứng xã hội" này chỉ hợp lý khi khách đang lướt
@@ -76,17 +59,26 @@ export default function FomoToast() {
   useEffect(() => {
     let cancelled = false;
 
+    fetch("/api/activity")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((events: FomoMessage[]) => {
+        if (cancelled || !Array.isArray(events) || events.length === 0) return;
+        // Ưu tiên sự kiện thật (gấp đôi trọng số), xen số liệu ngành cho đỡ lặp.
+        messagesRef.current = [...events, ...events, ...REAL_DEMAND_MESSAGES];
+      })
+      .catch(() => {});
+
     const scheduleNext = () => {
       timersRef.current.show = setTimeout(() => {
         if (cancelled) return;
 
-        let idx = Math.floor(Math.random() * ALL_MESSAGES.length);
-        if (ALL_MESSAGES.length > 1 && idx === lastIndexRef.current) {
-          idx = (idx + 1) % ALL_MESSAGES.length;
+        let idx = Math.floor(Math.random() * messagesRef.current.length);
+        if (messagesRef.current.length > 1 && idx === lastIndexRef.current) {
+          idx = (idx + 1) % messagesRef.current.length;
         }
         lastIndexRef.current = idx;
 
-        setCurrent(ALL_MESSAGES[idx]);
+        setCurrent(messagesRef.current[idx]);
         setVisible(true);
 
         timersRef.current.hide = setTimeout(() => {
@@ -119,7 +111,16 @@ export default function FomoToast() {
         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-sm">
           {current.icon}
         </div>
-        <p className="text-xs leading-relaxed text-slate-200">{current.text}</p>
+        <div className="min-w-0">
+          {current.href ? (
+            <Link href={current.href} className="text-xs leading-relaxed text-slate-200 hover:text-white">
+              {current.text}
+            </Link>
+          ) : (
+            <p className="text-xs leading-relaxed text-slate-200">{current.text}</p>
+          )}
+          {current.at && <p className="mt-0.5 text-[10px] text-slate-500">{timeAgo(current.at)}</p>}
+        </div>
       </div>
     </div>
   );

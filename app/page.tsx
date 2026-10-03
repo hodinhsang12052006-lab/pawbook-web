@@ -10,6 +10,7 @@ import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
 import RightRail from "@/components/layout/RightRail";
+import ToolsPanel from "@/components/layout/ToolsPanel";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
@@ -159,6 +160,8 @@ export default function HomePage() {
                 <p className="mt-0.5 text-sm text-slate-400">{TAB_SUBTITLE[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
               </div>
             )}
+
+            {sessionUser && <ToolsPanel variant="row" />}
 
             {completeness && completeness.percent < 100 && !hideCompleteness && (
               <div className="relative md:hidden">

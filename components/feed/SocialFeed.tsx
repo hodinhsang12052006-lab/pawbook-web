@@ -182,7 +182,11 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         <div className="space-y-4">
           {feedItems.map((item, idx) =>
             item.type === "post" ? (
-              <FeedPostCard key={`post-${item.post.id}`} post={item.post} />
+              <FeedPostCard
+                key={`post-${item.post.id}`}
+                post={item.post}
+                onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+              />
             ) : (
               <SupplyProductCard key={`supply-slot-${idx}`} product={item.product} />
             )

@@ -294,6 +294,33 @@ await step("F22", "Trang đăng ký có số liệu, cách hoạt động và FA
   await ctx.close();
 });
 
+await step("F23", "Menu ⋮: tự xóa bài của mình → bài biến khỏi bảng tin", async () => {
+  const text = `QA bài sẽ xóa ${Date.now()}`;
+  await op.goto(BASE_URL + "/?tab=feed");
+  const box = op.getByPlaceholder(/Khoe tác phẩm móng mới/);
+  await box.waitFor({ timeout: 15000 });
+  await box.fill(text);
+  await op.getByRole("button", { name: /^Đăng bài$/ }).click();
+  const card = op.locator("article").filter({ hasText: text }).first();
+  await card.waitFor({ timeout: 15000 });
+  op.once("dialog", (d) => d.accept());
+  await card.getByRole("button", { name: "Tùy chọn bài viết" }).click();
+  await op.getByRole("menuitem", { name: /Xóa bài viết/ }).click();
+  await op.getByText("Đã xóa bài viết.").waitFor({ timeout: 10000 });
+  return (await op.locator("article").filter({ hasText: text }).count()) === 0;
+});
+
+await step("F24", "Menu ⋮: báo cáo bài người khác với lý do có sẵn", async () => {
+  await op.goto(BASE_URL + "/?tab=feed");
+  const card = op.locator("article").filter({ hasNot: op.getByText("Kim Nguyen", { exact: true }) }).first();
+  await card.waitFor({ timeout: 15000 });
+  await card.getByRole("button", { name: "Tùy chọn bài viết" }).click();
+  await op.getByRole("menuitem", { name: /Báo cáo bài viết/ }).click();
+  await op.getByRole("menuitem", { name: "Lừa đảo / spam" }).click();
+  await op.getByText(/Đã gửi báo cáo/).waitFor({ timeout: 10000 });
+  await shot(op, "17_report_sent");
+});
+
 R.check("F18", "Không có lỗi JS / HTTP 5xx trong suốt các luồng", pageErrors.length === 0, pageErrors.join(" | "));
 
 await browser.close();

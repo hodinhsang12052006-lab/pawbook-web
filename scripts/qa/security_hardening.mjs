@@ -102,6 +102,24 @@ const msgId = seed.data?.message?.id;
   R.check("HTTP2", "Path traversal trong jobId → 404, không lộ file", r2.status === 404 || r2.status === 400, `status=${r2.status}`);
 }
 
+// ---------- 7b. Xóa bài viết & trang kiểm duyệt báo cáo ----------
+{
+  const created = await tech.req("/api/posts", { method: "POST", json: { content: "QA bài sẽ bị xóa" } });
+  const postId = created.data?.id;
+  const anonDel = await new Client().req(`/api/posts/${postId}`, { method: "DELETE" });
+  R.check("DEL1", "Ẩn danh xóa bài → 401", anonDel.status === 401, `status=${anonDel.status}`);
+  const otherDel = await other.req(`/api/posts/${postId}`, { method: "DELETE" });
+  R.check("DEL2", "Người khác (không phải admin) xóa bài của người ta → 403", otherDel.status === 403, `status=${otherDel.status}`);
+  const ownDel = await tech.req(`/api/posts/${postId}`, { method: "DELETE" });
+  R.check("DEL3", "Tác giả tự xóa bài của mình → 200", ownDel.status === 200, `status=${ownDel.status}`);
+  const gone = await tech.req(`/api/posts/${postId}`, { method: "DELETE" });
+  R.check("DEL4", "Xóa lại bài đã xóa → 404", gone.status === 404, `status=${gone.status}`);
+  const rep = await tech.req("/api/admin/reports");
+  R.check("MOD1", "Người không phải admin xem danh sách báo cáo → 403", rep.status === 403, `status=${rep.status}`);
+  const repAnon = await new Client().req("/api/admin/reports");
+  R.check("MOD2", "Ẩn danh xem danh sách báo cáo → 401", repAnon.status === 401, `status=${repAnon.status}`);
+}
+
 // ---------- 8. CSRF: đổi dữ liệu không kèm cookie session ----------
 {
   const noCookie = await fetch(BASE_URL_SAFE() + "/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "csrf" }) });

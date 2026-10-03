@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 
@@ -46,7 +46,9 @@ function isVideo(url: string) {
   return /\.(mp4|webm|mov)$/i.test(url);
 }
 
-export default function FeedPostCard({ post }: { post: FeedPost }) {
+const REPORT_REASONS = ["Lừa đảo / spam", "Nội dung phản cảm", "Thông tin tuyển dụng sai sự thật", "Quấy rối"];
+
+export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDeleted?: (postId: string) => void }) {
   const router = useRouter();
   const { user: currentUser } = useSessionUser();
 
@@ -62,6 +64,52 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
   const [commentCount, setCommentCount] = useState(post.commentCount);
 
   const isOwnPost = currentUser?.id === post.author.id;
+  const canDelete = isOwnPost || currentUser?.role === "ADMIN";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [menuBusy, setMenuBusy] = useState(false);
+
+  const handleDelete = async () => {
+    if (!window.confirm("Xóa bài viết này? Hành động không thể hoàn tác.")) return;
+    setMenuBusy(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Không thể xóa bài viết.");
+      toast.success("Đã xóa bài viết.");
+      onDeleted?.(post.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Không thể xóa bài viết.");
+    } finally {
+      setMenuBusy(false);
+      setMenuOpen(false);
+    }
+  };
+
+  // Báo cáo bài viết → dùng chung bảng UserReport (gắn mã bài vào lý do để
+  // admin truy được đúng bài trong /admin/reports).
+  const handleReport = async (reason: string) => {
+    if (!currentUser) {
+      toast.error("Vui lòng đăng nhập để báo cáo.");
+      return;
+    }
+    setMenuBusy(true);
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: post.author.id, reason: `[Bài viết ${post.id}] ${reason}` }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Đã gửi báo cáo. Cảm ơn bạn đã giúp cộng đồng an toàn hơn.");
+    } catch {
+      toast.error("Không gửi được báo cáo, vui lòng thử lại.");
+    } finally {
+      setMenuBusy(false);
+      setMenuOpen(false);
+      setReportOpen(false);
+    }
+  };
   const badge = POST_TYPE_BADGE[post.postType];
 
   const handleToggleLike = async () => {
@@ -172,6 +220,46 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
           <span className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold ${badge.classes}`}>
             {badge.label}
           </span>
+        )}
+        {currentUser && (
+          <div className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => { setMenuOpen((o) => !o); setReportOpen(false); }}
+              aria-label="Tùy chọn bài viết"
+              aria-expanded={menuOpen}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-white/5 hover:text-slate-200 transition-colors"
+            >
+              {menuBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+            </button>
+            {menuOpen && (
+              <>
+                <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => { setMenuOpen(false); setReportOpen(false); }} />
+                <div role="menu" className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/95 p-1 shadow-2xl shadow-black/50 backdrop-blur-md animate-scaleUp">
+                  {canDelete && (
+                    <button role="menuitem" type="button" onClick={handleDelete} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10">
+                      <Trash2 className="h-4 w-4" /> Xóa bài viết
+                    </button>
+                  )}
+                  {!isOwnPost && !reportOpen && (
+                    <button role="menuitem" type="button" onClick={() => setReportOpen(true)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:bg-white/5">
+                      <Flag className="h-4 w-4 text-amber-400" /> Báo cáo bài viết
+                    </button>
+                  )}
+                  {reportOpen && (
+                    <div className="space-y-0.5">
+                      <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Lý do báo cáo</p>
+                      {REPORT_REASONS.map((reason) => (
+                        <button key={reason} role="menuitem" type="button" onClick={() => handleReport(reason)} className="w-full rounded-lg px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/5">
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 

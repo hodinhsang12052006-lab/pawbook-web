@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -506,6 +507,9 @@ export default function AdminLeadsPage() {
               <p className="text-[11px] text-slate-500">{owners.length} chủ tiệm · {technicians.length} thợ đã đăng ký</p>
             </div>
           </div>
+          <Link href="/admin/reports" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20">
+            🚩 Báo cáo vi phạm
+          </Link>
         </div>
       </header>
 

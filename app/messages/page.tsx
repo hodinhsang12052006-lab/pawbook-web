@@ -113,15 +113,20 @@ export default async function MessagesPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen text-slate-100 select-none overflow-hidden">
+    <div className="flex flex-col h-[100dvh] text-slate-100 select-none overflow-hidden">
       <Navbar />
-      <main className="flex h-[calc(100vh-73px)] w-full overflow-hidden">
-        <MessagesContent
-          initialSessionUser={session.user}
-          initialConversations={initialConversations}
-          initialMessages={[]} // Will be loaded dynamically per chat conversation
-          initialSystemUsers={initialSystemUsers}
-        />
+      {/* Cùng khung max-w-7xl với Navbar — trước đây khung chat tràn sát 2 mép
+          màn hình trong khi logo/nút phía trên nằm giữa, nhìn lệch hẳn. Desktop:
+          khung bo góc nổi trên nền; mobile: full màn hình như app nhắn tin. */}
+      <main className="mx-auto flex w-full max-w-7xl flex-1 min-h-0 md:px-6 md:py-5 lg:px-8">
+        <div className="flex w-full min-h-0 overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-slate-950/40 md:shadow-2xl md:shadow-black/50">
+          <MessagesContent
+            initialSessionUser={session.user}
+            initialConversations={initialConversations}
+            initialMessages={[]} // Will be loaded dynamically per chat conversation
+            initialSystemUsers={initialSystemUsers}
+          />
+        </div>
       </main>
     </div>
   );

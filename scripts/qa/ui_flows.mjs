@@ -326,7 +326,12 @@ await step("F24", "Menu ⋮: báo cáo bài người khác với lý do có sẵ
 
 await step("F25", "Thả tim: hiện dòng 'Bạn… đã thích' (người thật), double-tap ảnh hiện tim lớn", async () => {
   await op.goto(BASE_URL + "/?tab=feed");
-  const card = op.locator("article").filter({ has: op.locator("img[sizes]") }).first();
+  // Chỉ lấy bài đăng có nút thích — feed trộn ngẫu nhiên thẻ "Hàng Sỉ" (cũng là
+  // <article> có ảnh) nên .first() theo ảnh có lúc trúng thẻ hàng sỉ.
+  const card = op.locator("article")
+    .filter({ has: op.locator("img[sizes]") })
+    .filter({ has: op.getByRole("button", { name: /^(Thích|Bỏ thích)$/ }) })
+    .first();
   await card.waitFor({ timeout: 15000 });
   if ((await card.getByRole("button", { name: "Bỏ thích" }).count()) > 0) {
     await card.getByRole("button", { name: "Bỏ thích" }).click();
@@ -415,6 +420,30 @@ await step("F29", "Realtime 2 người: online thật, 'Đang soạn tin', badge
   await shot(op, "21_realtime_owner");
   await t2.screenshot({ path: fileURLToPath(new URL("21_realtime_tech.png", SHOTS)) });
   await techCtx2.close();
+});
+
+await step("F30", "Chuông 🔔: người khác thích bài của mình → badge tăng realtime, mở ra thấy thông báo", async () => {
+  const text = `QA bài chuông ${Date.now()}`;
+  const created = await ownerCtx.request.post(BASE_URL + "/api/posts", { data: { content: text } });
+  const postId = (await created.json()).id;
+  await op.goto(BASE_URL + "/?tab=feed");
+  const bell = op.getByRole("button", { name: /^Thông báo/ });
+  await bell.waitFor({ timeout: 15000 });
+  // Mở 1 lần để đánh dấu đã đọc hết trước khi kiểm tra.
+  await bell.click();
+  await op.getByRole("dialog", { name: "Thông báo" }).waitFor();
+  await op.keyboard.press("Escape");
+  await op.waitForTimeout(1500);
+  // Một thợ khác thả tim (qua API, context riêng).
+  const liker = await newCtx();
+  const csrf = await (await liker.request.get(BASE_URL + "/api/auth/csrf")).json();
+  await liker.request.post(BASE_URL + "/api/auth/callback/credentials", { form: { csrfToken: csrf.csrfToken, email: "tech8.us@pawnailjobs.demo", password: DEMO_PASSWORD, json: "true" } });
+  await liker.request.post(BASE_URL + `/api/posts/${postId}/like`);
+  await op.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ }).waitFor({ timeout: 15000 });
+  await op.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ }).click();
+  await op.getByRole("dialog", { name: "Thông báo" }).getByText(/đã thích bài viết của bạn/).first().waitFor({ timeout: 10000 });
+  await shot(op, "22_bell");
+  await liker.close();
 });
 
 R.check("F18", "Không có lỗi JS / HTTP 5xx trong suốt các luồng", pageErrors.length === 0, pageErrors.join(" | "));

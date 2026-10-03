@@ -238,34 +238,39 @@ export default function HomePage() {
             </div>
 
             {/* Tabs */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-900/70 border border-slate-800/80 sticky top-[68px] z-30 backdrop-blur-md shadow-lg shadow-black/20">
-              <button
-                onClick={() => setTab("feed")}
-                className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                  tab === "feed" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Newspaper className="h-4 w-4" />
-                <span>Bảng tin</span>
-              </button>
-              <button
-                onClick={() => setTab("jobs")}
-                className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                  tab === "jobs" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Flame className="h-4 w-4" />
-                <span><span className="sm:hidden">Việc gấp</span><span className="hidden sm:inline">Cần thợ gấp</span></span>
-              </button>
-              <button
-                onClick={() => setTab("portfolio")}
-                className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                  tab === "portfolio" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span><span className="sm:hidden">Thợ rảnh</span><span className="hidden sm:inline">Thợ đang rảnh</span></span>
-              </button>
+            {/* Dính ngay dưới Navbar (64px + 1px viền). Trước đây top-[68px] để hở
+                3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
+                mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
+            <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-1 bg-[#020617]/85 backdrop-blur-md">
+              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-lg shadow-black/20">
+                <button
+                  onClick={() => setTab("feed")}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+                    tab === "feed" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <Newspaper className="h-4 w-4" />
+                  <span>Bảng tin</span>
+                </button>
+                <button
+                  onClick={() => setTab("jobs")}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+                    tab === "jobs" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <Flame className="h-4 w-4" />
+                  <span><span className="sm:hidden">Việc gấp</span><span className="hidden sm:inline">Cần thợ gấp</span></span>
+                </button>
+                <button
+                  onClick={() => setTab("portfolio")}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+                    tab === "portfolio" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span><span className="sm:hidden">Thợ rảnh</span><span className="hidden sm:inline">Thợ đang rảnh</span></span>
+                </button>
+              </div>
             </div>
 
             {tab === "feed" ? (

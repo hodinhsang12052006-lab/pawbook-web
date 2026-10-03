@@ -168,6 +168,31 @@ const msgId = seed.data?.message?.id;
   R.check("PR4", "Ẩn danh dò online → 401", anonPresence.status === 401, `status=${anonPresence.status}`);
 }
 
+// ---------- 7e. Chuông thông báo + lượt xem ----------
+{
+  const anonNotif = await new Client().req("/api/notifications");
+  R.check("NT1", "Ẩn danh xem thông báo → 401", anonNotif.status === 401, `status=${anonNotif.status}`);
+  const post = await tech.req("/api/posts", { method: "POST", json: { content: "QA bài cho chuông" } });
+  await other.req(`/api/posts/${post.data.id}/like`, { method: "POST" });
+  await other.req(`/api/posts/${post.data.id}/comments`, { method: "POST", json: { content: "QA bình luận chuông" } });
+  const techNotif = await tech.req("/api/notifications");
+  const kinds = (techNotif.data.items || []).filter((i) => i.actor?.id === other.userId).map((i) => i.kind);
+  R.check("NT2", "Tác giả nhận thông báo thích + bình luận từ người thật", kinds.includes("like") && kinds.includes("comment"), JSON.stringify(kinds));
+  const otherNotif = await other.req("/api/notifications");
+  R.check("NT3", "Người thả tim KHÔNG nhận thông báo của người khác", !(otherNotif.data.items || []).some((i) => i.text.includes("QA bài cho chuông")), "");
+  R.check("NT4", "Thông báo không lộ email/SĐT", !/@[a-z0-9.-]+\.[a-z]{2,}/i.test(JSON.stringify(techNotif.data)), "");
+
+  // Lượt xem: id rác bị bỏ qua, server không bị lỗi; bơm số bằng script bị chặn theo IP.
+  const junk = await new Client().req("/api/posts/views", { method: "POST", json: { ids: ["'; DROP TABLE Post;--", 123, "x".repeat(500)] } });
+  R.check("VW1", "Gửi id lượt xem rác → bỏ qua, không lỗi", junk.status === 200, `status=${junk.status}`);
+  const bot = new Client("10.240.0.9");
+  for (let i = 0; i < 10; i++) await bot.req("/api/posts/views", { method: "POST", json: { ids: Array(20).fill(post.data.id) } });
+  const feed = await new Client().req("/api/posts");
+  const views = feed.data.posts.find((p) => p.id === post.data.id)?.views ?? 0;
+  R.check("VW2", "Bơm lượt xem bằng script 1 IP bị giới hạn (≤ 120 / 10 phút, id trùng trong 1 lần chỉ tính 1)", views <= 120, `views=${views}`);
+  await tech.req(`/api/posts/${post.data.id}`, { method: "DELETE" });
+}
+
 // ---------- 8. CSRF: đổi dữ liệu không kèm cookie session ----------
 {
   const noCookie = await fetch(BASE_URL_SAFE() + "/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "csrf" }) });

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { Plus, MessageSquare } from "lucide-react";
+import { Plus, MessageSquare, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -40,7 +40,16 @@ export default function Navbar() {
             </div>
           ) : sessionUser ? (
             <>
-              {sessionUser.role === "OWNER" ? (
+              {sessionUser.role === "ADMIN" ? (
+                <button
+                  onClick={() => router.push("/admin/reports")}
+                  className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all duration-200 cursor-pointer"
+                  title="Trang quản trị"
+                >
+                  <ShieldAlert className="h-4 w-4" />
+                  <span className="hidden md:inline">Quản trị</span>
+                </button>
+              ) : sessionUser.role === "OWNER" ? (
                 <button
                   onClick={() => router.push("/jobs/create")}
                   className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"

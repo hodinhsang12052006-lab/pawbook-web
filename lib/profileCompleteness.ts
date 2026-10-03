@@ -33,7 +33,8 @@ const hasCustomAvatar = (url?: string | null) => !!url && !url.includes("dicebea
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getProfileCompleteness(user: any): Completeness | null {
-  if (!user?.id || !user?.role) return null;
+  // ADMIN không có hồ sơ tuyển dụng — không hiện checklist thợ/chủ tiệm.
+  if (!user?.id || !user?.role || user.role === "ADMIN") return null;
 
   let items: CompletenessItem[];
   if (user.role === "OWNER") {

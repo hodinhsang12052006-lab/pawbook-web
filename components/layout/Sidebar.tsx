@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Briefcase, Store, Newspaper, MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle } from "lucide-react";
+import { Briefcase, Store, Newspaper, MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -40,7 +40,9 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   // desktop gần như không biết tới.
   const tools = [
     { href: "/messages", label: "Tin nhắn", icon: MessageCircle, badge: unreadCount },
-    ...(userRole === "OWNER"
+    ...(userRole === "ADMIN"
+      ? [{ href: "/admin/reports", label: "Báo cáo vi phạm", icon: ShieldAlert, badge: 0 }]
+      : userRole === "OWNER"
       ? [{ href: "/jobs/create", label: "Đăng tin tuyển thợ", icon: PlusCircle, badge: 0 }]
       : [{ href: "/tools/income-tracker", label: "Bảng tính thu nhập", icon: Wallet, badge: 0 }]),
     { href: "/tools/radar", label: "Nail Radar · mức lương", icon: Radar, badge: 0 },

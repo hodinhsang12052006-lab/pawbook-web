@@ -264,3 +264,16 @@ body {
   .heart-pop, .heart-float, .heart-big, .count-bump { animation: none; }
   .heart-float, .heart-big { display: none; }
 }
+
+/* ===== Nền khung chat (Messenger) =====
+   Trước đây là 1 mảng slate-900 phẳng. Giờ: nền tối có chiều sâu, 2 quầng
+   sáng thương hiệu (hồng góc trên, tím góc dưới), lớp chấm mờ rất nhẹ kiểu
+   "giấy dán tường" chat của các app nhắn tin lớn. Tĩnh — không tốn CPU. */
+.chat-wallpaper {
+  background-color: #0a1020;
+  background-image:
+    radial-gradient(38rem 26rem at 100% 0%, rgba(236, 72, 153, 0.09), transparent 60%),
+    radial-gradient(34rem 24rem at 0% 100%, rgba(139, 92, 246, 0.08), transparent 60%),
+    radial-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+  background-size: auto, auto, 18px 18px;
+}

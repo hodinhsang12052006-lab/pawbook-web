@@ -171,17 +171,17 @@ await step("F12", "Thợ mở chat với chủ tiệm (/messages?to=) và gửi 
   await input.waitFor({ timeout: 20000 });
   await input.fill("Chào anh, em muốn ứng tuyển ạ");
   await input.press("Enter");
-  await tp.getByText("Chào anh, em muốn ứng tuyển ạ").first().waitFor({ timeout: 10000 });
+  await tp.getByText("Chào anh, em muốn ứng tuyển ạ").last().waitFor({ timeout: 10000 });
   await shot(tp, "10_tech_chat");
 });
 
 await step("F13", "Chủ tiệm nhận được tin và trả lời", async () => {
   await op.goto(BASE_URL + `/messages?to=${techId}`);
-  await op.getByText("Chào anh, em muốn ứng tuyển ạ").first().waitFor({ timeout: 20000 });
+  await op.getByText("Chào anh, em muốn ứng tuyển ạ").last().waitFor({ timeout: 20000 });
   const input = op.getByPlaceholder(/Viết tin nhắn/);
   await input.fill("OK em, mai ghé tiệm nhé");
   await input.press("Enter");
-  await op.getByText("OK em, mai ghé tiệm nhé").first().waitFor({ timeout: 10000 });
+  await op.getByText("OK em, mai ghé tiệm nhé").last().waitFor({ timeout: 10000 });
   await shot(op, "11_owner_chat");
 });
 
@@ -352,6 +352,26 @@ await step("F27", "Mobile: hàng thẻ Công cụ hiện trên trang chủ", asy
   const row = op.getByRole("navigation", { name: "Công cụ" });
   await row.getByRole("link", { name: /Nail Radar/ }).waitFor({ timeout: 15000 });
   await shot(op, "19_mobile_tools");
+});
+
+await step("F28", "Tin nhắn: xem trước tin cuối + giờ, tìm kiếm hoạt động, header có 'Xem hồ sơ', không còn chấm online giả", async () => {
+  const techs = await (await fetch(BASE_URL + "/api/technicians")).json();
+  const partner = techs[0].user;
+  const stamp = `QA preview ${Date.now()}`;
+  await ownerCtx.request.post(BASE_URL + "/api/messages", { data: { receiverId: partner.id, content: stamp } });
+  await op.goto(BASE_URL + "/messages");
+  await op.getByText(`Bạn: ${stamp}`).first().waitFor({ timeout: 15000 });
+  const search = op.getByRole("searchbox", { name: "Tìm cuộc trò chuyện" });
+  await search.fill("zzzz-khong-co");
+  await op.getByText(/Không tìm thấy cuộc trò chuyện nào/).waitFor({ timeout: 5000 });
+  await search.fill(partner.name.split(" ")[0]);
+  const row = op.getByRole("button", { name: new RegExp(partner.name) }).first();
+  await row.waitFor({ timeout: 5000 });
+  await row.click();
+  await op.getByRole("link", { name: "Xem hồ sơ" }).waitFor({ timeout: 10000 });
+  await op.getByText(stamp).last().waitFor({ timeout: 10000 });
+  await shot(op, "20_messenger");
+  return (await op.locator(".bg-emerald-500.rounded-full").count()) === 0;
 });
 
 R.check("F18", "Không có lỗi JS / HTTP 5xx trong suốt các luồng", pageErrors.length === 0, pageErrors.join(" | "));

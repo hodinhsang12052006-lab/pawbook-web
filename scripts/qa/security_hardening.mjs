@@ -138,6 +138,36 @@ const msgId = seed.data?.message?.id;
   R.check("SAVE1", "Job board trả saveCount là số thật (không âm)", Array.isArray(jobs.data) && jobs.data.every((j) => Number.isInteger(j.saveCount) && j.saveCount >= 0), "");
 }
 
+// ---------- 7d. Realtime: đang soạn tin / online / chưa đọc ----------
+{
+  const anonTyping = await new Client().req("/api/messages/typing", { method: "POST", json: { conversationId: convId } });
+  R.check("RT1", "Ẩn danh gửi 'đang soạn tin' → 401", anonTyping.status === 401, `status=${anonTyping.status}`);
+  const outsiderTyping = await other.req("/api/messages/typing", { method: "POST", json: { conversationId: convId } });
+  R.check("RT2", "Người ngoài gửi 'đang soạn tin' vào hội thoại người khác → 403", outsiderTyping.status === 403, `status=${outsiderTyping.status}`);
+  const memberTyping = await tech.req("/api/messages/typing", { method: "POST", json: { conversationId: convId } });
+  R.check("RT3", "Thành viên hội thoại gửi 'đang soạn tin' → 200", memberTyping.status === 200, `status=${memberTyping.status}`);
+  const anonUnread = await new Client().req("/api/messages/unread");
+  R.check("RT4", "Ẩn danh xem tổng tin chưa đọc → 401", anonUnread.status === 401, `status=${anonUnread.status}`);
+
+  const presence = (c, target) =>
+    c.req("/api/pusher/auth", {
+      method: "POST",
+      body: `socket_id=123.456&channel_name=presence-user-${target}`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+    });
+  const own = await presence(owner, owner.userId);
+  R.check("PR1", "Vào presence channel của chính mình → 200", own.status === 200, `status=${own.status}`);
+  const partnerPresence = await presence(owner, tech.userId);
+  R.check("PR2", "Xem online của người đã từng nhắn tin chung → 200", partnerPresence.status === 200, `status=${partnerPresence.status}`);
+  const stranger = new Client();
+  const reg = await registerUser();
+  await stranger.login(reg.body.email, reg.body.password);
+  const strangerPresence = await presence(stranger, owner.userId);
+  R.check("PR3", "Người lạ (chưa từng nhắn tin) dò online của người khác → 403", strangerPresence.status === 403, `status=${strangerPresence.status}`);
+  const anonPresence = await presence(new Client(), owner.userId);
+  R.check("PR4", "Ẩn danh dò online → 401", anonPresence.status === 401, `status=${anonPresence.status}`);
+}
+
 // ---------- 8. CSRF: đổi dữ liệu không kèm cookie session ----------
 {
   const noCookie = await fetch(BASE_URL_SAFE() + "/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "csrf" }) });

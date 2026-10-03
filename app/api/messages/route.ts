@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
+import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -138,9 +139,14 @@ export async function GET(req: Request) {
         conversationId: msg.conversationId,
       }));
 
+      // Mốc đã đọc của đối phương → client hiện "Đã xem" dưới tin cuối của mình.
+      const marks = await getReadMarks([targetConversationId]);
+      const partnerMark = marks.find((m) => m.userId !== userId);
+
       return NextResponse.json({
         messages: safeMessages,
         nextCursor,
+        partnerLastReadAt: partnerMark ? partnerMark.lastReadAt.toISOString() : null,
       });
     }
 
@@ -184,6 +190,9 @@ export async function GET(req: Request) {
       },
     });
 
+    // Chưa đọc / đã xem / hoạt động gần nhất — dữ liệu thật (lib/conversationReads).
+    const meta = await getConversationMeta(userId, conversations);
+
     // Ensure all conversations and nested messages are serialized with safe string dates
     const safeConversations = conversations.map((conv) => {
       // Reverse messages so they are chronologically correct in preview
@@ -198,7 +207,9 @@ export async function GET(req: Request) {
           name: p.name,
           avatarUrl: p.avatarUrl,
           role: p.role,
+          lastActiveAt: meta.lastActiveAt(p.id),
         })),
+        ...meta.conv(conv.id),
         messages: sortedMessages.map((msg) => ({
           id: msg.id,
           body: msg.body,

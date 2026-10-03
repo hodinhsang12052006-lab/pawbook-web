@@ -53,8 +53,9 @@ model User {
   clientTypePolicy String? // VD: "Khách sang, tip cao", "Khách vãng lai, khu đông dân"
   housingSupport   Boolean @default(false) // Có chỗ ở/bao ăn ở cho thợ ở xa
 
-  conversations Conversation[] @relation("UserConversations")
-  messages      Message[]
+  conversations     Conversation[]     @relation("UserConversations")
+  conversationReads ConversationRead[]
+  messages          Message[]
 
   // Paywall "Mở khóa kết nối trực tiếp" — chủ tiệm (OWNER) unlock quyền
   // nhắn tin/gọi 1 thợ cụ thể sau khi hoàn tất khảo sát chuyên sâu.
@@ -239,12 +240,13 @@ model UserReport {
 }
 
 model Conversation {
-  id           String    @id @default(cuid())
-  isGroup      Boolean   @default(false)
+  id           String             @id @default(cuid())
+  isGroup      Boolean            @default(false)
   name         String?
-  createdAt    DateTime  @default(now())
-  participants User[]    @relation("UserConversations")
+  createdAt    DateTime           @default(now())
+  participants User[]             @relation("UserConversations")
   messages     Message[]
+  reads        ConversationRead[]
 }
 
 model Message {
@@ -260,6 +262,20 @@ model Message {
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
   @@index([conversationId, createdAt])
   @@index([senderId])
+}
+
+// Mốc "đã đọc tới đâu" của từng người trong từng hội thoại — nguồn cho số tin
+// chưa đọc theo hội thoại, dấu "Đã xem" và "Hoạt động x phút trước".
+model ConversationRead {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime     @default(now())
+
+  @@unique([userId, conversationId])
+  @@index([conversationId])
 }
 
 enum PostType {

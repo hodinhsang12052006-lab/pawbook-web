@@ -374,6 +374,49 @@ await step("F28", "Tin nhắn: xem trước tin cuối + giờ, tìm kiếm ho�
   return (await op.locator(".bg-emerald-500.rounded-full").count()) === 0;
 });
 
+await step("F29", "Realtime 2 người: online thật, 'Đang soạn tin', badge chưa đọc, 'Đã xem'", async () => {
+  // Thợ seed (khác người đã dùng ở các bước trước) — đăng nhập ở context riêng.
+  const techCtx2 = await newCtx();
+  const csrf = await (await techCtx2.request.get(BASE_URL + "/api/auth/csrf")).json();
+  await techCtx2.request.post(BASE_URL + "/api/auth/callback/credentials", { form: { csrfToken: csrf.csrfToken, email: "tech5.us@pawnailjobs.demo", password: DEMO_PASSWORD, json: "true" } });
+  const techSession = await (await techCtx2.request.get(BASE_URL + "/api/auth/session")).json();
+  const techUser = techSession.user;
+  const t2 = await techCtx2.newPage();
+  watch(t2, "tech5");
+
+  // Thợ nhắn trước để 2 bên có hội thoại chung (điều kiện xem online).
+  const hello = `Chào anh, em hỏi việc ${Date.now()}`;
+  await techCtx2.request.post(BASE_URL + "/api/messages", { data: { receiverId: ownerId, content: hello } });
+
+  // Chủ tiệm thấy badge chưa đọc ở danh sách (chưa mở hội thoại).
+  await op.goto(BASE_URL + "/messages");
+  const row = op.getByRole("button", { name: new RegExp(techUser.name) }).first();
+  await row.waitFor({ timeout: 15000 });
+  const badgeText = await row.locator("span.rounded-full").filter({ hasText: /^\d+$/ }).first().textContent({ timeout: 10000 });
+  if (!badgeText || Number(badgeText) < 1) throw new Error("không thấy badge chưa đọc");
+
+  // Thợ mở app (vào kênh presence của mình) → chủ tiệm thấy "Đang hoạt động".
+  await t2.goto(BASE_URL + `/messages?to=${ownerId}`);
+  await t2.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+  await row.click();
+  await op.getByText("Đang hoạt động").filter({ visible: true }).first().waitFor({ timeout: 20000 });
+
+  // Thợ gõ → chủ tiệm thấy "Đang soạn tin".
+  await t2.getByPlaceholder(/Viết tin nhắn/).fill("Em đang gõ...");
+  await op.getByText(/Đang soạn tin/).filter({ visible: true }).first().waitFor({ timeout: 15000 });
+
+  // Chủ tiệm trả lời → thợ đang mở hội thoại (tự đánh dấu đã đọc) → chủ tiệm thấy "Đã xem".
+  const reply = `OK em ${Date.now()}`;
+  const input = op.getByPlaceholder(/Viết tin nhắn/);
+  await input.fill(reply);
+  await input.press("Enter");
+  await t2.getByText(reply).last().waitFor({ timeout: 15000 });
+  await op.getByText("Đã xem").filter({ visible: true }).first().waitFor({ timeout: 20000 });
+  await shot(op, "21_realtime_owner");
+  await t2.screenshot({ path: fileURLToPath(new URL("21_realtime_tech.png", SHOTS)) });
+  await techCtx2.close();
+});
+
 R.check("F18", "Không có lỗi JS / HTTP 5xx trong suốt các luồng", pageErrors.length === 0, pageErrors.join(" | "));
 
 await browser.close();

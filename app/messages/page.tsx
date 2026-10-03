@@ -4,10 +4,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getConversationMeta } from "@/lib/conversationReads";
 
 export const dynamic = "force-dynamic";
 
-function mapConversation(conv: any) {
+type ConvMeta = Awaited<ReturnType<typeof getConversationMeta>>;
+
+function mapConversation(conv: any, meta: ConvMeta) {
   return {
     id: conv.id,
     isGroup: conv.isGroup,
@@ -18,7 +21,9 @@ function mapConversation(conv: any) {
       name: p.name,
       avatarUrl: p.avatarUrl || null,
       role: p.role,
+      lastActiveAt: meta.lastActiveAt(p.id),
     })),
+    ...meta.conv(conv.id),
     messages: conv.messages.map((m: any) => ({
       id: m.id,
       body: m.body,
@@ -78,9 +83,12 @@ export default async function MessagesPage() {
         },
       },
       orderBy: { createdAt: "desc" },
+      // Trước đây không giới hạn — người dùng nhiều hội thoại phải tải hết.
+      take: 50,
     });
 
-    initialConversations = conversationsData.map(mapConversation);
+    const meta = await getConversationMeta(userId, conversationsData);
+    initialConversations = conversationsData.map((c) => mapConversation(c, meta));
   } catch (err) {
     console.error("MessagesPage: failed to load conversations:", err);
   }

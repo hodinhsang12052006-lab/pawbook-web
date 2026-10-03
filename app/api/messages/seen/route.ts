@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { getPusherServer } from "@/lib/pusherServer";
+import { markConversationRead } from "@/lib/conversationReads";
 import { chatChannelName } from "@/lib/pusherChannel";
 
 // Ephemeral (non-persisted) read receipts: broadcasts "message-seen" to the
@@ -39,7 +40,10 @@ export async function POST(req: Request) {
       .filter((p) => p.id !== userId)
       .map((p) => chatChannelName(p.id));
 
-    const seenAt = new Date().toISOString();
+    // Lưu mốc đã đọc (null nếu bảng chưa được tạo trên production — vẫn bắn
+    // sự kiện realtime như cũ).
+    const saved = await markConversationRead(userId, conversationId);
+    const seenAt = (saved ?? new Date()).toISOString();
     if (otherChannels.length > 0) {
       await getPusherServer()?.trigger(otherChannels, "message-seen", { conversationId, seenBy: userId, seenAt });
     }

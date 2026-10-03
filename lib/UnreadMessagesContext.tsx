@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playNotifySound } from "@/lib/notifySound";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { joinOwnPresence } from "@/lib/presence";
 
 interface UnreadMessagesContextValue {
   unreadCount: number;
@@ -33,6 +34,24 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     if (pathname && pathname.startsWith("/messages")) setUnreadCount(0);
   }, [pathname]);
+
+  // Có mặt trong presence channel của chính mình suốt lúc mở app → người
+  // khác thấy chấm xanh "đang hoạt động" thật. Đồng thời lấy tổng tin chưa
+  // đọc thật từ server cho badge (thay vì bắt đầu từ 0 mỗi lần tải trang).
+  useEffect(() => {
+    if (!sessionUser?.id) return;
+    const leave = joinOwnPresence(String(sessionUser.id));
+    if (!pathnameRef.current?.startsWith("/messages")) {
+      fetch("/api/messages/unread")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (typeof d?.unread === "number") setUnreadCount(d.unread);
+        })
+        .catch(() => {});
+    }
+    return leave;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionUser?.id]);
 
   useEffect(() => {
     if (!sessionUser?.id) return;

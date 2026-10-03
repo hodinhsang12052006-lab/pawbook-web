@@ -5,12 +5,13 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import GifPicker from "@/components/chat/GifPicker";
 import {
   Send, User, Search, MessageSquare, Loader2, Plus, Users,
-  Smile, X, ArrowLeft, Paperclip, Zap, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
+  Smile, X, ArrowLeft, Check, CheckCheck, Paperclip, Zap, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playNotifySound } from "@/lib/notifySound";
+import { useIsOnline, lastActiveLabel } from "@/lib/presence";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useCallManager } from "@/lib/CallManagerContext";
@@ -47,6 +48,7 @@ interface UserType {
   avatarUrl: string | null;
   role: string;
   isInternal?: boolean;
+  lastActiveAt?: string | null;
 }
 
 interface MessageType {
@@ -76,6 +78,30 @@ function shortChatTime(iso: string) {
   return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
 }
 
+// Avatar có chấm xanh khi người đó THẬT SỰ đang mở app (Pusher presence).
+function PresenceAvatar({ userId, src, alt, size = "h-11 w-11" }: { userId: string; src: string; alt: string; size?: string }) {
+  const online = useIsOnline(userId);
+  return (
+    <span className={`relative ${size} flex-shrink-0`}>
+      <img src={src} alt={alt} loading="lazy" className={`${size} rounded-full object-cover ring-1 ring-white/10`} />
+      {online && (
+        <span aria-label="Đang hoạt động" className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+      )}
+    </span>
+  );
+}
+
+// 3 chấm nhảy "đang soạn tin".
+function TypingDots({ className = "" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-0.5 ${className}`} aria-hidden>
+      <span className="typing-dot" />
+      <span className="typing-dot" style={{ animationDelay: "0.15s" }} />
+      <span className="typing-dot" style={{ animationDelay: "0.3s" }} />
+    </span>
+  );
+}
+
 const ROLE_VI: Record<string, string> = { OWNER: "Chủ tiệm", TECHNICIAN: "Thợ Nail", ADMIN: "Quản trị viên" };
 
 interface ConversationType {
@@ -85,6 +111,8 @@ interface ConversationType {
   createdAt: string;
   participants: UserType[];
   messages: { id: string; body: string; type: string; senderId: string; conversationId: string; createdAt: string }[];
+  unreadCount?: number;
+  partnerLastReadAt?: string | null;
 }
 
 interface ActiveChatType {
@@ -195,6 +223,18 @@ export default function MessagesContent({
   const [loadingMoreChatMessages, setLoadingMoreChatMessages] = useState(false);
 
   const [messageText, setMessageText] = useState("");
+  // Realtime: ai đang soạn tin (theo hội thoại, hết hạn sau 4s) và mốc "đã
+  // xem" của đối phương (theo hội thoại).
+  const [typingByConv, setTypingByConv] = useState<Record<string, string>>({});
+  const [seenByConv, setSeenByConv] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      (initialConversations || [])
+        .filter((c: ConversationType) => c.partnerLastReadAt)
+        .map((c: ConversationType) => [c.id, c.partnerLastReadAt as string])
+    )
+  );
+  const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const lastTypingSentRef = useRef(0);
   const [sending, setSending] = useState(false);
 
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -309,7 +349,10 @@ export default function MessagesContent({
         createdAt: conv.createdAt ? new Date(conv.createdAt).toISOString() : new Date().toISOString(),
         participants: (conv.participants || []).map((p: any) => ({
           id: p.id, name: p.name, avatarUrl: p.avatarUrl || null, role: p.role, bio: p.bio || null,
+          lastActiveAt: p.lastActiveAt || null,
         })),
+        unreadCount: conv.unreadCount || 0,
+        partnerLastReadAt: conv.partnerLastReadAt || null,
         messages: (conv.messages || []).map((m: any) => ({
           id: m.id, body: m.body, type: m.type || "TEXT", senderId: m.senderId,
           conversationId: m.conversationId,
@@ -318,6 +361,11 @@ export default function MessagesContent({
       }));
 
       setConversations(safeConvs);
+      setSeenByConv((prev) => {
+        const next = { ...prev };
+        for (const c of safeConvs) if (c.partnerLastReadAt && !next[c.id]) next[c.id] = c.partnerLastReadAt;
+        return next;
+      });
       setSystemUsers(data.users || []);
     } catch (err) {
       console.error("Failed to load sidebar data:", err);
@@ -429,6 +477,9 @@ export default function MessagesContent({
         const effectiveKey = chat.conversationId || fetchedConvId || key;
 
         if (effectiveKey !== key) rekeyBucket(key, effectiveKey);
+        if (data?.partnerLastReadAt && fetchedConvId) {
+          setSeenByConv((prev) => ({ ...prev, [fetchedConvId]: data.partnerLastReadAt }));
+        }
 
         if (isFirstOpen) {
           // First time ever opening this chat — establish messages + cursor.
@@ -583,10 +634,20 @@ export default function MessagesContent({
     return fresh;
   }, [chatMessages]);
 
+  // Đánh dấu đã đọc: lưu mốc trên server (bắn "message-seen" cho đối phương)
+  // + xoá badge chưa đọc của hội thoại ngay trên giao diện.
+  const markSeen = useCallback((conversationId: string) => {
+    setConversations((prev) => prev.map((c) => (c.id === conversationId && c.unreadCount ? { ...c, unreadCount: 0 } : c)));
+    fetch("/api/messages/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId }),
+    }).catch(() => {});
+  }, []);
   // -------------------------------------------------------------------------
   // Realtime messaging channel — DÙNG CHUNG với CallManager/
   // UnreadMessagesContext qua lib/pusherUserChannel.ts (xem comment ở đó).
-  // Chỉ bind/unbind ĐÚNG 3 handler của component này bằng tham chiếu hàm,
+  // Chỉ bind/unbind ĐÚNG các handler của component này bằng tham chiếu hàm,
   // không bao giờ unbind_all()/unsubscribe() — trước đây làm vậy sẽ xóa mất
   // listener "incoming-call" của CallManager mỗi khi rời trang /messages,
   // khiến chuông gọi đến chết vĩnh viễn cho tới khi F5 lại trang.
@@ -613,7 +674,25 @@ export default function MessagesContent({
           ? liveActiveChat.conversationId === m.conversationId
           : (m.senderId === liveActiveChat.id || m.receiverId === liveActiveChat.id));
 
+      // Người gửi vừa gửi xong → tắt "đang soạn tin" của họ ngay. Đối phương
+      // đã trả lời nghĩa là đã đọc mọi tin trước đó (giống Messenger).
+      if (m.senderId !== currentUser.id && m.conversationId) {
+        const repliedAt = m.createdAt || new Date().toISOString();
+        setSeenByConv((prev) =>
+          !prev[m.conversationId] || prev[m.conversationId] < repliedAt ? { ...prev, [m.conversationId]: repliedAt } : prev
+        );
+        setTypingByConv((prev) => {
+          if (!prev[m.conversationId]) return prev;
+          const next = { ...prev };
+          delete next[m.conversationId];
+          return next;
+        });
+      }
+
       if (belongsToActiveChat) {
+        if (m.senderId !== currentUser.id && m.conversationId && !document.hidden) {
+          markSeen(m.conversationId);
+        }
         const key = chatKeyFor(liveActiveChat);
         if (!liveActiveChat.conversationId && m.conversationId) {
           rekeyBucket(key, m.conversationId);
@@ -653,6 +732,10 @@ export default function MessagesContent({
                   senderId: m.senderId, conversationId: m.conversationId,
                   createdAt: m.createdAt || new Date().toISOString(),
                 }],
+                unreadCount:
+                  m.senderId !== currentUser.id && !belongsToActiveChat
+                    ? (conv.unreadCount || 0) + 1
+                    : conv.unreadCount || 0,
               }
             : conv
         );
@@ -673,17 +756,56 @@ export default function MessagesContent({
       }
     };
 
+    const handleMessageSeen = (data: any) => {
+      if (!data?.conversationId || !data?.seenAt) return;
+      setSeenByConv((prev) => ({ ...prev, [data.conversationId]: data.seenAt }));
+    };
+
+    const handleUserTyping = (data: any) => {
+      if (!data?.conversationId || data.userId === currentUser.id) return;
+      const convId = data.conversationId as string;
+      setTypingByConv((prev) => ({ ...prev, [convId]: data.name || "" }));
+      clearTimeout(typingTimersRef.current[convId]);
+      typingTimersRef.current[convId] = setTimeout(() => {
+        setTypingByConv((prev) => {
+          const next = { ...prev };
+          delete next[convId];
+          return next;
+        });
+      }, 4500);
+    };
+
     channel.bind("pusher:subscription_error", handleSubscriptionError);
     channel.bind("new-message", handleNewMessage);
     channel.bind("message-updated", handleMessageUpdated);
+    channel.bind("message-seen", handleMessageSeen);
+    channel.bind("user-typing", handleUserTyping);
 
     return () => {
       channel.unbind("pusher:subscription_error", handleSubscriptionError);
       channel.unbind("new-message", handleNewMessage);
       channel.unbind("message-updated", handleMessageUpdated);
+      channel.unbind("message-seen", handleMessageSeen);
+      channel.unbind("user-typing", handleUserTyping);
       releaseUserChannel(currentUser.id);
     };
-  }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket, loadData]);
+  }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket, loadData, markSeen]);
+
+  useEffect(() => {
+    if (activeChat?.conversationId) markSeen(activeChat.conversationId);
+  }, [activeChat?.conversationId, markSeen]);
+
+  // Báo "đang soạn tin" tối đa 1 lần / 3 giây khi gõ.
+  const notifyTyping = useCallback(() => {
+    const convId = activeChat?.conversationId;
+    if (!convId || Date.now() - lastTypingSentRef.current < 3000) return;
+    lastTypingSentRef.current = Date.now();
+    fetch("/api/messages/typing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: convId }),
+    }).catch(() => {});
+  }, [activeChat?.conversationId]);
 
   // -------------------------------------------------------------------------
   // Optimistic send: bubble appears instantly (slide-up animation via
@@ -937,6 +1059,24 @@ export default function MessagesContent({
       .sort((a, b) => b.sortAt.localeCompare(a.sortAt));
   }, [conversations, listQuery, currentUser?.id]);
 
+  // Vị trí tin cuối cùng của mình trong đoạn chat (gắn Đã gửi/Đã xem).
+  const lastSelfIndex = useMemo(
+    () => chatMessages.reduce((acc, m, i) => (m.senderId === currentUser?.id ? i : acc), -1),
+    [chatMessages, currentUser?.id]
+  );
+
+  // Trạng thái THẬT của đối phương đang chat.
+  const partnerOnline = useIsOnline(activeChat && !activeChat.isGroup ? activeChat.id : null);
+  const partnerLastActiveAt = useMemo(() => {
+    if (!activeChat || activeChat.isGroup) return null;
+    for (const c of conversations) {
+      const p = c.participants.find((x) => x.id === activeChat.id);
+      if (p?.lastActiveAt) return p.lastActiveAt;
+    }
+    return null;
+  }, [activeChat, conversations]);
+  const activeChatTyping = activeChat?.conversationId ? typingByConv[activeChat.conversationId] !== undefined : false;
+
   const callPartner = activeChat
     ? { id: activeChat.id, name: activeChat.name, avatarUrl: activeChat.avatarUrl, isGroup: activeChat.isGroup, conversationId: activeChat.conversationId }
     : null;
@@ -989,6 +1129,8 @@ export default function MessagesContent({
                 const avatarUrl = isGroup ? "" : partner!.avatarUrl || AVATAR_FALLBACK(displayName);
                 const isActive = activeChat?.conversationId === conv.id;
                 const fromMe = lastMsg?.senderId === currentUser?.id;
+                const unread = isActive ? 0 : conv.unreadCount || 0;
+                const isTyping = typingByConv[conv.id] !== undefined;
                 const preview = lastMsg
                   ? `${fromMe ? "Bạn: " : ""}${lastMsg.type === "IMAGE" ? "📷 Ảnh" : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.body}`
                   : isGroup
@@ -1012,21 +1154,34 @@ export default function MessagesContent({
                     aria-current={isActive ? "true" : undefined}
                     className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all duration-200 ${isActive ? "bg-gradient-to-r from-pink-600/20 to-fuchsia-600/10 ring-1 ring-pink-500/30" : "hover:bg-white/[0.04]"}`}
                   >
-                    <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/10 bg-slate-900 flex items-center justify-center">
-                      {isGroup ? <Users className="h-5 w-5 text-fuchsia-300" /> : (
-                        <img src={avatarUrl} alt={displayName} loading="lazy" className="h-full w-full object-cover" />
-                      )}
-                    </div>
+                    {isGroup ? (
+                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
+                        <Users className="h-5 w-5 text-fuchsia-300" />
+                      </span>
+                    ) : (
+                      <PresenceAvatar userId={partner!.id} src={avatarUrl} alt={displayName} />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-[13px] font-bold text-slate-100">{displayName}</p>
-                        {lastMsg && <span className="flex-shrink-0 text-[10px] text-slate-500">{shortChatTime(lastMsg.createdAt)}</span>}
+                        <p className={`truncate text-[13px] ${unread > 0 ? "font-black text-white" : "font-bold text-slate-100"}`}>{displayName}</p>
+                        {lastMsg && <span className={`flex-shrink-0 text-[10px] ${unread > 0 ? "font-bold text-pink-300" : "text-slate-500"}`}>{shortChatTime(lastMsg.createdAt)}</span>}
                       </div>
                       <div className="flex items-center gap-1.5">
                         {!isGroup && (
                           <span className="flex-shrink-0 rounded bg-slate-800/80 px-1.5 py-px text-[9px] font-bold text-slate-400">{ROLE_VI[partner!.role] || "Thành viên"}</span>
                         )}
-                        <p className="truncate text-[11px] text-slate-500">{preview}</p>
+                        {isTyping ? (
+                          <p className="flex items-center gap-1.5 truncate text-[11px] font-semibold text-pink-300">
+                            Đang soạn tin <TypingDots />
+                          </p>
+                        ) : (
+                          <p className={`truncate text-[11px] ${unread > 0 ? "font-semibold text-slate-200" : "text-slate-500"}`}>{preview}</p>
+                        )}
+                        {unread > 0 && (
+                          <span className="ml-auto flex h-[18px] min-w-[18px] flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-1.5 text-[10px] font-black text-white shadow-md shadow-pink-600/30">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -1063,22 +1218,34 @@ export default function MessagesContent({
                   <ArrowLeft className="h-4 w-4" /><span className="sr-only">{locale === "vi" ? "Quay lại" : "Back"}</span>
                 </button>
                 <div className="relative flex-shrink-0">
-                  <div className="relative h-10 w-10 rounded-full overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                    {activeChat.isGroup ? <Users className="h-5 w-5 text-indigo-400" /> : (
-                      <img src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt={activeChat.name} loading="lazy" className="object-cover w-full h-full rounded-full" />
-                    )}
-                  </div>
+                  {activeChat.isGroup ? (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
+                      <Users className="h-5 w-5 text-fuchsia-300" />
+                    </span>
+                  ) : (
+                    <PresenceAvatar userId={activeChat.id} src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt={activeChat.name} size="h-10 w-10" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <h3 className="truncate text-sm font-bold text-slate-100">{activeChat.name}</h3>
                   {/* Trước đây chấm xanh "đang hoạt động" hiện cứng cho MỌI người
                       (app không theo dõi online) — bỏ, thay bằng thông tin thật. */}
                   <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[11px] text-slate-400">
-                    {activeChat.isGroup ? (
+                    {activeChatTyping ? (
+                      <span className="flex items-center gap-1.5 font-semibold text-pink-300">
+                        Đang soạn tin <TypingDots />
+                      </span>
+                    ) : activeChat.isGroup ? (
                       <span>Nhóm trò chuyện</span>
                     ) : (
                       <>
-                        <span>{ROLE_VI[activeChat.role] || "Thành viên"}</span>
+                        {partnerOnline ? (
+                          <span className="flex items-center gap-1.5 font-semibold text-emerald-300">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" /> Đang hoạt động
+                          </span>
+                        ) : (
+                          <span>{lastActiveLabel(partnerLastActiveAt) || ROLE_VI[activeChat.role] || "Thành viên"}</span>
+                        )}
                         <span className="text-slate-600">·</span>
                         <Link href={`/profile/${activeChat.id}`} className="font-semibold text-pink-300 hover:text-pink-200">
                           Xem hồ sơ
@@ -1171,12 +1338,28 @@ export default function MessagesContent({
                   const isSelf = msg.senderId === currentUser?.id;
                   const senderAvatar = isSelf
                     ? currentUser.avatarUrl || AVATAR_FALLBACK(currentUser.name)
-                    : msg.sender?.avatarUrl || AVATAR_FALLBACK(msg.sender?.name || "U");
+                    : msg.sender?.avatarUrl ||
+                      // Tin realtime (Pusher) không kèm avatar → chat 1-1 dùng avatar đối phương.
+                      (!activeChat.isGroup ? activeChat.avatarUrl : "") ||
+                      AVATAR_FALLBACK(msg.sender?.name || "U");
                   const animClass = freshMessageIds.has(msg.id) ? "message-slide-up" : "";
 
                   const prevMsg = idx > 0 ? chatMessages[idx - 1] : null;
+                  const nextMsg = idx < chatMessages.length - 1 ? chatMessages[idx + 1] : null;
                   const msgDay = new Date(msg.createdAt).toDateString();
                   const showDateSeparator = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== msgDay;
+                  // Gom tin liên tiếp của cùng 1 người trong 5 phút thành 1 cụm
+                  // (kiểu Messenger): avatar + giờ chỉ ở tin cuối cụm, khoảng
+                  // cách giữa các tin trong cụm sát lại.
+                  const sameGroup = (a: MessageType | null, b: MessageType | null) =>
+                    !!a && !!b && a.senderId === b.senderId && a.type !== "SYSTEM" && b.type !== "SYSTEM" &&
+                    new Date(a.createdAt).toDateString() === new Date(b.createdAt).toDateString() &&
+                    Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) < 5 * 60_000;
+                  const groupedWithPrev = sameGroup(prevMsg, msg);
+                  const isLastInGroup = !sameGroup(msg, nextMsg);
+                  const isLastSelf = isSelf && idx === lastSelfIndex;
+                  const seenAt = activeChat.conversationId ? seenByConv[activeChat.conversationId] : undefined;
+                  const isSeen = isLastSelf && !activeChat.isGroup && !!seenAt && new Date(seenAt).getTime() >= new Date(msg.createdAt).getTime();
                   const dateSeparatorLabel = (() => {
                     if (!showDateSeparator) return null;
                     const d = new Date(msg.createdAt);
@@ -1211,12 +1394,14 @@ export default function MessagesContent({
                   return (
                     <React.Fragment key={msg.id || idx}>
                       {dateSeparator}
-                      <div className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${animClass}`}>
-                        {!isSelf && (
-                          <div className="relative mb-[22px] h-6 w-6 rounded-full overflow-hidden border border-slate-800 flex-shrink-0">
+                      <div className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${groupedWithPrev ? "!mt-1" : ""} ${animClass}`}>
+                        {!isSelf && (isLastInGroup ? (
+                          <div className="relative mb-[22px] h-7 w-7 rounded-full overflow-hidden ring-1 ring-white/10 flex-shrink-0">
                             <img src={senderAvatar} alt={msg.sender?.name || "User"} loading="lazy" className="object-cover w-full h-full rounded-full" />
                           </div>
-                        )}
+                        ) : (
+                          <div className="h-7 w-7 flex-shrink-0" aria-hidden />
+                        ))}
                         <div className="flex flex-col max-w-[70%] relative pb-1">
                           {activeChat.isGroup && !isSelf && (
                             <span className="text-5xs text-slate-500 mb-0.5 ml-1">{msg.sender?.name}</span>
@@ -1296,10 +1481,19 @@ export default function MessagesContent({
                             )}
                           </div>
 
-                          {/* Giờ gửi dưới mỗi tin — app nhắn tin chuyên nghiệp nào cũng có. */}
-                          <span className={`mt-1 px-1 text-[10px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
-                            {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
+                          {/* Giờ gửi ở tin cuối mỗi cụm; tin cuối của mình kèm Đã gửi/Đã xem. */}
+                          {(isLastInGroup || isLastSelf) && (
+                            <span className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
+                              {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                              {isLastSelf && !activeChat.isGroup && !msg.isOptimistic && !msg.sendError && (
+                                isSeen ? (
+                                  <span className="flex items-center gap-0.5 font-semibold text-pink-300">· <CheckCheck className="h-3 w-3" /> Đã xem</span>
+                                ) : (
+                                  <span className="flex items-center gap-0.5">· <Check className="h-3 w-3" /> Đã gửi</span>
+                                )
+                              )}
+                            </span>
+                          )}
 
                           {isSelf && msg.sendError && (
                             <button
@@ -1333,12 +1527,41 @@ export default function MessagesContent({
                   );
                 })
               ) : !loadingChatMessages ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2 text-slate-500 animate-fadeIn">
-                  <span className="text-xl">👋</span>
-                  <p className="text-xs font-bold text-slate-400">{t("messenger.noMessagesYet")}</p>
-                  <p className="text-4xs text-slate-600 max-w-[200px] leading-relaxed">{t("messenger.noMessagesHint")}</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 animate-fadeIn">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/20 to-fuchsia-500/20 ring-1 ring-pink-500/30 text-2xl">👋</span>
+                  <p className="text-sm font-bold text-slate-200">{t("messenger.noMessagesYet")}</p>
+                  <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{t("messenger.noMessagesHint")}</p>
+                  {/* Gợi ý câu mở đầu theo vai trò — bấm để điền sẵn vào ô nhập. */}
+                  <div className="mt-1 flex max-w-md flex-wrap justify-center gap-2">
+                    {(currentUser?.role === "OWNER"
+                      ? ["Chào bạn, tiệm mình đang cần thợ, bạn còn nhận việc không?", "Bạn làm được Bột/Dip/Gel-X không?", "Khi nào bạn có thể ghé tiệm thử tay nghề?"]
+                      : ["Chào anh/chị, tiệm còn tuyển thợ không ạ?", "Cho em hỏi lương và cách chia turn ạ?", "Tiệm có hỗ trợ chỗ ở không ạ?"]
+                    ).map((starter) => (
+                      <button
+                        key={starter}
+                        type="button"
+                        onClick={() => setMessageText(starter)}
+                        className="rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1.5 text-xs font-semibold text-pink-200 hover:bg-pink-500/20 transition-colors"
+                      >
+                        {starter}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
+
+              {/* Bong bóng "đang soạn tin" của đối phương — realtime qua Pusher. */}
+              {activeChatTyping && (
+                <div className="flex items-end gap-2 animate-fadeIn" aria-live="polite">
+                  <div className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
+                    <img src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt="" className="h-full w-full object-cover" />
+                  </div>
+                  <div className="rounded-2xl rounded-bl-sm border border-slate-700 bg-slate-800 px-4 py-3 text-slate-300">
+                    <TypingDots />
+                    <span className="sr-only">Đối phương đang soạn tin</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {(showEmoji || showGifs) && (
@@ -1474,7 +1697,10 @@ export default function MessagesContent({
                   <input
                     type="text"
                     value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
+                    onChange={(e) => {
+                      setMessageText(e.target.value);
+                      if (e.target.value.trim()) notifyTyping();
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();

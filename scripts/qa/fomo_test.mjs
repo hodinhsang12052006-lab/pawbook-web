@@ -85,7 +85,7 @@ const badState = await new Client().req(`/api/trends?market=<script>`);
 R.check("FM16", "market rác → mặc định US, không lỗi", badState.status === 200 && badState.data.market === "US");
 
 // ---- Huy hiệu ----
-const pub = (await new Client().req(`/api/profile?id=${tech.userId}`)).data;
+const pub = (await new Client().req(`/api/profile?id=${tech.userId}&badges=1`)).data;
 R.check("FM17", "Hồ sơ có huy hiệu 'Thành viên sáng lập' (đăng ký trước 2027)", pub.badges?.some((b) => b.key === "founding"), JSON.stringify(pub.badges));
 R.check("FM18", "Hồ sơ công khai vẫn không lộ SĐT/email", !pub.phone && !pub.email);
 

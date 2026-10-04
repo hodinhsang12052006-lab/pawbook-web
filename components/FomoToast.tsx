@@ -1,129 +1,273 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { X, ArrowRight, Flame, Sparkles, Heart, BarChart3 } from "lucide-react";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { timeAgo } from "@/lib/feedFormat";
+import Avatar from "@/components/ui/Avatar";
+
+type Kind = "job" | "tech" | "post" | "survey";
 
 interface FomoMessage {
-  icon: string;
+  kind: Kind;
+  title: string;
   text: string;
+  chip?: string;
   href?: string;
   at?: string; // ISO — sự kiện thật thì hiện "x phút trước"
+  actor?: { id: string; name: string; avatarUrl: string | null };
 }
 
-// Nhóm câu FOMO RIÊNG nhắm vào THỢ đang tìm việc — dựa trên số liệu tổng
-// hợp/ẩn danh THẬT từ đợt quét cộng đồng ngành nail (xem
-// lib/nailRadarData.ts, DEMAND_SIGNAL/TOTAL_DEMAND_COUNT). Data quét được
-// cho thấy lệch hẳn về phía "chủ tìm thợ" (chủ tiệm đăng tin tuyển) so với
-// "thợ tìm việc" — tức thợ đang là bên khan hiếm, nên đây chính là bằng
-// chứng thật (không phải số bịa) để nhấn mạnh với thợ mới vào: "rất nhiều
-// tiệm đang cần bạn". Không giống các câu mô phỏng ở trên, nhóm này gắn với
-// con số có thật tại thời điểm quét — nếu quét lại, cập nhật số ở đây theo.
-// Ghi rõ NGUỒN + THỜI ĐIỂM: đây là số đếm của 1 đợt khảo sát, không phải
-// số "ngay lúc này" — nói quá là quảng cáo gây hiểu lầm.
+// Số liệu tổng hợp THẬT từ 1 đợt khảo sát cộng đồng (lib/nailRadarData.ts).
+// Ghi rõ NGUỒN + THỜI ĐIỂM — đây là số của 1 đợt khảo sát, không phải số
+// "ngay lúc này"; nói quá là quảng cáo gây hiểu lầm.
 const SURVEY = "khảo sát nhóm nail Facebook, 9/2026";
-const REAL_DEMAND_MESSAGES: FomoMessage[] = [
-  { icon: "📢", text: `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc chỉ trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón` },
-  { icon: "🔥", text: `Texas dẫn đầu nhu cầu: ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})` },
-  { icon: "🔥", text: `California: ${DEMAND_SIGNAL.US?.CA?.demandCount ?? 0} tin tìm thợ nail (${SURVEY})` },
-  { icon: "🔥", text: `NSW: ${DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0} tin tìm thợ nail (${SURVEY})` },
-  { icon: "🔥", text: `Victoria: ${DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0} tin tìm thợ nail (${SURVEY})` },
+const SURVEY_MESSAGES: FomoMessage[] = [
+  { kind: "survey", title: "Nhịp thị trường", text: `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón` },
+  { kind: "survey", title: "Nhịp thị trường", text: `Texas dẫn đầu nhu cầu với ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})` },
+  { kind: "survey", title: "Nhịp thị trường", text: `Úc: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} tin tìm thợ tại NSW & Victoria (${SURVEY})` },
 ];
 
-// Trước đây xen kẽ 8 "sự kiện" BỊA (tên người, số tiền, "3 phút trước"
-// không hề xảy ra) — social proof giả, bị FTC/ACCC coi là gây hiểu lầm và
-// rủi ro bị App Store/Google Play từ chối. Giờ CHỈ còn: hoạt động thật lấy
-// từ /api/activity + số liệu tổng hợp thật của đợt quét ngành.
+// Trước đây xen kẽ "sự kiện" BỊA (tên người, số tiền, "3 phút trước" không
+// hề xảy ra) — social proof giả. Giờ CHỈ có hoạt động thật từ /api/activity
+// + số liệu khảo sát có ghi nguồn.
 
-const MIN_DELAY_MS = 15_000;
-const MAX_DELAY_MS = 25_000;
-const VISIBLE_MS = 4_000;
+const KIND_STYLE: Record<Kind, { icon: typeof Flame; tile: string; label: string; bar: string }> = {
+  job: { icon: Flame, tile: "from-orange-500 to-red-500", label: "text-orange-300", bar: "from-orange-500 to-red-500" },
+  tech: { icon: Sparkles, tile: "from-pink-500 to-fuchsia-600", label: "text-pink-300", bar: "from-pink-500 to-fuchsia-500" },
+  post: { icon: Heart, tile: "from-rose-500 to-pink-500", label: "text-rose-300", bar: "from-rose-500 to-pink-500" },
+  survey: { icon: BarChart3, tile: "from-emerald-500 to-teal-500", label: "text-emerald-300", bar: "from-emerald-500 to-teal-400" },
+};
 
-function randomDelay() {
-  return MIN_DELAY_MS + Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS);
+// Nhịp hiển thị: lần đầu sau vài giây, sau đó thưa dần; mỗi phiên tối đa vài
+// lần — thông báo dày quá là phiền, người dùng sẽ ghét chứ không "FOMO".
+const FIRST_DELAY_MS = 9_000;
+const MIN_GAP_MS = 28_000;
+const MAX_GAP_MS = 48_000;
+const VISIBLE_MS = 6_500;
+const MAX_PER_SESSION = 6;
+const SNOOZE_MS = 3 * 60_000;
+const SESSION_KEY = "pn_fomo_session"; // { shown, closes }
+
+// Không chen ngang lúc người dùng đang làm việc quan trọng.
+const QUIET_ROUTES = [/^\/auth/, /^\/messages/, /^\/jobs\/create/, /^\/profile$/, /^\/admin/];
+
+function readSession(): { shown: number; closes: number } {
+  try {
+    return { shown: 0, closes: 0, ...JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}") };
+  } catch {
+    return { shown: 0, closes: 0 };
+  }
+}
+function writeSession(v: { shown: number; closes: number }) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(v));
+  } catch {}
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 export default function FomoToast() {
   const pathname = usePathname();
+  const router = useRouter();
   const [current, setCurrent] = useState<FomoMessage | null>(null);
-  const [visible, setVisible] = useState(false);
-  const lastIndexRef = useRef<number>(-1);
-  const messagesRef = useRef<FomoMessage[]>(REAL_DEMAND_MESSAGES);
-  const timersRef = useRef<{ show?: ReturnType<typeof setTimeout>; hide?: ReturnType<typeof setTimeout> }>({});
+  const [showKey, setShowKey] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const queueRef = useRef<FomoMessage[]>([]);
+  const poolRef = useRef<FomoMessage[]>(SURVEY_MESSAGES);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleRef = useRef<((delay: number) => void) | null>(null);
+  const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remainingRef = useRef(VISIBLE_MS);
+  const shownAtRef = useRef(0);
+  const touchX = useRef<number | null>(null);
+  const pathRef = useRef(pathname);
+  pathRef.current = pathname;
 
-  // Toast quảng cáo "bằng chứng xã hội" này chỉ hợp lý khi khách đang lướt
-  // job board — trên các trang /auth/* nó chỉ đè lên form/chữ thương hiệu
-  // (đây chính là lỗi khách báo: toast che mất chữ "Việc Làm Nail" ở góc
-  // trái trang đăng ký vì toast dùng position: fixed toàn viewport).
-  const isAuthRoute = pathname?.startsWith("/auth") ?? false;
+  const quiet = QUIET_ROUTES.some((r) => r.test(pathname || ""));
 
   useEffect(() => {
     let cancelled = false;
-
     fetch("/api/activity")
       .then((r) => (r.ok ? r.json() : []))
       .then((events: FomoMessage[]) => {
-        if (cancelled || !Array.isArray(events) || events.length === 0) return;
-        // Ưu tiên sự kiện thật (gấp đôi trọng số), xen số liệu ngành cho đỡ lặp.
-        messagesRef.current = [...events, ...events, ...REAL_DEMAND_MESSAGES];
+        if (cancelled || !Array.isArray(events)) return;
+        // Sự kiện thật là chính; số khảo sát chỉ xen vào cho đỡ lặp.
+        poolRef.current = [...events.filter((e) => e && e.text), ...SURVEY_MESSAGES];
+        queueRef.current = [];
       })
       .catch(() => {});
 
-    const scheduleNext = () => {
-      timersRef.current.show = setTimeout(() => {
-        if (cancelled) return;
-
-        let idx = Math.floor(Math.random() * messagesRef.current.length);
-        if (messagesRef.current.length > 1 && idx === lastIndexRef.current) {
-          idx = (idx + 1) % messagesRef.current.length;
-        }
-        lastIndexRef.current = idx;
-
-        setCurrent(messagesRef.current[idx]);
-        setVisible(true);
-
-        timersRef.current.hide = setTimeout(() => {
-          if (cancelled) return;
-          setVisible(false);
-          scheduleNext();
-        }, VISIBLE_MS);
-      }, randomDelay());
+    const nextMessage = (): FomoMessage | null => {
+      if (queueRef.current.length === 0) queueRef.current = shuffle(poolRef.current);
+      return queueRef.current.shift() ?? null;
     };
 
-    scheduleNext();
+    const schedule = (delay: number) => {
+      timerRef.current = setTimeout(() => {
+        if (cancelled) return;
+        const sess = readSession();
+        if (sess.shown >= MAX_PER_SESSION || sess.closes >= 2) return; // đủ rồi, thôi làm phiền
+        const busy =
+          document.visibilityState !== "visible" ||
+          QUIET_ROUTES.some((r) => r.test(pathRef.current || "")) ||
+          !!document.querySelector("[data-call-phase], [role=dialog][aria-modal=true]") ||
+          /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+        if (busy) {
+          schedule(10_000);
+          return;
+        }
+        const msg = nextMessage();
+        if (!msg) return;
+        writeSession({ ...sess, shown: sess.shown + 1 });
+        remainingRef.current = VISIBLE_MS;
+        setDragX(0);
+        setPaused(false);
+        setCurrent(msg);
+        setShowKey((k) => k + 1);
+      }, delay);
+    };
+
+    // Lên lịch lần kế khi toast hiện tại đóng (xem dismiss()).
+    scheduleRef.current = schedule;
+    schedule(FIRST_DELAY_MS);
 
     return () => {
       cancelled = true;
-      if (timersRef.current.show) clearTimeout(timersRef.current.show);
-      if (timersRef.current.hide) clearTimeout(timersRef.current.hide);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (hideRef.current) clearTimeout(hideRef.current);
     };
   }, []);
 
-  if (!current || isAuthRoute) return null;
+  const dismiss = (byUser: boolean) => {
+    if (hideRef.current) clearTimeout(hideRef.current);
+    setCurrent(null);
+    const sess = readSession();
+    if (byUser) writeSession({ ...sess, closes: sess.closes + 1 });
+    const gap = byUser ? SNOOZE_MS : MIN_GAP_MS + Math.random() * (MAX_GAP_MS - MIN_GAP_MS);
+    scheduleRef.current?.(gap);
+  };
+
+  // Tự ẩn sau VISIBLE_MS; tạm dừng khi rê chuột / chạm giữ.
+  useEffect(() => {
+    if (!current) return;
+    if (paused) {
+      if (hideRef.current) clearTimeout(hideRef.current);
+      remainingRef.current -= Date.now() - shownAtRef.current;
+      return;
+    }
+    shownAtRef.current = Date.now();
+    hideRef.current = setTimeout(() => dismiss(false), Math.max(800, remainingRef.current));
+    return () => {
+      if (hideRef.current) clearTimeout(hideRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, paused, showKey]);
+
+  if (!current || quiet) return null;
+  const st = KIND_STYLE[current.kind] ?? KIND_STYLE.survey;
+  const Icon = st.icon;
+
+  const open = () => {
+    if (!current.href) return;
+    dismiss(false);
+    router.push(current.href);
+  };
 
   return (
     <div
       aria-live="polite"
-      className={`fixed bottom-20 left-3 right-3 sm:left-4 sm:right-auto z-40 sm:max-w-xs pointer-events-none transition-all duration-500 ease-out ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-      }`}
+      // Mobile: nằm ngay trên thanh điều hướng nổi · Desktop: góc dưới trái.
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(max(10px,env(safe-area-inset-bottom))+84px)] z-40 sm:inset-x-auto sm:left-5 sm:w-[370px] md:bottom-6"
     >
-      <div className="pointer-events-auto flex items-start gap-2.5 rounded-2xl border border-slate-800 bg-slate-900/95 backdrop-blur-md px-3.5 py-3 shadow-2xl shadow-black/40">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-sm">
-          {current.icon}
+      <div
+        key={showKey}
+        role="status"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onTouchStart={(e) => {
+          touchX.current = e.touches[0].clientX;
+          setPaused(true);
+        }}
+        onTouchMove={(e) => touchX.current !== null && setDragX(e.touches[0].clientX - touchX.current)}
+        onTouchEnd={() => {
+          touchX.current = null;
+          if (Math.abs(dragX) > 80) dismiss(true);
+          else {
+            setDragX(0);
+            setPaused(false);
+          }
+        }}
+        className="fomo-in pointer-events-auto relative overflow-hidden rounded-2xl border border-white/10 bg-slate-950/95 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.9)] backdrop-blur-xl"
+        style={{ transform: dragX ? `translateX(${dragX}px)` : undefined, opacity: dragX ? Math.max(0.2, 1 - Math.abs(dragX) / 200) : undefined, transition: dragX ? "none" : "transform 0.2s, opacity 0.2s" }}
+      >
+        {/* Viền sáng theo loại sự kiện */}
+        <span aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${st.bar}`} />
+
+        <div
+          onClick={open}
+          className={`flex items-start gap-3 py-3 pl-4 pr-9 ${current.href ? "cursor-pointer" : ""}`}
+        >
+          <span className="relative flex-shrink-0">
+            {current.actor ? (
+              <Avatar src={current.actor.avatarUrl} name={current.actor.name} seed={current.actor.id} className="h-10 w-10 ring-1 ring-white/10" />
+            ) : (
+              <span className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${st.tile}`}>
+                <Icon className="h-5 w-5 text-white" />
+              </span>
+            )}
+            {current.actor && (
+              <span className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br ring-2 ring-slate-950 ${st.tile}`}>
+                <Icon className="h-2.5 w-2.5 text-white" />
+              </span>
+            )}
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className={`text-[10px] font-black uppercase tracking-wider ${st.label}`}>
+              {current.title}
+              {current.at && <span className="font-semibold normal-case tracking-normal text-slate-500"> · {timeAgo(current.at)}</span>}
+            </p>
+            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-200">{current.text}</p>
+            {(current.chip || current.href) && (
+              <div className="mt-2 flex items-center gap-2">
+                {current.chip && (
+                  <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-black text-emerald-300 ring-1 ring-emerald-500/25">{current.chip}</span>
+                )}
+                {current.href && (
+                  <span className="ml-auto inline-flex items-center gap-0.5 text-[11px] font-bold text-pink-300">
+                    Xem <ArrowRight className="h-3 w-3" />
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="min-w-0">
-          {current.href ? (
-            <Link href={current.href} className="text-xs leading-relaxed text-slate-200 hover:text-white">
-              {current.text}
-            </Link>
-          ) : (
-            <p className="text-xs leading-relaxed text-slate-200">{current.text}</p>
-          )}
-          {current.at && <p className="mt-0.5 text-[10px] text-slate-500">{timeAgo(current.at)}</p>}
-        </div>
+
+        <button
+          type="button"
+          onClick={() => dismiss(true)}
+          aria-label="Ẩn thông báo"
+          className="absolute right-1.5 top-1.5 rounded-full p-1.5 text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Thanh đếm ngược — dừng khi rê chuột/chạm giữ */}
+        <span
+          aria-hidden
+          className={`absolute bottom-0 left-0 h-[2px] w-full origin-left bg-gradient-to-r ${st.bar} opacity-70`}
+          style={{ animation: `fomoCountdown ${VISIBLE_MS}ms linear forwards`, animationPlayState: paused ? "paused" : "running" }}
+        />
       </div>
     </div>
   );

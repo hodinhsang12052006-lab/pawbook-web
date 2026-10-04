@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Image as ImageIcon, X, Loader2, Sparkles } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -24,6 +24,28 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // Nút ＋ ở thanh điều hướng mobile: cuộn tới ô soạn bài + bật bàn phím.
+  // Đến từ trang khác thì cờ nằm trong sessionStorage (đọc 1 lần lúc mount).
+  useEffect(() => {
+    const focusComposer = () => {
+      try {
+        sessionStorage.removeItem("pn_compose");
+      } catch {}
+      boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => textareaRef.current?.focus({ preventScroll: true }), 350);
+    };
+    try {
+      if (sessionStorage.getItem("pn_compose") === "1") {
+        sessionStorage.removeItem("pn_compose");
+        setTimeout(focusComposer, 300);
+      }
+    } catch {}
+    window.addEventListener("compose-post", focusComposer);
+    return () => window.removeEventListener("compose-post", focusComposer);
+  }, []);
 
   if (!user) return null;
 
@@ -86,10 +108,11 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
   };
 
   return (
-    <div className="glass-card rounded-2xl p-4 space-y-3">
+    <div ref={boxRef} className="glass-card scroll-mt-40 rounded-2xl p-4 space-y-3">
       <div className="flex items-start gap-3">
         <Avatar src={user.avatarUrl} name={user.name} seed={user.id} className="h-10 w-10 ring-1 ring-white/10" loading="eager" />
         <textarea
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Khoe tác phẩm móng mới, cập nhật tình hình tiệm, hoặc bất cứ điều gì... #NailArt"

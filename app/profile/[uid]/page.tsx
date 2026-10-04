@@ -461,7 +461,7 @@ export default function PublicProfilePage({ params }: PageProps) {
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/profile?id=${uid}`);
+        const res = await fetch(`/api/profile?id=${uid}&badges=1`);
         if (!res.ok) throw new Error("Không tìm thấy hồ sơ này.");
         setProfile(await res.json());
       } catch (err: any) {

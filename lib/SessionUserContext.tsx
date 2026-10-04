@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from "react";
 
 interface SessionUserContextValue {
   user: any;
@@ -21,9 +21,13 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Chỉ lần nạp ĐẦU mới bật "loading". Làm mới sau khi lưu hồ sơ / đổi ảnh
+  // (event "profile-updated") chạy ngầm — trước đây cả thanh điều hướng, cột
+  // trái... chớp tắt về trạng thái đang tải mỗi lần bấm Lưu.
+  const loadedOnce = useRef(false);
   const load = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!loadedOnce.current) setLoading(true);
       const res = await fetch("/api/auth/session");
       if (res.ok) {
         const session = await res.json();
@@ -39,6 +43,7 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
     } catch (err) {
       console.error(err);
     } finally {
+      loadedOnce.current = true;
       setLoading(false);
     }
   }, []);

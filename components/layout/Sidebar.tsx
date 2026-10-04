@@ -20,7 +20,7 @@ interface SidebarProps {
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user: effectiveUser } = useSessionUser();
+  const { user: effectiveUser, loading: sessionLoading } = useSessionUser();
 
   const userName = effectiveUser?.name || "Thành viên";
   const userRole = effectiveUser?.role || "TECHNICIAN";
@@ -54,7 +54,27 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       <aside className="hidden md:block w-64 flex-shrink-0">
         <div className="sticky top-20 space-y-4">
           <div className="glass-card rounded-2xl p-4">
-            {/* Profile Card Summary */}
+            {/* Profile Card Summary — đang tải thì hiện khung chờ (trước đây lóe
+                lên "Thành viên · Chưa cập nhật khu vực" như một tài khoản lạ);
+                khách chưa đăng nhập thì mời tham gia thay vì hồ sơ rỗng. */}
+            {sessionLoading ? (
+              <div className="mb-4 flex items-center gap-3" aria-hidden>
+                <div className="skeleton h-12 w-12 flex-shrink-0 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-3.5 w-28 rounded-md" />
+                  <div className="skeleton h-3 w-36 rounded-md" />
+                </div>
+              </div>
+            ) : !effectiveUser ? (
+              <div className="mb-4 rounded-xl bg-gradient-to-br from-pink-600/15 to-fuchsia-600/5 p-3.5 ring-1 ring-pink-500/20">
+                <p className="text-sm font-black text-white">Tham gia PawNail</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">Miễn phí — tìm việc, tìm thợ và nhắn tin trực tiếp.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">Đăng ký</Link>
+                  <Link href="/auth/login" className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">Đăng nhập</Link>
+                </div>
+              </div>
+            ) : (
             <Link href="/profile" className="mb-4 flex items-center gap-3 rounded-xl p-1 -m-1 hover:bg-white/5 transition-colors">
               <Avatar src={effectiveUser?.avatarUrl || effectiveUser?.image} name={userName} seed={effectiveUser?.id} className="h-12 w-12 ring-2 ring-pink-500/40" loading="eager" />
               <div className="min-w-0">
@@ -67,6 +87,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 )}
               </div>
             </Link>
+            )}
 
             {/* Navigation Menu */}
             <nav className="space-y-1" aria-label="Khám phá">

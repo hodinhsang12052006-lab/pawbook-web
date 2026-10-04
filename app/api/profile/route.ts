@@ -93,11 +93,17 @@ export async function GET(req: NextRequest) {
         }
       : null;
 
-    // Huy hiệu tính từ dữ liệu thật — lỗi ở đây không được làm hỏng trang hồ sơ.
-    const badges = await getBadges(user.id).catch((err) => {
-      console.error("getBadges error:", err);
-      return [];
-    });
+    // Huy hiệu tính từ dữ liệu thật (nhiều truy vấn) — CHỈ khi trang hồ sơ xin
+    // (?badges=1). Endpoint này còn được gọi mỗi lần mở app để nạp người dùng
+    // (SessionUserContext), không được làm chậm mọi lượt tải trang.
+    // Lỗi ở đây không được làm hỏng trang hồ sơ.
+    const wantBadges = searchParams.get("badges") === "1";
+    const badges = wantBadges
+      ? await getBadges(user.id).catch((err) => {
+          console.error("getBadges error:", err);
+          return [];
+        })
+      : undefined;
 
     return NextResponse.json({
       ...user,

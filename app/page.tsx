@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
@@ -34,6 +34,20 @@ const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 
 type HomeTab = "feed" | "jobs" | "portfolio";
+const TAB_ORDER: HomeTab[] = ["feed", "jobs", "portfolio"];
+
+// Vuốt ngang trên phần tử có thể cuộn ngang (hàng chip bang, hàng công cụ,
+// ảnh nhiều tấm...) là để CUỘN chứ không phải đổi tab — bỏ qua những chỗ đó.
+function insideHorizontalScroller(target: EventTarget | null, root: HTMLElement | null): boolean {
+  let el = target as HTMLElement | null;
+  while (el && el !== root) {
+    if (el.matches?.("input, textarea, video, [data-noswipe]")) return true;
+    const ox = getComputedStyle(el).overflowX;
+    if ((ox === "auto" || ox === "scroll") && el.scrollWidth > el.clientWidth + 2) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -43,6 +57,38 @@ export default function HomePage() {
   // vì bảng tin tuyển dụng thuần. Các luồng cũ (SalonDiagnosticModal, form
   // đăng ký) vẫn điều hướng thẳng bằng ?tab=jobs nên không bị ảnh hưởng.
   const [tab, setTab] = useState<HomeTab>("feed");
+  // Hướng trượt của nội dung khi đổi tab (theo thứ tự tab).
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const touchRef = useRef<{ x: number; y: number; t: number; skip: boolean } | null>(null);
+
+  // Đổi tab do người dùng (bấm / vuốt): tính hướng trượt, báo cho BottomNav
+  // sáng đúng mục, cập nhật URL (không cuộn trang).
+  const changeTab = (next: HomeTab) => {
+    if (next === tab) return;
+    setSlideDir(TAB_ORDER.indexOf(next) > TAB_ORDER.indexOf(tab) ? "right" : "left");
+    setTab(next);
+    window.dispatchEvent(new CustomEvent("hometab-change", { detail: next }));
+    router.replace(`/?tab=${next}`, { scroll: false });
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchRef.current = { x: t.clientX, y: t.clientY, t: Date.now(), skip: insideHorizontalScroller(e.target, contentRef.current) };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start || start.skip) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // Vuốt nhanh, rõ ràng theo chiều ngang (không nhầm với cuộn dọc).
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8 || Date.now() - start.t > 600) return;
+    const i = TAB_ORDER.indexOf(tab);
+    const next = TAB_ORDER[dx < 0 ? Math.min(i + 1, 2) : Math.max(i - 1, 0)];
+    changeTab(next);
+  };
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
@@ -71,7 +117,12 @@ export default function HomePage() {
   useEffect(() => {
     const handler = (e: Event) => {
       const nextTab = (e as CustomEvent<string>).detail;
-      if (nextTab === "jobs" || nextTab === "portfolio" || nextTab === "feed") setTab(nextTab);
+      if (nextTab === "jobs" || nextTab === "portfolio" || nextTab === "feed") {
+        setTab((cur) => {
+          if (cur !== nextTab) setSlideDir(TAB_ORDER.indexOf(nextTab) > TAB_ORDER.indexOf(cur) ? "right" : "left");
+          return nextTab;
+        });
+      }
     };
     window.addEventListener("hometab-change", handler);
     return () => window.removeEventListener("hometab-change", handler);
@@ -146,9 +197,9 @@ export default function HomePage() {
         </section>
       )}
 
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-24 md:pb-8">
+      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-28 md:pb-8">
         <div className="flex flex-col md:flex-row gap-6">
-          <Sidebar activeTab={tab} setActiveTab={(t) => setTab(t as any)} />
+          <Sidebar activeTab={tab} setActiveTab={(t) => changeTab(t as HomeTab)} />
 
           <div className="flex-1 min-w-0 space-y-5">
             {/* Region Switcher — nổi bật, chữ to, tương phản cao */}
@@ -242,37 +293,37 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-1 bg-[#020617]/85 backdrop-blur-md">
-              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-lg shadow-black/20">
-                <button
-                  onClick={() => setTab("feed")}
-                  className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                    tab === "feed" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  <Newspaper className="h-4 w-4" />
-                  <span>Bảng tin</span>
-                </button>
-                <button
-                  onClick={() => setTab("jobs")}
-                  className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                    tab === "jobs" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  <Flame className="h-4 w-4" />
-                  <span><span className="sm:hidden">Việc gấp</span><span className="hidden sm:inline">Cần thợ gấp</span></span>
-                </button>
-                <button
-                  onClick={() => setTab("portfolio")}
-                  className={`flex items-center justify-center gap-1.5 py-3 rounded-lg text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-                    tab === "portfolio" ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span><span className="sm:hidden">Thợ rảnh</span><span className="hidden sm:inline">Thợ đang rảnh</span></span>
-                </button>
+              <div role="tablist" aria-label="Nội dung trang chủ" className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
+                {/* Viên chọn trượt mượt sang tab đang mở */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 shadow-lg shadow-pink-600/25 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  style={{ transform: `translateX(${TAB_ORDER.indexOf(tab) * 100}%)` }}
+                />
+                {([
+                  { id: "feed", icon: Newspaper, short: "Bảng tin", long: "Bảng tin" },
+                  { id: "jobs", icon: Flame, short: "Việc gấp", long: "Cần thợ gấp" },
+                  { id: "portfolio", icon: Sparkles, short: "Thợ rảnh", long: "Thợ đang rảnh" },
+                ] as const).map((t) => (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={tab === t.id}
+                    onClick={() => changeTab(t.id)}
+                    className={`relative z-10 flex items-center justify-center gap-1.5 rounded-lg py-3 text-xs font-bold transition-colors duration-200 active:scale-95 sm:text-sm ${
+                      tab === t.id ? "text-white" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <t.icon className="h-4 w-4" />
+                    <span><span className="sm:hidden">{t.short}</span><span className="hidden sm:inline">{t.long}</span></span>
+                  </button>
+                ))}
               </div>
             </div>
 
+            {/* Vuốt trái/phải trên điện thoại để chuyển tab; nội dung trượt vào theo hướng vuốt. */}
+            <div ref={contentRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="min-h-[50vh]">
+              <div key={tab} className={slideDir === "right" ? "tab-in-right" : slideDir === "left" ? "tab-in-left" : ""}>
             {tab === "feed" ? (
               <SocialFeed market={market} state={state} city={city} />
             ) : tab === "jobs" ? (
@@ -280,6 +331,8 @@ export default function HomePage() {
             ) : (
               <TechnicianGrid market={market} state={state} city={city} />
             )}
+              </div>
+            </div>
           </div>
 
           {sessionUser && <RightRail market={market} state={state} />}

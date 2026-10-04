@@ -557,7 +557,7 @@ export default function ProfilePage() {
       </main>
 
       {/* Thanh lưu dính đáy — luôn trong tầm tay, không phải cuộn xuống cuối form. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 px-4 md:bottom-6">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+82px)] z-40 px-4 md:bottom-6">
         <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/90 p-2.5 pl-4 shadow-2xl shadow-black/60 backdrop-blur-xl md:px-3">
           <p className="hidden flex-1 text-xs text-slate-400 sm:block">Nhớ bấm lưu sau khi chỉnh sửa.</p>
           <button

@@ -7,6 +7,11 @@ import SupplyProductCard, { SupplyProductType } from "./SupplyProductCard";
 import CreatePostComposer from "./CreatePostComposer";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
+import { useStudio, ThemeCard, TipCard, RecapCard } from "./StudioCards";
+
+// Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
+const TIP_AFTER_POST = 3;
+const RECAP_AFTER_POST = 8;
 
 interface SocialFeedProps {
   market: "US" | "AU";
@@ -43,6 +48,7 @@ function FeedSkeleton() {
 export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   const { user } = useSessionUser();
   const isTech = user?.role === "TECHNICIAN";
+  const studio = useStudio(market, user?.role);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [supplyProducts, setSupplyProducts] = useState<SupplyProductType[]>([]);
@@ -134,20 +140,32 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
 
   const handlePosted = (post: FeedPost) => setPosts((prev) => [post, ...prev]);
 
+  // "Tham gia #thử thách" → mở ô soạn bài với hashtag điền sẵn.
+  const joinChallenge = (hashtag: string) => {
+    try {
+      sessionStorage.setItem("pn_compose_tag", hashtag);
+    } catch {}
+    window.dispatchEvent(new CustomEvent("compose-post", { detail: { hashtag } }));
+  };
+  const suggestedTags = Array.from(new Set([studio?.theme?.hashtag, ...(studio?.trendingTags ?? [])].filter(Boolean) as string[])).slice(0, 5);
+
   // Trộn bài đăng + thẻ sản phẩm thành 1 danh sách render duy nhất.
   const feedItems = useMemo(() => {
-    if (supplyProducts.length === 0) return posts.map((p) => ({ type: "post" as const, post: p }));
-    const items: Array<{ type: "post"; post: FeedPost } | { type: "supply"; product: SupplyProductType }> = [];
+    const items: Array<
+      { type: "post"; post: FeedPost } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" }
+    > = [];
     let supplyIdx = 0;
     posts.forEach((post, idx) => {
       items.push({ type: "post", post });
-      if ((idx + 1) % SUPPLY_EVERY_N_POSTS === 0) {
+      if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
+      if (idx + 1 === RECAP_AFTER_POST && studio?.recap) items.push({ type: "recap" });
+      if (supplyProducts.length > 0 && (idx + 1) % SUPPLY_EVERY_N_POSTS === 0) {
         items.push({ type: "supply", product: supplyProducts[supplyIdx % supplyProducts.length] });
         supplyIdx += 1;
       }
     });
     return items;
-  }, [posts, supplyProducts]);
+  }, [posts, supplyProducts, studio]);
 
   return (
     <div className="space-y-4">
@@ -155,7 +173,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
           tỉ lệ "chủ tìm thợ" áp đảo "thợ tìm việc" trên thị trường, nên đây
           chính là lúc đúng nhất để nhắc thợ đăng bài — họ đang là bên được
           săn đón, chỉ cần xuất hiện là dễ được chủ để ý ngay. */}
-      {isTech && (
+      {studio?.theme && <ThemeCard studio={studio} isOwner={user?.role === "OWNER"} onJoin={joinChallenge} />}
+      {isTech && !studio?.theme && (
         <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
           <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />
           <p className="text-xs sm:text-sm text-slate-200">
@@ -163,7 +182,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
           </p>
         </div>
       )}
-      <CreatePostComposer onPosted={handlePosted} />
+      <CreatePostComposer onPosted={handlePosted} suggestedTags={suggestedTags} />
 
       {loading ? (
         <FeedSkeleton />
@@ -187,8 +206,12 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
                 post={item.post}
                 onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
               />
-            ) : (
+            ) : item.type === "supply" ? (
               <SupplyProductCard key={`supply-slot-${idx}`} product={item.product} />
+            ) : item.type === "tip" ? (
+              <TipCard key="studio-tip" tip={studio!.tip} />
+            ) : (
+              <RecapCard key="studio-recap" recap={studio!.recap!} market={market} />
             )
           )}
         </div>

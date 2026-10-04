@@ -52,7 +52,13 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
         {/* Nền chung toàn app — xem .app-backdrop trong globals.css */}
-        <div aria-hidden className="app-backdrop" />
+        <div aria-hidden className="app-backdrop">
+          <span className="aurora aurora-1" />
+          <span className="aurora aurora-2" />
+          <span className="aurora aurora-3" />
+          <span className="beam" />
+          <span className="grain" />
+        </div>
         <LanguageProvider>
           <SessionUserProvider>
             <CallManagerProvider>

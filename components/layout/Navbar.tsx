@@ -52,7 +52,7 @@ export default function Navbar() {
               ) : sessionUser.role === "OWNER" ? (
                 <button
                   onClick={() => router.push("/jobs/create")}
-                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
+                  className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
                   title="Đăng tin tuyển thợ"
                 >
                   <Plus className="h-4 w-4" />
@@ -61,7 +61,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push("/profile")}
-                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
+                  className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
                   title="Đăng ảnh portfolio"
                 >
                   <Plus className="h-4 w-4" />

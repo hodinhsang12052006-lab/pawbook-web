@@ -15,7 +15,7 @@ const POST_TYPE_OPTIONS: { value: "GENERAL" | "SHOWCASE"; label: string }[] = [
   { value: "SHOWCASE", label: "✨ Khoe tay nghề / tiệm" },
 ];
 
-export default function CreatePostComposer({ onPosted }: { onPosted: (post: FeedPost) => void }) {
+export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { onPosted: (post: FeedPost) => void; suggestedTags?: string[] }) {
   const { user } = useSessionUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,14 +31,19 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
   // Đến từ trang khác thì cờ nằm trong sessionStorage (đọc 1 lần lúc mount).
   useEffect(() => {
     const focusComposer = () => {
+      // Hashtag thử thách (nút "Tham gia #…") — điền sẵn vào cuối bài.
+      let tag: string | null = null;
       try {
         sessionStorage.removeItem("pn_compose");
+        tag = sessionStorage.getItem("pn_compose_tag");
+        sessionStorage.removeItem("pn_compose_tag");
       } catch {}
+      if (tag) setContent((prev) => (prev.toLowerCase().includes(`#${tag!.toLowerCase()}`) ? prev : `${prev}${prev && !prev.endsWith(" ") ? " " : ""}#${tag} `));
       boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => textareaRef.current?.focus({ preventScroll: true }), 350);
     };
     try {
-      if (sessionStorage.getItem("pn_compose") === "1") {
+      if (sessionStorage.getItem("pn_compose") === "1" || sessionStorage.getItem("pn_compose_tag")) {
         sessionStorage.removeItem("pn_compose");
         setTimeout(focusComposer, 300);
       }
@@ -121,6 +126,29 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
           className="flex-1 resize-none bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
         />
       </div>
+
+      {/* Gợi ý hashtag đang hot / thử thách tuần — chạm 1 lần là thêm vào bài,
+          bài có hashtag lên bảng Xu hướng & bảng thử thách. */}
+      {suggestedTags.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pl-[52px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {suggestedTags.map((tag) => {
+            const used = content.toLowerCase().includes(`#${tag.toLowerCase()}`);
+            return (
+              <button
+                key={tag}
+                type="button"
+                disabled={used}
+                onClick={() => setContent((prev) => `${prev}${prev && !prev.endsWith(" ") ? " " : ""}#${tag} `)}
+                className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 transition-colors ${
+                  used ? "bg-pink-500/15 text-pink-200 ring-pink-500/40" : "text-slate-400 ring-white/10 hover:text-pink-200 hover:ring-pink-500/40"
+                }`}
+              >
+                #{tag}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {mediaUrls.length > 0 && (
         <div className="flex gap-2 overflow-x-auto custom-scrollbar pl-[52px]">

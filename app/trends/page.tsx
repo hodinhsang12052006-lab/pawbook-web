@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Avatar from "@/components/ui/Avatar";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import type { TrendsData } from "@/lib/trends";
+import { useStudio, ChallengeBoard } from "@/components/feed/StudioCards";
 import {
   TrendingUp, Flame, Heart, MessageCircle, Eye, Hash, DollarSign, Star, Users, Crown, Sparkles, ArrowRight, Activity,
 } from "lucide-react";
@@ -45,6 +46,7 @@ export default function TrendsPage() {
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [data, setData] = useState<TrendsData | null>(null);
   const [error, setError] = useState(false);
+  const studio = useStudio(market, user?.role);
 
   useEffect(() => {
     if (user?.market === "AU") setMarket("AU");
@@ -63,7 +65,7 @@ export default function TrendsPage() {
     };
   }, [market]);
 
-  const empty = data && !data.pulse.length && !data.hotPosts.length && !data.hashtags.length && !data.salaries.length && !data.risingTechs.length;
+  const empty = data && !studio?.challenge && !data.pulse.length && !data.hotPosts.length && !data.hashtags.length && !data.salaries.length && !data.risingTechs.length;
 
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
@@ -96,6 +98,8 @@ export default function TrendsPage() {
             </div>
           </div>
         </header>
+
+        {studio?.challenge && <ChallengeBoard studio={studio} />}
 
         {error && <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">Không tải được xu hướng. Vui lòng thử lại sau.</p>}
         {!data && !error && <Skeleton />}

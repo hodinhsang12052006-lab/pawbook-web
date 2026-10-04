@@ -11,6 +11,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
 import RightRail from "@/components/layout/RightRail";
 import ToolsPanel from "@/components/layout/ToolsPanel";
+import WelcomeBack from "@/components/layout/WelcomeBack";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
@@ -92,6 +93,7 @@ export default function HomePage() {
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
+  const [showCitySearch, setShowCitySearch] = useState(false);
 
   // Đọc ?tab=/?market=/?state= trên URL phía client (không dùng
   // useSearchParams để tránh buộc bọc Suspense — kết hợp với client
@@ -212,6 +214,8 @@ export default function HomePage() {
               </div>
             )}
 
+            {sessionUser && <WelcomeBack onGoTab={changeTab} />}
+
             {sessionUser && <ToolsPanel variant="row" />}
 
             {completeness && completeness.percent < 100 && !hideCompleteness && (
@@ -227,7 +231,66 @@ export default function HomePage() {
               </div>
             )}
 
-            <div className="glass-card rounded-2xl p-3 sm:p-4 space-y-3">
+            {/* Bộ lọc — ĐIỆN THOẠI: gọn 1 hàng (Mỹ/Úc · chip bang vuốt ngang · 🔍),
+                trước đây chiếm ~200px khiến nội dung bị đẩy xuống dưới màn hình đầu. */}
+            <div className="glass-card space-y-2 rounded-2xl p-2 md:hidden">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-shrink-0 rounded-full bg-slate-950/70 p-0.5 ring-1 ring-white/10" role="group" aria-label="Thị trường">
+                  {(["US", "AU"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => { setMarket(m); setState(""); }}
+                      aria-pressed={market === m}
+                      className={`rounded-full px-2.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400"}`}
+                    >
+                      {m === "US" ? "🇺🇸 Mỹ" : "🇦🇺 Úc"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {["", ...states].map((s) => (
+                    <button
+                      key={s || "all"}
+                      onClick={() => setState(s)}
+                      className={`flex-shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-bold ring-1 transition-all active:scale-95 ${
+                        state === s ? "bg-pink-600 text-white ring-pink-600" : "bg-slate-950/60 text-slate-400 ring-slate-800"
+                      }`}
+                    >
+                      {s ? stateName(market, s) : "Tất cả bang"}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowCitySearch((v) => !v)}
+                  aria-label="Tìm theo thành phố"
+                  aria-expanded={showCitySearch || !!city}
+                  className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ring-1 transition-colors ${showCitySearch || city ? "bg-pink-500/15 text-pink-300 ring-pink-500/40" : "text-slate-400 ring-slate-800"}`}
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              </div>
+              {(showCitySearch || city) && (
+                <div className="relative animate-fadeIn">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    autoFocus={showCitySearch && !city}
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Thành phố… (VD: Houston, Sydney)"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950/60 py-2 pl-9 pr-9 text-sm text-slate-100 placeholder-slate-500 focus:border-pink-500 focus:outline-none"
+                  />
+                  {city && (
+                    <button onClick={() => { setCity(""); setShowCitySearch(false); }} aria-label="Xoá tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 hover:text-slate-200">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bộ lọc — MÁY TÍNH: đầy đủ như cũ */}
+            <div className="glass-card hidden space-y-3 rounded-2xl p-3 sm:p-4 md:block">
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-950/60 p-1 border border-slate-800/80">
                 <button
                   onClick={() => { setMarket("US"); setState(""); }}

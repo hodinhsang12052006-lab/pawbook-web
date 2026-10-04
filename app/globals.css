@@ -225,6 +225,58 @@ body {
   background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(2, 6, 23, 0.7) 100%);
 }
 
+/* Nâng cấp nền: 3 dải "aurora" trôi RẤT chậm (40–60 giây/vòng) + chùm sáng
+   phía trên + lớp hạt mịn kiểu phim. Chỉ animate transform/opacity của các
+   lớp gradient có sẵn (KHÔNG dùng filter: blur — đắt) nên GPU gánh nhẹ. Trên
+   điện thoại và khi người dùng bật "giảm chuyển động" thì đứng yên. */
+.app-backdrop .aurora {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0.9;
+  will-change: transform;
+}
+.app-backdrop .aurora-1 {
+  width: 70vmax; height: 70vmax; left: -25vmax; top: -38vmax;
+  background: radial-gradient(closest-side, rgba(236, 72, 153, 0.22), rgba(236, 72, 153, 0.06) 55%, transparent);
+  animation: bgDrift1 48s ease-in-out infinite alternate;
+}
+.app-backdrop .aurora-2 {
+  width: 60vmax; height: 60vmax; right: -24vmax; top: -30vmax;
+  background: radial-gradient(closest-side, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.05) 55%, transparent);
+  animation: bgDrift2 58s ease-in-out infinite alternate;
+}
+.app-backdrop .aurora-3 {
+  width: 64vmax; height: 64vmax; left: 20vw; bottom: -46vmax;
+  background: radial-gradient(closest-side, rgba(14, 165, 233, 0.12), rgba(14, 165, 233, 0.03) 55%, transparent);
+  animation: bgDrift3 64s ease-in-out infinite alternate;
+}
+/* Chùm sáng mảnh từ trên xuống giữa màn hình — tạo cảm giác "sân khấu". */
+.app-backdrop .beam {
+  position: absolute; left: 50%; top: -10vh; width: 60vw; height: 70vh;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 50% 60% at 50% 0%, rgba(244, 114, 182, 0.08), transparent 70%);
+}
+/* Hạt nhiễu mịn (SVG feTurbulence vẽ 1 lần) — khử cảm giác "gradient nhựa". */
+.app-backdrop .grain {
+  position: absolute; inset: 0; opacity: 0.05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+@keyframes bgDrift1 {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(12vw, 8vh, 0) scale(1.12); }
+}
+@keyframes bgDrift2 {
+  from { transform: translate3d(0, 0, 0) scale(1.05); }
+  to { transform: translate3d(-10vw, 12vh, 0) scale(0.95); }
+}
+@keyframes bgDrift3 {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-14vw, -6vh, 0) scale(1.1); }
+}
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .app-backdrop .aurora { animation: none; }
+}
+
 /* @layer components: để utility Tailwind (hover:border-*, bg-*) vẫn ghi đè được. */
 @layer components {
   /* Thẻ "kính mờ" dùng chung cho khối nội dung đặt trên nền mới. */

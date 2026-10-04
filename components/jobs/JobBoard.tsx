@@ -249,7 +249,7 @@ function JobCard({
         <a
           href={`tel:${job.phone}`}
           onClick={() => trackJobContact(job.id)}
-          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white hover:bg-emerald-500 ${PRESS}`}
+          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-bold text-white hover:bg-emerald-600 ${PRESS}`}
         >
           <Phone className="h-5 w-5" /> Gọi ngay
         </a>

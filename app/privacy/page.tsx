@@ -93,7 +93,7 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-lg font-bold text-white">7. Liên hệ</h2>
           <p>
             Mọi câu hỏi về chính sách bảo mật, vui lòng liên hệ:{" "}
-            <a href="mailto:support@bitpawos.com" className="text-pink-400 hover:underline">support@bitpawos.com</a>.
+            <a href="mailto:support@bitpawos.com" className="text-pink-400 underline underline-offset-2">support@bitpawos.com</a>.
           </p>
           <p className="text-xs text-slate-500">
             [Điền tên pháp nhân/chủ sở hữu vận hành nền tảng] · [Điền địa chỉ liên hệ nếu cần cho hồ sơ store]

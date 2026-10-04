@@ -276,7 +276,7 @@ await step("F21", "Desktop: Sidebar có Công cụ (Tin nhắn, Đăng tin, Rada
   await ctx.addCookies(await ownerCtx.cookies());
   const p = await ctx.newPage();
   await p.goto(BASE_URL + "/");
-  await p.getByText("Mẹo hôm nay").waitFor({ timeout: 15000 });
+  await p.getByText("Mẹo hôm nay", { exact: true }).waitFor({ timeout: 15000 });
   const tools = p.getByRole("navigation", { name: "Công cụ" });
   await tools.getByRole("link", { name: /Tin nhắn/ }).waitFor();
   await tools.getByRole("link", { name: /Nail Radar/ }).waitFor();

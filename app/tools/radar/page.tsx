@@ -106,7 +106,7 @@ export default function NailRadarPage() {
             <button
               key={m}
               onClick={() => setMarket(m)}
-              className={`py-2.5 rounded-lg text-xs font-bold transition-all ${market === m ? "bg-amber-600 text-white" : "text-slate-400"}`}
+              className={`py-2.5 rounded-lg text-xs font-bold transition-all ${market === m ? "bg-amber-700 text-white" : "text-slate-400"}`}
             >
               {m === "US" ? "🇺🇸 Mỹ (US)" : "🇦🇺 Úc (AU)"}
             </button>

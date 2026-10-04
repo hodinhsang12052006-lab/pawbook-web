@@ -209,7 +209,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
             ) : item.type === "supply" ? (
               <SupplyProductCard key={`supply-slot-${idx}`} product={item.product} />
             ) : item.type === "tip" ? (
-              <TipCard key="studio-tip" tip={studio!.tip} />
+              // Màn hình rộng (xl) đã có "Mẹo hôm nay" ở cột phải — tránh 2 mẹo khác nhau cùng lúc.
+              <div key="studio-tip" className="xl:hidden"><TipCard tip={studio!.tip} /></div>
             ) : (
               <RecapCard key="studio-recap" recap={studio!.recap!} market={market} />
             )

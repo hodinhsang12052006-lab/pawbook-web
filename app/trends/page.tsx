@@ -248,7 +248,7 @@ export default function TrendsPage() {
         )}
 
         {data && (
-          <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-600">
+          <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500">
             <Users className="h-3 w-3" /> Chỉ tính hoạt động thật của thành viên — không có số liệu ảo.
           </p>
         )}

@@ -298,7 +298,7 @@ export default function OwnerRegisterForm() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.stateLabel")}</label>
-            <select value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
+            <select aria-label={t("auth.common.stateLabel")} value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
               {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
             </select>
           </div>
@@ -312,6 +312,7 @@ export default function OwnerRegisterForm() {
           <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.phoneLabel")}</label>
           <div className="flex gap-2">
             <select
+              aria-label="Mã quốc gia"
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value as "+1" | "+61")}
               className={`min-h-[48px] rounded-2xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}

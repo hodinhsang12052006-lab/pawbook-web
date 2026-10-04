@@ -196,6 +196,7 @@ export default function IncomeTrackerPage() {
           <div>
             <label className="block text-xs font-bold text-slate-400 mb-1.5">Ngày</label>
             <input
+              aria-label="Ngày"
               type="date"
               value={formDate}
               max={todayISO()}
@@ -275,6 +276,7 @@ export default function IncomeTrackerPage() {
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <input
+              aria-label="Phần trăm bạn ăn chia mỗi dịch vụ"
               type="number"
               min={0}
               max={100}

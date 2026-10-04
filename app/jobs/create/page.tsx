@@ -144,7 +144,7 @@ export default function CreateJobPage() {
 
               <div>
                 <label className="block font-bold text-slate-300 mb-1.5">Bang / Tiểu bang *</label>
-                <select value={state} onChange={(e) => setState(e.target.value)} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200">
+                <select aria-label="Bang / Tiểu bang" value={state} onChange={(e) => setState(e.target.value)} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-slate-200">
                   {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
                 </select>
               </div>

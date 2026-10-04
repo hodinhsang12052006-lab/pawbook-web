@@ -75,7 +75,7 @@ export default function Navbar() {
                   href="/messages"
                   prefetch={true}
                   onClick={resetUnread}
-                  className="rounded-full p-1.5 sm:p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-100 transition-colors relative"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
                   title={t("menu.messages")}
                 >
                   <div className="relative">

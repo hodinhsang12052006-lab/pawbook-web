@@ -151,7 +151,7 @@ function LeadDetailPanel({ lead, onClose }: { lead: OwnerLead; onClose: () => vo
             </div>
             {lead.phone && (
               <div className="flex gap-2">
-                <a href={`tel:${lead.phone}`} className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-sm font-bold text-white ${PRESS}`}>
+                <a href={`tel:${lead.phone}`} className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 py-2.5 text-sm font-bold text-white ${PRESS}`}>
                   <Phone className="h-4 w-4" /> Gọi ngay
                 </a>
                 <button onClick={() => copyToClipboard(lead.phone!, "Đã copy số điện thoại")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 py-2.5 text-sm font-bold text-slate-100 ${PRESS}`}>
@@ -262,11 +262,10 @@ function LeadDetailPanel({ lead, onClose }: { lead: OwnerLead; onClose: () => vo
 function LeadCard({ lead, onOpen }: { lead: OwnerLead; onOpen: () => void }) {
   const latestJob = lead.jobs[0];
   return (
+    // Thẻ bấm được bằng chuột/chạm; bàn phím & trình đọc màn hình dùng nút
+    // mũi tên "Xem chi tiết" — không lồng nút Gọi/Copy bên trong 1 role=button.
     <div
-      role="button"
-      tabIndex={0}
       onClick={onOpen}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
       className={`w-full text-left rounded-2xl border border-slate-800 bg-slate-900/30 p-4 space-y-3 hover:border-pink-500/40 transition-colors cursor-pointer ${PRESS}`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -274,7 +273,9 @@ function LeadCard({ lead, onOpen }: { lead: OwnerLead; onOpen: () => void }) {
           <p className="text-sm font-extrabold text-white truncate">{latestJob?.salonName || "Chưa đăng tin"}</p>
           <p className="text-xs text-slate-400 truncate">{lead.name} · {lead.city}, {stateName(lead.market, lead.state)} {lead.market === "US" ? "🇺🇸" : "🇦🇺"}</p>
         </div>
-        <ChevronRight className="h-4 w-4 text-slate-600 flex-shrink-0 mt-1" />
+        <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} aria-label="Xem chi tiết" className="-m-1 flex-shrink-0 rounded-lg p-1 text-slate-500 hover:bg-white/5 hover:text-slate-200">
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="flex items-center justify-between">
@@ -307,7 +308,7 @@ function LeadCard({ lead, onOpen }: { lead: OwnerLead; onOpen: () => void }) {
             <a
               href={`tel:${lead.phone}`}
               onClick={(e) => e.stopPropagation()}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 py-2 text-xs font-bold text-white ${PRESS}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 py-2 text-xs font-bold text-white ${PRESS}`}
             >
               <Phone className="h-3.5 w-3.5" /> Gọi
             </a>
@@ -363,7 +364,7 @@ function TechnicianCard({ tech, onOpenImage }: { tech: TechnicianLead; onOpenIma
 
       {tech.phone && (
         <div className="flex gap-2">
-          <a href={`tel:${tech.phone}`} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 py-2 text-xs font-bold text-white ${PRESS}`}>
+          <a href={`tel:${tech.phone}`} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 py-2 text-xs font-bold text-white ${PRESS}`}>
             <Phone className="h-3.5 w-3.5" /> {tech.phone}
           </a>
           <button onClick={() => copyToClipboard(tech.phone!, "Đã copy số điện thoại")} className={`rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 ${PRESS}`}>
@@ -497,7 +498,7 @@ export default function AdminLeadsPage() {
       <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.push("/")} className={`p-2 rounded-full text-slate-400 hover:bg-slate-900 ${PRESS}`}>
+            <button onClick={() => router.push("/")} aria-label="Về trang chủ" className={`p-2 rounded-full text-slate-400 hover:bg-slate-900 ${PRESS}`}>
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>

@@ -296,7 +296,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <a
                 href={`tel:${job.phone}`}
                 onClick={() => trackJobContact(job.id)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-700/25 transition-all"
               >
                 <Phone className="h-5 w-5" /> Gọi ngay {job.phone}
               </a>

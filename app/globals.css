@@ -30,6 +30,15 @@
 :root {
   --background: #020617;
   --foreground: #f8fafc;
+  /* Chữ phụ (text-slate-500, dùng ~150 chỗ) trên nền tối của app chỉ đạt
+     ~4.0:1 — dưới chuẩn WCAG AA 4.5:1, khó đọc ngoài nắng. Làm sáng nhẹ tông
+     này cho nền tối: đạt 4.8–5.5:1 trên mọi nền tối đang dùng. */
+  --color-slate-500: #7487a3;
+}
+/* Trang đăng nhập/đăng ký có chế độ SÁNG — giữ slate-500 gốc của Tailwind ở
+   đó (màu sáng hơn trên nền trắng sẽ lại thiếu tương phản). */
+.theme-light {
+  --color-slate-500: oklch(55.4% 0.046 257.417);
 }
 
 body {

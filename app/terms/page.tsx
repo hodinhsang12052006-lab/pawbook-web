@@ -86,7 +86,7 @@ export default function TermsOfServicePage() {
           <h2 className="text-lg font-bold text-white">7. Liên hệ</h2>
           <p>
             Câu hỏi về điều khoản dịch vụ, vui lòng liên hệ:{" "}
-            <a href="mailto:support@bitpawos.com" className="text-pink-400 hover:underline">support@bitpawos.com</a>.
+            <a href="mailto:support@bitpawos.com" className="text-pink-400 underline underline-offset-2">support@bitpawos.com</a>.
           </p>
         </section>
 

@@ -166,11 +166,11 @@ export default function NotificationBell() {
         onClick={toggle}
         aria-label={unread > 0 ? `Thông báo, ${unread} chưa đọc` : "Thông báo"}
         aria-expanded={open}
-        className="relative rounded-full p-1.5 sm:p-2 text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
+        className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
       >
         <Bell className={`h-[18px] w-[18px] ${unread > 0 ? "text-pink-300" : ""}`} />
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-slate-950 bg-gradient-to-r from-pink-600 to-fuchsia-600 px-1 text-[9px] font-black leading-none text-white">
+          <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full border border-slate-950 bg-gradient-to-r from-pink-600 to-fuchsia-600 px-1 text-[9px] font-black leading-none text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         )}

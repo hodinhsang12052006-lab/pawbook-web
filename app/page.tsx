@@ -402,7 +402,7 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-600">
+      <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500">
         <p>© 2026 PawNail Jobs. Nền tảng việc làm &amp; tay nghề Nail cho thị trường Mỹ &amp; Úc.</p>
       </footer>
     </div>

@@ -41,7 +41,9 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
         setUser(session?.user || null);
       }
     } catch (err) {
-      console.error(err);
+      // "Failed to fetch" khi người dùng chuyển trang lúc đang tải (request bị
+      // huỷ) hoặc mất mạng chốc lát — không phải lỗi app, đừng đẩy lên Sentry.
+      if (!(err instanceof TypeError && /fetch/i.test(err.message))) console.error(err);
     } finally {
       loadedOnce.current = true;
       setLoading(false);

@@ -45,7 +45,7 @@ export default function SupplyProductCard({ product }: { product: SupplyProductT
           <Package className="h-3 w-3" /> Hàng Sỉ Tiệm Nail
         </span>
         {product.discountPercent && (
-          <span className="absolute top-2.5 right-2.5 rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-black text-white shadow">
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-black text-white shadow">
             -{product.discountPercent}%
           </span>
         )}

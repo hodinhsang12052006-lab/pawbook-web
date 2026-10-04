@@ -29,7 +29,7 @@ export default function CustomAuthLayout({
   return (
     <AuthSettingsContext.Provider value={{ theme, toggleTheme }}>
       <div className={`flex min-h-screen transition-colors duration-300 ${
-        theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-gray-50 text-slate-900"
+        theme === "dark" ? "bg-slate-950 text-slate-100" : "theme-light bg-gray-50 text-slate-900"
       }`}>
 
         {/* Floating controls in the upper right */}
@@ -39,6 +39,7 @@ export default function CustomAuthLayout({
           <div className="relative flex items-center gap-1.5 rounded-xl border border-slate-200/20 bg-white/10 px-3 py-1.5 backdrop-blur-md">
             <Globe className={`h-4 w-4 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`} />
             <select
+              aria-label="Ngôn ngữ / Language"
               value={locale}
               onChange={(e) => setLocale(e.target.value as "vi" | "en")}
               className={`bg-transparent text-xs font-bold focus:outline-none cursor-pointer border-none p-0 ${

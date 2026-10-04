@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
 import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
+import { sendPush } from "@/lib/push";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -492,6 +493,19 @@ export async function POST(req: Request) {
       if (validChannels.length > 0) {
         // Client's handler reads `data.message`, so the payload must be nested.
         await getPusherServer()?.trigger(validChannels, "new-message", { message: miniPayload });
+      }
+      // Thông báo đẩy cho người nhận đang KHÔNG mở app (service worker tự bỏ
+      // qua nếu app đang mở). Tag theo hội thoại → nhiều tin chỉ 1 thông báo.
+      const recipients = conversation.participants.map((p) => p.id).filter((id) => id && id !== userId);
+      if (recipients.length && miniPayload.type !== "CALL") {
+        const preview =
+          miniPayload.type === "IMAGE" ? "📷 Đã gửi một ảnh" : miniPayload.type === "VIDEO" ? "🎬 Đã gửi một video" : miniPayload.type === "STICKER" ? miniPayload.content : String(miniPayload.content || "");
+        sendPush(recipients, {
+          title: miniPayload.sender.name,
+          body: preview,
+          url: `/messages?to=${userId}`,
+          tag: `pn-chat-${miniPayload.conversationId}`,
+        }).catch(() => {});
       }
     } catch (pusherError: any) {
       console.error("❌ PUSHER LỖI TỪ SERVER:", pusherError?.body || pusherError);

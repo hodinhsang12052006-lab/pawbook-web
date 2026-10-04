@@ -38,6 +38,8 @@ import BottomNav from "@/components/layout/BottomNav";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import PusherStatusBanner from "@/components/PusherStatusBanner";
 import NativeAppBridge from "@/components/NativeAppBridge";
+import PushPrompt from "@/components/PushPrompt";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export default function RootLayout({
   children,
@@ -91,8 +93,10 @@ export default function RootLayout({
                 />
                 <PusherStatusBanner />
                 <NativeAppBridge />
+                <ServiceWorkerRegister />
                 {children}
                 <FomoToast />
+                <PushPrompt />
                 <ScrollToTop />
                 <BottomNav />
               </UnreadMessagesProvider>

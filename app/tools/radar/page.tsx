@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Radar, Loader2, DollarSign, Users, Package, Lightbulb, ClipboardList, AlertCircle, Info, TrendingUp } from "lucide-react";
 import { stateName } from "@/lib/stateNames";
+import Flag from "@/components/ui/Flag";
 
 type MarketKey = "US" | "AU";
 type SkillKey = "BOT" | "DIP" | "TAY_NUOC";
@@ -108,7 +109,7 @@ export default function NailRadarPage() {
               onClick={() => setMarket(m)}
               className={`py-2.5 rounded-lg text-xs font-bold transition-all ${market === m ? "bg-amber-700 text-white" : "text-slate-400"}`}
             >
-              {m === "US" ? "🇺🇸 Mỹ (US)" : "🇦🇺 Úc (AU)"}
+              <span className="inline-flex items-center justify-center gap-1.5"><Flag code={m} /> {m === "US" ? "Mỹ (US)" : "Úc (AU)"}</span>
             </button>
           ))}
         </div>

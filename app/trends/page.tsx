@@ -8,6 +8,7 @@ import Avatar from "@/components/ui/Avatar";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import type { TrendsData } from "@/lib/trends";
 import { useStudio, ChallengeBoard } from "@/components/feed/StudioCards";
+import Flag from "@/components/ui/Flag";
 import {
   TrendingUp, Flame, Heart, MessageCircle, Eye, Hash, DollarSign, Star, Users, Crown, Sparkles, ArrowRight, Activity,
 } from "lucide-react";
@@ -92,7 +93,7 @@ export default function TrendsPage() {
                   onClick={() => setMarket(m)}
                   className={`rounded-lg px-4 py-2 text-xs font-bold transition-all ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
                 >
-                  {m === "US" ? "🇺🇸 Mỹ" : "🇦🇺 Úc"}
+                  <span className="inline-flex items-center gap-1.5"><Flag code={m} /> {m === "US" ? "Mỹ" : "Úc"}</span>
                 </button>
               ))}
             </div>

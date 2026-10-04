@@ -42,8 +42,8 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
   return (
     <svg
       viewBox="0 0 40 40"
-      role="img"
-      aria-label={alt ?? name ?? "Ảnh đại diện"}
+      // alt="" = ảnh trang trí (tên đã hiện bên cạnh) → ẩn khỏi trình đọc màn hình.
+      {...(alt === "" ? { "aria-hidden": true } : { role: "img", "aria-label": alt ?? name ?? "Ảnh đại diện" })}
       className={`flex-shrink-0 rounded-full ${className}`}
     >
       <defs>

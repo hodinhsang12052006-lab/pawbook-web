@@ -15,6 +15,7 @@ import WelcomeBack from "@/components/layout/WelcomeBack";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
+import Flag from "@/components/ui/Flag";
 
 // Lời chào theo giờ địa phương — chi tiết nhỏ giúp app có "hơi người".
 function greeting(date = new Date()) {
@@ -241,9 +242,9 @@ export default function HomePage() {
                       key={m}
                       onClick={() => { setMarket(m); setState(""); }}
                       aria-pressed={market === m}
-                      className={`rounded-full px-2.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400"}`}
+                      className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400"}`}
                     >
-                      {m === "US" ? "🇺🇸 Mỹ" : "🇦🇺 Úc"}
+                      <span className="inline-flex items-center gap-1"><Flag code={m} className="h-3 w-4" /> {m === "US" ? "Mỹ" : "Úc"}</span>
                     </button>
                   ))}
                 </div>
@@ -252,7 +253,7 @@ export default function HomePage() {
                     <button
                       key={s || "all"}
                       onClick={() => setState(s)}
-                      className={`flex-shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-bold ring-1 transition-all active:scale-95 ${
+                      className={`min-h-[36px] flex-shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-bold ring-1 transition-all active:scale-95 ${
                         state === s ? "bg-pink-600 text-white ring-pink-600" : "bg-slate-950/60 text-slate-400 ring-slate-800"
                       }`}
                     >
@@ -264,7 +265,7 @@ export default function HomePage() {
                   onClick={() => setShowCitySearch((v) => !v)}
                   aria-label="Tìm theo thành phố"
                   aria-expanded={showCitySearch || !!city}
-                  className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ring-1 transition-colors ${showCitySearch || city ? "bg-pink-500/15 text-pink-300 ring-pink-500/40" : "text-slate-400 ring-slate-800"}`}
+                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ring-1 transition-colors ${showCitySearch || city ? "bg-pink-500/15 text-pink-300 ring-pink-500/40" : "text-slate-400 ring-slate-800"}`}
                 >
                   <Search className="h-4 w-4" />
                 </button>
@@ -301,7 +302,7 @@ export default function HomePage() {
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <span className="text-lg leading-none">🇺🇸</span> Mỹ · US
+                  <Flag code="US" /> Mỹ · US
                 </button>
                 <button
                   onClick={() => { setMarket("AU"); setState(""); }}
@@ -312,7 +313,7 @@ export default function HomePage() {
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <span className="text-lg leading-none">🇦🇺</span> Úc · AU
+                  <Flag code="AU" /> Úc · AU
                 </button>
               </div>
 

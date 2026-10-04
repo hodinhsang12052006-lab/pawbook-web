@@ -7,6 +7,7 @@ import { SPARKLE_DOTS } from "@/lib/sparkleDots";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
+import Flag from "@/components/ui/Flag";
 
 // Trang đăng nhập/đăng ký này chính là "trang chủ" thật sự với khách vãng
 // lai — mọi lượt vào "/" khi chưa đăng nhập đều redirect thẳng về đây, nên
@@ -192,7 +193,7 @@ export default function CustomAuthLayout({
                   <span className="text-white text-base font-black tracking-widest uppercase leading-none whitespace-nowrap">PawNail Jobs</span>
                 </Link>
                 <span className="rounded-full border border-white/15 bg-white/[0.06] backdrop-blur-md px-3 py-1.5 text-[10px] font-bold text-slate-200 shadow-[0_0_12px_rgba(217,70,239,0.35)] whitespace-nowrap">
-                  🇺🇸 US &amp; 🇦🇺 AU Nail Network
+                  <span className="inline-flex items-center gap-1"><Flag code="US" className="h-2.5 w-3.5" /> US &amp; <Flag code="AU" className="h-2.5 w-3.5" /> AU Nail Network</span>
                 </span>
               </div>
               <p className="relative z-10 mt-2.5 text-[11px] text-slate-400">

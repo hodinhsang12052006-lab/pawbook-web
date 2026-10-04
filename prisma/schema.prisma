@@ -83,8 +83,24 @@ model User {
   reviewsGiven    Review[] @relation("ReviewsGiven")
   reviewsReceived Review[] @relation("ReviewsReceived")
 
+  pushSubscriptions PushSubscription[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Đăng ký nhận THÔNG BÁO ĐẨY (Web Push / VAPID) — mỗi trình duyệt/thiết bị
+// 1 bản ghi. Tạo bằng prisma/sql/2026-10-04_push_subscriptions.sql.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Tin tuyển thợ do chủ tiệm (OWNER) đăng

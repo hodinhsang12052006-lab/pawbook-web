@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
-    await notifyUser(post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã bình luận bài viết của bạn`);
+    await notifyUser(post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã bình luận bài viết của bạn`, "/?tab=feed");
 
     return NextResponse.json(
       {

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
 import prisma from "@/lib/prisma";
+import { sendPush } from "@/lib/push";
 
 // Maps the client's call `action` (MessagesContent.tsx's handleStartCall /
 // handleAcceptCall / handleEndCall / camera toggle) to the Pusher event name
@@ -90,6 +91,14 @@ export async function POST(req: Request) {
     }
 
     await getPusherServer()?.trigger(chatChannelName(String(targetId).trim()), eventName, payload);
+    if (action === "offer") {
+      sendPush(String(targetId).trim(), {
+        title: `${payload.callType === "video" ? "📹 Cuộc gọi video" : "📞 Cuộc gọi thoại"} đến`,
+        body: `${payload.callerName} đang gọi cho bạn — mở PawNail để trả lời`,
+        url: `/messages?to=${userId}`,
+        tag: "pn-call",
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

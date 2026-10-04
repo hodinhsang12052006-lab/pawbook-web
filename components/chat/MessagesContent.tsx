@@ -4,8 +4,8 @@ import Link from "next/link";
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import GifPicker from "@/components/chat/GifPicker";
 import {
-  Send, User, Search, MessageSquare, Loader2, Plus, Users,
-  Smile, X, ArrowLeft, Check, CheckCheck, Paperclip, Zap, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
+  Send, Search, MessageSquare, Loader2, Plus, Users,
+  Smile, X, ArrowLeft, Check, CheckCheck, Paperclip, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -16,183 +16,8 @@ import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useCallManager } from "@/lib/CallManagerContext";
 import { avatarSrc } from "@/lib/avatar";
-
-const POPULAR_EMOJIS = [
-  "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
-  "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
-  "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
-  "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
-  "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬",
-  "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗",
-  "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯",
-  "✍️", "👍", "👎", "👊", "✊", "🤛", "🤜", "🤝", "👏", "🙌",
-  "👐", "🤲", "🙏", "💅", "🤳", "💪", "🦾", "🦿", "❤️", "🧡",
-  "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "🔥", "✨",
-];
-
-const MOCK_STICKERS = [
-  { emoji: "🐶", label: "Cún Cười" },
-  { emoji: "🐱", label: "Mèo Wow" },
-  { emoji: "🚀", label: "Thăng Tiến" },
-  { emoji: "💎", label: "VIP Deal" },
-  { emoji: "💼", label: "Duyệt Công" },
-  { emoji: "🚗", label: "Vận Chuyển" },
-  { emoji: "🛠️", label: "Đang Tới" },
-  { emoji: "🔥", label: "Hot Deal" },
-  { emoji: "🎉", label: "Chốt Deal" },
-  { emoji: "👍", label: "Cực Tốt" },
-];
-
-interface UserType {
-  id: string;
-  name: string;
-  avatarUrl: string | null;
-  role: string;
-  isInternal?: boolean;
-  lastActiveAt?: string | null;
-}
-
-interface MessageType {
-  id: string;
-  content: string;
-  type: string;
-  senderId: string;
-  receiverId: string;
-  createdAt: string;
-  sender?: { id: string; name: string; avatarUrl: string | null; role: string };
-  receiver?: { id: string; name: string; avatarUrl: string | null; role: string };
-  conversationId: string;
-  isOptimistic?: boolean;
-  sendError?: boolean;
-}
-
-// Bỏ dấu tiếng Việt để tìm "nguyen" ra "Nguyễn".
-const foldVi = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
-
-// Giờ hiển thị kiểu Messenger/Zalo: hôm nay → 14:05 · trong tuần → T3 · cũ hơn → 12/09.
-function shortChatTime(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-  const days = (now.getTime() - d.getTime()) / 86_400_000;
-  if (days < 7) return ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][d.getDay()];
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-}
-
-// Avatar có chấm xanh khi người đó THẬT SỰ đang mở app (Pusher presence).
-function PresenceAvatar({ userId, src, alt, size = "h-11 w-11" }: { userId: string; src: string; alt: string; size?: string }) {
-  const online = useIsOnline(userId);
-  return (
-    <span className={`relative ${size} flex-shrink-0`}>
-      <img src={src} alt={alt} loading="lazy" className={`${size} rounded-full object-cover ring-1 ring-white/10`} />
-      {online && (
-        <span aria-label="Đang hoạt động" className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-      )}
-    </span>
-  );
-}
-
-// 3 chấm nhảy "đang soạn tin".
-function TypingDots({ className = "" }: { className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-0.5 ${className}`} aria-hidden>
-      <span className="typing-dot" />
-      <span className="typing-dot" style={{ animationDelay: "0.15s" }} />
-      <span className="typing-dot" style={{ animationDelay: "0.3s" }} />
-    </span>
-  );
-}
-
-// "missed:audio" | "declined:video" | "ended:audio:125" → mô tả hiển thị.
-function describeCall(body: string) {
-  const [outcome, kind, secs] = body.split(":");
-  const label = kind === "video" ? "Cuộc gọi video" : "Cuộc gọi thoại";
-  if (outcome === "ended") {
-    const n = Number(secs) || 0;
-    return { missed: false, kind: kind === "video" ? "video" : "audio", text: `${label} · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` };
-  }
-  return { missed: true, kind: kind === "video" ? "video" : "audio", text: outcome === "declined" ? `${label} bị từ chối` : `${label} nhỡ` };
-}
-
-const ROLE_VI: Record<string, string> = { OWNER: "Chủ tiệm", TECHNICIAN: "Thợ Nail", ADMIN: "Quản trị viên" };
-
-interface ConversationType {
-  id: string;
-  isGroup: boolean;
-  name: string | null;
-  createdAt: string;
-  participants: UserType[];
-  messages: { id: string; body: string; type: string; senderId: string; conversationId: string; createdAt: string }[];
-  unreadCount?: number;
-  partnerLastReadAt?: string | null;
-}
-
-interface ActiveChatType {
-  id: string;
-  name: string;
-  avatarUrl: string;
-  role: string;
-  isGroup: boolean;
-  isOnline: boolean;
-  statusText: string;
-  conversationId?: string;
-}
-
-interface MessagesContentProps {
-  initialSessionUser: any;
-  initialConversations: any[];
-  initialMessages: any[];
-  initialSystemUsers: any[];
-}
-
-// ---------------------------------------------------------------------------
-// Local message cache: Record<chatKey, ChatBucket>. A chat is keyed by its
-// real conversationId once known; a brand-new 1-1 chat that hasn't sent or
-// received a first message yet has no conversationId, so it's keyed by
-// `partner:<userId>` until the server resolves a real one (see rekeyBucket).
-//
-// This is the whole point of the zero-latency requirement: once a chat's key
-// has an entry here, switching back to it renders its messages on the same
-// frame — no fetch, no spinner, nothing. A background refresh still runs to
-// pick up anything new, but it only ever merges into the bucket, never clears
-// it, so the screen never goes blank.
-// ---------------------------------------------------------------------------
-interface ChatBucket {
-  messages: MessageType[];
-  nextCursor: string | null;
-}
-
-function chatKeyFor(chat: { id: string; conversationId?: string } | null | undefined): string | null {
-  if (!chat) return null;
-  return chat.conversationId || `partner:${chat.id}`;
-}
-
-function mergeSorted(a: MessageType[], b: MessageType[]): MessageType[] {
-  const map = new Map<string, MessageType>();
-  a.forEach((m) => map.set(m.id, m));
-  b.forEach((m) => map.set(m.id, m));
-  return Array.from(map.values()).sort(
-    (x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime()
-  );
-}
-
-function mapServerMessage(m: any): MessageType {
-  return {
-    id: m.id,
-    content: m.content || m.body || "",
-    type: m.type || "TEXT",
-    senderId: m.senderId,
-    receiverId: m.receiverId || "",
-    createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
-    sender: m.sender
-      ? { id: m.sender.id, name: m.sender.name, avatarUrl: m.sender.avatarUrl || null, role: m.sender.role }
-      : { id: "", name: "User", role: "USER" } as any,
-    receiver: m.receiver
-      ? { id: m.receiver.id, name: m.receiver.name, avatarUrl: m.receiver.avatarUrl || null, role: m.receiver.role }
-      : { id: "", name: "User", role: "USER" } as any,
-    conversationId: m.conversationId,
-  };
-}
+import { POPULAR_EMOJIS, MOCK_STICKERS, UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
+import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 
 export default function MessagesContent({
   initialSessionUser,
@@ -1851,135 +1676,28 @@ export default function MessagesContent({
         )}
       </div>
 
-      {/* REPORT USER MODAL */}
       {showReportModal && activeChat && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4">
-          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4 animate-scaleUp">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/30">
-              <Flag className="h-6 w-6 text-amber-400" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-extrabold text-white">Báo cáo {activeChat.name}</h3>
-              <p className="text-sm text-slate-400">Mô tả ngắn gọn lý do báo cáo — đội ngũ sẽ xem xét sớm nhất.</p>
-            </div>
-            <textarea
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              rows={4}
-              placeholder="VD: Gửi nội dung quấy rối, lừa đảo..."
-              className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setShowReportModal(false); setReportReason(""); }}
-                disabled={blockActionLoading}
-                className="flex-1 min-h-[48px] rounded-xl border border-slate-800 text-sm font-bold text-slate-300 disabled:opacity-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSubmitReport}
-                disabled={!reportReason.trim() || blockActionLoading}
-                className="flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-sm font-bold text-white disabled:opacity-40 transition-all"
-              >
-                {blockActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gửi báo cáo"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReportUserModal
+          name={activeChat.name}
+          reason={reportReason}
+          onReasonChange={setReportReason}
+          busy={blockActionLoading}
+          onCancel={() => { setShowReportModal(false); setReportReason(""); }}
+          onSubmit={handleSubmitReport}
+        />
       )}
 
-      {/* CREATE GROUP MODAL */}
       {showGroupModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <Users className="h-4.5 w-4.5 text-pink-500" />
-                Tạo nhóm trò chuyện mới
-              </h3>
-              <button onClick={() => setShowGroupModal(false)} className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-4xs font-bold text-slate-400 mb-1">TÊN NHÓM</label>
-                <input
-                  type="text"
-                  placeholder="Nhập tên nhóm trò chuyện..."
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-4xs font-bold text-slate-400 mb-1.5 uppercase">Chọn thành viên</label>
-                <div className="max-h-40 overflow-y-auto space-y-2 border border-slate-850 rounded-xl p-2 bg-slate-950/40 custom-scrollbar">
-                  {systemUsers.length === 0 ? (
-                    <p className="text-center py-4 text-slate-500 text-5xs">Chưa có thành viên nào.</p>
-                  ) : (
-                    systemUsers.map((user) => {
-                      const isSelected = selectedUserIds.includes(user.id);
-                      const isDisabled = user.id === currentUser?.id;
-                      return (
-                        <div
-                          key={user.id}
-                          onClick={() => {
-                            if (isDisabled) return;
-                            setSelectedUserIds((prev) => isSelected ? prev.filter((id) => id !== user.id) : [...prev, user.id]);
-                          }}
-                          className={`flex items-center justify-between p-2 rounded-lg hover:bg-slate-900 transition-all duration-300 ${isDisabled ? "opacity-35 cursor-not-allowed select-none" : "cursor-pointer"}`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="relative h-6.5 w-6.5 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
-                              <img src={avatarSrc(user.avatarUrl, user.name, user.id)} alt={user.name} loading="lazy" className="object-cover w-full h-full rounded-full" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="block text-3xs font-bold text-slate-200 truncate">{user.name}</span>
-                                {user.isInternal && (
-                                  <span className="inline-flex items-center text-[7px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded-full">
-                                    ✓ Nội bộ
-                                  </span>
-                                )}
-                              </div>
-                              <span className="block text-5xs text-slate-500 truncate">{user.role}</span>
-                            </div>
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            disabled={isDisabled}
-                            onChange={() => {}}
-                            className="h-3.5 w-3.5 rounded border-slate-800 text-pink-600 focus:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          />
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
-              <button
-                onClick={() => setShowGroupModal(false)}
-                className="rounded-lg px-4 py-2 text-3xs font-bold bg-slate-950 text-slate-400 hover:text-white border border-slate-800 cursor-pointer transition-all duration-300"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={handleCreateGroup}
-                className="rounded-lg bg-pink-600 hover:bg-pink-500 px-4 py-2 text-3xs font-bold text-white transition-all duration-300 cursor-pointer"
-              >
-                Tạo nhóm
-              </button>
-            </div>
-          </div>
-        </div>
+        <CreateGroupModal
+          groupName={groupName}
+          onGroupNameChange={setGroupName}
+          users={systemUsers}
+          selectedIds={selectedUserIds}
+          onToggle={(id) => setSelectedUserIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))}
+          currentUserId={currentUser?.id}
+          onClose={() => setShowGroupModal(false)}
+          onCreate={handleCreateGroup}
+        />
       )}
 
     </div>

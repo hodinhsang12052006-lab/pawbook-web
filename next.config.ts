@@ -32,11 +32,11 @@ const withPWA = withPWAInit({
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
   runtimeCaching,
-  // Default 2MB limit silently skipped our largest vendor chunk (ZegoCloud
-  // call SDK + map/AI libs bundled together, ~5MB) from the offline
-  // precache list every build — bumped just above that chunk's real size so
-  // the service worker actually caches it instead of only warning about it.
-  maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+  // Giữ giới hạn 2MB: KHÔNG tải trước gói gọi video ZegoCloud (~5MB) ngay lần
+  // mở app đầu tiên — tốn 4G của người dùng trong khi gọi video lúc offline
+  // vốn không dùng được. Gói đó tải khi có cuộc gọi (rồi trình duyệt tự cache).
+  // Tổng tải trước giảm từ ~8.7MB xuống ~3.8MB.
+  maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
   // Without this, a fully-offline visit to an uncached route showed the
   // browser's generic native offline error page instead of anything
   // PawNail-branded. Workbox serves this static, precached page for any

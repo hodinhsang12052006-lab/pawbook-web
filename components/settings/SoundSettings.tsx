@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Volume2, VolumeX, Play, MessageCircle, Bell, Sparkles, Smartphone } from "lucide-react";
+import { Volume2, VolumeX, Play, MessageCircle, Bell, Sparkles, Smartphone, BellRing } from "lucide-react";
+import { disablePush, enablePush, getPushState, type PushState } from "@/lib/pushClient";
 import { DEFAULT_PREFS, getSoundPrefs, playSound, setSoundPrefs, type SoundKind, type SoundPrefs } from "@/lib/sounds";
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -24,6 +25,43 @@ const GROUPS: { key: "messages" | "notifications" | "effects"; icon: typeof Bell
   { key: "notifications", icon: Bell, title: "Thông báo", hint: "Lượt thích, bình luận, việc gấp gần bạn", demo: "notify" },
   { key: "effects", icon: Sparkles, title: "Hiệu ứng thao tác", hint: "Thả tim, đăng bài, đăng tin thành công", demo: "like" },
 ];
+
+// Thông báo đẩy (kể cả khi đã tắt app) — trạng thái thật lấy từ trình duyệt.
+function PushRow() {
+  const [state, setState] = useState<PushState | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    getPushState().then(setState);
+  }, []);
+  if (state === null || state === "unsupported") return null;
+  const hint =
+    state === "ios-needs-install"
+      ? "iPhone: bấm Chia sẻ → \"Thêm vào màn hình chính\", mở PawNail từ đó rồi bật."
+      : state === "denied"
+      ? "Bạn đã chặn thông báo — mở cài đặt trình duyệt cho bitpawos.com để cho phép lại."
+      : "Việc gấp gần bạn, tin nhắn, cuộc gọi — kể cả khi đã tắt app.";
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 ring-1 ring-pink-500/20">
+      <BellRing className="h-4 w-4 flex-shrink-0 text-pink-300" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-slate-200">Thông báo đẩy</span>
+        <span className="block text-[11px] leading-snug text-slate-500">{hint}</span>
+      </span>
+      {(state === "on" || state === "off") && (
+        <Switch
+          on={state === "on"}
+          label="Thông báo đẩy"
+          onChange={async (v) => {
+            if (busy) return;
+            setBusy(true);
+            setState(await (v ? enablePush() : disablePush()).catch(() => "off" as PushState));
+            setBusy(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
 
 /** Cài đặt âm thanh & rung (lưu trên thiết bị này). */
 export default function SoundSettings() {
@@ -87,7 +125,8 @@ export default function SoundSettings() {
           <Switch on={prefs.vibrate} onChange={(v) => update({ vibrate: v })} label="Rung" />
         </div>
       </div>
-      <p className="px-1 text-[11px] text-slate-600">Cuộc gọi đến luôn đổ chuông để bạn không lỡ cuộc gọi.</p>
+      <PushRow />
+      <p className="px-1 text-[11px] text-slate-500">Cuộc gọi đến luôn đổ chuông để bạn không lỡ cuộc gọi.</p>
     </div>
   );
 }

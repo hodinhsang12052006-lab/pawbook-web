@@ -1,5 +1,7 @@
 import { getPusherServer } from "@/lib/pusherServer";
 import { jobAlertChannelName } from "@/lib/pusherChannel";
+import prisma from "@/lib/prisma";
+import { sendPush } from "@/lib/push";
 
 interface UrgentJob {
   id: string;
@@ -24,5 +26,23 @@ export async function notifyUrgentJob(job: UrgentJob) {
     });
   } catch (err) {
     console.error("notifyUrgentJob error:", err);
+  }
+  // Thông báo đẩy cho thợ cùng bang đã bật thông báo (kể cả đang đóng app).
+  try {
+    const techs = await prisma.user.findMany({
+      where: { role: "TECHNICIAN", market: job.market as "US" | "AU", state: job.state, pushSubscriptions: { some: {} } },
+      select: { id: true },
+      take: 1000,
+    });
+    if (techs.length) {
+      await sendPush(techs.map((t) => t.id), {
+        title: "🔥 Việc gấp gần bạn",
+        body: `${job.salonName} tại ${job.city} cần thợ: ${job.title} — ${job.salaryAmount}`,
+        url: `/jobs/${job.id}`,
+        tag: `pn-job-${job.id}`,
+      });
+    }
+  } catch (err) {
+    if (!/no such table|P2021/i.test(String(err))) console.error("urgent job push error:", err);
   }
 }

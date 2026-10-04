@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} đã mở khoá liên hệ với bạn`);
+    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} đã mở khoá liên hệ với bạn`, `/profile/${session.user.id}`);
 
     return NextResponse.json({ unlocked: true, unlockedAt: unlock.unlockedAt }, { status: 201 });
   } catch (err) {

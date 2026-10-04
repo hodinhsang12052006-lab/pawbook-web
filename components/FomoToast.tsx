@@ -120,7 +120,7 @@ export default function FomoToast() {
         const busy =
           document.visibilityState !== "visible" ||
           QUIET_ROUTES.some((r) => r.test(pathRef.current || "")) ||
-          !!document.querySelector("[data-call-phase], [role=dialog][aria-modal=true]") ||
+          !!document.querySelector("[data-call-phase], [role=dialog]") ||
           /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
         if (busy) {
           schedule(10_000);

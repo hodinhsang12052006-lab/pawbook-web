@@ -14,6 +14,7 @@ import { stateName } from "@/lib/stateNames";
 import { timeAgo } from "@/lib/feedFormat";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import Avatar from "@/components/ui/Avatar";
+import Flag from "@/components/ui/Flag";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -172,7 +173,7 @@ export default function JobDetailPage({ params }: PageProps) {
     { icon: MapPin, label: "Khu vực", value: `${job.city}, ${stateName(job.market, job.state)}` },
     { icon: DollarSign, label: "Mức lương", value: job.salaryAmount, accent: true },
     { icon: Wallet, label: "Hình thức", value: job.salaryType },
-    { icon: Globe2, label: "Thị trường", value: job.market === "US" ? "🇺🇸 Mỹ" : "🇦🇺 Úc" },
+    { icon: Globe2, label: "Thị trường", value: <span className="inline-flex items-center gap-1.5"><Flag code={job.market} /> {job.market === "US" ? "Mỹ" : "Úc"}</span> },
   ];
   const isOwnJob = user?.id && user.id === job.ownerId;
 

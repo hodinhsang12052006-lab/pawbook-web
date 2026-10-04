@@ -64,7 +64,7 @@ export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs
 
   return (
     <section aria-label="Có gì mới từ lần trước" className="relative animate-fadeIn rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-900/50 p-4">
-      <button onClick={() => setClosed(true)} aria-label="Đóng" className="absolute right-2 top-2 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
+      <button onClick={() => setClosed(true)} aria-label="Đóng" className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
         <X className="h-4 w-4" />
       </button>
       <p className="text-sm font-black text-white">Có gì mới từ lần trước bạn ghé 👋</p>

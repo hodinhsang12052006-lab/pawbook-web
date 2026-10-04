@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import { stateName } from "@/lib/stateNames";
 import { playSound } from "@/lib/sounds";
+import Flag from "@/components/ui/Flag";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -131,14 +132,14 @@ export default function CreateJobPage() {
                   onClick={() => { setMarket("US"); setState(US_STATES[0]); setSalaryType(SALARY_TYPES_US[0]); }}
                   className={`rounded-xl py-3 font-bold border-2 transition-all ${market === "US" ? "border-pink-500 bg-pink-500/10 text-white" : "border-slate-800 text-slate-400"}`}
                 >
-                  🇺🇸 Mỹ (US)
+                  <span className="inline-flex items-center gap-1.5"><Flag code="US" /> Mỹ (US)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setMarket("AU"); setState(AU_STATES[0]); setSalaryType(SALARY_TYPES_AU[0]); }}
                   className={`rounded-xl py-3 font-bold border-2 transition-all ${market === "AU" ? "border-pink-500 bg-pink-500/10 text-white" : "border-slate-800 text-slate-400"}`}
                 >
-                  🇦🇺 Úc (AU)
+                  <span className="inline-flex items-center gap-1.5"><Flag code="AU" /> Úc (AU)</span>
                 </button>
               </div>
 

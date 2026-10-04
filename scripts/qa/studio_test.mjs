@@ -86,6 +86,10 @@ try {
     const chip = p.getByRole("button", { name: `#${st.data.theme.hashtag}`, exact: true });
     R.check("ST15", "Chip gợi ý hashtag hiện & đánh dấu đã dùng", (await chip.count()) > 0 && (await chip.first().isDisabled()));
     await p.locator("textarea").first().fill("");
+    // Nút ✕ "Ẩn chủ đề hôm nay" phải bấm được (không bị nội dung thẻ đè lên).
+    await theme.getByRole("button", { name: "Ẩn chủ đề hôm nay" }).click({ timeout: 5000 });
+    R.check("ST13b", "Nút ✕ trên thẻ chủ đề bấm được và ẩn thẻ trong hôm nay", (await theme.count()) === 0);
+    await p.evaluate(() => localStorage.removeItem("pn_studio_hide"));
   }
 
   // Mẹo hôm nay chen trong bảng tin

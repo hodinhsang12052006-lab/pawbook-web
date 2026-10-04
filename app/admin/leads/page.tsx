@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { SURVEY, PAIN_TAG_META, getSalesScript } from "@/lib/ownerSurvey";
 import { stateName } from "@/lib/stateNames";
+import Flag from "@/components/ui/Flag";
+import Navbar from "@/components/layout/Navbar";
 
 // ============================================================
 // Types
@@ -271,7 +273,7 @@ function LeadCard({ lead, onOpen }: { lead: OwnerLead; onOpen: () => void }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-extrabold text-white truncate">{latestJob?.salonName || "Chưa đăng tin"}</p>
-          <p className="text-xs text-slate-400 truncate">{lead.name} · {lead.city}, {stateName(lead.market, lead.state)} {lead.market === "US" ? "🇺🇸" : "🇦🇺"}</p>
+          <p className="text-xs text-slate-400 truncate">{lead.name} · {lead.city}, {stateName(lead.market, lead.state)} <Flag code={lead.market} className="h-3 w-4" /></p>
         </div>
         <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} aria-label="Xem chi tiết" className="-m-1 flex-shrink-0 rounded-lg p-1 text-slate-500 hover:bg-white/5 hover:text-slate-200">
           <ChevronRight className="h-4 w-4" />
@@ -336,7 +338,7 @@ function TechnicianCard({ tech, onOpenImage }: { tech: TechnicianLead; onOpenIma
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-extrabold text-white truncate">{tech.name}</p>
-          <p className="text-xs text-slate-400 truncate">{tech.city}, {stateName(tech.market, tech.state)} {tech.market === "US" ? "🇺🇸" : "🇦🇺"} · {p?.yearsOfExperience ?? 0} năm KN</p>
+          <p className="text-xs text-slate-400 truncate">{tech.city}, {stateName(tech.market, tech.state)} <Flag code={tech.market} className="h-3 w-4" /> · {p?.yearsOfExperience ?? 0} năm KN</p>
         </div>
         {p?.status === "URGENT" && (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-400 border border-red-500/30 flex-shrink-0">
@@ -495,26 +497,25 @@ export default function AdminLeadsPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
 
-      <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push("/")} aria-label="Về trang chủ" className={`p-2 rounded-full text-slate-400 hover:bg-slate-900 ${PRESS}`}>
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="text-sm font-extrabold text-white flex items-center gap-1.5">
-                <ShieldAlert className="h-4 w-4 text-pink-400" /> Admin — Lead Radar
-              </h1>
-              <p className="text-[11px] text-slate-500">{owners.length} chủ tiệm · {technicians.length} thợ đã đăng ký</p>
-            </div>
-          </div>
-          <Link href="/admin/reports" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20">
-            🚩 Báo cáo vi phạm
+      {/* Dùng thanh điều hướng chung như mọi trang khác (trước đây trang này có
+          header riêng, lạc tông với phần còn lại của app). */}
+      <Navbar />
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pt-6 sm:px-6">
+        <div>
+          <Link href="/admin/reports" className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-200 md:hidden">
+            <ArrowLeft className="h-3.5 w-3.5" /> Quản trị
           </Link>
+          <h1 className="flex items-center gap-2 text-xl font-black tracking-tight text-white">
+            <ShieldAlert className="h-5 w-5 text-pink-400" /> Lead Radar
+          </h1>
+          <p className="text-xs text-slate-500">{owners.length} chủ tiệm · {technicians.length} thợ đã đăng ký</p>
         </div>
-      </header>
+        <Link href="/admin/reports" className="flex-shrink-0 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20">
+          🚩 Báo cáo vi phạm
+        </Link>
+      </div>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6 sm:px-6 space-y-5">
+      <main className="mx-auto max-w-7xl px-4 py-5 pb-28 md:pb-6 sm:px-6 space-y-5">
         {/* Tabs */}
         <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900/40 border border-slate-850 max-w-md">
           <button
@@ -540,7 +541,7 @@ export default function AdminLeadsPage() {
                 onClick={() => { setMarketFilter(m); setStateFilter("ALL"); }}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold border ${PRESS} ${marketFilter === m ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950 border-slate-800 text-slate-400"}`}
               >
-                {m === "ALL" ? "Tất cả vùng" : m === "US" ? "🇺🇸 US" : "🇦🇺 AU"}
+                {m === "ALL" ? "Tất cả vùng" : <span className="inline-flex items-center gap-1"><Flag code={m} className="h-3 w-4" /> {m}</span>}
               </button>
             ))}
             <span className="w-px h-5 bg-slate-800 mx-1" />

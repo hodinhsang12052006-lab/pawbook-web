@@ -47,7 +47,7 @@ function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: st
     <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3 mb-3">
       <Zap className="h-5 w-5 text-amber-400 flex-shrink-0" />
       <p className="text-xs sm:text-sm text-slate-200">
-        <span className="font-black text-amber-400">{count}+ tiệm</span> {scopeLabel} đang tranh nhau tìm thợ — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.
+        <span className="font-black text-amber-400">{count}+ tin chủ tìm thợ</span> {scopeLabel} trong 1 đợt khảo sát nhóm nail (9/2026) — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.
       </p>
     </div>
   );

@@ -8,6 +8,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playNotifySound } from "@/lib/notifySound";
 import { timeAgo } from "@/lib/feedFormat";
+import Avatar from "@/components/ui/Avatar";
 
 interface NotificationItem {
   id: string;
@@ -170,12 +171,7 @@ export default function NotificationBell() {
                   className={`flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-white/5 ${isNew ? "bg-pink-500/[0.07]" : ""}`}
                 >
                   <span className="relative flex-shrink-0">
-                    {n.actor.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={n.actor.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
-                    ) : (
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-sm">💅</span>
-                    )}
+                    <Avatar src={n.actor.avatarUrl} name={n.actor.name} seed={n.actor.id} alt="" className="h-10 w-10 ring-1 ring-white/10" />
                     <span className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-slate-950 ${cls}`}>
                       <Icon className="h-2.5 w-2.5" />
                     </span>

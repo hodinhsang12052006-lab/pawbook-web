@@ -10,7 +10,7 @@ import { stateName } from "@/lib/stateNames";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
 
 interface SidebarProps {
   activeTab?: string;
@@ -24,7 +24,6 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
 
   const userName = effectiveUser?.name || "Thành viên";
   const userRole = effectiveUser?.role || "TECHNICIAN";
-  const userAvatar = effectiveUser?.avatarUrl || effectiveUser?.image || "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=100&auto=format&fit=crop&q=80";
   const userLocation = [effectiveUser?.city, stateName(effectiveUser?.market, effectiveUser?.state)].filter(Boolean).join(", ") || "Chưa cập nhật khu vực";
   const roleLabel = userRole === "OWNER" ? "Chủ tiệm" : userRole === "ADMIN" ? "Quản trị" : "Thợ Nail";
   const completeness = getProfileCompleteness(effectiveUser);
@@ -57,9 +56,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           <div className="glass-card rounded-2xl p-4">
             {/* Profile Card Summary */}
             <Link href="/profile" className="mb-4 flex items-center gap-3 rounded-xl p-1 -m-1 hover:bg-white/5 transition-colors">
-              <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-pink-500/40">
-                <Image src={userAvatar} alt={userName} fill priority sizes="48px" className="object-cover" />
-              </div>
+              <Avatar src={effectiveUser?.avatarUrl || effectiveUser?.image} name={userName} seed={effectiveUser?.id} className="h-12 w-12 ring-2 ring-pink-500/40" loading="eager" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-slate-100">{userName}</p>
                 <p className="truncate text-[11px] text-slate-400">📍 {userLocation}</p>

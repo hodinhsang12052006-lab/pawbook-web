@@ -6,6 +6,8 @@ import { Phone, Video, PhoneOff, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { startRingtone, stopRingtone } from "@/lib/ringtone";
+import Avatar from "@/components/ui/Avatar";
+import { isPlaceholderAvatar } from "@/lib/avatar";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
   ssr: false,
@@ -48,9 +50,6 @@ interface Peer {
 
 // Không ai nghe máy sau ngần này thì tự kết thúc + ghi "cuộc gọi nhỡ".
 const RING_TIMEOUT_MS = 45_000;
-
-const AVATAR_FALLBACK = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "U")}&background=db2777&color=ffffff&bold=true&format=png`;
 
 // Toàn bộ cuộc gọi chạy qua ZEGOCLOUD (cả thoại lẫn video — có máy chủ trung
 // chuyển nên kết nối được qua 4G/5G); Pusher chỉ dùng để đổ chuông / nghe máy
@@ -273,7 +272,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
   // roomId đối xứng: 2 bên luôn tính ra cùng 1 chuỗi bất kể ai gọi.
   const roomId = "call-" + [currentUserId, peer.id].sort().join("-") + (callId ? `-${callId}` : "");
-  const avatar = peer.avatarUrl || AVATAR_FALLBACK(peer.name);
+  const hasPhoto = !isPlaceholderAvatar(peer.avatarUrl);
   const typeLabel = callType === "video" ? "Cuộc gọi video" : "Cuộc gọi thoại";
   const inRoom = phase === "connecting" || phase === "connected";
 
@@ -286,8 +285,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-between overflow-clip text-slate-100 animate-fadeIn" role="dialog" aria-label={typeLabel} data-call-phase={phase}>
       {/* Nền: avatar đối phương phóng to + mờ, phủ gradient thương hiệu */}
       <div className="absolute inset-0 -z-10 bg-slate-950">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={avatar} alt="" aria-hidden className="h-full w-full scale-125 object-cover opacity-35 blur-2xl" />
+        {hasPhoto && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={peer.avatarUrl!} alt="" aria-hidden className="h-full w-full scale-125 object-cover opacity-35 blur-2xl" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950" />
         <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-pink-600/25 blur-[90px]" />
       </div>
@@ -329,8 +330,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
             <div className="relative">
               <span className="absolute inset-0 animate-ping rounded-full bg-pink-500/25" />
               <span className="absolute -inset-3 animate-ping rounded-full bg-fuchsia-500/10" style={{ animationDelay: "0.5s" }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={avatar} alt={peer.name} className="relative h-32 w-32 rounded-full object-cover ring-4 ring-white/10 shadow-2xl" />
+              <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="relative h-32 w-32 ring-4 ring-white/10 shadow-2xl" />
             </div>
             <div className="space-y-1.5">
               <h2 className="text-2xl font-black tracking-tight text-white">{peer.name}</h2>

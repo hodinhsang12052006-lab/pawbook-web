@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Flag, ShieldAlert, Loader2, ExternalLink, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { timeAgo } from "@/lib/feedFormat";
+import Avatar from "@/components/ui/Avatar";
 
 interface ReportRow {
   id: string;
@@ -75,7 +76,7 @@ export default function AdminReportsPage() {
             <li key={r.id} className="glass-card rounded-2xl p-4">
               <div className="flex flex-wrap items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={r.reportedUser.avatarUrl || "/cho1.jpg"} alt={r.reportedUser.name} className="h-10 w-10 rounded-full object-cover" />
+                <Avatar src={r.reportedUser.avatarUrl} name={r.reportedUser.name} seed={r.reportedUser.id} className="h-10 w-10" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white">
                     {r.reportedUser.name}{" "}

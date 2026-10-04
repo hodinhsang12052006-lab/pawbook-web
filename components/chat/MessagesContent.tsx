@@ -15,6 +15,7 @@ import { useIsOnline, lastActiveLabel } from "@/lib/presence";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useCallManager } from "@/lib/CallManagerContext";
+import { avatarSrc } from "@/lib/avatar";
 
 const POPULAR_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
@@ -192,9 +193,6 @@ function mapServerMessage(m: any): MessageType {
     conversationId: m.conversationId,
   };
 }
-
-const AVATAR_FALLBACK = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=ffffff&bold=true&format=png`;
 
 export default function MessagesContent({
   initialSessionUser,
@@ -1023,7 +1021,7 @@ export default function MessagesContent({
       setActiveChat({
         id: partner.id,
         name: partner.name,
-        avatarUrl: partner.avatarUrl || AVATAR_FALLBACK(partner.name),
+        avatarUrl: partner.avatarUrl || "",
         role: partner.role,
         isGroup: false,
         isOnline: true,
@@ -1137,7 +1135,7 @@ export default function MessagesContent({
               )}
               {conversationRows.map(({ conv, partner, displayName, lastMsg }) => {
                 const isGroup = conv.isGroup;
-                const avatarUrl = isGroup ? "" : partner!.avatarUrl || AVATAR_FALLBACK(displayName);
+                const avatarUrl = isGroup ? "" : partner!.avatarUrl || "";
                 const isActive = activeChat?.conversationId === conv.id;
                 const fromMe = lastMsg?.senderId === currentUser?.id;
                 const unread = isActive ? 0 : conv.unreadCount || 0;
@@ -1170,7 +1168,7 @@ export default function MessagesContent({
                         <Users className="h-5 w-5 text-fuchsia-300" />
                       </span>
                     ) : (
-                      <PresenceAvatar userId={partner!.id} src={avatarUrl} alt={displayName} />
+                      <PresenceAvatar userId={partner!.id} src={avatarSrc(avatarUrl, displayName, partner!.id)} alt={displayName} />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
@@ -1234,7 +1232,7 @@ export default function MessagesContent({
                       <Users className="h-5 w-5 text-fuchsia-300" />
                     </span>
                   ) : (
-                    <PresenceAvatar userId={activeChat.id} src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt={activeChat.name} size="h-10 w-10" />
+                    <PresenceAvatar userId={activeChat.id} src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt={activeChat.name} size="h-10 w-10" />
                   )}
                 </div>
                 <div className="min-w-0">
@@ -1348,11 +1346,13 @@ export default function MessagesContent({
                 chatMessages.map((msg, idx) => {
                   const isSelf = msg.senderId === currentUser?.id;
                   const senderAvatar = isSelf
-                    ? currentUser.avatarUrl || AVATAR_FALLBACK(currentUser.name)
-                    : msg.sender?.avatarUrl ||
-                      // Tin realtime (Pusher) không kèm avatar → chat 1-1 dùng avatar đối phương.
-                      (!activeChat.isGroup ? activeChat.avatarUrl : "") ||
-                      AVATAR_FALLBACK(msg.sender?.name || "U");
+                    ? avatarSrc(currentUser.avatarUrl, currentUser.name, currentUser.id)
+                    : avatarSrc(
+                        // Tin realtime (Pusher) không kèm avatar → chat 1-1 dùng avatar đối phương.
+                        msg.sender?.avatarUrl || (!activeChat.isGroup ? activeChat.avatarUrl : ""),
+                        msg.sender?.name || (!activeChat.isGroup ? activeChat.name : "U"),
+                        msg.senderId
+                      );
                   const animClass = freshMessageIds.has(msg.id) ? "message-slide-up" : "";
 
                   const prevMsg = idx > 0 ? chatMessages[idx - 1] : null;
@@ -1596,7 +1596,7 @@ export default function MessagesContent({
               {activeChatTyping && (
                 <div className="flex items-end gap-2 animate-fadeIn" aria-live="polite">
                   <div className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
-                    <img src={activeChat.avatarUrl || AVATAR_FALLBACK(activeChat.name)} alt="" className="h-full w-full object-cover" />
+                    <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="rounded-2xl rounded-bl-sm border border-slate-700 bg-slate-800 px-4 py-3 text-slate-300">
                     <TypingDots />
@@ -1792,7 +1792,7 @@ export default function MessagesContent({
                         onClick={() => setActiveChat({
                           id: conv.isGroup ? conv.id : partner!.id,
                           name: displayName,
-                          avatarUrl: conv.isGroup ? "" : partner!.avatarUrl || AVATAR_FALLBACK(displayName),
+                          avatarUrl: conv.isGroup ? "" : partner!.avatarUrl || "",
                           role: conv.isGroup ? "GROUP" : partner!.role,
                           isGroup: conv.isGroup,
                           isOnline: false,
@@ -1803,7 +1803,7 @@ export default function MessagesContent({
                       >
                         <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/10 transition group-hover:ring-pink-500/60">
                           {conv.isGroup ? <Users className="h-5 w-5 text-fuchsia-300" /> : (
-                            <img src={partner!.avatarUrl || AVATAR_FALLBACK(displayName)} alt="" className="h-full w-full object-cover" />
+                            <img src={avatarSrc(partner!.avatarUrl, displayName, partner!.id)} alt="" className="h-full w-full object-cover" />
                           )}
                         </span>
                         <span className="w-full truncate text-center text-[11px] text-slate-400 group-hover:text-slate-200">{displayName}</span>
@@ -1931,7 +1931,7 @@ export default function MessagesContent({
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="relative h-6.5 w-6.5 overflow-hidden rounded-full border border-slate-800 flex-shrink-0">
-                              <img src={user.avatarUrl || AVATAR_FALLBACK(user.name)} alt={user.name} loading="lazy" className="object-cover w-full h-full rounded-full" />
+                              <img src={avatarSrc(user.avatarUrl, user.name, user.id)} alt={user.name} loading="lazy" className="object-cover w-full h-full rounded-full" />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">

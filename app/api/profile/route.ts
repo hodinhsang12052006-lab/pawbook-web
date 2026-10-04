@@ -45,6 +45,8 @@ export async function GET(req: NextRequest) {
         turnSplitPolicy: true,
         clientTypePolicy: true,
         housingSupport: true,
+        // "Tham gia từ…" trên hồ sơ — không phải dữ liệu nhạy cảm.
+        createdAt: true,
         jobs: {
           select: {
             id: true,
@@ -92,6 +94,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ...user,
+      createdAt: user.createdAt.toISOString(),
       jobs: safeJobs,
       technicianProfile,
     });

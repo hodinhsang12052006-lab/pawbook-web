@@ -10,14 +10,13 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 import NotificationBell from "@/components/layout/NotificationBell";
+import Avatar from "@/components/ui/Avatar";
 
 export default function Navbar() {
   const router = useRouter();
   const { t } = useLanguage();
   const { user: sessionUser, loading: loadingSession } = useSessionUser();
   const { unreadCount, resetUnread } = useUnreadMessages();
-
-  const userAvatar = sessionUser?.avatarUrl || "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=100&auto=format&fit=crop&q=80";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800/70 bg-slate-950/70 backdrop-blur-xl after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent">
@@ -91,12 +90,14 @@ export default function Navbar() {
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-3 border-l border-slate-850 pl-2 sm:pl-4">
-                <div
+                <button
+                  type="button"
                   onClick={() => router.push("/profile")}
-                  className="h-8 w-8 overflow-hidden rounded-full border border-slate-700 cursor-pointer hover:border-pink-500 transition-colors"
+                  aria-label="Hồ sơ của tôi"
+                  className="rounded-full ring-1 ring-slate-700 hover:ring-2 hover:ring-pink-500 transition-all"
                 >
-                  <img src={userAvatar} alt={sessionUser.name || "User Avatar"} className="h-full w-full object-cover" />
-                </div>
+                  <Avatar src={sessionUser.avatarUrl} name={sessionUser.name} seed={sessionUser.id} className="h-8 w-8" loading="eager" />
+                </button>
                 <span
                   onClick={() => router.push("/profile")}
                   className="hidden lg:inline text-xs font-semibold text-slate-200 cursor-pointer hover:text-white transition-colors"

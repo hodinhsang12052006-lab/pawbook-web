@@ -1,3 +1,4 @@
+import { isPlaceholderAvatar } from "@/lib/avatar";
 // Tính % hoàn thiện hồ sơ + danh sách việc còn thiếu — dùng chung cho
 // Sidebar, banner mobile trang chủ và trang /profile. Hồ sơ càng đủ thì chủ
 // tiệm/thợ càng dễ chọn nhau, nên đây là "việc tiếp theo" rõ ràng nhất để
@@ -29,7 +30,7 @@ function parseList(value: unknown): unknown[] {
 }
 
 // Avatar mặc định sinh tự động lúc đăng ký (DiceBear) không tính là "đã có ảnh".
-const hasCustomAvatar = (url?: string | null) => !!url && !url.includes("dicebear.com");
+const hasCustomAvatar = (url?: string | null) => !isPlaceholderAvatar(url);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getProfileCompleteness(user: any): Completeness | null {

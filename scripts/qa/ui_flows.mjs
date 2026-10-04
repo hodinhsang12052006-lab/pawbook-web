@@ -187,7 +187,7 @@ await step("F13", "Chủ tiệm nhận được tin và trả lời", async () =
 
 await step("F14", "Thợ chỉnh sửa + lưu hồ sơ", async () => {
   await tp.goto(BASE_URL + "/profile");
-  const bio = tp.getByPlaceholder("Kinh nghiệm, phong cách làm việc...");
+  const bio = tp.getByLabel("Giới thiệu ngắn");
   await bio.waitFor({ timeout: 15000 });
   await bio.fill("5 năm làm Gel-X, QA test");
   await tp.getByRole("button", { name: /Lưu hồ sơ/ }).click();
@@ -208,7 +208,7 @@ await step("F15", "Đăng xuất rồi đăng nhập lại bằng tài khoản v
 
 await step("F16", "Xóa tài khoản qua UI (gõ xác nhận) → về trang đăng ký, không đăng nhập lại được", async () => {
   await tp.goto(BASE_URL + "/profile");
-  await tp.getByRole("button", { name: /^Xóa tài khoản$/ }).click();
+  await tp.getByRole("button", { name: /^Tôi muốn xóa tài khoản$/ }).click();
   await tp.getByPlaceholder("XÓA TÀI KHOẢN").fill("XÓA TÀI KHOẢN");
   await shot(tp, "13_delete_confirm");
   await tp.getByRole("button", { name: /Xóa vĩnh viễn|Xóa tài khoản|Xác nhận/ }).last().click();

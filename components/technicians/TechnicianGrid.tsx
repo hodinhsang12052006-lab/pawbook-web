@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName } from "@/lib/stateNames";
+import Avatar from "@/components/ui/Avatar";
+import { avatarGradient } from "@/lib/avatar";
 
 export interface TechnicianType {
   id: string;
@@ -120,6 +122,16 @@ function StatusBadge({ status }: { status: string }) {
   return null;
 }
 
+function NoMediaCover({ tech }: { tech: TechnicianType }) {
+  const [a, b] = avatarGradient(tech.user.id);
+  return (
+    <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${a}55, ${b}33), #0f172a` }}>
+      <div className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px]" />
+      <Avatar src={tech.user.avatarUrl} name={tech.user.name} seed={tech.user.id} className="relative -mt-6 h-16 w-16 ring-4 ring-white/10 shadow-xl" />
+    </div>
+  );
+}
+
 function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const media = firstMedia(tech.portfolioImages as any[]);
@@ -130,7 +142,11 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
       className={`relative aspect-square rounded-xl overflow-hidden bg-slate-900 border border-slate-800 group text-left ${PRESS}`}
     >
       {/* Nền xám chờ tải — fade ra khi ảnh/video thật đã sẵn sàng */}
-      <div className={`absolute inset-0 bg-slate-800 transition-opacity duration-300 ${loaded ? "opacity-0" : "opacity-100 animate-pulse"}`} />
+      {media && <div className={`absolute inset-0 bg-slate-800 transition-opacity duration-300 ${loaded ? "opacity-0" : "opacity-100 animate-pulse"}`} />}
+
+      {/* Thợ chưa có ảnh mẫu: nền gradient riêng + ảnh đại diện, thay vì ô xám
+          nhấp nháy mãi như đang tải. */}
+      {!media && <NoMediaCover tech={tech} />}
 
       {media && (
         media.isVideo ? (

@@ -6,9 +6,7 @@ import { Image as ImageIcon, X, Loader2, Sparkles } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import type { FeedPost } from "./FeedPostCard";
-
-const AVATAR_FALLBACK = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ec4899&color=ffffff&bold=true&format=png`;
+import Avatar from "@/components/ui/Avatar";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
@@ -90,11 +88,7 @@ export default function CreatePostComposer({ onPosted }: { onPosted: (post: Feed
   return (
     <div className="glass-card rounded-2xl p-4 space-y-3">
       <div className="flex items-start gap-3">
-        <img
-          src={user.avatarUrl || AVATAR_FALLBACK(user.name)}
-          alt={user.name}
-          className="h-10 w-10 rounded-full object-cover border border-slate-800 flex-shrink-0"
-        />
+        <Avatar src={user.avatarUrl} name={user.name} seed={user.id} className="h-10 w-10 ring-1 ring-white/10" loading="eager" />
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}

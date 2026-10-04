@@ -229,6 +229,36 @@ body {
   .skeleton { animation: none; }
 }
 
+/* Ô nhập liệu chuẩn cho form (hồ sơ, đánh giá…) — viền mảnh, focus có quầng
+   hồng nhẹ thay vì viền xanh mặc định của trình duyệt. */
+@layer components {
+  .input-field {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(2, 6, 23, 0.6);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.875rem;
+    color: #f1f5f9;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .input-field::placeholder { color: #475569; }
+  .input-field:hover { border-color: rgba(148, 163, 184, 0.26); }
+  .input-field:focus {
+    outline: none;
+    border-color: rgba(236, 72, 153, 0.6);
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
+    background: rgba(2, 6, 23, 0.85);
+  }
+  .field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+}
+
 /* ===== Hiệu ứng thả tim (chỉ phản hồi tương tác thật của người dùng) ===== */
 @keyframes heartPop {
   0% { transform: scale(1); }

@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { stateName } from "@/lib/stateNames";
 import { timeAgo } from "@/lib/feedFormat";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import Avatar from "@/components/ui/Avatar";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -269,7 +270,7 @@ export default function JobDetailPage({ params }: PageProps) {
             className="glass-card group flex items-center gap-3 rounded-2xl p-4 hover:border-pink-500/30 transition-colors"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={job.owner.avatarUrl || "/cho1.jpg"} alt={job.owner.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-pink-500/30" />
+            <Avatar src={job.owner.avatarUrl} name={job.owner.name} seed={job.owner.id} className="h-12 w-12 ring-2 ring-pink-500/30" />
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Đăng bởi chủ tiệm</p>
               <p className="truncate text-sm font-bold text-white">{job.owner.name}</p>

@@ -9,6 +9,7 @@ import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHori
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 import { trackPostView } from "@/lib/viewTracker";
+import Avatar from "@/components/ui/Avatar";
 
 export interface FeedPost {
   id: string;
@@ -38,9 +39,6 @@ interface CommentType {
   createdAt: string;
   author: { id: string; name: string; avatarUrl: string | null; role: string };
 }
-
-const AVATAR_FALLBACK = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ec4899&color=ffffff&bold=true&format=png`;
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 
@@ -219,12 +217,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       {/* HEADER */}
       <div className="flex items-start gap-3 p-4">
         <Link href={`/profile/${post.author.id}`} className="flex-shrink-0">
-          <img
-            src={post.author.avatarUrl || AVATAR_FALLBACK(post.author.name)}
-            alt={post.author.name}
-            loading="lazy"
-            className="h-11 w-11 rounded-full object-cover border border-slate-800"
-          />
+          <Avatar src={post.author.avatarUrl} name={post.author.name} seed={post.author.id} className="h-11 w-11 ring-1 ring-white/10" />
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -375,7 +368,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           <div className="flex -space-x-2">
             {likers.map((l) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={l.id} src={l.avatarUrl || AVATAR_FALLBACK(l.name)} alt="" className="h-5 w-5 rounded-full border-2 border-slate-900 object-cover" />
+              <Avatar key={l.id} src={l.avatarUrl} name={l.name} seed={l.id} alt="" className="h-5 w-5 ring-2 ring-slate-900" />
             ))}
           </div>
           <span className="truncate">
@@ -458,12 +451,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <div className="space-y-3 max-h-72 overflow-y-auto custom-scrollbar">
               {comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-2.5">
-                  <img
-                    src={c.author.avatarUrl || AVATAR_FALLBACK(c.author.name)}
-                    alt={c.author.name}
-                    loading="lazy"
-                    className="h-7 w-7 rounded-full object-cover border border-slate-800 flex-shrink-0"
-                  />
+                  <Avatar src={c.author.avatarUrl} name={c.author.name} seed={c.author.id} className="h-7 w-7 ring-1 ring-white/10" />
                   <div className="min-w-0 flex-1 rounded-2xl bg-slate-900/60 border border-slate-850 px-3 py-2">
                     <p className="text-xs font-bold text-slate-200">{c.author.name}</p>
                     <p className="text-xs text-slate-300 leading-relaxed break-words">{c.content}</p>

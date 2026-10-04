@@ -8,10 +8,15 @@ import CreatePostComposer from "./CreatePostComposer";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import { useStudio, ThemeCard, TipCard, RecapCard } from "./StudioCards";
+import PulseCard from "./PulseCard";
+import RadarPostCard, { type RadarPost } from "./RadarPostCard";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
 const RECAP_AFTER_POST = 8;
+// "Nhịp đau tuần" ngay sau bài đầu tiên; bài radar đã duyệt chen thưa.
+const PULSE_AFTER_POST = 1;
+const RADAR_AFTER_POSTS = [5, 11, 17];
 
 interface SocialFeedProps {
   market: "US" | "AU";
@@ -49,6 +54,17 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   const { user } = useSessionUser();
   const isTech = user?.role === "TECHNICIAN";
   const studio = useStudio(market, user?.role);
+  const [radarPosts, setRadarPosts] = useState<RadarPost[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/radar?market=${market}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => alive && setRadarPosts(Array.isArray(d?.posts) ? d.posts : []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [market]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [supplyProducts, setSupplyProducts] = useState<SupplyProductType[]>([]);
@@ -152,20 +168,23 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   // Trộn bài đăng + thẻ sản phẩm thành 1 danh sách render duy nhất.
   const feedItems = useMemo(() => {
     const items: Array<
-      { type: "post"; post: FeedPost } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" }
+      { type: "post"; post: FeedPost } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" } | { type: "pulse" } | { type: "radar"; post: RadarPost }
     > = [];
     let supplyIdx = 0;
     posts.forEach((post, idx) => {
       items.push({ type: "post", post });
       if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
       if (idx + 1 === RECAP_AFTER_POST && studio?.recap) items.push({ type: "recap" });
+      if (idx + 1 === PULSE_AFTER_POST && user) items.push({ type: "pulse" });
+      const r = RADAR_AFTER_POSTS.indexOf(idx + 1);
+      if (r >= 0 && radarPosts[r]) items.push({ type: "radar", post: radarPosts[r] });
       if (supplyProducts.length > 0 && (idx + 1) % SUPPLY_EVERY_N_POSTS === 0) {
         items.push({ type: "supply", product: supplyProducts[supplyIdx % supplyProducts.length] });
         supplyIdx += 1;
       }
     });
     return items;
-  }, [posts, supplyProducts, studio]);
+  }, [posts, supplyProducts, studio, radarPosts, user]);
 
   return (
     <div className="space-y-4">
@@ -211,6 +230,10 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
             ) : item.type === "tip" ? (
               // Màn hình rộng (xl) đã có "Mẹo hôm nay" ở cột phải — tránh 2 mẹo khác nhau cùng lúc.
               <div key="studio-tip" className="xl:hidden"><TipCard tip={studio!.tip} /></div>
+            ) : item.type === "pulse" ? (
+              <PulseCard key="pulse" />
+            ) : item.type === "radar" ? (
+              <RadarPostCard key={`radar-${item.post.id}`} post={item.post} />
             ) : (
               <RecapCard key="studio-recap" recap={studio!.recap!} market={market} />
             )

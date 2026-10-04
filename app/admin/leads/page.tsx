@@ -510,9 +510,14 @@ export default function AdminLeadsPage() {
           </h1>
           <p className="text-xs text-slate-500">{owners.length} chủ tiệm · {technicians.length} thợ đã đăng ký</p>
         </div>
-        <Link href="/admin/reports" className="flex-shrink-0 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20">
-          🚩 Báo cáo vi phạm
-        </Link>
+        <div className="flex flex-shrink-0 flex-wrap justify-end gap-2">
+          <Link href="/admin/studio" className="rounded-xl border border-pink-500/30 bg-pink-500/10 px-3 py-2 text-xs font-bold text-pink-200 hover:bg-pink-500/20">
+            📡 Phòng nội dung
+          </Link>
+          <Link href="/admin/reports" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20">
+            🚩 Báo cáo vi phạm
+          </Link>
+        </div>
       </div>
 
       <main className="mx-auto max-w-7xl px-4 py-5 pb-28 md:pb-6 sm:px-6 space-y-5">

@@ -40,6 +40,9 @@ try {
   const me = await p.evaluate(() => fetch("/api/auth/session").then((r) => r.json()).then((s) => s.user.id));
 
   // Giả lập lần ghé trước là 2 ngày trước → thẻ "Có gì mới" phải hiện.
+  // Đặt mốc khi đang ở trang KHÔNG có thẻ này (trang chủ ngay sau đăng nhập
+  // có thể ghi đè mốc "bây giờ" sau khi test đặt, nếu server đang chậm).
+  await p.goto(BASE_URL + "/terms");
   await p.evaluate(([id]) => {
     localStorage.setItem(`pn_last_visit_${id}`, String(Date.now() - 2 * 86_400_000));
     localStorage.removeItem("pn_studio_hide");

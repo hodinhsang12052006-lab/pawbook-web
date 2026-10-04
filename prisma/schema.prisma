@@ -84,6 +84,7 @@ model User {
   reviewsReceived Review[] @relation("ReviewsReceived")
 
   pushSubscriptions PushSubscription[]
+  pulseVotes        PulseVote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -101,6 +102,39 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// "Nhịp đau tuần" — mỗi người trả lời 1 câu hỏi/tuần (câu hỏi xoay vòng theo
+// vai trò, xem lib/painPulse.ts). Nguồn THẬT về nỗi đau & xu hướng ngành.
+model PulseVote {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  week       String // "2026-W40"
+  questionId String
+  option     String
+  role       String
+  market     String?
+  state      String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, week])
+  @@index([week, questionId])
+}
+
+// Bài "PawNail Studio" do ADMIN duyệt & đăng từ Phòng nội dung (/admin/studio)
+// — soạn sẵn từ tín hiệu thật, hiện trên bảng tin với nhãn rõ ràng.
+model StudioPost {
+  id          String   @id @default(cuid())
+  kind        String // pulse | gap | salary | hashtag | news | pain | custom
+  title       String
+  body        String
+  href        String?
+  market      String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Tin tuyển thợ do chủ tiệm (OWNER) đăng

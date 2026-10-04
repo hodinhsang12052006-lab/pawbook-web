@@ -10,8 +10,15 @@ import type { TrendsData } from "@/lib/trends";
 import { useStudio, ChallengeBoard } from "@/components/feed/StudioCards";
 import Flag from "@/components/ui/Flag";
 import {
-  TrendingUp, Flame, Heart, MessageCircle, Eye, Hash, DollarSign, Star, Users, Crown, Sparkles, ArrowRight, Activity,
+  TrendingUp, Flame, Heart, MessageCircle, Eye, Hash, DollarSign, Star, Users, Crown, Sparkles, ArrowRight, Activity, Newspaper, ExternalLink,
 } from "lucide-react";
+import { timeAgo } from "@/lib/feedFormat";
+
+interface RadarPublic {
+  pulse: { questionId: string; topic: string; week: string; total: number; options: { id: string; label: string; votes: number; pct: number }[] }[];
+  news: { title: string; link: string; source: string; publishedAt: string | null; topic: string; lang: string }[];
+}
+const NEWS_TOPIC: Record<string, string> = { law: "Luật & giấy phép", labor: "Lao động & lương", safety: "An toàn & sức khoẻ", business: "Kinh doanh tiệm", trend: "Xu hướng mẫu" };
 
 const money = (n: number, market: "US" | "AU") => `${market === "AU" ? "A$" : "$"}${n.toLocaleString("en-US")}`;
 
@@ -48,6 +55,14 @@ export default function TrendsPage() {
   const [data, setData] = useState<TrendsData | null>(null);
   const [error, setError] = useState(false);
   const studio = useStudio(market, user?.role);
+  const [radar, setRadar] = useState<RadarPublic | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/radar?market=${market}`).then((r) => (r.ok ? r.json() : null)).then((d) => alive && setRadar(d)).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [market]);
 
   useEffect(() => {
     if (user?.market === "AU") setMarket("AU");
@@ -228,6 +243,50 @@ export default function TrendsPage() {
                   </div>
                 );
               })}
+            </div>
+          </Section>
+        )}
+
+        {radar && radar.pulse.length > 0 && (
+          <Section icon={Activity} title="Nhịp đau ngành" hint="Thợ & chủ tiệm tự trả lời mỗi tuần trên PawNail — ẩn danh" tone="bg-sky-500/15 text-sky-300">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {radar.pulse.map((p) => {
+                const sorted = [...p.options].sort((a, b) => b.votes - a.votes).filter((o) => o.votes > 0);
+                return (
+                  <div key={p.questionId + p.week} className="glass-card space-y-2.5 rounded-2xl p-4">
+                    <div>
+                      <p className="text-sm font-black text-white">{p.topic}</p>
+                      <p className="text-[11px] text-slate-500">{p.total} người trả lời · tuần {p.week.split("-W")[1]}</p>
+                    </div>
+                    {sorted.slice(0, 4).map((o, i) => (
+                      <div key={o.id} className="relative overflow-hidden rounded-lg bg-slate-950/60">
+                        <span aria-hidden className={`absolute inset-y-0 left-0 ${i === 0 ? "bg-sky-500/30" : "bg-white/[0.06]"}`} style={{ width: `${o.pct}%` }} />
+                        <div className="relative flex justify-between gap-2 px-3 py-1.5 text-xs">
+                          <span className={i === 0 ? "font-bold text-white" : "text-slate-300"}>{o.label}</span>
+                          <span className="font-bold tabular-nums text-slate-200">{o.pct}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
+        {radar && radar.news.length > 0 && (
+          <Section icon={Newspaper} title="Tin ngành nail" hint="Tiêu đề từ báo chí & tạp chí ngành — bấm để đọc bài gốc" tone="bg-slate-400/15 text-slate-200">
+            <div className="glass-card divide-y divide-white/5 overflow-hidden rounded-2xl">
+              {radar.news.map((n) => (
+                <a key={n.link} href={n.link} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 p-3.5 transition-colors hover:bg-white/[0.03]">
+                  <span className="mt-0.5 flex-shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{NEWS_TOPIC[n.topic] ?? "Tin ngành"}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold leading-snug text-slate-100">{n.title}</span>
+                    <span className="mt-0.5 block text-[11px] text-slate-500">{n.source}{n.publishedAt ? ` · ${timeAgo(n.publishedAt)}` : ""}</span>
+                  </span>
+                  <ExternalLink className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-slate-500" />
+                </a>
+              ))}
             </div>
           </Section>
         )}

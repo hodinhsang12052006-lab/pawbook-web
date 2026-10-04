@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { stateName } from "@/lib/stateNames";
+import { playSound } from "@/lib/sounds";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -81,6 +82,7 @@ export default function CreateJobPage() {
       const data = await res.json();
       if (res.ok) {
         toast.success("Đăng tin tuyển thợ thành công! 💅", { id: toastId });
+        playSound("success");
         router.push("/?tab=jobs");
       } else {
         toast.error(data.error || "Không thể đăng tin.", { id: toastId });

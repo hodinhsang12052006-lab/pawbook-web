@@ -7,6 +7,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import type { FeedPost } from "./FeedPostCard";
 import Avatar from "@/components/ui/Avatar";
+import { playSound } from "@/lib/sounds";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
@@ -101,6 +102,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
         return;
       }
       onPosted(data);
+      playSound("success");
       setContent("");
       setMediaUrls([]);
       setPostType("GENERAL");

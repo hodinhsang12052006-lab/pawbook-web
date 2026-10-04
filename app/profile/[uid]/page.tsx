@@ -17,6 +17,7 @@ import Avatar from "@/components/ui/Avatar";
 import { avatarGradient } from "@/lib/avatar";
 import { stateName } from "@/lib/stateNames";
 import { timeAgo } from "@/lib/feedFormat";
+import { playSound } from "@/lib/sounds";
 
 interface PageProps {
   params: Promise<{ uid: string }>;
@@ -214,6 +215,7 @@ function ReviewsSection({
         return;
       }
       toast.success("Đã gửi đánh giá — cảm ơn bạn! 🙏");
+      playSound("success");
       setShowForm(false);
       setOverall(0);
       setCriteriaValues({});

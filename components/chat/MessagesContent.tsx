@@ -10,7 +10,7 @@ import {
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
-import { playNotifySound } from "@/lib/notifySound";
+import { playSound } from "@/lib/sounds";
 import { useIsOnline, lastActiveLabel } from "@/lib/presence";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -702,6 +702,8 @@ export default function MessagesContent({
         if (m.senderId !== currentUser.id && m.conversationId && !document.hidden) {
           markSeen(m.conversationId);
         }
+        // Tin đến ngay trong khung chat đang mở — tiếng "bóp" nhẹ như Messenger.
+        if (m.senderId !== currentUser.id) playSound(document.hidden ? "message" : "messageInChat");
         const key = chatKeyFor(liveActiveChat);
         if (!liveActiveChat.conversationId && m.conversationId) {
           rekeyBucket(key, m.conversationId);
@@ -717,7 +719,7 @@ export default function MessagesContent({
         // /messages nên UnreadMessagesContext tự bỏ qua (coi như "đang đọc
         // tin nhắn"), nhưng người dùng thực ra không nhìn thấy tin này, nên
         // tự phát âm thanh ở đây thay vì im lặng bỏ qua hoàn toàn.
-        playNotifySound();
+        playSound("message");
       }
 
       setConversations((prev) => {
@@ -872,6 +874,8 @@ export default function MessagesContent({
       if (res.ok) {
         const data = await res.json();
         const m = data.message;
+        // Nhật ký cuộc gọi (CALL) do CallManager tự ghi — không kêu "vút".
+        if (customType !== "CALL") playSound("sent");
         const safeNewMsg = mapServerMessage({ ...m, sender: currentUser });
 
         const finalKey = m.conversationId || sendKey;

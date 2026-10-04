@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2 } from "lucide-react";
+import SoundSettings from "@/components/settings/SoundSettings";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient, isPlaceholderAvatar } from "@/lib/avatar";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
@@ -534,6 +535,11 @@ export default function ProfilePage() {
         )}
 
         {/* ===== TÀI KHOẢN ===== */}
+        {/* ===== ÂM THANH & RUNG (lưu trên thiết bị, áp dụng ngay — không cần bấm Lưu) ===== */}
+        <FormSection icon={Volume2} title="Âm thanh & rung" hint="Áp dụng ngay trên thiết bị này.">
+          <SoundSettings />
+        </FormSection>
+
         <FormSection icon={ShieldAlert} title="Tài khoản">
           <button
             type="button"

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
 import { jobAlertChannelName } from "@/lib/pusherChannel";
-import { playNotifySound } from "@/lib/notifySound";
+import { playSound, getSoundPrefs, setSoundPrefs } from "@/lib/sounds";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
 
@@ -45,6 +45,14 @@ export default function NotificationBell() {
   const uid: string | undefined = user?.id;
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [open, setOpen] = useState(false);
+  // Tắt/bật tiếng nhanh ngay trong bảng thông báo (đồng bộ với Cài đặt âm thanh).
+  const [soundOn, setSoundOn] = useState(true);
+  useEffect(() => {
+    setSoundOn(getSoundPrefs().enabled);
+    const onChange = (e: Event) => setSoundOn((e as CustomEvent<{ enabled: boolean }>).detail.enabled);
+    window.addEventListener("sound-prefs-change", onChange);
+    return () => window.removeEventListener("sound-prefs-change", onChange);
+  }, []);
   const [seenAt, setSeenAt] = useState(0);
   // Mốc đã xem TRƯỚC lần mở hiện tại — để vẫn tô sáng các mục mới trong
   // lúc panel đang mở (sau khi đã đánh dấu đã đọc).
@@ -74,7 +82,7 @@ export default function NotificationBell() {
     if (!channel) return;
     const onNotify = (data: { text?: string }) => {
       load();
-      playNotifySound();
+      playSound("notify");
       if (data?.text) toast(data.text, { icon: "🔔", position: "top-right" });
     };
     channel.bind("notification", onNotify);
@@ -94,7 +102,7 @@ export default function NotificationBell() {
     const channel = pusher.subscribe(alertChannel);
     const onJob = (data: { id?: string; text?: string }) => {
       load();
-      playNotifySound();
+      playSound("urgent");
       if (data?.text) {
         toast(
           (t) => (
@@ -176,9 +184,22 @@ export default function NotificationBell() {
         >
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <p className="text-sm font-black text-white">Thông báo</p>
+            <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const next = setSoundPrefs({ enabled: !soundOn });
+                if (next.enabled) playSound("notify", { force: true });
+              }}
+              aria-label={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
+              title={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
+              className={`rounded-lg p-1.5 transition-colors hover:bg-white/10 ${soundOn ? "text-slate-300" : "text-slate-600"}`}
+            >
+              {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
             <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] font-semibold text-pink-300 hover:text-pink-200">
               <CheckCheck className="h-3.5 w-3.5" /> Đánh dấu đã đọc
             </button>
+            </div>
           </div>
 
           <div className="max-h-[calc(75vh-48px)] overflow-y-auto custom-scrollbar p-1.5">

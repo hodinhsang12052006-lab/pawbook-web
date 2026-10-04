@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
-import { playNotifySound } from "@/lib/notifySound";
+import { playSound } from "@/lib/sounds";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { joinOwnPresence } from "@/lib/presence";
 
@@ -79,7 +79,7 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
       if (onMessagesPage && !tabHidden) return;
 
       setUnreadCount((c) => c + 1);
-      playNotifySound();
+      playSound("message");
       const who = message.sender?.name || "ai đó";
       if (message.type === "CALL") {
         // Nhật ký cuộc gọi — không hiện chuỗi thô "missed:audio".

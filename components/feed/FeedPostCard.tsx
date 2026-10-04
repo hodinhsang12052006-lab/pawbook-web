@@ -10,6 +10,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 import { trackPostView } from "@/lib/viewTracker";
 import Avatar from "@/components/ui/Avatar";
+import { playSound } from "@/lib/sounds";
 
 export interface FeedPost {
   id: string;
@@ -141,6 +142,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     setLiked(nextLiked);
     setLikeCount((c) => c + (nextLiked ? 1 : -1));
     if (nextLiked) {
+      playSound("like");
       setBurstKey((k) => k + 1);
       setLikers((prev) => [{ id: currentUser.id, name: "Bạn", avatarUrl: currentUser.avatarUrl ?? null }, ...prev.filter((l) => l.id !== currentUser.id)].slice(0, 3));
     } else {

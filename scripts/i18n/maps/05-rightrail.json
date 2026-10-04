@@ -1,0 +1,13 @@
+{ "file": "components/layout/RightRail.tsx", "map": {
+  "Mẹo hôm nay": "Tip of the day",
+  "Tin gấp mới nhất": "Latest urgent jobs",
+  "Chưa có tin gấp ở khu vực này.": "No urgent jobs in this area yet.",
+  "Xem tất cả tin": "See all jobs",
+  "Cộng đồng an toàn": "Stay safe",
+  "• Không chuyển tiền đặt cọc cho người lạ.": "• Never send deposits to strangers.",
+  "• Thoả thuận lương, chỗ ở qua tin nhắn trong app.": "• Agree on pay and housing in in-app messages.",
+  "• Gặp nội dung lừa đảo? Bấm": "• See a scam? Tap",
+  "⋮ → Báo cáo": "⋮ → Report",
+  "Điều khoản": "Terms",
+  "Bảo mật": "Privacy"
+} }

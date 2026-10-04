@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
 import { stateName } from "@/lib/stateNames";
@@ -337,7 +338,7 @@ export default function OwnerRegisterForm() {
                 onClick={() => toggleRole(r)}
                 className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${urgentRole.includes(r) ? "border-pink-500 bg-pink-500/15 text-pink-400" : `${cardClass} ${labelClass}`}`}
               >
-                {r}
+                {valueLabel(r)}
               </button>
             ))}
           </div>
@@ -353,7 +354,7 @@ export default function OwnerRegisterForm() {
                 onClick={() => setSalaryType(st)}
                 className={`min-h-[48px] rounded-2xl py-2.5 text-xs font-bold border-2 ${PRESS} ${salaryType === st ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
               >
-                {st}
+                {valueLabel(st)}
               </button>
             ))}
           </div>

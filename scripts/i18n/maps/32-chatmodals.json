@@ -1,0 +1,19 @@
+{ "file": "components/chat/ChatModals.tsx", "map": {
+  "Báo cáo ${name}": "Report ${name}",
+  "Báo cáo": "Report",
+  "Mô tả ngắn gọn lý do báo cáo — đội ngũ sẽ xem xét sớm nhất.": "Briefly describe why — our team will review it as soon as possible.",
+  "Lý do báo cáo": "Reason",
+  "VD: Gửi nội dung quấy rối, lừa đảo...": "e.g. Harassment, scams...",
+  "Hủy": "Cancel",
+  "Gửi báo cáo": "Send report",
+  "Tạo nhóm trò chuyện": "Create group chat",
+  "Tạo nhóm trò chuyện mới": "New group chat",
+  "Đóng": "Close",
+  "TÊN NHÓM": "GROUP NAME",
+  "Nhập tên nhóm trò chuyện...": "Enter a group name...",
+  "Chọn thành viên": "Choose members",
+  "Chưa có thành viên nào.": "No members yet.",
+  "✓ Nội bộ": "✓ Internal",
+  "Hủy bỏ": "Cancel",
+  "Tạo nhóm": "Create group"
+} }

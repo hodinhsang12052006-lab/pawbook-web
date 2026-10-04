@@ -10,6 +10,8 @@ import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import { useStudio, ThemeCard, TipCard, RecapCard } from "./StudioCards";
 import PulseCard from "./PulseCard";
 import RadarPostCard, { type RadarPost } from "./RadarPostCard";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
@@ -30,8 +32,9 @@ interface SocialFeedProps {
 const SUPPLY_EVERY_N_POSTS = 4;
 
 function FeedSkeleton() {
+  useTr(); // render lại khi đổi VI/EN
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Đang tải bảng tin">
+    <div className="space-y-4" aria-busy="true" aria-label={tr("Đang tải bảng tin", "Loading feed")}>
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="glass-card rounded-2xl p-4 space-y-3 animate-pulse">
           <div className="flex items-center gap-3">
@@ -51,6 +54,7 @@ function FeedSkeleton() {
 }
 
 export default function SocialFeed({ market, state, city }: SocialFeedProps) {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const isTech = user?.role === "TECHNICIAN";
   const studio = useStudio(market, user?.role);
@@ -86,13 +90,13 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         if (state) params.set("state", state);
         if (city) params.set("city", city);
         const res = await fetch(`/api/posts?${params.toString()}`);
-        if (!res.ok) throw new Error("Không thể tải bảng tin.");
+        if (!res.ok) throw new Error(tr("Không thể tải bảng tin.", "Couldn't load the feed."));
         const data = await res.json();
         if (cancelled) return;
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
       } catch (err: any) {
-        if (!cancelled) setError(err.message || "Đã xảy ra lỗi.");
+        if (!cancelled) setError(err.message || tr("Đã xảy ra lỗi.", "Something went wrong."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -197,7 +201,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
           <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />
           <p className="text-xs sm:text-sm text-slate-200">
-            <span className="font-black text-pink-400">{TOTAL_DEMAND_COUNT[market]}+ tin chủ tìm thợ</span> tại {market === "US" ? "Mỹ" : "Úc"} trong 1 đợt khảo sát nhóm nail (9/2026) — đăng ảnh tay nghề để chủ tiệm dễ tìm thấy bạn hơn.
+            <span className="font-black text-pink-400">{TOTAL_DEMAND_COUNT[market]}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span>{tr(" tại ", " in ")}{market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia")}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — đăng ảnh tay nghề để chủ tiệm dễ tìm thấy bạn hơn.", " in one survey of nail groups (Sep 2026) — post your work so salons can find you.")}
           </p>
         </div>
       )}
@@ -213,8 +217,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       ) : feedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
           <Newspaper className="h-10 w-10 text-slate-700" />
-          <p className="text-base font-bold text-slate-300">Chưa có bài đăng nào ở khu vực này</p>
-          <p className="text-sm text-slate-500">Hãy là người đầu tiên chia sẻ!</p>
+          <p className="text-base font-bold text-slate-300">{tr("Chưa có bài đăng nào ở khu vực này", "No posts in this area yet")}</p>
+          <p className="text-sm text-slate-500">{tr("Hãy là người đầu tiên chia sẻ!", "Be the first to share!")}</p>
         </div>
       ) : (
         <div className="space-y-4">

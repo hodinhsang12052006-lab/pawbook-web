@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { BellRing, X } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { enablePush, getPushState } from "@/lib/pushClient";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Lời mời bật thông báo đẩy — KHÔNG bật hộp xin quyền của trình duyệt ngay
 // khi vừa vào (người dùng bấm "Chặn" theo phản xạ là mất luôn). Chỉ mời sau
@@ -16,6 +18,7 @@ const SNOOZE_MS = 7 * 86_400_000;
 const QUIET = [/^\/auth/, /^\/messages/, /^\/jobs\/create/, /^\/admin/];
 
 export default function PushPrompt() {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const pathname = usePathname();
   const [show, setShow] = useState(false);
@@ -55,7 +58,7 @@ export default function PushPrompt() {
     >
       <div className="relative overflow-hidden rounded-2xl border border-pink-500/30 bg-slate-950/95 p-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.9)] backdrop-blur-xl">
         <span aria-hidden className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-pink-600/20 blur-2xl" />
-        <button onClick={later} aria-label="Đóng" className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
+        <button onClick={later} aria-label={tr("Đóng", "Close")} className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
           <X className="h-4 w-4" />
         </button>
         <div className="relative flex gap-3">
@@ -63,17 +66,17 @@ export default function PushPrompt() {
             <BellRing className="h-5 w-5 text-white" />
           </span>
           <div className="min-w-0 pr-5">
-            <p className="text-sm font-black text-white">Bật thông báo trên điện thoại</p>
+            <p className="text-sm font-black text-white">{tr("Bật thông báo trên điện thoại", "Turn on phone notifications")}</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
               {isTech
-                ? "Biết ngay khi tiệm gần bạn cần thợ gấp, có tin nhắn hay cuộc gọi — kể cả khi đã tắt app."
-                : "Biết ngay khi thợ nhắn tin, gọi điện hay lưu tin tuyển của bạn — kể cả khi đã tắt app."}
+                ? tr("Biết ngay khi tiệm gần bạn cần thợ gấp, có tin nhắn hay cuộc gọi — kể cả khi đã tắt app.", "Know instantly when a nearby salon needs a tech, or you get a message or call — even with the app closed.")
+                : tr("Biết ngay khi thợ nhắn tin, gọi điện hay lưu tin tuyển của bạn — kể cả khi đã tắt app.", "Know instantly when a tech messages, calls or saves your job — even with the app closed.")}
             </p>
           </div>
         </div>
         <div className="relative mt-3 grid grid-cols-2 gap-2">
           <button onClick={later} className="min-h-[40px] rounded-xl bg-white/5 text-xs font-bold text-slate-300 ring-1 ring-white/10 hover:bg-white/10">
-            Để sau
+            {tr("Để sau", "Later")}
           </button>
           <button
             disabled={busy}
@@ -85,7 +88,7 @@ export default function PushPrompt() {
             }}
             className="min-h-[40px] rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-xs font-black text-white shadow-lg shadow-pink-600/25 disabled:opacity-60"
           >
-            {busy ? "Đang bật…" : "Bật thông báo"}
+            {busy ? tr("Đang bật…", "Turning on…") : "Bật thông báo"}
           </button>
         </div>
       </div>

@@ -11,6 +11,8 @@ import { jobAlertChannelName } from "@/lib/pusherChannel";
 import { playSound, getSoundPrefs, setSoundPrefs } from "@/lib/sounds";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 interface NotificationItem {
   id: string;
@@ -41,6 +43,7 @@ function readSeen(uid: string): number {
 }
 
 export default function NotificationBell() {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const uid: string | undefined = user?.id;
   const [items, setItems] = useState<NotificationItem[] | null>(null);
@@ -107,7 +110,7 @@ export default function NotificationBell() {
         toast(
           (t) => (
             <Link href={`/jobs/${data.id}`} onClick={() => toast.dismiss(t.id)} className="block">
-              <span className="block text-[11px] font-black uppercase tracking-wider text-orange-300">Việc gấp gần bạn</span>
+              <span className="block text-[11px] font-black uppercase tracking-wider text-orange-300">{tr("Việc gấp gần bạn", "Urgent job near you")}</span>
               <span className="block">{data.text}</span>
             </Link>
           ),
@@ -164,7 +167,7 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={toggle}
-        aria-label={unread > 0 ? `Thông báo, ${unread} chưa đọc` : "Thông báo"}
+        aria-label={unread > 0 ? tr(`Thông báo, ${unread} chưa đọc`, `Notifications, ${unread} unread`) : "Thông báo"}
         aria-expanded={open}
         className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
       >
@@ -190,14 +193,14 @@ export default function NotificationBell() {
                 const next = setSoundPrefs({ enabled: !soundOn });
                 if (next.enabled) playSound("notify", { force: true });
               }}
-              aria-label={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
-              title={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
+              aria-label={soundOn ? tr("Tắt âm thanh", "Mute sounds") : tr("Bật âm thanh", "Unmute sounds")}
+              title={soundOn ? tr("Tắt âm thanh", "Mute sounds") : tr("Bật âm thanh", "Unmute sounds")}
               className={`rounded-lg p-1.5 transition-colors hover:bg-white/10 ${soundOn ? "text-slate-300" : "text-slate-600"}`}
             >
               {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
             <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] font-semibold text-pink-300 hover:text-pink-200">
-              <CheckCheck className="h-3.5 w-3.5" /> Đánh dấu đã đọc
+              <CheckCheck className="h-3.5 w-3.5" />{tr(" Đánh dấu đã đọc", " Mark all read")}
             </button>
             </div>
           </div>
@@ -210,8 +213,8 @@ export default function NotificationBell() {
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-500/10 text-pink-300 ring-1 ring-pink-500/20">
                   <Bell className="h-5 w-5" />
                 </span>
-                <p className="mt-3 text-sm font-bold text-slate-200">Chưa có thông báo</p>
-                <p className="mt-1 text-xs text-slate-500">Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.</p>
+                <p className="mt-3 text-sm font-bold text-slate-200">{tr("Chưa có thông báo", "No notifications yet")}</p>
+                <p className="mt-1 text-xs text-slate-500">{tr("Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.", "When someone likes, comments on or reviews you, it shows up here.")}</p>
               </div>
             )}
             {items?.map((n) => {

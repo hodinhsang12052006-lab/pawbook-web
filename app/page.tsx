@@ -16,21 +16,24 @@ import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCar
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
 import Flag from "@/components/ui/Flag";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Lời chào theo giờ địa phương — chi tiết nhỏ giúp app có "hơi người".
 function greeting(date = new Date()) {
   const h = date.getHours();
-  if (h < 11) return "Chào buổi sáng";
-  if (h < 14) return "Chào buổi trưa";
-  if (h < 18) return "Chào buổi chiều";
-  return "Chào buổi tối";
+  if (h < 11) return tr("Chào buổi sáng", "Good morning");
+  if (h < 14) return tr("Chào buổi trưa", "Good afternoon");
+  if (h < 18) return tr("Chào buổi chiều", "Good afternoon");
+  return tr("Chào buổi tối", "Good evening");
 }
 
-const TAB_SUBTITLE: Record<"feed" | "jobs" | "portfolio", { owner: string; tech: string }> = {
-  feed: { owner: "Cập nhật mới nhất từ cộng đồng nail quanh bạn.", tech: "Khoe tay nghề và xem tiệm nào đang tuyển quanh bạn." },
-  jobs: { owner: "Xem các tiệm khác đang tuyển để đặt mức lương cạnh tranh.", tech: "Tin tuyển gấp mới nhất — gọi hoặc nhắn tin ngay cho tiệm." },
-  portfolio: { owner: "Thợ đang sẵn sàng nhận việc — xem portfolio và nhắn tin trực tiếp.", tech: "Xem portfolio thợ khác để lấy cảm hứng mẫu mới." },
-};
+// Hàm (không phải hằng số) để đọc đúng ngôn ngữ hiện tại mỗi lần render.
+const tabSubtitle = (): Record<"feed" | "jobs" | "portfolio", { owner: string; tech: string }> => ({
+  feed: { owner: tr("Cập nhật mới nhất từ cộng đồng nail quanh bạn.", "The latest from the nail community around you."), tech: tr("Khoe tay nghề và xem tiệm nào đang tuyển quanh bạn.", "Show off your work and see which salons are hiring near you.") },
+  jobs: { owner: tr("Xem các tiệm khác đang tuyển để đặt mức lương cạnh tranh.", "See what other salons offer to set a competitive wage."), tech: tr("Tin tuyển gấp mới nhất — gọi hoặc nhắn tin ngay cho tiệm.", "Latest urgent jobs — call or message the salon right away.") },
+  portfolio: { owner: tr("Thợ đang sẵn sàng nhận việc — xem portfolio và nhắn tin trực tiếp.", "Techs ready to work — view portfolios and message directly."), tech: tr("Xem portfolio thợ khác để lấy cảm hứng mẫu mới.", "Browse other techs’ portfolios for new design ideas.") },
+});
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -52,6 +55,7 @@ function insideHorizontalScroller(target: EventTarget | null, root: HTMLElement 
 }
 
 export default function HomePage() {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const { user: sessionUser, loading: sessionLoading } = useSessionUser();
 
@@ -169,17 +173,17 @@ export default function HomePage() {
 
           <div className="relative mx-auto max-w-4xl px-4 py-10 sm:py-14 text-center space-y-6">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 px-3 py-1 text-xs font-bold text-pink-300 uppercase tracking-wider">
-              <Sparkles className="h-3.5 w-3.5" /> 100% miễn phí kết nối
+              <Sparkles className="h-3.5 w-3.5" />{tr(" 100% miễn phí kết nối", " 100% free to connect")}
             </span>
 
             <h1 className="text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight">
-              SÀN KẾT NỐI NGHỀ NAIL <br className="hidden sm:block" />
+              {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE NAIL INDUSTRY MARKETPLACE ")}<br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
-                HẢI NGOẠI #1
+                {tr("HẢI NGOẠI #1", "#1 OVERSEAS")}
               </span> TẠI MỸ &amp; ÚC
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto">
-              #1 Nail Community Marketplace in the US &amp; Australia — nơi thợ tìm việc gấp, chủ tiệm tìm thợ giỏi, chỉ trong vài phút.
+              {tr("#1 Nail Community Marketplace in the US & Australia — nơi thợ tìm việc gấp, chủ tiệm tìm thợ giỏi, chỉ trong vài phút.", "#1 Nail Community Marketplace in the US & Australia — techs find jobs fast, salons find great techs, in minutes.")}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -187,13 +191,13 @@ export default function HomePage() {
                 onClick={() => router.push("/auth/register?role=technician")}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-500 hover:to-fuchsia-500 px-8 py-4 text-base font-extrabold text-white shadow-xl shadow-pink-600/30 transition-all active:scale-95"
               >
-                💅 TÌM VIỆC LÀM NAIL
+                {tr("💅 TÌM VIỆC LÀM NAIL", "💅 FIND NAIL JOBS")}
               </button>
               <button
                 onClick={() => router.push("/auth/register?role=owner")}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 px-8 py-4 text-base font-extrabold text-emerald-300 shadow-lg transition-all active:scale-95"
               >
-                🏪 ĐĂNG TIN TUYỂN THỢ GẤP
+                {tr("🏪 ĐĂNG TIN TUYỂN THỢ GẤP", "🏪 POST AN URGENT JOB")}
               </button>
             </div>
           </div>
@@ -211,7 +215,7 @@ export default function HomePage() {
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                   {greeting()}{displayName ? `, ${displayName}` : ""} 👋
                 </h1>
-                <p className="mt-0.5 text-sm text-slate-400">{TAB_SUBTITLE[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
+                <p className="mt-0.5 text-sm text-slate-400">{tabSubtitle()[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
               </div>
             )}
 
@@ -224,7 +228,7 @@ export default function HomePage() {
                 <ProfileCompletenessCard completeness={completeness} compact role={sessionUser?.role} />
                 <button
                   onClick={dismissCompleteness}
-                  aria-label="Ẩn gợi ý hoàn thiện hồ sơ"
+                  aria-label={tr("Ẩn gợi ý hoàn thiện hồ sơ", "Hide profile tips")}
                   className="absolute right-2 top-2 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200"
                 >
                   <X className="h-4 w-4" />
@@ -244,7 +248,7 @@ export default function HomePage() {
                       aria-pressed={market === m}
                       className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400"}`}
                     >
-                      <span className="inline-flex items-center gap-1"><Flag code={m} className="h-3 w-4" /> {m === "US" ? "Mỹ" : "Úc"}</span>
+                      <span className="inline-flex items-center gap-1"><Flag code={m} className="h-3 w-4" /> {m === "US" ? tr("Mỹ", "US") : tr("Úc", "AU")}</span>
                     </button>
                   ))}
                 </div>
@@ -257,13 +261,13 @@ export default function HomePage() {
                         state === s ? "bg-pink-600 text-white ring-pink-600" : "bg-slate-950/60 text-slate-400 ring-slate-800"
                       }`}
                     >
-                      {s ? stateName(market, s) : "Tất cả bang"}
+                      {s ? stateName(market, s) : tr("Tất cả bang", "All states")}
                     </button>
                   ))}
                 </div>
                 <button
                   onClick={() => setShowCitySearch((v) => !v)}
-                  aria-label="Tìm theo thành phố"
+                  aria-label={tr("Tìm theo thành phố", "Search by city")}
                   aria-expanded={showCitySearch || !!city}
                   className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ring-1 transition-colors ${showCitySearch || city ? "bg-pink-500/15 text-pink-300 ring-pink-500/40" : "text-slate-400 ring-slate-800"}`}
                 >
@@ -278,11 +282,11 @@ export default function HomePage() {
                     autoFocus={showCitySearch && !city}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Thành phố… (VD: Houston, Sydney)"
+                    placeholder={tr("Thành phố… (VD: Houston, Sydney)", "City… (e.g. Houston, Sydney)")}
                     className="w-full rounded-xl border border-slate-800 bg-slate-950/60 py-2 pl-9 pr-9 text-sm text-slate-100 placeholder-slate-500 focus:border-pink-500 focus:outline-none"
                   />
                   {city && (
-                    <button onClick={() => { setCity(""); setShowCitySearch(false); }} aria-label="Xoá tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 hover:text-slate-200">
+                    <button onClick={() => { setCity(""); setShowCitySearch(false); }} aria-label={tr("Xoá tìm kiếm", "Clear search")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-500 hover:text-slate-200">
                       <X className="h-4 w-4" />
                     </button>
                   )}
@@ -302,7 +306,7 @@ export default function HomePage() {
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <Flag code="US" /> Mỹ · US
+                  <Flag code="US" />{tr(" Mỹ · US", " United States")}
                 </button>
                 <button
                   onClick={() => { setMarket("AU"); setState(""); }}
@@ -313,7 +317,7 @@ export default function HomePage() {
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <Flag code="AU" /> Úc · AU
+                  <Flag code="AU" />{tr(" Úc · AU", " Australia")}
                 </button>
               </div>
 
@@ -325,7 +329,7 @@ export default function HomePage() {
                     state === "" ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
                   }`}
                 >
-                  Tất cả bang
+                  {tr("Tất cả bang", "All states")}
                 </button>
                 {states.map((s) => (
                   <button
@@ -346,7 +350,7 @@ export default function HomePage() {
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="Tìm theo thành phố... (VD: Los Angeles, Sydney)"
+                  placeholder={tr("Tìm theo thành phố... (VD: Los Angeles, Sydney)", "Search by city... (e.g. Los Angeles, Sydney)")}
                   className="w-full rounded-xl border border-slate-800 bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500"
                 />
               </div>
@@ -365,9 +369,9 @@ export default function HomePage() {
                   style={{ transform: `translateX(${TAB_ORDER.indexOf(tab) * 100}%)` }}
                 />
                 {([
-                  { id: "feed", icon: Newspaper, short: "Bảng tin", long: "Bảng tin" },
-                  { id: "jobs", icon: Flame, short: "Việc gấp", long: "Cần thợ gấp" },
-                  { id: "portfolio", icon: Sparkles, short: "Thợ rảnh", long: "Thợ đang rảnh" },
+                  { id: "feed", icon: Newspaper, short: tr("Bảng tin", "Feed"), long: tr("Bảng tin", "Feed") },
+                  { id: "jobs", icon: Flame, short: tr("Việc gấp", "Jobs"), long: tr("Cần thợ gấp", "Urgent jobs") },
+                  { id: "portfolio", icon: Sparkles, short: tr("Thợ rảnh", "Techs"), long: tr("Thợ đang rảnh", "Available techs") },
                 ] as const).map((t) => (
                   <button
                     key={t.id}
@@ -404,7 +408,7 @@ export default function HomePage() {
       </main>
 
       <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500">
-        <p>© 2026 PawNail Jobs. Nền tảng việc làm &amp; tay nghề Nail cho thị trường Mỹ &amp; Úc.</p>
+        <p>{tr("© 2026 PawNail Jobs. Nền tảng việc làm & tay nghề Nail cho thị trường Mỹ & Úc.", "© 2026 PawNail Jobs. Nail jobs & talent platform for the US & Australia.")}</p>
       </footer>
     </div>
   );

@@ -1,0 +1,7 @@
+{ "file": "components/chat/VideoCallRoom.tsx", "map": {
+  "Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.": "Couldn't connect the call. Check your connection and try again.",
+  "Không lấy được token cuộc gọi.": "Couldn't get a call token.",
+  "Không kết nối được dịch vụ gọi. Vui lòng thử lại hoặc chuyển sang nhắn tin.": "Couldn't reach the call service. Try again or switch to messaging.",
+  "Thử lại": "Try again",
+  "Chuyển sang nhắn tin": "Switch to messaging"
+} }

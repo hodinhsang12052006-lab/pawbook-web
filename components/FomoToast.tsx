@@ -6,6 +6,7 @@ import { X, ArrowRight, Flame, Sparkles, Heart, BarChart3 } from "lucide-react";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
+import { tr } from "@/lib/i18n/tr";
 
 type Kind = "job" | "tech" | "post" | "survey";
 
@@ -22,12 +23,16 @@ interface FomoMessage {
 // Số liệu tổng hợp THẬT từ 1 đợt khảo sát cộng đồng (lib/nailRadarData.ts).
 // Ghi rõ NGUỒN + THỜI ĐIỂM — đây là số của 1 đợt khảo sát, không phải số
 // "ngay lúc này"; nói quá là quảng cáo gây hiểu lầm.
-const SURVEY = "khảo sát nhóm nail Facebook, 9/2026";
-const SURVEY_MESSAGES: FomoMessage[] = [
-  { kind: "survey", title: "Nhịp thị trường", text: `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón` },
-  { kind: "survey", title: "Nhịp thị trường", text: `Texas dẫn đầu nhu cầu với ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})` },
-  { kind: "survey", title: "Nhịp thị trường", text: `Úc: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} tin tìm thợ tại NSW & Victoria (${SURVEY})` },
-];
+// Hàm (không phải hằng) để chữ đổi theo VI/EN lúc tạo hàng đợi.
+const SURVEY_MESSAGES = (): FomoMessage[] => {
+  const SURVEY = tr("khảo sát nhóm nail Facebook, 9/2026", "Facebook nail-group survey, Sep 2026");
+  const title = tr("Nhịp thị trường", "Market pulse");
+  return [
+  { kind: "survey", title, text: tr(`${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón`, `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ salon posts seeking nail techs in the US & Australia in one ${SURVEY} — techs are in demand`) },
+  { kind: "survey", title, text: tr(`Texas dẫn đầu nhu cầu với ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})`, `Texas leads demand with ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} hiring posts, mostly for acrylic techs (${SURVEY})`) },
+  { kind: "survey", title, text: tr(`Úc: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} tin tìm thợ tại NSW & Victoria (${SURVEY})`, `Australia: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} hiring posts in NSW & Victoria (${SURVEY})`) },
+  ];
+};
 
 // Trước đây xen kẽ "sự kiện" BỊA (tên người, số tiền, "3 phút trước" không
 // hề xảy ra) — social proof giả. Giờ CHỈ có hoạt động thật từ /api/activity
@@ -83,7 +88,7 @@ export default function FomoToast() {
   const [paused, setPaused] = useState(false);
   const [dragX, setDragX] = useState(0);
   const queueRef = useRef<FomoMessage[]>([]);
-  const poolRef = useRef<FomoMessage[]>(SURVEY_MESSAGES);
+  const poolRef = useRef<FomoMessage[]>(SURVEY_MESSAGES());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleRef = useRef<((delay: number) => void) | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,7 +107,7 @@ export default function FomoToast() {
       .then((events: FomoMessage[]) => {
         if (cancelled || !Array.isArray(events)) return;
         // Sự kiện thật là chính; số khảo sát chỉ xen vào cho đỡ lặp.
-        poolRef.current = [...events.filter((e) => e && e.text), ...SURVEY_MESSAGES];
+        poolRef.current = [...events.filter((e) => e && e.text), ...SURVEY_MESSAGES()];
         queueRef.current = [];
       })
       .catch(() => {});

@@ -1,0 +1,17 @@
+{ "file": "components/technicians/TechnicianGrid.tsx", "map": {
+  "tại ${stateName(market, state)}": "in ${stateName(market, state)}",
+  "tại Mỹ": "in the US",
+  "tại Úc": "in Australia",
+  "+ tin chủ tìm thợ": "+ salon hiring posts",
+  "trong 1 đợt khảo sát nhóm nail (9/2026) — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.": "in one survey of nail groups (Sep 2026) — great techs get many offers, message as soon as you find a match.",
+  "Đang tải portfolio thợ": "Loading tech portfolios",
+  "Tìm việc gấp": "Needs work now",
+  "Đang rảnh hôm nay": "Available today",
+  "Đang tìm chỗ tốt hơn": "Open to better offers",
+  "Chuyên ${s}": "${s} specialist",
+  "năm KN": "yrs exp",
+  "Không thể tải danh sách thợ.": "Couldn't load techs.",
+  "Đã xảy ra lỗi.": "Something went wrong.",
+  "Chưa có thợ nào đăng portfolio ở khu vực này": "No tech portfolios in this area yet",
+  "Hãy thử đổi bang hoặc thành phố khác.": "Try another state or city."
+} }

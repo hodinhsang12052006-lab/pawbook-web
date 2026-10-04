@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { Activity, Loader2, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { playSound } from "@/lib/sounds";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 interface PulseOptionResult { id: string; label: string; votes: number; pct: number }
 interface PulseResults { total: number; published: boolean; options: PulseOptionResult[]; scope: string | null }
@@ -18,6 +20,7 @@ interface PulseData {
 // "Nhịp đau tuần" — 1 câu hỏi/tuần, bấm 1 lần. Trả lời xong mới thấy kết quả
 // (để không bị số đông "lái"). Kết quả gộp lại thành nội dung PawNail Studio.
 export default function PulseCard() {
+  useTr(); // render lại khi đổi VI/EN
   const [data, setData] = useState<PulseData | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -34,11 +37,11 @@ export default function PulseCard() {
     try {
       const res = await fetch("/api/pulse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ option }) });
       const next = await res.json();
-      if (!res.ok) throw new Error(next.error || "Không ghi nhận được.");
+      if (!res.ok) throw new Error(next.error || tr("Không ghi nhận được.", "Couldn't record your answer."));
       setData(next);
       playSound("success");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Không ghi nhận được.");
+      toast.error(err instanceof Error ? err.message : tr("Không ghi nhận được.", "Couldn't record your answer."));
     } finally {
       setBusy(null);
     }
@@ -48,7 +51,7 @@ export default function PulseCard() {
   return (
     <section aria-label="Nhịp đau tuần" className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
       <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-sky-300">
-        <Activity className="h-3.5 w-3.5" /> Nhịp đau tuần · 1 chạm, ẩn danh
+        <Activity className="h-3.5 w-3.5" />{tr(" Nhịp đau tuần · 1 chạm, ẩn danh", " Weekly pulse · one tap, anonymous")}
       </p>
       <h3 className="mt-1.5 text-[15px] font-black leading-snug text-white">{q.text}</h3>
 
@@ -87,12 +90,12 @@ export default function PulseCard() {
           ) : (
             <p className="flex items-center gap-2 rounded-xl bg-slate-950/50 px-3 py-2.5 text-xs text-slate-300 ring-1 ring-white/5">
               <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-sky-300" />
-              Đã ghi nhận! Kết quả hiện khi đủ người trả lời — bạn là một trong những người đầu tiên.
+              {tr("Đã ghi nhận! Kết quả hiện khi đủ người trả lời — bạn là một trong những người đầu tiên.", "Recorded! Results appear once enough people answer — you're one of the first.")}
             </p>
           )}
           {shown?.published && (
             <p className="text-[11px] text-slate-500">
-              {shown.total} người trả lời{shown.scope ? ` tại bang của bạn` : ""} · kết quả tổng hợp lên bảng Xu hướng mỗi tuần
+              {shown.total}{tr(" người trả lời", " responses")}{shown.scope ? tr(` tại bang của bạn`, ` in your state`) : ""}{tr(" · kết quả tổng hợp lên bảng Xu hướng mỗi tuần", " · results go to the weekly Trends page")}
             </p>
           )}
         </div>

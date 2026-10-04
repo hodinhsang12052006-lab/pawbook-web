@@ -1,5 +1,6 @@
 "use client";
 
+import { setTrLocale } from "@/lib/i18n/tr";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import vi from "./dictionaries/vi.json";
 import en from "./dictionaries/en.json";
@@ -35,6 +36,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // render would mismatch the server HTML and trigger a hydration error.
   const [locale, setLocaleState] = useState<Locale>("vi");
   const [hydrated, setHydrated] = useState(false);
+  // Đồng bộ ngôn ngữ cho hàm tr() toàn cục — đặt ngay trong lúc render để
+  // mọi component con (render sau provider) đọc đúng ngôn ngữ mới.
+  setTrLocale(locale);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? (localStorage.getItem(STORAGE_KEY) as Locale | null) : null;

@@ -50,9 +50,10 @@ const REVIEW_CRITERIA: { key: "punctualityOrPay" | "environment" | "turnFairness
 const cache = new Map<string, { at: number; data: Signals }>();
 const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 
-export async function getSignals(market: Market): Promise<Signals> {
+// fresh=true: Phòng nội dung của admin luôn xem số liệu mới nhất (bảng tin công khai dùng cache).
+export async function getSignals(market: Market, { fresh = false }: { fresh?: boolean } = {}): Promise<Signals> {
   const hit = cache.get(market);
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
+  if (!fresh && hit && Date.now() - hit.at < CACHE_MS) return hit.data;
   const now = Date.now();
 
   const [posts, jobs14, techs, jobs60, reviews, owners] = await Promise.all([

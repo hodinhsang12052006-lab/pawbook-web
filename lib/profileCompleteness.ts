@@ -1,4 +1,5 @@
 import { isPlaceholderAvatar } from "@/lib/avatar";
+import { tr } from "@/lib/i18n/tr";
 // Tính % hoàn thiện hồ sơ + danh sách việc còn thiếu — dùng chung cho
 // Sidebar, banner mobile trang chủ và trang /profile. Hồ sơ càng đủ thì chủ
 // tiệm/thợ càng dễ chọn nhau, nên đây là "việc tiếp theo" rõ ràng nhất để
@@ -40,23 +41,23 @@ export function getProfileCompleteness(user: any): Completeness | null {
   let items: CompletenessItem[];
   if (user.role === "OWNER") {
     items = [
-      { key: "avatar", label: "Ảnh đại diện / logo tiệm", done: hasCustomAvatar(user.avatarUrl) },
-      { key: "phone", label: "Số điện thoại liên hệ", done: !!user.phone },
-      { key: "location", label: "Thành phố & bang của tiệm", done: !!user.city && !!user.state },
-      { key: "policy", label: "Chính sách chia turn", done: !!user.turnSplitPolicy },
-      { key: "clients", label: "Loại khách của tiệm", done: !!user.clientTypePolicy },
-      { key: "job", label: "Đăng tin tuyển thợ đầu tiên", done: (user.jobs?.length ?? 0) > 0 },
+      { key: "avatar", label: tr("Ảnh đại diện / logo tiệm", "Profile photo / salon logo"), done: hasCustomAvatar(user.avatarUrl) },
+      { key: "phone", label: tr("Số điện thoại liên hệ", "Contact phone"), done: !!user.phone },
+      { key: "location", label: tr("Thành phố & bang của tiệm", "Salon city & state"), done: !!user.city && !!user.state },
+      { key: "policy", label: tr("Chính sách chia turn", "Commission policy"), done: !!user.turnSplitPolicy },
+      { key: "clients", label: tr("Loại khách của tiệm", "Salon clientele"), done: !!user.clientTypePolicy },
+      { key: "job", label: tr("Đăng tin tuyển thợ đầu tiên", "Post your first job"), done: (user.jobs?.length ?? 0) > 0 },
     ];
   } else {
     const tp = user.technicianProfile || {};
     items = [
-      { key: "avatar", label: "Ảnh đại diện thật", done: hasCustomAvatar(user.avatarUrl) },
-      { key: "phone", label: "Số điện thoại", done: !!user.phone },
-      { key: "location", label: "Thành phố & bang", done: !!user.city && !!user.state },
-      { key: "skills", label: "Kỹ năng sở trường", done: parseList(tp.specialties).length > 0 },
-      { key: "bio", label: "Giới thiệu ngắn về bản thân", done: !!tp.bio && String(tp.bio).trim().length >= 20 },
-      { key: "experience", label: "Số năm kinh nghiệm", done: (tp.yearsOfExperience ?? 0) > 0 },
-      { key: "portfolio", label: "Ít nhất 3 ảnh mẫu móng", done: parseList(tp.portfolioImages).length >= 3 },
+      { key: "avatar", label: tr("Ảnh đại diện thật", "Real profile photo"), done: hasCustomAvatar(user.avatarUrl) },
+      { key: "phone", label: tr("Số điện thoại", "Phone number"), done: !!user.phone },
+      { key: "location", label: tr("Thành phố & bang", "City & state"), done: !!user.city && !!user.state },
+      { key: "skills", label: tr("Kỹ năng sở trường", "Top skills"), done: parseList(tp.specialties).length > 0 },
+      { key: "bio", label: tr("Giới thiệu ngắn về bản thân", "Short bio"), done: !!tp.bio && String(tp.bio).trim().length >= 20 },
+      { key: "experience", label: tr("Số năm kinh nghiệm", "Years of experience"), done: (tp.yearsOfExperience ?? 0) > 0 },
+      { key: "portfolio", label: tr("Ít nhất 3 ảnh mẫu móng", "At least 3 work photos"), done: parseList(tp.portfolioImages).length >= 3 },
     ];
   }
 

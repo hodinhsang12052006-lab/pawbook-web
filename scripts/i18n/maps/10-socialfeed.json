@@ -1,0 +1,12 @@
+{ "file": "components/feed/SocialFeed.tsx", "map": {
+  "Đang tải bảng tin": "Loading feed",
+  "Không thể tải bảng tin.": "Couldn't load the feed.",
+  "Đã xảy ra lỗi.": "Something went wrong.",
+  "+ tin chủ tìm thợ": "+ salon hiring posts",
+  "tại": "in",
+  "Mỹ": "the US",
+  "Úc": "Australia",
+  "trong 1 đợt khảo sát nhóm nail (9/2026) — đăng ảnh tay nghề để chủ tiệm dễ tìm thấy bạn hơn.": "in one survey of nail groups (Sep 2026) — post your work so salons can find you.",
+  "Chưa có bài đăng nào ở khu vực này": "No posts in this area yet",
+  "Hãy là người đầu tiên chia sẻ!": "Be the first to share!"
+} }

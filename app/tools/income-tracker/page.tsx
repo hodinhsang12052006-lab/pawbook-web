@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Navbar from "@/components/layout/Navbar";
 import { Wallet, Calendar, Plus, TrendingUp, Trash2, Loader2, ClipboardCheck, X } from "lucide-react";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 const STORAGE_KEY_PREFIX = "bitpaw_income_";
@@ -46,6 +48,7 @@ function currency(n: number) {
 // & Tip Hằng Ngày" — nếu đo được usage thật, v2 mới đầu tư sync 1 bảng
 // DailyEarning trong Prisma.
 export default function IncomeTrackerPage() {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -68,7 +71,7 @@ export default function IncomeTrackerPage() {
         const res = await fetch("/api/auth/session");
         const session = res.ok ? await res.json() : null;
         if (!session?.user?.id) {
-          toast.error("Vui lòng đăng nhập để dùng Bảng tính thu nhập.");
+          toast.error(tr("Vui lòng đăng nhập để dùng Bảng tính thu nhập.", "Please sign in to use the income tracker."));
           router.push("/auth/login");
           return;
         }
@@ -119,7 +122,7 @@ export default function IncomeTrackerPage() {
     const tipCash = Number(formTipCash) || 0;
     const tipCredit = Number(formTipCredit) || 0;
     if (turns <= 0 && serviceAmount <= 0 && tipCash <= 0 && tipCredit <= 0) {
-      toast.error("Nhập ít nhất 1 số liệu cho ca làm hôm nay.");
+      toast.error(tr("Nhập ít nhất 1 số liệu cho ca làm hôm nay.", "Enter at least one number for today's shift."));
       return;
     }
     // Upsert theo ngày — lưu đè nếu đã ghi ca này rồi (sửa lại trong ngày).
@@ -127,7 +130,7 @@ export default function IncomeTrackerPage() {
     next.push({ date: formDate, turns, serviceAmount, tipCash, tipCredit });
     next.sort((a, b) => a.date.localeCompare(b.date));
     persistEntries(next);
-    toast.success("Đã lưu ca làm hôm nay! 🎉", { duration: 2500 });
+    toast.success(tr("Đã lưu ca làm hôm nay! 🎉", "Today's shift saved! 🎉"), { duration: 2500 });
     setFormTurns("");
     setFormService("");
     setFormTipCash("");
@@ -180,23 +183,23 @@ export default function IncomeTrackerPage() {
       <main className="mx-auto w-full max-w-2xl px-4 py-8 pb-28 md:pb-10 space-y-6">
         <div className="space-y-1.5">
           <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-purple-400" /> Bảng Tính Thu Nhập & Tip
+            <Wallet className="h-6 w-6 text-purple-400" />{tr(" Bảng Tính Thu Nhập & Tip", " Income & Tip Tracker")}
           </h1>
           <p className="text-sm text-slate-400">
-            Ghi turn + tip mỗi tối, tự cộng dồn theo tuần — đối chiếu phiếu lương cuối tuần cho chuẩn.
+            {tr("Ghi turn + tip mỗi tối, tự cộng dồn theo tuần — đối chiếu phiếu lương cuối tuần cho chuẩn.", "Log turns + tips each night, auto-totaled by week — check your weekly paycheck with confidence.")}
           </p>
         </div>
 
         {/* FORM NHẬP LIỆU — One-thumb design: mỗi input min-h-[48px], 1 nút lưu duy nhất */}
         <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-5 space-y-4">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wide">
-            <Calendar className="h-4 w-4 text-purple-400" /> Ghi ca làm
+            <Calendar className="h-4 w-4 text-purple-400" />{tr(" Ghi ca làm", " Log a shift")}
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">Ngày</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Ngày", "Date")}</label>
             <input
-              aria-label="Ngày"
+              aria-label={tr("Ngày", "Date")}
               type="date"
               value={formDate}
               max={todayISO()}
@@ -207,7 +210,7 @@ export default function IncomeTrackerPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Số lượt làm (Turn)</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Số lượt làm (Turn)", "Turns")}</label>
               <input
                 type="number"
                 inputMode="numeric"
@@ -219,7 +222,7 @@ export default function IncomeTrackerPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Tiền dịch vụ ($)</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Tiền dịch vụ ($)", "Service total ($)")}</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -234,7 +237,7 @@ export default function IncomeTrackerPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Tip tiền mặt ($)</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Tip tiền mặt ($)", "Cash tips ($)")}</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -246,7 +249,7 @@ export default function IncomeTrackerPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Tip thẻ ($)</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Tip thẻ ($)", "Card tips ($)")}</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -264,19 +267,19 @@ export default function IncomeTrackerPage() {
             onClick={handleSaveEntry}
             className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-sm font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 ${PRESS}`}
           >
-            <Plus className="h-4.5 w-4.5" /> Lưu ca làm hôm nay
+            <Plus className="h-4.5 w-4.5" />{tr(" Lưu ca làm hôm nay", " Save today's shift")}
           </button>
         </div>
 
         {/* CẤU HÌNH % ĂN CHIA — thợ tự cấu hình, dùng để ước tính phần nhận */}
         <div className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-slate-300">Bạn ăn chia bao nhiêu % dịch vụ?</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Tip mặc định tính 100% về bạn.</p>
+            <p className="text-xs font-bold text-slate-300">{tr("Bạn ăn chia bao nhiêu % dịch vụ?", "What % of service do you keep?")}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{tr("Tip mặc định tính 100% về bạn.", "Tips count 100% to you by default.")}</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <input
-              aria-label="Phần trăm bạn ăn chia mỗi dịch vụ"
+              aria-label={tr("Phần trăm bạn ăn chia mỗi dịch vụ", "Your commission percentage per service")}
               type="number"
               min={0}
               max={100}
@@ -291,24 +294,24 @@ export default function IncomeTrackerPage() {
         {/* TỔNG KẾT TUẦN */}
         <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-950/30 via-slate-900/40 to-indigo-950/30 p-5 space-y-4">
           <div className="flex items-center gap-2 text-xs font-bold text-purple-300 uppercase tracking-wide">
-            <TrendingUp className="h-4 w-4" /> Tổng kết tuần {formatDateVN(weekStart)} – {formatDateVN(weekEnd)}
+            <TrendingUp className="h-4 w-4" />{tr(" Tổng kết tuần ", " Weekly summary ")}{formatDateVN(weekStart)} – {formatDateVN(weekEnd)}
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center">
             <div className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng lượt làm</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng lượt làm", "Total turns")}</p>
               <p className="text-lg font-black text-white mt-1">{weekTotals.totalTurns}</p>
             </div>
             <div className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng dịch vụ</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng dịch vụ", "Total service")}</p>
               <p className="text-lg font-black text-white mt-1">{currency(weekTotals.totalService)}</p>
             </div>
             <div className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Tip</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng Tip", "Total tips")}</p>
               <p className="text-lg font-black text-emerald-400 mt-1">{currency(weekTotals.totalTip)}</p>
             </div>
             <div className="rounded-2xl bg-purple-500/10 border border-purple-500/30 p-3">
-              <p className="text-[10px] font-bold text-purple-300 uppercase">Ước tính bạn nhận</p>
+              <p className="text-[10px] font-bold text-purple-300 uppercase">{tr("Ước tính bạn nhận", "Estimated take-home")}</p>
               <p className="text-lg font-black text-purple-300 mt-1">{currency(weekTotals.estimatedEarning)}</p>
             </div>
           </div>
@@ -319,7 +322,7 @@ export default function IncomeTrackerPage() {
             disabled={weekEntries.length === 0}
             className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-500/10 text-sm font-bold text-purple-300 hover:bg-purple-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all ${PRESS}`}
           >
-            <ClipboardCheck className="h-4.5 w-4.5" /> Đối chiếu phiếu lương
+            <ClipboardCheck className="h-4.5 w-4.5" />{tr(" Đối chiếu phiếu lương", " Paycheck check")}
           </button>
         </div>
 
@@ -337,7 +340,7 @@ export default function IncomeTrackerPage() {
                     })}
                   </p>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    {e.turns} lượt · DV {currency(e.serviceAmount)} · Tip {currency(e.tipCash + e.tipCredit)}
+                    {e.turns}{tr(" lượt · DV ", " turns · service ")}{currency(e.serviceAmount)} · Tip {currency(e.tipCash + e.tipCredit)}
                   </p>
                 </div>
                 <button
@@ -358,15 +361,15 @@ export default function IncomeTrackerPage() {
           type="button"
           onClick={() =>
             toast.success(
-              "Đã ghi nhận! Đội ngũ PawNail sẽ liên hệ tư vấn Bảng Chia Turn tự động cho tiệm bạn trong 24h.",
+              tr("Đã ghi nhận! Đội ngũ PawNail sẽ liên hệ tư vấn Bảng Chia Turn tự động cho tiệm bạn trong 24h.", "Got it! The PawNail team will reach out about an automatic turn board for your salon within 24h."),
               { duration: 4000, icon: "🚀" }
             )
           }
           className="w-full text-left rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 p-4 text-xs text-slate-400 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all cursor-pointer"
         >
-          💡 Tiệm bạn chưa chia turn tự động?{" "}
-          <span className="text-purple-300 font-bold">Giới thiệu chủ tiệm dùng thử Bảng Chia Turn PawNail POS</span>{" "}
-          để không bao giờ sợ tính lộn tip!
+          {tr("💡 Tiệm bạn chưa chia turn tự động?", "💡 Salon not splitting turns automatically yet?")}{" "}
+          <span className="text-purple-300 font-bold">{tr("Giới thiệu chủ tiệm dùng thử Bảng Chia Turn PawNail POS", "Refer your owner to try the PawNail POS turn board")}</span>{" "}
+          {tr("để không bao giờ sợ tính lộn tip!", "so tips are never miscounted!")}
         </button>
       </main>
 
@@ -375,7 +378,7 @@ export default function IncomeTrackerPage() {
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
           <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4 animate-scaleUp">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-white">Đối chiếu phiếu lương</h3>
+              <h3 className="text-lg font-black text-white">{tr("Đối chiếu phiếu lương", "Paycheck check")}</h3>
               <button
                 onClick={() => setShowReconcile(false)}
                 className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer"
@@ -384,38 +387,38 @@ export default function IncomeTrackerPage() {
               </button>
             </div>
             <p className="text-xs text-slate-500">
-              {userName ? `${userName} — ` : ""}Tuần {formatDateVN(weekStart)} – {formatDateVN(weekEnd)}
+              {userName ? `${userName} — ` : ""}{tr("Tuần ", "Week ")}{formatDateVN(weekStart)} – {formatDateVN(weekEnd)}
             </p>
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-400">Tổng lượt làm</span>
+                <span className="text-slate-400">{tr("Tổng lượt làm", "Total turns")}</span>
                 <span className="font-bold text-white">{weekTotals.totalTurns}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Tổng tiền dịch vụ</span>
+                <span className="text-slate-400">{tr("Tổng tiền dịch vụ", "Service total")}</span>
                 <span className="font-bold text-white">{currency(weekTotals.totalService)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">% ăn chia</span>
+                <span className="text-slate-400">{tr("% ăn chia", "% commission")}</span>
                 <span className="font-bold text-white">{splitPercent}%</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Tip tiền mặt</span>
+                <span className="text-slate-400">{tr("Tip tiền mặt", "Cash tips")}</span>
                 <span className="font-bold text-white">{currency(weekTotals.totalTipCash)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Tip thẻ</span>
+                <span className="text-slate-400">{tr("Tip thẻ", "Card tips")}</span>
                 <span className="font-bold text-white">{currency(weekTotals.totalTipCredit)}</span>
               </div>
               <div className="border-t border-slate-800 pt-2 flex justify-between text-base">
-                <span className="font-black text-purple-300">Ước tính bạn nhận</span>
+                <span className="font-black text-purple-300">{tr("Ước tính bạn nhận", "Estimated take-home")}</span>
                 <span className="font-black text-purple-300">{currency(weekTotals.estimatedEarning)}</span>
               </div>
             </div>
 
             <p className="text-[10px] text-slate-600 text-center">
-              Số liệu tự ghi trên máy bạn — dùng để đối chiếu, không thay thế phiếu lương chính thức của tiệm.
+              {tr("Số liệu tự ghi trên máy bạn — dùng để đối chiếu, không thay thế phiếu lương chính thức của tiệm.", "Numbers are stored on your device — for checking only, not a replacement for the salon's official paycheck.")}
             </p>
           </div>
         </div>

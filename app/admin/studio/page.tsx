@@ -48,6 +48,7 @@ function Panel({ title, icon: Icon, children, hint }: { title: string; icon: typ
   );
 }
 const Empty = ({ text }: { text: string }) => <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-500">{text}</p>;
+const topicKey = (t: string) => t.replace(/[\d.,]+%?/g, "#").trim();
 
 export default function StudioRoomPage() {
   const [market, setMarket] = useState<"US" | "AU">("US");
@@ -72,7 +73,9 @@ export default function StudioRoomPage() {
     load();
   }, [load]);
 
-  const postedTitles = useMemo(() => new Set((data?.posts ?? []).map((p) => p.title)), [data?.posts]);
+  // So theo CHỦ ĐỀ (bỏ phần số): số liệu cập nhật liên tục làm tiêu đề đổi
+  // vài con số — vẫn là bài đã đăng, tránh admin đăng trùng.
+  const postedTitles = useMemo(() => new Set((data?.posts ?? []).map((p) => topicKey(p.title))), [data?.posts]);
 
   const publish = async (d: { id?: string; kind: string; title: string; body: string; href?: string | null }) => {
     setBusy(d.id ?? "custom");
@@ -141,7 +144,7 @@ export default function StudioRoomPage() {
               ) : (
                 <div className="grid gap-3 lg:grid-cols-2">
                   {data.drafts.map((d) => {
-                    const posted = postedTitles.has(d.title);
+                    const posted = postedTitles.has(topicKey(d.title));
                     return (
                       <article key={d.id} className="flex min-w-0 flex-col gap-2 rounded-xl bg-slate-950/50 p-3.5 ring-1 ring-white/5">
                         <div className="flex items-center justify-between gap-2"><Badge kind={d.kind} /><span className="truncate text-[10px] text-slate-500">Nguồn: {d.evidence}</span></div>

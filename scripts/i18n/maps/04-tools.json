@@ -1,0 +1,20 @@
+{ "file": "components/layout/ToolsPanel.tsx", "map": {
+  "${user.state} · $${radar.rateMin.toLocaleString(\"en-US\")}–${radar.rateMax.toLocaleString(\"en-US\")}/tuần": "${user.state} · $${radar.rateMin.toLocaleString(\"en-US\")}–${radar.rateMax.toLocaleString(\"en-US\")}/week",
+  "Mức bao lương & chia turn theo bang": "Pay & commission rates by state",
+  "Báo cáo vi phạm": "Reports",
+  "Kiểm duyệt nội dung": "Content moderation",
+  "${reportCount} báo cáo cần xem": "${reportCount} reports to review",
+  "Đăng tin tuyển thợ": "Post a job",
+  "${user?.jobs?.length ?? 0} tin đang mở": "${user?.jobs?.length ?? 0} open jobs",
+  "Thu nhập & tip": "Income & tips",
+  "Ghi turn + tip mỗi tối": "Log turns + tips nightly",
+  "Tuần này: $${income.toLocaleString(\"en-US\")}": "This week: $${income.toLocaleString(\"en-US\")}",
+  "Tin nhắn": "Messages",
+  "${unreadCount} tin chưa đọc": "${unreadCount} unread",
+  "Chat với tiệm & thợ": "Chat with salons & techs",
+  "Xu hướng tuần": "Weekly trends",
+  "Mẫu hot · thợ nổi bật · lương": "Hot designs · top techs · pay",
+  "Kho hàng vật tư": "Supply store",
+  "Vật tư giá sỉ từ các tiệm": "Wholesale supplies from salons",
+  "Công cụ": "Tools"
+} }

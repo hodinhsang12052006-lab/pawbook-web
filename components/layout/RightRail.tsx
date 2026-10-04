@@ -6,6 +6,8 @@ import { Lightbulb, Flame, ShieldCheck, MapPin, ChevronRight } from "lucide-reac
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { getDailyTip } from "@/lib/dailyTips";
 import { stateName } from "@/lib/stateNames";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 interface RailJob {
   id: string;
@@ -22,6 +24,7 @@ interface RailJob {
 // trống. Lấp bằng nội dung có ích thật: mẹo trong ngày, tin gấp mới nhất ở
 // đúng khu vực đang lọc, và quy tắc cộng đồng (tăng niềm tin).
 export default function RightRail({ market, state }: { market: "US" | "AU"; state: string }) {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const tip = getDailyTip(user?.role);
   const [jobs, setJobs] = useState<RailJob[] | null>(null);
@@ -46,7 +49,7 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
       <div className="sticky top-20 space-y-4">
         <section className="glass-card rounded-2xl p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300">
-            <Lightbulb className="h-4 w-4" /> Mẹo hôm nay
+            <Lightbulb className="h-4 w-4" />{tr(" Mẹo hôm nay", " Tip of the day")}
           </h3>
           <p className="mt-2 text-sm font-bold text-white">{tip.title}</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-400">{tip.body}</p>
@@ -54,12 +57,12 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
 
         <section className="glass-card rounded-2xl p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
-            <Flame className="h-4 w-4" /> Tin gấp mới nhất
+            <Flame className="h-4 w-4" />{tr(" Tin gấp mới nhất", " Latest urgent jobs")}
           </h3>
           <div className="mt-3 space-y-2">
             {jobs === null &&
               Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-14" />)}
-            {jobs?.length === 0 && <p className="text-xs text-slate-500">Chưa có tin gấp ở khu vực này.</p>}
+            {jobs?.length === 0 && <p className="text-xs text-slate-500">{tr("Chưa có tin gấp ở khu vực này.", "No urgent jobs in this area yet.")}</p>}
             {jobs?.map((job) => (
               <Link
                 key={job.id}
@@ -76,24 +79,24 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
             ))}
           </div>
           <Link href="/?tab=jobs" className="mt-3 flex items-center justify-center gap-1 text-xs font-semibold text-pink-300 hover:text-pink-200">
-            Xem tất cả tin <ChevronRight className="h-3.5 w-3.5" />
+            {tr("Xem tất cả tin ", "See all jobs ")}<ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </section>
 
         <section className="glass-card rounded-2xl p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-300">
-            <ShieldCheck className="h-4 w-4" /> Cộng đồng an toàn
+            <ShieldCheck className="h-4 w-4" />{tr(" Cộng đồng an toàn", " Stay safe")}
           </h3>
           <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-400">
-            <li>• Không chuyển tiền đặt cọc cho người lạ.</li>
-            <li>• Thoả thuận lương, chỗ ở qua tin nhắn trong app.</li>
-            <li>• Gặp nội dung lừa đảo? Bấm <span className="text-slate-200">⋮ → Báo cáo</span> trong chat.</li>
+            <li>{tr("• Không chuyển tiền đặt cọc cho người lạ.", "• Never send deposits to strangers.")}</li>
+            <li>{tr("• Thoả thuận lương, chỗ ở qua tin nhắn trong app.", "• Agree on pay and housing in in-app messages.")}</li>
+            <li>{tr("• Gặp nội dung lừa đảo? Bấm ", "• See a scam? Tap ")}<span className="text-slate-200">{tr("⋮ → Báo cáo", "⋮ → Report")}</span> trong chat.</li>
           </ul>
         </section>
 
         <p className="px-1 text-[11px] text-slate-600">
-          <Link href="/terms" className="hover:text-slate-400">Điều khoản</Link> ·{" "}
-          <Link href="/privacy" className="hover:text-slate-400">Bảo mật</Link> · © 2026 PawNail Jobs
+          <Link href="/terms" className="hover:text-slate-400">{tr("Điều khoản", "Terms")}</Link> ·{" "}
+          <Link href="/privacy" className="hover:text-slate-400">{tr("Bảo mật", "Privacy")}</Link> · © 2026 PawNail Jobs
         </p>
       </div>
     </aside>

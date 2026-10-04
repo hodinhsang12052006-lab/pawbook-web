@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: { params: Promise<{ uid: stri
   try {
     const u = await prisma.user.findUnique({ where: { id: uid }, select: { name: true, role: true, city: true } });
     if (!u) return { title: "Hồ sơ — PawNail Jobs" };
-    const role = u.role === "OWNER" ? "Chủ tiệm" : "Thợ Nail";
+    const role = u.role === "ADMIN" ? "Tài khoản chính thức ✓" : u.role === "OWNER" ? "Chủ tiệm" : "Thợ Nail";
     const title = `${u.name} · ${role} — PawNail Jobs`;
     const description = `Hồ sơ ${role.toLowerCase()} ${u.name}${u.city ? ` tại ${u.city}` : ""} trên PawNail Jobs — xem đánh giá thật, portfolio và nhắn tin trực tiếp.`;
     return { title, description, openGraph: { title, description } };

@@ -7,11 +7,14 @@ import { Package, Plus, X, Loader2, Image as ImageIcon, AlertCircle } from "luci
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import SupplyProductCard, { SupplyProductType } from "@/components/feed/SupplyProductCard";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
 // Form đăng bán — chỉ Chủ tiệm (khớp guard ở app/api/supply/route.ts:POST).
 function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProductType) => void; onClose: () => void }) {
+  useTr(); // render lại khi đổi VI/EN
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -32,9 +35,9 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.url) setImageUrl(data.url);
-      else toast.error(data.error || "Không thể tải ảnh lên.");
+      else toast.error(data.error || tr("Không thể tải ảnh lên.", "Couldn't upload the image."));
     } catch (err) {
-      toast.error(err instanceof FileTooLargeError ? err.message : "Lỗi mạng khi tải ảnh.");
+      toast.error(err instanceof FileTooLargeError ? err.message : tr("Lỗi mạng khi tải ảnh.", "Network error while uploading."));
     } finally {
       setUploading(false);
     }
@@ -42,7 +45,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
 
   const handleSubmit = async () => {
     if (!title.trim() || !imageUrl || !price) {
-      toast.error("Vui lòng nhập tên, giá và ảnh sản phẩm.");
+      toast.error(tr("Vui lòng nhập tên, giá và ảnh sản phẩm.", "Please enter a name, price and product photo."));
       return;
     }
     setSubmitting(true);
@@ -60,14 +63,14 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Không thể đăng sản phẩm.");
+        toast.error(data.error || tr("Không thể đăng sản phẩm.", "Couldn't list the product."));
         return;
       }
-      toast.success("Đã đăng bán sản phẩm! 📦");
+      toast.success(tr("Đã đăng bán sản phẩm! 📦", "Product listed! 📦"));
       onCreated(data);
       onClose();
     } catch {
-      toast.error("Lỗi mạng. Vui lòng thử lại.");
+      toast.error(tr("Lỗi mạng. Vui lòng thử lại.", "Network error. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -78,7 +81,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
       <div className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4 animate-scaleUp">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black text-white flex items-center gap-2">
-            <Package className="h-5 w-5 text-amber-400" /> Đăng bán sỉ vật tư
+            <Package className="h-5 w-5 text-amber-400" />{tr(" Đăng bán sỉ vật tư", " List wholesale supplies")}
           </h3>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer">
             <X className="h-4.5 w-4.5" />
@@ -98,36 +101,36 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
           ) : (
             <>
               <ImageIcon className="h-6 w-6" />
-              <span className="text-xs font-bold">Tải ảnh sản phẩm</span>
+              <span className="text-xs font-bold">{tr("Tải ảnh sản phẩm", "Upload product photo")}</span>
             </>
           )}
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
 
         <div>
-          <label className="block text-xs font-bold text-slate-400 mb-1.5">Tên sản phẩm</label>
+          <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Tên sản phẩm", "Product name")}</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="VD: Set Cọ Đắp Bột Cao Cấp"
+            placeholder={tr("VD: Set Cọ Đắp Bột Cao Cấp", "e.g. Premium acrylic brush set")}
             className="w-full min-h-[48px] rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-400 mb-1.5">Mô tả (không bắt buộc)</label>
+          <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Mô tả (không bắt buộc)", "Description (optional)")}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            placeholder="Chất lượng, số lượng tối thiểu, cách giao hàng..."
+            placeholder={tr("Chất lượng, số lượng tối thiểu, cách giao hàng...", "Quality, minimum order, delivery...")}
             className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">Giá bán ($)</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Giá bán ($)", "Price ($)")}</label>
             <input
               type="number" min={0} step="0.01" inputMode="decimal"
               value={price}
@@ -137,7 +140,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">Giá gốc (nếu giảm)</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Giá gốc (nếu giảm)", "Original price (if discounted)")}</label>
             <input
               type="number" min={0} step="0.01" inputMode="decimal"
               value={originalPrice}
@@ -155,7 +158,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
           className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-sm font-black text-amber-950 disabled:opacity-50 ${PRESS}`}
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
-          Đăng bán ngay
+          {tr("Đăng bán ngay", "List now")}
         </button>
       </div>
     </div>
@@ -163,6 +166,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
 }
 
 export default function SupplyPage() {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const [products, setProducts] = useState<SupplyProductType[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -178,7 +182,7 @@ export default function SupplyPage() {
     let cancelled = false;
     fetch("/api/supply")
       .then((res) => {
-        if (!res.ok) throw new Error("Không thể tải kho hàng.");
+        if (!res.ok) throw new Error(tr("Không thể tải kho hàng.", "Couldn't load supplies."));
         return res.json();
       })
       .then((data) => {
@@ -187,7 +191,7 @@ export default function SupplyPage() {
         setNextCursor(data.nextCursor);
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message || "Đã xảy ra lỗi.");
+        if (!cancelled) setError(err.message || tr("Đã xảy ra lỗi.", "Something went wrong."));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -229,9 +233,9 @@ export default function SupplyPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              <Package className="h-6 w-6 text-amber-400" /> Kho Hàng Supply
+              <Package className="h-6 w-6 text-amber-400" />{tr(" Kho Hàng Supply", " Supply Market")}
             </h1>
-            <p className="text-sm text-slate-400 mt-1">Hàng sỉ vật tư nail giữa các tiệm — không qua thanh toán trong app, liên hệ trực tiếp để chốt đơn.</p>
+            <p className="text-sm text-slate-400 mt-1">{tr("Hàng sỉ vật tư nail giữa các tiệm — không qua thanh toán trong app, liên hệ trực tiếp để chốt đơn.", "Wholesale nail supplies between salons — no in-app payment, contact the seller directly.")}</p>
           </div>
           {user?.role === "OWNER" && (
             <button
@@ -239,7 +243,7 @@ export default function SupplyPage() {
               onClick={() => setShowForm(true)}
               className={`flex items-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 px-4 py-3 text-sm font-black text-amber-950 shadow-lg shadow-amber-500/20 ${PRESS}`}
             >
-              <Plus className="h-4.5 w-4.5" /> Đăng bán sản phẩm
+              <Plus className="h-4.5 w-4.5" />{tr(" Đăng bán sản phẩm", " List a product")}
             </button>
           )}
         </div>
@@ -257,8 +261,8 @@ export default function SupplyPage() {
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
             <Package className="h-10 w-10 text-slate-700" />
-            <p className="text-base font-bold text-slate-300">Chưa có sản phẩm nào trong kho hàng</p>
-            <p className="text-sm text-slate-500">Chủ tiệm hãy là người đầu tiên đăng bán sỉ vật tư.</p>
+            <p className="text-base font-bold text-slate-300">{tr("Chưa có sản phẩm nào trong kho hàng", "No products listed yet")}</p>
+            <p className="text-sm text-slate-500">{tr("Chủ tiệm hãy là người đầu tiên đăng bán sỉ vật tư.", "Salon owners — be the first to list wholesale supplies.")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">

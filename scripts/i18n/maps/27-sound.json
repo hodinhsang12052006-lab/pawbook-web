@@ -1,0 +1,20 @@
+{ "file": "components/settings/SoundSettings.tsx", "map": {
+  "Tin nhắn": "Messages",
+  "Tin mới, tin đến trong khung chat, gửi tin": "New, incoming and sent messages",
+  "Thông báo": "Notifications",
+  "Lượt thích, bình luận, việc gấp gần bạn": "Likes, comments, urgent jobs near you",
+  "Hiệu ứng thao tác": "Action effects",
+  "Thả tim, đăng bài, đăng tin thành công": "Likes, posting, job posted",
+  "iPhone: bấm Chia sẻ → \\\"Thêm vào màn hình chính\\\", mở PawNail từ đó rồi bật.": "iPhone: tap Share → \"Add to Home Screen\", open PawNail from there, then turn this on.",
+  "Bạn đã chặn thông báo — mở cài đặt trình duyệt cho bitpawos.com để cho phép lại.": "You've blocked notifications — allow them again in your browser settings for bitpawos.com.",
+  "Việc gấp gần bạn, tin nhắn, cuộc gọi — kể cả khi đã tắt app.": "Urgent jobs nearby, messages, calls — even when the app is closed.",
+  "Thông báo đẩy": "Push notifications",
+  "Âm thanh trong app": "In-app sounds",
+  "Bật âm thanh": "Sound on",
+  "Âm lượng": "Volume",
+  "Nghe thử âm ${g.title.toLowerCase()}": "Preview ${g.title.toLowerCase()} sound",
+  "Nghe thử": "Preview",
+  "Âm ${g.title.toLowerCase()}": "${g.title} sound",
+  "Rung nhẹ khi có tin nhắn & việc gấp (Android)": "Light vibration for messages & urgent jobs (Android)",
+  "Cuộc gọi đến luôn đổ chuông để bạn không lỡ cuộc gọi.": "Incoming calls always ring so you never miss one."
+} }

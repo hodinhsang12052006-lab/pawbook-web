@@ -1,17 +1,18 @@
 import React from "react";
+import { tr } from "@/lib/i18n/tr";
 
 // "5 phút trước" / "2 giờ trước" / "3 ngày trước" — không kéo thêm date-fns
 // chỉ cho 1 hàm nhỏ này.
 export function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "Vừa xong";
-  if (mins < 60) return `${mins} phút trước`;
+  if (mins < 1) return tr("Vừa xong", "Just now");
+  if (mins < 60) return tr(`${mins} phút trước`, `${mins}m ago`);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 24) return tr(`${hours} giờ trước`, `${hours}h ago`);
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
-  return new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  if (days < 7) return tr(`${days} ngày trước`, `${days}d ago`);
+  return new Date(iso).toLocaleDateString(tr("vi-VN", "en-US"), { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 // Tách nội dung bài đăng thành đoạn text thường + hashtag (#ViecLam,

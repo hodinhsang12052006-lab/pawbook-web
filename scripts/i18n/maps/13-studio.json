@@ -1,0 +1,18 @@
+{ "file": "components/feed/StudioCards.tsx", "map": {
+  "Ẩn chủ đề hôm nay": "Hide today's theme",
+  "Chủ đề tuần này": "This week's theme",
+  "bài đã tham gia": "entries so far",
+  "Chưa ai tham gia — bài đầu tiên dễ lên Top nhất!": "No entries yet — the first post has the best shot at #1!",
+  "Mẹo hôm nay · PawNail Studio": "Tip of the day · PawNail Studio",
+  "Tổng kết tuần ·": "Weekly recap ·",
+  "Mỹ": "US",
+  "Úc": "AU",
+  "tin tuyển mới": "new jobs",
+  "tuyển nhiều nhất": "most hiring",
+  "lương tuần TB": "median weekly pay",
+  "Xem bảng xu hướng": "See trends",
+  "Thử thách #": "Challenge #",
+  "bài tham gia · xếp theo lượt thích thật": "entries · ranked by real likes",
+  "Chưa có bài nào — đăng mẫu móng kèm": "No entries yet — post your nails with",
+  "để giành Top 1 tuần này.": "to grab #1 this week."
+} }

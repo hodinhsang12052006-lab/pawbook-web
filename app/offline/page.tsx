@@ -1,6 +1,8 @@
 "use client";
 
 import { WifiOff, RefreshCw } from "lucide-react";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Served by the service worker (next-pwa `fallbacks.document`, see
 // next.config.ts) for any navigation request that fails purely because the
@@ -9,6 +11,7 @@ import { WifiOff, RefreshCw } from "lucide-react";
 // (no Navbar/BottomNav, no data fetching) so it renders instantly from the
 // precache with nothing that can itself fail while offline.
 export default function OfflinePage() {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-6 text-center">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
@@ -25,9 +28,9 @@ export default function OfflinePage() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-xl font-black text-white">Bạn đang ngoại tuyến</h1>
+          <h1 className="text-xl font-black text-white">{tr("Bạn đang ngoại tuyến", "You are offline")}</h1>
           <p className="text-sm text-slate-400">
-            Vui lòng kiểm tra kết nối mạng. Trang bạn cần sẽ tự tải lại ngay khi có mạng trở lại.
+            {tr("Vui lòng kiểm tra kết nối mạng. Trang bạn cần sẽ tự tải lại ngay khi có mạng trở lại.", "Please check your connection. This page will reload automatically once you are back online.")}
           </p>
         </div>
 
@@ -36,7 +39,7 @@ export default function OfflinePage() {
           onClick={() => window.location.reload()}
           className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-6 text-sm font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 active:scale-[0.98] transition-all duration-200 cursor-pointer"
         >
-          <RefreshCw className="h-4 w-4" /> Tải lại trang
+          <RefreshCw className="h-4 w-4" />{tr(" Tải lại trang", " Reload page")}
         </button>
       </div>
     </div>

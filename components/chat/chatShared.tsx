@@ -4,6 +4,7 @@
 // tách khỏi MessagesContent.tsx (file chính quá dài).
 import React from "react";
 import { useIsOnline } from "@/lib/presence";
+import { tr } from "@/lib/i18n/tr";
 
 export const POPULAR_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
@@ -61,20 +62,21 @@ export const foldVi = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").
 export function shortChatTime(iso: string) {
   const d = new Date(iso);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(tr("vi-VN", "en-US"), { hour: "2-digit", minute: "2-digit" });
   const days = (now.getTime() - d.getTime()) / 86_400_000;
-  if (days < 7) return ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][d.getDay()];
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  if (days < 7) return (tr("CN T2 T3 T4 T5 T6 T7", "Sun Mon Tue Wed Thu Fri Sat").split(" "))[d.getDay()];
+  return d.toLocaleDateString(tr("vi-VN", "en-US"), { day: "2-digit", month: "2-digit" });
 }
 
 // Avatar có chấm xanh khi người đó THẬT SỰ đang mở app (Pusher presence).
-export function PresenceAvatar({ userId, src, alt, size = "h-11 w-11" }: { userId: string; src: string; alt: string; size?: string }) {
-  const online = useIsOnline(userId);
+// watch=false: không theo dõi online (VD: người chưa từng nhắn chung — server sẽ từ chối).
+export function PresenceAvatar({ userId, src, alt, size = "h-11 w-11", watch = true }: { userId: string; src: string; alt: string; size?: string; watch?: boolean }) {
+  const online = useIsOnline(watch ? userId : null);
   return (
     <span className={`relative ${size} flex-shrink-0`}>
       <img src={src} alt={alt} loading="lazy" className={`${size} rounded-full object-cover ring-1 ring-white/10`} />
       {online && (
-        <span aria-label="Đang hoạt động" className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+        <span aria-label={tr("Đang hoạt động", "Active now")} className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
       )}
     </span>
   );
@@ -94,15 +96,16 @@ export function TypingDots({ className = "" }: { className?: string }) {
 // "missed:audio" | "declined:video" | "ended:audio:125" → mô tả hiển thị.
 export function describeCall(body: string) {
   const [outcome, kind, secs] = body.split(":");
-  const label = kind === "video" ? "Cuộc gọi video" : "Cuộc gọi thoại";
+  const label = kind === "video" ? tr("Cuộc gọi video", "Video call") : tr("Cuộc gọi thoại", "Voice call");
   if (outcome === "ended") {
     const n = Number(secs) || 0;
     return { missed: false, kind: kind === "video" ? "video" : "audio", text: `${label} · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` };
   }
-  return { missed: true, kind: kind === "video" ? "video" : "audio", text: outcome === "declined" ? `${label} bị từ chối` : `${label} nhỡ` };
+  return { missed: true, kind: kind === "video" ? "video" : "audio", text: outcome === "declined" ? tr(`${label} bị từ chối`, `${label} declined`) : tr(`${label} nhỡ`, `Missed ${label.toLowerCase()}`) };
 }
 
-export const ROLE_VI: Record<string, string> = { OWNER: "Chủ tiệm", TECHNICIAN: "Thợ Nail", ADMIN: "Quản trị viên" };
+// Hàm (không phải hằng) để nhãn đổi theo VI/EN.
+export const ROLE_VI = (): Record<string, string> => ({ OWNER: tr("Chủ tiệm", "Salon owner"), TECHNICIAN: tr("Thợ Nail", "Nail tech"), ADMIN: tr("Quản trị viên", "Admin") });
 
 export interface ConversationType {
   id: string;
@@ -148,6 +151,8 @@ export interface MessagesContentProps {
 export interface ChatBucket {
   messages: MessageType[];
   nextCursor: string | null;
+  // Bản lấy từ bộ nhớ máy (chưa đồng bộ mạng) — chỉ để hiện ngay khi mở chat.
+  fromDisk?: boolean;
 }
 
 export function chatKeyFor(chat: { id: string; conversationId?: string } | null | undefined): string | null {

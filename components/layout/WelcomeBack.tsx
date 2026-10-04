@@ -5,6 +5,8 @@ import { X, Flame, Heart, MessageCircle, Bookmark, Sparkles, type LucideIcon } f
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
 import { timeAgo } from "@/lib/feedFormat";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 interface Digest {
   since: string;
@@ -24,6 +26,7 @@ const KEY = "pn_last_visit";
 const MIN_GAP_MS = 4 * 60 * 60 * 1000;
 
 export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs" | "portfolio") => void }) {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const [digest, setDigest] = useState<Digest | null>(null);
   const [closed, setClosed] = useState(false);
@@ -53,22 +56,22 @@ export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs
   }, [user?.id]);
 
   if (!digest || closed) return null;
-  const area = digest.state ? stateName(digest.market ?? "US", digest.state) || digest.state : digest.market === "AU" ? "Úc" : "Mỹ";
+  const area = digest.state ? stateName(digest.market ?? "US", digest.state) || digest.state : digest.market === "AU" ? tr("Úc", "Australia") : tr("Mỹ", "the US");
   const items: { icon: LucideIcon; text: string; tone: string; tab: "feed" | "jobs" | "portfolio" }[] = [];
-  if (digest.newJobs) items.push({ icon: Flame, text: `${digest.newJobs} tin tuyển mới tại ${area}`, tone: "text-orange-300 bg-orange-500/10 ring-orange-500/25", tab: "jobs" });
-  if (digest.newTechs) items.push({ icon: Sparkles, text: `${digest.newTechs} thợ đang sẵn sàng tại ${area}`, tone: "text-fuchsia-300 bg-fuchsia-500/10 ring-fuchsia-500/25", tab: "portfolio" });
-  if (digest.likes) items.push({ icon: Heart, text: `${digest.likes} lượt thích bài của bạn`, tone: "text-pink-300 bg-pink-500/10 ring-pink-500/25", tab: "feed" });
-  if (digest.comments) items.push({ icon: MessageCircle, text: `${digest.comments} bình luận mới`, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/25", tab: "feed" });
-  if (digest.saves) items.push({ icon: Bookmark, text: `${digest.saves} thợ đã lưu tin của bạn`, tone: "text-emerald-300 bg-emerald-500/10 ring-emerald-500/25", tab: "jobs" });
+  if (digest.newJobs) items.push({ icon: Flame, text: tr(`${digest.newJobs} tin tuyển mới tại ${area}`, `${digest.newJobs} new jobs in ${area}`), tone: "text-orange-300 bg-orange-500/10 ring-orange-500/25", tab: "jobs" });
+  if (digest.newTechs) items.push({ icon: Sparkles, text: tr(`${digest.newTechs} thợ đang sẵn sàng tại ${area}`, `${digest.newTechs} techs available in ${area}`), tone: "text-fuchsia-300 bg-fuchsia-500/10 ring-fuchsia-500/25", tab: "portfolio" });
+  if (digest.likes) items.push({ icon: Heart, text: tr(`${digest.likes} lượt thích bài của bạn`, `${digest.likes} likes on your posts`), tone: "text-pink-300 bg-pink-500/10 ring-pink-500/25", tab: "feed" });
+  if (digest.comments) items.push({ icon: MessageCircle, text: tr(`${digest.comments} bình luận mới`, `${digest.comments} new comments`), tone: "text-sky-300 bg-sky-500/10 ring-sky-500/25", tab: "feed" });
+  if (digest.saves) items.push({ icon: Bookmark, text: tr(`${digest.saves} thợ đã lưu tin của bạn`, `${digest.saves} techs saved your job`), tone: "text-emerald-300 bg-emerald-500/10 ring-emerald-500/25", tab: "jobs" });
   if (items.length === 0) return null;
 
   return (
     <section aria-label="Có gì mới từ lần trước" className="relative animate-fadeIn rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-900/50 p-4">
-      <button onClick={() => setClosed(true)} aria-label="Đóng" className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
+      <button onClick={() => setClosed(true)} aria-label={tr("Đóng", "Close")} className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
         <X className="h-4 w-4" />
       </button>
-      <p className="text-sm font-black text-white">Có gì mới từ lần trước bạn ghé 👋</p>
-      <p className="text-[11px] text-slate-500">Lần trước: {timeAgo(digest.since)}</p>
+      <p className="text-sm font-black text-white">{tr("Có gì mới từ lần trước bạn ghé 👋", "What's new since your last visit 👋")}</p>
+      <p className="text-[11px] text-slate-500">{tr("Lần trước: ", "Last visit: ")}{timeAgo(digest.since)}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.map((it) => (
           <button

@@ -1,0 +1,21 @@
+{ "file": "components/chat/CallManager.tsx", "map": {
+  "Đang kết nối cuộc gọi…": "Connecting call…",
+  "Người dùng": "User",
+  "${stateRef.current.peer?.name || \"Người nhận\"} đã từ chối cuộc gọi.": "${stateRef.current.peer?.name || \"They\"} declined the call.",
+  "Cuộc gọi nhỡ từ ${stateRef.current.peer?.name || \"người dùng\"}": "Missed call from ${stateRef.current.peer?.name || \"a user\"}",
+  "Cuộc gọi đã kết thúc.": "Call ended.",
+  "${stateRef.current.peer?.name || \"Người nhận\"} đang bận cuộc gọi khác.": "${stateRef.current.peer?.name || \"They\"} are on another call.",
+  "Bạn đang trong một cuộc gọi khác.": "You're already on another call.",
+  "Không thể bắt đầu cuộc gọi.": "Couldn't start the call.",
+  "${partner.name} không nghe máy.": "${partner.name} didn't answer.",
+  "Cuộc gọi video": "Video call",
+  "Cuộc gọi thoại": "Voice call",
+  "Đang chờ": "Waiting for",
+  "vào cuộc gọi…": "to join…",
+  "${typeLabel} đến…": "Incoming ${typeLabel.toLowerCase()}…",
+  "Đang đổ chuông…": "Ringing…",
+  "Từ chối": "Decline",
+  "Huỷ cuộc gọi": "Cancel call",
+  "Huỷ": "Cancel",
+  "Trả lời": "Answer"
+} }

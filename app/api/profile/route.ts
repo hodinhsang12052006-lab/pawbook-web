@@ -105,9 +105,23 @@ export async function GET(req: NextRequest) {
         })
       : undefined;
 
+    // Hồ sơ tài khoản chính thức (tick xanh): số liệu cộng đồng THẬT, công khai.
+    let official: { members: number; availableTechs: number; jobs30d: number; posts: number } | undefined;
+    if (wantBadges && user.role === "ADMIN") {
+      const since = new Date(Date.now() - 30 * 86_400_000);
+      const [members, availableTechs, jobs30d, posts] = await Promise.all([
+        prisma.user.count({ where: { role: { in: ["TECHNICIAN", "OWNER"] } } }),
+        prisma.technicianProfile.count({ where: { status: { in: ["AVAILABLE", "URGENT"] } } }),
+        prisma.job.count({ where: { createdAt: { gte: since } } }),
+        prisma.post.count(),
+      ]).catch(() => [0, 0, 0, 0]);
+      official = { members, availableTechs, jobs30d, posts };
+    }
+
     return NextResponse.json({
       ...user,
       badges,
+      official,
       createdAt: user.createdAt.toISOString(),
       jobs: safeJobs,
       technicianProfile,

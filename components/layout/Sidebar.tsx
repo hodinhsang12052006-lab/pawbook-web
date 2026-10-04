@@ -11,6 +11,8 @@ import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 
 import Avatar from "@/components/ui/Avatar";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 interface SidebarProps {
   activeTab?: string;
@@ -18,20 +20,21 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const pathname = usePathname();
   const { user: effectiveUser, loading: sessionLoading } = useSessionUser();
 
-  const userName = effectiveUser?.name || "Thành viên";
+  const userName = effectiveUser?.name || tr("Thành viên", "Member");
   const userRole = effectiveUser?.role || "TECHNICIAN";
-  const userLocation = [effectiveUser?.city, stateName(effectiveUser?.market, effectiveUser?.state)].filter(Boolean).join(", ") || "Chưa cập nhật khu vực";
-  const roleLabel = userRole === "OWNER" ? "Chủ tiệm" : userRole === "ADMIN" ? "Quản trị" : "Thợ Nail";
+  const userLocation = [effectiveUser?.city, stateName(effectiveUser?.market, effectiveUser?.state)].filter(Boolean).join(", ") || tr("Chưa cập nhật khu vực", "Location not set");
+  const roleLabel = userRole === "OWNER" ? tr("Chủ tiệm", "Salon owner") : userRole === "ADMIN" ? tr("Quản trị", "Admin") : tr("Thợ Nail", "Nail tech");
   const completeness = getProfileCompleteness(effectiveUser);
 
   const menuItems = [
-    { id: "feed", label: "Bảng Tin", icon: Newspaper, route: "/?tab=feed" },
-    { id: "jobs", label: "Cần Thợ Gấp", icon: Briefcase, route: "/?tab=jobs" },
-    { id: "portfolio", label: "Thợ Đang Rảnh", icon: Store, route: "/?tab=portfolio" },
+    { id: "feed", label: tr("Bảng Tin", "Feed"), icon: Newspaper, route: "/?tab=feed" },
+    { id: "jobs", label: tr("Cần Thợ Gấp", "Urgent jobs"), icon: Briefcase, route: "/?tab=jobs" },
+    { id: "portfolio", label: tr("Thợ Đang Rảnh", "Available techs"), icon: Store, route: "/?tab=portfolio" },
   ];
 
   const handleNavigation = (id: string, route: string) => {
@@ -68,10 +71,10 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
             ) : !effectiveUser ? (
               <div className="mb-4 rounded-xl bg-gradient-to-br from-pink-600/15 to-fuchsia-600/5 p-3.5 ring-1 ring-pink-500/20">
                 <p className="text-sm font-black text-white">Tham gia PawNail</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">Miễn phí — tìm việc, tìm thợ và nhắn tin trực tiếp.</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{tr("Miễn phí — tìm việc, tìm thợ và nhắn tin trực tiếp.", "Free — find jobs, find techs and message directly.")}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">Đăng ký</Link>
-                  <Link href="/auth/login" className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">Đăng nhập</Link>
+                  <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">{tr("Đăng ký", "Sign up")}</Link>
+                  <Link href="/auth/login" className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">{tr("Đăng nhập", "Sign in")}</Link>
                 </div>
               </div>
             ) : (
@@ -90,7 +93,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
             )}
 
             {/* Navigation Menu */}
-            <nav className="space-y-1" aria-label="Khám phá">
+            <nav className="space-y-1" aria-label={tr("Khám phá", "Explore")}>
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = checkIsActive(item.id);
@@ -112,7 +115,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               })}
             </nav>
 
-            <p className="mt-5 mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Công cụ</p>
+            <p className="mt-5 mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">{tr("Công cụ", "Tools")}</p>
             <ToolsPanel variant="list" />
           </div>
 

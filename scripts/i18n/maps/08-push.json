@@ -1,0 +1,7 @@
+{ "file": "components/PushPrompt.tsx", "map": {
+  "Bật thông báo trên điện thoại": "Turn on phone notifications",
+  "Biết ngay khi tiệm gần bạn cần thợ gấp, có tin nhắn hay cuộc gọi — kể cả khi đã tắt app.": "Know instantly when a nearby salon needs a tech, or you get a message or call — even with the app closed.",
+  "Biết ngay khi thợ nhắn tin, gọi điện hay lưu tin tuyển của bạn — kể cả khi đã tắt app.": "Know instantly when a tech messages, calls or saves your job — even with the app closed.",
+  "Để sau": "Later",
+  "Đang bật…": "Turning on…"
+} }

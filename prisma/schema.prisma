@@ -164,11 +164,21 @@ model Job {
 
   savedBy SavedJob[]
   daily   JobDaily[]
+  media   JobMedia?
 
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
   @@index([ownerId])
   @@index([isUrgent, createdAt])
   @@index([market, state])
+}
+
+// Ảnh / video tiệm đính kèm tin tuyển — bảng RIÊNG (không thêm cột vào Job)
+// để tin tuyển vẫn chạy bình thường trước khi chạy
+// prisma/sql/2026-10-05_job_media.sql. mediaUrls: JSON string[].
+model JobMedia {
+  jobId     String @id
+  job       Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  mediaUrls String
 }
 
 // Độ "nóng" THẬT của tin tuyển theo ngày (UTC): lượt xem (≥1 giây trên màn

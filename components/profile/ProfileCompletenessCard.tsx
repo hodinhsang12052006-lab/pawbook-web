@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { CheckCircle2, Circle, ArrowRight, Trophy } from "lucide-react";
 import type { Completeness } from "@/lib/profileCompleteness";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Vòng tiến độ + việc tiếp theo. `compact` dùng trong Sidebar/banner (chỉ
 // hiện việc kế tiếp), bản đầy đủ dùng ở /profile (hiện cả checklist).
@@ -15,19 +17,20 @@ export default function ProfileCompletenessCard({
   compact?: boolean;
   role?: string;
 }) {
+  useTr(); // render lại khi đổi VI/EN
   const { percent, items, nextItem } = completeness;
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const done = percent >= 100;
   const benefit =
     role === "OWNER"
-      ? "Hồ sơ tiệm đầy đủ giúp thợ tin tưởng và gọi nhiều hơn."
-      : "Hồ sơ đầy đủ được chủ tiệm chú ý và nhắn tin nhiều hơn.";
+      ? tr("Hồ sơ tiệm đầy đủ giúp thợ tin tưởng và gọi nhiều hơn.", "A complete salon profile earns more trust and calls from techs.")
+      : tr("Hồ sơ đầy đủ được chủ tiệm chú ý và nhắn tin nhiều hơn.", "Complete profiles get noticed and messaged more by salons.");
 
   return (
     <div className="rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-500/10 via-slate-900/40 to-violet-500/10 p-4">
       <div className="flex items-center gap-3">
-        <div className="relative h-12 w-12 flex-shrink-0" role="img" aria-label={`Hồ sơ hoàn thiện ${percent}%`}>
+        <div className="relative h-12 w-12 flex-shrink-0" role="img" aria-label={tr(`Hồ sơ hoàn thiện ${percent}%`, `Profile ${percent}% complete`)}>
           <svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90">
             <circle cx="24" cy="24" r={radius} fill="none" stroke="rgba(148,163,184,0.2)" strokeWidth="4" />
             <circle
@@ -53,9 +56,9 @@ export default function ProfileCompletenessCard({
         </div>
         <div className="min-w-0">
           <p className="text-sm font-bold text-white flex items-center gap-1.5">
-            {done ? <><Trophy className="h-4 w-4 text-amber-400" /> Hồ sơ hoàn hảo!</> : "Hoàn thiện hồ sơ"}
+            {done ? <><Trophy className="h-4 w-4 text-amber-400" />{tr(" Hồ sơ hoàn hảo!", " Profile complete!")}</> : tr("Hoàn thiện hồ sơ", "Complete your profile")}
           </p>
-          <p className="text-[11px] leading-snug text-slate-400">{done ? "Bạn đang nổi bật với nhà tuyển dụng." : benefit}</p>
+          <p className="text-[11px] leading-snug text-slate-400">{done ? tr("Bạn đang nổi bật với nhà tuyển dụng.", "You stand out to employers.") : benefit}</p>
         </div>
       </div>
 
@@ -64,7 +67,7 @@ export default function ProfileCompletenessCard({
           href="/profile"
           className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-950/60 border border-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-pink-500/40 transition-colors"
         >
-          <span className="truncate">Tiếp theo: {nextItem.label}</span>
+          <span className="truncate">{tr("Tiếp theo: ", "Next: ")}{nextItem.label}</span>
           <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-pink-400" />
         </Link>
       )}

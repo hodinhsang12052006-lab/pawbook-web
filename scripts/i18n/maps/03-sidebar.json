@@ -1,0 +1,15 @@
+{ "file": "components/layout/Sidebar.tsx", "map": {
+  "Thành viên": "Member",
+  "Chưa cập nhật khu vực": "Location not set",
+  "Chủ tiệm": "Salon owner",
+  "Quản trị": "Admin",
+  "Thợ Nail": "Nail tech",
+  "Bảng Tin": "Feed",
+  "Cần Thợ Gấp": "Urgent jobs",
+  "Thợ Đang Rảnh": "Available techs",
+  "Miễn phí — tìm việc, tìm thợ và nhắn tin trực tiếp.": "Free — find jobs, find techs and message directly.",
+  "Đăng ký": "Sign up",
+  "Đăng nhập": "Sign in",
+  "Khám phá": "Explore",
+  "Công cụ": "Tools"
+} }

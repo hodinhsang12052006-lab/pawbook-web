@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { SURVEY, PAIN_TAG_META, HIRING_TIMELINE_OPTIONS } from "@/lib/ownerSurvey";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Modal này chỉ bao giờ mount sau khi người dùng bấm nút (showUnlockModal
 // bắt đầu là false) — không bao giờ có trong lần render SSR đầu tiên, nên
@@ -27,6 +29,7 @@ interface UnlockChatModalProps {
 type Step = "paywall" | "survey" | "unlocking" | "success";
 
 export default function UnlockChatModal({ technicianUserId, technicianName, ownerPains, onUnlocked, onClose }: UnlockChatModalProps) {
+  useTr(); // render lại khi đổi VI/EN
   const [step, setStep] = useState<Step>("paywall");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [timeline, setTimeline] = useState<string | null>(null);
@@ -43,7 +46,7 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
 
   const handleConfirmUnlock = async () => {
     if (!timeline) {
-      toast.error("Vui lòng chọn thời gian dự kiến nhận thợ.");
+      toast.error(tr("Vui lòng chọn thời gian dự kiến nhận thợ.", "Please choose when you'd like the tech to start."));
       return;
     }
     setSubmitting(true);
@@ -61,7 +64,7 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Mở khóa thất bại. Vui lòng thử lại.");
+        toast.error(data.error || tr("Mở khóa thất bại. Vui lòng thử lại.", "Unlock failed. Please try again."));
         setStep("survey");
         setSubmitting(false);
         return;
@@ -71,7 +74,7 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
       // một thứ có giá trị".
       setTimeout(() => setStep("success"), 900);
     } catch {
-      toast.error("Lỗi kết nối mạng. Vui lòng thử lại.");
+      toast.error(tr("Lỗi kết nối mạng. Vui lòng thử lại.", "Network error. Please try again."));
       setStep("survey");
       setSubmitting(false);
     }
@@ -88,7 +91,7 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
             type="button"
             onClick={onClose}
             className="absolute top-4 right-4 z-10 text-slate-500 hover:text-slate-300"
-            aria-label="Đóng"
+            aria-label={tr("Đóng", "Close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -101,9 +104,9 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-xl font-black text-white leading-tight">MỞ KHÓA KẾT NỐI TRỰC TIẾP</h2>
+              <h2 className="text-xl font-black text-white leading-tight">{tr("MỞ KHÓA KẾT NỐI TRỰC TIẾP", "UNLOCK DIRECT CONTACT")}</h2>
               <p className="text-sm text-slate-400">
-                với <span className="font-bold text-white">{technicianName}</span>
+                {tr("với ", "with ")}<span className="font-bold text-white">{technicianName}</span>
               </p>
             </div>
 
@@ -117,23 +120,23 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
               {IS_NATIVE_APP ? (
                 <>
                   <p className="text-4xl font-black bg-gradient-to-r from-pink-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">
-                    Đặc quyền Hội viên
+                    {tr("Đặc quyền Hội viên", "Member perk")}
                   </p>
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Miễn phí mở khóa</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">{tr("Miễn phí mở khóa", "Free unlock")}</p>
                 </>
               ) : (
                 <>
                   <p className="text-base text-slate-500 line-through">$4.99 USD</p>
                   <p className="text-4xl font-black bg-gradient-to-r from-pink-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent">
-                    $0 — MIỄN PHÍ 100%
+                    {tr("$0 — MIỄN PHÍ 100%", "$0 — 100% FREE")}
                   </p>
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Ưu đãi đặc quyền hôm nay</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">{tr("Ưu đãi đặc quyền hôm nay", "Today's member perk")}</p>
                 </>
               )}
             </div>
 
             <p className="text-sm text-slate-400 leading-relaxed">
-              Dành riêng cho chủ tiệm: Hoàn tất <span className="font-bold text-white">2 bước xác nhận nhu cầu vận hành</span> để hệ thống đồng bộ hồ sơ và mở khóa liên hệ ngay lập tức.
+              {tr("Dành riêng cho chủ tiệm: Hoàn tất ", "For salon owners: complete ")}<span className="font-bold text-white">{tr("2 bước xác nhận nhu cầu vận hành", "2 quick questions about your needs")}</span>{tr(" để hệ thống đồng bộ hồ sơ và mở khóa liên hệ ngay lập tức.", " to sync your profile and unlock contact instantly.")}
             </p>
 
             <button
@@ -142,10 +145,10 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
               className={`w-full min-h-[52px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 via-fuchsia-600 to-amber-500 hover:brightness-110 text-base font-extrabold text-white shadow-xl shadow-pink-600/25 ${PRESS}`}
             >
               <Sparkles className="h-5 w-5 flex-shrink-0" />
-              Bắt đầu — chỉ 30 giây
+              {tr("Bắt đầu — chỉ 30 giây", "Start — just 30 seconds")}
             </button>
             <button type="button" onClick={onClose} className="text-xs font-bold text-slate-500 hover:text-slate-300">
-              Để sau
+              {tr("Để sau", "Later")}
             </button>
           </div>
         )}
@@ -153,8 +156,8 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
         {step === "survey" && (
           <div className="p-6 space-y-5">
             <div className="space-y-1">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-pink-400">Bước 2/2 — Xác nhận nhu cầu vận hành</p>
-              <h2 className="text-lg font-extrabold text-white leading-snug">Đồng bộ hồ sơ để mở khóa ngay</h2>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-pink-400">{tr("Bước 2/2 — Xác nhận nhu cầu vận hành", "Step 2/2 — Confirm your needs")}</p>
+              <h2 className="text-lg font-extrabold text-white leading-snug">{tr("Đồng bộ hồ sơ để mở khóa ngay", "Sync your profile to unlock now")}</h2>
             </div>
 
             {painCards.length > 0 ? (
@@ -184,12 +187,12 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
               </div>
             ) : (
               <p className="text-sm text-slate-400 rounded-2xl border border-slate-800 bg-slate-900/40 p-3.5">
-                Tiệm bạn có vẻ vận hành khá ổn — chỉ cần xác nhận thời gian dự kiến bên dưới để mở khóa.
+                {tr("Tiệm bạn có vẻ vận hành khá ổn — chỉ cần xác nhận thời gian dự kiến bên dưới để mở khóa.", "Your salon seems to run well — just confirm the expected start time below to unlock.")}
               </p>
             )}
 
             <div className="space-y-2">
-              <p className="text-sm font-bold text-slate-200">Thời gian dự kiến bạn muốn thợ này bắt đầu làm việc?</p>
+              <p className="text-sm font-bold text-slate-200">{tr("Thời gian dự kiến bạn muốn thợ này bắt đầu làm việc?", "When would you like this tech to start?")}</p>
               <div className="grid grid-cols-3 gap-2">
                 {HIRING_TIMELINE_OPTIONS.map((opt) => (
                   <button
@@ -213,7 +216,7 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
               className={`w-full min-h-[52px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 via-fuchsia-600 to-amber-500 hover:brightness-110 text-base font-extrabold text-white shadow-xl shadow-pink-600/25 disabled:opacity-60 ${PRESS}`}
             >
               <Unlock className="h-5 w-5 flex-shrink-0" />
-              Xác Nhận &amp; Mở Khóa Miễn Phí
+              {tr("Xác Nhận & Mở Khóa Miễn Phí", "Confirm & Unlock Free")}
             </button>
           </div>
         )}
@@ -221,7 +224,7 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
         {step === "unlocking" && (
           <div className="p-10 flex flex-col items-center justify-center gap-4 text-center min-h-[280px]">
             <Loader2 className="h-10 w-10 text-pink-400 animate-spin" />
-            <p className="text-sm font-bold text-slate-300">Đang đồng bộ hồ sơ và mở khóa liên hệ...</p>
+            <p className="text-sm font-bold text-slate-300">{tr("Đang đồng bộ hồ sơ và mở khóa liên hệ...", "Syncing profile and unlocking contact...")}</p>
           </div>
         )}
 
@@ -230,16 +233,16 @@ export default function UnlockChatModal({ technicianUserId, technicianName, owne
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/30 animate-scaleUp">
               <PartyPopper className="h-8 w-8 text-emerald-400" />
             </div>
-            <h2 className="text-lg font-black text-white">Đã mở khóa thành công! 🎉</h2>
+            <h2 className="text-lg font-black text-white">{tr("Đã mở khóa thành công! 🎉", "Unlocked! 🎉")}</h2>
             <p className="text-sm text-slate-400">
-              Bạn có thể nhắn tin và gọi trực tiếp cho <span className="font-bold text-white">{technicianName}</span> ngay bây giờ.
+              {tr("Bạn có thể nhắn tin và gọi trực tiếp cho ", "You can now message and call ")}<span className="font-bold text-white">{technicianName}</span>{tr(" ngay bây giờ.", " directly.")}
             </p>
             <button
               type="button"
               onClick={onUnlocked}
               className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-amber-500 mt-2 text-sm font-extrabold text-white ${PRESS}`}
             >
-              Vào khung chat ngay
+              {tr("Vào khung chat ngay", "Open chat now")}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

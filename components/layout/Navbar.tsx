@@ -11,8 +11,11 @@ import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 import NotificationBell from "@/components/layout/NotificationBell";
 import Avatar from "@/components/ui/Avatar";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 export default function Navbar() {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const { t } = useLanguage();
   const { user: sessionUser, loading: loadingSession } = useSessionUser();
@@ -44,28 +47,28 @@ export default function Navbar() {
                 <button
                   onClick={() => router.push("/admin/reports")}
                   className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all duration-200 cursor-pointer"
-                  title="Trang quản trị"
+                  title={tr("Trang quản trị", "Admin dashboard")}
                 >
                   <ShieldAlert className="h-4 w-4" />
-                  <span className="hidden md:inline">Quản trị</span>
+                  <span className="hidden md:inline">{tr("Quản trị", "Admin")}</span>
                 </button>
               ) : sessionUser.role === "OWNER" ? (
                 <button
                   onClick={() => router.push("/jobs/create")}
                   className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
-                  title="Đăng tin tuyển thợ"
+                  title={tr("Đăng tin tuyển thợ", "Post a job")}
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">Đăng tin</span>
+                  <span className="hidden md:inline">{tr("Đăng tin", "Post job")}</span>
                 </button>
               ) : (
                 <button
                   onClick={() => router.push("/profile")}
                   className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
-                  title="Đăng ảnh portfolio"
+                  title={tr("Đăng ảnh portfolio", "Post portfolio photos")}
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">Đăng ảnh</span>
+                  <span className="hidden md:inline">{tr("Đăng ảnh", "Post photos")}</span>
                 </button>
               )}
 
@@ -93,7 +96,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => router.push("/profile")}
-                  aria-label="Hồ sơ của tôi"
+                  aria-label={tr("Hồ sơ của tôi", "My profile")}
                   className="rounded-full ring-1 ring-slate-700 hover:ring-2 hover:ring-pink-500 transition-all"
                 >
                   <Avatar src={sessionUser.avatarUrl} name={sessionUser.name} seed={sessionUser.id} className="h-8 w-8" loading="eager" />

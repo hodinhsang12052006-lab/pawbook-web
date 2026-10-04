@@ -2,6 +2,8 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WifiOff, MessageCircle, RefreshCw } from "lucide-react";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Phòng gọi 1-1 qua ZEGOCLOUD cho CẢ gọi thoại lẫn video. Trước đây gọi thoại
 // dùng WebRTC tự dựng chỉ có STUN (không TURN) — mạng 4G/5G (NAT nhà mạng)
@@ -29,6 +31,7 @@ interface VideoCallRoomProps {
 const PEER_TIMEOUT_MS = 30_000;
 
 export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, onConnected, onLeave, onPeerLeft }: VideoCallRoomProps) {
+  useTr(); // render lại khi đổi VI/EN
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const zpRef = useRef<any>(null);
@@ -50,7 +53,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     let peerSeen = false;
     let peerWatcher: MutationObserver | null = null;
     const peerTimer = setTimeout(() => {
-      if (!cancelled && !peerSeen) setCallError("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.");
+      if (!cancelled && !peerSeen) setCallError(tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again."));
     }, PEER_TIMEOUT_MS);
     const markConnected = () => {
       if (cancelled) return;
@@ -76,7 +79,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         if (cancelled) return;
         if (!tokenRes.ok) {
           const err = await tokenRes.json().catch(() => ({}));
-          throw new Error(err.error || "Không lấy được token cuộc gọi.");
+          throw new Error(err.error || tr("Không lấy được token cuộc gọi.", "Couldn't get a call token."));
         }
         const { token: kitToken } = await tokenRes.json();
 
@@ -139,7 +142,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         });
       } catch (err) {
         console.error("❌ Không khởi tạo được cuộc gọi ZEGOCLOUD:", err);
-        if (!cancelled) setCallError("Không kết nối được dịch vụ gọi. Vui lòng thử lại hoặc chuyển sang nhắn tin.");
+        if (!cancelled) setCallError(tr("Không kết nối được dịch vụ gọi. Vui lòng thử lại hoặc chuyển sang nhắn tin.", "Couldn't reach the call service. Try again or switch to messaging."));
       }
     })();
 
@@ -190,13 +193,13 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
               onClick={() => { setCallError(null); setRetryKey((k) => k + 1); }}
               className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2 text-xs font-bold text-slate-100 transition-all hover:bg-slate-700"
             >
-              <RefreshCw className="h-3.5 w-3.5" /> Thử lại
+              <RefreshCw className="h-3.5 w-3.5" />{tr(" Thử lại", " Try again")}
             </button>
             <button
               onClick={() => cbRef.current.onLeave?.()}
               className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white"
             >
-              <MessageCircle className="h-3.5 w-3.5" /> Chuyển sang nhắn tin
+              <MessageCircle className="h-3.5 w-3.5" />{tr(" Chuyển sang nhắn tin", " Switch to messaging")}
             </button>
           </div>
         </div>

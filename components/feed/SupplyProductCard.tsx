@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Package, MessageCircle, Store } from "lucide-react";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 export interface SupplyProductType {
   id: string;
@@ -28,6 +30,7 @@ function formatUSD(n: number) {
 // (khung viền vàng/hổ phách thay vì viền xám trung tính) để mắt phân biệt
 // ngay đây là nội dung thương mại, không lẫn với bài đăng cá nhân.
 export default function SupplyProductCard({ product }: { product: SupplyProductType }) {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
 
   return (
@@ -42,7 +45,7 @@ export default function SupplyProductCard({ product }: { product: SupplyProductT
           className="object-cover"
         />
         <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-black text-amber-950 shadow">
-          <Package className="h-3 w-3" /> Hàng Sỉ Tiệm Nail
+          <Package className="h-3 w-3" />{tr(" Hàng Sỉ Tiệm Nail", " Salon wholesale")}
         </span>
         {product.discountPercent && (
           <span className="absolute top-2.5 right-2.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-black text-white shadow">
@@ -83,13 +86,13 @@ export default function SupplyProductCard({ product }: { product: SupplyProductT
             onClick={() => router.push(`/messages?to=${product.seller.id}`)}
             className={`flex-1 min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-sm font-bold text-amber-950 ${PRESS}`}
           >
-            <MessageCircle className="h-4 w-4" /> Nhắn tin mua sỉ
+            <MessageCircle className="h-4 w-4" />{tr(" Nhắn tin mua sỉ", " Message to buy")}
           </button>
           <Link
             href="/supply"
             className={`flex-1 min-h-[44px] flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-sm font-bold text-slate-200 ${PRESS}`}
           >
-            Xem kho hàng
+            {tr("Xem kho hàng", "View store")}
           </Link>
         </div>
       </div>

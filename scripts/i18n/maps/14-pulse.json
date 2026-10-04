@@ -1,0 +1,8 @@
+{ "file": "components/feed/PulseCard.tsx", "map": {
+  "Không ghi nhận được.": "Couldn't record your answer.",
+  "Nhịp đau tuần · 1 chạm, ẩn danh": "Weekly pulse · one tap, anonymous",
+  "Đã ghi nhận! Kết quả hiện khi đủ người trả lời — bạn là một trong những người đầu tiên.": "Recorded! Results appear once enough people answer — you're one of the first.",
+  "người trả lời": "responses",
+  " tại bang của bạn": " in your state",
+  "· kết quả tổng hợp lên bảng Xu hướng mỗi tuần": "· results go to the weekly Trends page"
+} }

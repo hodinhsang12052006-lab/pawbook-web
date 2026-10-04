@@ -1,0 +1,9 @@
+{ "file": "components/layout/NotificationBell.tsx", "map": {
+  "Việc gấp gần bạn": "Urgent job near you",
+  "Thông báo, ${unread} chưa đọc": "Notifications, ${unread} unread",
+  "Tắt âm thanh": "Mute sounds",
+  "Bật âm thanh": "Unmute sounds",
+  "Đánh dấu đã đọc": "Mark all read",
+  "Chưa có thông báo": "No notifications yet",
+  "Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.": "When someone likes, comments on or reviews you, it shows up here."
+} }

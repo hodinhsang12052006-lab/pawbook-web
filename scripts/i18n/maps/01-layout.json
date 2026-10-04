@@ -1,0 +1,9 @@
+{ "file": "components/layout/Navbar.tsx", "map": {
+  "Trang quản trị": "Admin dashboard",
+  "Quản trị": "Admin",
+  "Đăng tin tuyển thợ": "Post a job",
+  "Đăng tin": "Post job",
+  "Đăng ảnh portfolio": "Post portfolio photos",
+  "Đăng ảnh": "Post photos",
+  "Hồ sơ của tôi": "My profile"
+} }

@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { notifyUrgentJob } from "@/lib/jobAlerts";
+import { cleanJobMedia, getJobMedia, setJobMedia } from "@/lib/jobMedia";
 
 // GET /api/jobs?market=US&state=CA&city=...  — danh sách tin tuyển thợ
 export async function GET(req: NextRequest) {
@@ -32,12 +33,13 @@ export async function GET(req: NextRequest) {
       take: 100,
     });
 
-    const heat = await getJobHeat(jobs.map((j) => j.id));
+    const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
     const safeJobs = jobs.map(({ _count, ...job }) => {
       const h = heat.get(job.id);
       return {
       ...job,
       saveCount: _count.savedBy,
+      mediaUrls: media.get(job.id) ?? [],
       // Số liệu "nóng" thật — UI tự ẩn khi dưới ngưỡng (lib/jobStats HEAT_MIN).
       heat: { viewsToday: h?.viewsToday ?? 0, contacts7d: h?.contacts7d ?? 0, hot: isHot(h) },
       skills: job.skills ? job.skills.split(",").filter(Boolean) : [],
@@ -81,8 +83,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       title, salonName, description, market, state, city,
-      salaryType, salaryAmount, skills, benefits, phone, isUrgent,
+      salaryType, salaryAmount, skills, benefits, phone, isUrgent, mediaUrls,
     } = body;
+    const media = cleanJobMedia(mediaUrls);
 
     if (!title || !salonName || !market || !state || !city || !salaryType || !salaryAmount || !phone) {
       return NextResponse.json(
@@ -120,6 +123,9 @@ export async function POST(req: Request) {
         isUrgent: isUrgent !== undefined ? !!isUrgent : true,
       },
     });
+
+    // Ảnh/video tiệm (bảng riêng — lỗi ở đây không làm hỏng tin đã đăng).
+    await setJobMedia(newJob.id, media);
 
     // Tin gấp → báo ngay cho thợ cùng bang (chuông realtime). Không chặn phản hồi.
     if (newJob.isUrgent) notifyUrgentJob(newJob).catch(() => {});

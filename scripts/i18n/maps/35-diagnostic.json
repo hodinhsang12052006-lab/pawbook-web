@@ -1,0 +1,17 @@
+{ "file": "components/auth/SalonDiagnosticModal.tsx", "map": {
+  "Đã ghi nhận! Đội ngũ sẽ set up tính năng này cho tiệm trong 24h.": "Got it! Our team will set this up for your salon within 24h.",
+  "Hệ thống đang chẩn đoán tiệm của bạn": "Diagnosing your salon",
+  "Phân tích hoàn tất": "Analysis complete",
+  "Hồ Sơ Chẩn Đoán Vận Hành": "Operations Diagnosis",
+  "Vấn đề của tiệm": "Salon issue",
+  "Giải pháp từ hệ thống": "Our solution",
+  "✅ Đã bật": "✅ Enabled",
+  "Kích hoạt": "Activate",
+  "Tiệm bạn đã trả lời tốt cả 5 hạng mục vận hành cốt lõi. Vẫn có thể tham khảo bộ giải pháp quản lý để tiệm vận hành trơn tru hơn nữa khi mở rộng quy mô.": "Your salon answered well on all 5 core areas. You can still explore our management tools to run even smoother as you grow.",
+  "Trải nghiệm ngay bản Demo Quản Lý Tiệm Nail": "Try the Nail Salon Management demo",
+  "Tiếp tục tìm thợ quanh tiệm của bạn": "Keep finding techs near your salon",
+  "Đóng": "Close",
+  "Xem trước: Bảng Chia Turn Công Bằng": "Preview: Fair Turn Board",
+  "Giao diện thật chạy trên iPad tại quầy — thợ tự xem lượt và tiền tip của mình, không ai tị nạnh ai.": "The real screen runs on an iPad at the front desk — techs see their own turns and tips, so no one feels shortchanged.",
+  "Turn hôm nay —": "Today's turns —"
+} }

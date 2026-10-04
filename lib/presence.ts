@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { PresenceChannel } from "pusher-js";
 import { getPusherClient } from "./pusherClient";
+import { tr } from "@/lib/i18n/tr";
 
 // Trạng thái online THẬT qua Pusher presence channel "presence-user-<id>":
 // - Người đang mở app tự vào kênh của chính mình (joinOwnPresence).
@@ -85,11 +86,11 @@ export function useIsOnline(userId: string | null | undefined): boolean {
 export function lastActiveLabel(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "Vừa hoạt động";
-  if (mins < 60) return `Hoạt động ${mins} phút trước`;
+  if (mins < 1) return tr("Vừa hoạt động", "Active just now");
+  if (mins < 60) return tr(`Hoạt động ${mins} phút trước`, `Active ${mins}m ago`);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `Hoạt động ${hours} giờ trước`;
+  if (hours < 24) return tr(`Hoạt động ${hours} giờ trước`, `Active ${hours}h ago`);
   const days = Math.floor(hours / 24);
-  if (days < 7) return `Hoạt động ${days} ngày trước`;
+  if (days < 7) return tr(`Hoạt động ${days} ngày trước`, `Active ${days}d ago`);
   return null;
 }

@@ -1,0 +1,9 @@
+{
+ "file": "app/global-error.tsx",
+ "map": {
+  "Đã có lỗi xảy ra": "Something went wrong",
+  "Vui lòng thử tải lại. Nếu vẫn lỗi, hãy quay lại sau ít phút.": "Please try reloading. If it keeps failing, come back in a few minutes.",
+  "Mã lỗi:": "Error code:",
+  "Tải lại trang": "Reload page"
+ }
+}

@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { SURVEY, PAIN_TAG_META } from "@/lib/ownerSurvey";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Mockup "Bảng Chia Turn" cho popup Demo — không phải screenshot thật, chỉ
 // dựng bằng CSS để cho chủ tiệm hình dung giao diện thật trông thế nào mà
@@ -18,10 +20,11 @@ const DEMO_TURN_ROWS = [
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 
-const SCAN_STEPS = [
-  "Đang phân tích mô hình vận hành của tiệm...",
-  "Đang đối chiếu dữ liệu thợ và lượt làm...",
-  "Đã lập xong Hồ Sơ Tối Ưu Hóa Vận Hành!",
+// Hàm (không phải hằng) để chữ đổi theo VI/EN.
+const SCAN_STEPS = () => [
+  tr("Đang phân tích mô hình vận hành của tiệm...", "Analyzing how your salon operates..."),
+  tr("Đang đối chiếu dữ liệu thợ và lượt làm...", "Comparing tech and turn data..."),
+  tr("Đã lập xong Hồ Sơ Tối Ưu Hóa Vận Hành!", "Your operations report is ready!"),
 ];
 
 // Tổng thời lượng hiệu ứng quét — đủ lâu để tạo cảm giác "đang tính toán",
@@ -35,6 +38,7 @@ interface SalonDiagnosticModalProps {
 }
 
 export default function SalonDiagnosticModal({ salonName, pains, onFinish }: SalonDiagnosticModalProps) {
+  useTr(); // render lại khi đổi VI/EN
   const [subPhase, setSubPhase] = useState<"scanning" | "report">("scanning");
   const [progress, setProgress] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
@@ -47,7 +51,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
   // cảm giác "đã làm được something" ngay trong lúc xem báo cáo.
   const activateTrojan = (tag: string) => {
     setActivatedTags((prev) => new Set(prev).add(tag));
-    toast.success("Đã ghi nhận! Đội ngũ sẽ set up tính năng này cho tiệm trong 24h.", { icon: "⚡", duration: 3500 });
+    toast.success(tr("Đã ghi nhận! Đội ngũ sẽ set up tính năng này cho tiệm trong 24h.", "Got it! Our team will set this up for your salon within 24h."), { icon: "⚡", duration: 3500 });
   };
 
   // Chỉ những câu họ chọn đáp án "có vấn đề" mới xuất hiện — báo cáo cá
@@ -101,10 +105,10 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
           </div>
 
           <p className="text-xs font-bold uppercase tracking-wider text-pink-400 mb-2">
-            Hệ thống đang chẩn đoán tiệm của bạn
+            {tr("Hệ thống đang chẩn đoán tiệm của bạn", "Diagnosing your salon")}
           </p>
           <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-6 max-w-sm">
-            {salonName || "Tiệm của bạn"}
+            {salonName || tr("Tiệm của bạn", "Your salon")}
           </h2>
 
           <div className="w-full max-w-xs">
@@ -115,7 +119,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
               />
             </div>
             <div className="mt-4 space-y-2 text-left">
-              {SCAN_STEPS.map((label, idx) => (
+              {SCAN_STEPS().map((label, idx) => (
                 <div key={label} className={`flex items-center gap-2 text-sm transition-opacity duration-300 ${idx <= stepIndex ? "opacity-100" : "opacity-30"}`}>
                   {idx < stepIndex ? (
                     <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400" />
@@ -135,15 +139,15 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
           <div className="flex-1 px-5 pt-8 pb-4 space-y-6 max-w-xl mx-auto w-full">
             <div className="text-center space-y-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-300 uppercase tracking-wider">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Phân tích hoàn tất
+                <CheckCircle2 className="h-3.5 w-3.5" />{tr(" Phân tích hoàn tất", " Analysis complete")}
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                Hồ Sơ Chẩn Đoán Vận Hành
+                {tr("Hồ Sơ Chẩn Đoán Vận Hành", "Operations Diagnosis")}
               </h1>
               <p className="text-sm text-slate-400">
                 {painCards.length > 0
-                  ? <>Phát hiện <span className="font-bold text-pink-400">{painCards.length} điểm nghẽn</span> tại <span className="font-bold text-white">{salonName || "tiệm của bạn"}</span> cần tối ưu ngay.</>
-                  : <>Tiệm <span className="font-bold text-white">{salonName || "của bạn"}</span> đang vận hành khá bài bản!</>}
+                  ? <>{tr("Phát hiện ", "Found ")}<span className="font-bold text-pink-400">{painCards.length}{tr(" điểm nghẽn", " bottlenecks")}</span>{tr(" tại ", " at ")}<span className="font-bold text-white">{salonName || tr("tiệm của bạn", "your salon")}</span>{tr(" cần tối ưu ngay.", " to fix now.")}</>
+                  : <>{tr("Tiệm ", "")}<span className="font-bold text-white">{salonName || tr("của bạn", "Your salon")}</span>{tr(" đang vận hành khá bài bản!", " is running quite well!")}</>}
               </p>
             </div>
 
@@ -154,14 +158,14 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                     <div className="flex items-start gap-2.5 p-4 border-b border-slate-800/80 bg-red-500/5">
                       <XCircle className="h-5 w-5 flex-shrink-0 text-red-400 mt-0.5" />
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-red-400 mb-0.5">Vấn đề của tiệm</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-red-400 mb-0.5">{tr("Vấn đề của tiệm", "Salon issue")}</p>
                         <p className="text-sm text-slate-200 leading-relaxed">{meta.problem}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-2.5 p-4 bg-emerald-500/5">
                       <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-400 mt-0.5" />
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">Giải pháp từ hệ thống</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">{tr("Giải pháp từ hệ thống", "Our solution")}</p>
                         <p className="text-sm text-slate-200 leading-relaxed">{meta.solution}</p>
                       </div>
                     </div>
@@ -185,7 +189,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                             : "bg-pink-500 text-white hover:bg-pink-400"
                         }`}
                       >
-                        {activatedTags.has(meta.tag) ? "✅ Đã bật" : "Kích hoạt"}
+                        {activatedTags.has(meta.tag) ? tr("✅ Đã bật", "✅ Enabled") : tr("Kích hoạt", "Activate")}
                       </button>
                     </div>
                   </div>
@@ -195,7 +199,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center space-y-2">
                 <PartyPopper className="h-8 w-8 mx-auto text-emerald-400" />
                 <p className="text-sm text-emerald-200 leading-relaxed">
-                  Tiệm bạn đã trả lời tốt cả 5 hạng mục vận hành cốt lõi. Vẫn có thể tham khảo bộ giải pháp quản lý để tiệm vận hành trơn tru hơn nữa khi mở rộng quy mô.
+                  {tr("Tiệm bạn đã trả lời tốt cả 5 hạng mục vận hành cốt lõi. Vẫn có thể tham khảo bộ giải pháp quản lý để tiệm vận hành trơn tru hơn nữa khi mở rộng quy mô.", "Your salon answered well on all 5 core areas. You can still explore our management tools to run even smoother as you grow.")}
                 </p>
               </div>
             )}
@@ -210,14 +214,14 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                 className={`w-full min-h-[52px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 via-fuchsia-600 to-amber-500 hover:brightness-110 px-6 py-4 text-sm sm:text-base font-extrabold text-white shadow-xl shadow-pink-600/25 ${PRESS}`}
               >
                 <Play className="h-5 w-5 flex-shrink-0 fill-white" />
-                Trải nghiệm ngay bản Demo Quản Lý Tiệm Nail
+                {tr("Trải nghiệm ngay bản Demo Quản Lý Tiệm Nail", "Try the Nail Salon Management demo")}
               </button>
               <button
                 type="button"
                 onClick={onFinish}
                 className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900/60 hover:border-slate-500 px-6 py-3.5 text-sm font-bold text-slate-200 ${PRESS}`}
               >
-                Tiếp tục tìm thợ quanh tiệm của bạn
+                {tr("Tiếp tục tìm thợ quanh tiệm của bạn", "Keep finding techs near your salon")}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -233,15 +237,15 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                   type="button"
                   onClick={() => setShowDemoTeaser(false)}
                   className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
-                  aria-label="Đóng"
+                  aria-label={tr("Đóng", "Close")}
                 >
                   <X className="h-5 w-5" />
                 </button>
 
                 <div className="space-y-1">
-                  <h3 className="text-lg font-extrabold text-white">Xem trước: Bảng Chia Turn Công Bằng</h3>
+                  <h3 className="text-lg font-extrabold text-white">{tr("Xem trước: Bảng Chia Turn Công Bằng", "Preview: Fair Turn Board")}</h3>
                   <p className="text-sm text-slate-400">
-                    Giao diện thật chạy trên iPad tại quầy — thợ tự xem lượt và tiền tip của mình, không ai tị nạnh ai.
+                    {tr("Giao diện thật chạy trên iPad tại quầy — thợ tự xem lượt và tiền tip của mình, không ai tị nạnh ai.", "The real screen runs on an iPad at the front desk — techs see their own turns and tips, so no one feels shortchanged.")}
                   </p>
                 </div>
 
@@ -249,7 +253,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                     phỏng đúng bố cục để chủ tiệm hình dung sản phẩm. */}
                 <div className="rounded-2xl border border-slate-700 bg-slate-950 p-3 space-y-2">
                   <div className="flex items-center justify-between px-1 pb-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Turn hôm nay — {salonName || "Tiệm của bạn"}</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{tr("Turn hôm nay — ", "Today's turns — ")}{salonName || tr("Tiệm của bạn", "Your salon")}</span>
                     <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
                     </span>
@@ -282,7 +286,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                   }}
                   className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-amber-500 text-sm font-extrabold text-white ${PRESS}`}
                 >
-                  Tiếp tục tìm thợ quanh tiệm của bạn
+                  {tr("Tiếp tục tìm thợ quanh tiệm của bạn", "Keep finding techs near your salon")}
                 </button>
               </div>
             </div>

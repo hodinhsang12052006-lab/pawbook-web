@@ -13,16 +13,20 @@ import {
   TrendingUp, Flame, Heart, MessageCircle, Eye, Hash, DollarSign, Star, Users, Crown, Sparkles, ArrowRight, Activity, Newspaper, ExternalLink,
 } from "lucide-react";
 import { timeAgo } from "@/lib/feedFormat";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 interface RadarPublic {
   pulse: { questionId: string; topic: string; week: string; total: number; options: { id: string; label: string; votes: number; pct: number }[] }[];
   news: { title: string; link: string; source: string; publishedAt: string | null; topic: string; lang: string }[];
 }
-const NEWS_TOPIC: Record<string, string> = { law: "Luật & giấy phép", labor: "Lao động & lương", safety: "An toàn & sức khoẻ", business: "Kinh doanh tiệm", trend: "Xu hướng mẫu" };
+// Hàm (không phải hằng) để nhãn đổi theo VI/EN.
+const NEWS_TOPIC = (): Record<string, string> => ({ law: tr("Luật & giấy phép", "Law & licensing"), labor: tr("Lao động & lương", "Labor & pay"), safety: tr("An toàn & sức khoẻ", "Health & safety"), business: tr("Kinh doanh tiệm", "Salon business"), trend: tr("Xu hướng mẫu", "Design trends") });
 
 const money = (n: number, market: "US" | "AU") => `${market === "AU" ? "A$" : "$"}${n.toLocaleString("en-US")}`;
 
 function Section({ icon: Icon, title, hint, tone, children }: { icon: typeof Star; title: string; hint?: string; tone: string; children: React.ReactNode }) {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3 px-1">
@@ -40,6 +44,7 @@ function Section({ icon: Icon, title, hint, tone, children }: { icon: typeof Sta
 }
 
 function Skeleton() {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}</div>
@@ -50,6 +55,7 @@ function Skeleton() {
 }
 
 export default function TrendsPage() {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [data, setData] = useState<TrendsData | null>(null);
@@ -94,12 +100,12 @@ export default function TrendsPage() {
           <div className="relative flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-pink-200 ring-1 ring-white/10">
-                <Activity className="h-3.5 w-3.5" /> Dữ liệu thật từ cộng đồng PawNail
+                <Activity className="h-3.5 w-3.5" />{tr(" Dữ liệu thật từ cộng đồng PawNail", " Real data from the PawNail community")}
               </p>
-              <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">Xu hướng tuần này</h1>
-              <p className="mt-1 max-w-md text-sm text-slate-400">Mẫu móng được thả tim nhiều nhất, thợ nổi bật, lương theo bang và nơi đang tuyển nhiều nhất.</p>
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Xu hướng tuần này", "This week's trends")}</h1>
+              <p className="mt-1 max-w-md text-sm text-slate-400">{tr("Mẫu móng được thả tim nhiều nhất, thợ nổi bật, lương theo bang và nơi đang tuyển nhiều nhất.", "Most-loved nail designs, standout techs, pay by state and where hiring is hottest.")}</p>
             </div>
-            <div className="flex rounded-xl bg-slate-950/60 p-1 ring-1 ring-white/10" role="tablist" aria-label="Thị trường">
+            <div className="flex rounded-xl bg-slate-950/60 p-1 ring-1 ring-white/10" role="tablist" aria-label={tr("Thị trường", "Market")}>
               {(["US", "AU"] as const).map((m) => (
                 <button
                   key={m}
@@ -108,7 +114,7 @@ export default function TrendsPage() {
                   onClick={() => setMarket(m)}
                   className={`rounded-lg px-4 py-2 text-xs font-bold transition-all ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
                 >
-                  <span className="inline-flex items-center gap-1.5"><Flag code={m} /> {m === "US" ? "Mỹ" : "Úc"}</span>
+                  <span className="inline-flex items-center gap-1.5"><Flag code={m} /> {m === "US" ? tr("Mỹ", "US") : tr("Úc", "Australia")}</span>
                 </button>
               ))}
             </div>
@@ -117,22 +123,22 @@ export default function TrendsPage() {
 
         {studio?.challenge && <ChallengeBoard studio={studio} />}
 
-        {error && <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">Không tải được xu hướng. Vui lòng thử lại sau.</p>}
+        {error && <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{tr("Không tải được xu hướng. Vui lòng thử lại sau.", "Couldn't load trends. Please try again later.")}</p>}
         {!data && !error && <Skeleton />}
 
         {empty && (
           <div className="rounded-3xl border border-dashed border-white/10 px-6 py-14 text-center">
             <Sparkles className="mx-auto h-8 w-8 text-pink-300" />
-            <p className="mt-3 text-base font-bold text-white">Tuần này chưa đủ dữ liệu để xếp hạng</p>
-            <p className="mt-1 text-sm text-slate-500">Hãy là người mở màn — đăng mẫu móng đẹp nhất của bạn lên bảng tin.</p>
+            <p className="mt-3 text-base font-bold text-white">{tr("Tuần này chưa đủ dữ liệu để xếp hạng", "Not enough data to rank this week yet")}</p>
+            <p className="mt-1 text-sm text-slate-500">{tr("Hãy là người mở màn — đăng mẫu móng đẹp nhất của bạn lên bảng tin.", "Kick things off — post your best nail design to the feed.")}</p>
             <Link href="/?tab=feed" className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white">
-              Đăng bài ngay <ArrowRight className="h-4 w-4" />
+              {tr("Đăng bài ngay ", "Post now ")}<ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         )}
 
         {data && data.pulse.length > 0 && (
-          <Section icon={Flame} title="Nơi đang tuyển nhiều nhất" hint="Tin tuyển mới trong 7 ngày qua" tone="bg-orange-500/15 text-orange-300">
+          <Section icon={Flame} title={tr("Nơi đang tuyển nhiều nhất", "Where hiring is hottest")} hint={tr("Tin tuyển mới trong 7 ngày qua", "New job posts in the last 7 days")} tone="bg-orange-500/15 text-orange-300">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {data.pulse.map((p, i) => (
                 <Link
@@ -143,10 +149,10 @@ export default function TrendsPage() {
                   {i === 0 && <span className="absolute right-3 top-3 rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-black text-orange-300">#1</span>}
                   <p className="text-sm font-bold text-slate-200">{p.label}</p>
                   <p className="mt-1 text-3xl font-black tracking-tight text-white">{p.newJobs}</p>
-                  <p className="text-[11px] font-semibold text-slate-500">tin mới</p>
+                  <p className="text-[11px] font-semibold text-slate-500">{tr("tin mới", "new")}</p>
                   <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
-                    {p.urgentJobs > 0 && <span className="font-bold text-orange-300">🔥 {p.urgentJobs} gấp</span>}
-                    {p.availableTechs > 0 && <span className="text-slate-400">{p.availableTechs} thợ sẵn sàng</span>}
+                    {p.urgentJobs > 0 && <span className="font-bold text-orange-300">🔥 {p.urgentJobs}{tr(" gấp", " urgent")}</span>}
+                    {p.availableTechs > 0 && <span className="text-slate-400">{p.availableTechs}{tr(" thợ sẵn sàng", " techs available")}</span>}
                   </div>
                 </Link>
               ))}
@@ -155,7 +161,7 @@ export default function TrendsPage() {
         )}
 
         {data && data.hotPosts.length > 0 && (
-          <Section icon={Heart} title="Mẫu móng hot" hint="Xếp theo lượt thích, bình luận và lượt xem thật · 14 ngày" tone="bg-pink-500/15 text-pink-300">
+          <Section icon={Heart} title={tr("Mẫu móng hot", "Hot designs")} hint={tr("Xếp theo lượt thích, bình luận và lượt xem thật · 14 ngày", "Ranked by real likes, comments and views · 14 days")} tone="bg-pink-500/15 text-pink-300">
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {data.hotPosts.map((p, i) => (
                 <Link key={p.id} href={`/profile/${p.author.id}`} className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-white/10">
@@ -184,14 +190,14 @@ export default function TrendsPage() {
         )}
 
         {data && data.hashtags.length > 0 && (
-          <Section icon={Hash} title="Hashtag đang lên" hint="Số bài đăng có hashtag trong 14 ngày" tone="bg-sky-500/15 text-sky-300">
+          <Section icon={Hash} title={tr("Hashtag đang lên", "Rising hashtags")} hint={tr("Số bài đăng có hashtag trong 14 ngày", "Posts using the hashtag in 14 days")} tone="bg-sky-500/15 text-sky-300">
             <div className="flex flex-wrap gap-2">
               {data.hashtags.map((t, i) => (
                 <span
                   key={t.tag}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold ring-1 ${i < 3 ? "bg-sky-500/15 text-sky-100 ring-sky-400/30" : "bg-white/[0.04] text-slate-300 ring-white/10"}`}
                 >
-                  #{t.tag} <span className="text-[11px] font-semibold text-slate-400">{t.count} bài</span>
+                  #{t.tag} <span className="text-[11px] font-semibold text-slate-400">{t.count}{tr(" bài", " posts")}</span>
                 </span>
               ))}
             </div>
@@ -199,7 +205,7 @@ export default function TrendsPage() {
         )}
 
         {data && data.risingTechs.length > 0 && (
-          <Section icon={Star} title="Thợ nổi bật" hint="Theo lượt thích 30 ngày và đánh giá thật từ chủ tiệm" tone="bg-amber-500/15 text-amber-300">
+          <Section icon={Star} title={tr("Thợ nổi bật", "Standout techs")} hint={tr("Theo lượt thích 30 ngày và đánh giá thật từ chủ tiệm", "By 30-day likes and real salon-owner reviews")} tone="bg-amber-500/15 text-amber-300">
             <div className="glass-card divide-y divide-white/5 overflow-hidden rounded-2xl">
               {data.risingTechs.map((t, i) => (
                 <Link key={t.id} href={`/profile/${t.id}`} className="flex items-center gap-3 p-3.5 transition-colors hover:bg-white/[0.03]">
@@ -220,7 +226,7 @@ export default function TrendsPage() {
         )}
 
         {data && data.salaries.length > 0 && (
-          <Section icon={DollarSign} title="Lương tuần theo bang" hint="Từ tin tuyển thật có ghi lương tuần (cần ≥3 tin/bang)" tone="bg-emerald-500/15 text-emerald-300">
+          <Section icon={DollarSign} title={tr("Lương tuần theo bang", "Weekly pay by state")} hint={tr("Từ tin tuyển thật có ghi lương tuần (cần ≥3 tin/bang)", "From real job posts listing weekly pay (needs ≥3 posts/state)")} tone="bg-emerald-500/15 text-emerald-300">
             <div className="glass-card overflow-hidden rounded-2xl">
               {data.salaries.map((s) => {
                 const max = data.salaries[0].high || 1;
@@ -248,7 +254,7 @@ export default function TrendsPage() {
         )}
 
         {radar && radar.pulse.length > 0 && (
-          <Section icon={Activity} title="Nhịp đau ngành" hint="Thợ & chủ tiệm tự trả lời mỗi tuần trên PawNail — ẩn danh" tone="bg-sky-500/15 text-sky-300">
+          <Section icon={Activity} title={tr("Nhịp đau ngành", "Industry pain pulse")} hint={tr("Thợ & chủ tiệm tự trả lời mỗi tuần trên PawNail — ẩn danh", "Techs & owners answer weekly on PawNail — anonymous")} tone="bg-sky-500/15 text-sky-300">
             <div className="grid gap-3 sm:grid-cols-2">
               {radar.pulse.map((p) => {
                 const sorted = [...p.options].sort((a, b) => b.votes - a.votes).filter((o) => o.votes > 0);
@@ -256,7 +262,7 @@ export default function TrendsPage() {
                   <div key={p.questionId + p.week} className="glass-card space-y-2.5 rounded-2xl p-4">
                     <div>
                       <p className="text-sm font-black text-white">{p.topic}</p>
-                      <p className="text-[11px] text-slate-500">{p.total} người trả lời · tuần {p.week.split("-W")[1]}</p>
+                      <p className="text-[11px] text-slate-500">{p.total}{tr(" người trả lời · tuần ", " responses · week ")}{p.week.split("-W")[1]}</p>
                     </div>
                     {sorted.slice(0, 4).map((o, i) => (
                       <div key={o.id} className="relative overflow-hidden rounded-lg bg-slate-950/60">
@@ -275,11 +281,11 @@ export default function TrendsPage() {
         )}
 
         {radar && radar.news.length > 0 && (
-          <Section icon={Newspaper} title="Tin ngành nail" hint="Tiêu đề từ báo chí & tạp chí ngành — bấm để đọc bài gốc" tone="bg-slate-400/15 text-slate-200">
+          <Section icon={Newspaper} title={tr("Tin ngành nail", "Nail industry news")} hint={tr("Tiêu đề từ báo chí & tạp chí ngành — bấm để đọc bài gốc", "Headlines from press & trade magazines — tap to read the original")} tone="bg-slate-400/15 text-slate-200">
             <div className="glass-card divide-y divide-white/5 overflow-hidden rounded-2xl">
               {radar.news.map((n) => (
                 <a key={n.link} href={n.link} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 p-3.5 transition-colors hover:bg-white/[0.03]">
-                  <span className="mt-0.5 flex-shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{NEWS_TOPIC[n.topic] ?? "Tin ngành"}</span>
+                  <span className="mt-0.5 flex-shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{NEWS_TOPIC()[n.topic] ?? tr("Tin ngành", "Industry news")}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold leading-snug text-slate-100">{n.title}</span>
                     <span className="mt-0.5 block text-[11px] text-slate-500">{n.source}{n.publishedAt ? ` · ${timeAgo(n.publishedAt)}` : ""}</span>
@@ -300,8 +306,8 @@ export default function TrendsPage() {
               <TrendingUp className="h-5 w-5 text-white" />
             </span>
             <span className="flex-1">
-              <span className="block text-sm font-black text-white">Muốn lên bảng tuần sau?</span>
-              <span className="block text-xs text-slate-400">Đăng mẫu móng đẹp nhất kèm hashtag — bảng xếp hạng cập nhật mỗi 5 phút.</span>
+              <span className="block text-sm font-black text-white">{tr("Muốn lên bảng tuần sau?", "Want to make next week's board?")}</span>
+              <span className="block text-xs text-slate-400">{tr("Đăng mẫu móng đẹp nhất kèm hashtag — bảng xếp hạng cập nhật mỗi 5 phút.", "Post your best design with a hashtag — rankings refresh every 5 minutes.")}</span>
             </span>
             <ArrowRight className="h-5 w-5 text-pink-300" />
           </Link>
@@ -309,7 +315,7 @@ export default function TrendsPage() {
 
         {data && (
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500">
-            <Users className="h-3 w-3" /> Chỉ tính hoạt động thật của thành viên — không có số liệu ảo.
+            <Users className="h-3 w-3" />{tr(" Chỉ tính hoạt động thật của thành viên — không có số liệu ảo.", " Only real member activity counts — no fake numbers.")}
           </p>
         )}
       </main>

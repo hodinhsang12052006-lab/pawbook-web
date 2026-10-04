@@ -13,6 +13,8 @@ import {
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { stateName } from "@/lib/stateNames";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { tr } from "@/lib/i18n/tr";
+import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
@@ -290,7 +292,7 @@ export default function TechnicianRegisterForm() {
                   onClick={() => toggleSpecialty(s)}
                   className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${specialties.includes(s) ? "border-pink-500 bg-pink-500/15 text-pink-400" : `${cardClass} ${labelClass}`}`}
                 >
-                  {s}
+                  {valueLabel(s)}
                 </button>
               ))}
             </div>
@@ -304,20 +306,20 @@ export default function TechnicianRegisterForm() {
                 onClick={() => setSalaryMode("Bao lương")}
                 className={`min-h-[48px] rounded-2xl py-2.5 text-sm font-bold border-2 ${PRESS} ${salaryMode === "Bao lương" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
               >
-                Bao lương
+                {valueLabel("Bao lương")}
               </button>
               <button
                 type="button"
                 onClick={() => setSalaryMode("Ăn chia %")}
                 className={`min-h-[48px] rounded-2xl py-2.5 text-sm font-bold border-2 ${PRESS} ${salaryMode === "Ăn chia %" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
               >
-                Ăn chia %
+                {valueLabel("Ăn chia %")}
               </button>
             </div>
             <input
               value={salaryAmount}
               onChange={(e) => setSalaryAmount(e.target.value)}
-              placeholder={salaryMode === "Bao lương" ? "VD: $1,200/tuần" : "VD: 60/40"}
+              placeholder={salaryMode === "Bao lương" ? tr("VD: $1,200/tuần", "e.g. $1,200/week") : tr("VD: 60/40", "e.g. 60/40")}
               className={inputClass}
             />
           </div>
@@ -332,7 +334,7 @@ export default function TechnicianRegisterForm() {
                   onClick={() => toggleBenefit(b)}
                   className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${benefits.includes(b) ? "border-emerald-500 bg-emerald-500/15 text-emerald-400" : `${cardClass} ${labelClass}`}`}
                 >
-                  {b}
+                  {valueLabel(b)}
                 </button>
               ))}
             </div>

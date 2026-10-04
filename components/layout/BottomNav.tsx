@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import Avatar from "@/components/ui/Avatar";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 type HomeTab = "feed" | "jobs" | "portfolio";
 
@@ -24,6 +26,7 @@ interface NavItem {
 // đăng tin tuyển). Viên sáng trượt theo mục đang chọn; tự ẩn khi cuộn xuống
 // để nhường chỗ cho nội dung, hiện lại ngay khi cuộn lên.
 export default function BottomNav() {
+  useTr(); // render lại khi đổi VI/EN
   const pathname = usePathname();
   const router = useRouter();
   const { user: sessionUser, loading } = useSessionUser();
@@ -83,7 +86,7 @@ export default function BottomNav() {
   const items: NavItem[] = [
     {
       id: "feed",
-      label: "Bảng tin",
+      label: tr("Bảng tin", "Feed"),
       icon: Newspaper,
       onClick: () => goToTab("feed"),
       // Tab thứ 3 (không có nút riêng ở đây) thì không sáng mục nào — tránh
@@ -92,14 +95,14 @@ export default function BottomNav() {
     },
     {
       id: "second",
-      label: isOwner ? "Tìm thợ" : "Việc làm",
+      label: isOwner ? tr("Tìm thợ", "Find techs") : tr("Việc làm", "Jobs"),
       icon: isOwner ? Users : Briefcase,
       onClick: () => goToTab(secondTab),
       active: isHome && currentTab === secondTab,
     },
     {
       id: "messages",
-      label: "Tin nhắn",
+      label: tr("Tin nhắn", "Messages"),
       icon: MessageCircle,
       onClick: () => router.push("/messages"),
       active: pathname?.startsWith("/messages") ?? false,
@@ -107,7 +110,7 @@ export default function BottomNav() {
     },
     {
       id: "profile",
-      label: "Hồ sơ",
+      label: tr("Hồ sơ", "Profile"),
       onClick: () => router.push("/profile"),
       active: pathname?.startsWith("/profile") ?? false,
     },
@@ -160,7 +163,7 @@ export default function BottomNav() {
               <button
                 type="button"
                 onClick={createAction}
-                aria-label={isOwner ? "Đăng tin tuyển thợ" : "Đăng bài mới"}
+                aria-label={isOwner ? tr("Đăng tin tuyển thợ", "Post a job") : tr("Đăng bài mới", "New post")}
                 className="-mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 via-fuchsia-600 to-purple-600 text-white shadow-[0_10px_24px_-6px_rgba(219,39,119,0.75)] ring-4 ring-slate-950 transition-transform duration-150 active:scale-90"
               >
                 <Plus className="h-6 w-6" strokeWidth={2.75} />

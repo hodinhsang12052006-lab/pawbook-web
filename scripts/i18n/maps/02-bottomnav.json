@@ -1,0 +1,9 @@
+{ "file": "components/layout/BottomNav.tsx", "map": {
+  "Bảng tin": "Feed",
+  "Tìm thợ": "Find techs",
+  "Việc làm": "Jobs",
+  "Tin nhắn": "Messages",
+  "Hồ sơ": "Profile",
+  "Đăng tin tuyển thợ": "Post a job",
+  "Đăng bài mới": "New post"
+} }

@@ -1,0 +1,13 @@
+{ "file": "components/feed/CreatePostComposer.tsx", "map": {
+  "💬 Chia sẻ": "💬 Share",
+  "✨ Khoe tay nghề / tiệm": "✨ Show off work / salon",
+  "Không thể tải \"${rawFile.name}\" lên.": "Couldn't upload \"${rawFile.name}\".",
+  "Lỗi mạng khi tải \"${rawFile.name}\" lên.": "Network error uploading \"${rawFile.name}\".",
+  "Viết vài dòng hoặc đăng ảnh trước khi chia sẻ nhé.": "Write something or add a photo first.",
+  "Không thể đăng bài.": "Couldn't publish the post.",
+  "Đã đăng bài! 🎉": "Posted! 🎉",
+  "Lỗi mạng. Vui lòng thử lại.": "Network error. Please try again.",
+  "Khoe tác phẩm móng mới, cập nhật tình hình tiệm, hoặc bất cứ điều gì... #NailArt": "Show your latest nail work, share salon news, anything... #NailArt",
+  "Ảnh/Video": "Photo/Video",
+  "Đăng bài": "Post"
+} }

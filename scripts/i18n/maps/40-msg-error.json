@@ -1,0 +1,8 @@
+{
+ "file": "app/messages/error.tsx",
+ "map": {
+  "🚨 ỨNG DỤNG BỊ CRASH": "🚨 SOMETHING CRASHED",
+  "Lỗi không xác định": "Unknown error",
+  "🔄 Tải lại trang": "🔄 Reload page"
+ }
+}

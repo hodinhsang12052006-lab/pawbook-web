@@ -54,7 +54,8 @@ const d = room.data;
 R.check("RA8", "Admin thấy đủ: tín hiệu + tin ngành + bài nháp", room.status === 200 && d.signals && Array.isArray(d.news) && Array.isArray(d.drafts), room.status);
 R.check("RA9", "Tín hiệu 'thiếu thợ Gel-X tại Texas' được phát hiện", d.signals.skillGaps.some((g) => g.state === "TX" && g.skill === "Gel-X" && g.jobs >= 3), JSON.stringify(d.signals.skillGaps).slice(0, 200));
 const pulseDraft = d.drafts.find((x) => x.kind === "pulse");
-R.check("RA10", "Bài nháp Nhịp đau trích ĐÚNG % thật (67%)", pulseDraft && /67%/.test(pulseDraft.title), pulseDraft?.title);
+// % thật lấy từ kết quả API (DB dùng lại nhiều lần trong tuần thì phiếu cộng dồn; DB sạch = 67%).
+R.check("RA10", `Bài nháp Nhịp đau trích ĐÚNG % thật (${top.pct}%)`, pulseDraft && pulseDraft.title.includes(`${top.pct}%`), pulseDraft?.title);
 R.check("RA11", "Tin ngành chỉ gồm tiêu đề + link https (không chép nội dung)", d.news.length === 0 || d.news.every((n) => /^https:\/\//.test(n.link) && n.title.length <= 200 && !("content" in n)), `${d.news.length} tin`);
 R.check("RA12", "Nội dung tin ngành đúng chủ đề nail", d.news.length === 0 || d.news.filter((n) => /nail|manicur|pedicur|móng|nail tech|gel|acrylic/i.test(n.title) || n.source === "NAILS Magazine").length / d.news.length > 0.9, d.news.slice(0, 3).map((n) => n.title).join(" | "));
 

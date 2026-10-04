@@ -8,13 +8,15 @@ import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel"
 import { startRingtone, stopRingtone } from "@/lib/ringtone";
 import Avatar from "@/components/ui/Avatar";
 import { isPlaceholderAvatar } from "@/lib/avatar";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full flex-col items-center justify-center rounded-[1.75rem] bg-slate-950 text-slate-100">
       <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
-      <p className="mt-2 text-xs text-slate-400">Đang kết nối cuộc gọi…</p>
+      <p className="mt-2 text-xs text-slate-400">{tr("Đang kết nối cuộc gọi…", "Connecting call…")}</p>
     </div>
   ),
 });
@@ -134,7 +136,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       }
       isCallerRef.current = false;
       loggedRef.current = false;
-      setPeer({ id: callerId, name: data.callerName || "Người dùng", avatarUrl: data.callerAvatar || null });
+      setPeer({ id: callerId, name: data.callerName || tr("Người dùng", "User"), avatarUrl: data.callerAvatar || null });
       setCallId(data.callId || "");
       setCallType(data.callType === "video" ? "video" : "audio");
       setPhase("incoming");
@@ -157,13 +159,13 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       const p = stateRef.current.phase;
       if (p === "outgoing") {
         logCall("declined");
-        toast.error(`${stateRef.current.peer?.name || "Người nhận"} đã từ chối cuộc gọi.`);
+        toast.error(tr(`${stateRef.current.peer?.name || "Người nhận"} đã từ chối cuộc gọi.`, `${stateRef.current.peer?.name || "They"} declined the call.`));
       } else if (p === "incoming") {
         // Người gọi huỷ trước khi mình nghe máy.
-        toast(`Cuộc gọi nhỡ từ ${stateRef.current.peer?.name || "người dùng"}`, { icon: "📞" });
+        toast(tr(`Cuộc gọi nhỡ từ ${stateRef.current.peer?.name || "người dùng"}`, `Missed call from ${stateRef.current.peer?.name || "a user"}`), { icon: "📞" });
       } else if (p === "connecting" || p === "connected") {
         logCall("ended");
-        toast("Cuộc gọi đã kết thúc.", { icon: "📞" });
+        toast(tr("Cuộc gọi đã kết thúc.", "Call ended."), { icon: "📞" });
       }
       resetCall();
     };
@@ -171,7 +173,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     const onBusy = (data: { fromId?: string }) => {
       if (!fromPeer(data) || stateRef.current.phase !== "outgoing") return;
       logCall("missed");
-      toast.error(`${stateRef.current.peer?.name || "Người nhận"} đang bận cuộc gọi khác.`);
+      toast.error(tr(`${stateRef.current.peer?.name || "Người nhận"} đang bận cuộc gọi khác.`, `${stateRef.current.peer?.name || "They"} are on another call.`));
       resetCall();
     };
 
@@ -196,7 +198,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     async (partner: CallPartner, type: CallType) => {
       if (!partner || partner.isGroup) return;
       if (stateRef.current.phase !== "idle") {
-        toast.error("Bạn đang trong một cuộc gọi khác.");
+        toast.error(tr("Bạn đang trong một cuộc gọi khác.", "You're already on another call."));
         return;
       }
       isCallerRef.current = true;
@@ -214,10 +216,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         const res = await signal(partner.id, "offer", { callType: type, callId: newCallId });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Không thể bắt đầu cuộc gọi.");
+          throw new Error(data.error || tr("Không thể bắt đầu cuộc gọi.", "Couldn't start the call."));
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Không thể bắt đầu cuộc gọi.");
+        toast.error(err instanceof Error ? err.message : tr("Không thể bắt đầu cuộc gọi.", "Couldn't start the call."));
         resetCall();
         return;
       }
@@ -227,7 +229,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         if (stateRef.current.phase !== "outgoing") return;
         signal(partner.id, "reject").catch(() => {});
         logCall("missed");
-        toast(`${partner.name} không nghe máy.`, { icon: "📞" });
+        toast(tr(`${partner.name} không nghe máy.`, `${partner.name} didn't answer.`), { icon: "📞" });
         resetCall();
       }, RING_TIMEOUT_MS);
     },
@@ -262,7 +264,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     // Đối phương rời phòng ZEGOCLOUD (cúp máy hoặc rớt mạng hẳn).
     if (stateRef.current.phase === "idle") return;
     logCall("ended");
-    toast("Cuộc gọi đã kết thúc.", { icon: "📞" });
+    toast(tr("Cuộc gọi đã kết thúc.", "Call ended."), { icon: "📞" });
     resetCall();
   }, [logCall, resetCall]);
 
@@ -273,7 +275,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   // roomId đối xứng: 2 bên luôn tính ra cùng 1 chuỗi bất kể ai gọi.
   const roomId = "call-" + [currentUserId, peer.id].sort().join("-") + (callId ? `-${callId}` : "");
   const hasPhoto = !isPlaceholderAvatar(peer.avatarUrl);
-  const typeLabel = callType === "video" ? "Cuộc gọi video" : "Cuộc gọi thoại";
+  const typeLabel = callType === "video" ? tr("Cuộc gọi video", "Video call") : tr("Cuộc gọi thoại", "Voice call");
   const inRoom = phase === "connecting" || phase === "connected";
 
   return (
@@ -311,7 +313,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           <VideoCallRoom
             roomId={roomId}
             userId={currentUserId}
-            userName={currentUserName || "Người dùng"}
+            userName={currentUserName || tr("Người dùng", "User")}
             mode={callType}
             peerId={peer.id}
             onConnected={handleConnected}
@@ -320,7 +322,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           />
           {phase === "connecting" && (
             <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold text-slate-300 backdrop-blur">
-              Đang chờ {peer.name} vào cuộc gọi…
+              {tr("Đang chờ ", "Waiting for ")}{peer.name}{tr(" vào cuộc gọi…", " to join…")}
             </div>
           )}
         </div>
@@ -335,7 +337,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
             <div className="space-y-1.5">
               <h2 className="text-2xl font-black tracking-tight text-white">{peer.name}</h2>
               <p className="text-sm font-semibold text-slate-300">
-                {phase === "incoming" ? `${typeLabel} đến…` : "Đang đổ chuông…"}
+                {phase === "incoming" ? tr(`${typeLabel} đến…`, `Incoming ${typeLabel.toLowerCase()}…`) : tr("Đang đổ chuông…", "Ringing…")}
               </p>
             </div>
           </div>
@@ -345,26 +347,26 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
               <button
                 type="button"
                 onClick={handleHangUp}
-                title={phase === "incoming" ? "Từ chối" : "Huỷ cuộc gọi"}
-                aria-label={phase === "incoming" ? "Từ chối" : "Huỷ cuộc gọi"}
+                title={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
+                aria-label={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
                 className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white shadow-xl shadow-red-500/30 transition-transform hover:scale-105 active:scale-90"
               >
                 <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
               </button>
-              <span className="text-[11px] font-semibold text-slate-400">{phase === "incoming" ? "Từ chối" : "Huỷ"}</span>
+              <span className="text-[11px] font-semibold text-slate-400">{phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ", "Cancel")}</span>
             </div>
             {phase === "incoming" && (
               <div className="flex flex-col items-center gap-2">
                 <button
                   type="button"
                   onClick={handleAccept}
-                  title="Trả lời"
-                  aria-label="Trả lời"
+                  title={tr("Trả lời", "Answer")}
+                  aria-label={tr("Trả lời", "Answer")}
                   className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-xl shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-90"
                 >
                   {callType === "video" ? <Video className="h-6 w-6 stroke-[2.5px]" /> : <Phone className="h-6 w-6 stroke-[2.5px]" />}
                 </button>
-                <span className="text-[11px] font-semibold text-slate-400">Trả lời</span>
+                <span className="text-[11px] font-semibold text-slate-400">{tr("Trả lời", "Answer")}</span>
               </div>
             )}
           </div>

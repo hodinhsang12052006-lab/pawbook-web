@@ -1,0 +1,6 @@
+{ "file": "components/ui/MediaLightbox.tsx", "map": {
+  "Xem ảnh / video": "Photo / video viewer",
+  "Đóng": "Close",
+  "Ảnh trước": "Previous",
+  "Ảnh sau": "Next"
+} }

@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const a = await admin();
   if (a.error) return a.error;
   const market = new URL(req.url).searchParams.get("market") === "AU" ? "AU" : "US";
-  const [signals, news] = await Promise.all([getSignals(market), getIndustryNews()]);
+  const [signals, news] = await Promise.all([getSignals(market, { fresh: true }), getIndustryNews()]);
   let posts: unknown[] = [];
   try {
     posts = await prisma.studioPost.findMany({ orderBy: { createdAt: "desc" }, take: 30 });

@@ -8,15 +8,19 @@ import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import type { FeedPost } from "./FeedPostCard";
 import Avatar from "@/components/ui/Avatar";
 import { playSound } from "@/lib/sounds";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
-const POST_TYPE_OPTIONS: { value: "GENERAL" | "SHOWCASE"; label: string }[] = [
-  { value: "GENERAL", label: "💬 Chia sẻ" },
-  { value: "SHOWCASE", label: "✨ Khoe tay nghề / tiệm" },
+// Hàm (không phải hằng) để nhãn đổi theo VI/EN.
+const POST_TYPE_OPTIONS = (): { value: "GENERAL" | "SHOWCASE"; label: string }[] => [
+  { value: "GENERAL", label: tr("💬 Chia sẻ", "💬 Share") },
+  { value: "SHOWCASE", label: tr("✨ Khoe tay nghề / tiệm", "✨ Show off work / salon") },
 ];
 
 export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { onPosted: (post: FeedPost) => void; suggestedTags?: string[] }) {
+  useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,10 +74,10 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
           if (res.ok && data.url) {
             setMediaUrls((prev) => [...prev, data.url]);
           } else {
-            toast.error(data.error || `Không thể tải "${rawFile.name}" lên.`);
+            toast.error(data.error || tr(`Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
           }
         } catch (err) {
-          toast.error(err instanceof FileTooLargeError ? err.message : `Lỗi mạng khi tải "${rawFile.name}" lên.`);
+          toast.error(err instanceof FileTooLargeError ? err.message : tr(`Lỗi mạng khi tải "${rawFile.name}" lên.`, `Network error uploading "${rawFile.name}".`));
         }
       }
     } finally {
@@ -86,7 +90,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
 
   const handleSubmit = async () => {
     if (!content.trim() && mediaUrls.length === 0) {
-      toast.error("Viết vài dòng hoặc đăng ảnh trước khi chia sẻ nhé.");
+      toast.error(tr("Viết vài dòng hoặc đăng ảnh trước khi chia sẻ nhé.", "Write something or add a photo first."));
       return;
     }
     setPosting(true);
@@ -98,7 +102,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Không thể đăng bài.");
+        toast.error(data.error || tr("Không thể đăng bài.", "Couldn't publish the post."));
         return;
       }
       onPosted(data);
@@ -106,9 +110,9 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       setContent("");
       setMediaUrls([]);
       setPostType("GENERAL");
-      toast.success("Đã đăng bài! 🎉");
+      toast.success(tr("Đã đăng bài! 🎉", "Posted! 🎉"));
     } catch {
-      toast.error("Lỗi mạng. Vui lòng thử lại.");
+      toast.error(tr("Lỗi mạng. Vui lòng thử lại.", "Network error. Please try again."));
     } finally {
       setPosting(false);
     }
@@ -122,7 +126,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Khoe tác phẩm móng mới, cập nhật tình hình tiệm, hoặc bất cứ điều gì... #NailArt"
+          placeholder={tr("Khoe tác phẩm móng mới, cập nhật tình hình tiệm, hoặc bất cứ điều gì... #NailArt", "Show your latest nail work, share salon news, anything... #NailArt")}
           rows={2}
           maxLength={2000}
           className="flex-1 resize-none bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
@@ -180,12 +184,12 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
             className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300 hover:text-white disabled:opacity-40 ${PRESS}`}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-            Ảnh/Video
+            {tr("Ảnh/Video", "Photo/Video")}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleUpload} />
 
           <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950 p-1">
-            {POST_TYPE_OPTIONS.map((opt) => (
+            {POST_TYPE_OPTIONS().map((opt) => (
               <button
                 key={opt.value}
                 type="button"
@@ -207,7 +211,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
           className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-black text-white shadow-lg shadow-pink-600/20 disabled:opacity-50 ${PRESS}`}
         >
           {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          Đăng bài
+          {tr("Đăng bài", "Post")}
         </button>
       </div>
     </div>

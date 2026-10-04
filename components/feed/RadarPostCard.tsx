@@ -4,6 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Sparkles, ArrowRight, ExternalLink } from "lucide-react";
 import { timeAgo } from "@/lib/feedFormat";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 export interface RadarPost { id: string; kind: string; title: string; body: string; href: string | null; createdAt: string }
 
@@ -19,6 +21,7 @@ const KIND_TONE: Record<string, string> = {
 
 /** Bài PawNail Studio đã được admin duyệt (radar xu hướng & nỗi đau ngành). */
 export default function RadarPostCard({ post }: { post: RadarPost }) {
+  useTr(); // render lại khi đổi VI/EN
   const tone = KIND_TONE[post.kind] ?? KIND_TONE.custom;
   const external = !!post.href && /^https:\/\//.test(post.href);
   const body = (
@@ -30,7 +33,7 @@ export default function RadarPostCard({ post }: { post: RadarPost }) {
       <p className="mt-1 text-[13px] leading-relaxed text-slate-300">{post.body}</p>
       {post.href && (
         <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-pink-300">
-          {external ? <>Đọc bài gốc <ExternalLink className="h-3 w-3" /></> : <>Xem thêm <ArrowRight className="h-3 w-3" /></>}
+          {external ? <>{tr("Đọc bài gốc ", "Read original ")}<ExternalLink className="h-3 w-3" /></> : <>{tr("Xem thêm ", "Learn more ")}<ArrowRight className="h-3 w-3" /></>}
         </span>
       )}
     </>

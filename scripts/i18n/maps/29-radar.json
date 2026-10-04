@@ -1,0 +1,20 @@
+{ "file": "app/tools/radar/page.tsx", "map": {
+  "Không thể tải dữ liệu.": "Couldn't load data.",
+  "Lỗi mạng.": "Network error.",
+  "Chỉ số bao lương & chia turn tham khảo theo tiểu bang — đối chiếu trước khi quyết định bay đến tiệm mới.": "Reference guaranteed pay & commission splits by state — compare before flying to a new salon.",
+  "Mỹ (US)": "United States",
+  "Úc (AU)": "Australia",
+  "Chọn tiểu bang": "Choose a state",
+  "Chọn kỹ năng chính": "Choose your main skill",
+  "Mức bao lương tham khảo / tuần": "Reference guaranteed pay / week",
+  "/ tuần ·": "/ week ·",
+  "Cầu thợ thực tế từ cộng đồng": "Real demand from the community",
+  "tin tuyển thợ": "hiring posts",
+  "ghi nhận tại": "recorded in",
+  "qua các nhóm cộng đồng ngành nail": "across nail community groups",
+  "tin có nhắc mức lương cụ thể": "posts mention specific pay",
+  "Chưa đủ dữ liệu cộng đồng cho bang này trong đợt quét gần nhất.": "Not enough community data for this state in the latest scan.",
+  "Mức chia turn phổ biến": "Common commission splits",
+  "Mẹo thỏa thuận trước khi bay": "Negotiation tips before you fly",
+  "Checklist hỏi chủ trước khi nhận việc": "Questions to ask the owner before accepting"
+} }

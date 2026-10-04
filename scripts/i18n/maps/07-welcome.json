@@ -1,0 +1,12 @@
+{ "file": "components/layout/WelcomeBack.tsx", "map": {
+  "Úc": "Australia",
+  "Mỹ": "the US",
+  "${digest.newJobs} tin tuyển mới tại ${area}": "${digest.newJobs} new jobs in ${area}",
+  "${digest.newTechs} thợ đang sẵn sàng tại ${area}": "${digest.newTechs} techs available in ${area}",
+  "${digest.likes} lượt thích bài của bạn": "${digest.likes} likes on your posts",
+  "${digest.comments} bình luận mới": "${digest.comments} new comments",
+  "${digest.saves} thợ đã lưu tin của bạn": "${digest.saves} techs saved your job",
+  "Đóng": "Close",
+  "Có gì mới từ lần trước bạn ghé 👋": "What's new since your last visit 👋",
+  "Lần trước:": "Last visit:"
+} }

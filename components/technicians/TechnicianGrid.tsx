@@ -9,6 +9,9 @@ import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName } from "@/lib/stateNames";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient } from "@/lib/avatar";
+import { tr } from "@/lib/i18n/tr";
+import { valueLabel } from "@/lib/i18n/valueLabel";
+import { useTr } from "@/lib/i18n/useTr";
 
 export interface TechnicianType {
   id: string;
@@ -39,15 +42,16 @@ const PRESS = "active:scale-95 transition-transform duration-100";
 // tiệm đang lướt "Thợ Đang Rảnh" để họ nhắn tin/unlock sớm thay vì lưỡng lự,
 // không bịa số "X tiệm khác đang xem" vì app chưa có tracking lượt xem thật.
 function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: string }) {
+  useTr(); // render lại khi đổi VI/EN
   const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
   const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
-  const scopeLabel = stateSignal ? `tại ${stateName(market, state)}` : market === "US" ? "tại Mỹ" : "tại Úc";
+  const scopeLabel = stateSignal ? tr(`tại ${stateName(market, state)}`, `in ${stateName(market, state)}`) : market === "US" ? tr("tại Mỹ", "in the US") : tr("tại Úc", "in Australia");
 
   return (
     <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3 mb-3">
       <Zap className="h-5 w-5 text-amber-400 flex-shrink-0" />
       <p className="text-xs sm:text-sm text-slate-200">
-        <span className="font-black text-amber-400">{count}+ tin chủ tìm thợ</span> {scopeLabel} trong 1 đợt khảo sát nhóm nail (9/2026) — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.
+        <span className="font-black text-amber-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span> {scopeLabel}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.", " in one survey of nail groups (Sep 2026) — great techs get many offers, message as soon as you find a match.")}
       </p>
     </div>
   );
@@ -67,6 +71,7 @@ function firstMedia(images: any[]): { url: string; isVideo: boolean } | null {
 // được placeholder="blur" chuẩn của next/image vì ảnh đến từ URL ngoài
 // không có sẵn blurDataURL, nên thay bằng lớp nền xám fade-out khi onLoad).
 function TechnicianCardSkeleton() {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-800/70 border border-slate-800 animate-pulse">
       <div className="absolute inset-x-0 bottom-0 p-2.5 space-y-1.5">
@@ -78,8 +83,9 @@ function TechnicianCardSkeleton() {
 }
 
 function TechnicianGridSkeleton() {
+  useTr(); // render lại khi đổi VI/EN
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3" aria-busy="true" aria-label="Đang tải portfolio thợ">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3" aria-busy="true" aria-label={tr("Đang tải portfolio thợ", "Loading tech portfolios")}>
       {Array.from({ length: 9 }).map((_, i) => (
         <TechnicianCardSkeleton key={i} />
       ))}
@@ -97,10 +103,11 @@ function TechnicianGridSkeleton() {
 // chồng lên chữ badge phải, cắt chữ lem nhem cả 2 bên. truncate để câu dài
 // bị cắt gọn bằng dấu "…" thay vì tràn ra ngoài khung.
 function StatusBadge({ status }: { status: string }) {
+  useTr(); // render lại khi đổi VI/EN
   if (status === "URGENT") {
     return (
       <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
-        <Flame className="h-2.5 w-2.5 flex-shrink-0" /> <span className="truncate">Tìm việc gấp</span>
+        <Flame className="h-2.5 w-2.5 flex-shrink-0" /> <span className="truncate">{tr("Tìm việc gấp", "Needs work now")}</span>
       </span>
     );
   }
@@ -108,14 +115,14 @@ function StatusBadge({ status }: { status: string }) {
     return (
       <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
         <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse" />
-        <span className="line-clamp-2">Đang rảnh hôm nay</span>
+        <span className="line-clamp-2">{tr("Đang rảnh hôm nay", "Available today")}</span>
       </span>
     );
   }
   if (status === "BETTER") {
     return (
       <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
-        <span className="truncate">Đang tìm chỗ tốt hơn</span>
+        <span className="truncate">{tr("Đang tìm chỗ tốt hơn", "Open to better offers")}</span>
       </span>
     );
   }
@@ -123,6 +130,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function NoMediaCover({ tech }: { tech: TechnicianType }) {
+  useTr(); // render lại khi đổi VI/EN
   const [a, b] = avatarGradient(tech.user.id);
   return (
     <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${a}55, ${b}33), #0f172a` }}>
@@ -133,6 +141,7 @@ function NoMediaCover({ tech }: { tech: TechnicianType }) {
 }
 
 function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () => void }) {
+  useTr(); // render lại khi đổi VI/EN
   const [loaded, setLoaded] = useState(false);
   const media = firstMedia(tech.portfolioImages as any[]);
 
@@ -186,7 +195,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
               key={s}
               className="rounded-full bg-black/60 backdrop-blur-sm border border-white/15 px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-full"
             >
-              {i === 0 ? `Chuyên ${s}` : s}
+              {i === 0 ? tr(`Chuyên ${s}`, `${valueLabel(s)} specialist`) : valueLabel(s)}
             </span>
           ))}
         </div>
@@ -194,7 +203,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
         <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
-        <p className="text-[10px] text-slate-300 truncate">{tech.city}, {stateName(tech.market, tech.state)} · {tech.yearsOfExperience} năm KN</p>
+        <p className="text-[10px] text-slate-300 truncate">{tech.city}, {stateName(tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", " yrs exp")}</p>
       </div>
 
       <StatusBadge status={tech.status} />
@@ -203,6 +212,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 }
 
 export default function TechnicianGrid({ market, state, city }: TechnicianGridProps) {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const { user } = useSessionUser();
   const isOwner = user?.role === "OWNER";
@@ -221,11 +231,11 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
         if (state) params.set("state", state);
         if (city) params.set("city", city);
         const res = await fetch(`/api/technicians?${params.toString()}`);
-        if (!res.ok) throw new Error("Không thể tải danh sách thợ.");
+        if (!res.ok) throw new Error(tr("Không thể tải danh sách thợ.", "Couldn't load techs."));
         const data = await res.json();
         if (!cancelled) setTechs(data);
       } catch (err: any) {
-        if (!cancelled) setError(err.message || "Đã xảy ra lỗi.");
+        if (!cancelled) setError(err.message || tr("Đã xảy ra lỗi.", "Something went wrong."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -256,8 +266,8 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
         {isOwner && <OwnerScarcityBanner market={market} state={state} />}
         <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
           <p className="text-4xl">💅</p>
-          <p className="text-base font-bold text-slate-300">Chưa có thợ nào đăng portfolio ở khu vực này</p>
-          <p className="text-sm text-slate-500">Hãy thử đổi bang hoặc thành phố khác.</p>
+          <p className="text-base font-bold text-slate-300">{tr("Chưa có thợ nào đăng portfolio ở khu vực này", "No tech portfolios in this area yet")}</p>
+          <p className="text-sm text-slate-500">{tr("Hãy thử đổi bang hoặc thành phố khác.", "Try another state or city.")}</p>
         </div>
       </div>
     );

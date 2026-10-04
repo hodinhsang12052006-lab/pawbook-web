@@ -1,0 +1,9 @@
+{ "file": "components/profile/ProfileCompletenessCard.tsx", "map": {
+  "Hồ sơ tiệm đầy đủ giúp thợ tin tưởng và gọi nhiều hơn.": "A complete salon profile earns more trust and calls from techs.",
+  "Hồ sơ đầy đủ được chủ tiệm chú ý và nhắn tin nhiều hơn.": "Complete profiles get noticed and messaged more by salons.",
+  "Hồ sơ hoàn thiện ${percent}%": "Profile ${percent}% complete",
+  "Hồ sơ hoàn hảo!": "Profile complete!",
+  "Hoàn thiện hồ sơ": "Complete your profile",
+  "Bạn đang nổi bật với nhà tuyển dụng.": "You stand out to employers.",
+  "Tiếp theo:": "Next:"
+} }

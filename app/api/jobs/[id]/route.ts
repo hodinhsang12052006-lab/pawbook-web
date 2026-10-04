@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { getResponseStats, describeResponse } from "@/lib/responseTime";
+import { getJobMedia } from "@/lib/jobMedia";
 
 const FIRST_VIEWERS = 10;
 const FRESH_MS = 48 * 60 * 60 * 1000;
@@ -34,10 +35,11 @@ export async function GET(
       );
     }
 
-    const [heatMap, response, saveCount] = await Promise.all([
+    const [heatMap, response, saveCount, mediaMap] = await Promise.all([
       getJobHeat([job.id]),
       getResponseStats(job.ownerId),
       prisma.savedJob.count({ where: { jobId: job.id } }),
+      getJobMedia([job.id]),
     ]);
     const h = heatMap.get(job.id);
     const fresh = Date.now() - job.createdAt.getTime() < FRESH_MS;
@@ -45,6 +47,7 @@ export async function GET(
     return NextResponse.json({
       ...job,
       saveCount,
+      mediaUrls: mediaMap.get(job.id) ?? [],
       heat: {
         viewsToday: h?.viewsToday ?? 0,
         contacts7d: h?.contacts7d ?? 0,

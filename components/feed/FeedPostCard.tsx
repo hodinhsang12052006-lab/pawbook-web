@@ -11,6 +11,9 @@ import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFo
 import { trackPostView } from "@/lib/viewTracker";
 import Avatar from "@/components/ui/Avatar";
 import { playSound } from "@/lib/sounds";
+import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 export interface FeedPost {
   id: string;
@@ -43,22 +46,24 @@ interface CommentType {
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 
-const POST_TYPE_BADGE: Record<string, { label: string; classes: string }> = {
-  SHOWCASE: { label: "✨ Khoe tay nghề", classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
-  JOB: { label: "🔥 Tuyển thợ", classes: "bg-red-500/10 border-red-500/25 text-red-300" },
+// Hàm (không phải hằng) để nhãn đổi theo VI/EN.
+const POST_TYPE_BADGE = (): Record<string, { label: string; classes: string }> => ({
+  SHOWCASE: { label: tr("✨ Khoe tay nghề", "✨ Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
+  JOB: { label: tr("🔥 Tuyển thợ", "🔥 Hiring"), classes: "bg-red-500/10 border-red-500/25 text-red-300" },
   GENERAL: { label: "", classes: "" },
-};
+});
 
 function isVideo(url: string) {
   return /\.(mp4|webm|mov)$/i.test(url);
 }
 
-const REPORT_REASONS = ["Lừa đảo / spam", "Nội dung phản cảm", "Thông tin tuyển dụng sai sự thật", "Quấy rối"];
+const REPORT_REASONS = () => [tr("Lừa đảo / spam", "Scam / spam"), tr("Nội dung phản cảm", "Offensive content"), tr("Thông tin tuyển dụng sai sự thật", "False job information"), tr("Quấy rối", "Harassment")];
 
 // Dưới ngưỡng này thì ẩn "lượt xem" — số quá nhỏ nhìn vắng, phản tác dụng.
 const MIN_VIEWS_SHOWN = 5;
 
 export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDeleted?: (postId: string) => void }) {
+  useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const { user: currentUser } = useSessionUser();
 
@@ -89,16 +94,16 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   const [menuBusy, setMenuBusy] = useState(false);
 
   const handleDelete = async () => {
-    if (!window.confirm("Xóa bài viết này? Hành động không thể hoàn tác.")) return;
+    if (!window.confirm(tr("Xóa bài viết này? Hành động không thể hoàn tác.", "Delete this post? This can't be undone."))) return;
     setMenuBusy(true);
     try {
       const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Không thể xóa bài viết.");
-      toast.success("Đã xóa bài viết.");
+      if (!res.ok) throw new Error(data.error || tr("Không thể xóa bài viết.", "Couldn't delete the post."));
+      toast.success(tr("Đã xóa bài viết.", "Post deleted."));
       onDeleted?.(post.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Không thể xóa bài viết.");
+      toast.error(err instanceof Error ? err.message : tr("Không thể xóa bài viết.", "Couldn't delete the post."));
     } finally {
       setMenuBusy(false);
       setMenuOpen(false);
@@ -109,7 +114,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   // admin truy được đúng bài trong /admin/reports).
   const handleReport = async (reason: string) => {
     if (!currentUser) {
-      toast.error("Vui lòng đăng nhập để báo cáo.");
+      toast.error(tr("Vui lòng đăng nhập để báo cáo.", "Please sign in to report."));
       return;
     }
     setMenuBusy(true);
@@ -120,20 +125,20 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         body: JSON.stringify({ userId: post.author.id, reason: `[Bài viết ${post.id}] ${reason}` }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Đã gửi báo cáo. Cảm ơn bạn đã giúp cộng đồng an toàn hơn.");
+      toast.success(tr("Đã gửi báo cáo. Cảm ơn bạn đã giúp cộng đồng an toàn hơn.", "Report sent. Thanks for keeping the community safe."));
     } catch {
-      toast.error("Không gửi được báo cáo, vui lòng thử lại.");
+      toast.error(tr("Không gửi được báo cáo, vui lòng thử lại.", "Couldn't send the report, please try again."));
     } finally {
       setMenuBusy(false);
       setMenuOpen(false);
       setReportOpen(false);
     }
   };
-  const badge = POST_TYPE_BADGE[post.postType];
+  const badge = POST_TYPE_BADGE()[post.postType];
 
   const handleToggleLike = async () => {
     if (!currentUser) {
-      toast.error("Vui lòng đăng nhập để thả tim.");
+      toast.error(tr("Vui lòng đăng nhập để thả tim.", "Please sign in to like."));
       return;
     }
     if (likeBusy) return;
@@ -144,7 +149,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     if (nextLiked) {
       playSound("like");
       setBurstKey((k) => k + 1);
-      setLikers((prev) => [{ id: currentUser.id, name: "Bạn", avatarUrl: currentUser.avatarUrl ?? null }, ...prev.filter((l) => l.id !== currentUser.id)].slice(0, 3));
+      setLikers((prev) => [{ id: currentUser.id, name: tr("Bạn", "You"), avatarUrl: currentUser.avatarUrl ?? null }, ...prev.filter((l) => l.id !== currentUser.id)].slice(0, 3));
     } else {
       setLikers((prev) => prev.filter((l) => l.id !== currentUser.id));
     }
@@ -159,7 +164,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       // Hoàn tác nếu lỗi mạng — không để số like sai lệch với server.
       setLiked(!nextLiked);
       setLikeCount((c) => c + (nextLiked ? -1 : 1));
-      toast.error("Không thể thả tim. Vui lòng thử lại.");
+      toast.error(tr("Không thể thả tim. Vui lòng thử lại.", "Couldn't like the post. Please try again."));
     } finally {
       setLikeBusy(false);
     }
@@ -192,7 +197,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     const content = commentText.trim();
     if (!content) return;
     if (!currentUser) {
-      toast.error("Vui lòng đăng nhập để bình luận.");
+      toast.error(tr("Vui lòng đăng nhập để bình luận.", "Please sign in to comment."));
       return;
     }
     setSendingComment(true);
@@ -204,14 +209,14 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Không thể gửi bình luận.");
+        toast.error(data.error || tr("Không thể gửi bình luận.", "Couldn't post the comment."));
         return;
       }
       setComments((prev) => [...(prev || []), data]);
       setCommentCount((c) => c + 1);
       setCommentText("");
     } catch {
-      toast.error("Lỗi mạng. Vui lòng thử lại.");
+      toast.error(tr("Lỗi mạng. Vui lòng thử lại.", "Network error. Please try again."));
     } finally {
       setSendingComment(false);
     }
@@ -229,8 +234,9 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
               {post.author.name}
             </Link>
-            <span className="inline-flex items-center rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px] font-bold text-slate-300 flex-shrink-0">
-              {roleBadgeLabel(post.author.role)}
+            {isVerifiedRole(post.author.role) && <VerifiedBadge className="-ml-1 h-4 w-4" />}
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0 ${isVerifiedRole(post.author.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-300"}`}>
+              {isVerifiedRole(post.author.role) ? tr("Chính thức", "Official") : roleBadgeLabel(post.author.role)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 flex-wrap">
@@ -243,7 +249,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <span>{timeAgo(post.createdAt)}</span>
             {post.isHot && (
               <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
-                🔥 Đang hot
+                {tr("🔥 Đang hot", "🔥 Trending")}
               </span>
             )}
           </div>
@@ -258,7 +264,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <button
               type="button"
               onClick={() => { setMenuOpen((o) => !o); setReportOpen(false); }}
-              aria-label="Tùy chọn bài viết"
+              aria-label={tr("Tùy chọn bài viết", "Post options")}
               aria-expanded={menuOpen}
               className="rounded-lg p-1.5 text-slate-500 hover:bg-white/5 hover:text-slate-200 transition-colors"
             >
@@ -270,18 +276,18 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
                 <div role="menu" className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/95 p-1 shadow-2xl shadow-black/50 backdrop-blur-md animate-scaleUp">
                   {canDelete && (
                     <button role="menuitem" type="button" onClick={handleDelete} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10">
-                      <Trash2 className="h-4 w-4" /> Xóa bài viết
+                      <Trash2 className="h-4 w-4" />{tr(" Xóa bài viết", " Delete post")}
                     </button>
                   )}
                   {!isOwnPost && !reportOpen && (
                     <button role="menuitem" type="button" onClick={() => setReportOpen(true)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-200 hover:bg-white/5">
-                      <Flag className="h-4 w-4 text-amber-400" /> Báo cáo bài viết
+                      <Flag className="h-4 w-4 text-amber-400" />{tr(" Báo cáo bài viết", " Report post")}
                     </button>
                   )}
                   {reportOpen && (
                     <div className="space-y-0.5">
-                      <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Lý do báo cáo</p>
-                      {REPORT_REASONS.map((reason) => (
+                      <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{tr("Lý do báo cáo", "Reason for reporting")}</p>
+                      {REPORT_REASONS().map((reason) => (
                         <button key={reason} role="menuitem" type="button" onClick={() => handleReport(reason)} className="w-full rounded-lg px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/5">
                           {reason}
                         </button>
@@ -378,12 +384,12 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           </div>
           <span className="truncate">
             <span className="font-semibold text-slate-200">{likers.map((l) => l.name).slice(0, 2).join(", ")}</span>
-            {likeCount > Math.min(2, likers.length) ? ` và ${likeCount - Math.min(2, likers.length)} người khác` : ""} đã thích
+            {likeCount > Math.min(2, likers.length) ? tr(` và ${likeCount - Math.min(2, likers.length)} người khác`, ` and ${likeCount - Math.min(2, likers.length)} others`) : ""}{tr(" đã thích", " liked this")}
           </span>
           </>)}
           {(post.views ?? 0) >= MIN_VIEWS_SHOWN && (
-            <span className="ml-auto flex-shrink-0 text-slate-500" title="Lượt xem thật (mỗi người tính 1 lần/ngày)">
-              👁 {compactCount(post.views!)} lượt xem
+            <span className="ml-auto flex-shrink-0 text-slate-500" title={tr("Lượt xem thật (mỗi người tính 1 lần/ngày)", "Real views (each person counted once a day)")}>
+              👁 {compactCount(post.views!)}{tr(" lượt xem", " views")}
             </span>
           )}
         </div>
@@ -394,7 +400,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         <button
           type="button"
           onClick={handleToggleLike}
-          aria-label={liked ? "Bỏ thích" : "Thích"}
+          aria-label={liked ? tr("Bỏ thích", "Unlike") : tr("Thích", "Like")}
           aria-pressed={liked}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${PRESS} ${
             liked ? "text-pink-400" : "text-slate-400 hover:text-pink-300"
@@ -418,7 +424,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         <button
           type="button"
           onClick={handleToggleComments}
-          aria-label="Bình luận"
+          aria-label={tr("Bình luận", "Comment")}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-blue-300 transition-colors ${PRESS}`}
         >
           <MessageCircle className="h-4.5 w-4.5" />
@@ -429,7 +435,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           <button
             type="button"
             onClick={() => router.push(`/messages?to=${post.author.id}`)}
-            aria-label="Nhắn tin cho tác giả"
+            aria-label={tr("Nhắn tin cho tác giả", "Message the author")}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-emerald-300 transition-colors ${PRESS}`}
           >
             <Send className="h-4.5 w-4.5" />
@@ -440,7 +446,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           href={`/profile/${post.author.id}`}
           className={`ml-auto flex items-center gap-1 rounded-xl border border-pink-500/30 bg-pink-500/5 px-3 py-2 text-[11px] font-bold text-pink-300 hover:bg-pink-500/15 transition-colors ${PRESS}`}
         >
-          {post.author.role === "OWNER" ? "Xem Tiệm" : "Xem Tay Nghề"}
+          {post.author.role === "OWNER" ? tr("Xem Tiệm", "View salon") : tr("Xem Tay Nghề", "View work")}
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
@@ -458,14 +464,14 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
                 <div key={c.id} className="flex items-start gap-2.5">
                   <Avatar src={c.author.avatarUrl} name={c.author.name} seed={c.author.id} className="h-7 w-7 ring-1 ring-white/10" />
                   <div className="min-w-0 flex-1 rounded-2xl bg-slate-900/60 border border-slate-850 px-3 py-2">
-                    <p className="text-xs font-bold text-slate-200">{c.author.name}</p>
+                    <p className="flex items-center gap-1 text-xs font-bold text-slate-200">{c.author.name}{isVerifiedRole(c.author.role) && <VerifiedBadge className="h-3.5 w-3.5" />}</p>
                     <p className="text-xs text-slate-300 leading-relaxed break-words">{c.content}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 text-center py-2">Chưa có bình luận nào — hãy là người đầu tiên!</p>
+            <p className="text-xs text-slate-500 text-center py-2">{tr("Chưa có bình luận nào — hãy là người đầu tiên!", "No comments yet — be the first!")}</p>
           )}
 
           {currentUser && (
@@ -480,7 +486,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
                     handleSendComment();
                   }
                 }}
-                placeholder="Viết bình luận..."
+                placeholder={tr("Viết bình luận...", "Write a comment...")}
                 disabled={sendingComment}
                 className="flex-1 min-h-[40px] rounded-full border border-slate-800 bg-slate-900 px-4 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500"
               />

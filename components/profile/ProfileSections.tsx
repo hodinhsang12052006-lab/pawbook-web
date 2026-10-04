@@ -10,6 +10,8 @@ import { Loader2, Play, Star, Images, ShieldCheck, Send, BadgeCheck, PenSquare }
 import Avatar from "@/components/ui/Avatar";
 import { timeAgo } from "@/lib/feedFormat";
 import { playSound } from "@/lib/sounds";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 export function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov)$/i.test(url);
@@ -17,6 +19,7 @@ export function isVideoUrl(url: string) {
 
 // 5 sao chạm-để-chọn, dùng chung cho cả hiển thị (readOnly) lẫn form đánh giá.
 export function StarPicker({ value, onChange, readOnly, size = "h-5 w-5" }: { value: number; onChange?: (v: number) => void; readOnly?: boolean; size?: string }) {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((n) => (
@@ -72,21 +75,22 @@ export interface GalleryPost {
 // Cấu hình 2 bộ tiêu chí theo chiều đánh giá — targetRole quyết định chiều:
 // target=OWNER → viewer (Thợ) chấm SALON_REVIEW; target=TECHNICIAN → viewer
 // (Chủ tiệm) chấm TECHNICIAN_REVIEW. Field key khớp 1-1 với app/api/reviews.
-export const CRITERIA_BY_TARGET_ROLE: Record<
+// Hàm (không phải hằng) để nhãn đổi theo VI/EN.
+export const CRITERIA_BY_TARGET_ROLE = (): Record<
   "OWNER" | "TECHNICIAN",
   { key: "punctualityOrPay" | "environment" | "turnFairness" | "skillAccuracy" | "workEthic" | "customerAttitude"; label: string; summaryLabel: string }[]
-> = {
+> => ({
   OWNER: [
-    { key: "punctualityOrPay", label: "Sòng phẳng lương/giờ giấc", summaryLabel: "Sòng phẳng" },
-    { key: "environment", label: "Môi trường làm việc", summaryLabel: "Môi trường" },
-    { key: "turnFairness", label: "Công bằng chia turn", summaryLabel: "Chia turn" },
+    { key: "punctualityOrPay", label: tr("Sòng phẳng lương/giờ giấc", "Fair pay & hours"), summaryLabel: tr("Sòng phẳng", "Fair pay") },
+    { key: "environment", label: tr("Môi trường làm việc", "Work environment"), summaryLabel: tr("Môi trường", "Environment") },
+    { key: "turnFairness", label: tr("Công bằng chia turn", "Fair turn sharing"), summaryLabel: "Chia turn" },
   ],
   TECHNICIAN: [
-    { key: "skillAccuracy", label: "Tay nghề đúng như quảng cáo", summaryLabel: "Tay nghề" },
-    { key: "workEthic", label: "Chăm chỉ, đúng giờ", summaryLabel: "Chăm chỉ" },
-    { key: "customerAttitude", label: "Thái độ với khách", summaryLabel: "Thái độ" },
+    { key: "skillAccuracy", label: tr("Tay nghề đúng như quảng cáo", "Skills as advertised"), summaryLabel: tr("Tay nghề", "Skills") },
+    { key: "workEthic", label: tr("Chăm chỉ, đúng giờ", "Hardworking, punctual"), summaryLabel: tr("Chăm chỉ", "Work ethic") },
+    { key: "customerAttitude", label: tr("Thái độ với khách", "Attitude with clients"), summaryLabel: tr("Thái độ", "Attitude") },
   ],
-};
+});
 
 export const SUMMARY_KEY_FOR: Record<string, keyof ReviewSummary> = {
   punctualityOrPay: "avgPunctualityOrPay",
@@ -101,6 +105,7 @@ export const fmtScore =(v: number | null | undefined) => (v == null ? "—" : Nu
 
 // Tiêu đề khối nội dung — thống nhất icon + chữ cho mọi section.
 export function SectionTitle({ icon: Icon, children, tone = "text-pink-300" }: { icon: typeof Star; children: React.ReactNode; tone?: string }) {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <h3 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-slate-300">
       <Icon className={`h-4 w-4 ${tone}`} /> {children}
@@ -109,6 +114,7 @@ export function SectionTitle({ icon: Icon, children, tone = "text-pink-300" }: {
 }
 
 export function EmptyState({ icon: Icon, title, hint }: { icon: typeof Star; title: string; hint?: string }) {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10 text-center">
       <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.04] ring-1 ring-white/10">
@@ -138,13 +144,14 @@ export function ReviewsSection({
   viewerRole: string | null;
   onChanged?: () => void;
 }) {
+  useTr(); // render lại khi đổi VI/EN
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const criteria = CRITERIA_BY_TARGET_ROLE[targetRole];
+  const criteria = CRITERIA_BY_TARGET_ROLE()[targetRole];
   const [overall, setOverall] = useState(0);
   const [criteriaValues, setCriteriaValues] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
@@ -175,11 +182,11 @@ export function ReviewsSection({
 
   const handleSubmit = async () => {
     if (!overall || criteria.some((c) => !criteriaValues[c.key])) {
-      toast.error("Vui lòng chấm đủ cả 4 tiêu chí.");
+      toast.error(tr("Vui lòng chấm đủ cả 4 tiêu chí.", "Please rate all 4 criteria."));
       return;
     }
     if (!comment.trim()) {
-      toast.error("Vui lòng viết vài dòng nhận xét.");
+      toast.error(tr("Vui lòng viết vài dòng nhận xét.", "Please write a few words."));
       return;
     }
     setSubmitting(true);
@@ -191,10 +198,10 @@ export function ReviewsSection({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Không thể gửi đánh giá.");
+        toast.error(data.error || tr("Không thể gửi đánh giá.", "Couldn't submit the review."));
         return;
       }
-      toast.success("Đã gửi đánh giá — cảm ơn bạn! 🙏");
+      toast.success(tr("Đã gửi đánh giá — cảm ơn bạn! 🙏", "Review submitted — thank you! 🙏"));
       playSound("success");
       setShowForm(false);
       setOverall(0);
@@ -203,7 +210,7 @@ export function ReviewsSection({
       load();
       onChanged?.();
     } catch {
-      toast.error("Lỗi mạng. Vui lòng thử lại.");
+      toast.error(tr("Lỗi mạng. Vui lòng thử lại.", "Network error. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -225,7 +232,7 @@ export function ReviewsSection({
         <div className="text-center">
           <p className="text-4xl font-black tracking-tight text-white">{fmtScore(summary?.avgOverall)}</p>
           <StarPicker value={Math.round(summary?.avgOverall ?? 0)} readOnly size="h-3.5 w-3.5" />
-          <p className="mt-1 text-[11px] text-slate-500">{summary?.count ?? 0} đánh giá</p>
+          <p className="mt-1 text-[11px] text-slate-500">{summary?.count ?? 0}{tr(" đánh giá", " reviews")}</p>
         </div>
         <div className="space-y-2.5">
           {criteria.map((c) => {
@@ -249,7 +256,7 @@ export function ReviewsSection({
           onClick={() => setShowForm(true)}
           className="flex w-full min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 text-sm font-bold text-slate-300 transition-all hover:border-pink-500/50 hover:bg-pink-500/[0.04] hover:text-pink-200"
         >
-          <PenSquare className="h-4 w-4" /> Viết đánh giá cho {targetRole === "OWNER" ? "tiệm này" : "thợ này"}
+          <PenSquare className="h-4 w-4" /> {targetRole === "OWNER" ? tr("Viết đánh giá cho tiệm này", "Review this salon") : tr("Viết đánh giá cho thợ này", "Review this tech")}
         </button>
       )}
 
@@ -257,7 +264,7 @@ export function ReviewsSection({
         <div className="glass-card space-y-4 rounded-2xl p-4 animate-fadeIn">
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <div className="flex items-center justify-between rounded-xl bg-slate-950/50 px-3 py-2.5 ring-1 ring-white/5">
-              <span className="text-xs font-bold text-slate-300">Điểm tổng thể</span>
+              <span className="text-xs font-bold text-slate-300">{tr("Điểm tổng thể", "Overall score")}</span>
               <StarPicker value={overall} onChange={setOverall} />
             </div>
             {criteria.map((c) => (
@@ -275,7 +282,7 @@ export function ReviewsSection({
             onChange={(e) => setComment(e.target.value)}
             rows={3}
             maxLength={1000}
-            placeholder={`Chia sẻ trải nghiệm thật của bạn với ${targetRole === "OWNER" ? "tiệm này" : "thợ này"}...`}
+            placeholder={targetRole === "OWNER" ? tr("Chia sẻ trải nghiệm thật của bạn với tiệm này...", "Share your real experience with this salon...") : tr("Chia sẻ trải nghiệm thật của bạn với thợ này...", "Share your real experience with this tech...")}
             className="input-field"
           />
           <div className="flex gap-2">
@@ -285,7 +292,7 @@ export function ReviewsSection({
               disabled={submitting}
               className="flex-1 min-h-[44px] rounded-xl border border-white/10 text-sm font-bold text-slate-300 hover:bg-white/5 disabled:opacity-50"
             >
-              Hủy
+              {tr("Hủy", "Cancel")}
             </button>
             <button
               type="button"
@@ -294,14 +301,14 @@ export function ReviewsSection({
               className="flex-1 min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-bold text-white shadow-lg shadow-pink-600/20 hover:brightness-110 disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Gửi đánh giá
+              {tr("Gửi đánh giá", "Submit review")}
             </button>
           </div>
         </div>
       )}
 
       {reviews.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="Chưa có đánh giá nào" hint="Đánh giá chỉ đến từ người từng làm việc thật — hãy là người đầu tiên." />
+        <EmptyState icon={ShieldCheck} title={tr("Chưa có đánh giá nào", "No reviews yet")} hint={tr("Đánh giá chỉ đến từ người từng làm việc thật — hãy là người đầu tiên.", "Reviews only come from people who actually worked together — be the first.")} />
       ) : (
         <div className="space-y-3">
           {reviews.map((r) => (
@@ -314,8 +321,8 @@ export function ReviewsSection({
                   <div className="flex items-center gap-1.5">
                     <Link href={`/profile/${r.author.id}`} className="truncate text-sm font-bold text-slate-100 hover:text-pink-300">{r.author.name}</Link>
                     {r.isVerifiedConnection && (
-                      <span className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25" title="Hai bên đã thực sự kết nối trên PawNail">
-                        <BadgeCheck className="h-3 w-3" /> Đã kết nối thật
+                      <span className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25" title={tr("Hai bên đã thực sự kết nối trên PawNail", "Both sides actually connected on PawNail")}>
+                        <BadgeCheck className="h-3 w-3" />{tr(" Đã kết nối thật", " Verified connection")}
                       </span>
                     )}
                   </div>
@@ -342,6 +349,7 @@ export function ReviewsSection({
 }
 
 export function MediaGrid({ urls }: { urls: string[] }) {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="grid grid-cols-3 gap-1.5 overflow-hidden rounded-2xl">
       {urls.map((url, idx) => (
@@ -366,6 +374,7 @@ export function MediaGrid({ urls }: { urls: string[] }) {
 // chủ tiệm này làm gallery, không tạo bảng riêng để tránh trùng dữ liệu với
 // newsfeed (xem comment trong prisma/schema.prisma tại model Post).
 export function GallerySection({ ownerId }: { ownerId: string }) {
+  useTr(); // render lại khi đổi VI/EN
   const [posts, setPosts] = useState<GalleryPost[] | null>(null);
 
   useEffect(() => {
@@ -388,12 +397,13 @@ export function GallerySection({ ownerId }: { ownerId: string }) {
   }
   const media = posts.flatMap((p) => p.mediaUrls);
   if (media.length === 0) {
-    return <EmptyState icon={Images} title="Chưa có ảnh tiệm" hint='Ảnh/video đăng mục "Khoe tiệm" trên bảng tin sẽ hiện ở đây.' />;
+    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint='Ảnh/video đăng mục "Khoe tiệm" trên bảng tin sẽ hiện ở đây.' />;
   }
   return <MediaGrid urls={media} />;
 }
 
 export function ProfileSkeleton() {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 md:px-6 md:pt-6">
       <div className="overflow-hidden md:rounded-3xl md:border md:border-white/10">

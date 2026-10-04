@@ -1,0 +1,8 @@
+{
+ "file": "app/offline/page.tsx",
+ "map": {
+  "Bạn đang ngoại tuyến": "You are offline",
+  "Vui lòng kiểm tra kết nối mạng. Trang bạn cần sẽ tự tải lại ngay khi có mạng trở lại.": "Please check your connection. This page will reload automatically once you are back online.",
+  "Tải lại trang": "Reload page"
+ }
+}

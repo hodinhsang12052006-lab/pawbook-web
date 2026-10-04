@@ -1,0 +1,21 @@
+{ "file": "components/profile/UnlockChatModal.tsx", "map": {
+  "Vui lòng chọn thời gian dự kiến nhận thợ.": "Please choose when you'd like the tech to start.",
+  "Mở khóa thất bại. Vui lòng thử lại.": "Unlock failed. Please try again.",
+  "Lỗi kết nối mạng. Vui lòng thử lại.": "Network error. Please try again.",
+  "Đóng": "Close",
+  "MỞ KHÓA KẾT NỐI TRỰC TIẾP": "UNLOCK DIRECT CONTACT",
+  "Đặc quyền Hội viên": "Member perk",
+  "Miễn phí mở khóa": "Free unlock",
+  "$0 — MIỄN PHÍ 100%": "$0 — 100% FREE",
+  "Ưu đãi đặc quyền hôm nay": "Today's member perk",
+  "Bắt đầu — chỉ 30 giây": "Start — just 30 seconds",
+  "Để sau": "Later",
+  "Bước 2/2 — Xác nhận nhu cầu vận hành": "Step 2/2 — Confirm your needs",
+  "Đồng bộ hồ sơ để mở khóa ngay": "Sync your profile to unlock now",
+  "Tiệm bạn có vẻ vận hành khá ổn — chỉ cần xác nhận thời gian dự kiến bên dưới để mở khóa.": "Your salon seems to run well — just confirm the expected start time below to unlock.",
+  "Thời gian dự kiến bạn muốn thợ này bắt đầu làm việc?": "When would you like this tech to start?",
+  "Xác Nhận &amp; Mở Khóa Miễn Phí": "Confirm & Unlock Free",
+  "Đang đồng bộ hồ sơ và mở khóa liên hệ...": "Syncing profile and unlocking contact...",
+  "Đã mở khóa thành công! 🎉": "Unlocked! 🎉",
+  "Vào khung chat ngay": "Open chat now"
+} }

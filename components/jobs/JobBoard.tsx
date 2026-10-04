@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark, Eye, Zap } from "lucide-react";
+import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName } from "@/lib/stateNames";
 
@@ -24,7 +26,14 @@ export interface JobType {
   ownerId: string;
   owner?: { id: string; name: string; avatarUrl: string | null } | null;
   saveCount?: number;
+  heat?: { viewsToday: number; contacts7d: number; hot: boolean };
 }
+
+// Ngưỡng hiển thị (khớp lib/jobStats HEAT_MIN) — số nhỏ quá thì ẩn, tránh
+// cảm giác "vắng". File này là client nên không import thẳng lib/jobStats.
+const MIN_VIEWS_TODAY = 3;
+const MIN_CONTACTS = 2;
+const MIN_SAVES = 2;
 
 const NEW_JOB_MS = 24 * 60 * 60 * 1000;
 
@@ -67,20 +76,38 @@ function timeAgo(iso: string): string {
   return `${days} ngày trước`;
 }
 
-// Banner "cầu thợ thực tế" — tái dùng đúng số liệu tổng hợp/ẩn danh đã tính
-// cho Nail Radar (lib/nailRadarData.ts), để tab "Cần Thợ Gấp" mở ra là thợ
-// thấy ngay bằng chứng có thật rằng thị trường đang khát nhân lực, thay vì
-// chỉ có mỗi danh sách tin — đúng tinh thần giữ chân thợ mới vào nền tảng.
-function DemandFomoBanner({ market, state }: { market: "US" | "AU"; state: string }) {
+// Banner "nhịp thị trường": ưu tiên số LIVE từ chính các tin đang mở trên
+// app (đủ ≥3 tin mới hiện); app còn ít dữ liệu thì dùng số khảo sát cộng đồng
+// và GHI RÕ nguồn + thời điểm — không nói "ngay bây giờ" với số cũ.
+function DemandFomoBanner({ market, state, jobs }: { market: "US" | "AU"; state: string; jobs: JobType[] }) {
+  const scope = state ? stateName(market, state) : market === "US" ? "Mỹ" : "Úc";
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const newThisWeek = jobs.filter((j) => new Date(j.createdAt).getTime() >= weekAgo).length;
+  const urgent = jobs.filter((j) => j.isUrgent).length;
+
+  if (jobs.length >= 3) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3">
+        <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        </span>
+        <p className="text-xs text-slate-200 sm:text-sm">
+          <span className="font-black text-emerald-300">{jobs.length} tin đang tuyển</span> tại {scope}
+          {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek} tin mới</span> trong 7 ngày</>}
+          {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent} tin gấp</span></>}
+        </p>
+      </div>
+    );
+  }
+
   const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
   const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
-  const scopeLabel = stateSignal ? `tại ${stateName(market, state)}` : market === "US" ? "tại Mỹ" : "tại Úc";
-
   return (
     <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3">
-      <TrendingUp className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-      <p className="text-xs sm:text-sm text-slate-200">
-        <span className="font-black text-emerald-400">{count}+ tiệm</span> {scopeLabel} đang cần tuyển thợ ngay bây giờ — ứng tuyển sớm để không bị tiệm khác giành mất suất.
+      <TrendingUp className="h-5 w-5 flex-shrink-0 text-emerald-400" />
+      <p className="text-xs text-slate-200 sm:text-sm">
+        <span className="font-black text-emerald-400">{count}+ tin chủ tìm thợ</span> tại {stateSignal ? scope : market === "US" ? "Mỹ" : "Úc"} trong 1 đợt khảo sát nhóm nail (9/2026) — thợ đang là bên được săn đón.
       </p>
     </div>
   );
@@ -118,6 +145,121 @@ function JobBoardSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <JobCardSkeleton key={i} />
       ))}
+    </div>
+  );
+}
+
+function JobCard({
+  job, saved, saveCount, onToggleSave, onMessage,
+}: { job: JobType; saved: boolean; saveCount: number; onToggleSave: () => void; onMessage: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => trackJobView(ref.current, job.id), [job.id]);
+  const heat = job.heat;
+  const isNew = Date.now() - new Date(job.createdAt).getTime() < NEW_JOB_MS;
+
+  // Tín hiệu "đám đông" THẬT, chỉ hiện khi vượt ngưỡng.
+  const signals: { icon: typeof Eye; text: string }[] = [];
+  if (heat && heat.viewsToday >= MIN_VIEWS_TODAY) signals.push({ icon: Eye, text: `${heat.viewsToday} người xem hôm nay` });
+  if (heat && heat.contacts7d >= MIN_CONTACTS) signals.push({ icon: MessageCircle, text: `${heat.contacts7d} người đã liên hệ tuần này` });
+  if (saveCount >= MIN_SAVES) signals.push({ icon: Bookmark, text: `${saveCount} người đã lưu` });
+
+  return (
+    <div
+      ref={ref}
+      className={`glass-card relative space-y-3 rounded-2xl p-4 transition-colors hover:border-pink-500/40 sm:p-5 ${heat?.hot ? "!border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.15),0_12px_40px_-16px_rgba(249,115,22,0.45)]" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{job.title}</h3>
+          <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
+        </Link>
+        <button
+          onClick={onToggleSave}
+          aria-label={saved ? "Bỏ lưu tin" : "Lưu tin"}
+          className="-m-1.5 flex-shrink-0 p-1.5 text-slate-500 transition-all hover:text-pink-400 active:scale-90"
+        >
+          <Bookmark className={`h-5 w-5 ${saved ? "fill-pink-400 text-pink-400" : ""}`} />
+        </button>
+        <div className="flex flex-shrink-0 flex-col items-end gap-1">
+          <div className="flex items-center gap-1">
+            {heat?.hot && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2 py-1 text-[11px] font-black text-white shadow-lg shadow-orange-500/30" title="Nhiều người xem / liên hệ tin này">
+                <Zap className="h-3 w-3 fill-white" /> Đang hot
+              </span>
+            )}
+            {isNew && !heat?.hot && (
+              <span className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300">✨ Mới</span>
+            )}
+            {job.isUrgent && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400">
+                <Flame className="h-3 w-3" /> Gấp
+              </span>
+            )}
+          </div>
+          <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+            <Clock className="h-3 w-3" /> {timeAgo(job.createdAt)}
+          </span>
+        </div>
+      </div>
+
+      {/* Con số lương — thứ đầu tiên thợ nhìn vào, phải to/đậm/tương phản nhất card. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1.5 pl-2.5 pr-3 shadow-lg shadow-emerald-500/20">
+          <DollarSign className="h-5 w-5 text-emerald-950" />
+          <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl">{job.salaryAmount}</span>
+        </span>
+        <span className="text-xs font-semibold text-slate-500">{job.salaryType}</span>
+      </div>
+
+      <span className="flex items-center gap-1.5 text-sm text-slate-300">
+        <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
+        {job.city}, {stateName(job.market, job.state)}
+      </span>
+
+      {signals.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-xl bg-amber-500/[0.06] px-3 py-2 ring-1 ring-amber-500/15">
+          {signals.map((sg) => (
+            <span key={sg.text} className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-200/90">
+              <sg.icon className="h-3.5 w-3.5" /> {sg.text}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {job.skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {job.skills.map((skill) => (
+            <span key={skill} className="rounded-full border border-pink-500/25 bg-pink-500/10 px-2.5 py-1 text-[11px] font-semibold text-pink-300">{skill}</span>
+          ))}
+        </div>
+      )}
+
+      {job.benefits.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {job.benefits.map((benefit) => (
+            <span key={benefit} className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">
+              {benefitIcon(benefit)} {benefit}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* CTA — chạm ngón cái chuẩn (min 48px), chữ to rõ để móng dài bấm không trượt. */}
+      <div className="flex items-center gap-2 border-t border-slate-850 pt-2">
+        <a
+          href={`tel:${job.phone}`}
+          onClick={() => trackJobContact(job.id)}
+          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white hover:bg-emerald-500 ${PRESS}`}
+        >
+          <Phone className="h-5 w-5" /> Gọi ngay
+        </a>
+        <button
+          onClick={() => { trackJobContact(job.id); onMessage(); }}
+          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
+        >
+          <MessageCircle className="h-5 w-5" /> Nhắn tin
+        </button>
+      </div>
     </div>
   );
 }
@@ -219,7 +361,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   if (jobs.length === 0) {
     return (
       <div className="space-y-4">
-        <DemandFomoBanner market={market} state={state} />
+        <DemandFomoBanner market={market} state={state} jobs={jobs} />
         <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
           <p className="text-4xl">💅</p>
           <p className="text-base font-bold text-slate-300">Chưa có tin tuyển thợ ở khu vực này</p>
@@ -233,7 +375,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
 
   return (
     <div className="space-y-4 animate-fadeIn">
-      <DemandFomoBanner market={market} state={state} />
+      <DemandFomoBanner market={market} state={state} jobs={jobs} />
 
       <button
         onClick={() => setShowSavedOnly((v) => !v)}
@@ -256,113 +398,14 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
       ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {visibleJobs.map((job) => (
-        <div
+        <JobCard
           key={job.id}
-          className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 hover:border-pink-500/40 transition-colors"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-white leading-snug truncate">{job.title}</h3>
-              <p className="text-sm text-slate-400 font-semibold truncate">{job.salonName}</p>
-            </div>
-            <button
-              onClick={() => toggleSave(job.id)}
-              aria-label={savedIds.has(job.id) ? "Bỏ lưu tin" : "Lưu tin"}
-              className="flex-shrink-0 p-1.5 -m-1.5 text-slate-500 hover:text-pink-400 active:scale-90 transition-all"
-            >
-              <Bookmark className={`h-5 w-5 ${savedIds.has(job.id) ? "fill-pink-400 text-pink-400" : ""}`} />
-            </button>
-            <div className="flex-shrink-0 flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1">
-                {Date.now() - new Date(job.createdAt).getTime() < NEW_JOB_MS && (
-                  <span className="inline-flex items-center rounded-full bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300 border border-sky-500/30">
-                    ✨ Mới
-                  </span>
-                )}
-                {job.isUrgent && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400 border border-red-500/30">
-                    <Flame className="h-3 w-3" /> Gấp
-                  </span>
-                )}
-              </div>
-              <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
-                <Clock className="h-3 w-3" /> {timeAgo(job.createdAt)}
-              </span>
-            </div>
-          </div>
-
-          {/* Con số lương — thứ đầu tiên thợ nhìn vào, phải to/đậm/tương
-              phản nhất card, đứng riêng thành 1 badge thay vì chữ thường
-              lẫn trong hàng thông tin. */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 pl-2.5 pr-3 py-1.5 shadow-lg shadow-emerald-500/20">
-              <DollarSign className="h-5 w-5 text-emerald-950" />
-              <span className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tight leading-none">
-                {job.salaryAmount}
-              </span>
-            </span>
-            <span className="text-xs text-slate-500 font-semibold">{job.salaryType}</span>
-          </div>
-
-          <span className="flex items-center gap-1.5 text-sm text-slate-300">
-            <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
-            {job.city}, {stateName(job.market, job.state)}
-          </span>
-
-          {(() => {
-            const count =
-              (job.saveCount ?? 0) +
-              (savedIds.has(job.id) ? 1 : 0) -
-              (initialSaved.has(job.id) ? 1 : 0);
-            return count > 0 ? (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-300/90">
-                👀 {count} người đã lưu tin này
-              </span>
-            ) : null;
-          })()}
-
-          {job.skills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {job.skills.map((skill) => (
-                <span key={skill} className="rounded-full bg-pink-500/10 border border-pink-500/25 px-2.5 py-1 text-[11px] font-semibold text-pink-300">
-                  {skill}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {job.benefits.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {job.benefits.map((benefit) => (
-                <span
-                  key={benefit}
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 text-[11px] font-bold text-amber-300"
-                >
-                  {benefitIcon(benefit)} {benefit}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* CTA — kích thước chạm ngón tay cái chuẩn (min 48px), chữ to rõ
-              để bấm không trượt kể cả móng dài. */}
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-850">
-            <a
-              href={`tel:${job.phone}`}
-              className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-base font-bold text-white ${PRESS}`}
-            >
-              <Phone className="h-5 w-5" />
-              Gọi ngay
-            </a>
-            <button
-              onClick={() => router.push(`/messages?to=${job.ownerId}`)}
-              className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-base font-bold text-slate-100 ${PRESS}`}
-            >
-              <MessageCircle className="h-5 w-5" />
-              Nhắn tin
-            </button>
-          </div>
-        </div>
+          job={job}
+          saved={savedIds.has(job.id)}
+          saveCount={(job.saveCount ?? 0) + (savedIds.has(job.id) ? 1 : 0) - (initialSaved.has(job.id) ? 1 : 0)}
+          onToggleSave={() => toggleSave(job.id)}
+          onMessage={() => router.push(`/messages?to=${job.ownerId}`)}
+        />
       ))}
       </div>
       )}

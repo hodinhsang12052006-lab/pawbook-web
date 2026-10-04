@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight } from "lucide-react";
+import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -71,6 +71,7 @@ function useTools(): Tool[] {
   return [
     { href: "/messages", label: "Tin nhắn", stat: unreadCount > 0 ? `${unreadCount} tin chưa đọc` : "Chat với tiệm & thợ", icon: MessageCircle, tone: "bg-sky-500/15 text-sky-300", badge: unreadCount },
     roleTool,
+    { href: "/trends", label: "Xu hướng tuần", stat: "Mẫu hot · thợ nổi bật · lương", icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
     { href: "/tools/radar", label: "Nail Radar", stat: radarStat, icon: Radar, tone: "bg-amber-500/15 text-amber-300" },
     { href: "/supply", label: "Kho hàng vật tư", stat: "Vật tư giá sỉ từ các tiệm", icon: ShoppingBag, tone: "bg-emerald-500/15 text-emerald-300" },
   ];

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { getBadges } from "@/lib/badges";
 
 // GET user profile data (own profile, or ?id=<userId> for public view)
 export async function GET(req: NextRequest) {
@@ -92,8 +93,15 @@ export async function GET(req: NextRequest) {
         }
       : null;
 
+    // Huy hiệu tính từ dữ liệu thật — lỗi ở đây không được làm hỏng trang hồ sơ.
+    const badges = await getBadges(user.id).catch((err) => {
+      console.error("getBadges error:", err);
+      return [];
+    });
+
     return NextResponse.json({
       ...user,
+      badges,
       createdAt: user.createdAt.toISOString(),
       jobs: safeJobs,
       technicianProfile,

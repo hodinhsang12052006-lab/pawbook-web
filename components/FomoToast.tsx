@@ -21,12 +21,15 @@ interface FomoMessage {
 // chứng thật (không phải số bịa) để nhấn mạnh với thợ mới vào: "rất nhiều
 // tiệm đang cần bạn". Không giống các câu mô phỏng ở trên, nhóm này gắn với
 // con số có thật tại thời điểm quét — nếu quét lại, cập nhật số ở đây theo.
+// Ghi rõ NGUỒN + THỜI ĐIỂM: đây là số đếm của 1 đợt khảo sát, không phải
+// số "ngay lúc này" — nói quá là quảng cáo gây hiểu lầm.
+const SURVEY = "khảo sát nhóm nail Facebook, 9/2026";
 const REAL_DEMAND_MESSAGES: FomoMessage[] = [
-  { icon: "📢", text: `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin tuyển thợ nail ghi nhận tại Mỹ & Úc — ngành đang khát nhân lực chưa từng thấy` },
-  { icon: "🔥", text: `${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tiệm tại Texas đang tranh nhau tìm thợ Bột/Acrylic ngay lúc này` },
-  { icon: "🔥", text: `${DEMAND_SIGNAL.US?.CA?.demandCount ?? 0} tiệm tại California đăng tin cần tuyển thợ nail gấp` },
-  { icon: "🔥", text: `${DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0} tiệm tại NSW đang cần tuyển thợ ngay bây giờ` },
-  { icon: "🔥", text: `${DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0} tiệm tại Victoria đang thiếu thợ, sẵn sàng bao lương cao` },
+  { icon: "📢", text: `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc chỉ trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón` },
+  { icon: "🔥", text: `Texas dẫn đầu nhu cầu: ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})` },
+  { icon: "🔥", text: `California: ${DEMAND_SIGNAL.US?.CA?.demandCount ?? 0} tin tìm thợ nail (${SURVEY})` },
+  { icon: "🔥", text: `NSW: ${DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0} tin tìm thợ nail (${SURVEY})` },
+  { icon: "🔥", text: `Victoria: ${DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0} tin tìm thợ nail (${SURVEY})` },
 ];
 
 // Trước đây xen kẽ 8 "sự kiện" BỊA (tên người, số tiền, "3 phút trước"

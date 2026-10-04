@@ -54,6 +54,9 @@ function isVideo(url: string) {
 
 const REPORT_REASONS = ["Lừa đảo / spam", "Nội dung phản cảm", "Thông tin tuyển dụng sai sự thật", "Quấy rối"];
 
+// Dưới ngưỡng này thì ẩn "lượt xem" — số quá nhỏ nhìn vắng, phản tác dụng.
+const MIN_VIEWS_SHOWN = 5;
+
 export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDeleted?: (postId: string) => void }) {
   const router = useRouter();
   const { user: currentUser } = useSessionUser();
@@ -362,7 +365,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       )}
 
       {/* NGƯỜI THẬT ĐÃ THÍCH + LƯỢT XEM THẬT — bằng chứng xã hội từ dữ liệu thật */}
-      {((likeCount > 0 && likers.length > 0) || (post.views ?? 0) > 0) && (
+      {((likeCount > 0 && likers.length > 0) || (post.views ?? 0) >= MIN_VIEWS_SHOWN) && (
         <div className="flex items-center gap-2 px-4 pb-2 text-[11px] text-slate-400">
           {likeCount > 0 && likers.length > 0 && (<>
           <div className="flex -space-x-2">
@@ -376,7 +379,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             {likeCount > Math.min(2, likers.length) ? ` và ${likeCount - Math.min(2, likers.length)} người khác` : ""} đã thích
           </span>
           </>)}
-          {(post.views ?? 0) > 0 && (
+          {(post.views ?? 0) >= MIN_VIEWS_SHOWN && (
             <span className="ml-auto flex-shrink-0 text-slate-500" title="Lượt xem thật (mỗi người tính 1 lần/ngày)">
               👁 {compactCount(post.views!)} lượt xem
             </span>

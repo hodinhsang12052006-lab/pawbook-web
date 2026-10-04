@@ -27,6 +27,13 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.subtitle")}</p>
       </div>
 
+      {/* Khan hiếm THẬT: hạn chót công khai, trùng với FOUNDING_UNTIL ở lib/badges.ts */}
+      {Date.now() < new Date("2027-01-01T00:00:00Z").getTime() && (
+        <p className={`rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs font-semibold leading-relaxed ${isDark ? "text-amber-200" : "text-amber-700"}`}>
+          {t("auth.rolePicker.foundingNote")}
+        </p>
+      )}
+
       <button
         type="button"
         onClick={() => onPick("technician")}

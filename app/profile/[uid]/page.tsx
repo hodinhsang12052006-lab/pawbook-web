@@ -6,7 +6,7 @@ import Navbar from "@/components/layout/Navbar";
 import {
   Loader2, AlertCircle, MessageCircle, Flame, CheckCircle2, MapPin, Briefcase, Play, Lock,
   Star, Images, ShieldCheck, Send, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award,
-  Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign,
+  Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -108,7 +108,15 @@ const SUMMARY_KEY_FOR: Record<string, keyof ReviewSummary> = {
   customerAttitude: "avgCustomerAttitude",
 };
 
-const fmtScore = (v: number | null | undefined) => (v == null ? "—" : Number(v).toFixed(1));
+const BADGE_STYLE = {
+  founding: { icon: Crown, cls: "bg-gradient-to-r from-amber-500/20 to-yellow-500/10 text-amber-200 ring-amber-400/40" },
+  fast_reply: { icon: Zap, cls: "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30" },
+  top_rated: { icon: Star, cls: "bg-amber-500/10 text-amber-200 ring-amber-500/30" },
+  complete: { icon: BadgeCheck, cls: "bg-sky-500/10 text-sky-200 ring-sky-500/30" },
+  loved: { icon: Heart, cls: "bg-pink-500/10 text-pink-200 ring-pink-500/30" },
+} as const;
+
+const fmtScore =(v: number | null | undefined) => (v == null ? "—" : Number(v).toFixed(1));
 
 // Tiêu đề khối nội dung — thống nhất icon + chữ cho mọi section.
 function SectionTitle({ icon: Icon, children, tone = "text-pink-300" }: { icon: typeof Star; children: React.ReactNode; tone?: string }) {
@@ -691,6 +699,21 @@ export default function PublicProfilePage({ params }: PageProps) {
                 </span>
               )}
             </div>
+
+            {/* Huy hiệu — mỗi cái gắn điều kiện đo được từ dữ liệu thật (lib/badges.ts) */}
+            {Array.isArray(profile.badges) && profile.badges.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {profile.badges.map((b: { key: keyof typeof BADGE_STYLE; label: string; hint: string }) => {
+                  const st = BADGE_STYLE[b.key];
+                  if (!st) return null;
+                  return (
+                    <span key={b.key} title={b.hint} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold ring-1 ${st.cls}`}>
+                      <st.icon className="h-3.5 w-3.5" /> {b.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-400">
               {location && (

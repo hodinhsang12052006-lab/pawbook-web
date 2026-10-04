@@ -113,11 +113,26 @@ model Job {
   createdAt DateTime @default(now())
 
   savedBy SavedJob[]
+  daily   JobDaily[]
 
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
   @@index([ownerId])
   @@index([isUrgent, createdAt])
   @@index([market, state])
+}
+
+// Độ "nóng" THẬT của tin tuyển theo ngày (UTC): lượt xem (≥1 giây trên màn
+// hình, 1 lần/ngày/thiết bị) và lượt bấm liên hệ (Gọi / Nhắn tin). Tạo bằng
+// prisma/sql/2026-10-04_job_daily.sql — code tự bỏ qua khi bảng chưa có.
+model JobDaily {
+  jobId    String
+  job      Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  day      String // "YYYY-MM-DD"
+  views    Int    @default(0)
+  contacts Int    @default(0)
+
+  @@id([jobId, day])
+  @@index([day])
 }
 
 // Tin đã lưu — thợ thấy tin ưng ý nhưng chưa tiện gọi ngay có thể lưu lại

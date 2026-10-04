@@ -12,12 +12,14 @@ const PER_KIND = 15;
 
 export interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job";
   actor: { id: string | null; name: string; avatarUrl: string | null };
   text: string;
   href: string;
   createdAt: string;
 }
+
+const JOB_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const snippet = (s: string, n = 40) => (s.length > n ? `${s.slice(0, n).trim()}…` : s);
 
@@ -29,7 +31,11 @@ export async function GET() {
     const since = new Date(Date.now() - WINDOW_MS);
     const actorSel = { select: { id: true, name: true, avatarUrl: true } } as const;
 
-    const [likes, comments, reviews, saves, unlocks] = await Promise.all([
+    // Thợ: tin GẤP mới ở cùng bang trong 7 ngày — "việc gần bạn".
+    const meRow = await prisma.user.findUnique({ where: { id: me }, select: { role: true, market: true, state: true } });
+    const wantsJobs = meRow?.role === "TECHNICIAN" && !!meRow.state;
+
+    const [likes, comments, reviews, saves, unlocks, urgentJobs] = await Promise.all([
       prisma.postLike.findMany({
         where: { post: { authorId: me }, userId: { not: me }, createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
@@ -60,6 +66,14 @@ export async function GET() {
         take: PER_KIND,
         select: { id: true, unlockedAt: true, owner: actorSel },
       }),
+      wantsJobs
+        ? prisma.job.findMany({
+            where: { isUrgent: true, market: meRow!.market, state: meRow!.state!, ownerId: { not: me }, createdAt: { gte: new Date(Date.now() - JOB_WINDOW_MS) } },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+            select: { id: true, title: true, city: true, salaryAmount: true, createdAt: true, owner: actorSel },
+          })
+        : Promise.resolve([]),
     ]);
 
     const items: NotificationItem[] = [
@@ -103,6 +117,14 @@ export async function GET() {
         text: "đã mở khoá liên hệ với bạn — có thể sắp nhắn tin mời làm việc",
         href: `/profile/${u.owner.id}`,
         createdAt: u.unlockedAt.toISOString(),
+      })),
+      ...urgentJobs.map((j) => ({
+        id: `job-${j.id}`,
+        kind: "job" as const,
+        actor: j.owner,
+        text: `cần thợ gấp tại ${j.city}: "${snippet(j.title)}" — ${j.salaryAmount}`,
+        href: `/jobs/${j.id}`,
+        createdAt: j.createdAt.toISOString(),
       })),
     ]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))

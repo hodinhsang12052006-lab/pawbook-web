@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { Market, Role } from "@prisma/client";
+import { getJobHeat, isHot } from "@/lib/jobStats";
+import { notifyUrgentJob } from "@/lib/jobAlerts";
 
 // GET /api/jobs?market=US&state=CA&city=...  — danh sách tin tuyển thợ
 export async function GET(req: NextRequest) {
@@ -30,13 +32,19 @@ export async function GET(req: NextRequest) {
       take: 100,
     });
 
-    const safeJobs = jobs.map(({ _count, ...job }) => ({
+    const heat = await getJobHeat(jobs.map((j) => j.id));
+    const safeJobs = jobs.map(({ _count, ...job }) => {
+      const h = heat.get(job.id);
+      return {
       ...job,
       saveCount: _count.savedBy,
+      // Số liệu "nóng" thật — UI tự ẩn khi dưới ngưỡng (lib/jobStats HEAT_MIN).
+      heat: { viewsToday: h?.viewsToday ?? 0, contacts7d: h?.contacts7d ?? 0, hot: isHot(h) },
       skills: job.skills ? job.skills.split(",").filter(Boolean) : [],
       benefits: job.benefits ? job.benefits.split(",").filter(Boolean) : [],
       createdAt: job.createdAt.toISOString(),
-    }));
+      };
+    });
 
     return NextResponse.json(safeJobs);
   } catch (error: any) {
@@ -112,6 +120,9 @@ export async function POST(req: Request) {
         isUrgent: isUrgent !== undefined ? !!isUrgent : true,
       },
     });
+
+    // Tin gấp → báo ngay cho thợ cùng bang (chuông realtime). Không chặn phản hồi.
+    if (newJob.isUrgent) notifyUrgentJob(newJob).catch(() => {});
 
     return NextResponse.json(newJob, { status: 201 });
   } catch (error: any) {

@@ -3,16 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
+import { getPusherClient } from "@/lib/pusherClient";
+import { jobAlertChannelName } from "@/lib/pusherChannel";
 import { playNotifySound } from "@/lib/notifySound";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
 
 interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job";
   actor: { id: string | null; name: string; avatarUrl: string | null };
   text: string;
   href: string;
@@ -25,6 +27,7 @@ const KIND_STYLE: Record<NotificationItem["kind"], { icon: typeof Heart; cls: st
   review: { icon: Star, cls: "bg-amber-500 text-white" },
   save: { icon: Bookmark, cls: "bg-emerald-500 text-white" },
   unlock: { icon: Unlock, cls: "bg-violet-500 text-white" },
+  job: { icon: Flame, cls: "bg-gradient-to-br from-orange-500 to-red-500 text-white" },
 };
 
 // Mốc "đã xem thông báo" lưu theo user trên thiết bị (không cần bảng DB mới).
@@ -80,6 +83,36 @@ export default function NotificationBell() {
       releaseUserChannel(uid);
     };
   }, [uid, load]);
+
+  // Thợ: nghe kênh công khai "việc gấp" của bang mình — tiệm vừa đăng tin
+  // gấp là chuông kêu ngay, ai thấy trước liên hệ trước.
+  const alertChannel = user?.role === "TECHNICIAN" && user?.market && user?.state ? jobAlertChannelName(user.market, user.state) : null;
+  useEffect(() => {
+    if (!alertChannel) return;
+    const pusher = getPusherClient();
+    if (!pusher) return;
+    const channel = pusher.subscribe(alertChannel);
+    const onJob = (data: { id?: string; text?: string }) => {
+      load();
+      playNotifySound();
+      if (data?.text) {
+        toast(
+          (t) => (
+            <Link href={`/jobs/${data.id}`} onClick={() => toast.dismiss(t.id)} className="block">
+              <span className="block text-[11px] font-black uppercase tracking-wider text-orange-300">Việc gấp gần bạn</span>
+              <span className="block">{data.text}</span>
+            </Link>
+          ),
+          { icon: "🔥", position: "top-right", duration: 7000 }
+        );
+      }
+    };
+    channel.bind("urgent-job", onJob);
+    return () => {
+      channel.unbind("urgent-job", onJob);
+      pusher.unsubscribe(alertChannel);
+    };
+  }, [alertChannel, load]);
 
   // Đóng khi bấm ra ngoài / phím Esc.
   useEffect(() => {

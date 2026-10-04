@@ -344,12 +344,26 @@ await step("F25", "Thả tim: hiện dòng 'Bạn… đã thích' (người th�
   await shot(op, "18_like_effect");
 });
 
-await step("F26", "Job board: lưu tin → hiện '👀 N người đã lưu tin này'", async () => {
+await step("F26", "Job board: lưu tin → khi ≥2 người lưu thì hiện 'N người đã lưu' (dưới ngưỡng thì ẩn)", async () => {
   await op.goto(BASE_URL + "/?tab=jobs");
   const card = op.locator("div.glass-card").filter({ has: op.getByRole("button", { name: /lưu tin$/i }) }).first();
   await card.waitFor({ timeout: 15000 });
   if ((await card.getByRole("button", { name: "Bỏ lưu tin" }).count()) === 0) await card.getByRole("button", { name: "Lưu tin" }).click();
-  await card.getByText(/người đã lưu tin này/).waitFor({ timeout: 10000 });
+  await card.getByRole("button", { name: "Bỏ lưu tin" }).waitFor({ timeout: 10000 });
+  // Người thứ 2 (thợ seed) lưu cùng tin qua API → tải lại phải thấy con số.
+  const href = await card.locator('a[href^="/jobs/"]').first().getAttribute("href");
+  const second = await browser.newContext({ locale: "vi-VN", extraHTTPHeaders: { "cf-connecting-ip": fakeIp() } });
+  const sp = await second.newPage();
+  await sp.goto(BASE_URL + "/auth/login");
+  await sp.locator("#email").fill("tech2.us@pawnailjobs.demo");
+  await sp.locator("#password").fill(DEMO_PASSWORD);
+  await sp.getByRole("button", { name: /^Đăng nhập$/ }).click();
+  await sp.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 });
+  await second.request.post(BASE_URL + `/api${href}/save`);
+  await second.close();
+  await op.reload();
+  const card2 = op.locator("div.glass-card").filter({ has: op.locator(`a[href="${href}"]`) }).first();
+  await card2.getByText(/\d+ người đã lưu/).waitFor({ timeout: 10000 });
 });
 
 await step("F27", "Mobile: hàng thẻ Công cụ hiện trên trang chủ", async () => {

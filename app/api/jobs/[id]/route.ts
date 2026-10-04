@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { getJobHeat, isHot } from "@/lib/jobStats";
+import { getResponseStats, describeResponse } from "@/lib/responseTime";
+
+const FIRST_VIEWERS = 10;
+const FRESH_MS = 48 * 60 * 60 * 1000;
 
 export async function GET(
   request: Request,
@@ -29,8 +34,29 @@ export async function GET(
       );
     }
 
+    const [heatMap, response, saveCount] = await Promise.all([
+      getJobHeat([job.id]),
+      getResponseStats(job.ownerId),
+      prisma.savedJob.count({ where: { jobId: job.id } }),
+    ]);
+    const h = heatMap.get(job.id);
+    const fresh = Date.now() - job.createdAt.getTime() < FRESH_MS;
+
     return NextResponse.json({
       ...job,
+      saveCount,
+      heat: {
+        viewsToday: h?.viewsToday ?? 0,
+        contacts7d: h?.contacts7d ?? 0,
+        hot: isHot(h),
+        // Tin mới < 48h và chưa tới 10 lượt xem (thiết bị/ngày) → người xem
+        // này THẬT SỰ nằm trong nhóm đầu tiên thấy tin.
+        firstViewers: fresh && (h?.viewsTotal ?? 0) < FIRST_VIEWERS ? FIRST_VIEWERS : null,
+      },
+      // Thời gian phản hồi THẬT của chủ tiệm (trung vị ≥3 lượt) — null khi chưa đủ dữ liệu.
+      ownerResponse: response
+        ? { label: describeResponse(response.medianMinutes), fast: response.medianMinutes <= 60, samples: response.samples }
+        : null,
       skills: job.skills ? job.skills.split(",").filter(Boolean) : [],
       benefits: job.benefits ? job.benefits.split(",").filter(Boolean) : [],
       createdAt: job.createdAt.toISOString(),

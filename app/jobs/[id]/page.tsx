@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import {
   ArrowLeft, MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Building, Clock,
-  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight,
+  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight, Eye, Zap, Timer, Sparkles,
 } from "lucide-react";
+import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -35,6 +36,9 @@ interface JobDetail {
   createdAt: string;
   ownerId: string;
   owner?: { id: string; name: string; avatarUrl: string | null };
+  saveCount?: number;
+  heat?: { viewsToday: number; contacts7d: number; hot: boolean; firstViewers: number | null };
+  ownerResponse?: { label: string; fast: boolean; samples: number } | null;
 }
 
 export default function JobDetailPage({ params }: PageProps) {
@@ -46,6 +50,7 @@ export default function JobDetailPage({ params }: PageProps) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const articleRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     params.then((p) => setJobId(p.id));
@@ -89,6 +94,12 @@ export default function JobDetailPage({ params }: PageProps) {
       .then((ids: string[]) => setSaved(Array.isArray(ids) && ids.includes(jobId)))
       .catch(() => {});
   }, [jobId, user?.id]);
+
+  // Ghi lượt xem thật khi nội dung tin đã hiện đủ lâu (đếm 1 lần/ngày/thiết bị).
+  useEffect(() => {
+    if (!job?.id) return;
+    return trackJobView(articleRef.current, job.id);
+  }, [job?.id]);
 
   const toggleSave = async () => {
     if (!user?.id) {
@@ -174,9 +185,14 @@ export default function JobDetailPage({ params }: PageProps) {
           <ArrowLeft className="h-4 w-4" /> Quay lại danh sách tin
         </Link>
 
-        <article className="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+        <article ref={articleRef} className={`glass-card rounded-2xl p-5 sm:p-6 space-y-5 ${job.heat?.hot ? "!border-orange-500/40" : ""}`}>
           <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
+              {job.heat?.hot && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2.5 py-1 text-xs font-black text-white shadow-lg shadow-orange-500/30">
+                  <Zap className="h-3.5 w-3.5 fill-white" /> Đang hot
+                </span>
+              )}
               {job.isUrgent && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400 border border-red-500/30">
                   <Flame className="h-3.5 w-3.5" /> Cần gấp
@@ -217,6 +233,35 @@ export default function JobDetailPage({ params }: PageProps) {
             ))}
           </dl>
 
+          {(() => {
+            const h = job.heat;
+            const items: { icon: typeof Eye; text: string; tone: string }[] = [];
+            if (h && h.viewsToday >= 3) items.push({ icon: Eye, text: `${h.viewsToday} người xem hôm nay`, tone: "text-amber-200" });
+            if (h && h.contacts7d >= 2) items.push({ icon: MessageCircle, text: `${h.contacts7d} người đã liên hệ tuần này`, tone: "text-amber-200" });
+            if ((job.saveCount ?? 0) >= 2) items.push({ icon: Bookmark, text: `${job.saveCount} người đã lưu tin`, tone: "text-amber-200" });
+            if (job.ownerResponse) items.push({ icon: Timer, text: `Chủ tiệm thường trả lời ${job.ownerResponse.label}`, tone: job.ownerResponse.fast ? "text-emerald-300" : "text-slate-300" });
+            if (items.length === 0 && !h?.firstViewers) return null;
+            return (
+              <div className="space-y-2">
+                {h?.firstViewers && !isOwnJob && (
+                  <p className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-500/15 to-indigo-500/10 px-3.5 py-2.5 text-xs font-semibold text-sky-100 ring-1 ring-sky-400/25">
+                    <Sparkles className="h-4 w-4 flex-shrink-0 text-sky-300" />
+                    Tin mới — bạn là một trong {h.firstViewers} người đầu tiên xem. Liên hệ sớm để được ưu tiên.
+                  </p>
+                )}
+                {items.length > 0 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-white/5">
+                    {items.map((it) => (
+                      <span key={it.text} className={`inline-flex items-center gap-1.5 text-xs font-semibold ${it.tone}`}>
+                        <it.icon className="h-3.5 w-3.5" /> {it.text}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {job.description && (
             <section className="space-y-2">
               <h2 className="text-sm font-bold text-slate-200">Mô tả công việc</h2>
@@ -250,12 +295,16 @@ export default function JobDetailPage({ params }: PageProps) {
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
               <a
                 href={`tel:${job.phone}`}
+                onClick={() => trackJobContact(job.id)}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-600/25 transition-all"
               >
                 <Phone className="h-5 w-5" /> Gọi ngay {job.phone}
               </a>
               <button
-                onClick={() => router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login")}
+                onClick={() => {
+                  if (user?.id) trackJobContact(job.id);
+                  router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login");
+                }}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 py-3.5 text-base font-bold text-slate-100 transition-all"
               >
                 <MessageCircle className="h-5 w-5" /> Nhắn tin qua App

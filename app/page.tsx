@@ -14,6 +14,7 @@ import ToolsPanel from "@/components/layout/ToolsPanel";
 import WelcomeBack from "@/components/layout/WelcomeBack";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
+import GettingStarted from "@/components/onboarding/GettingStarted";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
 import Flag from "@/components/ui/Flag";
@@ -223,6 +224,8 @@ export default function HomePage() {
             {/* Thẻ phụ (chào lại, ai xem hồ sơ, công cụ, hoàn thiện hồ sơ) CHỈ ở tab Bảng tin.
                 Ở tab Việc gấp / Thợ rảnh người dùng đến để XEM TIN — trước đây
                 ~1.400px thẻ phụ đẩy tin đầu tiên xuống tận cuối màn hình điện thoại. */}
+            {sessionUser && <GettingStarted compact={tab !== "feed"} />}
+
             {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
 
             {sessionUser && tab === "feed" && sessionUser.role !== "ADMIN" && <ProfileViewsCard compact role={sessionUser.role} />}

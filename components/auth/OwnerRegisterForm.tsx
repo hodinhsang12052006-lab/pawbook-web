@@ -129,6 +129,12 @@ export default function OwnerRegisterForm() {
 
     // Câu cuối cùng — hoàn tất đăng ký, tạo tài khoản + đăng nhập ngầm ngay
     setAdvancing(false);
+    await finishRegistration(nextPains, nextAnswers);
+  };
+
+  // Tạo tài khoản với những câu đã trả lời (bỏ qua khảo sát = mảng rỗng/dở dang).
+  // Không có "nỗi đau" nào → vào thẳng app, khỏi màn chẩn đoán.
+  const finishRegistration = async (nextPains: string[], nextAnswers: SurveyAnswerRecord[]) => {
     setLoading(true);
     setError("");
     try {
@@ -156,7 +162,8 @@ export default function OwnerRegisterForm() {
         setLoading(false);
         // Không chuyển hướng ngay — hiện màn hình chẩn đoán vận hành trước,
         // điều hướng thật sự xảy ra khi họ bấm CTA trong SalonDiagnosticModal.
-        setPhase("diagnostic");
+        if (nextPains.length) setPhase("diagnostic");
+        else handleFinishDiagnostic();
       } else {
         setLoading(false);
         router.push("/auth/login");
@@ -234,6 +241,17 @@ export default function OwnerRegisterForm() {
             </div>
           </button>
         </div>
+
+        {!loading && (
+          <button
+            type="button"
+            disabled={advancing}
+            onClick={() => finishRegistration(pains, answers)}
+            className={`w-full text-center text-sm font-semibold underline-offset-4 hover:underline ${isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-800"}`}
+          >
+            {t("auth.owner.skipSurvey")}
+          </button>
+        )}
 
         {loading && (
           <div className="flex items-center justify-center gap-2 text-sm text-slate-400">

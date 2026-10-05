@@ -356,12 +356,12 @@ export default function IncomeTrackerPage() {
 
         {/* ĐÒN BẨY BÁN PHẦN MỀM — lead-capture nhẹ, cùng cơ chế với Trojan
             Horse CTA trong SalonDiagnosticModal.tsx (không bật tính năng thật,
-            chỉ ghi nhận nhu cầu + báo team follow-up). */}
+            chỉ cảm ơn — KHÔNG hứa "liên hệ trong 24h" vì không có ai được báo để gọi lại). */}
         <button
           type="button"
           onClick={() =>
             toast.success(
-              tr("Đã ghi nhận! Đội ngũ PawNail sẽ liên hệ tư vấn Bảng Chia Turn tự động cho tiệm bạn trong 24h.", "Got it! The PawNail team will reach out about an automatic turn board for your salon within 24h."),
+              tr("Cảm ơn bạn quan tâm! Bảng Chia Turn tự động đang được PawNail phát triển — sẽ thông báo trên app khi ra mắt.", "Thanks for your interest! PawNail is building an automatic turn board — we'll announce it in the app when it launches."),
               { duration: 4000, icon: "🚀" }
             )
           }

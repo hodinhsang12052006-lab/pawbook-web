@@ -66,7 +66,7 @@ export interface PainTagMeta {
   // "Trojan Horse" — lời mời kích hoạt nhanh 1 tính năng cụ thể ngay dưới
   // giải pháp, thay vì chỉ nói chung chung "có giải pháp cho vấn đề này".
   trojanHorse: string;
-  // Dùng trong UnlockChatModal — bước "khảo sát chuyên sâu" bắt buộc trước
+  // (Trước đây dùng trong UnlockChatModal — đã bỏ.) Bước "khảo sát chuyên sâu"
   // khi mở khóa nhắn tin/gọi 1 thợ cụ thể, cá nhân hoá theo đúng pain tag
   // chủ tiệm đã chọn lúc đăng ký.
   unlockQuestion: string;
@@ -82,7 +82,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-red-500/40 bg-red-500/10 text-red-400",
     problem: "Khách đặt hẹn bị chồng chéo giờ cao điểm, thợ bị quá tải hoặc để khách đợi lâu.",
     solution: "Smart Booking Online tự động khóa lịch khi thợ đang có khách, gửi SMS xác nhận lịch hẹn chuẩn giờ.",
-    trojanHorse: "Bật Smart Booking khóa lịch tự động cho tiệm ngay hôm nay (không cần cài đặt gì thêm)",
+    trojanHorse: "Báo tôi khi Smart Booking khóa lịch tự động ra mắt",
     unlockQuestion: "Tiệm bạn đang gặp vấn đề trùng lịch hẹn giờ cao điểm. Bạn có muốn kích hoạt Smart Booking khóa lịch tự động ngay khi thợ này bắt đầu làm không?",
     unlockCheckboxLabel: "Cần hỗ trợ cài đặt ngay.",
   },
@@ -94,7 +94,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-purple-500/40 bg-purple-500/10 text-purple-400",
     problem: "Nguy cơ mất thợ giỏi và mâu thuẫn nội bộ do chia turn thủ công, tính tip dễ nhầm lẫn.",
     solution: "Hệ thống POS tự động xoay tua thợ công bằng theo giá trị bill. Tách bạch 100% Cash Tip & Credit Tip trên màn hình iPad. Thợ tự xem, không tị nạnh.",
-    trojanHorse: "Tặng tiệm 14 ngày dùng thử Bảng Chia Turn Công Bằng trên iPad (cài đặt trong 30 giây)",
+    trojanHorse: "Báo tôi khi Bảng Chia Turn Công Bằng trên iPad ra mắt",
     unlockQuestion: "Tiệm bạn đang gặp vấn đề thợ tị nạnh chia turn. Bạn có muốn kích hoạt công cụ Chia Turn Minh Bạch trên iPad khi nhận thợ này không?",
     unlockCheckboxLabel: "Cần hỗ trợ cài đặt ngay.",
   },
@@ -106,7 +106,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-orange-500/40 bg-orange-500/10 text-orange-400",
     problem: "Thất thoát chi phí vật tư và tốn thời gian bấm máy tính cộng trừ tiền bột/đá cuối tuần.",
     solution: "Tự động khấu trừ chi phí supply trực tiếp trên từng hóa đơn tính tiền. Xuất bill in nhiệt chuyên nghiệp 1-click.",
-    trojanHorse: "Bật tính năng Tự động khấu trừ Supply trên Bill tính tiền cho tiệm",
+    trojanHorse: "Báo tôi khi tính năng khấu trừ Supply trên bill ra mắt",
     unlockQuestion: "Tiệm bạn đang mất thời gian trừ supply và in bill. Bạn có muốn tự động khấu trừ vật tư khi thợ này làm móng không?",
     unlockCheckboxLabel: "Cần trải nghiệm giải pháp này.",
   },
@@ -118,7 +118,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
     problem: "Khó kiểm soát giờ giấc ra vào của thợ, xử lý khách khiếu nại hoàn tiền dễ thất thoát.",
     solution: "Chấm công bằng định vị GPS chuẩn xác ngay tại tiệm. Cơ chế hoàn tiền/hủy đơn chuẩn theo mã hóa đơn.",
-    trojanHorse: "Kích hoạt Chấm công GPS & Mã bill chống quỵt cho tiệm ngay",
+    trojanHorse: "Báo tôi khi Chấm công GPS & mã bill ra mắt",
     unlockQuestion: "Tiệm bạn đang khó kiểm soát giờ giấc & xử lý hoàn tiền. Bạn có muốn bật Chấm công GPS & mã bill chống quỵt cho thợ này không?",
     unlockCheckboxLabel: "Kích hoạt giải pháp này.",
   },
@@ -130,7 +130,7 @@ export const PAIN_TAG_META: Record<string, PainTagMeta> = {
     classes: "border-blue-500/40 bg-blue-500/10 text-blue-400",
     problem: "Khách làm xong rồi quên quay lại; ngày Thứ 2 - Thứ 4 tiệm vắng thợ ngồi bấm điện thoại.",
     solution: "QR Check-in tích điểm theo SĐT + AI tự động gửi SMS nhắc khách quay lại dặm gel sau 3 tuần.",
-    trojanHorse: "Tải mẫu QR Check-in để bàn tiệm & Tự động nhắc khách dặm gel",
+    trojanHorse: "Báo tôi khi QR Check-in & nhắc khách dặm gel ra mắt",
     unlockQuestion: "Bạn có muốn hệ thống tự động bắn SMS kéo khách cũ cho thợ này làm vào Thứ 2 - Thứ 4 không?",
     unlockCheckboxLabel: "Kích hoạt giải pháp giữ chân khách.",
   },
@@ -141,7 +141,7 @@ export interface HiringTimelineOption {
   label: string;
 }
 
-// Dùng trong UnlockChatModal — câu hỏi cam kết bắt buộc trước khi mở khóa.
+// (Không còn dùng trong app — giữ để đọc dữ liệu cũ trong Lead Radar.)
 export const HIRING_TIMELINE_OPTIONS: HiringTimelineOption[] = [
   { value: "THIS_WEEK", label: "Tuần này" },
   { value: "NEXT_WEEK", label: "Tuần sau" },

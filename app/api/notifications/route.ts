@@ -114,7 +114,7 @@ export async function GET() {
         id: `unlock-${u.id}`,
         kind: "unlock" as const,
         actor: u.owner,
-        text: "đã mở khoá liên hệ với bạn — có thể sắp nhắn tin mời làm việc",
+        text: "muốn liên hệ với bạn — có thể sắp nhắn tin mời làm việc",
         href: `/profile/${u.owner.id}`,
         createdAt: u.unlockedAt.toISOString(),
       })),

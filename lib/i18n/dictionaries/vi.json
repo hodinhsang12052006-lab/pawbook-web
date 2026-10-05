@@ -139,8 +139,9 @@
       "salaryLabel": "Mức lương",
       "salaryPlaceholder": "VD: $1,200-1,500/tuần",
       "housing": "Có chỗ ở (Housing) cho thợ",
+      "skipSurvey": "Bỏ qua khảo sát — vào app ngay",
       "startSurveyButton": "Tiếp tục khảo sát nhanh",
-      "surveyIntro": "Khảo sát nhanh 30 giây để hệ thống tối ưu ghép thợ và vận hành cho tiệm",
+      "surveyIntro": "Khảo sát 30 giây về vận hành tiệm (không bắt buộc) — giúp PawNail biết nên làm công cụ nào tiếp",
       "surveyProgress": "Câu {current}/{total} — {title}",
       "creatingShop": "Đang khởi tạo tiệm của bạn...",
       "registerFailed": "Đăng ký thất bại. Vui lòng thử lại."

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { getBadges } from "@/lib/badges";
+import { toE164 } from "@/lib/sms";
 
 // GET user profile data (own profile, or ?id=<userId> for public view)
 export async function GET(req: NextRequest) {
@@ -118,10 +119,22 @@ export async function GET(req: NextRequest) {
       official = { members, availableTechs, jobs30d, posts };
     }
 
+    // "SĐT đã xác minh" — chỉ khi số đã xác minh KHỚP số đang lưu (đổi số là mất dấu).
+    let phoneVerified: boolean | undefined;
+    if (wantBadges) {
+      phoneVerified = await Promise.all([
+        prisma.phoneVerification.findUnique({ where: { userId: user.id }, select: { phone: true } }),
+        prisma.user.findUnique({ where: { id: user.id }, select: { phone: true, market: true } }),
+      ])
+        .then(([v, u]) => !!v && !!u && v.phone === toE164(u.phone, u.market))
+        .catch(() => false);
+    }
+
     return NextResponse.json({
       ...user,
       badges,
       official,
+      phoneVerified,
       createdAt: user.createdAt.toISOString(),
       jobs: safeJobs,
       technicianProfile,

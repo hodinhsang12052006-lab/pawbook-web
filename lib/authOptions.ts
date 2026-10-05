@@ -1,10 +1,11 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { isRateLimited, recordAttempt, clearAttempts } from "@/lib/rateLimit";
+import { oauthProviders, appleEnabled } from "@/lib/authProviders";
+import { findOrCreateOAuthUser, needsOnboarding } from "@/lib/oauthUsers";
 
 // Sống ở đây (không phải trong app/api/auth/[...nextauth]/route.ts) vì Next.js
 // typegen cho route handler chỉ chấp nhận export GET/POST/config/... — export
@@ -37,8 +38,8 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
   // Ép Vercel tin tưởng Domain để không đánh rơi Cookie
   trustHost: true as any,
 
-  // Vẫn giữ Adapter dự phòng cho tương lai nếu ní tích hợp Login Google/Facebook
-  adapter: PrismaAdapter(prisma) as any,
+  // KHÔNG dùng adapter: schema không có bảng Account/Session (JWT thuần).
+  // Google/Apple tự tìm-hoặc-tạo User theo email trong callback signIn bên dưới.
 
   // BẮT BUỘC: Ép dùng JWT để Middleware (Edge) đọc được mà không cần chọc vào Database
   session: {
@@ -104,14 +105,44 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
           throw new Error(err.message || "Lỗi hệ thống xác thực thông tin đăng nhập.");
         }
       }
-    })
+    }),
+    ...oauthProviders(),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      if (!account || account.provider === "credentials") return true;
+      // Google/Apple: chỉ nhận email ĐÃ XÁC MINH (chống chiếm tài khoản cùng email).
+      const email = user.email || (profile as { email?: string } | undefined)?.email;
+      const verified = (profile as { email_verified?: boolean | string } | undefined)?.email_verified;
+      if (!email || verified === false || verified === "false") return "/auth/login?error=OAuthEmail";
+      try {
+        await findOrCreateOAuthUser({ email, name: user.name });
+        return true;
+      } catch (err) {
+        console.error("OAuth signIn error:", err);
+        return "/auth/login?error=OAuthSignin";
+      }
+    },
+    async jwt({ token, user, account }) {
       // Lúc đăng nhập thành công, nhét id và role vào vé VIP (token)
-      if (user) {
+      if (user && (!account || account.provider === "credentials")) {
         token.id = user.id;
         token.role = (user as any).role;
+      } else if (user && account) {
+        // Google/Apple: id/role lấy từ User THẬT trong DB (không phải id của Google).
+        const db = await prisma.user.findUnique({ where: { email: String(user.email).toLowerCase() }, select: { id: true, role: true, password: true, state: true } });
+        if (db) {
+          token.id = db.id;
+          token.role = db.role;
+          token.onb = needsOnboarding(db);
+        }
+      } else if (token.onb && token.id) {
+        // Đang hoàn tất hồ sơ (chọn vai trò/khu vực) → đọc lại vai trò mới cho tới khi xong.
+        const db = await prisma.user.findUnique({ where: { id: String(token.id) }, select: { role: true, password: true, state: true } });
+        if (db) {
+          token.role = db.role;
+          token.onb = needsOnboarding(db);
+        }
       }
       return token;
     },
@@ -120,13 +151,16 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).needsOnboarding = !!token.onb;
       }
       return session;
     }
   },
   pages: {
     signIn: "/auth/login",
-    error: "/auth/error",
+    // Lỗi đăng nhập Google/Apple quay về trang đăng nhập kèm ?error= (trước
+    // đây trỏ /auth/error — trang không tồn tại → 404).
+    error: "/auth/login",
     // KHÔNG khai `newUser` — trang đăng ký thật của app đi qua
     // /api/register (route riêng, không qua NextAuth adapter) TRƯỚC khi
     // signIn() được gọi, nên NextAuth không bao giờ cần tự "tạo user mới"
@@ -138,6 +172,14 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
     // khoản cũ đăng nhập bình thường. Đây chính là lỗi "đăng nhập xong lại
     // bị đá về trang đăng ký" phát hiện khi test thật trên production.
   },
+  ...(appleEnabled() && (process.env.NEXTAUTH_URL || "").startsWith("https")
+    ? {
+        cookies: {
+          pkceCodeVerifier: { name: "__Secure-next-auth.pkce.code_verifier", options: { httpOnly: true, sameSite: "none" as const, path: "/", secure: true, maxAge: 900 } },
+          state: { name: "__Secure-next-auth.state", options: { httpOnly: true, sameSite: "none" as const, path: "/", secure: true, maxAge: 900 } },
+        },
+      }
+    : {}),
   // Tắt debug trên Production cho nhẹ server, chỉ bật khi ở máy tính
   debug: process.env.NODE_ENV === "development",
   secret: authSecret,

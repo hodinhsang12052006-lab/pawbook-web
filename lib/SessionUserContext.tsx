@@ -31,6 +31,11 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
       const res = await fetch("/api/auth/session");
       if (res.ok) {
         const session = await res.json();
+        // Đăng nhập Google/Apple lần đầu: phải chọn vai trò + khu vực trước khi dùng app.
+        if (session?.user?.needsOnboarding && !window.location.pathname.startsWith("/auth/complete")) {
+          window.location.replace("/auth/complete");
+          return;
+        }
         if (session?.user?.id) {
           const profileRes = await fetch(`/api/profile?id=${session.user.id}`);
           if (profileRes.ok) {

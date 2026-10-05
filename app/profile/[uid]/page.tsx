@@ -4,13 +4,12 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
-  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Lock, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart,
+  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import UnlockChatModal from "@/components/profile/UnlockChatModal";
 import Avatar from "@/components/ui/Avatar";
 import OfficialProfile from "@/components/profile/OfficialProfile";
 import ShareCardButton from "@/components/profile/ShareCard";
@@ -57,7 +56,6 @@ export default function PublicProfilePage({ params }: PageProps) {
   const isSelf = Boolean(viewer?.id && profile?.id && viewer.id === profile.id);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingUnlock, setCheckingUnlock] = useState(false);
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
 
   useEffect(() => {
     params.then((p) => setUid(p.uid));
@@ -127,7 +125,6 @@ export default function PublicProfilePage({ params }: PageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwnerViewingTechnician, profile?.id]);
 
-  const ownerPains: string[] = viewer?.diagnosedPains ? String(viewer.diagnosedPains).split(",").filter(Boolean) : [];
 
   const goToChat = () => router.push(`/messages?to=${profile.id}`);
 
@@ -136,9 +133,12 @@ export default function PublicProfilePage({ params }: PageProps) {
       router.push("/auth/login");
       return;
     }
+    // Chủ tiệm nhắn thợ NGAY — không còn "mở khoá"/khảo sát chặn giữa chừng
+    // (đúng lúc họ cần nhất). Vẫn ghi bản ghi kết nối ở nền vì đánh giá 2
+    // chiều dựa vào nó ("Đã kết nối thật").
     if (isOwnerViewingTechnician && !unlocked) {
-      setShowUnlockModal(true);
-      return;
+      setUnlocked(true);
+      fetch("/api/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ technicianUserId: profile.id }) }).catch(() => {});
     }
     goToChat();
   };
@@ -245,12 +245,10 @@ export default function PublicProfilePage({ params }: PageProps) {
     >
       {isOwnerViewingTechnician && checkingUnlock ? (
         <Loader2 className="h-4 w-4 animate-spin" />
-      ) : isOwnerViewingTechnician && !unlocked ? (
-        <Lock className="h-4 w-4" />
       ) : (
         <MessageCircle className="h-4 w-4" />
       )}
-      {isOwnerViewingTechnician && !unlocked && !checkingUnlock ? tr("Mở khóa liên hệ", "Unlock contact") : tr("Nhắn tin", "Message")}
+      {tr("Nhắn tin", "Message")}
     </button>
   );
 
@@ -319,6 +317,11 @@ export default function PublicProfilePage({ params }: PageProps) {
               {isOwnerProfile && profile.housingSupport && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-200 ring-1 ring-sky-500/25">
                   <HomeIcon className="h-3.5 w-3.5" />{tr(" Có chỗ ở cho thợ", " Housing for techs")}
+                </span>
+              )}
+              {profile.phoneVerified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-200 ring-1 ring-emerald-500/25" title={tr("Đã xác minh số điện thoại bằng mã SMS", "Phone number verified by SMS code")}>
+                  <BadgeCheck className="h-3.5 w-3.5" />{tr(" SĐT đã xác minh", " Phone verified")}
                 </span>
               )}
             </div>
@@ -395,19 +398,6 @@ export default function PublicProfilePage({ params }: PageProps) {
           </div>
         </section>
 
-        {showUnlockModal && (
-          <UnlockChatModal
-            technicianUserId={profile.id}
-            technicianName={profile.name}
-            ownerPains={ownerPains}
-            onClose={() => setShowUnlockModal(false)}
-            onUnlocked={() => {
-              setUnlocked(true);
-              setShowUnlockModal(false);
-              goToChat();
-            }}
-          />
-        )}
 
         {/* ===== TABS ===== */}
         <nav

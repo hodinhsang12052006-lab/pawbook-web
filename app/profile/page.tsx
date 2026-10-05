@@ -12,6 +12,7 @@ import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCar
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
 import ShareCardButton from "@/components/profile/ShareCard";
 import { JobAlertsManager } from "@/components/jobs/JobAlerts";
+import PhoneVerify from "@/components/profile/PhoneVerify";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -61,6 +62,8 @@ export default function ProfilePage() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [savedPhone, setSavedPhone] = useState(""); // số đang lưu trên máy chủ (để biết người dùng vừa sửa mà chưa lưu)
+  const [phoneCheckKey, setPhoneCheckKey] = useState(0);
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
 
@@ -96,6 +99,7 @@ export default function ProfilePage() {
           setProfile(data);
           setName(data.name || "");
           setPhone(data.phone || "");
+          setSavedPhone(data.phone || "");
           setState(data.state || "");
           setCity(data.city || "");
           setTurnSplitPolicy(data.turnSplitPolicy || "");
@@ -218,6 +222,8 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok) {
         toast.success(tr("Đã lưu hồ sơ! 🎉", "Profile saved! 🎉"), { id: toastId });
+        setSavedPhone(phone);
+        setPhoneCheckKey((k) => k + 1);
         window.dispatchEvent(new Event("profile-updated"));
       } else {
         toast.error(data.error || tr("Không thể lưu hồ sơ.", "Couldn't save profile."), { id: toastId });
@@ -407,6 +413,7 @@ export default function ProfilePage() {
             <div>
               <label className="field-label" htmlFor="pf-phone">{tr("Số điện thoại", "Phone number")}</label>
               <input id="pf-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="VD: (713) 555-0123" className="input-field" />
+              <PhoneVerify dirty={phone.trim() !== savedPhone.trim()} refreshKey={phoneCheckKey} />
             </div>
             <div>
               <label className="field-label" htmlFor="pf-state">Bang</label>

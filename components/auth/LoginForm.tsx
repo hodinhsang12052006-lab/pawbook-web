@@ -7,6 +7,8 @@ import toast from "react-hot-toast";
 import { Lock, Mail, Loader2, AlertCircle } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import SocialLogin from "@/components/auth/SocialLogin";
+import { tr } from "@/lib/i18n/tr";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
@@ -18,6 +20,17 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Lỗi quay về từ Google/Apple (?error=...) — hiện thông báo dễ hiểu.
+  React.useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error");
+    if (!code) return;
+    setError(
+      code === "OAuthEmail"
+        ? tr("Tài khoản Google/Apple chưa xác minh email — hãy dùng email đã xác minh hoặc đăng ký bằng email.", "That Google/Apple account has no verified email — use a verified one or sign up with email.")
+        : tr("Đăng nhập bằng Google/Apple chưa thành công. Thử lại hoặc dùng email.", "Google/Apple sign-in didn't complete. Try again or use email.")
+    );
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +99,8 @@ export default function LoginForm() {
           <span>{error}</span>
         </div>
       )}
+
+      <SocialLogin dark={theme === "dark"} />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

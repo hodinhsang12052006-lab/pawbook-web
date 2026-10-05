@@ -90,6 +90,7 @@ model User {
   profileViewsMade     ProfileView[] @relation("ViewsMade")
   profileViewsReceived ProfileView[] @relation("ViewsReceived")
   jobAlerts            JobAlert[]
+  phoneVerification    PhoneVerification? // SĐT đã xác minh qua SMS (prisma/sql/2026-10-07_phone_verification.sql)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,6 +124,15 @@ model JobAlert {
 
   @@index([market, state])
   @@index([userId])
+}
+
+// Số điện thoại đã xác minh qua SMS (Twilio Verify). Lưu đúng số đã xác minh —
+// người dùng đổi SĐT trong hồ sơ thì dấu xác minh tự mất (không khớp nữa).
+model PhoneVerification {
+  userId     String   @id
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone      String // dạng E.164, VD +14085550199
+  verifiedAt DateTime @default(now())
 }
 
 model PushSubscription {

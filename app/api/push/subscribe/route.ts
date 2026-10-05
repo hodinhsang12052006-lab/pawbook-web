@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { pushEnabled } from "@/lib/push";
+import { fcmEnabled } from "@/lib/fcm";
+import { apnsEnabled } from "@/lib/apns";
 import { isRateLimited, recordAttempt, getClientIp } from "@/lib/rateLimit";
 
 // POST   /api/push/subscribe  { endpoint, keys: { p256dh, auth } } — lưu thiết bị
@@ -30,7 +32,7 @@ function validEndpoint(v: unknown): v is string {
 const validKey = (v: unknown) => typeof v === "string" && /^[A-Za-z0-9_-]{10,200}={0,2}$/.test(v);
 
 export async function GET() {
-  return NextResponse.json({ enabled: pushEnabled() });
+  return NextResponse.json({ enabled: pushEnabled(), nativeEnabled: fcmEnabled(), iosEnabled: apnsEnabled() });
 }
 
 export async function POST(req: Request) {

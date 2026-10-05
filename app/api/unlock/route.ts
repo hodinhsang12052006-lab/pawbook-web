@@ -6,8 +6,7 @@ import { notifyUser } from "@/lib/notify";
 import { Role } from "@prisma/client";
 
 // GET /api/unlock?technicianUserId=xxx — chủ tiệm kiểm tra đã mở khóa liên
-// hệ với thợ này chưa, để quyết định hiện thẳng nút "Nhắn tin" hay bật
-// UnlockChatModal trước.
+// hệ (kết nối) với thợ này chưa.
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -36,8 +35,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/unlock — chủ tiệm hoàn tất khảo sát chuyên sâu trong
-// UnlockChatModal, lưu bản ghi mở khóa vĩnh viễn cho cặp (owner, thợ) này.
+// POST /api/unlock — ghi "đã kết nối" cho cặp (chủ tiệm, thợ) khi chủ tiệm bấm
+// Nhắn tin trên hồ sơ thợ (không còn paywall/khảo sát chặn). Đánh giá 2 chiều
+// dựa vào bản ghi này để gắn nhãn "Đã kết nối thật".
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} đã mở khoá liên hệ với bạn`, `/profile/${session.user.id}`);
+    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} muốn liên hệ với bạn — xem tiệm và nhắn lại nhé`, `/profile/${session.user.id}`);
 
     return NextResponse.json({ unlocked: true, unlockedAt: unlock.unlockedAt }, { status: 201 });
   } catch (err) {

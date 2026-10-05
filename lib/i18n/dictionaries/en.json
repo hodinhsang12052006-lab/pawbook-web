@@ -139,8 +139,9 @@
       "salaryLabel": "Pay rate",
       "salaryPlaceholder": "e.g. $1,200-1,500/week",
       "housing": "Housing available for techs",
+      "skipSurvey": "Skip the survey — go to the app",
       "startSurveyButton": "Continue to quick survey",
-      "surveyIntro": "30-second survey so the system can match techs and optimize your salon's operations",
+      "surveyIntro": "Optional 30-second survey about running your salon — helps PawNail decide which tools to build next",
       "surveyProgress": "Question {current}/{total} — {title}",
       "creatingShop": "Setting up your salon...",
       "registerFailed": "Registration failed. Please try again."

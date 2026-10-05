@@ -1,6 +1,9 @@
 "use client";
 
 // Phía trình duyệt của thông báo đẩy (xem lib/push.ts + worker/index.js).
+// Trong app native (Capacitor) tự chuyển sang Firebase — lib/nativePush.ts.
+import { isNativeApp, nativeDisable, nativeEnable, nativeGetState } from "@/lib/nativePush";
+
 export type PushState = "unsupported" | "ios-needs-install" | "denied" | "on" | "off";
 
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
@@ -16,7 +19,9 @@ const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
 
 export async function getPushState(): Promise<PushState> {
-  if (typeof window === "undefined" || !PUBLIC_KEY) return "unsupported";
+  if (typeof window === "undefined") return "unsupported";
+  if (isNativeApp()) return nativeGetState().catch(() => "unsupported" as PushState);
+  if (!PUBLIC_KEY) return "unsupported";
   // iPhone chỉ nhận Web Push khi PawNail đã được "Thêm vào màn hình chính".
   if (isIOS() && !isStandalone()) return "ios-needs-install";
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "unsupported";
@@ -32,6 +37,7 @@ export async function getPushState(): Promise<PushState> {
 
 /** Xin quyền + đăng ký + lưu lên máy chủ. Trả về trạng thái mới. */
 export async function enablePush(): Promise<PushState> {
+  if (isNativeApp()) return nativeEnable().catch(() => "off" as PushState);
   const state = await getPushState();
   if (state === "unsupported" || state === "ios-needs-install" || state === "denied") return state;
   const perm = await Notification.requestPermission();
@@ -51,6 +57,7 @@ export async function enablePush(): Promise<PushState> {
 }
 
 export async function disablePush(): Promise<PushState> {
+  if (isNativeApp()) return nativeDisable();
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = await reg?.pushManager.getSubscription();

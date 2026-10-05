@@ -8,6 +8,8 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
 import OwnerRegisterForm from "@/components/auth/OwnerRegisterForm";
+import SocialLogin from "@/components/auth/SocialLogin";
+import { tr } from "@/lib/i18n/tr";
 
 type Role = "technician" | "owner" | null;
 
@@ -61,6 +63,8 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         </div>
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
+
+      <SocialLogin dark={isDark} divider={false} heading={tr("Hoặc đăng ký nhanh bằng", "Or sign up faster with")} />
 
       <p className={`text-center text-sm ${labelClass}`}>
         {t("auth.rolePicker.haveAccount")}{" "}

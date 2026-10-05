@@ -249,7 +249,7 @@ export default function HomePage() {
                 trước đây chiếm ~200px khiến nội dung bị đẩy xuống dưới màn hình đầu. */}
             <div className="glass-card space-y-2 rounded-2xl p-2 md:hidden">
               <div className="flex items-center gap-2">
-                <div className="flex flex-shrink-0 rounded-full bg-slate-950/70 p-0.5 ring-1 ring-white/10" role="group" aria-label="Thị trường">
+                <div className="flex flex-shrink-0 rounded-full bg-slate-950/70 p-0.5 ring-1 ring-white/10" role="group" aria-label={tr("Thị trường", "Market")}>
                   {(["US", "AU"] as const).map((m) => (
                     <button
                       key={m}
@@ -370,7 +370,7 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-1 bg-[#020617]/85 backdrop-blur-md">
-              <div role="tablist" aria-label="Nội dung trang chủ" className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
+              <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
                 {/* Viên chọn trượt mượt sang tab đang mở */}
                 <span
                   aria-hidden

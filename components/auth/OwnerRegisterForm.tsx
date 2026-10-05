@@ -17,6 +17,8 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
 import { stateName } from "@/lib/stateNames";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
+import { dt } from "@/lib/i18n/dataEn";
+import { tr } from "@/lib/i18n/tr";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -199,7 +201,7 @@ export default function OwnerRegisterForm() {
               <div key={idx} className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${idx <= surveyIndex ? "bg-pink-500" : isDark ? "bg-slate-800" : "bg-slate-200"}`} />
             ))}
           </div>
-          <p className={`text-xs ${labelClass}`}>{t("auth.owner.surveyProgress", { current: surveyIndex + 1, total: SURVEY.length, title: q.title })}</p>
+          <p className={`text-xs ${labelClass}`}>{t("auth.owner.surveyProgress", { current: surveyIndex + 1, total: SURVEY.length, title: dt(q.title) })}</p>
         </div>
 
         {error && (
@@ -210,7 +212,7 @@ export default function OwnerRegisterForm() {
         )}
 
         <h2 className={`text-xl font-extrabold leading-snug transition-opacity duration-200 ${isDark ? "text-white" : "text-slate-900"}`}>
-          {q.question}
+          {dt(q.question)}
         </h2>
 
         <div className="space-y-3">
@@ -223,7 +225,7 @@ export default function OwnerRegisterForm() {
             }`}
           >
             <div className="flex items-start justify-between gap-3">
-              <span className={`text-sm leading-relaxed ${labelClass}`}>{q.optionA}</span>
+              <span className={`text-sm leading-relaxed ${labelClass}`}>{dt(q.optionA)}</span>
               {selectedOption === "A" && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-pink-400" />}
             </div>
           </button>
@@ -236,7 +238,7 @@ export default function OwnerRegisterForm() {
             }`}
           >
             <div className="flex items-start justify-between gap-3">
-              <span className={`text-sm leading-relaxed ${labelClass}`}>{q.optionB}</span>
+              <span className={`text-sm leading-relaxed ${labelClass}`}>{dt(q.optionB)}</span>
               {selectedOption === "B" && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-400" />}
             </div>
           </button>
@@ -332,7 +334,7 @@ export default function OwnerRegisterForm() {
           <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.phoneLabel")}</label>
           <div className="flex gap-2">
             <select
-              aria-label="Mã quốc gia"
+              aria-label={tr("Mã quốc gia", "Country code")}
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value as "+1" | "+61")}
               className={`min-h-[48px] rounded-2xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}

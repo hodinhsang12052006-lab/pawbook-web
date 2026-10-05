@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { playSound } from "@/lib/sounds";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 interface PulseOptionResult { id: string; label: string; votes: number; pct: number }
 interface PulseResults { total: number; published: boolean; options: PulseOptionResult[]; scope: string | null }
@@ -49,11 +50,11 @@ export default function PulseCard() {
 
   const shown = data.localResults ?? data.results;
   return (
-    <section aria-label="Nhịp đau tuần" className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
+    <section aria-label={tr("Nhịp đau tuần", "Weekly pulse")} className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
       <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-sky-300">
         <Activity className="h-3.5 w-3.5" />{tr(" Nhịp đau tuần · 1 chạm, ẩn danh", " Weekly pulse · one tap, anonymous")}
       </p>
-      <h3 className="mt-1.5 text-[15px] font-black leading-snug text-white">{q.text}</h3>
+      <h3 className="mt-1.5 text-[15px] font-black leading-snug text-white">{dt(q.text)}</h3>
 
       {!data.myVote ? (
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -66,7 +67,7 @@ export default function PulseCard() {
               className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-slate-950/60 px-2.5 py-2 text-center text-xs font-semibold text-slate-200 ring-1 ring-white/10 transition-all hover:ring-sky-400/50 active:scale-95 disabled:opacity-60"
             >
               {busy === o.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {o.label}
+              {dt(o.label)}
             </button>
           ))}
         </div>
@@ -80,7 +81,7 @@ export default function PulseCard() {
                   <span aria-hidden className={`absolute inset-y-0 left-0 ${mine ? "bg-sky-500/30" : "bg-white/[0.06]"}`} style={{ width: `${o.pct}%` }} />
                   <div className="relative flex items-center justify-between gap-2 px-3 py-2 text-xs">
                     <span className={`flex items-center gap-1.5 ${mine ? "font-bold text-white" : "text-slate-300"}`}>
-                      {mine && <CheckCircle2 className="h-3.5 w-3.5 text-sky-300" />} {o.label}
+                      {mine && <CheckCircle2 className="h-3.5 w-3.5 text-sky-300" />} {dt(o.label)}
                     </span>
                     <span className="font-bold tabular-nums text-slate-200">{o.pct}%</span>
                   </div>

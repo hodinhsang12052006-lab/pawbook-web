@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} muốn liên hệ với bạn — xem tiệm và nhắn lại nhé`, `/profile/${session.user.id}`);
+    await notifyUser(technicianUserId, session.user.id, `${session.user.name || "Một chủ tiệm"} muốn liên hệ với bạn — xem tiệm và nhắn lại nhé`, `/profile/${session.user.id}`, `${session.user.name || "A salon owner"} wants to connect — check out the salon and reply`);
 
     return NextResponse.json({ unlocked: true, unlockedAt: unlock.unlockedAt }, { status: 201 });
   } catch (err) {

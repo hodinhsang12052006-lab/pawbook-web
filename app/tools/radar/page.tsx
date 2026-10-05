@@ -7,6 +7,7 @@ import { stateName } from "@/lib/stateNames";
 import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 type MarketKey = "US" | "AU";
 type SkillKey = "BOT" | "DIP" | "TAY_NUOC";
@@ -219,7 +220,7 @@ export default function NailRadarPage() {
               <ul className="space-y-1.5">
                 {result.turnSplitOptions.map((opt, i) => (
                   <li key={i} className="text-xs text-slate-400 flex items-start gap-2">
-                    <span className="text-pink-400 mt-0.5">•</span> {opt}
+                    <span className="text-pink-400 mt-0.5">•</span> {dt(opt)}
                   </li>
                 ))}
               </ul>
@@ -230,7 +231,7 @@ export default function NailRadarPage() {
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <Package className="h-4 w-4 text-indigo-400" /> Ai bao supply?
               </p>
-              <p className="text-xs text-slate-400 leading-relaxed">{result.supplyPolicy}</p>
+              <p className="text-xs text-slate-400 leading-relaxed">{dt(result.supplyPolicy)}</p>
             </div>
 
             {/* Negotiation tips */}
@@ -241,7 +242,7 @@ export default function NailRadarPage() {
               <ul className="space-y-1.5">
                 {result.negotiationTips.map((tip, i) => (
                   <li key={i} className="text-xs text-slate-400 flex items-start gap-2">
-                    <span className="text-amber-400 mt-0.5">•</span> {tip}
+                    <span className="text-amber-400 mt-0.5">•</span> {dt(tip)}
                   </li>
                 ))}
               </ul>
@@ -255,7 +256,7 @@ export default function NailRadarPage() {
               <ul className="space-y-1.5">
                 {result.ownerChecklist.map((item, i) => (
                   <li key={i} className="text-xs text-slate-400 flex items-start gap-2">
-                    <span className="text-emerald-400 mt-0.5">☐</span> {item}
+                    <span className="text-emerald-400 mt-0.5">☐</span> {dt(item)}
                   </li>
                 ))}
               </ul>

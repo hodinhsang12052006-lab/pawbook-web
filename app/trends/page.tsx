@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { timeAgo } from "@/lib/feedFormat";
 import { tr } from "@/lib/i18n/tr";
+import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 
 interface RadarPublic {
@@ -213,7 +214,7 @@ export default function TrendsPage() {
                   <Avatar src={t.avatarUrl} name={t.name} seed={t.id} className="h-11 w-11 ring-1 ring-white/10" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-white">{t.name}</p>
-                    <p className="truncate text-xs text-slate-500">{[t.specialty, `${t.city}, ${t.state}`].filter(Boolean).join(" · ")}</p>
+                    <p className="truncate text-xs text-slate-500">{[t.specialty ? valueLabel(t.specialty) : null, `${t.city}, ${t.state}`].filter(Boolean).join(" · ")}</p>
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-0.5 text-[11px] font-semibold">
                     {t.rating !== null && <span className="inline-flex items-center gap-0.5 text-amber-300"><Star className="h-3 w-3 fill-amber-300" /> {t.rating.toFixed(1)} ({t.reviews})</span>}

@@ -25,6 +25,7 @@ export async function notifyUrgentJob(job: UrgentJob): Promise<string[]> {
     await getPusherServer()?.trigger(channel, "urgent-job", {
       id: job.id,
       text: `${job.salonName} tại ${job.city} cần thợ gấp: ${job.title} — ${job.salaryAmount}`.slice(0, 160),
+      textEn: `${job.salonName} in ${job.city} needs a tech urgently: ${job.title} — ${job.salaryAmount}`.slice(0, 160),
     });
   } catch (err) {
     console.error("notifyUrgentJob error:", err);

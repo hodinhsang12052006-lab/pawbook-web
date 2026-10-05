@@ -13,8 +13,9 @@ const PER_KIND = 15;
 export interface NotificationItem {
   id: string;
   kind: "like" | "comment" | "review" | "save" | "unlock" | "job";
-  actor: { id: string | null; name: string; avatarUrl: string | null };
+  actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
+  textEn: string;
   href: string;
   createdAt: string;
 }
@@ -82,6 +83,7 @@ export async function GET() {
         kind: "like" as const,
         actor: l.user,
         text: `đã thích bài viết của bạn: "${snippet(l.post.content)}"`,
+        textEn: `liked your post: "${snippet(l.post.content)}"`,
         href: "/?tab=feed",
         createdAt: l.createdAt.toISOString(),
       })),
@@ -90,6 +92,7 @@ export async function GET() {
         kind: "comment" as const,
         actor: c.author,
         text: `đã bình luận: "${snippet(c.content)}"`,
+        textEn: `commented: "${snippet(c.content)}"`,
         href: "/?tab=feed",
         createdAt: c.createdAt.toISOString(),
       })),
@@ -98,6 +101,7 @@ export async function GET() {
         kind: "review" as const,
         actor: r.author,
         text: `đã đánh giá bạn ${"★".repeat(r.overall)}`,
+        textEn: `reviewed you ${"★".repeat(r.overall)}`,
         href: `/profile/${me}`,
         createdAt: r.createdAt.toISOString(),
       })),
@@ -105,8 +109,9 @@ export async function GET() {
       ...saves.map((s) => ({
         id: `save-${s.id}`,
         kind: "save" as const,
-        actor: { id: null, name: "Một thợ nail", avatarUrl: null },
+        actor: { id: null, name: "Một thợ nail", nameEn: "A nail tech", avatarUrl: null },
         text: `vừa lưu tin tuyển "${snippet(s.job.title)}" của bạn`,
+        textEn: `saved your job "${snippet(s.job.title)}"`,
         href: `/jobs/${s.job.id}`,
         createdAt: s.createdAt.toISOString(),
       })),
@@ -115,6 +120,7 @@ export async function GET() {
         kind: "unlock" as const,
         actor: u.owner,
         text: "muốn liên hệ với bạn — có thể sắp nhắn tin mời làm việc",
+        textEn: "wants to connect — they may message you about a job soon",
         href: `/profile/${u.owner.id}`,
         createdAt: u.unlockedAt.toISOString(),
       })),
@@ -123,6 +129,7 @@ export async function GET() {
         kind: "job" as const,
         actor: j.owner,
         text: `cần thợ gấp tại ${j.city}: "${snippet(j.title)}" — ${j.salaryAmount}`,
+        textEn: `urgently hiring in ${j.city}: "${snippet(j.title)}" — ${j.salaryAmount}`,
         href: `/jobs/${j.id}`,
         createdAt: j.createdAt.toISOString(),
       })),

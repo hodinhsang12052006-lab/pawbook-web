@@ -23,6 +23,7 @@ import { isVideoUrl, ReviewSummary, fmtScore, SectionTitle, EmptyState, ReviewsS
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 const BADGE_STYLE = {
   founding: { icon: Crown, cls: "bg-gradient-to-r from-amber-500/20 to-yellow-500/10 text-amber-200 ring-amber-400/40" },
@@ -333,8 +334,8 @@ export default function PublicProfilePage({ params }: PageProps) {
                   const st = BADGE_STYLE[b.key];
                   if (!st) return null;
                   return (
-                    <span key={b.key} title={b.hint} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold ring-1 ${st.cls}`}>
-                      <st.icon className="h-3.5 w-3.5" /> {b.label}
+                    <span key={b.key} title={dt(b.hint)} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold ring-1 ${st.cls}`}>
+                      <st.icon className="h-3.5 w-3.5" /> {dt(b.label)}
                     </span>
                   );
                 })}

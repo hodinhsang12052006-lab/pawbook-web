@@ -8,6 +8,7 @@ import { getDailyTip } from "@/lib/dailyTips";
 import { stateName } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 interface RailJob {
   id: string;
@@ -51,8 +52,8 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300">
             <Lightbulb className="h-4 w-4" />{tr(" Mẹo hôm nay", " Tip of the day")}
           </h3>
-          <p className="mt-2 text-sm font-bold text-white">{tip.title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400">{tip.body}</p>
+          <p className="mt-2 text-sm font-bold text-white">{dt(tip.title)}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">{dt(tip.body)}</p>
         </section>
 
         <section className="glass-card rounded-2xl p-4">
@@ -69,7 +70,7 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
                 href={`/jobs/${job.id}`}
                 className="group block rounded-xl border border-slate-800/80 bg-slate-950/40 p-2.5 hover:border-pink-500/40 transition-colors"
               >
-                <p className="truncate text-[13px] font-semibold text-slate-100 group-hover:text-white">{job.title}</p>
+                <p className="truncate text-[13px] font-semibold text-slate-100 group-hover:text-white">{dt(job.title)}</p>
                 <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
                   <MapPin className="h-3 w-3 flex-shrink-0" />
                   {job.city}, {stateName(job.market, job.state)}

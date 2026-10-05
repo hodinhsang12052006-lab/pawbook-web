@@ -17,8 +17,9 @@ import { useTr } from "@/lib/i18n/useTr";
 interface NotificationItem {
   id: string;
   kind: "like" | "comment" | "review" | "save" | "unlock" | "job";
-  actor: { id: string | null; name: string; avatarUrl: string | null };
+  actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
+  textEn?: string;
   href: string;
   createdAt: string;
 }
@@ -83,10 +84,10 @@ export default function NotificationBell() {
     if (!uid) return;
     const channel = acquireUserChannel(uid);
     if (!channel) return;
-    const onNotify = (data: { text?: string }) => {
+    const onNotify = (data: { text?: string; textEn?: string }) => {
       load();
       playSound("notify");
-      if (data?.text) toast(data.text, { icon: "🔔", position: "top-right" });
+      if (data?.text) toast(tr(data.text, data.textEn || data.text), { icon: "🔔", position: "top-right" });
     };
     channel.bind("notification", onNotify);
     return () => {
@@ -103,7 +104,7 @@ export default function NotificationBell() {
     const pusher = getPusherClient();
     if (!pusher) return;
     const channel = pusher.subscribe(alertChannel);
-    const onJob = (data: { id?: string; text?: string }) => {
+    const onJob = (data: { id?: string; text?: string; textEn?: string }) => {
       load();
       playSound("urgent");
       if (data?.text) {
@@ -111,7 +112,7 @@ export default function NotificationBell() {
           (t) => (
             <Link href={`/jobs/${data.id}`} onClick={() => toast.dismiss(t.id)} className="block">
               <span className="block text-[11px] font-black uppercase tracking-wider text-orange-300">{tr("Việc gấp gần bạn", "Urgent job near you")}</span>
-              <span className="block">{data.text}</span>
+              <span className="block">{tr(data.text ?? "", data.textEn || data.text || "")}</span>
             </Link>
           ),
           { icon: "🔥", position: "top-right", duration: 7000 }
@@ -235,11 +236,11 @@ export default function NotificationBell() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] leading-snug text-slate-300">
-                      <span className="font-bold text-white">{n.actor.name}</span> {n.text}
+                      <span className="font-bold text-white">{n.actor.nameEn ? tr(n.actor.name, n.actor.nameEn) : n.actor.name}</span> {tr(n.text, n.textEn || n.text)}
                     </span>
                     <span className={`mt-0.5 block text-[11px] ${isNew ? "font-semibold text-pink-300" : "text-slate-500"}`}>{timeAgo(n.createdAt)}</span>
                   </span>
-                  {isNew && <span className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-pink-500" aria-label="Mới" />}
+                  {isNew && <span className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-pink-500" aria-label={tr("Mới", "New")} />}
                 </Link>
               );
             })}

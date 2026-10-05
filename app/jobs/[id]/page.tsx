@@ -20,6 +20,7 @@ import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt, responseEn } from "@/lib/i18n/dataEn";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -224,7 +225,7 @@ export default function JobDetailPage({ params }: PageProps) {
                 </button>
               </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">{job.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">{dt(job.title)}</h1>
             <p className="flex items-center gap-2 text-slate-300">
               <Building className="h-4 w-4 text-pink-400" />
               <span className="font-semibold">{job.salonName}</span>
@@ -248,7 +249,7 @@ export default function JobDetailPage({ params }: PageProps) {
             if (h && h.viewsToday >= 3) items.push({ icon: Eye, text: tr(`${h.viewsToday} người xem hôm nay`, `${h.viewsToday} viewed today`), tone: "text-amber-200" });
             if (h && h.contacts7d >= 2) items.push({ icon: MessageCircle, text: tr(`${h.contacts7d} người đã liên hệ tuần này`, `${h.contacts7d} contacted this week`), tone: "text-amber-200" });
             if ((job.saveCount ?? 0) >= 2) items.push({ icon: Bookmark, text: tr(`${job.saveCount} người đã lưu tin`, `${job.saveCount} saved this job`), tone: "text-amber-200" });
-            if (job.ownerResponse) items.push({ icon: Timer, text: tr(`Chủ tiệm thường trả lời ${job.ownerResponse.label}`, `Salon usually replies ${job.ownerResponse.label}`), tone: job.ownerResponse.fast ? "text-emerald-300" : "text-slate-300" });
+            if (job.ownerResponse) items.push({ icon: Timer, text: tr(`Chủ tiệm thường trả lời ${job.ownerResponse.label}`, `Salon usually replies ${responseEn(job.ownerResponse.label)}`), tone: job.ownerResponse.fast ? "text-emerald-300" : "text-slate-300" });
             if (items.length === 0 && !h?.firstViewers) return null;
             return (
               <div className="space-y-2">

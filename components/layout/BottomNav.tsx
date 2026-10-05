@@ -140,7 +140,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      aria-label="Điều hướng chính"
+      aria-label={tr("Điều hướng chính", "Main navigation")}
       className={`fixed inset-x-3 z-50 transition-transform duration-300 ease-out md:hidden ${hiddenByScroll ? "translate-y-[calc(100%+24px)]" : "translate-y-0"}`}
       style={{ bottom: "max(10px, env(safe-area-inset-bottom))" }}
     >

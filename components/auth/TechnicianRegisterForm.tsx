@@ -209,7 +209,7 @@ export default function TechnicianRegisterForm() {
             <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.phoneLabel")}</label>
             <div className="flex gap-2">
               <select
-                aria-label="Mã quốc gia"
+                aria-label={tr("Mã quốc gia", "Country code")}
               value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value as "+1" | "+61")}
                 className={`min-h-[48px] rounded-2xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}

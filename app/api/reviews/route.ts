@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await notifyUser(targetUserId, session.user.id, `${session.user.name || "Ai đó"} đã đánh giá bạn`, `/profile/${targetUserId}`);
+    await notifyUser(targetUserId, session.user.id, `${session.user.name || "Ai đó"} đã đánh giá bạn`, `/profile/${targetUserId}`, `${session.user.name || "Someone"} reviewed you`);
 
     return NextResponse.json(
       {

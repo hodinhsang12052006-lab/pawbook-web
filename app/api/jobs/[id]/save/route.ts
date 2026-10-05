@@ -31,7 +31,7 @@ export async function POST(
       create: { userId, jobId },
     });
     // Chỉ báo lần lưu đầu tiên (không báo lại khi bấm lưu nhiều lần).
-    if (!existed) await notifyUser(job.ownerId, userId, `Một thợ nail vừa lưu tin "${job.title}" của bạn`, `/jobs/${job.id}`);
+    if (!existed) await notifyUser(job.ownerId, userId, `Một thợ nail vừa lưu tin "${job.title}" của bạn`, `/jobs/${job.id}`, `A nail tech saved your job "${job.title}"`);
 
     return NextResponse.json(saved, { status: 201 });
   } catch (error: any) {

@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { SearchX, Home } from "lucide-react";
+import { tr } from "@/lib/i18n/tr";
+import { useTr } from "@/lib/i18n/useTr";
 
 // Thay trang 404 trắng mặc định của Next.js — trong app native (WebView nền
 // tối), 1 link hỏng/tin đã bị xóa từng hiện ra trang trắng trơn không có
 // đường quay lại, trông như app bị lỗi.
 export default function NotFound() {
+  useTr(); // render lại khi đổi VI/EN
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-6 text-center">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
@@ -17,9 +22,9 @@ export default function NotFound() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-xl font-black text-white">Không tìm thấy trang</h1>
+          <h1 className="text-xl font-black text-white">{tr("Không tìm thấy trang", "Page not found")}</h1>
           <p className="text-sm text-slate-400">
-            Trang này không tồn tại hoặc tin đã bị gỡ. Page not found.
+            {tr("Trang này không tồn tại hoặc tin đã bị gỡ.", "This page doesn't exist or the post was removed.")}
           </p>
         </div>
 
@@ -27,7 +32,7 @@ export default function NotFound() {
           href="/"
           className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-6 text-sm font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 active:scale-[0.98] transition-all duration-200"
         >
-          <Home className="h-4 w-4" /> Về trang chủ
+          <Home className="h-4 w-4" />{tr(" Về trang chủ", " Back to home")}
         </Link>
       </div>
     </div>

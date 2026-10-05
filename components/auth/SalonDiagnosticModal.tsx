@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { SURVEY, PAIN_TAG_META } from "@/lib/ownerSurvey";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 // Mockup "Bảng Chia Turn" cho popup Demo — không phải screenshot thật, chỉ
 // dựng bằng CSS để cho chủ tiệm hình dung giao diện thật trông thế nào mà
@@ -159,14 +160,14 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                       <XCircle className="h-5 w-5 flex-shrink-0 text-red-400 mt-0.5" />
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-wider text-red-400 mb-0.5">{tr("Vấn đề của tiệm", "Salon issue")}</p>
-                        <p className="text-sm text-slate-200 leading-relaxed">{meta.problem}</p>
+                        <p className="text-sm text-slate-200 leading-relaxed">{dt(meta.problem)}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-2.5 p-4 bg-emerald-500/5">
                       <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-400 mt-0.5" />
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">{tr("PawNail đang phát triển · sắp ra mắt", "In development · coming soon")}</p>
-                        <p className="text-sm text-slate-200 leading-relaxed">{meta.solution}</p>
+                        <p className="text-sm text-slate-200 leading-relaxed">{dt(meta.solution)}</p>
                       </div>
                     </div>
 
@@ -177,7 +178,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                         <Zap className="h-4 w-4 text-pink-400" />
                       </div>
                       <p className="flex-1 text-xs sm:text-[13px] font-bold text-pink-200 leading-snug">
-                        {meta.trojanHorse}
+                        {dt(meta.trojanHorse)}
                       </p>
                       <button
                         type="button"
@@ -263,7 +264,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                       <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-pink-500/20 text-[11px] font-black text-pink-300">
                         {i + 1}
                       </span>
-                      <span className="flex-1 text-xs font-bold text-white truncate">{row.name}</span>
+                      <span className="flex-1 text-xs font-bold text-white truncate">{dt(row.name)}</span>
                       <span className="text-[10px] font-bold text-emerald-400">${row.tip} tip</span>
                     </div>
                   ))}
@@ -273,7 +274,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                   {painCards.slice(0, 3).map((meta) => (
                     <li key={meta.tag} className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
-                      <span>{meta.shortLabel}: {meta.solution}</span>
+                      <span>{meta.shortLabel}: {dt(meta.solution)}</span>
                     </li>
                   ))}
                 </ul>

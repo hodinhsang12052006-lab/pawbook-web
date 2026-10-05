@@ -8,6 +8,7 @@ import Avatar from "@/components/ui/Avatar";
 import type { StudioData } from "@/lib/contentEngine";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 export type Studio = StudioData & { tip: string };
 
@@ -57,7 +58,7 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
 
   return (
     <section
-      aria-label={`Chủ đề tuần: ${t.title}`}
+      aria-label={tr(`Chủ đề tuần: ${t.title}`, `Theme of the week: ${dt(t.title)}`)}
       className="relative overflow-hidden rounded-2xl border border-white/10 p-4 shadow-xl shadow-black/30 sm:p-5"
       style={{ background: `linear-gradient(135deg, ${t.colors[0]}38, ${t.colors[1]}2e), #0b1020` }}
     >
@@ -81,12 +82,12 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
           <span className="text-[11px] font-semibold text-white/60">{tr("Chủ đề tuần này", "This week's theme")}</span>
         </div>
         <div>
-          <h3 className="text-lg font-black tracking-tight text-white sm:text-xl">{t.emoji} {t.title}</h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-white/75">{isOwner ? t.ownerTip : t.blurb}</p>
+          <h3 className="text-lg font-black tracking-tight text-white sm:text-xl">{t.emoji} {dt(t.title)}</h3>
+          <p className="mt-1 text-[13px] leading-relaxed text-white/75">{dt(isOwner ? t.ownerTip : t.blurb)}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {t.ideas.map((idea) => (
-            <span key={idea} className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold text-white/85 ring-1 ring-white/10">{idea}</span>
+            <span key={idea} className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold text-white/85 ring-1 ring-white/10">{dt(idea)}</span>
           ))}
         </div>
 
@@ -95,7 +96,7 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
             onClick={() => onJoin(t.hashtag)}
             className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-slate-900 shadow-lg transition-transform active:scale-95"
           >
-            <Trophy className="h-3.5 w-3.5" /> Tham gia #{t.hashtag}
+            <Trophy className="h-3.5 w-3.5" />{tr(" Tham gia #", " Join #")}{t.hashtag}
           </button>
           {c && c.posts > 0 ? (
             <div className="flex items-center gap-2">
@@ -127,7 +128,7 @@ export function TipCard({ tip }: { tip: string }) {
       </span>
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-wider text-amber-300">{tr("Mẹo hôm nay · PawNail Studio", "Tip of the day · PawNail Studio")}</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-200">{tip}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-slate-200">{dt(tip)}</p>
       </div>
     </aside>
   );
@@ -177,7 +178,7 @@ export function ChallengeBoard({ studio }: { studio: Studio }) {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-pink-500/15 text-pink-300"><Trophy className="h-4 w-4" /></span>
             {tr("Thử thách #", "Challenge #")}{c.hashtag}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">{t.emoji} {t.title} · {c.posts}{tr(" bài tham gia · xếp theo lượt thích thật", " entries · ranked by real likes")}</p>
+          <p className="mt-1 text-xs text-slate-500">{t.emoji} {dt(t.title)} · {c.posts}{tr(" bài tham gia · xếp theo lượt thích thật", " entries · ranked by real likes")}</p>
         </div>
         <Link href="/?tab=feed" className="flex-shrink-0 text-xs font-bold text-pink-300 hover:text-pink-200">Tham gia →</Link>
       </div>

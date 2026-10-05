@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           data: { postId, userId: session.user.id },
           select: { post: { select: { authorId: true } } },
         });
-        await notifyUser(like.post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã thích bài viết của bạn`, "/?tab=feed");
+        await notifyUser(like.post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã thích bài viết của bạn`, "/?tab=feed", `${session.user.name || "Someone"} liked your post`);
       } catch {
         return NextResponse.json({ error: "Bài viết không còn tồn tại." }, { status: 404 });
       }

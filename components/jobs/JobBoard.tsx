@@ -13,6 +13,7 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { JobAlertButton } from "@/components/jobs/JobAlerts";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { dt } from "@/lib/i18n/dataEn";
 
 export interface JobType {
   id: string;
@@ -181,7 +182,7 @@ function JobCard({
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{job.title}</h3>
+          <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
           <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
         </Link>
         <button

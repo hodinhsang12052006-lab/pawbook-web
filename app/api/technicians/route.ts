@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
       // Chỉ hiển thị thợ đã có ít nhất 1 ảnh portfolio
       .filter((p) => p.portfolioImages.length > 0);
 
-    return NextResponse.json(safeProfiles);
+    // Công khai, không cá nhân hoá → CDN giữ 30 giây (xem app/api/jobs).
+    return NextResponse.json(safeProfiles, { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } });
   } catch (error: any) {
     console.error("Fetch technicians API error:", error);
     return NextResponse.json(

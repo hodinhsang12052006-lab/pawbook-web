@@ -48,7 +48,11 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json(safeJobs);
+    // Danh sách CÔNG KHAI, giống nhau cho mọi người → CDN của Vercel giữ 20 giây
+    // (phục vụ tiếp bản cũ tối đa 60 giây trong lúc làm mới). 1.000 người mở
+    // bảng việc cùng lúc chỉ tốn ~1 lượt đọc DB thay vì 1.000. Tin vừa đăng có
+    // thể chậm hiện trên bảng ≤ 20 giây; trang chi tiết tin không bị cache.
+    return NextResponse.json(safeJobs, { headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" } });
   } catch (error: any) {
     console.error("Fetch jobs API error:", error);
     return NextResponse.json(

@@ -12,6 +12,7 @@ import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { JobAlertButton } from "@/components/jobs/JobAlerts";
+import { useSessionUser } from "@/lib/SessionUserContext";
 
 export interface JobType {
   id: string;
@@ -159,8 +160,8 @@ function JobBoardSkeleton() {
 }
 
 function JobCard({
-  job, saved, saveCount, onToggleSave, onMessage,
-}: { job: JobType; saved: boolean; saveCount: number; onToggleSave: () => void; onMessage: () => void }) {
+  job, saved, saveCount, onToggleSave, onMessage, nearYou = false,
+}: { job: JobType; saved: boolean; saveCount: number; onToggleSave: () => void; onMessage: () => void; nearYou?: boolean }) {
   useTr(); // render lại khi đổi VI/EN
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => trackJobView(ref.current, job.id), [job.id]);
@@ -240,6 +241,7 @@ function JobCard({
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
         {job.city}, {stateName(job.market, job.state)}
+        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("📍 Gần bạn", "📍 Near you")}</span>}
       </span>
 
       {signals.length > 0 && (
@@ -370,7 +372,12 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     }
   }
 
-  const visibleJobs = showSavedOnly ? jobs.filter((j) => savedIds.has(j.id)) : jobs;
+  // "Tất cả bang": đưa tin ở BANG CỦA NGƯỜI XEM lên đầu (giữ thứ tự gấp/mới
+  // trong từng nhóm) — không lọc mất tin nơi khác, nên không bao giờ trống trơn.
+  const { user: viewer } = useSessionUser();
+  const homeState = !state && viewer?.market === market ? viewer?.state || null : null;
+  const ordered = homeState ? [...jobs.filter((j) => j.state === homeState), ...jobs.filter((j) => j.state !== homeState)] : jobs;
+  const visibleJobs = showSavedOnly ? ordered.filter((j) => savedIds.has(j.id)) : ordered;
 
   if (loading) {
     return <JobBoardSkeleton />;
@@ -436,6 +443,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
           saveCount={(job.saveCount ?? 0) + (savedIds.has(job.id) ? 1 : 0) - (initialSaved.has(job.id) ? 1 : 0)}
           onToggleSave={() => toggleSave(job.id)}
           onMessage={() => router.push(`/messages?to=${job.ownerId}`)}
+          nearYou={!!homeState && job.state === homeState}
         />
       ))}
       </div>

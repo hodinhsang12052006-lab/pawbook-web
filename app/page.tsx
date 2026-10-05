@@ -220,13 +220,16 @@ export default function HomePage() {
               </div>
             )}
 
-            {sessionUser && <WelcomeBack onGoTab={changeTab} />}
+            {/* Thẻ phụ (chào lại, ai xem hồ sơ, công cụ, hoàn thiện hồ sơ) CHỈ ở tab Bảng tin.
+                Ở tab Việc gấp / Thợ rảnh người dùng đến để XEM TIN — trước đây
+                ~1.400px thẻ phụ đẩy tin đầu tiên xuống tận cuối màn hình điện thoại. */}
+            {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
 
-            {sessionUser && sessionUser.role !== "ADMIN" && <ProfileViewsCard compact role={sessionUser.role} />}
+            {sessionUser && tab === "feed" && sessionUser.role !== "ADMIN" && <ProfileViewsCard compact role={sessionUser.role} />}
 
-            {sessionUser && <ToolsPanel variant="row" />}
+            {sessionUser && tab === "feed" && <ToolsPanel variant="row" />}
 
-            {completeness && completeness.percent < 100 && !hideCompleteness && (
+            {tab === "feed" && completeness && completeness.percent < 100 && !hideCompleteness && (
               <div className="relative md:hidden">
                 <ProfileCompletenessCard completeness={completeness} compact role={sessionUser?.role} />
                 <button

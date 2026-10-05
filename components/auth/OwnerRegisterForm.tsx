@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
@@ -305,7 +306,7 @@ export default function OwnerRegisterForm() {
           </div>
           <div>
             <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.cityLabel")}</label>
-            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
+            <input value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
           </div>
         </div>
 

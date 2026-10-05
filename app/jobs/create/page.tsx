@@ -10,6 +10,7 @@ import { stateName } from "@/lib/stateNames";
 import { playSound } from "@/lib/sounds";
 import Flag from "@/components/ui/Flag";
 import { useTr } from "@/lib/i18n/useTr";
+import { guessState } from "@/lib/cityState";
 import { uploadMedia, MAX_VIDEO_MB } from "@/lib/mediaUpload";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
@@ -190,7 +191,7 @@ export default function CreateJobPage() {
               </div>
               <div>
                 <label htmlFor="job-city" className="field-label">{tr("Thành phố *", "City *")}</label>
-                <input id="job-city" value={city} onChange={(e) => setCity(e.target.value)} placeholder={tr("VD: Los Angeles", "e.g. Los Angeles")} className="input-field" />
+                <input id="job-city" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={tr("VD: Los Angeles", "e.g. Los Angeles")} className="input-field" />
               </div>
               <div>
                 <label htmlFor="job-salon" className="field-label">{tr("Tên tiệm *", "Salon name *")}</label>

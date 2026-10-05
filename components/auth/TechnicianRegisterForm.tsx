@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { stateName } from "@/lib/stateNames";
+import { guessState } from "@/lib/cityState";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -249,7 +250,7 @@ export default function TechnicianRegisterForm() {
             </div>
             <div>
               <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.cityLabel")}</label>
-              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
+              <input value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
             </div>
           </div>
 

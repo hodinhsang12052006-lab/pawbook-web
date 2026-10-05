@@ -86,12 +86,45 @@ model User {
   pushSubscriptions PushSubscription[]
   pulseVotes        PulseVote[]
 
+  // Giữ chân: ai đã xem hồ sơ + báo việc theo tiêu chí (prisma/sql/2026-10-06_retention.sql)
+  profileViewsMade     ProfileView[] @relation("ViewsMade")
+  profileViewsReceived ProfileView[] @relation("ViewsReceived")
+  jobAlerts            JobAlert[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 // Đăng ký nhận THÔNG BÁO ĐẨY (Web Push / VAPID) — mỗi trình duyệt/thiết bị
 // 1 bản ghi. Tạo bằng prisma/sql/2026-10-04_push_subscriptions.sql.
+// "Ai đã xem hồ sơ bạn" — mỗi người xem 1 hồ sơ tối đa 1 dòng/ngày (day = YYYY-MM-DD UTC).
+model ProfileView {
+  id        String   @id @default(cuid())
+  viewerId  String
+  viewer    User     @relation("ViewsMade", fields: [viewerId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   User     @relation("ViewsReceived", fields: [profileId], references: [id], onDelete: Cascade)
+  day       String
+  createdAt DateTime @default(now())
+
+  @@unique([viewerId, profileId, day])
+  @@index([profileId, createdAt])
+}
+
+// Báo việc theo tiêu chí — có tin khớp (thị trường + bang + kỹ năng) là đẩy thông báo.
+model JobAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  market    Market
+  state     String?
+  skill     String?
+  createdAt DateTime @default(now())
+
+  @@index([market, state])
+  @@index([userId])
+}
+
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String

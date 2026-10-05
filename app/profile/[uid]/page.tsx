@@ -13,6 +13,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import UnlockChatModal from "@/components/profile/UnlockChatModal";
 import Avatar from "@/components/ui/Avatar";
 import OfficialProfile from "@/components/profile/OfficialProfile";
+import ShareCardButton from "@/components/profile/ShareCard";
 import { avatarGradient } from "@/lib/avatar";
 import { stateName } from "@/lib/stateNames";
 
@@ -78,6 +79,12 @@ export default function PublicProfilePage({ params }: PageProps) {
     }
     load();
   }, [uid]);
+
+  // "Ai đã xem hồ sơ bạn": ghi 1 lượt khi người đã đăng nhập mở hồ sơ NGƯỜI KHÁC.
+  useEffect(() => {
+    if (!viewer?.id || !profile?.id || viewer.id === profile.id) return;
+    fetch("/api/profile/views", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profileId: profile.id }) }).catch(() => {});
+  }, [viewer?.id, profile?.id]);
 
   // Số liệu tóm tắt — tải song song, độc lập với tab đang mở.
   useEffect(() => {
@@ -352,6 +359,26 @@ export default function PublicProfilePage({ params }: PageProps) {
               <div className="flex-1 [&>*]:w-full">{primaryAction}</div>
               {shareButton}
             </div>
+            {isSelf && (
+              <div className="mt-2.5 [&>button]:w-full sm:[&>button]:w-auto">
+                <ShareCardButton
+                  data={{
+                    id: profile.id,
+                    name: profile.name,
+                    avatarUrl: profile.avatarUrl,
+                    role: profile.role,
+                    market: profile.market,
+                    city: profile.city,
+                    state: profile.state,
+                    years: tech?.yearsOfExperience ?? null,
+                    skills: specialties,
+                    photos: portfolio,
+                    openJobs: profile.jobs?.length ?? 0,
+                    urgent: tech?.status === "URGENT",
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Dải số liệu THẬT (đánh giá, tin tuyển, ảnh…) — không bịa lượng khách/tip */}

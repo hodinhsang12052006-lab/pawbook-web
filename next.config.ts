@@ -132,6 +132,9 @@ const nextConfig: NextConfig = {
             // Cloudflare tự chèn beacon Web Analytics vào mọi trang, CSP cũ
             // chặn nó nên console production báo lỗi ở mọi trang và analytics
             // không ghi nhận lượt truy cập nào.
+            // Added res.cloudinary.com + images.unsplash.com to connect-src —
+            // "Thẻ portfolio" (components/profile/ShareCard) fetch ảnh mẫu móng
+            // về dạng blob để vẽ lên canvas mà không làm canvas bị "bẩn".
             // Added *.coolgcloud.com + *.coolzcloud.com to connect-src — test
             // gọi video 2-browser thật phát hiện ZegoCloud SDK còn dùng CẢ 3
             // domain logging khác nhau (coolbcloud/coolgcloud/coolzcloud —
@@ -143,7 +146,7 @@ const nextConfig: NextConfig = {
             // đã sửa cả .env và .env.local, đã verify bằng Playwright 2 tài
             // khoản thật kết nối thành công (xem log "appid invalid" 1001004
             // biến mất sau khi sửa).
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://api.cloudinary.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

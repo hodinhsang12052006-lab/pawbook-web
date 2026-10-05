@@ -11,6 +11,7 @@ import { stateName } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
+import { JobAlertButton } from "@/components/jobs/JobAlerts";
 
 export interface JobType {
   id: string;
@@ -391,6 +392,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
         <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
           <p className="text-4xl">💅</p>
           <p className="text-base font-bold text-slate-300">{tr("Chưa có tin tuyển thợ ở khu vực này", "No jobs in this area yet")}</p>
+          <JobAlertButton market={market} state={state} />
           <p className="text-sm text-slate-500">
             {tr("Nhưng đừng bỏ cuộc — thử đổi bang hoặc thành phố khác, ", "Don't give up — try another state or city, ")}{market === "US" ? tr("toàn nước Mỹ", "across the US") : tr("toàn nước Úc", "across Australia")}{tr(" vẫn còn rất nhiều tiệm đang cần thợ.", " plenty of salons are still hiring.")}
           </p>
@@ -403,6 +405,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     <div className="space-y-4 animate-fadeIn">
       <DemandFomoBanner market={market} state={state} jobs={jobs} />
 
+      <div className="flex flex-wrap items-center gap-2">
       <button
         onClick={() => setShowSavedOnly((v) => !v)}
         className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold border transition-colors ${
@@ -414,6 +417,8 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
         <Bookmark className={`h-3.5 w-3.5 ${showSavedOnly ? "fill-pink-400" : ""}`} />
         {tr("Đã lưu ", "Saved ")}{savedIds.size > 0 && `(${savedIds.size})`}
       </button>
+      <JobAlertButton market={market} state={state} />
+      </div>
 
       {showSavedOnly && visibleJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">

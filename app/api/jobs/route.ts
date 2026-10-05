@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { notifyUrgentJob } from "@/lib/jobAlerts";
+import { notifyJobAlerts } from "@/lib/jobAlertRules";
 import { cleanJobMedia, getJobMedia, setJobMedia } from "@/lib/jobMedia";
 
 // GET /api/jobs?market=US&state=CA&city=...  — danh sách tin tuyển thợ
@@ -131,8 +132,13 @@ export async function POST(req: Request) {
     // Ảnh/video tiệm (bảng riêng — lỗi ở đây không làm hỏng tin đã đăng).
     await setJobMedia(newJob.id, media);
 
-    // Tin gấp → báo ngay cho thợ cùng bang (chuông realtime). Không chặn phản hồi.
-    if (newJob.isUrgent) notifyUrgentJob(newJob).catch(() => {});
+    // Tin gấp → báo thợ cùng bang; rồi báo người có "thông báo việc" khớp tiêu chí
+    // (bỏ qua ai vừa nhận tin gấp). Chạy SAU khi trả lời — after() giữ hàm
+    // serverless sống tới khi gửi xong (fire-and-forget có thể bị Vercel cắt).
+    after(async () => {
+      const urgentIds = newJob.isUrgent ? await notifyUrgentJob(newJob).catch(() => [] as string[]) : [];
+      await notifyJobAlerts(newJob, new Set(urgentIds));
+    });
 
     return NextResponse.json(newJob, { status: 201 });
   } catch (error: any) {

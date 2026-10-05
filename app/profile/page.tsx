@@ -3,12 +3,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2 } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing } from "lucide-react";
 import SoundSettings from "@/components/settings/SoundSettings";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient, isPlaceholderAvatar } from "@/lib/avatar";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
+import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
+import ShareCardButton from "@/components/profile/ShareCard";
+import { JobAlertsManager } from "@/components/jobs/JobAlerts";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -363,6 +366,37 @@ export default function ProfilePage() {
           </Link>
         </div>
 
+        {/* ===== AI ĐÃ XEM HỒ SƠ + THẺ CHIA SẺ ===== */}
+        {profile && profile.role !== "ADMIN" && (
+          <div className="space-y-3">
+            <ProfileViewsCard role={profile.role} />
+            <div className="flex flex-col gap-2 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/[0.05] p-4 sm:flex-row sm:items-center">
+              <p className="flex-1 text-xs leading-relaxed text-slate-300">
+                <span className="block text-sm font-bold text-white">{tr("Thẻ portfolio để đăng mạng xã hội", "Portfolio card for social media")}</span>
+                {isOwner
+                  ? tr("Ảnh đẹp có tên tiệm + mã QR — đăng Facebook/Instagram là thợ quét vào nhắn tiệm ngay.", "A polished image with your salon name + QR code — post it and techs can scan to message you.")
+                  : tr("Ảnh đẹp có mẫu móng, kỹ năng + mã QR — đăng Facebook/TikTok là tiệm quét vào nhắn bạn ngay.", "A polished image with your work, skills + QR code — post it and salons can scan to message you.")}
+              </p>
+              <ShareCardButton
+                data={{
+                  id: profile.id,
+                  name: name || profile.name,
+                  avatarUrl: profile.avatarUrl,
+                  role: profile.role,
+                  market: profile.market,
+                  city: city || profile.city,
+                  state: state || profile.state,
+                  years,
+                  skills: specialties,
+                  photos: portfolioImages,
+                  openJobs: profile.jobs?.length ?? 0,
+                  urgent: status === "URGENT",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* ===== THÔNG TIN CƠ BẢN ===== */}
         <FormSection icon={UserRound} title={tr("Thông tin cơ bản", "Basic info")} hint={tr("Hiển thị trên hồ sơ công khai (trừ số điện thoại).", "Shown on your public profile (except phone number).")}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -540,6 +574,13 @@ export default function ProfilePage() {
         )}
 
         {/* ===== TÀI KHOẢN ===== */}
+        {/* ===== THÔNG BÁO VIỆC THEO TIÊU CHÍ (thợ) ===== */}
+        {profile?.role === "TECHNICIAN" && (
+          <FormSection icon={BellRing} title={tr("Thông báo việc mới", "Job alerts")} hint={tr("Có tin khớp tiêu chí là bạn nhận thông báo ngay (tối đa 3).", "Get notified the moment a matching job is posted (up to 3).")}>
+            <JobAlertsManager />
+          </FormSection>
+        )}
+
         {/* ===== ÂM THANH & RUNG (lưu trên thiết bị, áp dụng ngay — không cần bấm Lưu) ===== */}
         <FormSection icon={Volume2} title={tr("Âm thanh & rung", "Sound & haptics")} hint={tr("Áp dụng ngay trên thiết bị này.", "Applies right away on this device.")}>
           <SoundSettings />

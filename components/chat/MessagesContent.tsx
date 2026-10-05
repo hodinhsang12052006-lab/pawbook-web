@@ -19,7 +19,8 @@ import { avatarSrc } from "@/lib/avatar";
 import { POPULAR_EMOJIS, MOCK_STICKERS, UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
-import { Pin } from "lucide-react";
+import { Pin, Palette } from "lucide-react";
+import { CHAT_WALLPAPERS, getWallpaperId, saveWallpaper, wallpaperById } from "@/lib/chatWallpapers";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -107,6 +108,13 @@ export default function MessagesContent({
     fetch("/api/official").then((r) => (r.ok ? r.json() : null)).then((d) => d?.account && setOfficial(d.account)).catch(() => {});
   }, []);
   const [showChatMenu, setShowChatMenu] = useState(false);
+  // Hình nền khung chat — riêng từng cuộc trò chuyện, lưu trên thiết bị.
+  const [wallpaperId, setWallpaperId] = useState("default");
+  const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
+  const [wallpaperForAll, setWallpaperForAll] = useState(false);
+  useEffect(() => {
+    setWallpaperId(getWallpaperId(activeKey));
+  }, [activeKey]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [blockActionLoading, setBlockActionLoading] = useState(false);
@@ -1180,7 +1188,7 @@ export default function MessagesContent({
       </div>
 
       {/* RIGHT COLUMN: MAIN CHAT PANEL */}
-      <div className={`chat-wallpaper flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
+      <div data-wallpaper={wallpaperId} style={activeChat ? wallpaperById(wallpaperId).style : undefined} className={`chat-wallpaper flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
         {activeChat ? (
           <>
             <div className="p-4 border-b border-white/5 bg-slate-950/70 backdrop-blur-md flex items-center justify-between gap-3 flex-none z-10">
@@ -1268,6 +1276,12 @@ export default function MessagesContent({
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
                         <div className="absolute right-0 top-full mt-2 z-50 w-48 rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
+                          <button
+                            onClick={() => { setShowChatMenu(false); setShowWallpaperPicker(true); }}
+                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
+                          >
+                            <Palette className="h-4 w-4 text-pink-400" />{tr(" Hình nền đoạn chat", " Chat wallpaper")}
+                          </button>
                           <button
                             onClick={() => { setShowChatMenu(false); setShowReportModal(true); }}
                             className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
@@ -1822,6 +1836,50 @@ export default function MessagesContent({
           </div>
         )}
       </div>
+
+      {showWallpaperPicker && activeChat && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setShowWallpaperPicker(false)}>
+          <div role="dialog" aria-label={tr("Chọn hình nền đoạn chat", "Choose chat wallpaper")} className="w-full max-w-md rounded-t-3xl border border-white/10 bg-slate-900 p-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <p className="flex items-center gap-2 text-base font-black text-white"><Palette className="h-5 w-5 text-pink-400" />{tr(" Hình nền đoạn chat", " Chat wallpaper")}</p>
+            <p className="mt-1 text-xs text-slate-400">{tr("Chỉ đổi trên máy bạn — người kia không bị đổi theo.", "Only changes on your device — the other person isn't affected.")}</p>
+            <div className="mt-4 grid grid-cols-4 gap-2.5">
+              {CHAT_WALLPAPERS.map((w) => (
+                <button
+                  key={w.id}
+                  type="button"
+                  aria-pressed={wallpaperId === w.id}
+                  aria-label={tr(w.vi, w.en)}
+                  onClick={() => {
+                    setWallpaperId(w.id);
+                    saveWallpaper(activeKey, w.id, wallpaperForAll);
+                  }}
+                  className="group flex flex-col items-center gap-1.5"
+                >
+                  <span className={`relative block aspect-[3/4] w-full overflow-hidden rounded-xl ring-2 transition-all ${wallpaperId === w.id ? "ring-pink-500" : "ring-white/10 group-hover:ring-white/30"}`} style={w.pattern ? { background: w.swatch, backgroundSize: "60px 60px, auto" } : { background: w.swatch }}>
+                    <span className="absolute bottom-2 left-1.5 h-2 w-7 rounded-full bg-slate-700/90" />
+                    <span className="absolute bottom-5 right-1.5 h-2 w-6 rounded-full bg-pink-500/90" />
+                    {wallpaperId === w.id && <Check className="absolute right-1 top-1 h-4 w-4 rounded-full bg-pink-500 p-0.5 text-white" />}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-300">{tr(w.vi, w.en)}</span>
+                </button>
+              ))}
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-xs font-semibold text-slate-300">
+              <input
+                type="checkbox"
+                checked={wallpaperForAll}
+                onChange={(e) => {
+                  setWallpaperForAll(e.target.checked);
+                  if (e.target.checked) saveWallpaper(activeKey, wallpaperId, true);
+                }}
+                className="h-4 w-4 accent-pink-500"
+              />
+              {tr("Áp dụng cho mọi đoạn chat", "Use for all chats")}
+            </label>
+            <button type="button" onClick={() => setShowWallpaperPicker(false)} className="mt-4 min-h-[44px] w-full rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10">{tr("Xong", "Done")}</button>
+          </div>
+        </div>
+      )}
 
       {showReportModal && activeChat && (
         <ReportUserModal

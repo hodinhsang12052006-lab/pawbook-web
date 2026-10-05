@@ -13,6 +13,7 @@ import RightRail from "@/components/layout/RightRail";
 import ToolsPanel from "@/components/layout/ToolsPanel";
 import WelcomeBack from "@/components/layout/WelcomeBack";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
+import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
 import Flag from "@/components/ui/Flag";
@@ -220,6 +221,8 @@ export default function HomePage() {
             )}
 
             {sessionUser && <WelcomeBack onGoTab={changeTab} />}
+
+            {sessionUser && sessionUser.role !== "ADMIN" && <ProfileViewsCard compact role={sessionUser.role} />}
 
             {sessionUser && <ToolsPanel variant="row" />}
 

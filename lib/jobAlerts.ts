@@ -16,9 +16,11 @@ interface UrgentJob {
 // Báo realtime cho mọi thợ đang mở app ở cùng bang khi có tin GẤP mới.
 // Bản ghi lâu dài nằm ở /api/notifications (kind "job"), nên ai offline lúc
 // đăng vẫn thấy trong chuông khi mở lại app.
-export async function notifyUrgentJob(job: UrgentJob) {
+/** Trả về id những người đã được đẩy thông báo (để kênh khác không báo trùng). */
+export async function notifyUrgentJob(job: UrgentJob): Promise<string[]> {
+  let pushed: string[] = [];
   const channel = jobAlertChannelName(job.market, job.state);
-  if (!channel) return;
+  if (!channel) return pushed;
   try {
     await getPusherServer()?.trigger(channel, "urgent-job", {
       id: job.id,
@@ -35,6 +37,7 @@ export async function notifyUrgentJob(job: UrgentJob) {
       take: 1000,
     });
     if (techs.length) {
+      pushed = techs.map((t) => t.id);
       await sendPush(techs.map((t) => t.id), {
         title: "🔥 Việc gấp gần bạn",
         body: `${job.salonName} tại ${job.city} cần thợ: ${job.title} — ${job.salaryAmount}`,
@@ -45,4 +48,5 @@ export async function notifyUrgentJob(job: UrgentJob) {
   } catch (err) {
     if (!/no such table|P2021/i.test(String(err))) console.error("urgent job push error:", err);
   }
+  return pushed;
 }

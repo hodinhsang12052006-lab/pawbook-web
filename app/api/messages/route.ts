@@ -25,7 +25,8 @@ export async function GET(req: Request) {
     const conversationId = searchParams.get("conversationId");
     const partnerId = searchParams.get("partnerId");
     const cursor = searchParams.get("cursor") || undefined;
-    const limit = 15;
+    // Trang đầu đủ lấp màn hình; cuộn lên tải mỗi lần 40 tin (ít lượt chờ mạng hơn, kiểu Telegram).
+    const limit = cursor ? 40 : 20;
 
     let targetConversationId = conversationId;
 

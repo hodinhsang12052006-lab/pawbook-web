@@ -66,16 +66,17 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     (async () => {
       try {
         setCallError(null);
-        const { ZegoUIKitPrebuilt } = await import("@zegocloud/zego-uikit-prebuilt");
-        if (cancelled) return;
-
         // Token sinh phía server (app/api/zego/token) — chỉ cấp cho đúng người
         // trong đúng phòng, secret không bao giờ nằm trong bundle JS.
-        const tokenRes = await fetch("/api/zego/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId, userName }),
-        });
+        // Xin token SONG SONG với việc nạp SDK (trước đây làm lần lượt).
+        const [{ ZegoUIKitPrebuilt }, tokenRes] = await Promise.all([
+          import("@zegocloud/zego-uikit-prebuilt"),
+          fetch("/api/zego/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roomId, userName }),
+          }),
+        ]);
         if (cancelled) return;
         if (!tokenRes.ok) {
           const err = await tokenRes.json().catch(() => ({}));

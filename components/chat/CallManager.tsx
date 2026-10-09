@@ -10,6 +10,7 @@ import Avatar from "@/components/ui/Avatar";
 import { isPlaceholderAvatar } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { preloadCallSdk } from "@/lib/callPreload";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
   ssr: false,
@@ -141,6 +142,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setCallType(data.callType === "video" ? "video" : "audio");
       setPhase("incoming");
       startRingtone("incoming");
+      preloadCallSdk(); // tải bộ gọi trong lúc đổ chuông
       if (ringTimerRef.current) clearTimeout(ringTimerRef.current);
       ringTimerRef.current = setTimeout(() => {
         if (stateRef.current.phase === "incoming") resetCall();
@@ -211,6 +213,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setCallType(type);
       setPhase("outgoing");
       startRingtone("outgoing");
+      preloadCallSdk();
 
       try {
         const res = await signal(partner.id, "offer", { callType: type, callId: newCallId });

@@ -58,15 +58,18 @@ const C = await userCtx("owner2.us@pawnailjobs.demo");
 await B.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: A.me.id, content: "Test cuộc gọi" } });
 await C.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: "Test máy bận" } });
 
+const timings = {};
 for (const type of ["audio", "video"]) {
   const label = type === "audio" ? "thoại" : "video";
   await openChat(A, B.me.id);
   await openChat(B, A.me.id);
 
   await step(`${type}-1`, `Gọi ${label}: người gọi thấy "Đang đổ chuông", người nhận thấy cuộc gọi đến (ảnh thật, không phải chữ viết tắt)`, async () => {
+    const t0 = Date.now();
     await dial(A, type);
     await phaseIs(A, "outgoing", 10000);
     await phaseIs(B, "incoming", 15000);
+    timings[type] = { ringMs: Date.now() - t0 };
     await shot(A.page, `${type}_1_outgoing`);
     await shot(B.page, `${type}_1_incoming`);
     // Người gọi không còn nút "Trả lời" vô nghĩa trên cuộc gọi của chính mình.
@@ -76,9 +79,19 @@ for (const type of ["audio", "video"]) {
   });
 
   await step(`${type}-2`, `Gọi ${label}: nghe máy → CẢ 2 bên kết nối được với nhau qua ZEGOCLOUD`, async () => {
+    // Bộ gọi (ZEGOCLOUD) phải được tải SẴN trong lúc đổ chuông, không đợi bấm nghe.
+    await B.page.waitForTimeout(1500);
+    const clickAt = await B.page.evaluate(() => performance.now());
+    const t1 = Date.now();
     await B.page.getByRole("button", { name: "Trả lời" }).click();
     await phaseIs(A, "connected", 40000);
     await phaseIs(B, "connected", 40000);
+    timings[type].connectMs = Date.now() - t1;
+    // JS phải tải thêm SAU khi bấm nghe (đã tải sẵn đúng → gần 0 KB).
+    const lateKb = await B.page.evaluate((at) => Math.round(performance.getEntriesByType("resource").filter((e) => e.startTime > at && e.name.includes("/_next/") && e.name.split("?")[0].endsWith(".js")).reduce((n, e) => n + (e.encodedBodySize || e.transferSize || 0), 0) / 1024), clickAt);
+    const preloaded = lateKb < 50;
+    timings[type].lateJsKb = lateKb;
+    console.log(`   ⏱  ${label}: đổ chuông sau ${timings[type].ringMs}ms · nghe máy → thông ${timings[type].connectMs}ms · JS tải thêm sau khi nghe: ${lateKb}KB (${preloaded ? "đã tải sẵn ✓" : "CHƯA tải sẵn"})`);
     await A.page.waitForTimeout(3000);
     await shot(A.page, `${type}_2_connected_caller`);
     await shot(B.page, `${type}_2_connected_callee`);

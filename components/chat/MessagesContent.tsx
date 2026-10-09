@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import GifPicker from "@/components/chat/GifPicker";
 import {
   Send, Search, MessageSquare, Loader2, Plus, Users,
@@ -18,6 +18,8 @@ import { useCallManager } from "@/lib/CallManagerContext";
 import { avatarSrc } from "@/lib/avatar";
 import { POPULAR_EMOJIS, MOCK_STICKERS, UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
+import MessageRow from "./MessageRow";
+import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
 import { Pin, Palette } from "lucide-react";
 import { CHAT_WALLPAPERS, getWallpaperId, saveWallpaper, wallpaperById } from "@/lib/chatWallpapers";
@@ -58,6 +60,8 @@ export default function MessagesContent({
   const activeBucket = activeKey ? chatBuckets[activeKey] : undefined;
   const chatMessages = activeBucket?.messages ?? [];
   const chatNextCursor = activeBucket?.nextCursor ?? null;
+  const chatMessagesRef = useRef(chatMessages);
+  chatMessagesRef.current = chatMessages;
 
   const [loadingChatMessages, setLoadingChatMessages] = useState(false);
   // Khung tin mờ chỉ hiện nếu sau 250ms vẫn chưa có gì — mở chat đã có sẵn
@@ -73,7 +77,25 @@ export default function MessagesContent({
   }, [loadingChatMessages]);
   const [loadingMoreChatMessages, setLoadingMoreChatMessages] = useState(false);
 
-  const [messageText, setMessageText] = useState("");
+  // Ô nhập KHÔNG điều khiển bằng state: mỗi phím gõ mà setState ở component
+  // 1.900 dòng này là render lại cả danh sách tin + hội thoại → gõ bị khựng
+  // trên điện thoại. Chữ nằm trong DOM (inputRef); state chỉ đổi khi ô chuyển
+  // rỗng ↔ có chữ (để bật/tắt nút Gửi).
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [hasText, setHasTextState] = useState(false);
+  const hasTextRef = useRef(false);
+  // Chỉ gọi setState khi THẬT SỰ đổi (gọi với cùng giá trị React vẫn có thể chạy lại thân component).
+  const setHasText = useCallback((v: boolean) => {
+    if (hasTextRef.current === v) return;
+    hasTextRef.current = v;
+    setHasTextState(v);
+  }, []);
+  const setMessageText = useCallback((v: string | ((prev: string) => string)) => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.value = typeof v === "function" ? v(el.value) : v;
+    setHasText(!!el.value.trim());
+  }, [setHasText]);
   // Realtime: ai đang soạn tin (theo hội thoại, hết hạn sau 4s) và mốc "đã
   // xem" của đối phương (theo hội thoại).
   const [typingByConv, setTypingByConv] = useState<Record<string, string>>({});
@@ -127,7 +149,9 @@ export default function MessagesContent({
   const isNearBottomRef = useRef(true);
   const prevChatKeyRef = useRef<string | null>(null);
   const prevMessageCountRef = useRef(0);
-  const pendingScrollAdjustRef = useRef<{ prevScrollHeight: number; prevScrollTop: number } | null>(null);
+  // Bù vị trí cuộn khi chèn tin cũ lên trên: chụp chiều cao NGAY TRƯỚC khi chèn
+  // + id tin đầu tiên, chỉ bù ở đúng lần render có tin cũ mới vào.
+  const pendingScrollAdjustRef = useRef<{ prevScrollHeight: number; firstId: string | undefined } | null>(null);
   const animatedMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Live mirror of activeChat for the Pusher handler below, which is bound
@@ -479,16 +503,16 @@ export default function MessagesContent({
       loadingMoreRef.current = true;
       setLoadingMoreChatMessages(true);
 
-      const container = scrollContainerRef.current;
-      if (container) {
-        pendingScrollAdjustRef.current = { prevScrollHeight: container.scrollHeight, prevScrollTop: container.scrollTop };
-      }
-
       const res = await fetch(`/api/messages?conversationId=${key}&cursor=${chatNextCursor}`);
       if (res.ok) {
         const data = await res.json();
         const safeMsgs = (data.messages || []).map(mapServerMessage);
-        prependIntoBucket(key, safeMsgs, data.nextCursor || null);
+        const container = scrollContainerRef.current;
+        if (container && safeMsgs.length) {
+          pendingScrollAdjustRef.current = { prevScrollHeight: container.scrollHeight, firstId: chatMessagesRef.current[0]?.id };
+        }
+        // Việc nền: React chia nhỏ việc dựng vài chục bong bóng → cuộn không khựng.
+        startTransition(() => prependIntoBucket(key, safeMsgs, data.nextCursor || null));
       } else {
         pendingScrollAdjustRef.current = null;
       }
@@ -510,7 +534,9 @@ export default function MessagesContent({
     if (!el || !chatNextCursor) return;
     const obs = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) loadMoreChatMessages(); },
-      { threshold: 0.1 }
+      // Tải trước khi người dùng còn cách đỉnh ~800px (kiểu Telegram) → cuộn lên
+      // không phải đứng chờ "đang tải lịch sử".
+      { root: scrollContainerRef.current, rootMargin: "800px 0px 0px 0px", threshold: 0 }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -536,9 +562,10 @@ export default function MessagesContent({
     const el = scrollContainerRef.current;
     if (!el) return;
 
-    if (pendingScrollAdjustRef.current) {
-      const { prevScrollHeight, prevScrollTop } = pendingScrollAdjustRef.current;
-      el.scrollTop = prevScrollTop + (el.scrollHeight - prevScrollHeight);
+    if (pendingScrollAdjustRef.current && chatMessages[0]?.id !== pendingScrollAdjustRef.current.firstId) {
+      const { prevScrollHeight } = pendingScrollAdjustRef.current;
+      // Giữ nguyên chỗ đang đọc (kể cả khi người dùng vẫn đang cuộn).
+      el.scrollTop = el.scrollTop + (el.scrollHeight - prevScrollHeight);
       pendingScrollAdjustRef.current = null;
       prevMessageCountRef.current = chatMessages.length;
       return;
@@ -758,9 +785,11 @@ export default function MessagesContent({
   // -------------------------------------------------------------------------
   const handleSendMessage = useCallback(async (e: React.FormEvent | null, customContent?: string, customType?: string) => {
     if (e) e.preventDefault();
-    if (!activeChat || sending) return;
+    // Gửi liên tiếp như Zalo/Telegram: không chờ tin trước xong. Chỉ chặn khi
+    // cuộc trò chuyện chưa tồn tại (tin đầu tiên tạo hội thoại → tránh tạo trùng).
+    if (!activeChat || (sending && !activeChat.conversationId)) return;
 
-    const content = customContent || messageText.trim();
+    const content = customContent || (inputRef.current?.value ?? "").trim();
     const type = customType || "TEXT";
     if (!content) return;
 
@@ -852,7 +881,7 @@ export default function MessagesContent({
     } finally {
       setSending(false);
     }
-  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket, messageText, patchBucket]);
+  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket, setMessageText, patchBucket]);
 
   // Bấm "Thử lại" trên 1 tin nhắn gửi lỗi — bỏ bong bóng lỗi cũ, gửi lại y
   // nguyên nội dung như 1 lần gửi mới (tạo bong bóng optimistic mới).
@@ -1036,6 +1065,29 @@ export default function MessagesContent({
   const callPartner = activeChat
     ? { id: activeChat.id, name: activeChat.name, avatarUrl: activeChat.avatarUrl, isGroup: activeChat.isGroup, conversationId: activeChat.conversationId }
     : null;
+
+  // Props ỔN ĐỊNH cho MessageRow (React.memo): đối tượng/hàm giữ nguyên danh
+  // tính giữa các lần render, gọi bản mới nhất qua ref.
+  const rowChat = useMemo(
+    () => ({ isGroup: !!activeChat?.isGroup, avatarUrl: activeChat?.avatarUrl, name: activeChat?.name ?? "" }),
+    [activeChat?.isGroup, activeChat?.avatarUrl, activeChat?.name]
+  );
+  const rowLatest = useRef({ callPartner, startCall, handleAddReaction, retrySendMessage });
+  rowLatest.current = { callPartner, startCall, handleAddReaction, retrySendMessage };
+  const rowHandlers = useMemo(() => ({
+    callBack: (kind: "audio" | "video") => {
+      const { callPartner: p, startCall: go } = rowLatest.current;
+      if (p) go(p, kind);
+    },
+    react: (id: string, icon: string) => rowLatest.current.handleAddReaction(id, icon),
+    clearReactions: (id: string) => setMessageReactions((prev) => ({ ...prev, [id]: [] })),
+    retry: (m: MessageType) => rowLatest.current.retrySendMessage(m),
+  }), []);
+
+  // Đang mở chat 1-1 → tải sẵn bộ gọi lúc rảnh để bấm gọi là đổ chuông/thông ngay.
+  useEffect(() => {
+    if (activeChat && !activeChat.isGroup) preloadCallSdkWhenIdle();
+  }, [activeChat?.id, activeChat?.isGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex w-full h-full overflow-hidden">
@@ -1249,6 +1301,7 @@ export default function MessagesContent({
               {!activeChat.isGroup && (
                 <div className="flex items-center gap-2.5">
                   <button
+                    onPointerEnter={preloadCallSdk}
                     onClick={() => callPartner && startCall(callPartner, "audio")}
                     className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
                     title={tr("Cuộc gọi thoại bảo mật", "Secure voice call")}
@@ -1256,6 +1309,7 @@ export default function MessagesContent({
                     <Phone className="h-4.5 w-4.5" />
                   </button>
                   <button
+                    onPointerEnter={preloadCallSdk}
                     onClick={() => callPartner && startCall(callPartner, "video")}
                     className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
                     title={tr("Cuộc gọi video thời gian thực", "Live video call")}
@@ -1307,13 +1361,17 @@ export default function MessagesContent({
               )}
             </div>
 
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0 relative">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4 space-y-4 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0 relative">
               <div ref={chatObserverTarget} className="h-2 w-full flex-none" />
 
+              {/* Nhãn nổi (cao 0, dính đỉnh) — KHÔNG chiếm chỗ, nên hiện/ẩn không đẩy
+                  chỗ đang đọc lên xuống. */}
               {loadingMoreChatMessages && (
-                <div className="flex items-center justify-center py-2 text-4xs font-bold text-slate-500 gap-1.5 animate-fadeIn flex-none">
-                  <Loader2 className="h-3 w-3 animate-spin text-pink-500" />
-                  <span>{t("messenger.loadingHistory")}</span>
+                <div className="sticky top-0 z-10 !my-0 flex h-0 flex-none justify-center overflow-visible">
+                  <div className="mt-1 flex items-center gap-1.5 rounded-full bg-slate-900/90 px-3 py-1 text-4xs font-bold text-slate-400 shadow-lg ring-1 ring-white/10 animate-fadeIn">
+                    <Loader2 className="h-3 w-3 animate-spin text-pink-500" />
+                    <span>{t("messenger.loadingHistory")}</span>
+                  </div>
                 </div>
               )}
 
@@ -1332,228 +1390,27 @@ export default function MessagesContent({
 
               {chatMessages.length > 0 ? (
                 chatMessages.map((msg, idx) => {
-                  const isSelf = msg.senderId === currentUser?.id;
-                  const senderAvatar = isSelf
-                    ? avatarSrc(currentUser.avatarUrl, currentUser.name, currentUser.id)
-                    : avatarSrc(
-                        // Tin realtime (Pusher) không kèm avatar → chat 1-1 dùng avatar đối phương.
-                        msg.sender?.avatarUrl || (!activeChat.isGroup ? activeChat.avatarUrl : ""),
-                        msg.sender?.name || (!activeChat.isGroup ? activeChat.name : "U"),
-                        msg.senderId
-                      );
-                  const animClass = freshMessageIds.has(msg.id) ? "message-slide-up" : "";
-
-                  const prevMsg = idx > 0 ? chatMessages[idx - 1] : null;
-                  const nextMsg = idx < chatMessages.length - 1 ? chatMessages[idx + 1] : null;
-                  const msgDay = new Date(msg.createdAt).toDateString();
-                  const showDateSeparator = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== msgDay;
-                  // Gom tin liên tiếp của cùng 1 người trong 5 phút thành 1 cụm
-                  // (kiểu Messenger): avatar + giờ chỉ ở tin cuối cụm, khoảng
-                  // cách giữa các tin trong cụm sát lại.
-                  const sameGroup = (a: MessageType | null, b: MessageType | null) =>
-                    !!a && !!b && a.senderId === b.senderId && a.type !== "SYSTEM" && b.type !== "SYSTEM" &&
-                    new Date(a.createdAt).toDateString() === new Date(b.createdAt).toDateString() &&
-                    Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) < 5 * 60_000;
-                  const groupedWithPrev = sameGroup(prevMsg, msg);
-                  const isLastInGroup = !sameGroup(msg, nextMsg);
-                  const isLastSelf = isSelf && idx === lastSelfIndex;
-                  const seenAt = activeChat.conversationId ? seenByConv[activeChat.conversationId] : undefined;
-                  const isSeen = isLastSelf && !activeChat.isGroup && !!seenAt && new Date(seenAt).getTime() >= new Date(msg.createdAt).getTime();
-                  const dateSeparatorLabel = (() => {
-                    if (!showDateSeparator) return null;
-                    const d = new Date(msg.createdAt);
-                    const today = new Date().toDateString();
-                    const yesterday = new Date(Date.now() - 86400000).toDateString();
-                    if (msgDay === today) return t("messenger.today");
-                    if (msgDay === yesterday) return t("messenger.yesterday");
-                    return d.toLocaleDateString(locale === "en" ? "en-US" : "vi-VN", { day: "2-digit", month: "long", year: "numeric" });
-                  })();
-                  const dateSeparator = showDateSeparator ? (
-                    <div key={`sep-${msg.id || idx}`} className="flex items-center justify-center my-4 w-full">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/70 border border-slate-850 px-3 py-1 rounded-full shadow-sm">
-                        {dateSeparatorLabel}
-                      </span>
-                    </div>
-                  ) : null;
-
-                  if (msg.type === "CALL") {
-                    const call = describeCall(msg.content);
-                    return (
-                      <React.Fragment key={msg.id || idx}>
-                        {dateSeparator}
-                        <div className={`my-2 flex w-full justify-center ${animClass}`}>
-                          <div className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 ${call.missed ? "border-rose-500/30 bg-rose-500/10" : "border-white/10 bg-slate-900/70"}`}>
-                            <span className={`flex h-8 w-8 items-center justify-center rounded-full ${call.missed ? "bg-rose-500/20 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                              {call.kind === "video" ? <Video className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
-                            </span>
-                            <div className="text-left">
-                              <p className={`text-xs font-bold ${call.missed ? "text-rose-200" : "text-slate-100"}`}>{call.text}</p>
-                              <p className="text-[10px] text-slate-500">
-                                {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                              </p>
-                            </div>
-                            {!activeChat.isGroup && callPartner && (
-                              <button
-                                type="button"
-                                onClick={() => startCall(callPartner, call.kind as "audio" | "video")}
-                                className="ml-1 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3 py-1 text-[11px] font-bold text-white"
-                              >
-                                {tr("Gọi lại", "Call back")}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </React.Fragment>
-                    );
-                  }
-
-                  if (msg.type === "SYSTEM") {
-                    return (
-                      <React.Fragment key={msg.id || idx}>
-                        {dateSeparator}
-                        <div className={`flex justify-center my-3 w-full ${animClass}`}>
-                          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-900/60 border border-slate-850 text-[10px] text-slate-400 font-semibold tracking-wide font-sans shadow-inner">
-                            <span>🤖</span>
-                            <span>{msg.content}</span>
-                          </div>
-                        </div>
-                      </React.Fragment>
-                    );
-                  }
-
+                  const isLastSelf = idx === lastSelfIndex;
                   return (
-                    <React.Fragment key={msg.id || idx}>
-                      {dateSeparator}
-                      <div className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${groupedWithPrev ? "!mt-1" : ""} ${animClass}`}>
-                        {!isSelf && (isLastInGroup ? (
-                          <div className="relative mb-[22px] h-7 w-7 rounded-full overflow-hidden ring-1 ring-white/10 flex-shrink-0">
-                            <img src={senderAvatar} alt={msg.sender?.name || "User"} loading="lazy" className="object-cover w-full h-full rounded-full" />
-                          </div>
-                        ) : (
-                          <div className="h-7 w-7 flex-shrink-0" aria-hidden />
-                        ))}
-                        <div className="flex flex-col max-w-[70%] relative pb-1">
-                          {activeChat.isGroup && !isSelf && (
-                            <span className="text-5xs text-slate-500 mb-0.5 ml-1">{msg.sender?.name}</span>
-                          )}
-
-                          <div className="relative">
-                            {msg.type === "STICKER" ? (
-                              <div className="text-5xl my-2 select-none transform hover:scale-115 hover:-rotate-3 active:scale-95 transition-all cursor-pointer" title="Sticker">
-                                {msg.content}
-                              </div>
-                            ) : msg.type === "ATTENDANCE" ? (
-                              <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-2 min-w-[260px] text-emerald-300 font-sans shadow-lg text-left">
-                                <p className="font-extrabold text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                                  <span className="text-emerald-500">⏱️</span>{tr(" GPS Chấm Công Thành Công", " GPS check-in successful")}
-                                </p>
-                                <div className="text-3xs space-y-1 mt-1 text-emerald-300/90 leading-relaxed font-semibold">
-                                  <p>{tr("✅ Đã chấm công thành công lúc 08:00 AM.", "✅ Checked in at 08:00 AM.")}</p>
-                                  <p>{tr("📍 Vị trí: Trùng khớp với tọa độ Radar.", "📍 Location: matches Radar coordinates.")}</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div
-                                className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${isSelf
-                                  ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white rounded-2xl rounded-tr-sm shadow-md shadow-pink-600/10"
-                                  : "bg-slate-800 text-white rounded-2xl rounded-bl-sm border border-slate-700"
-                                  }`}
-                              >
-                                {msg.type === "IMAGE" ? (
-                                  // Plain <img>, not next/image: content comes from
-                                  // arbitrary external hosts (Tenor GIFs, Cloudinary
-                                  // uploads). next/image's optimizer 400s on any host
-                                  // not explicitly allowlisted — a plain <img> just
-                                  // loads the URL directly, no allowlist needed.
-                                  <div className="relative w-60 max-w-full overflow-hidden rounded-lg">
-                                    <img
-                                      src={msg.content}
-                                      alt={tr("Hình ảnh", "Image")}
-                                      loading="lazy"
-                                      className="w-full h-auto max-h-60 object-contain rounded-lg"
-                                      onError={(e) => {
-                                        const imgEl = e.currentTarget;
-                                        imgEl.style.display = "none";
-                                        const parent = imgEl.parentElement;
-                                        if (parent) {
-                                          const bubble = parent.parentElement;
-                                          if (bubble) {
-                                            bubble.style.background = "none";
-                                            bubble.style.backgroundColor = "#0f172a";
-                                            bubble.style.border = "1px solid #1e293b";
-                                            bubble.style.padding = "6px 12px";
-                                            bubble.style.boxShadow = "none";
-                                            bubble.style.maxWidth = "220px";
-                                            bubble.innerHTML = `<span class='flex items-center gap-1.5 text-[10px] text-slate-400 font-medium'>⚠️ ${tr("Ảnh không hiển thị được", "Image unavailable")}</span>`;
-                                          }
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                ) : msg.type === "VIDEO" ? (
-                                  <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
-                                ) : (
-                                  <p>{msg.content}</p>
-                                )}
-                              </div>
-                            )}
-
-                            {messageReactions[msg.id] && messageReactions[msg.id].length > 0 && (
-                              <div
-                                onClick={() => setMessageReactions((prev) => ({ ...prev, [msg.id]: [] }))}
-                                className={`absolute -bottom-2.5 ${isSelf ? "left-2" : "right-2"} bg-slate-900 border border-slate-800 rounded-full px-1.5 py-0.5 text-[9px] flex items-center gap-0.5 shadow-lg z-20 select-none cursor-pointer hover:bg-slate-800 transition-colors`}
-                                title={tr("Nhấp để xóa cảm xúc", "Click to remove reaction")}
-                              >
-                                {messageReactions[msg.id].map((emoji, i) => (
-                                  <span key={i} className="hover:scale-125 transition-transform duration-100">{emoji}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Giờ gửi ở tin cuối mỗi cụm; tin cuối của mình kèm Đã gửi/Đã xem. */}
-                          {(isLastInGroup || isLastSelf) && (
-                            <span className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
-                              {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                              {isLastSelf && !activeChat.isGroup && !msg.isOptimistic && !msg.sendError && (
-                                isSeen ? (
-                                  <span className="flex items-center gap-0.5 font-semibold text-pink-300">· <CheckCheck className="h-3 w-3" />{tr(" Đã xem", " Seen")}</span>
-                                ) : (
-                                  <span className="flex items-center gap-0.5">· <Check className="h-3 w-3" />{tr(" Đã gửi", " Sent")}</span>
-                                )
-                              )}
-                            </span>
-                          )}
-
-                          {isSelf && msg.sendError && (
-                            <button
-                              type="button"
-                              onClick={() => retrySendMessage(msg)}
-                              className="mt-1 flex items-center gap-1 self-end text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                            >
-                              <RefreshCw className="h-3 w-3" />{tr(" Gửi thất bại · Thử lại", " Failed · Retry")}
-                            </button>
-                          )}
-
-                          <div className={`absolute -top-7 ${isSelf ? "right-0" : "left-0"} flex items-center gap-1 bg-slate-900/95 border border-slate-800 rounded-lg px-2 py-0.5 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-30 backdrop-blur-sm`}>
-                            <div className="flex items-center gap-1 border-r border-slate-800 pr-1.5 mr-1.5">
-                              {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => handleAddReaction(msg.id, emoji)}
-                                  className="text-xs hover:scale-130 transition-transform active:scale-95 duration-75 cursor-pointer"
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                            <span className="text-[8px] text-slate-500 font-mono select-none">
-                              {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </React.Fragment>
+                    <MessageRow
+                      key={msg.id || idx}
+                      msg={msg}
+                      idx={idx}
+                      prevMsg={idx > 0 ? chatMessages[idx - 1] : null}
+                      nextMsg={idx < chatMessages.length - 1 ? chatMessages[idx + 1] : null}
+                      currentUser={currentUser}
+                      activeChat={rowChat}
+                      fresh={freshMessageIds.has(msg.id)}
+                      isLastSelf={isLastSelf}
+                      seenAt={isLastSelf && activeChat.conversationId ? seenByConv[activeChat.conversationId] : undefined}
+                      reactions={messageReactions[msg.id]}
+                      locale={locale}
+                      t={t}
+                      onCallBack={!activeChat.isGroup ? rowHandlers.callBack : undefined}
+                      onReact={rowHandlers.react}
+                      onClearReactions={rowHandlers.clearReactions}
+                      onRetry={rowHandlers.retry}
+                    />
                   );
                 })
               ) : !loadingChatMessages ? (
@@ -1726,26 +1583,28 @@ export default function MessagesContent({
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={messageText}
+                    ref={inputRef}
+                    defaultValue=""
                     onChange={(e) => {
-                      setMessageText(e.target.value);
-                      if (e.target.value.trim()) notifyTyping();
+                      const has = !!e.target.value.trim();
+                      setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
+                      if (has) notifyTyping();
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                         e.preventDefault();
-                        if (messageText.trim()) {
-                          handleSendMessage(null);
-                        }
+                        if (inputRef.current?.value.trim()) handleSendMessage(null);
                       }
                     }}
-                    disabled={sending}
+                    enterKeyHint="send"
+                    autoComplete="off"
                     placeholder={t("messenger.inputPlaceholder")}
                     className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-pink-600 focus:ring-1 focus:ring-pink-600 shadow-inner"
                   />
                   <button
                     type="submit"
-                    disabled={!messageText.trim() || sending}
+                    disabled={!hasText}
+                    onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
                     className="h-10 w-10 rounded-2xl bg-pink-600 hover:bg-pink-500 text-white flex items-center justify-center disabled:opacity-50 transition-all duration-300 cursor-pointer shadow-lg shadow-pink-500/20"
                   >
                     <Send className="h-4.5 w-4.5" />

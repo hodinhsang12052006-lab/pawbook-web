@@ -19,13 +19,21 @@ if (!url) {
 }
 const db = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 
-const before = await db.execute({ sql: `SELECT id, name, email, role FROM "User" WHERE lower(email) = ?`, args: [email] });
-if (!before.rows.length) {
-  console.error(`Không tìm thấy tài khoản ${email}`);
-  process.exit(1);
+// tsx chạy dạng CommonJS → không có await cấp ngoài cùng; bọc trong main().
+async function main() {
+  const before = await db.execute({ sql: `SELECT id, name, email, role FROM "User" WHERE lower(email) = ?`, args: [email] });
+  if (!before.rows.length) {
+    console.error(`Không tìm thấy tài khoản ${email}`);
+    process.exit(1);
+  }
+  console.log("Trước:", before.rows[0]);
+  await db.execute({ sql: `UPDATE "User" SET role = 'ADMIN' WHERE lower(email) = ?`, args: [email] });
+  const after = await db.execute({ sql: `SELECT id, name, email, role FROM "User" WHERE lower(email) = ?`, args: [email] });
+  console.log("Sau:  ", after.rows[0]);
+  console.log("Xong — trong ≤ 10 phút tài khoản này sẽ thành tài khoản chính thức (ghim + tick xanh).");
 }
-console.log("Trước:", before.rows[0]);
-await db.execute({ sql: `UPDATE "User" SET role = 'ADMIN' WHERE lower(email) = ?`, args: [email] });
-const after = await db.execute({ sql: `SELECT id, name, email, role FROM "User" WHERE lower(email) = ?`, args: [email] });
-console.log("Sau:  ", after.rows[0]);
-console.log("Xong — trong ≤ 10 phút tài khoản này sẽ thành tài khoản chính thức (ghim + tick xanh).");
+
+main().catch((e) => {
+  console.error("Lỗi:", e instanceof Error ? e.message : e);
+  process.exit(1);
+});

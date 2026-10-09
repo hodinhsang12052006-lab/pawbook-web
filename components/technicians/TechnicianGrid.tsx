@@ -96,7 +96,7 @@ function TechnicianGridSkeleton() {
 // Chủ tiệm quét lưới ảnh cực nhanh — badge trạng thái phải nói được ngay
 // "gọi được không" mà không cần bấm vào xem hồ sơ.
 //
-// max-w giới hạn ở 48% (thay vì gần full-width trước đây) vì badge chuyên
+// max-w giới hạn ở 46% (2 bên cộng lại < 100% kể cả lề) (thay vì gần full-width trước đây) vì badge chuyên
 // môn bên phải (xem tech.specialties bên dưới) cũng absolute top-2 right-2
 // độc lập, không nằm chung flex layout — nếu badge trái được phép rộng gần
 // hết thẻ, câu dài như "Đang rảnh hôm nay – Gọi thử tay nghề ngay" sẽ đè
@@ -106,14 +106,14 @@ function StatusBadge({ status }: { status: string }) {
   useTr(); // render lại khi đổi VI/EN
   if (status === "URGENT") {
     return (
-      <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
+      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
         <Flame className="h-2.5 w-2.5 flex-shrink-0" /> <span className="truncate">{tr("Tìm việc gấp", "Needs work now")}</span>
       </span>
     );
   }
   if (status === "AVAILABLE") {
     return (
-      <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
+      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
         <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse" />
         <span className="line-clamp-2">{tr("Đang rảnh hôm nay", "Available today")}</span>
       </span>
@@ -121,7 +121,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === "BETTER") {
     return (
-      <span className="absolute top-2 left-2 max-w-[48%] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
+      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
         <span className="truncate">{tr("Đang tìm chỗ tốt hơn", "Open to better offers")}</span>
       </span>
     );
@@ -189,11 +189,11 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
       {/* Chuyên môn — badge tay nghề hiện ngay ngoài lưới ảnh, chủ tiệm
           không cần bấm vào hồ sơ mới biết thợ chuyên gì. */}
       {tech.specialties.length > 0 && (
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[55%]">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[46%]">
           {tech.specialties.slice(0, 2).map((s, i) => (
             <span
               key={s}
-              className="rounded-full bg-black/60 backdrop-blur-sm border border-white/15 px-2 py-0.5 text-[9px] font-bold text-white truncate max-w-full"
+              className="rounded-full bg-black/60 backdrop-blur-sm border border-white/15 px-2 py-0.5 text-[9px] font-bold text-white block truncate max-w-full"
             >
               {i === 0 ? tr(`Chuyên ${s}`, `${valueLabel(s)} specialist`) : valueLabel(s)}
             </span>

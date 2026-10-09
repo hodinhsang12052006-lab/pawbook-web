@@ -85,7 +85,8 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   note("THỢ", "Màn hình đầu tiên sau đăng ký (chữ)", { text: (await visibleText(p)).slice(0, 300) });
 
   ms = await timed(p, async () => {
-    await p.getByRole("link", { name: /Việc làm/ }).last().click().catch(() => p.goto(BASE_URL + "/?tab=jobs"));
+    // Thanh dưới là NÚT (không phải link) — bấm như người dùng thật.
+    await p.getByRole("button", { name: /^Việc làm$/ }).last().click({ timeout: 5000 });
     await p.getByRole("link", { name: /Gọi ngay/ }).first().waitFor({ timeout: 15000 });
   });
   note("THỢ", "Bấm Việc làm → thấy tin", { ms });

@@ -179,8 +179,9 @@ export default function OwnerRegisterForm() {
   // CTA cuối màn hình chẩn đoán — đưa họ về sàn với market/state của tiệm
   // đã điền sẵn để bộ lọc trang chủ tự khớp luôn, khỏi phải chọn lại.
   const handleFinishDiagnostic = () => {
-    toast.success("Chào mừng bạn đến với cộng đồng Nail! Đang mở bảng tin...", { duration: 3000, icon: "🎉" });
-    const params = new URLSearchParams({ tab: "jobs", market, state });
+    toast.success(tr("Chào mừng bạn! Đang mở danh sách thợ gần tiệm…", "Welcome! Opening techs near your salon…"), { duration: 3000, icon: "🎉" });
+    // Việc đầu tiên của chủ tiệm là nhắn thợ → mở thẳng tab Thợ rảnh.
+    const params = new URLSearchParams({ tab: "portfolio", market, state });
     router.push(`/?${params.toString()}`);
   };
 

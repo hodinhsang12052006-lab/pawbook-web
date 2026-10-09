@@ -165,7 +165,7 @@ export default function TechnicianRegisterForm() {
         return;
       }
       refreshSession();
-      toast.success("Chào mừng bạn đến với cộng đồng Nail! Đang mở bảng tin...", { duration: 3000, icon: "🎉" });
+      toast.success(tr("Chào mừng bạn! Đang mở việc làm gần bạn…", "Welcome! Opening jobs near you…"), { duration: 3000, icon: "🎉" });
       // router.push (client-side, không full-page reload) — zero flash trắng màn hình
       router.push("/?tab=jobs");
     } catch {

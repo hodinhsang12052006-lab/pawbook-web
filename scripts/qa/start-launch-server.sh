@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Khởi động server LOCAL với mọi máy chủ giả cho launch_test.mjs:
-#   Twilio Verify :4997 · OAuth :4996 · FCM :4995 · APNs (http2+TLS) :4994 · Web push :4999
+#   Twilio Verify :4997 · OAuth :4996 · FCM :4995 · APNs (http2+TLS) :4994 · Web push :4999 · Gemini :4993
+#   (đặt GEMINI_API_KEY thật trước khi chạy để thử với Gemini thật)
 # Khoá test (RSA cho FCM, EC P-256 cho APNs) nằm ở $TEMP/qa-keys (tạo bằng openssl).
 # KHÔNG BAO GIỜ đặt các biến *_ALLOW_TEST* trên Vercel.
 #   bash scripts/qa/start-launch-server.sh
@@ -18,4 +19,7 @@ export FCM_ALLOW_TEST=1 FCM_TEST_BASE=http://127.0.0.1:4995
 export APNS_TEAM_ID=TEAM123456 APNS_KEY_ID=KEY1234567 APNS_BUNDLE_ID=com.bitpawos.app
 export APNS_PRIVATE_KEY="$(cat "$KEYS/apns.p8")"
 export APNS_ALLOW_TEST=1 APNS_TEST_BASE=https://127.0.0.1:4994
+export GEMINI_API_KEY="${GEMINI_API_KEY:-test-gemini-key}"
+if [ "$GEMINI_API_KEY" = "test-gemini-key" ]; then export GEMINI_ALLOW_TEST=1 GEMINI_TEST_BASE=http://127.0.0.1:4993; fi
+export AI_DESIGNS_ALLOW_DATA_URL=1 AI_DESIGNS_DAILY_LIMIT=6 CRON_SECRET=test-cron
 exec npx next start -p 3000

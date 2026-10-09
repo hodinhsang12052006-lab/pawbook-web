@@ -1,0 +1,214 @@
+import { v2 as cloudinary } from "cloudinary";
+import prisma from "@/lib/prisma";
+import { activeThemes, THEMES } from "@/lib/contentEngine";
+import { getSignals } from "@/lib/trendSignals";
+import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
+
+// "Mẫu nail AI mỗi ngày":
+//   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
+//      tiêu đề mẫu đã ra gần đây (để không lặp).
+//   2. Gemini viết N mẫu song ngữ: mô tả, kỹ năng, độ khó, thời gian, giá gợi
+//      ý, VẬT TƯ cần chuẩn bị, các bước làm, và mô tả để vẽ ảnh.
+//   3. Gemini vẽ ảnh cận cảnh bàn tay → lưu Cloudinary → bản NHÁP.
+//   4. Admin duyệt trong Phòng nội dung mới hiện cho người dùng.
+// Giới hạn: AI_DESIGNS_DAILY_LIMIT mẫu/ngày (mặc định 8) — chặn chi phí.
+
+export const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
+const DAY_MS = 86_400_000;
+const today = () => new Date().toISOString().slice(0, 10);
+export const dailyLimit = () => Math.max(1, Math.min(50, Number(process.env.AI_DESIGNS_DAILY_LIMIT) || 8));
+
+export interface Bi { vi: string; en: string }
+interface DesignIdea {
+  title: Bi;
+  description: Bi;
+  occasion: string;
+  skills: string[];
+  difficulty: number;
+  minutes: number;
+  priceHint: string;
+  materials: (Bi & { qty: string })[];
+  steps: Bi[];
+  imagePrompt: string;
+}
+
+const bi = { type: "OBJECT", properties: { vi: { type: "STRING" }, en: { type: "STRING" } }, required: ["vi", "en"] };
+const SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      title: bi,
+      description: bi,
+      occasion: { type: "STRING" },
+      skills: { type: "ARRAY", items: { type: "STRING", enum: SKILLS } },
+      difficulty: { type: "INTEGER" },
+      minutes: { type: "INTEGER" },
+      priceHint: { type: "STRING" },
+      materials: { type: "ARRAY", items: { type: "OBJECT", properties: { vi: { type: "STRING" }, en: { type: "STRING" }, qty: { type: "STRING" } }, required: ["vi", "en", "qty"] } },
+      steps: { type: "ARRAY", items: bi },
+      imagePrompt: { type: "STRING" },
+    },
+    required: ["title", "description", "occasion", "skills", "difficulty", "minutes", "priceHint", "materials", "steps", "imagePrompt"],
+  },
+};
+
+// Phong cách ảnh chung: cận cảnh, ánh sáng studio, KHÔNG chữ/logo (tránh vi phạm thương hiệu).
+const IMAGE_STYLE =
+  "Photorealistic close-up product photo of a woman's hand showing a fresh professional manicure, all five fingers anatomically correct and natural, nails in sharp focus, soft studio lighting, clean neutral background, shallow depth of field, square 1:1. No text, no watermark, no logos, no brand names.";
+
+const cut = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
+const clean = (b: Partial<Bi> | undefined, n: number): Bi => ({ vi: cut(b?.vi, n), en: cut(b?.en, n) });
+
+function upcomingThemes(market: "US" | "AU", now: Date) {
+  // Dịp đang diễn ra + dịp bắt đầu trong 21 ngày tới (thợ cần chuẩn bị vật tư trước).
+  const ids = new Set<string>();
+  const out: { id: string; title: string; ideas: string[]; startsIn: number }[] = [];
+  for (let d = 0; d <= 21; d += 3) {
+    for (const t of activeThemes(new Date(now.getTime() + d * DAY_MS), market)) {
+      if (ids.has(t.id)) continue;
+      ids.add(t.id);
+      out.push({ id: t.id, title: t.title, ideas: t.ideas, startsIn: d });
+    }
+  }
+  return out.slice(0, 4);
+}
+
+/** Có chỗ lưu ảnh chưa (Cloudinary; hoặc data URL khi test local). */
+export const storageReady = () =>
+  !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) || process.env.AI_DESIGNS_ALLOW_DATA_URL === "1";
+
+async function store(img: { mimeType: string; base64: string }): Promise<string> {
+  const dataUri = `data:${img.mimeType};base64,${img.base64}`;
+  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
+  if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
+    cloudinary.config({ cloud_name: CLOUDINARY_CLOUD_NAME, api_key: CLOUDINARY_API_KEY, api_secret: CLOUDINARY_API_SECRET });
+    const r = await cloudinary.uploader.upload(dataUri, { folder: "pawbook/designs", resource_type: "image" });
+    return r.secure_url;
+  }
+  // Không có Cloudinary: chỉ cho phép ở máy local (ảnh ~1MB không được nhét vào DB production).
+  if (process.env.AI_DESIGNS_ALLOW_DATA_URL === "1") return dataUri;
+  throw new Error("Cần cấu hình Cloudinary để lưu ảnh mẫu AI.");
+}
+
+export interface GenerateResult { created: string[]; skipped: number; errors: string[] }
+
+/** Tạo tối đa `count` mẫu nháp (không vượt giới hạn/ngày). */
+export async function generateDesigns(market: "US" | "AU", count: number): Promise<GenerateResult> {
+  if (!geminiEnabled()) throw new Error("Chưa cấu hình GEMINI_API_KEY.");
+  if (!storageReady()) throw new Error("Cần cấu hình Cloudinary để lưu ảnh mẫu AI (CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET).");
+  const madeToday = await prisma.nailDesign.count({ where: { day: today() } });
+  const n = Math.max(0, Math.min(count, dailyLimit() - madeToday));
+  if (n === 0) return { created: [], skipped: count, errors: [`Đã đủ ${dailyLimit()} mẫu hôm nay.`] };
+
+  const now = new Date();
+  const [themes, signals, recent] = await Promise.all([
+    Promise.resolve(upcomingThemes(market, now)),
+    getSignals(market).catch(() => null),
+    prisma.nailDesign.findMany({ where: { createdAt: { gte: new Date(now.getTime() - 30 * DAY_MS) } }, select: { title: true }, take: 60, orderBy: { createdAt: "desc" } }),
+  ]);
+  const tags = (signals?.risingTags ?? []).slice(0, 6).map((t) => "#" + t.tag);
+  const prompt = [
+    `Bạn là giám đốc sáng tạo của một tiệm nail cao cấp người Việt tại ${market === "US" ? "Mỹ" : "Úc"}.`,
+    `Hôm nay là ${now.toISOString().slice(0, 10)}. Hãy đề xuất ĐÚNG ${n} mẫu nail mới, đang hợp xu hướng, khách sẽ muốn làm NGAY tuần này.`,
+    themes.length
+      ? `Dịp lễ/mùa đang hoặc sắp diễn ra (ưu tiên, ghi id vào trường occasion): ${themes.map((t) => `${t.id} = ${t.title}${t.startsIn ? ` (bắt đầu sau ~${t.startsIn} ngày)` : " (đang diễn ra)"}; gợi ý: ${t.ideas.join(", ")}`).join(" | ")}.`
+      : "Không có dịp lễ đặc biệt — chọn xu hướng theo mùa hiện tại (occasion để trống).",
+    tags.length ? `Hashtag đang lên trên app: ${tags.join(" ")}.` : "",
+    recent.length ? `KHÔNG lặp lại các mẫu đã ra gần đây: ${recent.map((r) => r.title).join("; ")}.` : "",
+    "Đa dạng: ít nhất 1 mẫu dễ (thợ mới làm được, ≤45 phút), 1 mẫu nghệ thuật khó; trộn kỹ năng Gel-X, Dip, Acrylic, vẽ tay.",
+    "Mỗi mẫu: title & description có cả tiếng Việt (vi, giọng thợ nail Việt, tự nhiên) và tiếng Anh (en). description 1–2 câu: vì sao đang hot, hợp khách nào.",
+    "skills: chọn từ danh sách cho sẵn. difficulty: 1 dễ, 2 vừa, 3 khó. minutes: thời gian làm thực tế. priceHint: khoảng giá tiệm nên báo khách, đơn vị USD (Mỹ) hoặc AUD (Úc), VD \"$45–60\".",
+    "materials: 4–8 vật tư CỤ THỂ cần chuẩn bị (màu gel/bột tên gọi phổ biến, top/base, charm, cọ, foil…), mỗi món có qty (VD \"1 lọ\", \"1 bộ\").",
+    "steps: 4–6 bước làm ngắn gọn, đúng kỹ thuật.",
+    "imagePrompt: tiếng Anh, mô tả CHÍNH XÁC bộ móng để vẽ ảnh (dáng móng, độ dài, màu, hoạ tiết, chất liệu bóng/nhám/chrome). Không nhắc thương hiệu, logo, chữ, người nổi tiếng.",
+    "Tuyệt đối không mô phỏng thương hiệu thời trang (Chanel, LV, Gucci…) hay nhân vật có bản quyền.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const ideas = await geminiJson<DesignIdea[]>(prompt, SCHEMA);
+  const list = (Array.isArray(ideas) ? ideas : []).slice(0, n);
+  const themeIds = new Set(THEMES.map((t) => t.id));
+
+  const created: string[] = [];
+  const errors: string[] = [];
+  // Vẽ song song — 1 ảnh ~10–20 giây.
+  await Promise.all(
+    list.map(async (d) => {
+      try {
+        const imagePrompt = `${cut(d.imagePrompt, 900)}\n\n${IMAGE_STYLE}`;
+        const img = await geminiImage(imagePrompt);
+        const imageUrl = await store(img);
+        const row = await prisma.nailDesign.create({
+          data: {
+            day: today(),
+            market,
+            occasion: themeIds.has(d.occasion) ? d.occasion : null,
+            title: cut(d.title?.vi, 80) || "Mẫu mới",
+            titleEn: cut(d.title?.en, 80) || "New design",
+            description: cut(d.description?.vi, 400),
+            descriptionEn: cut(d.description?.en, 400),
+            skills: (Array.isArray(d.skills) ? d.skills : []).filter((s) => SKILLS.includes(s)).slice(0, 3).join(","),
+            difficulty: Math.min(3, Math.max(1, Math.round(Number(d.difficulty) || 2))),
+            minutes: Math.min(240, Math.max(15, Math.round(Number(d.minutes) || 60))),
+            priceHint: cut(d.priceHint, 30),
+            materials: JSON.stringify((Array.isArray(d.materials) ? d.materials : []).slice(0, 10).map((m) => ({ ...clean(m, 80), qty: cut(m.qty, 30) }))),
+            steps: JSON.stringify((Array.isArray(d.steps) ? d.steps : []).slice(0, 8).map((s) => clean(s, 200))),
+            imageUrl,
+            provider: "gemini",
+            prompt: imagePrompt.slice(0, 2000),
+          },
+          select: { id: true },
+        });
+        created.push(row.id);
+      } catch (err) {
+        errors.push((err as Error).message.slice(0, 200));
+      }
+    })
+  );
+  return { created, skipped: count - list.length, errors };
+}
+
+export interface PublicDesign {
+  id: string;
+  day: string;
+  occasion: string | null;
+  title: string;
+  titleEn: string;
+  description: string;
+  descriptionEn: string;
+  skills: string[];
+  difficulty: number;
+  minutes: number;
+  priceHint: string;
+  materials: (Bi & { qty: string })[];
+  steps: Bi[];
+  imageUrl: string | null;
+  videoUrl: string | null;
+  status: string;
+  saves: number;
+  saved?: boolean;
+  publishedAt: string | null;
+}
+
+const parse = <T,>(s: string, fallback: T): T => {
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+export function toPublic(r: {
+  id: string; day: string; occasion: string | null; title: string; titleEn: string; description: string; descriptionEn: string; skills: string;
+  difficulty: number; minutes: number; priceHint: string; materials: string; steps: string; imageUrl: string | null; videoUrl: string | null;
+  status: string; publishedAt: Date | null; _count?: { saves: number };
+}): PublicDesign {
+  return {
+    id: r.id, day: r.day, occasion: r.occasion, title: r.title, titleEn: r.titleEn, description: r.description, descriptionEn: r.descriptionEn,
+    skills: r.skills ? r.skills.split(",").filter(Boolean) : [], difficulty: r.difficulty, minutes: r.minutes, priceHint: r.priceHint,
+    materials: parse(r.materials, []), steps: parse(r.steps, []), imageUrl: r.imageUrl, videoUrl: r.videoUrl, status: r.status,
+    saves: r._count?.saves ?? 0, publishedAt: r.publishedAt?.toISOString() ?? null,
+  };
+}

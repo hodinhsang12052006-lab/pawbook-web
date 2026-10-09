@@ -12,6 +12,7 @@ import PulseCard from "./PulseCard";
 import RadarPostCard, { type RadarPost } from "./RadarPostCard";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { DesignsStrip } from "@/components/designs/DesignViews";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
@@ -222,6 +223,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         </div>
       ) : (
         <div className="space-y-4">
+          <DesignsStrip />
           {feedItems.map((item, idx) =>
             item.type === "post" ? (
               <FeedPostCard

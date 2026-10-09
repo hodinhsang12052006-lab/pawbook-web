@@ -90,6 +90,7 @@ model User {
   profileViewsMade     ProfileView[] @relation("ViewsMade")
   profileViewsReceived ProfileView[] @relation("ViewsReceived")
   jobAlerts            JobAlert[]
+  nailDesignSaves      NailDesignSave[] // mẫu AI đã lưu (prisma/sql/2026-10-09_nail_designs.sql)
   phoneVerification    PhoneVerification? // SĐT đã xác minh qua SMS (prisma/sql/2026-10-07_phone_verification.sql)
 
   createdAt DateTime @default(now())
@@ -133,6 +134,47 @@ model PhoneVerification {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   phone      String // dạng E.164, VD +14085550199
   verifiedAt DateTime @default(now())
+}
+
+// "Mẫu nail AI mỗi ngày" — ý tưởng (chữ) do Gemini viết dựa trên dịp lễ +
+// xu hướng thật, ảnh minh hoạ do Gemini vẽ. Admin DUYỆT trước khi hiện.
+model NailDesign {
+  id            String   @id @default(cuid())
+  day           String // YYYY-MM-DD (UTC) ngày tạo
+  market        Market   @default(US)
+  occasion      String? // id chủ đề mùa (lib/contentEngine THEMES) nếu có
+  title         String
+  titleEn       String
+  description   String
+  descriptionEn String
+  skills        String // "Gel-X,Design" (giá trị lưu tiếng Việt như tin tuyển)
+  difficulty    Int // 1 dễ · 2 vừa · 3 khó
+  minutes       Int
+  priceHint     String // VD "$45–60"
+  materials     String // JSON [{ vi, en, qty }]
+  steps         String // JSON [{ vi, en }]
+  imageUrl      String?
+  videoUrl      String?
+  provider      String // "gemini" | "openai"
+  prompt        String // mô tả gửi cho AI vẽ (để làm lại/so sánh)
+  status        String   @default("draft") // draft | published | rejected
+  publishedAt   DateTime?
+  createdAt     DateTime @default(now())
+  saves         NailDesignSave[]
+
+  @@index([status, publishedAt])
+  @@index([day])
+}
+
+model NailDesignSave {
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designId  String
+  design    NailDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@id([userId, designId])
+  @@index([designId])
 }
 
 model PushSubscription {

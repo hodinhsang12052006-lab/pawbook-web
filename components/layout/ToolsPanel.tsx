@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp } from "lucide-react";
+import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -73,6 +73,7 @@ function useTools(): Tool[] {
   return [
     { href: "/messages", label: tr("Tin nhắn", "Messages"), stat: unreadCount > 0 ? tr(`${unreadCount} tin chưa đọc`, `${unreadCount} unread`) : tr("Chat với tiệm & thợ", "Chat with salons & techs"), icon: MessageCircle, tone: "bg-sky-500/15 text-sky-300", badge: unreadCount },
     roleTool,
+    { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
     { href: "/trends", label: tr("Xu hướng tuần", "Weekly trends"), stat: tr("Mẫu hot · thợ nổi bật · lương", "Hot designs · top techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
     { href: "/tools/radar", label: "Nail Radar", stat: radarStat, icon: Radar, tone: "bg-amber-500/15 text-amber-300" },
     { href: "/supply", label: tr("Kho hàng vật tư", "Supply store"), stat: tr("Vật tư giá sỉ từ các tiệm", "Wholesale supplies from salons"), icon: ShoppingBag, tone: "bg-emerald-500/15 text-emerald-300" },

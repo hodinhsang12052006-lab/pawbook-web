@@ -174,6 +174,14 @@ export default function SupplyPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  // ?q= — đến từ "Tìm mua" trong Mẫu nail AI: lọc sản phẩm theo tên vật tư.
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    setQ(new URLSearchParams(window.location.search).get("q")?.trim() ?? "");
+  }, []);
+  const fold = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
+  const words = fold(q).split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+  const shown = words.length ? products.filter((p) => { const name = fold(`${p.title} ${p.description ?? ""}`); return words.some((w) => name.includes(w)); }) : products;
 
   const loadingMoreRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -265,11 +273,22 @@ export default function SupplyPage() {
             <p className="text-sm text-slate-500">{tr("Chủ tiệm hãy là người đầu tiên đăng bán sỉ vật tư.", "Salon owners — be the first to list wholesale supplies.")}</p>
           </div>
         ) : (
+          <>
+          {q && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100 ring-1 ring-emerald-500/25">
+              <span className="min-w-0 flex-1 truncate">{tr("Đang tìm: ", "Searching: ")}<strong>{q}</strong>{tr(` · ${shown.length} sản phẩm`, ` · ${shown.length} products`)}</span>
+              <button type="button" onClick={() => { setQ(""); window.history.replaceState(null, "", "/supply"); }} className="flex-shrink-0 text-xs font-bold text-emerald-300 hover:underline">{tr("Xem tất cả", "Show all")}</button>
+            </div>
+          )}
+          {q && shown.length === 0 && (
+            <p className="mb-4 text-sm text-slate-400">{tr("Chưa có tiệm nào bán món này trên PawNail — mua ở tiệm vật tư quen của bạn nhé.", "No salon sells this on PawNail yet — try your usual supply store.")}</p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
-            {products.map((p) => (
+            {shown.map((p) => (
               <SupplyProductCard key={p.id} product={p} />
             ))}
           </div>
+          </>
         )}
 
         <div ref={sentinelRef} className="h-2 w-full" />

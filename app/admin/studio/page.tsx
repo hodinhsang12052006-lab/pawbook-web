@@ -12,6 +12,7 @@ import { timeAgo } from "@/lib/feedFormat";
 import type { Signals } from "@/lib/trendSignals";
 import type { Draft } from "@/lib/contentDrafts";
 import type { NewsItem } from "@/lib/industryFeed";
+import AdminDesigns from "@/components/designs/AdminDesigns";
 
 interface StudioPost { id: string; kind: string; title: string; body: string; href: string | null; market: string | null; createdAt: string }
 interface Payload { signals: Signals; news: NewsItem[]; drafts: Draft[]; posts: StudioPost[] }
@@ -131,6 +132,8 @@ export default function StudioRoomPage() {
             <button onClick={() => { setData(null); load(); }} aria-label="Tải lại" className="rounded-xl p-2 text-slate-400 ring-1 ring-white/10 hover:text-white"><RefreshCw className="h-4 w-4" /></button>
           </div>
         </div>
+
+        <AdminDesigns />
 
         {error && <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{error}</p>}
         {!data && !error && <div className="grid gap-4 md:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-48 rounded-2xl" />)}</div>}

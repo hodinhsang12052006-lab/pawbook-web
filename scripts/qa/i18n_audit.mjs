@@ -17,7 +17,7 @@ const data = new Set();
 for (const sql of [
   `SELECT name AS t FROM "User"`, `SELECT city AS t FROM "User"`, `SELECT title AS t FROM "Job"`, `SELECT salonName AS t FROM "Job"`,
   `SELECT description AS t FROM "Job"`, `SELECT city AS t FROM "Job"`, `SELECT content AS t FROM "Post"`, `SELECT content AS t FROM "PostComment"`,
-  `SELECT body AS t FROM "Message"`, `SELECT name AS t FROM "SupplyProduct"`, `SELECT description AS t FROM "SupplyProduct"`, `SELECT bio AS t FROM "TechnicianProfile"`,
+  `SELECT body AS t FROM "Message"`, `SELECT title AS t FROM "SupplyProduct"`, `SELECT description AS t FROM "SupplyProduct"`, `SELECT bio AS t FROM "TechnicianProfile"`,
   `SELECT comment AS t FROM "Review"`, `SELECT turnSplitPolicy AS t FROM "User"`, `SELECT clientTypePolicy AS t FROM "User"`, `SELECT salaryAmount AS t FROM "Job"`,
 ]) {
   try {

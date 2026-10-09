@@ -35,7 +35,7 @@ export const geminiEnabled = () => cfg() !== null;
 interface Part { text?: string; inlineData?: { mimeType: string; data: string } }
 interface GenResponse { candidates?: { content?: { parts?: Part[] }; finishReason?: string }[]; error?: { message?: string } }
 
-function request(mode: Mode, c: NonNullable<ReturnType<typeof cfg>>, model: string) {
+function request(mode: Mode, c: NonNullable<ReturnType<typeof cfg>>, model: string): { url: string; headers: Record<string, string> } {
   const m = encodeURIComponent(model);
   if (c.test) return { url: `${c.test}/v1beta/models/${m}:generateContent`, headers: { "x-goog-api-key": c.key } };
   if (mode === "header") return { url: `${AI_STUDIO}/${m}:generateContent`, headers: { "x-goog-api-key": c.key } };

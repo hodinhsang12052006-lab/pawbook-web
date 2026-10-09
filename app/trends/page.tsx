@@ -15,6 +15,7 @@ import {
 import { timeAgo } from "@/lib/feedFormat";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
+import { dt } from "@/lib/i18n/dataEn";
 import { useTr } from "@/lib/i18n/useTr";
 
 interface RadarPublic {
@@ -262,14 +263,14 @@ export default function TrendsPage() {
                 return (
                   <div key={p.questionId + p.week} className="glass-card space-y-2.5 rounded-2xl p-4">
                     <div>
-                      <p className="text-sm font-black text-white">{p.topic}</p>
+                      <p className="text-sm font-black text-white">{dt(p.topic)}</p>
                       <p className="text-[11px] text-slate-500">{p.total}{tr(" người trả lời · tuần ", " responses · week ")}{p.week.split("-W")[1]}</p>
                     </div>
                     {sorted.slice(0, 4).map((o, i) => (
                       <div key={o.id} className="relative overflow-hidden rounded-lg bg-slate-950/60">
                         <span aria-hidden className={`absolute inset-y-0 left-0 ${i === 0 ? "bg-sky-500/30" : "bg-white/[0.06]"}`} style={{ width: `${o.pct}%` }} />
                         <div className="relative flex justify-between gap-2 px-3 py-1.5 text-xs">
-                          <span className={i === 0 ? "font-bold text-white" : "text-slate-300"}>{o.label}</span>
+                          <span className={i === 0 ? "font-bold text-white" : "text-slate-300"}>{dt(o.label)}</span>
                           <span className="font-bold tabular-nums text-slate-200">{o.pct}%</span>
                         </div>
                       </div>

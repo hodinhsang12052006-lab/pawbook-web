@@ -155,7 +155,10 @@ model NailDesign {
   steps         String // JSON [{ vi, en }]
   imageUrl      String?
   videoUrl      String?
-  provider      String // "gemini" | "openai"
+  palette       String   @default("[]") // JSON ["#hex", …] — app tự vẽ minh hoạ khi chưa có ảnh AI
+  shape         String   @default("almond") // almond | coffin | square | oval | stiletto
+  finish        String   @default("glossy") // glossy | matte | chrome | cateye | glitter
+  provider      String // "gemini" | "sample" (mẫu gợi ý soạn sẵn)
   prompt        String // mô tả gửi cho AI vẽ (để làm lại/so sánh)
   status        String   @default("draft") // draft | published | rejected
   publishedAt   DateTime?

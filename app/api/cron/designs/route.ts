@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
-import { dailyLimit, generateDesigns, storageReady } from "@/lib/aiDesigns";
+import { dailyLimit, generateDesigns } from "@/lib/aiDesigns";
 import { sendPush } from "@/lib/push";
 
 // Vercel Cron gọi mỗi sáng (vercel.json) → tạo loạt mẫu nháp, báo admin vào duyệt.
@@ -15,7 +15,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!geminiEnabled()) return NextResponse.json({ skipped: "GEMINI_API_KEY chưa cấu hình" });
-  if (!storageReady()) return NextResponse.json({ skipped: "Chưa có Cloudinary để lưu ảnh" });
   try {
     const r = await generateDesigns("US", Math.ceil(dailyLimit() / 2));
     if (r.created.length) {

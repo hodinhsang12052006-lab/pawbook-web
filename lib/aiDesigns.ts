@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { activeThemes, THEMES } from "@/lib/contentEngine";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
+import { SAMPLE_DESIGNS } from "@/lib/designSamples";
 
 // "Mẫu nail AI mỗi ngày":
 //   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
@@ -16,6 +17,14 @@ import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 export const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
 const DAY_MS = 86_400_000;
 const today = () => new Date().toISOString().slice(0, 10);
+// AI_DESIGNS_TEXT_ONLY=1: chỉ dùng Gemini viết chữ (gói MIỄN PHÍ) — minh hoạ do
+// app tự vẽ từ bảng màu/dáng/hiệu ứng. Không có cờ này mà vẽ ảnh lỗi (chưa bật
+// thanh toán, hết hạn mức) → mẫu vẫn được lưu, chỉ thiếu ảnh.
+export const textOnly = () => process.env.AI_DESIGNS_TEXT_ONLY === "1";
+export const SHAPES = ["almond", "coffin", "square", "oval", "stiletto"] as const;
+export const FINISHES = ["glossy", "matte", "chrome", "cateye", "glitter"] as const;
+const HEX = /^#[0-9a-f]{6}$/i;
+const cleanPalette = (p: unknown) => (Array.isArray(p) ? p : []).map((c) => String(c).trim()).filter((c) => HEX.test(c)).slice(0, 5);
 export const dailyLimit = () => Math.max(1, Math.min(50, Number(process.env.AI_DESIGNS_DAILY_LIMIT) || 8));
 
 export interface Bi { vi: string; en: string }
@@ -30,6 +39,9 @@ interface DesignIdea {
   materials: (Bi & { qty: string })[];
   steps: Bi[];
   imagePrompt: string;
+  palette: string[];
+  shape: string;
+  finish: string;
 }
 
 const bi = { type: "OBJECT", properties: { vi: { type: "STRING" }, en: { type: "STRING" } }, required: ["vi", "en"] };
@@ -48,8 +60,11 @@ const SCHEMA = {
       materials: { type: "ARRAY", items: { type: "OBJECT", properties: { vi: { type: "STRING" }, en: { type: "STRING" }, qty: { type: "STRING" } }, required: ["vi", "en", "qty"] } },
       steps: { type: "ARRAY", items: bi },
       imagePrompt: { type: "STRING" },
+      palette: { type: "ARRAY", items: { type: "STRING" } },
+      shape: { type: "STRING", enum: ["almond", "coffin", "square", "oval", "stiletto"] },
+      finish: { type: "STRING", enum: ["glossy", "matte", "chrome", "cateye", "glitter"] },
     },
-    required: ["title", "description", "occasion", "skills", "difficulty", "minutes", "priceHint", "materials", "steps", "imagePrompt"],
+    required: ["title", "description", "occasion", "skills", "difficulty", "minutes", "priceHint", "materials", "steps", "imagePrompt", "palette", "shape", "finish"],
   },
 };
 
@@ -96,7 +111,7 @@ export interface GenerateResult { created: string[]; skipped: number; errors: st
 /** Tạo tối đa `count` mẫu nháp (không vượt giới hạn/ngày). */
 export async function generateDesigns(market: "US" | "AU", count: number): Promise<GenerateResult> {
   if (!geminiEnabled()) throw new Error("Chưa cấu hình GEMINI_API_KEY.");
-  if (!storageReady()) throw new Error("Cần cấu hình Cloudinary để lưu ảnh mẫu AI (CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET).");
+  const wantImages = !textOnly() && storageReady();
   const madeToday = await prisma.nailDesign.count({ where: { day: today() } });
   const n = Math.max(0, Math.min(count, dailyLimit() - madeToday));
   if (n === 0) return { created: [], skipped: count, errors: [`Đã đủ ${dailyLimit()} mẫu hôm nay.`] };
@@ -121,6 +136,7 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
     "skills: chọn từ danh sách cho sẵn. difficulty: 1 dễ, 2 vừa, 3 khó. minutes: thời gian làm thực tế. priceHint: khoảng giá tiệm nên báo khách, đơn vị USD (Mỹ) hoặc AUD (Úc), VD \"$45–60\".",
     "materials: 4–8 vật tư CỤ THỂ cần chuẩn bị (màu gel/bột tên gọi phổ biến, top/base, charm, cọ, foil…), mỗi món có qty (VD \"1 lọ\", \"1 bộ\").",
     "steps: 4–6 bước làm ngắn gọn, đúng kỹ thuật.",
+    "palette: 2–5 mã màu hex chính của bộ móng (VD \"#7f1d1d\"). shape: dáng móng. finish: hiệu ứng bề mặt (glossy bóng, matte nhám, chrome tráng gương, cateye mắt mèo, glitter nhũ).",
     "imagePrompt: tiếng Anh, mô tả CHÍNH XÁC bộ móng để vẽ ảnh (dáng móng, độ dài, màu, hoạ tiết, chất liệu bóng/nhám/chrome). Không nhắc thương hiệu, logo, chữ, người nổi tiếng.",
     "Tuyệt đối không mô phỏng thương hiệu thời trang (Chanel, LV, Gucci…) hay nhân vật có bản quyền.",
   ]
@@ -138,8 +154,15 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
     list.map(async (d) => {
       try {
         const imagePrompt = `${cut(d.imagePrompt, 900)}\n\n${IMAGE_STYLE}`;
-        const img = await geminiImage(imagePrompt);
-        const imageUrl = await store(img);
+        let imageUrl: string | null = null;
+        if (wantImages) {
+          try {
+            imageUrl = await store(await geminiImage(imagePrompt));
+          } catch (err) {
+            // Không vẽ được (thường do chưa bật thanh toán) → vẫn lưu mẫu, app tự vẽ minh hoạ.
+            errors.push(`Không vẽ được ảnh, dùng minh hoạ tự vẽ: ${(err as Error).message.slice(0, 140)}`);
+          }
+        }
         const row = await prisma.nailDesign.create({
           data: {
             day: today(),
@@ -156,6 +179,9 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
             materials: JSON.stringify((Array.isArray(d.materials) ? d.materials : []).slice(0, 10).map((m) => ({ ...clean(m, 80), qty: cut(m.qty, 30) }))),
             steps: JSON.stringify((Array.isArray(d.steps) ? d.steps : []).slice(0, 8).map((s) => clean(s, 200))),
             imageUrl,
+            palette: JSON.stringify(cleanPalette(d.palette).length ? cleanPalette(d.palette) : ["#ec4899", "#a855f7"]),
+            shape: (SHAPES as readonly string[]).includes(d.shape) ? d.shape : "almond",
+            finish: (FINISHES as readonly string[]).includes(d.finish) ? d.finish : "glossy",
             provider: "gemini",
             prompt: imagePrompt.slice(0, 2000),
           },
@@ -168,6 +194,28 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
     })
   );
   return { created, skipped: count - list.length, errors };
+}
+
+/** Mẫu GỢI Ý soạn sẵn (không gọi AI) — ưu tiên dịp lễ sắp tới, không lặp mẫu đã có. */
+export async function generateSamples(market: "US" | "AU", count: number): Promise<GenerateResult> {
+  const used = new Set((await prisma.nailDesign.findMany({ where: { provider: "sample" }, select: { title: true } })).map((r) => r.title));
+  const soon = new Set(upcomingThemes(market, new Date()).map((t) => t.id));
+  const pool = SAMPLE_DESIGNS.filter((d) => !used.has(d.title.vi)).sort((a, b) => Number(soon.has(b.occasion ?? "")) - Number(soon.has(a.occasion ?? "")));
+  const pick = pool.slice(0, Math.max(0, count));
+  const created: string[] = [];
+  for (const d of pick) {
+    const row = await prisma.nailDesign.create({
+      data: {
+        day: today(), market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
+        skills: d.skills.join(","), difficulty: d.difficulty, minutes: d.minutes, priceHint: d.priceHint,
+        materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: null,
+        palette: JSON.stringify(d.palette), shape: d.shape, finish: d.finish, provider: "sample", prompt: "",
+      },
+      select: { id: true },
+    });
+    created.push(row.id);
+  }
+  return { created, skipped: count - pick.length, errors: pick.length < count ? ["Đã dùng hết bộ mẫu gợi ý — thêm mẫu mới trong lib/designSamples.ts."] : [] };
 }
 
 export interface PublicDesign {
@@ -186,6 +234,10 @@ export interface PublicDesign {
   steps: Bi[];
   imageUrl: string | null;
   videoUrl: string | null;
+  palette: string[];
+  shape: string;
+  finish: string;
+  provider: string;
   status: string;
   saves: number;
   saved?: boolean;
@@ -203,12 +255,14 @@ const parse = <T,>(s: string, fallback: T): T => {
 export function toPublic(r: {
   id: string; day: string; occasion: string | null; title: string; titleEn: string; description: string; descriptionEn: string; skills: string;
   difficulty: number; minutes: number; priceHint: string; materials: string; steps: string; imageUrl: string | null; videoUrl: string | null;
+  palette?: string; shape?: string; finish?: string; provider?: string;
   status: string; publishedAt: Date | null; _count?: { saves: number };
 }): PublicDesign {
   return {
     id: r.id, day: r.day, occasion: r.occasion, title: r.title, titleEn: r.titleEn, description: r.description, descriptionEn: r.descriptionEn,
     skills: r.skills ? r.skills.split(",").filter(Boolean) : [], difficulty: r.difficulty, minutes: r.minutes, priceHint: r.priceHint,
     materials: parse(r.materials, []), steps: parse(r.steps, []), imageUrl: r.imageUrl, videoUrl: r.videoUrl, status: r.status,
+    palette: parse(r.palette ?? "[]", [] as string[]), shape: r.shape ?? "almond", finish: r.finish ?? "glossy", provider: r.provider ?? "gemini",
     saves: r._count?.saves ?? 0, publishedAt: r.publishedAt?.toISOString() ?? null,
   };
 }

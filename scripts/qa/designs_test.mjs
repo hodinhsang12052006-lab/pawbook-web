@@ -15,6 +15,7 @@ await db.execute(`DELETE FROM "NailDesign"`);
 // PNG 8×8 hồng (đủ để trình duyệt hiển thị)
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFTEMIwkAQJ8Q8Iyx8SoAAAAASUVORK5CYII=";
 const calls = [];
+let imageFails = false; // giả lập tài khoản Google chưa bật thanh toán
 const gemini = http.createServer((req, res) => {
   let b = "";
   req.on("data", (c) => (b += c));
@@ -24,6 +25,9 @@ const gemini = http.createServer((req, res) => {
     calls.push({ path: req.url, key: req.headers["x-goog-api-key"], prompt, cfg: body.generationConfig });
     res.setHeader("content-type", "application/json");
     if (req.headers["x-goog-api-key"] !== "test-gemini-key") return res.writeHead(403).end(JSON.stringify({ error: { message: "API key not valid" } }));
+    if (body.generationConfig?.responseModalities?.includes("IMAGE") && imageFails) {
+      return res.writeHead(429).end(JSON.stringify({ error: { message: "Image generation requires billing (free tier quota is 0)" } }));
+    }
     if (body.generationConfig?.responseModalities?.includes("IMAGE")) {
       return res.end(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/png", data: PNG } }] } }] }));
     }
@@ -39,6 +43,9 @@ const gemini = http.createServer((req, res) => {
       materials: [{ vi: "Gel mắt mèo cam", en: "Orange cat-eye gel", qty: "1 lọ" }, { vi: "Nam châm mắt mèo", en: "Cat-eye magnet", qty: "1 cái" }, { vi: "Top coat bóng", en: "Glossy top coat", qty: "1 lọ" }],
       steps: [{ vi: "Sơn base", en: "Apply base" }, { vi: "Sơn 2 lớp gel mắt mèo", en: "Two coats of cat-eye gel" }, { vi: "Hút nam châm", en: "Use the magnet" }, { vi: "Phủ top", en: "Top coat" }],
       imagePrompt: "almond nails, burnt orange cat eye gel with a bright magnetic stripe",
+      palette: ["#c2410c", "#f97316", "not-a-color"],
+      shape: "almond",
+      finish: "cateye",
     }));
     res.end(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(ideas) }] } }] }));
   });
@@ -82,9 +89,14 @@ try {
   R.check("D8", "Duyệt 2 / bỏ 1 → công khai đúng 2 mẫu; trạng thái lạ → 400", pub.length === 2 && bad.status === 400, `${pub.length} ${bad.status}`);
   R.check("D9", "Lọc theo dịp lễ (halloween) & kỹ năng (Gel-X)", (await anon.req("/api/designs?occasion=halloween")).data.designs.length === (pub.filter((d) => d.occasion === "halloween").length) && (await anon.req("/api/designs?skill=Gel-X")).data.designs.length === 2);
 
+  imageFails = true;
+  const free = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 1 } })).data;
+  imageFails = false;
+  const freeRow = free.created[0] ? (await admin.req("/api/admin/designs")).data.drafts.find((d) => d.id === free.created[0]) : null;
+  R.check("D9b", "Gemini MIỄN PHÍ (vẽ ảnh bị từ chối) → mẫu vẫn lưu, không ảnh, có bảng màu/dáng/hiệu ứng để app tự vẽ; màu rác bị lọc", free.created.length === 1 && freeRow && freeRow.imageUrl === null && freeRow.palette.length === 2 && freeRow.shape === "almond" && freeRow.finish === "cateye" && /Không vẽ được ảnh/.test(free.errors[0] || ""), JSON.stringify({ free, p: freeRow?.palette }));
   const more = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 6 } })).data;
   const over = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 2 } })).data;
-  R.check("D10", "Giới hạn 6 mẫu/ngày (chặn chi phí AI): lần 2 chỉ tạo thêm 3, lần 3 từ chối", more.created.length === 3 && over.created.length === 0 && /Đã đủ 6/.test(over.errors[0]), JSON.stringify({ more: more.created.length, over }));
+  R.check("D10", "Giới hạn 6 mẫu/ngày (chặn chi phí AI): đã có 4 → chỉ tạo thêm 2, lần sau từ chối", more.created.length === 2 && over.created.length === 0 && /Đã đủ 6/.test(over.errors[0]), JSON.stringify({ more: more.created.length, over }));
 
   const c1 = await anon.req("/api/cron/designs");
   const c2 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer sai" } });
@@ -97,6 +109,13 @@ try {
   const sDraft = await tech.req(`/api/designs/${drafts[2].id}/save`, { method: "POST" });
   const sAnon = await anon.req(`/api/designs/${pub[0].id}/save`, { method: "POST" });
   R.check("D12", "Lưu mẫu: lưu/bỏ lưu đếm đúng; mẫu chưa duyệt 404; khách 401", s1.data.saved === true && s1.data.saves === 1 && list1.saved === true && s2.data.saved === false && sDraft.status === 404 && sAnon.status === 401);
+
+  const smp = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 2, mode: "sample" } })).data;
+  const smpRows = (await admin.req("/api/admin/designs")).data.drafts.filter((d) => smp.created.includes(d.id));
+  R.check("D13", "Mẫu gợi ý (không dùng AI): tạo được dù đã hết hạn mức AI; ưu tiên dịp Halloween; đủ song ngữ + vật tư + bảng màu", smp.created.length === 2 && smpRows.every((d) => d.provider === "sample" && d.titleEn && d.materials.length >= 3 && d.palette.length >= 2) && smpRows.some((d) => d.occasion === "halloween"), JSON.stringify(smpRows.map((d) => [d.title, d.occasion])));
+  const smp2 = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 2, mode: "sample" } })).data;
+  const titles = (await admin.req("/api/admin/designs")).data.drafts.filter((d) => d.provider === "sample").map((d) => d.title);
+  R.check("D14", "Mẫu gợi ý không bị lặp lại", smp2.created.length === 2 && new Set(titles).size === titles.length, titles.join(" | "));
 
   // ---------- Giao diện ----------
   browser = await chromium.launch();
@@ -168,10 +187,15 @@ try {
   await sec.waitFor({ timeout: 15000 });
   await sec.locator("article").first().waitFor({ timeout: 15000 });
   const draftCount = await sec.locator("article").count();
+  const svgPreviews = await sec.getByRole("img", { name: "Minh hoạ mẫu nail" }).count();
+  const colorBadges = await sec.getByText("Minh hoạ màu", { exact: false }).count();
+  const aiTextBadges = await sec.getByText("Ý tưởng AI · minh hoạ màu").count();
+  R.check("U10", "Nháp không có ảnh AI → minh hoạ tự vẽ + nhãn đúng nguồn", svgPreviews >= 5 && colorBadges >= 5 && aiTextBadges >= 1, svgPreviews + " svg, " + colorBadges + " nhãn, " + aiTextBadges + " AI chữ");
+  await ap.screenshot({ path: TMP + "/designs_admin_samples.png", fullPage: true });
   await sec.getByRole("button", { name: /Duyệt & đăng/ }).first().click();
   await ap.waitForTimeout(1500);
   const after = (await anon.req("/api/designs")).data.designs.length;
-  R.check("U9", "Phòng nội dung: thấy 3 nháp, bấm 'Duyệt & đăng' → công khai thêm 1 mẫu", draftCount === 3 && after === 3, `${draftCount} nháp, ${after} công khai`);
+  R.check("U9", "Phòng nội dung: thấy đủ 7 nháp (3 AI + 4 gợi ý), bấm 'Duyệt & đăng' → công khai thêm 1 mẫu", draftCount === 7 && after === 3, `${draftCount} nháp, ${after} công khai`);
   await ap.screenshot({ path: TMP + "/designs_admin.png" });
 
   R.check("Z1", "Không lỗi JS / 5xx", errors.length === 0, errors.slice(0, 3).join(" | "));

@@ -3,10 +3,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Check, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { AiBadge, occasionLabel, type Design } from "@/components/designs/DesignViews";
+import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
-interface State { enabled: boolean; storage?: boolean; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
+interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
 
 // Phòng nội dung → "Mẫu nail AI": tạo mẫu bằng Gemini, DUYỆT trước khi người
 // dùng thấy (AI hay vẽ sai ngón tay / mô tả lệch — admin là người chốt).
@@ -23,11 +23,11 @@ export default function AdminDesigns() {
   }, []);
   useEffect(load, [load]);
 
-  const generate = async () => {
+  const generate = async (mode: "ai" | "sample") => {
     setBusy(true);
-    const id = toast.loading("Gemini đang nghĩ mẫu và vẽ ảnh… (20–40 giây)");
+    const id = toast.loading(mode === "sample" ? "Đang tạo mẫu gợi ý…" : "Gemini đang nghĩ mẫu… (10–40 giây)");
     try {
-      const res = await fetch("/api/admin/designs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ count: 3 }) });
+      const res = await fetch("/api/admin/designs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ count: 3, mode }) });
       const r = await res.json();
       if (!res.ok) throw new Error(r.error || "Không tạo được.");
       if (r.created?.length) toast.success(`Đã tạo ${r.created.length} mẫu nháp — duyệt bên dưới.`, { id });
@@ -60,12 +60,17 @@ export default function AdminDesigns() {
             {st && ` Hôm nay: ${st.madeToday}/${st.dailyLimit} mẫu.`}
           </p>
         </div>
-        <button type="button" onClick={generate} disabled={busy || !st?.enabled || st?.storage === false} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-50">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Tạo 3 mẫu mới
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => generate("ai")} disabled={busy || !st?.enabled} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-50">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Tạo 3 mẫu bằng AI
+          </button>
+          <button type="button" onClick={() => generate("sample")} disabled={busy} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/15 disabled:opacity-50">
+            <Wand2 className="h-4 w-4 text-pink-300" /> Tạo mẫu gợi ý (không dùng AI)
+          </button>
+        </div>
       </div>
       {st && !st.enabled && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa có GEMINI_API_KEY trên máy chủ — thêm vào Vercel rồi deploy lại.</p>}
-      {st && st.enabled && st.storage === false && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa có Cloudinary để lưu ảnh — thêm CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET vào Vercel rồi deploy lại.</p>}
+      {st && st.enabled && (st.textOnly || st.storage === false) && <p className="rounded-xl bg-sky-500/10 px-3 py-2 text-xs text-sky-200 ring-1 ring-sky-500/25">Chế độ chỉ viết chữ (Gemini miễn phí): AI viết ý tưởng + vật tư + các bước, minh hoạ do app tự vẽ từ bảng màu. Bật ảnh AI: bỏ AI_DESIGNS_TEXT_ONLY trên Vercel sau khi gắn thanh toán Google.</p>}
       {st?.needsSql && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa tạo bảng — chạy prisma/sql/2026-10-09_nail_designs.sql.</p>}
 
       {st && st.drafts.length === 0 ? (
@@ -75,11 +80,8 @@ export default function AdminDesigns() {
           {st?.drafts.map((d) => (
             <article key={d.id} aria-label={`Nháp: ${d.title}`} className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/70">
               <div className="relative aspect-square bg-slate-900">
-                {d.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={d.imageUrl} alt={d.title} className="h-full w-full object-cover" />
-                )}
-                <AiBadge className="absolute left-2 top-2" />
+                <DesignVisual d={d} />
+                <AiBadge d={d} className="absolute left-2 top-2" />
               </div>
               <div className="space-y-1.5 p-3">
                 {d.occasion && <p className="text-[10px] font-black uppercase tracking-wider text-pink-300">{occasionLabel(d.occasion)}</p>}
@@ -109,10 +111,7 @@ export default function AdminDesigns() {
           <div className="flex gap-2 overflow-x-auto pb-1">
             {st.published.map((d) => (
               <div key={d.id} className="w-28 flex-shrink-0">
-                {d.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={d.imageUrl} alt={d.title} className="aspect-square w-full rounded-lg object-cover" />
-                )}
+                <div className="aspect-square w-full overflow-hidden rounded-lg"><DesignVisual d={d} /></div>
                 <p className="mt-1 truncate text-[11px] text-slate-300">{d.title}</p>
                 <p className="text-[10px] text-slate-500">🔖 {d.saves} lượt lưu</p>
               </div>

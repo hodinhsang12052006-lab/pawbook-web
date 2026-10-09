@@ -12,6 +12,7 @@ import { THEMES } from "@/lib/studioThemes";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { playSound } from "@/lib/sounds";
+import NailArt from "@/components/designs/NailArt";
 
 export interface Design {
   id: string;
@@ -29,6 +30,10 @@ export interface Design {
   steps: { vi: string; en: string }[];
   imageUrl: string | null;
   videoUrl: string | null;
+  palette?: string[];
+  shape?: string;
+  finish?: string;
+  provider?: string;
   saves: number;
   saved?: boolean;
   publishedAt: string | null;
@@ -45,14 +50,29 @@ export const hashtagFor = (d: Design) => {
   return t ? `#${t.hashtag}` : "#PawNailAI";
 };
 
-/** Nhãn bắt buộc trên mọi ảnh AI — không để ai hiểu nhầm là ảnh tay nghề thật. */
-export function AiBadge({ className = "" }: { className?: string }) {
+/** Nhãn bắt buộc, nói đúng nguồn — không để ai hiểu nhầm là ảnh tay nghề thật:
+ *  ảnh do AI vẽ · ý tưởng AI + minh hoạ màu do app vẽ · mẫu gợi ý + minh hoạ màu. */
+export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "provider">; className?: string }) {
   useTr(); // render lại khi đổi VI/EN
+  const label = !d || d.imageUrl
+    ? tr(" Ảnh minh hoạ AI", " AI illustration")
+    : d.provider === "sample"
+      ? tr(" Minh hoạ màu", " Color preview")
+      : tr(" Ý tưởng AI · minh hoạ màu", " AI idea · color preview");
   return (
     <span className={`inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur ${className}`}>
-      <Wand2 className="h-3 w-3" />{tr(" Ảnh minh hoạ AI", " AI illustration")}
+      <Wand2 className="h-3 w-3" />{label}
     </span>
   );
+}
+
+/** Ảnh AI nếu có, không thì minh hoạ tự vẽ từ bảng màu/dáng/hiệu ứng. */
+export function DesignVisual({ d, className = "" }: { d: Design; className?: string }) {
+  if (d.imageUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={d.imageUrl} alt={designTitle(d)} loading="lazy" className={`h-full w-full object-cover ${className}`} />;
+  }
+  return <NailArt palette={d.palette ?? []} shape={d.shape} finish={d.finish} seed={d.id} className={`h-full w-full ${className}`} />;
 }
 
 export function DesignCard({ d, onOpen, compact = false }: { d: Design; onOpen: () => void; compact?: boolean }) {
@@ -61,11 +81,8 @@ export function DesignCard({ d, onOpen, compact = false }: { d: Design; onOpen: 
   return (
     <button type="button" onClick={onOpen} className={`group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 text-left transition-all hover:border-pink-400/40 ${compact ? "w-44 flex-shrink-0" : ""}`}>
       <span className="relative block aspect-square w-full overflow-hidden bg-slate-800">
-        {d.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.imageUrl} alt={designTitle(d)} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-        )}
-        <AiBadge className="absolute left-2 top-2" />
+        <DesignVisual d={d} className="transition-transform duration-300 group-hover:scale-105" />
+        <AiBadge d={d} className="absolute left-2 top-2" />
         {d.saves > 0 && (
           <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-bold text-white">
             <Bookmark className="h-3 w-3" /> {d.saves}
@@ -129,11 +146,8 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div role="dialog" aria-label={designTitle(d)} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-square w-full bg-slate-900">
-          {d.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.imageUrl} alt={designTitle(d)} className="h-full w-full object-cover" />
-          )}
-          <AiBadge className="absolute left-3 top-3" />
+          <DesignVisual d={d} />
+          <AiBadge d={d} className="absolute left-3 top-3" />
           <button type="button" onClick={onClose} aria-label={tr("Đóng", "Close")} className="absolute right-3 top-3 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"><X className="h-5 w-5" /></button>
         </div>
         <div className="space-y-5 p-5 pb-[max(20px,env(safe-area-inset-bottom))]">

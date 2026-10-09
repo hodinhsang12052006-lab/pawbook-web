@@ -1,19 +1,30 @@
 // Gọi Google Gemini API (REST) — viết ý tưởng mẫu nail (JSON) và vẽ ảnh minh hoạ.
 // Biến môi trường:
-//   GEMINI_API_KEY        — khoá từ Google AI Studio (bắt buộc)
+//   GEMINI_API_KEY        — khoá từ Google AI Studio / Vertex AI (bắt buộc)
 //   GEMINI_TEXT_MODEL     — mặc định "gemini-2.5-flash"
 //   GEMINI_IMAGE_MODEL    — mặc định "gemini-2.5-flash-image"
 // Kiểm thử local: GEMINI_ALLOW_TEST=1 + GEMINI_TEST_BASE=http://127.0.0.1:PORT (máy chủ giả).
+//
+// Google có nhiều kiểu khoá (khoá AI Studio "AIza…", khoá mới "AQ.…", khoá
+// Vertex AI express) và mỗi kiểu nhận ở chỗ khác nhau. Thử lần lượt 3 cách,
+// nhớ cách nào chạy được cho các lần sau:
+//   1. generativelanguage.googleapis.com + header x-goog-api-key
+//   2. generativelanguage.googleapis.com + ?key=
+//   3. aiplatform.googleapis.com (Vertex AI express) + ?key=
 
-const BASE = "https://generativelanguage.googleapis.com";
+const AI_STUDIO = "https://generativelanguage.googleapis.com/v1beta/models";
+const VERTEX = "https://aiplatform.googleapis.com/v1/publishers/google/models";
+
+type Mode = "header" | "query" | "vertex";
+let workingMode: Mode | null = null;
 
 function cfg() {
-  const key = process.env.GEMINI_API_KEY;
+  const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return null;
-  const base = process.env.GEMINI_ALLOW_TEST === "1" && process.env.GEMINI_TEST_BASE ? process.env.GEMINI_TEST_BASE.replace(/\/$/, "") : BASE;
+  const test = process.env.GEMINI_ALLOW_TEST === "1" && process.env.GEMINI_TEST_BASE ? process.env.GEMINI_TEST_BASE.replace(/\/$/, "") : null;
   return {
     key,
-    base,
+    test,
     textModel: process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash",
     imageModel: process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image",
   };
@@ -24,19 +35,37 @@ export const geminiEnabled = () => cfg() !== null;
 interface Part { text?: string; inlineData?: { mimeType: string; data: string } }
 interface GenResponse { candidates?: { content?: { parts?: Part[] }; finishReason?: string }[]; error?: { message?: string } }
 
+function request(mode: Mode, c: NonNullable<ReturnType<typeof cfg>>, model: string) {
+  const m = encodeURIComponent(model);
+  if (c.test) return { url: `${c.test}/v1beta/models/${m}:generateContent`, headers: { "x-goog-api-key": c.key } };
+  if (mode === "header") return { url: `${AI_STUDIO}/${m}:generateContent`, headers: { "x-goog-api-key": c.key } };
+  if (mode === "query") return { url: `${AI_STUDIO}/${m}:generateContent?key=${encodeURIComponent(c.key)}`, headers: {} };
+  return { url: `${VERTEX}/${m}:generateContent?key=${encodeURIComponent(c.key)}`, headers: {} };
+}
+
 async function generate(model: string, body: unknown, timeoutMs: number): Promise<GenResponse> {
   const c = cfg();
   if (!c) throw new Error("Chưa cấu hình GEMINI_API_KEY.");
-  const res = await fetch(`${c.base}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    // Khoá đi trong header (không nằm trên URL → không lọt vào log truy cập).
-    headers: { "Content-Type": "application/json", "x-goog-api-key": c.key },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const data = (await res.json().catch(() => ({}))) as GenResponse;
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${data.error?.message?.slice(0, 200) ?? "lỗi không rõ"}`);
-  return data;
+  const modes: Mode[] = c.test ? ["header"] : workingMode ? [workingMode] : ["header", "query", "vertex"];
+  let lastErr = "";
+  for (const mode of modes) {
+    const { url, headers } = request(mode, c, model);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const data = (await res.json().catch(() => ({}))) as GenResponse;
+    if (res.ok) {
+      workingMode = mode;
+      return data;
+    }
+    lastErr = `Gemini ${res.status} (${mode}): ${data.error?.message?.slice(0, 200) ?? "lỗi không rõ"}`;
+    // Chỉ thử cách khác khi lỗi XÁC THỰC; lỗi khác (quota, nội dung…) báo luôn.
+    if (res.status !== 401 && res.status !== 403) break;
+  }
+  throw new Error(lastErr);
 }
 
 /** Gọi model chữ, bắt trả JSON đúng schema. */

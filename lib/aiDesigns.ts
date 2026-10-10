@@ -229,7 +229,8 @@ export async function generateEngine(market: "US" | "AU", count: number): Promis
   // Không có / hết lượt / lỗi → mẫu vẫn lưu, app tự vẽ hình minh hoạ.
   const errors: string[] = list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [];
   let imagesLeft = 0;
-  if (cfImageEnabled() && storageReady() && !textOnly()) {
+  // (AI_DESIGNS_TEXT_ONLY chỉ dành cho Gemini — không chặn ảnh Cloudflare miễn phí.)
+  if (cfImageEnabled() && storageReady()) {
     const imagesToday = await prisma.nailDesign.count({ where: { day, provider: "pawnail", imageUrl: { not: null } } });
     imagesLeft = Math.max(0, cfDailyImages() - imagesToday);
   }

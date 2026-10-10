@@ -19,8 +19,24 @@ function apiBase() {
   return "https://api.cloudflare.com/client/v4";
 }
 
+// Bộ lọc NSFW của Cloudflare đôi khi chặn nhầm mô tả móng tay ("sheer", "woman's
+// hand"…) — cùng 1 câu lúc qua lúc không. Bị chặn nhầm → thử lại tối đa 2 lần,
+// lần cuối với câu mô tả "an toàn" hơn. Lỗi khác (hết lượt, sai khoá) → dừng ngay.
+const NSFW = /NSFW/i;
+const safer = (p: string) => p.replace(/\b(sheer|translucent|see-through)\b/gi, "glossy").replace(/a woman's hand/gi, "a hand");
+
 /** Vẽ 1 ảnh từ mô tả tiếng Anh → { mimeType, base64 } (JPEG). */
 export async function cfImage(prompt: string, timeoutMs = 45_000): Promise<{ mimeType: string; base64: string }> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await cfImageOnce(attempt < 2 ? prompt : safer(prompt), timeoutMs);
+    } catch (err) {
+      if (attempt >= 2 || !NSFW.test((err as Error).message)) throw err;
+    }
+  }
+}
+
+async function cfImageOnce(prompt: string, timeoutMs: number): Promise<{ mimeType: string; base64: string }> {
   if (!cfImageEnabled()) throw new Error("Chưa cấu hình Cloudflare Workers AI (CF_ACCOUNT_ID / CF_AI_TOKEN).");
   const res = await fetch(`${apiBase()}/accounts/${encodeURIComponent(process.env.CF_ACCOUNT_ID!)}/ai/run/${MODEL}`, {
     method: "POST",

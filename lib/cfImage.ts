@@ -4,14 +4,14 @@
 // CHI PHÍ: gói Workers FREE cho 10.000 neuron/ngày. Một ảnh 1024×1024, 4 bước
 // ≈ 4 ô 512 × 4,8 + 4 bước × 9,6 ≈ 58 neuron → ~170 ảnh/ngày miễn phí. Ở gói
 // Free, hết hạn mức thì Cloudflare chỉ trả lỗi (không tự trừ tiền); app còn tự
-// khoá ở AI_IMAGES_DAILY ảnh/ngày (mặc định 12) cho chắc.
+// khoá ở AI_IMAGES_DAILY ảnh/ngày (mặc định 12, tối đa 120 — dưới hạn mức miễn phí) cho chắc.
 //
 // Cấu hình (Vercel): CF_ACCOUNT_ID + CF_AI_TOKEN (API token quyền "Workers AI: Read").
 
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 
 export const cfImageEnabled = () => !!(process.env.CF_ACCOUNT_ID && process.env.CF_AI_TOKEN);
-export const cfDailyImages = () => Math.max(0, Math.min(60, Number(process.env.AI_IMAGES_DAILY ?? 12) || 0));
+export const cfDailyImages = () => Math.max(0, Math.min(120, Number(process.env.AI_IMAGES_DAILY ?? 12) || 0));
 
 function apiBase() {
   // Máy chủ giả lập chỉ dùng khi chạy kiểm thử local (không bao giờ đặt trên Vercel).

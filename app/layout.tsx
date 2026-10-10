@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/siteUrl";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
@@ -24,10 +25,19 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'PawNail Jobs — Việc Làm & Tay Nghề Nail US/AU',
-  description: 'Nền tảng tuyển dụng & sàn tay nghề ngành Nail cho thị trường Mỹ (US) và Úc (AU).',
+  description: 'Sàn kết nối thợ nail và chủ tiệm tại Mỹ & Úc — tìm việc nail gấp, tuyển thợ giỏi, nhắn tin trực tiếp, miễn phí.',
   manifest: '/manifest.json',
+  applicationName: 'PawNail Jobs',
+  openGraph: { siteName: 'PawNail Jobs', type: 'website', locale: 'vi_VN' },
 };
+
+// Cho Google biết TÊN thương hiệu + LOGO (hiện ở kết quả tìm kiếm thay cho tên miền / ảnh cũ).
+const SITE_LD = JSON.stringify([
+  { "@context": "https://schema.org", "@type": "WebSite", name: "PawNail Jobs", alternateName: ["BitPawOS", "PawNail"], url: `${SITE_URL}/` },
+  { "@context": "https://schema.org", "@type": "Organization", name: "PawNail Jobs", url: `${SITE_URL}/`, logo: `${SITE_URL}/icon.jpg` },
+]);
 
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { SessionUserProvider } from "@/lib/SessionUserContext";
@@ -61,6 +71,7 @@ export default function RootLayout({
             __html: `window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
           }}
         />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_LD }} />
       </head>
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
         {/* Nền chung toàn app — xem .app-backdrop trong globals.css */}

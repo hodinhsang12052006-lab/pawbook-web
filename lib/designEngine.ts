@@ -226,7 +226,7 @@ export const PATTERNS: Pattern[] = [
     why: s("kẻ chỉ tối giản (minimal) hợp khách văn phòng, làm nhanh mà vẫn nổi", "minimal line art suits office clients — fast yet eye-catching"),
     materials: ({ metal }) => [LINER(metal), LINER_BRUSH],
     steps: ({ metal }) => [s(`Kẻ 1–2 đường chỉ ${metal.vi} cong nhẹ trên mỗi móng, hơ đèn`, `Draw one or two gently curved ${metal.en} lines on each nail, cure`)],
-    image: ({ c1, metal }) => `${c1.en} nails with delicate minimalist ${metal.en} curved line art`,
+    image: ({ c1, metal }) => `${c1.en} nails with clearly visible thin metallic ${metal.en} curved line art painted on every nail`,
   },
   {
     id: "dots", occasions: ["spring", "summer", "backtoschool", "any"], finishes: ["glossy", "matte"], minutes: 10, price: 5, difficulty: 1, design: true,
@@ -356,7 +356,7 @@ export const PATTERNS: Pattern[] = [
     why: s("đầu French tráng gương (bạc, ngọc trai) đang thay French trắng — sang, ăn ảnh", "mirror-chrome French tips (silver or pearl) are replacing white French — luxe and photogenic"),
     materials: ({ metal }) => [m(`Bột tráng gương ${metal.vi}`, `${cap(metal.en)} chrome powder`, "1 hũ"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat"), m("Cọ French dẹt", "Flat French brush", "1 cây")],
     steps: ({ metal }) => [s("Kẻ đầu French mảnh bằng top no-wipe, hơ đèn", "Paint a thin French tip with no-wipe top, cure"), s(`Xoa bột tráng gương ${metal.vi} lên đầu French, phủ top khoá bột, hơ đèn`, `Buff ${metal.en} chrome powder onto the tips, seal with top coat, cure`)],
-    image: ({ c1, metal }) => `${c1.en} base with thin French tips made of highly reflective mirror-like metallic ${metal.en} chrome that shines like polished metal`,
+    image: ({ c1, metal }) => `${c1.en} base with clearly contrasting French tips made of highly reflective mirror-like metallic ${metal.en} chrome that shines like polished metal on every nail`,
   },
   {
     id: "charm3d", occasions: ["korean", "valentine", "wedding"], finishes: ["glossy", "cateye"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 1, design: true,
@@ -406,7 +406,7 @@ export const PATTERNS: Pattern[] = [
     why: s("French đôi (2 đường mảnh song song ở đầu móng) là biến tấu French đang được lưu nhiều", "the double French (two fine parallel tip lines) is the French twist everyone is saving"),
     materials: ({ c2, metal }) => [m(`Gel ${c2.vi} (đường French)`, `${cap(c2.en)} gel (French line)`), LINER(metal), LINER_BRUSH],
     steps: ({ c2, metal }) => [s(`Kẻ đường French ${c2.vi} thật mảnh ở đầu móng, hơ đèn`, `Paint a micro-thin ${c2.en} French line at the tip, cure`), s(`Kẻ đường thứ hai ${metal.vi} song song, cách đường đầu ~1mm, hơ đèn`, `Add a second ${metal.en} line parallel to it, about 1 mm below, cure`)],
-    image: ({ c1, c2, metal }) => `${c1.en} nails with a double French: a thin ${c2.en} tip line and a second fine ${metal.en} line just below it, crisp and parallel`,
+    image: ({ c1, c2, metal }) => `${c1.en} nails with a clearly visible double French on every nail: a thin ${c2.en} tip line and a second fine ${metal.en} line just below it, crisp and parallel`,
   },
   {
     id: "swirl", occasions: ["trend", "summer", "spring"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
@@ -478,7 +478,7 @@ export const PATTERNS: Pattern[] = [
     why: s("móng velvet (mắt mèo rải đều như nhung) đang thay mắt mèo dải sáng — nhìn sang, lấp lánh dưới đèn", "velvet nails (cat-eye spread evenly like velvet) are replacing the classic cat-eye stripe — luxe and sparkly"),
     materials: () => [m("Nam châm phẳng cho hiệu ứng velvet", "Flat magnet for velvet effect", "1 cái")],
     steps: () => [],
-    image: ({ c1 }) => `${c1.en} velvet nails with an even fine shimmering magnetic cat-eye sparkle across the whole nail, plush velvet look`,
+    image: ({ c1 }) => `${c1.en} velvet nails covered edge to edge in dense fine shimmering magnetic sparkle, plush velvet texture clearly visible`,
   },
 
   // ---------------- Halloween 🎃 (vẽ trên 1–2 ngón nhấn, còn lại màu nền) ----------------
@@ -552,7 +552,7 @@ export const PATTERNS: Pattern[] = [
     why: s("mèo đen (biểu tượng phù thuỷ) vẽ dáng ngồi — dễ thương, người nuôi mèo rất thích", "a sitting black cat (the witch's companion) is adorable — cat lovers ask for it"),
     materials: () => [m("Gel đen đặc (dáng mèo)", "Opaque black gel (cat shape)"), m("Gel vàng (mắt mèo)", "Yellow gel (cat eyes)"), LINER_BRUSH, DOT],
     steps: () => [s(`Vẽ dáng mèo đen ngồi (đầu tròn, 2 tai nhọn, đuôi cong) ở chân móng ${ACC.vi}, hơ đèn`, `Paint a sitting black cat (round head, pointed ears, curled tail) near the cuticle of the ${ACC.en}, cure`), s("Chấm 2 mắt vàng nhỏ, hơ đèn", "Dot two tiny yellow eyes, cure")],
-    image: ({ c1 }) => `${c1.en} nails with a small black cat silhouette with yellow eyes on two accent nails`,
+    image: ({ c1 }) => `${c1.en} nails with a clearly visible black cat silhouette with yellow eyes painted large on the surface of two accent nails`,
   },
   {
     id: "witchy", occasions: ["halloween"], finishes: ["cateye", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 8, difficulty: 2, design: true, badBase: ["nude", "pinkNude", "babyPink", "lavender", "white", "pearl", "pumpkin", "sheer"],
@@ -611,7 +611,14 @@ function DIP_FINISH(finish: Finish, metal: Color): { materials: Mat[]; steps: Bi
   return { materials: [], steps: [], minutes: 0, price: 0 };
 }
 
-const FINISH_EN: Record<Finish, string> = { glossy: "high-gloss", matte: "velvety matte", chrome: "mirror chrome", cateye: "magnetic cat-eye", glitter: "shimmering glitter" };
+const FINISH_EN: Record<Finish, string> = {
+  glossy: "high-gloss",
+  matte: "velvety matte",
+  chrome: "reflective mirror chrome",
+  // Ảnh kiểm tra cho thấy "magnetic cat-eye" hay ra màu trơn → tả rõ dải sáng.
+  cateye: "magnetic cat-eye gel with a bright shimmering diagonal light band clearly visible across each nail",
+  glitter: "shimmering glitter",
+};
 
 // ----------------------------------------------------------------------------
 export interface EngineSpec { occasion: string | null; system: SystemId; shape: Shape; finish: Finish; pattern: string; colors: [CK, CK, CK]; style?: "korean" | "trend" }
@@ -700,7 +707,7 @@ export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: 
   };
 
   const length = spec.shape === "stiletto" || spec.shape === "coffin" ? "long" : spec.shape === "square" || spec.shape === "oval" ? "short" : "medium-length";
-  const imagePrompt = `${length} ${spec.shape} nails, ${pat.image(ctx)}, ${FINISH_EN[spec.finish]} finish`;
+  const imagePrompt = `${length} ${spec.shape} nails, ${pat.image(ctx)}, ${FINISH_EN[spec.finish]} finish, all nail art painted only on the nail surfaces (never on the skin), all five nails fully painted`;
 
   return {
     occasion: spec.occasion, title, description, skills, difficulty, minutes,

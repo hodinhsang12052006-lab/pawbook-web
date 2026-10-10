@@ -318,8 +318,16 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
         await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt}${imgMark()}`.slice(0, 2000) } });
         done++;
       } catch (err) {
+        const msg = (err as Error).message;
+        // Hết lượt miễn phí trong ngày (Cloudflare reset 00:00 UTC) → dừng hẳn, mai vẽ bù tiếp.
+        if (/used up your daily free allocation|daily free allocation/i.test(msg)) {
+          left = 0;
+          queue.length = 0;
+          errors.push("Đã hết lượt vẽ ảnh miễn phí hôm nay của Cloudflare — các mẫu còn lại sẽ được vẽ bù ở lượt sau (không tốn tiền).");
+          return;
+        }
         left++;
-        errors.push(`Không vẽ được ảnh (dùng hình minh hoạ, sẽ vẽ bù): ${(err as Error).message.slice(0, 140)}`);
+        errors.push(`Không vẽ được ảnh (dùng hình minh hoạ, sẽ vẽ bù): ${msg.slice(0, 140)}`);
       }
     }
   };

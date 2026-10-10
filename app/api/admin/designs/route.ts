@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
+import { cfDailyImages, cfImageEnabled } from "@/lib/cfImage";
 import { dailyLimit, generateDesigns, generateEngine, generateSamples, storageReady, textOnly, toPublic } from "@/lib/aiDesigns";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
@@ -36,6 +37,7 @@ export async function GET() {
       enabled: geminiEnabled(),
       storage: storageReady(),
       textOnly: textOnly(),
+      cfImages: cfImageEnabled() && storageReady() ? cfDailyImages() : 0,
       dailyLimit: dailyLimit(),
       madeToday,
       drafts: drafts.map(toPublic),

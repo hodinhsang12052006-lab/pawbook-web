@@ -5,6 +5,7 @@ import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 import { SAMPLE_DESIGNS } from "@/lib/designSamples";
 import { generateEngineDesigns, PATTERN_IDS } from "@/lib/designEngine";
+import { cfDailyImages, cfImage, cfImageEnabled } from "@/lib/cfImage";
 
 // "Mẫu nail AI mỗi ngày":
 //   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
@@ -224,23 +225,42 @@ export async function generateEngine(market: "US" | "AU", count: number): Promis
     risingTags: (signals?.risingTags ?? []).map((t) => t.tag),
     usedTitles: new Set(recent.map((r) => r.title)),
   });
+  // Ảnh thật (tuỳ chọn): Cloudflare Workers AI gói miễn phí, tối đa cfDailyImages() ảnh/ngày.
+  // Không có / hết lượt / lỗi → mẫu vẫn lưu, app tự vẽ hình minh hoạ.
+  const errors: string[] = list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [];
+  let imagesLeft = 0;
+  if (cfImageEnabled() && storageReady() && !textOnly()) {
+    const imagesToday = await prisma.nailDesign.count({ where: { day, provider: "pawnail", imageUrl: { not: null } } });
+    imagesLeft = Math.max(0, cfDailyImages() - imagesToday);
+  }
+  const images = await Promise.all(
+    list.map(async (d, k) => {
+      if (k >= imagesLeft) return null;
+      try {
+        return await store(await cfImage(`${d.imagePrompt}. ${IMAGE_STYLE}`));
+      } catch (err) {
+        errors.push(`Không vẽ được ảnh (dùng hình minh hoạ): ${(err as Error).message.slice(0, 140)}`);
+        return null;
+      }
+    })
+  );
   const created: string[] = [];
-  for (const d of list) {
+  for (const [k, d] of list.entries()) {
     const row = await prisma.nailDesign.create({
       data: {
         day, market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
         skills: d.skills.join(","), difficulty: d.difficulty, minutes: d.minutes, priceHint: d.priceHint,
-        materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: null,
+        materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: images[k],
         palette: JSON.stringify(d.palette), shape: d.shape, finish: d.finish, pattern: d.pattern,
         provider: "pawnail",
-        // Mô tả ảnh sẵn cho máy vẽ ảnh (giai đoạn 2) — hiện chưa gọi dịch vụ nào.
+        // Mô tả ảnh — dùng để vẽ (nếu bật Cloudflare) hoặc vẽ lại sau.
         prompt: `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000),
       },
       select: { id: true },
     });
     created.push(row.id);
   }
-  return { created, skipped: count - list.length, errors: list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [] };
+  return { created, skipped: count - list.length, errors };
 }
 
 /** Mẫu GỢI Ý soạn sẵn (không gọi AI) — ưu tiên dịp lễ sắp tới, không lặp mẫu đã có. */

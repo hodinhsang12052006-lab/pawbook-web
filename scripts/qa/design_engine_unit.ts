@@ -48,8 +48,8 @@ check("DE7", "Mắt mèo: có nam châm + hút nam châm NGAY trong lớp màu (
   bad((x) => x.d.finish === "cateye" && !(x.d.steps.findIndex((s) => /nam châm/.test(s.vi)) === x.d.steps.findIndex((s) => /mắt mèo/.test(s.vi)))));
 check("DE8", "Tráng gương: có bột chrome + bước xoa bột + khoá top", all.filter((x) => x.d.finish === "chrome").every((x) => x.d.materials.some((m) => /tráng gương/.test(m.vi)) && x.d.steps.some((s) => /xoa bột chrome/.test(s.vi))));
 check("DE9", "Nhám: có top nhám, KHÔNG có bước phủ top bóng mâu thuẫn", all.filter((x) => x.d.finish === "matte").every((x) => x.d.materials.some((m) => /nhám/.test(m.vi)) && !x.d.steps.some((s) => /top bóng, hơ đèn, thoa/.test(s.vi))), bad((x) => x.d.finish === "matte" && x.d.steps.some((s) => /top bóng, hơ đèn, thoa/.test(s.vi))));
-check("DE10", "Dip: chỉ hoạ tiết làm bằng bột, hoàn thiện activator + top dip, không hơ đèn ở bước cuối, không top gel", all.filter((x) => x.d.spec.system === "dip").every((x) => ["solid", "french", "ombre"].includes(x.d.pattern) && /activator/.test(x.d.steps.at(-1)!.vi) && !/hơ đèn/.test(x.d.steps.at(-1)!.vi) && !x.d.materials.some((m) => /Top gel/.test(m.vi))),
-  bad((x) => x.d.spec.system === "dip" && !(["solid", "french", "ombre"].includes(x.d.pattern) && /activator/.test(x.d.steps.at(-1)!.vi))));
+check("DE10", "Dip: chỉ hoạ tiết làm bằng bột, hoàn thiện activator + top dip, không hơ đèn ở bước cuối, không top gel", all.filter((x) => x.d.spec.system === "dip").every((x) => ["solid", "french", "ombre", "babyboomer"].includes(x.d.pattern) && /activator/.test(x.d.steps.at(-1)!.vi) && !/hơ đèn/.test(x.d.steps.at(-1)!.vi) && !x.d.materials.some((m) => /Top gel/.test(m.vi))),
+  bad((x) => x.d.spec.system === "dip" && !(["solid", "french", "ombre", "babyboomer"].includes(x.d.pattern) && /activator/.test(x.d.steps.at(-1)!.vi))));
 check("DE11", "Đồi mồi: không sơn thêm lớp màu nền (jelly là màu), dùng tông caramel/nâu", all.filter((x) => x.d.pattern === "tortoise").every((x) => !x.d.steps.some((s) => /^Sơn 2 lớp gel/.test(s.vi)) && x.d.palette[0] === "#b45309"));
 check("DE12", "Chỉ nói 'đang lên #tag' khi mẫu dùng đúng hoạ tiết/hiệu ứng đó", all.every((x) => {
   const m = x.d.description.vi.match(/#(\w+)/);
@@ -74,6 +74,16 @@ check("DE19", "Cùng ngày chạy lại ra cùng kết quả (có hạt giống)
 const avoid = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "halloween", title: "Mùa Halloween", startsIn: 0 }], risingTags: [], usedTitles: new Set(again.map((d) => d.title.vi)) });
 check("DE20", "Không lặp tên mẫu đã ra trước đó", avoid.length === 6 && !avoid.some((d) => again.some((a) => a.title.vi === d.title.vi)), avoid.map((d) => d.title.vi).join(" | "));
 
+const kor = all.filter((x) => /^Trend nail Hàn/.test(x.d.description.vi));
+const KOREAN_ONLY = ["jelly", "chromefrench", "charm3d", "gemcluster", "foil", "chromeline", "mixmatch", "babyboomer"];
+check("DE22", "Trend nail Hàn tối giản: chiếm phần lớn mẫu quanh năm, dùng bảng màu nude/thạch/trắng sữa/xám be/socola", kor.length >= all.length * 0.25 && kor.every((x) => !x.d.occasion) && new Set(kor.map((x) => x.d.pattern)).size >= 10, `${kor.length}/${all.length} mẫu, ${new Set(kor.map((x) => x.d.pattern)).size} hoạ tiết`);
+check("DE23", "Mỗi lô vừa có mẫu theo dịp lễ vừa có mẫu quanh năm (khi đang có dịp lễ)", batches.every((b) => b.some((d) => d.occasion) && b.some((d) => !d.occasion)));
+check("DE24", "Hoạ tiết kiểu Hàn ra đúng chỗ (trend Hàn hoặc dịp được phép), baby boomer luôn hồng nude → trắng sữa", all.filter((x) => KOREAN_ONLY.includes(x.d.pattern)).every((x) => /^Trend nail Hàn/.test(x.d.description.vi) || (x.d.occasion && (PATTERNS.find((p) => p.id === x.d.pattern)!.occasions as string[]).includes(x.d.occasion))) && all.filter((x) => x.d.pattern === "babyboomer").every((x) => x.d.palette[0] === "#f2c4c4" && x.d.palette[1] === "#f8fafc"));
+check("DE25", "Charm/cụm đá: phủ top quanh viền, KHÔNG phủ lên mặt charm/đá", all.filter((x) => ["charm3d", "gemcluster"].includes(x.d.pattern)).every((x) => x.d.steps.some((st) => /không phủ lên mặt/.test(st.vi))));
+
+const dupWord = (t: string) => t.toLowerCase().split(/\s+/).some((w, i, a) => i > 0 && w === a[i - 1]);
+check("DE26", "Tên mẫu không lặp từ (VD 'thạch … thạch', 'sheer sheer')", !all.some((x) => dupWord(x.d.title.vi) || dupWord(x.d.title.en)), bad((x) => dupWord(x.d.title.vi) || dupWord(x.d.title.en)));
+
 // Mọi tổ hợp hợp lệ đều ghép được (không lỗi, đủ bước).
 let combos = 0, comboErr = "";
 for (const p of PATTERNS) for (const sys of ["gelx", "acrylic", "dip", "gel"] as SystemId[]) for (const fi of p.finishes as Finish[]) for (const sh of ["almond", "coffin", "square", "oval", "stiletto"] as Shape[]) {
@@ -88,5 +98,5 @@ for (const p of PATTERNS) for (const sys of ["gelx", "acrylic", "dip", "gel"] as
 }
 check("DE21", `Mọi tổ hợp hoạ tiết × hệ × hiệu ứng × dáng ghép được (${combos} tổ hợp)`, !comboErr && combos > 300, comboErr);
 
-console.log(`\nMáy tạo mẫu PawNail: ${21 - fail}/21 PASS`);
+console.log(`\nMáy tạo mẫu PawNail: ${26 - fail}/26 PASS`);
 if (fail) process.exit(1);

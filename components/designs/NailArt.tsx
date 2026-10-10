@@ -21,7 +21,7 @@ const NAIL: Record<string, string> = {
 // Ngón: [tâm x, đỉnh ngón y] — xoè nhẹ như bàn tay giơ lên.
 const FINGERS: [number, number][] = [[38, 70], [84, 38], [130, 26], [176, 40], [220, 82]];
 const ACCENT = new Set([1, 3]); // ngón trỏ + ngón áp út
-const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines"]);
+const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline"]);
 
 function hash(s: string) {
   let h = 2166136261;
@@ -108,6 +108,44 @@ function Motif({ pattern, c2, metal, i, rnd, uid }: { pattern: string; c2: strin
           <g stroke="#ffffff" strokeWidth={0.5} opacity={0.8}><path d="M13 -6 L13 74 M-2 33 L28 33" /></g>
         </g>
       );
+    case "babyboomer":
+      return <rect x={-2} y={-6} width={30} height={80} fill={`url(#bb${uid})`} />;
+    case "chromefrench":
+      return <path d="M-3 16 Q13 6 29 16 L29 -8 L-3 -8 Z" fill={`url(#cr${uid})`} />;
+    case "charm3d":
+      // nơ kim loại: 2 cánh + nút giữa, có điểm sáng
+      return (
+        <g>
+          <path d="M13 34 L5 28 L5 40 Z M13 34 L21 28 L21 40 Z" fill={`url(#cr${uid})`} stroke="rgba(0,0,0,0.25)" strokeWidth={0.4} />
+          <circle cx={13} cy={34} r={2.2} fill={`url(#cr${uid})`} stroke="rgba(0,0,0,0.25)" strokeWidth={0.4} />
+        </g>
+      );
+    case "gemcluster":
+      return (
+        <g stroke="#94a3b8" strokeWidth={0.4}>
+          <circle cx={13} cy={36} r={4.2} fill="#f8fafc" />
+          <circle cx={13} cy={36} r={1.6} fill="#ffffff" stroke="none" />
+          {[[7, 30, 2], [19, 31, 2.2], [8, 43, 1.8], [18, 43, 2], [13, 27, 1.5], [13, 46, 1.4]].map(([x, y, r], k) => (
+            <circle key={k} cx={x} cy={y} r={r} fill={k % 2 ? "#cbd5e1" : "#e2e8f0"} />
+          ))}
+        </g>
+      );
+    case "foil":
+      return (
+        <g fill={metal} opacity={0.9}>
+          {Array.from({ length: 6 }).map((_, k) => {
+            const x = 3 + rnd() * 18, y = 10 + rnd() * 44;
+            return <path key={k} d={`M${x} ${y} l${2 + rnd() * 3} ${-1 - rnd() * 2} l${1 + rnd() * 2} ${2 + rnd() * 3} l${-3 - rnd() * 2} ${1 + rnd()} Z`} />;
+          })}
+        </g>
+      );
+    case "chromeline":
+      return (
+        <g fill="none" strokeLinecap="round">
+          <path d={i % 2 ? "M4 60 C 10 44, 4 30, 14 20 S 22 8, 20 2" : "M22 62 C 14 50, 22 36, 12 24 S 6 10, 8 2"} stroke={`url(#cr${uid})`} strokeWidth={2.2} />
+          <path d={i % 2 ? "M4 60 C 10 44, 4 30, 14 20" : "M22 62 C 14 50, 22 36, 12 24"} stroke="#ffffff" strokeOpacity={0.6} strokeWidth={0.6} />
+        </g>
+      );
     case "waves":
       return <g stroke="#ffffff" strokeWidth={1.2} fill="none" strokeLinecap="round">{[10, 17].map((y) => <path key={y} d={`M-2 ${y} Q4 ${y - 4} 9 ${y} T20 ${y} T31 ${y}`} />)}</g>;
     default:
@@ -126,7 +164,9 @@ export default function NailArt({
   const c2 = colors[1] ?? colors[0];
   const metal = colors[2] ?? colors[1] ?? "#d4af37";
   // Có hoạ tiết (hoặc mẫu PawNail) → mọi móng cùng màu nền; mẫu cũ thì đổi màu xen kẽ.
-  const sameBase = uniform || pattern !== "solid";
+  const sameBase = pattern !== "mixmatch" && (uniform || pattern !== "solid");
+  // Mix màu: ngón giữa + áp út đổi màu phụ (đúng bước làm của máy tạo mẫu).
+  const mixIdx = (i: number) => (i === 2 || i === 3 ? 1 : 0);
 
   return (
     <svg viewBox="0 0 260 260" className={className} role="img" aria-label={tr("Minh hoạ mẫu nail", "Nail design preview")} preserveAspectRatio="xMidYMid slice">
@@ -148,6 +188,17 @@ export default function NailArt({
           <stop offset="0%" stopColor={c2} />
           <stop offset="100%" stopColor={c2} stopOpacity="0" />
         </radialGradient>
+        <linearGradient id={`bb${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f8fafc" />
+          <stop offset="35%" stopColor="#f8fafc" stopOpacity="0.85" />
+          <stop offset="80%" stopColor="#f8fafc" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`cr${uid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="40%" stopColor={metal} />
+          <stop offset="60%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor={metal} />
+        </linearGradient>
         <clipPath id={`clip${uid}`}>
           <path d={path} />
         </clipPath>
@@ -180,13 +231,13 @@ export default function NailArt({
       <rect width="260" height="260" fill={`url(#bg${uid})`} />
       {FINGERS.map(([cx, top], i) => {
         const fw = i === 4 ? 40 : 36;
-        const nailColor = `url(#n${uid}${sameBase ? 0 : (i === 3 && colors.length > 1 ? 1 : i) % colors.length})`;
+        const nailColor = `url(#n${uid}${pattern === "mixmatch" ? Math.min(mixIdx(i), colors.length - 1) : sameBase ? 0 : (i === 3 && colors.length > 1 ? 1 : i) % colors.length})`;
         const drawMotif = pattern !== "solid" && (ALL_NAILS.has(pattern) || ACCENT.has(i));
         return (
           <g key={i} transform={i === 4 ? `rotate(22 ${cx} ${top + 40})` : i === 0 ? "rotate(-8 38 150)" : undefined}>
             <rect x={cx - fw / 2} y={top} width={fw} height={260} rx={fw / 2} fill={`url(#skin${uid})`} />
             <g transform={`translate(${cx - W / 2} ${top + 8})`}>
-              <path d={path} fill={pattern === "tortoise" ? "#b45309" : nailColor} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
+              <path d={path} fill={pattern === "tortoise" ? "#b45309" : pattern === "babyboomer" ? "#f2c4c4" : nailColor} fillOpacity={pattern === "jelly" ? 0.55 : 1} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
               {drawMotif && (
                 <g clipPath={`url(#clip${uid})`}>
                   <Motif pattern={pattern} c2={c2} metal={metal} i={i} rnd={rnd} uid={uid} />

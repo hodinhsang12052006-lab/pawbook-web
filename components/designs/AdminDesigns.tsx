@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
-interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
+interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
 
 // Phòng nội dung → "Mẫu nail AI": tạo mẫu bằng Gemini, DUYỆT trước khi người
 // dùng thấy (AI hay vẽ sai ngón tay / mô tả lệch — admin là người chốt).
@@ -69,7 +69,11 @@ export default function AdminDesigns() {
           </button>
         </div>
       </div>
-      {st && !st.enabled && <p className="rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-slate-400 ring-1 ring-white/10">Gemini (tuỳ chọn) chưa bật — không cần: máy PawNail vẫn tạo mẫu mỗi ngày.</p>}
+      {st && (st.cfImages ? (
+        <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200 ring-1 ring-emerald-500/25">Ảnh thật: Cloudflare Workers AI (gói miễn phí) — tối đa {st.cfImages} ảnh/ngày, hết lượt thì dùng hình minh hoạ, không tốn tiền.</p>
+      ) : (
+        <p className="rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-slate-400 ring-1 ring-white/10">Ảnh thật (tuỳ chọn, miễn phí): thêm CF_ACCOUNT_ID + CF_AI_TOKEN của Cloudflare Workers AI vào Vercel. Chưa có thì mẫu dùng hình minh hoạ app tự vẽ.</p>
+      ))}
       {st && st.enabled && (st.textOnly || st.storage === false) && <p className="rounded-xl bg-sky-500/10 px-3 py-2 text-xs text-sky-200 ring-1 ring-sky-500/25">Chế độ chỉ viết chữ (Gemini miễn phí): AI viết ý tưởng + vật tư + các bước, minh hoạ do app tự vẽ từ bảng màu. Bật ảnh AI: bỏ AI_DESIGNS_TEXT_ONLY trên Vercel sau khi gắn thanh toán Google.</p>}
       {st?.needsSql && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa tạo bảng — chạy prisma/sql/2026-10-09_nail_designs.sql.</p>}
 

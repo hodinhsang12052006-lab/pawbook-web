@@ -52,6 +52,20 @@ const gemini = http.createServer((req, res) => {
 });
 await new Promise((r) => gemini.listen(4993, "127.0.0.1", r));
 
+// Cloudflare Workers AI giả lập (FLUX schnell) — trả JPEG base64 như API thật.
+const cfCalls = [];
+const cf = http.createServer((req, res) => {
+  let b = "";
+  req.on("data", (c) => (b += c));
+  req.on("end", () => {
+    cfCalls.push({ path: req.url, auth: req.headers.authorization, body: JSON.parse(b || "{}") });
+    res.setHeader("content-type", "application/json");
+    if (req.headers.authorization !== "Bearer test-cf-token") return res.writeHead(401).end(JSON.stringify({ success: false, errors: [{ message: "Authentication error" }] }));
+    res.end(JSON.stringify({ success: true, result: { image: PNG }, errors: [] }));
+  });
+});
+await new Promise((r) => cf.listen(4992, "127.0.0.1", r));
+
 let browser;
 const errors = [];
 try {
@@ -102,6 +116,11 @@ try {
   const c2 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer sai" } });
   const c3 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer test-cron" } });
   const c4 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer test-cron" } });
+  const cronRows = (await admin.req("/api/admin/designs")).data.drafts.filter((d) => c3.data.created?.includes(d.id));
+  R.check("D11b", "Ảnh thật miễn phí (Cloudflare FLUX): khoá qua header, đúng model, mô tả ảnh chân thực; KHOÁ 3 ảnh/ngày → 3 mẫu có ảnh, mẫu thứ 4 dùng hình minh hoạ",
+    cfCalls.length === 3 && cfCalls.every((c) => c.auth === "Bearer test-cf-token" && /\/accounts\/test-acc\/ai\/run\/@cf\/black-forest-labs\/flux-1-schnell$/.test(c.path) && /Photorealistic/.test(c.body.prompt) && c.body.steps === 4) &&
+    cronRows.filter((d) => d.imageUrl).length === 3 && cronRows.filter((d) => !d.imageUrl).length === 1,
+    JSON.stringify({ calls: cfCalls.map((c) => c.path), withImg: cronRows.filter((d) => d.imageUrl).length }));
   R.check("D11", "Cron: không khoá / sai khoá → 401; đúng khoá → máy PawNail tạo 4 mẫu (0đ, không gọi Gemini); chạy lại trong ngày không tạo thêm", c1.status === 401 && c2.status === 401 && c3.status === 200 && c3.data.created?.length === 4 && c4.data.created?.length === 0, `${c1.status} ${c2.status} ${c3.status} ${JSON.stringify(c3.data).slice(0, 120)} | ${JSON.stringify(c4.data).slice(0, 80)}`);
 
   // Máy tạo mẫu PawNail từ nút trong Phòng nội dung
@@ -110,7 +129,7 @@ try {
   const allDrafts = (await admin.req("/api/admin/designs")).data.drafts;
   const engRows = allDrafts.filter((d) => eng.data.created?.includes(d.id));
   const pawRows = allDrafts.filter((d) => d.provider === "pawnail");
-  R.check("D15", "Máy PawNail: tạo 3 mẫu KHÔNG gọi Gemini, đủ song ngữ + vật tư + các bước + giá + hoạ tiết", eng.status === 201 && engRows.length === 3 && calls.length === callsBefore &&
+  R.check("D15", "Máy PawNail: tạo 3 mẫu KHÔNG gọi Gemini, hết lượt ảnh trong ngày thì KHÔNG gọi Cloudflare thêm; đủ song ngữ + vật tư + các bước + giá + hoạ tiết", eng.status === 201 && engRows.length === 3 && calls.length === callsBefore && cfCalls.length === 3 &&
     engRows.every((d) => d.provider === "pawnail" && d.titleEn && d.descriptionEn && d.materials.length >= 3 && d.steps.length >= 4 && /^\$\d+–\d+$/.test(d.priceHint) && d.palette.length >= 2 && d.pattern && d.imageUrl === null),
     JSON.stringify(engRows.map((d) => [d.title, d.pattern, d.priceHint])).slice(0, 300));
   R.check("D16", "Máy PawNail: 7 mẫu (cron + nút) không trùng tên, mẫu đầu lô dễ cho thợ mới", pawRows.length === 7 && new Set(pawRows.map((d) => d.title)).size === 7 && pawRows.some((d) => d.difficulty === 1), pawRows.map((d) => d.title).join(" | "));
@@ -207,7 +226,7 @@ try {
   const aiTextBadges = await sec.getByText("Ý tưởng AI · minh hoạ màu").count();
   const pawBadges = await sec.getByText("Mẫu PawNail · hình minh hoạ").count();
   const motifs = await sec.locator("svg g[clip-path]").count();
-  R.check("U10", "Nháp không có ảnh AI → minh hoạ tự vẽ + nhãn đúng nguồn (AI chữ / mẫu gợi ý / mẫu PawNail)", svgPreviews >= 12 && colorBadges >= 5 && aiTextBadges >= 1 && pawBadges === 7, svgPreviews + " svg, " + colorBadges + " nhãn màu, " + aiTextBadges + " AI chữ, " + pawBadges + " PawNail");
+  R.check("U10", "Nháp không có ảnh AI → minh hoạ tự vẽ + nhãn đúng nguồn (AI chữ / mẫu gợi ý / mẫu PawNail); mẫu có ảnh Cloudflare ghi 'Ảnh minh hoạ AI'", svgPreviews >= 9 && colorBadges >= 5 && aiTextBadges >= 1 && pawBadges === 4, svgPreviews + " svg, " + colorBadges + " nhãn màu, " + aiTextBadges + " AI chữ, " + pawBadges + " PawNail");
   const engBtn = sec.getByRole("button", { name: /Tạo 3 mẫu PawNail \(miễn phí\)/ });
   R.check("U11", "Phòng nội dung: nút 'Tạo 3 mẫu PawNail (miễn phí)' bấm được; mẫu có hoạ tiết được vẽ đúng (không chỉ màu trơn)", (await engBtn.isEnabled()) && motifs >= 4, motifs + " móng có hoạ tiết");
   await ap.screenshot({ path: TMP + "/designs_admin_samples.png", fullPage: true });
@@ -221,6 +240,7 @@ try {
 } finally {
   await browser?.close();
   gemini.close();
+  cf.close();
 }
 const sum = R.summary();
 process.exit(sum.failed ? 1 : 0);

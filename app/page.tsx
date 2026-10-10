@@ -16,7 +16,7 @@ import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCar
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
 import GettingStarted from "@/components/onboarding/GettingStarted";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
-import { Sparkles, Search, Flame, Newspaper, X } from "lucide-react";
+import { Sparkles, Search, Flame, Newspaper, X, Briefcase, Store } from "lucide-react";
 import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -182,10 +182,10 @@ export default function HomePage() {
               {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE NAIL INDUSTRY MARKETPLACE ")}<br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
                 {tr("HẢI NGOẠI #1", "#1 OVERSEAS")}
-              </span> TẠI MỸ &amp; ÚC
+              </span>{tr(" TẠI MỸ & ÚC", " IN THE US & AUSTRALIA")}
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto">
-              {tr("#1 Nail Community Marketplace in the US & Australia — nơi thợ tìm việc gấp, chủ tiệm tìm thợ giỏi, chỉ trong vài phút.", "#1 Nail Community Marketplace in the US & Australia — techs find jobs fast, salons find great techs, in minutes.")}
+              {tr("Nơi thợ nail tìm việc gấp, chủ tiệm tìm thợ giỏi — miễn phí, nhắn tin trực tiếp, chỉ trong vài phút.", "Where nail techs find jobs fast and salons find great techs — free, direct messaging, in minutes.")}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -193,13 +193,13 @@ export default function HomePage() {
                 onClick={() => router.push("/auth/register?role=technician")}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-500 hover:to-fuchsia-500 px-8 py-4 text-base font-extrabold text-white shadow-xl shadow-pink-600/30 transition-all active:scale-95"
               >
-                {tr("💅 TÌM VIỆC LÀM NAIL", "💅 FIND NAIL JOBS")}
+                <Briefcase className="h-5 w-5" />{tr(" TÌM VIỆC LÀM NAIL", " FIND NAIL JOBS")}
               </button>
               <button
                 onClick={() => router.push("/auth/register?role=owner")}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 px-8 py-4 text-base font-extrabold text-emerald-300 shadow-lg transition-all active:scale-95"
               >
-                {tr("🏪 ĐĂNG TIN TUYỂN THỢ GẤP", "🏪 POST AN URGENT JOB")}
+                <Store className="h-5 w-5" />{tr(" ĐĂNG TIN TUYỂN THỢ GẤP", " POST AN URGENT JOB")}
               </button>
             </div>
           </div>
@@ -224,16 +224,18 @@ export default function HomePage() {
             {/* Thẻ phụ (chào lại, ai xem hồ sơ, công cụ, hoàn thiện hồ sơ) CHỈ ở tab Bảng tin.
                 Ở tab Việc gấp / Thợ rảnh người dùng đến để XEM TIN — trước đây
                 ~1.400px thẻ phụ đẩy tin đầu tiên xuống tận cuối màn hình điện thoại. */}
+            {/* Điện thoại: lối tắt kiểu app ngay dưới lời chào, rồi mới tới thẻ gợi ý. */}
+            {sessionUser && tab === "feed" && <ToolsPanel variant="row" />}
+
             {sessionUser && <GettingStarted compact={tab !== "feed"} />}
 
             {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
 
             {sessionUser && tab === "feed" && sessionUser.role !== "ADMIN" && <ProfileViewsCard compact role={sessionUser.role} />}
 
-            {sessionUser && tab === "feed" && <ToolsPanel variant="row" />}
-
+            {/* Đang có thẻ "Bắt đầu" (đã gồm thêm ảnh, hoàn thiện hồ sơ) → ẩn thẻ này cho đỡ lặp. */}
             {tab === "feed" && completeness && completeness.percent < 100 && !hideCompleteness && (
-              <div className="relative md:hidden">
+              <div className="relative md:hidden [[data-nudge]~&]:hidden">
                 <ProfileCompletenessCard completeness={completeness} compact role={sessionUser?.role} />
                 <button
                   onClick={dismissCompleteness}

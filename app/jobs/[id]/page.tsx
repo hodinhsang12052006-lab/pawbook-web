@@ -21,6 +21,7 @@ import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt, responseEn } from "@/lib/i18n/dataEn";
+import { formatPhone, telHref } from "@/lib/phoneFormat";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -331,11 +332,11 @@ export default function JobDetailPage({ params }: PageProps) {
           {!isOwnJob && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
               <a
-                href={`tel:${job.phone}`}
+                href={telHref(job.phone, job.market)}
                 onClick={() => trackJobContact(job.id)}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-700/25 transition-all"
               >
-                <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{job.phone}
+                <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
               </a>
               <button
                 onClick={() => {

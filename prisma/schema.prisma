@@ -92,6 +92,7 @@ model User {
   jobAlerts            JobAlert[]
   nailDesignSaves      NailDesignSave[] // mẫu AI đã lưu (prisma/sql/2026-10-09_nail_designs.sql)
   phoneVerification    PhoneVerification? // SĐT đã xác minh qua SMS (prisma/sql/2026-10-07_phone_verification.sql)
+  passwordResets       PasswordReset[] // link đặt lại mật khẩu qua email (prisma/sql/2026-10-10_password_reset.sql)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -129,6 +130,20 @@ model JobAlert {
 
 // Số điện thoại đã xác minh qua SMS (Twilio Verify). Lưu đúng số đã xác minh —
 // người dùng đổi SĐT trong hồ sơ thì dấu xác minh tự mất (không khớp nữa).
+// Đặt lại mật khẩu qua email: chỉ lưu HASH của mã (mã thật chỉ nằm trong link email),
+// hết hạn sau 30 phút, dùng 1 lần.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
 model PhoneVerification {
   userId     String   @id
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -60,7 +60,12 @@ const SNOOZE_MS = 3 * 60_000;
 const SESSION_KEY = "pn_fomo_session"; // { shown, closes }
 
 // Không chen ngang lúc người dùng đang làm việc quan trọng.
-const QUIET_ROUTES = [/^\/auth/, /^\/messages/, /^\/jobs\/create/, /^\/profile$/, /^\/admin/];
+// (+ mọi trang hồ sơ và Mẫu nail: người dùng đang xem kỹ, đừng che.)
+const QUIET_ROUTES = [/^\/auth/, /^\/messages/, /^\/jobs\/create/, /^\/profile/, /^\/admin/, /^\/designs/];
+// Điện thoại: màn hình nhỏ, thông báo nổi dễ che nội dung → thưa hơn hẳn.
+const isPhone = () => typeof window !== "undefined" && window.innerWidth < 768;
+const maxPerSession = () => (isPhone() ? 2 : MAX_PER_SESSION);
+const firstDelay = () => (isPhone() ? 25_000 : FIRST_DELAY_MS);
 
 function readSession(): { shown: number; closes: number } {
   try {
@@ -130,7 +135,7 @@ export default function FomoToast() {
       timerRef.current = setTimeout(() => {
         if (cancelled) return;
         const sess = readSession();
-        if (sess.shown >= MAX_PER_SESSION || sess.closes >= 2) return; // đủ rồi, thôi làm phiền
+        if (sess.shown >= maxPerSession() || sess.closes >= 2) return; // đủ rồi, thôi làm phiền
         const busy =
           document.visibilityState !== "visible" ||
           QUIET_ROUTES.some((r) => r.test(pathRef.current || "")) ||
@@ -153,7 +158,7 @@ export default function FomoToast() {
 
     // Lên lịch lần kế khi toast hiện tại đóng (xem dismiss()).
     scheduleRef.current = schedule;
-    schedule(FIRST_DELAY_MS);
+    schedule(firstDelay());
 
     return () => {
       cancelled = true;

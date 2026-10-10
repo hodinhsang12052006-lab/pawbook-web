@@ -49,8 +49,12 @@ const techCtx = await newCtx();
 tp = await techCtx.newPage();
 watch(tp, "tech");
 
-await step("F1", "Khách vào / bị chuyển sang trang đăng ký", async () => {
+await step("F1", "Khách vào / xem được trang chủ công khai (tin, thợ) → bấm 'Tìm việc' sang đăng ký", async () => {
   await tp.goto(BASE_URL + "/");
+  if (!tp.url().endsWith("/")) throw new Error("bị chuyển hướng: " + tp.url());
+  await tp.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).waitFor({ timeout: 15000 });
+  await shot(tp, "01_public_home");
+  await tp.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).click();
   await tp.waitForURL(/\/auth\/register/, { timeout: 15000 });
   await shot(tp, "01_register_picker");
 });

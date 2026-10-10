@@ -37,11 +37,11 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
 {
   const p = await ctxFor();
   let ms = await timed(p, async () => {
+    // Khách xem được trang chủ (bảng tin, việc, thợ) trước khi đăng ký.
     await p.goto(BASE_URL + "/");
-    await p.waitForURL(/\/auth\/register/);
-    await p.getByRole("heading").first().waitFor();
+    await p.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).waitFor();
   });
-  note("THỢ", "Mở app lần đầu → trang đăng ký", { ms });
+  note("THỢ", "Mở app lần đầu → trang chủ công khai", { ms });
   await shot(p, "A01_landing", true);
   await shot(p, "A01_landing_fold");
 

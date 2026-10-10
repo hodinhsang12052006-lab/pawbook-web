@@ -241,7 +241,7 @@ export default function SupplyPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              <Package className="h-6 w-6 text-amber-400" />{tr(" Kho Hàng Supply", " Supply Market")}
+              <Package className="h-6 w-6 text-amber-400" />{tr(" Kho vật tư nail", " Nail supply market")}
             </h1>
             <p className="text-sm text-slate-400 mt-1">{tr("Hàng sỉ vật tư nail giữa các tiệm — không qua thanh toán trong app, liên hệ trực tiếp để chốt đơn.", "Wholesale nail supplies between salons — no in-app payment, contact the seller directly.")}</p>
           </div>

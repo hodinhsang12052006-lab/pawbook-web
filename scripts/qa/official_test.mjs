@@ -195,7 +195,7 @@ try {
   const pages = [
     ["/?tab=jobs", /open jobs/],
     ["/messages", /Private chat|Official/i],
-    ["/profile", /Your profile|Save profile/],
+    ["/profile", /Your profile|Save profile|Save/],
     ["/trends", /This week's trends/],
     ["/tools/radar", /Choose a state|Reference/],
     [`/profile/${officialId}`, /Official PawNail Jobs account/],

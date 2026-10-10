@@ -102,11 +102,11 @@ try {
   const shownCls = await nav.getAttribute("class");
   R.check("M7", "Cuộn xuống ẩn thanh điều hướng, cuộn lên hiện lại", hiddenCls.includes("translate-y-[calc") && !shownCls.includes("translate-y-[calc"), "");
 
-  // FOMO toast v2 xuất hiện (lần đầu ~9 giây), có nhãn loại + đóng được
+  // FOMO toast xuất hiện (điện thoại: lần đầu sau ~25 giây), có nhãn loại + đóng được
   await tp.evaluate(() => sessionStorage.removeItem("pn_fomo_session"));
   await tp.goto(BASE_URL + "/?tab=feed");
   const toast = tp.locator('[role="status"]').filter({ has: tp.getByRole("button", { name: "Ẩn thông báo" }) });
-  const appeared = await toast.waitFor({ timeout: 16000 }).then(() => true).catch(() => false);
+  const appeared = await toast.waitFor({ timeout: 34000 }).then(() => true).catch(() => false);
   const label = appeared ? await toast.locator("p").first().innerText() : "";
   R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG/i.test(label), label);
   await tp.screenshot({ path: `${OUT}/m_fomo.png` });

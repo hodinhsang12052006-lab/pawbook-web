@@ -57,6 +57,8 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // "Đã lưu lần cuối" — so với dữ liệu hiện tại để biết có thay đổi chưa lưu (xem dirty bên dưới).
+  const [savedSnap, setSavedSnap] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
@@ -198,6 +200,16 @@ export default function ProfilePage() {
 
   const removeImage = (url: string) => setPortfolioImages((prev) => prev.filter((u) => u !== url));
 
+  // Có thay đổi chưa lưu → thanh Lưu mở rộng; chưa sửa gì → chỉ là nút nhỏ ở góc
+  // (trước đây thanh rộng luôn dính đáy, che mất nội dung trên điện thoại).
+  // So dữ liệu hiện tại với lần lưu cuối — không bắt sự kiện gõ phím (bắt sự kiện ở
+  // thẻ cha từng làm React xoá trắng ô đang gõ).
+  const snap = JSON.stringify([name, phone, state, city, bio, years, specialties, status, portfolioImages, avgTenureMonths, turnSplitPolicy, clientTypePolicy, housingSupport]);
+  useEffect(() => {
+    if (profile && savedSnap === null) setSavedSnap(snap); // mốc ban đầu = dữ liệu vừa tải
+  }, [profile, savedSnap, snap]);
+  const dirty = savedSnap !== null && snap !== savedSnap;
+
   const handleSave = async () => {
     setSaving(true);
     const toastId = toast.loading(tr("Đang lưu hồ sơ...", "Saving profile..."));
@@ -222,6 +234,7 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok) {
         toast.success(tr("Đã lưu hồ sơ! 🎉", "Profile saved! 🎉"), { id: toastId });
+        setSavedSnap(snap);
         setSavedPhone(phone);
         setPhoneCheckKey((k) => k + 1);
         window.dispatchEvent(new Event("profile-updated"));
@@ -247,7 +260,8 @@ export default function ProfilePage() {
       if (res.ok) {
         toast.success(tr("Đã xóa tài khoản. Hẹn gặp lại bạn! 👋", "Account deleted. See you again! 👋"));
         await signOut({ redirect: false });
-        router.push("/");
+        // Trang chủ giờ mở cho khách → đi thẳng tới trang đăng ký (tải lại toàn trang để xoá phiên cũ).
+        window.location.href = "/auth/register";
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || tr("Không thể xóa tài khoản.", "Couldn't delete the account."));
@@ -615,18 +629,31 @@ export default function ProfilePage() {
         </FormSection>
       </main>
 
-      {/* Thanh lưu dính đáy — luôn trong tầm tay, không phải cuộn xuống cuối form. */}
+      {/* Thanh lưu dính đáy: CÓ thay đổi → thanh rộng nhắc lưu; chưa sửa gì → nút nhỏ ở góc. */}
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+82px)] z-40 px-4 md:bottom-6">
-        <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/90 p-2.5 pl-4 shadow-2xl shadow-black/60 backdrop-blur-xl md:px-3">
-          <p className="hidden flex-1 text-xs text-slate-400 sm:block">{tr("Nhớ bấm lưu sau khi chỉnh sửa.", "Remember to save after editing.")}</p>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-bold text-white shadow-lg shadow-pink-600/25 transition-all hover:brightness-110 disabled:opacity-50 sm:flex-none"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{tr(" Lưu hồ sơ", " Save profile")}
-          </button>
-        </div>
+        {dirty ? (
+          <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-pink-500/30 bg-slate-950/95 p-2.5 pl-4 shadow-2xl shadow-black/60 backdrop-blur-xl md:px-3">
+            <p className="flex-1 text-xs font-semibold text-pink-200">{tr("Bạn có thay đổi chưa lưu", "You have unsaved changes")}</p>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-bold text-white shadow-lg shadow-pink-600/25 transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{tr(" Lưu hồ sơ", " Save profile")}
+            </button>
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-3xl justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              aria-label={tr("Lưu hồ sơ", "Save profile")}
+              className="pointer-events-auto flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/90 px-4 text-xs font-bold text-slate-200 shadow-xl shadow-black/50 backdrop-blur-xl disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{tr(" Lưu", " Save")}
+            </button>
+          </div>
+        )}
       </div>
 
       {showDeleteConfirm && (

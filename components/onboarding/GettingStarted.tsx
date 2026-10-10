@@ -78,7 +78,7 @@ export default function GettingStarted({ compact = false }: { compact?: boolean 
     const next = steps.find((s) => !s.done)!;
     const m = meta(next.key);
     return (
-      <Link href={m.href} aria-label={tr("Bắt đầu với PawNail", "Get started with PawNail")} className="flex items-center gap-2.5 rounded-2xl border border-pink-500/25 bg-pink-500/[0.08] px-3.5 py-2.5 text-sm transition-colors hover:bg-pink-500/[0.14]">
+      <Link data-nudge href={m.href} aria-label={tr("Bắt đầu với PawNail", "Get started with PawNail")} className="flex items-center gap-2.5 rounded-2xl border border-pink-500/25 bg-pink-500/[0.08] px-3.5 py-2.5 text-sm transition-colors hover:bg-pink-500/[0.14]">
         <Rocket className="h-4 w-4 flex-shrink-0 text-pink-300" />
         <span className="min-w-0 flex-1 truncate font-semibold text-white">{tr("Bước tiếp theo: ", "Next step: ")}{m.title}</span>
         <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold tabular-nums text-pink-200">{done}/{steps.length}</span>
@@ -88,7 +88,7 @@ export default function GettingStarted({ compact = false }: { compact?: boolean 
   }
 
   return (
-    <section aria-label={tr("Bắt đầu với PawNail", "Get started with PawNail")} className="relative rounded-2xl border border-pink-500/25 bg-gradient-to-br from-pink-500/[0.10] via-fuchsia-500/[0.05] to-slate-900/40 p-4">
+    <section data-nudge aria-label={tr("Bắt đầu với PawNail", "Get started with PawNail")} className="relative rounded-2xl border border-pink-500/25 bg-gradient-to-br from-pink-500/[0.10] via-fuchsia-500/[0.05] to-slate-900/40 p-4">
       <button type="button" onClick={dismiss} aria-label={tr("Ẩn hướng dẫn bắt đầu", "Hide getting started")} className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
         <X className="h-4 w-4" />
       </button>

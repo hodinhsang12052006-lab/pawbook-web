@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { getClientIp } from "@/lib/rateLimit";
 
 // In-memory sliding-window counters, keyed by `${bucketName}:${ip}`.
@@ -28,6 +27,9 @@ interface RateLimitRule {
 const RATE_LIMIT_RULES: Array<{ prefix: string; rule: RateLimitRule }> = [
   { prefix: "/api/auth/callback/credentials", rule: { bucket: "login", limit: 8, windowMs: 60 * 1000 } },
   { prefix: "/api/register", rule: { bucket: "register", limit: 5, windowMs: 5 * 60 * 1000 } },
+  // Quên / đặt lại mật khẩu: chặn spam gửi thư và đoán mã.
+  { prefix: "/api/auth/forgot", rule: { bucket: "forgot", limit: 5, windowMs: 15 * 60 * 1000 } },
+  { prefix: "/api/auth/reset", rule: { bucket: "reset", limit: 10, windowMs: 15 * 60 * 1000 } },
 ];
 
 function resolveRule(pathname: string): RateLimitRule | null {
@@ -38,35 +40,10 @@ function resolveRule(pathname: string): RateLimitRule | null {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Khách chưa đăng nhập vào thẳng root domain -> đẩy sang trang đăng ký
-  // ngay tại edge (trước khi page.tsx kịp render job board), tránh nháy
-  // trắng "thấy trang chủ rồi mới bị đá đi" nếu làm phía client.
-  // Quyết định sản phẩm: đánh đổi SEO/duyệt công khai job board để lấy tỷ lệ
-  // đăng ký cao hơn ngay từ domain gốc.
-  if (pathname === "/") {
-    // getToken() tự đoán tên cookie session (`next-auth.session-token` hay
-    // `__Secure-next-auth.session-token`) dựa trên protocol của TỪNG
-    // request — suy đoán này không đáng tin cậy trong Edge Runtime khi app
-    // đứng sau 2 lớp proxy (Cloudflare -> Vercel), và sai lệch riêng với
-    // request dạng RSC soft-navigation của Next.js client router. Hậu quả
-    // đã xác nhận qua test production: getToken() trả null (tưởng chưa
-    // đăng nhập) dù session hợp lệ, đá nhầm người ĐÃ đăng nhập về
-    // /auth/register — chỉ với RSC request, không với document request
-    // thường. Đã thử ép cứng qua NODE_ENV rồi NEXTAUTH_URL, cả 2 đều
-    // không khớp giá trị thật trên Vercel (không xem được để xác nhận).
-    // Cách chắc chắn nhất: đọc THẲNG cookie nào THỰC SỰ có mặt trong
-    // chính request này — không đoán qua bất kỳ nguồn gián tiếp nào nữa.
-    const hasSecureCookie = request.cookies.has("__Secure-next-auth.session-token");
-    const hasPlainCookie = request.cookies.has("next-auth.session-token");
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-      secureCookie: hasSecureCookie,
-    });
-    if (!token && !hasSecureCookie && !hasPlainCookie) {
-      return NextResponse.redirect(new URL("/auth/register", request.url));
-    }
-  }
+  // (10/2026) Trước đây khách chưa đăng nhập vào "/" bị đẩy thẳng sang /auth/register.
+  // Đã bỏ: khách xem được bảng tin, việc làm, thợ (như người dùng thật vẫn "xem thử
+  // rồi mới đăng ký") và Google lập chỉ mục được trang chủ. Hành động cần tài khoản
+  // (nhắn tin, đăng tin, lưu…) vẫn dẫn về trang đăng ký.
 
   const rule = resolveRule(pathname);
 
@@ -114,7 +91,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Bảo vệ mọi API route + chặn riêng route "/" để redirect khách chưa đăng
-  // nhập (xem nhánh if (pathname === "/") ở trên).
-  matcher: ["/api/:path*", "/"],
+  // Giới hạn tần suất cho API đăng nhập / đăng ký.
+  matcher: ["/api/:path*"],
 };

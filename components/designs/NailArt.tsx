@@ -21,7 +21,7 @@ const NAIL: Record<string, string> = {
 // Ngón: [tâm x, đỉnh ngón y] — xoè nhẹ như bàn tay giơ lên.
 const FINGERS: [number, number][] = [[38, 70], [84, 38], [130, 26], [176, 40], [220, 82]];
 const ACCENT = new Set([1, 3]); // ngón trỏ + ngón áp út
-const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline", "doublefrench", "swirl", "milkbath", "negative", "velvet"]);
+const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline", "doublefrench", "swirl", "milkbath", "negative", "velvet", "candycorn"]);
 
 function hash(s: string) {
   let h = 2166136261;
@@ -30,7 +30,7 @@ function hash(s: string) {
 }
 
 /** Hoạ tiết trên 1 móng, toạ độ của móng (rộng 26, đầu móng ở trên ~y2, chân móng ~y64). */
-function Motif({ pattern, c2, metal, i, rnd, uid }: { pattern: string; c2: string; metal: string; i: number; rnd: () => number; uid: string }) {
+function Motif({ pattern, c2, metal, i, rnd, uid, outline }: { pattern: string; c2: string; metal: string; i: number; rnd: () => number; uid: string; outline: string }) {
   switch (pattern) {
     case "french":
       return <path d="M-3 17 Q13 7 29 17 L29 -8 L-3 -8 Z" fill={c2} />;
@@ -237,6 +237,100 @@ function Motif({ pattern, c2, metal, i, rnd, uid }: { pattern: string; c2: strin
           {Array.from({ length: 22 }).map((_, k) => <circle key={k} cx={2 + rnd() * 22} cy={4 + rnd() * 58} r={0.35 + rnd() * 0.5} fill="#fff7ed" />)}
         </g>
       );
+    // ---------- Halloween ----------
+    case "ghost":
+      return (
+        <g>
+          <path d="M7 44 L7 32 Q7 22 13 22 Q19 22 19 32 L19 44 L17 42 L15 44 L13 42 L11 44 L9 42 Z" fill="#ffffff" />
+          <circle cx={11} cy={31} r={1} fill="#111111" /><circle cx={15} cy={31} r={1} fill="#111111" />
+          <ellipse cx={13} cy={35.5} rx={1} ry={1.3} fill="#111111" />
+        </g>
+      );
+    case "jackolantern":
+      return (
+        <g>
+          <rect x={-2} y={-6} width={30} height={80} fill="#ea580c" />
+          <path d="M8 28 L11 24 L12 28 Z M18 28 L15 24 L14 28 Z" fill="#111111" />
+          <path d="M7 36 L9 39 L11 36 L13 39 L15 36 L17 39 L19 36 L17 42 L9 42 Z" fill="#111111" />
+          <path d="M13 58 q1 -4 3 -5" stroke="#15803d" strokeWidth={1.4} fill="none" />
+        </g>
+      );
+    case "bats":
+      return (
+        <g fill={metal}>
+          {[[9, 22, 1], [17, 36, 0.8], [10, 48, 0.65]].map(([x, y, k], n) => (
+            <path key={n} transform={`translate(${x} ${y}) scale(${k})`} d="M0 0 q -3 -3 -7 -1 q 2 1 2 3 q 2 -1 3 0 q 1 -2 2 -2 q 1 0 2 2 q 1 -1 3 0 q 0 -2 2 -3 q -4 -2 -7 1 Z" />
+          ))}
+        </g>
+      );
+    case "candycorn":
+      return (
+        <g>
+          <rect x={-2} y={-6} width={30} height={26} fill="#f8fafc" />
+          <rect x={-2} y={20} width={30} height={22} fill="#ea580c" />
+          <rect x={-2} y={42} width={30} height={32} fill="#facc15" />
+        </g>
+      );
+    case "skull":
+      return (
+        <g>
+          <path d="M8 34 Q8 24 13 24 Q18 24 18 34 L16.5 34 L16.5 38 L9.5 38 L9.5 34 Z" fill="#ffffff" />
+          <circle cx={11} cy={31} r={1.5} fill="#111111" /><circle cx={15} cy={31} r={1.5} fill="#111111" />
+          <path d="M13 33.5 l -0.8 1.4 h 1.6 Z M11 36 v2 M13 36 v2 M15 36 v2" stroke="#111111" strokeWidth={0.5} fill="#111111" />
+        </g>
+      );
+    case "eyeball":
+      return (
+        <g>
+          <circle cx={13} cy={34} r={5.5} fill="#ffffff" stroke="#e2e8f0" strokeWidth={0.4} />
+          <circle cx={13} cy={34} r={2.6} fill="#16a34a" />
+          <circle cx={13} cy={34} r={1.3} fill="#111111" />
+          <circle cx={12} cy={33} r={0.6} fill="#ffffff" />
+        </g>
+      );
+    case "slimedrip":
+      return <path d="M-2 -6 L28 -6 L28 12 Q 26 14 25 12 L25 22 Q 23 26 21 22 L21 13 Q 18 16 15 13 L15 28 Q 13 32 11 28 L11 14 Q 8 16 6 13 L6 18 Q 4 21 2 18 L2 12 L-2 12 Z" fill="#84cc16" />;
+    case "moonstars":
+      return (
+        <g fill={metal}>
+          <path d="M15 26 a 7 7 0 1 0 0 14 a 5.5 5.5 0 1 1 0 -14 Z" />
+          <path d="M19 46 l0.8 2 l2 0.8 l-2 0.8 l-0.8 2 l-0.8 -2 l-2 -0.8 l2 -0.8 Z" />
+          <circle cx={8} cy={48} r={0.8} />
+        </g>
+      );
+    case "blackcat":
+      return (
+        <g fill="#111111">
+          <path d="M8 58 Q8 46 13 46 Q18 46 18 58 Z" />
+          <circle cx={13} cy={43} r={4} />
+          <path d="M9.5 41 L10 37 L12 40 Z M16.5 41 L16 37 L14 40 Z" />
+          <path d="M18 57 q5 -2 3 -8" stroke="#111111" strokeWidth={1.2} fill="none" />
+          <circle cx={11.6} cy={43} r={0.6} fill="#facc15" /><circle cx={14.4} cy={43} r={0.6} fill="#facc15" />
+        </g>
+      );
+    case "witchy":
+      return (
+        <g>
+          <path d={outline} stroke={metal} strokeWidth={1.6} fill="none" />
+          <path d="M13 54 l1 2.4 l2.4 1 l-2.4 1 l-1 2.4 l-1 -2.4 l-2.4 -1 l2.4 -1 Z" fill={metal} />
+        </g>
+      );
+    case "mummy":
+      return (
+        <g>
+          {[-4, 6, 16, 26, 36, 46, 56].map((y, k) => <path key={k} d={`M-3 ${y + 8} L29 ${y + (k % 2 ? 2 : 12)}`} stroke="#f1f5f9" strokeWidth={5} />)}
+          <rect x={4} y={28} width={18} height={6} fill="rgba(0,0,0,0.75)" />
+          <circle cx={10} cy={31} r={1.6} fill="#ffffff" /><circle cx={16} cy={31} r={1.6} fill="#ffffff" />
+          <circle cx={10} cy={31} r={0.7} fill="#111111" /><circle cx={16} cy={31} r={0.7} fill="#111111" />
+        </g>
+      );
+    case "stitches":
+      return (
+        <g stroke="#111111" strokeWidth={0.8} strokeLinecap="round">
+          <path d="M13 12 L13 58" />
+          {[18, 26, 34, 42, 50].map((y) => <path key={y} d={`M10 ${y} L16 ${y + 1}`} />)}
+        </g>
+      );
     case "waves":
       return <g stroke="#ffffff" strokeWidth={1.2} fill="none" strokeLinecap="round">{[10, 17].map((y) => <path key={y} d={`M-2 ${y} Q4 ${y - 4} 9 ${y} T20 ${y} T31 ${y}`} />)}</g>;
     default:
@@ -331,7 +425,7 @@ export default function NailArt({
               <path d={path} fill={pattern === "tortoise" ? "#b45309" : pattern === "babyboomer" ? "#f2c4c4" : pattern === "milkbath" ? "#f8fafc" : pattern === "negative" ? "#f3d6c8" : nailColor} fillOpacity={pattern === "jelly" ? 0.55 : pattern === "negative" ? 0.45 : 1} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
               {drawMotif && (
                 <g clipPath={`url(#clip${uid})`}>
-                  <Motif pattern={pattern} c2={c2} metal={metal} i={i} rnd={rnd} uid={uid} />
+                  <Motif pattern={pattern} c2={c2} metal={metal} i={i} rnd={rnd} uid={uid} outline={path} />
                 </g>
               )}
               {finish === "glitter" &&

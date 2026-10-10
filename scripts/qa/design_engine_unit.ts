@@ -2,7 +2,7 @@
 // Sinh hàng trăm mẫu cho mọi dịp lễ rồi soát luật NGHỀ: đúng kỹ thuật, đủ vật
 // tư, song ngữ sạch, không nói sai về xu hướng, không trùng tên.
 import { activeThemes, THEMES } from "../../lib/contentEngine";
-import { buildDesign, generateEngineDesigns, PATTERNS, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
+import { buildDesign, generateEngineDesigns, generateOccasionBatch, PATTERNS, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
 
 let fail = 0;
 const check = (id: string, desc: string, ok: boolean, detail = "") => {
@@ -91,6 +91,22 @@ check("DE25", "Charm/cụm đá: phủ top quanh viền, KHÔNG phủ lên mặt
 const dupWord = (t: string) => t.toLowerCase().split(/\s+/).some((w, i, a) => i > 0 && w === a[i - 1]);
 check("DE26", "Tên mẫu không lặp từ (VD 'thạch … thạch', 'sheer sheer')", !all.some((x) => dupWord(x.d.title.vi) || dupWord(x.d.title.en)), bad((x) => dupWord(x.d.title.vi) || dupWord(x.d.title.en)));
 
+// Bộ 100 mẫu Halloween
+const hb = generateOccasionBatch(100, { market: "US", date: "2026-10-10", occasion: { id: "halloween", title: "Mùa Halloween", emoji: "🎃", startsIn: 0 }, risingTags: [], usedTitles: new Set() });
+const hbPat = new Set(hb.map((d) => d.pattern));
+const SPECIAL = PATTERNS.filter((p) => p.occasions !== "any" && (p.occasions as string[]).includes("halloween")).map((p) => p.id);
+const DARK = ["#111111", "#5b3a29", "#475569", "#581c87", "#7f1d1d", "#3b2418", "#1e3a8a", "#14532d"];
+const LIGHT = ["#f8fafc", "#f5f0e8", "#fef3c7", "#f6d5d0"];
+check("DE29", "Bộ 100 mẫu Halloween: đủ 100, không trùng tên (VI + EN), tất cả là Halloween, ≥ 20 hoạ tiết, ≥ 60% hoạ tiết riêng của Halloween",
+  hb.length === 100 && new Set(hb.map((d) => d.title.vi)).size === 100 && new Set(hb.map((d) => d.title.en)).size === 100 && hb.every((d) => d.occasion === "halloween" && /mùa Halloween/.test(d.description.vi)) && hbPat.size >= 20 && hb.filter((d) => SPECIAL.includes(d.pattern)).length >= 60,
+  `${hb.length} mẫu, ${new Set(hb.map((d) => d.title.vi)).size} tên, ${hbPat.size} hoạ tiết, riêng ${hb.filter((d) => SPECIAL.includes(d.pattern)).length}`);
+check("DE30", "Không ghép màu làm hoạ tiết chìm: mèo đen/khâu đen không trên nền tối, ma/xác ướp/đầu lâu không trên nền trắng, bí ngô không trên nền cam",
+  hb.every((d) => !(["blackcat", "stitches"].includes(d.pattern) && DARK.includes(d.palette[0])) && !(["ghost", "mummy", "skull"].includes(d.pattern) && LIGHT.includes(d.palette[0])) && !(d.pattern === "jackolantern" && ["#ea580c", "#c2410c", "#b45309"].includes(d.palette[0]))),
+  hb.filter((d) => ["blackcat", "stitches"].includes(d.pattern) && DARK.includes(d.palette[0])).map((d) => d.title.vi).join(" | "));
+check("DE31", "Bộ Halloween: tiếng Anh sạch, đủ vật tư & bước, mô tả ảnh không có chữ nhạy cảm (blood, gore, nude…)", hb.every((d) => ![d.title.en, d.description.en, d.imagePrompt, ...d.materials.map((m) => m.en), ...d.steps.map((x) => x.en)].some((t) => VI.test(t)) && d.materials.length >= 3 && d.steps.length >= 4 && !/(blood|gore|bloody|naked|nude skin|sexy)/i.test(d.imagePrompt)));
+const hb2 = generateOccasionBatch(100, { market: "US", date: "2026-10-10", occasion: { id: "halloween", title: "Mùa Halloween", startsIn: 0 }, risingTags: [], usedTitles: new Set(hb.map((d) => d.title.vi)) });
+check("DE32", "Tạo bộ lần 2 (đã có 100 mẫu) → chỉ ra mẫu MỚI, không trùng bộ trước", hb2.every((d) => !hb.some((x) => x.title.vi === d.title.vi)), String(hb2.length));
+
 // Mọi tổ hợp hợp lệ đều ghép được (không lỗi, đủ bước).
 let combos = 0, comboErr = "";
 for (const p of PATTERNS) for (const sys of ["gelx", "acrylic", "dip", "gel"] as SystemId[]) for (const fi of p.finishes as Finish[]) for (const sh of ["almond", "coffin", "square", "oval", "stiletto"] as Shape[]) {
@@ -105,5 +121,5 @@ for (const p of PATTERNS) for (const sys of ["gelx", "acrylic", "dip", "gel"] as
 }
 check("DE21", `Mọi tổ hợp hoạ tiết × hệ × hiệu ứng × dáng ghép được (${combos} tổ hợp)`, !comboErr && combos > 300, comboErr);
 
-console.log(`\nMáy tạo mẫu PawNail: ${28 - fail}/28 PASS`);
+console.log(`\nMáy tạo mẫu PawNail: ${32 - fail}/32 PASS`);
 if (fail) process.exit(1);

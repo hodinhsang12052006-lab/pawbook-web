@@ -19,13 +19,24 @@ export default function DesignsPage() {
   const [skill, setSkill] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   const [open, setOpen] = useState<Design | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE = 48;
 
   useEffect(() => {
-    fetch("/api/designs?limit=60")
+    fetch(`/api/designs?limit=${PAGE}`)
       .then((r) => (r.ok ? r.json() : { designs: [] }))
-      .then((d) => setAll(d.designs || []))
+      .then((d) => { setAll(d.designs || []); setHasMore(!!d.hasMore); })
       .catch(() => setAll([]));
   }, []);
+  // Bộ mẫu lễ có thể cả trăm mẫu → tải thêm từng trang thay vì tải hết một lần.
+  const loadMore = () => {
+    setLoadingMore(true);
+    fetch(`/api/designs?limit=${PAGE}&offset=${all?.length ?? 0}`)
+      .then((r) => (r.ok ? r.json() : { designs: [] }))
+      .then((d) => { setAll((l) => [...(l ?? []), ...((d.designs || []) as Design[]).filter((x) => !(l ?? []).some((y) => y.id === x.id))]); setHasMore(!!d.hasMore); })
+      .finally(() => setLoadingMore(false));
+  };
 
   const occasions = useMemo(() => [...new Set((all ?? []).map((d) => d.occasion).filter(Boolean))] as string[], [all]);
   const list = (all ?? []).filter((d) => (!occasion || d.occasion === occasion) && (!skill || d.skills.includes(skill)) && (!savedOnly || d.saved));
@@ -65,6 +76,13 @@ export default function DesignsPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {list.map((d) => <DesignCard key={d.id} d={d} onOpen={() => setOpen(d)} />)}
+          </div>
+        )}
+        {hasMore && (
+          <div className="flex justify-center pt-2">
+            <button type="button" onClick={loadMore} disabled={loadingMore} className="min-h-[44px] rounded-2xl bg-white/[0.06] px-6 text-sm font-bold text-white ring-1 ring-white/10 disabled:opacity-50">
+              {loadingMore ? tr("Đang tải…", "Loading…") : tr("Xem thêm mẫu", "Show more designs")}
+            </button>
           </div>
         )}
       </main>

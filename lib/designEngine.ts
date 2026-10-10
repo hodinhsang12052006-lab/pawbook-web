@@ -60,7 +60,9 @@ const METALS: CK[] = ["gold", "silver", "roseGold", "pearl"];
 
 // Bảng màu theo dịp: [màu chính, màu phụ, kim loại/điểm nhấn]
 const PALETTES: Record<string, [CK, CK, CK][]> = {
-  halloween: [["black", "pumpkin", "silver"], ["olive", "black", "gold"], ["pumpkin", "black", "gold"], ["plum", "black", "silver"], ["black", "white", "silver"]],
+  halloween: [["black", "pumpkin", "silver"], ["olive", "black", "gold"], ["pumpkin", "black", "gold"], ["plum", "black", "silver"], ["black", "white", "silver"],
+    ["black", "cherry", "silver"], ["burgundy", "black", "gold"], ["nude", "black", "silver"], ["lavender", "black", "silver"], ["smoke", "black", "silver"],
+    ["pinkNude", "black", "silver"], ["babyPink", "black", "silver"], ["chocolate", "pumpkin", "gold"]],
   fall: [["burgundy", "caramel", "gold"], ["caramel", "chocolate", "gold"], ["olive", "nude", "gold"], ["burnt", "mocha", "gold"], ["mocha", "nude", "roseGold"]],
   thanksgiving: [["pinkNude", "burnt", "gold"], ["mocha", "champagne", "gold"], ["chocolate", "nude", "gold"], ["nude", "caramel", "gold"]],
   christmas: [["velvet", "pine", "gold"], ["pine", "white", "gold"], ["white", "sky", "silver"], ["cherry", "white", "gold"], ["velvet", "white", "gold"]],
@@ -150,6 +152,7 @@ interface Pattern {
   systems?: SystemId[];
   minutes: number; price: number; difficulty: number; design: boolean;
   ownColor?: boolean; // hoạ tiết tự là lớp màu (đồi mồi) → bỏ bước sơn màu nền
+  badBase?: CK[]; // màu nền làm hoạ tiết bị chìm (VD mèo đen trên nền đen) → không ghép
   title: (p: PCtx) => Bi;
   why: Bi; // vì sao đang được chuộng
   materials: (p: PCtx) => Mat[];
@@ -477,6 +480,104 @@ export const PATTERNS: Pattern[] = [
     steps: () => [],
     image: ({ c1 }) => `${c1.en} velvet nails with an even fine shimmering magnetic cat-eye sparkle across the whole nail, plush velvet look`,
   },
+
+  // ---------------- Halloween 🎃 (vẽ trên 1–2 ngón nhấn, còn lại màu nền) ----------------
+  {
+    id: "ghost", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true, badBase: ["white", "pearl", "butter", "sheer"],
+    title: ({ c1 }) => s(`Ma trắng dễ thương nền ${c1.vi}`, `Cute white ghosts on ${c1.en}`),
+    why: s("ma trắng mặt cười là mẫu Halloween dễ thương, khách mọi tuổi đều chọn", "cute smiling ghosts are the Halloween look every age group picks"),
+    materials: () => [m("Gel trắng đặc (thân ma)", "Opaque white gel (ghost body)"), LINER(COLORS.black), DOT],
+    steps: () => [s(`Vẽ thân ma trắng hình giọt nước lộn ngược, chân lượn sóng trên ${ACC.vi}, hơ đèn`, `Paint an upside-down teardrop white ghost with a wavy hem on the ${ACC.en}, cure`), s("Chấm 2 mắt + miệng tròn đen, hơ đèn", "Dot two black eyes and a round mouth, cure")],
+    image: ({ c1 }) => `${c1.en} nails with a small cute hand-painted white cartoon ghost with black dot eyes on two accent nails`,
+  },
+  {
+    id: "jackolantern", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true, badBase: ["pumpkin", "burnt", "caramel"],
+    title: ({ c1 }) => s(`Bí ngô mặt cười nền ${c1.vi}`, `Jack-o'-lantern on ${c1.en}`),
+    why: s("bí ngô mặt cười (jack-o'-lantern) là biểu tượng Halloween, làm nhanh, khách nhận ra ngay", "the jack-o'-lantern is the Halloween icon — quick to paint and instantly recognizable"),
+    materials: () => [m("Gel cam bí ngô (mặt bí)", "Pumpkin orange gel (pumpkin face)"), LINER(COLORS.black), m("Gel xanh lá (cuống)", "Green gel (stem)")],
+    steps: () => [s(`Tô cả móng ${ACC.vi} màu cam bí ngô, hơ đèn`, `Fill the ${ACC.en} with pumpkin orange, cure`), s("Vẽ mắt tam giác + miệng răng cưa màu đen, thêm cuống xanh ở chân móng, hơ đèn", "Paint black triangle eyes and a zigzag grin, add a green stem near the cuticle, cure")],
+    image: ({ c1 }) => `${c1.en} nails with two accent nails painted as orange jack-o'-lantern pumpkins with black carved triangle eyes and zigzag smile`,
+  },
+  {
+    id: "bats", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 6, difficulty: 1, design: true,
+    title: ({ c1, metal }) => s(`Dơi bay ${metal.vi} nền ${c1.vi}`, `${cap(metal.en)} flying bats on ${c1.en}`),
+    why: s("đàn dơi nhỏ bay chéo móng — tinh tế, đi làm vẫn đeo được", "tiny bats flying across the nail — subtle enough for the office"),
+    materials: ({ metal }) => [LINER(metal), m("Sticker dơi (tuỳ chọn, làm nhanh)", "Bat decals (optional, faster)", "1 tấm"), LINER_BRUSH],
+    steps: ({ metal }) => [s(`Vẽ 2–3 con dơi nhỏ ${metal.vi} bay chéo trên ${ACC.vi} (hoặc dán sticker), hơ đèn`, `Paint two or three tiny ${metal.en} bats flying diagonally on the ${ACC.en} (or use decals), cure`)],
+    image: ({ c1, metal }) => `${c1.en} nails with tiny ${metal.en} bat silhouettes flying diagonally on two accent nails`,
+  },
+  {
+    id: "candycorn", occasions: ["halloween"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: () => s("Kẹo bắp 3 màu vàng – cam – trắng", "Candy corn yellow, orange & white"),
+    why: s("kẹo bắp (candy corn) 3 màu là mẫu Halloween vui mắt, khách trẻ và trẻ em rất thích", "three-tone candy corn is a cheerful Halloween classic kids and young clients love"),
+    materials: () => [m("Gel vàng chanh", "Lemon yellow gel"), m("Gel cam bí ngô", "Pumpkin orange gel"), m("Gel trắng", "White gel"), m("Mút tán màu", "Blending sponge", "1 cái")],
+    steps: () => [s("Chia móng 3 dải: vàng ở chân, cam ở giữa, trắng ở đầu móng; tán nhẹ ranh giới, hơ đèn", "Paint three bands — yellow at the cuticle, orange in the middle, white at the tip; soften the edges, cure")],
+    image: () => "candy corn nails with yellow at the cuticle, orange in the middle and white at the tip on every nail",
+  },
+  {
+    id: "skull", occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true, badBase: ["white", "pearl", "butter", "sheer"],
+    title: ({ c1 }) => s(`Đầu lâu tối giản nền ${c1.vi}`, `Minimal skulls on ${c1.en}`),
+    why: s("đầu lâu nét tối giản (không ghê) đang được khách thích phong cách gothic chọn", "minimal line skulls (cute, not gory) are a favorite with gothic-style clients"),
+    materials: () => [m("Gel trắng đặc", "Opaque white gel"), LINER(COLORS.black), LINER_BRUSH],
+    steps: () => [s(`Vẽ đầu lâu trắng nhỏ tròn trên ${ACC.vi}, hơ đèn`, `Paint a small rounded white skull on the ${ACC.en}, cure`), s("Kẻ 2 hốc mắt + mũi tam giác + răng bằng nét đen, hơ đèn", "Add black eye sockets, a triangle nose and teeth lines, cure")],
+    image: ({ c1 }) => `${c1.en} nails with a small cute minimalist white cartoon skull on two accent nails`,
+  },
+  {
+    id: "eyeball", occasions: ["halloween"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Mắt quỷ 3D nền ${c1.vi}`, `Spooky 3D eyeballs on ${c1.en}`),
+    why: s("mắt quỷ 3D trợn tròn là mẫu 'chơi' Halloween được chụp ảnh nhiều nhất", "bulging 3D eyeballs are the most-photographed playful Halloween look"),
+    materials: () => [m("Gel đắp trắng (builder white)", "White builder gel"), m("Gel xanh / đỏ (con ngươi)", "Green or red gel (iris)"), LINER(COLORS.black), DOT],
+    steps: () => [s(`Chấm 1 giọt gel đắp trắng tròn giữa ${ACC.vi}, để tự tròn rồi hơ đèn`, `Dot a round dome of white builder gel in the center of the ${ACC.en}, let it dome, cure`), s("Chấm con ngươi màu + đồng tử đen + điểm sáng trắng, hơ đèn", "Add a colored iris, black pupil and white highlight, cure")],
+    image: ({ c1 }) => `${c1.en} nails with a cute cartoon 3D eyeball on two accent nails, playful Halloween style`,
+  },
+  {
+    id: "slimedrip", occasions: ["halloween"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Slime xanh chảy từ đầu móng nền ${c1.vi}`, `Green slime drips on ${c1.en}`),
+    why: s("slime xanh chảy từ đầu móng — vui, nổi, đúng không khí Halloween", "green slime dripping from the tips is fun, bold and very Halloween"),
+    materials: () => [m("Gel xanh slime (xanh nõn chuối)", "Slime green gel"), LINER_BRUSH],
+    steps: () => [s("Vẽ đường viền slime xanh ở đầu móng, kéo 2–3 giọt chảy xuống dài ngắn khác nhau, hơ đèn", "Paint slime green along the tips and pull two or three drips of different lengths down the nail, cure")],
+    image: ({ c1 }) => `${c1.en} nails with glossy bright green slime dripping down from the tips`,
+  },
+  {
+    id: "moonstars", occasions: ["halloween"], finishes: ["matte", "glossy", "glitter"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true,
+    title: ({ c1, metal }) => s(`Trăng khuyết & sao ${metal.vi} nền ${c1.vi}`, `${cap(metal.en)} crescent moon & stars on ${c1.en}`),
+    why: s("trăng khuyết và sao kiểu 'witchy' — Halloween mà sang, đeo được cả sau lễ", "witchy crescent moons and stars — Halloween but elegant, wearable well after the holiday"),
+    materials: ({ metal }) => [LINER(metal), m(`Charm trăng & sao ${metal.vi} (tuỳ chọn)`, `${cap(metal.en)} moon & star charms (optional)`, "1 gói"), DOT],
+    steps: ({ metal }) => [s(`Vẽ trăng khuyết ${metal.vi} + 2–3 ngôi sao nhỏ trên ${ACC.vi} (hoặc gắn charm), hơ đèn`, `Paint a ${metal.en} crescent moon and two or three tiny stars on the ${ACC.en} (or set charms), cure`)],
+    image: ({ c1, metal }) => `${c1.en} nails with a small ${metal.en} crescent moon and tiny stars on two accent nails, witchy celestial style`,
+  },
+  {
+    id: "blackcat", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, badBase: ["black", "chocolate", "smoke", "plum", "burgundy", "espresso", "navy", "pine"],
+    title: ({ c1 }) => s(`Mèo đen ngồi nền ${c1.vi}`, `Black cat silhouette on ${c1.en}`),
+    why: s("mèo đen (biểu tượng phù thuỷ) vẽ dáng ngồi — dễ thương, người nuôi mèo rất thích", "a sitting black cat (the witch's companion) is adorable — cat lovers ask for it"),
+    materials: () => [m("Gel đen đặc (dáng mèo)", "Opaque black gel (cat shape)"), m("Gel vàng (mắt mèo)", "Yellow gel (cat eyes)"), LINER_BRUSH, DOT],
+    steps: () => [s(`Vẽ dáng mèo đen ngồi (đầu tròn, 2 tai nhọn, đuôi cong) ở chân móng ${ACC.vi}, hơ đèn`, `Paint a sitting black cat (round head, pointed ears, curled tail) near the cuticle of the ${ACC.en}, cure`), s("Chấm 2 mắt vàng nhỏ, hơ đèn", "Dot two tiny yellow eyes, cure")],
+    image: ({ c1 }) => `${c1.en} nails with a small black cat silhouette with yellow eyes on two accent nails`,
+  },
+  {
+    id: "witchy", occasions: ["halloween"], finishes: ["cateye", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 8, difficulty: 2, design: true, badBase: ["nude", "pinkNude", "babyPink", "lavender", "white", "pearl", "pumpkin", "sheer"],
+    title: ({ c1, metal }) => s(`Phù thuỷ ${c1.vi} viền ${metal.vi}`, `Witchy ${c1.en} with ${metal.en} accents`),
+    why: s("tông phù thuỷ (tím mận, xanh rêu mắt mèo + viền kim loại) là Halloween kiểu sang", "witchy tones (plum or olive cat-eye with metallic accents) are Halloween done luxe"),
+    materials: ({ metal }) => [LINER(metal), m(`Charm sao ${metal.vi} mini`, `Mini ${metal.en} star charms`, "1 gói"), m("Gel dán charm", "Charm gel")],
+    steps: ({ metal }) => [s(`Kẻ viền ${metal.vi} mảnh quanh mép ${ACC.vi}, gắn 1 charm sao nhỏ ở chân móng, hơ đèn 60 giây`, `Outline the ${ACC.en} with a fine ${metal.en} line and set one small star charm near the cuticle, cure 60s`)],
+    image: ({ c1, metal }) => `witchy ${c1.en} nails with thin ${metal.en} outlines and tiny star charms on two accent nails`,
+  },
+  {
+    id: "mummy", occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, badBase: ["white", "pearl", "butter", "sheer"],
+    title: ({ c1 }) => s(`Xác ướp băng trắng nền ${c1.vi}`, `Mummy wraps on ${c1.en}`),
+    why: s("xác ướp quấn băng + 2 mắt tròn — mẫu Halloween vui, dễ làm", "mummy wraps with two peeking eyes — a fun, easy Halloween design"),
+    materials: () => [m("Gel trắng đặc (băng quấn)", "Opaque white gel (wraps)"), LINER(COLORS.black), LINER_BRUSH, DOT],
+    steps: () => [s(`Kẻ các dải trắng chéo đan nhau kín mặt ${ACC.vi}, chừa 1 khe nhỏ, hơ đèn`, `Paint overlapping diagonal white bands across the ${ACC.en}, leaving a small gap, cure`), s("Chấm 2 mắt đen trong khe hở, hơ đèn", "Dot two black eyes peeking through the gap, cure")],
+    image: ({ c1 }) => `${c1.en} nails with two accent nails painted as cute white mummy bandage wraps with two peeking eyes`,
+  },
+  {
+    id: "stitches", occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 6, difficulty: 1, design: true, badBase: ["black", "chocolate", "espresso", "navy", "plum", "burgundy", "smoke"],
+    title: ({ c1 }) => s(`Đường khâu Frankenstein nền ${c1.vi}`, `Frankenstein stitches on ${c1.en}`),
+    why: s("đường khâu kiểu Frankenstein — tối giản, làm nhanh mà vẫn 'chất' Halloween", "Frankenstein stitch lines are minimal and quick yet unmistakably Halloween"),
+    materials: () => [LINER(COLORS.black), LINER_BRUSH],
+    steps: () => [s(`Kẻ 1 đường dọc đen trên ${ACC.vi}, thêm các vạch ngang ngắn như đường khâu, hơ đèn`, `Draw a black line down the ${ACC.en} and cross it with short stitch marks, cure`)],
+    image: ({ c1 }) => `${c1.en} nails with thin black Frankenstein stitch lines on two accent nails`,
+  },
 ];
 
 // Hiệu ứng bề mặt
@@ -705,6 +806,44 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     usedPatterns.add(pat.id);
     out.push(d);
     i++;
+  }
+  return out;
+}
+
+// Hoạ tiết "chung" ghép được với mọi dịp lễ (với bảng màu của dịp đó).
+const OCCASION_BASICS = ["solid", "french", "ombre", "lines", "velvet", "doublefrench", "foil", "chromefrench", "gemcluster"];
+
+/** Tạo CẢ BỘ `n` mẫu cho 1 dịp lễ (VD 100 mẫu Halloween): xoay vòng hoạ tiết riêng
+ *  của dịp + hoạ tiết chung × bảng màu của dịp; không trùng tên, không ghép màu
+ *  làm hoạ tiết bị chìm, trộn hệ móng/dáng/hiệu ứng. Hoạ tiết riêng được ưu tiên. */
+export function generateOccasionBatch(n: number, input: Omit<EngineInput, "occasions"> & { occasion: OccasionInfo }): EngineDesign[] {
+  const r = rng(`batch|${input.date}|${input.market}|${input.occasion.id}|${input.salt ?? ""}`);
+  const occId = input.occasion.id;
+  const palettes = PALETTES[occId] ?? PALETTES.any;
+  const special = PATTERNS.filter((p) => p.occasions !== "any" && p.occasions.includes(occId));
+  const basics = PATTERNS.filter((p) => OCCASION_BASICS.includes(p.id) && !special.includes(p));
+  const usedTitles = new Set([...input.usedTitles].map((t) => t.toLowerCase()));
+  const out: EngineDesign[] = [];
+  // Mỗi vòng: mọi hoạ tiết riêng 1 lần + một nửa hoạ tiết chung → bộ mẫu thiên về chủ đề.
+  for (let round = 0; out.length < n && round < palettes.length * 3; round++) {
+    const pool = [...special, ...basics.filter((_, k) => (k + round) % 2 === 0)];
+    for (const [pi, pat] of pool.entries()) {
+      if (out.length >= n) break;
+      const colors = palettes[(round + pi) % palettes.length];
+      if (pat.badBase?.includes(colors[0])) continue;
+      const sysPool = SYSTEMS.filter((x) => (!pat.systems || pat.systems.includes(x.id)) && (x.id !== "dip" || DIP_POWDER_PATTERNS.includes(pat.id)));
+      if (!sysPool.length) continue;
+      const sys = pick(r, sysPool);
+      const finishes = pat.finishes.filter((f) => sys.finishes.includes(f));
+      if (!finishes.length) continue;
+      const finish = finishes[(round + pi) % finishes.length];
+      const shape = pick(r, sys.shapes);
+      const d = buildDesign({ occasion: occId, system: sys.id, shape, finish, pattern: pat.id, colors }, input.market, input.occasion, null);
+      const key = d.title.vi.toLowerCase();
+      if (usedTitles.has(key)) continue;
+      usedTitles.add(key);
+      out.push(d);
+    }
   }
   return out;
 }

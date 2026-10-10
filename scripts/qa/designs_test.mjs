@@ -251,6 +251,25 @@ try {
   R.check("U9", "Phòng nội dung: thấy đủ 14 nháp (3 AI + 4 gợi ý + 7 PawNail), bấm 'Duyệt & đăng' → công khai thêm 1 mẫu", draftCount === 14 && after === 3, `${draftCount} nháp, ${after} công khai`);
   await ap.screenshot({ path: TMP + "/designs_admin.png" });
 
+  // Bộ mẫu theo dịp lễ + duyệt hàng loạt + phân trang
+  const occ = await admin.req("/api/admin/designs", { method: "POST", json: { mode: "occasion", occasion: "halloween", count: 60 } });
+  const st2 = (await admin.req("/api/admin/designs")).data;
+  const occRows = st2.drafts.filter((d) => occ.data.created?.includes(d.id));
+  R.check("D18", "Tạo bộ 60 mẫu Halloween: đủ 60, đúng dịp, không trùng tên với mẫu đã có, Phòng nội dung hiện đủ + gợi ý dịp sắp tới", occ.status === 201 && occRows.length === 60 && occRows.every((d) => d.occasion === "halloween" && d.provider === "pawnail") && new Set(st2.drafts.map((d) => d.title)).size === st2.drafts.length && st2.nextOccasion?.id === "halloween",
+    JSON.stringify({ s: occ.status, n: occRows.length, next: st2.nextOccasion }));
+  const bulkTech = await tech.req("/api/admin/designs", { method: "PATCH", json: { ids: occRows.slice(0, 5).map((d) => d.id), status: "published" } });
+  const bulk = await admin.req("/api/admin/designs", { method: "PATCH", json: { ids: occRows.slice(0, 55).map((d) => d.id), status: "published" } });
+  R.check("D19", "Duyệt hàng loạt: admin đăng 55 mẫu một lần; thợ gọi → 403", bulk.status === 200 && bulk.data.count === 55 && bulkTech.status === 403, JSON.stringify(bulk.data));
+  const pg1 = (await anon.req("/api/designs?limit=12")).data;
+  const pg2 = (await anon.req("/api/designs?limit=12&offset=12")).data;
+  R.check("D20", "Trang /designs phân trang: trang 1 + trang 2 khác nhau, có cờ 'còn nữa'", pg1.designs.length === 12 && pg1.hasMore === true && pg2.designs.length === 12 && !pg2.designs.some((d) => pg1.designs.some((x) => x.id === d.id)));
+  const lp = await page();
+  await lp.goto(BASE_URL + "/designs");
+  await lp.getByRole("button", { name: /Xem thêm mẫu/ }).click({ timeout: 15000 }).catch(() => {});
+  await lp.waitForTimeout(1500);
+  const shown = await lp.locator("main button.group").count();
+  R.check("U12", "Trang /designs: bấm 'Xem thêm mẫu' → hiện thêm mẫu (bộ lễ cả trăm mẫu)", shown > 48, shown + " thẻ");
+
   R.check("Z1", "Không lỗi JS / 5xx", errors.length === 0, errors.slice(0, 3).join(" | "));
 } finally {
   await browser?.close();

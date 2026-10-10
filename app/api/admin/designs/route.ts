@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
 import { cfDailyImages, cfImageEnabled } from "@/lib/cfImage";
-import { dailyLimit, generateDesigns, generateEngine, generateSamples, redrawImage, storageReady, textOnly, toPublic } from "@/lib/aiDesigns";
+import { dailyLimit, generateDesigns, generateEngine, generateOccasion, generateSamples, imagesDrawnToday, OCCASION_BATCH_MAX, redrawImage, storageReady, textOnly, toPublic, upcomingThemes } from "@/lib/aiDesigns";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
 //   GET                         — nháp chờ duyệt + mẫu đã đăng gần đây + trạng thái cấu hình
@@ -12,6 +12,8 @@ import { dailyLimit, generateDesigns, generateEngine, generateSamples, redrawIma
 //                                    "ai" (Gemini, trong giới hạn/ngày) hoặc "sample" (mẫu soạn sẵn)
 //   PATCH { id, status }        — duyệt ("published") hoặc bỏ ("rejected")
 //   PATCH { id, action: "redraw" } — vẽ lại ảnh (Cloudflare miễn phí, tối đa 3 lần/mẫu)
+//   PATCH { ids: [...], status }    — duyệt / bỏ hàng loạt (tối đa 200)
+//   POST  { mode: "occasion", occasion, count } — tạo CẢ BỘ mẫu cho 1 dịp lễ (tối đa 150)
 export const maxDuration = 60; // vẽ ảnh mất 10–30 giây
 
 const missing = (err: unknown) => /no such table|P2021/i.test(String((err as Error)?.message || err));
@@ -30,7 +32,7 @@ export async function GET() {
   try {
     const day = new Date().toISOString().slice(0, 10);
     const [drafts, published, madeToday] = await Promise.all([
-      prisma.nailDesign.findMany({ where: { status: "draft" }, orderBy: { createdAt: "desc" }, take: 40, include: { _count: { select: { saves: true } } } }),
+      prisma.nailDesign.findMany({ where: { status: "draft" }, orderBy: { createdAt: "desc" }, take: 200, include: { _count: { select: { saves: true } } } }),
       prisma.nailDesign.findMany({ where: { status: "published" }, orderBy: { publishedAt: "desc" }, take: 12, include: { _count: { select: { saves: true } } } }),
       prisma.nailDesign.count({ where: { day } }),
     ]);
@@ -39,6 +41,8 @@ export async function GET() {
       storage: storageReady(),
       textOnly: textOnly(),
       cfImages: cfImageEnabled() && storageReady() ? cfDailyImages() : 0,
+      imagesToday: await imagesDrawnToday().catch(() => 0),
+      nextOccasion: (() => { const t = upcomingThemes("US", new Date())[0]; return t ? { id: t.id, title: t.title, emoji: t.emoji } : null; })(),
       dailyLimit: dailyLimit(),
       madeToday,
       drafts: drafts.map(toPublic),
@@ -53,7 +57,17 @@ export async function GET() {
 export async function POST(req: Request) {
   const a = await admin();
   if (a.error) return a.error;
-  const body = (await req.json().catch(() => ({}))) as { count?: number; market?: string; mode?: string };
+  const body = (await req.json().catch(() => ({}))) as { count?: number; market?: string; mode?: string; occasion?: string };
+  const market0 = body.market === "AU" ? "AU" : "US";
+  if (body.mode === "occasion") {
+    const n = Math.min(OCCASION_BATCH_MAX, Math.max(1, Math.round(Number(body.count) || 50)));
+    try {
+      const r = await generateOccasion(market0, String(body.occasion ?? ""), n);
+      return NextResponse.json(r, { status: r.created.length ? 201 : 200 });
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message.slice(0, 300) }, { status: 502 });
+    }
+  }
   const count = Math.min(6, Math.max(1, Math.round(Number(body.count) || 3)));
   const market = body.market === "AU" ? "AU" : "US";
   const local = body.mode === "sample" || body.mode === "engine";
@@ -70,7 +84,13 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const a = await admin();
   if (a.error) return a.error;
-  const body = (await req.json().catch(() => ({}))) as { id?: string; status?: string; action?: string };
+  const body = (await req.json().catch(() => ({}))) as { id?: string; ids?: string[]; status?: string; action?: string };
+  if (Array.isArray(body.ids)) {
+    const ids = body.ids.filter((x) => typeof x === "string").slice(0, 200);
+    if (!ids.length || !["published", "rejected"].includes(body.status ?? "")) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 400 });
+    const r = await prisma.nailDesign.updateMany({ where: { id: { in: ids }, status: "draft" }, data: { status: body.status, publishedAt: body.status === "published" ? new Date() : null } });
+    return NextResponse.json({ ok: true, count: r.count });
+  }
   if (body.id && body.action === "redraw") {
     const r = await redrawImage(body.id);
     return NextResponse.json(r, { status: r.imageUrl ? 200 : r.error === "Không tìm thấy mẫu." ? 404 : 422 });

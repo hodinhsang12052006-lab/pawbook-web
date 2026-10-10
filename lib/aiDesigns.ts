@@ -4,7 +4,7 @@ import { activeThemes, THEMES } from "@/lib/contentEngine";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 import { SAMPLE_DESIGNS } from "@/lib/designSamples";
-import { generateEngineDesigns, PATTERN_IDS } from "@/lib/designEngine";
+import { generateEngineDesigns, generateOccasionBatch, PATTERN_IDS, type EngineDesign } from "@/lib/designEngine";
 import { cfDailyImages, cfImage, cfImageEnabled } from "@/lib/cfImage";
 
 // "Mẫu nail AI mỗi ngày":
@@ -82,7 +82,7 @@ const IMAGE_STYLE =
 const cut = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 const clean = (b: Partial<Bi> | undefined, n: number): Bi => ({ vi: cut(b?.vi, n), en: cut(b?.en, n) });
 
-function upcomingThemes(market: "US" | "AU", now: Date) {
+export function upcomingThemes(market: "US" | "AU", now: Date) {
   // Dịp đang diễn ra + dịp bắt đầu trong 21 ngày tới (thợ cần chuẩn bị vật tư trước).
   const ids = new Set<string>();
   const out: { id: string; title: string; emoji: string; ideas: string[]; startsIn: number }[] = [];
@@ -228,10 +228,20 @@ export async function generateEngine(market: "US" | "AU", count: number, deadlin
     usedTitles: new Set(recent.map((r) => r.title)),
   });
   const errors: string[] = list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [];
-  // Lưu mẫu TRƯỚC (luôn có hình minh hoạ), vẽ ảnh thật SAU — lỗi/quá giờ không mất mẫu.
+  const { created, jobs } = await saveEngineDesigns(list, market);
+  await drawImages(jobs, deadline, errors);
+  return { created, skipped: count - list.length, errors };
+}
+
+type ImageJob = { id: string; subject: string; prompt: string };
+
+// Lưu mẫu TRƯỚC (luôn có hình minh hoạ), vẽ ảnh thật SAU — lỗi/quá giờ không mất mẫu.
+async function saveEngineDesigns(list: EngineDesign[], market: "US" | "AU") {
+  const day = today();
   const created: string[] = [];
-  const jobs: { id: string; subject: string }[] = [];
+  const jobs: ImageJob[] = [];
   for (const d of list) {
+    const prompt = `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000);
     const row = await prisma.nailDesign.create({
       data: {
         day, market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
@@ -240,13 +250,45 @@ export async function generateEngine(market: "US" | "AU", count: number, deadlin
         palette: JSON.stringify(d.palette), shape: d.shape, finish: d.finish, pattern: d.pattern,
         provider: "pawnail",
         // Mô tả ảnh — dùng để vẽ (nếu bật Cloudflare), vẽ bù hoặc vẽ lại sau.
-        prompt: `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000),
+        prompt,
       },
       select: { id: true },
     });
     created.push(row.id);
-    jobs.push({ id: row.id, subject: d.imagePrompt });
+    jobs.push({ id: row.id, subject: d.imagePrompt, prompt });
   }
+  return { created, jobs };
+}
+
+// Bộ mẫu theo dịp lễ (VD 100 mẫu Halloween) — miễn phí nên không tính vào giới hạn
+// ngày thường, nhưng vẫn chặn trần để Phòng nội dung không bị ngập.
+export const OCCASION_BATCH_MAX = 150;
+
+function daysUntil(theme: (typeof THEMES)[number], market: "US" | "AU", now: Date) {
+  if (activeThemes(now, market).some((t) => t.id === theme.id)) return 0;
+  const d = new Date(Date.UTC(now.getUTCFullYear(), theme.from[0] - 1, theme.from[1]));
+  if (d.getTime() < now.getTime()) d.setUTCFullYear(d.getUTCFullYear() + 1);
+  return Math.ceil((d.getTime() - now.getTime()) / DAY_MS);
+}
+
+/** Tạo CẢ BỘ mẫu cho 1 dịp lễ (xem generateOccasionBatch). Ảnh vẽ dần: lượt này vẽ
+ *  được bao nhiêu thì vẽ, phần còn lại các lượt cron sau tự vẽ bù. */
+export async function generateOccasion(market: "US" | "AU", occasionId: string, count: number, deadline = Date.now() + 50_000): Promise<GenerateResult> {
+  const theme = THEMES.find((t) => t.id === occasionId && (!t.markets || t.markets.includes(market)));
+  if (!theme) return { created: [], skipped: count, errors: ["Không có dịp lễ này ở thị trường đã chọn."] };
+  const n = Math.max(0, Math.min(count, OCCASION_BATCH_MAX));
+  const now = new Date();
+  const [recent, already] = await Promise.all([
+    prisma.nailDesign.findMany({ where: { createdAt: { gte: new Date(now.getTime() - 365 * DAY_MS) } }, select: { title: true }, take: 3000 }),
+    prisma.nailDesign.count({ where: { day: today(), provider: "pawnail", occasion: occasionId } }),
+  ]);
+  const list = generateOccasionBatch(n, {
+    market, date: today(), salt: String(already), risingTags: [],
+    occasion: { id: theme.id, title: theme.title, emoji: theme.emoji, startsIn: daysUntil(theme, market, now) },
+    usedTitles: new Set(recent.map((r) => r.title)),
+  });
+  const errors: string[] = list.length < n ? [`Chỉ còn ${list.length} mẫu ${theme.title} chưa trùng — đã tạo hết.`] : [];
+  const { created, jobs } = await saveEngineDesigns(list, market);
   await drawImages(jobs, deadline, errors);
   return { created, skipped: count - list.length, errors };
 }
@@ -254,10 +296,14 @@ export async function generateEngine(market: "US" | "AU", count: number, deadlin
 /** Vẽ ảnh thật (Cloudflare, gói miễn phí) cho các mẫu: tối đa 2 ảnh cùng lúc (gửi
  *  dồn 6 ảnh một lúc thì Cloudflare xếp hàng → quá giờ), trong hạn mức ảnh/ngày và
  *  trước `deadline` (giới hạn 60 giây của máy chủ). Không kịp → để lần sau vẽ bù. */
-async function drawImages(jobs: { id: string; subject: string }[], deadline: number, errors: string[]): Promise<number> {
+const imgMark = () => `[img:${today()}]`;
+/** Số ảnh đã vẽ HÔM NAY (đếm theo ngày vẽ, kể cả vẽ bù/vẽ lại cho mẫu của ngày trước). */
+export const imagesDrawnToday = () => prisma.nailDesign.count({ where: { prompt: { contains: imgMark() } } });
+
+async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]): Promise<number> {
   // (AI_DESIGNS_TEXT_ONLY chỉ dành cho Gemini — không chặn ảnh Cloudflare miễn phí.)
   if (!jobs.length || !cfImageEnabled() || !storageReady()) return 0;
-  const imagesToday = await prisma.nailDesign.count({ where: { day: today(), provider: "pawnail", imageUrl: { not: null } } });
+  const imagesToday = await imagesDrawnToday();
   let left = Math.max(0, cfDailyImages() - imagesToday);
   const queue = [...jobs];
   let done = 0;
@@ -269,7 +315,7 @@ async function drawImages(jobs: { id: string; subject: string }[], deadline: num
       left--;
       try {
         const imageUrl = await store(await cfImage(`${job.subject}. ${IMAGE_STYLE}`, Math.min(30_000, budget)));
-        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl } });
+        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt}${imgMark()}`.slice(0, 2000) } });
         done++;
       } catch (err) {
         left++;
@@ -281,21 +327,24 @@ async function drawImages(jobs: { id: string; subject: string }[], deadline: num
   return done;
 }
 
-/** Vẽ bù ảnh cho các mẫu PawNail HÔM NAY còn thiếu ảnh (lần trước lỗi/quá giờ). */
+/** Vẽ bù ảnh cho mẫu PawNail nháp (14 ngày gần đây) còn thiếu ảnh — lỗi/quá giờ, hoặc
+ *  bộ mẫu lớn đang vẽ dần. Mỗi lượt vẽ được bao nhiêu thì vẽ, trong hạn mức ngày. */
 export async function backfillImages(deadline: number): Promise<{ drawn: number; errors: string[] }> {
   const rows = await prisma.nailDesign.findMany({
-    where: { day: today(), provider: "pawnail", imageUrl: null, status: { not: "rejected" } },
+    where: { provider: "pawnail", imageUrl: null, status: "draft", createdAt: { gte: new Date(Date.now() - 14 * DAY_MS) } },
     select: { id: true, prompt: true },
     orderBy: { createdAt: "asc" },
-    take: 12,
+    take: 40,
   });
-  const jobs = rows.map((r) => ({ id: r.id, subject: r.prompt.replace(/\s*\[redraws:\d+\]\s*$/, "").split("\n\n")[0].trim() })).filter((j) => j.subject);
+  const jobs = rows.map((r) => ({ id: r.id, subject: subjectOf(r.prompt), prompt: r.prompt })).filter((j) => j.subject);
   const errors: string[] = [];
   const drawn = await drawImages(jobs, deadline, errors);
   return { drawn, errors };
 }
 
 export const MAX_REDRAWS = 3;
+// Phần mô tả bộ móng (trước khung ảnh và các dấu [redraws:…][img:…]).
+const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img):[^\]]*\]/g, "").split("\n\n")[0].trim();
 
 /** Admin bấm "Vẽ lại ảnh" (ảnh lỗi tay, sai hoạ tiết…) — tối đa MAX_REDRAWS lần/mẫu.
  *  Luôn dùng khung ảnh MỚI NHẤT (IMAGE_STYLE) với phần mô tả bộ móng đã lưu. */
@@ -303,13 +352,13 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
   if (!cfImageEnabled() || !storageReady()) return { error: "Chưa bật vẽ ảnh (Cloudflare Workers AI)." };
   const row = await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true } });
   if (!row) return { error: "Không tìm thấy mẫu." };
-  const n = Number(row.prompt.match(/\[redraws:(\d+)\]\s*$/)?.[1] ?? 0);
+  const n = Number(row.prompt.match(/\[redraws:(\d+)\]/)?.[1] ?? 0);
   if (n >= MAX_REDRAWS) return { error: `Mẫu này đã vẽ lại ${MAX_REDRAWS} lần — bỏ mẫu hoặc tạo mẫu mới.` };
-  const subject = row.prompt.replace(/\s*\[redraws:\d+\]\s*$/, "").split("\n\n")[0].trim();
+  const subject = subjectOf(row.prompt);
   if (!subject) return { error: "Mẫu này không có mô tả ảnh để vẽ." };
   try {
     const imageUrl = await store(await cfImage(`${subject}. ${IMAGE_STYLE}`));
-    await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]`.slice(0, 2000) } });
+    await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]${imgMark()}`.slice(0, 2000) } });
     return { imageUrl, redraws: n + 1 };
   } catch (err) {
     return { error: `Không vẽ được ảnh: ${(err as Error).message.slice(0, 160)}` };

@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
-interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
+interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
 
 // Phòng nội dung → "Mẫu nail AI": tạo mẫu bằng Gemini, DUYỆT trước khi người
 // dùng thấy (AI hay vẽ sai ngón tay / mô tả lệch — admin là người chốt).
@@ -39,6 +39,29 @@ export default function AdminDesigns() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const makeOccasion = async () => {
+    const o = st?.nextOccasion;
+    if (!o || !confirm(`Tạo bộ 50 mẫu ${o.title} ${o.emoji}? Ảnh thật sẽ được vẽ dần (miễn phí) trong các lượt sau.`)) return;
+    setBusy(true);
+    const id = toast.loading(`Đang tạo bộ mẫu ${o.title}…`);
+    const res = await fetch("/api/admin/designs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "occasion", occasion: o.id, count: 50 }) });
+    const r = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) return toast.error(r.error || "Không tạo được.", { id });
+    toast.success(`Đã tạo ${r.created?.length ?? 0} mẫu ${o.title} — ảnh đang được vẽ dần.`, { id });
+    load();
+  };
+
+  const approveAllWithImages = async () => {
+    const ids = (st?.drafts ?? []).filter((d) => d.imageUrl).map((d) => d.id);
+    if (!ids.length || !confirm(`Duyệt & đăng ${ids.length} mẫu đã có ảnh? Hãy xem qua ảnh trước — mẫu ảnh lỗi nên bấm "Bỏ".`)) return;
+    const res = await fetch("/api/admin/designs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, status: "published" }) });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) return toast.error(r.error || "Không duyệt được.");
+    toast.success(`Đã đăng ${r.count} mẫu.`);
+    load();
   };
 
   const redraw = async (d: Design) => {
@@ -75,6 +98,11 @@ export default function AdminDesigns() {
           <button type="button" onClick={() => generate("engine")} disabled={busy} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Tạo 3 mẫu PawNail (miễn phí)
           </button>
+          {st?.nextOccasion && (
+            <button type="button" onClick={makeOccasion} disabled={busy} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-orange-500/15 px-4 text-sm font-black text-orange-200 ring-1 ring-orange-400/40 disabled:opacity-50">
+              {st.nextOccasion.emoji} Tạo bộ 50 mẫu {st.nextOccasion.title}
+            </button>
+          )}
           <button type="button" onClick={() => generate("ai")} disabled={busy || !st?.enabled} title={st?.enabled ? undefined : "Chưa bật Gemini (tuỳ chọn)"} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/15 disabled:opacity-50">
             <Wand2 className="h-4 w-4 text-pink-300" /> Tạo bằng Gemini
           </button>
@@ -88,6 +116,16 @@ export default function AdminDesigns() {
       {st && st.enabled && (st.textOnly || st.storage === false) && <p className="rounded-xl bg-sky-500/10 px-3 py-2 text-xs text-sky-200 ring-1 ring-sky-500/25">Chế độ chỉ viết chữ (Gemini miễn phí): AI viết ý tưởng + vật tư + các bước, minh hoạ do app tự vẽ từ bảng màu. Bật ảnh AI: bỏ AI_DESIGNS_TEXT_ONLY trên Vercel sau khi gắn thanh toán Google.</p>}
       {st?.needsSql && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa tạo bảng — chạy prisma/sql/2026-10-09_nail_designs.sql.</p>}
 
+      {!!st?.drafts.length && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/10">
+          <p className="text-xs text-slate-400">
+            {st.drafts.length} mẫu chờ duyệt · {st.drafts.filter((d) => d.imageUrl).length} đã có ảnh{st.cfImages ? ` · hôm nay đã vẽ ${st.imagesToday ?? 0}/${st.cfImages} ảnh` : ""}
+          </p>
+          <button type="button" onClick={approveAllWithImages} disabled={!st.drafts.some((d) => d.imageUrl)} className="inline-flex min-h-[34px] items-center gap-1.5 rounded-lg bg-emerald-600/90 px-3 text-xs font-black text-white disabled:opacity-40">
+            <Check className="h-4 w-4" /> Duyệt tất cả mẫu có ảnh
+          </button>
+        </div>
+      )}
       {st && st.drafts.length === 0 ? (
         <p className="text-xs text-slate-500">Không có mẫu nào chờ duyệt.</p>
       ) : (

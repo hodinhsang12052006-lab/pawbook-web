@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
-import { dailyLimit, generateDesigns, generateEngine } from "@/lib/aiDesigns";
+import { backfillImages, dailyLimit, generateDesigns, generateEngine } from "@/lib/aiDesigns";
 import { sendPush } from "@/lib/push";
 
 // Vercel Cron gọi mỗi sáng (vercel.json) → tạo loạt mẫu nháp, báo admin vào duyệt.
@@ -13,6 +13,7 @@ const CRON_ENGINE_COUNT = 4;
 export const maxDuration = 60;
 
 export async function GET(req: Request) {
+  const deadline = Date.now() + 54_000; // maxDuration 60s, chừa thời gian trả lời
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,13 +25,19 @@ export async function GET(req: Request) {
     // ?count=N (1–8, vẫn cần CRON_SECRET): tạo thêm theo yêu cầu, vẫn trong giới hạn ngày.
     const extra = Math.min(8, Math.max(0, Math.round(Number(new URL(req.url).searchParams.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
-    const r = useGemini
+    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number } = useGemini
       ? await generateDesigns("US", Math.ceil(dailyLimit() / 2))
       : extra
-        ? await generateEngine("US", extra)
+        ? await generateEngine("US", extra, deadline)
         : already >= CRON_ENGINE_COUNT
         ? { created: [] as string[], skipped: CRON_ENGINE_COUNT, errors: ["Hôm nay đã có mẫu mới."] }
-        : await generateEngine("US", CRON_ENGINE_COUNT - already);
+        : await generateEngine("US", CRON_ENGINE_COUNT - already, deadline);
+    // Vẽ bù ảnh cho mẫu hôm nay còn thiếu (lần trước lỗi/quá giờ) nếu còn thời gian + lượt.
+    if (!useGemini) {
+      const b = await backfillImages(deadline);
+      r.backfilled = b.drawn;
+      r.errors.push(...b.errors);
+    }
     if (r.created.length) {
       const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
       await sendPush(admins.map((a) => a.id), {

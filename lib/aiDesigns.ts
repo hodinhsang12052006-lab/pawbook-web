@@ -209,7 +209,7 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
 export const ENGINE_DAILY_MAX = 24;
 
 /** Tạo mẫu bằng MÁY TẠO MẪU PAWNAIL (lib/designEngine) — không gọi AI, 0đ. */
-export async function generateEngine(market: "US" | "AU", count: number): Promise<GenerateResult> {
+export async function generateEngine(market: "US" | "AU", count: number, deadline = Date.now() + 50_000): Promise<GenerateResult> {
   const day = today();
   const madeToday = await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
   const n = Math.max(0, Math.min(count, ENGINE_DAILY_MAX - madeToday));
@@ -227,43 +227,72 @@ export async function generateEngine(market: "US" | "AU", count: number): Promis
     risingTags: (signals?.risingTags ?? []).map((t) => t.tag),
     usedTitles: new Set(recent.map((r) => r.title)),
   });
-  // Ảnh thật (tuỳ chọn): Cloudflare Workers AI gói miễn phí, tối đa cfDailyImages() ảnh/ngày.
-  // Không có / hết lượt / lỗi → mẫu vẫn lưu, app tự vẽ hình minh hoạ.
   const errors: string[] = list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [];
-  let imagesLeft = 0;
-  // (AI_DESIGNS_TEXT_ONLY chỉ dành cho Gemini — không chặn ảnh Cloudflare miễn phí.)
-  if (cfImageEnabled() && storageReady()) {
-    const imagesToday = await prisma.nailDesign.count({ where: { day, provider: "pawnail", imageUrl: { not: null } } });
-    imagesLeft = Math.max(0, cfDailyImages() - imagesToday);
-  }
-  const images = await Promise.all(
-    list.map(async (d, k) => {
-      if (k >= imagesLeft) return null;
-      try {
-        return await store(await cfImage(`${d.imagePrompt}. ${IMAGE_STYLE}`));
-      } catch (err) {
-        errors.push(`Không vẽ được ảnh (dùng hình minh hoạ): ${(err as Error).message.slice(0, 140)}`);
-        return null;
-      }
-    })
-  );
+  // Lưu mẫu TRƯỚC (luôn có hình minh hoạ), vẽ ảnh thật SAU — lỗi/quá giờ không mất mẫu.
   const created: string[] = [];
-  for (const [k, d] of list.entries()) {
+  const jobs: { id: string; subject: string }[] = [];
+  for (const d of list) {
     const row = await prisma.nailDesign.create({
       data: {
         day, market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
         skills: d.skills.join(","), difficulty: d.difficulty, minutes: d.minutes, priceHint: d.priceHint,
-        materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: images[k],
+        materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: null,
         palette: JSON.stringify(d.palette), shape: d.shape, finish: d.finish, pattern: d.pattern,
         provider: "pawnail",
-        // Mô tả ảnh — dùng để vẽ (nếu bật Cloudflare) hoặc vẽ lại sau.
+        // Mô tả ảnh — dùng để vẽ (nếu bật Cloudflare), vẽ bù hoặc vẽ lại sau.
         prompt: `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000),
       },
       select: { id: true },
     });
     created.push(row.id);
+    jobs.push({ id: row.id, subject: d.imagePrompt });
   }
+  await drawImages(jobs, deadline, errors);
   return { created, skipped: count - list.length, errors };
+}
+
+/** Vẽ ảnh thật (Cloudflare, gói miễn phí) cho các mẫu: tối đa 2 ảnh cùng lúc (gửi
+ *  dồn 6 ảnh một lúc thì Cloudflare xếp hàng → quá giờ), trong hạn mức ảnh/ngày và
+ *  trước `deadline` (giới hạn 60 giây của máy chủ). Không kịp → để lần sau vẽ bù. */
+async function drawImages(jobs: { id: string; subject: string }[], deadline: number, errors: string[]): Promise<number> {
+  // (AI_DESIGNS_TEXT_ONLY chỉ dành cho Gemini — không chặn ảnh Cloudflare miễn phí.)
+  if (!jobs.length || !cfImageEnabled() || !storageReady()) return 0;
+  const imagesToday = await prisma.nailDesign.count({ where: { day: today(), provider: "pawnail", imageUrl: { not: null } } });
+  let left = Math.max(0, cfDailyImages() - imagesToday);
+  const queue = [...jobs];
+  let done = 0;
+  const worker = async () => {
+    while (queue.length && left > 0) {
+      const budget = deadline - Date.now() - 4000;
+      if (budget < 8000) return; // sắp hết giờ → lần chạy sau vẽ bù
+      const job = queue.shift()!;
+      left--;
+      try {
+        const imageUrl = await store(await cfImage(`${job.subject}. ${IMAGE_STYLE}`, Math.min(30_000, budget)));
+        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl } });
+        done++;
+      } catch (err) {
+        left++;
+        errors.push(`Không vẽ được ảnh (dùng hình minh hoạ, sẽ vẽ bù): ${(err as Error).message.slice(0, 140)}`);
+      }
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  return done;
+}
+
+/** Vẽ bù ảnh cho các mẫu PawNail HÔM NAY còn thiếu ảnh (lần trước lỗi/quá giờ). */
+export async function backfillImages(deadline: number): Promise<{ drawn: number; errors: string[] }> {
+  const rows = await prisma.nailDesign.findMany({
+    where: { day: today(), provider: "pawnail", imageUrl: null, status: { not: "rejected" } },
+    select: { id: true, prompt: true },
+    orderBy: { createdAt: "asc" },
+    take: 12,
+  });
+  const jobs = rows.map((r) => ({ id: r.id, subject: r.prompt.replace(/\s*\[redraws:\d+\]\s*$/, "").split("\n\n")[0].trim() })).filter((j) => j.subject);
+  const errors: string[] = [];
+  const drawn = await drawImages(jobs, deadline, errors);
+  return { drawn, errors };
 }
 
 export const MAX_REDRAWS = 3;

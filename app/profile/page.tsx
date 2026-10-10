@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing, Mail } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing, Mail, Gift } from "lucide-react";
+import InviteFriends from "@/components/profile/InviteFriends";
 import SoundSettings from "@/components/settings/SoundSettings";
 import EmailDigestToggle from "@/components/settings/EmailDigestToggle";
 import Avatar from "@/components/ui/Avatar";
@@ -596,6 +597,15 @@ export default function ProfilePage() {
         )}
 
         {/* ===== TÀI KHOẢN ===== */}
+        {/* ===== MỜI BẠN BÈ ===== */}
+        {profile && profile.role !== "ADMIN" && (
+          <div id="moi-ban-be" className="scroll-mt-24">
+            <FormSection icon={Gift} title={tr("Mời bạn bè", "Invite friends")} hint={tr("Thợ & tiệm càng đông, việc và thợ càng dễ tìm — cho chính bạn.", "More techs & salons means easier hiring and job hunting — for you too.")}>
+              <InviteFriends />
+            </FormSection>
+          </div>
+        )}
+
         {/* ===== THÔNG BÁO VIỆC THEO TIÊU CHÍ (thợ) ===== */}
         {profile?.role === "TECHNICIAN" && (
           <FormSection icon={BellRing} title={tr("Thông báo việc mới", "Job alerts")} hint={tr("Có tin khớp tiêu chí là bạn nhận thông báo ngay (tối đa 3).", "Get notified the moment a matching job is posted (up to 3).")}>

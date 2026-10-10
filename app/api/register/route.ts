@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role, Market } from "@prisma/client";
 import { isRateLimited, recordAttempt, getClientIp } from "@/lib/rateLimit";
+import { attachReferral, readRef } from "@/lib/referral";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_ROLES = ["OWNER", "TECHNICIAN"];
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
     recordAttempt(clientIp, REGISTER_WINDOW_MS);
 
     const body = await req.json();
+    const ref = readRef(req, body); // link mời bạn bè (?ref=) — gắn sau khi tạo tài khoản
     const { role, market } = body;
     let { name, email, password, phone, state, city } = body;
 
@@ -139,6 +141,7 @@ export async function POST(req: Request) {
         },
       });
 
+      await attachReferral(user.id, name, ref);
       const { password: _, ...userWithoutPassword } = user;
       return NextResponse.json(
         { message: "Đăng ký thành công!", user: userWithoutPassword },
@@ -201,6 +204,7 @@ export async function POST(req: Request) {
       });
     }
 
+    await attachReferral(user.id, name, ref);
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json(
       { message: "Đăng ký thành công!", user: userWithoutPassword },

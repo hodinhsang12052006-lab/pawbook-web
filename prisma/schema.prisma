@@ -32,6 +32,10 @@ model User {
   city      String? // City/Suburb
   emailDigest  Boolean   @default(true) // email tóm tắt hằng tuần (prisma/sql/2026-10-10b_email_digest.sql)
   lastDigestAt DateTime?
+  // Mời bạn bè: ai đã mời người này (prisma/sql/2026-10-10c_referral.sql)
+  referredById String?
+  referredBy   User?   @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[]  @relation("Referrals")
 
   jobs              Job[] // Tin tuyển dụng do chủ tiệm (OWNER) đăng
   technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN

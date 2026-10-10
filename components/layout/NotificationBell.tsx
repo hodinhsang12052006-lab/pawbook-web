@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
@@ -16,7 +16,7 @@ import { useTr } from "@/lib/i18n/useTr";
 
 interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn?: string;
@@ -32,6 +32,7 @@ const KIND_STYLE: Record<NotificationItem["kind"], { icon: typeof Heart; cls: st
   unlock: { icon: Unlock, cls: "bg-violet-500 text-white" },
   job: { icon: Flame, cls: "bg-gradient-to-br from-orange-500 to-red-500 text-white" },
   view: { icon: Eye, cls: "bg-sky-500 text-white" },
+  invite: { icon: Gift, cls: "bg-fuchsia-500 text-white" },
 };
 
 // Mốc "đã xem thông báo" lưu theo user trên thiết bị (không cần bảng DB mới).

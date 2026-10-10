@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { getResponseStats, describeResponse } from "@/lib/responseTime";
+import { AMBASSADOR_MIN } from "@/lib/referral";
 
 // Huy hiệu hồ sơ — mỗi huy hiệu gắn với 1 điều kiện ĐO ĐƯỢC từ dữ liệu thật,
 // không cấp tay, không mua được. Đây là động lực để người dùng hoàn thiện hồ
@@ -8,7 +9,7 @@ import { getResponseStats, describeResponse } from "@/lib/responseTime";
 // cho phía bên kia khi chọn tiệm / chọn thợ.
 
 export interface Badge {
-  key: "founding" | "fast_reply" | "top_rated" | "complete" | "loved";
+  key: "founding" | "fast_reply" | "top_rated" | "complete" | "loved" | "ambassador";
   label: string;
   hint: string;
 }
@@ -32,10 +33,11 @@ export async function getBadges(userId: string): Promise<Badge[]> {
   if (!user || user.role === "ADMIN") return [];
 
   const since = new Date(Date.now() - 30 * 86_400_000);
-  const [reviewAgg, response, likes] = await Promise.all([
+  const [reviewAgg, response, likes, invited] = await Promise.all([
     prisma.review.aggregate({ where: { targetUserId: userId }, _avg: { overall: true }, _count: { _all: true } }),
     getResponseStats(userId),
     prisma.postLike.count({ where: { post: { authorId: userId }, userId: { not: userId }, createdAt: { gte: since } } }),
+    prisma.user.count({ where: { referredById: userId } }).catch(() => 0),
   ]);
 
   const badges: Badge[] = [];
@@ -54,6 +56,9 @@ export async function getBadges(userId: string): Promise<Badge[]> {
   }
   if (likes >= LOVED_MIN_LIKES) {
     badges.push({ key: "loved", label: "Được yêu thích", hint: `${likes} lượt thích bài đăng trong 30 ngày` });
+  }
+  if (invited >= AMBASSADOR_MIN) {
+    badges.push({ key: "ambassador", label: "Đại sứ PawNail", hint: `Đã mời ${invited} người tham gia PawNail` });
   }
   return badges;
 }

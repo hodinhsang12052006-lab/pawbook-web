@@ -34,6 +34,8 @@ import { SessionUserProvider } from "@/lib/SessionUserContext";
 import { UnreadMessagesProvider } from "@/lib/UnreadMessagesContext";
 import { CallManagerProvider } from "@/lib/CallManagerContext";
 import FomoToast from "@/components/FomoToast";
+import RefCapture from "@/components/RefCapture";
+import InstallPrompt from "@/components/InstallPrompt";
 import BottomNav from "@/components/layout/BottomNav";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import PusherStatusBanner from "@/components/PusherStatusBanner";
@@ -52,6 +54,14 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
+      <head>
+        {/* Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app (components/InstallPrompt.tsx) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
         {/* Nền chung toàn app — xem .app-backdrop trong globals.css */}
         <div aria-hidden className="app-backdrop">
@@ -96,6 +106,8 @@ export default function RootLayout({
                 <ServiceWorkerRegister />
                 {children}
                 <FomoToast />
+                <RefCapture />
+                <InstallPrompt />
                 <PushPrompt />
                 <ScrollToTop />
                 <BottomNav />

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
-  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart,
+  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -31,6 +31,7 @@ const BADGE_STYLE = {
   top_rated: { icon: Star, cls: "bg-amber-500/10 text-amber-200 ring-amber-500/30" },
   complete: { icon: BadgeCheck, cls: "bg-sky-500/10 text-sky-200 ring-sky-500/30" },
   loved: { icon: Heart, cls: "bg-pink-500/10 text-pink-200 ring-pink-500/30" },
+  ambassador: { icon: Megaphone, cls: "bg-fuchsia-500/15 text-fuchsia-200 ring-fuchsia-400/40" },
 } as const;
 
 type TabKey = "overview" | "portfolio" | "jobs" | "gallery" | "reviews";

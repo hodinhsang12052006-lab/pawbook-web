@@ -12,7 +12,7 @@ const PER_KIND = 15;
 
 export interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn: string;
@@ -38,7 +38,7 @@ export async function GET() {
 
     // Thợ: chủ tiệm nào đã xem hồ sơ mình (7 ngày) — tiệm là doanh nghiệp nên hiện tên.
     const wantsViews = meRow?.role === "TECHNICIAN";
-    const [likes, comments, reviews, saves, unlocks, urgentJobs, salonViews] = await Promise.all([
+    const [likes, comments, reviews, saves, unlocks, urgentJobs, salonViews, invitees] = await Promise.all([
       prisma.postLike.findMany({
         where: { post: { authorId: me }, userId: { not: me }, createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
@@ -87,6 +87,15 @@ export async function GET() {
             })
             .catch(() => [])
         : Promise.resolve([]),
+      // Bạn bè tham gia nhờ link mời của mình
+      prisma.user
+        .findMany({
+          where: { referredById: me, createdAt: { gte: since } },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: { id: true, name: true, avatarUrl: true, createdAt: true },
+        })
+        .catch(() => []),
     ]);
 
     const items: NotificationItem[] = [
@@ -135,6 +144,15 @@ export async function GET() {
         textEn: "wants to connect — they may message you about a job soon",
         href: `/profile/${u.owner.id}`,
         createdAt: u.unlockedAt.toISOString(),
+      })),
+      ...invitees.map((u) => ({
+        id: `invite-${u.id}`,
+        kind: "invite" as const,
+        actor: { id: u.id, name: u.name, avatarUrl: u.avatarUrl },
+        text: "vừa tham gia PawNail nhờ lời mời của bạn 🎉",
+        textEn: "just joined PawNail from your invite 🎉",
+        href: `/profile/${u.id}`,
+        createdAt: u.createdAt.toISOString(),
       })),
       ...salonViews.map((v) => ({
         id: `view-${v.id}`,

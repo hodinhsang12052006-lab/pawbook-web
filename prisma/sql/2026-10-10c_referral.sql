@@ -1,0 +1,2 @@
+ALTER TABLE "User" ADD COLUMN "referredById" TEXT REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+CREATE INDEX IF NOT EXISTS "User_referredById_idx" ON "User"("referredById");

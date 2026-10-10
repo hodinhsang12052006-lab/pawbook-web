@@ -7,6 +7,7 @@ import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
+import { useSessionUser } from "@/lib/SessionUserContext";
 
 type Kind = "job" | "tech" | "post" | "survey";
 
@@ -18,20 +19,23 @@ interface FomoMessage {
   href?: string;
   at?: string; // ISO — sự kiện thật thì hiện "x phút trước"
   actor?: { id: string; name: string; avatarUrl: string | null };
+  m?: "US" | "AU"; // số khảo sát chỉ của 1 thị trường
 }
 
 // Số liệu tổng hợp THẬT từ 1 đợt khảo sát cộng đồng (lib/nailRadarData.ts).
 // Ghi rõ NGUỒN + THỜI ĐIỂM — đây là số của 1 đợt khảo sát, không phải số
 // "ngay lúc này"; nói quá là quảng cáo gây hiểu lầm.
 // Hàm (không phải hằng) để chữ đổi theo VI/EN lúc tạo hàng đợi.
-const SURVEY_MESSAGES = (): FomoMessage[] => {
+// market: chỉ hiện số của đúng thị trường người dùng (thợ Texas không cần số của Úc).
+const SURVEY_MESSAGES = (market?: string | null): FomoMessage[] => {
   const SURVEY = tr("khảo sát nhóm nail Facebook, 9/2026", "Facebook nail-group survey, Sep 2026");
   const title = tr("Nhịp thị trường", "Market pulse");
-  return [
+  const all: FomoMessage[] = [
   { kind: "survey", title, text: tr(`${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón`, `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ salon posts seeking nail techs in the US & Australia in one ${SURVEY} — techs are in demand`) },
-  { kind: "survey", title, text: tr(`Texas dẫn đầu nhu cầu với ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})`, `Texas leads demand with ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} hiring posts, mostly for acrylic techs (${SURVEY})`) },
-  { kind: "survey", title, text: tr(`Úc: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} tin tìm thợ tại NSW & Victoria (${SURVEY})`, `Australia: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} hiring posts in NSW & Victoria (${SURVEY})`) },
+  { kind: "survey", m: "US", title, text: tr(`Texas dẫn đầu nhu cầu với ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})`, `Texas leads demand with ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} hiring posts, mostly for acrylic techs (${SURVEY})`) },
+  { kind: "survey", m: "AU", title, text: tr(`Úc: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} tin tìm thợ tại NSW & Victoria (${SURVEY})`, `Australia: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} hiring posts in NSW & Victoria (${SURVEY})`) },
   ];
+  return all.filter((x) => !x.m || !market || x.m === market);
 };
 
 // Trước đây xen kẽ "sự kiện" BỊA (tên người, số tiền, "3 phút trước" không
@@ -88,7 +92,11 @@ export default function FomoToast() {
   const [paused, setPaused] = useState(false);
   const [dragX, setDragX] = useState(0);
   const queueRef = useRef<FomoMessage[]>([]);
-  const poolRef = useRef<FomoMessage[]>(SURVEY_MESSAGES());
+  const { user } = useSessionUser();
+  const market = (user?.market as string | undefined) ?? null;
+  const marketRef = useRef(market);
+  marketRef.current = market; // phiên đăng nhập có thể tải xong SAU khi hàng đợi đã dựng
+  const poolRef = useRef<FomoMessage[]>(SURVEY_MESSAGES(null));
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleRef = useRef<((delay: number) => void) | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,13 +115,14 @@ export default function FomoToast() {
       .then((events: FomoMessage[]) => {
         if (cancelled || !Array.isArray(events)) return;
         // Sự kiện thật là chính; số khảo sát chỉ xen vào cho đỡ lặp.
-        poolRef.current = [...events.filter((e) => e && e.text), ...SURVEY_MESSAGES()];
+        poolRef.current = [...events.filter((e) => e && e.text), ...SURVEY_MESSAGES(null)];
         queueRef.current = [];
       })
       .catch(() => {});
 
     const nextMessage = (): FomoMessage | null => {
-      if (queueRef.current.length === 0) queueRef.current = shuffle(poolRef.current);
+      const mk = marketRef.current;
+      if (queueRef.current.length === 0) queueRef.current = shuffle(poolRef.current.filter((x) => !x.m || !mk || x.m === mk));
       return queueRef.current.shift() ?? null;
     };
 

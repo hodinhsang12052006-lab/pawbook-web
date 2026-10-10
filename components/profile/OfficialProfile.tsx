@@ -7,6 +7,7 @@ import { MessageCircle, Share2, PenSquare, Radar, ShieldCheck, Mail, Copy, FileT
 import Avatar from "@/components/ui/Avatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import FeedPostCard, { type FeedPost } from "@/components/feed/FeedPostCard";
+import { DesignsStrip } from "@/components/designs/DesignViews";
 import { EmptyState, SectionTitle } from "@/components/profile/ProfileSections";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -132,6 +133,8 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
       </nav>
 
       <div className="space-y-4 px-4 pt-5 md:px-0">
+        {/* Bộ sưu tập mẫu nail mới (đã duyệt) — tài khoản chính thức là nơi khoe mẫu mỗi ngày. */}
+        {tab === "posts" && <DesignsStrip />}
         {tab === "posts" &&
           (posts === null ? (
             <div className="skeleton h-40 rounded-2xl" />

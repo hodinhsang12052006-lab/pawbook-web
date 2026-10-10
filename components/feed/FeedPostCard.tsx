@@ -446,7 +446,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           href={`/profile/${post.author.id}`}
           className={`ml-auto flex items-center gap-1 rounded-xl border border-pink-500/30 bg-pink-500/5 px-3 py-2 text-[11px] font-bold text-pink-300 hover:bg-pink-500/15 transition-colors ${PRESS}`}
         >
-          {post.author.role === "OWNER" ? tr("Xem Tiệm", "View salon") : tr("Xem Tay Nghề", "View work")}
+          {post.author.role === "ADMIN" ? tr("Xem hồ sơ", "View profile") : post.author.role === "OWNER" ? tr("Xem Tiệm", "View salon") : tr("Xem Tay Nghề", "View work")}
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>

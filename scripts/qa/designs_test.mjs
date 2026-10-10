@@ -263,6 +263,15 @@ try {
   const pg1 = (await anon.req("/api/designs?limit=12")).data;
   const pg2 = (await anon.req("/api/designs?limit=12&offset=12")).data;
   R.check("D20", "Trang /designs phân trang: trang 1 + trang 2 khác nhau, có cờ 'còn nữa'", pg1.designs.length === 12 && pg1.hasMore === true && pg2.designs.length === 12 && !pg2.designs.some((d) => pg1.designs.some((x) => x.id === d.id)));
+  // Bot nội dung cho tài khoản chính thức
+  const cbTech = await tech.req("/api/admin/contentbot");
+  const cb = (await admin.req("/api/admin/contentbot")).data;
+  const pin = cb.drafts?.find((d) => d.pinned);
+  const posted = pin ? await admin.req("/api/posts", { method: "POST", json: { content: pin.text, postType: "GENERAL", mediaUrls: [] } }) : { status: 0 };
+  const cb2 = (await admin.req("/api/admin/contentbot")).data;
+  R.check("D21", "Bot nội dung: chỉ admin xem được (thợ 403); bài ghim đứng đầu; đăng xong không đề xuất lại", cbTech.status === 403 && cb.drafts.length >= 5 && cb.drafts[0].pinned && posted.status < 300 && !cb2.drafts.some((d) => d.id === pin.id), JSON.stringify({ t: cbTech.status, n: cb.drafts?.length, p: posted.status }));
+  R.check("D22", "Đã có ≥ 10 mẫu Halloween được duyệt → bot đề xuất bài quảng bá bộ sưu tập (có link /designs)", cb.drafts.some((d) => /Bộ sưu tập .*Halloween/.test(d.title) && d.text.includes("bitpawos.com/designs")), cb.drafts.map((d) => d.title).join(" | "));
+
   const lp = await page();
   await lp.goto(BASE_URL + "/designs");
   await lp.getByRole("button", { name: /Xem thêm mẫu/ }).click({ timeout: 15000 }).catch(() => {});

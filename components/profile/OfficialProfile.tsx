@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { MessageCircle, Share2, PenSquare, Radar, ShieldCheck, Mail, Copy, FileText, Lock, HeartHandshake, BadgeCheck, Users, Briefcase, Sparkles, Newspaper } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import Flag from "@/components/ui/Flag";
 import FeedPostCard, { type FeedPost } from "@/components/feed/FeedPostCard";
 import { DesignsStrip } from "@/components/designs/DesignViews";
 import { EmptyState, SectionTitle } from "@/components/profile/ProfileSections";
@@ -18,7 +19,17 @@ interface Props {
   isSelf: boolean;
 }
 
-const SUPPORT_EMAIL = "support@bitpawos.com";
+// Email hỗ trợ dùng chung toàn site (Điều khoản, Bảo mật, Quên mật khẩu) — đổi qua NEXT_PUBLIC_SUPPORT_EMAIL.
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawos.com";
+
+// Lối tắt "Nổi bật" — dẫn tới các mục người dùng cần nhất.
+const HIGHLIGHTS: { href: string; emoji: string; vi: string; en: string }[] = [
+  { href: "/?tab=jobs", emoji: "💼", vi: "Việc gấp", en: "Urgent jobs" },
+  { href: "/designs", emoji: "💅", vi: "Mẫu nail", en: "Designs" },
+  { href: "/tools/income-tracker", emoji: "💵", vi: "Thuế & tip", en: "Tax & tips" },
+  { href: "/trends", emoji: "📈", vi: "Lương", en: "Pay trends" },
+  { href: "#an-toan", emoji: "🛡️", vi: "An toàn", en: "Safety" },
+];
 const fmt = (n?: number) => (typeof n === "number" ? n.toLocaleString("en-US") : "—");
 
 // Hồ sơ TÀI KHOẢN CHÍNH THỨC của PawNail (tick xanh) — kênh hỗ trợ & thông
@@ -32,7 +43,8 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
   useEffect(() => {
     fetch(`/api/posts?authorId=${profile.id}`)
       .then((r) => (r.ok ? r.json() : { posts: [] }))
-      .then((d) => setPosts(d.posts || []))
+      // Bài ghim (mở đầu bằng 📌) luôn nằm trên cùng, còn lại mới nhất trước.
+      .then((d) => setPosts([...(d.posts || [])].sort((a: FeedPost, b: FeedPost) => Number(String(b.content ?? "").startsWith("📌")) - Number(String(a.content ?? "").startsWith("📌")))))
       .catch(() => setPosts([]));
   }, [profile.id]);
 
@@ -92,6 +104,19 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-300">
             {tr("Nền tảng kết nối thợ nail và chủ tiệm người Việt tại Mỹ & Úc — miễn phí, không qua môi giới. Nhắn tin cho chúng tôi khi cần hỗ trợ tài khoản, báo lừa đảo hay góp ý tính năng.", "Connecting Vietnamese nail techs and salon owners across the US & Australia — free, no middlemen. Message us for account help, to report scams, or to suggest features.")}
           </p>
+          <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400" aria-label={tr("Thông tin", "Info")}>
+            <li className="flex items-center gap-1.5"><Flag code="US" /><Flag code="AU" /> {tr("Mỹ & Úc", "US & Australia")}</li>
+            <li>⏱ {tr("Thường trả lời trong 24 giờ", "Usually replies within 24 hours")}</li>
+            <li>🌐 bitpawos.com</li>
+          </ul>
+          <nav aria-label={tr("Nổi bật", "Highlights")} className="-mx-1 mt-4 flex gap-3 overflow-x-auto px-1 pb-1">
+            {HIGHLIGHTS.map((h) => (
+              <Link key={h.href} href={h.href} onClick={h.href === "#an-toan" ? (e) => { e.preventDefault(); setTab("about"); setTimeout(() => document.getElementById("an-toan")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); } : undefined} className="flex w-[68px] flex-shrink-0 flex-col items-center gap-1.5 text-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/25 to-fuchsia-500/25 text-2xl ring-2 ring-sky-400/40">{h.emoji}</span>
+                <span className="text-[11px] font-semibold leading-tight text-slate-300">{tr(h.vi, h.en)}</span>
+              </Link>
+            ))}
+          </nav>
 
           {isSelf && (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -146,7 +171,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
 
         {tab === "about" && (
           <>
-            <div className="glass-card space-y-3 rounded-2xl p-5">
+            <div id="an-toan" className="glass-card scroll-mt-28 space-y-3 rounded-2xl p-5">
               <SectionTitle icon={HeartHandshake}>{tr("Cam kết của PawNail", "Our commitments")}</SectionTitle>
               <ul className="space-y-2.5 text-sm text-slate-300">
                 <li className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-300" />{tr(" Miễn phí kết nối — thợ và chủ tiệm nói chuyện trực tiếp, không qua môi giới.", " Free to connect — techs and owners talk directly, no middlemen.")}</li>
@@ -156,12 +181,15 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
             </div>
             <div className="glass-card space-y-3 rounded-2xl p-5">
               <SectionTitle icon={Mail}>{tr("Liên hệ", "Contact")}</SectionTitle>
-              <div className="flex items-center gap-2 rounded-xl bg-slate-950/60 px-3.5 py-2.5 ring-1 ring-white/10">
-                <Mail className="h-4 w-4 text-slate-400" />
-                <span className="flex-1 select-all text-sm font-semibold text-slate-100">{SUPPORT_EMAIL}</span>
-                <button onClick={copyEmail} aria-label={tr("Sao chép email", "Copy email")} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"><Copy className="h-4 w-4" /></button>
-              </div>
-              {!isSelf && <Link href={`/messages?to=${profile.id}`} className="flex items-center gap-2 text-sm font-bold text-sky-300 hover:text-sky-200"><MessageCircle className="h-4 w-4" />{tr(" Hoặc nhắn tin trực tiếp trong app", " Or message us directly in the app")}</Link>}
+              {SUPPORT_EMAIL && (
+                <div className="flex items-center gap-2 rounded-xl bg-slate-950/60 px-3.5 py-2.5 ring-1 ring-white/10">
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <span className="flex-1 select-all text-sm font-semibold text-slate-100">{SUPPORT_EMAIL}</span>
+                  <button onClick={copyEmail} aria-label={tr("Sao chép email", "Copy email")} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"><Copy className="h-4 w-4" /></button>
+                </div>
+              )}
+              <p className="text-sm text-slate-300">{tr("Cách nhanh nhất: nhắn tin trực tiếp trong app — thường trả lời trong 24 giờ. Báo lừa đảo: bấm ⋮ → Báo cáo trên tin nhắn, bài đăng hoặc hồ sơ.", "Fastest: message us in the app — we usually reply within 24 hours. To report a scam, tap ⋮ → Report on the message, post or profile.")}</p>
+              {!isSelf && <Link href={`/messages?to=${profile.id}`} className="flex items-center gap-2 text-sm font-bold text-sky-300 hover:text-sky-200"><MessageCircle className="h-4 w-4" />{tr(" Nhắn tin cho PawNail Jobs", " Message PawNail Jobs")}</Link>}
             </div>
             <div className="glass-card space-y-2 rounded-2xl p-5">
               <SectionTitle icon={FileText}>{tr("Chính sách", "Policies")}</SectionTitle>

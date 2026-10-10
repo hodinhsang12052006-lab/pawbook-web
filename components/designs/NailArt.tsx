@@ -21,7 +21,7 @@ const NAIL: Record<string, string> = {
 // Ngón: [tâm x, đỉnh ngón y] — xoè nhẹ như bàn tay giơ lên.
 const FINGERS: [number, number][] = [[38, 70], [84, 38], [130, 26], [176, 40], [220, 82]];
 const ACCENT = new Set([1, 3]); // ngón trỏ + ngón áp út
-const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline"]);
+const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline", "doublefrench", "swirl", "milkbath", "negative", "velvet"]);
 
 function hash(s: string) {
   let h = 2166136261;
@@ -146,6 +146,97 @@ function Motif({ pattern, c2, metal, i, rnd, uid }: { pattern: string; c2: strin
           <path d={i % 2 ? "M4 60 C 10 44, 4 30, 14 20" : "M22 62 C 14 50, 22 36, 12 24"} stroke="#ffffff" strokeOpacity={0.6} strokeWidth={0.6} />
         </g>
       );
+    case "doublefrench":
+      return (
+        <g fill="none" strokeLinecap="round">
+          <path d="M-1 12 Q13 3 27 12" stroke={c2} strokeWidth={2.2} />
+          <path d="M-1 17 Q13 8 27 17" stroke={metal} strokeWidth={1} />
+        </g>
+      );
+    case "swirl":
+      return (
+        <g fill="none" strokeLinecap="round">
+          <path d={i % 2 ? "M-2 20 C 10 14, 18 30, 28 22" : "M-2 40 C 8 30, 20 48, 28 36"} stroke={c2} strokeWidth={3} />
+          <path d={i % 2 ? "M-2 26 C 10 20, 18 36, 28 28" : "M-2 46 C 8 36, 20 54, 28 42"} stroke={metal} strokeWidth={1} />
+          <path d={i % 2 ? "M-2 44 C 8 36, 20 54, 28 46" : "M-2 14 C 10 8, 18 22, 28 14"} stroke={c2} strokeWidth={2.2} opacity={0.85} />
+        </g>
+      );
+    case "droplet":
+      return (
+        <g>
+          {[[8, 22, 3.2], [17, 34, 2.4], [10, 46, 2], [18, 52, 1.5]].map(([x, y, r], k) => (
+            <g key={k}>
+              <circle cx={x} cy={y} r={r} fill="#ffffff" fillOpacity={0.28} stroke="#ffffff" strokeOpacity={0.7} strokeWidth={0.5} />
+              <circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * 0.3} fill="#ffffff" />
+            </g>
+          ))}
+        </g>
+      );
+    case "milkbath":
+      return (
+        <g>
+          {[[9, 24], [18, 40], [8, 50]].map(([x, y], k) => (
+            <g key={k} opacity={0.75}>
+              {Array.from({ length: 5 }).map((_, p) => {
+                const a = (p / 5) * Math.PI * 2;
+                return <ellipse key={p} cx={x + Math.cos(a) * 2.4} cy={y + Math.sin(a) * 2.4} rx={1.8} ry={1.2} fill={c2} transform={`rotate(${(a * 180) / Math.PI} ${x + Math.cos(a) * 2.4} ${y + Math.sin(a) * 2.4})`} />;
+              })}
+              <circle cx={x} cy={y} r={0.9} fill="#a3e635" />
+            </g>
+          ))}
+          <rect x={-2} y={-6} width={30} height={80} fill="#f8fafc" opacity={0.35} />
+        </g>
+      );
+    case "leopard":
+      return (
+        <g>
+          {[[7, 16], [18, 24], [9, 34], [19, 44], [8, 52]].map(([x, y], k) => (
+            <g key={k}>
+              <ellipse cx={x} cy={y} rx={2.6} ry={2} fill={c2} />
+              <path d={`M${x - 3.4} ${y - 1} q 0 -3 3 -3 M${x + 3.4} ${y + 1} q 0 3 -3 3`} stroke="#111111" strokeWidth={0.9} fill="none" strokeLinecap="round" />
+            </g>
+          ))}
+        </g>
+      );
+    case "checker":
+      return (
+        <g fill={c2}>
+          {Array.from({ length: 6 }).flatMap((_, row) =>
+            Array.from({ length: 3 }).map((_, col) => ((row + col) % 2 ? <rect key={`${row}-${col}`} x={-1 + col * 9.4} y={-2 + row * 11} width={9.4} height={11} /> : null))
+          )}
+        </g>
+      );
+    case "cherry":
+      return (
+        <g>
+          <path d="M10 38 Q 13 26 17 22 M16 38 Q 16 28 17 22" stroke="#15803d" strokeWidth={0.9} fill="none" />
+          <path d="M17 22 q 4 -3 6 1 q -4 1 -6 -1 Z" fill="#16a34a" />
+          <circle cx={10} cy={40} r={3} fill="#b91c1c" />
+          <circle cx={16.5} cy={40.5} r={3} fill="#b91c1c" />
+          <circle cx={9} cy={39} r={0.8} fill="#ffffff" />
+          <circle cx={15.5} cy={39.5} r={0.8} fill="#ffffff" />
+        </g>
+      );
+    case "lace":
+      return (
+        <g fill="none" stroke="#ffffff" strokeWidth={0.6} opacity={0.9}>
+          {[14, 24, 34, 44].map((y) => <path key={y} d={`M-2 ${y} q 3.5 -4 7 0 q 3.5 -4 7 0 q 3.5 -4 7 0 q 3.5 -4 7 0`} />)}
+          {[[6, 19], [13, 29], [20, 19], [6, 39], [20, 39], [13, 49]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r={1.6} />)}
+        </g>
+      );
+    case "negative":
+      return (
+        <g>
+          <path d={i % 2 ? "M-2 74 L-2 34 Q 14 30 28 46 L28 74 Z" : "M28 74 L28 30 Q 10 34 -2 52 L-2 74 Z"} fill={c2} />
+          <path d={i % 2 ? "M-2 34 Q 14 30 28 46" : "M28 30 Q 10 34 -2 52"} stroke={metal} strokeWidth={0.9} fill="none" />
+        </g>
+      );
+    case "velvet":
+      return (
+        <g opacity={0.55}>
+          {Array.from({ length: 22 }).map((_, k) => <circle key={k} cx={2 + rnd() * 22} cy={4 + rnd() * 58} r={0.35 + rnd() * 0.5} fill="#fff7ed" />)}
+        </g>
+      );
     case "waves":
       return <g stroke="#ffffff" strokeWidth={1.2} fill="none" strokeLinecap="round">{[10, 17].map((y) => <path key={y} d={`M-2 ${y} Q4 ${y - 4} 9 ${y} T20 ${y} T31 ${y}`} />)}</g>;
     default:
@@ -237,7 +328,7 @@ export default function NailArt({
           <g key={i} transform={i === 4 ? `rotate(22 ${cx} ${top + 40})` : i === 0 ? "rotate(-8 38 150)" : undefined}>
             <rect x={cx - fw / 2} y={top} width={fw} height={260} rx={fw / 2} fill={`url(#skin${uid})`} />
             <g transform={`translate(${cx - W / 2} ${top + 8})`}>
-              <path d={path} fill={pattern === "tortoise" ? "#b45309" : pattern === "babyboomer" ? "#f2c4c4" : nailColor} fillOpacity={pattern === "jelly" ? 0.55 : 1} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
+              <path d={path} fill={pattern === "tortoise" ? "#b45309" : pattern === "babyboomer" ? "#f2c4c4" : pattern === "milkbath" ? "#f8fafc" : pattern === "negative" ? "#f3d6c8" : nailColor} fillOpacity={pattern === "jelly" ? 0.55 : pattern === "negative" ? 0.45 : 1} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
               {drawMotif && (
                 <g clipPath={`url(#clip${uid})`}>
                   <Motif pattern={pattern} c2={c2} metal={metal} i={i} rnd={rnd} uid={uid} />

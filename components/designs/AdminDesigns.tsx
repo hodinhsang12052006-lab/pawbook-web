@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Check, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { Check, Loader2, Sparkles, Trash2, Wand2, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -39,6 +39,17 @@ export default function AdminDesigns() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const redraw = async (d: Design) => {
+    setActing(d.id);
+    const id = toast.loading("Đang vẽ lại ảnh… (5–20 giây)");
+    const res = await fetch("/api/admin/designs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: d.id, action: "redraw" }) });
+    const r = await res.json().catch(() => ({}));
+    setActing(null);
+    if (!res.ok) return toast.error(r.error || "Không vẽ lại được.", { id });
+    toast.success(`Đã vẽ lại (lần ${r.redraws}/3).`, { id });
+    load();
   };
 
   const setStatus = async (d: Design, status: "published" | "rejected") => {
@@ -86,6 +97,11 @@ export default function AdminDesigns() {
               <div className="relative aspect-square bg-slate-900">
                 <DesignVisual d={d} />
                 <AiBadge d={d} className="absolute left-2 top-2" />
+                {!!st?.cfImages && (
+                  <button type="button" disabled={acting === d.id} onClick={() => redraw(d)} className="absolute bottom-2 right-2 inline-flex min-h-[32px] items-center gap-1 rounded-full bg-black/70 px-3 text-[11px] font-bold text-white backdrop-blur disabled:opacity-50">
+                    {acting === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {d.imageUrl ? "Vẽ lại ảnh" : "Vẽ ảnh"}
+                  </button>
+                )}
               </div>
               <div className="space-y-1.5 p-3">
                 {d.occasion && <p className="text-[10px] font-black uppercase tracking-wider text-pink-300">{occasionLabel(d.occasion)}</p>}

@@ -52,6 +52,7 @@ export const COLORS = {
   pearl: col("ngọc trai", "pearl", "#f5f0e8"),
   roseGold: col("vàng hồng", "rose gold", "#b76e79"),
   greige: col("xám be", "greige", "#b8ada3"),
+  espresso: col("nâu espresso", "espresso brown", "#3b2418"),
   sheer: col("hồng sữa", "milky pink", "#f6d5d0"),
 } as const;
 type CK = keyof typeof COLORS;
@@ -74,6 +75,8 @@ const PALETTES: Record<string, [CK, CK, CK][]> = {
   backtoschool: [["navy", "white", "silver"], ["cherry", "navy", "gold"], ["olive", "butter", "gold"], ["nude", "chocolate", "gold"]],
   // Nail Hàn / nude tối giản: nền trong, hồng nude, trắng sữa, xám be, nâu socola + bạc
   korean: [["sheer", "white", "silver"], ["pinkNude", "white", "silver"], ["white", "pinkNude", "silver"], ["greige", "white", "silver"], ["chocolate", "nude", "silver"], ["nude", "white", "pearl"], ["mocha", "pinkNude", "silver"], ["sheer", "babyPink", "pearl"]],
+  // Trend quanh năm: espresso, đỏ cherry, vàng bơ, xanh rêu, hồng phấn, tím lavender…
+  trend: [["espresso", "nude", "gold"], ["nude", "cherry", "gold"], ["butter", "white", "gold"], ["olive", "nude", "gold"], ["babyPink", "white", "silver"], ["mocha", "white", "gold"], ["navy", "white", "silver"], ["lavender", "white", "silver"], ["pinkNude", "espresso", "gold"], ["white", "cherry", "silver"]],
   any: [["nude", "white", "gold"], ["pinkNude", "white", "gold"], ["mocha", "nude", "gold"], ["babyPink", "white", "pearl"], ["burgundy", "nude", "gold"], ["navy", "nude", "silver"]],
 };
 
@@ -180,7 +183,7 @@ export const PATTERNS: Pattern[] = [
     why: s("French kiểu mới (đầu màu, viền mảnh) đang thay French trắng cổ điển", "modern French tips (colored, micro-thin) are replacing the classic white French"),
     materials: ({ c2, sys }) => [sys.id === "dip" ? m(`Bột dip ${c2.vi} (đầu French)`, `${cap(c2.en)} dip powder (French tips)`, "1 hũ") : m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), m("Cọ French dẹt", "Flat French brush", "1 cây")],
     steps: ({ c2, sys }) => [sys.id === "dip" ? s(`Nhúng nghiêng đầu móng vào bột ${c2.vi} tạo đường French`, `Dip the tips at an angle into ${c2.en} powder for the French line`) : s(`Kẻ đầu French ${c2.vi} mảnh, đều 2 bên, hơ đèn`, `Paint a thin, even ${c2.en} French tip, cure`)],
-    image: ({ c1, c2 }) => `${c1.en} base with thin crisp ${c2.en} French tips`,
+    image: ({ c1, c2 }) => `${c1.en} base with thin crisp ${c2.en} French tips, clean smile line`,
   },
   {
     id: "ombre", occasions: "any", finishes: ["glossy", "glitter", "matte"], minutes: 15, price: 8, difficulty: 2, design: true,
@@ -271,7 +274,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, c2 }) => `diagonal ${c1.en} and ${c2.en} candy-cane stripes on accent nails`,
   },
   {
-    id: "stars", occasions: ["newyear", "prom"], finishes: ["glossy", "chrome"], minutes: 12, price: 8, difficulty: 1, design: true,
+    id: "stars", occasions: ["newyear", "prom", "trend"], finishes: ["glossy", "chrome"], minutes: 12, price: 8, difficulty: 1, design: true,
     title: ({ c1, metal }) => s(`Sao lấp lánh ${metal.vi} nền ${c1.vi}`, `${cap(c1.en)} with ${metal.en} sparkle stars`),
     why: s("sao lấp lánh hợp đi tiệc đếm ngược, chụp ảnh rất ăn đèn", "sparkle stars are made for countdown parties and photos"),
     materials: ({ metal }) => [m(`Charm ngôi sao ${metal.vi}`, `${cap(metal.en)} star charms`, "1 gói"), m("Gel dán charm", "Charm gel")],
@@ -316,7 +319,7 @@ export const PATTERNS: Pattern[] = [
     why: s("caro kiểu áo dạ là mẫu tựu trường và đầu thu đang lên", "flannel plaid is trending for back-to-school and early fall"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (kẻ caro)`, `${cap(c2.en)} gel (plaid lines)`), LINER(COLORS.white), LINER_BRUSH],
     steps: ({ c2 }) => [s(`Kẻ 2 sọc dọc + 2 sọc ngang ${c2.vi} trên ${ACC.vi}, hơ đèn`, `Paint two vertical and two horizontal ${c2.en} bands on the ${ACC.en}, cure`), s("Thêm sọc trắng mảnh xen giữa, hơ đèn", "Add thin white lines in between, cure")],
-    image: ({ c1, c2 }) => `${c1.en} and ${c2.en} tartan plaid pattern on accent nails`,
+    image: ({ c1, c2 }) => `${c1.en} nails, with a neat ${c1.en}, ${c2.en} and thin white tartan plaid pattern painted on two accent nails only`,
   },
   {
     id: "waves", occasions: ["summer"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 8, difficulty: 2, design: true,
@@ -350,7 +353,7 @@ export const PATTERNS: Pattern[] = [
     why: s("đầu French tráng gương (bạc, ngọc trai) đang thay French trắng — sang, ăn ảnh", "mirror-chrome French tips (silver or pearl) are replacing white French — luxe and photogenic"),
     materials: ({ metal }) => [m(`Bột tráng gương ${metal.vi}`, `${cap(metal.en)} chrome powder`, "1 hũ"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat"), m("Cọ French dẹt", "Flat French brush", "1 cây")],
     steps: ({ metal }) => [s("Kẻ đầu French mảnh bằng top no-wipe, hơ đèn", "Paint a thin French tip with no-wipe top, cure"), s(`Xoa bột tráng gương ${metal.vi} lên đầu French, phủ top khoá bột, hơ đèn`, `Buff ${metal.en} chrome powder onto the tips, seal with top coat, cure`)],
-    image: ({ c1, metal }) => `${c1.en} base with thin mirror ${metal.en} chrome French tips`,
+    image: ({ c1, metal }) => `${c1.en} base with thin French tips made of highly reflective mirror-like metallic ${metal.en} chrome that shines like polished metal`,
   },
   {
     id: "charm3d", occasions: ["korean", "valentine", "wedding"], finishes: ["glossy", "cateye"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 1, design: true,
@@ -392,6 +395,88 @@ export const PATTERNS: Pattern[] = [
     steps: ({ c2 }) => [s(`Ngón giữa và ngón áp út đổi sang ${c2.vi} (2 lớp, hơ đèn mỗi lớp)`, `Switch the middle and ring fingers to ${c2.en} (two coats, cure each)`)],
     image: ({ c1, c2 }) => `mix-and-match manicure alternating ${c1.en} and ${c2.en} nails`,
   },
+
+  // ---------------- Trend đang được ưa chuộng (quanh năm) ----------------
+  {
+    id: "doublefrench", occasions: ["trend", "korean", "wedding"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2, metal }) => s(`French đôi ${c2.vi} viền ${metal.vi} nền ${c1.vi}`, `${cap(c2.en)} & ${metal.en} double French on ${c1.en}`),
+    why: s("French đôi (2 đường mảnh song song ở đầu móng) là biến tấu French đang được lưu nhiều", "the double French (two fine parallel tip lines) is the French twist everyone is saving"),
+    materials: ({ c2, metal }) => [m(`Gel ${c2.vi} (đường French)`, `${cap(c2.en)} gel (French line)`), LINER(metal), LINER_BRUSH],
+    steps: ({ c2, metal }) => [s(`Kẻ đường French ${c2.vi} thật mảnh ở đầu móng, hơ đèn`, `Paint a micro-thin ${c2.en} French line at the tip, cure`), s(`Kẻ đường thứ hai ${metal.vi} song song, cách đường đầu ~1mm, hơ đèn`, `Add a second ${metal.en} line parallel to it, about 1 mm below, cure`)],
+    image: ({ c1, c2, metal }) => `${c1.en} nails with a double French: a thin ${c2.en} tip line and a second fine ${metal.en} line just below it, crisp and parallel`,
+  },
+  {
+    id: "swirl", occasions: ["trend", "summer", "spring"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2, metal }) => s(`Swirl ${c2.vi} – ${metal.vi} nền ${c1.vi}`, `${cap(c2.en)} & ${metal.en} swirls on ${c1.en}`),
+    why: s("đường swirl uốn lượn kiểu retro đang là trend vẽ tay được thử nhiều nhất", "retro abstract swirls are the hand-painted trend clients try most"),
+    materials: ({ c2, metal }) => [m(`Gel ${c2.vi} (đường swirl)`, `${cap(c2.en)} gel (swirls)`), LINER(metal), LINER_BRUSH],
+    steps: ({ c2, metal }) => [s(`Kẻ 2–3 đường cong uốn lượn ${c2.vi} chạy từ cạnh móng, hơ đèn`, `Paint two or three flowing ${c2.en} curves from the side of each nail, cure`), s(`Viền thêm 1 đường ${metal.vi} mảnh song song với đường cong, hơ đèn`, `Trace one fine ${metal.en} line alongside the curves, cure`)],
+    image: ({ c1, c2, metal }) => `${c1.en} nails with flowing retro abstract swirl lines in ${c2.en} and thin ${metal.en}`,
+  },
+  {
+    id: "droplet", occasions: ["trend", "korean", "summer"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true,
+    title: ({ c1 }) => s(`Giọt nước 3D trên nền ${c1.vi}`, `3D water droplets on ${c1.en}`),
+    why: s("giọt nước 3D trong veo nhìn như móng vừa ướt — trend 'glass nails' ăn ảnh", "clear 3D droplets make nails look freshly dewy — the photogenic 'glass nails' trend"),
+    materials: () => [m("Gel đắp trong suốt (builder clear)", "Clear builder gel"), DOT],
+    steps: () => [s(`Chấm các giọt gel trong to nhỏ trên ${ACC.vi}, chờ 5 giây cho giọt tự tròn rồi hơ đèn`, `Dot clear gel droplets of different sizes on the ${ACC.en}, wait 5s for them to dome, cure`)],
+    image: ({ c1 }) => `glossy ${c1.en} nails with clear raised 3D water droplet bubbles on two accent nails, wet glass look`,
+  },
+  {
+    id: "milkbath", occasions: ["trend", "spring", "wedding", "mothersday", "korean"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 12, difficulty: 2, design: true, ownColor: true,
+    title: ({ c2 }) => s(`Milk bath hoa khô ${c2.vi}`, `${cap(c2.en)} milk bath nails`),
+    why: s("milk bath (hoa khô ẩn dưới lớp trắng sữa) là mẫu mùa xuân và cô dâu được lưu nhiều", "milk bath nails (dried flowers under milky white) are a top saved look for spring and brides"),
+    materials: ({ c2 }) => [m("Gel thạch trắng sữa (milky jelly)", "Milky white jelly gel"), m(`Hoa khô mini tông ${c2.vi}`, `Mini dried flowers (${c2.en} tones)`, "1 hộp"), m("Kềm gắp", "Tweezers", "1 cây")],
+    steps: () => [s("Sơn 1 lớp thạch trắng sữa, đặt hoa khô lên khi chưa hơ đèn, ấn nhẹ cho phẳng, hơ đèn", "Paint one milky jelly coat, set the dried flowers before curing, press flat, cure"), s("Phủ thêm 1 lớp thạch trắng sữa mỏng trùm lên hoa để hoa 'chìm' mờ, hơ đèn", "Cover with another thin milky coat so the flowers look softly submerged, cure")],
+    image: ({ c2 }) => `milky white jelly nails with tiny ${c2.en} dried flowers softly visible under the milky layer`,
+  },
+  {
+    id: "leopard", occasions: ["trend", "fall"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Da báo ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} leopard print on ${c1.en}`),
+    why: s("hoạ tiết da báo quay lại mạnh — làm 2 ngón nhấn là đủ sang", "leopard print is back — two accent nails is all it takes"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (đốm báo)`, `${cap(c2.en)} gel (spots)`), LINER(COLORS.black), LINER_BRUSH],
+    steps: ({ c2 }) => [s(`Chấm các đốm ${c2.vi} không đều nhau trên ${ACC.vi}, hơ đèn`, `Dab irregular ${c2.en} spots on the ${ACC.en}, cure`), s("Viền mỗi đốm bằng nét đen đứt quãng hình chữ C, hơ đèn", "Outline each spot with broken black C-shaped strokes, cure")],
+    image: ({ c1, c2 }) => `${c1.en} nails with ${c2.en} and black leopard print spots on two accent nails`,
+  },
+  {
+    id: "checker", occasions: ["trend", "summer", "backtoschool"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 25, price: 12, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Bàn cờ ${c1.vi} – ${c2.vi}`, `${cap(c1.en)} & ${c2.en} checkerboard`),
+    why: s("hoạ tiết bàn cờ (checkerboard) là trend trẻ trung, khách Gen Z rất thích", "checkerboard nails are a playful trend Gen Z clients love"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (ô cờ)`, `${cap(c2.en)} gel (squares)`), m("Cọ dẹt nhỏ", "Small flat brush", "1 cây")],
+    steps: ({ c2 }) => [s(`Chia mặt móng ${ACC.vi} thành lưới ô vuông nhỏ, tô xen kẽ ô ${c2.vi}, hơ đèn`, `Grid the ${ACC.en} into small squares and fill alternating squares with ${c2.en}, cure`)],
+    image: ({ c1, c2 }) => `${c1.en} nails with a neat ${c1.en} and ${c2.en} checkerboard pattern on two accent nails`,
+  },
+  {
+    id: "cherry", occasions: ["trend", "summer", "valentine"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Cherry đỏ vẽ tay nền ${c1.vi}`, `Hand-painted cherries on ${c1.en}`),
+    why: s("cherry đỏ vẽ tay nhỏ xinh là mẫu 'cherry coded' đang hot", "tiny hand-painted cherries are the hot 'cherry-coded' look"),
+    materials: () => [m("Gel đỏ cherry (quả)", "Cherry red gel (fruit)"), m("Gel xanh lá (cuống, lá)", "Green gel (stems, leaves)"), LINER_BRUSH, DOT],
+    steps: () => [s(`Chấm 2 quả cherry đỏ cạnh nhau trên ${ACC.vi}, hơ đèn`, `Dot two red cherries side by side on the ${ACC.en}, cure`), s("Kẻ cuống xanh nối 2 quả, thêm 1 lá nhỏ và chấm điểm sáng trắng lên quả, hơ đèn", "Draw green stems joining them, add a tiny leaf and a white highlight dot, cure")],
+    image: ({ c1 }) => `${c1.en} nails with tiny hand-painted red cherries with green stems on two accent nails`,
+  },
+  {
+    id: "lace", occasions: ["wedding", "korean", "valentine"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 10, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Ren trắng nền ${c1.vi}`, `White lace on ${c1.en}`),
+    why: s("hoạ tiết ren in (stamping) nhìn tinh tế như váy cưới, làm nhanh hơn vẽ tay", "stamped lace looks as delicate as a wedding dress and is faster than hand-painting"),
+    materials: () => [m("Khuôn in hoạ tiết ren (stamping plate)", "Lace stamping plate", "1 tấm"), m("Sơn in stamping trắng", "White stamping polish"), m("Con dấu silicone + gạt", "Silicone stamper + scraper", "1 bộ")],
+    steps: () => [s(`Quét sơn stamping trắng lên khuôn ren, gạt sạch, lăn con dấu rồi in lên ${ACC.vi}`, `Swipe white stamping polish over the lace plate, scrape, pick up with the stamper and press onto the ${ACC.en}`), s("Chờ khô 1 phút trước khi phủ top để không lem", "Let it dry a minute before top coat so it doesn't smear")],
+    image: ({ c1 }) => `${c1.en} nails with delicate white stamped lace pattern on two accent nails`,
+  },
+  {
+    id: "negative", occasions: ["trend", "korean"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, ownColor: true,
+    title: ({ c2, metal }) => s(`Negative space ${c2.vi} viền ${metal.vi}`, `${cap(c2.en)} negative space with ${metal.en}`),
+    why: s("negative space (chừa móng thật, vẽ khối hình học) — tối giản mà vẫn nghệ thuật, móng mọc ra không lộ", "negative space (bare nail with geometric shapes) is minimal yet artsy — and grows out invisibly"),
+    materials: ({ c2, metal }) => [m("Gel base trong / nude trong", "Clear or sheer nude base gel"), m(`Gel ${c2.vi} (khối hình)`, `${cap(c2.en)} gel (shapes)`), LINER(metal), LINER_BRUSH],
+    steps: ({ c2, metal }) => [s("Phủ 1 lớp base trong (giữ màu móng thật), hơ đèn", "Apply a clear base layer (keep the natural nail visible), cure"), s(`Vẽ khối nửa vầng trăng / hình học ${c2.vi} ở 1 góc móng, chừa khoảng trống còn lại, hơ đèn`, `Paint a ${c2.en} half-moon or geometric block in one corner, leaving the rest bare, cure`), s(`Viền mép khối bằng nét ${metal.vi} mảnh, hơ đèn`, `Edge the shape with a fine ${metal.en} line, cure`)],
+    image: ({ c2, metal }) => `negative space nails: clear natural base with ${c2.en} geometric half-moon shapes outlined in thin ${metal.en}`,
+  },
+  {
+    id: "velvet", occasions: ["trend", "fall", "christmas", "korean"], finishes: ["cateye"], systems: ["gelx", "gel", "acrylic"], minutes: 5, price: 5, difficulty: 2, design: false,
+    title: ({ c1 }) => s(`Velvet nhung ${c1.vi}`, `${cap(c1.en)} velvet nails`),
+    why: s("móng velvet (mắt mèo rải đều như nhung) đang thay mắt mèo dải sáng — nhìn sang, lấp lánh dưới đèn", "velvet nails (cat-eye spread evenly like velvet) are replacing the classic cat-eye stripe — luxe and sparkly"),
+    materials: () => [m("Nam châm phẳng cho hiệu ứng velvet", "Flat magnet for velvet effect", "1 cái")],
+    steps: () => [],
+    image: ({ c1 }) => `${c1.en} velvet nails with an even fine shimmering magnetic cat-eye sparkle across the whole nail, plush velvet look`,
+  },
 ];
 
 // Hiệu ứng bề mặt
@@ -428,7 +513,7 @@ function DIP_FINISH(finish: Finish, metal: Color): { materials: Mat[]; steps: Bi
 const FINISH_EN: Record<Finish, string> = { glossy: "high-gloss", matte: "velvety matte", chrome: "mirror chrome", cateye: "magnetic cat-eye", glitter: "shimmering glitter" };
 
 // ----------------------------------------------------------------------------
-export interface EngineSpec { occasion: string | null; system: SystemId; shape: Shape; finish: Finish; pattern: string; colors: [CK, CK, CK]; style?: "korean" }
+export interface EngineSpec { occasion: string | null; system: SystemId; shape: Shape; finish: Finish; pattern: string; colors: [CK, CK, CK]; style?: "korean" | "trend" }
 
 export interface EngineDesign {
   occasion: string | null;
@@ -460,7 +545,7 @@ const range = (lo: number, market: "US" | "AU") => {
 export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: OccasionInfo | null, trendTag?: string | null): EngineDesign {
   const sys = SYSTEMS.find((x) => x.id === spec.system)!;
   const pat = PATTERNS.find((x) => x.id === spec.pattern)!;
-  const keys: [CK, CK, CK] = spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.pattern === "babyboomer" ? ["pinkNude", "white", spec.colors[2]] : spec.colors;
+  const keys: [CK, CK, CK] = spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.pattern === "babyboomer" ? ["pinkNude", "white", spec.colors[2]] : spec.pattern === "milkbath" ? ["white", spec.colors[1] === "white" ? "babyPink" : spec.colors[1], spec.colors[2]] : spec.colors;
   const [c1, c2, metal] = keys.map((k) => COLORS[k]) as [Color, Color, Color];
   const ctx: PCtx = { c1, c2, metal, sys, finish: spec.finish };
   const shapeName = SHAPE_NAME[spec.shape];
@@ -469,7 +554,9 @@ export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: 
 
   // Lớp màu chính: mắt mèo dùng chính gel mắt mèo làm lớp màu.
   const colorMat = spec.finish === "cateye" ? m(`Gel mắt mèo ${c1.vi}`, `${cap(c1.en)} cat-eye gel`) : sys.colorMat(c1);
-  const colorStep = spec.finish === "cateye"
+  const colorStep = pat.id === "velvet"
+    ? s(`Sơn gel mắt mèo ${c1.vi}, lướt nam châm phẳng khắp mặt móng theo vòng tròn để ánh nhũ rải đều như nhung (KHÔNG tạo dải), hơ đèn NGAY; lặp lại lớp 2`, `Apply ${c1.en} cat-eye gel, sweep a flat magnet in circles over the whole nail so the shimmer spreads evenly like velvet (no stripe), cure immediately; repeat for coat two`)
+    : spec.finish === "cateye"
     ? s(`Sơn gel mắt mèo ${c1.vi}, hút nam châm 5–10 giây cho dải sáng đẹp rồi hơ đèn NGAY; lặp lại lớp 2`, `Apply ${c1.en} cat-eye gel, hold the magnet 5–10s until the band looks right, cure immediately; repeat for coat two`)
     : sys.colorStep(c1);
 
@@ -499,6 +586,8 @@ export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: 
       : s(`Đang vào ${OCC_VI[occ.id] ?? occ.title}${occ.emoji ? " " + occ.emoji : ""}`, `${occTitleEn(occ.id) ?? occ.title} season is here${occ.emoji ? " " + occ.emoji : ""}`)
     : spec.style === "korean"
       ? s("Trend nail Hàn tối giản", "Korean minimalist trend")
+      : spec.style === "trend"
+      ? s("Trend đang được ưa chuộng", "A trend clients are loving")
       : s("Mẫu dễ bán quanh năm", "An easy seller all year round");
   const who = difficulty === 1
     ? s("Thợ mới làm đẹp được", "Newer techs can do it beautifully")
@@ -568,11 +657,14 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     // tối giản (nude, thạch trong, French tráng gương, charm, cụm đá) khách đặt nhiều.
     const yearRound = !occs.length || out.length % 2 === 1;
     const occ = yearRound ? null : occs[(i + Math.floor(tries / 20)) % occs.length];
-    const korean = yearRound && r() < 0.7;
-    const occId = occ?.id ?? (korean ? "korean" : "any");
-    const KOREAN_OK = new Set(["solid", "french", "ombre", "aura", "lines"]);
+    // Quanh năm: ~45% nail Hàn, ~45% trend đang chuộng, còn lại mẫu cơ bản dễ bán.
+    const roll = yearRound ? r() : 1;
+    const style: "korean" | "trend" | null = roll < 0.45 ? "korean" : roll < 0.9 ? "trend" : null;
+    const korean = style === "korean";
+    const occId = occ?.id ?? style ?? "any";
+    const BASIC_OK = new Set(["solid", "french", "ombre", "aura", "lines"]);
     const cands = PATTERNS.filter((p) =>
-      korean ? (p.occasions !== "any" && p.occasions.includes("korean")) || KOREAN_OK.has(p.id)
+      style ? (p.occasions !== "any" && p.occasions.includes(style)) || BASIC_OK.has(p.id)
         : p.occasions === "any" ? true : p.occasions.includes(occId) || (occId === "any" && p.occasions.includes("any")));
     // Dịp lễ: ưu tiên hoạ tiết riêng của dịp đó (mạng nhện cho Halloween…).
     const special = cands.filter((p) => p.occasions !== "any" && p.occasions.includes(occId));
@@ -606,7 +698,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     // Chỉ nói "đang lên #tag" khi mẫu dùng đúng hoạ tiết/hiệu ứng của tag đó.
     const hint = trendTag ? TAG_HINTS.find(([re]) => re.test(trendTag!))?.[1] : undefined;
     const honestTag = hint && ((hint.pattern && hint.pattern === pat.id) || (hint.finish && hint.finish === finish)) ? trendTag : null;
-    const d = buildDesign({ occasion: occ?.id ?? null, system: sys.id, shape, finish, pattern: pat.id, colors, ...(korean ? { style: "korean" as const } : {}) }, input.market, occ, honestTag);
+    const d = buildDesign({ occasion: occ?.id ?? null, system: sys.id, shape, finish, pattern: pat.id, colors, ...(style ? { style } : {}) }, input.market, occ, honestTag);
     const key = d.title.vi.toLowerCase();
     if (usedTitles.has(key)) continue;
     usedTitles.add(key);

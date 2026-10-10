@@ -74,8 +74,10 @@ const SCHEMA = {
 };
 
 // Phong cách ảnh chung: cận cảnh, ánh sáng studio, KHÔNG chữ/logo (tránh vi phạm thương hiệu).
+// Khung ảnh: 1 bàn tay đặt tự nhiên (ít lỗi thừa ngón hơn kiểu "giơ tay"), không
+// nhắc giới tính/da (bộ lọc NSFW của Cloudflare hay chặn nhầm), không chữ/logo.
 const IMAGE_STYLE =
-  "Photorealistic close-up product photo of a woman's hand showing a fresh professional manicure, all five fingers anatomically correct and natural, nails in sharp focus, soft studio lighting, clean neutral background, shallow depth of field, square 1:1. No text, no watermark, no logos, no brand names.";
+  "Professional nail salon portfolio photo: close-up of one hand resting naturally on a soft cream towel, relaxed fingers with realistic proportions and exactly five fingers, every nail in sharp focus showing the nail art clearly, soft daylight, clean neutral background, photorealistic, square 1:1. No text, no watermark, no logos, no brand names.";
 
 const cut = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 const clean = (b: Partial<Bi> | undefined, n: number): Bi => ({ vi: cut(b?.vi, n), en: cut(b?.en, n) });
@@ -262,6 +264,27 @@ export async function generateEngine(market: "US" | "AU", count: number): Promis
     created.push(row.id);
   }
   return { created, skipped: count - list.length, errors };
+}
+
+export const MAX_REDRAWS = 3;
+
+/** Admin bấm "Vẽ lại ảnh" (ảnh lỗi tay, sai hoạ tiết…) — tối đa MAX_REDRAWS lần/mẫu.
+ *  Luôn dùng khung ảnh MỚI NHẤT (IMAGE_STYLE) với phần mô tả bộ móng đã lưu. */
+export async function redrawImage(id: string): Promise<{ imageUrl?: string; error?: string; redraws?: number }> {
+  if (!cfImageEnabled() || !storageReady()) return { error: "Chưa bật vẽ ảnh (Cloudflare Workers AI)." };
+  const row = await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true } });
+  if (!row) return { error: "Không tìm thấy mẫu." };
+  const n = Number(row.prompt.match(/\[redraws:(\d+)\]\s*$/)?.[1] ?? 0);
+  if (n >= MAX_REDRAWS) return { error: `Mẫu này đã vẽ lại ${MAX_REDRAWS} lần — bỏ mẫu hoặc tạo mẫu mới.` };
+  const subject = row.prompt.replace(/\s*\[redraws:\d+\]\s*$/, "").split("\n\n")[0].trim();
+  if (!subject) return { error: "Mẫu này không có mô tả ảnh để vẽ." };
+  try {
+    const imageUrl = await store(await cfImage(`${subject}. ${IMAGE_STYLE}`));
+    await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]`.slice(0, 2000) } });
+    return { imageUrl, redraws: n + 1 };
+  } catch (err) {
+    return { error: `Không vẽ được ảnh: ${(err as Error).message.slice(0, 160)}` };
+  }
 }
 
 /** Mẫu GỢI Ý soạn sẵn (không gọi AI) — ưu tiên dịp lễ sắp tới, không lặp mẫu đã có. */

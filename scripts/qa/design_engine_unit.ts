@@ -76,7 +76,14 @@ check("DE20", "Không lặp tên mẫu đã ra trước đó", avoid.length === 
 
 const kor = all.filter((x) => /^Trend nail Hàn/.test(x.d.description.vi));
 const KOREAN_ONLY = ["jelly", "chromefrench", "charm3d", "gemcluster", "foil", "chromeline", "mixmatch", "babyboomer"];
-check("DE22", "Trend nail Hàn tối giản: chiếm phần lớn mẫu quanh năm, dùng bảng màu nude/thạch/trắng sữa/xám be/socola", kor.length >= all.length * 0.25 && kor.every((x) => !x.d.occasion) && new Set(kor.map((x) => x.d.pattern)).size >= 10, `${kor.length}/${all.length} mẫu, ${new Set(kor.map((x) => x.d.pattern)).size} hoạ tiết`);
+const trd = all.filter((x) => /^Trend đang được ưa chuộng/.test(x.d.description.vi));
+check("DE22", "Mẫu quanh năm: nail Hàn + trend đang chuộng chiếm ≥ 40% tổng số, mỗi nhóm ≥ 15%, đa dạng hoạ tiết", kor.length + trd.length >= all.length * 0.4 && kor.length >= all.length * 0.15 && trd.length >= all.length * 0.15 && kor.every((x) => !x.d.occasion) && trd.every((x) => !x.d.occasion) && new Set(kor.map((x) => x.d.pattern)).size >= 10 && new Set(trd.map((x) => x.d.pattern)).size >= 10,
+  `Hàn ${kor.length}, trend ${trd.length} / ${all.length}; hoạ tiết Hàn ${new Set(kor.map((x) => x.d.pattern)).size}, trend ${new Set(trd.map((x) => x.d.pattern)).size}`);
+check("DE27", "Velvet: nam châm phẳng lướt đều khắp móng (không tạo dải); Milk bath: nền trắng sữa, hoa nằm dưới lớp thạch; Negative space: chừa móng thật bằng base trong",
+  all.filter((x) => x.d.pattern === "velvet").every((x) => x.d.finish === "cateye" && x.d.steps.some((st) => /KHÔNG tạo dải/.test(st.vi)) && !x.d.steps.some((st) => /cho dải sáng/.test(st.vi))) &&
+  all.filter((x) => x.d.pattern === "milkbath").every((x) => x.d.palette[0] === "#f8fafc" && x.d.steps.some((st) => /trùm lên hoa/.test(st.vi))) &&
+  all.filter((x) => x.d.pattern === "negative").every((x) => x.d.steps.some((st) => /base trong/.test(st.vi)) && !x.d.steps.some((st) => /^Sơn 2 lớp gel/.test(st.vi))));
+check("DE28", "Cả năm dùng ≥ 30 hoạ tiết khác nhau", new Set(all.map((x) => x.d.pattern)).size >= 30, String(new Set(all.map((x) => x.d.pattern)).size));
 check("DE23", "Mỗi lô vừa có mẫu theo dịp lễ vừa có mẫu quanh năm (khi đang có dịp lễ)", batches.every((b) => b.some((d) => d.occasion) && b.some((d) => !d.occasion)));
 check("DE24", "Hoạ tiết kiểu Hàn ra đúng chỗ (trend Hàn hoặc dịp được phép), baby boomer luôn hồng nude → trắng sữa", all.filter((x) => KOREAN_ONLY.includes(x.d.pattern)).every((x) => /^Trend nail Hàn/.test(x.d.description.vi) || (x.d.occasion && (PATTERNS.find((p) => p.id === x.d.pattern)!.occasions as string[]).includes(x.d.occasion))) && all.filter((x) => x.d.pattern === "babyboomer").every((x) => x.d.palette[0] === "#f2c4c4" && x.d.palette[1] === "#f8fafc"));
 check("DE25", "Charm/cụm đá: phủ top quanh viền, KHÔNG phủ lên mặt charm/đá", all.filter((x) => ["charm3d", "gemcluster"].includes(x.d.pattern)).every((x) => x.d.steps.some((st) => /không phủ lên mặt/.test(st.vi))));
@@ -98,5 +105,5 @@ for (const p of PATTERNS) for (const sys of ["gelx", "acrylic", "dip", "gel"] as
 }
 check("DE21", `Mọi tổ hợp hoạ tiết × hệ × hiệu ứng × dáng ghép được (${combos} tổ hợp)`, !comboErr && combos > 300, comboErr);
 
-console.log(`\nMáy tạo mẫu PawNail: ${26 - fail}/26 PASS`);
+console.log(`\nMáy tạo mẫu PawNail: ${28 - fail}/28 PASS`);
 if (fail) process.exit(1);

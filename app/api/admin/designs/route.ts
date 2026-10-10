@@ -4,13 +4,14 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
 import { cfDailyImages, cfImageEnabled } from "@/lib/cfImage";
-import { dailyLimit, generateDesigns, generateEngine, generateSamples, storageReady, textOnly, toPublic } from "@/lib/aiDesigns";
+import { dailyLimit, generateDesigns, generateEngine, generateSamples, redrawImage, storageReady, textOnly, toPublic } from "@/lib/aiDesigns";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
 //   GET                         — nháp chờ duyệt + mẫu đã đăng gần đây + trạng thái cấu hình
 //   POST  { count?, market?, mode? } — tạo mẫu nháp: mode "engine" (máy tạo mẫu PawNail, 0đ),
 //                                    "ai" (Gemini, trong giới hạn/ngày) hoặc "sample" (mẫu soạn sẵn)
 //   PATCH { id, status }        — duyệt ("published") hoặc bỏ ("rejected")
+//   PATCH { id, action: "redraw" } — vẽ lại ảnh (Cloudflare miễn phí, tối đa 3 lần/mẫu)
 export const maxDuration = 60; // vẽ ảnh mất 10–30 giây
 
 const missing = (err: unknown) => /no such table|P2021/i.test(String((err as Error)?.message || err));
@@ -69,7 +70,11 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const a = await admin();
   if (a.error) return a.error;
-  const body = (await req.json().catch(() => ({}))) as { id?: string; status?: string };
+  const body = (await req.json().catch(() => ({}))) as { id?: string; status?: string; action?: string };
+  if (body.id && body.action === "redraw") {
+    const r = await redrawImage(body.id);
+    return NextResponse.json(r, { status: r.imageUrl ? 200 : r.error === "Không tìm thấy mẫu." ? 404 : 422 });
+  }
   if (!body.id || !["published", "rejected", "draft"].includes(body.status ?? "")) {
     return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 400 });
   }

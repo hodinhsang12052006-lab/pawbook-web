@@ -21,10 +21,14 @@ export async function GET(req: Request) {
   try {
     const day = new Date().toISOString().slice(0, 10);
     // Chạy lại trong ngày không tạo thêm: đã đủ mẫu PawNail hôm nay thì thôi.
+    // ?count=N (1–8, vẫn cần CRON_SECRET): tạo thêm theo yêu cầu, vẫn trong giới hạn ngày.
+    const extra = Math.min(8, Math.max(0, Math.round(Number(new URL(req.url).searchParams.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
     const r = useGemini
       ? await generateDesigns("US", Math.ceil(dailyLimit() / 2))
-      : already >= CRON_ENGINE_COUNT
+      : extra
+        ? await generateEngine("US", extra)
+        : already >= CRON_ENGINE_COUNT
         ? { created: [] as string[], skipped: CRON_ENGINE_COUNT, errors: ["Hôm nay đã có mẫu mới."] }
         : await generateEngine("US", CRON_ENGINE_COUNT - already);
     if (r.created.length) {

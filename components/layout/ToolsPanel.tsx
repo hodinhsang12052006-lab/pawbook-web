@@ -88,17 +88,18 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
 
   if (variant === "row") {
     return (
-      <nav aria-label={tr("Công cụ", "Tools")} className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
+      // Hàng lối tắt kiểu app (icon + nhãn ngắn) — trước đây là thẻ 160px chiếm nửa màn
+      // hình điện thoại. Chi tiết (stat) vẫn có ở thanh bên trên máy tính.
+      <nav aria-label={tr("Công cụ", "Tools")} className="-mx-4 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
         {tools.map(({ href, label, stat, icon: Icon, tone, badge }) => (
-          <Link key={href} href={href} className="glass-card relative flex w-40 flex-shrink-0 flex-col gap-2 rounded-2xl p-3 active:scale-95 transition-transform">
-            <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}>
-              <Icon className="h-[18px] w-[18px]" />
+          <Link key={href} href={href} title={stat} className="relative flex w-[76px] flex-shrink-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center active:scale-95 transition-transform">
+            <span className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-white/10 ${tone}`}>
+              <Icon className="h-5 w-5" />
+              {!!badge && badge > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-pink-600 px-1 text-[10px] font-bold leading-[18px] text-white ring-2 ring-slate-950">{badge > 9 ? "9+" : badge}</span>
+              )}
             </span>
-            <span className="text-[13px] font-bold text-white">{label}</span>
-            <span className="line-clamp-2 text-[11px] leading-snug text-slate-400">{stat}</span>
-            {!!badge && badge > 0 && (
-              <span className="absolute right-2.5 top-2.5 rounded-full bg-pink-600 px-1.5 text-[10px] font-bold text-white">{badge > 9 ? "9+" : badge}</span>
-            )}
+            <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-slate-300">{label}</span>
           </Link>
         ))}
       </nav>

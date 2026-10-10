@@ -31,8 +31,8 @@ function greeting(date = new Date()) {
 }
 
 // Hàm (không phải hằng số) để đọc đúng ngôn ngữ hiện tại mỗi lần render.
-const tabSubtitle = (): Record<"feed" | "jobs" | "portfolio", { owner: string; tech: string }> => ({
-  feed: { owner: tr("Cập nhật mới nhất từ cộng đồng nail quanh bạn.", "The latest from the nail community around you."), tech: tr("Khoe tay nghề và xem tiệm nào đang tuyển quanh bạn.", "Show off your work and see which salons are hiring near you.") },
+const tabSubtitle = (): Record<"feed" | "jobs" | "portfolio", { owner: string; tech: string; admin?: string }> => ({
+  feed: { admin: tr("Theo dõi cộng đồng, duyệt nội dung và hỗ trợ thành viên.", "Keep an eye on the community, review content and support members."), owner: tr("Cập nhật mới nhất từ cộng đồng nail quanh bạn.", "The latest from the nail community around you."), tech: tr("Khoe tay nghề và xem tiệm nào đang tuyển quanh bạn.", "Show off your work and see which salons are hiring near you.") },
   jobs: { owner: tr("Xem các tiệm khác đang tuyển để đặt mức lương cạnh tranh.", "See what other salons offer to set a competitive wage."), tech: tr("Tin tuyển gấp mới nhất — gọi hoặc nhắn tin ngay cho tiệm.", "Latest urgent jobs — call or message the salon right away.") },
   portfolio: { owner: tr("Thợ đang sẵn sàng nhận việc — xem portfolio và nhắn tin trực tiếp.", "Techs ready to work — view portfolios and message directly."), tech: tr("Xem portfolio thợ khác để lấy cảm hứng mẫu mới.", "Browse other techs’ portfolios for new design ideas.") },
 });
@@ -217,7 +217,7 @@ export default function HomePage() {
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                   {greeting()}{displayName ? `, ${displayName}` : ""} 👋
                 </h1>
-                <p className="mt-0.5 text-sm text-slate-400">{tabSubtitle()[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
+                <p className="mt-0.5 text-sm text-slate-400">{(sessionUser.role === "ADMIN" && tabSubtitle()[tab].admin) || tabSubtitle()[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
               </div>
             )}
 

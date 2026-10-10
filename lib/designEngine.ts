@@ -191,7 +191,7 @@ export const PATTERNS: Pattern[] = [
     why: s("ombre chuyển màu mềm hợp mọi độ dài móng, khách nhìn là thích", "soft ombre flatters every length and photographs beautifully"),
     materials: ({ c2, sys }) => [sys.id === "dip" ? m(`Bột dip ${c2.vi}`, `${cap(c2.en)} dip powder`, "1 hũ") : m(`Gel ${c2.vi}`, `${cap(c2.en)} gel polish`), m("Mút tán màu / cọ ombre", "Ombre sponge or brush", "1 cái")],
     steps: ({ c1, c2, sys }) => [sys.id === "dip" ? s(`Nhúng ${c2.vi} từ đầu móng lên giữa móng, rắc nhẹ phần chuyển màu`, `Dip ${c2.en} from tip to mid-nail, sprinkle lightly at the blend line`) : s(`Tán ${c2.vi} từ đầu móng vào, hoà với ${c1.vi} ở giữa móng, hơ đèn; lặp lại 2 lớp`, `Sponge ${c2.en} from the tip, blending into ${c1.en} mid-nail, cure; repeat twice`)],
-    image: ({ c1, c2 }) => `smooth vertical ombre fading from ${c1.en} at the cuticle to ${c2.en} at the tip`,
+    image: ({ c1, c2 }) => `every nail has the same smooth vertical gradient ombre, ${c1.en} near the cuticle blending softly into ${c2.en} at the tip, all five nails matching`,
   },
   {
     id: "aura", occasions: ["spring", "summer", "valentine", "prom", "any"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 2, design: true,
@@ -255,7 +255,7 @@ export const PATTERNS: Pattern[] = [
     why: s("mạng nhện là mẫu Halloween được hỏi nhiều nhất — sang mà không “lố”", "spiderwebs are the most-requested Halloween look — chic, not costume-y"),
     materials: ({ metal }) => [LINER(metal), LINER_BRUSH],
     steps: ({ metal }) => [s(`Vẽ 3 đường chéo từ góc móng rồi nối các vòng cung ${metal.vi} thành mạng nhện trên ${ACC.vi}`, `Draw three diagonal spokes from a corner and connect ${metal.en} arcs into a web on the ${ACC.en}`)],
-    image: ({ c1, metal }) => `${c1.en} nails with fine ${metal.en} spiderweb art on two accent nails`,
+    image: ({ c1, metal }) => `${c1.en} nails with delicate thin ${metal.en} spider web line art (only the web lines, no spiders) on two accent nails`,
   },
   {
     id: "snow", occasions: ["christmas", "newyear"], finishes: ["glossy", "matte"], minutes: 15, price: 8, difficulty: 2, design: true,
@@ -345,7 +345,7 @@ export const PATTERNS: Pattern[] = [
     why: s("baby boomer (hồng nude chuyển trắng sữa) là mẫu sang, hợp mọi khách và mọi dịp", "baby boomer (pink nude fading to milky white) is elegant and suits every client and occasion"),
     materials: ({ sys }) => [sys.id === "dip" ? m("Bột dip trắng sữa", "Milky white dip powder", "1 hũ") : m("Gel trắng sữa", "Milky white gel polish"), m("Mút tán màu / cọ ombre", "Ombre sponge or brush", "1 cái")],
     steps: ({ sys }) => [sys.id === "dip" ? s("Nhúng trắng sữa từ đầu móng lên 2/3 móng, rắc nhẹ phần chuyển màu cho mờ", "Dip milky white from the tip up two-thirds, sprinkle lightly to soften the blend") : s("Tán trắng sữa từ đầu móng vào, mờ dần về chân móng; hơ đèn, lặp lại 2 lớp", "Sponge milky white from the tip, fading toward the cuticle; cure, repeat twice")],
-    image: () => "soft baby boomer ombre from pink nude at the cuticle to milky white at the tip",
+    image: () => "every nail has the same soft baby boomer gradient, pink nude near the cuticle blending into milky white at the tip, all five nails matching",
   },
   {
     id: "chromefrench", occasions: ["korean", "newyear", "wedding"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 10, difficulty: 2, design: true,

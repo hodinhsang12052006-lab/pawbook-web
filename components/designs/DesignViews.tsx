@@ -33,6 +33,7 @@ export interface Design {
   palette?: string[];
   shape?: string;
   finish?: string;
+  pattern?: string;
   provider?: string;
   saves: number;
   saved?: boolean;
@@ -50,13 +51,23 @@ export const hashtagFor = (d: Design) => {
   return t ? `#${t.hashtag}` : "#PawNailAI";
 };
 
+// "1 lọ" → "1 bottle"… (số lượng vật tư lưu tiếng Việt).
+const QTY_EN: Record<string, string> = { lọ: "bottle", bộ: "set", hộp: "box", cây: "pc", hũ: "jar", tấm: "sheet", cái: "pc", gói: "pack", vỉ: "pack", cuộn: "roll" };
+export const qtyEn = (q: string) =>
+  q.replace(/(\d+)\s*(lọ|bộ|hộp|cây|hũ|tấm|cái|gói|vỉ|cuộn)/giu, (_, n: string, u: string) => {
+    const unit = QTY_EN[u.toLowerCase()] ?? u;
+    return `${n} ${unit}${Number(n) > 1 ? (unit === "box" ? "es" : "s") : ""}`;
+  });
+
 /** Nhãn bắt buộc, nói đúng nguồn — không để ai hiểu nhầm là ảnh tay nghề thật:
- *  ảnh do AI vẽ · ý tưởng AI + minh hoạ màu do app vẽ · mẫu gợi ý + minh hoạ màu. */
+ *  ảnh do AI vẽ · mẫu của máy PawNail · ý tưởng AI + minh hoạ màu · mẫu gợi ý + minh hoạ màu. */
 export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "provider">; className?: string }) {
   useTr(); // render lại khi đổi VI/EN
   const label = !d || d.imageUrl
     ? tr(" Ảnh minh hoạ AI", " AI illustration")
-    : d.provider === "sample"
+    : d.provider === "pawnail"
+      ? tr(" Mẫu PawNail · hình minh hoạ", " PawNail design · illustration")
+      : d.provider === "sample"
       ? tr(" Minh hoạ màu", " Color preview")
       : tr(" Ý tưởng AI · minh hoạ màu", " AI idea · color preview");
   return (
@@ -72,7 +83,7 @@ export function DesignVisual({ d, className = "" }: { d: Design; className?: str
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={d.imageUrl} alt={designTitle(d)} loading="lazy" className={`h-full w-full object-cover ${className}`} />;
   }
-  return <NailArt palette={d.palette ?? []} shape={d.shape} finish={d.finish} seed={d.id} className={`h-full w-full ${className}`} />;
+  return <NailArt palette={d.palette ?? []} shape={d.shape} finish={d.finish} pattern={d.pattern} uniform={d.provider === "pawnail"} seed={d.id} className={`h-full w-full ${className}`} />;
 }
 
 export function DesignCard({ d, onOpen, compact = false }: { d: Design; onOpen: () => void; compact?: boolean }) {
@@ -176,7 +187,7 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
                     className="h-4 w-4 accent-emerald-500"
                   />
                   <span className={`min-w-0 flex-1 text-sm ${checked.has(i) ? "text-slate-500 line-through" : "text-slate-200"}`}>{tr(m.vi, m.en || m.vi)}</span>
-                  <span className="flex-shrink-0 text-[11px] text-slate-500">{m.qty}</span>
+                  <span className="flex-shrink-0 text-[11px] text-slate-500">{tr(m.qty, qtyEn(m.qty))}</span>
                   <Link href={`/supply?q=${encodeURIComponent(m.vi)}`} className="flex-shrink-0 text-[11px] font-bold text-emerald-300 hover:underline">{tr("Tìm mua", "Find")}</Link>
                 </li>
               ))}
@@ -210,7 +221,7 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
   );
 }
 
-/** Dải "Mẫu nail AI hôm nay" trên bảng tin — ẩn khi chưa có mẫu đã duyệt. */
+/** Dải "Mẫu nail mới hôm nay" trên bảng tin — ẩn khi chưa có mẫu đã duyệt. */
 export function DesignsStrip() {
   useTr(); // render lại khi đổi VI/EN
   const [items, setItems] = useState<Design[] | null>(null);
@@ -227,7 +238,7 @@ export function DesignsStrip() {
     setOpen((o) => (o && o.id === id ? { ...o, saved, saves } : o));
   };
   return (
-    <section aria-label={tr("Mẫu nail AI mới", "New AI nail designs")} className="space-y-2.5">
+    <section aria-label={tr("Mẫu nail mới", "New nail designs")} className="space-y-2.5">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-sm font-black text-white"><Sparkles className="h-4 w-4 text-pink-300" />{tr(" Mẫu nail mới mỗi ngày", " Fresh nail designs daily")}</p>
         <Link href="/designs" className="flex items-center gap-0.5 text-xs font-bold text-pink-300 hover:underline">{tr("Xem tất cả", "See all")}<ChevronRight className="h-3.5 w-3.5" /></Link>

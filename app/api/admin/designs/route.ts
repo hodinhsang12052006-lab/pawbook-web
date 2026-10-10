@@ -3,12 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
-import { dailyLimit, generateDesigns, generateSamples, storageReady, textOnly, toPublic } from "@/lib/aiDesigns";
+import { dailyLimit, generateDesigns, generateEngine, generateSamples, storageReady, textOnly, toPublic } from "@/lib/aiDesigns";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
 //   GET                         — nháp chờ duyệt + mẫu đã đăng gần đây + trạng thái cấu hình
-//   POST  { count?, market?, mode? } — tạo mẫu nháp: mode "ai" (Gemini, trong giới hạn/ngày)
-//                                    hoặc "sample" (bộ mẫu gợi ý soạn sẵn, không gọi AI)
+//   POST  { count?, market?, mode? } — tạo mẫu nháp: mode "engine" (máy tạo mẫu PawNail, 0đ),
+//                                    "ai" (Gemini, trong giới hạn/ngày) hoặc "sample" (mẫu soạn sẵn)
 //   PATCH { id, status }        — duyệt ("published") hoặc bỏ ("rejected")
 export const maxDuration = 60; // vẽ ảnh mất 10–30 giây
 
@@ -53,9 +53,10 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { count?: number; market?: string; mode?: string };
   const count = Math.min(6, Math.max(1, Math.round(Number(body.count) || 3)));
   const market = body.market === "AU" ? "AU" : "US";
-  if (body.mode !== "sample" && !geminiEnabled()) return NextResponse.json({ error: "Chưa cấu hình GEMINI_API_KEY trên máy chủ." }, { status: 503 });
+  const local = body.mode === "sample" || body.mode === "engine";
+  if (!local && !geminiEnabled()) return NextResponse.json({ error: "Chưa cấu hình GEMINI_API_KEY trên máy chủ." }, { status: 503 });
   try {
-    const r = body.mode === "sample" ? await generateSamples(market, count) : await generateDesigns(market, count);
+    const r = body.mode === "engine" ? await generateEngine(market, count) : body.mode === "sample" ? await generateSamples(market, count) : await generateDesigns(market, count);
     return NextResponse.json(r, { status: r.created.length ? 201 : 200 });
   } catch (err) {
     if (missing(err)) return NextResponse.json({ error: "Chưa tạo bảng NailDesign — chạy prisma/sql/2026-10-09_nail_designs.sql." }, { status: 503 });

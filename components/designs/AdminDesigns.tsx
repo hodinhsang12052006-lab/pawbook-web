@@ -23,9 +23,9 @@ export default function AdminDesigns() {
   }, []);
   useEffect(load, [load]);
 
-  const generate = async (mode: "ai" | "sample") => {
+  const generate = async (mode: "engine" | "ai") => {
     setBusy(true);
-    const id = toast.loading(mode === "sample" ? "Đang tạo mẫu gợi ý…" : "Gemini đang nghĩ mẫu… (10–40 giây)");
+    const id = toast.loading(mode === "engine" ? "Máy PawNail đang ghép mẫu…" : "Gemini đang nghĩ mẫu… (10–40 giây)");
     try {
       const res = await fetch("/api/admin/designs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ count: 3, mode }) });
       const r = await res.json();
@@ -51,25 +51,25 @@ export default function AdminDesigns() {
   };
 
   return (
-    <section id="mau-ai" aria-label="Mẫu nail AI" className="scroll-mt-24 space-y-4 rounded-2xl border border-pink-500/25 bg-pink-500/[0.04] p-4">
+    <section id="mau-ai" aria-label="Mẫu nail mới" className="scroll-mt-24 space-y-4 rounded-2xl border border-pink-500/25 bg-pink-500/[0.04] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-black text-white"><Wand2 className="h-5 w-5 text-pink-300" /> Mẫu nail AI</h2>
+          <h2 className="flex items-center gap-2 text-lg font-black text-white"><Wand2 className="h-5 w-5 text-pink-300" /> Mẫu nail mới mỗi ngày</h2>
           <p className="text-xs text-slate-400">
-            Gemini viết mẫu theo dịp lễ + xu hướng thật, vẽ ảnh minh hoạ. Mỗi sáng tự tạo; duyệt xong mới hiện ở /designs và bảng tin.
-            {st && ` Hôm nay: ${st.madeToday}/${st.dailyLimit} mẫu.`}
+            Máy tạo mẫu PawNail ghép mẫu theo dịp lễ + hashtag đang lên: vật tư, các bước, thời gian, giá gợi ý — không tốn phí AI. Mỗi sáng tự tạo 4 mẫu; duyệt xong mới hiện ở /designs và bảng tin.
+            {st && ` Hôm nay đã tạo ${st.madeToday} mẫu.`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => generate("ai")} disabled={busy || !st?.enabled} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-50">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Tạo 3 mẫu bằng AI
+          <button type="button" onClick={() => generate("engine")} disabled={busy} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-50">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Tạo 3 mẫu PawNail (miễn phí)
           </button>
-          <button type="button" onClick={() => generate("sample")} disabled={busy} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/15 disabled:opacity-50">
-            <Wand2 className="h-4 w-4 text-pink-300" /> Tạo mẫu gợi ý (không dùng AI)
+          <button type="button" onClick={() => generate("ai")} disabled={busy || !st?.enabled} title={st?.enabled ? undefined : "Chưa bật Gemini (tuỳ chọn)"} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/15 disabled:opacity-50">
+            <Wand2 className="h-4 w-4 text-pink-300" /> Tạo bằng Gemini
           </button>
         </div>
       </div>
-      {st && !st.enabled && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa có GEMINI_API_KEY trên máy chủ — thêm vào Vercel rồi deploy lại.</p>}
+      {st && !st.enabled && <p className="rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-slate-400 ring-1 ring-white/10">Gemini (tuỳ chọn) chưa bật — không cần: máy PawNail vẫn tạo mẫu mỗi ngày.</p>}
       {st && st.enabled && (st.textOnly || st.storage === false) && <p className="rounded-xl bg-sky-500/10 px-3 py-2 text-xs text-sky-200 ring-1 ring-sky-500/25">Chế độ chỉ viết chữ (Gemini miễn phí): AI viết ý tưởng + vật tư + các bước, minh hoạ do app tự vẽ từ bảng màu. Bật ảnh AI: bỏ AI_DESIGNS_TEXT_ONLY trên Vercel sau khi gắn thanh toán Google.</p>}
       {st?.needsSql && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa tạo bảng — chạy prisma/sql/2026-10-09_nail_designs.sql.</p>}
 
@@ -89,7 +89,7 @@ export default function AdminDesigns() {
                 <p className="text-[11px] text-slate-500">{d.titleEn}</p>
                 <p className="text-xs text-slate-400">{d.description}</p>
                 <p className="text-[11px] text-slate-500">
-                  {d.skills.map(valueLabel).join(" · ")} · {d.minutes} phút · {d.priceHint} · {d.materials.length} vật tư · {d.steps.length} bước
+                  {[...d.skills.map(valueLabel), `${d.minutes} phút`, d.priceHint, `${d.materials.length} vật tư`, `${d.steps.length} bước`].filter(Boolean).join(" · ")}
                 </p>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button type="button" disabled={acting === d.id} onClick={() => setStatus(d, "published")} className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-xs font-black text-white disabled:opacity-50">

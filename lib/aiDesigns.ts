@@ -4,6 +4,7 @@ import { activeThemes, THEMES } from "@/lib/contentEngine";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 import { SAMPLE_DESIGNS } from "@/lib/designSamples";
+import { generateEngineDesigns, PATTERN_IDS } from "@/lib/designEngine";
 
 // "Mẫu nail AI mỗi ngày":
 //   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
@@ -27,7 +28,8 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const cleanPalette = (p: unknown) => (Array.isArray(p) ? p : []).map((c) => String(c).trim()).filter((c) => HEX.test(c)).slice(0, 5);
 export const dailyLimit = () => Math.max(1, Math.min(50, Number(process.env.AI_DESIGNS_DAILY_LIMIT) || 8));
 
-export interface Bi { vi: string; en: string }
+export type { Bi } from "@/lib/designEngine";
+import type { Bi } from "@/lib/designEngine";
 interface DesignIdea {
   title: Bi;
   description: Bi;
@@ -42,6 +44,7 @@ interface DesignIdea {
   palette: string[];
   shape: string;
   finish: string;
+  pattern?: string;
 }
 
 const bi = { type: "OBJECT", properties: { vi: { type: "STRING" }, en: { type: "STRING" } }, required: ["vi", "en"] };
@@ -63,6 +66,7 @@ const SCHEMA = {
       palette: { type: "ARRAY", items: { type: "STRING" } },
       shape: { type: "STRING", enum: ["almond", "coffin", "square", "oval", "stiletto"] },
       finish: { type: "STRING", enum: ["glossy", "matte", "chrome", "cateye", "glitter"] },
+      pattern: { type: "STRING", enum: PATTERN_IDS },
     },
     required: ["title", "description", "occasion", "skills", "difficulty", "minutes", "priceHint", "materials", "steps", "imagePrompt", "palette", "shape", "finish"],
   },
@@ -78,12 +82,12 @@ const clean = (b: Partial<Bi> | undefined, n: number): Bi => ({ vi: cut(b?.vi, n
 function upcomingThemes(market: "US" | "AU", now: Date) {
   // Dịp đang diễn ra + dịp bắt đầu trong 21 ngày tới (thợ cần chuẩn bị vật tư trước).
   const ids = new Set<string>();
-  const out: { id: string; title: string; ideas: string[]; startsIn: number }[] = [];
+  const out: { id: string; title: string; emoji: string; ideas: string[]; startsIn: number }[] = [];
   for (let d = 0; d <= 21; d += 3) {
     for (const t of activeThemes(new Date(now.getTime() + d * DAY_MS), market)) {
       if (ids.has(t.id)) continue;
       ids.add(t.id);
-      out.push({ id: t.id, title: t.title, ideas: t.ideas, startsIn: d });
+      out.push({ id: t.id, title: t.title, emoji: t.emoji, ideas: t.ideas, startsIn: d });
     }
   }
   return out.slice(0, 4);
@@ -136,7 +140,7 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
     "skills: chọn từ danh sách cho sẵn. difficulty: 1 dễ, 2 vừa, 3 khó. minutes: thời gian làm thực tế. priceHint: khoảng giá tiệm nên báo khách, đơn vị USD (Mỹ) hoặc AUD (Úc), VD \"$45–60\".",
     "materials: 4–8 vật tư CỤ THỂ cần chuẩn bị (màu gel/bột tên gọi phổ biến, top/base, charm, cọ, foil…), mỗi món có qty (VD \"1 lọ\", \"1 bộ\").",
     "steps: 4–6 bước làm ngắn gọn, đúng kỹ thuật.",
-    "palette: 2–5 mã màu hex chính của bộ móng (VD \"#7f1d1d\"). shape: dáng móng. finish: hiệu ứng bề mặt (glossy bóng, matte nhám, chrome tráng gương, cateye mắt mèo, glitter nhũ).",
+    "palette: 2–5 mã màu hex chính của bộ móng (VD \"#7f1d1d\"). shape: dáng móng. finish: hiệu ứng bề mặt (glossy bóng, matte nhám, chrome tráng gương, cateye mắt mèo, glitter nhũ). pattern: hoạ tiết gần nhất trong danh sách cho sẵn (solid = màu trơn).",
     "imagePrompt: tiếng Anh, mô tả CHÍNH XÁC bộ móng để vẽ ảnh (dáng móng, độ dài, màu, hoạ tiết, chất liệu bóng/nhám/chrome). Không nhắc thương hiệu, logo, chữ, người nổi tiếng.",
     "Tuyệt đối không mô phỏng thương hiệu thời trang (Chanel, LV, Gucci…) hay nhân vật có bản quyền.",
   ]
@@ -182,6 +186,7 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
             palette: JSON.stringify(cleanPalette(d.palette).length ? cleanPalette(d.palette) : ["#ec4899", "#a855f7"]),
             shape: (SHAPES as readonly string[]).includes(d.shape) ? d.shape : "almond",
             finish: (FINISHES as readonly string[]).includes(d.finish) ? d.finish : "glossy",
+            pattern: d.pattern && PATTERN_IDS.includes(d.pattern) ? d.pattern : "solid",
             provider: "gemini",
             prompt: imagePrompt.slice(0, 2000),
           },
@@ -194,6 +199,48 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
     })
   );
   return { created, skipped: count - list.length, errors };
+}
+
+// Máy tạo mẫu PawNail: miễn phí nên không tính vào giới hạn AI, nhưng vẫn
+// chặn số nháp/ngày để Phòng nội dung không bị ngập.
+export const ENGINE_DAILY_MAX = 24;
+
+/** Tạo mẫu bằng MÁY TẠO MẪU PAWNAIL (lib/designEngine) — không gọi AI, 0đ. */
+export async function generateEngine(market: "US" | "AU", count: number): Promise<GenerateResult> {
+  const day = today();
+  const madeToday = await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
+  const n = Math.max(0, Math.min(count, ENGINE_DAILY_MAX - madeToday));
+  if (n === 0) return { created: [], skipped: count, errors: [`Đã tạo đủ ${ENGINE_DAILY_MAX} mẫu PawNail hôm nay.`] };
+  const now = new Date();
+  const [signals, recent] = await Promise.all([
+    getSignals(market).catch(() => null),
+    prisma.nailDesign.findMany({ where: { createdAt: { gte: new Date(now.getTime() - 60 * DAY_MS) } }, select: { title: true }, take: 400 }),
+  ]);
+  const list = generateEngineDesigns(n, {
+    market,
+    date: day,
+    salt: String(madeToday), // bấm thêm trong ngày → ra mẫu khác
+    occasions: upcomingThemes(market, now).map((t) => ({ id: t.id, title: t.title, emoji: t.emoji, startsIn: t.startsIn })),
+    risingTags: (signals?.risingTags ?? []).map((t) => t.tag),
+    usedTitles: new Set(recent.map((r) => r.title)),
+  });
+  const created: string[] = [];
+  for (const d of list) {
+    const row = await prisma.nailDesign.create({
+      data: {
+        day, market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
+        skills: d.skills.join(","), difficulty: d.difficulty, minutes: d.minutes, priceHint: d.priceHint,
+        materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: null,
+        palette: JSON.stringify(d.palette), shape: d.shape, finish: d.finish, pattern: d.pattern,
+        provider: "pawnail",
+        // Mô tả ảnh sẵn cho máy vẽ ảnh (giai đoạn 2) — hiện chưa gọi dịch vụ nào.
+        prompt: `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000),
+      },
+      select: { id: true },
+    });
+    created.push(row.id);
+  }
+  return { created, skipped: count - list.length, errors: list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [] };
 }
 
 /** Mẫu GỢI Ý soạn sẵn (không gọi AI) — ưu tiên dịp lễ sắp tới, không lặp mẫu đã có. */
@@ -237,6 +284,7 @@ export interface PublicDesign {
   palette: string[];
   shape: string;
   finish: string;
+  pattern: string;
   provider: string;
   status: string;
   saves: number;
@@ -255,14 +303,14 @@ const parse = <T,>(s: string, fallback: T): T => {
 export function toPublic(r: {
   id: string; day: string; occasion: string | null; title: string; titleEn: string; description: string; descriptionEn: string; skills: string;
   difficulty: number; minutes: number; priceHint: string; materials: string; steps: string; imageUrl: string | null; videoUrl: string | null;
-  palette?: string; shape?: string; finish?: string; provider?: string;
+  palette?: string; shape?: string; finish?: string; pattern?: string; provider?: string;
   status: string; publishedAt: Date | null; _count?: { saves: number };
 }): PublicDesign {
   return {
     id: r.id, day: r.day, occasion: r.occasion, title: r.title, titleEn: r.titleEn, description: r.description, descriptionEn: r.descriptionEn,
     skills: r.skills ? r.skills.split(",").filter(Boolean) : [], difficulty: r.difficulty, minutes: r.minutes, priceHint: r.priceHint,
     materials: parse(r.materials, []), steps: parse(r.steps, []), imageUrl: r.imageUrl, videoUrl: r.videoUrl, status: r.status,
-    palette: parse(r.palette ?? "[]", [] as string[]), shape: r.shape ?? "almond", finish: r.finish ?? "glossy", provider: r.provider ?? "gemini",
+    palette: parse(r.palette ?? "[]", [] as string[]), shape: r.shape ?? "almond", finish: r.finish ?? "glossy", pattern: r.pattern ?? "solid", provider: r.provider ?? "gemini",
     saves: r._count?.saves ?? 0, publishedAt: r.publishedAt?.toISOString() ?? null,
   };
 }

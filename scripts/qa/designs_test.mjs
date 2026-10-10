@@ -101,7 +101,19 @@ try {
   const c1 = await anon.req("/api/cron/designs");
   const c2 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer sai" } });
   const c3 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer test-cron" } });
-  R.check("D11", "Cron: không khoá / sai khoá → 401; đúng khoá → chạy (đã đủ mẫu thì không tốn thêm)", c1.status === 401 && c2.status === 401 && c3.status === 200 && c3.data.created.length === 0, `${c1.status} ${c2.status} ${c3.status} ${JSON.stringify(c3.data).slice(0, 80)}`);
+  const c4 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer test-cron" } });
+  R.check("D11", "Cron: không khoá / sai khoá → 401; đúng khoá → máy PawNail tạo 4 mẫu (0đ, không gọi Gemini); chạy lại trong ngày không tạo thêm", c1.status === 401 && c2.status === 401 && c3.status === 200 && c3.data.created?.length === 4 && c4.data.created?.length === 0, `${c1.status} ${c2.status} ${c3.status} ${JSON.stringify(c3.data).slice(0, 120)} | ${JSON.stringify(c4.data).slice(0, 80)}`);
+
+  // Máy tạo mẫu PawNail từ nút trong Phòng nội dung
+  const callsBefore = calls.length;
+  const eng = await admin.req("/api/admin/designs", { method: "POST", json: { count: 3, mode: "engine" } });
+  const allDrafts = (await admin.req("/api/admin/designs")).data.drafts;
+  const engRows = allDrafts.filter((d) => eng.data.created?.includes(d.id));
+  const pawRows = allDrafts.filter((d) => d.provider === "pawnail");
+  R.check("D15", "Máy PawNail: tạo 3 mẫu KHÔNG gọi Gemini, đủ song ngữ + vật tư + các bước + giá + hoạ tiết", eng.status === 201 && engRows.length === 3 && calls.length === callsBefore &&
+    engRows.every((d) => d.provider === "pawnail" && d.titleEn && d.descriptionEn && d.materials.length >= 3 && d.steps.length >= 4 && /^\$\d+–\d+$/.test(d.priceHint) && d.palette.length >= 2 && d.pattern && d.imageUrl === null),
+    JSON.stringify(engRows.map((d) => [d.title, d.pattern, d.priceHint])).slice(0, 300));
+  R.check("D16", "Máy PawNail: 7 mẫu (cron + nút) không trùng tên, mẫu đầu lô dễ cho thợ mới", pawRows.length === 7 && new Set(pawRows.map((d) => d.title)).size === 7 && pawRows.some((d) => d.difficulty === 1), pawRows.map((d) => d.title).join(" | "));
 
   const s1 = await tech.req(`/api/designs/${pub[0].id}/save`, { method: "POST" });
   const list1 = (await tech.req("/api/designs")).data.designs.find((d) => d.id === pub[0].id);
@@ -137,7 +149,7 @@ try {
   };
   const p = await page();
   await p.goto(BASE_URL + "/?tab=feed");
-  const strip = p.getByRole("region", { name: "Mẫu nail AI mới" });
+  const strip = p.getByRole("region", { name: "Mẫu nail mới" });
   R.check("U1", "Bảng tin: dải 'Mẫu nail mới mỗi ngày' với mẫu đã duyệt", await strip.waitFor({ timeout: 15000 }).then(() => true).catch(() => false));
   await p.goto(BASE_URL + "/designs");
   await p.getByRole("heading", { name: "Mẫu nail mới" }).waitFor({ timeout: 15000 });
@@ -172,6 +184,9 @@ try {
   await e.waitForTimeout(1000);
   const enText = await e.locator("main").innerText();
   R.check("U8", "Tiếng Anh: tiêu đề trang + tên mẫu tiếng Anh + 'AI illustration'", enOk && /Pumpkin cat eye/.test(enText) && /AI illustration/.test(enText) && !/Mắt mèo bí ngô/.test(enText));
+  await e.locator("main button.group").first().click();
+  const enSheet = await e.getByRole("dialog").innerText().catch(() => "");
+  R.check("U8b", "Tiếng Anh: số lượng vật tư cũng tiếng Anh ('1 bottle', không còn '1 lọ')", /1 bottle/.test(enSheet) && !/1 lọ/.test(enSheet), enSheet.slice(0, 200));
 
   // Admin UI
   const actx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "vi-VN" });
@@ -183,19 +198,23 @@ try {
   await ap.locator('button[type="submit"]').click();
   await ap.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 });
   await ap.goto(BASE_URL + "/admin/studio");
-  const sec = ap.getByRole("region", { name: "Mẫu nail AI" });
+  const sec = ap.getByRole("region", { name: "Mẫu nail mới" });
   await sec.waitFor({ timeout: 15000 });
   await sec.locator("article").first().waitFor({ timeout: 15000 });
   const draftCount = await sec.locator("article").count();
   const svgPreviews = await sec.getByRole("img", { name: "Minh hoạ mẫu nail" }).count();
   const colorBadges = await sec.getByText("Minh hoạ màu", { exact: false }).count();
   const aiTextBadges = await sec.getByText("Ý tưởng AI · minh hoạ màu").count();
-  R.check("U10", "Nháp không có ảnh AI → minh hoạ tự vẽ + nhãn đúng nguồn", svgPreviews >= 5 && colorBadges >= 5 && aiTextBadges >= 1, svgPreviews + " svg, " + colorBadges + " nhãn, " + aiTextBadges + " AI chữ");
+  const pawBadges = await sec.getByText("Mẫu PawNail · hình minh hoạ").count();
+  const motifs = await sec.locator("svg g[clip-path]").count();
+  R.check("U10", "Nháp không có ảnh AI → minh hoạ tự vẽ + nhãn đúng nguồn (AI chữ / mẫu gợi ý / mẫu PawNail)", svgPreviews >= 12 && colorBadges >= 5 && aiTextBadges >= 1 && pawBadges === 7, svgPreviews + " svg, " + colorBadges + " nhãn màu, " + aiTextBadges + " AI chữ, " + pawBadges + " PawNail");
+  const engBtn = sec.getByRole("button", { name: /Tạo 3 mẫu PawNail \(miễn phí\)/ });
+  R.check("U11", "Phòng nội dung: nút 'Tạo 3 mẫu PawNail (miễn phí)' bấm được; mẫu có hoạ tiết được vẽ đúng (không chỉ màu trơn)", (await engBtn.isEnabled()) && motifs >= 4, motifs + " móng có hoạ tiết");
   await ap.screenshot({ path: TMP + "/designs_admin_samples.png", fullPage: true });
   await sec.getByRole("button", { name: /Duyệt & đăng/ }).first().click();
   await ap.waitForTimeout(1500);
   const after = (await anon.req("/api/designs")).data.designs.length;
-  R.check("U9", "Phòng nội dung: thấy đủ 7 nháp (3 AI + 4 gợi ý), bấm 'Duyệt & đăng' → công khai thêm 1 mẫu", draftCount === 7 && after === 3, `${draftCount} nháp, ${after} công khai`);
+  R.check("U9", "Phòng nội dung: thấy đủ 14 nháp (3 AI + 4 gợi ý + 7 PawNail), bấm 'Duyệt & đăng' → công khai thêm 1 mẫu", draftCount === 14 && after === 3, `${draftCount} nháp, ${after} công khai`);
   await ap.screenshot({ path: TMP + "/designs_admin.png" });
 
   R.check("Z1", "Không lỗi JS / 5xx", errors.length === 0, errors.slice(0, 3).join(" | "));

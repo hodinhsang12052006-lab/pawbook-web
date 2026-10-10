@@ -10,7 +10,7 @@ import { useTr } from "@/lib/i18n/useTr";
 
 const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
 
-// /designs — "Mẫu nail AI": mẫu mới mỗi ngày theo dịp lễ & xu hướng, kèm vật
+// /designs — "Mẫu nail mới": mẫu mới mỗi ngày theo dịp lễ & xu hướng, kèm vật
 // tư cần chuẩn bị và các bước làm. Chỉ hiện mẫu admin ĐÃ DUYỆT.
 export default function DesignsPage() {
   useTr(); // render lại khi đổi VI/EN
@@ -42,7 +42,7 @@ export default function DesignsPage() {
         <header className="space-y-1">
           <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-pink-300"><Sparkles className="h-4 w-4" />{tr(" PawNail Studio · cập nhật mỗi ngày", " PawNail Studio · updated daily")}</p>
           <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Mẫu nail mới", "Fresh nail designs")}</h1>
-          <p className="max-w-2xl text-sm text-slate-400">{tr("Ý tưởng theo dịp lễ và xu hướng đang lên, kèm vật tư cần chuẩn bị và các bước làm. Ảnh là minh hoạ do AI vẽ — đăng ảnh thật khi bạn làm xong nhé.", "Ideas for upcoming holidays and rising trends, with the materials to prepare and the steps. Images are AI illustrations — post a real photo when you've made it.")}</p>
+          <p className="max-w-2xl text-sm text-slate-400">{tr("Ý tưởng theo dịp lễ và xu hướng đang lên, kèm vật tư cần chuẩn bị và các bước làm. Hình là minh hoạ (có ghi nhãn nguồn), không phải ảnh tay nghề thật — làm xong nhớ đăng ảnh thật nhé.", "Ideas for upcoming holidays and rising trends, with the materials to prepare and the steps. Pictures are labeled illustrations, not real work — post a real photo when you've made it.")}</p>
         </header>
 
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group" aria-label={tr("Lọc mẫu", "Filter designs")}>

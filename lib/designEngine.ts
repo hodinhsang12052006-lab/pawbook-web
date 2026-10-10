@@ -1,0 +1,543 @@
+// MÁY TẠO MẪU NAIL CỦA PAWNAIL — không gọi AI bên ngoài, chi phí 0đ.
+//
+// Ghép mẫu từ KIẾN THỨC NGHỀ soạn sẵn: hệ móng (Gel-X / bột / dip / sơn gel),
+// dáng móng, hiệu ứng bề mặt, hoạ tiết, bảng màu có tên theo dịp lễ/mùa.
+// Mỗi phần mang sẵn vật tư + bước làm + thời gian + độ khó, nên công thức ra
+// luôn đúng kỹ thuật (AI chung hay bịa vật tư). Tự tính giá gợi ý theo Mỹ/Úc,
+// viết mô tả song ngữ, và mô tả ảnh tiếng Anh để sau này gắn máy vẽ ảnh.
+//
+// Ngẫu nhiên CÓ HẠT GIỐNG (ngày + thị trường) → cùng ngày chạy lại ra cùng
+// kết quả; tránh trùng tên với các mẫu đã có.
+
+export interface Bi { vi: string; en: string }
+export type Mat = Bi & { qty: string };
+export type Shape = "almond" | "coffin" | "square" | "oval" | "stiletto";
+export type Finish = "glossy" | "matte" | "chrome" | "cateye" | "glitter";
+export type SystemId = "gelx" | "acrylic" | "dip" | "gel";
+
+interface Color { vi: string; en: string; hex: string }
+const col = (vi: string, en: string, hex: string): Color => ({ vi, en, hex });
+
+export const COLORS = {
+  black: col("đen tuyền", "jet black", "#111111"),
+  white: col("trắng sữa", "milky white", "#f8fafc"),
+  nude: col("nude be", "beige nude", "#e8c4a8"),
+  pinkNude: col("hồng nude", "pink nude", "#f2c4c4"),
+  babyPink: col("hồng phấn", "baby pink", "#f9a8d4"),
+  hotPink: col("hồng cánh sen", "hot pink", "#ec4899"),
+  cherry: col("đỏ cherry", "cherry red", "#b91c1c"),
+  velvet: col("đỏ nhung", "velvet red", "#9f1239"),
+  burgundy: col("đỏ rượu vang", "burgundy", "#7f1d1d"),
+  pumpkin: col("cam bí ngô", "pumpkin orange", "#ea580c"),
+  burnt: col("cam cháy", "burnt orange", "#c2410c"),
+  caramel: col("nâu caramel", "caramel", "#b45309"),
+  chocolate: col("nâu socola", "chocolate brown", "#5b3a29"),
+  mocha: col("nâu mocha", "mocha", "#8b6b5a"),
+  olive: col("xanh rêu", "olive green", "#4d5b2a"),
+  pine: col("xanh thông", "pine green", "#14532d"),
+  emerald: col("xanh lục bảo", "emerald", "#047857"),
+  mint: col("xanh mint", "mint", "#a7f3d0"),
+  sky: col("xanh da trời", "sky blue", "#7dd3fc"),
+  navy: col("xanh navy", "navy", "#1e3a8a"),
+  teal: col("xanh ngọc", "teal", "#0d9488"),
+  lavender: col("tím lavender", "lavender", "#c4b5fd"),
+  plum: col("tím mận", "plum", "#581c87"),
+  lemon: col("vàng chanh", "lemon yellow", "#fde047"),
+  butter: col("vàng bơ", "butter yellow", "#fef3c7"),
+  coral: col("hồng san hô", "coral", "#fb7185"),
+  champagne: col("champagne", "champagne", "#f3e5ab"),
+  smoke: col("xám khói", "smoky grey", "#475569"),
+  gold: col("vàng ánh kim", "gold", "#d4af37"),
+  silver: col("bạc", "silver", "#c0c0c0"),
+  pearl: col("ngọc trai", "pearl", "#f5f0e8"),
+  roseGold: col("vàng hồng", "rose gold", "#b76e79"),
+} as const;
+type CK = keyof typeof COLORS;
+const METALS: CK[] = ["gold", "silver", "roseGold", "pearl"];
+
+// Bảng màu theo dịp: [màu chính, màu phụ, kim loại/điểm nhấn]
+const PALETTES: Record<string, [CK, CK, CK][]> = {
+  halloween: [["black", "pumpkin", "silver"], ["olive", "black", "gold"], ["pumpkin", "black", "gold"], ["plum", "black", "silver"], ["black", "white", "silver"]],
+  fall: [["burgundy", "caramel", "gold"], ["caramel", "chocolate", "gold"], ["olive", "nude", "gold"], ["burnt", "mocha", "gold"], ["mocha", "nude", "roseGold"]],
+  thanksgiving: [["pinkNude", "burnt", "gold"], ["mocha", "champagne", "gold"], ["chocolate", "nude", "gold"], ["nude", "caramel", "gold"]],
+  christmas: [["velvet", "pine", "gold"], ["pine", "white", "gold"], ["white", "sky", "silver"], ["cherry", "white", "gold"], ["velvet", "white", "gold"]],
+  newyear: [["silver", "black", "silver"], ["champagne", "white", "gold"], ["black", "champagne", "gold"], ["smoke", "silver", "silver"], ["plum", "black", "gold"]],
+  tet: [["cherry", "lemon", "gold"], ["velvet", "champagne", "gold"], ["babyPink", "white", "gold"], ["lemon", "white", "gold"]],
+  valentine: [["babyPink", "cherry", "gold"], ["cherry", "white", "gold"], ["hotPink", "babyPink", "silver"], ["pinkNude", "cherry", "roseGold"]],
+  spring: [["lavender", "mint", "pearl"], ["babyPink", "butter", "pearl"], ["mint", "white", "gold"], ["sky", "lavender", "silver"], ["pinkNude", "white", "pearl"]],
+  prom: [["plum", "silver", "silver"], ["hotPink", "silver", "silver"], ["navy", "silver", "silver"], ["emerald", "gold", "gold"]],
+  mothersday: [["pinkNude", "white", "gold"], ["nude", "babyPink", "gold"], ["coral", "white", "pearl"]],
+  wedding: [["white", "pearl", "pearl"], ["nude", "white", "pearl"], ["pinkNude", "white", "silver"]],
+  summer: [["coral", "lemon", "gold"], ["teal", "white", "silver"], ["sky", "white", "pearl"], ["hotPink", "pumpkin", "gold"], ["lemon", "mint", "gold"]],
+  backtoschool: [["navy", "white", "silver"], ["cherry", "navy", "gold"], ["olive", "butter", "gold"], ["nude", "chocolate", "gold"]],
+  any: [["nude", "white", "gold"], ["pinkNude", "white", "gold"], ["mocha", "nude", "gold"], ["babyPink", "white", "pearl"], ["burgundy", "nude", "gold"], ["navy", "nude", "silver"]],
+};
+
+// ----------------------------------------------------------------------------
+// Hệ móng
+interface Sys {
+  id: SystemId; name: Bi; skill: string | null; minutes: number; price: number; difficulty: number;
+  shapes: Shape[]; finishes: Finish[];
+  prep: (shape: Bi) => { materials: Mat[]; steps: Bi[] };
+  colorMat: (c: Color) => Mat;
+  colorStep: (c: Color) => Bi;
+}
+const m = (vi: string, en: string, qty = "1 lọ"): Mat => ({ vi, en, qty });
+const s = (vi: string, en: string): Bi => ({ vi, en });
+
+const SHAPE_NAME: Record<Shape, Bi> = {
+  almond: s("almond (hạnh nhân)", "almond"), coffin: s("coffin (ballerina)", "coffin"), square: s("vuông", "square"),
+  oval: s("oval (tròn)", "oval"), stiletto: s("stiletto (nhọn)", "stiletto"),
+};
+
+const SYSTEMS: Sys[] = [
+  {
+    id: "gelx", name: s("Gel-X", "Gel-X"), skill: "Gel-X", minutes: 40, price: 50, difficulty: 1,
+    shapes: ["almond", "coffin", "stiletto", "square", "oval"], finishes: ["glossy", "matte", "chrome", "cateye", "glitter"],
+    prep: (sh) => ({
+      materials: [m(`Móng úp Gel-X dáng ${sh.vi}`, `Gel-X ${sh.en} soft tips`, "1 hộp"), m("Gel dán móng (extend gel)", "Extend gel"), m("Dehydrator & primer", "Dehydrator & primer", "1 bộ")],
+      steps: [s("Đẩy da, dũa nhẹ mặt móng, lau dehydrator và primer", "Push cuticles, lightly buff, apply dehydrator and primer"), s(`Chọn size móng úp, phủ extend gel, hơ đèn 60 giây, dũa form ${sh.vi}`, `Size the tips, apply extend gel, cure 60s, file into ${sh.en}`)],
+    }),
+    colorMat: (c) => m(`Gel ${c.vi}`, `${cap(c.en)} gel polish`),
+    colorStep: (c) => s(`Sơn 2 lớp gel ${c.vi}, hơ đèn mỗi lớp`, `Two coats of ${c.en} gel, cure each coat`),
+  },
+  {
+    id: "acrylic", name: s("bột", "acrylic"), skill: "Bột/Acrylic", minutes: 55, price: 50, difficulty: 2,
+    shapes: ["coffin", "stiletto", "square", "almond"], finishes: ["glossy", "matte", "chrome", "cateye", "glitter"],
+    prep: (sh) => ({
+      materials: [m("Bột acrylic trong (clear)", "Clear acrylic powder", "1 hũ"), m("Nước đắp bột (monomer)", "Acrylic liquid (monomer)"), m("Form giấy hoặc móng tip", "Nail forms or tips", "1 hộp"), m("Cọ bột số 10", "Size 10 acrylic brush", "1 cây")],
+      steps: [s("Đẩy da, dũa mặt móng, quét primer", "Push cuticles, buff, apply primer"), s(`Gắn form, đắp bột tạo dáng ${sh.vi}, để khô rồi dũa form và mặt móng mịn`, `Fit forms, sculpt ${sh.en} with acrylic, let set, then file shape and surface smooth`)],
+    }),
+    colorMat: (c) => m(`Gel ${c.vi}`, `${cap(c.en)} gel polish`),
+    colorStep: (c) => s(`Sơn 2 lớp gel ${c.vi} lên bột, hơ đèn mỗi lớp`, `Two coats of ${c.en} gel over the acrylic, cure each`),
+  },
+  {
+    id: "dip", name: s("dip", "dip"), skill: "Dip/SNS", minutes: 40, price: 42, difficulty: 1,
+    shapes: ["square", "oval", "almond"], finishes: ["glossy", "matte", "glitter"],
+    prep: (sh) => ({
+      materials: [m("Bộ dung dịch dip (base, activator, top)", "Dip liquid set (base, activator, top)", "1 bộ"), m("Bột dip trong (clear)", "Clear dip powder", "1 hũ")],
+      steps: [s(`Đẩy da, dũa nhám mặt móng, dũa dáng ${sh.vi}`, `Push cuticles, buff the surface, file into ${sh.en}`), s("Quét base, nhúng 1 lớp bột trong để móng chắc", "Brush on base and dip one clear layer for strength")],
+    }),
+    colorMat: (c) => m(`Bột dip ${c.vi}`, `${cap(c.en)} dip powder`, "1 hũ"),
+    colorStep: (c) => s(`Quét base, nhúng 2 lớp bột dip ${c.vi}, gõ sạch bột thừa`, `Base, dip two layers of ${c.en} powder, tap off excess`),
+  },
+  {
+    id: "gel", name: s("sơn gel móng thật", "gel manicure"), skill: null, minutes: 30, price: 35, difficulty: 1,
+    shapes: ["oval", "square", "almond"], finishes: ["glossy", "matte", "chrome", "cateye", "glitter"],
+    prep: (sh) => ({
+      materials: [m("Base gel", "Base gel")],
+      steps: [s(`Đẩy da, dũa móng thật dáng ${sh.vi}, dũa nhẹ mặt móng`, `Push cuticles, file natural nails into ${sh.en}, lightly buff`), s("Lau dehydrator, quét base gel, hơ đèn", "Dehydrate, apply base gel, cure")],
+    }),
+    colorMat: (c) => m(`Gel ${c.vi}`, `${cap(c.en)} gel polish`),
+    colorStep: (c) => s(`Sơn 2 lớp gel ${c.vi}, hơ đèn mỗi lớp`, `Two coats of ${c.en} gel, cure each coat`),
+  },
+];
+
+// ----------------------------------------------------------------------------
+// Hoạ tiết
+interface PCtx { c1: Color; c2: Color; metal: Color; sys: Sys; finish: Finish }
+interface Pattern {
+  id: string;
+  occasions: string[] | "any";
+  finishes: Finish[];
+  systems?: SystemId[];
+  minutes: number; price: number; difficulty: number; design: boolean;
+  ownColor?: boolean; // hoạ tiết tự là lớp màu (đồi mồi) → bỏ bước sơn màu nền
+  title: (p: PCtx) => Bi;
+  why: Bi; // vì sao đang được chuộng
+  materials: (p: PCtx) => Mat[];
+  steps: (p: PCtx) => Bi[];
+  image: (p: PCtx) => string; // mô tả tiếng Anh cho máy vẽ ảnh
+}
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+const capVi = cap;
+const LINER = (c: Color) => m(`Gel vẽ nét ${c.vi}`, `${cap(c.en)} liner gel`);
+const LINER_BRUSH = m("Cọ nét mảnh 7–9mm", "7–9mm liner brush", "1 cây");
+const DOT = m("Cây chấm bi (dotting tool)", "Dotting tool", "1 cây");
+const isMai = (a: Color, b: Color) => a.hex === COLORS.lemon.hex || b.hex === COLORS.lemon.hex;
+const ACC = s("ngón áp út và ngón trỏ", "ring and index fingers");
+
+export const PATTERNS: Pattern[] = [
+  {
+    id: "solid", occasions: "any", finishes: ["glossy", "matte", "chrome", "cateye", "glitter"], minutes: 0, price: 0, difficulty: 1, design: false,
+    title: ({ c1, finish, metal }) =>
+      finish === "cateye" ? s(`Mắt mèo ${c1.vi}`, `${cap(c1.en)} cat eye`)
+        : finish === "chrome" ? s(`${capVi(c1.vi)} tráng gương`, `${cap(c1.en)} chrome`)
+          : finish === "glitter" ? s(`${capVi(c1.vi)} phủ nhũ ${metal.vi}`, `${cap(c1.en)} with ${metal.en} shimmer`)
+            : finish === "matte" ? s(`${capVi(c1.vi)} nhám`, `Matte ${c1.en}`)
+              : s(`${capVi(c1.vi)} bóng gương`, `Glossy ${c1.en}`),
+    why: s("màu trơn hiệu ứng đẹp là mẫu khách chọn nhiều nhất, làm nhanh", "a great solid with a standout finish is the most-booked look and quick to do"),
+    materials: () => [], steps: () => [],
+    image: ({ c1 }) => `solid ${c1.en} color on every nail`,
+  },
+  {
+    id: "french", occasions: "any", finishes: ["glossy", "matte", "chrome", "cateye", "glitter"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`French ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} French on ${c1.en}`),
+    why: s("French kiểu mới (đầu màu, viền mảnh) đang thay French trắng cổ điển", "modern French tips (colored, micro-thin) are replacing the classic white French"),
+    materials: ({ c2, sys }) => [sys.id === "dip" ? m(`Bột dip ${c2.vi} (đầu French)`, `${cap(c2.en)} dip powder (French tips)`, "1 hũ") : m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), m("Cọ French dẹt", "Flat French brush", "1 cây")],
+    steps: ({ c2, sys }) => [sys.id === "dip" ? s(`Nhúng nghiêng đầu móng vào bột ${c2.vi} tạo đường French`, `Dip the tips at an angle into ${c2.en} powder for the French line`) : s(`Kẻ đầu French ${c2.vi} mảnh, đều 2 bên, hơ đèn`, `Paint a thin, even ${c2.en} French tip, cure`)],
+    image: ({ c1, c2 }) => `${c1.en} base with thin crisp ${c2.en} French tips`,
+  },
+  {
+    id: "ombre", occasions: "any", finishes: ["glossy", "glitter", "matte"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Ombre ${c1.vi} – ${c2.vi}`, `${cap(c1.en)} to ${c2.en} ombre`),
+    why: s("ombre chuyển màu mềm hợp mọi độ dài móng, khách nhìn là thích", "soft ombre flatters every length and photographs beautifully"),
+    materials: ({ c2, sys }) => [sys.id === "dip" ? m(`Bột dip ${c2.vi}`, `${cap(c2.en)} dip powder`, "1 hũ") : m(`Gel ${c2.vi}`, `${cap(c2.en)} gel polish`), m("Mút tán màu / cọ ombre", "Ombre sponge or brush", "1 cái")],
+    steps: ({ c1, c2, sys }) => [sys.id === "dip" ? s(`Nhúng ${c2.vi} từ đầu móng lên giữa móng, rắc nhẹ phần chuyển màu`, `Dip ${c2.en} from tip to mid-nail, sprinkle lightly at the blend line`) : s(`Tán ${c2.vi} từ đầu móng vào, hoà với ${c1.vi} ở giữa móng, hơ đèn; lặp lại 2 lớp`, `Sponge ${c2.en} from the tip, blending into ${c1.en} mid-nail, cure; repeat twice`)],
+    image: ({ c1, c2 }) => `smooth vertical ombre fading from ${c1.en} at the cuticle to ${c2.en} at the tip`,
+  },
+  {
+    id: "aura", occasions: ["spring", "summer", "valentine", "prom", "any"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Aura ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} aura on ${c1.en}`),
+    why: s("móng aura (vầng sáng giữa móng) đang là trend lên nhanh trên mạng xã hội", "aura nails (a glowing center blush) are one of the fastest-rising trends on social"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (vầng aura)`, `${cap(c2.en)} gel (aura)`), m("Mút nhỏ hoặc máy phun airbrush", "Small sponge or airbrush", "1 cái")],
+    steps: ({ c2 }) => [s(`Chấm tán ${c2.vi} thành vầng tròn mờ giữa móng, hơ đèn; tán thêm lớp 2 cho đậm tâm`, `Dab ${c2.en} into a soft circle in the center, cure; add a second pass for a deeper core`)],
+    image: ({ c1, c2 }) => `${c1.en} base with a soft blurred ${c2.en} aura glow in the center of each nail`,
+  },
+  {
+    id: "tortoise", occasions: ["fall", "thanksgiving", "any"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true, ownColor: true,
+    title: ({ metal }) => s(`Đồi mồi caramel viền ${metal.vi}`, `Tortoiseshell with ${metal.en} accents`),
+    why: s("đồi mồi là mẫu mùa thu bán chạy, sang mà dễ phối đồ", "tortoiseshell is a fall best-seller — chic and easy to wear"),
+    materials: ({ metal }) => [m("Gel nâu caramel trong (jelly)", "Caramel jelly gel"), m("Gel nâu đậm", "Dark brown gel"), LINER(metal), DOT],
+    steps: ({ metal }) => [s("Phủ 1 lớp jelly caramel mỏng, hơ đèn", "Apply a thin caramel jelly layer, cure"), s("Chấm loang nâu đậm, chưa hơ đèn để màu tự tan vào nhau", "Dot dark brown and let it bleed before curing"), s("Phủ thêm lớp jelly, hơ đèn để tạo chiều sâu", "Seal with more jelly and cure for depth"), s(`Viền chỉ ${metal.vi} mảnh quanh 2 ngón nhấn`, `Outline two accent nails with a fine ${metal.en} line`)],
+    image: ({ metal }) => `glossy caramel and dark brown tortoiseshell pattern with thin ${metal.en} outlines on two accent nails`,
+  },
+  {
+    id: "marble", occasions: ["any", "newyear", "wedding", "christmas"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true,
+    title: ({ c1, metal }) => s(`Vân đá ${c1.vi} chỉ ${metal.vi}`, `${cap(c1.en)} marble with ${metal.en} veins`),
+    why: s("vân đá chỉ kim loại nhìn cao cấp, giá bán tốt", "metallic-veined marble looks luxe and sells at a premium"),
+    materials: ({ metal }) => [m("Gel loang (blooming gel)", "Blooming gel"), m("Gel đen hoặc xám (vẽ vân)", "Black or grey gel (veins)"), LINER(metal), LINER_BRUSH],
+    steps: ({ metal }) => [s(`Quét blooming gel trên ${ACC.vi}, kéo vân mảnh bằng cọ nét, để loang 10 giây rồi hơ đèn`, `Brush blooming gel on the ${ACC.en}, drag fine veins, let them bloom 10s, cure`), s(`Viền vài đường chỉ ${metal.vi} dọc theo vân`, `Trace a few ${metal.en} lines along the veins`)],
+    image: ({ c1, metal }) => `${c1.en} stone marble effect with thin ${metal.en} veins on two accent nails, solid ${c1.en} on the others`,
+  },
+  {
+    id: "lines", occasions: "any", finishes: ["glossy", "matte"], minutes: 12, price: 6, difficulty: 2, design: true,
+    title: ({ c1, metal }) => s(`${capVi(c1.vi)} kẻ chỉ ${metal.vi}`, `${cap(c1.en)} with ${metal.en} line art`),
+    why: s("kẻ chỉ tối giản (minimal) hợp khách văn phòng, làm nhanh mà vẫn nổi", "minimal line art suits office clients — fast yet eye-catching"),
+    materials: ({ metal }) => [LINER(metal), LINER_BRUSH],
+    steps: ({ metal }) => [s(`Kẻ 1–2 đường chỉ ${metal.vi} cong nhẹ trên mỗi móng, hơ đèn`, `Draw one or two gently curved ${metal.en} lines on each nail, cure`)],
+    image: ({ c1, metal }) => `${c1.en} nails with delicate minimalist ${metal.en} curved line art`,
+  },
+  {
+    id: "dots", occasions: ["spring", "summer", "backtoschool", "any"], finishes: ["glossy", "matte"], minutes: 10, price: 5, difficulty: 1, design: true,
+    title: ({ c1, c2 }) => s(`${capVi(c1.vi)} chấm bi ${c2.vi}`, `${cap(c1.en)} with ${c2.en} polka dots`),
+    why: s("chấm bi dễ thương, thợ mới làm đẹp được ngay", "cute polka dots that newer techs can nail on day one"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (chấm bi)`, `${cap(c2.en)} gel (dots)`), DOT],
+    steps: ({ c2 }) => [s(`Chấm bi ${c2.vi} đều tay trên ${ACC.vi}, hơ đèn`, `Dot ${c2.en} evenly on the ${ACC.en}, cure`)],
+    image: ({ c1, c2 }) => `${c1.en} nails with small neat ${c2.en} polka dots on the accent nails`,
+  },
+  {
+    id: "hearts", occasions: ["valentine"], finishes: ["glossy", "matte"], minutes: 12, price: 6, difficulty: 1, design: true,
+    title: ({ c1, c2 }) => s(`${capVi(c1.vi)} tim nhỏ ${c2.vi}`, `${cap(c1.en)} with tiny ${c2.en} hearts`),
+    why: s("tim nhỏ là mẫu Valentine được đặt nhiều nhất cho cặp đôi và hội bạn thân", "tiny hearts are the most-booked Valentine look for couples and besties"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (vẽ tim)`, `${cap(c2.en)} gel (hearts)`), DOT],
+    steps: ({ c2 }) => [s(`Chấm 2 chấm ${c2.vi} sát nhau rồi kéo nhọn xuống thành tim trên ${ACC.vi}, hơ đèn`, `Place two ${c2.en} dots side by side and drag down into a heart on the ${ACC.en}, cure`)],
+    image: ({ c1, c2 }) => `${c1.en} nails with tiny hand-painted ${c2.en} hearts on two accent nails`,
+  },
+  {
+    id: "floral", occasions: ["spring", "mothersday", "wedding", "summer"], finishes: ["glossy", "matte"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Hoa nhí ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} ditsy florals on ${c1.en}`),
+    why: s("hoa nhí vẽ tay nhẹ nhàng, khách tặng mẹ và cô dâu rất chuộng", "hand-painted ditsy florals are a favorite for moms and brides"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (cánh hoa)`, `${cap(c2.en)} gel (petals)`), m("Gel vàng (nhuỵ hoa)", "Yellow gel (flower centers)"), DOT],
+    steps: ({ c2 }) => [s(`Chấm 5 cánh hoa ${c2.vi} quanh 1 tâm trên ${ACC.vi}, hơ đèn`, `Dot five ${c2.en} petals around a center on the ${ACC.en}, cure`), s("Chấm nhuỵ vàng giữa mỗi bông, hơ đèn", "Add a yellow center to each flower, cure")],
+    image: ({ c1, c2 }) => `${c1.en} nails with small hand-painted five-petal ${c2.en} flowers on accent nails`,
+  },
+  {
+    id: "web", occasions: ["halloween"], finishes: ["matte", "glossy"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1, metal }) => s(`${capVi(c1.vi)} mạng nhện ${metal.vi}`, `${cap(c1.en)} with ${metal.en} spiderwebs`),
+    why: s("mạng nhện là mẫu Halloween được hỏi nhiều nhất — sang mà không “lố”", "spiderwebs are the most-requested Halloween look — chic, not costume-y"),
+    materials: ({ metal }) => [LINER(metal), LINER_BRUSH],
+    steps: ({ metal }) => [s(`Vẽ 3 đường chéo từ góc móng rồi nối các vòng cung ${metal.vi} thành mạng nhện trên ${ACC.vi}`, `Draw three diagonal spokes from a corner and connect ${metal.en} arcs into a web on the ${ACC.en}`)],
+    image: ({ c1, metal }) => `${c1.en} nails with fine ${metal.en} spiderweb art on two accent nails`,
+  },
+  {
+    id: "snow", occasions: ["christmas", "newyear"], finishes: ["glossy", "matte"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Bông tuyết trên nền ${c1.vi}`, `Snowflakes on ${c1.en}`),
+    why: s("bông tuyết vẽ tay là mẫu Noel được lưu nhiều nhất", "hand-painted snowflakes are the most-saved holiday look"),
+    materials: () => [LINER(COLORS.white), LINER_BRUSH, m("Nhũ bạc mịn (tuỳ chọn)", "Fine silver glitter (optional)", "1 hũ")],
+    steps: () => [s(`Vẽ dấu * 6 cánh màu trắng, thêm nhánh nhỏ ở đầu mỗi cánh trên ${ACC.vi}`, `Paint a white six-point star and add tiny branches on each arm on the ${ACC.en}`)],
+    image: ({ c1 }) => `${c1.en} nails with delicate white hand-painted snowflakes on accent nails`,
+  },
+  {
+    id: "candy", occasions: ["christmas"], finishes: ["glossy"], minutes: 18, price: 8, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Sọc kẹo gậy ${c1.vi} – ${c2.vi}`, `${cap(c1.en)} & ${c2.en} candy-cane stripes`),
+    why: s("sọc kẹo gậy vui mắt, khách trẻ và trẻ em rất thích dịp Noel", "playful candy-cane stripes are a hit with younger clients at Christmas"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (sọc)`, `${cap(c2.en)} gel (stripes)`), m("Băng keo kẻ sọc hoặc cọ nét", "Striping tape or liner brush", "1 cuộn")],
+    steps: ({ c2 }) => [s(`Kẻ sọc chéo ${c2.vi} đều nhau trên ${ACC.vi}, hơ đèn`, `Paint even diagonal ${c2.en} stripes on the ${ACC.en}, cure`)],
+    image: ({ c1, c2 }) => `diagonal ${c1.en} and ${c2.en} candy-cane stripes on accent nails`,
+  },
+  {
+    id: "stars", occasions: ["newyear", "prom"], finishes: ["glossy", "chrome"], minutes: 12, price: 8, difficulty: 1, design: true,
+    title: ({ c1, metal }) => s(`Sao lấp lánh ${metal.vi} nền ${c1.vi}`, `${cap(c1.en)} with ${metal.en} sparkle stars`),
+    why: s("sao lấp lánh hợp đi tiệc đếm ngược, chụp ảnh rất ăn đèn", "sparkle stars are made for countdown parties and photos"),
+    materials: ({ metal }) => [m(`Charm ngôi sao ${metal.vi}`, `${cap(metal.en)} star charms`, "1 gói"), m("Gel dán charm", "Charm gel")],
+    steps: ({ metal }) => [s(`Gắn charm sao ${metal.vi} bằng gel dán trên ${ACC.vi}, hơ đèn 60 giây`, `Set ${metal.en} star charms with charm gel on the ${ACC.en}, cure 60s`)],
+    image: ({ c1, metal }) => `${c1.en} nails with small ${metal.en} star charms on accent nails`,
+  },
+  {
+    id: "gems", occasions: ["prom", "wedding", "newyear"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic"], minutes: 20, price: 15, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`${capVi(c1.vi)} đính đá`, `${cap(c1.en)} with crystals`),
+    why: s("đính đá là lựa chọn số 1 cho prom và tiệc — giá bán cao", "crystals are the #1 pick for prom and parties — a high-ticket service"),
+    materials: () => [m("Đá đính móng nhiều size", "Assorted nail crystals", "1 vỉ"), m("Gel dán đá", "Gem gel"), m("Que chấm sáp gắp đá", "Wax pick-up pencil", "1 cây")],
+    steps: () => [s(`Gắp đá xếp vòng cung ở chân móng ${ACC.vi}, cố định bằng gel dán đá, hơ đèn 60 giây`, `Arrange crystals in an arc at the cuticle of the ${ACC.en}, secure with gem gel, cure 60s`)],
+    image: ({ c1 }) => `${c1.en} nails with an arc of small clear crystals at the cuticle of accent nails`,
+  },
+  {
+    id: "pearls", occasions: ["wedding", "mothersday"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 1, design: true,
+    title: ({ c1 }) => s(`${capVi(c1.vi)} ngọc trai`, `${cap(c1.en)} with pearls`),
+    why: s("ngọc trai nhỏ là chi tiết cô dâu chọn nhiều nhất", "tiny pearls are the detail brides ask for most"),
+    materials: () => [m("Hạt ngọc trai mini", "Mini nail pearls", "1 hũ"), m("Gel dán charm", "Charm gel")],
+    steps: () => [s(`Gắn 3–5 hạt ngọc trai ở chân móng ${ACC.vi}, hơ đèn 60 giây`, `Place three to five pearls at the cuticle of the ${ACC.en}, cure 60s`)],
+    image: ({ c1 }) => `${c1.en} nails with tiny white pearls at the cuticle of accent nails`,
+  },
+  {
+    id: "leaf", occasions: ["fall", "thanksgiving"], finishes: ["glossy", "matte"], minutes: 12, price: 6, difficulty: 1, design: true,
+    title: ({ c1, metal }) => s(`Lá phong ${metal.vi} nền ${c1.vi}`, `${cap(metal.en)} maple leaf on ${c1.en}`),
+    why: s("lá phong nhỏ trên ngón áp út — mẫu mùa thu, Lễ Tạ Ơn dễ bán", "a tiny maple leaf on the ring finger — an easy fall and Thanksgiving seller"),
+    materials: ({ metal }) => [m(`Sticker lá phong ${metal.vi}`, `${cap(metal.en)} maple leaf decals`, "1 tấm")],
+    steps: () => [s("Dán sticker lá phong lên ngón áp út trước lớp top", "Place a maple decal on the ring finger before top coat")],
+    image: ({ c1, metal }) => `${c1.en} nails with a small ${metal.en} maple leaf on the ring finger`,
+  },
+  {
+    id: "blossom", occasions: ["tet"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => (isMai(c1, c2) ? s(`Hoa mai vẽ tay nền ${c1.vi}`, `Apricot blossoms on ${c1.en}`) : s(`Hoa đào vẽ tay nền ${c1.vi}`, `Peach blossoms on ${c1.en}`)),
+    why: s("hoa mai, hoa đào vẽ tay là mẫu Tết khách Việt và khách Á Đông hỏi nhiều nhất", "hand-painted blossoms are the Lunar New Year look Vietnamese and Asian clients ask for most"),
+    materials: ({ c1, c2 }) => [m(`Gel ${isMai(c1, c2) ? "vàng mai" : "hồng đào"} (cánh hoa)`, `${isMai(c1, c2) ? "Apricot yellow" : "Peach pink"} gel (petals)`), m("Gel nâu (cành)", "Brown gel (branches)"), LINER_BRUSH, DOT],
+    steps: () => [s(`Kẻ cành nâu mảnh chéo móng trên ${ACC.vi}`, `Draw a thin brown branch diagonally on the ${ACC.en}`), s("Chấm 5 cánh hoa dọc cành, chấm nhuỵ, hơ đèn", "Dot five-petal blossoms along the branch, add centers, cure")],
+    image: ({ c1, c2 }) => `${c1.en} nails with hand-painted ${isMai(c1, c2) ? "yellow apricot" : "pink peach"} blossoms on a thin brown branch on accent nails`,
+  },
+  {
+    id: "plaid", occasions: ["backtoschool", "fall"], finishes: ["matte", "glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Caro ${c1.vi} – ${c2.vi}`, `${cap(c1.en)} & ${c2.en} plaid`),
+    why: s("caro kiểu áo dạ là mẫu tựu trường và đầu thu đang lên", "flannel plaid is trending for back-to-school and early fall"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (kẻ caro)`, `${cap(c2.en)} gel (plaid lines)`), LINER(COLORS.white), LINER_BRUSH],
+    steps: ({ c2 }) => [s(`Kẻ 2 sọc dọc + 2 sọc ngang ${c2.vi} trên ${ACC.vi}, hơ đèn`, `Paint two vertical and two horizontal ${c2.en} bands on the ${ACC.en}, cure`), s("Thêm sọc trắng mảnh xen giữa, hơ đèn", "Add thin white lines in between, cure")],
+    image: ({ c1, c2 }) => `${c1.en} and ${c2.en} tartan plaid pattern on accent nails`,
+  },
+  {
+    id: "waves", occasions: ["summer"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Sóng biển ${c1.vi}`, `${cap(c1.en)} ocean waves`),
+    why: s("sóng biển hợp khách đi du lịch mùa hè, làm cả tay lẫn chân", "ocean waves suit vacation clients — great for mani + pedi combos"),
+    materials: () => [LINER(COLORS.white), LINER_BRUSH],
+    steps: () => [s(`Kẻ 2–3 đường sóng uốn lượn màu trắng ở đầu móng ${ACC.vi}, hơ đèn`, `Paint two or three white wavy lines across the tips of the ${ACC.en}, cure`)],
+    image: ({ c1 }) => `${c1.en} nails with white swirling ocean-wave lines across the tips`,
+  },
+];
+
+// Hiệu ứng bề mặt
+const FINISH_STEP: Record<Finish, (p: PCtx) => { materials: Mat[]; steps: Bi[]; minutes: number; price: number }> = {
+  glossy: () => ({ materials: [m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")], steps: [], minutes: 0, price: 0 }),
+  matte: () => ({ materials: [m("Top nhám (matte top)", "Matte top coat")], steps: [s("Phủ top nhám, hơ đèn (muốn hoạ tiết kim loại nổi thì chấm lại top bóng lên nét)", "Matte top coat, cure (dab glossy top back over metallic details to make them pop)")], minutes: 3, price: 3 }),
+  chrome: ({ c1 }) => ({
+    materials: [m(`Bột tráng gương ${["white", "pearl", "babyPink", "pinkNude", "nude", "champagne", "butter"].some((k) => COLORS[k as CK].hex === c1.hex) ? "ánh ngọc trai" : "bạc"}`, `${["white", "pearl", "babyPink", "pinkNude", "nude", "champagne", "butter"].some((k) => COLORS[k as CK].hex === c1.hex) ? "Pearl" : "Silver"} chrome powder`, "1 hũ"), m("Mút xoa bột chrome", "Chrome applicator sponge", "1 gói"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")],
+    steps: [s("Phủ top no-wipe, hơ đèn, xoa bột chrome đều tay bằng mút", "No-wipe top, cure, buff chrome powder in with a sponge"), s("Phủ top khoá bột, hơ đèn", "Seal with top coat, cure")],
+    minutes: 8, price: 8,
+  }),
+  cateye: () => ({
+    // Bước hút nam châm nằm ngay trong lớp màu (xem colorStep) — đúng kỹ thuật.
+    materials: [m("Nam châm mắt mèo", "Cat-eye magnet", "1 cái"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")],
+    steps: [],
+    minutes: 5, price: 7,
+  }),
+  glitter: ({ metal }) => ({
+    materials: [m(`Gel nhũ ${metal.vi}`, `${cap(metal.en)} glitter gel`), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")],
+    steps: [s(`Phủ 1 lớp nhũ ${metal.vi} mỏng (đậm dần về đầu móng), hơ đèn`, `One sheer ${metal.en} glitter coat, denser toward the tip, cure`)],
+    minutes: 5, price: 5,
+  }),
+};
+// Dip: hoàn thiện bằng activator + top dip tự khô (không hơ đèn).
+const DIP_POWDER_PATTERNS = ["solid", "french", "ombre"];
+function DIP_FINISH(finish: Finish, metal: Color): { materials: Mat[]; steps: Bi[]; minutes: number; price: number } {
+  if (finish === "glitter") {
+    return { materials: [m(`Bột dip nhũ ${metal.vi}`, `${cap(metal.en)} glitter dip powder`, "1 hũ")], steps: [s(`Quét base, rắc 1 lớp bột nhũ ${metal.vi} đậm dần về đầu móng`, `Base, then sprinkle ${metal.en} glitter powder, denser toward the tip`)], minutes: 5, price: 5 };
+  }
+  if (finish === "matte") return { materials: [m("Top nhám cho dip", "Matte dip top coat")], steps: [], minutes: 2, price: 3 };
+  return { materials: [], steps: [], minutes: 0, price: 0 };
+}
+
+const FINISH_EN: Record<Finish, string> = { glossy: "high-gloss", matte: "velvety matte", chrome: "mirror chrome", cateye: "magnetic cat-eye", glitter: "shimmering glitter" };
+
+// ----------------------------------------------------------------------------
+export interface EngineSpec { occasion: string | null; system: SystemId; shape: Shape; finish: Finish; pattern: string; colors: [CK, CK, CK] }
+
+export interface EngineDesign {
+  occasion: string | null;
+  title: Bi;
+  description: Bi;
+  skills: string[];
+  difficulty: number;
+  minutes: number;
+  priceHint: string;
+  materials: Mat[];
+  steps: Bi[];
+  palette: string[];
+  shape: Shape;
+  finish: Finish;
+  pattern: string;
+  imagePrompt: string;
+  spec: EngineSpec;
+}
+
+export interface OccasionInfo { id: string; title: string; emoji?: string; startsIn: number }
+
+const range = (lo: number, market: "US" | "AU") => {
+  const k = market === "AU" ? 1.5 : 1;
+  const r5 = (x: number) => Math.round((x * k) / 5) * 5;
+  return `${market === "AU" ? "A$" : "$"}${r5(lo)}–${r5(lo + 15)}`;
+};
+
+/** Ghép 1 mẫu hoàn chỉnh từ thông số (dùng cho máy tạo mẫu và cho kiểm thử). */
+export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: OccasionInfo | null, trendTag?: string | null): EngineDesign {
+  const sys = SYSTEMS.find((x) => x.id === spec.system)!;
+  const pat = PATTERNS.find((x) => x.id === spec.pattern)!;
+  const keys: [CK, CK, CK] = spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.colors;
+  const [c1, c2, metal] = keys.map((k) => COLORS[k]) as [Color, Color, Color];
+  const ctx: PCtx = { c1, c2, metal, sys, finish: spec.finish };
+  const shapeName = SHAPE_NAME[spec.shape];
+  const prep = sys.prep(shapeName);
+  const fin = sys.id === "dip" ? DIP_FINISH(spec.finish, metal) : FINISH_STEP[spec.finish](ctx);
+
+  // Lớp màu chính: mắt mèo dùng chính gel mắt mèo làm lớp màu.
+  const colorMat = spec.finish === "cateye" ? m(`Gel mắt mèo ${c1.vi}`, `${cap(c1.en)} cat-eye gel`) : sys.colorMat(c1);
+  const colorStep = spec.finish === "cateye"
+    ? s(`Sơn gel mắt mèo ${c1.vi}, hút nam châm 5–10 giây cho dải sáng đẹp rồi hơ đèn NGAY; lặp lại lớp 2`, `Apply ${c1.en} cat-eye gel, hold the magnet 5–10s until the band looks right, cure immediately; repeat for coat two`)
+    : sys.colorStep(c1);
+
+  const materials: Mat[] = [];
+  const seen = new Set<string>();
+  for (const x of [...prep.materials, ...(pat.ownColor ? [] : [colorMat]), ...pat.materials(ctx), ...fin.materials]) {
+    if (seen.has(x.vi)) continue;
+    seen.add(x.vi);
+    materials.push(x);
+  }
+  const ownTop = spec.finish === "matte" || spec.finish === "chrome"; // các hiệu ứng này đã có bước phủ top riêng
+  const finalStep = sys.id === "dip"
+    ? s(`Quét activator, chờ 2 phút, dũa mịn mặt móng; phủ 2 lớp top ${spec.finish === "matte" ? "nhám " : ""}dip, để khô tự nhiên, thoa dầu dưỡng da`, `Activator, wait 2 min, buff smooth; two coats of ${spec.finish === "matte" ? "matte " : ""}dip top, air-dry, finish with cuticle oil`)
+    : ownTop
+    ? s("Lau lớp dính (nếu có), thoa dầu dưỡng da", "Wipe if needed, finish with cuticle oil")
+    : s("Phủ top bóng, hơ đèn, thoa dầu dưỡng da", "Glossy top coat, cure, finish with cuticle oil");
+  const steps: Bi[] = [...prep.steps, ...(pat.ownColor ? [] : [colorStep]), ...pat.steps(ctx), ...fin.steps, finalStep];
+
+  const minutes = Math.round((sys.minutes + pat.minutes + fin.minutes) / 5) * 5;
+  const difficulty = Math.min(3, Math.max(sys.difficulty, pat.difficulty, spec.finish === "chrome" || spec.finish === "cateye" ? 2 : 1, pat.id === "gems" && sys.id === "acrylic" ? 3 : 1, (pat.minutes >= 20 && sys.id === "acrylic") ? 3 : 1));
+  const skills = [sys.skill, pat.design ? "Design" : null].filter((x): x is string => !!x);
+
+  const title = pat.title(ctx);
+  const when = occ
+    ? occ.startsIn > 0
+      ? s(`Chuẩn bị cho ${OCC_VI[occ.id] ?? occ.title}${occ.emoji ? " " + occ.emoji : ""} (còn ~${occ.startsIn} ngày)`, `Get ready for ${occTitleEn(occ.id) ?? occ.title}${occ.emoji ? " " + occ.emoji : ""} (in ~${occ.startsIn} days)`)
+      : s(`Đang vào ${OCC_VI[occ.id] ?? occ.title}${occ.emoji ? " " + occ.emoji : ""}`, `${occTitleEn(occ.id) ?? occ.title} season is here${occ.emoji ? " " + occ.emoji : ""}`)
+    : s("Mẫu dễ bán quanh năm", "An easy seller all year round");
+  const who = difficulty === 1
+    ? s("Thợ mới làm đẹp được", "Newer techs can do it beautifully")
+    : difficulty === 2 ? s("Hợp khách thích nổi bật vừa phải", "Great for clients who like a little statement") : s("Mẫu nghệ thuật cho khách đi tiệc, nên báo giá cao", "An art set for party clients, price it high");
+  const trend = trendTag ? s(` · đang lên #${trendTag} trên PawNail`, ` · #${trendTag} is rising on PawNail`) : s("", "");
+  const description: Bi = {
+    vi: `${when.vi}: ${pat.why.vi}${trend.vi}. ${who.vi}. Làm ${sys.name.vi}, dáng ${shapeName.vi}, khoảng ${minutes} phút.`,
+    en: `${when.en}: ${pat.why.en}${trend.en}. ${who.en}. ${cap(sys.name.en)}, ${shapeName.en} shape, about ${minutes} minutes.`,
+  };
+
+  const length = spec.shape === "stiletto" || spec.shape === "coffin" ? "long" : spec.shape === "square" || spec.shape === "oval" ? "short" : "medium-length";
+  const imagePrompt = `${length} ${spec.shape} nails, ${pat.image(ctx)}, ${FINISH_EN[spec.finish]} finish`;
+
+  return {
+    occasion: spec.occasion, title, description, skills, difficulty, minutes,
+    priceHint: range(sys.price + pat.price + fin.price, market),
+    materials, steps,
+    palette: [c1.hex, c2.hex, metal.hex].filter((h, i, a) => a.indexOf(h) === i),
+    shape: spec.shape, finish: spec.finish, pattern: pat.id, imagePrompt, spec,
+  };
+}
+
+const OCC_EN: Record<string, string> = {
+  halloween: "Halloween", fall: "Fall", thanksgiving: "Thanksgiving & Black Friday", christmas: "Christmas", newyear: "New Year", tet: "Lunar New Year",
+  valentine: "Valentine's Day", spring: "Spring pastel", prom: "Prom", mothersday: "Mother's Day", wedding: "Wedding", summer: "Summer", backtoschool: "Back to school",
+};
+const occTitleEn = (id: string) => OCC_EN[id];
+const OCC_VI: Record<string, string> = {
+  halloween: "mùa Halloween", fall: "mùa thu", thanksgiving: "Lễ Tạ Ơn", christmas: "mùa Giáng Sinh", newyear: "dịp Năm Mới", tet: "Tết Nguyên Đán",
+  valentine: "Valentine", spring: "mùa xuân", prom: "mùa Prom", mothersday: "Ngày của Mẹ", wedding: "mùa cưới", summer: "mùa hè", backtoschool: "mùa tựu trường",
+};
+
+// Ngẫu nhiên có hạt giống (mulberry32)
+function rng(seedStr: string) {
+  let h = 1779033703 ^ seedStr.length;
+  for (let i = 0; i < seedStr.length; i++) h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353), (h = (h << 13) | (h >>> 19));
+  let a = h >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const pick = <T,>(r: () => number, arr: readonly T[]): T => arr[Math.floor(r() * arr.length)];
+
+// Hashtag đang lên → hoạ tiết/hiệu ứng tương ứng (để mô tả nói thật "đang lên").
+const TAG_HINTS: [RegExp, { pattern?: string; finish?: Finish }][] = [
+  [/french/i, { pattern: "french" }], [/ombre|ombré/i, { pattern: "ombre" }], [/aura/i, { pattern: "aura" }], [/tortoise|doimoi|đồimồi/i, { pattern: "tortoise" }],
+  [/marble|vanda/i, { pattern: "marble" }], [/minimal|line/i, { pattern: "lines" }], [/chrome|trangguong/i, { finish: "chrome" }], [/cateye|matmeo|mắtmèo/i, { finish: "cateye" }],
+  [/glitter|nhu|nhũ/i, { finish: "glitter" }], [/matte|nham/i, { finish: "matte" }], [/flower|hoa|floral/i, { pattern: "floral" }], [/heart|tim/i, { pattern: "hearts" }],
+];
+
+export interface EngineInput { market: "US" | "AU"; date: string; occasions: OccasionInfo[]; risingTags: string[]; usedTitles: Set<string>; salt?: string }
+
+/** Tạo `n` mẫu khác nhau: ưu tiên dịp lễ đang/sắp tới, trộn hệ móng/độ khó, không trùng tên đã có. */
+export function generateEngineDesigns(n: number, input: EngineInput): EngineDesign[] {
+  const r = rng(`${input.date}|${input.market}|${input.salt ?? ""}`);
+  const occs = input.occasions.length ? input.occasions : [];
+  const out: EngineDesign[] = [];
+  const usedPatterns = new Set<string>();
+  const usedTitles = new Set([...input.usedTitles].map((t) => t.toLowerCase()));
+  const tags = input.risingTags.map((t) => t.replace(/^#/, ""));
+
+  for (let i = 0, tries = 0; out.length < n && tries < n * 60; tries++) {
+    // Xoay vòng dịp lễ; cứ 4 mẫu có 1 mẫu "quanh năm" để thợ luôn có mẫu dễ bán.
+    const occ = occs.length && (out.length % 4 !== 3 || occs.length === 0) ? occs[(i + Math.floor(tries / 20)) % occs.length] : null;
+    const occId = occ?.id ?? "any";
+    const cands = PATTERNS.filter((p) => (p.occasions === "any" ? true : p.occasions.includes(occId) || (occId === "any" && p.occasions.includes("any"))));
+    // Dịp lễ: ưu tiên hoạ tiết riêng của dịp đó (mạng nhện cho Halloween…).
+    const special = cands.filter((p) => p.occasions !== "any" && p.occasions.includes(occId));
+    let pat = (special.length && r() < 0.65 ? pick(r, special) : pick(r, cands));
+    // Hashtag đang lên khớp hoạ tiết → ưu tiên (1/3 số lần).
+    let trendTag: string | null = null;
+    const hit = tags.map((t) => [t, TAG_HINTS.find(([re]) => re.test(t))?.[1]] as const).find(([, h]) => h);
+    if (hit && r() < 0.34) {
+      const h = hit[1]!;
+      const p2 = h.pattern ? PATTERNS.find((p) => p.id === h.pattern) : undefined;
+      if (p2) pat = p2;
+      trendTag = hit[0];
+    }
+    if (out.length === 0 && pat.difficulty > 1 && tries < n * 40) continue; // mẫu đầu lô: thợ mới làm được
+    if (usedPatterns.has(pat.id) && tries < n * 30) continue;
+
+    const palettes = PALETTES[occId] ?? PALETTES.any;
+    const colors = pick(r, palettes);
+    // Mẫu đầu tiên trong mỗi lô: dễ (thợ mới làm được) → ưu tiên dip/sơn gel.
+    const sysPool = SYSTEMS.filter((x) => (!pat.systems || pat.systems.includes(x.id)) && (x.id !== "dip" || DIP_POWDER_PATTERNS.includes(pat.id)));
+    const sys = out.length === 0 ? (sysPool.find((x) => x.id === "gel") ?? sysPool[0]) : pick(r, sysPool);
+    let finishes = pat.finishes.filter((f) => sys.finishes.includes(f));
+    const hintFinish = trendTag ? TAG_HINTS.find(([re]) => re.test(trendTag!))?.[1].finish : undefined;
+    if (hintFinish && finishes.includes(hintFinish)) finishes = [hintFinish];
+    if (!finishes.length) continue;
+    if (out.length === 0) finishes = finishes.filter((f) => f !== "chrome" && f !== "cateye");
+    if (!finishes.length) continue;
+    const finish = pick(r, finishes);
+    const shape = pick(r, sys.shapes);
+
+    // Chỉ nói "đang lên #tag" khi mẫu dùng đúng hoạ tiết/hiệu ứng của tag đó.
+    const hint = trendTag ? TAG_HINTS.find(([re]) => re.test(trendTag!))?.[1] : undefined;
+    const honestTag = hint && ((hint.pattern && hint.pattern === pat.id) || (hint.finish && hint.finish === finish)) ? trendTag : null;
+    const d = buildDesign({ occasion: occ?.id ?? null, system: sys.id, shape, finish, pattern: pat.id, colors }, input.market, occ, honestTag);
+    const key = d.title.vi.toLowerCase();
+    if (usedTitles.has(key)) continue;
+    usedTitles.add(key);
+    usedPatterns.add(pat.id);
+    out.push(d);
+    i++;
+  }
+  return out;
+}
+
+export const PATTERN_IDS = PATTERNS.map((p) => p.id);
+export { METALS };

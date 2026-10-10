@@ -30,6 +30,8 @@ model User {
   market    Market  @default(US)
   state     String? // US: CA, TX, FL... | AU: NSW, VIC, QLD...
   city      String? // City/Suburb
+  emailDigest  Boolean   @default(true) // email tóm tắt hằng tuần (prisma/sql/2026-10-10b_email_digest.sql)
+  lastDigestAt DateTime?
 
   jobs              Job[] // Tin tuyển dụng do chủ tiệm (OWNER) đăng
   technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN

@@ -3,8 +3,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing, Mail } from "lucide-react";
 import SoundSettings from "@/components/settings/SoundSettings";
+import EmailDigestToggle from "@/components/settings/EmailDigestToggle";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient, isPlaceholderAvatar } from "@/lib/avatar";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
@@ -607,6 +608,10 @@ export default function ProfilePage() {
           <SoundSettings />
         </FormSection>
 
+        <FormSection icon={Mail} title={tr("Email", "Email")} hint={tr("Tối đa 1 thư/tuần, hủy được bất cứ lúc nào.", "At most 1 email a week, unsubscribe anytime.")}>
+          <EmailDigestToggle />
+        </FormSection>
+
         <FormSection icon={ShieldAlert} title={tr("Tài khoản", "Account")}>
           <button
             type="button"
@@ -643,7 +648,8 @@ export default function ProfilePage() {
             </button>
           </div>
         ) : (
-          <div className="mx-auto flex max-w-3xl justify-end">
+          // Điện thoại: nút nhỏ nằm bên TRÁI — bên phải là nút "lên đầu trang" (trước đây chồng nhau).
+          <div className="mx-auto flex max-w-3xl justify-start md:justify-end">
             <button
               onClick={handleSave}
               disabled={saving}

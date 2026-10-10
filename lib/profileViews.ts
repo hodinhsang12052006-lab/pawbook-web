@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import { sendPush } from "@/lib/push";
+import { getPusherServer } from "@/lib/pusherServer";
+import { chatChannelName } from "@/lib/pusherChannel";
 import { stateName } from "@/lib/stateNames";
 
 // "Ai đã xem hồ sơ bạn" — số liệu THẬT, mỗi người xem 1 hồ sơ tính tối đa
@@ -42,6 +44,10 @@ export async function recordProfileView(viewerId: string, profileId: string): Pr
       const ownerViewsToday = await prisma.profileView.count({ where: { profileId, day: today(), viewer: { role: "OWNER" } } });
       if (ownerViewsToday === 1) {
         const where = viewer.city || stateName(viewer.market, viewer.state) || "";
+        // Chuông trong app nhảy số ngay (realtime) — nội dung tải lại từ /api/notifications.
+        try {
+          await getPusherServer()?.trigger(chatChannelName(profileId), "notification", { text: "Có tiệm vừa xem hồ sơ bạn", textEn: "A salon just viewed your profile" });
+        } catch {}
         await sendPush(profileId, {
           title: "👀 Có tiệm vừa xem hồ sơ bạn",
           body: where ? `Một tiệm ở ${where} vừa xem portfolio của bạn — mở app xem là tiệm nào.` : "Một tiệm vừa xem portfolio của bạn — mở app xem là tiệm nào.",

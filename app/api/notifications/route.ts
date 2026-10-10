@@ -12,7 +12,7 @@ const PER_KIND = 15;
 
 export interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn: string;
@@ -36,7 +36,9 @@ export async function GET() {
     const meRow = await prisma.user.findUnique({ where: { id: me }, select: { role: true, market: true, state: true } });
     const wantsJobs = meRow?.role === "TECHNICIAN" && !!meRow.state;
 
-    const [likes, comments, reviews, saves, unlocks, urgentJobs] = await Promise.all([
+    // Thợ: chủ tiệm nào đã xem hồ sơ mình (7 ngày) — tiệm là doanh nghiệp nên hiện tên.
+    const wantsViews = meRow?.role === "TECHNICIAN";
+    const [likes, comments, reviews, saves, unlocks, urgentJobs, salonViews] = await Promise.all([
       prisma.postLike.findMany({
         where: { post: { authorId: me }, userId: { not: me }, createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
@@ -74,6 +76,16 @@ export async function GET() {
             take: 10,
             select: { id: true, title: true, city: true, salaryAmount: true, createdAt: true, owner: actorSel },
           })
+        : Promise.resolve([]),
+      wantsViews
+        ? prisma.profileView
+            .findMany({
+              where: { profileId: me, viewer: { role: "OWNER" }, createdAt: { gte: new Date(Date.now() - JOB_WINDOW_MS) } },
+              orderBy: { createdAt: "desc" },
+              take: 10,
+              select: { id: true, createdAt: true, viewer: { select: { id: true, name: true, avatarUrl: true, city: true } } },
+            })
+            .catch(() => [])
         : Promise.resolve([]),
     ]);
 
@@ -123,6 +135,15 @@ export async function GET() {
         textEn: "wants to connect — they may message you about a job soon",
         href: `/profile/${u.owner.id}`,
         createdAt: u.unlockedAt.toISOString(),
+      })),
+      ...salonViews.map((v) => ({
+        id: `view-${v.id}`,
+        kind: "view" as const,
+        actor: { id: v.viewer.id, name: v.viewer.name, avatarUrl: v.viewer.avatarUrl },
+        text: `(chủ tiệm${v.viewer.city ? ` ở ${v.viewer.city}` : ""}) vừa xem hồ sơ của bạn — nhắn lại ngay khi tiệm còn nhớ bạn`,
+        textEn: `(salon owner${v.viewer.city ? ` in ${v.viewer.city}` : ""}) viewed your profile — message them while you're top of mind`,
+        href: `/profile/${v.viewer.id}`,
+        createdAt: v.createdAt.toISOString(),
       })),
       ...urgentJobs.map((j) => ({
         id: `job-${j.id}`,

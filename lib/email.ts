@@ -10,12 +10,12 @@ function apiBase() {
   return "https://api.resend.com";
 }
 
-export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, html: string, text: string, headers?: Record<string, string>): Promise<void> {
   if (!emailEnabled()) throw new Error("Chưa cấu hình gửi email (RESEND_API_KEY / EMAIL_FROM).");
   const res = await fetch(`${apiBase()}/emails`, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, html, text }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, html, text, ...(headers ? { headers } : {}) }),
     signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) {

@@ -1,6 +1,6 @@
 // Kiểm thử bộ tách tin tuyển thợ (lib/jobIngest/parse.ts) bằng các kiểu bài hay gặp trong nhóm.
 // Bài & số điện thoại dưới đây là HƯ CẤU (đầu số 555-01xx dành cho ví dụ).   npx tsx scripts/qa/job_parse_unit.ts
-import { parseJobPost, findPhone } from "../../lib/jobIngest/parse";
+import { parseJobPost, findPhone, parseLocation } from "../../lib/jobIngest/parse";
 
 let pass = 0, fail = 0;
 const ok = (id: string, desc: string, cond: boolean, detail = "") => {
@@ -45,6 +45,16 @@ ok("P9", "Số rác (ngày tháng, ZIP, giá tiền) không bị nhận nhầm l
 ok("P10", "Tên tiệm không nhận nhầm câu 'Cần thợ Nail'", parseJobPost("Cần thợ Nail gấp ở Houston, gọi 713-555-0100").salonName === null);
 const pz = parseJobPost("Cần thợ bột gấp. 1234 Main St, Plano, TX 75074. Gọi 972-555-0123");
 ok("P11", "Plano, TX 75074 → TX, Plano; tiêu đề 'Cần thợ Bột/Acrylic gấp'", pz.state === "TX" && pz.city === "Plano" && pz.title === "Cần thợ Bột/Acrylic gấp", `${pz.state} ${pz.city} ${pz.title}`);
+
+// Ô "location" của tool — đúng các kiểu đã gặp khi tool gửi thật
+const L = (s: string) => JSON.stringify(parseLocation(s));
+ok("L1", "'Winthrop, MA' → Winthrop, MA (thành phố lạ vẫn đọc được)", L("Winthrop, MA") === JSON.stringify({ city: "Winthrop", state: "MA", zip: null, market: "US" }), L("Winthrop, MA"));
+ok("L2", "'Senatobia, MS 38668' → Senatobia, MS, 38668", L("Senatobia, MS 38668") === JSON.stringify({ city: "Senatobia", state: "MS", zip: "38668", market: "US" }), L("Senatobia, MS 38668"));
+ok("L3", "'TX 77521' → TX, ZIP 77521 (không bịa thành phố)", L("TX 77521") === JSON.stringify({ city: null, state: "TX", zip: "77521", market: "US" }), L("TX 77521"));
+ok("L4", "'CA 91016**' (có dấu * thừa) → CA 91016", L("CA 91016**") === JSON.stringify({ city: null, state: "CA", zip: "91016", market: "US" }), L("CA 91016**"));
+ok("L5", "'Bankstown NSW 2200' → Úc", L("Bankstown NSW 2200") === JSON.stringify({ city: "Bankstown", state: "NSW", zip: "2200", market: "AU" }), L("Bankstown NSW 2200"));
+ok("L6", "'Mỹ (USA)' → không đoán bậy", parseLocation("Mỹ (USA)").state === null && parseLocation("Mỹ (USA)").city === null, L("Mỹ (USA)"));
+ok("L7", "'Houston, TX 77083' → Houston, TX, 77083", L("Houston, TX 77083") === JSON.stringify({ city: "Houston", state: "TX", zip: "77083", market: "US" }), L("Houston, TX 77083"));
 
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

@@ -33,7 +33,11 @@ try {
   const c = await sync(base);
   const id = c.data.job_id;
   const r1 = await row(id);
-  R.check("S2", "Bài mới → tạo tin (201), repost_count = 1, giữ tiêu đề + tên tiệm của tool", c.status === 201 && c.data.status === "created" && c.data.repost_count === 1 && r1.title === base.title && r1.salonName === base.salon_name, JSON.stringify(c.data));
+  R.check("S2", "Bài mới → tạo tin (201), repost_count = 1; tiêu đề PawNail tự tạo gọn ('Cần thợ Bột/Acrylic/…'); tên tiệm lấy từ bài", c.status === 201 && c.data.status === "created" && c.data.repost_count === 1 && /^Cần thợ Bột\/Acrylic\/Chân tay nước/.test(String(r1.title)) && r1.salonName === "Diamond Nails", JSON.stringify({ d: c.data, title: r1.title, salon: r1.salonName }));
+  // Ô location chỉ có "TX 77521" nhưng tiêu đề ghi "- Baytown, TX" → vẫn có thành phố
+  const lc = await sync({ ...base, phone: `(281) 555-0${t.slice(-3)}`, facebook_url: `https://facebook.com/lc.${t}`, location: "TX 77521", title: "Cần tuyển Gel-X - Baytown, TX", post_url: `https://facebook.com/groups/g/posts/${t}9`, salon_name: "Kaia Vu", content: `Cần thợ gel-x gấp, gọi (281) 555-0${t.slice(-3)}` });
+  const rl = lc.data.job_id ? await row(lc.data.job_id) : null;
+  R.check("S2b", "Location 'TX 77521' + tiêu đề '- Baytown, TX' → Baytown, TX 77521; bài không ghi tên tiệm → dùng tên tool gửi", rl?.city === "Baytown" && rl?.state === "TX" && rl?.zip === "77521" && rl?.salonName === "Kaia Vu", JSON.stringify(rl));
   R.check("S3", "Tách location 'Houston, TX 77083'; lương; kỹ năng tool → chuẩn PawNail", r1.city === "Houston" && r1.state === "TX" && r1.zip === "77083" && r1.salaryAmount === "$1,500/tuần" && String(r1.skills).includes("Bột/Acrylic") && String(r1.skills).includes("Chân tay nước"), JSON.stringify(r1));
   R.check("S4", "Facebook người đăng chỉ lưu MÃ BĂM (không lưu link)", /^[0-9a-f]{64}$/.test(String(r1.sourceFbHash)) && !JSON.stringify(r1).includes("profile.php"));
 
@@ -51,7 +55,7 @@ try {
 
   // Đổi SĐT nhưng cùng Facebook người đăng → vẫn nhận ra cùng tiệm
   const fb = await sync({ ...base, phone: `(713) 555-0${t.slice(-3)}`, post_url: `https://facebook.com/groups/g/posts/${t}3`, content: `Diamond Nails ${t} cần thợ gấp, gọi số mới (713) 555-0${t.slice(-3)}` });
-  const cnt = Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "Job" WHERE salonName = ?`, args: [base.salon_name] })).rows[0].n);
+  const cnt = Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "Job" WHERE sourceFbHash = (SELECT sourceFbHash FROM "Job" WHERE id = ?)`, args: [id] })).rows[0].n);
   R.check("S8", "Đổi SĐT nhưng cùng Facebook người đăng → bump (repost 3), vẫn chỉ 1 tin", fb.data.status === "bumped" && fb.data.repost_count === 3 && cnt === 1, JSON.stringify(fb.data));
 
   // Gửi nhiều bài 1 lần (mảng) + Úc
@@ -64,10 +68,10 @@ try {
   R.check("S9", "Gửi mảng: 2 tạo mới + 1 bỏ qua; Úc → NSW, Bankstown, +61", batch.data.created === 2 && batch.data.skipped === 1 && au?.state === "NSW" && au?.city === "Bankstown" && String(au?.phone).startsWith("04"), JSON.stringify(batch.data).slice(0, 220));
 
   // GET /api/jobs?state=&q=
-  const q1 = await fetch(`${BASE_URL}/api/jobs?state=TX&q=${encodeURIComponent(`Diamond Nails ${t}`)}`).then((r) => r.json());
+  const q1 = await fetch(`${BASE_URL}/api/jobs?state=TX&q=${encodeURIComponent(`Diamond Nails ${t} cần thợ gấp`)}`).then((r) => r.json());
   const q2 = await fetch(`${BASE_URL}/api/jobs?state=TX&q=khongcotiemnaynhe${t}`).then((r) => r.json());
   const q3 = await fetch(`${BASE_URL}/api/jobs?state=NSW&q=Bankstown`).then((r) => r.json());
-  R.check("S10", "GET /api/jobs?state=TX&q=tên tiệm → tìm đúng; từ khoá không có → rỗng; lọc bang NSW + q", q1.length === 1 && q1[0].id === id && q2.length === 0 && q3.some((j) => j.salonName === `Lotus Nails ${t}`), `${q1.length}/${q2.length}/${q3.length}`);
+  R.check("S10", "GET /api/jobs?state=TX&q=tên tiệm → tìm đúng; từ khoá không có → rỗng; lọc bang NSW + q", q1.length === 1 && q1[0].id === id && q2.length === 0 && q3.some((j) => j.id === batch.data.results?.[1]?.job_id), `${q1.length}/${q2.length}/${q3.length}`);
   R.check("S11", "API công khai KHÔNG lộ link bài / mã băm Facebook", !("sourceUrl" in q1[0]) && !("sourceFbHash" in q1[0]) && !("sourceKey" in q1[0]) && q1[0].repostCount === 3);
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);

@@ -80,7 +80,8 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
   const market = (input.market === "AU" || input.market === "US" ? input.market : null) ?? ph?.market ?? p.market;
   const state = clean(input.state, 3).toUpperCase() || p.state;
   const city = clean(input.city, 60) || p.city || "";
-  const salonName = clean(input.salonName, 60) || p.salonName;
+  // Tên tiệm ghi trong bài ("… Nails") đáng tin hơn tên người đăng mà tool gửi kèm.
+  const salonName = p.salonName || clean(input.salonName, 60);
 
   if (text && !p.isHiring && !input.salonName) return { status: "skipped", reason: "không phải bài tuyển thợ" };
   if (!phone || !phoneDisplay) return { status: "skipped", reason: "không có SĐT Mỹ/Úc" };
@@ -99,7 +100,8 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
   const toolSkills = Array.isArray(input.skills) ? parseJobPost(`cần thợ ${input.skills.join(", ")}`).skills : [];
   const skills = [...new Set([...toolSkills, ...p.skills])];
   const data = {
-    title: clean(input.title, 80) || p.title,
+    // Tiêu đề PawNail tự tạo (đồng nhất, gọn) — tiêu đề tool gửi kèm thường lẫn chữ thừa.
+    title: `Cần thợ ${skills.length ? skills.slice(0, 2).join("/") : "Nail"}${p.isUrgent ? " gấp" : ""}`,
     salonName: salonName || `Tiệm nail ${city || state}`,
     description: text || [salonName, input.address, salary].filter(Boolean).join(" · "),
     market, state, city,

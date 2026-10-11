@@ -187,7 +187,7 @@ export default function JobDetailPage({ params }: PageProps) {
   }
 
   const facts = [
-    { icon: MapPin, label: tr("Khu vực", "Location"), value: `${job.city}, ${stateName(job.market, job.state)}` },
+    { icon: MapPin, label: tr("Khu vực", "Location"), value: [job.city, stateName(job.market, job.state)].filter(Boolean).join(", ") },
     { icon: DollarSign, label: tr("Mức lương", "Pay"), value: job.salaryAmount, accent: true },
     { icon: Wallet, label: tr("Hình thức", "Pay type"), value: valueLabel(job.salaryType) },
     { icon: Globe2, label: tr("Thị trường", "Market"), value: <span className="inline-flex items-center gap-1.5"><Flag code={job.market} /> {job.market === "US" ? tr("Mỹ", "US") : tr("Úc", "Australia")}</span> },

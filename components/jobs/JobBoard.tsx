@@ -250,7 +250,7 @@ function JobCard({
 
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
-        {job.city}, {stateName(job.market, job.state)}
+        {[job.city, stateName(job.market, job.state)].filter(Boolean).join(", ")}
         {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("📍 Gần bạn", "📍 Near you")}</span>}
       </span>
 

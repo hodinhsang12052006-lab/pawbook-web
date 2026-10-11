@@ -139,6 +139,21 @@ export function findAddress(text: string) {
   return null;
 }
 
+/** Ô "location" của tool: "Winthrop, MA" · "Senatobia, MS 38668" · "TX 77521" · "Bankstown NSW 2200" · "Houston TX". */
+export function parseLocation(loc: string): { city: string | null; state: string | null; zip: string | null; market: "US" | "AU" | null } {
+  const t = String(loc || "").replace(/\*+/g, " ").replace(/\s+/g, " ").trim();
+  const au = t.match(/^([A-Za-z .'-]{2,40}?)[ ,]+(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b(?:[ ,]+(\d{4}))?/i);
+  if (au) return { city: titleCase(au[1]), state: au[2].toUpperCase(), zip: au[3] ?? null, market: "AU" };
+  const us = t.match(/^([A-Za-z .'-]{2,40}?)\s*,?\s+([A-Z]{2})\b(?:[ ,]+(\d{5}))?/);
+  if (us && US_CODES.has(us[2]) && !/^(usa|us|my|mỹ)$/i.test(us[1].trim())) return { city: titleCase(us[1]), state: us[2], zip: us[3] ?? null, market: "US" };
+  const sz = t.match(/\b([A-Z]{2})\s+(\d{5})\b/);
+  if (sz && US_CODES.has(sz[1])) return { city: null, state: sz[1], zip: sz[2], market: "US" };
+  const zip = t.match(/\b(\d{5})\b/);
+  if (zip) { const st = usStateFromZip(zip[1]); if (st) return { city: null, state: st, zip: zip[1], market: "US" }; }
+  const p = findPlace(t);
+  return { city: p.city, state: p.state, zip: null, market: p.market };
+}
+
 /** Bang + thành phố khi không có địa chỉ đầy đủ. */
 export function findPlace(text: string): { state: string | null; city: string | null; market: "US" | "AU" | null } {
   const s = ` ${strip(text)} `;

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { blockedPhones, ingestBatch, ingestOne, type IngestInput } from "@/lib/jobIngest/ingest";
-import { parseJobPost } from "@/lib/jobIngest/parse";
+import { parseLocation } from "@/lib/jobIngest/parse";
 
 // POST /api/jobs/sync — tool lọc bài gửi tin TIỆM NHỜ ĐĂNG (định dạng của tool):
 //   { title, salon_name, phone, facebook_url, location, state, salary, skills[], content, post_url, country }
@@ -27,7 +27,16 @@ interface SyncPost {
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 
 function toInput(p: SyncPost): IngestInput {
-  const loc = str(p.location) ? parseJobPost(String(p.location)) : null; // "Houston, TX 77083" → thành phố / bang / ZIP
+  // "Winthrop, MA" / "TX 77521" / "Bankstown NSW 2200" → thành phố / bang / ZIP.
+  // Ô location thiếu thành phố → thử phần sau " - " của tiêu đề ("Cần tuyển … - Senatobia, MS").
+  const fromLoc = parseLocation(str(p.location) || "");
+  const fromTitle = parseLocation(String(p.title || "").split(/\s[-–]\s/).pop() || "");
+  const loc = {
+    city: fromLoc.city || (fromTitle.state && (!fromLoc.state || fromTitle.state === fromLoc.state) ? fromTitle.city : null),
+    state: fromLoc.state || fromTitle.state,
+    zip: fromLoc.zip || fromTitle.zip,
+    market: fromLoc.market || fromTitle.market,
+  };
   const country = String(p.country || "");
   const market = /(úc|uc\b|australia|\bau\b)/i.test(country) ? "AU" : /(mỹ|my\b|usa|\bus\b|united states)/i.test(country) ? "US" : undefined;
   return {
@@ -36,10 +45,10 @@ function toInput(p: SyncPost): IngestInput {
     salonName: str(p.salon_name),
     phone: str(p.phone),
     fbUrl: str(p.facebook_url),
-    city: loc?.city ?? undefined,
-    state: str(p.state) || loc?.state || undefined,
-    zip: loc?.zip ?? undefined,
-    market: market ?? (loc?.market || undefined),
+    city: loc.city ?? undefined,
+    state: str(p.state) || loc.state || undefined,
+    zip: loc.zip ?? undefined,
+    market: market ?? (loc.market || undefined),
     salary: str(p.salary),
     skills: Array.isArray(p.skills) ? p.skills.filter((s): s is string => typeof s === "string").slice(0, 12) : undefined,
     sourceUrl: str(p.post_url),

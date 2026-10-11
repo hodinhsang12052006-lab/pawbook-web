@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { buildDigest, unsubUrl, type DigestUser } from "@/lib/digest";
+import { isDemoEmail } from "@/lib/demo";
 
 // Vercel Cron mỗi ngày (vercel.json): gửi email tóm tắt cho người đã 7 ngày chưa nhận.
 // Chia đều cả tuần → mỗi ngày tối đa DIGEST_CAP thư (gói Resend miễn phí 100 thư/ngày).
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
   for (const u of users) {
     if (Date.now() > deadline) break;
     const email = (u.email || "").toLowerCase();
-    const fake = !email.includes("@") || email.endsWith(".test") || email.endsWith("@pawnailjobs.demo");
+    const fake = !email.includes("@") || email.endsWith(".test") || isDemoEmail(email);
     try {
       const d = fake ? null : await buildDigest(u as DigestUser);
       if (d) {

@@ -3,8 +3,9 @@ import prisma from "@/lib/prisma";
 import { stateName } from "@/lib/stateNames";
 import { firstImage, jobPostingLd } from "@/lib/jobPostingLd";
 import { SITE_URL } from "@/lib/siteUrl";
+import { isDemoEmail } from "@/lib/demo";
 
-const JOB_SELECT = { id: true, title: true, salonName: true, description: true, salaryType: true, salaryAmount: true, city: true, state: true, market: true, skills: true, benefits: true, createdAt: true } as const;
+const JOB_SELECT = { id: true, title: true, salonName: true, description: true, salaryType: true, salaryAmount: true, city: true, state: true, market: true, skills: true, benefits: true, createdAt: true, owner: { select: { email: true } } } as const;
 
 // Tiêu đề tab + bản xem trước khi chia sẻ tin tuyển (nút Chia sẻ trên trang
 // tin): "Cần thợ Gel-X · Sunny Nails — $1,300/tuần · Houston, Texas".
@@ -21,6 +22,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return {
       title,
       description,
+      // Tin MẪU: không cho Google lập chỉ mục (Google for Jobs phạt tin tuyển không có thật).
+      ...(isDemoEmail(j.owner?.email) ? { robots: { index: false, follow: false } } : {}),
       alternates: { canonical: `${SITE_URL}/jobs/${j.id}` },
       openGraph: { title, description, url: `${SITE_URL}/jobs/${j.id}`, siteName: "PawNail Jobs", type: "website", ...(image ? { images: [{ url: image }] } : {}) },
       twitter: { card: image ? "summary_large_image" : "summary", title, description, ...(image ? { images: [image] } : {}) },
@@ -36,7 +39,7 @@ export default async function Layout({ children, params }: { children: React.Rea
   let ld: object | null = null;
   try {
     const j = await prisma.job.findUnique({ where: { id }, select: JOB_SELECT });
-    if (j) ld = jobPostingLd(j);
+    if (j && !isDemoEmail(j.owner?.email)) ld = jobPostingLd(j);
   } catch {}
   return (
     <>

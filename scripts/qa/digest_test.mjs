@@ -61,6 +61,15 @@ try {
   R.check("D3", "Thư thợ: tiêu đề nói số tiệm đã xem hồ sơ, có tên, có link /jobs + link hủy nhận", !!toTech && /tiệm đã xem hồ sơ bạn/.test(toTech.subject) && /Chào Lan Nguyen/.test(toTech.html) && toTech.html.includes("/api/email/unsubscribe?u=" + techId) && toTech.text.includes("Hủy nhận"), toTech?.subject);
   R.check("D4", "Thư chủ tiệm: có thợ đang rảnh tại California + link hồ sơ thợ", !!toOwner && /thợ đang rảnh tại California/.test(toOwner.subject) && (toOwner.html.match(/\/profile\/[a-z0-9]{10,}/g) || []).length >= 1, toOwner?.subject); // (5 thợ MỚI nhất trong bang — chạy sau bộ test khác thì thợ test có thể không nằm trong top 5)
   for (const [k, m] of [["tech", toTech], ["owner", toOwner]]) if (m) (await import("node:fs")).writeFileSync(`${process.env.TEMP || "."}/digest_${k}.html`, m.html);
+  const demoIds = (await db.execute(`SELECT id FROM "User" WHERE email LIKE '%pawnailjobs.demo'`)).rows.map((r) => r.id);
+  const demoJobIds = (await db.execute(`SELECT j.id FROM "Job" j JOIN "User" u ON u.id = j.ownerId WHERE u.email LIKE '%pawnailjobs.demo'`)).rows.map((r) => r.id);
+  const allHtml = (toTech?.html || "") + (toOwner?.html || "");
+  R.check("D4b", "Email KHÔNG giới thiệu hồ sơ / tin tuyển mẫu (demo) như thật", demoIds.length > 0 && !demoIds.some((id) => allHtml.includes(`/profile/${id}`)) && !demoJobIds.some((id) => allHtml.includes(`/jobs/${id}`)), `demo=${demoIds.length}`);
+  if (demoJobIds[0]) {
+    const jp = await fetch(`${BASE_URL}/jobs/${demoJobIds[0]}`).then((r) => r.text());
+    const sm = await fetch(`${BASE_URL}/sitemap.xml`).then((r) => r.text());
+    R.check("D4c", "Tin mẫu: noindex, không JobPosting, không có trong sitemap", /<meta name="robots" content="noindex, nofollow"/.test(jp) && !/"@type":"JobPosting"/.test(jp) && !demoJobIds.some((id) => sm.includes(id)));
+  }
   R.check("D5", "Có header List-Unsubscribe + one-click (Gmail/Apple Mail hiện nút Hủy)", !!toTech?.headers?.["List-Unsubscribe"]?.includes("/api/email/unsubscribe") && toTech.headers["List-Unsubscribe-Post"] === "List-Unsubscribe=One-Click");
   R.check("D6", "Nội dung escape HTML, không có 'undefined'/'null'", !!toTech && !/undefined|>null</.test(toTech.html + toOwner.html));
   const fakeRow = await digestOf(fakeId);

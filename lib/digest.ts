@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { weeklyPay } from "@/lib/trends";
 import { stateName } from "@/lib/stateNames";
 import { SITE_URL } from "@/lib/siteUrl";
+import { realUserWhere } from "@/lib/demo";
 
 const DAY = 86_400_000;
 const esc = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -53,12 +54,12 @@ export async function buildDigest(u: DigestUser, now = new Date()): Promise<Dige
   if (u.role === "TECHNICIAN") {
     const [jobs, views, designs] = await Promise.all([
       prisma.job.findMany({
-        where: { market: u.market, ...(u.state ? { state: u.state } : {}), createdAt: { gte: since } },
+        where: { market: u.market, ...(u.state ? { state: u.state } : {}), createdAt: { gte: since }, owner: realUserWhere }, // không giới thiệu tin mẫu
         orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
         take: 30,
         select: { id: true, title: true, salonName: true, city: true, salaryAmount: true, salaryType: true },
       }),
-      prisma.profileView.count({ where: { profileId: u.id, createdAt: { gte: since }, viewer: { role: "OWNER" } } }).catch(() => 0),
+      prisma.profileView.count({ where: { profileId: u.id, createdAt: { gte: since }, viewer: { role: "OWNER", ...realUserWhere } } }).catch(() => 0),
       prisma.nailDesign.count({ where: { status: "published", publishedAt: { gte: since } } }).catch(() => 0),
     ]);
     if (!jobs.length && !views) return null;
@@ -79,7 +80,7 @@ export async function buildDigest(u: DigestUser, now = new Date()): Promise<Dige
   if (u.role === "OWNER") {
     const [techs, myJobs] = await Promise.all([
       prisma.technicianProfile.findMany({
-        where: { status: { in: ["AVAILABLE", "URGENT"] }, user: { market: u.market, ...(u.state ? { state: u.state } : {}) } },
+        where: { status: { in: ["AVAILABLE", "URGENT"] }, user: { market: u.market, ...(u.state ? { state: u.state } : {}), ...realUserWhere } }, // chỉ thợ thật
         orderBy: { user: { createdAt: "desc" } },
         take: 5,
         select: { yearsOfExperience: true, specialties: true, user: { select: { id: true, name: true, city: true } } },

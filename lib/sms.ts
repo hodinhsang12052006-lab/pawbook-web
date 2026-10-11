@@ -20,7 +20,9 @@ function cfg() {
   return { sid, token, service, base };
 }
 
-export const smsEnabled = () => cfg() !== null;
+// Bật thật cho khách cần THÊM SMS_LIVE=1 (Vercel). Tài khoản Twilio còn bản dùng thử chỉ gửi được tới số
+// đã xác minh trong Twilio → để tắt (ẩn nút đăng nhập SĐT + nút xác minh SMS) tới khi nâng cấp Twilio.
+export const smsEnabled = () => cfg() !== null && process.env.SMS_LIVE === "1";
 
 /** "+1 408 555 0199" / "(408) 555-0199" → "+14085550199". Chỉ nhận Mỹ (+1) và Úc (+61). */
 export function toE164(raw: string | null | undefined, market: "US" | "AU" = "US"): string | null {

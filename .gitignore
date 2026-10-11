@@ -72,3 +72,6 @@ ios/App/App/public
 /public/workbox-*.js.map
 /public/worker-*.js
 /public/worker-*.js.map
+
+# Ảnh nộp App Store / Google Play (scripts/store/make_screenshots.mjs)
+store-assets/

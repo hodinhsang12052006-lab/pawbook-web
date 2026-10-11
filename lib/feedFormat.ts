@@ -18,13 +18,26 @@ export function timeAgo(iso: string): string {
 // Tách nội dung bài đăng thành đoạn text thường + hashtag (#ViecLam,
 // #NailArt...) để tô màu riêng — chỉ nhận diện hiển thị, không lưu bảng
 // hashtag riêng (chưa cần thiết ở quy mô hiện tại).
+// Hashtag tô màu + link https:// bấm được (mở tab mới, rel an toàn; chỉ https, cắt gọn khi hiển thị).
 export function renderContentWithHashtags(text: string): React.ReactNode[] {
-  const parts = text.split(/(#[\p{L}\p{N}_]+)/gu);
-  return parts.map((part, i) =>
-    part.startsWith("#") && part.length > 1
+  const parts = text.split(/(https:\/\/[^\s<>"']+|#[\p{L}\p{N}_]+)/gu);
+  return parts.map((part, i) => {
+    if (part.startsWith("https://")) {
+      const url = part.replace(/[.,;:!?)\]]+$/, "");
+      const tail = part.slice(url.length);
+      let label = url;
+      try { const u = new URL(url); label = u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? "/…" : ""); } catch {}
+      return React.createElement(
+        React.Fragment,
+        { key: i },
+        React.createElement("a", { href: url, target: "_blank", rel: "noopener noreferrer nofollow", className: "font-semibold text-sky-300 underline decoration-sky-300/40 underline-offset-2 hover:text-sky-200", onClick: (e: { stopPropagation: () => void }) => e.stopPropagation() }, label),
+        tail,
+      );
+    }
+    return part.startsWith("#") && part.length > 1
       ? React.createElement("span", { key: i, className: "text-pink-400 font-semibold" }, part)
-      : React.createElement(React.Fragment, { key: i }, part)
-  );
+      : React.createElement(React.Fragment, { key: i }, part);
+  });
 }
 
 export function roleBadgeLabel(role: string): string {

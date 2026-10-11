@@ -53,6 +53,22 @@ const POST_TYPE_BADGE = (): Record<string, { label: string; classes: string }> =
   GENERAL: { label: "", classes: "" },
 });
 
+// Bài dài (bài thuế, tin ngành…) thu gọn 6 dòng + "Xem thêm" — trước đây là bức tường chữ đẩy bài sau xuống tít.
+function PostText({ content }: { content: string }) {
+  const long = content.length > 320 || content.split("\n").length > 7;
+  const [open, setOpen] = useState(!long);
+  return (
+    <div className="px-4 pb-3">
+      <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-200 ${open ? "" : "line-clamp-6"}`}>{renderContentWithHashtags(content)}</p>
+      {long && (
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-1 min-h-[32px] text-sm font-bold text-slate-400 hover:text-white">
+          {open ? tr("Thu gọn", "Show less") : tr("… Xem thêm", "… See more")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function isVideo(url: string) {
   return /\.(mp4|webm|mov)$/i.test(url);
 }
@@ -134,7 +150,12 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       setReportOpen(false);
     }
   };
-  const badge = POST_TYPE_BADGE()[post.postType];
+  // Bài tin ngành (📰) và bài ảnh mẫu (✨ 4 mẫu nail) của tài khoản chính thức có nhãn riêng.
+  const badge = post.content?.startsWith("📰")
+    ? { label: tr("📰 Tin ngành", "📰 Industry news"), classes: "bg-sky-500/10 border-sky-500/25 text-sky-300" }
+    : post.content?.startsWith("✨ 4 mẫu nail")
+    ? { label: tr("💅 Mẫu hôm nay", "💅 Today's designs"), classes: "bg-pink-500/10 border-pink-500/25 text-pink-300" }
+    : POST_TYPE_BADGE()[post.postType];
 
   const handleToggleLike = async () => {
     if (!currentUser) {
@@ -302,11 +323,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       </div>
 
       {/* NỘI DUNG */}
-      {post.content && (
-        <p className="px-4 pb-3 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
-          {renderContentWithHashtags(post.content)}
-        </p>
-      )}
+      {post.content && <PostText content={post.content} />}
 
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,
           không cần thư viện carousel nặng nề. */}

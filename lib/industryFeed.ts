@@ -10,6 +10,8 @@ export interface NewsItem {
   publishedAt: string | null;
   lang: "en" | "vi";
   topic: NewsTopic;
+  market: "US" | "AU" | "VN";
+  summary: string | null; // đoạn tóm tắt ngắn của báo trong RSS (nếu có) — KHÔNG chép nội dung bài
 }
 export type NewsTopic = "law" | "labor" | "safety" | "business" | "trend" | "other";
 
@@ -22,11 +24,12 @@ export const TOPIC_LABEL: Record<NewsTopic, string> = {
   other: "Tin ngành",
 };
 
-const FEEDS: { url: string; source?: string; lang: "en" | "vi" }[] = [
-  { url: "https://news.google.com/rss/search?q=%22nail+salon%22+OR+%22nail+technician%22+when:14d&hl=en-US&gl=US&ceid=US:en", lang: "en" },
-  { url: "https://news.google.com/rss/search?q=%22nail+salon%22+australia+when:30d&hl=en-AU&gl=AU&ceid=AU:en", lang: "en" },
-  { url: "https://news.google.com/rss/search?q=%22ti%E1%BB%87m+nail%22+OR+%22th%E1%BB%A3+nail%22+OR+%22ngh%E1%BB%81+nail%22+when:60d&hl=vi&gl=VN&ceid=VN:vi", lang: "vi" },
-  { url: "https://www.nailsmag.com/rss", source: "NAILS Magazine", lang: "en" },
+const FEEDS: { url: string; source?: string; lang: "en" | "vi"; market: "US" | "AU" | "VN" }[] = [
+  { url: "https://news.google.com/rss/search?q=%22nail+salon%22+OR+%22nail+technician%22+when:14d&hl=en-US&gl=US&ceid=US:en", lang: "en", market: "US" },
+  { url: "https://news.google.com/rss/search?q=%22nail+salon%22+australia+when:30d&hl=en-AU&gl=AU&ceid=AU:en", lang: "en", market: "AU" },
+  { url: "https://news.google.com/rss/search?q=%22nail+technician%22+OR+%22nail+tech%22+australia+when:30d&hl=en-AU&gl=AU&ceid=AU:en", lang: "en", market: "AU" },
+  { url: "https://news.google.com/rss/search?q=%22ti%E1%BB%87m+nail%22+OR+%22th%E1%BB%A3+nail%22+OR+%22ngh%E1%BB%81+nail%22+when:60d&hl=vi&gl=VN&ceid=VN:vi", lang: "vi", market: "VN" },
+  { url: "https://www.nailsmag.com/rss", source: "NAILS Magazine", lang: "en", market: "US" },
 ];
 
 // Google News khớp lỏng (trả cả tin không liên quan) → tiêu đề BẮT BUỘC nhắc
@@ -66,7 +69,10 @@ function parse(xml: string, feed: (typeof FEEDS)[number]): NewsItem[] {
     const pub = tag(item, "pubDate");
     const date = pub ? new Date(decode(pub)) : null;
     const topic = TOPIC_RULES.find((r) => r.re.test(title))?.topic ?? "other";
-    return [{ title: title.slice(0, 200), link, source: (source || "Google News").slice(0, 60), publishedAt: date && !isNaN(date.getTime()) ? date.toISOString() : null, lang: feed.lang, topic }];
+    // Tóm tắt của báo (RSS description). Google News chỉ lặp lại tiêu đề → bỏ.
+    let summary: string | null = decode(tag(item, "description") || "").replace(/\s+/g, " ").slice(0, 500) || null;
+    if (summary && summary.toLowerCase().startsWith(title.toLowerCase().slice(0, 40))) summary = null;
+    return [{ title: title.slice(0, 200), link, source: (source || "Google News").slice(0, 60), publishedAt: date && !isNaN(date.getTime()) ? date.toISOString() : null, lang: feed.lang, topic, market: feed.market, summary }];
   });
 }
 

@@ -7,6 +7,7 @@
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
 import { geminiEnabled, geminiJson } from "@/lib/gemini";
+import { cfJson, cfTextEnabled } from "@/lib/cfText";
 import { getIndustryNews, type NewsItem } from "@/lib/industryFeed";
 import { getSetting, setSetting } from "@/lib/settings";
 
@@ -16,6 +17,17 @@ export const newsPerDay = () => Math.min(4, Math.max(0, Number(process.env.NEWS_
 const hash = (s: string) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
 
 interface Written { hook: string; points: string[]; takeaway: string; hashtags: string[] }
+// JSON Schema chuẩn cho Cloudflare (Gemini dùng kiểu viết hoa ở SCHEMA bên dưới)
+const CF_SCHEMA = {
+  type: "object",
+  properties: {
+    hook: { type: "string" },
+    points: { type: "array", items: { type: "string" } },
+    takeaway: { type: "string" },
+    hashtags: { type: "array", items: { type: "string" } },
+  },
+  required: ["hook", "points", "takeaway", "hashtags"],
+};
 const SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -49,8 +61,16 @@ QUY TẮC BẮT BUỘC:
 // Tin không đáng đăng cho thợ / chủ tiệm: chuyện vặt, người nổi tiếng, động vật, mục tư vấn ứng xử…
 const OFF_TOPIC = /\b(cats?|kittens?|dogs?|pupp(y|ies)|animal|rescue|miss manners|dear abby|celebrit|star['’]?s?\b|royal|princess|kardashian|taylor swift|downton|horoscope|recipe|chisme)\b/i;
 // Tin ngoài Mỹ / Úc lọt vào bộ lọc (Google News khớp lỏng)
-const ELSEWHERE = /\b(toronto|ontario|canada|canadian|vancouver|montreal|calgary|london|england|scotland|ireland|singapore|india|philippines|new zealand|auckland)\b/i;
+const ELSEWHERE = /\b(toronto|ontario|canada|canadian|vancouver|montreal|calgary|london|england|scotland|ireland|singapore|india|philippines|new zealand|auckland|hong kong|mong kok|china|chinese|taiwan|japan|korea|seoul|dubai)\b/i;
 const postable = (n: NewsItem) => !OFF_TOPIC.test(n.title) && !ELSEWHERE.test(n.title);
+
+/** Viết bài: Cloudflare Workers AI (miễn phí) trước, Gemini dự phòng. */
+async function write(text: string): Promise<Written> {
+  const errs: string[] = [];
+  if (cfTextEnabled()) { try { return await cfJson<Written>(text, CF_SCHEMA); } catch (e) { errs.push(String((e as Error).message).slice(0, 80)); } }
+  if (geminiEnabled()) { try { return await geminiJson<Written>(text, SCHEMA); } catch (e) { errs.push(String((e as Error).message).slice(0, 80)); } }
+  throw new Error(errs.join(" | ") || "không có AI viết bài");
+}
 
 /** Con số trong bài viết phải xuất hiện trong nguồn (chống AI bịa số). */
 function numbersSupported(written: string, n: NewsItem) {
@@ -89,7 +109,7 @@ export async function publishNewsPosts(now = new Date(), opts: { max?: number; t
   const officialId = process.env.OFFICIAL_ACCOUNT_ID;
   const max = opts.max ?? newsPerDay();
   if (!officialId || !max || process.env.OFFICIAL_DAILY_POST === "0") return { posted, skipped: ["tắt / chưa có tài khoản chính thức"] };
-  if (!geminiEnabled()) return { posted, skipped: ["chưa có GEMINI_API_KEY"] };
+  if (!cfTextEnabled() && !geminiEnabled()) return { posted, skipped: ["chưa có Cloudflare AI / Gemini"] };
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const today = await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart }, content: { startsWith: "📰" } } });
   let left = Math.max(0, max - today);
@@ -109,7 +129,7 @@ export async function publishNewsPosts(now = new Date(), opts: { max?: number; t
     if (opts.deadline && Date.now() > opts.deadline - 8000) { skipped.push("hết giờ"); break; }
     try {
       const w = await Promise.race([
-        geminiJson<Written>(prompt(n), SCHEMA),
+        write(prompt(n)),
         new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Gemini quá giờ")), opts.timeoutMs ?? 15_000)),
       ]);
       const text = composeNewsPost(n, w);

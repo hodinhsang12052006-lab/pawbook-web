@@ -26,6 +26,8 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
 
   const [content, setContent] = useState("");
   const [postType, setPostType] = useState<"GENERAL" | "SHOWCASE">("GENERAL");
+  // "Tâm sự ẩn danh": không hiện tên, PawNail duyệt trước khi hiện (chặn bôi nhọ tên tiệm / người)
+  const [anonymous, setAnonymous] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -101,19 +103,20 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content.trim() || "📸", postType, mediaUrls }),
+        body: JSON.stringify({ content: content.trim() || "📸", postType, mediaUrls, ...(anonymous ? { anonymous: true } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || tr("Không thể đăng bài.", "Couldn't publish the post."));
         return;
       }
-      onPosted(data);
+      if (!data.pending) onPosted(data);
       playSound("success");
       setContent("");
       setMediaUrls([]);
       setPostType("GENERAL");
-      toast.success(tr("Đã đăng bài! 🎉", "Posted! 🎉"));
+      setAnonymous(false);
+      toast.success(data.pending ? tr("Đã gửi tâm sự ẩn danh — sẽ hiện sau khi PawNail duyệt (thường trong ngày).", "Anonymous post sent — it appears once reviewed (usually same day).") : tr("Đã đăng bài! 🎉", "Posted! 🎉"));
     } catch {
       toast.error(tr("Lỗi mạng. Vui lòng thử lại.", "Network error. Please try again."));
     } finally {
@@ -190,6 +193,16 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
             {tr("Ảnh/Video", "Photo/Video")}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleUpload} />
+
+          <button
+            type="button"
+            aria-pressed={anonymous}
+            onClick={() => setAnonymous((v) => !v)}
+            title={tr("Không hiện tên bạn. PawNail duyệt trước khi hiện. Không nêu tên tiệm / tên người.", "Your name is hidden. Reviewed before it appears. Don't name salons or people.")}
+            className={`flex min-h-[32px] items-center gap-1 whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-bold ${anonymous ? "border-violet-400/60 bg-violet-500/15 text-violet-100" : "border-slate-800 bg-slate-950 text-slate-300 hover:text-white"} ${PRESS}`}
+          >
+            🤫 {tr("Ẩn danh", "Anonymous")}
+          </button>
 
           <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950 p-1">
             {POST_TYPE_OPTIONS().map((opt) => (

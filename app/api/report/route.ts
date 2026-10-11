@@ -13,7 +13,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
     }
 
-    const { userId, reason } = await req.json();
+    const body = await req.json();
+    const reason = body?.reason;
+    let userId = typeof body?.userId === "string" ? body.userId : null;
+    // Bài "Tâm sự ẩn danh": người báo cáo không biết tác giả → gửi postId, máy chủ tự tra (không lộ ra ngoài).
+    if (!userId && typeof body?.postId === "string") {
+      userId = (await prisma.post.findUnique({ where: { id: body.postId }, select: { authorId: true } }))?.authorId ?? null;
+    }
     if (!userId || !reason || !String(reason).trim()) {
       return NextResponse.json({ error: "Vui lòng nhập lý do báo cáo." }, { status: 400 });
     }

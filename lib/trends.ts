@@ -62,7 +62,7 @@ export async function getTrends(market: Market): Promise<TrendsData> {
   const now = Date.now();
   const [posts, jobsWeek, allJobs, techs, techLikes, reviewAgg] = await Promise.all([
     prisma.post.findMany({
-      where: { createdAt: { gte: new Date(now - POST_WINDOW) }, OR: [{ market }, { market: null }] },
+      where: { anonymous: false, status: "published", createdAt: { gte: new Date(now - POST_WINDOW) }, OR: [{ market }, { market: null }] },
       select: {
         id: true, content: true, mediaUrls: true, city: true,
         author: { select: { id: true, name: true, avatarUrl: true } },

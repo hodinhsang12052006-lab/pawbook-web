@@ -351,9 +351,13 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     };
   }, [market, state, city]);
 
-  // Nạp danh sách đã lưu 1 lần khi mount — không phụ thuộc bộ lọc market/
-  // state/city vì "đã lưu" là của riêng người dùng, không đổi theo bộ lọc.
+  // Nạp danh sách đã lưu khi ĐÃ đăng nhập — không phụ thuộc bộ lọc market/
+  // state/city vì "đã lưu" là của riêng người dùng. Khách thì khỏi gọi (trước đây
+  // mỗi lần khách mở tab Việc gấp là 1 request 401 thừa).
+  const { user: viewer } = useSessionUser();
+  const viewerId: string | undefined = viewer?.id;
   useEffect(() => {
+    if (!viewerId) return;
     let cancelled = false;
     fetch("/api/jobs/saved")
       .then((res) => (res.ok ? res.json() : []))
@@ -367,7 +371,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [viewerId]);
 
   async function toggleSave(jobId: string) {
     const isSaved = savedIds.has(jobId);
@@ -394,7 +398,6 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
 
   // "Tất cả bang": đưa tin ở BANG CỦA NGƯỜI XEM lên đầu (giữ thứ tự gấp/mới
   // trong từng nhóm) — không lọc mất tin nơi khác, nên không bao giờ trống trơn.
-  const { user: viewer } = useSessionUser();
   const homeState = !state && viewer?.market === market ? viewer?.state || null : null;
   const ordered = homeState ? [...jobs.filter((j) => j.state === homeState), ...jobs.filter((j) => j.state !== homeState)] : jobs;
   const visibleJobs = showSavedOnly ? ordered.filter((j) => savedIds.has(j.id)) : ordered;

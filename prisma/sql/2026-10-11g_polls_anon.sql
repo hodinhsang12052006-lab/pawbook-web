@@ -1,0 +1,6 @@
+ALTER TABLE "Post" ADD COLUMN "anonymous" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Post" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'published';
+CREATE INDEX IF NOT EXISTS "Post_status_createdAt_idx" ON "Post"("status", "createdAt");
+CREATE TABLE IF NOT EXISTS "PostPoll" ("postId" TEXT NOT NULL PRIMARY KEY, "question" TEXT NOT NULL, "options" TEXT NOT NULL, CONSTRAINT "PostPoll_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post" ("id") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE TABLE IF NOT EXISTS "PostPollVote" ("postId" TEXT NOT NULL, "userId" TEXT NOT NULL, "option" INTEGER NOT NULL, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY ("postId", "userId"), CONSTRAINT "PostPollVote_postId_fkey" FOREIGN KEY ("postId") REFERENCES "PostPoll" ("postId") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE INDEX IF NOT EXISTS "PostPollVote_postId_idx" ON "PostPollVote"("postId");

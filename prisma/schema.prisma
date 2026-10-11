@@ -522,6 +522,9 @@ model Post {
   likes     PostLike[]
   comments  PostComment[]
   stat      PostStat?
+  poll      PostPoll? // thăm dò 1 chạm (prisma/sql/2026-10-11g_polls_anon.sql)
+  anonymous Boolean       @default(false) // "Tâm sự ẩn danh": không hiện tên / hồ sơ người đăng
+  status    String        @default("published") // published | pending (tâm sự ẩn danh chờ duyệt) | rejected
   createdAt DateTime      @default(now())
 
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
@@ -647,4 +650,24 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// Thăm dò 1 chạm trên bảng tin — mỗi người 1 phiếu (đổi được).
+model PostPoll {
+  postId   String         @id
+  post     Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  question String
+  options  String // JSON string[] (2–4 lựa chọn)
+  votes    PostPollVote[]
+}
+
+model PostPollVote {
+  postId    String
+  poll      PostPoll @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  userId    String
+  option    Int
+  createdAt DateTime @default(now())
+
+  @@id([postId, userId])
+  @@index([postId])
 }

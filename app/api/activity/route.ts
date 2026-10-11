@@ -44,7 +44,7 @@ export async function GET() {
         select: { city: true, specialties: true, updatedAt: true, user: { select: { id: true, name: true, avatarUrl: true } } },
       }),
       prisma.post.findMany({
-        where: { createdAt: { gte: since }, likes: { some: {} } },
+        where: { anonymous: false, status: "published", createdAt: { gte: since }, likes: { some: {} } }, // không lộ bài ẩn danh / chưa duyệt
         orderBy: { createdAt: "desc" },
         take: 4,
         select: { id: true, city: true, createdAt: true, _count: { select: { likes: true, comments: true } }, author: { select: { id: true, name: true, avatarUrl: true } } },

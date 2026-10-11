@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
+import PollCard, { type PollData } from "@/components/feed/PollCard";
 import { trackPostView } from "@/lib/viewTracker";
 import Avatar from "@/components/ui/Avatar";
 import { playSound } from "@/lib/sounds";
@@ -24,7 +25,9 @@ export interface FeedPost {
   state: string | null;
   city: string | null;
   createdAt: string;
-  author: { id: string; name: string; avatarUrl: string | null; role: string; city: string | null; state: string | null };
+  author: { id: string | null; name: string; avatarUrl: string | null; role: string; city: string | null; state: string | null };
+  anonymous?: boolean; // "Tâm sự ẩn danh" — không có hồ sơ / nhắn tin tới tác giả
+  poll?: PollData | null;
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
@@ -41,7 +44,7 @@ interface CommentType {
   id: string;
   content: string;
   createdAt: string;
-  author: { id: string; name: string; avatarUrl: string | null; role: string };
+  author: { id: string | null; name: string; avatarUrl: string | null; role: string };
 }
 
 const PRESS = "active:scale-95 transition-transform duration-100";
@@ -103,7 +106,8 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   const [sendingComment, setSendingComment] = useState(false);
   const [commentCount, setCommentCount] = useState(post.commentCount);
 
-  const isOwnPost = currentUser?.id === post.author.id;
+  const isOwnPost = !!post.author.id && currentUser?.id === post.author.id;
+  const anon = !!post.anonymous;
   const canDelete = isOwnPost || currentUser?.role === "ADMIN";
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -138,7 +142,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: post.author.id, reason: `[Bài viết ${post.id}] ${reason}` }),
+        body: JSON.stringify({ userId: post.author.id ?? undefined, postId: post.id, reason: `[Bài viết ${post.id}] ${reason}` }),
       });
       if (!res.ok) throw new Error();
       toast.success(tr("Đã gửi báo cáo. Cảm ơn bạn đã giúp cộng đồng an toàn hơn.", "Report sent. Thanks for keeping the community safe."));
@@ -153,6 +157,8 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   // Bài tin ngành (📰) và bài ảnh mẫu (✨ 4 mẫu nail) của tài khoản chính thức có nhãn riêng.
   const badge = post.content?.startsWith("📰")
     ? { label: tr("📰 Tin ngành", "📰 Industry news"), classes: "bg-sky-500/10 border-sky-500/25 text-sky-300" }
+    : post.content?.startsWith("💬") && post.poll
+    ? { label: tr("💬 Thảo luận", "💬 Discussion"), classes: "bg-amber-500/10 border-amber-500/25 text-amber-200" }
     : post.content?.startsWith("✨ 4 mẫu nail")
     ? { label: tr("💅 Mẫu hôm nay", "💅 Today's designs"), classes: "bg-pink-500/10 border-pink-500/25 text-pink-300" }
     : POST_TYPE_BADGE()[post.postType];
@@ -247,14 +253,23 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     <article ref={articleRef} className="glass-card rounded-2xl overflow-hidden animate-fadeIn">
       {/* HEADER */}
       <div className="flex items-start gap-3 p-4">
-        <Link href={`/profile/${post.author.id}`} className="flex-shrink-0">
-          <Avatar src={post.author.avatarUrl} name={post.author.name} seed={post.author.id} className="h-11 w-11 ring-1 ring-white/10" />
-        </Link>
+        {anon ? (
+          <span aria-hidden className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-xl ring-1 ring-white/10">🤫</span>
+        ) : (
+          <Link href={`/profile/${post.author.id}`} className="flex-shrink-0">
+            <Avatar src={post.author.avatarUrl} name={post.author.name} seed={post.author.id ?? undefined} className="h-11 w-11 ring-1 ring-white/10" />
+          </Link>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
-              {post.author.name}
-            </Link>
+            {anon ? (
+              <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
+            ) : (
+              <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
+                {post.author.name}
+              </Link>
+            )}
+            {anon && <span className="inline-flex flex-shrink-0 items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-200">{tr("Tâm sự ẩn danh", "Anonymous")}</span>}
             {isVerifiedRole(post.author.role) && <VerifiedBadge className="-ml-1 h-4 w-4" />}
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0 ${isVerifiedRole(post.author.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-300"}`}>
               {isVerifiedRole(post.author.role) ? tr("Chính thức", "Official") : roleBadgeLabel(post.author.role)}
@@ -324,6 +339,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
 
       {/* NỘI DUNG */}
       {post.content && <PostText content={post.content} />}
+      {post.poll && <PollCard postId={post.id} poll={post.poll} />}
 
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,
           không cần thư viện carousel nặng nề. */}
@@ -448,7 +464,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           {commentCount > 0 && <span>{commentCount}</span>}
         </button>
 
-        {!isOwnPost && (
+        {!isOwnPost && !anon && (
           <button
             type="button"
             onClick={() => router.push(`/messages?to=${post.author.id}`)}
@@ -459,13 +475,13 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           </button>
         )}
 
-        <Link
+        {!anon && <Link
           href={`/profile/${post.author.id}`}
           className={`ml-auto flex items-center gap-1 rounded-xl border border-pink-500/30 bg-pink-500/5 px-3 py-2 text-[11px] font-bold text-pink-300 hover:bg-pink-500/15 transition-colors ${PRESS}`}
         >
           {post.author.role === "ADMIN" ? tr("Xem hồ sơ", "View profile") : post.author.role === "OWNER" ? tr("Xem Tiệm", "View salon") : tr("Xem Tay Nghề", "View work")}
           <ArrowRight className="h-3 w-3" />
-        </Link>
+        </Link>}
       </div>
 
       {/* BÌNH LUẬN */}
@@ -479,7 +495,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <div className="space-y-3 max-h-72 overflow-y-auto custom-scrollbar">
               {comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-2.5">
-                  <Avatar src={c.author.avatarUrl} name={c.author.name} seed={c.author.id} className="h-7 w-7 ring-1 ring-white/10" />
+                  <Avatar src={c.author.avatarUrl} name={c.author.name} seed={c.author.id ?? undefined} className="h-7 w-7 ring-1 ring-white/10" />
                   <div className="min-w-0 flex-1 rounded-2xl bg-slate-900/60 border border-slate-850 px-3 py-2">
                     <p className="flex items-center gap-1 text-xs font-bold text-slate-200">{c.author.name}{isVerifiedRole(c.author.role) && <VerifiedBadge className="h-3.5 w-3.5" />}</p>
                     <p className="text-xs text-slate-300 leading-relaxed break-words">{c.content}</p>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { sendPush } from "@/lib/push";
 import { getViews } from "@/lib/postStats";
 import { Market, PostType } from "@prisma/client";
 
@@ -15,7 +16,14 @@ type Liker = { id: string; name: string; avatarUrl: string | null };
 const HOT_WINDOW_MS = 48 * 60 * 60 * 1000;
 const HOT_SCORE = 5;
 
-function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0) {
+type PollView = { question: string; options: { label: string; votes: number }[]; total: number; myVote: number | null } | null;
+
+// Bài "Tâm sự ẩn danh": KHÔNG trả id / tên / ảnh / thành phố người đăng — chỉ vai trò + bang.
+function anonAuthor(a: { role?: string; state?: string | null } | null) {
+  return { id: null, name: a?.role === "OWNER" ? "Chủ tiệm ẩn danh" : "Thợ ẩn danh", avatarUrl: null, role: a?.role ?? "TECHNICIAN", city: null, state: a?.state ?? null, anonymous: true };
+}
+
+function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0, poll: PollView = null) {
   const likeCount = post._count?.likes ?? 0;
   const commentCount = post._count?.comments ?? 0;
   const isRecent = Date.now() - post.createdAt.getTime() < HOT_WINDOW_MS;
@@ -28,7 +36,9 @@ function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views
     state: post.state,
     city: post.city,
     createdAt: post.createdAt.toISOString(),
-    author: post.author,
+    author: post.anonymous ? anonAuthor(post.author) : post.author,
+    anonymous: !!post.anonymous,
+    poll,
     likeCount,
     commentCount,
     likedByMe: viewerId ? (post.likes?.length ?? 0) > 0 : false,
@@ -55,11 +65,17 @@ export async function GET(req: NextRequest) {
     const postType = searchParams.get("postType");
     const cursor = searchParams.get("cursor");
 
-    const where: any = {};
-    if (market === "US" || market === "AU") where.market = market as Market;
-    if (state) where.state = state;
+    // Chỉ bài đã đăng (tâm sự ẩn danh chờ duyệt thì chưa hiện)
+    const where: any = { status: "published" };
+    // Bài chung (market / bang trống: bài chính thức, chủ đề nóng, mẫu hôm nay…) hiện ở MỌI bộ lọc
+    // Mỹ / Úc / bang — trước đây lọc khu vực là các bài này biến mất khỏi bảng tin.
+    const and: any[] = [];
+    if (market === "US" || market === "AU") and.push({ OR: [{ market: market as Market }, { market: null }] });
+    if (state) and.push({ OR: [{ state }, { state: null }] });
+    if (and.length) where.AND = and;
     if (city) where.city = { contains: city };
-    if (authorId) where.authorId = authorId;
+    // Trang hồ sơ 1 người: KHÔNG kèm bài ẩn danh của họ (kẻo lộ danh tính) — trừ chính chủ xem
+    if (authorId) { where.authorId = authorId; if (authorId !== viewerId) where.anonymous = false; }
     if (postType && VALID_POST_TYPES.includes(postType)) where.postType = postType as PostType;
 
     const posts = await prisma.post.findMany({
@@ -87,6 +103,22 @@ export async function GET(req: NextRequest) {
         })
       : [];
     const viewsByPost = await getViews(posts.map((p) => p.id));
+    // Thăm dò: đếm phiếu theo lựa chọn + phiếu của người xem (1 query mỗi loại cho cả trang)
+    const pollRows = posts.length ? await prisma.postPoll.findMany({ where: { postId: { in: posts.map((p) => p.id) } } }).catch(() => []) : [];
+    const pollIds = pollRows.map((p) => p.postId);
+    const [tally, mine] = pollIds.length
+      ? await Promise.all([
+          prisma.postPollVote.groupBy({ by: ["postId", "option"], where: { postId: { in: pollIds } }, _count: { _all: true } }),
+          viewerId ? prisma.postPollVote.findMany({ where: { postId: { in: pollIds }, userId: viewerId }, select: { postId: true, option: true } }) : Promise.resolve([]),
+        ])
+      : [[], []];
+    const polls = new Map<string, PollView>();
+    for (const p of pollRows) {
+      let labels: string[] = [];
+      try { labels = JSON.parse(p.options); } catch {}
+      const options = labels.map((label, i) => ({ label, votes: tally.find((t) => t.postId === p.postId && t.option === i)?._count._all ?? 0 }));
+      polls.set(p.postId, { question: p.question, options, total: options.reduce((a, o) => a + o.votes, 0), myVote: mine.find((m) => m.postId === p.postId)?.option ?? null });
+    }
     const likersByPost = new Map<string, Liker[]>();
     for (const like of recentLikes) {
       const list = likersByPost.get(like.postId) ?? [];
@@ -95,7 +127,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      posts: posts.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0)),
+      posts: posts.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null)),
       nextCursor,
     });
   } catch (error) {
@@ -114,6 +146,8 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { content, postType, mediaUrls } = body;
+    // "Tâm sự ẩn danh": không hiện tên; vào hàng CHỜ DUYỆT (chặn bôi nhọ tên tiệm / người); tối đa 3 bài/ngày.
+    const anonymous = body?.anonymous === true;
 
     if (!content || typeof content !== "string" || !content.trim()) {
       return NextResponse.json({ error: "Nội dung bài đăng không được để trống." }, { status: 400 });
@@ -135,6 +169,10 @@ export async function POST(req: NextRequest) {
       where: { id: session.user.id },
       select: { market: true, state: true, city: true },
     });
+    if (anonymous) {
+      const today = await prisma.post.count({ where: { authorId: session.user.id, anonymous: true, createdAt: { gte: new Date(Date.now() - 86_400_000) } } });
+      if (today >= 3) return NextResponse.json({ error: "Mỗi ngày tối đa 3 tâm sự ẩn danh — mai bạn gửi tiếp nhé." }, { status: 429 });
+    }
 
     const post = await prisma.post.create({
       data: {
@@ -144,7 +182,8 @@ export async function POST(req: NextRequest) {
         mediaUrls: JSON.stringify(safeMediaUrls),
         market: author?.market ?? null,
         state: author?.state ?? null,
-        city: author?.city ?? null,
+        city: anonymous ? null : author?.city ?? null, // ẩn danh: chỉ giữ bang, bỏ thành phố
+        ...(anonymous ? { anonymous: true, status: "pending" } : {}),
       },
       include: {
         author: { select: { id: true, name: true, avatarUrl: true, role: true, city: true, state: true } },
@@ -152,7 +191,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(mapPost(post, session.user.id), { status: 201 });
+    if (anonymous) {
+      const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+      sendPush(admins.map((a) => a.id), { title: "🤫 Tâm sự ẩn danh chờ duyệt", body: content.trim().slice(0, 80), url: "/admin/studio#tam-su", tag: "pn-anon" }).catch(() => {});
+    }
+    return NextResponse.json({ ...mapPost(post, session.user.id), pending: anonymous }, { status: 201 });
   } catch (error) {
     console.error("POST /api/posts error:", error);
     return NextResponse.json({ error: "Không thể đăng bài. Vui lòng thử lại." }, { status: 500 });

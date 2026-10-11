@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   try {
     const rows = await prisma.post.findMany({
       // CHỈ người dùng thật — bài mẫu (seed) dùng ảnh stock, không được gọi là "ảnh thật".
-      where: { postType: "SHOWCASE", NOT: [{ mediaUrls: "[]" }, { mediaUrls: "" }], author: realUserWhere },
+      where: { postType: "SHOWCASE", anonymous: false, status: "published", NOT: [{ mediaUrls: "[]" }, { mediaUrls: "" }], author: realUserWhere },
       orderBy: { createdAt: "desc" },
       skip: offset,
       take: limit + 1,

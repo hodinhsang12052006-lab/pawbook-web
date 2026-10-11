@@ -10,6 +10,8 @@ import { notifyUser } from "@/lib/notify";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: postId } = await params;
+    // Bài ẩn danh: bình luận của CHÍNH người đăng hiện "Tác giả (ẩn danh)", không lộ tên.
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true, anonymous: true } });
     const comments = await prisma.postComment.findMany({
       where: { postId },
       orderBy: { createdAt: "asc" },
@@ -24,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         id: c.id,
         content: c.content,
         createdAt: c.createdAt.toISOString(),
-        author: c.author,
+        author: post?.anonymous && c.author.id === post.authorId ? { id: null, name: "Tác giả (ẩn danh)", avatarUrl: null, role: c.author.role } : c.author,
       }))
     );
   } catch (error) {
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Bình luận quá dài (tối đa 500 ký tự)." }, { status: 400 });
     }
 
-    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true, authorId: true } });
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true, authorId: true, anonymous: true } });
     if (!post) {
       return NextResponse.json({ error: "Bài viết không còn tồn tại." }, { status: 404 });
     }
@@ -70,7 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         id: comment.id,
         content: comment.content,
         createdAt: comment.createdAt.toISOString(),
-        author: comment.author,
+        author: post.anonymous && comment.author.id === post.authorId ? { id: null, name: "Tác giả (ẩn danh)", avatarUrl: null, role: comment.author.role } : comment.author,
       },
       { status: 201 }
     );

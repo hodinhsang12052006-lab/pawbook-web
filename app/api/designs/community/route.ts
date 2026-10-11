@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { realUserWhere } from "@/lib/demo";
 
 // GET /api/designs/community?limit=&offset= — ẢNH THẬT thợ & tiệm đăng (bài "Khoe tay nghề" có ảnh),
 // hiện ở trang Mẫu nail cạnh ý tưởng PawNail. Chỉ lấy ảnh (bỏ video), mới nhất trước.
-const isImage = (u: string) => !/\.(mp4|mov|webm|m4v)(\?|$)/i.test(u) && !/\/video\/upload\//.test(u);
+const isImage = (u: string) => !/\.(mp4|mov|webm|m4v)(\?|$)/i.test(u) && !/\/video\/upload\//.test(u) && !/images\.unsplash\.com/i.test(u); // ảnh stock không phải tay nghề thật
 
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
@@ -11,7 +12,8 @@ export async function GET(req: Request) {
   const offset = Math.min(5000, Math.max(0, Math.floor(Number(sp.get("offset")) || 0)));
   try {
     const rows = await prisma.post.findMany({
-      where: { postType: "SHOWCASE", NOT: [{ mediaUrls: "[]" }, { mediaUrls: "" }] },
+      // CHỈ người dùng thật — bài mẫu (seed) dùng ảnh stock, không được gọi là "ảnh thật".
+      where: { postType: "SHOWCASE", NOT: [{ mediaUrls: "[]" }, { mediaUrls: "" }], author: realUserWhere },
       orderBy: { createdAt: "desc" },
       skip: offset,
       take: limit + 1,

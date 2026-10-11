@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Package, MessageCircle, Store } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn";
 
 export interface SupplyProductType {
   id: string;
@@ -56,9 +57,9 @@ export default function SupplyProductCard({ product }: { product: SupplyProductT
 
       <div className="p-4 space-y-3">
         <div>
-          <h3 className="text-sm font-bold text-white leading-snug line-clamp-2">{product.title}</h3>
+          <h3 className="text-sm font-bold text-white leading-snug line-clamp-2">{dt(product.title)}</h3>
           {product.description && (
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{product.description}</p>
+            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{dt(product.description)}</p>
           )}
         </div>
 

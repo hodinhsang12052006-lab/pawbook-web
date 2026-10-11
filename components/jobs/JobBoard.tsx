@@ -7,7 +7,7 @@ import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
-import { stateName } from "@/lib/stateNames";
+import { stateName, placeLabel } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
@@ -243,14 +243,14 @@ function JobCard({
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1.5 pl-2.5 pr-3 shadow-lg shadow-emerald-500/20">
           <DollarSign className="h-5 w-5 text-emerald-950" />
-          <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl">{job.salaryAmount}</span>
+          <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl">{dt(job.salaryAmount)}</span>
         </span>
-        <span className="text-xs font-semibold text-slate-500">{valueLabel(job.salaryType)}</span>
+        {job.salaryType !== job.salaryAmount && <span className="text-xs font-semibold text-slate-500">{valueLabel(job.salaryType)}</span>}
       </div>
 
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
-        {[job.city, stateName(job.market, job.state)].filter(Boolean).join(", ")}
+        {placeLabel(job.city, job.market, job.state)}
         {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("📍 Gần bạn", "📍 Near you")}</span>}
       </span>
 

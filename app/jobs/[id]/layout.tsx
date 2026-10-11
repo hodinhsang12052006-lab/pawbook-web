@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
-import { stateName } from "@/lib/stateNames";
+import { placeLabel } from "@/lib/stateNames";
 import { firstImage, jobPostingLd } from "@/lib/jobPostingLd";
 import { SITE_URL } from "@/lib/siteUrl";
 import { isDemoEmail } from "@/lib/demo";
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     // Ảnh tiệm nằm ở bảng riêng JobMedia (có thể chưa có bảng ở DB cũ → bỏ qua).
     const media = await prisma.jobMedia.findUnique({ where: { jobId: id }, select: { mediaUrls: true } }).catch(() => null);
     const title = `${j.title} · ${j.salonName} — PawNail Jobs`;
-    const description = `${j.salaryAmount} · ${j.city}, ${stateName(j.market, j.state)}. Gọi hoặc nhắn tin trực tiếp cho tiệm trên PawNail Jobs.`;
+    const description = `${j.salaryAmount} · ${placeLabel(j.city, j.market, j.state)}. Gọi hoặc nhắn tin trực tiếp cho tiệm trên PawNail Jobs.`;
     const image = firstImage(media?.mediaUrls);
     return {
       title,

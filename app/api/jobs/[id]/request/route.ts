@@ -31,7 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const what = kind === "remove" ? "GỠ TIN" : "NHẬN TIN";
     await sendEmail(
       to,
-      `[PawNail] Yêu cầu ${what}: ${job.salonName} (${job.city}, ${job.state})`,
+      `[PawNail] Yêu cầu ${what}: ${job.salonName} (${[job.city, job.state].filter(Boolean).join(", ")})`,
       `<p><b>${what}</b> — ${esc(job.salonName)}, ${esc(job.city)} ${esc(job.state)} · SĐT trên tin: ${esc(job.phone)}</p><p>Người gửi: ${esc(name)} · Liên hệ: ${esc(contact)}${userId ? ` · tài khoản ${esc(userId)}` : ""}</p>${note ? `<p>Ghi chú: ${esc(note)}</p>` : ""}<p><a href="${SITE_URL}/jobs/${job.id}">Xem tin</a> · xử lý ở Admin → Studio</p>`,
       `${what} — ${job.salonName}, ${job.city} ${job.state} · SĐT tin: ${job.phone}\nNgười gửi: ${name} · ${contact}\n${note}\n${SITE_URL}/jobs/${job.id}`,
     ).catch((e) => console.error("job request email:", e));

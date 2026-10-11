@@ -7,6 +7,7 @@ import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
 type Kind = "job" | "tech" | "post" | "survey";
@@ -20,6 +21,7 @@ interface FomoMessage {
   at?: string; // ISO — sự kiện thật thì hiện "x phút trước"
   actor?: { id: string; name: string; avatarUrl: string | null };
   m?: "US" | "AU"; // số khảo sát chỉ của 1 thị trường
+  en?: { title: string; text: string; chip?: string }; // sự kiện thật: bản EN từ máy chủ
 }
 
 // Số liệu tổng hợp THẬT từ 1 đợt khảo sát cộng đồng (lib/nailRadarData.ts).
@@ -93,6 +95,7 @@ export default function FomoToast() {
   const pathname = usePathname();
   const router = useRouter();
   const [current, setCurrent] = useState<FomoMessage | null>(null);
+  const { locale } = useLanguage();
   const [showKey, setShowKey] = useState(0);
   const [paused, setPaused] = useState(false);
   const [dragX, setDragX] = useState(0);
@@ -193,6 +196,7 @@ export default function FomoToast() {
   }, [current, paused, showKey]);
 
   if (!current || quiet) return null;
+  const msg = locale === "en" && current.en ? { ...current, ...current.en } : current;
   const st = KIND_STYLE[current.kind] ?? KIND_STYLE.survey;
   const Icon = st.icon;
 
@@ -253,14 +257,14 @@ export default function FomoToast() {
 
           <div className="min-w-0 flex-1">
             <p className={`text-[10px] font-black uppercase tracking-wider ${st.label}`}>
-              {current.title}
+              {msg.title}
               {current.at && <span className="font-semibold normal-case tracking-normal text-slate-500"> · {timeAgo(current.at)}</span>}
             </p>
-            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-200">{current.text}</p>
-            {(current.chip || current.href) && (
+            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-200">{msg.text}</p>
+            {(msg.chip || current.href) && (
               <div className="mt-2 flex items-center gap-2">
-                {current.chip && (
-                  <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-black text-emerald-300 ring-1 ring-emerald-500/25">{current.chip}</span>
+                {msg.chip && (
+                  <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-black text-emerald-300 ring-1 ring-emerald-500/25">{msg.chip}</span>
                 )}
                 {current.href && (
                   <span className="ml-auto inline-flex items-center gap-0.5 text-[11px] font-bold text-pink-300">

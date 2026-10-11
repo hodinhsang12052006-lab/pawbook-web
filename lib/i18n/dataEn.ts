@@ -276,12 +276,104 @@ const EN: Record<string, string> = {
   "Chị Linda": "Linda",
   "Anh Tony": "Tony",
   "Chị Kim": "Kim",
+
+  // ---- Tin tuyển dụng (tiêu đề mẫu, lương) ----
+  "Thỏa thuận": "Negotiable",
+  "Thoả thuận": "Negotiable",
+  "Tuyển thợ Gel-X kinh nghiệm": "Experienced Gel-X tech wanted",
+  "Cần thợ làm ca tối/cuối tuần": "Evening/weekend tech needed",
+  "Tuyển thợ chuyên Ombre/Aura": "Ombre/Aura specialist wanted",
+  "Cần thợ mới ra trường, được đào tạo thêm": "New grad tech wanted — training provided",
+  "Tuyển thợ kinh nghiệm lâu năm": "Seasoned nail tech wanted",
+  "Cần thợ đa năng gấp": "All-round tech needed urgently",
+  "Cần thợ biết Wax + Nail": "Wax + nail tech needed",
+  "Tuyển thợ Design giỏi": "Skilled nail art tech wanted",
+  "Cần thợ chân tay nước full-time": "Full-time mani-pedi tech needed",
+
+  // ---- Sản phẩm Chợ Supply do PawNail đăng sẵn ----
+  "Combo bao tay + khẩu trang y tế tiệm nail (100 cái)": "Salon gloves + medical masks combo (100 pcs)",
+  "Đạt chuẩn y tế, bảo vệ thợ và khách khi làm bột/mài.": "Medical grade — protects techs and clients during acrylic and filing work.",
+  "Khay đựng đồ nghề nail đa năng 3 tầng": "3-tier multipurpose nail tool tray",
+  "Sắp xếp gọn gàng dụng cụ, khay trượt êm, dễ vệ sinh.": "Keeps tools tidy, smooth sliding trays, easy to clean.",
+  "Bộ cọ vẽ nail 15 cây lông mềm cao cấp": "Premium soft nail art brush set (15 pcs)",
+  "Đủ size từ vẽ chi tiết đến tô nền, cầm cân tay chuyên nghiệp.": "Every size from fine detail to base fill, professionally balanced.",
+  "Bình xịt khử trùng dụng cụ nail 500ml": "Nail tool disinfectant spray 500ml",
+  "Diệt khuẩn nhanh, an toàn cho da tay, mùi nhẹ dễ chịu.": "Fast-acting, gentle on hands, light pleasant scent.",
+  "Miếng dán nail art 3D họa tiết mix": "Mixed 3D nail art stickers",
+  "Hơn 200 họa tiết/hộp, dán nhanh không cần vẽ tay.": "200+ designs per box — quick to apply, no hand painting needed.",
+  "Bộ tay giả luyện tập vẽ nail (silicone)": "Silicone practice hand for nail art",
+  "Chất liệu mềm dẻo như tay thật, có thể tháo rời từng ngón.": "Soft and flexible like a real hand, with detachable fingers.",
+  "Set 6 màu sơn Gel Ombre Aura Trend 2026": "6-color Ombre Aura gel set — 2026 trend",
+  "Lên màu loang tự nhiên, chuẩn hiệu ứng aura đang hot.": "Natural blended color for the trending aura effect.",
+  "Bàn hút bụi nail mini để bàn": "Mini tabletop nail dust collector",
+  "Hút sạch bụi mài, chạy êm, tiết kiệm điện, gọn nhẹ để bàn.": "Clears filing dust, runs quiet, energy-saving, compact.",
+  "Nước rửa cọ vẽ nail chuyên dụng 250ml": "Nail brush cleaner 250ml",
+  "Làm sạch cọ nhanh, giữ lông cọ mềm, không xơ cứng.": "Cleans brushes fast and keeps bristles soft.",
+  "Bộ cây đẩy da + kìm cắt da inox cao cấp": "Premium stainless cuticle pusher + nipper set",
+  "Thép phẫu thuật, bén đều, không gỉ sau nhiều lần tiệt trùng.": "Surgical steel, evenly sharp, rust-free after repeated sterilizing.",
+  "Khăn giấy lau nail + Cotton pad (Combo 500 tờ)": "Lint-free nail wipes + cotton pads (500 combo)",
+  "Không xơ vải, thấm hút tốt, dùng cho tẩy trang/lau cọ.": "Lint-free and absorbent — for removing polish and wiping brushes.",
+  "Sơn Chrome Mirror Powder 6 màu": "Chrome mirror powder, 6 colors",
+  "Hiệu ứng gương bóng loáng, dễ lên màu, ít bụi bay.": "High-shine mirror effect, easy to apply, low dust.",
+  "Máy mài nail mini không dây": "Mini cordless nail drill",
+  "Pin sạc 4 tiếng, êm tay, kèm 6 đầu mài đổi được.": "4-hour rechargeable battery, smooth, with 6 interchangeable bits.",
+  "Bột Dip SNS 10 màu Basic": "Basic dip (SNS) powder, 10 colors",
+  "Màu basic dễ phối, bền màu 3 tuần không sứt mẻ.": "Easy-to-match basics that last 3 weeks without chipping.",
+  "Bộ giũa & cọ vẽ nail chuyên nghiệp (10 món)": "Professional file & brush set (10 pcs)",
+  "Thép không gỉ, cầm chắc tay, dùng bền nhiều năm.": "Stainless steel, firm grip, lasts for years.",
+  "Top Coat + Base Coat Combo": "Top coat + base coat combo",
+  "Bộ đôi bóng gương không ố vàng, khô nhanh trong 60s.": "Mirror-shine duo that won't yellow, dries in 60 seconds.",
+  "Đèn UV/LED sấy gel 54W": "54W UV/LED gel lamp",
+  "Sấy nhanh 30s, cảm ứng tự động, bảo hành 6 tháng.": "30-second cure, auto sensor, 6-month warranty.",
+  "Set 50 đầu charm 3D Nail Art": "50-piece 3D nail art charm set",
+  "Charm kim loại + đá pha lê, đủ hình trái tim/hoa/ngôi sao.": "Metal charms + crystals in hearts, flowers and stars.",
+  "Bột Acrylic cao cấp 500g": "Premium acrylic powder 500g",
+  "Bám dính tốt, không ố vàng, dùng được cho cả đắp form dài.": "Strong adhesion, non-yellowing, works for long sculpted sets.",
+  "Bộ sơn Gel 12 màu Trend 2026": "12-color gel polish set — 2026 trends",
+  "12 màu hot nhất mùa này, chuẩn bảng màu chrome/pastel, hàng chính hãng.": "This season's 12 hottest chrome and pastel shades, authentic brand.",
 };
+
+// Kỹ năng trong tiêu đề tự sinh "Cần thợ Bột/Acrylic/Dip/SNS gấp" — tên kỹ năng
+// có sẵn dấu "/" nên tách theo cụm dài nhất trước.
+const SKILL_EN: [string, string][] = [
+  ["Bột (Acrylic/Ombre)", "Acrylic/Ombre"],
+  ["Bột/Acrylic", "Acrylic"],
+  ["Chân tay nước", "Mani-pedi"],
+  ["Chân Tay Nước", "Mani-pedi"],
+  ["Mi/Lông mày", "Lashes/Brows"],
+  ["Design nghệ thuật", "Nail art"],
+  ["Design", "Nail art"],
+  ["Dip/SNS", "Dip/SNS"],
+  ["Gel-X/Biab", "Gel-X/BIAB"],
+  ["Bột", "Acrylic"],
+  ["Dip", "Dip"],
+  ["Gel-X", "Gel-X"],
+  ["Nail", "Nail"],
+];
+
+function skillsEn(s: string): string | null {
+  const out: string[] = [];
+  let rest = s;
+  while (rest) {
+    const hit = SKILL_EN.find(([vi]) => rest === vi || rest.startsWith(vi + "/"));
+    if (!hit) return null;
+    out.push(hit[1]);
+    rest = rest.slice(hit[0].length + 1);
+  }
+  return out.join("/");
+}
+
+const PER_EN: Record<string, string> = { "giờ": "hr", "tuần": "wk", "tháng": "mo", "ngày": "day", "năm": "yr" };
 
 /** Dịch nội dung do app sinh ra khi đang ở chế độ EN (không có trong bảng → giữ nguyên). */
 export function dt(vi: string | null | undefined): string {
   if (!vi) return vi ?? "";
   if (currentLocale() !== "en") return vi;
+  return dtEn(vi);
+}
+
+/** Bản EN không phụ thuộc ngôn ngữ đang chọn — dùng ở máy chủ khi trả về cả 2 thứ tiếng. */
+export function dtEn(vi: string): string {
   const hit = EN[vi];
   if (hit) return hit;
   // Mẫu có số: "Uy tín 4.8★", "Trung bình 4.8★ từ 12 đánh giá thật", "23 lượt thích bài đăng trong 30 ngày", "Thường trả lời tin nhắn trong ~5 phút"
@@ -293,6 +385,18 @@ export function dt(vi: string | null | undefined): string {
   if (m) return `${m[1]} post likes in 30 days`;
   m = vi.match(/^Thường trả lời tin nhắn (.+)$/);
   if (m) return `Usually replies ${responseEn(m[1])}`;
+  // Tiêu đề tin tự sinh: "Cần thợ Bột/Acrylic/Dip/SNS gấp" → "Urgent: Acrylic/Dip/SNS tech needed"
+  m = vi.match(/^Cần thợ (.+?)( gấp)?$/);
+  if (m) {
+    const sk = skillsEn(m[1]);
+    if (sk) return m[2] ? `Urgent: ${sk} tech needed` : `${sk} tech needed`;
+  }
+  // Lương: "$28-32/giờ" → "$28-32/hr", "$1,300-1,600/tuần" → "$1,300-1,600/wk"
+  m = vi.match(/^(Bao lương )?([$A-Z\d][^/]*)\/\s*(giờ|tuần|tháng|ngày|năm)$/);
+  if (m && /\d/.test(m[2])) return `${m[1] ? "Guaranteed " : ""}${m[2]}/${PER_EN[m[3]]}`;
+  // Ăn chia: "60/40 ăn chia", "Chia 6/4" → "60/40 split"
+  m = vi.match(/^(?:Chia |Ăn chia )?(\d{1,2}\/\d{1,2})(?: ăn chia| chia)?$/i);
+  if (m && vi !== m[1]) return `${m[1]} split`;
   return vi;
 }
 

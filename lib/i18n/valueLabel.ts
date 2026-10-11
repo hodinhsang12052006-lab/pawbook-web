@@ -32,6 +32,8 @@ const EN: Record<string, string> = {
   "% Ăn chia": "Commission split",
   "Theo giờ AUD": "Hourly AUD",
   "Theo tuần AUD": "Weekly AUD",
+  "Thỏa thuận": "Negotiable",
+  "Thoả thuận": "Negotiable",
 };
 
 export function valueLabel(v: string): string {

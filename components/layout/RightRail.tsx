@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Lightbulb, Flame, ShieldCheck, MapPin, ChevronRight } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { getDailyTip } from "@/lib/dailyTips";
-import { stateName } from "@/lib/stateNames";
+import { placeLabel } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt } from "@/lib/i18n/dataEn";
@@ -73,9 +73,9 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
                 <p className="truncate text-[13px] font-semibold text-slate-100 group-hover:text-white">{dt(job.title)}</p>
                 <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
                   <MapPin className="h-3 w-3 flex-shrink-0" />
-                  {job.city}, {stateName(job.market, job.state)}
+                  {placeLabel(job.city, job.market, job.state)}
                 </p>
-                <p className="mt-1 text-[11px] font-bold text-emerald-400">{job.salaryAmount}</p>
+                <p className="mt-1 text-[11px] font-bold text-emerald-400">{dt(job.salaryAmount)}</p>
               </Link>
             ))}
           </div>

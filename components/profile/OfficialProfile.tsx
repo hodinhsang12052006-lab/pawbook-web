@@ -1,5 +1,6 @@
 "use client";
 
+import { dt } from "@/lib/i18n/dataEn";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -282,9 +283,9 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
                 {jobs.map((j) => (
                   <li key={j.id}>
                     <Link href={`/jobs/${j.id}`} className="block rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/5 hover:bg-white/[0.06]">
-                      <p className="truncate text-sm font-bold text-slate-100">{j.title}</p>
-                      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500"><MapPin className="h-3 w-3 flex-shrink-0" />{j.salonName} · {j.city}, {j.state}</p>
-                      {j.salaryAmount && <p className="mt-0.5 text-xs font-bold text-emerald-300">{j.salaryAmount}{j.salaryType ? ` · ${valueLabel(j.salaryType)}` : ""}</p>}
+                      <p className="truncate text-sm font-bold text-slate-100">{dt(j.title)}</p>
+                      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500"><MapPin className="h-3 w-3 flex-shrink-0" />{[j.salonName, j.city, j.state].filter(Boolean).join(" · ")}</p>
+                      {j.salaryAmount && <p className="mt-0.5 text-xs font-bold text-emerald-300">{dt(j.salaryAmount)}{j.salaryType && j.salaryType !== j.salaryAmount ? ` · ${valueLabel(j.salaryType)}` : ""}</p>}
                     </Link>
                   </li>
                 ))}

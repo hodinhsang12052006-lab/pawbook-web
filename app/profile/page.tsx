@@ -19,7 +19,8 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
-import { stateName } from "@/lib/stateNames";
+import { placeLabel } from "@/lib/stateNames";
+import { dt } from "@/lib/i18n/dataEn";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
@@ -584,7 +585,7 @@ export default function ProfilePage() {
                   <div key={job.id} className="flex items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 ring-1 ring-white/5">
                     <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-slate-100 hover:text-white">{job.title}</p>
-                      <p className="truncate text-xs text-slate-500">{job.city}, {stateName(job.market, job.state)} · {job.salaryAmount}</p>
+                      <p className="truncate text-xs text-slate-500">{placeLabel(job.city, job.market, job.state)} · {dt(job.salaryAmount)}</p>
                     </Link>
                     <button type="button" onClick={() => handleDeleteJob(job.id)} aria-label={tr("Xoá tin này", "Delete this job")} className="flex-shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400">
                       <Trash2 className="h-4 w-4" />

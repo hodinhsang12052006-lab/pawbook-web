@@ -188,7 +188,7 @@ export default function JobDetailPage({ params }: PageProps) {
 
   const facts = [
     { icon: MapPin, label: tr("Khu vực", "Location"), value: [job.city, stateName(job.market, job.state)].filter(Boolean).join(", ") },
-    { icon: DollarSign, label: tr("Mức lương", "Pay"), value: job.salaryAmount, accent: true },
+    { icon: DollarSign, label: tr("Mức lương", "Pay"), value: dt(job.salaryAmount), accent: true },
     { icon: Wallet, label: tr("Hình thức", "Pay type"), value: valueLabel(job.salaryType) },
     { icon: Globe2, label: tr("Thị trường", "Market"), value: <span className="inline-flex items-center gap-1.5"><Flag code={job.market} /> {job.market === "US" ? tr("Mỹ", "US") : tr("Úc", "Australia")}</span> },
   ];
@@ -404,10 +404,10 @@ export default function JobDetailPage({ params }: PageProps) {
                 className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 hover:border-pink-500/30 transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">{s.title}</p>
+                  <p className="truncate text-sm font-semibold text-white">{dt(s.title)}</p>
                   <p className="truncate text-xs text-slate-400">{s.salonName} · {s.city}</p>
                 </div>
-                <span className="flex-shrink-0 text-xs font-bold text-emerald-400">{s.salaryAmount}</span>
+                <span className="flex-shrink-0 text-xs font-bold text-emerald-400">{dt(s.salaryAmount)}</span>
                 <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600 group-hover:text-pink-400" />
               </Link>
             ))}

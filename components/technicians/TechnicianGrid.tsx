@@ -6,7 +6,7 @@ import { AlertCircle, Flame, Play, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
-import { stateName } from "@/lib/stateNames";
+import { stateName, placeLabel } from "@/lib/stateNames";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
@@ -203,7 +203,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
         <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
-        <p className="text-[10px] text-slate-300 truncate">{tech.city}, {stateName(tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", " yrs exp")}</p>
+        <p className="text-[10px] text-slate-300 truncate">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", " yrs exp")}</p>
       </div>
 
       <StatusBadge status={tech.status} />

@@ -10,7 +10,7 @@ import {
   Flame, Home, CheckCircle2, XCircle, Sparkles, ShieldAlert,
 } from "lucide-react";
 import { SURVEY, PAIN_TAG_META, getSalesScript } from "@/lib/ownerSurvey";
-import { stateName } from "@/lib/stateNames";
+import { placeLabel } from "@/lib/stateNames";
 import Flag from "@/components/ui/Flag";
 import Navbar from "@/components/layout/Navbar";
 
@@ -273,7 +273,7 @@ function LeadCard({ lead, onOpen }: { lead: OwnerLead; onOpen: () => void }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-extrabold text-white truncate">{latestJob?.salonName || "Chưa đăng tin"}</p>
-          <p className="text-xs text-slate-400 truncate">{lead.name} · {lead.city}, {stateName(lead.market, lead.state)} <Flag code={lead.market} className="h-3 w-4" /></p>
+          <p className="text-xs text-slate-400 truncate">{lead.name} · {placeLabel(lead.city, lead.market, lead.state)} <Flag code={lead.market} className="h-3 w-4" /></p>
         </div>
         <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(); }} aria-label="Xem chi tiết" className="-m-1 flex-shrink-0 rounded-lg p-1 text-slate-500 hover:bg-white/5 hover:text-slate-200">
           <ChevronRight className="h-4 w-4" />
@@ -338,7 +338,7 @@ function TechnicianCard({ tech, onOpenImage }: { tech: TechnicianLead; onOpenIma
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-extrabold text-white truncate">{tech.name}</p>
-          <p className="text-xs text-slate-400 truncate">{tech.city}, {stateName(tech.market, tech.state)} <Flag code={tech.market} className="h-3 w-4" /> · {p?.yearsOfExperience ?? 0} năm KN</p>
+          <p className="text-xs text-slate-400 truncate">{placeLabel(tech.city, tech.market, tech.state)} <Flag code={tech.market} className="h-3 w-4" /> · {p?.yearsOfExperience ?? 0} năm KN</p>
         </div>
         {p?.status === "URGENT" && (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-400 border border-red-500/30 flex-shrink-0">

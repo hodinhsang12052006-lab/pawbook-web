@@ -33,3 +33,8 @@ export function stateName(market: "US" | "AU", code: string | null | undefined):
   const table = market === "AU" ? AU_STATE_NAMES : US_STATE_NAMES;
   return table[code] || code;
 }
+
+/** "Houston, Texas" — bỏ phần trống để không ra ", Georgia" khi tin thiếu thành phố. */
+export function placeLabel(city: string | null | undefined, market: "US" | "AU", code: string | null | undefined): string {
+  return [city?.trim(), stateName(market, code)].filter(Boolean).join(", ");
+}

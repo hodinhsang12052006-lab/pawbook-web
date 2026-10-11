@@ -14,7 +14,7 @@ import Avatar from "@/components/ui/Avatar";
 import OfficialProfile from "@/components/profile/OfficialProfile";
 import ShareCardButton from "@/components/profile/ShareCard";
 import { avatarGradient } from "@/lib/avatar";
-import { stateName } from "@/lib/stateNames";
+import { stateName, placeLabel } from "@/lib/stateNames";
 
 interface PageProps {
   params: Promise<{ uid: string }>;
@@ -576,14 +576,14 @@ export default function PublicProfilePage({ params }: PageProps) {
                       <Briefcase className="h-5 w-5 text-pink-300" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-slate-100 group-hover:text-white">{job.title}</p>
+                      <p className="truncate text-sm font-bold text-slate-100 group-hover:text-white">{dt(job.title)}</p>
                       <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500">
-                        <MapPin className="h-3 w-3" /> {job.city}, {stateName(job.market, job.state)}
+                        <MapPin className="h-3 w-3" /> {placeLabel(job.city, job.market, job.state)}
                       </p>
                     </div>
                     {job.salaryAmount && (
                       <span className="flex-shrink-0 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300 ring-1 ring-emerald-500/20">
-                        {job.salaryAmount}
+                        {dt(job.salaryAmount)}
                       </span>
                     )}
                     <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600 group-hover:text-slate-300" />

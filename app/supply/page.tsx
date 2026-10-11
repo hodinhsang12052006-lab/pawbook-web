@@ -1,5 +1,6 @@
 "use client";
 
+import { dtEn } from "@/lib/i18n/dataEn";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import toast from "react-hot-toast";
@@ -181,7 +182,7 @@ export default function SupplyPage() {
   }, []);
   const fold = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
   const words = fold(q).split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
-  const shown = words.length ? products.filter((p) => { const name = fold(`${p.title} ${p.description ?? ""}`); return words.some((w) => name.includes(w)); }) : products;
+  const shown = words.length ? products.filter((p) => { const name = fold(`${p.title} ${p.description ?? ""} ${dtEn(p.title)} ${p.description ? dtEn(p.description) : ""}`); return words.some((w) => name.includes(w)); }) : products;
 
   const loadingMoreRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);

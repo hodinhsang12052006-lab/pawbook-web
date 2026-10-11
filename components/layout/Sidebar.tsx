@@ -70,7 +70,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               </div>
             ) : !effectiveUser ? (
               <div className="mb-4 rounded-xl bg-gradient-to-br from-pink-600/15 to-fuchsia-600/5 p-3.5 ring-1 ring-pink-500/20">
-                <p className="text-sm font-black text-white">Tham gia PawNail</p>
+                <p className="text-sm font-black text-white">{tr("Tham gia PawNail", "Join PawNail")}</p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{tr("Miễn phí — tìm việc, tìm thợ và nhắn tin trực tiếp.", "Free — find jobs, find techs and message directly.")}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">{tr("Đăng ký", "Sign up")}</Link>

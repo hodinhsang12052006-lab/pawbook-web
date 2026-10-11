@@ -1,0 +1,50 @@
+// Kiểm thử bộ tách tin tuyển thợ (lib/jobIngest/parse.ts) bằng các kiểu bài hay gặp trong nhóm.
+// Bài & số điện thoại dưới đây là HƯ CẤU (đầu số 555-01xx dành cho ví dụ).   npx tsx scripts/qa/job_parse_unit.ts
+import { parseJobPost, findPhone } from "../../lib/jobIngest/parse";
+
+let pass = 0, fail = 0;
+const ok = (id: string, desc: string, cond: boolean, detail = "") => {
+  cond ? pass++ : fail++;
+  console.log(`${cond ? "✅" : "❌"} [${id}] ${desc}${cond ? "" : "  → " + detail}`);
+};
+
+const p1 = parseJobPost(`CẦN GẤP THỢ BỘT, DIP, GEL-X
+Tiệm Lucky Nails & Spa ở Houston TX cần gấp 2 thợ biết làm bột và dip. Bao lương $1,200 - $1,500/tuần, tip cao, bao ăn ở.
+Địa chỉ: 10250 Bellaire Blvd Ste 120, Houston, TX 77072
+Gọi/text: (281) 555-0142 anh Tuấn`);
+ok("P1a", "SĐT Mỹ (281) 555-0142 → +12815550142", p1.phone === "+12815550142" && p1.phoneDisplay === "(281) 555-0142", JSON.stringify(p1.phone));
+ok("P1b", "Tên tiệm 'Lucky Nails & Spa'", p1.salonName === "Lucky Nails & Spa", String(p1.salonName));
+ok("P1c", "Địa chỉ đầy đủ + ZIP + Houston, TX", p1.address === "10250 Bellaire Blvd Ste 120, Houston, TX 77072" && p1.city === "Houston" && p1.state === "TX" && p1.zip === "77072" && p1.market === "US", JSON.stringify({ a: p1.address, c: p1.city, s: p1.state }));
+ok("P1d", "Lương khoảng + loại Bao lương tuần", p1.salaryAmount === "$1,200-1,500/tuần" && p1.salaryType === "Bao lương tuần", `${p1.salaryType} | ${p1.salaryAmount}`);
+ok("P1e", "Kỹ năng Bột + Dip + Gel-X; có chỗ ở, tip cao; tin gấp; là bài tuyển", ["Bột/Acrylic", "Dip/SNS", "Gel-X"].every((x) => p1.skills.includes(x)) && p1.benefits.includes("Có chỗ ở") && p1.benefits.includes("Tip cao") && p1.isUrgent && p1.isHiring, JSON.stringify(p1.skills));
+
+const p2 = parseJobPost(`Cần thợ chân tay nước + wax, tiệm khu Garden Grove. Ăn chia 6/4, khách Mỹ trắng tip tốt. Liên lạc 714.555.0199`);
+ok("P2a", "SĐT dạng chấm 714.555.0199; thành phố → CA", p2.phone === "+17145550199" && p2.city === "Garden Grove" && p2.state === "CA", JSON.stringify(p2));
+ok("P2b", "Ăn chia 6/4 → '% Ăn chia', 'Chia 6/4'", p2.salaryType === "% Ăn chia" && p2.salaryAmount === "Chia 6/4", `${p2.salaryType} | ${p2.salaryAmount}`);
+ok("P2c", "Kỹ năng Chân tay nước + Wax; không ghi gấp", p2.skills.includes("Chân tay nước") && p2.skills.includes("Wax") && !p2.isUrgent);
+
+const p3 = parseJobPost(`Hiring nail tech ASAP at Bella Nail Lounge, Shop 4/112 Station St, Bankstown NSW 2200. $30-35/hr cash. Call 0412 555 019 or +61 2 5550 1234`);
+ok("P3a", "Úc: di động 0412 555 019 → +61412555019", p3.phone === "+61412555019" && p3.phoneDisplay === "0412 555 019" && p3.market === "AU", JSON.stringify(p3.phone));
+ok("P3b", "Úc: địa chỉ shop + Bankstown NSW 2200", p3.state === "NSW" && p3.city === "Bankstown" && p3.zip === "2200" && !!p3.address?.startsWith("Shop 4/112 Station St"), JSON.stringify({ a: p3.address, c: p3.city }));
+ok("P3c", "Úc: $30-35/giờ → 'Theo giờ AUD'; tên Bella Nail Lounge; trả cash", p3.salaryAmount === "$30-35/giờ" && p3.salaryType === "Theo giờ AUD" && p3.salonName === "Bella Nail Lounge" && p3.benefits.includes("Trả cash"), `${p3.salaryType} | ${p3.salaryAmount} | ${p3.salonName}`);
+
+const p4 = parseJobPost(`Mình cần tìm việc làm nail ở Dallas, biết làm bột. Ai cần thợ inbox 469-555-0110`);
+ok("P4", "Bài TÌM VIỆC (không phải tiệm tuyển) → isHiring=false", p4.isHiring === false);
+
+const p5 = parseJobPost(`Cần thợ nail gấp ở Atlanta, Georgia. Lương thỏa thuận. ĐT 4045550123`);
+ok("P5", "10 số liền 4045550123; Atlanta → GA; lương thỏa thuận", p5.phone === "+14045550123" && p5.state === "GA" && p5.city === "Atlanta" && p5.salaryAmount === "Thỏa thuận", JSON.stringify(p5));
+
+const p6 = parseJobPost(`Tiệm ở bang Washington cần thợ biết gel-x, lương $1500+/tuần. Zip 98101. Text 206 555 0177`);
+ok("P6", "SĐT cách trống; 'Washington' → WA; $1,500+/tuần", p6.phone === "+12065550177" && p6.state === "WA" && p6.salaryAmount === "$1,500+/tuần", `${p6.phone} ${p6.state} ${p6.salaryAmount}`);
+
+const p7 = parseJobPost(`Tiệm nail ở Melbourne cần thợ làm bột, có chỗ ở. Lương $1200/tuần. LH 0433 555 888`);
+ok("P7", "Úc: Melbourne → VIC; 0433 555 888; $1,200/tuần → Theo tuần AUD", p7.phone === "+61433555888" && p7.state === "VIC" && p7.salaryType === "Theo tuần AUD" && p7.salaryAmount === "$1,200/tuần", `${p7.phone} ${p7.state} ${p7.salaryType} ${p7.salaryAmount}`);
+
+ok("P8", "Không có SĐT → phone null (không bịa)", parseJobPost("Cần thợ nail ở Texas, inbox mình").phone === null);
+ok("P9", "Số rác (ngày tháng, ZIP, giá tiền) không bị nhận nhầm là SĐT", findPhone("Lương $1,200-1,500, zip 77072, ngày 10/11/2026") === null);
+ok("P10", "Tên tiệm không nhận nhầm câu 'Cần thợ Nail'", parseJobPost("Cần thợ Nail gấp ở Houston, gọi 713-555-0100").salonName === null);
+const pz = parseJobPost("Cần thợ bột gấp. 1234 Main St, Plano, TX 75074. Gọi 972-555-0123");
+ok("P11", "Plano, TX 75074 → TX, Plano; tiêu đề 'Cần thợ Bột/Acrylic gấp'", pz.state === "TX" && pz.city === "Plano" && pz.title === "Cần thợ Bột/Acrylic gấp", `${pz.state} ${pz.city} ${pz.title}`);
+
+console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
+process.exit(fail ? 1 : 0);

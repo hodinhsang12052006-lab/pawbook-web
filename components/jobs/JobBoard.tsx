@@ -35,6 +35,10 @@ export interface JobType {
   saveCount?: number;
   heat?: { viewsToday: number; contacts7d: number; hot: boolean };
   mediaUrls?: string[];
+  // Tin PawNail ĐĂNG HỘ tiệm (tiệm nhờ đăng, nhận qua /api/ingest/jobs): gọi trực tiếp tiệm.
+  source?: string | null;
+  sourcePostedAt?: string | null;
+  address?: string | null;
 }
 
 // Ngưỡng hiển thị (khớp lib/jobStats HEAT_MIN) — số nhỏ quá thì ẩn, tránh
@@ -184,6 +188,11 @@ function JobCard({
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
           <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
           <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
+          {job.source === "ingest" && (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-500/25" title={tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail on the salon's behalf — call the salon directly")}>
+              {tr("Đăng hộ tiệm", "Posted for salon")}
+            </span>
+          )}
         </Link>
         <button
           onClick={onToggleSave}
@@ -282,12 +291,22 @@ function JobCard({
         >
           <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
         </a>
-        <button
-          onClick={() => { trackJobContact(job.id); onMessage(); }}
-          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
-        >
-          <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin", " Message")}
-        </button>
+        {job.source === "ingest" ? (
+          // Tin đăng hộ: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
+          <Link
+            href={`/jobs/${job.id}`}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
+          >
+            <MapPin className="h-5 w-5" />{tr(" Chi tiết", " Details")}
+          </Link>
+        ) : (
+          <button
+            onClick={() => { trackJobContact(job.id); onMessage(); }}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
+          >
+            <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin", " Message")}
+          </button>
+        )}
       </div>
     </div>
   );

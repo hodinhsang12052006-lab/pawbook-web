@@ -22,6 +22,7 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt, responseEn } from "@/lib/i18n/dataEn";
 import { formatPhone, telHref } from "@/lib/phoneFormat";
+import { PostedForSalonBanner, SalonRequestLinks } from "@/components/jobs/PostedForSalon";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -48,6 +49,11 @@ interface JobDetail {
   heat?: { viewsToday: number; contacts7d: number; hot: boolean; firstViewers: number | null };
   mediaUrls?: string[];
   ownerResponse?: { label: string; fast: boolean; samples: number } | null;
+  // Tin PawNail đăng hộ tiệm (tiệm nhờ đăng)
+  source?: string | null;
+  sourcePostedAt?: string | null;
+  address?: string | null;
+  expired?: boolean;
 }
 
 export default function JobDetailPage({ params }: PageProps) {
@@ -186,6 +192,7 @@ export default function JobDetailPage({ params }: PageProps) {
     { icon: Globe2, label: tr("Thị trường", "Market"), value: <span className="inline-flex items-center gap-1.5"><Flag code={job.market} /> {job.market === "US" ? tr("Mỹ", "US") : tr("Úc", "Australia")}</span> },
   ];
   const isOwnJob = user?.id && user.id === job.ownerId;
+  const postedForSalon = job.source === "ingest";
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -329,6 +336,8 @@ export default function JobDetailPage({ params }: PageProps) {
             </section>
           )}
 
+          {postedForSalon && <PostedForSalonBanner postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} />}
+
           {!isOwnJob && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
               <a
@@ -338,7 +347,7 @@ export default function JobDetailPage({ params }: PageProps) {
               >
                 <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
               </a>
-              <button
+              {!postedForSalon && <button
                 onClick={() => {
                   if (user?.id) trackJobContact(job.id);
                   router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login");
@@ -346,16 +355,17 @@ export default function JobDetailPage({ params }: PageProps) {
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 py-3.5 text-base font-bold text-slate-100 transition-all"
               >
                 <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin qua App", " Message in app")}
-              </button>
+              </button>}
             </div>
           )}
+          {postedForSalon && <SalonRequestLinks jobId={job.id} />}
         </article>
 
         {viewer !== null && job.mediaUrls && (
           <MediaLightbox urls={job.mediaUrls} index={viewer} onIndex={setViewer} onClose={() => setViewer(null)} />
         )}
 
-        {job.owner && (
+        {job.owner && !postedForSalon && (
           <Link
             href={`/profile/${job.owner.id}`}
             className="glass-card group flex items-center gap-3 rounded-2xl p-4 hover:border-pink-500/30 transition-colors"

@@ -8,7 +8,7 @@ const R = new Results("Sức khoẻ tăng trưởng");
 const db = createClient({ url: "file:prisma/dev.db" });
 const errors = [];
 let browser;
-const realCount = async (role) => Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "User" WHERE role = ? AND email NOT LIKE '%pawnailjobs.demo'`, args: [role] })).rows[0].n);
+const realCount = async (role) => Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "User" WHERE role = ? AND email NOT LIKE '%pawnailjobs.demo' AND email != 'tonghop@feed.pawnail.invalid'`, args: [role] })).rows[0].n); // bỏ tài khoản hệ thống "Tin tổng hợp"
 
 try {
   const a = await registerUser({ role: "OWNER", name: "QA Admin", salonName: "Admin QA" });

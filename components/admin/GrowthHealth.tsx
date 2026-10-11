@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Database, Download, Gift, Mail, MessageCircle, Palette, Users } from "lucide-react";
+import { Activity, Database, Store, Download, Gift, Mail, MessageCircle, Palette, Users } from "lucide-react";
 
 interface Growth {
   users: { total: number; techs: number; owners: number; new7: number };
@@ -11,6 +11,7 @@ interface Growth {
   install: { installed: number };
   demo: { users: number; jobs: number; posts: number };
   designs: { drafts: number; published: number; noImage: number };
+  ingest?: { active: number; pendingRequests: number };
 }
 
 // "Sức khoẻ tăng trưởng" — số THẬT (đã loại tài khoản mẫu), để biết tính năng nào giữ chân người dùng.
@@ -30,6 +31,7 @@ export default function GrowthHealth() {
     { icon: Gift, label: "Mời bạn bè", value: g.referral.invited, sub: `người tham gia nhờ link mời · +${g.referral.invited7} tuần này` },
     { icon: Download, label: "Đã cài app", value: g.install.installed, sub: "mở PawNail từ màn hình chính" },
     { icon: Palette, label: "Mẫu nail", value: g.designs.published, sub: `đã đăng · ${g.designs.drafts} chờ duyệt · ${g.designs.noImage} chưa có ảnh` },
+    ...(g.ingest ? [{ icon: Store, label: "Tin đăng hộ tiệm", value: g.ingest.active, sub: `đang hiện · ${g.ingest.pendingRequests} yêu cầu nhận/gỡ chờ xử lý` }] : []),
   ];
   return (
     <section className="glass-card space-y-3 rounded-2xl p-4" data-testid="growth-health">

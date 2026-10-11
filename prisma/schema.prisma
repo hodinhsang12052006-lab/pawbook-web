@@ -274,6 +274,16 @@ model Job {
 
   createdAt DateTime @default(now())
 
+  // TIN TỔNG HỢP (nhận từ tool lọc nhóm qua /api/ingest/jobs) — prisma/sql/2026-10-11e_job_ingest.sql
+  source         String? // "ingest" = tin tổng hợp; null = chủ tiệm tự đăng
+  sourceUrl      String? // link bài gốc (chỉ admin thấy)
+  sourceKey      String? // khoá chống trùng (SĐT + nội dung)
+  sourcePostedAt DateTime? // ngày bài gốc đăng
+  expiresAt      DateTime? // tự ẩn sau ngày này
+  address        String?
+  zip            String?
+  requests       JobRequest[]
+
   savedBy SavedJob[]
   daily   JobDaily[]
   media   JobMedia?
@@ -282,6 +292,25 @@ model Job {
   @@index([ownerId])
   @@index([isUrgent, createdAt])
   @@index([market, state])
+  @@index([sourceKey])
+  @@index([expiresAt])
+}
+
+// "Tôi là chủ tiệm này" / "Gỡ tin" trên tin tổng hợp → admin xử lý.
+model JobRequest {
+  id        String    @id @default(cuid())
+  jobId     String
+  job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  kind      String // "claim" | "remove"
+  name      String
+  contact   String
+  note      String?
+  userId    String?
+  createdAt DateTime  @default(now())
+  handledAt DateTime?
+
+  @@index([jobId])
+  @@index([handledAt])
 }
 
 // Ảnh / video tiệm đính kèm tin tuyển — bảng RIÊNG (không thêm cột vào Job)

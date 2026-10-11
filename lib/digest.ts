@@ -4,6 +4,7 @@
 // Mọi số đều là số đếm thật. Có link hủy nhận (ký HMAC) + header List-Unsubscribe.
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { weeklyPay } from "@/lib/trends";
 import { stateName } from "@/lib/stateNames";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -54,7 +55,7 @@ export async function buildDigest(u: DigestUser, now = new Date()): Promise<Dige
   if (u.role === "TECHNICIAN") {
     const [jobs, views, designs] = await Promise.all([
       prisma.job.findMany({
-        where: { market: u.market, ...(u.state ? { state: u.state } : {}), createdAt: { gte: since }, owner: realUserWhere }, // không giới thiệu tin mẫu
+        where: { market: u.market, ...(u.state ? { state: u.state } : {}), createdAt: { gte: since }, owner: realUserWhere, ...activeJobWhere() }, // không giới thiệu tin mẫu / tin hết hạn
         orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
         take: 30,
         select: { id: true, title: true, salonName: true, city: true, salaryAmount: true, salaryType: true },

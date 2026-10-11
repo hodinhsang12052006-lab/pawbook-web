@@ -44,8 +44,12 @@ export async function GET(
     const h = heatMap.get(job.id);
     const fresh = Date.now() - job.createdAt.getTime() < FRESH_MS;
 
+    // Link bài gốc / khoá chống trùng của tin tổng hợp: chỉ admin cần, không trả ra ngoài.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { sourceUrl, sourceKey, ...pub } = job;
     return NextResponse.json({
-      ...job,
+      ...pub,
+      expired: !!job.expiresAt && job.expiresAt.getTime() <= Date.now(),
       saveCount,
       mediaUrls: mediaMap.get(job.id) ?? [],
       heat: {

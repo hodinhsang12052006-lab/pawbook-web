@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     // Tin còn hiệu lực (90 ngày gần nhất) — tin cũ để trong sitemap chỉ làm loãng.
     const jobs = await prisma.job.findMany({
-      where: { createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) }, owner: realUserWhere }, // tin mẫu không khai cho Google
+      where: { createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) }, owner: realUserWhere, source: null }, // tin mẫu / tin tổng hợp không khai cho Google
       select: { id: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 5000,

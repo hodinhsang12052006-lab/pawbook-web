@@ -1,0 +1,12 @@
+ALTER TABLE "Job" ADD COLUMN "source" TEXT;
+ALTER TABLE "Job" ADD COLUMN "sourceUrl" TEXT;
+ALTER TABLE "Job" ADD COLUMN "sourceKey" TEXT;
+ALTER TABLE "Job" ADD COLUMN "sourcePostedAt" DATETIME;
+ALTER TABLE "Job" ADD COLUMN "expiresAt" DATETIME;
+ALTER TABLE "Job" ADD COLUMN "address" TEXT;
+ALTER TABLE "Job" ADD COLUMN "zip" TEXT;
+CREATE INDEX IF NOT EXISTS "Job_sourceKey_idx" ON "Job"("sourceKey");
+CREATE INDEX IF NOT EXISTS "Job_expiresAt_idx" ON "Job"("expiresAt");
+CREATE TABLE IF NOT EXISTS "JobRequest" ("id" TEXT NOT NULL PRIMARY KEY, "jobId" TEXT NOT NULL, "kind" TEXT NOT NULL, "name" TEXT NOT NULL, "contact" TEXT NOT NULL, "note" TEXT, "userId" TEXT, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "handledAt" DATETIME, CONSTRAINT "JobRequest_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job" ("id") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE INDEX IF NOT EXISTS "JobRequest_jobId_idx" ON "JobRequest"("jobId");
+CREATE INDEX IF NOT EXISTS "JobRequest_handledAt_idx" ON "JobRequest"("handledAt");

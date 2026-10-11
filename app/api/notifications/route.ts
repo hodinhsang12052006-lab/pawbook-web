@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 
 // GET /api/notifications — thông báo cho chuông 🔔, tổng hợp từ dữ liệu SẴN
 // CÓ (không cần bảng mới): thích / bình luận bài của mình, đánh giá về mình,
@@ -71,7 +72,7 @@ export async function GET() {
       }),
       wantsJobs
         ? prisma.job.findMany({
-            where: { isUrgent: true, market: meRow!.market, state: meRow!.state!, ownerId: { not: me }, createdAt: { gte: new Date(Date.now() - JOB_WINDOW_MS) } },
+            where: { isUrgent: true, market: meRow!.market, state: meRow!.state!, ownerId: { not: me }, createdAt: { gte: new Date(Date.now() - JOB_WINDOW_MS) }, ...activeJobWhere() },
             orderBy: { createdAt: "desc" },
             take: 10,
             select: { id: true, title: true, city: true, salaryAmount: true, createdAt: true, owner: actorSel },

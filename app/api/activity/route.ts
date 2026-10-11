@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { stateName } from "@/lib/stateNames";
 
 // GET /api/activity — hoạt động THẬT gần đây cho thông báo "đám đông"
@@ -28,7 +29,7 @@ export async function GET() {
     const since = new Date(now - WINDOW_MS);
     const [jobs, techs, posts] = await Promise.all([
       prisma.job.findMany({
-        where: { createdAt: { gte: since } },
+        where: { createdAt: { gte: since }, ...activeJobWhere() },
         orderBy: { createdAt: "desc" },
         take: 6,
         select: {

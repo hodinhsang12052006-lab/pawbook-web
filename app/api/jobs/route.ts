@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { notifyUrgentJob } from "@/lib/jobAlerts";
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get("state");
     const city = searchParams.get("city");
 
-    const where: any = {};
+    const where: any = { ...activeJobWhere() }; // tin tổng hợp quá hạn tự ẩn
     if (market === "US" || market === "AU") where.market = market as Market;
     if (state) where.state = state;
     if (city) where.city = { contains: city };
@@ -35,7 +36,8 @@ export async function GET(req: NextRequest) {
     });
 
     const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
-    const safeJobs = jobs.map(({ _count, ...job }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const safeJobs = jobs.map(({ _count, sourceUrl, sourceKey, ...job }) => {
       const h = heat.get(job.id);
       return {
       ...job,

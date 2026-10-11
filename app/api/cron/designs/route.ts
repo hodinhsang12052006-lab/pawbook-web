@@ -10,7 +10,9 @@ import { publishNewsPosts } from "@/lib/newsPosts";
 // Vercel Cron gọi mỗi sáng (vercel.json) → tạo loạt mẫu nháp, báo admin vào duyệt.
 // Mặc định dùng MÁY TẠO MẪU PAWNAIL (0đ, không phụ thuộc AI ngoài). Muốn dùng
 // Gemini: đặt DESIGNS_SOURCE=gemini (+ GEMINI_API_KEY) trên Vercel.
+// 3 lượt/ngày (vercel.json: 23:00, 05:00, 13:00 UTC) × 4 mẫu → tối đa 12 mẫu mới mỗi ngày.
 const CRON_ENGINE_COUNT = 4;
+const CRON_ENGINE_PER_DAY = 12;
 // Bảo vệ bằng CRON_SECRET: Vercel tự gửi "Authorization: Bearer <CRON_SECRET>".
 // Không có CRON_SECRET → từ chối mọi lời gọi (không ai gọi ngoài được để đốt tiền AI).
 export const maxDuration = 60;
@@ -37,9 +39,9 @@ export async function GET(req: Request) {
         ? await generateOccasion("US", occasion, extra, deadline)
         : extra
         ? await generateEngine("US", extra, deadline)
-        : already >= CRON_ENGINE_COUNT
-        ? { created: [] as string[], skipped: CRON_ENGINE_COUNT, errors: ["Hôm nay đã có mẫu mới."] }
-        : await generateEngine("US", CRON_ENGINE_COUNT - already, deadline);
+        : already >= CRON_ENGINE_PER_DAY
+        ? { created: [] as string[], skipped: CRON_ENGINE_COUNT, errors: ["Hôm nay đã đủ mẫu mới."] }
+        : await generateEngine("US", Math.min(CRON_ENGINE_COUNT, CRON_ENGINE_PER_DAY - already), deadline);
     // NỘI DUNG MỖI NGÀY từ tài khoản chính thức (trước phần vẽ bù ảnh để không bị hết giờ):
     //   1 bài kiến thức (thuế/tip/an toàn/mẹo) · 1 bài ảnh "4 mẫu nail hôm nay" · ≤ 2 tin ngành Mỹ/Úc viết lại
     const fail = (e: unknown) => ({ posted: false, reason: String((e as Error).message).slice(0, 120) });

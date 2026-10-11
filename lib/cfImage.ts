@@ -41,8 +41,9 @@ async function cfImageOnce(prompt: string, timeoutMs: number): Promise<{ mimeTyp
   const res = await fetch(`${apiBase()}/accounts/${encodeURIComponent(process.env.CF_ACCOUNT_ID!)}/ai/run/${MODEL}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.CF_AI_TOKEN}`, "Content-Type": "application/json" },
-    // 6 bước (tối đa 8): chi tiết hoạ tiết rõ hơn 4 bước, vẫn ~77 neuron/ảnh (~130 ảnh/ngày miễn phí).
-    body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 6 }),
+    // 8 bước (tối đa của flux-schnell): da tay, khớp ngón, viền móng ra giống ảnh chụp thật hơn 6 bước;
+    // ~100 neuron/ảnh → 30 ảnh/ngày vẫn trong gói miễn phí 10k neuron.
+    body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 8 }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const j = (await res.json().catch(() => null)) as { success?: boolean; result?: { image?: string }; errors?: { code?: number; message?: string }[] } | null;

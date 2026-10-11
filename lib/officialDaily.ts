@@ -5,13 +5,19 @@ import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
 import { buildBotDrafts, firstLine } from "@/lib/contentBot";
 import { upcomingThemes } from "@/lib/aiDesigns";
+import { GALLERY_PREFIX } from "@/lib/designGallery";
 
 export async function publishDailyOfficialPost(now = new Date()): Promise<{ posted: boolean; title?: string; reason?: string }> {
   if (process.env.OFFICIAL_DAILY_POST === "0") return { posted: false, reason: "đã tắt" };
   const officialId = process.env.OFFICIAL_ACCOUNT_ID;
   if (!officialId) return { posted: false, reason: "chưa có OFFICIAL_ACCOUNT_ID" };
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  if (await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart } } })) return { posted: false, reason: "hôm nay đã có bài" };
+  // Chỉ đếm bài KIẾN THỨC hôm nay — bài ảnh mẫu nail, tin ngành, chủ đề nóng (có thăm dò) là loại khác,
+  // trước đây đếm chung nên hễ sáng có chủ đề nóng là bài kiến thức buổi tối bị bỏ.
+  const knowledgeToday = await prisma.post.count({
+    where: { authorId: officialId, createdAt: { gte: dayStart }, poll: { is: null }, NOT: [{ content: { startsWith: GALLERY_PREFIX } }, { content: { startsWith: "📰" } }] },
+  });
+  if (knowledgeToday) return { posted: false, reason: "hôm nay đã có bài" };
 
   const mine = await prisma.post.findMany({ where: { authorId: officialId }, select: { content: true }, take: 1000 });
   const published = new Set(mine.map((p) => firstLine(p.content)));

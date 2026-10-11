@@ -1,6 +1,7 @@
 // Nội dung mỗi ngày: tin ngành → bài viết (Gemini giả, chống bịa số) + bài "4 mẫu nail hôm nay".
 //   DATABASE_URL="file:./prisma/dev.db" npx tsx scripts/qa/content_daily_unit.mts
 import http from "node:http";
+if (process.env.TURSO_DATABASE_URL) throw new Error("Bài test chỉ chạy trên DB local — bỏ TURSO_DATABASE_URL (env -u TURSO_DATABASE_URL …)");
 import prismaMod from "../../lib/prisma";
 const prisma = ((prismaMod as unknown as { default?: typeof prismaMod }).default ?? prismaMod);
 
@@ -27,6 +28,7 @@ const port = (gem.address() as { port: number }).port;
 Object.assign(process.env, { GEMINI_API_KEY: "test", GEMINI_ALLOW_TEST: "1", GEMINI_TEST_BASE: `http://127.0.0.1:${port}` });
 const { publishNewsPosts } = await import("../../lib/newsPosts");
 const { publishDesignGallery } = await import("../../lib/designGallery");
+const { publishDailyOfficialPost } = await import("../../lib/officialDaily");
 
 const admin = await prisma.user.create({ data: { email: `content.${Date.now()}@qa.test`, name: "PawNail Jobs QA", password: "x", role: "ADMIN" } });
 process.env.OFFICIAL_ACCOUNT_ID = admin.id;
@@ -56,17 +58,28 @@ ok("N6", "Ngày sau: tin đã đăng / đã chặn KHÔNG đăng lại", r3.post
 
 // Bài ảnh mẫu
 const ids: string[] = [];
-for (let i = 0; i < 5; i++) {
-  const d = await prisma.nailDesign.create({ data: { day: "2026-10-12", market: "US", title: `Mẫu thử ${t}-${i}`, titleEn: "x", description: "x", descriptionEn: "x", skills: "Gel-X", difficulty: 1, minutes: 30, priceHint: "$40", materials: "[]", steps: "[]", imageUrl: `https://res.cloudinary.com/demo/image/upload/s${i}.jpg`, status: "published", publishedAt: now, provider: "pawnail", prompt: "qa" } });
+for (let i = 0; i < 13; i++) {
+  const d = await prisma.nailDesign.create({ data: { day: "2026-10-12", market: "US", title: `Mẫu thử ${t}-${i}`, titleEn: "x", description: "x", descriptionEn: "x", skills: "Gel-X", difficulty: i % 2 ? 1 : 2, minutes: 30, priceHint: "$40", materials: "[]", steps: "[]", imageUrl: `https://res.cloudinary.com/demo/image/upload/s${i}.jpg`, status: "published", publishedAt: now, provider: "pawnail", prompt: "qa" } });
   ids.push(d.id);
 }
 const g1 = await publishDesignGallery(now);
 const gp = await prisma.post.findFirst({ where: { authorId: admin.id, content: { startsWith: "✨ 4 mẫu nail" } } });
 ok("G1", "Bài '4 mẫu nail hôm nay': 4 ảnh, có link /designs và nhãn 'Ảnh minh hoạ AI'", g1.posted === true && JSON.parse(gp?.mediaUrls || "[]").length === 4 && /\/designs/.test(gp?.content || "") && /Ảnh minh hoạ AI/.test(gp?.content || ""), JSON.stringify(g1));
 const g2 = await publishDesignGallery(new Date(now.getTime() + 3600e3));
-ok("G2", "Cùng ngày → không đăng bài ảnh thứ 2", g2.posted === false);
+ok("G2", "1 giờ sau → chưa đăng bài ảnh thứ 2 (cách nhau ≥ 4 giờ)", g2.posted === false);
+const g2b = await publishDesignGallery(new Date(now.getTime() + 5 * 3600e3));
+const g2c = await publishDesignGallery(new Date(now.getTime() + 10 * 3600e3));
+const heads = (await prisma.post.findMany({ where: { authorId: admin.id, content: { startsWith: "✨ 4 mẫu nail" } }, orderBy: { createdAt: "asc" }, select: { content: true } })).map((p) => p.content.split("\n")[0]);
+ok("G2b", "Cùng ngày tối đa 3 bài ảnh, mỗi bài 1 góc khác (theo mùa / dễ làm / quanh năm), không lặp mẫu",
+  g2b.posted && g2c.posted && new Set(heads).size === 3 && /dễ làm/.test(heads[1]) && /quanh năm/.test(heads[2]) && new Set([...g1.ids!, ...g2b.ids!, ...g2c.ids!]).size === 12, JSON.stringify(heads));
+const g2d = await publishDesignGallery(new Date(now.getTime() + 10.9 * 3600e3));
+ok("G2c", "Đủ 3 bài trong ngày → không đăng bài thứ 4", g2d.posted === false && g2d.reason === "hôm nay đã đủ", JSON.stringify(g2d));
+const o1 = await publishDailyOfficialPost(new Date(now.getTime() + 2 * 3600e3));
+ok("O1", "Đã có bài ảnh mẫu + tin ngành hôm nay → bài KIẾN THỨC vẫn được đăng", o1.posted === true, JSON.stringify(o1));
+const o2 = await publishDailyOfficialPost(new Date(now.getTime() + 3 * 3600e3));
+ok("O2", "Bài kiến thức thứ 2 cùng ngày → không đăng", o2.posted === false);
 const g3 = await publishDesignGallery(new Date(now.getTime() + 86400e3));
-const used = new Set(g1.ids);
+const used = new Set([...g1.ids!, ...g2b.ids!, ...g2c.ids!]);
 ok("G3", "Ngày sau → không lặp mẫu đã giới thiệu", !g3.posted || !(g3.ids || []).some((x) => used.has(x)), JSON.stringify(g3));
 
 await prisma.post.deleteMany({ where: { authorId: admin.id } });

@@ -83,8 +83,28 @@ const SCHEMA = {
 // Phong cách ảnh chung: cận cảnh, ánh sáng studio, KHÔNG chữ/logo (tránh vi phạm thương hiệu).
 // Khung ảnh: 1 bàn tay đặt tự nhiên (ít lỗi thừa ngón hơn kiểu "giơ tay"), không
 // nhắc giới tính/da (bộ lọc NSFW của Cloudflare hay chặn nhầm), không chữ/logo.
+// Khung ảnh: phải trông như ẢNH CHỤP THẬT ở tiệm (thợ nhìn là biết làm được), không phải ảnh 3D
+// bóng loáng. Bối cảnh + màu da xoay vòng theo mẫu để bảng tin không 10 ảnh giống hệt nhau.
 const IMAGE_STYLE =
-  "Professional nail salon portfolio photo: close-up of one hand resting naturally on a soft cream towel, relaxed fingers with realistic proportions and exactly five fingers, every nail in sharp focus showing the nail art clearly, soft daylight, clean neutral background, photorealistic, square 1:1. No text, no watermark, no logos, no brand names.";
+  "Real candid photo taken with an iPhone in a nail salon, natural light. Close-up of a real woman's hand, relaxed natural pose, " +
+  "realistic skin texture with fine lines, knuckle creases and natural cuticles, correct anatomy with exactly five fingers and one thumb, " +
+  "nails cleanly finished and in sharp focus, shallow depth of field, true-to-life colors. " +
+  "Not a 3D render, not CGI, not an illustration, no plastic or airbrushed skin, no extra fingers. No text, no watermark, no logos, no brand names.";
+const SCENES = [
+  "hand resting on a white salon towel on the manicure table",
+  "hand holding a takeaway iced coffee cup",
+  "hand resting on a light wooden table near a window",
+  "hand against a soft knit beige sweater sleeve",
+  "hand on a pale pink salon cushion, polish bottles blurred in the background",
+  "hand lightly touching a white marble tabletop",
+];
+const SKINS = ["light skin tone", "medium olive skin tone", "warm tan skin tone", "deep brown skin tone", "fair skin tone with pink undertone"];
+/** Khung ảnh theo mẫu: cùng mẫu → cùng bối cảnh (vẽ lại vẫn nhất quán), mẫu khác → khác bối cảnh/màu da. */
+function photoStyle(seed: string): string {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `${IMAGE_STYLE} Scene: ${SCENES[h % SCENES.length]}, ${SKINS[(h >>> 8) % SKINS.length]}. Square 1:1.`;
+}
 
 const cut = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 const clean = (b: Partial<Bi> | undefined, n: number): Bi => ({ vi: cut(b?.vi, n), en: cut(b?.en, n) });
@@ -323,7 +343,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
       const job = queue.shift()!;
       left--;
       try {
-        const imageUrl = await store(await cfImage(`${job.subject}. ${IMAGE_STYLE}`, Math.min(30_000, budget)));
+        const imageUrl = await store(await cfImage(`${job.subject}. ${photoStyle(job.id)}`, Math.min(30_000, budget)));
         await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt}${imgMark()}`.slice(0, 2000) } });
         done++;
       } catch (err) {
@@ -375,7 +395,7 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
   const subject = subjectOf(row.prompt);
   if (!subject) return { error: "Mẫu này không có mô tả ảnh để vẽ." };
   try {
-    const imageUrl = await store(await cfImage(`${subject}. ${IMAGE_STYLE}`));
+    const imageUrl = await store(await cfImage(`${subject}. ${photoStyle(id + n)}`));
     await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]${imgMark()}`.slice(0, 2000) } });
     return { imageUrl, redraws: n + 1 };
   } catch (err) {

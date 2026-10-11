@@ -45,10 +45,10 @@ async function cfImageOnce(prompt: string, timeoutMs: number): Promise<{ mimeTyp
     body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 6 }),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  const j = (await res.json().catch(() => null)) as { success?: boolean; result?: { image?: string }; errors?: { message?: string }[] } | null;
+  const j = (await res.json().catch(() => null)) as { success?: boolean; result?: { image?: string }; errors?: { code?: number; message?: string }[] } | null;
   if (!res.ok || !j?.success || !j.result?.image) {
-    const msg = j?.errors?.[0]?.message || `HTTP ${res.status}`;
-    throw new Error(`Cloudflare AI: ${msg}`.slice(0, 200));
+    const msg = `${j?.errors?.[0]?.message || "no message"} (HTTP ${res.status}${j?.errors?.[0]?.code ? `, code ${j.errors[0].code}` : ""})`;
+    throw new Error(`Cloudflare AI: ${msg}`.slice(0, 260));
   }
   return { mimeType: "image/jpeg", base64: j.result.image };
 }

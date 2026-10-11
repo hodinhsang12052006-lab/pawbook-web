@@ -323,7 +323,8 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
         if (/used up your daily free allocation|daily free allocation/i.test(msg)) {
           left = 0;
           queue.length = 0;
-          errors.push("Đã hết lượt vẽ ảnh miễn phí hôm nay của Cloudflare — các mẫu còn lại sẽ được vẽ bù ở lượt sau (không tốn tiền).");
+          // Kèm nguyên văn lỗi Cloudflare để chẩn đoán (10/2026: báo hết lượt trong khi trang Usage ghi 0/10k).
+          errors.push(`Đã hết lượt vẽ ảnh miễn phí hôm nay của Cloudflare — các mẫu còn lại sẽ được vẽ bù ở lượt sau (không tốn tiền). [${msg.slice(0, 220)}]`);
           return;
         }
         left++;

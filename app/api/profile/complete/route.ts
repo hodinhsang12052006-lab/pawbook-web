@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { needsOnboarding } from "@/lib/oauthUsers";
+import { attachReferral, readRef } from "@/lib/referral";
 
 // POST /api/profile/complete — người đăng nhập bằng Google/Apple lần đầu chọn
 // vai trò + khu vực + SĐT. Chỉ dùng được MỘT lần (khi tài khoản OAuth chưa có
@@ -37,5 +38,7 @@ export async function POST(req: Request) {
       create: { userId, market, state, city, specialties: "", status: "AVAILABLE", portfolioImages: "[]" },
     });
   }
+  // Đăng ký bằng Google/Apple qua link mời bạn bè (cookie pn_ref) → tính cho người mời như đăng ký thường.
+  await attachReferral(userId, name, readRef(req, null));
   return NextResponse.json({ ok: true, role });
 }

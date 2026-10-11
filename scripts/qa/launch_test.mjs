@@ -9,7 +9,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { createClient } from "@libsql/client";
 import { chromium, devices } from "playwright";
-import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_TECH, registerUser, fakeIp } from "./lib.mjs";
+import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_OWNER_2, SEED_TECH, registerUser, fakeIp } from "./lib.mjs";
 
 const R = new Results("Chốt: chủ tiệm, người mới, SMS, Google/Apple, push app");
 const TMP = process.env.TEMP || ".";
@@ -244,6 +244,10 @@ try {
     const email = `qa.oauth.${Date.now()}@gmail.test`;
     nextIdentity = { sub: "g-" + Date.now(), email, name: "QA Google User", email_verified: true };
     const p = await page();
+    // Vào qua link mời bạn bè trước → đăng ký bằng Google vẫn phải tính cho người mời
+    const inviterId = (await db.execute({ sql: `SELECT id FROM "User" WHERE email = ?`, args: [SEED_OWNER_2] })).rows[0]?.id;
+    await p.goto(`${BASE_URL}/?ref=${inviterId}`);
+    await p.waitForTimeout(1000);
     await p.goto(BASE_URL + "/auth/login");
     await p.getByRole("button", { name: /Tiếp tục với Test OAuth/ }).click();
     const toComplete = await p.waitForURL(/\/auth\/complete/, { timeout: 30000 }).then(() => true).catch(() => false);
@@ -266,6 +270,8 @@ try {
     R.check("OA5", "Không dùng lại được API hoàn tất để đổi vai trò (409)", again === 409, again);
     const row = (await db.execute({ sql: `SELECT role, state, city, password FROM "User" WHERE email = ?`, args: [email] })).rows[0];
     R.check("OA6", "Tài khoản OAuth: lưu đúng vai trò/khu vực; KHÔNG đăng nhập được bằng mật khẩu", row.role === "OWNER" && row.state === "TX" && String(row.password).startsWith("oauth:"), JSON.stringify({ role: row.role, state: row.state }));
+    const ref = (await db.execute({ sql: `SELECT referredById FROM "User" WHERE email = ?`, args: [email] })).rows[0]?.referredById;
+    R.check("OA6b", "Đăng ký bằng Google qua link mời bạn bè → tính cho người mời", !!inviterId && ref === inviterId, String(ref));
     const pw = await new Client().login(email, "oauth:anything");
     R.check("OA7", "Thử đăng nhập email+mật khẩu vào tài khoản OAuth → thất bại", !pw.ok);
 

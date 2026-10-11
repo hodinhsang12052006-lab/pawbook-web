@@ -46,7 +46,7 @@ try {
   const card = p.getByTestId("growth-health");
   await card.waitFor({ timeout: 20000 });
   const txt = await card.innerText();
-  R.check("G6", "Studio có thẻ Sức khoẻ tăng trưởng: người dùng thật, email, mời bạn, cài app, cảnh báo dữ liệu mẫu", /Người dùng thật/.test(txt) && /Email tuần/.test(txt) && /Mời bạn bè/.test(txt) && /Đã cài app/.test(txt) && /dữ liệu mẫu/.test(txt), txt.slice(0, 200));
+  R.check("G6", "Studio có thẻ Sức khoẻ tăng trưởng: người dùng thật, email, mời bạn, cài app, dữ liệu nhập sẵn", /Người dùng thật/.test(txt) && /Email tuần/.test(txt) && /Mời bạn bè/.test(txt) && /Đã cài app/.test(txt) && /Dữ liệu nhập sẵn/.test(txt), txt.slice(0, 200));
   await card.screenshot({ path: `${process.env.TEMP || "."}/growth_card.png` }).catch(() => {});
 
   // Thợ mở app ở chế độ đã cài (standalone) → tự báo

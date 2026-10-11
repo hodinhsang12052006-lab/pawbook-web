@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, AlertTriangle, Download, Gift, Mail, MessageCircle, Palette, Users } from "lucide-react";
+import { Activity, Database, Download, Gift, Mail, MessageCircle, Palette, Users } from "lucide-react";
 
 interface Growth {
   users: { total: number; techs: number; owners: number; new7: number };
@@ -44,9 +44,9 @@ export default function GrowthHealth() {
         ))}
       </div>
       {g.demo.users > 0 && (
-        <p className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200 ring-1 ring-amber-500/25">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          Đang có dữ liệu mẫu hiển thị công khai: {g.demo.users} tài khoản, {g.demo.jobs} tin tuyển, {g.demo.posts} bài đăng (email đuôi pawnailjobs.demo). Đã loại khỏi email & Google; khách xem web vẫn thấy như thật.
+        <p className="flex items-start gap-2 rounded-xl bg-white/[0.03] p-3 text-xs leading-relaxed text-slate-400 ring-1 ring-white/10">
+          <Database className="mt-0.5 h-4 w-4 shrink-0" />
+          Dữ liệu nhập sẵn (email đuôi pawnailjobs.demo, không tính vào số người dùng ở trên): {g.demo.users} tài khoản, {g.demo.jobs} tin tuyển, {g.demo.posts} bài đăng.
         </p>
       )}
       {g.designs.published === 0 && g.designs.drafts > 0 && (

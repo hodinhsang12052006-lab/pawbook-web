@@ -30,7 +30,27 @@ interface SocialFeedProps {
 // Chen 1 thẻ sản phẩm supply sau mỗi N bài đăng — đủ thưa để không thành
 // spam quảng cáo giữa dòng nội dung xã hội, đủ dày để kho hàng thật sự có
 // mặt trong tầm mắt khi lướt.
-const SUPPLY_EVERY_N_POSTS = 4;
+const SUPPLY_EVERY_N_POSTS = 8;
+
+// Bài của tài khoản chính thức không đứng liền nhau: trước đây 10 bài kiến thức
+// đăng cùng lúc thành 1 bức tường "PawNail Jobs" dài cả màn hình. Giữ thứ tự mới
+// nhất cho bài cộng đồng, bài chính thức xen vào sau mỗi bài cộng đồng; còn dư
+// thì chờ trang sau (hết trang mới xếp nốt ở cuối).
+function spreadOfficial(posts: FeedPost[], hasMore: boolean): FeedPost[] {
+  const out: FeedPost[] = [];
+  const waiting: FeedPost[] = [];
+  let lastOfficial = false;
+  for (const p of posts) {
+    if (p.author.role === "ADMIN") {
+      if (!lastOfficial && !waiting.length) { out.push(p); lastOfficial = true; } else waiting.push(p);
+      continue;
+    }
+    out.push(p);
+    lastOfficial = false;
+    if (waiting.length) { out.push(waiting.shift()!); lastOfficial = true; }
+  }
+  return hasMore ? out : out.concat(waiting);
+}
 
 function FeedSkeleton() {
   useTr(); // render lại khi đổi VI/EN
@@ -170,13 +190,20 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   };
   const suggestedTags = Array.from(new Set([studio?.theme?.hashtag, ...(studio?.trendingTags ?? [])].filter(Boolean) as string[])).slice(0, 5);
 
+  const ordered = useMemo(() => spreadOfficial(posts, !!nextCursor), [posts, nextCursor]);
+  // Trang đầu toàn bài chính thức → chỉ hiện được 1 bài (số còn lại chờ xen kẽ):
+  // tự tải thêm trang để có bài cộng đồng chen vào, khỏi bắt người dùng cuộn.
+  useEffect(() => {
+    if (!loading && nextCursor && ordered.length < 6) loadMore();
+  }, [loading, nextCursor, ordered.length, loadMore]);
+
   // Trộn bài đăng + thẻ sản phẩm thành 1 danh sách render duy nhất.
   const feedItems = useMemo(() => {
     const items: Array<
       { type: "post"; post: FeedPost } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" } | { type: "pulse" } | { type: "radar"; post: RadarPost }
     > = [];
     let supplyIdx = 0;
-    posts.forEach((post, idx) => {
+    ordered.forEach((post, idx) => {
       items.push({ type: "post", post });
       if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
       if (idx + 1 === RECAP_AFTER_POST && studio?.recap) items.push({ type: "recap" });
@@ -189,7 +216,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       }
     });
     return items;
-  }, [posts, supplyProducts, studio, radarPosts, user]);
+  }, [ordered, supplyProducts, studio, radarPosts, user]);
 
   return (
     <div className="space-y-4">
@@ -232,7 +259,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
                 onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
               />
             ) : item.type === "supply" ? (
-              <SupplyProductCard key={`supply-slot-${idx}`} product={item.product} />
+              <SupplyProductCard key={`supply-slot-${idx}`} product={item.product} compact />
             ) : item.type === "tip" ? (
               // Màn hình rộng (xl) đã có "Mẹo hôm nay" ở cột phải — tránh 2 mẹo khác nhau cùng lúc.
               <div key="studio-tip" className="xl:hidden"><TipCard tip={studio!.tip} /></div>

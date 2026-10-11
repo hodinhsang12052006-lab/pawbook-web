@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
+import ArticleText, { parseArticle } from "./ArticleText";
 import PollCard, { type PollData } from "@/components/feed/PollCard";
 import { trackPostView } from "@/lib/viewTracker";
 import Avatar from "@/components/ui/Avatar";
@@ -107,6 +108,8 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   const [commentCount, setCommentCount] = useState(post.commentCount);
 
   const isOwnPost = !!post.author.id && currentUser?.id === post.author.id;
+  // Bài chính thức chỉ có chữ → trình bày dạng bài báo nhỏ (xem ArticleText).
+  const article = useMemo(() => (post.author.role === "ADMIN" && !post.mediaUrls.length ? parseArticle(post.content) : null), [post.author.role, post.mediaUrls.length, post.content]);
   const anon = !!post.anonymous;
   const canDelete = isOwnPost || currentUser?.role === "ADMIN";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -338,7 +341,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       </div>
 
       {/* NỘI DUNG */}
-      {post.content && <PostText content={post.content} />}
+      {post.content && (article ? <ArticleText article={article} /> : <PostText content={post.content} />)}
       {post.poll && <PollCard postId={post.id} poll={post.poll} />}
 
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,

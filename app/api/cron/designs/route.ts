@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
-import { backfillImages, dailyLimit, generateDesigns, generateEngine, generateOccasion } from "@/lib/aiDesigns";
+import { backfillImages, dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion } from "@/lib/aiDesigns";
 import { sendPush } from "@/lib/push";
+import { publishDailyOfficialPost } from "@/lib/officialDaily";
 
 // Vercel Cron gọi mỗi sáng (vercel.json) → tạo loạt mẫu nháp, báo admin vào duyệt.
 // Mặc định dùng MÁY TẠO MẪU PAWNAIL (0đ, không phụ thuộc AI ngoài). Muốn dùng
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
     const occasion = sp.get("occasion");
     const extra = Math.min(occasion ? 150 : 8, Math.max(0, Math.round(Number(sp.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
-    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number } = useGemini
+    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; official?: unknown } = useGemini
       ? await generateDesigns("US", Math.ceil(dailyLimit() / 2))
       : occasion && extra
         ? await generateOccasion("US", occasion, extra, deadline)
@@ -43,7 +44,10 @@ export async function GET(req: Request) {
       r.backfilled = b.drawn;
       r.errors.push(...b.errors);
     }
-    if (r.created.length) {
+    // Mỗi ngày 1 bài mới từ tài khoản chính thức (lib/officialDaily.ts)
+    r.official = await publishDailyOfficialPost().catch((e) => ({ posted: false, reason: String((e as Error).message).slice(0, 120) }));
+    // Báo admin chỉ khi đang BẬT duyệt (mặc định mẫu lên thẳng, không cần báo)
+    if (r.created.length && (await designsNeedReview())) {
       const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
       await sendPush(admins.map((a) => a.id), {
         title: useGemini ? "🎨 Mẫu nail AI mới chờ duyệt" : "🎨 Mẫu nail mới chờ duyệt",

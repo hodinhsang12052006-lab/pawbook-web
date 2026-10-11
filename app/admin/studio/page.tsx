@@ -14,6 +14,7 @@ import type { Draft } from "@/lib/contentDrafts";
 import type { NewsItem } from "@/lib/industryFeed";
 import AdminDesigns from "@/components/designs/AdminDesigns";
 import ContentBot from "@/components/admin/ContentBot";
+import GrowthHealth from "@/components/admin/GrowthHealth";
 
 interface StudioPost { id: string; kind: string; title: string; body: string; href: string | null; market: string | null; createdAt: string }
 interface Payload { signals: Signals; news: NewsItem[]; drafts: Draft[]; posts: StudioPost[] }
@@ -134,6 +135,7 @@ export default function StudioRoomPage() {
           </div>
         </div>
 
+        <GrowthHealth />
         <ContentBot />
         <AdminDesigns />
 

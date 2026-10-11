@@ -66,6 +66,15 @@ export default function InstallPrompt() {
     return () => { clearTimeout(t0); clearTimeout(t1); window.removeEventListener("pn-bip", onBIP); window.removeEventListener("appinstalled", onInstalled); };
   }, []);
 
+  // Đo hiệu quả: mở PawNail từ màn hình chính (đã cài) khi đã đăng nhập → báo 1 lần cho admin đếm.
+  useEffect(() => {
+    if (!loggedIn) return;
+    const standalone = window.matchMedia?.("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (!standalone || Capacitor.isNativePlatform()) return;
+    try { if (localStorage.getItem("pn_install_reported")) return; } catch {}
+    fetch("/api/me/installed", { method: "POST" }).then((r) => { if (r.ok) try { localStorage.setItem("pn_install_reported", "1"); } catch {} }).catch(() => {});
+  }, [loggedIn]);
+
   const quiet = QUIET.some((r) => r.test(pathname || ""));
   useEffect(() => {
     if (!mode || quiet || open) return;

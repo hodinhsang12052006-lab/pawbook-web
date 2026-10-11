@@ -1,0 +1,4 @@
+ALTER TABLE "Job" ADD COLUMN "repostCount" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "Job" ADD COLUMN "lastRepostedAt" DATETIME;
+ALTER TABLE "Job" ADD COLUMN "sourceFbHash" TEXT;
+CREATE INDEX IF NOT EXISTS "Job_sourceFbHash_idx" ON "Job"("sourceFbHash");

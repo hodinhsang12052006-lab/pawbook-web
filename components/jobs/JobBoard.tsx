@@ -333,7 +333,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
         setError(null);
         const params = new URLSearchParams({ market });
         if (state) params.set("state", state);
-        if (city) params.set("city", city);
+        if (city) params.set("q", city); // ô tìm: thành phố, tên tiệm, kỹ năng…
         const res = await fetch(`/api/jobs?${params.toString()}`);
         if (!res.ok) throw new Error(tr("Không thể tải danh sách tin tuyển dụng.", "Couldn't load jobs."));
         const data = await res.json();

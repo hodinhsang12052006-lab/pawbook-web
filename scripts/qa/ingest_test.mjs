@@ -33,7 +33,7 @@ try {
 
   const r2 = await ingest([{ text: POST1 + "\n(đăng lại)", sourceUrl: "https://facebook.com/groups/x/posts/2" }]);
   const cnt = Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "Job" WHERE phone = ? AND source = 'ingest'`, args: [PH1] })).rows[0].n);
-  R.check("I4", "Tiệm đăng lại (cùng SĐT) → làm mới tin cũ, không thành 2 tin", r2.data.results?.[0]?.status === "updated" && cnt === 1, JSON.stringify(r2.data.results));
+  R.check("I4", "Tiệm đăng lại (cùng SĐT, bài mới) → đẩy tin cũ lên (bumped, repost 2), không thành 2 tin", r2.data.results?.[0]?.status === "bumped" && r2.data.results?.[0]?.repostCount === 2 && cnt === 1, JSON.stringify(r2.data.results));
 
   const list = await fetch(`${BASE_URL}/api/jobs?market=US&state=TX`).then((r) => r.json());
   const inList = list.find((j) => j.id === jobId);
@@ -99,15 +99,19 @@ try {
   const ap1 = await ap.newPage();
   ap1.on("pageerror", (e) => errors.push(e.message.slice(0, 140)));
   await ap1.goto(BASE_URL + "/admin/studio");
-  await ap1.getByTestId("ingest-text").fill(`Hiring nail tech at Rose Nail Lounge, 120 King St, Newtown NSW 2042. $32-36/hr. Call 0412 555 0${n4(5).slice(-2)}`);
+  await ap1.getByTestId("ingest-text").fill(`Hiring nail tech at Rose ${tag} Nail Lounge, 120 King St, Newtown NSW 2042. $32-36/hr. Call 0412 555 0${n4(5).slice(-2)}`);
   await ap1.getByRole("button", { name: "Xem trước" }).click();
   const prev = ap1.getByTestId("ingest-preview");
   await prev.waitFor({ timeout: 10000 });
   const ptxt = await prev.innerText();
-  R.check("I13", "Admin dán bài → xem trước tách đúng (Úc: tên tiệm, NSW, giờ AUD) trước khi đăng", /Rose Nail Lounge/.test(ptxt) && /NSW/.test(ptxt) && /Theo giờ AUD/.test(ptxt), ptxt.slice(0, 200));
+  R.check("I13", "Admin dán bài → xem trước tách đúng (Úc: tên tiệm, NSW, giờ AUD) trước khi đăng", new RegExp(`Rose ${tag} Nail Lounge`).test(ptxt) && /NSW/.test(ptxt) && /Theo giờ AUD/.test(ptxt), ptxt.slice(0, 200));
   await ap1.getByRole("button", { name: "Đăng hộ" }).click();
   await ap1.getByText("Đã đăng hộ tiệm").waitFor({ timeout: 10000 }).catch(() => {});
-  R.check("I14", "Bấm Đăng hộ → tin lên sàn", Number((await db.execute(`SELECT COUNT(*) n FROM "Job" WHERE salonName = 'Rose Nail Lounge' AND source = 'ingest'`)).rows[0].n) === 1);
+  R.check("I14", "Bấm Đăng hộ → tin lên sàn", Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "Job" WHERE salonName = ? AND source = 'ingest'`, args: [`Rose ${tag} Nail Lounge`] })).rows[0].n) === 1);
+  // Tài khoản hệ thống "Tin tổng hợp" bị xoá giữa chừng → gửi tin tiếp vẫn chạy (không lỗi khoá ngoại)
+  await db.execute(`DELETE FROM "User" WHERE email = 'tonghop@feed.pawnail.invalid'`);
+  const after = await ingest([{ text: `Cần thợ dip gấp ở Austin TX, gọi (512) 555-${n4(6)}` }]);
+  R.check("I16", "Tài khoản hệ thống bị xoá → tin mới vẫn tạo được (tự tạo lại tài khoản)", after.data.results?.[0]?.status === "created", JSON.stringify(after.data.results));
   R.check("I15", "Không lỗi JS", errors.length === 0, errors.join(" | "));
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);

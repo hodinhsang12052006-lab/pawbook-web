@@ -54,6 +54,7 @@ interface JobDetail {
   sourcePostedAt?: string | null;
   address?: string | null;
   expired?: boolean;
+  repostCount?: number;
 }
 
 export default function JobDetailPage({ params }: PageProps) {
@@ -336,7 +337,7 @@ export default function JobDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {postedForSalon && <PostedForSalonBanner postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} />}
+          {postedForSalon && <PostedForSalonBanner postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} />}
 
           {!isOwnJob && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">

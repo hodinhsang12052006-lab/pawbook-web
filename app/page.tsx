@@ -316,7 +316,7 @@ export default function HomePage() {
                     autoFocus={showCitySearch && !city}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder={tr("Thành phố… (VD: Houston, Sydney)", "City… (e.g. Houston, Sydney)")}
+                    placeholder={tab === "jobs" ? tr("Tìm thành phố, tên tiệm, kỹ năng…", "Search city, salon, skill…") : tr("Thành phố… (VD: Houston, Sydney)", "City… (e.g. Houston, Sydney)")}
                     className="w-full rounded-xl border border-slate-800 bg-slate-950/60 py-2 pl-9 pr-9 text-sm text-slate-100 placeholder-slate-500 focus:border-pink-500 focus:outline-none"
                   />
                   {city && (

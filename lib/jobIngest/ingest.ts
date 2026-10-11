@@ -24,19 +24,21 @@ export interface IngestInput {
   postedAt?: string | number; // ISO / ms — ngày bài gốc đăng
   // Trường tool đã tách sẵn (nếu có) — ưu tiên hơn kết quả tự tách
   phone?: string; salonName?: string; address?: string; city?: string; state?: string; zip?: string; market?: "US" | "AU"; salary?: string;
+  title?: string; skills?: string[];
+  fbUrl?: string; // Facebook người đăng — CHỈ dùng để nhận ra cùng 1 tiệm đăng lại (lưu dạng mã băm)
 }
-export type IngestResult = { status: "created" | "updated" | "skipped"; reason?: string; jobId?: string };
+// created = tin mới · bumped = tiệm ĐĂNG LẠI (đẩy lên đầu, repostCount+1) · updated = tool gửi lại đúng bài cũ
+export type IngestResult = { status: "created" | "bumped" | "updated" | "skipped"; reason?: string; jobId?: string; repostCount?: number };
 
-let ownerCache: string | null = null;
+// Không nhớ id trong bộ nhớ máy chủ: tài khoản hệ thống có thể bị xoá / DB đổi → upsert mỗi lần tạo tin
+// (chỉ khi TẠO tin mới, rẻ) thay vì giữ id cũ gây lỗi khoá ngoại tới khi máy chủ khởi động lại.
 async function ingestOwnerId() {
-  if (ownerCache) return ownerCache;
   const u = await prisma.user.upsert({
     where: { email: INGEST_OWNER_EMAIL },
     update: {},
     create: { email: INGEST_OWNER_EMAIL, name: "PawNail · Tin tổng hợp", role: "OWNER", password: OAUTH_PASSWORD_PREFIX + crypto.randomBytes(24).toString("hex"), market: "US", state: "CA", city: "—", emailDigest: false },
     select: { id: true },
   });
-  ownerCache = u.id;
   return u.id;
 }
 
@@ -48,6 +50,21 @@ export async function blockPhone(e164: string) {
   const s = await blockedPhones();
   s.add(e164);
   await setSetting(blockedKey, JSON.stringify([...s].slice(-20000)));
+}
+
+/** Link Facebook người đăng → mã băm ổn định (bỏ http/www/m., dấu / cuối, tham số rác; giữ ?id= của profile.php). */
+export function fbKey(url?: string | null): string | null {
+  if (!url || typeof url !== "string") return null;
+  try {
+    const u = new URL(url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`);
+    if (!/(^|\.)facebook\.com$|(^|\.)fb\.com$/i.test(u.hostname)) return null;
+    const path = u.pathname.replace(/\/+$/, "").toLowerCase();
+    const id = path === "/profile.php" ? u.searchParams.get("id") : null;
+    const key = id ? `id:${id}` : path ? `p:${path}` : null;
+    return key ? crypto.createHash("sha256").update(key).digest("hex") : null;
+  } catch {
+    return null;
+  }
 }
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim().slice(0, 300);
@@ -76,15 +93,19 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
   if (expiresAt.getTime() <= Date.now()) return { status: "skipped", reason: `bài cũ hơn ${ingestTtlDays()} ngày` };
 
   const sourceKey = crypto.createHash("sha1").update(`${phone}|${norm(text || `${salonName}|${city}`)}`).digest("hex");
+  const fbHash = fbKey(input.fbUrl);
   const salary = clean(input.salary, 40);
+  // Kỹ năng tool đã gắn ("Thợ Bột / Acrylic", "Chân Tay Nước"…) → chuẩn PawNail, gộp với kỹ năng tự tách
+  const toolSkills = Array.isArray(input.skills) ? parseJobPost(`cần thợ ${input.skills.join(", ")}`).skills : [];
+  const skills = [...new Set([...toolSkills, ...p.skills])];
   const data = {
-    title: p.title,
+    title: clean(input.title, 80) || p.title,
     salonName: salonName || `Tiệm nail ${city || state}`,
     description: text || [salonName, input.address, salary].filter(Boolean).join(" · "),
     market, state, city,
     salaryType: p.salaryType,
     salaryAmount: salary || p.salaryAmount,
-    skills: p.skills.join(","),
+    skills: skills.join(","),
     benefits: p.benefits.join(","),
     phone: phoneDisplay,
     isUrgent: p.isUrgent,
@@ -97,19 +118,34 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
     zip: clean(input.zip, 10) || p.zip,
   };
 
-  // Trùng: cùng khoá, hoặc cùng SĐT (đã chuẩn hoá) còn hạn → làm mới tin cũ
+  // Tiệm đã TỰ đăng tin trên PawNail (đã nhận tin / có tài khoản) → không thêm bản đăng hộ trùng
+  const own = await prisma.job.findFirst({ where: { source: null, phone: phoneDisplay, ...activeJobWhere() }, select: { id: true } });
+  if (own) return { status: "skipped", reason: "tiệm đã tự đăng tin trên PawNail", jobId: own.id };
+
+  // Cùng tiệm (cùng SĐT, hoặc cùng Facebook người đăng) đã có tin → KHÔNG tạo bản mới:
+  //   - tool gửi lại ĐÚNG bài cũ (cùng link bài / cùng nội dung) → chỉ cập nhật
+  //   - tiệm ĐĂNG LẠI bài mới → đẩy lên đầu, repostCount + 1, lastRepostedAt = bây giờ, nội dung mới nhất
   const same = await prisma.job.findFirst({
-    where: { source: INGEST_SOURCE, OR: [{ sourceKey }, { phone: phoneDisplay, expiresAt: { gt: new Date() } }] },
+    where: { source: INGEST_SOURCE, OR: [{ sourceKey }, { phone: phoneDisplay }, ...(fbHash ? [{ sourceFbHash: fbHash }] : [])] },
     orderBy: { createdAt: "desc" },
-    select: { id: true, sourcePostedAt: true },
+    select: { id: true, sourceUrl: true, sourceKey: true, repostCount: true },
   });
   if (same) {
-    const newer = !same.sourcePostedAt || posted >= same.sourcePostedAt;
-    await prisma.job.update({ where: { id: same.id }, data: newer ? { ...data, createdAt: posted } : { expiresAt: data.expiresAt } });
-    return { status: "updated", jobId: same.id };
+    const samePost = data.sourceUrl ? same.sourceUrl === data.sourceUrl : same.sourceKey === sourceKey;
+    if (samePost) {
+      await prisma.job.update({ where: { id: same.id }, data: { ...data, ...(fbHash ? { sourceFbHash: fbHash } : {}) } });
+      return { status: "updated", jobId: same.id, repostCount: same.repostCount };
+    }
+    const now = new Date();
+    const j = await prisma.job.update({
+      where: { id: same.id },
+      data: { ...data, ...(fbHash ? { sourceFbHash: fbHash } : {}), createdAt: posted, lastRepostedAt: now, repostCount: { increment: 1 } },
+      select: { repostCount: true },
+    });
+    return { status: "bumped", jobId: same.id, repostCount: j.repostCount };
   }
-  const job = await prisma.job.create({ data: { ...data, ownerId: await ingestOwnerId(), createdAt: posted }, select: { id: true } });
-  return { status: "created", jobId: job.id };
+  const job = await prisma.job.create({ data: { ...data, sourceFbHash: fbHash, repostCount: 1, ownerId: await ingestOwnerId(), createdAt: posted }, select: { id: true } });
+  return { status: "created", jobId: job.id, repostCount: 1 };
 }
 
 export async function ingestBatch(items: IngestInput[]) {
@@ -120,5 +156,5 @@ export async function ingestBatch(items: IngestInput[]) {
     catch (e) { results.push({ i, status: "skipped", reason: `lỗi: ${String((e as Error).message).slice(0, 80)}` }); }
   }
   const count = (s: string) => results.filter((r) => r.status === s).length;
-  return { created: count("created"), updated: count("updated"), skipped: count("skipped"), results };
+  return { created: count("created"), bumped: count("bumped"), updated: count("updated"), skipped: count("skipped"), results };
 }

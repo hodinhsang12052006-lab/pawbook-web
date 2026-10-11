@@ -282,6 +282,9 @@ model Job {
   expiresAt      DateTime? // tự ẩn sau ngày này
   address        String?
   zip            String?
+  repostCount    Int       @default(1) // số lần tiệm đăng lại (tool gửi bài mới của cùng tiệm)
+  lastRepostedAt DateTime?
+  sourceFbHash   String? // mã băm link Facebook người đăng — chỉ để chống trùng, không hiển thị
   requests       JobRequest[]
 
   savedBy SavedJob[]
@@ -293,6 +296,7 @@ model Job {
   @@index([isUrgent, createdAt])
   @@index([market, state])
   @@index([sourceKey])
+  @@index([sourceFbHash])
   @@index([expiresAt])
 }
 

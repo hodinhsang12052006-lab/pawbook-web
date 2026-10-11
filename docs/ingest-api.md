@@ -39,6 +39,39 @@ for i in range(0, len(posts), 200):
             print("  bỏ qua bài", i + x["i"], "→", x["reason"])
 ```
 
+## Định dạng của tool: `POST /api/jobs/sync`
+
+Cùng khoá (header `Authorization: Bearer <KEY>` **hoặc** `x-api-key: <KEY>`). Gửi 1 bài (object), mảng, hoặc `{ "posts": [...] }` (≤ 200).
+
+```python
+requests.post("https://www.bitpawos.com/api/jobs/sync", headers={"x-api-key": KEY}, timeout=60, json={
+    "title": "Cần tuyển Thợ Bột / Acrylic, Chân Tay Nước - Houston, TX 77083",
+    "salon_name": "Diamond Nails",
+    "phone": "(832) 555-0199",
+    "facebook_url": "https://www.facebook.com/profile.php?id=...",   # chỉ để nhận ra cùng tiệm — lưu dạng mã băm
+    "location": "Houston, TX 77083",
+    "state": "TX",
+    "salary": "$1,500/tuần",
+    "skills": ["Thợ Bột / Acrylic", "Chân Tay Nước"],
+    "content": "Toàn bộ nội dung bài đăng...",
+    "post_url": "https://facebook.com/groups/.../posts/...",
+    "country": "Mỹ (USA)",          # hoặc "Úc"
+    # "posted_at": "2026-10-11T08:30:00Z",   # (không bắt buộc) ngày bài gốc
+})
+```
+
+Trả về (1 bài): `{"status": "created|bumped|updated|skipped", "job_id": "...", "repost_count": 2, "reason": null}`
+- **created** (HTTP 201): tiệm mới → tạo tin, `repost_count = 1`.
+- **bumped**: cùng **SĐT** hoặc cùng **Facebook người đăng** mà là **bài mới** → KHÔNG tạo tin mới: đẩy tin lên đầu,
+  `repost_count + 1`, `last_reposted_at = bây giờ`, nội dung mới nhất.
+- **updated**: tool gửi lại **đúng bài cũ** (cùng `post_url`) → chỉ cập nhật, không tính là đăng lại.
+- **skipped** (HTTP 422) + `reason`.
+
+Danh sách việc: `GET /api/jobs?state=TX&q=...` — `q` tìm trong tiêu đề, tên tiệm, thành phố, kỹ năng, nội dung;
+tin mới nhất / vừa được đăng lại nằm trên cùng. Trên web: ô 🔍 ở tab Việc làm.
+
+## Kết quả của `/api/ingest/jobs`
+
 Kết quả mỗi bài: `created` (tin mới) · `updated` (cùng SĐT đã có tin → làm mới) · `skipped` + lý do:
 không phải bài tuyển thợ · không có SĐT Mỹ/Úc · không xác định được bang · bài cũ hơn 14 ngày ·
 tiệm đã yêu cầu gỡ tin.

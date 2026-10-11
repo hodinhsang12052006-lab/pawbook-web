@@ -13,10 +13,13 @@ export const SEED_OWNER = "owner1.us@pawnailjobs.demo";
 export const SEED_OWNER_2 = "owner2.us@pawnailjobs.demo";
 export const SEED_TECH = "tech1.us@pawnailjobs.demo";
 
+// Mỗi bộ test bắt đầu ở dải IP NGẪU NHIÊN — trước đây bộ nào cũng bắt đầu 10.99.0.1 nên các bộ chạy liền nhau
+// dùng chung IP và cùng chạm giới hạn đăng ký 5 lần/5 phút (bộ chạy sau bị chặn oan).
+const IP_BASE = Math.floor(Math.random() * 200) + 20;
 let ipCounter = 1;
 // Mỗi phiên đăng nhập giả lập 1 IP riêng (cf-connecting-ip) để bộ chống
 // brute-force theo IP không chặn chính bộ test.
-export const fakeIp = () => `10.99.${Math.floor(ipCounter / 250)}.${(ipCounter++ % 250) + 1}`;
+export const fakeIp = () => `10.${IP_BASE}.${Math.floor(ipCounter / 250)}.${(ipCounter++ % 250) + 1}`;
 
 function mergeCookies(jar, res) {
   const raw = res.headers.getSetCookie?.() || [];

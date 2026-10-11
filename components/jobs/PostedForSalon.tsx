@@ -8,7 +8,7 @@ import { timeAgo } from "@/lib/feedFormat";
 
 // Tin PawNail ĐĂNG HỘ tiệm (tiệm nhờ đăng): ghi rõ nguồn, địa chỉ + bản đồ, hết hạn;
 // tiệm có thể "nhận tin" (tự quản lý trên PawNail) hoặc "gỡ tin" — gửi yêu cầu cho admin.
-export function PostedForSalonBanner({ postedAt, expired, address }: { postedAt?: string | null; expired?: boolean; address?: string | null }) {
+export function PostedForSalonBanner({ postedAt, expired, address, repostCount }: { postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number }) {
   return (
     <div className="space-y-2">
       {expired && (
@@ -21,6 +21,7 @@ export function PostedForSalonBanner({ postedAt, expired, address }: { postedAt?
         <span>
           {tr("PawNail đăng hộ theo yêu cầu của tiệm", "Posted by PawNail on the salon's behalf")}
           {postedAt ? tr(` · tiệm gửi ${timeAgo(postedAt)}`, ` · sent ${timeAgo(postedAt)}`) : ""}
+          {repostCount && repostCount > 1 ? tr(` · tiệm đã đăng lại ${repostCount} lần (đang cần người)`, ` · reposted ${repostCount} times (still hiring)`) : ""}
           {tr(". Gọi trực tiếp số của tiệm để hỏi việc.", ". Call the salon directly to ask about the job.")}
         </span>
       </p>

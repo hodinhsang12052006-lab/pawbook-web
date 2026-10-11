@@ -9,18 +9,21 @@ import { notifyUrgentJob } from "@/lib/jobAlerts";
 import { notifyJobAlerts } from "@/lib/jobAlertRules";
 import { cleanJobMedia, getJobMedia, setJobMedia } from "@/lib/jobMedia";
 
-// GET /api/jobs?market=US&state=CA&city=...  — danh sách tin tuyển thợ
+// GET /api/jobs?market=US&state=CA&city=...&q=...  — danh sách tin tuyển thợ
+//   q: tìm trong tiêu đề, tên tiệm, thành phố, kỹ năng, nội dung. Mới nhất / vừa được tiệm đăng lại lên đầu.
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const market = searchParams.get("market");
     const state = searchParams.get("state");
     const city = searchParams.get("city");
+    const q = (searchParams.get("q") || "").trim().slice(0, 60);
 
     const where: any = { ...activeJobWhere() }; // tin tổng hợp quá hạn tự ẩn
     if (market === "US" || market === "AU") where.market = market as Market;
     if (state) where.state = state;
     if (city) where.city = { contains: city };
+    if (q) where.AND = [{ OR: ["title", "salonName", "city", "skills", "description"].map((f) => ({ [f]: { contains: q } })) }];
 
     const jobs = await prisma.job.findMany({
       where,
@@ -31,13 +34,14 @@ export async function GET(req: NextRequest) {
         // Số người THẬT đã lưu tin — tín hiệu "nhiều người quan tâm".
         _count: { select: { savedBy: true } },
       },
-      orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
+      // Tin đăng lại (bump) có createdAt = lúc đăng lại → tự lên đầu.
+      orderBy: [{ createdAt: "desc" }],
       take: 100,
     });
 
     const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const safeJobs = jobs.map(({ _count, sourceUrl, sourceKey, ...job }) => {
+    const safeJobs = jobs.map(({ _count, sourceUrl, sourceKey, sourceFbHash, ...job }) => {
       const h = heat.get(job.id);
       return {
       ...job,

@@ -46,7 +46,7 @@ export async function GET(
 
     // Link bài gốc / khoá chống trùng của tin tổng hợp: chỉ admin cần, không trả ra ngoài.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { sourceUrl, sourceKey, ...pub } = job;
+    const { sourceUrl, sourceKey, sourceFbHash, ...pub } = job;
     return NextResponse.json({
       ...pub,
       expired: !!job.expiresAt && job.expiresAt.getTime() <= Date.now(),

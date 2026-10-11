@@ -7,6 +7,7 @@ import { DesignCard, DesignSheet, occasionLabel, type Design } from "@/component
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import CommunityDesigns from "@/components/designs/CommunityDesigns";
 
 const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
 
@@ -55,6 +56,10 @@ export default function DesignsPage() {
           <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Mẫu nail mới", "Fresh nail designs")}</h1>
           <p className="max-w-2xl text-sm text-slate-400">{tr("Ý tưởng theo dịp lễ và xu hướng đang lên, kèm vật tư cần chuẩn bị và các bước làm. Hình là minh hoạ (có ghi nhãn nguồn), không phải ảnh tay nghề thật — làm xong nhớ đăng ảnh thật nhé.", "Ideas for upcoming holidays and rising trends, with the materials to prepare and the steps. Pictures are labeled illustrations, not real work — post a real photo when you've made it.")}</p>
         </header>
+
+        <CommunityDesigns />
+
+        <h2 className="flex items-center gap-2 pt-2 text-base font-black text-white"><Sparkles className="h-4 w-4 text-pink-300" />{tr("Ý tưởng mẫu PawNail", "PawNail design ideas")}</h2>
 
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group" aria-label={tr("Lọc mẫu", "Filter designs")}>
           <button type="button" aria-pressed={!occasion && !skill && !savedOnly} onClick={() => { setOccasion(null); setSkill(null); setSavedOnly(false); }} className={chip(!occasion && !skill && !savedOnly)}>{tr("Tất cả", "All")}</button>

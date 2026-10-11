@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import prisma from "@/lib/prisma";
+import { getSetting } from "@/lib/settings";
 import { activeThemes, THEMES } from "@/lib/contentEngine";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
@@ -15,6 +16,12 @@ import { cfDailyImages, cfImage, cfImageEnabled } from "@/lib/cfImage";
 //   3. Gemini vẽ ảnh cận cảnh bàn tay → lưu Cloudinary → bản NHÁP.
 //   4. Admin duyệt trong Phòng nội dung mới hiện cho người dùng.
 // Giới hạn: AI_DESIGNS_DAILY_LIMIT mẫu/ngày (mặc định 8) — chặn chi phí.
+
+// Giai đoạn đầu: mẫu lên THẲNG trang Mẫu nail, không chờ admin duyệt (ảnh vẽ bù sau vài phút,
+// trong lúc chờ hiện hình minh hoạ). Khi người dùng đông: Admin → Studio → Mẫu nail → bật
+// "Duyệt mẫu trước khi đăng" (cài đặt designs_review, xem lib/settings.ts).
+export const designsNeedReview = async () => (await getSetting("designs_review")) === "1";
+const publishState = async () => ((await designsNeedReview()) ? { status: "draft" } : { status: "published", publishedAt: new Date() });
 
 export const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
 const DAY_MS = 86_400_000;
@@ -172,6 +179,7 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
         }
         const row = await prisma.nailDesign.create({
           data: {
+            ...(await publishState()),
             day: today(),
             market,
             occasion: themeIds.has(d.occasion) ? d.occasion : null,
@@ -244,6 +252,7 @@ async function saveEngineDesigns(list: EngineDesign[], market: "US" | "AU") {
     const prompt = `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000);
     const row = await prisma.nailDesign.create({
       data: {
+        ...(await publishState()),
         day, market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
         skills: d.skills.join(","), difficulty: d.difficulty, minutes: d.minutes, priceHint: d.priceHint,
         materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: null,
@@ -340,7 +349,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
  *  bộ mẫu lớn đang vẽ dần. Mỗi lượt vẽ được bao nhiêu thì vẽ, trong hạn mức ngày. */
 export async function backfillImages(deadline: number): Promise<{ drawn: number; errors: string[] }> {
   const rows = await prisma.nailDesign.findMany({
-    where: { provider: "pawnail", imageUrl: null, status: "draft", createdAt: { gte: new Date(Date.now() - 14 * DAY_MS) } },
+    where: { provider: "pawnail", imageUrl: null, status: { in: ["draft", "published"] }, createdAt: { gte: new Date(Date.now() - 14 * DAY_MS) } },
     select: { id: true, prompt: true },
     orderBy: { createdAt: "asc" },
     take: 40,
@@ -384,6 +393,7 @@ export async function generateSamples(market: "US" | "AU", count: number): Promi
   for (const d of pick) {
     const row = await prisma.nailDesign.create({
       data: {
+        ...(await publishState()),
         day: today(), market, occasion: d.occasion, title: d.title.vi, titleEn: d.title.en, description: d.description.vi, descriptionEn: d.description.en,
         skills: d.skills.join(","), difficulty: d.difficulty, minutes: d.minutes, priceHint: d.priceHint,
         materials: JSON.stringify(d.materials), steps: JSON.stringify(d.steps), imageUrl: null,

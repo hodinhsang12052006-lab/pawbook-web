@@ -31,15 +31,26 @@ export default function CompleteProfilePage() {
       .then((s) => {
         if (!s?.user?.id) return window.location.replace("/auth/login");
         if (!s.user.needsOnboarding) return window.location.replace("/");
-        setName(s.user.name || "");
+        // Đăng ký bằng SĐT: chưa có tên thật (tên tạm "Thành viên PawNail") → để trống cho tự nhập.
+        setName(s.user.name && s.user.name !== "Thành viên PawNail" ? s.user.name : "");
+        // Đã xác minh SĐT (đăng nhập bằng mã SMS) → điền sẵn số + quốc gia.
+        fetch("/api/phone/verify")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((v) => {
+            const e164: string | undefined = v?.verified ? v.phone : undefined;
+            if (!e164) return;
+            if (e164.startsWith("+61")) { setMarket("AU"); setPhone("0" + e164.slice(3)); }
+            else setPhone(e164.slice(2));
+          })
+          .catch(() => {});
         setReady(true);
       })
       .catch(() => window.location.replace("/auth/login"));
   }, []);
 
   const submit = async () => {
-    if (!role || !state || !city.trim() || phone.replace(/\D/g, "").length < 8) {
-      toast.error(tr("Chọn vai trò, bang, thành phố và nhập số điện thoại nhé.", "Pick a role, state, city and enter your phone number."));
+    if (!role || !state || !city.trim() || !name.trim() || phone.replace(/\D/g, "").length < 8) {
+      toast.error(tr("Nhập tên, chọn vai trò, bang, thành phố và số điện thoại nhé.", "Enter your name, pick a role, state, city and phone number."));
       return;
     }
     setBusy(true);
@@ -96,7 +107,7 @@ export default function CompleteProfilePage() {
 
       <div>
         <label htmlFor="c-name" className="mb-1.5 block text-sm font-bold text-slate-300">{tr("Tên hiển thị", "Display name")}</label>
-        <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} className="input-field" />
+        <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("VD: Lan Nguyễn", "e.g. Lan Nguyen")} autoComplete="name" className="input-field" />
       </div>
 
       <div className="grid grid-cols-2 gap-2">

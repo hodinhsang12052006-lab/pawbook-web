@@ -593,3 +593,25 @@ model Review {
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
   @@index([targetUserId])
 }
+
+// Nhật ký gửi mã SMS (đăng nhập bằng SĐT) — đếm để chặn spam/lừa "bơm SMS" đốt tiền,
+// đếm bằng DB vì máy chủ serverless không chung bộ nhớ (prisma/sql/2026-10-11c_sms_send.sql).
+model SmsSend {
+  id        String   @id @default(cuid())
+  phone     String
+  ip        String
+  purpose   String   @default("login")
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+  @@index([ip, createdAt])
+  @@index([createdAt])
+}
+
+// Cài đặt toàn hệ thống do admin bật/tắt (VD "designs_review" = "1" → mẫu nail chờ duyệt) —
+// prisma/sql/2026-10-11d_app_setting.sql
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

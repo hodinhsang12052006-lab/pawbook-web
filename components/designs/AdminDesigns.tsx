@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
-interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
+interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; review?: boolean; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
 
 // Phòng nội dung → "Mẫu nail AI": tạo mẫu bằng Gemini, DUYỆT trước khi người
 // dùng thấy (AI hay vẽ sai ngón tay / mô tả lệch — admin là người chốt).
@@ -90,9 +90,27 @@ export default function AdminDesigns() {
         <div>
           <h2 className="flex items-center gap-2 text-lg font-black text-white"><Wand2 className="h-5 w-5 text-pink-300" /> Mẫu nail mới mỗi ngày</h2>
           <p className="text-xs text-slate-400">
-            Máy tạo mẫu PawNail ghép mẫu theo dịp lễ + hashtag đang lên: vật tư, các bước, thời gian, giá gợi ý — không tốn phí AI. Mỗi sáng tự tạo 4 mẫu; duyệt xong mới hiện ở /designs và bảng tin.
+            Máy tạo mẫu PawNail ghép mẫu theo dịp lễ + hashtag đang lên: vật tư, các bước, thời gian, giá gợi ý — không tốn phí AI. Mỗi sáng tự tạo 4 mẫu{st?.review ? "; duyệt xong mới hiện ở /designs và bảng tin" : " và hiện NGAY ở /designs (đang tắt duyệt)"}.
             {st && ` Hôm nay đã tạo ${st.madeToday} mẫu.`}
           </p>
+          {st && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!st.review}
+              data-testid="designs-review-toggle"
+              onClick={async () => {
+                const next = !st.review;
+                const r = await fetch("/api/admin/designs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review: next }) });
+                if (r.ok) { setSt({ ...st, review: next }); toast.success(next ? "Đã bật duyệt: mẫu mới chờ admin duyệt" : "Đã tắt duyệt: mẫu mới lên thẳng /designs"); }
+                else toast.error("Không lưu được, thử lại.");
+              }}
+              className="mt-2 inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-slate-950/50 px-3 text-xs font-bold text-slate-200 ring-1 ring-white/10"
+            >
+              <span className={`relative h-5 w-9 rounded-full transition-colors ${st.review ? "bg-pink-600" : "bg-slate-700"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${st.review ? "left-[18px]" : "left-0.5"}`} /></span>
+              Duyệt mẫu trước khi đăng: {st.review ? "BẬT" : "TẮT (lên thẳng)"}
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => generate("engine")} disabled={busy} className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white disabled:opacity-50">

@@ -30,6 +30,9 @@ const RATE_LIMIT_RULES: Array<{ prefix: string; rule: RateLimitRule }> = [
   // Quên / đặt lại mật khẩu: chặn spam gửi thư và đoán mã.
   { prefix: "/api/auth/forgot", rule: { bucket: "forgot", limit: 5, windowMs: 15 * 60 * 1000 } },
   { prefix: "/api/auth/reset", rule: { bucket: "reset", limit: 10, windowMs: 15 * 60 * 1000 } },
+  // Đăng nhập bằng SĐT: gửi mã tốn tiền + chống dò mã (thêm giới hạn theo số/ngày trong DB — lib/phoneLogin.ts)
+  { prefix: "/api/auth/phone/start", rule: { bucket: "phone-start", limit: 5, windowMs: 15 * 60 * 1000 } },
+  { prefix: "/api/auth/callback/phone-otp", rule: { bucket: "phone-otp", limit: 10, windowMs: 5 * 60 * 1000 } },
 ];
 
 function resolveRule(pathname: string): RateLimitRule | null {

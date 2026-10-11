@@ -6,6 +6,8 @@ import crypto from "crypto";
 import { isRateLimited, recordAttempt, clearAttempts } from "@/lib/rateLimit";
 import { oauthProviders, appleEnabled } from "@/lib/authProviders";
 import { findOrCreateOAuthUser, needsOnboarding } from "@/lib/oauthUsers";
+import { smsEnabled } from "@/lib/sms";
+import { authorizePhone } from "@/lib/phoneLogin";
 
 // Sống ở đây (không phải trong app/api/auth/[...nextauth]/route.ts) vì Next.js
 // typegen cho route handler chỉ chấp nhận export GET/POST/config/... — export
@@ -106,11 +108,22 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
         }
       }
     }),
+    // Đăng nhập / đăng ký bằng SĐT + mã SMS (Twilio Verify) — chỉ khi đã cấu hình TWILIO_*.
+    ...(smsEnabled()
+      ? [
+          CredentialsProvider({
+            id: "phone-otp",
+            name: "Phone",
+            credentials: { phone: { type: "text" }, market: { type: "text" }, code: { type: "text" } },
+            authorize: async (c) => (await authorizePhone(c?.phone, c?.market, c?.code)) as never,
+          }),
+        ]
+      : []),
     ...oauthProviders(),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (!account || account.provider === "credentials") return true;
+      if (!account || account.provider === "credentials" || account.provider === "phone-otp") return true;
       // Google/Apple: chỉ nhận email ĐÃ XÁC MINH (chống chiếm tài khoản cùng email).
       const email = user.email || (profile as { email?: string } | undefined)?.email;
       const verified = (profile as { email_verified?: boolean | string } | undefined)?.email_verified;
@@ -125,9 +138,11 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
     },
     async jwt({ token, user, account }) {
       // Lúc đăng nhập thành công, nhét id và role vào vé VIP (token)
-      if (user && (!account || account.provider === "credentials")) {
+      if (user && (!account || account.provider === "credentials" || account.provider === "phone-otp")) {
         token.id = user.id;
         token.role = (user as any).role;
+        // SĐT mới: chưa chọn vai trò/khu vực → qua /auth/complete (như Google)
+        if ((user as { onb?: boolean }).onb) token.onb = true;
       } else if (user && account) {
         // Google/Apple: id/role lấy từ User THẬT trong DB (không phải id của Google).
         const db = await prisma.user.findUnique({ where: { email: String(user.email).toLowerCase() }, select: { id: true, role: true, password: true, state: true } });
@@ -138,9 +153,10 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
         }
       } else if (token.onb && token.id) {
         // Đang hoàn tất hồ sơ (chọn vai trò/khu vực) → đọc lại vai trò mới cho tới khi xong.
-        const db = await prisma.user.findUnique({ where: { id: String(token.id) }, select: { role: true, password: true, state: true } });
+        const db = await prisma.user.findUnique({ where: { id: String(token.id) }, select: { role: true, password: true, state: true, name: true } });
         if (db) {
           token.role = db.role;
+          token.name = db.name; // tên nhập ở bước Hoàn tất (thay tên tạm)
           token.onb = needsOnboarding(db);
         }
       }

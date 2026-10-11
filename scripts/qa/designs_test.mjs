@@ -84,6 +84,9 @@ try {
   await db.execute({ sql: `UPDATE "User" SET role = 'ADMIN' WHERE email = ?`, args: [a.body.email] });
   const admin = a.client;
   await admin.login(a.body.email, a.body.password);
+  // Bộ test này kiểm chế độ CÓ DUYỆT (mặc định giờ là lên thẳng — xem designs_autopublish_test.mjs)
+  await admin.req("/api/admin/designs", { method: "PATCH", json: { review: true } });
+  globalThis.__adminForReset = admin;
   const cfg = (await admin.req("/api/admin/designs")).data;
   R.check("D2", "Admin thấy cấu hình: Gemini bật, giới hạn 6 mẫu/ngày", cfg.enabled === true && cfg.dailyLimit === 6 && cfg.madeToday === 0, JSON.stringify(cfg).slice(0, 120));
 
@@ -281,6 +284,7 @@ try {
 
   R.check("Z1", "Không lỗi JS / 5xx", errors.length === 0, errors.slice(0, 3).join(" | "));
 } finally {
+  await globalThis.__adminForReset?.req("/api/admin/designs", { method: "PATCH", json: { review: false } }).catch(() => {});
   await browser?.close();
   gemini.close();
   cf.close();

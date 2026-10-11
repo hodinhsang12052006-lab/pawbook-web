@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
+import { isPhoneOnlyEmail } from "@/lib/phoneLogin";
 import { emailEnabled, resetPasswordEmail, sendEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/siteUrl";
 
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true } });
-  if (!user) return NextResponse.json(OK);
+  if (!user || isPhoneOnlyEmail(email)) return NextResponse.json(OK); // tài khoản chỉ có SĐT: đăng nhập lại bằng mã SMS
 
   const recent = await prisma.passwordReset.count({ where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 3_600_000) } } });
   if (recent >= PER_HOUR) return NextResponse.json(OK); // im lặng, không gửi thêm

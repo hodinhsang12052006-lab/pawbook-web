@@ -5,6 +5,7 @@ import { getProviders, signIn } from "next-auth/react";
 import { Capacitor } from "@capacitor/core";
 import { Loader2 } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
+import PhoneLogin from "@/components/auth/PhoneLogin";
 import { useTr } from "@/lib/i18n/useTr";
 
 // Nút "Tiếp tục với Google / Apple" — chỉ hiện provider máy chủ ĐÃ bật (có
@@ -44,13 +45,16 @@ export default function SocialLogin({ dark = true, divider = true, heading }: { 
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) return;
+    // App native: Google/Facebook chặn đăng nhập trong WebView → chỉ giữ đăng nhập bằng SĐT (SMS chạy bình thường).
+    const native = Capacitor.isNativePlatform();
     getProviders()
-      .then((p) => setProviders(Object.keys(p || {}).filter((id) => id !== "credentials").sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))))
+      .then((p) => setProviders(Object.keys(p || {}).filter((id) => id !== "credentials" && (!native || id === "phone-otp")).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))))
       .catch(() => {});
   }, []);
 
   if (!providers.length) return null;
+  const hasPhone = providers.includes("phone-otp");
+  const social = providers.filter((id) => id !== "phone-otp");
   const go = (id: string) => {
     setBusy(id);
     signIn(id, { callbackUrl: "/auth/complete" });
@@ -59,7 +63,7 @@ export default function SocialLogin({ dark = true, divider = true, heading }: { 
   return (
     <div className="space-y-2.5">
       {heading && <p className={`text-center text-xs font-bold uppercase tracking-wider ${dark ? "text-slate-500" : "text-slate-400"}`}>{heading}</p>}
-      {providers.map((id) => {
+      {social.map((id) => {
         const label =
           id === "google" ? tr("Tiếp tục với Google", "Continue with Google") : id === "apple" ? tr("Tiếp tục với Apple", "Continue with Apple") : id === "facebook" ? tr("Tiếp tục với Facebook", "Continue with Facebook") : tr("Tiếp tục với Test OAuth", "Continue with Test OAuth");
         const style =
@@ -75,6 +79,7 @@ export default function SocialLogin({ dark = true, divider = true, heading }: { 
           </button>
         );
       })}
+      {hasPhone && <PhoneLogin dark={dark} />}
       {divider && <div className="flex items-center gap-3 py-1">
         <span className={`h-px flex-1 ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
         <span className={`text-xs font-semibold ${dark ? "text-slate-500" : "text-slate-400"}`}>{tr("hoặc dùng email", "or use email")}</span>

@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
 import { cfDailyImages, cfImageEnabled } from "@/lib/cfImage";
-import { dailyLimit, generateDesigns, generateEngine, generateOccasion, generateSamples, imagesDrawnToday, OCCASION_BATCH_MAX, redrawImage, storageReady, textOnly, toPublic, upcomingThemes } from "@/lib/aiDesigns";
+import { dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion, generateSamples, imagesDrawnToday, OCCASION_BATCH_MAX, redrawImage, storageReady, textOnly, toPublic, upcomingThemes } from "@/lib/aiDesigns";
+import { setSetting } from "@/lib/settings";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
 //   GET                         — nháp chờ duyệt + mẫu đã đăng gần đây + trạng thái cấu hình
@@ -44,6 +45,7 @@ export async function GET() {
       imagesToday: await imagesDrawnToday().catch(() => 0),
       nextOccasion: (() => { const t = upcomingThemes("US", new Date())[0]; return t ? { id: t.id, title: t.title, emoji: t.emoji } : null; })(),
       dailyLimit: dailyLimit(),
+      review: await designsNeedReview(), // mẫu mới chờ duyệt (true) hay lên thẳng (false)
       madeToday,
       drafts: drafts.map(toPublic),
       published: published.map(toPublic),
@@ -84,7 +86,12 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const a = await admin();
   if (a.error) return a.error;
-  const body = (await req.json().catch(() => ({}))) as { id?: string; ids?: string[]; status?: string; action?: string };
+  const body = (await req.json().catch(() => ({}))) as { id?: string; ids?: string[]; status?: string; action?: string; review?: unknown };
+  // Công tắc "Duyệt mẫu trước khi đăng"
+  if (typeof body.review === "boolean") {
+    await setSetting("designs_review", body.review ? "1" : "0");
+    return NextResponse.json({ ok: true, review: body.review });
+  }
   if (Array.isArray(body.ids)) {
     const ids = body.ids.filter((x) => typeof x === "string").slice(0, 200);
     if (!ids.length || !["published", "rejected"].includes(body.status ?? "")) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 400 });

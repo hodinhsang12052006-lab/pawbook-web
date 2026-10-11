@@ -42,6 +42,9 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
         sessionStorage.removeItem("pn_compose");
         tag = sessionStorage.getItem("pn_compose_tag");
         sessionStorage.removeItem("pn_compose_tag");
+        // Từ trang Mẫu nail ("Đăng mẫu của bạn") → chọn sẵn loại Khoe tay nghề (bài có ảnh hiện ở Mẫu nail).
+        if (sessionStorage.getItem("pn_compose_type") === "SHOWCASE") setPostType("SHOWCASE");
+        sessionStorage.removeItem("pn_compose_type");
       } catch {}
       if (tag) setContent((prev) => (prev.toLowerCase().includes(`#${tag!.toLowerCase()}`) ? prev : `${prev}${prev && !prev.endsWith(" ") ? " " : ""}#${tag} `));
       boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -193,8 +196,9 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
               <button
                 key={opt.value}
                 type="button"
+                aria-pressed={postType === opt.value}
                 onClick={() => setPostType(opt.value)}
-                className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                className={`min-h-[32px] whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
                   postType === opt.value ? "bg-pink-600 text-white" : "text-slate-400"
                 }`}
               >

@@ -55,6 +55,17 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
+  // Gợi ý cho lần tải sau: script đầu trang (app/layout.tsx) đặt <html data-authed> trước khi
+  // vẽ → trang hiện đúng giao diện (khách / đã đăng nhập) ngay, không nhảy bố cục (CLS).
+  useEffect(() => {
+    if (loading) return;
+    try {
+      if (user?.id) localStorage.setItem("pn_authed", "1");
+      else localStorage.removeItem("pn_authed");
+      document.documentElement.toggleAttribute("data-authed", !!user?.id);
+    } catch {}
+  }, [user, loading]);
+
   useEffect(() => {
     load();
     window.addEventListener("profile-updated", load);

@@ -37,10 +37,18 @@ export default function Navbar() {
         {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4">
           {loadingSession ? (
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-800 animate-pulse">
+            <>
+            {/* Đang tải phiên: khách thấy ngay nút Đăng nhập/Đăng ký (không nhảy), máy từng đăng nhập thấy khung chờ */}
+            <div className="flex items-center gap-2 [html[data-authed]_&]:hidden" aria-hidden>
+              <LanguageToggle />
+              <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-300">{t("menu.login")}</span>
+              <span className="rounded-full bg-pink-600 px-3 py-1.5 text-xs font-semibold text-white">{t("menu.register")}</span>
+            </div>
+            <div className="hidden items-center gap-3 pl-4 border-l border-slate-800 animate-pulse [html[data-authed]_&]:flex">
               <div className="h-8 w-8 rounded-full bg-slate-800"></div>
               <div className="h-3 w-16 bg-slate-800 rounded hidden md:block"></div>
             </div>
+            </>
           ) : sessionUser ? (
             <>
               {sessionUser.role === "ADMIN" ? (

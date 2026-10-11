@@ -34,14 +34,27 @@ export default function GettingStarted({ compact = false }: { compact?: boolean 
   useTr(); // render lại khi đổi VI/EN
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [hidden, setHidden] = useState(true);
+  const [checked, setChecked] = useState(false);
+  // Nhớ "lần trước thẻ có hiện" → script đầu trang đặt <html data-onb>, giữ sẵn chỗ khi đang tải
+  // (thẻ ~250px chen vào sau khi tải xong từng đẩy cả bảng tin xuống — CLS).
+  const remember = (shown: boolean) => {
+    try {
+      if (shown) localStorage.setItem("pn_onb", "1");
+      else localStorage.removeItem("pn_onb");
+      document.documentElement.toggleAttribute("data-onb", shown);
+    } catch {}
+  };
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(HIDE_KEY)) return;
+      if (localStorage.getItem(HIDE_KEY)) { remember(false); return; }
     } catch {}
     fetch("/api/onboarding")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
+        setChecked(true);
+        const willShow = !!d?.newUser && !!d.steps?.length && (!d.steps.every((s: Step) => s.done) || !localStorage.getItem(CELEBRATED_KEY));
+        if (d) remember(willShow);
         if (!d?.newUser || !d.steps?.length) return;
         const all = d.steps.every((s: Step) => s.done);
         if (all) {
@@ -59,14 +72,17 @@ export default function GettingStarted({ compact = false }: { compact?: boolean 
         setSteps(d.steps);
         setHidden(false);
       })
-      .catch(() => {});
+      .catch(() => setChecked(true));
   }, []);
 
+  // Đang tải: giữ chỗ (chỉ khi lần trước thẻ có hiện — html[data-onb]), bản đầy đủ ở Bảng tin.
+  if (!checked && !compact) return <div aria-hidden data-onb-slot className="hidden h-[246px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-onb]_&]:block" />;
   if (hidden || !steps) return null;
   const done = steps.filter((s) => s.done).length;
   const allDone = done === steps.length;
   const dismiss = () => {
     setHidden(true);
+    remember(false);
     try {
       localStorage.setItem(HIDE_KEY, "1");
     } catch {}

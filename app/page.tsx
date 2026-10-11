@@ -155,12 +155,24 @@ export default function HomePage() {
     } catch {}
   };
   const completeness = getProfileCompleteness(sessionUser);
+  // Nhớ "thẻ hoàn thiện hồ sơ có hiện" cho lần tải sau (html[data-cmp]) — giữ chỗ 128px khi đang tải.
+  const cmpShown = !!completeness && completeness.percent < 100 && !hideCompleteness;
+  useEffect(() => {
+    if (sessionLoading || tab !== "feed") return;
+    try {
+      if (cmpShown) localStorage.setItem("pn_cmp", "1");
+      else localStorage.removeItem("pn_cmp");
+      document.documentElement.toggleAttribute("data-cmp", cmpShown);
+    } catch {}
+  }, [sessionLoading, cmpShown, tab]);
   // Tên đầy đủ — tên Việt (tên gọi ở cuối) và tên Anh (tên gọi ở đầu) không
   // tách chung 1 quy tắc được.
   const displayName = (sessionUser?.name || "").trim();
 
   const states = market === "US" ? US_STATES : AU_STATES;
-  const showHero = !sessionLoading && !sessionUser;
+  // Khách: hero có sẵn ngay trong HTML đầu tiên (trước đây chờ tải phiên ~1s rồi mới chen vào,
+  // đẩy cả trang xuống — CLS 0.8). Máy từng đăng nhập → CSS ẩn ngay từ đầu (html[data-authed]).
+  const showHero = !sessionUser;
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -168,7 +180,7 @@ export default function HomePage() {
 
       {/* HERO — chỉ hiện cho khách chưa đăng nhập, đánh thẳng thị giác 3 giây đầu */}
       {showHero && (
-        <section className="relative overflow-hidden border-b border-slate-900">
+        <section className={`relative overflow-hidden border-b border-slate-900 ${sessionLoading ? "[html[data-authed]_&]:hidden" : ""}`}>
           <div className="absolute inset-0 bg-gradient-to-br from-pink-600/20 via-fuchsia-600/10 to-slate-950" />
           <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-pink-500/20 blur-3xl" />
           <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
@@ -211,6 +223,17 @@ export default function HomePage() {
           <Sidebar activeTab={tab} setActiveTab={(t) => changeTab(t as HomeTab)} />
 
           <div className="flex-1 min-w-0 space-y-5">
+            {/* Đang tải phiên trên máy từng đăng nhập: giữ sẵn chỗ cho lời chào + lối tắt + thẻ "Bắt đầu"
+                đúng kích thước thật → bảng tin không bị đẩy xuống khi tải xong (CLS). */}
+            {sessionLoading && (
+              <div aria-hidden className="hidden space-y-5 [html[data-authed]_&]:block">
+                <div className="h-[50px] px-1 pt-1 md:h-[54px]"><div className="h-6 w-56 rounded-lg bg-white/[0.05]" /><div className="mt-2 h-3.5 w-40 rounded bg-white/[0.04]" /></div>
+                {tab === "feed" && <div className="h-[98px] rounded-2xl bg-white/[0.03] md:hidden" />}
+                <div className="hidden h-[246px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-onb]_&]:block" />
+                {tab === "feed" && <div className="hidden h-[128px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 md:!hidden [html[data-cmp]:not([data-onb])_&]:block" />}
+              </div>
+            )}
+
             {/* Region Switcher — nổi bật, chữ to, tương phản cao */}
             {sessionUser && (
               <div className="px-1">
@@ -235,7 +258,7 @@ export default function HomePage() {
 
             {/* Đang có thẻ "Bắt đầu" (đã gồm thêm ảnh, hoàn thiện hồ sơ) → ẩn thẻ này cho đỡ lặp. */}
             {tab === "feed" && completeness && completeness.percent < 100 && !hideCompleteness && (
-              <div className="relative md:hidden [[data-nudge]~&]:hidden">
+              <div className="relative md:hidden [[data-nudge]~&]:hidden [html[data-onb]_[data-onb-slot]~&]:hidden">
                 <ProfileCompletenessCard completeness={completeness} compact role={sessionUser?.role} />
                 <button
                   onClick={dismissCompleteness}

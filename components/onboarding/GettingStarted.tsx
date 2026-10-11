@@ -105,7 +105,7 @@ export default function GettingStarted({ compact = false }: { compact?: boolean 
 
   return (
     <section data-nudge aria-label={tr("Bắt đầu với PawNail", "Get started with PawNail")} className="relative rounded-2xl border border-pink-500/25 bg-gradient-to-br from-pink-500/[0.10] via-fuchsia-500/[0.05] to-slate-900/40 p-4">
-      <button type="button" onClick={dismiss} aria-label={tr("Ẩn hướng dẫn bắt đầu", "Hide getting started")} className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
+      <button type="button" onClick={dismiss} aria-label={tr("Ẩn hướng dẫn bắt đầu", "Hide getting started")} className="absolute right-1 top-1 z-10 rounded-full p-2.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
         <X className="h-4 w-4" />
       </button>
       <div className="flex items-center gap-2 pr-8">

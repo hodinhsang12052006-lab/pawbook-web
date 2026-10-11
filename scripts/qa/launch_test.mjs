@@ -292,7 +292,7 @@ try {
     await p3.goto(BASE_URL + "/auth/login");
     await p3.getByRole("button", { name: /Tiếp tục với Test OAuth/ }).click();
     await p3.waitForURL(/error=/, { timeout: 30000 }).catch(() => {});
-    const errShown = await p3.getByText(/chưa xác minh email/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    const errShown = await p3.getByText(/không có email đã xác minh/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     const made = (await db.execute({ sql: `SELECT COUNT(*) n FROM "User" WHERE email = ?`, args: [nextIdentity.email] })).rows[0].n;
     R.check("OA9", "Email chưa xác minh → báo lỗi dễ hiểu, KHÔNG tạo tài khoản", errShown && Number(made) === 0, `${errShown} ${made}`);
     await p3.screenshot({ path: TMP + "/launch_oauth_error.png" });

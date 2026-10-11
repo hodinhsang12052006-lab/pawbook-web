@@ -1,10 +1,12 @@
 import crypto from "crypto";
 import GoogleProvider from "next-auth/providers/google";
 import AppleProvider from "next-auth/providers/apple";
+import FacebookProvider from "next-auth/providers/facebook";
 import type { Provider } from "next-auth/providers/index";
 
 // Đăng nhập Google / Apple — TỰ BẬT khi có biến môi trường, không có thì ẩn.
 //   Google: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+//   Facebook: FACEBOOK_CLIENT_ID (App ID), FACEBOOK_CLIENT_SECRET (App Secret) — developers.facebook.com
 //     (Google Cloud Console → OAuth client "Web", Redirect URI:
 //      https://www.bitpawos.com/api/auth/callback/google)
 //   Apple:  APPLE_ID (Services ID), APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY (nội dung file .p8)
@@ -35,9 +37,13 @@ export const appleEnabled = () => appleClientSecret() !== null;
 
 export function oauthProviders(): Provider[] {
   const list: Provider[] = [];
-  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APPLE_ID } = process.env;
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APPLE_ID, FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET } = process.env;
   if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     list.push(GoogleProvider({ clientId: GOOGLE_CLIENT_ID, clientSecret: GOOGLE_CLIENT_SECRET }));
+  }
+  // Facebook: tài khoản FB lập bằng SĐT có thể KHÔNG có email → signIn báo lỗi OAuthEmail (dùng cách khác).
+  if (FACEBOOK_CLIENT_ID && FACEBOOK_CLIENT_SECRET) {
+    list.push(FacebookProvider({ clientId: FACEBOOK_CLIENT_ID, clientSecret: FACEBOOK_CLIENT_SECRET }));
   }
   const appleSecret = appleClientSecret();
   if (APPLE_ID && appleSecret) {

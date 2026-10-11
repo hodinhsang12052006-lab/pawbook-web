@@ -11,7 +11,7 @@ import { useTr } from "@/lib/i18n/useTr";
 // khoá). Ẩn trong app native (Capacitor): Google chặn đăng nhập trong WebView
 // ("disallowed_useragent"); không có đăng nhập bên thứ 3 trong app native thì
 // App Store cũng không bắt buộc "Sign in with Apple".
-const ORDER = ["apple", "google", "test-oauth"];
+const ORDER = ["apple", "google", "facebook", "test-oauth"];
 
 function GoogleLogo() {
   return (
@@ -20,6 +20,13 @@ function GoogleLogo() {
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
       <path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.94l3.66-2.84z" />
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.96 10.96 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z" />
+    </svg>
+  );
+}
+function FacebookLogo() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+      <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
     </svg>
   );
 }
@@ -54,14 +61,16 @@ export default function SocialLogin({ dark = true, divider = true, heading }: { 
       {heading && <p className={`text-center text-xs font-bold uppercase tracking-wider ${dark ? "text-slate-500" : "text-slate-400"}`}>{heading}</p>}
       {providers.map((id) => {
         const label =
-          id === "google" ? tr("Tiếp tục với Google", "Continue with Google") : id === "apple" ? tr("Tiếp tục với Apple", "Continue with Apple") : tr("Tiếp tục với Test OAuth", "Continue with Test OAuth");
+          id === "google" ? tr("Tiếp tục với Google", "Continue with Google") : id === "apple" ? tr("Tiếp tục với Apple", "Continue with Apple") : id === "facebook" ? tr("Tiếp tục với Facebook", "Continue with Facebook") : tr("Tiếp tục với Test OAuth", "Continue with Test OAuth");
         const style =
           id === "apple"
             ? "bg-black text-white ring-1 ring-white/20 hover:bg-neutral-900"
+            : id === "facebook"
+            ? "bg-[#1877F2] text-white hover:bg-[#166FE5]"
             : "bg-white text-slate-800 ring-1 ring-slate-300 hover:bg-slate-50";
         return (
           <button key={id} type="button" disabled={!!busy} onClick={() => go(id)} className={`flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-2xl text-sm font-bold shadow-sm transition-all active:scale-[0.98] disabled:opacity-60 ${style}`}>
-            {busy === id ? <Loader2 className="h-5 w-5 animate-spin" /> : id === "google" ? <GoogleLogo /> : id === "apple" ? <AppleLogo /> : <span aria-hidden>🔑</span>}
+            {busy === id ? <Loader2 className="h-5 w-5 animate-spin" /> : id === "google" ? <GoogleLogo /> : id === "apple" ? <AppleLogo /> : id === "facebook" ? <FacebookLogo /> : <span aria-hidden>🔑</span>}
             {label}
           </button>
         );

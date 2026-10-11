@@ -26,8 +26,8 @@ export default function LoginForm() {
     if (!code) return;
     setError(
       code === "OAuthEmail"
-        ? tr("Tài khoản Google/Apple chưa xác minh email — hãy dùng email đã xác minh hoặc đăng ký bằng email.", "That Google/Apple account has no verified email — use a verified one or sign up with email.")
-        : tr("Đăng nhập bằng Google/Apple chưa thành công. Thử lại hoặc dùng email.", "Google/Apple sign-in didn't complete. Try again or use email.")
+        ? tr("Tài khoản Google/Facebook/Apple này không có email đã xác minh (VD: Facebook lập bằng số điện thoại) — hãy dùng cách khác hoặc đăng ký bằng email.", "That Google/Facebook/Apple account has no verified email (e.g. a phone-only Facebook) — try another way or sign up with email.")
+        : tr("Đăng nhập bằng Google/Facebook/Apple chưa thành công. Thử lại hoặc dùng email.", "Google/Facebook/Apple sign-in didn't complete. Try again or use email.")
     );
   }, []);
 

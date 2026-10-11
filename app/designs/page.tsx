@@ -40,7 +40,7 @@ export default function DesignsPage() {
 
   const occasions = useMemo(() => [...new Set((all ?? []).map((d) => d.occasion).filter(Boolean))] as string[], [all]);
   const list = (all ?? []).filter((d) => (!occasion || d.occasion === occasion) && (!skill || d.skills.includes(skill)) && (!savedOnly || d.saved));
-  const chip = (on: boolean) => `flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition-colors ${on ? "bg-pink-500/20 text-pink-100 ring-pink-400/60" : "text-slate-400 ring-white/10 hover:text-slate-200"}`;
+  const chip = (on: boolean) => `min-h-[36px] flex-shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold ring-1 transition-colors ${on ? "bg-pink-500/20 text-pink-100 ring-pink-400/60" : "text-slate-400 ring-white/10 hover:text-slate-200"}`;
   const update = (id: string, saved: boolean, saves: number) => {
     setAll((l) => l?.map((x) => (x.id === id ? { ...x, saved, saves } : x)) ?? null);
     setOpen((o) => (o && o.id === id ? { ...o, saved, saves } : o));

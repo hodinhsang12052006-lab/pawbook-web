@@ -71,7 +71,7 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
           } catch {}
         }}
         aria-label={tr("Ẩn chủ đề hôm nay", "Hide today's theme")}
-        className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-white/50 hover:bg-white/10 hover:text-white"
+        className="absolute right-1 top-1 z-10 rounded-full p-2.5 text-white/50 hover:bg-white/10 hover:text-white"
       >
         <X className="h-4 w-4" />
       </button>

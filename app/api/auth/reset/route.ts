@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const hashed = await bcrypt.hash(password, 10);
   const now = new Date();
   await prisma.$transaction([
-    prisma.user.update({ where: { id: row.userId }, data: { password: hashed } }),
+    prisma.user.update({ where: { id: row.userId }, data: { password: hashed, sessionsValidAfter: now } }), // đăng xuất mọi máy đang đăng nhập
     prisma.passwordReset.updateMany({ where: { userId: row.userId, usedAt: null }, data: { usedAt: now } }),
   ]);
   return NextResponse.json({ ok: true });

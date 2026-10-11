@@ -37,6 +37,7 @@ model User {
   referredBy   User?   @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
   referrals    User[]  @relation("Referrals")
   pwaInstalledAt DateTime? // đã cài app lên màn hình chính (prisma/sql/2026-10-11_pwa_install.sql)
+  sessionsValidAfter DateTime? // phiên đăng nhập trước mốc này bị huỷ (đổi mật khẩu…) — prisma/sql/2026-10-11b_sessions.sql
 
   jobs              Job[] // Tin tuyển dụng do chủ tiệm (OWNER) đăng
   technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN

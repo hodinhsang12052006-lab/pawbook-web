@@ -144,9 +144,29 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
           token.onb = needsOnboarding(db);
         }
       }
+      // Huỷ phiên từ xa: đổi mật khẩu (sessionsValidAfter) hoặc tài khoản đã xoá → thẻ cũ hết hiệu lực.
+      // Đối chiếu DB tối đa mỗi SESSION_RECHECK_MS (mặc định 60s) để không tốn 1 truy vấn/yêu cầu.
+      const now = Date.now();
+      if (user) token.authAt = now;
+      if (token.id) {
+        const every = Number(process.env.SESSION_RECHECK_MS ?? 60_000);
+        if (!token.chk || now - Number(token.chk) >= every) {
+          try {
+            const u = await prisma.user.findUnique({ where: { id: String(token.id) }, select: { sessionsValidAfter: true } });
+            if (!u) return {} as typeof token; // tài khoản không còn
+            if (!token.authAt) token.authAt = now; // thẻ phát hành trước khi có cơ chế này
+            if (u.sessionsValidAfter && u.sessionsValidAfter.getTime() > Number(token.authAt)) return {} as typeof token;
+            token.chk = now;
+          } catch {
+            // DB lỗi chốc lát → giữ phiên, lần sau kiểm tra lại (không đá người dùng ra vì sự cố mạng)
+          }
+        }
+      }
       return token;
     },
     async session({ session, token }) {
+      // Phiên đã bị huỷ (xem jwt) → coi như chưa đăng nhập.
+      if (!token.id) return { expires: session.expires } as typeof session;
       // Truyền data từ token ra ngoài session để client dùng
       if (session.user) {
         (session.user as any).id = token.id;

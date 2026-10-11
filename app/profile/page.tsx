@@ -489,7 +489,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => toggleSpecialty(s)}
                       aria-pressed={on}
-                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition-all ${on ? "bg-pink-500/15 text-pink-100 ring-pink-500/60" : "text-slate-400 ring-white/10 hover:ring-white/25 hover:text-slate-200"}`}
+                      className={`flex min-h-[36px] items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold ring-1 transition-all ${on ? "bg-pink-500/15 text-pink-100 ring-pink-500/60" : "text-slate-400 ring-white/10 hover:ring-white/25 hover:text-slate-200"}`}
                     >
                       {on && <CheckCircle2 className="h-3.5 w-3.5" />} {valueLabel(s)}
                     </button>

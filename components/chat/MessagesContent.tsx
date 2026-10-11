@@ -1603,6 +1603,7 @@ export default function MessagesContent({
                   />
                   <button
                     type="submit"
+                    aria-label={tr("Gửi tin nhắn", "Send message")}
                     disabled={!hasText}
                     onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
                     className="h-10 w-10 rounded-2xl bg-pink-600 hover:bg-pink-500 text-white flex items-center justify-center disabled:opacity-50 transition-all duration-300 cursor-pointer shadow-lg shadow-pink-500/20"

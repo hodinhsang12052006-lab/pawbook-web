@@ -61,7 +61,7 @@ QUY TẮC BẮT BUỘC:
 // Tin không đáng đăng cho thợ / chủ tiệm: chuyện vặt, người nổi tiếng, động vật, mục tư vấn ứng xử…
 const OFF_TOPIC = /\b(cats?|kittens?|dogs?|pupp(y|ies)|animal|rescue|miss manners|dear abby|celebrit|star['’]?s?\b|royal|princess|kardashian|taylor swift|downton|horoscope|recipe|chisme)\b/i;
 // Tin ngoài Mỹ / Úc lọt vào bộ lọc (Google News khớp lỏng)
-const ELSEWHERE = /\b(toronto|ontario|canada|canadian|vancouver|montreal|calgary|london|england|scotland|ireland|singapore|india|philippines|new zealand|auckland|hong kong|mong kok|china|chinese|taiwan|japan|korea|seoul|dubai)\b/i;
+const ELSEWHERE = /\b(toronto|ontario|canada|canadian|vancouver|montreal|calgary|london|england|scotland|ireland|singapore|india|philippines|new zealand|auckland|hong kong|mong kok|hdb|red dot|malaysia|china|chinese|taiwan|japan|korea|seoul|dubai)\b/i;
 const postable = (n: NewsItem) => !OFF_TOPIC.test(n.title) && !ELSEWHERE.test(n.title);
 
 /** Viết bài: Cloudflare Workers AI (miễn phí) trước, Gemini dự phòng. */

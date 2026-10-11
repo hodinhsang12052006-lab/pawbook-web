@@ -64,7 +64,8 @@ export async function publishHotTopicPost(now = new Date()): Promise<{ posted: b
   const officialId = process.env.OFFICIAL_ACCOUNT_ID;
   if (!officialId || process.env.OFFICIAL_DAILY_POST === "0" || process.env.HOT_TOPICS_DAILY === "0") return { posted: false, reason: "tắt" };
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  if (await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart }, content: { startsWith: "💬" } } })) return { posted: false, reason: "hôm nay đã có" };
+  // Đếm bài CÓ THĂM DÒ hôm nay (bài bot khác cũng có thể mở đầu bằng 💬)
+  if (await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart }, poll: { isNot: null } } })) return { posted: false, reason: "hôm nay đã có" };
   const scores = await readJson<Scores>(SCORE_KEY, {});
   const last = await readJson<Record<string, number>>(LAST_KEY, {});
   const fresh = TOPIC_BANK.filter((t) => !last[t.key] || now.getTime() - last[t.key] > 10 * DAY);

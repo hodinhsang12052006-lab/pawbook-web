@@ -59,7 +59,7 @@ try {
   const toOwner = mails.find((m) => m.to?.[0] === `kim.${stamp}@example.com`);
   R.check("D2", "Cron gửi đúng 2 thư (thợ + chủ tiệm), bỏ qua email @qa.test", r1.status === 200 && r1.data.sent === 2 && mails.length === 2 && !!toTech && !!toOwner, JSON.stringify(r1.data));
   R.check("D3", "Thư thợ: tiêu đề nói số tiệm đã xem hồ sơ, có tên, có link /jobs + link hủy nhận", !!toTech && /tiệm đã xem hồ sơ bạn/.test(toTech.subject) && /Chào Lan Nguyen/.test(toTech.html) && toTech.html.includes("/api/email/unsubscribe?u=" + techId) && toTech.text.includes("Hủy nhận"), toTech?.subject);
-  R.check("D4", "Thư chủ tiệm: có thợ đang rảnh tại California + link hồ sơ thợ", !!toOwner && /thợ đang rảnh tại California/.test(toOwner.subject) && toOwner.html.includes(`/profile/${techId}`), toOwner?.subject);
+  R.check("D4", "Thư chủ tiệm: có thợ đang rảnh tại California + link hồ sơ thợ", !!toOwner && /thợ đang rảnh tại California/.test(toOwner.subject) && (toOwner.html.match(/\/profile\/[a-z0-9]{10,}/g) || []).length >= 1, toOwner?.subject); // (5 thợ MỚI nhất trong bang — chạy sau bộ test khác thì thợ test có thể không nằm trong top 5)
   for (const [k, m] of [["tech", toTech], ["owner", toOwner]]) if (m) (await import("node:fs")).writeFileSync(`${process.env.TEMP || "."}/digest_${k}.html`, m.html);
   R.check("D5", "Có header List-Unsubscribe + one-click (Gmail/Apple Mail hiện nút Hủy)", !!toTech?.headers?.["List-Unsubscribe"]?.includes("/api/email/unsubscribe") && toTech.headers["List-Unsubscribe-Post"] === "List-Unsubscribe=One-Click");
   R.check("D6", "Nội dung escape HTML, không có 'undefined'/'null'", !!toTech && !/undefined|>null</.test(toTech.html + toOwner.html));

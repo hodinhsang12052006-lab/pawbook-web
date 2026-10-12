@@ -89,14 +89,17 @@ const IMAGE_STYLE =
   "Real candid smartphone photo taken in a nail salon, natural daylight. Close-up of a hand in a relaxed natural pose, " +
   "lifelike detail: fine knuckle creases, natural cuticles, realistic proportions with exactly five fingers, " +
   "nails neatly finished and in sharp focus, shallow depth of field, true-to-life colors, looks like a real salon portfolio photo. " +
-  "Not a 3D render, not CGI, not an illustration, not airbrushed, no extra fingers. No text, no watermark, no logos, no brand names.";
+  "Exactly four fingers and one thumb, natural finger lengths, no fused or extra fingers. " +
+  "Not a 3D render, not CGI, not an illustration, not airbrushed. No text, letters, labels, packaging, watermark, logos or brand names anywhere in the image.";
+// Bối cảnh KHÔNG có chữ: ly cà phê / chai sơn làm AI tự "viết" nhãn chữ vô nghĩa ("Cgf ICED…",
+// "O·AL LIGUSE" — 12/10/2026) → bỏ. Chỉ giữ nền vải / gỗ / đá / hoa, dáng tay đơn giản.
 const SCENES = [
-  "hand resting on a white salon towel on the manicure table",
-  "hand holding a takeaway iced coffee cup",
-  "hand resting on a light wooden table near a window",
-  "hand against a soft knit beige sweater sleeve",
-  "hand on a pale pink salon cushion, polish bottles blurred in the background",
-  "hand lightly touching a white marble tabletop",
+  "hand resting flat on a plain white salon towel",
+  "hand resting on a light oak wooden table near a window",
+  "fingers gently curled over a soft beige knit sweater sleeve",
+  "hand resting on a plain white marble tabletop",
+  "hand resting on smooth pale pink linen fabric",
+  "hand lightly holding a single fresh flower, soft blurred background",
 ];
 /** Khung ảnh theo mẫu: cùng mẫu → cùng bối cảnh (vẽ lại vẫn nhất quán), mẫu khác → khác bối cảnh. */
 function photoStyle(seed: string): string {

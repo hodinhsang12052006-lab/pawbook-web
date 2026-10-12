@@ -29,6 +29,7 @@ Object.assign(process.env, { GEMINI_API_KEY: "test", GEMINI_ALLOW_TEST: "1", GEM
 const { publishNewsPosts } = await import("../../lib/newsPosts");
 const { publishDesignGallery } = await import("../../lib/designGallery");
 const { publishDailyOfficialPost } = await import("../../lib/officialDaily");
+const { publishJobDigest } = await import("../../lib/jobDigestPost");
 
 const admin = await prisma.user.create({ data: { email: `content.${Date.now()}@qa.test`, name: "PawNail Jobs QA", password: "x", role: "ADMIN" } });
 process.env.OFFICIAL_ACCOUNT_ID = admin.id;
@@ -77,7 +78,27 @@ ok("G2c", "Đủ 3 bài trong ngày → không đăng bài thứ 4", g2d.posted 
 const o1 = await publishDailyOfficialPost(new Date(now.getTime() + 2 * 3600e3));
 ok("O1", "Đã có bài ảnh mẫu + tin ngành hôm nay → bài KIẾN THỨC vẫn được đăng", o1.posted === true, JSON.stringify(o1));
 const o2 = await publishDailyOfficialPost(new Date(now.getTime() + 3 * 3600e3));
-ok("O2", "Bài kiến thức thứ 2 cùng ngày → không đăng", o2.posted === false);
+ok("O2", "1 giờ sau bài kiến thức → chưa đăng bài thứ 2 (cách ≥ 5 giờ)", o2.posted === false);
+const o3 = await publishDailyOfficialPost(new Date(now.getTime() + 8 * 3600e3));
+const o4 = await publishDailyOfficialPost(new Date(now.getTime() + 10.9 * 3600e3));
+ok("O3", "Tối đa 2 bài kiến thức/ngày (sáng + tối), bài thứ 3 không đăng", o3.posted === true && o4.posted === false, JSON.stringify([o3, o4]));
+
+// Bài điểm tin việc theo bang (từ tin tuyển thật)
+const owner = await prisma.user.create({ data: { email: `digest.${t}@qa.test`, name: "QA Owner", password: "x", role: "OWNER" } });
+const jobIds: string[] = [];
+for (let i = 0; i < 3; i++) {
+  const j = await prisma.job.create({ data: { ownerId: owner.id, title: `Cần thợ ${i}`, salonName: `Digest Nails ${t}-${i}`, description: "x", market: "AU", state: "QLD", city: "Brisbane", salaryType: "Theo giờ AUD", salaryAmount: "$30/giờ", skills: "Gel-X,Dip/SNS", benefits: "", phone: "+61400000000", isUrgent: i === 0, createdAt: now } as any });
+  jobIds.push(j.id);
+}
+const d1 = await publishJobDigest(new Date(now.getTime() + 3600e3));
+const dp = await prisma.post.findFirst({ where: { authorId: admin.id, content: { startsWith: "📍" } } });
+ok("J1", "Bài 📍 điểm tin việc: đúng bang, liệt kê tiệm + lương, link tab Việc, KHÔNG lộ số điện thoại", d1.posted === true && /Queensland: \d+ tiệm đang cần thợ/.test(dp?.content || "") && (dp?.content || "").includes(`Digest Nails ${t}-0`) && /\?tab=jobs/.test(dp?.content || "") && !(dp?.content || "").includes("+614") && dp?.state === "QLD", dp?.content?.slice(0, 200));
+const d2 = await publishJobDigest(new Date(now.getTime() + 2 * 3600e3));
+ok("J2", "Cùng ngày → không đăng bài điểm tin thứ 2", d2.posted === false);
+const o5 = await publishDailyOfficialPost(new Date(now.getTime() + 86400e3));
+ok("J3", "Bài 📍 không chiếm suất bài kiến thức", o5.posted === true, JSON.stringify(o5));
+await prisma.job.deleteMany({ where: { id: { in: jobIds } } });
+await prisma.user.delete({ where: { id: owner.id } });
 const g3 = await publishDesignGallery(new Date(now.getTime() + 86400e3));
 const used = new Set([...g1.ids!, ...g2b.ids!, ...g2c.ids!]);
 ok("G3", "Ngày sau → không lặp mẫu đã giới thiệu", !g3.posted || !(g3.ids || []).some((x) => used.has(x)), JSON.stringify(g3));

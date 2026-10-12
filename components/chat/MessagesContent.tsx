@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from "react";
-import GifPicker from "@/components/chat/GifPicker";
 import {
   Send, Search, MessageSquare, Loader2, Plus, Users,
-  Smile, X, ArrowLeft, Check, CheckCheck, Paperclip, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
+  Smile, X, ArrowLeft, Check, CheckCheck, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -16,12 +15,14 @@ import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useCallManager } from "@/lib/CallManagerContext";
 import { avatarSrc } from "@/lib/avatar";
-import { POPULAR_EMOJIS, MOCK_STICKERS, UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
+import { UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
 import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
-import { Pin, Palette } from "lucide-react";
+import { Pin, Palette, Image as ImageIcon } from "lucide-react";
+import { type Reaction, toggleReaction } from "@/lib/chatReactions";
+import MediaPicker from "./MediaPicker";
 import { CHAT_WALLPAPERS, getWallpaperId, saveWallpaper, wallpaperById } from "@/lib/chatWallpapers";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -115,7 +116,8 @@ export default function MessagesContent({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
-  const [messageReactions, setMessageReactions] = useState<{ [msgId: string]: string[] }>({});
+  // Cảm xúc đã đổi trong phiên (realtime / vừa bấm) — đè lên msg.reactions tải từ máy chủ.
+  const [messageReactions, setMessageReactions] = useState<{ [msgId: string]: Reaction[] }>({});
 
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGifs, setShowGifs] = useState(false);
@@ -551,8 +553,24 @@ export default function MessagesContent({
       isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
     };
     el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, []);
+    // Đang ở cuối đoạn chat mà ảnh / GIF / sticker / video tải xong (làm nội dung cao thêm) → giữ dính
+    // đáy như Messenger. Trước đây mở cuộc trò chuyện có ảnh thì dừng lửng lơ cách đáy vài trăm px,
+    // tin mới nhất bị khuất. Đang kéo lên đọc tin cũ thì không kéo xuống.
+    const keepPinned = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || !/^(IMG|VIDEO)$/.test(t.tagName) || !isNearBottomRef.current || pendingScrollAdjustRef.current) return;
+      el.scrollTop = el.scrollHeight;
+    };
+    el.addEventListener("load", keepPinned, true);
+    el.addEventListener("loadedmetadata", keepPinned, true);
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      el.removeEventListener("load", keepPinned, true);
+      el.removeEventListener("loadedmetadata", keepPinned, true);
+    };
+    // Khung cuộn chỉ có khi đang mở 1 cuộc trò chuyện → gắn lại mỗi lần mở / đổi cuộc trò chuyện
+    // (trước đây gắn 1 lần lúc vào trang: vào hộp thư rồi mới bấm mở thì không bao giờ gắn).
+  }, [activeKey]);
 
   // Single scroll-management effect covering all three cases: restoring
   // position after prepending history, jumping to bottom on chat switch, and
@@ -575,6 +593,7 @@ export default function MessagesContent({
       prevChatKeyRef.current = activeKey;
       prevMessageCountRef.current = chatMessages.length;
       el.scrollTop = el.scrollHeight;
+      isNearBottomRef.current = true; // vừa mở cuộc trò chuyện = đang ở đáy (ảnh tải sau vẫn giữ dính đáy)
       return;
     }
 
@@ -716,15 +735,13 @@ export default function MessagesContent({
     const handleMessageUpdated = (data: any) => {
       if (!data || (!data.id && !data.messageId)) return;
       const targetId = data.id || data.messageId;
-      if (data.reactions) {
-        setMessageReactions((prev) => ({ ...prev, [targetId]: data.reactions }));
-      } else if (data.emoji) {
-        setMessageReactions((prev) => {
-          const current = prev[targetId] || [];
-          if (current.includes(data.emoji)) return prev;
-          return { ...prev, [targetId]: [...current, data.emoji] };
-        });
-      }
+      if (Array.isArray(data.reactions)) setMessageReactions((prev) => ({ ...prev, [targetId]: data.reactions }));
+    };
+
+    // Máy chủ đã bắn tin trước khi ghi DB (để tới nhanh) mà ghi DB lỗi → gỡ tin vừa hiện.
+    const handleMessageRecalled = (data: any) => {
+      if (!data?.id || !data?.conversationId) return;
+      removeFromBucket(data.conversationId, (msg: any) => msg.id === data.id);
     };
 
     const handleMessageSeen = (data: any) => {
@@ -750,6 +767,7 @@ export default function MessagesContent({
     channel.bind("new-message", handleNewMessage);
     channel.bind("message-updated", handleMessageUpdated);
     channel.bind("message-seen", handleMessageSeen);
+    channel.bind("message-recalled", handleMessageRecalled);
     channel.bind("user-typing", handleUserTyping);
 
     return () => {
@@ -757,6 +775,7 @@ export default function MessagesContent({
       channel.unbind("new-message", handleNewMessage);
       channel.unbind("message-updated", handleMessageUpdated);
       channel.unbind("message-seen", handleMessageSeen);
+      channel.unbind("message-recalled", handleMessageRecalled);
       channel.unbind("user-typing", handleUserTyping);
       releaseUserChannel(currentUser.id);
     };
@@ -900,22 +919,21 @@ export default function MessagesContent({
     setShowGifs(false);
   }, []);
 
-  const handleAddReaction = useCallback(async (messageId: string, icon: string) => {
-    if (!messageId || !activeChat || !currentUser) return;
+  // Thả / đổi / gỡ cảm xúc: hiện ngay (đoán trước như máy chủ), rồi lấy bản đã lưu từ máy chủ.
+  const handleAddReaction = useCallback(async (messageId: string, icon: string, current?: Reaction[]) => {
+    if (!messageId || !activeChat || !currentUser || messageId.startsWith("temp")) return;
+    setMessageReactions((prev) => ({ ...prev, [messageId]: toggleReaction(prev[messageId] ?? current, currentUser.id, icon) }));
     try {
-      setMessageReactions((prev) => {
-        const current = prev[messageId] || [];
-        if (current.includes(icon)) return prev;
-        return { ...prev, [messageId]: [...current, icon] };
-      });
       const res = await fetch("/api/messages/react", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId, emoji: icon, icon, partnerId: activeChat.id }),
+        body: JSON.stringify({ messageId, emoji: icon }),
       });
-      if (!res.ok) console.error("Reaction server error status:", res.status);
-    } catch (error) {
-      console.error("Reaction error:", error);
+      const data = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(data?.reactions)) setMessageReactions((prev) => ({ ...prev, [messageId]: data.reactions }));
+      else setMessageReactions((prev) => ({ ...prev, [messageId]: current ?? [] }));
+    } catch {
+      setMessageReactions((prev) => ({ ...prev, [messageId]: current ?? [] }));
     }
   }, [activeChat, currentUser]);
 
@@ -1079,8 +1097,7 @@ export default function MessagesContent({
       const { callPartner: p, startCall: go } = rowLatest.current;
       if (p) go(p, kind);
     },
-    react: (id: string, icon: string) => rowLatest.current.handleAddReaction(id, icon),
-    clearReactions: (id: string) => setMessageReactions((prev) => ({ ...prev, [id]: [] })),
+    react: (id: string, icon: string, current?: Reaction[]) => rowLatest.current.handleAddReaction(id, icon, current),
     retry: (m: MessageType) => rowLatest.current.retrySendMessage(m),
   }), []);
 
@@ -1118,7 +1135,7 @@ export default function MessagesContent({
               onChange={(e) => setListQuery(e.target.value)}
               placeholder={t("messenger.searchPlaceholder")}
               aria-label={tr("Tìm cuộc trò chuyện", "Search conversations")}
-              className="w-full bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none"
+              className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
             />
           </div>
 
@@ -1182,7 +1199,7 @@ export default function MessagesContent({
                       conversationId: conv.id,
                     })}
                     aria-current={isActive ? "true" : undefined}
-                    className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all duration-200 ${isActive ? "bg-gradient-to-r from-pink-600/20 to-fuchsia-600/10 ring-1 ring-pink-500/30" : "hover:bg-white/[0.04]"}`}
+                    className={`relative flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors duration-150 ${isActive ? "bg-white/[0.07] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-gradient-to-b before:from-pink-500 before:to-fuchsia-500" : "hover:bg-white/[0.04]"}`}
                   >
                     {isGroup ? (
                       <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
@@ -1262,12 +1279,17 @@ export default function MessagesContent({
                 </div>
                 <div className="min-w-0">
                   <h3 className="flex min-w-0 items-center gap-1 text-sm font-bold text-slate-100">
-                    <span className="truncate">{activeChat.name}</span>
+                    {/* Điện thoại: chạm vào tên để xem hồ sơ (chỗ chật, ẩn chữ "Xem hồ sơ" để không đè nút gọi). */}
+                    {activeChat.isGroup ? (
+                      <span className="truncate">{activeChat.name}</span>
+                    ) : (
+                      <Link href={`/profile/${activeChat.id}`} className="truncate hover:text-pink-200">{activeChat.name}</Link>
+                    )}
                     {!activeChat.isGroup && isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
                   </h3>
                   {/* Trước đây chấm xanh "đang hoạt động" hiện cứng cho MỌI người
                       (app không theo dõi online) — bỏ, thay bằng thông tin thật. */}
-                  <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[11px] text-slate-400">
+                  <div className="mt-0.5 flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[11px] text-slate-400">
                     {activeChatTyping ? (
                       <span className="flex items-center gap-1.5 font-semibold text-pink-300">
                         {tr("Đang soạn tin ", "Typing ")}<TypingDots />
@@ -1283,8 +1305,8 @@ export default function MessagesContent({
                         ) : (
                           <span>{lastActiveLabel(partnerLastActiveAt) || ROLE_VI()[activeChat.role] || tr("Thành viên", "Member")}</span>
                         )}
-                        <span className="text-slate-600">·</span>
-                        <Link href={`/profile/${activeChat.id}`} className="font-semibold text-pink-300 hover:text-pink-200">
+                        <span className="hidden text-slate-600 sm:inline">·</span>
+                        <Link href={`/profile/${activeChat.id}`} className="hidden font-semibold text-pink-300 hover:text-pink-200 sm:inline">
                           {tr("Xem hồ sơ", "View profile")}
                         </Link>
                       </>
@@ -1388,6 +1410,23 @@ export default function MessagesContent({
                 </div>
               )}
 
+              {/* Đầu cuộc trò chuyện (đã cuộn tới tin đầu tiên): thẻ hồ sơ đối phương như Messenger —
+                  biết đang nói chuyện với ai, và đoạn chat ngắn không còn trống trơn. */}
+              {!activeChat.isGroup && !chatNextCursor && chatMessages.length > 0 && (
+                <div className="flex flex-none flex-col items-center gap-2 pb-4 pt-6 text-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-20 w-20 rounded-full object-cover ring-4 ring-white/5" />
+                  <p className="flex items-center gap-1 text-base font-black text-white">
+                    {activeChat.name}
+                    {isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
+                  </p>
+                  <p className="text-xs text-slate-400">{ROLE_VI()[activeChat.role] || tr("Thành viên PawNail", "PawNail member")}</p>
+                  <Link href={`/profile/${activeChat.id}`} className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12]">
+                    {tr("Xem hồ sơ", "View profile")}
+                  </Link>
+                </div>
+              )}
+
               {chatMessages.length > 0 ? (
                 chatMessages.map((msg, idx) => {
                   const isLastSelf = idx === lastSelfIndex;
@@ -1403,12 +1442,11 @@ export default function MessagesContent({
                       fresh={freshMessageIds.has(msg.id)}
                       isLastSelf={isLastSelf}
                       seenAt={isLastSelf && activeChat.conversationId ? seenByConv[activeChat.conversationId] : undefined}
-                      reactions={messageReactions[msg.id]}
+                      reactions={messageReactions[msg.id] ?? msg.reactions}
                       locale={locale}
                       t={t}
                       onCallBack={!activeChat.isGroup ? rowHandlers.callBack : undefined}
                       onReact={rowHandlers.react}
-                      onClearReactions={rowHandlers.clearReactions}
                       onRetry={rowHandlers.retry}
                     />
                   );
@@ -1451,81 +1489,6 @@ export default function MessagesContent({
               )}
             </div>
 
-            {(showEmoji || showGifs) && (
-              <div className="absolute bottom-24 left-4 right-4 bg-slate-950 border border-slate-850 rounded-2xl p-4 shadow-2xl z-20 h-80 flex flex-col animate-fadeIn">
-                <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => { setChatPanelTab("emoji"); setShowEmoji(true); setShowGifs(false); }}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${chatPanelTab === "emoji" ? "bg-pink-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"}`}
-                    >
-                      😀 Emojis
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setChatPanelTab("sticker"); setShowEmoji(false); setShowGifs(false); }}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${chatPanelTab === "sticker" ? "bg-pink-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"}`}
-                    >
-                      ✨ Stickers
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setChatPanelTab("gif"); setShowGifs(true); setShowEmoji(false); }}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${chatPanelTab === "gif" ? "bg-pink-600 text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"}`}
-                    >
-                      🎬 GIFs
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { setShowEmoji(false); setShowGifs(false); }}
-                    className="p-1 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white cursor-pointer"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  {chatPanelTab === "emoji" && (
-                    <div className="grid grid-cols-8 sm:grid-cols-10 gap-3 p-2 h-full overflow-y-auto custom-scrollbar select-none">
-                      {POPULAR_EMOJIS.map((emoji, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setMessageText((prev) => prev + emoji)}
-                          className="text-2xl p-2 rounded-xl hover:bg-slate-900 hover:scale-125 active:scale-95 transition-transform duration-200 cursor-pointer text-center flex items-center justify-center"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {chatPanelTab === "sticker" && (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 p-1">
-                      {MOCK_STICKERS.map((stk) => (
-                        <div
-                          key={stk.label}
-                          onClick={() => { handleSendMessage(null, stk.emoji, "STICKER"); setShowEmoji(false); }}
-                          className="hover:scale-125 hover:-rotate-3 active:scale-95 transition-all duration-300 cursor-pointer p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-1.5 shadow-md select-none hover:shadow-indigo-500/10 hover:border-indigo-500/30"
-                        >
-                          <span className="text-4xl animate-bounce" style={{ animationDuration: "2s" }}>{stk.emoji}</span>
-                          <span className="text-[9px] text-slate-500 tracking-wider font-semibold uppercase">{stk.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {chatPanelTab === "gif" && (
-                    <div className="h-full py-1">
-                      <GifPicker onSelect={handleGifSelect} onClose={handleCloseMediaPanel} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {isActiveChatBlocked ? (
               <div className="p-4 border-t border-white/5 bg-slate-950/70 backdrop-blur-md flex-none z-10 flex items-center justify-between gap-3">
                 <p className="text-xs font-bold text-slate-400 flex items-center gap-2">
@@ -1540,77 +1503,92 @@ export default function MessagesContent({
                 </button>
               </div>
             ) : (
-            <div className="p-4 border-t border-white/5 bg-slate-950/70 backdrop-blur-md flex-none z-10">
-              <form onSubmit={(e) => handleSendMessage(e)} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setShowEmoji(!showEmoji); setShowGifs(false); }}
-                    className={`p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer ${showEmoji && chatPanelTab !== "gif" ? "bg-slate-900 text-pink-400 border-pink-500/30" : ""}`}
-                    title={tr("Chèn biểu tượng, nhãn dán", "Insert emoji or sticker")}
-                  >
-                    <Smile className="h-4 w-4" />
-                  </button>
+            <div className="relative flex-none z-10 border-t border-white/5 bg-slate-950/80 px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-4">
+              {(showEmoji || showGifs) && (
+                <MediaPicker
+                  tab={chatPanelTab}
+                  onTab={(t) => { setChatPanelTab(t); setShowEmoji(true); setShowGifs(t === "gif"); }}
+                  onEmoji={(e) => setMessageText((prev) => prev + e)}
+                  onSticker={(e) => { handleSendMessage(null, e, "STICKER"); handleCloseMediaPanel(); }}
+                  onGif={(url) => { handleGifSelect(url); handleCloseMediaPanel(); }}
+                  onClose={handleCloseMediaPanel}
+                />
+              )}
+              {/* 1 hàng như Messenger: [😊][GIF][📎] · ô nhập bo tròn · nút gửi tròn. Trước đây nút
+                  biểu tượng nằm riêng 1 hàng phía trên, tốn chỗ và nhìn rời rạc. */}
+              <form onSubmit={(e) => handleSendMessage(e)} className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showEmoji && chatPanelTab !== "gif") { setShowEmoji(false); return; }
+                    setChatPanelTab(chatPanelTab === "gif" ? "emoji" : chatPanelTab);
+                    setShowEmoji(true);
+                    setShowGifs(false);
+                  }}
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-colors ${showEmoji && chatPanelTab !== "gif" ? "bg-pink-500/15 text-pink-300" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+                  title={tr("Chèn biểu tượng, nhãn dán", "Insert emoji or sticker")}
+                  aria-label={tr("Biểu tượng cảm xúc", "Emoji")}
+                >
+                  <Smile className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showEmoji && chatPanelTab === "gif") {
+                      setShowEmoji(false);
+                    } else {
+                      setShowEmoji(true);
+                      setChatPanelTab("gif");
+                      setShowGifs(true);
+                    }
+                  }}
+                  className={`flex h-10 flex-shrink-0 items-center justify-center rounded-full px-2 text-[11px] font-black transition-colors ${showEmoji && chatPanelTab === "gif" ? "bg-pink-500/15 text-pink-300" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+                  title={tr("Chèn ảnh động GIF", "Insert GIF")}
+                  aria-label="GIF"
+                >
+                  <span className="rounded-md border border-current px-1 py-px leading-none">GIF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUploadImage}
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                  title={tr("Đính kèm tệp tin hình ảnh", "Attach an image")}
+                  aria-label={tr("Gửi ảnh", "Send a photo")}
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (showEmoji && chatPanelTab === "gif") {
-                        setShowEmoji(false);
-                      } else {
-                        setShowEmoji(true);
-                        setChatPanelTab("gif");
-                        setShowGifs(true);
-                      }
-                    }}
-                    className={`px-2.5 py-1 h-8 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-all duration-300 cursor-pointer text-xs font-black font-sans leading-none flex items-center justify-center border border-slate-800 ${showEmoji && chatPanelTab === "gif" ? "bg-pink-600/20 text-pink-300 border-pink-500/50" : ""}`}
-                    title={tr("Chèn ảnh động GIF", "Insert GIF")}
-                  >
-                    GIF
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleUploadImage}
-                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                    title={tr("Đính kèm tệp tin hình ảnh", "Attach an image")}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </button>
-
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    ref={inputRef}
-                    defaultValue=""
-                    onChange={(e) => {
-                      const has = !!e.target.value.trim();
-                      setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
-                      if (has) notifyTyping();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                        e.preventDefault();
-                        if (inputRef.current?.value.trim()) handleSendMessage(null);
-                      }
-                    }}
-                    enterKeyHint="send"
-                    autoComplete="off"
-                    placeholder={t("messenger.inputPlaceholder")}
-                    className="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-pink-600 focus:ring-1 focus:ring-pink-600 shadow-inner"
-                  />
-                  <button
-                    type="submit"
-                    aria-label={tr("Gửi tin nhắn", "Send message")}
-                    disabled={!hasText}
-                    onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
-                    className="h-10 w-10 rounded-2xl bg-pink-600 hover:bg-pink-500 text-white flex items-center justify-center disabled:opacity-50 transition-all duration-300 cursor-pointer shadow-lg shadow-pink-500/20"
-                  >
-                    <Send className="h-4.5 w-4.5" />
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  ref={inputRef}
+                  defaultValue=""
+                  onChange={(e) => {
+                    const has = !!e.target.value.trim();
+                    setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
+                    if (has) notifyTyping();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      if (inputRef.current?.value.trim()) handleSendMessage(null);
+                    }
+                  }}
+                  enterKeyHint="send"
+                  autoComplete="off"
+                  placeholder={t("messenger.inputPlaceholder")}
+                  className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2.5 text-base text-slate-100 placeholder-slate-500 transition-colors focus:border-pink-500/60 focus:bg-white/[0.08] focus:outline-none sm:text-sm"
+                />
+                <button
+                  type="submit"
+                  aria-label={tr("Gửi tin nhắn", "Send message")}
+                  disabled={!hasText}
+                  onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
+                  // Chỉ đổi độ mờ + kích thước (rẻ, chạy trên GPU) — trước đây đổi cả nền gradient + bóng đổ có hiệu ứng
+                  // 0,2 giây đúng lúc gõ mấy chữ đầu → máy yếu bị khựng phím.
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-md shadow-pink-500/20 transition-[transform,opacity] duration-150 ${hasText ? "scale-100 opacity-100" : "scale-90 opacity-40"}`}
+                >
+                  <Send className="h-[18px] w-[18px] -translate-x-px translate-y-px" />
+                </button>
               </form>
             </div>
             )}

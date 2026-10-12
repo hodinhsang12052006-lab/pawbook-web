@@ -478,10 +478,24 @@ model Message {
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  reactions      MessageReaction[]
 
   // Index FK/cột lọc — SQLite không tự tạo index cho khóa ngoại.
   @@index([conversationId, createdAt])
   @@index([senderId])
+}
+
+// Thả cảm xúc vào tin nhắn — mỗi người 1 cảm xúc / tin (chọn lại = đổi, bấm trùng = gỡ), lưu thật
+// (trước đây chỉ bắn realtime 1 lần, tải lại là mất). SQL: prisma/sql/2026-10-12_message_reactions.sql
+model MessageReaction {
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@id([messageId, userId])
+  @@index([messageId])
 }
 
 // Mốc "đã đọc tới đâu" của từng người trong từng hội thoại — nguồn cho số tin

@@ -74,6 +74,10 @@ R.check("CP1", `Mở trang chat (tải trang mới hoàn toàn, CPU chậm ${CPU
 
 // 2) Gõ phím: độ trễ từng phím (Event Timing) — Zalo/Tele cảm giác tức thì < 50ms.
 await page.waitForTimeout(1500);
+// Người thật luôn chạm vào cuộc trò chuyện trước khi gõ (lần chạm đó mở khoá âm thanh ~1 lần/phiên);
+// bài test mở thẳng bằng link nên chạm 1 lần vào đầu khung chat cho giống, rồi mới đo gõ phím.
+{ const vp = page.viewportSize(); await page.mouse.click(Math.round(vp.width / 2), Math.round(vp.height / 2)); }
+await page.waitForTimeout(800);
 await resetPerf();
 await box.click();
 await page.keyboard.type("Dạ em cảm ơn anh, mai 10h em ghé tiệm thử tay nghề nha", { delay: 35 });
@@ -106,7 +110,7 @@ R.check("CP4", "Nhận tin realtime ≤ 1.5s (gồm cả Pusher qua internet)", 
 // 5) Cuộn lịch sử lên trên: đếm khung hình bị rớt.
 await resetPerf();
 const scroll = await page.evaluate(async () => {
-  const el = [...document.querySelectorAll("div")].find((d) => d.scrollHeight > d.clientHeight + 200 && getComputedStyle(d).overflowY === "auto" && d.querySelector("[class*=rounded-2xl]"));
+  const el = [...document.querySelectorAll("div")].find((d) => d.scrollHeight > d.clientHeight + 200 && getComputedStyle(d).overflowY === "auto" && d.querySelectorAll("p").length > 5);
   if (!el) return null;
   const frames = [];
   let last = performance.now();
@@ -130,7 +134,7 @@ await page2.goto(BASE_URL + `/messages?to=${owner.me.id}`);
 await page2.getByText(`(#${HISTORY - 1})`).last().waitFor({ timeout: 30000 });
 await page2.waitForTimeout(2500);
 const jump = await page2.evaluate(async () => {
-  const el = [...document.querySelectorAll("div")].find((d) => d.scrollHeight > d.clientHeight + 200 && getComputedStyle(d).overflowY === "auto" && d.querySelector("[class*=rounded-2xl]"));
+  const el = [...document.querySelectorAll("div")].find((d) => d.scrollHeight > d.clientHeight + 200 && getComputedStyle(d).overflowY === "auto" && d.querySelectorAll("p").length > 5);
   const ps = () => [...el.querySelectorAll("p")].filter((p) => /\(#\d+\)/.test(p.textContent || ""));
   el.scrollTop = 500; // đang đọc gần đỉnh → vào vùng tải trước (800px)
   await new Promise((r) => setTimeout(r, 30));

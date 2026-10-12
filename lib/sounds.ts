@@ -77,14 +77,18 @@ function audio(): { c: AudioContext; out: GainNode } | null {
 
 // Trình duyệt chỉ cho phát âm thanh sau lần chạm/bấm đầu tiên — "mở khoá"
 // AudioContext ngay lần tương tác đầu để tin nhắn đến sau đó kêu được.
+// Mở khoá lúc NHẤC ngón tay (pointerup), không phải lúc chạm xuống: tạo AudioContext tốn ~100ms
+// trên máy tầm trung — làm lúc chạm xuống thì đúng lúc ô nhập tin đang nhận focus → mấy chữ đầu
+// bị khựng. Nhấc tay vẫn là "cử chỉ người dùng" hợp lệ (iPhone cho phát âm thanh). Bàn phím rời:
+// mở khoá ở keyup thay vì keydown (phím đầu không phải chờ).
 if (typeof window !== "undefined") {
   const unlock = () => {
     audio();
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("keydown", unlock);
+    window.removeEventListener("pointerup", unlock);
+    window.removeEventListener("keyup", unlock);
   };
-  window.addEventListener("pointerdown", unlock, { passive: true });
-  window.addEventListener("keydown", unlock);
+  window.addEventListener("pointerup", unlock, { passive: true });
+  window.addEventListener("keyup", unlock);
 }
 
 interface ToneOpts {

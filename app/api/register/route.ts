@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { openWelcomeChat } from "@/lib/welcomeChat";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role, Market } from "@prisma/client";
@@ -142,6 +143,13 @@ export async function POST(req: Request) {
       });
 
       await attachReferral(user.id, name, ref);
+      // Admin (tài khoản chính thức) tự nhắn: thông tin đăng ký + lời chào — chạy sau khi trả lời.
+      after(() => openWelcomeChat({
+        userId: user.id, name, role: "TECHNICIAN", email, phone, market: marketEnum, state, city, via: "email",
+        specialties: Array.isArray(specialties) ? specialties : [], desiredSalaryType, desiredSalaryAmount,
+        desiredBenefits: Array.isArray(desiredBenefits) ? desiredBenefits : [], status,
+        portfolioCount: Array.isArray(portfolioImages) ? portfolioImages.length : 0,
+      }).catch((e) => console.error("welcome chat error:", e)));
       const { password: _, ...userWithoutPassword } = user;
       return NextResponse.json(
         { message: "Đăng ký thành công!", user: userWithoutPassword },
@@ -205,6 +213,12 @@ export async function POST(req: Request) {
     }
 
     await attachReferral(user.id, name, ref);
+    after(() => openWelcomeChat({
+      userId: user.id, name, role: "OWNER", email, phone, market: marketEnum, state, city, via: "email",
+      salonName: safeSalonName, urgentRole: Array.isArray(urgentRole) ? urgentRole : [], salaryType, salaryAmount,
+      hasHousing: typeof hasHousing === "boolean" ? hasHousing : undefined,
+      surveyAnswers: Array.isArray(surveyAnswers) ? surveyAnswers.filter((a: any) => a && typeof a.key === "string" && (a.answer === "A" || a.answer === "B")) : [],
+    }).catch((e) => console.error("welcome chat error:", e)));
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json(
       { message: "Đăng ký thành công!", user: userWithoutPassword },

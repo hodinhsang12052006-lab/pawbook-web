@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { openWelcomeChat } from "@/lib/welcomeChat";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
 
-  const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, password: true, state: true } });
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, password: true, state: true, email: true } });
   if (!me || !needsOnboarding(me)) return NextResponse.json({ error: "Hồ sơ đã hoàn tất." }, { status: 409 });
 
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -40,5 +41,7 @@ export async function POST(req: Request) {
   }
   // Đăng ký bằng Google/Apple qua link mời bạn bè (cookie pn_ref) → tính cho người mời như đăng ký thường.
   await attachReferral(userId, name, readRef(req, null));
+  // Admin (tài khoản chính thức) tự nhắn: thông tin đăng ký + lời chào.
+  after(() => openWelcomeChat({ userId, name, role, email: me.email, phone, market, state, city, via: "social" }).catch((e) => console.error("welcome chat error:", e)));
   return NextResponse.json({ ok: true, role });
 }

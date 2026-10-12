@@ -22,8 +22,10 @@ try {
   const cron = await fetch(BASE_URL + "/api/cron/designs?count=2", { headers: { authorization: "Bearer test-cron" } }).then((r) => r.json());
   const ids = cron.created || [];
   const rows = ids.length ? (await db.execute(`SELECT status, publishedAt FROM "NailDesign" WHERE id IN (${ids.map(() => "?").join(",")})`, ids)).rows : [];
+  // Đăng thẳng (không chờ duyệt); trang công khai hiện mẫu khi đã có ảnh thật (vẽ xong) — giả lập ảnh đã vẽ.
+  if (ids.length) await db.execute(`UPDATE "NailDesign" SET imageUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg' WHERE imageUrl IS NULL AND id IN (${ids.map(() => "?").join(",")})`, ids);
   const after = await fetch(BASE_URL + "/api/designs?limit=60").then((r) => r.json());
-  R.check("A2", "Mẫu mới tạo → lên THẲNG trang Mẫu nail (không chờ duyệt)", ids.length === 2 && rows.every((r) => r.status === "published" && r.publishedAt) && ids.every((id) => after.designs.some((d) => d.id === id)), JSON.stringify({ ids, rows, before }));
+  R.check("A2", "Mẫu mới tạo → lên THẲNG trang Mẫu nail (không chờ duyệt), hiện ngay khi có ảnh", ids.length === 2 && rows.every((r) => r.status === "published" && r.publishedAt) && ids.every((id) => after.designs.some((d) => d.id === id)), JSON.stringify({ ids, rows, before }));
 
   // Bật duyệt lại → mẫu mới chờ duyệt; tắt lại → lên thẳng
   await a.client.req("/api/admin/designs", { method: "PATCH", json: { review: true } });

@@ -74,8 +74,11 @@ for (const type of ["audio", "video"]) {
     await shot(B.page, `${type}_1_incoming`);
     // Người gọi không còn nút "Trả lời" vô nghĩa trên cuộc gọi của chính mình.
     const callerAnswer = await A.page.getByRole("button", { name: "Trả lời" }).count();
-    const calleeAvatar = await B.page.locator('[data-call-phase] img[alt]:not([alt=""])').first().getAttribute("src");
-    return callerAnswer === 0 && !!calleeAvatar && !calleeAvatar.includes("ui-avatars.com");
+    // Người gọi có ảnh → hiện ảnh thật; chưa có ảnh → chữ viết tắt (không phải ảnh ui-avatars lỗi).
+    const img = B.page.locator('[data-call-phase] img[alt]:not([alt=""])').first();
+    const calleeAvatar = (await img.count()) ? await img.getAttribute("src") : null;
+    const okAvatar = calleeAvatar ? !calleeAvatar.includes("ui-avatars.com") : (await B.page.locator("[data-call-phase]").innerText()).includes(A.me?.name ?? "");
+    return callerAnswer === 0 && okAvatar;
   });
 
   await step(`${type}-2`, `Gọi ${label}: nghe máy → CẢ 2 bên kết nối được với nhau qua ZEGOCLOUD`, async () => {

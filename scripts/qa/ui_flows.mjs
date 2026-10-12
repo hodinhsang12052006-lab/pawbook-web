@@ -393,7 +393,8 @@ await step("F28", "Tin nhắn: xem trước tin cuối + giờ, tìm kiếm ho�
   const row = op.getByRole("button", { name: new RegExp(partner.name) }).first();
   await row.waitFor({ timeout: 5000 });
   await row.click();
-  await op.getByRole("link", { name: "Xem hồ sơ" }).waitFor({ timeout: 10000 });
+  // Điện thoại: chữ "Xem hồ sơ" ở đầu khung chat ẩn (chạm vào tên) — còn ở thẻ hồ sơ đầu cuộc trò chuyện.
+  await op.getByRole("link", { name: "Xem hồ sơ" }).locator("visible=true").first().waitFor({ timeout: 10000 });
   await op.getByText(stamp).last().waitFor({ timeout: 10000 });
   await shot(op, "20_messenger");
   return (await op.locator(".bg-emerald-500.rounded-full").count()) === 0;

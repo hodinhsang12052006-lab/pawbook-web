@@ -10,6 +10,8 @@
 //     gọi lưu/chia sẻ/bình luận (tâm lý: sợ mất tiền, muốn kiếm thêm, muốn an toàn).
 //   • Không tự đăng: admin đọc, sửa nếu cần, rồi mới đăng.
 
+import { LIBRARY_TOPICS } from "@/lib/contentLibrary";
+
 export type Pillar = "money" | "safety" | "health" | "skills" | "owner" | "trend" | "community";
 export type Audience = "tech" | "owner" | "all";
 
@@ -46,7 +48,7 @@ const SRC = {
   osha: { label: "OSHA — Nail salon workers", url: "https://www.osha.gov/nail-salons" },
 } as const;
 
-interface Topic {
+export interface Topic {
   id: string;
   pillar: Pillar;
   audience: Audience;
@@ -61,7 +63,7 @@ interface Topic {
   sources?: { label: string; url: string }[];
   tags: string;
 }
-interface Ctx { now: Date; theme?: { title: string; emoji: string } | null }
+export interface Ctx { now: Date; theme?: { title: string; emoji: string } | null }
 
 const md = (d: Date) => (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); // 1015 = 15/10
 const between = (from: number, to: number) => (d: Date) => (from <= to ? md(d) >= from && md(d) <= to : md(d) >= from || md(d) <= to);
@@ -76,7 +78,7 @@ function nextQuarterly(now: Date) {
 const daysTo = (a: Date, b: Date) => Math.ceil((b.getTime() - a.getTime()) / 86_400_000);
 const vnDate = (d: Date) => `${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`;
 
-const TOPICS: Topic[] = [
+const BASE_TOPICS: Topic[] = [
   // ---------- Bài ghim ----------
   {
     id: "welcome", pillar: "community", audience: "all", market: "ALL", pinned: true,
@@ -434,6 +436,9 @@ export interface BotInput {
 
 /** Bài nháp hôm nay: bài ghim chưa đăng → bài đúng mùa → bài xoay vòng theo ngày
  *  (trộn đủ mảng: tiền, an toàn, sức khoẻ, tay nghề, quản lý tiệm). */
+// Kho chính (thuế/an toàn/theo mùa) + kho bài quanh năm (tiếng Anh đứng quầy, tay nghề, sức khoẻ…).
+const TOPICS: Topic[] = [...BASE_TOPICS, ...LIBRARY_TOPICS];
+
 export function buildBotDrafts(input: BotInput, max = 8): BotDraft[] {
   const ctx: Ctx = { now: input.now, theme: input.theme ?? null };
   const fits = TOPICS.filter((t) => (t.market === "ALL" || t.market === input.market) && (t.id !== "theme-collection" || !!input.theme));

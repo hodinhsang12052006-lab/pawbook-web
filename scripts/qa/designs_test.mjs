@@ -248,6 +248,13 @@ try {
   const engBtn = sec.getByRole("button", { name: /Tạo 3 mẫu PawNail \(miễn phí\)/ });
   R.check("U11", "Phòng nội dung: nút 'Tạo 3 mẫu PawNail (miễn phí)' bấm được; mẫu có hoạ tiết được vẽ đúng (không chỉ màu trơn)", (await engBtn.isEnabled()) && motifs >= 4, motifs + " móng có hoạ tiết");
   await ap.screenshot({ path: TMP + "/designs_admin_samples.png", fullPage: true });
+  // Trang công khai chỉ hiện mẫu ĐÃ có ảnh thật (mẫu chờ vẽ ảnh không hiện hình hoạt hình ra ngoài).
+  const pubIds = new Set((await anon.req("/api/designs?limit=60")).data.designs.map((d) => d.id));
+  const noImgPublished = (await db.execute(`SELECT id FROM "NailDesign" WHERE status = 'published' AND imageUrl IS NULL`)).rows.map((r) => r.id);
+  R.check("D21b", "Mẫu đã đăng nhưng chưa có ảnh thật → KHÔNG hiện trên trang công khai", noImgPublished.every((id) => !pubIds.has(id)), `${noImgPublished.length} mẫu chưa ảnh`);
+  // Từ đây kiểm tra duyệt / phân trang: cho mọi mẫu thử 1 ảnh mẫu để chúng được hiện công khai.
+  const giveImages = () => db.execute(`UPDATE "NailDesign" SET imageUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg' WHERE imageUrl IS NULL`);
+  await giveImages();
   await sec.getByRole("button", { name: /Duyệt & đăng/ }).first().click();
   await ap.waitForTimeout(1500);
   const after = (await anon.req("/api/designs")).data.designs.length;
@@ -263,6 +270,7 @@ try {
   const bulkTech = await tech.req("/api/admin/designs", { method: "PATCH", json: { ids: occRows.slice(0, 5).map((d) => d.id), status: "published" } });
   const bulk = await admin.req("/api/admin/designs", { method: "PATCH", json: { ids: occRows.slice(0, 55).map((d) => d.id), status: "published" } });
   R.check("D19", "Duyệt hàng loạt: admin đăng 55 mẫu một lần; thợ gọi → 403", bulk.status === 200 && bulk.data.count === 55 && bulkTech.status === 403, JSON.stringify(bulk.data));
+  await giveImages();
   const pg1 = (await anon.req("/api/designs?limit=12")).data;
   const pg2 = (await anon.req("/api/designs?limit=12&offset=12")).data;
   R.check("D20", "Trang /designs phân trang: trang 1 + trang 2 khác nhau, có cờ 'còn nữa'", pg1.designs.length === 12 && pg1.hasMore === true && pg2.designs.length === 12 && !pg2.designs.some((d) => pg1.designs.some((x) => x.id === d.id)));

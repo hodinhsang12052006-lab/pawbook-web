@@ -1,7 +1,10 @@
 "use client";
 
 import React from "react";
-import { Check, CheckCheck, Phone, Video, RefreshCw } from "lucide-react";
+import { Check, CheckCheck, Phone, Video, RefreshCw, SmilePlus, Copy } from "lucide-react";
+import toast from "react-hot-toast";
+import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
+import { stickerUrl } from "@/lib/chatStickers";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { describeCall, type MessageType } from "./chatShared";
@@ -20,12 +23,11 @@ export interface MessageRowProps {
   fresh: boolean;
   isLastSelf: boolean;
   seenAt?: string;
-  reactions?: string[];
+  reactions?: Reaction[];
   locale: string;
   t: (key: string) => string;
   onCallBack?: (kind: "audio" | "video") => void;
-  onReact: (messageId: string, icon: string) => void;
-  onClearReactions: (messageId: string) => void;
+  onReact: (messageId: string, icon: string, current?: Reaction[]) => void;
   onRetry: (msg: MessageType) => void;
 }
 
@@ -44,12 +46,22 @@ function MessageRowImpl({
   t,
   onCallBack,
   onReact,
-  onClearReactions,
   onRetry,
 }: MessageRowProps) {
-  // Thanh thả cảm xúc chỉ dựng khi chạm/rê vào tin (trước đây mỗi tin dựng sẵn
-  // 6 nút ẩn → hàng trăm nút thừa, chậm khi mở/cuộn chat dài).
-  const [barReady, setBarReady] = React.useState(false);
+  // Thả cảm xúc kiểu Messenger: máy tính rê vào tin → nút 🙂 cạnh bong bóng; điện thoại nhấn giữ tin.
+  // Thanh cảm xúc chỉ dựng khi mở (không dựng sẵn cho hàng trăm tin).
+  const [picker, setPicker] = React.useState(false);
+  const rowRef = React.useRef<HTMLDivElement>(null);
+  const pressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = React.useRef(false);
+  React.useEffect(() => {
+    if (!picker) return;
+    const close = (e: PointerEvent) => { if (!rowRef.current?.contains(e.target as Node)) setPicker(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPicker(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", esc); };
+  }, [picker]);
   const isSelf = msg.senderId === currentUser?.id;
   const senderAvatar = isSelf
     ? avatarSrc(currentUser.avatarUrl, currentUser.name, currentUser.id)
@@ -76,6 +88,46 @@ function MessageRowImpl({
     Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) < 5 * 60_000;
   const groupedWithPrev = sameGroup(prevMsg, msg);
   const isLastInGroup = !sameGroup(msg, nextMsg);
+  const canReact = !msg.isOptimistic && !msg.sendError && !String(msg.id).startsWith("temp");
+  const sum = summarize(reactions, currentUser?.id ?? "");
+  const clearPress = () => { if (pressTimer.current) clearTimeout(pressTimer.current); pressTimer.current = null; };
+  const pressHandlers = canReact
+    ? {
+        onPointerDown: (e: React.PointerEvent) => {
+          if (e.pointerType === "mouse") return;
+          longPressed.current = false;
+          pressTimer.current = setTimeout(() => { longPressed.current = true; setPicker(true); navigator.vibrate?.(8); }, 420);
+        },
+        onPointerUp: clearPress,
+        onPointerMove: (e: React.PointerEvent) => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) clearPress(); },
+        onPointerCancel: clearPress,
+        onContextMenu: (e: React.MouseEvent) => { if (longPressed.current || pressTimer.current) e.preventDefault(); },
+      }
+    : {};
+  const react = (e: string) => { onReact(msg.id, e, reactions); setPicker(false); };
+  const copy = () => {
+    navigator.clipboard?.writeText(msg.content).then(() => toast.success(tr("Đã sao chép", "Copied")), () => {});
+    setPicker(false);
+  };
+  const reactBtn = canReact ? (
+    <button
+      type="button"
+      onClick={() => setPicker((v) => !v)}
+      aria-label={tr("Thả cảm xúc", "React")}
+      className="mb-6 hidden h-8 w-8 flex-shrink-0 items-center justify-center self-center rounded-full text-slate-500 opacity-0 transition-opacity hover:bg-white/10 hover:text-slate-200 focus-visible:opacity-100 group-hover:opacity-100 md:flex"
+    >
+      <SmilePlus className="h-[18px] w-[18px]" />
+    </button>
+  ) : null;
+  // Tin chỉ có 1–3 emoji → hiện TO, không bong bóng (như Messenger/iMessage).
+  const emojiOnly =
+    (msg.type === "TEXT" || !msg.type) &&
+    /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\uFE0F|\u200D|\s)+$/u.test(msg.content || "") &&
+    [...(msg.content || "").matchAll(/\p{Extended_Pictographic}/gu)].length <= 3;
+  // Bo góc theo cụm: tin nối tiếp cùng người thì góc phía người gửi bo nhỏ lại (liền khối như Messenger).
+  const corner = isSelf
+    ? `${groupedWithPrev ? "rounded-tr-md" : ""} ${!isLastInGroup ? "rounded-br-md" : ""}`
+    : `${groupedWithPrev ? "rounded-tl-md" : ""} ${!isLastInGroup ? "rounded-bl-md" : ""}`;
   const isSeen = isLastSelf && !activeChat.isGroup && !!seenAt && new Date(seenAt).getTime() >= new Date(msg.createdAt).getTime();
   const dateSeparatorLabel = (() => {
     if (!showDateSeparator) return null;
@@ -141,9 +193,10 @@ function MessageRowImpl({
     <React.Fragment key={msg.id || idx}>
       {dateSeparator}
       <div
-        onPointerEnter={barReady ? undefined : () => setBarReady(true)}
-        className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${groupedWithPrev ? "!mt-1" : ""} ${animClass}`}
+        ref={rowRef}
+        className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${groupedWithPrev ? "!mt-1" : ""} ${picker ? "z-30" : ""} ${animClass}`}
       >
+        {isSelf && reactBtn}
         {!isSelf &&
           (isLastInGroup ? (
             <div className="relative mb-[22px] h-7 w-7 rounded-full overflow-hidden ring-1 ring-white/10 flex-shrink-0">
@@ -152,14 +205,44 @@ function MessageRowImpl({
           ) : (
             <div className="h-7 w-7 flex-shrink-0" aria-hidden />
           ))}
-        <div className="flex flex-col max-w-[70%] relative pb-1">
+        <div className="relative flex max-w-[78%] flex-col pb-1 sm:max-w-[65%]">
           {activeChat.isGroup && !isSelf && <span className="text-5xs text-slate-500 mb-0.5 ml-1">{msg.sender?.name}</span>}
 
-          <div className="relative">
-            {msg.type === "STICKER" ? (
-              <div className="text-5xl my-2 select-none transform hover:scale-115 hover:-rotate-3 active:scale-95 transition-all cursor-pointer" title="Sticker">
-                {msg.content}
+          <div className="relative select-none [-webkit-touch-callout:none] sm:select-text" {...pressHandlers}>
+            {picker && (
+              <div
+                role="menu"
+                aria-label={tr("Chọn cảm xúc", "Pick a reaction")}
+                className={`absolute bottom-full z-40 mb-2 flex items-center gap-0.5 rounded-full bg-slate-900/95 px-1.5 py-1 shadow-2xl shadow-black/60 ring-1 ring-white/10 backdrop-blur-md animate-fadeIn ${isSelf ? "right-0" : "left-0"}`}
+              >
+                {REACTION_EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    role="menuitemradio"
+                    onClick={() => react(e)}
+                    aria-label={e}
+                    aria-checked={sum.mine === e}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-[26px] leading-none transition-transform duration-150 hover:-translate-y-1 hover:scale-125 active:scale-95 ${sum.mine === e ? "bg-white/15" : ""}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+                {(msg.type === "TEXT" || !msg.type) && (
+                  <>
+                    <span className="mx-1 h-6 w-px bg-white/10" />
+                    <button type="button" role="menuitem" onClick={copy} aria-label={tr("Sao chép", "Copy")} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-300 hover:bg-white/10 hover:text-white">
+                      <Copy className="h-[18px] w-[18px]" />
+                    </button>
+                  </>
+                )}
               </div>
+            )}
+            {emojiOnly ? (
+              <div className="select-none py-1 text-[2.75rem] leading-none" aria-label={msg.content}>{msg.content}</div>
+            ) : msg.type === "STICKER" ? (
+              // Sticker hoạt hình (Noto Emoji Animation, Google · CC BY 4.0) — chưa tải được thì hiện emoji to.
+              <StickerView emoji={msg.content} />
             ) : msg.type === "ATTENDANCE" ? (
               <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-2 min-w-[260px] text-emerald-300 font-sans shadow-lg text-left">
                 <p className="font-extrabold text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
@@ -173,11 +256,11 @@ function MessageRowImpl({
               </div>
             ) : (
               <div
-                className={`rounded-2xl px-4 py-2 text-xs leading-relaxed break-words relative ${
+                className={`relative break-words rounded-[20px] px-3.5 py-2 text-[15px] leading-snug sm:text-sm ${corner} ${
                   isSelf
-                    ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white rounded-2xl rounded-tr-sm shadow-md shadow-pink-600/10"
-                    : "bg-slate-800 text-white rounded-2xl rounded-bl-sm border border-slate-700"
-                }`}
+                    ? "bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-sm shadow-pink-600/20"
+                    : "bg-slate-800/90 text-slate-50"
+                } ${msg.type === "IMAGE" || msg.type === "VIDEO" ? "!bg-none !bg-transparent !p-0 !shadow-none" : ""}`}
               >
                 {msg.type === "IMAGE" ? (
                   // Plain <img>, not next/image: content comes from
@@ -216,27 +299,24 @@ function MessageRowImpl({
                 ) : msg.type === "VIDEO" ? (
                   <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
                 ) : (
-                  <p>{msg.content}</p>
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
                 )}
               </div>
             )}
 
-            {reactions && reactions.length > 0 && (
-              <div
-                onClick={() => onClearReactions(msg.id)}
-                className={`absolute -bottom-2.5 ${
-                  isSelf ? "left-2" : "right-2"
-                } bg-slate-900 border border-slate-800 rounded-full px-1.5 py-0.5 text-[9px] flex items-center gap-0.5 shadow-lg z-20 select-none cursor-pointer hover:bg-slate-800 transition-colors`}
-                title={tr("Nhấp để xóa cảm xúc", "Click to remove reaction")}
-              >
-                {reactions.map((emoji, i) => (
-                  <span key={i} className="hover:scale-125 transition-transform duration-100">
-                    {emoji}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
+
+          {sum.total > 0 && (
+            <button
+              type="button"
+              onClick={() => (sum.mine ? react(sum.mine) : canReact && setPicker(true))}
+              title={sum.mine ? tr("Bấm để gỡ cảm xúc của bạn", "Tap to remove your reaction") : tr("Thả cảm xúc", "React")}
+              className={`relative z-10 -mt-2 inline-flex items-center gap-0.5 rounded-full bg-slate-900 px-1.5 py-0.5 text-[13px] leading-none shadow-md shadow-black/40 ring-1 transition-transform active:scale-95 ${sum.mine ? "ring-pink-500/60" : "ring-white/10"} ${isSelf ? "mr-2 self-end" : "ml-2 self-start"}`}
+            >
+              {sum.top.slice(0, 3).map((e) => <span key={e}>{e}</span>)}
+              {sum.total > 1 && <span className="ml-0.5 text-[11px] font-bold text-slate-300">{sum.total}</span>}
+            </button>
+          )}
 
           {/* Giờ gửi ở tin cuối mỗi cụm; tin cuối của mình kèm Đã gửi/Đã xem. */}
           {(isLastInGroup || isLastSelf) && (
@@ -271,26 +351,20 @@ function MessageRowImpl({
             </button>
           )}
 
-          {barReady && (
-            <div
-              className={`absolute -top-7 ${
-                isSelf ? "right-0" : "left-0"
-              } flex items-center gap-1 bg-slate-900/95 border border-slate-800 rounded-lg px-2 py-0.5 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-30 backdrop-blur-sm`}
-            >
-              <div className="flex items-center gap-1 border-r border-slate-800 pr-1.5 mr-1.5">
-                {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
-                  <button key={emoji} onClick={() => onReact(msg.id, emoji)} className="text-xs hover:scale-130 transition-transform active:scale-95 duration-75 cursor-pointer">
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[8px] text-slate-500 font-mono select-none">{new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
-            </div>
-          )}
+
         </div>
+        {!isSelf && reactBtn}
       </div>
     </React.Fragment>
   );
+}
+
+function StickerView({ emoji }: { emoji: string }) {
+  const [failed, setFailed] = React.useState(false);
+  const url = stickerUrl(emoji);
+  if (!url || failed) return <div className="my-1 select-none text-[64px] leading-none">{emoji}</div>;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt={emoji} width={120} height={120} loading="lazy" decoding="async" draggable={false} onError={() => setFailed(true)} className="my-1 h-[120px] w-[120px] select-none" />;
 }
 
 const MessageRow = React.memo(MessageRowImpl);

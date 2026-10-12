@@ -19,6 +19,10 @@ const THEMES: Record<string, Theme> = {
   season: { band: "from-orange-500/25 via-orange-500/10 to-transparent", ring: "ring-orange-500/20", dot: "bg-orange-400", label: "text-orange-300", tag: ["Theo mùa", "Seasonal"] },
   news: { band: "from-violet-500/25 via-violet-500/10 to-transparent", ring: "ring-violet-500/20", dot: "bg-violet-400", label: "text-violet-300", tag: ["Tin ngành nail", "Industry news"] },
   talk: { band: "from-fuchsia-500/25 via-fuchsia-500/10 to-transparent", ring: "ring-fuchsia-500/20", dot: "bg-fuchsia-400", label: "text-fuchsia-300", tag: ["Thảo luận", "Discussion"] },
+  jobs: { band: "from-emerald-500/25 via-teal-500/10 to-transparent", ring: "ring-emerald-500/20", dot: "bg-emerald-400", label: "text-emerald-300", tag: ["Việc làm tuần này", "Jobs this week"] },
+  health: { band: "from-teal-500/25 via-cyan-500/10 to-transparent", ring: "ring-teal-500/20", dot: "bg-teal-400", label: "text-teal-300", tag: ["Sức khoẻ thợ", "Tech health"] },
+  english: { band: "from-indigo-500/25 via-blue-500/10 to-transparent", ring: "ring-indigo-500/20", dot: "bg-indigo-400", label: "text-indigo-300", tag: ["Tiếng Anh tiệm nail", "Salon English"] },
+  owner: { band: "from-amber-500/25 via-amber-500/10 to-transparent", ring: "ring-amber-500/20", dot: "bg-amber-400", label: "text-amber-300", tag: ["Chủ tiệm", "Salon owners"] },
   tip: { band: "from-pink-500/25 via-pink-500/10 to-transparent", ring: "ring-pink-500/20", dot: "bg-pink-400", label: "text-pink-300", tag: ["Mẹo nghề", "Pro tip"] },
 };
 const EMOJI_THEME: Record<string, keyof typeof THEMES> = {
@@ -27,6 +31,11 @@ const EMOJI_THEME: Record<string, keyof typeof THEMES> = {
   "🎃": "season", "🎄": "season", "🍂": "season", "🌸": "season", "🎆": "season", "💝": "season", "🧧": "season", "☀️": "season",
   "📰": "news", "🗞️": "news", "🇺🇸": "news", "🇦🇺": "news", "📈": "news",
   "💬": "talk", "🗳️": "talk", "❓": "talk",
+  "📍": "jobs",
+  "🧘": "health", "👀": "health", "🧤": "health", "😷": "health", "🩺": "health",
+  "🗣️": "english", "🗣": "english",
+  "🏪": "owner", "💲": "owner", "🗂️": "owner", "📣": "owner", "🌧️": "owner", "📉": "owner",
+  "🧼": "safety", "🛁": "safety", "🔐": "safety", "🚗": "safety",
 };
 
 export interface Article {

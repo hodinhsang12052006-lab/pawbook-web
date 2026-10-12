@@ -16,6 +16,9 @@ export async function GET(req: Request) {
     const rows = await prisma.nailDesign.findMany({
       where: {
         status: "published",
+        // Chỉ hiện mẫu ĐÃ có ảnh thật — mẫu mới vẫn tự đăng (không chờ duyệt) nhưng chờ vẽ ảnh xong
+        // mới lộ ra; trước đó hiện hình minh hoạ hoạt hình nhìn rẻ tiền ở đầu trang.
+        imageUrl: { not: null },
         ...(occasion ? { occasion } : {}),
         ...(skill ? { skills: { contains: skill } } : {}),
       },

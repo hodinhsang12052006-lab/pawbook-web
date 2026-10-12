@@ -53,6 +53,7 @@ export interface MessageType {
   conversationId: string;
   isOptimistic?: boolean;
   sendError?: boolean;
+  reactions?: { e: string; u: string }[];
 }
 
 // Bỏ dấu tiếng Việt để tìm "nguyen" ra "Nguyễn".
@@ -184,6 +185,7 @@ export function mapServerMessage(m: any): MessageType {
       ? { id: m.receiver.id, name: m.receiver.name, avatarUrl: m.receiver.avatarUrl || null, role: m.receiver.role }
       : { id: "", name: "User", role: "USER" } as any,
     conversationId: m.conversationId,
+    reactions: Array.isArray(m.reactions) ? m.reactions : undefined,
   };
 }
 

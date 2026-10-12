@@ -6,6 +6,7 @@ import { sendPush } from "@/lib/push";
 import { publishDailyOfficialPost } from "@/lib/officialDaily";
 import { publishDesignGallery } from "@/lib/designGallery";
 import { publishNewsPosts } from "@/lib/newsPosts";
+import { publishJobDigest } from "@/lib/jobDigestPost";
 
 // Vercel Cron gọi mỗi sáng (vercel.json) → tạo loạt mẫu nháp, báo admin vào duyệt.
 // Mặc định dùng MÁY TẠO MẪU PAWNAIL (0đ, không phụ thuộc AI ngoài). Muốn dùng
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
     const occasion = sp.get("occasion");
     const extra = Math.min(occasion ? 150 : 8, Math.max(0, Math.round(Number(sp.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
-    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; official?: unknown; gallery?: unknown; news?: unknown } = useGemini
+    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; official?: unknown; gallery?: unknown; news?: unknown; digest?: unknown } = useGemini
       ? await generateDesigns("US", Math.ceil(dailyLimit() / 2))
       : occasion && extra
         ? await generateOccasion("US", occasion, extra, deadline)
@@ -47,6 +48,7 @@ export async function GET(req: Request) {
     const fail = (e: unknown) => ({ posted: false, reason: String((e as Error).message).slice(0, 120) });
     r.official = await publishDailyOfficialPost().catch(fail);
     r.gallery = await publishDesignGallery().catch(fail);
+    r.digest = await publishJobDigest().catch(fail);
     r.news = await publishNewsPosts(new Date(), { deadline: deadline - 15_000 }).catch(fail);
     // Vẽ bù ảnh cho mẫu hôm nay còn thiếu (lần trước lỗi/quá giờ) nếu còn thời gian + lượt.
     if (!useGemini) {
@@ -65,7 +67,7 @@ export async function GET(req: Request) {
       });
     }
     // Ghi tóm tắt vào log Vercel (lỗi vẽ ảnh chỉ nằm trong phản hồi — không ai đọc được khi cron tự chạy).
-    console.log("cron designs:", JSON.stringify({ created: r.created.length, backfilled: r.backfilled, gallery: r.gallery, official: r.official, errors: r.errors.slice(0, 5) }).slice(0, 1500));
+    console.log("cron designs:", JSON.stringify({ created: r.created.length, backfilled: r.backfilled, gallery: r.gallery, official: r.official, digest: r.digest, errors: r.errors.slice(0, 5) }).slice(0, 1500));
     return NextResponse.json(r);
   } catch (err) {
     console.error("cron designs error:", err);

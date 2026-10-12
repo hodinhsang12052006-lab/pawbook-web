@@ -17,7 +17,7 @@ const r1 = await publishDailyOfficialPost(d0);
 ok("O1", "Ngày đầu → đăng 1 bài (không phải bài ghim)", r1.posted === true && !String(r1.title).startsWith("📌"), JSON.stringify(r1));
 if (r1.title) titles.push(r1.title);
 const r2 = await publishDailyOfficialPost(new Date(d0.getTime() + 3600e3));
-ok("O2", "Cùng ngày gọi lại → KHÔNG đăng bài thứ 2", r2.posted === false && r2.reason === "hôm nay đã có bài", JSON.stringify(r2));
+ok("O2", "1 giờ sau gọi lại → KHÔNG đăng thêm (bài kiến thức cách nhau ≥ 5 giờ, tối đa 2/ngày)", r2.posted === false, JSON.stringify(r2));
 // Bài hôm qua phải có createdAt hôm qua để ngày mai được đăng tiếp
 await prisma.post.updateMany({ where: { authorId: admin.id }, data: { createdAt: d0 } });
 for (let i = 1; i <= 6; i++) {

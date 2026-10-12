@@ -2,7 +2,8 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Phone, Video, PhoneOff, Loader2 } from "lucide-react";
+import { Phone, Video, VideoOff, PhoneOff, Loader2, Mic, MicOff, Volume2, MessageCircle } from "lucide-react";
+import { useAudioOutput } from "@/lib/useAudioOutput";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { startRingtone, stopRingtone } from "@/lib/ringtone";
@@ -69,6 +70,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   // phòng cũ thì phiên cũ chưa kịp thoát hẳn trên ZEGOCLOUD → 2 phiên tranh
   // nhau, cuộc gọi mới không kết nối được.
   const [callId, setCallId] = useState("");
+  // Lựa chọn khi đang đổ chuông (như FaceTime/Messenger): tắt mic / tắt camera trước khi bên kia nghe.
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
+  // Đồng hồ đổ chuông (mm:ss) — biết đã chờ bao lâu.
+  const [ringSecs, setRingSecs] = useState(0);
+  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
 
   // Handler Pusher chỉ bind 1 lần → đọc trạng thái mới nhất qua ref.
   const stateRef = useRef({ phase, callType, peer, isCaller: false });
@@ -115,7 +122,16 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     isCallerRef.current = false;
     setPhase("idle");
     setPeer(null);
+    setMicOn(true);
+    setCamOn(true);
   }, []);
+
+  useEffect(() => {
+    if (phase !== "outgoing" && phase !== "incoming") return;
+    setRingSecs(0);
+    const t = setInterval(() => setRingSecs((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [phase]);
 
   // ---------- Tín hiệu đến qua Pusher ----------
   useEffect(() => {
@@ -273,6 +289,20 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
   useImperativeHandle(ref, () => ({ startCall: handleStartCall }), [handleStartCall]);
 
+  const speaker = useAudioOutput(rootEl, phase !== "idle");
+
+  // Máy đang đổ chuông mà bận: từ chối + nhắn sẵn 1 câu (như "Trả lời bằng tin nhắn" của iPhone).
+  const handleBusyReply = useCallback(() => {
+    const p = stateRef.current.peer;
+    if (!p) return;
+    fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receiverId: p.id, content: tr("Mình đang bận chút, lát mình gọi lại nha 🙏", "I'm busy right now, I'll call you back soon 🙏") }),
+    }).catch(() => {});
+    handleHangUp();
+  }, [handleHangUp]);
+
   if (phase === "idle" || !peer) return null;
 
   // roomId đối xứng: 2 bên luôn tính ra cùng 1 chuỗi bất kể ai gọi.
@@ -287,7 +317,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           ZEGOCLOUD tự focus phần tử bên trong khiến khung overflow-hidden bị
           cuộn ngang ~50px — cả màn hình gọi lệch trái, nút lật camera bị cắt,
           lộ trang chat phía sau. overflow-clip không cho cuộn kiểu đó. */}
-    <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-between overflow-clip text-slate-100 animate-fadeIn" role="dialog" aria-label={typeLabel} data-call-phase={phase}>
+    <div ref={setRootEl} className="fixed inset-0 z-[2000] flex flex-col items-center justify-between overflow-clip bg-slate-950 text-slate-100 animate-fadeIn" role="dialog" aria-label={typeLabel} data-call-phase={phase}>
       {/* Nền: avatar đối phương phóng to + mờ, phủ gradient thương hiệu */}
       <div className="absolute inset-0 -z-10 bg-slate-950">
         {hasPhoto && (
@@ -322,7 +352,20 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
             onConnected={handleConnected}
             onLeave={handleHangUp}
             onPeerLeft={handlePeerLeft}
+            micOn={micOn}
+            camOn={camOn}
           />
+          {speaker.canSwitch && (
+            <button
+              type="button"
+              onClick={speaker.next}
+              title={speaker.label || tr("Đổi loa", "Switch speaker")}
+              className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex items-center gap-1.5 rounded-full bg-slate-900/80 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/15 backdrop-blur-md hover:bg-slate-800"
+            >
+              <Volume2 className="h-4 w-4" />
+              <span className="max-w-[9rem] truncate">{speaker.isDefault ? tr("Loa", "Speaker") : speaker.label || tr("Loa", "Speaker")}</span>
+            </button>
+          )}
           {phase === "connecting" && (
             <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold text-slate-300 backdrop-blur">
               {tr("Đang chờ ", "Waiting for ")}{peer.name}{tr(" vào cuộc gọi…", " to join…")}
@@ -331,47 +374,74 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         </div>
       ) : (
         <>
-          <div className="flex flex-col items-center gap-6 px-6 text-center">
-            <div className="relative">
-              <span className="absolute inset-0 animate-ping rounded-full bg-pink-500/25" />
-              <span className="absolute -inset-3 animate-ping rounded-full bg-fuchsia-500/10" style={{ animationDelay: "0.5s" }} />
-              <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="relative h-32 w-32 ring-4 ring-white/10 shadow-2xl" />
-            </div>
-            <div className="space-y-1.5">
-              <h2 className="text-2xl font-black tracking-tight text-white">{peer.name}</h2>
-              <p className="text-sm font-semibold text-slate-300">
-                {phase === "incoming" ? tr(`${typeLabel} đến…`, `Incoming ${typeLabel.toLowerCase()}…`) : tr("Đang đổ chuông…", "Ringing…")}
-              </p>
-            </div>
-          </div>
+          {/* Máy tính: gom vào 1 thẻ giữa màn hình (trước đây chữ + nút trôi giữa khoảng trống lớn).
+              Điện thoại: toàn màn hình như cuộc gọi của máy. */}
+          <div className="flex w-full flex-1 items-center justify-center pb-44 md:px-6 md:pb-0">
+            <div className="flex w-full flex-col items-center gap-7 px-6 text-center md:max-w-md md:rounded-[2rem] md:border md:border-white/10 md:bg-white/[0.04] md:px-10 md:py-12 md:shadow-2xl md:shadow-black/40 md:backdrop-blur-2xl">
+              <div className="relative">
+                <span className="absolute -inset-4 animate-ping rounded-full bg-pink-500/20 [animation-duration:2s]" />
+                <span className="absolute -inset-8 animate-ping rounded-full bg-fuchsia-500/10 [animation-duration:2s]" style={{ animationDelay: "0.7s" }} />
+                <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="relative h-32 w-32 ring-4 ring-white/15 shadow-2xl shadow-pink-900/40" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-[28px] font-black leading-tight tracking-tight text-white">{peer.name}</h2>
+                <p className="flex items-center justify-center gap-2 text-sm font-medium text-slate-300">
+                  {callType === "video" ? <Video className="h-4 w-4 text-pink-300" /> : <Phone className="h-4 w-4 text-pink-300" />}
+                  {phase === "incoming" ? tr(`${typeLabel} đến`, `Incoming ${typeLabel.toLowerCase()}`) : tr("Đang đổ chuông", "Ringing")}
+                  <span className="tabular-nums text-slate-500">· {String(Math.floor(ringSecs / 60)).padStart(2, "0")}:{String(ringSecs % 60).padStart(2, "0")}</span>
+                </p>
+              </div>
 
-          <div className="flex w-full items-center justify-center gap-16 rounded-t-[2rem] border-t border-white/10 bg-white/[0.03] px-10 pb-[max(2rem,env(safe-area-inset-bottom))] pt-6 backdrop-blur-2xl animate-callSheetUp">
-            <div className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={handleHangUp}
-                title={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
-                aria-label={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white shadow-xl shadow-red-500/30 transition-transform hover:scale-105 active:scale-90"
-              >
-                <PhoneOff className="h-6 w-6 stroke-[2.5px]" />
-              </button>
-              <span className="text-[11px] font-semibold text-slate-400">{phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ", "Cancel")}</span>
-            </div>
+              {phase === "outgoing" && (
+                // Điều khiển trước khi bên kia nghe máy — giữ nguyên khi vào cuộc gọi.
+                <div className="flex items-start justify-center gap-5 pt-2">
+                  <CallToggle on={micOn} onClick={() => setMicOn((v) => !v)} label={micOn ? tr("Tắt tiếng", "Mute") : tr("Bật tiếng", "Unmute")} iconOn={<Mic className="h-6 w-6" />} iconOff={<MicOff className="h-6 w-6" />} />
+                  {speaker.canSwitch && (
+                    <CallToggle on={speaker.isDefault} onClick={speaker.next} label={tr("Loa", "Speaker")} iconOn={<Volume2 className="h-6 w-6" />} iconOff={<Volume2 className="h-6 w-6" />} />
+                  )}
+                  {callType === "video" && (
+                    <CallToggle on={camOn} onClick={() => setCamOn((v) => !v)} label={camOn ? tr("Tắt camera", "Camera off") : tr("Bật camera", "Camera on")} iconOn={<Video className="h-6 w-6" />} iconOff={<VideoOff className="h-6 w-6" />} />
+                  )}
+                </div>
+              )}
+
+          <div className="fixed inset-x-0 bottom-0 flex w-full flex-col items-center gap-5 px-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-4 animate-callSheetUp md:static md:mt-2 md:px-0 md:pb-0 md:pt-2">
             {phase === "incoming" && (
+              <button type="button" onClick={handleBusyReply} className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-slate-100 ring-1 ring-white/10 backdrop-blur-md transition-colors hover:bg-white/15">
+                <MessageCircle className="h-4 w-4" />{tr("Bận — nhắn lại", "Busy — send a message")}
+              </button>
+            )}
+            <div className="flex items-center justify-center gap-20">
               <div className="flex flex-col items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleAccept}
-                  title={tr("Trả lời", "Answer")}
-                  aria-label={tr("Trả lời", "Answer")}
-                  className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-xl shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-90"
+                  onClick={handleHangUp}
+                  title={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
+                  aria-label={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
+                  className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white shadow-xl shadow-red-600/40 transition-transform hover:scale-105 active:scale-90"
                 >
-                  {callType === "video" ? <Video className="h-6 w-6 stroke-[2.5px]" /> : <Phone className="h-6 w-6 stroke-[2.5px]" />}
+                  <PhoneOff className="h-7 w-7 stroke-[2.5px]" />
                 </button>
-                <span className="text-[11px] font-semibold text-slate-400">{tr("Trả lời", "Answer")}</span>
+                <span className="text-xs font-semibold text-slate-300">{phase === "incoming" ? tr("Từ chối", "Decline") : tr("Kết thúc", "End")}</span>
               </div>
-            )}
+              {phase === "incoming" && (
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAccept}
+                    title={tr("Trả lời", "Answer")}
+                    aria-label={tr("Trả lời", "Answer")}
+                    className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-xl shadow-emerald-500/40 transition-transform hover:scale-105 active:scale-90"
+                  >
+                    <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30 [animation-duration:1.6s]" />
+                    {callType === "video" ? <Video className="relative h-7 w-7 stroke-[2.5px]" /> : <Phone className="relative h-7 w-7 stroke-[2.5px]" />}
+                  </button>
+                  <span className="text-xs font-semibold text-slate-300">{tr("Trả lời", "Answer")}</span>
+                </div>
+              )}
+            </div>
+          </div>
+            </div>
           </div>
         </>
       )}
@@ -379,5 +449,22 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     </>
   );
 });
+
+function CallToggle({ on, onClick, label, iconOn, iconOff }: { on: boolean; onClick: () => void; label: string; iconOn: React.ReactNode; iconOff: React.ReactNode }) {
+  return (
+    <div className="flex w-16 flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={!on}
+        aria-label={label}
+        className={`flex h-14 w-14 items-center justify-center rounded-full backdrop-blur-md transition-all active:scale-90 ${on ? "bg-white/12 text-white ring-1 ring-white/15 hover:bg-white/20" : "bg-white text-slate-900"}`}
+      >
+        {on ? iconOn : iconOff}
+      </button>
+      <span className="text-[11px] font-semibold leading-tight text-slate-300">{label}</span>
+    </div>
+  );
+}
 
 export default CallManager;

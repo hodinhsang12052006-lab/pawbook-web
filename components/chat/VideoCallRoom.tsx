@@ -25,12 +25,15 @@ interface VideoCallRoomProps {
   onLeave?: () => void;
   /** Đối phương rời phòng (cúp máy / mất mạng). */
   onPeerLeft?: () => void;
+  /** Lựa chọn lúc đang đổ chuông: vào phòng với micro / camera bật hay tắt. */
+  micOn?: boolean;
+  camOn?: boolean;
 }
 
 // Không vào được phòng sau ngần này → coi như kết nối thất bại.
 const PEER_TIMEOUT_MS = 30_000;
 
-export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, onConnected, onLeave, onPeerLeft }: VideoCallRoomProps) {
+export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, onConnected, onLeave, onPeerLeft, micOn = true, camOn = true }: VideoCallRoomProps) {
   useTr(); // render lại khi đổi VI/EN
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,8 +113,8 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         zp.joinRoom({
           container: mount,
           scenario: { mode: ZegoUIKitPrebuilt.OneONoneCall },
-          turnOnCameraWhenJoining: mode === "video",
-          turnOnMicrophoneWhenJoining: true,
+          turnOnCameraWhenJoining: mode === "video" && camOn,
+          turnOnMicrophoneWhenJoining: micOn,
           showMyCameraToggleButton: mode === "video",
           showMyMicrophoneToggleButton: true,
           showAudioVideoSettingsButton: true,
@@ -152,6 +155,8 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
       clearTimeout(peerTimer);
       peerWatcher?.disconnect();
     };
+    // micOn/camOn chỉ đọc lúc vào phòng — đổi giữa chừng do thanh điều khiển của ZEGOCLOUD lo, không join lại.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, userName, mode, peerId, retryKey]);
 
   // Khi đóng cuộc gọi: chuyển node của SDK ra body (ẩn) TRƯỚC khi React gỡ

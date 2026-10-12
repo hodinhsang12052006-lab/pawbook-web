@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
@@ -98,6 +99,7 @@ export async function GET(req: Request) {
               role: true,
             },
           },
+          reactions: { select: { emoji: true, userId: true }, orderBy: { createdAt: "asc" } },
         },
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       } satisfies Prisma.MessageFindManyArgs;
@@ -131,6 +133,7 @@ export async function GET(req: Request) {
         senderId: msg.senderId,
         receiverId: partnerUser ? partnerUser.id : "",
         createdAt: msg.createdAt.toISOString(),
+        reactions: msg.reactions.map((r) => ({ e: r.emoji, u: r.userId })),
         sender: msg.sender ? {
           id: msg.sender.id,
           name: msg.sender.name,
@@ -431,22 +434,55 @@ export async function POST(req: Request) {
       }
     }
 
-    // Create the message in database
-    const createdMessage = await prisma.message.create({
-      data: {
-        body: messageText,
-        type: msgType,
-        senderId: userId,
-        conversationId: activeConversationId,
-      },
-      include: {
-        sender: {
-          select: { id: true, name: true, avatarUrl: true, role: true },
-        },
-      },
-    });
-
+    // GỬI NHANH: tạo sẵn id + giờ gửi, rồi BẮN realtime cho người nhận SONG SONG với lúc ghi DB
+    // (trước đây: ghi DB xong mới bắn → người nhận chờ thêm cả 1 vòng ghi DB). Lỡ ghi DB lỗi
+    // (hiếm) thì bắn "message-recalled" để máy người nhận gỡ tin vừa hiện.
+    const msgId = "c" + crypto.randomBytes(12).toString("hex");
+    const createdAt = new Date();
     const partner = conversation.participants.find((p) => p.id !== userId);
+    const me = conversation.participants.find((p) => p.id === userId);
+    const sender = { id: userId, name: me?.name || (session.user as any).name || "User", avatarUrl: me?.avatarUrl ?? null, role: me?.role ?? "USER" };
+
+    // Broadcast to every participant's private channel (not just a single
+    // "partner" — that missed everyone else in group chats), using the SAME
+    // channel name the client subscribes to (private-chat-<id>).
+    const validChannels = Array.from(
+      new Set(
+        conversation.participants
+          .map((p) => p.id)
+          .filter(Boolean)
+          .map((id) => chatChannelName(String(id).trim()))
+      )
+    );
+    // Trim the payload (avoid Pusher's 10KB event size limit) — no large
+    // fields like base64 avatars. Client's handler reads `data.message`.
+    const miniPayload = {
+      id: msgId,
+      content: messageText,
+      senderId: userId,
+      receiverId: partner ? partner.id : "",
+      conversationId: activeConversationId,
+      createdAt,
+      type: msgType,
+      sender: { id: userId, name: sender.name },
+    };
+    const pusher = getPusherServer();
+    const delivery = validChannels.length && pusher
+      ? pusher.trigger(validChannels, "new-message", { message: miniPayload }).catch((e: any) => console.error("❌ PUSHER LỖI TỪ SERVER:", e?.body || e))
+      : Promise.resolve();
+
+    let createdMessage;
+    try {
+      createdMessage = await prisma.message.create({
+        data: { id: msgId, createdAt, body: messageText, type: msgType, senderId: userId, conversationId: activeConversationId },
+        select: { id: true, body: true, type: true, senderId: true, createdAt: true },
+      });
+    } catch (dbError) {
+      await delivery;
+      await pusher?.trigger(validChannels, "message-recalled", { id: msgId, conversationId: activeConversationId }).catch(() => {});
+      throw dbError;
+    }
+    await delivery; // đã chạy song song — chờ nốt để hàm không bị dừng trước khi bắn xong
 
     const formattedMessage = {
       id: createdMessage.id,
@@ -455,61 +491,23 @@ export async function POST(req: Request) {
       senderId: createdMessage.senderId,
       receiverId: partner ? partner.id : "",
       createdAt: createdMessage.createdAt,
-      sender: createdMessage.sender,
+      sender,
       receiver: partner || { id: "", name: "User", role: "USER" },
       conversationId: activeConversationId,
     };
 
-    // Broadcast to every participant's private channel (not just a single
-    // "partner" — that missed everyone else in group chats), using the SAME
-    // channel name the client subscribes to (private-chat-<id>). Previously
-    // this triggered to the bare user id, which no client ever subscribed to,
-    // so new messages never arrived in real time for the recipient.
-    try {
-      const validChannels = Array.from(
-        new Set(
-          conversation.participants
-            .map((p) => p.id)
-            .filter(Boolean)
-            .map((id) => chatChannelName(String(id).trim()))
-        )
-      );
-
-      // Trim the payload (avoid Pusher's 10KB event size limit) — no large
-      // fields like base64 avatars.
-      const miniPayload = {
-        id: formattedMessage.id,
-        content: formattedMessage.content,
-        senderId: formattedMessage.senderId,
-        receiverId: formattedMessage.receiverId || "",
-        conversationId: formattedMessage.conversationId,
-        createdAt: formattedMessage.createdAt,
-        type: formattedMessage.type || "TEXT",
-        sender: {
-          id: formattedMessage.sender.id,
-          name: formattedMessage.sender.name || "User",
-        }
-      };
-
-      if (validChannels.length > 0) {
-        // Client's handler reads `data.message`, so the payload must be nested.
-        await getPusherServer()?.trigger(validChannels, "new-message", { message: miniPayload });
-      }
-      // Thông báo đẩy cho người nhận đang KHÔNG mở app (service worker tự bỏ
-      // qua nếu app đang mở). Tag theo hội thoại → nhiều tin chỉ 1 thông báo.
-      const recipients = conversation.participants.map((p) => p.id).filter((id) => id && id !== userId);
-      if (recipients.length && miniPayload.type !== "CALL") {
-        const preview =
-          miniPayload.type === "IMAGE" ? "📷 Đã gửi một ảnh" : miniPayload.type === "VIDEO" ? "🎬 Đã gửi một video" : miniPayload.type === "STICKER" ? miniPayload.content : String(miniPayload.content || "");
-        sendPush(recipients, {
-          title: miniPayload.sender.name,
-          body: preview,
-          url: `/messages?to=${userId}`,
-          tag: `pn-chat-${miniPayload.conversationId}`,
-        }).catch(() => {});
-      }
-    } catch (pusherError: any) {
-      console.error("❌ PUSHER LỖI TỪ SERVER:", pusherError?.body || pusherError);
+    // Thông báo đẩy cho người nhận đang KHÔNG mở app (service worker tự bỏ
+    // qua nếu app đang mở). Tag theo hội thoại → nhiều tin chỉ 1 thông báo.
+    const recipients = conversation.participants.map((p) => p.id).filter((id) => id && id !== userId);
+    if (recipients.length && msgType !== "CALL") {
+      const preview =
+        msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : messageText;
+      sendPush(recipients, {
+        title: sender.name,
+        body: preview,
+        url: `/messages?to=${userId}`,
+        tag: `pn-chat-${activeConversationId}`,
+      }).catch(() => {});
     }
 
     // Every client call site (handleSendMessage, image upload, GPS check-in)

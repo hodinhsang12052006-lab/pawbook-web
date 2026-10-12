@@ -6,6 +6,9 @@ import prisma from "@/lib/prisma";
 import { buildBotDrafts, firstLine } from "@/lib/contentBot";
 import { upcomingThemes } from "@/lib/aiDesigns";
 import { GALLERY_PREFIX } from "@/lib/designGallery";
+import { DIGEST_PREFIX } from "@/lib/jobDigestPost";
+
+export const KNOWLEDGE_PER_DAY = 2;
 
 export async function publishDailyOfficialPost(now = new Date()): Promise<{ posted: boolean; title?: string; reason?: string }> {
   if (process.env.OFFICIAL_DAILY_POST === "0") return { posted: false, reason: "đã tắt" };
@@ -14,10 +17,14 @@ export async function publishDailyOfficialPost(now = new Date()): Promise<{ post
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   // Chỉ đếm bài KIẾN THỨC hôm nay — bài ảnh mẫu nail, tin ngành, chủ đề nóng (có thăm dò) là loại khác,
   // trước đây đếm chung nên hễ sáng có chủ đề nóng là bài kiến thức buổi tối bị bỏ.
-  const knowledgeToday = await prisma.post.count({
-    where: { authorId: officialId, createdAt: { gte: dayStart }, poll: { is: null }, NOT: [{ content: { startsWith: GALLERY_PREFIX } }, { content: { startsWith: "📰" } }] },
-  });
-  if (knowledgeToday) return { posted: false, reason: "hôm nay đã có bài" };
+  const knowledge = { authorId: officialId, poll: { is: null }, NOT: [{ content: { startsWith: GALLERY_PREFIX } }, { content: { startsWith: "📰" } }, { content: { startsWith: DIGEST_PREFIX } }] };
+  // Tối đa KNOWLEDGE_PER_DAY bài/ngày (sáng + tối), cách nhau ≥ 5 giờ để không dồn 1 lúc.
+  const [knowledgeToday, recent] = await Promise.all([
+    prisma.post.count({ where: { ...knowledge, createdAt: { gte: dayStart } } }),
+    prisma.post.count({ where: { ...knowledge, createdAt: { gte: new Date(now.getTime() - 5 * 3600_000) } } }),
+  ]);
+  if (knowledgeToday >= KNOWLEDGE_PER_DAY) return { posted: false, reason: "hôm nay đã có bài" };
+  if (recent) return { posted: false, reason: "vừa đăng, chờ lượt sau" };
 
   const mine = await prisma.post.findMany({ where: { authorId: officialId }, select: { content: true }, take: 1000 });
   const published = new Set(mine.map((p) => firstLine(p.content)));

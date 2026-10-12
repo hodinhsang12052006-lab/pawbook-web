@@ -17,6 +17,17 @@ export const newsPerDay = () => Math.min(4, Math.max(0, Number(process.env.NEWS_
 const hash = (s: string) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
 
 interface Written { hook: string; points: string[]; takeaway: string; hashtags: string[] }
+
+const FILLER = /(chi tiết (xem |có )?(trong|tại) bài gốc|xem thêm (trong|tại) bài gốc|đang cập nhật|không rõ|n\/a)/i;
+/** Lý do bài viết yếu (để bỏ qua), hoặc null nếu đạt. */
+export function weakWriting(w: Partial<Written>): string | null {
+  const hook = String(w.hook || "").replace(/^\p{Extended_Pictographic}️?\s*/u, "").trim();
+  if (hook.length < 25 || hook.split(/\s+/).length < 6) return "tiêu đề quá ngắn / cụt";
+  const pts = (w.points || []).map((p) => String(p).trim()).filter(Boolean);
+  if (pts.length < 2) return "ít hơn 2 ý";
+  if (pts.some((p) => FILLER.test(p) || p.length < 15)) return "có ý rỗng";
+  return null;
+}
 // JSON Schema chuẩn cho Cloudflare (Gemini dùng kiểu viết hoa ở SCHEMA bên dưới)
 const CF_SCHEMA = {
   type: "object",
@@ -135,6 +146,9 @@ export async function publishNewsPosts(now = new Date(), opts: { max?: number; t
       const text = composeNewsPost(n, w);
       if (!numbersSupported([w.hook, ...(w.points || []), w.takeaway].join(" "), n)) { skipped.push(`có số liệu không có trong nguồn: ${n.title.slice(0, 60)}`); done.add(hash(n.link)); continue; }
       if (text.length < 120) { skipped.push(`bài quá ngắn: ${n.title.slice(0, 60)}`); continue; }
+      // Bài AI viết hụt (12/10/2026: tiêu đề "🚨 Một salon nail", ý "Chi tiết trong bài gốc") → không đăng.
+      const weak = weakWriting(w);
+      if (weak) { skipped.push(`bài viết yếu (${weak}): ${n.title.slice(0, 50)}`); done.add(hash(n.link)); continue; }
       await prisma.post.create({
         data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: text, postType: "GENERAL", mediaUrls: "[]", market: n.market === "AU" ? "AU" : "US", createdAt: new Date(now.getTime() + posted.length * 1000) },
       });

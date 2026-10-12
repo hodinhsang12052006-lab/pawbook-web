@@ -70,6 +70,24 @@ await ownerPage.getByText("📋 Thông tin đăng ký").first().waitFor({ timeou
 const ws = await ownerPage.getByText("📋 Thông tin đăng ký").first().evaluate((e) => getComputedStyle(e).whiteSpace).catch(() => "");
 R.check("W7", "Tin nhiều dòng hiện đúng từng dòng (không dồn 1 hàng)", /pre-wrap/.test(ws), ws);
 await ownerPage.screenshot({ path: process.env.TEMP + "/welcome_chat.png" });
+
+// 4) Người đăng ký TRƯỚC khi có tin chào: admin bấm bù → có tin 📋 + lời "Cảm ơn…"; chạy lại không gửi lặp
+const old = await registerUser({ name: `Old Tech ${stamp}`, email: `old.${stamp}@example.com` });
+await new Promise((r) => setTimeout(r, 2500));
+const oldId = (await db.execute({ sql: `SELECT id FROM "User" WHERE email = ?`, args: [old.body.email] })).rows[0].id;
+await db.execute({ sql: `DELETE FROM "Message" WHERE conversationId IN (SELECT a.A FROM "_UserConversations" a JOIN "_UserConversations" b ON a.A = b.A WHERE a.B = ? AND b.B = ?)`, args: [official.id, oldId] }); // giả lập người cũ
+const techClient = new Client();
+await techClient.login(old.body.email, old.body.password);
+const forbidden = await techClient.req("/api/admin/welcome-backfill", { method: "POST" });
+const adminRow = (await db.execute({ sql: `SELECT email FROM "User" WHERE id = ?`, args: [official.id] })).rows[0];
+const adminClient = new Client();
+// admin do bài test tạo (registerUser) dùng mật khẩu QaPass#2026; admin seed dùng mật khẩu demo
+if (!(await adminClient.login(adminRow.email, "QaPass#2026")).ok) await adminClient.login(adminRow.email, DEMO_PASSWORD);
+const bf = await adminClient.req("/api/admin/welcome-backfill", { method: "POST" });
+const oldMsgs = (await db.execute({ sql: `SELECT m.body FROM "Message" m JOIN "_UserConversations" a ON a.A = m.conversationId AND a.B = ? JOIN "_UserConversations" b ON b.A = m.conversationId AND b.B = ? ORDER BY m.createdAt ASC`, args: [official.id, oldId] })).rows.map((r) => String(r.body));
+const bf2 = await adminClient.req("/api/admin/welcome-backfill", { method: "POST" });
+const oldMsgs2 = (await db.execute({ sql: `SELECT COUNT(*) n FROM "Message" m JOIN "_UserConversations" a ON a.A = m.conversationId AND a.B = ? JOIN "_UserConversations" b ON b.A = m.conversationId AND b.B = ?`, args: [official.id, oldId] })).rows[0].n;
+R.check("W8", "Người đăng ký cũ: admin bấm bù → có 📋 thông tin + lời 'Cảm ơn…'; thợ gọi → 403; chạy lại không gửi lặp", forbidden.status === 403 && bf.status === 200 && oldMsgs.length === 2 && oldMsgs[0].startsWith("📋") && oldMsgs[1].startsWith("Cảm ơn") && Number(oldMsgs2) === 2, JSON.stringify({ f: forbidden.status, bf: bf.data, bf2: bf2.data, n: oldMsgs.length }));
 await browser.close();
 
 const sum = R.summary();

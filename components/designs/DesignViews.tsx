@@ -1,5 +1,6 @@
 "use client";
 
+import { cdnImage } from "@/lib/cdnImage";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2 } from "lucide-react";
@@ -78,10 +79,11 @@ export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "
 }
 
 /** Ảnh AI nếu có, không thì minh hoạ tự vẽ từ bảng màu/dáng/hiệu ứng. */
-export function DesignVisual({ d, className = "" }: { d: Design; className?: string }) {
+export function DesignVisual({ d, className = "", width = 480 }: { d: Design; className?: string; width?: number }) {
   if (d.imageUrl) {
+    // Bản đúng cỡ từ Cloudinary (WebP/AVIF, ~30–60KB) thay vì ảnh gốc 1024px ~450KB.
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={d.imageUrl} alt={designTitle(d)} loading="lazy" className={`h-full w-full object-cover ${className}`} />;
+    return <img src={cdnImage(d.imageUrl, width)} alt={designTitle(d)} loading="lazy" decoding="async" className={`h-full w-full object-cover ${className}`} />;
   }
   return <NailArt palette={d.palette ?? []} shape={d.shape} finish={d.finish} pattern={d.pattern} uniform={d.provider === "pawnail"} seed={d.id} className={`h-full w-full ${className}`} />;
 }
@@ -157,7 +159,7 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div role="dialog" aria-label={designTitle(d)} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-square w-full bg-slate-900">
-          <DesignVisual d={d} />
+          <DesignVisual d={d} width={1024} />
           <AiBadge d={d} className="absolute left-3 top-3" />
           <button type="button" onClick={onClose} aria-label={tr("Đóng", "Close")} className="absolute right-3 top-3 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"><X className="h-5 w-5" /></button>
         </div>

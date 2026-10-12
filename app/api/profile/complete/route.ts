@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { openWelcomeChat } from "@/lib/welcomeChat";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
@@ -42,6 +42,6 @@ export async function POST(req: Request) {
   // Đăng ký bằng Google/Apple qua link mời bạn bè (cookie pn_ref) → tính cho người mời như đăng ký thường.
   await attachReferral(userId, name, readRef(req, null));
   // Admin (tài khoản chính thức) tự nhắn: thông tin đăng ký + lời chào.
-  after(() => openWelcomeChat({ userId, name, role, email: me.email, phone, market, state, city, via: "social" }).catch((e) => console.error("welcome chat error:", e)));
+  await openWelcomeChat({ userId, name, role, email: me.email, phone, market, state, city, via: "social" }).catch((e) => console.error("welcome chat error:", e));
   return NextResponse.json({ ok: true, role });
 }

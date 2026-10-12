@@ -73,7 +73,17 @@ export function registrationSummary(i: WelcomeInfo): string {
   return lines.join("\n").slice(0, 4900);
 }
 
-export function welcomeText(i: Pick<WelcomeInfo, "name" | "role">): string {
+export function welcomeText(i: Pick<WelcomeInfo, "name" | "role">, existing = false): string {
+  // Người đăng ký TRƯỚC khi có tin chào tự động → cảm ơn thay vì "chào mừng" (họ đã ở đây vài hôm).
+  if (existing) {
+    return i.role === "OWNER"
+      ? `Cảm ơn ${i.name.trim()} đã tham gia PawNail Jobs 🙏
+
+Đây là kênh hỗ trợ riêng của tiệm với đội ngũ PawNail. Anh/chị cần đăng tin, tìm thợ hay góp ý gì cứ nhắn ở đây, tụi em trả lời trong 24 giờ nhé!`
+      : `Cảm ơn ${i.name.trim()} đã tham gia PawNail Jobs 🙏
+
+Đây là kênh hỗ trợ riêng của bạn với đội ngũ PawNail. Bạn cần tìm việc, sửa hồ sơ hay báo tin lạ cứ nhắn ở đây, tụi mình trả lời trong 24 giờ nhé!`;
+  }
   // Gọi đủ họ tên: tên Việt (Trần Thị Lan) và kiểu Tây (Lan Tran) thứ tự ngược nhau — đoán "tên" dễ sai.
   const first = i.name.trim();
   return i.role === "OWNER"
@@ -82,7 +92,7 @@ export function welcomeText(i: Pick<WelcomeInfo, "name" | "role">): string {
 }
 
 /** Mở (hoặc dùng lại) cuộc trò chuyện chính thức ↔ người mới và gửi 2 tin. Trả về conversationId. */
-export async function openWelcomeChat(i: WelcomeInfo): Promise<string | null> {
+export async function openWelcomeChat(i: WelcomeInfo, opts: { existing?: boolean } = {}): Promise<string | null> {
   if (process.env.WELCOME_CHAT === "0") return null;
   // Bộ nhớ tạm "chưa có admin" (30 giây) có thể cũ → hỏi thẳng DB 1 lần cho chắc.
   const official =
@@ -101,7 +111,7 @@ export async function openWelcomeChat(i: WelcomeInfo): Promise<string | null> {
   const now = Date.now();
   const msgs = [
     { id: "c" + crypto.randomBytes(12).toString("hex"), body: registrationSummary(i), createdAt: new Date(now) },
-    { id: "c" + crypto.randomBytes(12).toString("hex"), body: welcomeText(i), createdAt: new Date(now + 1000) },
+    { id: "c" + crypto.randomBytes(12).toString("hex"), body: welcomeText(i, opts.existing), createdAt: new Date(now + 1000) },
   ];
   for (const m of msgs) {
     await prisma.message.create({ data: { id: m.id, body: m.body, type: "TEXT", senderId: officialId, conversationId: convId, createdAt: m.createdAt } });
@@ -119,4 +129,50 @@ export async function openWelcomeChat(i: WelcomeInfo): Promise<string | null> {
     }
   }
   return convId;
+}
+
+/** Dựng thông tin đăng ký từ DB (cho người đăng ký trước khi có tin chào tự động). */
+export async function welcomeInfoFromDb(userId: string): Promise<WelcomeInfo | null> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true, name: true, email: true, phone: true, role: true, market: true, state: true, city: true, password: true, surveyAnswers: true,
+      technicianProfile: { select: { specialties: true, desiredSalaryType: true, desiredSalaryAmount: true, desiredBenefits: true, status: true, portfolioImages: true } },
+    },
+  });
+  if (!u || (u.role !== "OWNER" && u.role !== "TECHNICIAN")) return null;
+  const csv = (x?: string | null) => (x || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const via = u.email.endsWith("@phone.invalid") ? "phone" : u.password?.startsWith("oauth:") ? "social" : "email";
+  const base = { userId: u.id, name: u.name, role: u.role, email: u.email, phone: u.phone, market: u.market as "US" | "AU", state: u.state, city: u.city, via } as WelcomeInfo;
+  if (u.role === "OWNER") {
+    const job = await prisma.job.findFirst({ where: { ownerId: u.id }, orderBy: { createdAt: "asc" }, select: { salonName: true, skills: true, salaryType: true, salaryAmount: true, benefits: true } });
+    let answers: { key: string; answer: "A" | "B" }[] = [];
+    try { answers = JSON.parse(u.surveyAnswers || "[]"); } catch {}
+    return { ...base, salonName: job?.salonName, urgentRole: csv(job?.skills), salaryType: job?.salaryType, salaryAmount: job?.salaryAmount, hasHousing: job ? csv(job.benefits).some((b) => /chỗ ở/i.test(b)) : undefined, surveyAnswers: answers };
+  }
+  const t = u.technicianProfile;
+  let photos = 0;
+  try { photos = JSON.parse(t?.portfolioImages || "[]").length; } catch {}
+  return { ...base, specialties: csv(t?.specialties), desiredSalaryType: t?.desiredSalaryType, desiredSalaryAmount: t?.desiredSalaryAmount, desiredBenefits: csv(t?.desiredBenefits), status: t?.status, portfolioCount: photos };
+}
+
+/** Bù tin chào cho MỌI người dùng thật chưa có cuộc trò chuyện với tài khoản chính thức. */
+export async function backfillWelcomeChats(limit = 500): Promise<{ opened: number; skipped: number }> {
+  const official = await getOfficialAccount();
+  if (!official) return { opened: 0, skipped: 0 };
+  const users = await prisma.user.findMany({
+    where: { role: { in: ["OWNER", "TECHNICIAN"] }, id: { not: official.id }, NOT: [{ email: { endsWith: "@feed.pawnail.invalid" } }, { email: { endsWith: "@pawnailjobs.demo" } }, { email: { endsWith: "@qa.test" } }] }, // bỏ tài khoản hệ thống "đăng hộ tiệm" + tài khoản demo/test; người đăng ký bằng SĐT (@phone.invalid) vẫn tính
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+    take: limit,
+  });
+  let opened = 0, skipped = 0;
+  for (const { id } of users) {
+    const info = await welcomeInfoFromDb(id);
+    if (!info) { skipped++; continue; }
+    const before = await prisma.conversation.count({ where: { isGroup: false, AND: [{ participants: { some: { id: official.id } } }, { participants: { some: { id } } }], messages: { some: {} } } });
+    if (before) { skipped++; continue; }
+    if (await openWelcomeChat(info, { existing: true })) opened++; else skipped++;
+  }
+  return { opened, skipped };
 }

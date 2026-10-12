@@ -115,12 +115,24 @@ export default function ArticleText({ article }: { article: Article }) {
           )}
           {(source || tags) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/5 pt-2.5 text-xs text-slate-500">
-              {source && <span className="min-w-0 break-words">{tr("Nguồn: ", "Source: ")}{renderContentWithHashtags(source)}</span>}
+              {source && <SourceLabel source={source} />}
               {tags && <span className="min-w-0 break-words">{renderContentWithHashtags(tags)}</span>}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+// "WhatNow — https://news.google.com/…(rất dài)" → "Nguồn: WhatNow ↗" (bấm mở bài gốc), không in nguyên đường link.
+function SourceLabel({ source }: { source: string }) {
+  const m = source.match(/^(.*?)\s*[—-]\s*(https:\/\/\S+)$/);
+  if (!m) return <span className="min-w-0 break-words">{tr("Nguồn: ", "Source: ")}{renderContentWithHashtags(source)}</span>;
+  return (
+    <span className="min-w-0">
+      {tr("Nguồn: ", "Source: ")}
+      <a href={m[2]} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-slate-300 underline-offset-2 hover:text-white hover:underline">{m[1] || tr("bài gốc", "original")} ↗</a>
+    </span>
   );
 }

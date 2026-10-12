@@ -96,7 +96,7 @@ try {
   const imgCalls = calls.filter((c) => c.cfg?.responseModalities);
   R.check("D3", "Tạo 3 mẫu: Gemini nhận khoá qua header (không nằm trên URL), 1 lần viết + 3 lần vẽ", g.status === 201 && g.data.created.length === 3 && textCall?.key === "test-gemini-key" && !/key=/.test(textCall.path) && imgCalls.length === 3, JSON.stringify(g.data).slice(0, 200));
   R.check("D4", "Prompt dựa trên bối cảnh thật: dịp Halloween + yêu cầu song ngữ + vật tư + cấm thương hiệu", /halloween/i.test(textCall?.prompt ?? "") && /materials/.test(textCall.prompt) && /Chanel/.test(textCall.prompt));
-  R.check("D5", "Ảnh vẽ cận cảnh bàn tay, cấm chữ/logo", imgCalls.every((c) => /No text, no watermark, no logos/.test(c.prompt) && /five fingers/.test(c.prompt)));
+  R.check("D5", "Ảnh vẽ cận cảnh bàn tay, cấm chữ/logo", imgCalls.every((c) => /No text, letters, labels/.test(c.prompt) && /four fingers and one thumb/.test(c.prompt)));
 
   const drafts = (await admin.req("/api/admin/designs")).data.drafts;
   const d0 = drafts.find((d) => d.occasion === "halloween");

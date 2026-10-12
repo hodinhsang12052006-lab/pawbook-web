@@ -303,7 +303,7 @@ export async function POST(req: Request) {
     // Chỉ các loại tin client được phép gửi. Trước đây nhận mọi chuỗi — kẻ
     // xấu gửi type "SYSTEM" sẽ hiện thành dòng "thông báo hệ thống" 🤖 ở giữa
     // khung chat (dễ dùng để lừa đảo: "Tài khoản bị khoá, chuyển tiền…").
-    const ALLOWED_TYPES = ["TEXT", "IMAGE", "VIDEO", "STICKER", "CALL"];
+    const ALLOWED_TYPES = ["TEXT", "IMAGE", "VIDEO", "AUDIO", "STICKER", "CALL"];
     const msgType = typeof type === "string" && ALLOWED_TYPES.includes(type) ? type : "TEXT";
 
     if (!messageText) {
@@ -338,6 +338,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sticker không hợp lệ." }, { status: 400 });
     }
 
+    // Tin thoại: chỉ file ghi âm đã tải lên Cloudinary của PawNail (kèm "#d=<giây>" để hiện thời lượng).
+    if (msgType === "AUDIO" && !/^https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/video\/upload\/[^\s"'<>]+(#d=\d{1,3})?$/i.test(messageText)) {
+      return NextResponse.json({ error: "Tin nhắn thoại không hợp lệ." }, { status: 400 });
+    }
     if (msgType === "IMAGE" || msgType === "VIDEO") {
       const ALLOWED_MEDIA = /^(https:\/\/res\.cloudinary\.com\/|https:\/\/[a-z0-9-]+\.tenor\.com\/|https:\/\/media\.tenor\.com\/|https:\/\/[a-z0-9-]+\.giphy\.com\/|data:image\/|data:video\/)/i;
       if (!ALLOWED_MEDIA.test(messageText)) {
@@ -501,7 +505,7 @@ export async function POST(req: Request) {
     const recipients = conversation.participants.map((p) => p.id).filter((id) => id && id !== userId);
     if (recipients.length && msgType !== "CALL") {
       const preview =
-        msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : messageText;
+        msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : msgType === "AUDIO" ? "🎤 Đã gửi một tin nhắn thoại" : msgType === "STICKER" ? `${messageText} Sticker` : messageText;
       sendPush(recipients, {
         title: sender.name,
         body: preview,

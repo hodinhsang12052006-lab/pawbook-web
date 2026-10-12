@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Check, CheckCheck, Phone, Video, RefreshCw, SmilePlus, Copy } from "lucide-react";
+import { Check, CheckCheck, Phone, PhoneMissed, Video, RefreshCw, SmilePlus, Copy } from "lucide-react";
+import VoiceMessage from "./VoiceMessage";
 import toast from "react-hot-toast";
 import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
 import { stickerUrl } from "@/lib/chatStickers";
@@ -139,32 +140,35 @@ function MessageRowImpl({
     return d.toLocaleDateString(locale === "en" ? "en-US" : "vi-VN", { day: "2-digit", month: "long", year: "numeric" });
   })();
   const dateSeparator = showDateSeparator ? (
-    <div key={`sep-${msg.id || idx}`} className="flex items-center justify-center my-4 w-full">
-      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/70 border border-slate-850 px-3 py-1 rounded-full shadow-sm">
-        {dateSeparatorLabel}
-      </span>
+    <div key={`sep-${msg.id || idx}`} className="my-5 flex w-full items-center justify-center">
+      <span className="text-[11px] font-semibold text-slate-500">{dateSeparatorLabel}</span>
     </div>
   ) : null;
 
   if (msg.type === "CALL") {
+    // Nhật ký cuộc gọi như Messenger: bong bóng gọn nằm ĐÚNG phía người gọi (trước đây là thẻ hồng
+    // to giữa màn hình — 2 cuộc nhỡ liền nhau thành 2 khối to, rất rối).
     const call = describeCall(msg.content);
+    const time = new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
     return (
       <React.Fragment key={msg.id || idx}>
         {dateSeparator}
-        <div className={`my-2 flex w-full justify-center ${animClass}`}>
-          <div className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 ${call.missed ? "border-rose-500/30 bg-rose-500/10" : "border-white/10 bg-slate-900/70"}`}>
-            <span className={`flex h-8 w-8 items-center justify-center rounded-full ${call.missed ? "bg-rose-500/20 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-              {call.kind === "video" ? <Video className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
-            </span>
-            <div className="text-left">
-              <p className={`text-xs font-bold ${call.missed ? "text-rose-200" : "text-slate-100"}`}>{call.text}</p>
-              <p className="text-[10px] text-slate-500">{new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</p>
+        <div className={`flex w-full ${isSelf ? "justify-end" : "justify-start pl-9"} ${groupedWithPrev ? "!mt-1" : ""} ${animClass}`}>
+          <div className="w-[230px] max-w-[78%] overflow-hidden rounded-[20px] bg-slate-800/90">
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${call.missed ? "bg-rose-500/15 text-rose-400" : "bg-white/10 text-slate-200"}`}>
+                {call.kind === "video" ? <Video className="h-[18px] w-[18px]" /> : call.missed ? <PhoneMissed className="h-[18px] w-[18px]" /> : <Phone className="h-[18px] w-[18px]" />}
+              </span>
+              <div className="min-w-0 text-left">
+                <p className={`truncate text-sm font-semibold ${call.missed ? "text-rose-300" : "text-slate-100"}`}>{call.text}</p>
+                <p className="text-xs text-slate-400">{time}</p>
+              </div>
             </div>
             {onCallBack && (
               <button
                 type="button"
                 onClick={() => onCallBack(call.kind as "audio" | "video")}
-                className="ml-1 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3 py-1 text-[11px] font-bold text-white"
+                className="w-full border-t border-white/5 py-2 text-center text-[13px] font-semibold text-pink-300 transition-colors hover:bg-white/5 hover:text-pink-200"
               >
                 {tr("Gọi lại", "Call back")}
               </button>
@@ -260,7 +264,7 @@ function MessageRowImpl({
                   isSelf
                     ? "bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-sm shadow-pink-600/20"
                     : "bg-slate-800/90 text-slate-50"
-                } ${msg.type === "IMAGE" || msg.type === "VIDEO" ? "!bg-none !bg-transparent !p-0 !shadow-none" : ""}`}
+                } ${msg.type === "IMAGE" || msg.type === "VIDEO" || msg.type === "AUDIO" ? "!bg-none !bg-transparent !p-0 !shadow-none" : ""}`}
               >
                 {msg.type === "IMAGE" ? (
                   // Plain <img>, not next/image: content comes from
@@ -296,8 +300,10 @@ function MessageRowImpl({
                       }}
                     />
                   </div>
+                ) : msg.type === "AUDIO" ? (
+                  <VoiceMessage src={msg.content} self={isSelf} />
                 ) : msg.type === "VIDEO" ? (
-                  <video src={msg.content} controls className="max-w-full rounded-lg max-h-60" poster="/cho1.jpg" />
+                  <video src={msg.content} controls playsInline preload="metadata" className="block max-h-80 w-64 max-w-full rounded-2xl bg-black" />
                 ) : (
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 )}

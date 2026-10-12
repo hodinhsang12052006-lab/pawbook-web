@@ -20,9 +20,11 @@ import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
 import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
-import { Pin, Palette, Image as ImageIcon } from "lucide-react";
+import { Pin, Palette, Image as ImageIcon, Mic } from "lucide-react";
 import { type Reaction, toggleReaction } from "@/lib/chatReactions";
 import MediaPicker from "./MediaPicker";
+import VoiceRecorder from "./VoiceRecorder";
+import { uploadMedia } from "@/lib/mediaUpload";
 import { CHAT_WALLPAPERS, getWallpaperId, saveWallpaper, wallpaperById } from "@/lib/chatWallpapers";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -122,6 +124,7 @@ export default function MessagesContent({
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGifs, setShowGifs] = useState(false);
   const [chatPanelTab, setChatPanelTab] = useState<"emoji" | "sticker" | "gif">("emoji");
+  const [recording, setRecording] = useState(false);
 
   // Chặn/Báo cáo — bắt buộc theo App Store Guideline 1.2 cho app có nhắn tin
   // giữa người dùng với nhau.
@@ -971,25 +974,18 @@ export default function MessagesContent({
     if (!activeChat) return;
     const fileInput = document.createElement("input");
     fileInput.type = "file";
-    fileInput.accept = "image/*";
+    fileInput.accept = "image/*,video/*";
     fileInput.onchange = async () => {
       const rawFile = fileInput.files?.[0];
       if (!rawFile) return;
-      const toastId = toast.loading(tr("Đang tải ảnh đính kèm lên Cloudinary...", "Uploading image..."));
+      const isVideo = rawFile.type.startsWith("video/");
+      const toastId = toast.loading(isVideo ? tr("Đang tải video…", "Uploading video…") : tr("Đang gửi ảnh…", "Sending photo…"));
       try {
-        const file = await prepareFileForUpload(rawFile);
-        const formData = new FormData();
-        formData.append("file", file);
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-        const uploadData = await uploadRes.json();
-        if (uploadRes.ok && uploadData.url) {
-          toast.success(tr("Tải ảnh lên thành công! ☁️", "Image uploaded! ☁️"), { id: toastId });
-          handleSendMessage(null, uploadData.url, "IMAGE");
-        } else {
-          toast.error(uploadData.error || tr("Tải ảnh lên thất bại.", "Image upload failed."), { id: toastId });
-        }
+        const url = await uploadMedia(rawFile, (pct) => isVideo && toast.loading(tr(`Đang tải video… ${pct}%`, `Uploading video… ${pct}%`), { id: toastId }));
+        toast.dismiss(toastId);
+        handleSendMessage(null, url, isVideo ? "VIDEO" : "IMAGE");
       } catch (err) {
-        toast.error(err instanceof FileTooLargeError ? err.message : tr("Lỗi mạng khi tải ảnh.", "Network error while uploading."), { id: toastId });
+        toast.error(err instanceof Error && err.message ? err.message : tr("Lỗi mạng khi tải lên.", "Network error while uploading."), { id: toastId });
       }
     };
     fileInput.click();
@@ -1177,7 +1173,7 @@ export default function MessagesContent({
                 const unread = isActive ? 0 : conv.unreadCount || 0;
                 const isTyping = typingByConv[conv.id] !== undefined;
                 const preview = lastMsg
-                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : lastMsg.body}`
+                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "AUDIO" ? tr("🎤 Tin nhắn thoại", "🎤 Voice message") : lastMsg.type === "STICKER" ? `${lastMsg.body} Sticker` : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : lastMsg.body}`
                   : isGroup
                   ? tr(`${conv.participants.length} thành viên`, `${conv.participants.length} members`)
                   : tr("Bắt đầu trò chuyện", "Start chatting");
@@ -1421,7 +1417,7 @@ export default function MessagesContent({
                     {isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
                   </p>
                   <p className="text-xs text-slate-400">{ROLE_VI()[activeChat.role] || tr("Thành viên PawNail", "PawNail member")}</p>
-                  <Link href={`/profile/${activeChat.id}`} className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12]">
+                  <Link href={`/profile/${activeChat.id}`} className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12] sm:hidden">
                     {tr("Xem hồ sơ", "View profile")}
                   </Link>
                 </div>
@@ -1516,20 +1512,32 @@ export default function MessagesContent({
               )}
               {/* 1 hàng như Messenger: [😊][GIF][📎] · ô nhập bo tròn · nút gửi tròn. Trước đây nút
                   biểu tượng nằm riêng 1 hàng phía trên, tốn chỗ và nhìn rời rạc. */}
-              <form onSubmit={(e) => handleSendMessage(e)} className="flex items-center gap-1.5 sm:gap-2">
+              {recording ? (
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <VoiceRecorder
+                    onCancel={() => setRecording(false)}
+                    onSend={(url, secs) => { setRecording(false); handleSendMessage(null, `${url}#d=${secs}`, "AUDIO"); }}
+                  />
+                </div>
+              ) : (
+              <form onSubmit={(e) => handleSendMessage(e)} className="flex items-center gap-1 sm:gap-1.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (showEmoji && chatPanelTab !== "gif") { setShowEmoji(false); return; }
-                    setChatPanelTab(chatPanelTab === "gif" ? "emoji" : chatPanelTab);
-                    setShowEmoji(true);
-                    setShowGifs(false);
-                  }}
-                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-colors ${showEmoji && chatPanelTab !== "gif" ? "bg-pink-500/15 text-pink-300" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
-                  title={tr("Chèn biểu tượng, nhãn dán", "Insert emoji or sticker")}
-                  aria-label={tr("Biểu tượng cảm xúc", "Emoji")}
+                  onClick={handleUploadImage}
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/5 hover:text-pink-300"
+                  title={tr("Gửi ảnh hoặc video", "Send a photo or video")}
+                  aria-label={tr("Gửi ảnh hoặc video", "Send a photo or video")}
                 >
-                  <Smile className="h-5 w-5" />
+                  <ImageIcon className="h-[22px] w-[22px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleCloseMediaPanel(); setRecording(true); }}
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/5 hover:text-pink-300"
+                  title={tr("Ghi âm tin nhắn thoại", "Record a voice message")}
+                  aria-label={tr("Ghi âm", "Record voice")}
+                >
+                  <Mic className="h-[22px] w-[22px]" />
                 </button>
                 <button
                   type="button"
@@ -1542,54 +1550,61 @@ export default function MessagesContent({
                       setShowGifs(true);
                     }
                   }}
-                  className={`flex h-10 flex-shrink-0 items-center justify-center rounded-full px-2 text-[11px] font-black transition-colors ${showEmoji && chatPanelTab === "gif" ? "bg-pink-500/15 text-pink-300" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+                  className={`flex h-10 flex-shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-black transition-colors ${showEmoji && chatPanelTab === "gif" ? "bg-pink-500/15 text-pink-300" : "text-pink-400 hover:bg-white/5 hover:text-pink-300"}`}
                   title={tr("Chèn ảnh động GIF", "Insert GIF")}
                   aria-label="GIF"
                 >
-                  <span className="rounded-md border border-current px-1 py-px leading-none">GIF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleUploadImage}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
-                  title={tr("Đính kèm tệp tin hình ảnh", "Attach an image")}
-                  aria-label={tr("Gửi ảnh", "Send a photo")}
-                >
-                  <ImageIcon className="h-5 w-5" />
+                  <span className="rounded-md border-2 border-current px-1 py-px leading-none">GIF</span>
                 </button>
 
-                <input
-                  type="text"
-                  ref={inputRef}
-                  defaultValue=""
-                  onChange={(e) => {
-                    const has = !!e.target.value.trim();
-                    setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
-                    if (has) notifyTyping();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                      e.preventDefault();
-                      if (inputRef.current?.value.trim()) handleSendMessage(null);
-                    }
-                  }}
-                  enterKeyHint="send"
-                  autoComplete="off"
-                  placeholder={t("messenger.inputPlaceholder")}
-                  className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2.5 text-base text-slate-100 placeholder-slate-500 transition-colors focus:border-pink-500/60 focus:bg-white/[0.08] focus:outline-none sm:text-sm"
-                />
+                <div className="relative flex min-w-0 flex-1 items-center">
+                  <input
+                    type="text"
+                    ref={inputRef}
+                    defaultValue=""
+                    onChange={(e) => {
+                      const has = !!e.target.value.trim();
+                      setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
+                      if (has) notifyTyping();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        if (inputRef.current?.value.trim()) handleSendMessage(null);
+                      }
+                    }}
+                    enterKeyHint="send"
+                    autoComplete="off"
+                    placeholder={t("messenger.inputPlaceholder")}
+                    className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[0.06] py-2.5 pl-4 pr-11 text-base text-slate-100 placeholder-slate-500 transition-colors focus:border-pink-500/60 focus:bg-white/[0.08] focus:outline-none sm:text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (showEmoji && chatPanelTab !== "gif") { setShowEmoji(false); return; }
+                      setChatPanelTab(chatPanelTab === "gif" ? "emoji" : chatPanelTab);
+                      setShowEmoji(true);
+                      setShowGifs(false);
+                    }}
+                    className={`absolute right-1 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${showEmoji && chatPanelTab !== "gif" ? "text-pink-300" : "text-slate-400 hover:text-pink-300"}`}
+                    title={tr("Chèn biểu tượng, nhãn dán", "Insert emoji or sticker")}
+                    aria-label={tr("Biểu tượng cảm xúc", "Emoji")}
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+                </div>
                 <button
                   type="submit"
                   aria-label={tr("Gửi tin nhắn", "Send message")}
                   disabled={!hasText}
                   onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
-                  // Chỉ đổi độ mờ + kích thước (rẻ, chạy trên GPU) — trước đây đổi cả nền gradient + bóng đổ có hiệu ứng
-                  // 0,2 giây đúng lúc gõ mấy chữ đầu → máy yếu bị khựng phím.
+                  // Chỉ đổi độ mờ + kích thước (rẻ, chạy trên GPU) — tránh khựng phím đầu trên máy yếu.
                   className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-md shadow-pink-500/20 transition-[transform,opacity] duration-150 ${hasText ? "scale-100 opacity-100" : "scale-90 opacity-40"}`}
                 >
                   <Send className="h-[18px] w-[18px] -translate-x-px translate-y-px" />
                 </button>
               </form>
+              )}
             </div>
             )}
           </>

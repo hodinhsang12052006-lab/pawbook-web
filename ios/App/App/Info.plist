@@ -72,7 +72,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Cho phép chụp ảnh để tải lên portfolio tay nghề, và dùng camera khi gọi video với chủ tiệm/thợ khác.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Cho phép dùng micro để thực hiện cuộc gọi thoại/video với chủ tiệm và thợ khác trên PawNail Jobs.</string>
+	<string>Cho phép dùng micro để gọi thoại/video và ghi âm tin nhắn thoại gửi cho chủ tiệm, thợ khác trên PawNail Jobs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Cho phép chọn ảnh/video từ thư viện để tải lên portfolio tay nghề.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

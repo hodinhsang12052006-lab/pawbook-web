@@ -8,7 +8,8 @@ import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 // (Vercel giới hạn body request ~4.5MB nên video không thể đi qua /api/upload).
 // Chữ ký khoá cứng thư mục + định dạng video cho phép + hết hạn sau ~1 giờ
 // (Cloudinary tự từ chối timestamp cũ) — không ai dùng được để tải thứ khác.
-const VIDEO_FORMATS = "mp4,mov,webm,m4v";
+// + định dạng tin nhắn thoại (Chrome ghi webm, iPhone/Safari ghi mp4/m4a) — Cloudinary lưu audio dưới "video".
+const VIDEO_FORMATS = "mp4,mov,webm,m4v,m4a,ogg,mp3,wav";
 
 export async function POST() {
   const session = await getServerSession(authOptions);

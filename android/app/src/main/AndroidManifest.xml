@@ -32,6 +32,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: phải có quyền này thì thông báo đẩy (việc gấp, tin nhắn) mới hiện. Thư viện
+         Firebase thường tự gộp vào, khai rõ ở đây cho chắc. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Tải ảnh portfolio: input[type=file accept="image/*,video/*"] mở
          camera hoặc thư viện qua bộ chọn file gốc của hệ điều hành. -->
@@ -42,10 +45,9 @@
          chối truy cập mic, cuộc gọi thoại câm lặng thất bại (không crash,
          không log lỗi rõ ràng, chỉ đơn giản là không nghe được gì). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Android 13+ (API 33) dùng quyền media theo loại thay cho
-         READ_EXTERNAL_STORAGE cũ. -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Android 13+ KHÔNG cần READ_MEDIA_IMAGES/VIDEO: chọn ảnh qua bộ chọn file/Photo Picker
+         của hệ thống (input type=file) không cần quyền. Khai 2 quyền đó thì Google Play bắt
+         nộp tờ khai "Photo and video permissions" và hay từ chối app chỉ thỉnh thoảng tải ảnh. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <!-- KHÔNG khai báo ACCESS_FINE/COARSE_LOCATION: tính năng "Chấm công

@@ -1,5 +1,6 @@
 // Chủ đề nóng: chấm điểm theo tín hiệu tool → đăng bài thảo luận + thăm dò; không trùng trong ngày / 10 ngày.
 //   DATABASE_URL="file:./prisma/dev.db" npx tsx scripts/qa/hot_topic_unit.mts
+if (process.env.TURSO_DATABASE_URL) throw new Error("Bài test chỉ chạy trên DB local — bỏ TURSO_DATABASE_URL");
 import prismaMod from "../../lib/prisma";
 import { publishHotTopicPost, recordTopicSignals, TOPIC_BANK } from "../../lib/hotTopics";
 const prisma = ((prismaMod as unknown as { default?: typeof prismaMod }).default ?? prismaMod);
@@ -25,6 +26,8 @@ ok("H5", "Kho có đủ chủ đề, mỗi chủ đề 2–4 lựa chọn", TOPI
 const posts = await prisma.post.findMany({ where: { authorId: admin.id }, select: { id: true } });
 await prisma.post.deleteMany({ where: { id: { in: posts.map((p) => p.id) } } });
 await prisma.user.delete({ where: { id: admin.id } });
+// Dọn tín hiệu chủ đề để bộ test sau (community_test) bắt đầu sạch
+await prisma.appSetting.deleteMany({ where: { key: { in: ["hot_topic_scores", "hot_topic_last"] } } });
 console.log(`\nChủ đề nóng: ${pass}/${pass + fail} PASS`);
 await prisma.$disconnect();
 process.exit(fail ? 1 : 0);

@@ -1,5 +1,6 @@
 // Bài chính thức mỗi ngày (lib/officialDaily.ts) — chạy trên DB local.
 //   DATABASE_URL="file:./prisma/dev.db" npx tsx scripts/qa/official_daily_unit.mts
+if (process.env.TURSO_DATABASE_URL) throw new Error("Bài test chỉ chạy trên DB local — bỏ TURSO_DATABASE_URL");
 import prismaMod from "../../lib/prisma";
 const prisma = ((prismaMod as unknown as { default?: typeof prismaMod }).default ?? prismaMod); // ESM ↔ CJS
 import { publishDailyOfficialPost } from "../../lib/officialDaily";

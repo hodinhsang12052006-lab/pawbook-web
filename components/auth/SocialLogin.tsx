@@ -45,10 +45,13 @@ export default function SocialLogin({ dark = true, divider = true, heading }: { 
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    // App native: Google/Facebook chặn đăng nhập trong WebView → chỉ giữ đăng nhập bằng SĐT (SMS chạy bình thường).
+    // App native: Google/Facebook chặn đăng nhập trong WebView → ẩn. Đăng nhập SĐT cũng ẩn trong app
+    // native cho tới khi Twilio hết bản dùng thử (bản thử chỉ gửi mã tới số đã xác minh — người duyệt
+    // App Store/CH Play bấm vào không nhận được mã = bị từ chối). Bật lại: NEXT_PUBLIC_NATIVE_PHONE_LOGIN=1.
     const native = Capacitor.isNativePlatform();
+    const nativePhone = process.env.NEXT_PUBLIC_NATIVE_PHONE_LOGIN === "1";
     getProviders()
-      .then((p) => setProviders(Object.keys(p || {}).filter((id) => id !== "credentials" && (!native || id === "phone-otp")).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))))
+      .then((p) => setProviders(Object.keys(p || {}).filter((id) => id !== "credentials" && (!native || (nativePhone && id === "phone-otp"))).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))))
       .catch(() => {});
   }, []);
 

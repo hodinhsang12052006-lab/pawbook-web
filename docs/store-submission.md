@@ -110,7 +110,8 @@ microphone/camera for in-app voice & video calls between users.
 User-generated content is moderated: users can report and block other users (chat screen menu → Report / Block,
 or the ••• menu on any post); reports are reviewed by our team within 24 hours.
 Account deletion: Profile → Account → Delete my account (deletes immediately).
-Sign-in inside the app is by email/password (no third-party login in the app).
+Sign-in inside the app is by email/password only (Google, Facebook and phone sign-in exist on the website
+but are hidden in the native app), so Sign in with Apple is not required (guideline 4.8).
 ```
 
 > ⚠️ Người duyệt PHẢI đăng nhập được. Tạo 2 tài khoản demo trên bitpawos.com (1 thợ, 1 chủ tiệm), điền đủ hồ sơ + vài ảnh, rồi dán vào ô trên. Đừng dùng tài khoản thật/admin.
@@ -141,6 +142,8 @@ Code đã viết sẵn (lib/push.ts, lib/nativePush.ts) — chỉ cần khoá:
    - Lưu file `.jks` + mật khẩu ở nơi an toàn (Google Drive riêng / trình quản lý mật khẩu). **Mất khoá = không cập nhật app được.** Không gửi khoá này cho ai.
 3. Chọn **release** → ra file `android/app/release/app-release.aab`.
 4. Play Console → Tạo ứng dụng → điền mục 1, 2 → **Internal testing** tải `.aab` lên trước, thử trên máy thật → rồi **Production**.
+   - Quyền app: chỉ INTERNET, CAMERA, RECORD_AUDIO (gọi video), POST_NOTIFICATIONS. Đã bỏ READ_MEDIA_IMAGES/VIDEO (12/10/2026) → không phải nộp tờ khai "Photo and video permissions".
+   - Quốc gia phát hành: Hoa Kỳ + Úc (có thể thêm Việt Nam cho người nhà test).
 5. Tài khoản Play cá nhân mới: Google bắt **chạy thử kín với ≥12 người trong 14 ngày** trước khi được lên Production. (Tài khoản tổ chức/doanh nghiệp thì không.)
 
 **App Store (cần máy Mac + Xcode + tài khoản Apple Developer $99/năm):**
@@ -152,7 +155,8 @@ Code đã viết sẵn (lib/push.ts, lib/nativePush.ts) — chỉ cần khoá:
 
 **Rủi ro bị từ chối & cách đã xử lý:**
 - 4.2 "chỉ là web bọc lại": app có thông báo đẩy native, camera/thư viện ảnh, gọi thoại/video → nêu rõ trong Review Notes.
-- 4.8 Sign in with Apple: trong app native KHÔNG có đăng nhập Google/Facebook (chỉ email) → không bắt buộc Sign in with Apple.
+- 4.8 Sign in with Apple: trong app native chỉ có email + mật khẩu (Google/Facebook/SĐT ẩn — components/auth/SocialLogin.tsx) → không bắt buộc Sign in with Apple.
+- Đăng nhập SĐT ẩn trong app vì Twilio còn bản dùng thử (người duyệt không nhận được mã). Nâng cấp Twilio xong → đặt `NEXT_PUBLIC_NATIVE_PHONE_LOGIN=1` trên Vercel để bật lại.
 - 5.1.1(v) Xoá tài khoản: có trong app.
 - 1.2 Nội dung người dùng: có báo cáo + chặn.
 - Ảnh chụp có câu "#1" trên trang chủ — nếu Apple hỏi, đổi câu đó trên web (không cần build lại app).

@@ -11,7 +11,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const SHOTS = [
   { path: "/", title: "Việc nail gấp tại Mỹ & Úc", sub: "Tìm việc, tìm thợ — miễn phí, nhắn trực tiếp" },
-  { path: "/?tab=jobs", title: "Hàng trăm tin tuyển thợ", sub: "Lọc theo bang, lương, kỹ năng — tin gấp lên đầu" },
+  { path: "/?tab=jobs", title: "Tin tuyển thợ mới mỗi ngày", sub: "Lọc theo bang, lương, kỹ năng — tin gấp lên đầu", scrollTo: /tin đang tuyển/ },
   { path: "/jobs/cmui3d1jt007nu2m8hzfymgsr", title: "Xem lương, chỗ ở, liên hệ", sub: "Gọi hoặc nhắn tiệm chỉ 1 chạm" },
   { path: "/designs", title: "Mẫu nail mới mỗi ngày", sub: "Kèm vật tư, các bước làm và giá gợi ý" },
   { path: "/profile/cmv261cbf0000kz06racm3k1t", title: "Tin thuế, tip & quyền lợi", sub: "Cập nhật từ IRS, ATO, Fair Work — dễ hiểu" },
@@ -31,6 +31,11 @@ for (const t of TARGETS) {
     const p = await ctx.newPage();
     await p.goto(SITE + s.path, { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
     await p.waitForTimeout(2500);
+    // Cuộn tới đúng phần cần khoe (VD danh sách việc), bỏ qua banner đầu trang
+    if (s.scrollTo) {
+      await p.getByText(s.scrollTo).first().evaluate((e) => window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 140)).catch(() => {});
+      await p.waitForTimeout(1200);
+    }
     const raw = await p.screenshot({ type: "png" });
     await ctx.close();
     // 2) ghép: nền thương hiệu + tiêu đề + ảnh trong khung bo góc

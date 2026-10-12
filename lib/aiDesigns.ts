@@ -81,15 +81,15 @@ const SCHEMA = {
 };
 
 // Phong cách ảnh chung: cận cảnh, ánh sáng studio, KHÔNG chữ/logo (tránh vi phạm thương hiệu).
-// Khung ảnh: 1 bàn tay đặt tự nhiên (ít lỗi thừa ngón hơn kiểu "giơ tay"), không
-// nhắc giới tính/da (bộ lọc NSFW của Cloudflare hay chặn nhầm), không chữ/logo.
 // Khung ảnh: phải trông như ẢNH CHỤP THẬT ở tiệm (thợ nhìn là biết làm được), không phải ảnh 3D
-// bóng loáng. Bối cảnh + màu da xoay vòng theo mẫu để bảng tin không 10 ảnh giống hệt nhau.
+// bóng loáng; 1 bàn tay đặt tự nhiên (ít lỗi thừa ngón hơn kiểu "giơ tay"), không chữ/logo.
+// KHÔNG nhắc giới tính / da / màu da: bộ lọc NSFW của Cloudflare chặn nhầm (12/10/2026 thêm
+// "woman's hand" + "skin texture" → cả lượt vẽ trượt hết). Bối cảnh xoay vòng theo mẫu.
 const IMAGE_STYLE =
-  "Real candid photo taken with an iPhone in a nail salon, natural light. Close-up of a real woman's hand, relaxed natural pose, " +
-  "realistic skin texture with fine lines, knuckle creases and natural cuticles, correct anatomy with exactly five fingers and one thumb, " +
-  "nails cleanly finished and in sharp focus, shallow depth of field, true-to-life colors. " +
-  "Not a 3D render, not CGI, not an illustration, no plastic or airbrushed skin, no extra fingers. No text, no watermark, no logos, no brand names.";
+  "Real candid smartphone photo taken in a nail salon, natural daylight. Close-up of a hand in a relaxed natural pose, " +
+  "lifelike detail: fine knuckle creases, natural cuticles, realistic proportions with exactly five fingers, " +
+  "nails neatly finished and in sharp focus, shallow depth of field, true-to-life colors, looks like a real salon portfolio photo. " +
+  "Not a 3D render, not CGI, not an illustration, not airbrushed, no extra fingers. No text, no watermark, no logos, no brand names.";
 const SCENES = [
   "hand resting on a white salon towel on the manicure table",
   "hand holding a takeaway iced coffee cup",
@@ -98,12 +98,11 @@ const SCENES = [
   "hand on a pale pink salon cushion, polish bottles blurred in the background",
   "hand lightly touching a white marble tabletop",
 ];
-const SKINS = ["light skin tone", "medium olive skin tone", "warm tan skin tone", "deep brown skin tone", "fair skin tone with pink undertone"];
-/** Khung ảnh theo mẫu: cùng mẫu → cùng bối cảnh (vẽ lại vẫn nhất quán), mẫu khác → khác bối cảnh/màu da. */
+/** Khung ảnh theo mẫu: cùng mẫu → cùng bối cảnh (vẽ lại vẫn nhất quán), mẫu khác → khác bối cảnh. */
 function photoStyle(seed: string): string {
   let h = 0;
   for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return `${IMAGE_STYLE} Scene: ${SCENES[h % SCENES.length]}, ${SKINS[(h >>> 8) % SKINS.length]}. Square 1:1.`;
+  return `${IMAGE_STYLE} Scene: ${SCENES[h % SCENES.length]}. Square 1:1.`;
 }
 
 const cut = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);

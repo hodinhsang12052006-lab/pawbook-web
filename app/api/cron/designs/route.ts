@@ -64,6 +64,8 @@ export async function GET(req: Request) {
         tag: "pn-ai-designs",
       });
     }
+    // Ghi tóm tắt vào log Vercel (lỗi vẽ ảnh chỉ nằm trong phản hồi — không ai đọc được khi cron tự chạy).
+    console.log("cron designs:", JSON.stringify({ created: r.created.length, backfilled: r.backfilled, gallery: r.gallery, official: r.official, errors: r.errors.slice(0, 5) }).slice(0, 1500));
     return NextResponse.json(r);
   } catch (err) {
     console.error("cron designs error:", err);

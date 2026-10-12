@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark, Eye, Zap } from "lucide-react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
@@ -91,14 +91,14 @@ function timeAgo(iso: string): string {
 // Banner "nhịp thị trường": ưu tiên số LIVE từ chính các tin đang mở trên
 // app (đủ ≥3 tin mới hiện); app còn ít dữ liệu thì dùng số khảo sát cộng đồng
 // và GHI RÕ nguồn + thời điểm — không nói "ngay bây giờ" với số cũ.
-function DemandFomoBanner({ market, state, jobs }: { market: "US" | "AU"; state: string; jobs: JobType[] }) {
+export interface JobTotals { total: number; new7d: number; urgent: number }
+
+function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; state: string; totals: JobTotals }) {
   useTr(); // render lại khi đổi VI/EN
   const scope = state ? stateName(market, state) : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
-  const weekAgo = Date.now() - 7 * 86_400_000;
-  const newThisWeek = jobs.filter((j) => new Date(j.createdAt).getTime() >= weekAgo).length;
-  const urgent = jobs.filter((j) => j.isUrgent).length;
+  const { total, new7d: newThisWeek, urgent } = totals;
 
-  if (jobs.length >= 3) {
+  if (total >= 3) {
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3">
         <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
@@ -106,7 +106,7 @@ function DemandFomoBanner({ market, state, jobs }: { market: "US" | "AU"; state:
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
         </span>
         <p className="text-xs text-slate-200 sm:text-sm">
-          <span className="font-black text-emerald-300">{jobs.length}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
+          <span className="font-black text-emerald-300">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
           {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
           {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent}{tr(" tin gấp", " urgent")}</span></>}
         </p>
@@ -123,6 +123,40 @@ function DemandFomoBanner({ market, state, jobs }: { market: "US" | "AU"; state:
         <span className="font-black text-emerald-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span>{tr(" tại ", " in ")}{stateSignal ? scope : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia")}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ đang là bên được săn đón.", " in one survey of nail groups (Sep 2026) — techs are in demand.")}
       </p>
     </div>
+  );
+}
+
+export const JOBS_PER_PAGE = 12;
+
+/** ‹ 1 2 3 … 9 › — trang hiện tại nổi bật; nhiều trang thì rút gọn bằng "…". */
+function Pagination({ page, pages, onPage }: { page: number; pages: number; onPage: (p: number) => void }) {
+  useTr();
+  if (pages <= 1) return null;
+  const nums: (number | "…")[] = [];
+  for (let i = 1; i <= pages; i++) {
+    if (pages <= 7 || i === 1 || i === pages || Math.abs(i - page) <= 1) nums.push(i);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  }
+  const btn = "flex h-10 min-w-10 items-center justify-center rounded-xl px-3 text-sm font-bold transition-colors";
+  return (
+    <nav aria-label={tr("Phân trang tin tuyển", "Job pages")} className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
+      <button type="button" onClick={() => onPage(page - 1)} disabled={page <= 1} aria-label={tr("Trang trước", "Previous page")} className={`${btn} bg-slate-900/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800 disabled:opacity-30`}>
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      {nums.map((n, i) =>
+        n === "…" ? (
+          <span key={`d${i}`} className="px-1 text-slate-500">…</span>
+        ) : (
+          <button key={n} type="button" onClick={() => onPage(n)} aria-current={n === page ? "page" : undefined}
+            className={`${btn} ${n === page ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-500/20" : "bg-slate-900/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800"}`}>
+            {n}
+          </button>
+        )
+      )}
+      <button type="button" onClick={() => onPage(page + 1)} disabled={page >= pages} aria-label={tr("Trang sau", "Next page")} className={`${btn} bg-slate-900/60 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800 disabled:opacity-30`}>
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </nav>
   );
 }
 
@@ -323,6 +357,18 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   // người xem, nên chỉ cộng/trừ phần chênh lệch khi họ bấm lưu/bỏ lưu.
   const [initialSaved, setInitialSaved] = useState<Set<string>>(new Set());
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  // Phân trang: mỗi trang JOBS_PER_PAGE tin — cả trăm tin vẫn nhẹ, lướt không mỏi.
+  const [page, setPage] = useState(1);
+  const [totals, setTotals] = useState<JobTotals>({ total: 0, new7d: 0, urgent: 0 });
+  const [savedJobs, setSavedJobs] = useState<JobType[] | null>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  // Đổi bang / thành phố / ô tìm → về trang 1
+  useEffect(() => setPage(1), [market, state, city]);
+  // Mở tab Việc gấp = đã xem việc tới lúc này → bảng tin đếm "việc mới kể từ lần trước" từ mốc này.
+  useEffect(() => {
+    try { localStorage.setItem("pn_jobs_seen_at", String(Date.now())); } catch {}
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,13 +377,17 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
       try {
         setLoading(true);
         setError(null);
-        const params = new URLSearchParams({ market });
+        const params = new URLSearchParams({ market, page: String(page), pageSize: String(JOBS_PER_PAGE) });
         if (state) params.set("state", state);
         if (city) params.set("q", city); // ô tìm: thành phố, tên tiệm, kỹ năng…
         const res = await fetch(`/api/jobs?${params.toString()}`);
         if (!res.ok) throw new Error(tr("Không thể tải danh sách tin tuyển dụng.", "Couldn't load jobs."));
         const data = await res.json();
-        if (!cancelled) setJobs(data);
+        if (!cancelled) {
+          setJobs(data);
+          const n = (h: string) => Number(res.headers.get(h)) || 0;
+          setTotals({ total: n("X-Total-Count") || data.length, new7d: n("X-New-7d"), urgent: n("X-Urgent-Count") });
+        }
       } catch (err: any) {
         if (!cancelled) setError(err.message || tr("Đã xảy ra lỗi.", "Something went wrong."));
       } finally {
@@ -349,7 +399,28 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     return () => {
       cancelled = true;
     };
-  }, [market, state, city]);
+  }, [market, state, city, page]);
+
+  const goPage = (p: number) => {
+    setPage(p);
+    // Lên đầu danh sách (không về đầu trang chủ) để đọc tiếp trang mới
+    const el = topRef.current;
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 90, behavior: "smooth" });
+  };
+
+  // "Đã lưu": tải đúng các tin đã lưu (có thể nằm ở trang khác / bang khác)
+  useEffect(() => {
+    if (!showSavedOnly) return;
+    const ids = [...savedIds];
+    if (!ids.length) { setSavedJobs([]); return; }
+    let cancelled = false;
+    fetch(`/api/jobs?ids=${encodeURIComponent(ids.join(","))}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d: JobType[]) => !cancelled && setSavedJobs(d))
+      .catch(() => !cancelled && setSavedJobs([]));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSavedOnly]);
 
   // Nạp danh sách đã lưu khi ĐÃ đăng nhập — không phụ thuộc bộ lọc market/
   // state/city vì "đã lưu" là của riêng người dùng. Khách thì khỏi gọi (trước đây
@@ -400,7 +471,8 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   // trong từng nhóm) — không lọc mất tin nơi khác, nên không bao giờ trống trơn.
   const homeState = !state && viewer?.market === market ? viewer?.state || null : null;
   const ordered = homeState ? [...jobs.filter((j) => j.state === homeState), ...jobs.filter((j) => j.state !== homeState)] : jobs;
-  const visibleJobs = showSavedOnly ? ordered.filter((j) => savedIds.has(j.id)) : ordered;
+  const visibleJobs = showSavedOnly ? (savedJobs ?? []).filter((j) => savedIds.has(j.id)) : ordered;
+  const pages = Math.max(1, Math.ceil(totals.total / JOBS_PER_PAGE));
 
   if (loading) {
     return <JobBoardSkeleton />;
@@ -415,10 +487,10 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     );
   }
 
-  if (jobs.length === 0) {
+  if (jobs.length === 0 && page === 1) {
     return (
       <div className="space-y-4">
-        <DemandFomoBanner market={market} state={state} jobs={jobs} />
+        <DemandFomoBanner market={market} state={state} totals={totals} />
         <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
           <p className="text-4xl">💅</p>
           <p className="text-base font-bold text-slate-300">{tr("Chưa có tin tuyển thợ ở khu vực này", "No jobs in this area yet")}</p>
@@ -432,8 +504,8 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   }
 
   return (
-    <div className="space-y-4 animate-fadeIn">
-      <DemandFomoBanner market={market} state={state} jobs={jobs} />
+    <div ref={topRef} className="space-y-4 animate-fadeIn">
+      <DemandFomoBanner market={market} state={state} totals={totals} />
 
       <div className="flex flex-wrap items-center gap-2">
       <button
@@ -470,6 +542,16 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
         />
       ))}
       </div>
+      )}
+      {!showSavedOnly && (
+        <>
+          <Pagination page={page} pages={pages} onPage={goPage} />
+          {pages > 1 && (
+            <p className="text-center text-xs text-slate-500">
+              {tr(`Trang ${page}/${pages} · tin ${(page - 1) * JOBS_PER_PAGE + 1}–${Math.min(page * JOBS_PER_PAGE, totals.total)} trong ${totals.total}`, `Page ${page} of ${pages} · jobs ${(page - 1) * JOBS_PER_PAGE + 1}–${Math.min(page * JOBS_PER_PAGE, totals.total)} of ${totals.total}`)}
+            </p>
+          )}
+        </>
       )}
     </div>
   );

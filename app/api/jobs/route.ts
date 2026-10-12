@@ -11,6 +11,9 @@ import { cleanJobMedia, getJobMedia, setJobMedia } from "@/lib/jobMedia";
 
 // GET /api/jobs?market=US&state=CA&city=...&q=...  — danh sách tin tuyển thợ
 //   q: tìm trong tiêu đề, tên tiệm, thành phố, kỹ năng, nội dung. Mới nhất / vừa được tiệm đăng lại lên đầu.
+//   page=1&pageSize=12 (5–50): phân trang; tổng số trả trong header X-Total-Count / X-New-7d / X-Urgent-Count.
+//     Không có page → như cũ (tối đa 100 tin, mảng JSON) để tool nhập tin + trang cũ không đổi.
+//   ids=a,b,c (≤ 100): chỉ lấy đúng các tin này (mục "Đã lưu").
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -24,6 +27,11 @@ export async function GET(req: NextRequest) {
     if (state) where.state = state;
     if (city) where.city = { contains: city };
     if (q) where.AND = [{ OR: ["title", "salonName", "city", "skills", "description"].map((f) => ({ [f]: { contains: q } })) }];
+    const ids = (searchParams.get("ids") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 100);
+    if (ids.length) where.id = { in: ids };
+    const paged = searchParams.has("page");
+    const page = Math.min(1000, Math.max(1, Math.floor(Number(searchParams.get("page")) || 1)));
+    const pageSize = Math.min(50, Math.max(5, Math.floor(Number(searchParams.get("pageSize")) || 12)));
 
     const jobs = await prisma.job.findMany({
       where,
@@ -35,9 +43,18 @@ export async function GET(req: NextRequest) {
         _count: { select: { savedBy: true } },
       },
       // Tin đăng lại (bump) có createdAt = lúc đăng lại → tự lên đầu.
-      orderBy: [{ createdAt: "desc" }],
-      take: 100,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      skip: paged ? (page - 1) * pageSize : 0,
+      take: paged ? pageSize : 100,
     });
+    // Tổng số cho thanh phân trang + dải "N tin đang tuyển · N mới · N gấp" (đếm cả các trang khác).
+    const totals = paged
+      ? await Promise.all([
+          prisma.job.count({ where }),
+          prisma.job.count({ where: { AND: [where, { createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } }] } }),
+          prisma.job.count({ where: { AND: [where, { isUrgent: true }] } }),
+        ])
+      : null;
 
     const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -59,7 +76,9 @@ export async function GET(req: NextRequest) {
     // (phục vụ tiếp bản cũ tối đa 60 giây trong lúc làm mới). 1.000 người mở
     // bảng việc cùng lúc chỉ tốn ~1 lượt đọc DB thay vì 1.000. Tin vừa đăng có
     // thể chậm hiện trên bảng ≤ 20 giây; trang chi tiết tin không bị cache.
-    return NextResponse.json(safeJobs, { headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" } });
+    const headers: Record<string, string> = { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" };
+    if (totals) Object.assign(headers, { "X-Total-Count": String(totals[0]), "X-New-7d": String(totals[1]), "X-Urgent-Count": String(totals[2]), "X-Page": String(page), "X-Page-Size": String(pageSize) });
+    return NextResponse.json(safeJobs, { headers });
   } catch (error: any) {
     console.error("Fetch jobs API error:", error);
     return NextResponse.json(

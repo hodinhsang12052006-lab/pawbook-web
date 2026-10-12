@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Loader2, Newspaper, Sparkles } from "lucide-react";
+import { AlertCircle, ChevronRight, Flame, Loader2, Newspaper, Sparkles } from "lucide-react";
+import Link from "next/link";
 import FeedPostCard, { FeedPost } from "./FeedPostCard";
 import SupplyProductCard, { SupplyProductType } from "./SupplyProductCard";
 import CreatePostComposer from "./CreatePostComposer";
@@ -13,6 +14,9 @@ import RadarPostCard, { type RadarPost } from "./RadarPostCard";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { DesignsStrip } from "@/components/designs/DesignViews";
+import JobFeedCard from "./JobFeedCard";
+import type { JobType } from "@/components/jobs/JobBoard";
+import { stateName } from "@/lib/stateNames";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
@@ -20,6 +24,35 @@ const RECAP_AFTER_POST = 8;
 // "Nhịp đau tuần" ngay sau bài đầu tiên; bài radar đã duyệt chen thưa.
 const PULSE_AFTER_POST = 1;
 const RADAR_AFTER_POSTS = [5, 11, 17];
+// Tin tuyển THẬT chen vào bảng tin: cứ 3 bài thì 1 tin việc (mới nhất trước).
+const JOB_EVERY_N_POSTS = 3;
+const FEED_JOBS = 15;
+// Mốc "lần trước bạn ghé" — đặt khi mở tab Việc gấp (JobBoard) để đếm việc mới kể từ đó.
+export const JOBS_SEEN_KEY = "pn_jobs_seen_at";
+
+/** Dải đầu bảng tin: "🔥 N việc mới kể từ lần trước bạn ghé" — lý do để mở app mỗi ngày. */
+function NewJobsBanner({ jobs, total, urgent, market, state }: { jobs: JobType[]; total: number; urgent: number; market: "US" | "AU"; state: string }) {
+  useTr();
+  const [seenAt, setSeenAt] = useState<number | null | undefined>(undefined);
+  useEffect(() => {
+    try { const v = Number(localStorage.getItem(JOBS_SEEN_KEY)); setSeenAt(v > 0 ? v : null); } catch { setSeenAt(null); }
+  }, []);
+  if (seenAt === undefined || !total) return null;
+  const scope = state ? stateName(market, state) : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
+  const fresh = seenAt ? jobs.filter((j) => new Date(j.createdAt).getTime() > seenAt).length : 0;
+  const text = seenAt && fresh
+    ? tr(`${fresh} việc mới kể từ lần trước bạn ghé`, `${fresh} new job${fresh > 1 ? "s" : ""} since your last visit`)
+    : tr(`${total} việc đang tuyển tại ${scope}${urgent ? ` · ${urgent} việc gấp` : ""}`, `${total} open job${total > 1 ? "s" : ""} in ${scope}${urgent ? ` · ${urgent} urgent` : ""}`);
+  return (
+    <Link href="/?tab=jobs" className="flex items-center gap-3 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/15 via-pink-500/10 to-slate-900/30 px-4 py-3 transition-colors hover:border-orange-400/60">
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-pink-600">
+        <Flame className="h-5 w-5 text-white" />
+      </span>
+      <span className="min-w-0 flex-1 text-sm font-bold text-white">{text}</span>
+      <span className="inline-flex flex-shrink-0 items-center text-xs font-black text-orange-300">{tr("Xem ngay", "View")}<ChevronRight className="h-4 w-4" /></span>
+    </Link>
+  );
+}
 
 interface SocialFeedProps {
   market: "US" | "AU";
@@ -93,6 +126,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [supplyProducts, setSupplyProducts] = useState<SupplyProductType[]>([]);
+  const [feedJobs, setFeedJobs] = useState<JobType[]>([]);
+  const [jobTotals, setJobTotals] = useState({ total: 0, urgent: 0 });
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +162,23 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       cancelled = true;
     };
   }, [market, state, city]);
+
+  // Tin tuyển mới nhất đúng vùng đang xem → chen vào bảng tin + dải "việc mới".
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({ market, page: "1", pageSize: String(FEED_JOBS) });
+    if (state) params.set("state", state);
+    fetch(`/api/jobs?${params.toString()}`)
+      .then(async (r) => {
+        if (!r.ok || cancelled) return;
+        const data = (await r.json()) as JobType[];
+        if (cancelled || !Array.isArray(data)) return;
+        setFeedJobs(data);
+        setJobTotals({ total: Number(r.headers.get("X-Total-Count")) || data.length, urgent: Number(r.headers.get("X-Urgent-Count")) || 0 });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [market, state]);
 
   // Kho hàng supply tải riêng 1 lần (không phụ thuộc vùng — hàng sỉ thường
   // giao được nhiều nơi), dùng để chen vào giữa newsfeed.
@@ -200,9 +252,10 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   // Trộn bài đăng + thẻ sản phẩm thành 1 danh sách render duy nhất.
   const feedItems = useMemo(() => {
     const items: Array<
-      { type: "post"; post: FeedPost } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" } | { type: "pulse" } | { type: "radar"; post: RadarPost }
+      { type: "post"; post: FeedPost } | { type: "job"; job: JobType } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" } | { type: "pulse" } | { type: "radar"; post: RadarPost }
     > = [];
     let supplyIdx = 0;
+    let jobIdx = 0;
     ordered.forEach((post, idx) => {
       items.push({ type: "post", post });
       if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
@@ -210,13 +263,16 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       if (idx + 1 === PULSE_AFTER_POST && user) items.push({ type: "pulse" });
       const r = RADAR_AFTER_POSTS.indexOf(idx + 1);
       if (r >= 0 && radarPosts[r]) items.push({ type: "radar", post: radarPosts[r] });
+      if ((idx + 1) % JOB_EVERY_N_POSTS === 0 && feedJobs[jobIdx]) items.push({ type: "job", job: feedJobs[jobIdx++] });
       if (supplyProducts.length > 0 && (idx + 1) % SUPPLY_EVERY_N_POSTS === 0) {
         items.push({ type: "supply", product: supplyProducts[supplyIdx % supplyProducts.length] });
         supplyIdx += 1;
       }
     });
+    // Hết bài (bảng tin còn ít) → xếp nốt tin việc ở cuối, đừng để trống.
+    if (!nextCursor) while (feedJobs[jobIdx]) items.push({ type: "job", job: feedJobs[jobIdx++] });
     return items;
-  }, [ordered, supplyProducts, studio, radarPosts, user]);
+  }, [ordered, nextCursor, feedJobs, supplyProducts, studio, radarPosts, user]);
 
   return (
     <div className="space-y-4">
@@ -233,6 +289,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
           </p>
         </div>
       )}
+      <NewJobsBanner jobs={feedJobs} total={jobTotals.total} urgent={jobTotals.urgent} market={market} state={state} />
       <CreatePostComposer onPosted={handlePosted} suggestedTags={suggestedTags} />
 
       {loading ? (
@@ -258,6 +315,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
                 post={item.post}
                 onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
               />
+            ) : item.type === "job" ? (
+              <JobFeedCard key={`job-${item.job.id}`} job={item.job} />
             ) : item.type === "supply" ? (
               <SupplyProductCard key={`supply-slot-${idx}`} product={item.product} compact />
             ) : item.type === "tip" ? (

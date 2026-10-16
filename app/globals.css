@@ -62,6 +62,8 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* These utility classes were referenced throughout the chat UI (message
    bubbles, modals, panels) but never defined — every "smooth animation" was

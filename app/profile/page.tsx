@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing, Mail, Gift } from "lucide-react";
+import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing, Mail, Gift, BookOpen } from "lucide-react";
 import InviteFriends from "@/components/profile/InviteFriends";
 import SoundSettings from "@/components/settings/SoundSettings";
 import EmailDigestToggle from "@/components/settings/EmailDigestToggle";
@@ -331,6 +331,7 @@ export default function ProfilePage() {
                 </span>
               </button>
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              <div className="flex flex-wrap justify-end gap-2">
               {profile?.id && (
                 <Link
                   href={`/profile/${profile.id}`}
@@ -339,6 +340,15 @@ export default function ProfilePage() {
                   <Eye className="h-4 w-4" />{tr(" Xem hồ sơ công khai", " View public profile")}
                 </Link>
               )}
+              {profile?.id && profile.role !== "ADMIN" && (
+                <Link
+                  href={`/profile/${profile.id}?tab=menu`}
+                  className="mb-1 flex items-center gap-1.5 rounded-xl bg-amber-500/10 px-3.5 py-2 text-xs font-bold text-amber-100 ring-1 ring-amber-400/25 transition-colors hover:bg-amber-500/15"
+                >
+                  <BookOpen className="h-4 w-4" />{tr(" Menu mẫu của tôi", " My nail menu")}
+                </Link>
+              )}
+              </div>
             </div>
             <h1 className="mt-3 truncate text-2xl font-black tracking-tight text-white">{name || tr("Hồ sơ của bạn", "Your profile")}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-400">

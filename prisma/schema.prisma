@@ -64,6 +64,7 @@ model User {
   conversations     Conversation[]     @relation("UserConversations")
   conversationReads ConversationRead[]
   messages          Message[]
+  menuItems         MenuItem[]
 
   // Paywall "Mở khóa kết nối trực tiếp" — chủ tiệm (OWNER) unlock quyền
   // nhắn tin/gọi 1 thợ cụ thể sau khi hoàn tất khảo sát chuyên sâu.
@@ -684,4 +685,32 @@ model PostPollVote {
 
   @@id([postId, userId])
   @@index([postId])
+}
+
+// Menu mẫu nail cá nhân của thợ / tiệm (tab Menu trên hồ sơ + trang QR quầy).
+// images / materials: JSON. materials = [{ name, qty, cost }] — chỉ chủ menu xem (tính chi phí & lời).
+// SQL: prisma/sql/2026-10-16_menu_items.sql
+model MenuItem {
+  id              String   @id @default(cuid())
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category        String   @default("HAND") // HAND | FOOT | COMBO | ADDON
+  name            String
+  description     String?
+  technique       String?
+  priceFrom       Float
+  priceTo         Float?
+  minutes         Int?
+  durabilityWeeks Int?
+  difficulty      Int?
+  occasion        String?
+  images          String   @default("[]")
+  materials       String   @default("[]")
+  sourceDesignId  String?
+  sortOrder       Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([ownerId, sortOrder])
 }

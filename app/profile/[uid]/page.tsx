@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
-  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone,
+  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone, BookOpen,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import Avatar from "@/components/ui/Avatar";
 import OfficialProfile from "@/components/profile/OfficialProfile";
 import ShareCardButton from "@/components/profile/ShareCard";
+import NailMenu from "@/components/menu/NailMenu";
 import { avatarGradient } from "@/lib/avatar";
 import { stateName, placeLabel } from "@/lib/stateNames";
 
@@ -34,7 +35,7 @@ const BADGE_STYLE = {
   ambassador: { icon: Megaphone, cls: "bg-fuchsia-500/15 text-fuchsia-200 ring-fuchsia-400/40" },
 } as const;
 
-type TabKey = "overview" | "portfolio" | "jobs" | "gallery" | "reviews";
+type TabKey = "overview" | "menu" | "portfolio" | "jobs" | "gallery" | "reviews";
 
 export default function PublicProfilePage({ params }: PageProps) {
   useTr(); // render lại khi đổi VI/EN
@@ -45,6 +46,11 @@ export default function PublicProfilePage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("overview");
+  // ?tab=menu (link chia sẻ / QR) mở thẳng tab đó
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t === "menu" || t === "portfolio" || t === "jobs" || t === "gallery" || t === "reviews") setTab(t);
+  }, []);
 
   // Trust card — số liệu THẬT tính từ Review (không fabricate lượng khách/tip).
   const [trustSummary, setTrustSummary] = useState<ReviewSummary | null>(null);
@@ -222,12 +228,14 @@ export default function PublicProfilePage({ params }: PageProps) {
   const tabs: { key: TabKey; label: string; icon: typeof Star; count?: number }[] = isOwnerProfile
     ? [
         { key: "overview", label: tr("Tổng quan", "Overview"), icon: LayoutGrid },
+        { key: "menu", label: "Menu", icon: BookOpen },
         { key: "jobs", label: tr("Tin tuyển", "Jobs"), icon: Briefcase, count: profile.jobs?.length ?? 0 },
         { key: "gallery", label: tr("Ảnh tiệm", "Salon photos"), icon: Images },
         { key: "reviews", label: tr("Đánh giá", "Reviews"), icon: ShieldCheck, count: reviewCount },
       ]
     : [
         { key: "overview", label: tr("Tổng quan", "Overview"), icon: LayoutGrid },
+        { key: "menu", label: "Menu", icon: BookOpen },
         { key: "portfolio", label: "Portfolio", icon: Images, count: portfolio.length },
         { key: "reviews", label: tr("Đánh giá", "Reviews"), icon: ShieldCheck, count: reviewCount },
       ];
@@ -404,7 +412,7 @@ export default function PublicProfilePage({ params }: PageProps) {
         {/* ===== TABS ===== */}
         <nav
           aria-label={tr("Mục hồ sơ", "Profile sections")}
-          className="sticky top-16 z-20 mt-0 flex gap-1 border-b border-white/10 bg-slate-950/85 px-2 backdrop-blur-md md:mt-4 md:rounded-2xl md:border md:px-1.5 md:py-1.5"
+          className="no-scrollbar sticky top-16 z-20 mt-0 flex gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/85 px-2 backdrop-blur-md md:mt-4 md:rounded-2xl md:border md:px-1.5 md:py-1.5"
         >
           {tabs.map((t) => {
             const active = tab === t.key;
@@ -413,7 +421,7 @@ export default function PublicProfilePage({ params }: PageProps) {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap py-3 text-[13px] font-bold transition-colors md:rounded-xl md:py-2.5 ${
+                className={`relative flex flex-1 flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap px-2 py-3 text-[13px] font-bold transition-colors md:rounded-xl md:py-2.5 ${
                   active ? "text-white md:bg-white/[0.07]" : "text-slate-500 hover:text-slate-200"
                 }`}
               >
@@ -593,6 +601,7 @@ export default function PublicProfilePage({ params }: PageProps) {
             )
           )}
 
+          {(isTech || isOwnerProfile) && tab === "menu" && <NailMenu userId={profile.id} />}
           {isOwnerProfile && tab === "gallery" && <GallerySection ownerId={profile.id} />}
           {isOwnerProfile && tab === "reviews" && (
             <ReviewsSection

@@ -64,7 +64,9 @@ export default function LoginForm() {
         // luôn đúng). Dùng window.location thay vì router của Next.js để né
         // hẳn đường dẫn RSC bị lỗi đó — tải lại toàn trang nhưng đảm bảo luôn
         // vào đúng nơi.
-        window.location.href = "/";
+        // ?callbackUrl= (VD: khách bấm "Muốn làm mẫu này" khi chưa đăng nhập) — chỉ nhận đường dẫn nội bộ.
+        const cb = new URLSearchParams(window.location.search).get("callbackUrl") || "";
+        window.location.href = /^\/(?![/\\])/.test(cb) ? cb : "/";
       }
     } catch (err) {
       setError(t("auth.login.errorUnknown"));

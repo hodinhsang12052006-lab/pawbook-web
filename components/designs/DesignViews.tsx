@@ -3,7 +3,7 @@
 import { cdnImage } from "@/lib/cdnImage";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2 } from "lucide-react";
+import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2, BookOpen } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -147,6 +147,23 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
     }
   };
 
+  const [menuBusy, setMenuBusy] = useState(false);
+  const canMenu = user?.role === "TECHNICIAN" || user?.role === "OWNER";
+  const addToMenu = async () => {
+    setMenuBusy(true);
+    try {
+      const res = await fetch("/api/menu/from-design", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ designId: d.id }) });
+      const r = await res.json().catch(() => ({}));
+      if (res.status === 409) return toast(tr("Mẫu này đã có trong menu của bạn.", "Already in your menu."));
+      if (!res.ok) throw new Error(r.error);
+      toast.success(tr("Đã thêm vào menu — vào hồ sơ để chỉnh giá, ảnh thật.", "Added to your menu — open your profile to set price & real photos."));
+    } catch (e) {
+      toast.error((e as Error).message || tr("Không thêm được, thử lại.", "Couldn't add, try again."));
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
   const tryIt = () => {
     // Mở ô soạn bài với hashtag của mẫu — người làm thật đăng ảnh thật.
     try {
@@ -216,6 +233,11 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
               <Camera className="h-4 w-4" /> {tr("Tôi làm mẫu này", "I made this")}
             </button>
           </div>
+          {canMenu && (
+            <button type="button" onClick={addToMenu} disabled={menuBusy} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08] disabled:opacity-50">
+              <BookOpen className="h-4 w-4 text-amber-300" /> {tr("Thêm vào menu của tôi", "Add to my menu")}
+            </button>
+          )}
           <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>
         </div>
       </div>

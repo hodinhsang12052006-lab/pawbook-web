@@ -991,6 +991,21 @@ export default function MessagesContent({
     fileInput.click();
   }, [activeChat, handleSendMessage]);
 
+  // Tin soạn sẵn (VD bấm "Muốn làm mẫu này" trong Menu): { to, text } trong sessionStorage → mở đúng
+  // cuộc trò chuyện với người đó là điền sẵn vào ô nhập (người dùng tự bấm gửi).
+  useEffect(() => {
+    if (!activeChat?.id) return;
+    try {
+      const raw = sessionStorage.getItem("pn_chat_draft");
+      if (!raw) return;
+      const d = JSON.parse(raw) as { to?: string; text?: string };
+      if (d.to !== activeChat.id || !d.text) return;
+      sessionStorage.removeItem("pn_chat_draft");
+      setMessageText(String(d.text).slice(0, 1000));
+      inputRef.current?.focus();
+    } catch {}
+  }, [activeChat?.id, setMessageText]);
+
   // Direct route redirect handling (?to=partnerId)
   useEffect(() => {
     if (!directPartnerId || !currentUser || systemUsers.length === 0) return;

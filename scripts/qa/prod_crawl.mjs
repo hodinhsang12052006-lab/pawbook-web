@@ -9,7 +9,7 @@ const PAGES = [
   "/auth/login", "/auth/register", "/auth/register?role=technician", "/auth/register?role=owner", "/auth/forgot",
   "/privacy", "/terms", "/data-deletion", "/profile/cmv261cbf0000kz06racm3k1t",
   ...(jobs[0] ? [`/jobs/${jobs[0].id}`] : []),
-  "/tools/income-tracker", "/tools/radar", "/khong-ton-tai-404",
+  "/tools/income-tracker", "/tools/radar", "/consult", ...(jobs[0]?.ownerId ? [`/menu/${jobs[0].ownerId}`] : []), "/khong-ton-tai-404",
 ];
 const issues = [];
 const links = new Set();

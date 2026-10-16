@@ -55,6 +55,8 @@ export default function PublicProfilePage({ params }: PageProps) {
   // Trust card — số liệu THẬT tính từ Review (không fabricate lượng khách/tip).
   const [trustSummary, setTrustSummary] = useState<ReviewSummary | null>(null);
   const [galleryCount, setGalleryCount] = useState<number | null>(null);
+  // Số mẫu đang hiện trong Menu — 0 thì ẩn tab Menu với khách (chủ hồ sơ vẫn thấy để tạo menu).
+  const [menuCount, setMenuCount] = useState<number | null>(null);
   const [statsVersion, setStatsVersion] = useState(0);
 
   // Paywall "Mở khóa kết nối trực tiếp" — chỉ áp dụng khi Chủ tiệm xem hồ
@@ -62,6 +64,9 @@ export default function PublicProfilePage({ params }: PageProps) {
   // tự do, không gate, vì đó là hành động cốt lõi cần frictionless).
   const isOwnerViewingTechnician = viewer?.role === "OWNER" && profile?.role === "TECHNICIAN" && viewer.id !== profile.id;
   const isSelf = Boolean(viewer?.id && profile?.id && viewer.id === profile.id);
+  useEffect(() => {
+    if (tab === "menu" && menuCount === 0 && !isSelf) setTab("overview");
+  }, [tab, menuCount, isSelf]);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingUnlock, setCheckingUnlock] = useState(false);
 
@@ -99,6 +104,11 @@ export default function PublicProfilePage({ params }: PageProps) {
     const tasks: Promise<any>[] = [fetch(`/api/reviews?targetUserId=${profile.id}`).then((r) => (r.ok ? r.json() : null))];
     if (profile.role === "OWNER") {
       tasks.push(fetch(`/api/posts?authorId=${profile.id}&postType=SHOWCASE`).then((r) => (r.ok ? r.json() : null)));
+    }
+    if (profile.role === "OWNER" || profile.role === "TECHNICIAN") {
+      fetch(`/api/menu?userId=${profile.id}`).then((r) => (r.ok ? r.json() : null)).then((m) => {
+        if (!cancelled) setMenuCount(m ? (m.items || []).filter((i: { active: boolean }) => i.active).length : 0);
+      }).catch(() => { if (!cancelled) setMenuCount(0); });
     }
     Promise.all(tasks).then(([reviewData, postData]) => {
       if (cancelled) return;
@@ -225,20 +235,22 @@ export default function PublicProfilePage({ params }: PageProps) {
         { label: tr("Mẫu portfolio", "Portfolio"), value: portfolio.length },
       ];
 
-  const tabs: { key: TabKey; label: string; icon: typeof Star; count?: number }[] = isOwnerProfile
+  const allTabs: { key: TabKey; label: string; icon: typeof Star; count?: number }[] = isOwnerProfile
     ? [
         { key: "overview", label: tr("Tổng quan", "Overview"), icon: LayoutGrid },
-        { key: "menu", label: "Menu", icon: BookOpen },
+        { key: "menu", label: "Menu", icon: BookOpen, count: menuCount ?? 0 },
         { key: "jobs", label: tr("Tin tuyển", "Jobs"), icon: Briefcase, count: profile.jobs?.length ?? 0 },
         { key: "gallery", label: tr("Ảnh tiệm", "Salon photos"), icon: Images },
         { key: "reviews", label: tr("Đánh giá", "Reviews"), icon: ShieldCheck, count: reviewCount },
       ]
     : [
         { key: "overview", label: tr("Tổng quan", "Overview"), icon: LayoutGrid },
-        { key: "menu", label: "Menu", icon: BookOpen },
+        { key: "menu", label: "Menu", icon: BookOpen, count: menuCount ?? 0 },
         { key: "portfolio", label: "Portfolio", icon: Images, count: portfolio.length },
         { key: "reviews", label: tr("Đánh giá", "Reviews"), icon: ShieldCheck, count: reviewCount },
       ];
+  // Khách chỉ thấy tab Menu khi đã có mẫu (tránh "Chưa có mẫu nào" ở mọi hồ sơ mới).
+  const tabs = allTabs.filter((t) => t.key !== "menu" || isSelf || (menuCount ?? 0) > 0);
 
   const primaryAction = isSelf ? (
     <Link

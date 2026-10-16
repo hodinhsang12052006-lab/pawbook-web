@@ -140,6 +140,8 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   for (; q < 8; q++) {
     const opt = p.locator("button.w-full.text-left").first();
     if (!(await opt.isVisible().catch(() => false))) break;
+    // Câu cuối đã chọn → nút khoá trong lúc gửi khảo sát (đúng ý): chờ gửi xong, không bấm tiếp.
+    if (await opt.isDisabled().catch(() => true)) { await opt.waitFor({ state: "detached", timeout: 20000 }).catch(() => {}); break; }
     if (q === 0) await shot(p, "B02_survey_q1");
     await opt.click();
     await p.waitForTimeout(700);

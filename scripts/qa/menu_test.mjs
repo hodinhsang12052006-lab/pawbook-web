@@ -184,17 +184,30 @@ const phone = await login(null, devices["iPhone 13"]);
 await phone.page.goto(BASE_URL + `/menu/${tech.me.id}`);
 await phone.page.getByRole("button", { name: "QA French tráng gương" }).waitFor({ timeout: 20000 }).catch(() => {});
 const ov1 = await phone.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+// Tiệm CÓ menu → 5 tab (không tràn ngang); tiệm CHƯA có mẫu → khách không thấy tab Menu, chủ tiệm vẫn thấy
+const ownerItem = (await (await api(owner, "POST", "/api/menu", { name: "QA Menu tiệm", priceFrom: 30 })).json()).item?.id;
+if (ownerItem) created.push(ownerItem);
+const tabsNav = () => phone.page.getByRole("navigation", { name: "Mục hồ sơ" });
 await phone.page.goto(BASE_URL + `/profile/${owner.me.id}`);
-await phone.page.getByRole("navigation", { name: "Mục hồ sơ" }).waitFor({ timeout: 20000 }).catch(() => {});
+await tabsNav().getByRole("button", { name: /Menu/ }).waitFor({ timeout: 20000 }).catch(() => {});
 const ov2 = await phone.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-const menuTab = await phone.page.getByRole("navigation", { name: "Mục hồ sơ" }).getByRole("button", { name: /Menu/ }).isVisible().catch(() => false);
-R.check("M16", "Điện thoại (iPhone 13): /menu + hồ sơ tiệm 5 tab không tràn ngang, có tab Menu", ov1 <= 1 && ov2 <= 1 && menuTab, JSON.stringify({ ov1, ov2, menuTab }));
+const menuTab = await tabsNav().getByRole("button", { name: /Menu/ }).isVisible().catch(() => false);
+for (const it of (await (await api(owner2, "GET", `/api/menu?userId=${owner2.me.id}`)).json()).items || []) await api(owner2, "DELETE", `/api/menu/${it.id}`);
+await phone.page.goto(BASE_URL + `/profile/${owner2.me.id}?tab=menu`);
+await tabsNav().waitFor({ timeout: 20000 }).catch(() => {});
+await phone.page.waitForTimeout(1500);
+const hiddenForGuest = (await tabsNav().getByRole("button", { name: /Menu/ }).count()) === 0;
+const backToOverview = (await tabsNav().getByRole("button", { name: /Tổng quan/ }).getAttribute("aria-current").catch(() => null)) === "page";
+await owner2.page.goto(BASE_URL + `/profile/${owner2.me.id}`);
+const selfSees = await owner2.page.getByRole("navigation", { name: "Mục hồ sơ" }).getByRole("button", { name: /Menu/ }).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+R.check("M16", "Điện thoại: /menu + hồ sơ tiệm 5 tab không tràn ngang; tiệm chưa có mẫu → khách không thấy tab Menu (link ?tab=menu về Tổng quan), chủ tiệm vẫn thấy để tạo",
+  ov1 <= 1 && ov2 <= 1 && menuTab && hiddenForGuest && backToOverview && selfSees, JSON.stringify({ ov1, ov2, menuTab, hiddenForGuest, backToOverview, selfSees }));
 
 const errs = [...tech.errors, ...owner.errors, ...guest.errors, ...phone.errors];
 R.check("M17", "Không có lỗi JavaScript trên các trang menu", errs.length === 0, errs.join(" | "));
 
 // Dọn dữ liệu QA (chỉ mẫu do test tạo)
-for (const id of new Set(created)) await api(tech, "DELETE", `/api/menu/${id}`);
+for (const id of new Set(created)) if ((await api(tech, "DELETE", `/api/menu/${id}`)).status() === 403) await api(owner, "DELETE", `/api/menu/${id}`);
 await db.execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: [QA_DESIGN] });
 await browser.close();
 const s = R.summary();

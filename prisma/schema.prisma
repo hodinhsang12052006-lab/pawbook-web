@@ -66,6 +66,7 @@ model User {
   messages          Message[]
   menuItems         MenuItem[]
   bookings          BookingRequest[]
+  clientReviews     ClientReview[]
 
   // Paywall "Mở khóa kết nối trực tiếp" — chủ tiệm (OWNER) unlock quyền
   // nhắn tin/gọi 1 thợ cụ thể sau khi hoàn tất khảo sát chuyên sâu.
@@ -733,8 +734,28 @@ model BookingRequest {
   status        String    @default("new") // new | confirmed | declined | done
   scheduledFor  String? // giờ thợ chốt, VD "Thứ 7 18/10 · 2:30 PM"
   locale        String    @default("vi")
+  // Link đánh giá riêng (tạo khi thợ bấm "Đã làm xong") — chỉ khách THẬT đã đặt lịch mới đánh giá được
+  reviewToken   String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   @@index([techId, status, createdAt])
+}
+
+// Đánh giá của KHÁCH làm nail sau buổi hẹn (qua link riêng của lịch hẹn, không cần tài khoản).
+// bookingId KHÔNG khoá ngoại: lịch hẹn tự xoá sau 90 ngày (xoá SĐT) nhưng đánh giá vẫn giữ.
+// (prisma/sql/2026-10-17b_client_reviews.sql)
+model ClientReview {
+  id          String   @id @default(cuid())
+  techId      String
+  tech        User     @relation(fields: [techId], references: [id], onDelete: Cascade)
+  bookingId   String   @unique
+  rating      Int // 1–5
+  comment     String?
+  displayName String // VD "Ngọc A." — không lưu SĐT
+  itemName    String?
+  hidden      Boolean  @default(false) // chỉ admin ẩn (vi phạm) — thợ KHÔNG tự ẩn đánh giá xấu
+  createdAt   DateTime @default(now())
+
+  @@index([techId, createdAt])
 }

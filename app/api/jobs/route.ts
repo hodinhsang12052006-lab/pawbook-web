@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
@@ -26,7 +27,8 @@ export async function GET(req: NextRequest) {
     if (market === "US" || market === "AU") where.market = market as Market;
     if (state) where.state = state;
     if (city) where.city = { contains: city };
-    if (q) where.AND = [{ OR: ["title", "salonName", "city", "skills", "description"].map((f) => ({ [f]: { contains: q } })) }];
+    // (activeJobWhere đã dùng AND → nối thêm, không ghi đè)
+    if (q) where.AND = [...(where.AND ?? []), { OR: ["title", "salonName", "city", "skills", "description"].map((f) => ({ [f]: { contains: q } })) }];
     const ids = (searchParams.get("ids") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 100);
     if (ids.length) where.id = { in: ids };
     const paged = searchParams.has("page");
@@ -61,7 +63,7 @@ export async function GET(req: NextRequest) {
     const safeJobs = jobs.map(({ _count, sourceUrl, sourceKey, sourceFbHash, ...job }) => {
       const h = heat.get(job.id);
       return {
-      ...job,
+      ...tidyIngestJob(job),
       saveCount: _count.savedBy,
       mediaUrls: media.get(job.id) ?? [],
       // Số liệu "nóng" thật — UI tự ẩn khi dưới ngưỡng (lib/jobStats HEAT_MIN).

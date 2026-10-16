@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { randomBytes } from "node:crypto";
 import { NEXT, formatPhone, type BookingStatus } from "@/lib/booking";
+import { withReviewUrl } from "@/lib/bookingServer";
 
 // PATCH /api/bookings/:id { status, scheduledFor? } — thợ xác nhận / từ chối / đánh dấu đã làm.
 // DELETE — thợ xoá hẳn yêu cầu (xoá luôn SĐT khách). Chỉ thợ / tiệm nhận lịch.
@@ -24,8 +26,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const from = r.row.status as BookingStatus;
   if (!(NEXT[from] ?? []).includes(status)) return NextResponse.json({ error: "Không đổi được trạng thái này." }, { status: 400 });
   const scheduledFor = typeof body.scheduledFor === "string" ? body.scheduledFor.replace(/\s+/g, " ").trim().slice(0, 60) || null : r.row.scheduledFor;
-  const row = await prisma.bookingRequest.update({ where: { id }, data: { status, scheduledFor } });
-  return NextResponse.json({ booking: { ...row, phoneDisplay: formatPhone(row.clientPhone) } });
+  // Đã làm xong → tạo link đánh giá riêng cho đúng lịch này (chỉ khách thật đã đặt mới đánh giá được)
+  const reviewToken = status === "done" ? r.row.reviewToken ?? randomBytes(18).toString("base64url") : r.row.reviewToken;
+  const row = await prisma.bookingRequest.update({ where: { id }, data: { status, scheduledFor, reviewToken } });
+  return NextResponse.json({ booking: withReviewUrl(req, { ...row, phoneDisplay: formatPhone(row.clientPhone) }) });
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {

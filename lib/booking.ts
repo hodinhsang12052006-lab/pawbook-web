@@ -108,3 +108,19 @@ export function smsText(b: { clientName: string; itemName: string | null; prefer
     ? `Hi ${b.clientName}, this is ${techName} (PawNail). Got your request${what}${when ? ` (${when})` : ""}. What time works best for you?`
     : `Chào ${b.clientName}, mình là ${techName} (PawNail). Mình nhận được yêu cầu đặt lịch${what}${when ? ` (${when})` : ""}. Bạn muốn ghé mấy giờ để mình giữ chỗ nha?`;
 }
+
+/** Tên hiển thị khi đánh giá: "Ngọc Anh" → "Ngọc A." · "Mia Tran" → "Mia T." (không lộ họ tên đầy đủ). */
+export function shortName(full: string): string {
+  const w = full.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  if (!w.length) return "Khách";
+  if (w.length === 1) return w[0].slice(0, 20);
+  return `${w[0].slice(0, 20)} ${w[w.length - 1][0].toUpperCase()}.`;
+}
+
+/** Tin nhắn xin đánh giá sau buổi làm (gửi từ điện thoại thợ). */
+export function reviewSms(b: { clientName: string; locale: string }, techName: string, url: string): string {
+  return b.locale === "en"
+    ? `Thanks for coming in, ${b.clientName}! It'd mean a lot if you rated your nails (1 min): ${url} — ${techName}`
+    : `Cảm ơn ${b.clientName} đã ghé tiệm! Bạn chấm giúp ${techName} 1 phút nha, mình rất cảm kích: ${url}`;
+}
+export const REVIEW_DAYS = 30; // link đánh giá dùng được 30 ngày sau buổi làm

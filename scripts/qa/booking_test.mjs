@@ -158,6 +158,52 @@ const ov2 = await tp.evaluate(() => document.documentElement.scrollWidth - windo
 R.check("B10", "Thợ xác nhận giờ → có ngay tin SMS xác nhận soạn sẵn (kèm giờ); lịch chuyển sang tab \"Đã hẹn\"; điện thoại không tràn ngang",
   /6%3A00%20PM/.test(confirmSms || "") && confirmedCard && ov2 <= 1, JSON.stringify({ confirmSms: confirmSms?.slice(0, 160), confirmedCard, ov2 }));
 
+// ---------- Đánh giá sau buổi làm ----------
+await db.execute({ sql: `DELETE FROM "ClientReview" WHERE techId = ?`, args: [tech.me.id] });
+const doneCard = tp.getByRole("listitem", { name: "Lịch của Thu Trang" }).filter({ hasText: "6:00 PM" });
+await doneCard.getByRole("button", { name: "Đã làm xong" }).click();
+const ask = tp.getByRole("dialog", { name: "Xin khách đánh giá" });
+const askSms = await ask.getByRole("link", { name: "Nhắn xin đánh giá" }).getAttribute("href", { timeout: 8000 }).catch(() => "");
+const token = decodeURIComponent(askSms || "").match(/\/r\/([A-Za-z0-9_-]{16,40})/)?.[1];
+await ask.getByRole("button", { name: "Để sau" }).click().catch(() => {});
+R.check("B12", "Thợ bấm \"Đã làm xong\" → hiện ngay tin SMS xin đánh giá soạn sẵn, kèm link riêng của lịch hẹn", !!token && /Thu%20Trang/.test(askSms || ""), (askSms || "").slice(0, 160));
+
+const bad404 = await fetch(BASE_URL + "/api/client-reviews?token=khong-co-token-nay-abcdef");
+const notDone = (await rowsFor(tech.me.id)).find((r) => r.status === "new");
+const withLink = await fetch(BASE_URL + "/api/client-reviews", { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": fakeIp() }, body: JSON.stringify({ token, rating: 5, comment: "Đẹp lắm, ghé www.spam.com nha" }) });
+const noStar = await fetch(BASE_URL + "/api/client-reviews", { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": fakeIp() }, body: JSON.stringify({ token, rating: 0 }) });
+R.check("B13", "Link sai → 404; lịch chưa làm xong không có link đánh giá; nhận xét chứa link / thiếu sao → 400",
+  bad404.status === 404 && notDone && !notDone.reviewToken && withLink.status === 400 && noStar.status === 400, [bad404.status, !!notDone?.reviewToken, withLink.status, noStar.status].join(" "));
+
+const rv = await login(null, devices["iPhone 13"]);
+await rv.page.goto(BASE_URL + `/r/${token}`);
+const rvName = await rv.page.getByRole("heading", { name: tech.me.name || "" }).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+const prefilled = await rv.page.getByLabel("Tên hiển thị").inputValue().catch(() => "");
+await rv.page.getByRole("radio", { name: "5 sao" }).click();
+await rv.page.getByPlaceholder(/Móng đẹp/).fill("Làm kỹ, đúng giờ, mắt mèo rất đẹp!");
+await rv.page.getByRole("button", { name: "Gửi đánh giá" }).click();
+const thanks = await rv.page.getByText("Cảm ơn bạn!").waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+const again = await fetch(BASE_URL + "/api/client-reviews", { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": fakeIp() }, body: JSON.stringify({ token, rating: 1, comment: "spam" }) });
+const ov3 = await rv.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+R.check("B14", "Khách mở link trên điện thoại (không tài khoản): thấy tên thợ, tên hiển thị gợi ý gọn \"Thu T.\", chấm 5 sao + nhận xét → cảm ơn; gửi lần 2 → 409 (1 lịch = 1 đánh giá)",
+  rvName && prefilled === "Thu T." && thanks && again.status === 409 && ov3 <= 1, JSON.stringify({ rvName, prefilled, thanks, again: again.status, ov3 }));
+
+const pub = await (await fetch(BASE_URL + `/api/client-reviews?techId=${tech.me.id}`)).json();
+await rv.page.goto(BASE_URL + `/menu/${tech.me.id}`);
+const sec = rv.page.getByRole("region", { name: "Đánh giá từ khách" });
+const secOk = await sec.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+const secTxt = secOk ? await sec.textContent() : "";
+R.check("B15", "Menu thợ hiện \"Đánh giá từ khách\": 5.0, nhãn \"Khách đã đặt lịch\", tên gọn, tên mẫu; không lộ SĐT",
+  pub.count === 1 && pub.average === 5 && secOk && /5\.0/.test(secTxt) && /Khách đã đặt lịch/.test(secTxt) && /Thu T\./.test(secTxt) && /QA Mắt mèo bạc/.test(secTxt) && !/972|555/.test(JSON.stringify(pub)),
+  JSON.stringify({ count: pub.count, avg: pub.average, secOk, secTxt: secTxt.slice(0, 120) }));
+
+// Lịch hẹn tự xoá sau 90 ngày → đánh giá vẫn còn (không khoá ngoại tới lịch hẹn)
+await db.execute({ sql: `DELETE FROM "BookingRequest" WHERE reviewToken = ?`, args: [token] });
+const keep = await (await fetch(BASE_URL + `/api/client-reviews?techId=${tech.me.id}`)).json();
+R.check("B16", "Xoá lịch hẹn (kèm SĐT) → đánh giá vẫn giữ trên menu", keep.count === 1, JSON.stringify(keep.count));
+rv.errors.length && guest.errors.push(...rv.errors);
+await db.execute({ sql: `DELETE FROM "ClientReview" WHERE techId = ?`, args: [tech.me.id] });
+
 const errs = [...tech.errors, ...guest.errors, ...owner.errors];
 R.check("B11", "Không có lỗi JavaScript", errs.length === 0, errs.join(" | "));
 

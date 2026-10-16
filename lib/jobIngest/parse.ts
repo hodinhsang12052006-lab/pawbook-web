@@ -8,6 +8,7 @@ export interface ParsedJob {
   phone: string | null; // E.164: +1XXXXXXXXXX / +61XXXXXXXXX
   phoneDisplay: string | null; // (713) 555-0123 / 0412 345 678
   salonName: string | null;
+  isSale: boolean; // bài sang / bán tiệm
   address: string | null;
   zip: string | null;
   state: string | null;
@@ -177,9 +178,22 @@ const BENEFITS: [RegExp, string][] = [
   [/(b[ảa]o hi[ểe]m|insurance)/i, "Bảo hiểm"], [/(ngh[ỉi] ch[ủu] nh[ậa]t|off ch[ủu] nh[ậa]t)/i, "Nghỉ Chủ nhật"],
 ];
 
+// Bài SANG / BÁN tiệm (không phải tuyển thợ) — tool hay gửi kèm vì có chữ "cần gấp".
+const SALE = /(c[ầa]n sang|sang (l[ạa]i )?ti[ệe]m|sang nh[ượư][ợơ]ng|b[áa]n ti[ệe]m|c[ầa]n b[áa]n|gi[áa] sang|nh[ậa]n c[ọo]c|salon for sale|nail salon for sale|business for sale)/i;
+const HIRE_EXPLICIT = /(c[ầa]n (g[ấa]p )?(\d+ )?th[ợo]|tuy[ểe]n (g[ấa]p )?th[ợo]|hiring|need(ed)? (nail )?tech)/i;
+/** Bài sang / bán tiệm (có thể kèm "cần gấp") — không đưa vào mục Việc làm. */
+export const isSalonSale = (text: string) => SALE.test(text) && !HIRE_EXPLICIT.test(text.replace(SALE, ""));
+
+// Bỏ số điện thoại + các khoản KHÔNG phải lương (tiền thuê, giá sang, cọc, diện tích) trước khi tìm lương:
+// "bao lương 3343329402" (SĐT dính chữ), "Rent $5430", "Giá sang $120,000" từng bị hiểu là lương.
+// Đúng dạng SĐT (Mỹ 3-3-4 / 10–11 số liền, Úc 04xx xxx xxx, +61) — không nuốt "2000-2200 1 tuần".
+const PHONEISH = /(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)|(?<!\d)\d{10,11}(?!\d)|(?<!\d)(?:\+?61\s?|0)4\d{2}\s?\d{3}\s?\d{3}(?!\d)/g;
+const NOT_PAY = /(rent|thu[êe]|gi[áa] sang|gi[áa] b[áa]n|sang|c[ọo]c|deposit|lease|doanh thu|sqft|sf\b)\s*:?\s*\$?\s?[\d.,]+\s*(k|ngh[ìi]n)?(\s*\/\s*(th[áa]ng|month))?/gi;
+export const payText = (text: string) => text.replace(PHONEISH, " ").replace(NOT_PAY, " ");
+
 export function findSalary(text: string, market: "US" | "AU" | null): { salaryType: string; salaryAmount: string } {
-  const t = text.replace(/\s+/g, " ");
-  const money = String.raw`\$?\s?\d{1,2}[,.]?\d{3}|\$\s?\d{2,3}`;
+  const t = payText(text).replace(/\s+/g, " ");
+  const money = String.raw`(?<![\d,.])(?:\$?\s?\d{1,2}[,.]?\d{3}|\$\s?\d{2,3})(?![\d,.]*\d)`;
   const range = t.match(new RegExp(`(${money})\\s*(?:-|–|đến|to)\\s*(${money}|\\d{2,3}(?:[,.]\\d{3})?)\\s*(?:\\/|một|1|mỗi|per)?\\s*(tuần|tuan|week|wk|tháng|thang|month|giờ|gio|hour|hr|ngày|ngay|day)?`, "i"));
   const single = t.match(new RegExp(`(?:lương|luong|bao|guarantee|từ|tu|min|minimum|salary|pay)?\\s*(${money})\\s*\\+?\\s*(?:\\/|một|1|mỗi|per)\\s*(tuần|tuan|week|wk|tháng|thang|month|giờ|gio|hour|hr|ngày|ngay|day)`, "i"));
   const unitVi = (u?: string) => {
@@ -207,11 +221,41 @@ export function findSalary(text: string, market: "US" | "AU" | null): { salaryTy
   return { salaryType: type, salaryAmount: amount || "Thỏa thuận" };
 }
 
+/** Lương tool gửi kèm chỉ dùng khi trông đúng là tiền lương: có $ / đơn vị / chữ lương, số hợp lý,
+ *  và không phải mảnh của số điện thoại trong bài. */
+export function safeToolSalary(toolSalary: string, text: string): string | null {
+  const v = toolSalary.replace(/\s+/g, " ").trim();
+  if (!v || /th[ỏo]a thu[ậa]n/i.test(v)) return null;
+  const digits = (v.match(/\d[\d,.]*/g) || []).map((x) => x.replace(/[^\d]/g, ""));
+  if (!digits.length) return null;
+  const phones = (text.match(PHONEISH) || []).map((x) => x.replace(/\D/g, ""));
+  if (digits.some((d) => d.length >= 7 || phones.some((ph) => ph.includes(d) && d.length >= 3))) return null;
+  if (!digits.every((d) => Number(d) >= 10 && Number(d) <= 20000)) return null;
+  if (!/(\$|tu[ầa]n|week|th[áa]ng|month|gi[ờo]|hour|hr|ng[àa]y|day|l[ươu][ơo]?ng|chia|\d\s*\/\s*\d)/i.test(v)) return null;
+  return v.slice(0, 40);
+}
+
+/** Tên tiệm hiển thị gọn: bỏ "(tên người đăng)", tên kiểu câu tuyển dụng ("Tiem Ở Alabama Cần Gấp 1 Thợ…")
+ *  → "Tiệm nail <thành phố>". */
+export function cleanSalonName(name: string | null | undefined, city?: string | null, state?: string | null): string {
+  const fallback = `Tiệm nail ${(city || state || "").trim()}`.trim();
+  let n = String(name || "").replace(/\s+/g, " ").trim();
+  n = n.replace(/^(ti[ệe]m (nail|nails)|nail salon)\s*\(([^)]+)\)$/i, "").trim();
+  n = n.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  if (!n || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
+  return n.slice(0, 60);
+}
+
+/** "I Inverness" → "Inverness" (chữ cái thừa đầu tên thành phố do tool cắt dòng). */
+export const cleanCity = (c: string | null | undefined) => String(c || "").replace(/^[A-Za-z]\s+(?=[A-Z][a-z])/, "").trim();
+
 const HIRING = /(c[ầa]n (g[ấa]p )?(th[ợo]|ng[ườu][ờo]i)|tuy[ểe]n (g[ấa]p )?th[ợo]|ki[ếe]m th[ợo]|t[ìi]m th[ợo]|need(ed|ing)? (nail )?tech|hiring|now hiring|looking for (nail )?tech|nail tech wanted|c[ầa]n g[ấa]p)/i;
-const SEEKING = /(t[ìi]m vi[ệe]c|c[ầa]n vi[ệe]c|ki[ếe]m vi[ệe]c|xin vi[ệe]c|looking for (a )?job|need (a )?job|b[áa]n ti[ệe]m|sang ti[ệe]m|for sale)/i;
+// (bài sang / bán tiệm do isSalonSale lo — có ngoại lệ cho bài ghi rõ "cần thợ")
+const SEEKING = /(t[ìi]m vi[ệe]c|c[ầa]n vi[ệe]c|ki[ếe]m vi[ệe]c|xin vi[ệe]c|looking for (a )?job|need (a )?job)/i;
 
 export function parseJobPost(raw: string): ParsedJob {
   const text = String(raw || "").slice(0, 6000);
+  const sale = isSalonSale(text);
   const ph = findPhone(text);
   const addr = findAddress(text);
   const place = addr ? { state: addr.state, city: addr.city, market: addr.market } : findPlace(text);
@@ -227,10 +271,10 @@ export function parseJobPost(raw: string): ParsedJob {
   const isUrgent = /(g[ấa]p|urgent|asap|ngay|immediately)/i.test(text);
   const sal = findSalary(text, market);
   const salonName = findSalonName(text);
-  const isHiring = HIRING.test(text) && !SEEKING.test(text.slice(0, 160));
+  const isHiring = HIRING.test(text) && !SEEKING.test(text.slice(0, 160)) && !sale;
   const title = `Cần thợ ${skills.length ? skills.slice(0, 2).join("/") : "Nail"}${isUrgent ? " gấp" : ""}`;
   return {
-    isHiring, market, phone: ph?.e164 ?? null, phoneDisplay: ph?.display ?? null, salonName, address: addr?.address ?? null, zip: addr?.zip ?? null,
+    isHiring, isSale: sale, market, phone: ph?.e164 ?? null, phoneDisplay: ph?.display ?? null, salonName, address: addr?.address ?? null, zip: addr?.zip ?? null,
     state, city: place.city ?? addr?.city ?? null, salaryType: sal.salaryType, salaryAmount: sal.salaryAmount, skills, benefits, isUrgent,
     title: title.slice(0, 80),
   };

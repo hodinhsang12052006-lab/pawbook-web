@@ -8,15 +8,25 @@ import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
-import { findPhone, parseJobPost, type ParsedJob } from "@/lib/jobIngest/parse";
+import { cleanCity, cleanSalonName, findPhone, isSalonSale, parseJobPost, safeToolSalary, type ParsedJob } from "@/lib/jobIngest/parse";
 
 export const INGEST_SOURCE = "ingest";
 export const INGEST_OWNER_EMAIL = "tonghop@feed.pawnail.invalid";
 const DAY = 86_400_000;
 export const ingestTtlDays = () => Math.min(60, Math.max(3, Number(process.env.INGEST_TTL_DAYS) || 14));
 
-/** Điều kiện Prisma: tin còn hạn (tin chủ tiệm tự đăng không có hạn). */
-export const activeJobWhere = () => ({ OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] });
+// Bài SANG / BÁN tiệm mà tool từng gửi lẫn vào (trước 17/10/2026 chưa lọc) — ẩn khỏi mục Việc làm.
+// Chỉ áp cho tin TỔNG HỢP (source = ingest); tin chủ tiệm tự đăng không bao giờ bị ẩn theo chữ.
+// (SQLite so khớp không phân biệt hoa/thường với chữ Latin, CÓ phân biệt với chữ có dấu → liệt kê đủ kiểu viết.)
+const SALE_WORDS = ["sang tiệm", "Sang tiệm", "SANG TIỆM", "cần sang", "Cần sang", "CẦN SANG", "bán tiệm", "Bán tiệm", "BÁN TIỆM", "cần bán", "Cần bán", "CẦN BÁN", "giá sang", "Giá sang", "GIÁ SANG", "nhận cọc", "Nhận cọc", "for sale"];
+/** Điều kiện Prisma: tin còn hạn (tin chủ tiệm tự đăng không có hạn), không phải bài sang / bán tiệm. */
+export const activeJobWhere = () => ({
+  AND: [
+    { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+    // Viết dạng OR (không dùng NOT(a AND b)): source NULL → so sánh SQL ra NULL, NOT(NULL) sẽ ẩn nhầm tin tự đăng.
+    { OR: [{ source: null }, { source: { not: "ingest" } }, { NOT: { OR: SALE_WORDS.map((w) => ({ description: { contains: w } })) } }] },
+  ],
+});
 
 export interface IngestInput {
   text?: string; // nguyên văn bài
@@ -79,10 +89,11 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
   const phoneDisplay = ph?.display ?? p.phoneDisplay;
   const market = (input.market === "AU" || input.market === "US" ? input.market : null) ?? ph?.market ?? p.market;
   const state = clean(input.state, 3).toUpperCase() || p.state;
-  const city = clean(input.city, 60) || p.city || "";
+  const city = cleanCity(clean(input.city, 60) || p.city || "");
   // Tên tiệm ghi trong bài ("… Nails") đáng tin hơn tên người đăng mà tool gửi kèm.
   const salonName = p.salonName || clean(input.salonName, 60);
 
+  if (text && p.isSale) return { status: "skipped", reason: "bài sang / bán tiệm, không phải tuyển thợ" };
   if (text && !p.isHiring && !input.salonName) return { status: "skipped", reason: "không phải bài tuyển thợ" };
   if (!phone || !phoneDisplay) return { status: "skipped", reason: "không có SĐT Mỹ/Úc" };
   if (!market || !state) return { status: "skipped", reason: "không xác định được bang" };
@@ -95,14 +106,15 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
 
   const sourceKey = crypto.createHash("sha1").update(`${phone}|${norm(text || `${salonName}|${city}`)}`).digest("hex");
   const fbHash = fbKey(input.fbUrl);
-  const salary = clean(input.salary, 40);
+  // Lương: ưu tiên bộ tách của PawNail; lương tool gửi kèm chỉ dùng khi trông đúng là lương (không phải mảnh SĐT, tiền thuê…)
+  const salary = p.salaryAmount !== "Thỏa thuận" ? "" : safeToolSalary(clean(input.salary, 40), text) ?? "";
   // Kỹ năng tool đã gắn ("Thợ Bột / Acrylic", "Chân Tay Nước"…) → chuẩn PawNail, gộp với kỹ năng tự tách
   const toolSkills = Array.isArray(input.skills) ? parseJobPost(`cần thợ ${input.skills.join(", ")}`).skills : [];
   const skills = [...new Set([...toolSkills, ...p.skills])];
   const data = {
     // Tiêu đề PawNail tự tạo (đồng nhất, gọn) — tiêu đề tool gửi kèm thường lẫn chữ thừa.
     title: `Cần thợ ${skills.length ? skills.slice(0, 2).join("/") : "Nail"}${p.isUrgent ? " gấp" : ""}`,
-    salonName: salonName || `Tiệm nail ${city || state}`,
+    salonName: cleanSalonName(salonName, city, state),
     description: text || [salonName, input.address, salary].filter(Boolean).join(" · "),
     market, state, city,
     salaryType: p.salaryType,

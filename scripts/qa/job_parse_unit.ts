@@ -1,6 +1,6 @@
 // Kiểm thử bộ tách tin tuyển thợ (lib/jobIngest/parse.ts) bằng các kiểu bài hay gặp trong nhóm.
 // Bài & số điện thoại dưới đây là HƯ CẤU (đầu số 555-01xx dành cho ví dụ).   npx tsx scripts/qa/job_parse_unit.ts
-import { parseJobPost, findPhone, parseLocation } from "../../lib/jobIngest/parse";
+import { parseJobPost, findPhone, parseLocation, isSalonSale, safeToolSalary, cleanSalonName, cleanCity, findSalary } from "../../lib/jobIngest/parse";
 
 let pass = 0, fail = 0;
 const ok = (id: string, desc: string, cond: boolean, detail = "") => {
@@ -55,6 +55,26 @@ ok("L4", "'CA 91016**' (có dấu * thừa) → CA 91016", L("CA 91016**") === J
 ok("L5", "'Bankstown NSW 2200' → Úc", L("Bankstown NSW 2200") === JSON.stringify({ city: "Bankstown", state: "NSW", zip: "2200", market: "AU" }), L("Bankstown NSW 2200"));
 ok("L6", "'Mỹ (USA)' → không đoán bậy", parseLocation("Mỹ (USA)").state === null && parseLocation("Mỹ (USA)").city === null, L("Mỹ (USA)"));
 ok("L7", "'Houston, TX 77083' → Houston, TX, 77083", L("Houston, TX 77083") === JSON.stringify({ city: "Houston", state: "TX", zip: "77083", market: "US" }), L("Houston, TX 77083"));
+
+// ---- Lỗi gặp trên web thật 17/10/2026 (SĐT đổi sang số hư cấu 555) ----
+const al = "Tiem ở Alabama cần gấp 1 thợ everything dũa shape chuẩn design tốt, income đảm bảo từ 2000-2200 1 tuần chua típ , nếu cần mình sẽ bao lương 2055550142 có phòng cho thợ";
+ok("S1", "SĐT dính sau \"bao lương\" không bị hiểu là lương; lấy đúng income 2000-2200/tuần", findSalary(al, "US").salaryAmount === "$2,000-2,200/tuần", findSalary(al, "US").salaryAmount);
+ok("S2", "Lương tool gửi kèm \"bao lương 2055\" (mảnh SĐT) bị bỏ; lương thật được giữ", safeToolSalary("bao lương 2055", al) === null && safeToolSalary("$1,200-1,500/tuần", al) === "$1,200-1,500/tuần" && safeToolSalary("Thỏa thuận", al) === null, String(safeToolSalary("bao lương 2055", al)));
+const sale1 = "CẦN SANG GẤP TIỆM NAIL – SAN FRANCISCO, CA 94114. Tiệm rộng 900 sqft, 5 ghế Spa. Rent $3,850/tháng, lease còn 4 năm. Giá sang $120,000 có thương lượng. Call/Text Nhi: 714-555-0101";
+const sale2 = "Cần Bán Tiệm Nail Gấp Ở Vùng Pembroke Pines FLORIDA!! 1200SF có 11 ban nails 7 ghe pedicures. Rent $5430 !!! liên lạc 954-555-0134";
+const sale3 = "Chúc mừng tiệm Nail tại Inverness, FL 34450 đã nhận cọc thành công chỉ sau 5 ngày gửi bán. Liên hệ 714-555-0148";
+const sp = [sale1, sale2, sale3].map((t) => parseJobPost(t));
+ok("S3", "Bài SANG / BÁN tiệm (kể cả có \"gấp\") → không phải bài tuyển, không lấy tiền thuê / giá sang làm lương", sp.every((x) => x.isSale && !x.isHiring) && sp.every((x) => x.salaryAmount === "Thỏa thuận"), JSON.stringify(sp.map((x) => [x.isSale, x.isHiring, x.salaryAmount])));
+const both = "Cần thợ bột gấp, tiệm khu Houston TX. Bao lương $1,000/tuần. (Tiệm cũ bên kia mình đã sang tiệm rồi nên tuyển lại). Gọi 281-555-0177";
+ok("S4", "Bài tuyển thợ có nhắc chuyện sang tiệm vẫn là bài tuyển", !isSalonSale(both) && parseJobPost(both).isHiring && parseJobPost(both).salaryAmount === "$1,000/tuần", JSON.stringify([isSalonSale(both), parseJobPost(both).isHiring, parseJobPost(both).salaryAmount]));
+ok("S5", "Tên tiệm gọn: bỏ \"(tên người đăng)\", tên kiểu câu tuyển → \"Tiệm nail <thành phố>\"; tên thật giữ nguyên",
+  cleanSalonName("Tiệm Nail (Annie Linhh Nguyen)", "San Francisco", "CA") === "Tiệm nail San Francisco" &&
+  cleanSalonName("Tiem Ở Alabama Cần Gấp 1 Thợ Nữ Trẻ", "", "AL") === "Tiệm nail AL" &&
+  cleanSalonName("Tiệm Khách Đông (Jimmy Le)", null, "MD") === "Tiệm nail MD" &&
+  cleanSalonName("Lucky Nails & Spa", "Houston", "TX") === "Lucky Nails & Spa" &&
+  cleanSalonName("Viet Nails", "Inverness", "FL") === "Viet Nails",
+  [cleanSalonName("Tiệm Nail (Annie Linhh Nguyen)", "San Francisco", "CA"), cleanSalonName("Tiem Ở Alabama Cần Gấp 1 Thợ Nữ Trẻ", "", "AL"), cleanSalonName("Tiệm Khách Đông (Jimmy Le)", null, "MD")].join(" | "));
+ok("S6", "Thành phố \"I Inverness\" → \"Inverness\"; tên bình thường giữ nguyên", cleanCity("I Inverness") === "Inverness" && cleanCity("San Jose") === "San Jose" && cleanCity("O'Fallon") === "O'Fallon", cleanCity("I Inverness"));
 
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

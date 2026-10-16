@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { getResponseStats, describeResponse } from "@/lib/responseTime";
 import { getJobMedia } from "@/lib/jobMedia";
@@ -48,7 +49,7 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sourceUrl, sourceKey, sourceFbHash, ...pub } = job;
     return NextResponse.json({
-      ...pub,
+      ...tidyIngestJob(pub),
       expired: !!job.expiresAt && job.expiresAt.getTime() <= Date.now(),
       saveCount,
       mediaUrls: mediaMap.get(job.id) ?? [],

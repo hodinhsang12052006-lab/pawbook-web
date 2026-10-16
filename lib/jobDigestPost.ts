@@ -4,6 +4,7 @@
 // (tên tiệm, thành phố, kỹ năng, lương) — không đưa số điện thoại vào bài.
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
+import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { getSetting, setSetting } from "@/lib/settings";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { stateName } from "@/lib/stateNames";
@@ -19,12 +20,12 @@ export async function publishJobDigest(now = new Date()): Promise<{ posted: bool
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   if (await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart }, content: { startsWith: DIGEST_PREFIX } } })) return { posted: false, reason: "hôm nay đã có" };
 
-  const jobs = await prisma.job.findMany({
+  const jobs = (await prisma.job.findMany({
     where: { AND: [activeJobWhere(), { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }] },
     orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
-    select: { market: true, state: true, city: true, salonName: true, skills: true, salaryAmount: true, isUrgent: true },
+    select: { market: true, state: true, city: true, salonName: true, skills: true, salaryAmount: true, isUrgent: true, source: true, description: true },
     take: 500,
-  });
+  })).map(tidyIngestJob); // tên tiệm / lương gọn như mục Việc làm
   const groups = new Map<string, typeof jobs>();
   for (const j of jobs) {
     if (!j.state) continue;

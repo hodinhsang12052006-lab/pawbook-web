@@ -13,6 +13,7 @@ import { CATEGORY_LABEL, MENU_CATEGORIES, priceLabel, type MenuCategory, type Pu
 import MenuItemEditor from "./MenuItemEditor";
 import QuickMenu from "./QuickMenu";
 import BookingForm from "@/components/booking/BookingForm";
+import ClientReviews from "@/components/booking/ClientReviews";
 import Avatar from "@/components/ui/Avatar";
 import { placeLabel } from "@/lib/stateNames";
 
@@ -166,6 +167,8 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
           <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20"><Plus className="h-3.5 w-3.5" />{tr("Thêm mẫu", "Add design")}</button>
         )}
       </div>
+
+      <ClientReviews techId={owner.id} />
 
       {/* Lọc nhóm */}
       {Object.keys(counts).length > 1 && (

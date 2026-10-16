@@ -7,13 +7,14 @@ import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { NEXT, TIME_LABEL, dateLabel, smsText, type BookingStatus, type BookingTime } from "@/lib/booking";
+import { NEXT, TIME_LABEL, dateLabel, reviewSms, smsText, type BookingStatus, type BookingTime } from "@/lib/booking";
 
 // "Lịch hẹn" của thợ / tiệm: yêu cầu khách gửi từ menu (không cần tài khoản). Gọi / nhắn SMS soạn sẵn
 // từ chính điện thoại thợ (0đ) → xác nhận giờ → đánh dấu đã làm.
 interface Booking {
   id: string; itemName: string | null; itemPrice: string | null; clientName: string; clientPhone: string; phoneDisplay: string;
   preferredDate: string | null; preferredTime: string | null; note: string | null; status: BookingStatus; scheduledFor: string | null; locale: string; createdAt: string;
+  reviewUrl: string | null;
 }
 const TABS: { id: BookingStatus; label: [string, string] }[] = [
   { id: "new", label: ["Mới", "New"] },
@@ -38,6 +39,8 @@ export default function BookingInbox() {
   const [list, setList] = useState<Booking[] | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [confirming, setConfirming] = useState<Booking | null>(null);
+  // Vừa bấm "Đã làm xong" → mời gửi link đánh giá cho khách
+  const [askReview, setAskReview] = useState<Booking | null>(null);
 
   const load = useCallback(async (t: BookingStatus) => {
     setList(null);
@@ -55,6 +58,7 @@ export default function BookingInbox() {
     toast.success(status === "confirmed" ? tr("Đã xác nhận lịch", "Booking confirmed") : status === "done" ? tr("Đã đánh dấu làm xong", "Marked as done") : tr("Đã từ chối", "Declined"));
     setList((l) => (l ?? []).filter((x) => x.id !== b.id));
     setCounts((c) => ({ ...c, [b.status]: Math.max(0, (c[b.status] ?? 1) - 1), [status]: (c[status] ?? 0) + 1 }));
+    if (status === "done" && d.booking?.reviewUrl) setAskReview(d.booking as Booking);
     return d.booking as Booking;
   };
   const remove = async (b: Booking) => {
@@ -123,7 +127,7 @@ export default function BookingInbox() {
                 {b.note && <p className="rounded-2xl bg-black/20 px-3 py-2 text-sm text-slate-300">“{b.note}”</p>}
                 <div className="grid grid-cols-2 gap-2">
                   <a href={`tel:${b.clientPhone}`} className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10"><Phone className="h-4 w-4 text-emerald-300" />{tr("Gọi", "Call")}</a>
-                  <a href={smsHref(b.clientPhone, smsText(b, techName, b.status === "confirmed" ? "confirm" : "ask"))} className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10"><MessageSquare className="h-4 w-4 text-sky-300" />{tr("Nhắn SMS", "Text")}</a>
+                  <a href={smsHref(b.clientPhone, b.status === "done" && b.reviewUrl ? reviewSms(b, techName, b.reviewUrl) : smsText(b, techName, b.status === "confirmed" ? "confirm" : "ask"))} className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10"><MessageSquare className="h-4 w-4 text-sky-300" />{b.status === "done" && b.reviewUrl ? tr("Xin đánh giá", "Ask for review") : tr("Nhắn SMS", "Text")}</a>
                 </div>
                 {(can.length > 0 || b.status === "done" || b.status === "declined") && (
                   <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
@@ -139,6 +143,17 @@ export default function BookingInbox() {
         </ul>
       )}
 
+      {askReview && askReview.reviewUrl && (
+        <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setAskReview(null)}>
+          <div role="dialog" aria-label={tr("Xin khách đánh giá", "Ask for a review")} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm space-y-4 rounded-t-3xl border border-white/10 bg-slate-950 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl">
+            <p className="text-base font-black text-white">{tr("Xong buổi làm ✓", "Appointment done ✓")}</p>
+            <p className="text-sm text-slate-300">{tr(`Nhắn ${askReview.clientName} link đánh giá — đánh giá thật từ khách đã đặt lịch giúp bạn có thêm khách mới.`, `Text ${askReview.clientName} the review link — verified reviews bring you new clients.`)}</p>
+            <a href={smsHref(askReview.clientPhone, reviewSms(askReview, techName, askReview.reviewUrl))} onClick={() => setAskReview(null)} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white"><MessageSquare className="h-4 w-4" />{tr("Nhắn xin đánh giá", "Text review link")}</a>
+            <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(askReview.reviewUrl!); toast.success(tr("Đã chép link", "Link copied")); } catch { toast(askReview.reviewUrl!); } }} className="w-full text-center text-xs font-bold text-slate-300 hover:text-white">{tr("Chép link (gửi qua Zalo / Messenger)", "Copy link (send via any app)")}</button>
+            <button type="button" onClick={() => setAskReview(null)} className="w-full text-center text-xs font-bold text-slate-500">{tr("Để sau", "Later")}</button>
+          </div>
+        </div>
+      )}
       {confirming && <ConfirmTime b={confirming} techName={techName} onClose={() => setConfirming(null)} onConfirm={(when) => setStatus(confirming, "confirmed", when)} />}
     </div>
   );

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { sendPush } from "@/lib/push";
 import { getViews } from "@/lib/postStats";
+import { kindOf, mixFeed } from "@/lib/feedMix";
 import { Market, PostType } from "@prisma/client";
 
 const PAGE_SIZE = 12;
@@ -92,6 +93,25 @@ export async function GET(req: NextRequest) {
 
     const nextCursor = posts.length === PAGE_SIZE ? posts[posts.length - 1].id : null;
 
+    // Bảng tin chung (không phải trang hồ sơ 1 người): bỏ bài chính thức đã có bản MỚI HƠN cùng loại trong 24h
+    // (kể cả khi bản mới nằm ở trang trước), rồi rải đều bài chính thức giữa bài của người thật.
+    let shown = posts;
+    if (!authorId) {
+      const recent = await prisma.post.findMany({
+        where: { status: "published", author: { role: "ADMIN" }, createdAt: { gte: new Date(Date.now() - 48 * 3_600_000) } },
+        orderBy: { createdAt: "desc" },
+        take: 60,
+        select: { id: true, content: true, createdAt: true },
+      });
+      const newest = new Map<string, { id: string; at: number }>();
+      for (const r of recent) { const k = kindOf(r.content); if (k && !newest.has(k)) newest.set(k, { id: r.id, at: r.createdAt.getTime() }); }
+      shown = mixFeed(posts.filter((p) => {
+        if (p.author.role !== "ADMIN") return true;
+        const n = newest.get(kindOf(p.content));
+        return !n || n.id === p.id || n.at - p.createdAt.getTime() > 24 * 3_600_000;
+      }));
+    }
+
     // 1 query cho cả trang (không N+1): lấy like mới nhất của các bài này rồi
     // gom tối đa 3 người/bài.
     const recentLikes = posts.length
@@ -127,7 +147,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      posts: posts.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null)),
+      posts: shown.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null)),
       nextCursor,
     });
   } catch (error) {

@@ -6,6 +6,7 @@ import { getClientIp, isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { sendPush } from "@/lib/push";
 import { STATUSES, dateLabel, formatPhone, parseBooking, TIME_LABEL, type BookingTime } from "@/lib/booking";
 import { priceLabel } from "@/lib/menu";
+import { withReviewUrl } from "@/lib/bookingServer";
 
 // POST /api/bookings — KHÁCH (không cần tài khoản) gửi yêu cầu đặt lịch cho 1 thợ / tiệm.
 //   Chống spam: ô bẫy "website" (bot điền → giả vờ thành công), 5 lần / giờ / IP, 40 lần / ngày / thợ,
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
   ]);
   const counts = Object.fromEntries(STATUSES.map((s) => [s, grouped.find((g) => g.status === s)?._count._all ?? 0]));
   return NextResponse.json(
-    { counts, bookings: rows.map((r) => ({ ...r, phoneDisplay: formatPhone(r.clientPhone) })) },
+    { counts, bookings: rows.map((r) => withReviewUrl(req, { ...r, phoneDisplay: formatPhone(r.clientPhone) })) },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

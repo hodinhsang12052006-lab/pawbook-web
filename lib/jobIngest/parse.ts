@@ -249,7 +249,9 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
   n = n.replace(/\s*\([^)]*\)\s*$/, "").trim();
   const SALON_WORD = /(nail|spa|salon|beauty|ti[ệe]m|studio|lounge|bar|lash|brow|tips?)/i;
   const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){1,3}$/u.test(n);
-  if (!n || personLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
+  // Tên kiểu câu nói: "Tiệm Nails Ở Acworth", "Tiệm Mình Ở York", "Tiệm Em Đông Khách", "Chủ Tiệm Nails USA"
+  const sentenceLike = /(\s[ởỞ]\s|^ti[ệe]m\s+(nails?\s+)?[ởỞ]\s|^ti[ệe]m\s+(m[ìi]nh|em|t[ôo]i)\b|^ch[ủu]\s+ti[ệe]m)/i.test(n);
+  if (!n || personLike || sentenceLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
   return n.slice(0, 60);
 }
 

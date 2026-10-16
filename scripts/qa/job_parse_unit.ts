@@ -83,5 +83,11 @@ ok("S8", "Tên NGƯỜI ĐĂNG tool gửi kèm (\"Thuy Cao\", \"Kaia Vu\", \"Huy
   cleanSalonName("Glam Nails", "", "TX") === "Glam Nails" && cleanSalonName("Blossom Nail Lounge", "Plano", "TX") === "Blossom Nail Lounge" && cleanSalonName("GA Towne Lake Nails", "", "GA") === "GA Towne Lake Nails",
   [cleanSalonName("Thuy Cao", "", "NC"), cleanSalonName("Kaia Vu", "Houston", "TX"), cleanSalonName("Glam Nails", "", "TX")].join(" | "));
 
+ok("S9", "Tên kiểu câu nói (\"Tiệm Nails Ở Acworth\", \"Tiệm Mình Ở York\", \"Tiệm Em Đông Khách\", \"Chủ Tiệm Nails USA\") → \"Tiệm nail <thành phố>\"",
+  cleanSalonName("Tiệm Nails Ở Acworth", "Acworth", "GA") === "Tiệm nail Acworth" && cleanSalonName("Tiệm Mình Ở York", "York", "PA") === "Tiệm nail York" &&
+  cleanSalonName("Tiệm Ở South Carolina", "", "SC") === "Tiệm nail SC" && cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL") === "Tiệm nail Tampa" &&
+  cleanSalonName("Chủ Tiệm Nails USA", "Moncks Corner", "SC") === "Tiệm nail Moncks Corner" && cleanSalonName("Lucky Nails & Spa", "Houston", "TX") === "Lucky Nails & Spa",
+  [cleanSalonName("Tiệm Nails Ở Acworth", "Acworth", "GA"), cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL"), cleanSalonName("Chủ Tiệm Nails USA", "Moncks Corner", "SC")].join(" | "));
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

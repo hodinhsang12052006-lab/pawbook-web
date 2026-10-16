@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
-interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; review?: boolean; madeToday: number; drafts: Design[]; published: Design[]; needsSql?: boolean }
+interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; review?: boolean; madeToday: number; drafts: (Design & { quality?: number | null })[]; published: (Design & { quality?: number | null })[]; needsSql?: boolean }
 
 // Phòng nội dung → "Mẫu nail AI": tạo mẫu bằng Gemini, DUYỆT trước khi người
 // dùng thấy (AI hay vẽ sai ngón tay / mô tả lệch — admin là người chốt).
@@ -153,6 +153,11 @@ export default function AdminDesigns() {
               <div className="relative aspect-square bg-slate-900">
                 <DesignVisual d={d} />
                 <AiBadge d={d} className="absolute left-2 top-2" />
+                {typeof d.quality === "number" && (
+                  <span title="Điểm AI chấm ảnh (0–10): đủ ngón, không chữ, móng rõ, đúng mẫu" className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-black ring-1 ${d.quality >= 7 ? "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40" : "bg-amber-500/20 text-amber-200 ring-amber-400/40"}`}>
+                    Ảnh {d.quality}/10
+                  </span>
+                )}
                 {!!st?.cfImages && (
                   <button type="button" disabled={acting === d.id} onClick={() => redraw(d)} className="absolute bottom-2 right-2 inline-flex min-h-[32px] items-center gap-1 rounded-full bg-black/70 px-3 text-[11px] font-bold text-white backdrop-blur disabled:opacity-50">
                     {acting === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {d.imageUrl ? "Vẽ lại ảnh" : "Vẽ ảnh"}

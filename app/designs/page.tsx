@@ -8,6 +8,7 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import CommunityDesigns from "@/components/designs/CommunityDesigns";
+import MenuShowcase from "@/components/designs/MenuShowcase";
 
 const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
 
@@ -58,6 +59,7 @@ export default function DesignsPage() {
         </header>
 
         <CommunityDesigns />
+        <MenuShowcase />
 
         <h2 className="flex items-center gap-2 pt-2 text-base font-black text-white"><Sparkles className="h-4 w-4 text-pink-300" />{tr("Ý tưởng mẫu PawNail", "PawNail design ideas")}</h2>
 

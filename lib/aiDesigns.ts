@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import prisma from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
+import { judgeImage, type Verdict } from "@/lib/imageJudge";
 import { activeThemes, THEMES } from "@/lib/contentEngine";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
@@ -85,12 +86,14 @@ const SCHEMA = {
 // bóng loáng; 1 bàn tay đặt tự nhiên (ít lỗi thừa ngón hơn kiểu "giơ tay"), không chữ/logo.
 // KHÔNG nhắc giới tính / da / màu da: bộ lọc NSFW của Cloudflare chặn nhầm (12/10/2026 thêm
 // "woman's hand" + "skin texture" → cả lượt vẽ trượt hết). Bối cảnh xoay vòng theo mẫu.
+// 16/10/2026: FLUX KHÔNG hiểu câu phủ định ("no text", "no extra fingers" lại gợi ra đúng thứ đó) → khung
+// ảnh chỉ mô tả điều MUỐN có; ảnh lỗi (thừa ngón, có chữ) do "AI chấm ảnh" (lib/imageJudge) loại bỏ.
 const IMAGE_STYLE =
-  "Real candid smartphone photo taken in a nail salon, natural daylight. Close-up of a hand in a relaxed natural pose, " +
-  "lifelike detail: fine knuckle creases, natural cuticles, realistic proportions with exactly five fingers, " +
-  "nails neatly finished and in sharp focus, shallow depth of field, true-to-life colors, looks like a real salon portfolio photo. " +
-  "Exactly four fingers and one thumb, natural finger lengths, no fused or extra fingers. " +
-  "Not a 3D render, not CGI, not an illustration, not airbrushed. No text, letters, labels, packaging, watermark, logos or brand names anywhere in the image.";
+  "Professional nail salon portfolio photograph, macro close-up. One elegant relaxed hand, fingers gently spread, " +
+  "four slender fingers and one thumb with natural proportions and soft knuckle creases, neat clean cuticles. " +
+  "The manicure is the sharp focal point: flawless and evenly applied on every nail. " +
+  "Soft diffused window daylight, gentle shadows, true-to-life colors, shallow depth of field, 100mm macro lens, " +
+  "minimal uncluttered background, high-end editorial photo realism.";
 // Bối cảnh KHÔNG có chữ: ly cà phê / chai sơn làm AI tự "viết" nhãn chữ vô nghĩa ("Cgf ICED…",
 // "O·AL LIGUSE" — 12/10/2026) → bỏ. Chỉ giữ nền vải / gỗ / đá / hoa, dáng tay đơn giản.
 const SCENES = [
@@ -331,6 +334,53 @@ const imgMark = () => `[img:${today()}]`;
 /** Số ảnh đã vẽ HÔM NAY (đếm theo ngày vẽ, kể cả vẽ bù/vẽ lại cho mẫu của ngày trước). */
 export const imagesDrawnToday = () => prisma.nailDesign.count({ where: { prompt: { contains: imgMark() } } });
 
+// ---- Vẽ nhiều ảnh, AI chấm, giữ ảnh đẹp nhất (MIỄN PHÍ, trong hạn mức Cloudflare) ----
+// AI_IMAGE_CANDIDATES: số ảnh tối đa / mẫu (mặc định 3, dừng sớm khi có ảnh ≥ PASS_SCORE).
+// AI_IMAGE_CANDIDATES_DAILY: tổng ảnh ứng viên / ngày (mặc định 40 ≈ 40 × (100 vẽ + ~70 chấm) ≈ 6.800 neuron,
+// dưới 10k miễn phí, chừa phần viết bài). Ảnh tốt nhất < KEEP_SCORE → KHÔNG đăng ảnh xấu: mẫu giữ hình
+// minh hoạ, mai vẽ lại.
+export const PASS_SCORE = 7;
+export const KEEP_SCORE = 5;
+const candidatesPer = () => Math.max(1, Math.min(4, Number(process.env.AI_IMAGE_CANDIDATES ?? 3) || 3));
+const candidatesDaily = () => Math.max(0, Math.min(150, Number(process.env.AI_IMAGE_CANDIDATES_DAILY ?? 40) || 0));
+const candKey = () => `img_cand:${today()}`;
+const tryMark = () => `[try:${today()}]`;
+const QUOTA = /used up your daily free allocation|daily free allocation/i;
+
+/** Giữ 1 lượt vẽ ảnh ứng viên trong hạn mức ngày — đếm thẳng trong bảng AppSetting (KHÔNG qua
+ *  getSetting: bộ đệm 30s làm đếm sai giữa các lượt / máy chủ). Bảng chưa có → không chặn. */
+async function takeCandidate(): Promise<boolean> {
+  const key = candKey();
+  try {
+    const n = Number((await prisma.appSetting.findUnique({ where: { key } }))?.value) || 0;
+    if (n >= candidatesDaily()) return false;
+    await prisma.appSetting.upsert({ where: { key }, update: { value: String(n + 1) }, create: { key, value: String(n + 1) } });
+  } catch {
+    // bảng chưa có (DB cũ) → vẫn vẽ, trần AI_IMAGES_DAILY vẫn giữ
+  }
+  return true;
+}
+
+interface Best { img: { mimeType: string; base64: string }; verdict: Verdict | null; tried: number }
+/** Vẽ tối đa `max` ảnh cho 1 mẫu, chấm từng ảnh, trả ảnh đẹp nhất (null: hết hạn mức ứng viên / hết giờ).
+ *  Hết lượt miễn phí Cloudflare → ném lỗi (QUOTA) cho nơi gọi dừng hẳn. */
+async function drawBest(subject: string, seed: string, deadline: number, max = candidatesPer()): Promise<Best | null> {
+  let best: Best | null = null;
+  for (let k = 0; k < max; k++) {
+    const budget = deadline - Date.now() - 4000;
+    if (budget < (k === 0 ? 8000 : 20_000)) break; // ảnh thứ 2+ cần đủ giờ vẽ + chấm
+    if (!(await takeCandidate())) break;
+    // Mỗi ảnh ứng viên một bối cảnh khác → thêm cơ hội ra ảnh đẹp.
+    const img = await cfImage(`${subject}. ${photoStyle(k ? `${seed}:${k}` : seed)}`, Math.min(30_000, budget));
+    const verdict = deadline - Date.now() > 9000 ? await judgeImage(img, subject).catch(() => null) : null;
+    if (!verdict) return best ?? { img, verdict: null, tried: k + 1 }; // không có AI chấm → giữ cách cũ (nhận ảnh)
+    if (!best || !best.verdict || verdict.score > best.verdict.score) best = { img, verdict, tried: k + 1 };
+    else best.tried = k + 1;
+    if (verdict.score >= PASS_SCORE) break;
+  }
+  return best;
+}
+
 async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]): Promise<number> {
   // (AI_DESIGNS_TEXT_ONLY chỉ dành cho Gemini — không chặn ảnh Cloudflare miễn phí.)
   if (!jobs.length || !cfImageEnabled() || !storageReady()) return 0;
@@ -340,18 +390,27 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
   let done = 0;
   const worker = async () => {
     while (queue.length && left > 0) {
-      const budget = deadline - Date.now() - 4000;
-      if (budget < 8000) return; // sắp hết giờ → lần chạy sau vẽ bù
+      if (deadline - Date.now() - 4000 < 8000) return; // sắp hết giờ → lần chạy sau vẽ bù
       const job = queue.shift()!;
       left--;
       try {
-        const imageUrl = await store(await cfImage(`${job.subject}. ${photoStyle(job.id)}`, Math.min(30_000, budget)));
-        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt}${imgMark()}`.slice(0, 2000) } });
+        const best = await drawBest(job.subject, job.id, deadline);
+        if (!best) { left++; queue.length = 0; return; } // hết hạn mức ảnh ứng viên hôm nay / hết giờ
+        const score = best.verdict?.score;
+        if (score !== undefined && score < KEEP_SCORE) {
+          // Ảnh tốt nhất vẫn xấu → không đăng; đánh dấu đã thử hôm nay, mai vẽ lại.
+          await prisma.nailDesign.update({ where: { id: job.id }, data: { prompt: `${job.prompt}${tryMark()}`.slice(0, 2000) } });
+          errors.push(`Ảnh chưa đạt (${score}/10 sau ${best.tried} ảnh: ${best.verdict?.issues.join(", ") || "chất lượng thấp"}) — giữ hình minh hoạ, mai vẽ lại.`);
+          continue;
+        }
+        const imageUrl = await store(best.img);
+        const q = score !== undefined ? `[q:${score}]` : "";
+        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt.replace(/\[(q|try):[^\]]*\]/g, "")}${q}${imgMark()}`.slice(0, 2000) } });
         done++;
       } catch (err) {
         const msg = (err as Error).message;
         // Hết lượt miễn phí trong ngày (Cloudflare reset 00:00 UTC) → dừng hẳn, mai vẽ bù tiếp.
-        if (/used up your daily free allocation|daily free allocation/i.test(msg)) {
+        if (QUOTA.test(msg)) {
           left = 0;
           queue.length = 0;
           // Kèm nguyên văn lỗi Cloudflare để chẩn đoán (10/2026: báo hết lượt trong khi trang Usage ghi 0/10k).
@@ -376,7 +435,8 @@ export async function backfillImages(deadline: number): Promise<{ drawn: number;
     orderBy: { createdAt: "asc" },
     take: 40,
   });
-  const jobs = rows.map((r) => ({ id: r.id, subject: subjectOf(r.prompt), prompt: r.prompt })).filter((j) => j.subject);
+  // Mẫu đã vẽ hôm nay mà ảnh chưa đạt → để mai vẽ lại (không đốt hạn mức miễn phí vào 1 mẫu khó).
+  const jobs = rows.filter((r) => !r.prompt.includes(tryMark())).map((r) => ({ id: r.id, subject: subjectOf(r.prompt), prompt: r.prompt })).filter((j) => j.subject);
   const errors: string[] = [];
   const drawn = await drawImages(jobs, deadline, errors);
   return { drawn, errors };
@@ -384,7 +444,7 @@ export async function backfillImages(deadline: number): Promise<{ drawn: number;
 
 export const MAX_REDRAWS = 3;
 // Phần mô tả bộ móng (trước khung ảnh và các dấu [redraws:…][img:…]).
-const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img):[^\]]*\]/g, "").split("\n\n")[0].trim();
+const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img|q|try):[^\]]*\]/g, "").split("\n\n")[0].trim();
 
 /** Admin bấm "Vẽ lại ảnh" (ảnh lỗi tay, sai hoạ tiết…) — tối đa MAX_REDRAWS lần/mẫu.
  *  Luôn dùng khung ảnh MỚI NHẤT (IMAGE_STYLE) với phần mô tả bộ móng đã lưu. */
@@ -397,8 +457,11 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
   const subject = subjectOf(row.prompt);
   if (!subject) return { error: "Mẫu này không có mô tả ảnh để vẽ." };
   try {
-    const imageUrl = await store(await cfImage(`${subject}. ${photoStyle(id + n)}`));
-    await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]${imgMark()}`.slice(0, 2000) } });
+    // Vẽ 2 ảnh, AI chấm, lấy ảnh đẹp hơn; hết hạn mức ảnh ứng viên → vẽ 1 ảnh như cũ.
+    const best = await drawBest(subject, `${id}${n}`, Date.now() + 55_000, 2);
+    const imageUrl = await store(best?.img ?? (await cfImage(`${subject}. ${photoStyle(id + n)}`)));
+    const q = best?.verdict ? `[q:${best.verdict.score}]` : "";
+    await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]${q}${imgMark()}`.slice(0, 2000) } });
     return { imageUrl, redraws: n + 1 };
   } catch (err) {
     return { error: `Không vẽ được ảnh: ${(err as Error).message.slice(0, 160)}` };

@@ -27,6 +27,12 @@ async function admin() {
   return { id };
 }
 
+// Điểm "AI chấm ảnh" (lib/imageJudge) lưu trong prompt dạng [q:7.5] — hiện cho admin xem.
+const withQuality = (r: Parameters<typeof toPublic>[0] & { prompt: string }) => {
+  const q = r.prompt.match(/\[q:([\d.]+)\]/);
+  return { ...toPublic(r), quality: q ? Number(q[1]) : null };
+};
+
 export async function GET() {
   const a = await admin();
   if (a.error) return a.error;
@@ -47,8 +53,8 @@ export async function GET() {
       dailyLimit: dailyLimit(),
       review: await designsNeedReview(), // mẫu mới chờ duyệt (true) hay lên thẳng (false)
       madeToday,
-      drafts: drafts.map(toPublic),
-      published: published.map(toPublic),
+      drafts: drafts.map(withQuality),
+      published: published.map(withQuality),
     });
   } catch (err) {
     if (missing(err)) return NextResponse.json({ enabled: geminiEnabled(), storage: storageReady(), dailyLimit: dailyLimit(), madeToday: 0, drafts: [], published: [], needsSql: true });

@@ -59,13 +59,14 @@ const cf = http.createServer((req, res) => {
   let b = "";
   req.on("data", (c) => (b += c));
   req.on("end", () => {
-    cfCalls.push({ path: req.url, auth: req.headers.authorization, body: JSON.parse(b || "{}") });
+    if (!/llama-4-scout/.test(req.url)) cfCalls.push({ path: req.url, auth: req.headers.authorization, body: JSON.parse(b || "{}") });
     res.setHeader("content-type", "application/json");
     if (req.headers.authorization !== "Bearer test-cf-token") return res.writeHead(401).end(JSON.stringify({ success: false, errors: [{ message: "Authentication error" }] }));
     if (cfNsfwOnce) {
       cfNsfwOnce = false;
       return res.writeHead(400).end(JSON.stringify({ success: false, errors: [{ code: 8007, message: "AiError: Input prompt contains NSFW content." }] }));
     }
+    if (/llama-4-scout/.test(req.url)) return res.end(JSON.stringify({ success: true, result: { response: { hand: true, fiveFingers: true, textFree: true, nailsClear: true, matches: true, realistic: true, score: 8.5, issues: [] } } }));
     res.end(JSON.stringify({ success: true, result: { image: PNG }, errors: [] }));
   });
 });
@@ -96,7 +97,7 @@ try {
   const imgCalls = calls.filter((c) => c.cfg?.responseModalities);
   R.check("D3", "Tạo 3 mẫu: Gemini nhận khoá qua header (không nằm trên URL), 1 lần viết + 3 lần vẽ", g.status === 201 && g.data.created.length === 3 && textCall?.key === "test-gemini-key" && !/key=/.test(textCall.path) && imgCalls.length === 3, JSON.stringify(g.data).slice(0, 200));
   R.check("D4", "Prompt dựa trên bối cảnh thật: dịp Halloween + yêu cầu song ngữ + vật tư + cấm thương hiệu", /halloween/i.test(textCall?.prompt ?? "") && /materials/.test(textCall.prompt) && /Chanel/.test(textCall.prompt));
-  R.check("D5", "Ảnh vẽ cận cảnh bàn tay, cấm chữ/logo", imgCalls.every((c) => /No text, letters, labels/.test(c.prompt) && /four fingers and one thumb/.test(c.prompt)));
+  R.check("D5", "Ảnh vẽ cận cảnh bàn tay kiểu ảnh salon, nền gọn (không đồ vật có chữ)", imgCalls.every((c) => /Professional nail salon portfolio photograph/.test(c.prompt) && /four slender fingers and one thumb/.test(c.prompt) && /minimal uncluttered background/.test(c.prompt)));
 
   const drafts = (await admin.req("/api/admin/designs")).data.drafts;
   const d0 = drafts.find((d) => d.occasion === "halloween");
@@ -126,7 +127,7 @@ try {
   const c4 = await anon.req("/api/cron/designs", { headers: { authorization: "Bearer test-cron" } });
   const cronRows = (await admin.req("/api/admin/designs")).data.drafts.filter((d) => c3.data.created?.includes(d.id));
   R.check("D11b", "Ảnh thật miễn phí (Cloudflare FLUX): khoá qua header, đúng model, mô tả ảnh chân thực; bị chặn nhầm NSFW thì tự thử lại; KHOÁ 3 ảnh/ngày → 3 mẫu có ảnh, mẫu thứ 4 dùng hình minh hoạ",
-    cfCalls.length === 4 && cfCalls.every((c) => c.auth === "Bearer test-cf-token" && /\/accounts\/test-acc\/ai\/run\/@cf\/black-forest-labs\/flux-1-schnell$/.test(c.path) && /Real candid smartphone photo/.test(c.body.prompt) && !/(woman|skin)/i.test(c.body.prompt) && c.body.steps === 8) &&
+    cfCalls.length === 4 && cfCalls.every((c) => c.auth === "Bearer test-cf-token" && /\/accounts\/test-acc\/ai\/run\/@cf\/black-forest-labs\/flux-1-schnell$/.test(c.path) && /Professional nail salon portfolio photograph/.test(c.body.prompt) && !/(woman|skin)/i.test(c.body.prompt) && c.body.steps === 8) &&
     cronRows.filter((d) => d.imageUrl).length === 3 && cronRows.filter((d) => !d.imageUrl).length === 1,
     JSON.stringify({ calls: cfCalls.map((c) => c.path), withImg: cronRows.filter((d) => d.imageUrl).length }));
   R.check("D11", "Cron: không khoá / sai khoá → 401; đúng khoá → máy PawNail tạo 4 mẫu/lượt (0đ, không gọi Gemini); lượt 2 trong ngày tạo thêm 4 (tối đa 12/ngày)", c1.status === 401 && c2.status === 401 && c3.status === 200 && c3.data.created?.length === 4 && c4.data.created?.length === 4, `${c1.status} ${c2.status} ${c3.status} ${JSON.stringify(c3.data).slice(0, 120)} | ${JSON.stringify(c4.data).slice(0, 80)}`);
@@ -149,7 +150,7 @@ try {
   for (let k = 0; k < 4; k++) rd.push(await admin.req("/api/admin/designs", { method: "PATCH", json: { id: target.id, action: "redraw" } }));
   const rdTech = await tech.req("/api/admin/designs", { method: "PATCH", json: { id: target.id, action: "redraw" } });
   const after1 = (await admin.req("/api/admin/designs")).data.drafts.find((d) => d.id === target.id);
-  R.check("D17", "Vẽ lại ảnh: 3 lần đầu được (đúng khung ảnh mới), lần 4 bị từ chối; thợ gọi → 403", rd.slice(0, 3).every((r) => r.status === 200 && r.data.imageUrl) && rd[3].status === 422 && /3 lần/.test(rd[3].data.error) && rdTech.status === 403 && cfCalls.length - cfBefore === 3 && !!after1?.imageUrl && /Real candid smartphone photo/.test(cfCalls.at(-1).body.prompt) && /Scene: /.test(cfCalls.at(-1).body.prompt) && cfCalls.at(-1).body.steps === 8,
+  R.check("D17", "Vẽ lại ảnh: 3 lần đầu được (đúng khung ảnh mới), lần 4 bị từ chối; thợ gọi → 403", rd.slice(0, 3).every((r) => r.status === 200 && r.data.imageUrl) && rd[3].status === 422 && /3 lần/.test(rd[3].data.error) && rdTech.status === 403 && cfCalls.length - cfBefore === 3 && !!after1?.imageUrl && /Professional nail salon portfolio photograph/.test(cfCalls.at(-1).body.prompt) && /Scene: /.test(cfCalls.at(-1).body.prompt) && cfCalls.at(-1).body.steps === 8,
     JSON.stringify(rd.map((r) => r.status)) + " tech " + rdTech.status);
 
   const s1 = await tech.req(`/api/designs/${pub[0].id}/save`, { method: "POST" });

@@ -15,6 +15,7 @@ import WelcomeBack from "@/components/layout/WelcomeBack";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
 import GettingStarted from "@/components/onboarding/GettingStarted";
+import MenuNudge from "@/components/menu/MenuNudge";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import { Sparkles, Search, Flame, Newspaper, X, Briefcase, Store } from "lucide-react";
 import Flag from "@/components/ui/Flag";
@@ -251,6 +252,9 @@ export default function HomePage() {
             {sessionUser && tab === "feed" && <ToolsPanel variant="row" />}
 
             {sessionUser && <GettingStarted compact={tab !== "feed"} />}
+
+            {/* Render cả khi phiên đang tải: thẻ tự giữ chỗ (html[data-mn]) để không giật bố cục */}
+            {tab === "feed" && <MenuNudge />}
 
             {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
 

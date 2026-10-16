@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, BookOpen, Clock, Eye, EyeOff, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Clock, Eye, EyeOff, Images, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -11,6 +11,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { cdnImage } from "@/lib/cdnImage";
 import { CATEGORY_LABEL, MENU_CATEGORIES, priceLabel, type MenuCategory, type PublicMenuItem } from "@/lib/menu";
 import MenuItemEditor from "./MenuItemEditor";
+import QuickMenu from "./QuickMenu";
 import Avatar from "@/components/ui/Avatar";
 import { placeLabel } from "@/lib/stateNames";
 
@@ -32,6 +33,9 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
   const [open, setOpen] = useState<PublicMenuItem | null>(null);
   const [editing, setEditing] = useState<PublicMenuItem | "new" | null>(null);
   const [showQr, setShowQr] = useState(false);
+  const [quick, setQuick] = useState(false);
+  // Số ảnh thật (portfolio / bài khoe) chưa có trong menu → nút "Tạo nhanh từ ảnh"
+  const [photoCount, setPhotoCount] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -47,6 +51,17 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
   }, [userId]);
   // viewer?.id: đăng nhập xong (session nạp sau) thì tải lại để thấy chế độ chủ menu.
   useEffect(() => { load(); }, [load, viewer?.id]);
+  useEffect(() => {
+    if (!isOwner) return;
+    fetch("/api/menu/photos", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => setPhotoCount(d?.photos?.length ?? 0)).catch(() => {});
+  }, [isOwner, items?.length]);
+  // ?quick=1 (thẻ nhắc trên trang chủ) → mở luôn "Tạo nhanh từ ảnh" — chỉ 1 lần, không mở lại sau khi lưu
+  const quickOpened = useRef(false);
+  useEffect(() => {
+    if (!isOwner || quickOpened.current) return;
+    quickOpened.current = true;
+    try { if (new URLSearchParams(window.location.search).get("quick") === "1") setQuick(true); } catch {}
+  }, [isOwner]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -138,6 +153,9 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
         {isOwner && (
           <Link href="/consult" className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10"><ScanLine className="h-3.5 w-3.5 text-rose-300" />{tr("Soi tay khách", "Hand consult")}</Link>
         )}
+        {isOwner && photoCount > 0 && items.length > 0 && (
+          <button type="button" onClick={() => setQuick(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10"><Images className="h-3.5 w-3.5 text-amber-300" />{tr("Tạo nhanh từ ảnh", "Quick add from photos")}</button>
+        )}
         {isOwner && (
           <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20"><Plus className="h-3.5 w-3.5" />{tr("Thêm mẫu", "Add design")}</button>
         )}
@@ -164,7 +182,10 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
                 "Clients preview designs, prices and timing — one tap to message you. Log materials to see your margin per design (clients never see this).")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-900"><Plus className="h-4 w-4" />{tr("Thêm mẫu đầu tiên", "Add your first design")}</button>
+              {photoCount > 0 && (
+                <button type="button" onClick={() => setQuick(true)} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-900"><Images className="h-4 w-4" />{tr(`Tạo nhanh từ ${photoCount} ảnh của bạn`, `Quick start from your ${photoCount} photos`)}</button>
+              )}
+              <button type="button" onClick={() => setEditing("new")} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold ${photoCount > 0 ? "bg-white/[0.06] text-white ring-1 ring-white/10 hover:bg-white/10" : "bg-white text-slate-900"}`}><Plus className="h-4 w-4" />{tr("Thêm mẫu đầu tiên", "Add your first design")}</button>
               <Link href="/designs" className="inline-flex items-center gap-2 rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10"><Sparkles className="h-4 w-4 text-pink-300" />{tr("Lấy nhanh từ kho mẫu", "Pick from the design library")}</Link>
             </div>
           </div>
@@ -259,6 +280,12 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
           onClose={() => setEditing(null)}
           onSaved={(saved) => { setItems((p) => (p ?? []).some((x) => x.id === saved.id) ? (p ?? []).map((x) => (x.id === saved.id ? saved : x)) : [...(p ?? []), saved]); setEditing(null); }}
           onDeleted={(id) => { setItems((p) => (p ?? []).filter((x) => x.id !== id)); setEditing(null); }}
+        />
+      )}
+      {quick && (
+        <QuickMenu
+          onClose={() => setQuick(false)}
+          onDone={(added) => { setItems((p) => [...(p ?? []), ...added]); setQuick(false); setPhotoCount((n) => Math.max(0, n - added.length)); }}
         />
       )}
       {showQr && <MenuQr url={menuUrl} title={owner.salonName || owner.name || "PawNail"} onClose={() => setShowQr(false)} />}

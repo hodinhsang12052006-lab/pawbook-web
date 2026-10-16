@@ -203,7 +203,82 @@ const selfSees = await owner2.page.getByRole("navigation", { name: "Mục hồ s
 R.check("M16", "Điện thoại: /menu + hồ sơ tiệm 5 tab không tràn ngang; tiệm chưa có mẫu → khách không thấy tab Menu (link ?tab=menu về Tổng quan), chủ tiệm vẫn thấy để tạo",
   ov1 <= 1 && ov2 <= 1 && menuTab && hiddenForGuest && backToOverview && selfSees, JSON.stringify({ ov1, ov2, menuTab, hiddenForGuest, backToOverview, selfSees }));
 
-const errs = [...tech.errors, ...owner.errors, ...guest.errors, ...phone.errors];
+// ---------- Tạo menu nhanh từ ảnh có sẵn ----------
+const P1 = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg";
+const P2 = "https://res.cloudinary.com/demo/image/upload/e_grayscale/sample.jpg";
+const P3 = "https://res.cloudinary.com/demo/image/upload/e_sepia/sample.jpg";
+const VID = "https://res.cloudinary.com/demo/video/upload/dog.mp4";
+const AIIMG = "https://res.cloudinary.com/demo/image/upload/v1/pawbook/designs/x.jpg";
+const origPortfolio = (await db.execute({ sql: `SELECT portfolioImages FROM "TechnicianProfile" WHERE userId = ?`, args: [tech.me.id] })).rows[0]?.portfolioImages ?? "[]";
+await db.execute({ sql: `UPDATE "TechnicianProfile" SET portfolioImages = ? WHERE userId = ?`, args: [JSON.stringify([P1, P2, VID, AIIMG, cloudImg].filter(Boolean)), tech.me.id] });
+const postId = "qa-menu-showcase";
+await db.execute({ sql: `DELETE FROM "Post" WHERE id = ?`, args: [postId] });
+await db.execute({ sql: `INSERT INTO "Post" (id, authorId, content, postType, mediaUrls, status, anonymous, createdAt) VALUES (?, ?, ?, 'SHOWCASE', ?, 'published', 0, ?)`, args: [postId, tech.me.id, "Bộ mắt mèo bạc 💅 #catEye\nlàm hôm qua", JSON.stringify([P3]), Date.now()] });
+const ph = await (await api(tech, "GET", "/api/menu/photos")).json();
+const g401p = await fetch(BASE_URL + "/api/menu/photos"); // "guest" đã đăng nhập ở M11 → dùng request không cookie
+const urls = (ph.photos || []).map((x) => x.url);
+const cap3 = ph.photos?.find((x) => x.url === P3)?.caption;
+R.check("M18", "Ảnh của tôi để tạo menu: portfolio + bài khoe tay nghề (gợi ý tên từ chú thích, bỏ hashtag/emoji); bỏ video, ảnh AI, ảnh đã có trong menu; khách 401",
+  g401p.status === 401 && urls.includes(P1) && urls.includes(P2) && urls.includes(P3) && !urls.includes(VID) && !urls.includes(AIIMG) && (!cloudImg || !urls.includes(cloudImg)) && cap3 === "Bộ mắt mèo bạc",
+  JSON.stringify({ urls, cap3 }));
+
+const before = (await (await api(tech, "GET", `/api/menu?userId=${tech.me.id}`)).json()).items.length;
+await tech.page.goto(BASE_URL + `/profile/${tech.me.id}?tab=menu&quick=1`);
+const qm = tech.page.getByRole("dialog", { name: "Tạo menu nhanh từ ảnh" });
+const qmOpen = await qm.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+if (qmOpen) {
+  await qm.getByRole("button", { name: "Bộ mắt mèo bạc" }).click();
+  await qm.locator('button[aria-pressed]').filter({ has: tech.page.locator("img") }).nth(0).click();
+  await qm.getByRole("button", { name: "Tiếp tục" }).click();
+  await qm.getByRole("button", { name: /Lưu 2 mẫu/ }).click();
+  await tech.page.getByText(/điền tên và giá/).first().waitFor({ timeout: 4000 }).catch(() => {});
+  await qm.getByLabel("Tên mẫu 2").fill("QA Gel trơn hồng");
+  await qm.getByLabel("Giá mẫu 1").fill("55");
+  await qm.getByLabel("Giá mẫu 2").fill("35");
+  await qm.getByRole("button", { name: "Chân" }).nth(1).click();
+  await qm.getByRole("button", { name: /Lưu 2 mẫu/ }).click();
+}
+const closed = await qm.waitFor({ state: "detached", timeout: 15000 }).then(() => true).catch(() => false);
+await tech.page.waitForTimeout(1500);
+const reopened = await qm.isVisible().catch(() => false);
+const afterItems = (await (await api(tech, "GET", `/api/menu?userId=${tech.me.id}`)).json()).items;
+const a1 = afterItems.find((i) => i.name === "Bộ mắt mèo bạc");
+const a2 = afterItems.find((i) => i.name === "QA Gel trơn hồng");
+for (const it of [a1, a2]) if (it) created.push(it.id);
+R.check("M19", "Mở ?quick=1 → chọn 2 ảnh → thiếu giá bị nhắc → điền tên/giá/nhóm → lưu 2 mẫu cùng lúc (đúng ảnh, giá, Tay/Chân), cửa sổ đóng và không tự mở lại",
+  qmOpen && closed && !reopened && afterItems.length === before + 2 && a1?.priceFrom === 55 && a1.images[0] === P3 && a1.category === "HAND" && a2?.priceFrom === 35 && a2.category === "FOOT" && a2.images.length === 1,
+  JSON.stringify({ qmOpen, closed, reopened, n: afterItems.length - before, a1: a1 && [a1.priceFrom, a1.category], a2: a2 && [a2.priceFrom, a2.category] }));
+const ph2 = await (await api(tech, "GET", "/api/menu/photos")).json();
+R.check("M20", "Ảnh đã dùng cho menu không hiện lại trong \"Ảnh của tôi\"", !ph2.photos.some((x) => x.url === P3) && ph2.photos.length === ph.photos.length - 2, `${ph.photos.length} → ${ph2.photos.length}`);
+await db.execute({ sql: `UPDATE "TechnicianProfile" SET portfolioImages = ? WHERE userId = ?`, args: [origPortfolio, tech.me.id] });
+await db.execute({ sql: `DELETE FROM "Post" WHERE id = ?`, args: [postId] });
+
+// Thẻ nhắc trên Bảng tin: chủ tiệm chưa có menu thấy (trừ khi đang có thẻ "Bắt đầu"); ✕ → ẩn, tải lại vẫn ẩn
+await owner2.page.goto(BASE_URL + "/?tab=feed");
+await owner2.page.waitForTimeout(4000);
+const onbFirst = (await owner2.page.locator("[data-nudge]").count()) > 0;
+const nudgeWithOnb = await owner2.page.getByRole("link", { name: /Tạo menu mẫu có giá/ }).isVisible().catch(() => false);
+R.check("M22", "Đang có thẻ \"Bắt đầu\" → thẻ menu không chồng lên (chỉ 1 thẻ gợi ý)", !onbFirst || !nudgeWithOnb, JSON.stringify({ onbFirst, nudgeWithOnb }));
+// Người dùng đã ẩn thẻ "Bắt đầu" → thẻ menu phải hiện
+await owner2.page.evaluate(() => { try { localStorage.setItem("pn_onboarding_hide", "1"); localStorage.removeItem("pn_menu_nudge_hide"); } catch {} });
+await owner2.page.reload();
+await owner2.page.waitForTimeout(4000);
+const hasOnb = (await owner2.page.locator("[data-nudge]").count()) > 0;
+const nudge = owner2.page.getByRole("link", { name: /Tạo menu mẫu có giá/ });
+const nudgeVis = await nudge.isVisible().catch(() => false);
+let hiddenAfter = true;
+if (nudgeVis) {
+  const href = await nudge.getAttribute("href");
+  await owner2.page.getByRole("button", { name: "Ẩn gợi ý tạo menu" }).click();
+  await owner2.page.reload();
+  await owner2.page.waitForTimeout(4000);
+  hiddenAfter = !(await owner2.page.getByRole("link", { name: /Tạo menu mẫu có giá/ }).isVisible().catch(() => false));
+  R.check("M21", "Bảng tin: chủ tiệm chưa có menu thấy thẻ \"Tạo menu mẫu có giá\" (dẫn tới tab Menu); bấm ✕ → ẩn, tải lại vẫn ẩn", href === `/profile/${owner2.me.id}?tab=menu` && hiddenAfter, JSON.stringify({ href, hiddenAfter }));
+} else {
+  R.check("M21", "Bảng tin: đang có thẻ \"Bắt đầu\" → thẻ menu tự ẩn (không chồng thẻ)", hasOnb, JSON.stringify({ hasOnb, nudgeVis }));
+}
+
+const errs = [...tech.errors, ...owner.errors, ...owner2.errors, ...guest.errors, ...phone.errors];
 R.check("M17", "Không có lỗi JavaScript trên các trang menu", errs.length === 0, errs.join(" | "));
 
 // Dọn dữ liệu QA (chỉ mẫu do test tạo)

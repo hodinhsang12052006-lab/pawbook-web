@@ -8,6 +8,7 @@ import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
+import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
 import { cleanCity, cleanSalonName, findPhone, isSalonSale, parseJobPost, safeToolSalary, type ParsedJob } from "@/lib/jobIngest/parse";
 
 export const INGEST_SOURCE = "ingest";
@@ -87,8 +88,11 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
   const ph = input.phone ? findPhone(String(input.phone)) ?? findPhone(String(input.phone).replace(/^\+?1?/, "")) : null;
   const phone = ph?.e164 ?? p.phone;
   const phoneDisplay = ph?.display ?? p.phoneDisplay;
-  const market = (input.market === "AU" || input.market === "US" ? input.market : null) ?? ph?.market ?? p.market;
-  const state = clean(input.state, 3).toUpperCase() || p.state;
+  const market0 = (input.market === "AU" || input.market === "US" ? input.market : null) ?? ph?.market ?? p.market;
+  // Bài không ghi bang / thành phố → đoán bang từ mã vùng SĐT Mỹ (281 → TX, 714 → CA…)
+  const stateFromPhone = market0 !== "AU" ? stateFromUsPhone(phone) : null;
+  const state = clean(input.state, 3).toUpperCase() || p.state || stateFromPhone;
+  const market = market0 ?? (stateFromPhone ? "US" : null);
   const city = cleanCity(clean(input.city, 60) || p.city || "");
   // Tên tiệm ghi trong bài ("… Nails") đáng tin hơn tên người đăng mà tool gửi kèm.
   const salonName = p.salonName || clean(input.salonName, 60);

@@ -1,5 +1,6 @@
 // Kiểm thử bộ tách tin tuyển thợ (lib/jobIngest/parse.ts) bằng các kiểu bài hay gặp trong nhóm.
 // Bài & số điện thoại dưới đây là HƯ CẤU (đầu số 555-01xx dành cho ví dụ).   npx tsx scripts/qa/job_parse_unit.ts
+import { stateFromUsPhone } from "../../lib/jobIngest/areaCodes";
 import { parseJobPost, findPhone, parseLocation, isSalonSale, safeToolSalary, cleanSalonName, cleanCity, findSalary } from "../../lib/jobIngest/parse";
 
 let pass = 0, fail = 0;
@@ -88,6 +89,12 @@ ok("S9", "Tên kiểu câu nói (\"Tiệm Nails Ở Acworth\", \"Tiệm Mình �
   cleanSalonName("Tiệm Ở South Carolina", "", "SC") === "Tiệm nail SC" && cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL") === "Tiệm nail Tampa" &&
   cleanSalonName("Chủ Tiệm Nails USA", "Moncks Corner", "SC") === "Tiệm nail Moncks Corner" && cleanSalonName("Lucky Nails & Spa", "Houston", "TX") === "Lucky Nails & Spa",
   [cleanSalonName("Tiệm Nails Ở Acworth", "Acworth", "GA"), cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL"), cleanSalonName("Chủ Tiệm Nails USA", "Moncks Corner", "SC")].join(" | "));
+
+ok("S10", "Mã vùng SĐT → bang: 281 TX · 714 CA · 404 GA · 770 GA · 336 NC · +1 954 FL · 718 NY; số Úc / mã lạ / thiếu số → null",
+  stateFromUsPhone("+12815550142") === "TX" && stateFromUsPhone("(714) 555-0199") === "CA" && stateFromUsPhone("404-555-0100") === "GA" && stateFromUsPhone("770 555 0100") === "GA" &&
+  stateFromUsPhone("336-929-7543") === "NC" && stateFromUsPhone("+1 954 555 0134") === "FL" && stateFromUsPhone("718.555.0101") === "NY" &&
+  stateFromUsPhone("+61412555019") === null && stateFromUsPhone("(783) 523-4566") === null && stateFromUsPhone("12345") === null && stateFromUsPhone(null) === null,
+  [stateFromUsPhone("+12815550142"), stateFromUsPhone("(783) 523-4566"), stateFromUsPhone("+61412555019")].join(","));
 
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

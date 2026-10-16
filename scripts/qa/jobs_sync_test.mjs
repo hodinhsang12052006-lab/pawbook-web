@@ -73,6 +73,16 @@ try {
   const q3 = await fetch(`${BASE_URL}/api/jobs?state=NSW&q=Bankstown`).then((r) => r.json());
   R.check("S10", "GET /api/jobs?state=TX&q=tên tiệm → tìm đúng; từ khoá không có → rỗng; lọc bang NSW + q", q1.length === 1 && q1[0].id === id && q2.length === 0 && q3.some((j) => j.id === batch.data.results?.[1]?.job_id), `${q1.length}/${q2.length}/${q3.length}`);
   R.check("S11", "API công khai KHÔNG lộ link bài / mã băm Facebook", !("sourceUrl" in q1[0]) && !("sourceFbHash" in q1[0]) && !("sourceKey" in q1[0]) && q1[0].repostCount === 3);
+
+  // Bài KHÔNG ghi bang / thành phố → đoán bang từ mã vùng SĐT Mỹ (trước đây: "không xác định được bang")
+  const ph2 = `(281) 555-0${String(Number(t.slice(-3)) + 1).padStart(3, "0").slice(-3)}`;
+  const noLoc = await sync({ title: "Cần thợ gấp", salon_name: "", phone: ph2, location: "", state: "", content: `Cần gấp thợ bột, bao lương $1,200/tuần. Gọi ${ph2}`, post_url: `https://facebook.com/groups/g/posts/${t}9`, country: "" });
+  const nl = noLoc.data;
+  const nlRow = nl.job_id ? await row(nl.job_id) : null;
+  const badArea = await sync({ title: "Cần thợ", phone: "(783) 523-4566", location: "", state: "", content: "Cần thợ nail gấp, gọi (783) 523-4566", country: "" });
+  const ba = badArea.data;
+  R.check("S10", "Bài không ghi bang → lấy bang từ mã vùng SĐT (281 → TX) và tạo tin; mã vùng không có trong bảng → vẫn bỏ qua có lý do", noLoc.status === 201 && nlRow?.state === "TX" && ba.status === "skipped" && /bang/.test(ba.reason || ""), JSON.stringify({ s: noLoc.status, nl, st: nlRow?.state, ba }));
+
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);
 }

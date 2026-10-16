@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { sendPush } from "@/lib/push";
 import { getViews } from "@/lib/postStats";
 import { kindOf, mixFeed } from "@/lib/feedMix";
@@ -78,6 +79,8 @@ export async function GET(req: NextRequest) {
     // Trang hồ sơ 1 người: KHÔNG kèm bài ẩn danh của họ (kẻo lộ danh tính) — trừ chính chủ xem
     if (authorId) { where.authorId = authorId; if (authorId !== viewerId) where.anonymous = false; }
     if (postType && VALID_POST_TYPES.includes(postType)) where.postType = postType as PostType;
+    // Bảng tin chung: không hiện bài của tài khoản dữ liệu mẫu (lib/demo)
+    if (!authorId) where.author = realOnly();
 
     const posts = await prisma.post.findMany({
       where,

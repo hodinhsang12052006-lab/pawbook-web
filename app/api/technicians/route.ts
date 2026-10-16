@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { Market } from "@prisma/client";
 
 // GET /api/technicians?market=US&state=CA&city=... — lưới portfolio thợ đang rảnh
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
     // Lọc "có ảnh portfolio" NGAY trong query — trước đây lấy 100 hồ sơ mới
     // nhất rồi mới lọc ở JS: chỉ cần >100 thợ mới đăng ký chưa up ảnh là cả
     // lưới thợ trống trơn dù vẫn còn nhiều thợ có ảnh phía sau.
-    const where: any = { NOT: [{ portfolioImages: "[]" }, { portfolioImages: "" }] };
+    const where: any = { NOT: [{ portfolioImages: "[]" }, { portfolioImages: "" }], user: realOnly() }; // không hiện thợ mẫu
     if (market === "US" || market === "AU") where.market = market as Market;
     if (state) where.state = state;
     if (city) where.city = { contains: city };

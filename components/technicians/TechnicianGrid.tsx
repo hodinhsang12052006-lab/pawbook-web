@@ -57,6 +57,40 @@ function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: st
   );
 }
 
+// Chưa có thợ (thật) ở khu vực: không để trang trống — mời đúng người làm đúng việc, kèm số tin tuyển THẬT.
+function EmptyTechs({ market, state, role }: { market: "US" | "AU"; state: string; role: string | null }) {
+  useTr();
+  const [jobs, setJobs] = useState<number | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams({ market, page: "1", pageSize: "5", ...(state ? { state } : {}) });
+    fetch(`/api/jobs?${q}`).then((r) => (r.ok ? Number(r.headers.get("X-Total-Count") || 0) : 0)).then(setJobs).catch(() => setJobs(0));
+  }, [market, state]);
+  const where = state ? stateName(market, state) : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
+  const owner = role === "OWNER";
+  const tech = role === "TECHNICIAN";
+  return (
+    <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-gradient-to-br from-pink-500/10 via-fuchsia-500/5 to-transparent p-6 text-center ring-1 ring-white/10">
+      <p className="text-4xl">💅</p>
+      <h3 className="text-lg font-black text-white">{tr(`Thợ đang tìm việc ở ${where} sẽ hiện ở đây`, `Techs looking for work in ${where} show up here`)}</h3>
+      {owner ? (
+        <>
+          <p className="text-sm leading-relaxed text-slate-300">{tr("Đăng tin tuyển — thợ trong khu vực bật báo việc sẽ nhận thông báo ngay khi tin lên, nhắn thẳng cho bạn.", "Post a job — techs nearby with job alerts get notified instantly and message you directly.")}</p>
+          <a href="/jobs/create" className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tr("Đăng tin tuyển thợ", "Post a job")}</a>
+        </>
+      ) : (
+        <>
+          <p className="text-sm leading-relaxed text-slate-300">
+            {jobs ? tr(`Đang có ${jobs} tiệm tuyển thợ ở ${where}. `, `${jobs} salons are hiring in ${where}. `) : ""}
+            {tr("Đăng hồ sơ + vài ảnh móng đẹp nhất để tiệm tìm thấy bạn trước — miễn phí.", "Add your profile and best nail photos so salons find you first — free.")}
+          </p>
+          <a href={tech ? "/profile" : "/auth/register?role=technician"} className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tech ? tr("Thêm ảnh portfolio", "Add portfolio photos") : tr("Tạo hồ sơ thợ miễn phí", "Create a free tech profile")}</a>
+          {!!jobs && <a href="/?tab=jobs" className="block text-xs font-bold text-pink-300 hover:underline">{tr(`Xem ${jobs} việc đang tuyển →`, `See ${jobs} open jobs →`)}</a>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function firstMedia(images: any[]): { url: string; isVideo: boolean } | null {
   if (!images || images.length === 0) return null;
   const first = images[0];
@@ -264,11 +298,7 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
     return (
       <div>
         {isOwner && <OwnerScarcityBanner market={market} state={state} />}
-        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-          <p className="text-4xl">💅</p>
-          <p className="text-base font-bold text-slate-300">{tr("Chưa có thợ nào đăng portfolio ở khu vực này", "No tech portfolios in this area yet")}</p>
-          <p className="text-sm text-slate-500">{tr("Hãy thử đổi bang hoặc thành phố khác.", "Try another state or city.")}</p>
-        </div>
+        <EmptyTechs market={market} state={state} role={user?.role ?? null} />
       </div>
     );
   }

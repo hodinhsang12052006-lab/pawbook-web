@@ -156,10 +156,10 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   await p.waitForTimeout(2000);
   await shot(p, "B04_owner_home");
   await shot(p, "B04_owner_home_full", true);
-  await p.goto(BASE_URL + "/?tab=technicians");
+  await p.goto(BASE_URL + "/?tab=portfolio");
   await p.waitForTimeout(2000);
   await shot(p, "B05_techs");
-  const firstTech = p.locator('a[href^="/profile/"]').first();
+  const firstTech = p.locator('a[href^="/profile/"]:visible').first();
   if (await firstTech.count()) {
     await firstTech.click();
     await p.waitForURL(/\/profile\//, { timeout: 10000 }).catch(() => {});

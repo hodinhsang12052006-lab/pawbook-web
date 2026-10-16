@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { Role } from "@prisma/client";
 
 const PAGE_SIZE = 20;
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
     if (sellerId) where.sellerId = sellerId;
+    else where.seller = realOnly(); // danh sách chung: không hiện hàng của tài khoản mẫu
 
     const products = await prisma.supplyProduct.findMany({
       where,

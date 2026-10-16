@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { getTrends } from "@/lib/trends";
 import type { Market } from "@prisma/client";
 
@@ -97,7 +98,7 @@ export async function getStudio(market: Market, now = new Date()): Promise<Studi
   if (primary) {
     // SQLite LIKE không phân biệt hoa/thường với chữ ASCII — đủ cho hashtag không dấu.
     const posts = await prisma.post.findMany({
-      where: { anonymous: false, status: "published", content: { contains: `#${primary.hashtag}` }, createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) } },
+      where: { anonymous: false, status: "published", content: { contains: `#${primary.hashtag}` }, createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) }, author: realOnly() },
       select: { id: true, mediaUrls: true, author: { select: { id: true, name: true, avatarUrl: true } }, _count: { select: { likes: true } } },
       take: 200,
     });

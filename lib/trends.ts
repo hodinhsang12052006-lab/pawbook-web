@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { getViews } from "@/lib/postStats";
 import { stateName } from "@/lib/stateNames";
 import type { Market } from "@prisma/client";
@@ -62,7 +63,7 @@ export async function getTrends(market: Market): Promise<TrendsData> {
   const now = Date.now();
   const [posts, jobsWeek, allJobs, techs, techLikes, reviewAgg] = await Promise.all([
     prisma.post.findMany({
-      where: { anonymous: false, status: "published", createdAt: { gte: new Date(now - POST_WINDOW) }, OR: [{ market }, { market: null }] },
+      where: { anonymous: false, status: "published", createdAt: { gte: new Date(now - POST_WINDOW) }, OR: [{ market }, { market: null }], author: realOnly() },
       select: {
         id: true, content: true, mediaUrls: true, city: true,
         author: { select: { id: true, name: true, avatarUrl: true } },
@@ -73,23 +74,23 @@ export async function getTrends(market: Market): Promise<TrendsData> {
     }),
     prisma.job.groupBy({
       by: ["state", "isUrgent"],
-      where: { market, createdAt: { gte: new Date(now - JOB_WINDOW) } },
+      where: { market, createdAt: { gte: new Date(now - JOB_WINDOW) }, owner: realOnly() },
       _count: { _all: true },
     }),
-    prisma.job.findMany({ where: { market }, select: { state: true, salaryAmount: true, salaryType: true }, take: 2000 }),
+    prisma.job.findMany({ where: { market, owner: realOnly() }, select: { state: true, salaryAmount: true, salaryType: true }, take: 2000 }),
     prisma.technicianProfile.findMany({
-      where: { market },
+      where: { market, user: realOnly() },
       select: { userId: true, state: true, city: true, status: true, specialties: true, user: { select: { id: true, name: true, avatarUrl: true } } },
       take: 2000,
     }),
     prisma.postLike.findMany({
-      where: { createdAt: { gte: new Date(now - TECH_WINDOW) }, post: { author: { role: "TECHNICIAN" } } },
+      where: { createdAt: { gte: new Date(now - TECH_WINDOW) }, post: { author: { role: "TECHNICIAN", ...realOnly() } } },
       select: { post: { select: { authorId: true } } },
       take: 5000,
     }),
     prisma.review.groupBy({
       by: ["targetUserId"],
-      where: { type: "TECHNICIAN_REVIEW" },
+      where: { type: "TECHNICIAN_REVIEW", targetUser: realOnly() },
       _avg: { overall: true },
       _count: { _all: true },
     }),

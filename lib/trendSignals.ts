@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { stateName } from "@/lib/stateNames";
 import { weeklyPay } from "@/lib/trends";
 import { PAIN_TAG_META } from "@/lib/ownerSurvey";
@@ -57,12 +58,12 @@ export async function getSignals(market: Market, { fresh = false }: { fresh?: bo
   const now = Date.now();
 
   const [posts, jobs14, techs, jobs60, reviews, owners] = await Promise.all([
-    prisma.post.findMany({ where: { createdAt: { gte: new Date(now - 14 * DAY) } }, select: { content: true, createdAt: true }, take: 3000 }),
-    prisma.job.findMany({ where: { market, createdAt: { gte: new Date(now - 14 * DAY) } }, select: { state: true, skills: true }, take: 3000 }),
-    prisma.technicianProfile.findMany({ where: { market, status: { in: ["AVAILABLE", "URGENT"] } }, select: { state: true, specialties: true }, take: 5000 }),
-    prisma.job.findMany({ where: { market, createdAt: { gte: new Date(now - 60 * DAY) } }, select: { state: true, salaryAmount: true, salaryType: true, createdAt: true }, take: 5000 }),
-    prisma.review.findMany({ where: { createdAt: { gte: new Date(now - 90 * DAY) } }, select: { punctualityOrPay: true, environment: true, turnFairness: true, skillAccuracy: true, workEthic: true, customerAttitude: true }, take: 5000 }),
-    prisma.user.findMany({ where: { role: "OWNER", market, diagnosedPains: { not: null } }, select: { diagnosedPains: true }, take: 5000 }),
+    prisma.post.findMany({ where: { createdAt: { gte: new Date(now - 14 * DAY) }, author: realOnly() }, select: { content: true, createdAt: true }, take: 3000 }),
+    prisma.job.findMany({ where: { market, createdAt: { gte: new Date(now - 14 * DAY) }, owner: realOnly() }, select: { state: true, skills: true }, take: 3000 }),
+    prisma.technicianProfile.findMany({ where: { market, status: { in: ["AVAILABLE", "URGENT"] }, user: realOnly() }, select: { state: true, specialties: true }, take: 5000 }),
+    prisma.job.findMany({ where: { market, createdAt: { gte: new Date(now - 60 * DAY) }, owner: realOnly() }, select: { state: true, salaryAmount: true, salaryType: true, createdAt: true }, take: 5000 }),
+    prisma.review.findMany({ where: { createdAt: { gte: new Date(now - 90 * DAY) }, author: realOnly() }, select: { punctualityOrPay: true, environment: true, turnFairness: true, skillAccuracy: true, workEthic: true, customerAttitude: true }, take: 5000 }),
+    prisma.user.findMany({ where: { role: "OWNER", market, diagnosedPains: { not: null }, ...realOnly() }, select: { diagnosedPains: true }, take: 5000 }),
   ]);
 
   // ---- Hashtag tăng tốc ----

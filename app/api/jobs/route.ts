@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { Market, Role } from "@prisma/client";
@@ -23,7 +24,9 @@ export async function GET(req: NextRequest) {
     const city = searchParams.get("city");
     const q = (searchParams.get("q") || "").trim().slice(0, 60);
 
-    const where: any = { ...activeJobWhere() }; // tin tổng hợp quá hạn tự ẩn
+    // Tin tổng hợp quá hạn tự ẩn; xem 1 danh sách id cụ thể (tin đã lưu) thì vẫn trả cả tin của tài khoản mẫu
+    const where: any = { ...activeJobWhere() };
+    if (!searchParams.get("ids")) where.owner = realOnly();
     if (market === "US" || market === "AU") where.market = market as Market;
     if (state) where.state = state;
     if (city) where.city = { contains: city };

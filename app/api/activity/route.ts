@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { placeLabel } from "@/lib/stateNames";
 import { dtEn } from "@/lib/i18n/dataEn";
@@ -31,7 +32,7 @@ export async function GET() {
     const since = new Date(now - WINDOW_MS);
     const [jobs, techs, posts] = await Promise.all([
       prisma.job.findMany({
-        where: { createdAt: { gte: since }, ...activeJobWhere() },
+        where: { createdAt: { gte: since }, owner: realOnly(), ...activeJobWhere() },
         orderBy: { createdAt: "desc" },
         take: 6,
         select: {
@@ -40,13 +41,13 @@ export async function GET() {
         },
       }),
       prisma.technicianProfile.findMany({
-        where: { updatedAt: { gte: since }, NOT: [{ portfolioImages: "[]" }, { portfolioImages: "" }] },
+        where: { updatedAt: { gte: since }, user: realOnly(), NOT: [{ portfolioImages: "[]" }, { portfolioImages: "" }] },
         orderBy: { updatedAt: "desc" },
         take: 4,
         select: { city: true, specialties: true, updatedAt: true, user: { select: { id: true, name: true, avatarUrl: true } } },
       }),
       prisma.post.findMany({
-        where: { anonymous: false, status: "published", createdAt: { gte: since }, likes: { some: {} } }, // không lộ bài ẩn danh / chưa duyệt
+        where: { anonymous: false, status: "published", createdAt: { gte: since }, likes: { some: {} }, author: realOnly() }, // không lộ bài ẩn danh / chưa duyệt
         orderBy: { createdAt: "desc" },
         take: 4,
         select: { id: true, city: true, createdAt: true, _count: { select: { likes: true, comments: true } }, author: { select: { id: true, name: true, avatarUrl: true } } },

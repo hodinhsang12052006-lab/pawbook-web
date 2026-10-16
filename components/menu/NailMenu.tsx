@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, BookOpen, Clock, Eye, EyeOff, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Clock, Eye, EyeOff, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -134,6 +134,9 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
             <button type="button" onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10"><Link2 className="h-3.5 w-3.5" />{tr("Link", "Link")}</button>
             <button type="button" onClick={() => setShowQr(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10"><QrCode className="h-3.5 w-3.5" />QR</button>
           </>
+        )}
+        {isOwner && (
+          <Link href="/consult" className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10"><ScanLine className="h-3.5 w-3.5 text-rose-300" />{tr("Soi tay khách", "Hand consult")}</Link>
         )}
         {isOwner && (
           <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20"><Plus className="h-3.5 w-3.5" />{tr("Thêm mẫu", "Add design")}</button>

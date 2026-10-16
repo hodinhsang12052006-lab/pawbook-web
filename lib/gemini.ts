@@ -102,3 +102,23 @@ export async function geminiImage(prompt: string): Promise<{ mimeType: string; b
   if (!img) throw new Error(`Gemini không trả ảnh (${data.candidates?.[0]?.finishReason ?? "không rõ lý do"}).`);
   return { mimeType: img.mimeType || "image/png", base64: img.data };
 }
+
+/** Gửi 1 ảnh + lời dặn cho model chữ (nhìn ảnh), bắt trả JSON đúng schema — dùng cho "Soi tay tư vấn". */
+export async function geminiVisionJson<T>(prompt: string, image: { mimeType: string; base64: string }, schema: object, timeoutMs = 30_000): Promise<T> {
+  const c = cfg();
+  if (!c) throw new Error("Chưa cấu hình GEMINI_API_KEY.");
+  const data = await generate(
+    c.textModel,
+    {
+      contents: [{ role: "user", parts: [{ inlineData: { mimeType: image.mimeType, data: image.base64 } }, { text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0.2 },
+    },
+    timeoutMs
+  );
+  const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error("Gemini trả về không phải JSON hợp lệ.");
+  }
+}

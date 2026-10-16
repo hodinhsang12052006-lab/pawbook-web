@@ -41,3 +41,33 @@ export async function cfJson<T>(prompt: string, schema: object, timeoutMs = 25_0
   const r = j.result?.response;
   return (typeof r === "string" ? firstJson(r) : r) as T;
 }
+
+/** Nhìn ảnh bằng Cloudflare Workers AI (Llama 4 Scout, hạn mức miễn phí) — dự phòng khi Gemini lỗi. */
+export async function cfVisionJson<T>(prompt: string, image: { mimeType: string; base64: string }, schema: object, timeoutMs = 30_000): Promise<T> {
+  if (!cfTextEnabled()) throw new Error("Chưa cấu hình Cloudflare Workers AI.");
+  const model = process.env.CF_VISION_MODEL || "@cf/meta/llama-4-scout-17b-16e-instruct";
+  const res = await fetch(`${apiBase()}/accounts/${encodeURIComponent(process.env.CF_ACCOUNT_ID!)}/ai/run/${model}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.CF_AI_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [
+        { role: "system", content: "You only answer with ONE valid JSON object matching the requested schema, no other text." },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: `${prompt}\n\nJSON schema: ${JSON.stringify(schema)}` },
+            { type: "image_url", image_url: { url: `data:${image.mimeType};base64,${image.base64}` } },
+          ],
+        },
+      ],
+      response_format: { type: "json_schema", json_schema: schema },
+      max_tokens: 700,
+      temperature: 0.2,
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const j = (await res.json().catch(() => null)) as { success?: boolean; result?: { response?: unknown }; errors?: { message?: string }[] } | null;
+  if (!res.ok || !j?.success) throw new Error(`Cloudflare AI: ${j?.errors?.[0]?.message || `HTTP ${res.status}`}`.slice(0, 200));
+  const r = j.result?.response;
+  return (typeof r === "string" ? firstJson(r) : r) as T;
+}

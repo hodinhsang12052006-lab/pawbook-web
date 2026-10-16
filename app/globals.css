@@ -422,3 +422,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .typing-dot { animation: none; opacity: 0.8; }
 }
+
+/* Soi tay tư vấn: vệt quét trên ảnh khi đang phân tích */
+@keyframes pn-scan { 0% { top: -4rem; } 100% { top: 100%; } }
+.pn-scan { animation: pn-scan 1.6s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .pn-scan { animation: none; top: 40%; } }

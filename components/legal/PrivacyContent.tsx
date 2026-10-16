@@ -55,6 +55,7 @@ function PrivacyVi() {
           <li><strong className={B}>Google Firebase, Apple Push Notification service</strong> — gửi thông báo tới app trên điện thoại.</li>
           <li><strong className={B}>Google, Apple</strong> — chỉ khi bạn chọn đăng nhập bằng tài khoản đó.</li>
           <li><strong className={B}>Giphy</strong> — thư viện GIF trong khung chat (chỉ khi bạn tìm/chọn GIF).</li>
+          <li><strong className={B}>Google Gemini, Cloudflare Workers AI</strong> — tính năng &quot;Soi tay tư vấn&quot;: ảnh tay / chân do thợ chụp (khi khách đồng ý) được gửi tới AI để nhận diện tình trạng móng rồi bỏ ngay. PawNail <strong className={B}>không lưu</strong> ảnh này và không gắn ảnh với tên khách.</li>
         </ul>
       </section>
       <section className={S}>
@@ -122,6 +123,7 @@ function PrivacyEn() {
           <li><strong className={B}>Google Firebase, Apple Push Notification service</strong> — deliver notifications to the mobile app.</li>
           <li><strong className={B}>Google, Apple</strong> — only if you choose to sign in with them.</li>
           <li><strong className={B}>Giphy</strong> — GIF library in chat (only when you search for or pick a GIF).</li>
+          <li><strong className={B}>Google Gemini, Cloudflare Workers AI</strong> — the &quot;Hand consultation&quot; tool: a hand / foot photo taken by a technician (with the client&apos;s consent) is sent to the AI to recognise nail condition and then discarded. PawNail <strong className={B}>does not store</strong> these photos or link them to a client&apos;s name.</li>
         </ul>
       </section>
       <section className={S}>

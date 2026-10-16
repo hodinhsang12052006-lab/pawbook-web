@@ -92,8 +92,11 @@ const panelStill = (await owner.page.getByRole("tab", { name: "Sticker" }).getAt
 const panel = owner.page.getByRole("dialog", { name: "Chọn biểu tượng" });
 await panel.getByRole("button", { name: "😂", exact: true }).first().click();
 const stickerImg = owner.page.locator('img[src*="notoemoji/latest/1f602"]').last();
-const stickerShown = await stickerImg.waitFor({ state: "attached", timeout: 15000 }).then(() => true).catch(() => false);
-R.check("R7", "Bảng biểu tượng: đủ 3 tab; bấm tab Sticker KHÔNG đóng bảng (lỗi cũ); gửi sticker 😂 → hiện bản hoạt hình", tabNames.join(",") === "Emoji,Sticker,GIF" && panelStill && stickerShown, JSON.stringify({ tabNames, panelStill, stickerShown, emojiCount }));
+// Ảnh phải TẢI ĐƯỢC THẬT (naturalWidth > 0) — trước đây chỉ kiểm có thẻ <img>, nên không bắt được
+// chuyện CSP chặn fonts.gstatic.com (sticker rơi về emoji chữ của hệ điều hành).
+const stickerShown = await owner.page.waitForFunction(() => [...document.querySelectorAll('img[src*="notoemoji/latest/1f602"]')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15000 }).then(() => true).catch(() => false);
+const thumbsOk = await owner.page.evaluate(() => [...document.querySelectorAll('img[src*="notoemoji"][src$="emoji.svg"]')].filter((i) => i.complete).every((i) => i.naturalWidth > 0));
+R.check("R7", "Bảng biểu tượng: đủ 3 tab; bấm tab Sticker KHÔNG đóng bảng (lỗi cũ); gửi sticker 😂 → hiện bản hoạt hình", tabNames.join(",") === "Emoji,Sticker,GIF" && panelStill && stickerShown && thumbsOk, JSON.stringify({ tabNames, panelStill, stickerShown, thumbsOk, emojiCount }));
 // Gửi sticker xong bảng tự đóng → mở lại 1 lần, sang tab Emoji
 await owner.page.getByRole("button", { name: "Biểu tượng cảm xúc" }).click();
 await owner.page.getByRole("tab", { name: "Emoji" }).click();

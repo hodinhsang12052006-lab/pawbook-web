@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Search, X, Loader2 } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
-import { EMOJI_GROUPS, STICKER_PACKS } from "@/lib/chatStickers";
+import { EMOJI_GROUPS, STICKER_PACKS, stickerStill, stickerUrl } from "@/lib/chatStickers";
 
 // Bảng chèn biểu tượng như Messenger/Zalo: 3 tab Emoji (chia nhóm + "Gần đây") · Sticker hoạt hình
 // (theo bộ) · GIF (tìm kiếm). Bảng nằm trên ô nhập; bấm ngoài / Esc / X để đóng.
@@ -113,8 +113,8 @@ export default function MediaPicker({ tab, onTab, onEmoji, onSticker, onGif, onC
           <div className="custom-scrollbar grid flex-1 grid-cols-4 content-start gap-1 overflow-y-auto p-2">
             {curPack.items.map((e) => (
               <button key={e} type="button" onClick={() => onSticker(e)} aria-label={e} className="group flex aspect-square items-center justify-center rounded-2xl transition-colors hover:bg-white/5 active:scale-95">
-                {/* Bảng dùng emoji tĩnh (mở tức thì, không tải 20MB ảnh động); tin gửi đi mới là bản hoạt hình. */}
-                <span className="text-[44px] leading-none transition-transform duration-200 group-hover:scale-110">{e}</span>
+                {/* Ảnh tĩnh Noto (vài KB, mở tức thì); rê chuột → bản hoạt hình. Tin gửi đi là bản hoạt hình. */}
+                <StickerThumb emoji={e} />
               </button>
             ))}
           </div>
@@ -122,7 +122,7 @@ export default function MediaPicker({ tab, onTab, onEmoji, onSticker, onGif, onC
             {STICKER_PACKS.map((p) => (
               <button key={p.id} type="button" onClick={() => setPack(p.id)} title={tr(p.label[0], p.label[1])} className={`flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold transition-colors ${pack === p.id ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5"}`}>
                 <span className="text-lg leading-none">{p.icon}</span>
-                <span className="hidden sm:inline">{tr(p.label[0], p.label[1])}</span>
+                {pack === p.id && <span className="whitespace-nowrap">{tr(p.label[0], p.label[1])}</span>}
               </button>
             ))}
             <span className="ml-auto pr-1 text-[9px] text-slate-600" title="Noto Emoji Animation — Google, CC BY 4.0">Noto · CC BY 4.0</span>
@@ -204,5 +204,26 @@ function GifTab({ onGif }: { onGif: (url: string) => void }) {
         {enabled && <p className="pt-1 text-center text-[9px] text-slate-600">Powered by GIPHY</p>}
       </div>
     </>
+  );
+}
+
+function StickerThumb({ emoji }: { emoji: string }) {
+  const [hover, setHover] = useState(false);
+  const still = stickerStill(emoji);
+  const anim = stickerUrl(emoji);
+  if (!still) return <span className="text-[44px] leading-none">{emoji}</span>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={hover && anim ? anim : still}
+      alt={emoji}
+      width={64}
+      height={64}
+      loading="lazy"
+      draggable={false}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="h-16 w-16 select-none transition-transform duration-200 group-hover:scale-110"
+    />
   );
 }

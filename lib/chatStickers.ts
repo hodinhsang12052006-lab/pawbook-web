@@ -26,6 +26,12 @@ function codepoints(emoji: string): string {
   return cps.join("_");
 }
 
+/** Ảnh tĩnh SVG (2–15KB) cùng bộ Noto — hiện ngay trong bảng chọn & làm ảnh chờ khi bản động đang tải. */
+export function stickerStill(emoji: string): string | null {
+  if (!ANIMATED.has(emoji)) return null;
+  return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codepoints(emoji)}/emoji.svg`;
+}
+
 /** URL bản hoạt hình (webp) — null nếu emoji không có trong bộ sticker. */
 export function stickerUrl(emoji: string): string | null {
   if (!ANIMATED.has(emoji)) return null;

@@ -5,7 +5,7 @@ import { Check, CheckCheck, Phone, PhoneMissed, Video, RefreshCw, SmilePlus, Cop
 import VoiceMessage from "./VoiceMessage";
 import toast from "react-hot-toast";
 import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
-import { stickerUrl } from "@/lib/chatStickers";
+import { stickerStill, stickerUrl } from "@/lib/chatStickers";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { describeCall, type MessageType } from "./chatShared";
@@ -86,7 +86,7 @@ function MessageRowImpl({
     a.type !== "SYSTEM" &&
     b.type !== "SYSTEM" &&
     new Date(a.createdAt).toDateString() === new Date(b.createdAt).toDateString() &&
-    Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) < 5 * 60_000;
+    Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) < 10 * 60_000;
   const groupedWithPrev = sameGroup(prevMsg, msg);
   const isLastInGroup = !sameGroup(msg, nextMsg);
   const canReact = !msg.isOptimistic && !msg.sendError && !String(msg.id).startsWith("temp");
@@ -139,9 +139,15 @@ function MessageRowImpl({
     if (msgDay === yesterday) return t("messenger.yesterday");
     return d.toLocaleDateString(locale === "en" ? "en-US" : "vi-VN", { day: "2-digit", month: "long", year: "numeric" });
   })();
+  // Cùng ngày nhưng cách tin trước > 30 phút → nhãn giờ nhỏ ở giữa (như Messenger), đỡ phải nhìn giờ từng tin.
+  const timeGap = !showDateSeparator && !!prevMsg && new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 30 * 60_000;
   const dateSeparator = showDateSeparator ? (
     <div key={`sep-${msg.id || idx}`} className="my-5 flex w-full items-center justify-center">
       <span className="text-[11px] font-semibold text-slate-500">{dateSeparatorLabel}</span>
+    </div>
+  ) : timeGap ? (
+    <div key={`gap-${msg.id || idx}`} className="my-4 flex w-full items-center justify-center">
+      <span className="text-[11px] font-semibold text-slate-500">{new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
     </div>
   ) : null;
 
@@ -153,7 +159,7 @@ function MessageRowImpl({
     return (
       <React.Fragment key={msg.id || idx}>
         {dateSeparator}
-        <div className={`flex w-full ${isSelf ? "justify-end" : "justify-start pl-9"} ${groupedWithPrev ? "!mt-1" : ""} ${animClass}`}>
+        <div className={`flex w-full ${isSelf ? "justify-end" : "justify-start pl-9"} ${groupedWithPrev ? "!mt-[3px]" : ""} ${animClass}`}>
           <div className="w-[230px] max-w-[78%] overflow-hidden rounded-[20px] bg-slate-800/90">
             <div className="flex items-center gap-3 px-3 py-2.5">
               <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${call.missed ? "bg-rose-500/15 text-rose-400" : "bg-white/10 text-slate-200"}`}>
@@ -198,7 +204,7 @@ function MessageRowImpl({
       {dateSeparator}
       <div
         ref={rowRef}
-        className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${groupedWithPrev ? "!mt-1" : ""} ${picker ? "z-30" : ""} ${animClass}`}
+        className={`flex ${isSelf ? "justify-end" : "justify-start"} items-end gap-2 group relative ${groupedWithPrev ? "!mt-[3px]" : ""} ${picker ? "z-30" : ""} ${animClass}`}
       >
         {isSelf && reactBtn}
         {!isSelf &&
@@ -366,11 +372,20 @@ function MessageRowImpl({
 }
 
 function StickerView({ emoji }: { emoji: string }) {
+  // Ảnh tĩnh (vài KB) hiện ngay → bản hoạt hình tải xong mới đổi sang (không nháy trống, không nhảy layout).
+  const [animReady, setAnimReady] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
+  const still = stickerStill(emoji);
   const url = stickerUrl(emoji);
-  if (!url || failed) return <div className="my-1 select-none text-[64px] leading-none">{emoji}</div>;
+  React.useEffect(() => {
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => setAnimReady(true);
+    img.src = url;
+  }, [url]);
+  if (!url || !still || failed) return <div className="my-1 select-none text-[64px] leading-none">{emoji}</div>;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt={emoji} width={120} height={120} loading="lazy" decoding="async" draggable={false} onError={() => setFailed(true)} className="my-1 h-[120px] w-[120px] select-none" />;
+  return <img src={animReady ? url : still} alt={emoji} width={120} height={120} decoding="async" draggable={false} onError={() => setFailed(true)} className="my-1 h-[120px] w-[120px] select-none" />;
 }
 
 const MessageRow = React.memo(MessageRowImpl);

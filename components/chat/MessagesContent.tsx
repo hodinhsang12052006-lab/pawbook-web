@@ -1317,31 +1317,31 @@ export default function MessagesContent({
                   disappearing entirely (e.g. mobile "Back" clears activeChat
                   mid-call, or navigating away from /messages altogether). */}
               {!activeChat.isGroup && (
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-0.5">
                   <button
                     onPointerEnter={preloadCallSdk}
                     onClick={() => callPartner && startCall(callPartner, "audio")}
-                    className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
                     title={tr("Cuộc gọi thoại bảo mật", "Secure voice call")}
                   >
-                    <Phone className="h-4.5 w-4.5" />
+                    <Phone className="h-5 w-5" />
                   </button>
                   <button
                     onPointerEnter={preloadCallSdk}
                     onClick={() => callPartner && startCall(callPartner, "video")}
-                    className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
                     title={tr("Cuộc gọi video thời gian thực", "Live video call")}
                   >
-                    <Video className="h-4.5 w-4.5" />
+                    <Video className="h-[22px] w-[22px]" />
                   </button>
 
                   <div className="relative">
                     <button
                       onClick={() => setShowChatMenu((v) => !v)}
-                      className="p-2.5 rounded-xl border border-slate-850 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-300 cursor-pointer shadow-md"
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
                       title={tr("Thêm tùy chọn", "More options")}
                     >
-                      <MoreVertical className="h-4.5 w-4.5" />
+                      <MoreVertical className="h-5 w-5" />
                     </button>
 
                     {showChatMenu && (
@@ -1379,7 +1379,7 @@ export default function MessagesContent({
               )}
             </div>
 
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] p-4 space-y-4 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0 relative">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] px-3 py-4 sm:px-6 space-y-3 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0 relative">
               <div ref={chatObserverTarget} className="h-2 w-full flex-none" />
 
               {/* Nhãn nổi (cao 0, dính đỉnh) — KHÔNG chiếm chỗ, nên hiện/ẩn không đẩy

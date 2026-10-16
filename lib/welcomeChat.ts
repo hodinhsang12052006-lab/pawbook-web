@@ -161,7 +161,7 @@ export async function backfillWelcomeChats(limit = 500): Promise<{ opened: numbe
   const official = await getOfficialAccount();
   if (!official) return { opened: 0, skipped: 0 };
   const users = await prisma.user.findMany({
-    where: { role: { in: ["OWNER", "TECHNICIAN"] }, id: { not: official.id }, NOT: [{ email: { endsWith: "@feed.pawnail.invalid" } }, { email: { endsWith: "@pawnailjobs.demo" } }, { email: { endsWith: "@qa.test" } }] }, // bỏ tài khoản hệ thống "đăng hộ tiệm" + tài khoản demo/test; người đăng ký bằng SĐT (@phone.invalid) vẫn tính
+    where: { role: { in: ["OWNER", "TECHNICIAN"] }, id: { not: official.id }, NOT: [{ email: { endsWith: "@feed.pawnail.invalid" } }, { email: { endsWith: "pawnailjobs.demo" } }, { email: { endsWith: "@qa.test" } }] }, // bỏ tài khoản hệ thống "đăng hộ tiệm" + MỌI tài khoản demo (…@pawnailjobs.demo VÀ …@feed.pawnailjobs.demo — 16/10 lọt các tiệm mồi) + test; người đăng ký bằng SĐT (@phone.invalid) vẫn tính
     orderBy: { createdAt: "asc" },
     select: { id: true },
     take: limit,

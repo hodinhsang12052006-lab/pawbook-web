@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, BookOpen, Clock, Eye, EyeOff, Images, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, CalendarCheck, Clock, Eye, EyeOff, Images, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -12,6 +12,7 @@ import { cdnImage } from "@/lib/cdnImage";
 import { CATEGORY_LABEL, MENU_CATEGORIES, priceLabel, type MenuCategory, type PublicMenuItem } from "@/lib/menu";
 import MenuItemEditor from "./MenuItemEditor";
 import QuickMenu from "./QuickMenu";
+import BookingForm from "@/components/booking/BookingForm";
 import Avatar from "@/components/ui/Avatar";
 import { placeLabel } from "@/lib/stateNames";
 
@@ -34,6 +35,8 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
   const [editing, setEditing] = useState<PublicMenuItem | "new" | null>(null);
   const [showQr, setShowQr] = useState(false);
   const [quick, setQuick] = useState(false);
+  // Đặt lịch (khách không cần tài khoản): null = đóng, {item: null} = hỏi lịch chung
+  const [booking, setBooking] = useState<{ item: PublicMenuItem | null } | null>(null);
   // Số ảnh thật (portfolio / bài khoe) chưa có trong menu → nút "Tạo nhanh từ ảnh"
   const [photoCount, setPhotoCount] = useState(0);
 
@@ -144,6 +147,9 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
               : tr(`${items.length} mẫu · giá tham khảo, chốt khi xem tay`, `${items.length} designs · guide prices, final after consultation`)}
           </p>
         </div>
+        {!isOwner && items.length > 0 && (
+          <button type="button" onClick={() => setBooking({ item: null })} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20"><CalendarCheck className="h-3.5 w-3.5" />{tr("Đặt lịch", "Book")}</button>
+        )}
         {items.length > 0 && (
           <>
             <button type="button" onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10"><Link2 className="h-3.5 w-3.5" />{tr("Link", "Link")}</button>
@@ -272,7 +278,15 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
         </p>
       )}
 
-      {open && <MenuItemSheet it={open} isOwner={isOwner} ownerName={owner.name} onClose={() => setOpen(null)} onWant={() => want(open)} onEdit={() => { setEditing(open); setOpen(null); }} />}
+      {open && <MenuItemSheet it={open} isOwner={isOwner} ownerName={owner.name} canChat={!!viewer?.id} onClose={() => setOpen(null)} onWant={() => want(open)} onBook={() => { setBooking({ item: open }); setOpen(null); }} onEdit={() => { setEditing(open); setOpen(null); }} />}
+      {booking && (
+        <BookingForm
+          techId={owner.id}
+          techName={owner.salonName || owner.name || "PawNail"}
+          item={booking.item ? { id: booking.item.id, name: booking.item.name, price: priceLabel(booking.item.priceFrom, booking.item.priceTo) } : null}
+          onClose={() => setBooking(null)}
+        />
+      )}
       {editing && (
         <MenuItemEditor
           item={editing === "new" ? null : editing}
@@ -301,7 +315,7 @@ function IconBtn({ label, onClick, disabled, children }: { label: string; onClic
   );
 }
 
-function MenuItemSheet({ it, isOwner, ownerName, onClose, onWant, onEdit }: { it: PublicMenuItem; isOwner: boolean; ownerName: string | null; onClose: () => void; onWant: () => void; onEdit: () => void }) {
+function MenuItemSheet({ it, isOwner, ownerName, canChat, onClose, onWant, onBook, onEdit }: { it: PublicMenuItem; isOwner: boolean; ownerName: string | null; canChat: boolean; onClose: () => void; onWant: () => void; onBook: () => void; onEdit: () => void }) {
   useTr();
   const [img, setImg] = useState(0);
   useEffect(() => {
@@ -368,8 +382,11 @@ function MenuItemSheet({ it, isOwner, ownerName, onClose, onWant, onEdit }: { it
             <button type="button" onClick={onEdit} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-black text-white ring-1 ring-white/10 hover:bg-white/10"><Pencil className="h-4 w-4" />{tr("Sửa mẫu", "Edit design")}</button>
           ) : (
             <>
-              <button type="button" onClick={onWant} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-pink-600/20"><MessageCircle className="h-4 w-4" />{tr("Muốn làm mẫu này", "I want this design")}</button>
-              <p className="text-center text-[11px] text-slate-500">{tr(`Mở tin nhắn với ${ownerName ?? "thợ"} kèm sẵn tên mẫu — giá chốt khi xem tay.`, `Opens a chat with ${ownerName ?? "the tech"} with this design filled in — final price after consultation.`)}</p>
+              <button type="button" onClick={onBook} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-pink-600/20"><CalendarCheck className="h-4 w-4" />{tr("Đặt lịch mẫu này", "Book this design")}</button>
+              {canChat && (
+                <button type="button" onClick={onWant} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin hỏi thêm", "Message about it")}</button>
+              )}
+              <p className="text-center text-[11px] text-slate-500">{tr(`Không cần tài khoản — ${ownerName ?? "thợ"} gọi / nhắn bạn để chốt giờ. Giá chốt khi xem tay.`, `No account needed — ${ownerName ?? "the tech"} will call or text you to confirm. Final price after consultation.`)}</p>
             </>
           )}
         </div>

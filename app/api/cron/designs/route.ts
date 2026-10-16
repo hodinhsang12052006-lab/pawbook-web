@@ -50,6 +50,11 @@ export async function GET(req: Request) {
     r.gallery = await publishDesignGallery().catch(fail);
     r.digest = await publishJobDigest().catch(fail);
     r.news = await publishNewsPosts(new Date(), { deadline: deadline - 15_000 }).catch(fail);
+    // Dọn yêu cầu đặt lịch cũ (xoá luôn SĐT khách — chính sách quyền riêng tư): đã làm / từ chối > 90 ngày,
+    // chưa ai xử lý > 60 ngày.
+    await prisma.bookingRequest.deleteMany({
+      where: { OR: [{ status: { in: ["done", "declined"] }, updatedAt: { lt: new Date(Date.now() - 90 * 86_400_000) } }, { status: { in: ["new", "confirmed"] }, createdAt: { lt: new Date(Date.now() - 60 * 86_400_000) } }] },
+    }).catch(() => {});
     // Vẽ bù ảnh cho mẫu hôm nay còn thiếu (lần trước lỗi/quá giờ) nếu còn thời gian + lượt.
     if (!useGemini) {
       const b = await backfillImages(deadline);

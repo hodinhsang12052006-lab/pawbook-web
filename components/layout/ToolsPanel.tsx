@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine } from "lucide-react";
+import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -44,6 +44,15 @@ function useTools(): Tool[] {
   const { unreadCount } = useUnreadMessages();
   const [income, setIncome] = useState<number | null>(null);
   const [reportCount, setReportCount] = useState<number | null>(null);
+  const [newBookings, setNewBookings] = useState(0);
+
+  useEffect(() => {
+    if (user?.role !== "TECHNICIAN" && user?.role !== "OWNER") return;
+    fetch("/api/bookings?count=1", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setNewBookings(d?.counts?.new ?? 0))
+      .catch(() => {});
+  }, [user?.role]);
 
   useEffect(() => {
     if (user?.id && user.role === "TECHNICIAN") setIncome(weeklyIncome(user.id));
@@ -74,7 +83,8 @@ function useTools(): Tool[] {
     { href: "/messages", label: tr("Tin nhắn", "Messages"), stat: unreadCount > 0 ? tr(`${unreadCount} tin chưa đọc`, `${unreadCount} unread`) : tr("Chat với tiệm & thợ", "Chat with salons & techs"), icon: MessageCircle, tone: "bg-sky-500/15 text-sky-300", badge: unreadCount },
     roleTool,
     ...(user?.role === "TECHNICIAN" || user?.role === "OWNER"
-      ? [{ href: "/consult", label: tr("Soi tay tư vấn", "Hand consult"), stat: tr("Chụp tay khách → tình trạng + mẫu hợp", "Snap a client's hand → condition + matching designs"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
+      ? [{ href: "/bookings", label: tr("Lịch hẹn", "Bookings"), stat: newBookings > 0 ? tr(`${newBookings} khách mới đặt lịch`, `${newBookings} new requests`) : tr("Khách đặt từ menu / mã QR", "Requests from your menu / QR"), icon: CalendarCheck, tone: "bg-pink-500/15 text-pink-300", badge: newBookings } as Tool,
+        { href: "/consult", label: tr("Soi tay tư vấn", "Hand consult"), stat: tr("Chụp tay khách → tình trạng + mẫu hợp", "Snap a client's hand → condition + matching designs"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
       : []),
     { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
     { href: "/trends", label: tr("Xu hướng tuần", "Weekly trends"), stat: tr("Mẫu hot · thợ nổi bật · lương", "Hot designs · top techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },

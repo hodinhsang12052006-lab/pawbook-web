@@ -65,6 +65,7 @@ model User {
   conversationReads ConversationRead[]
   messages          Message[]
   menuItems         MenuItem[]
+  bookings          BookingRequest[]
 
   // Paywall "Mở khóa kết nối trực tiếp" — chủ tiệm (OWNER) unlock quyền
   // nhắn tin/gọi 1 thợ cụ thể sau khi hoàn tất khảo sát chuyên sâu.
@@ -713,4 +714,27 @@ model MenuItem {
   updatedAt       DateTime @default(now()) @updatedAt
 
   @@index([ownerId, sortOrder])
+}
+
+// Khách đặt lịch KHÔNG cần tài khoản (quét QR menu ở quầy / link chia sẻ): tên + SĐT + ngày / buổi mong
+// muốn → chỉ thợ / tiệm đó xem được, gọi hoặc nhắn xác nhận. (prisma/sql/2026-10-17_booking_requests.sql)
+model BookingRequest {
+  id            String    @id @default(cuid())
+  techId        String
+  tech          User      @relation(fields: [techId], references: [id], onDelete: Cascade)
+  menuItemId    String?
+  itemName      String?
+  itemPrice     String?
+  clientName    String
+  clientPhone   String
+  preferredDate String? // YYYY-MM-DD
+  preferredTime String? // morning | afternoon | evening
+  note          String?
+  status        String    @default("new") // new | confirmed | declined | done
+  scheduledFor  String? // giờ thợ chốt, VD "Thứ 7 18/10 · 2:30 PM"
+  locale        String    @default("vi")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([techId, status, createdAt])
 }

@@ -1,5 +1,5 @@
 // Menu mẫu nail cá nhân: API (quyền, kiểm tra ảnh, ẩn vật tư với khách, xếp thứ tự, lấy từ kho mẫu)
-// + giao diện (khách xem → "Muốn làm mẫu này" → tin nhắn soạn sẵn; thợ tự thêm mẫu; QR; điện thoại).
+// + giao diện (khách xem → đặt lịch / người đã đăng nhập nhắn tin soạn sẵn; thợ tự thêm mẫu; QR; điện thoại).
 // CHỈ chạy với server local.   node scripts/qa/menu_test.mjs
 import { chromium, devices } from "playwright";
 import { createClient } from "@libsql/client";
@@ -111,11 +111,13 @@ const header = await guest.page.getByText(tech.me.name || "", { exact: false }).
 const noCost = (await guest.page.getByText(/Vật tư|lời/).count()) === 0;
 R.check("M9", "Trang /menu/[uid] (quét QR): thẻ thợ + mẫu + giá, không lộ vật tư/lời", shown && header && noCost && (await guest.page.getByText("$45–60").count()) >= 1, JSON.stringify({ shown, header, noCost }));
 if (shown) await card.click();
-const want = guest.page.getByRole("button", { name: "Muốn làm mẫu này" });
-await want.click({ timeout: 8000 }).catch(() => {});
-await guest.page.waitForURL(/\/auth\/login/, { timeout: 10000 }).catch(() => {});
-const cb = new URL(guest.page.url()).searchParams.get("callbackUrl");
-R.check("M10", "Khách chưa đăng nhập bấm \"Muốn làm mẫu này\" → trang đăng nhập, quay lại đúng tin nhắn", /\/auth\/login/.test(guest.page.url()) && cb === `/messages?to=${tech.me.id}`, guest.page.url());
+// Khách chưa đăng nhập: đặt lịch NGAY (không bắt đăng nhập, không có nút chat — chat cần tài khoản)
+const bookBtn = await guest.page.getByRole("button", { name: "Đặt lịch mẫu này" }).isVisible().catch(() => false);
+const chatBtn = await guest.page.getByRole("button", { name: /Nhắn tin hỏi thêm|Muốn làm mẫu này/ }).count();
+if (bookBtn) await guest.page.getByRole("button", { name: "Đặt lịch mẫu này" }).click();
+const formOpen = await guest.page.getByRole("dialog", { name: "Đặt lịch" }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+R.check("M10", "Khách chưa đăng nhập: chi tiết mẫu → \"Đặt lịch mẫu này\" mở form đặt lịch ngay (không bắt đăng nhập, không hiện nút chat)", bookBtn && chatBtn === 0 && formOpen, JSON.stringify({ bookBtn, chatBtn, formOpen }));
+await guest.page.keyboard.press("Escape");
 
 // Đăng nhập với callbackUrl lạ (//evil) → không bị đưa ra ngoài
 await guest.page.goto(BASE_URL + "/auth/login?callbackUrl=//evil.example.com");
@@ -131,12 +133,12 @@ const oCard = owner.page.getByRole("button", { name: "QA French tráng gương" 
 const tabOk = await oCard.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
 if (tabOk) {
   await oCard.click();
-  await owner.page.getByRole("button", { name: "Muốn làm mẫu này" }).click();
+  await owner.page.getByRole("button", { name: "Nhắn tin hỏi thêm" }).click();
 }
 await owner.page.waitForURL(/\/messages\?to=/, { timeout: 15000 }).catch(() => {});
 await owner.page.waitForFunction(() => [...document.querySelectorAll("textarea, input")].some((e) => /QA French tráng gương/.test(e.value)), null, { timeout: 15000 }).catch(() => {});
 const draft = await owner.page.evaluate(() => [...document.querySelectorAll("textarea, input")].map((e) => e.value).find((v) => /QA French/.test(v)) || "");
-R.check("M12", "Hồ sơ ?tab=menu → bấm mẫu → \"Muốn làm mẫu này\" → mở chat với thợ, ô nhập đã soạn sẵn tên mẫu + giá", tabOk && /QA French tráng gương/.test(draft) && /\$45–60/.test(draft), `${tabOk} "${draft.slice(0, 90)}"`);
+R.check("M12", "Đã đăng nhập: hồ sơ ?tab=menu → bấm mẫu → \"Nhắn tin hỏi thêm\" → mở chat với thợ, ô nhập đã soạn sẵn tên mẫu + giá", tabOk && /QA French tráng gương/.test(draft) && /\$45–60/.test(draft), `${tabOk} "${draft.slice(0, 90)}"`);
 
 // Thợ tự thêm mẫu qua giao diện (không ảnh), vật tư → thấy chi phí + lời ngay
 await tech.page.goto(BASE_URL + `/profile/${tech.me.id}?tab=menu`);

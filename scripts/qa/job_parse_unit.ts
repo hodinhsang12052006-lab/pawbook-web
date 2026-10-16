@@ -76,5 +76,12 @@ ok("S5", "Tên tiệm gọn: bỏ \"(tên người đăng)\", tên kiểu câu t
   [cleanSalonName("Tiệm Nail (Annie Linhh Nguyen)", "San Francisco", "CA"), cleanSalonName("Tiem Ở Alabama Cần Gấp 1 Thợ Nữ Trẻ", "", "AL"), cleanSalonName("Tiệm Khách Đông (Jimmy Le)", null, "MD")].join(" | "));
 ok("S6", "Thành phố \"I Inverness\" → \"Inverness\"; tên bình thường giữ nguyên", cleanCity("I Inverness") === "Inverness" && cleanCity("San Jose") === "San Jose" && cleanCity("O'Fallon") === "O'Fallon", cleanCity("I Inverness"));
 
+const nd = "TUYỂN THỢ NAIL – BAO LƯƠNG ĐẾN $4,000 / 2 TUẦN NORTH DAKOTA. Bao lương: $4,000 / 2 tuần – Thợ làm đủ thứ. $3,500 / 2 tuần – Thợ chân tay nước. Pedicure: $43 – $135. Acrylic & Special Shape: $55. Gọi 701-555-0110";
+ok("S7", "Lương 2 tuần/lần \"$4,000 / 2 tuần\" được nhận; giá dịch vụ \"Pedicure: $43 – $135\" không bị hiểu là lương", findSalary(nd, "US").salaryAmount === "$4,000/2 tuần" && findSalary("Pedicure: $43 – $135, tip cao", "US").salaryAmount === "Thỏa thuận", findSalary(nd, "US").salaryAmount);
+ok("S8", "Tên NGƯỜI ĐĂNG tool gửi kèm (\"Thuy Cao\", \"Kaia Vu\", \"Huynh Tien Tien\") → \"Tiệm nail <thành phố>\"; tên tiệm thật giữ",
+  cleanSalonName("Thuy Cao", "", "NC") === "Tiệm nail NC" && cleanSalonName("Kaia Vu", "Houston", "TX") === "Tiệm nail Houston" && cleanSalonName("Huynh Tien Tien", "", "ND") === "Tiệm nail ND" &&
+  cleanSalonName("Glam Nails", "", "TX") === "Glam Nails" && cleanSalonName("Blossom Nail Lounge", "Plano", "TX") === "Blossom Nail Lounge" && cleanSalonName("GA Towne Lake Nails", "", "GA") === "GA Towne Lake Nails",
+  [cleanSalonName("Thuy Cao", "", "NC"), cleanSalonName("Kaia Vu", "Houston", "TX"), cleanSalonName("Glam Nails", "", "TX")].join(" | "));
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

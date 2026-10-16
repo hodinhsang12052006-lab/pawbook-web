@@ -189,13 +189,15 @@ export const isSalonSale = (text: string) => SALE.test(text) && !HIRE_EXPLICIT.t
 // Đúng dạng SĐT (Mỹ 3-3-4 / 10–11 số liền, Úc 04xx xxx xxx, +61) — không nuốt "2000-2200 1 tuần".
 const PHONEISH = /(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)|(?<!\d)\d{10,11}(?!\d)|(?<!\d)(?:\+?61\s?|0)4\d{2}\s?\d{3}\s?\d{3}(?!\d)/g;
 const NOT_PAY = /(rent|thu[êe]|gi[áa] sang|gi[áa] b[áa]n|sang|c[ọo]c|deposit|lease|doanh thu|sqft|sf\b)\s*:?\s*\$?\s?[\d.,]+\s*(k|ngh[ìi]n)?(\s*\/\s*(th[áa]ng|month))?/gi;
-export const payText = (text: string) => text.replace(PHONEISH, " ").replace(NOT_PAY, " ");
+const SERVICE_PRICE = /(pedicure|manicure|pedi|mani|full ?set|fill|refill|dip|sns|gel-?x|acrylic|b[ộo]t|ch[âa]n tay n[ưu][ớo]c|wax(?:ing)?|eyebrow|special shape)\s*:?\s*\$\s?\d{1,3}(\s*(?:-|–|đến|to)\s*\$?\s?\d{1,3})?(?![\d,])/gi;
+export const payText = (text: string) => text.replace(PHONEISH, " ").replace(NOT_PAY, " ").replace(SERVICE_PRICE, " ");
 
 export function findSalary(text: string, market: "US" | "AU" | null): { salaryType: string; salaryAmount: string } {
   const t = payText(text).replace(/\s+/g, " ");
   const money = String.raw`(?<![\d,.])(?:\$?\s?\d{1,2}[,.]?\d{3}|\$\s?\d{2,3})(?![\d,.]*\d)`;
   const range = t.match(new RegExp(`(${money})\\s*(?:-|–|đến|to)\\s*(${money}|\\d{2,3}(?:[,.]\\d{3})?)\\s*(?:\\/|một|1|mỗi|per)?\\s*(tuần|tuan|week|wk|tháng|thang|month|giờ|gio|hour|hr|ngày|ngay|day)?`, "i"));
   const single = t.match(new RegExp(`(?:lương|luong|bao|guarantee|từ|tu|min|minimum|salary|pay)?\\s*(${money})\\s*\\+?\\s*(?:\\/|một|1|mỗi|per)\\s*(tuần|tuan|week|wk|tháng|thang|month|giờ|gio|hour|hr|ngày|ngay|day)`, "i"));
+  const biweekly = t.match(new RegExp(`(${money})\\s*\\+?\\s*(?:\\/|mỗi|per|every)\\s*2\\s*(tuần|tuan|weeks?)`, "i"));
   const unitVi = (u?: string) => {
     const x = strip(u || "");
     if (/^(tuan|week|wk)/.test(x)) return "tuần";
@@ -208,7 +210,10 @@ export function findSalary(text: string, market: "US" | "AU" | null): { salaryTy
   const split = t.match(/\b([4-7])\s*\/\s*([3-6])\b/);
   let amount = "";
   let unit = "";
-  if (range) { unit = unitVi(range[3]); amount = `${fmt(range[1])}-${fmt(range[2]).slice(1)}${unit ? `/${unit}` : ""}`; }
+  // Khoảng không đơn vị mà cả 2 số < $300 → giá dịch vụ / tip, không phải lương
+  const smallRange = !!range && !range[3] && Number(range[1].replace(/[^\d]/g, "")) < 300 && Number(range[2].replace(/[^\d]/g, "")) < 300;
+  if (biweekly) { unit = "tuần"; amount = `${fmt(biweekly[1])}/2 tuần`; }
+  else if (range && !smallRange) { unit = unitVi(range[3]); amount = `${fmt(range[1])}-${fmt(range[2]).slice(1)}${unit ? `/${unit}` : ""}`; }
   else if (single) { unit = unitVi(single[2]); amount = `${fmt(single[1])}${/\+/.test(single[0]) ? "+" : ""}/${unit}`; }
   const aud = market === "AU";
   const type =
@@ -242,7 +247,9 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
   let n = String(name || "").replace(/\s+/g, " ").trim();
   n = n.replace(/^(ti[ệe]m (nail|nails)|nail salon)\s*\(([^)]+)\)$/i, "").trim();
   n = n.replace(/\s*\([^)]*\)\s*$/, "").trim();
-  if (!n || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
+  const SALON_WORD = /(nail|spa|salon|beauty|ti[ệe]m|studio|lounge|bar|lash|brow|tips?)/i;
+  const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){1,3}$/u.test(n);
+  if (!n || personLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
   return n.slice(0, 60);
 }
 

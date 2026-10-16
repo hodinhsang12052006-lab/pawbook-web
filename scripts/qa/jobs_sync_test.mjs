@@ -37,7 +37,7 @@ try {
   // Ô location chỉ có "TX 77521" nhưng tiêu đề ghi "- Baytown, TX" → vẫn có thành phố
   const lc = await sync({ ...base, phone: `(281) 555-0${t.slice(-3)}`, facebook_url: `https://facebook.com/lc.${t}`, location: "TX 77521", title: "Cần tuyển Gel-X - Baytown, TX", post_url: `https://facebook.com/groups/g/posts/${t}9`, salon_name: "Kaia Vu", content: `Cần thợ gel-x gấp, gọi (281) 555-0${t.slice(-3)}` });
   const rl = lc.data.job_id ? await row(lc.data.job_id) : null;
-  R.check("S2b", "Location 'TX 77521' + tiêu đề '- Baytown, TX' → Baytown, TX 77521; bài không ghi tên tiệm → dùng tên tool gửi", rl?.city === "Baytown" && rl?.state === "TX" && rl?.zip === "77521" && rl?.salonName === "Kaia Vu", JSON.stringify(rl));
+  R.check("S2b", "Location 'TX 77521' + tiêu đề '- Baytown, TX' → Baytown, TX 77521; bài không ghi tên tiệm, tool gửi TÊN NGƯỜI ĐĂNG → \"Tiệm nail Baytown\" (không lấy tên người làm tên tiệm)", rl?.city === "Baytown" && rl?.state === "TX" && rl?.zip === "77521" && rl?.salonName === "Tiệm nail Baytown", JSON.stringify(rl));
   R.check("S3", "Tách location 'Houston, TX 77083'; lương; kỹ năng tool → chuẩn PawNail", r1.city === "Houston" && r1.state === "TX" && r1.zip === "77083" && r1.salaryAmount === "$1,500/tuần" && String(r1.skills).includes("Bột/Acrylic") && String(r1.skills).includes("Chân tay nước"), JSON.stringify(r1));
   R.check("S4", "Facebook người đăng chỉ lưu MÃ BĂM (không lưu link)", /^[0-9a-f]{64}$/.test(String(r1.sourceFbHash)) && !JSON.stringify(r1).includes("profile.php"));
 

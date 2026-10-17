@@ -88,21 +88,22 @@ const SCHEMA = {
 // "woman's hand" + "skin texture" → cả lượt vẽ trượt hết). Bối cảnh xoay vòng theo mẫu.
 // 16/10/2026: FLUX KHÔNG hiểu câu phủ định ("no text", "no extra fingers" lại gợi ra đúng thứ đó) → khung
 // ảnh chỉ mô tả điều MUỐN có; ảnh lỗi (thừa ngón, có chữ) do "AI chấm ảnh" (lib/imageJudge) loại bỏ.
+// 17/10/2026: soi tay 167 ảnh đã đăng → ảnh lỗi gần như toàn là cảnh CẢ BÀN TAY (cầm hoa, cầm ly, đặt trên bàn,
+// giơ tay, lòng bàn tay) — FLUX vẽ cả bàn tay là hay thừa ngón / thừa móng. Ảnh đạt gần như toàn là cảnh CẬN
+// 3–4 đầu ngón đặt trên vải mềm, nhìn từ mu bàn tay → chỉ giữ kiểu cận đầu ngón đó.
 const IMAGE_STYLE =
-  "Professional nail salon portfolio photograph, macro close-up. One elegant relaxed hand, fingers gently spread, " +
-  "four slender fingers and one thumb with natural proportions and soft knuckle creases, neat clean cuticles. " +
+  "Professional nail salon portfolio photograph, tight macro close-up of the fingertips of one hand seen from above, " +
+  "the back of the fingers facing the camera, four slender fingers side by side with the nails in a neat row, " +
+  "each finger with its own single nail, natural proportions, neat clean cuticles. " +
   "The manicure is the sharp focal point: flawless and evenly applied on every nail. " +
-  "Soft diffused window daylight, gentle shadows, true-to-life colors, shallow depth of field, 100mm macro lens, " +
-  "minimal uncluttered background, high-end editorial photo realism.";
-// Bối cảnh KHÔNG có chữ: ly cà phê / chai sơn làm AI tự "viết" nhãn chữ vô nghĩa ("Cgf ICED…",
-// "O·AL LIGUSE" — 12/10/2026) → bỏ. Chỉ giữ nền vải / gỗ / đá / hoa, dáng tay đơn giản.
+  "Soft diffused daylight, gentle shadows, true-to-life colors, shallow depth of field, 100mm macro lens, " +
+  "plain soft cream background, high-end editorial photo realism.";
+// Bối cảnh KHÔNG có chữ, KHÔNG đồ vật để cầm (ly / chai sơn → AI tự "viết" chữ vô nghĩa; hoa → tay xoắn).
 const SCENES = [
-  "hand resting flat on a plain white salon towel",
-  "hand resting on a light oak wooden table near a window",
-  "fingers gently curled over a soft beige knit sweater sleeve",
-  "hand resting on a plain white marble tabletop",
-  "hand resting on smooth pale pink linen fabric",
-  "hand lightly holding a single fresh flower, soft blurred background",
+  "fingertips resting on a soft cream knit blanket",
+  "fingertips gently curled over a plush white towel",
+  "fingertips resting on smooth pale pink satin",
+  "fingertips resting on a soft beige knit sweater sleeve",
 ];
 /** Khung ảnh theo mẫu: cùng mẫu → cùng bối cảnh (vẽ lại vẫn nhất quán), mẫu khác → khác bối cảnh. */
 function photoStyle(seed: string): string {
@@ -339,8 +340,8 @@ export const imagesDrawnToday = () => prisma.nailDesign.count({ where: { prompt:
 // AI_IMAGE_CANDIDATES_DAILY: tổng ảnh ứng viên / ngày (mặc định 40 ≈ 40 × (100 vẽ + ~70 chấm) ≈ 6.800 neuron,
 // dưới 10k miễn phí, chừa phần viết bài). Ảnh tốt nhất < KEEP_SCORE → KHÔNG đăng ảnh xấu: mẫu giữ hình
 // minh hoạ, mai vẽ lại.
-export const PASS_SCORE = 7;
-export const KEEP_SCORE = 5;
+export const PASS_SCORE = 8;
+export const KEEP_SCORE = 7;
 const candidatesPer = () => Math.max(1, Math.min(4, Number(process.env.AI_IMAGE_CANDIDATES ?? 3) || 3));
 const candidatesDaily = () => Math.max(0, Math.min(150, Number(process.env.AI_IMAGE_CANDIDATES_DAILY ?? 40) || 0));
 const candKey = () => `img_cand:${today()}`;
@@ -405,7 +406,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
         }
         const imageUrl = await store(best.img);
         const q = score !== undefined ? `[q:${score}]` : "";
-        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt.replace(/\[(q|try):[^\]]*\]/g, "")}${q}${imgMark()}`.slice(0, 2000) } });
+        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt.replace(/\[(q|try|hid):[^\]]*\]/g, "")}${q}${imgMark()}`.slice(0, 2000) } });
         done++;
       } catch (err) {
         const msg = (err as Error).message;
@@ -444,7 +445,7 @@ export async function backfillImages(deadline: number): Promise<{ drawn: number;
 
 export const MAX_REDRAWS = 3;
 // Phần mô tả bộ móng (trước khung ảnh và các dấu [redraws:…][img:…]).
-const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img|q|try):[^\]]*\]/g, "").split("\n\n")[0].trim();
+const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img|q|try|hid):[^\]]*\]/g, "").split("\n\n")[0].trim();
 
 /** Admin bấm "Vẽ lại ảnh" (ảnh lỗi tay, sai hoạ tiết…) — tối đa MAX_REDRAWS lần/mẫu.
  *  Luôn dùng khung ảnh MỚI NHẤT (IMAGE_STYLE) với phần mô tả bộ móng đã lưu. */

@@ -97,7 +97,7 @@ try {
   const imgCalls = calls.filter((c) => c.cfg?.responseModalities);
   R.check("D3", "Tạo 3 mẫu: Gemini nhận khoá qua header (không nằm trên URL), 1 lần viết + 3 lần vẽ", g.status === 201 && g.data.created.length === 3 && textCall?.key === "test-gemini-key" && !/key=/.test(textCall.path) && imgCalls.length === 3, JSON.stringify(g.data).slice(0, 200));
   R.check("D4", "Prompt dựa trên bối cảnh thật: dịp Halloween + yêu cầu song ngữ + vật tư + cấm thương hiệu", /halloween/i.test(textCall?.prompt ?? "") && /materials/.test(textCall.prompt) && /Chanel/.test(textCall.prompt));
-  R.check("D5", "Ảnh vẽ cận cảnh bàn tay kiểu ảnh salon, nền gọn (không đồ vật có chữ)", imgCalls.every((c) => /Professional nail salon portfolio photograph/.test(c.prompt) && /four slender fingers and one thumb/.test(c.prompt) && /minimal uncluttered background/.test(c.prompt)));
+  R.check("D5", "Ảnh vẽ cận cảnh đầu ngón kiểu ảnh salon trên nền vải (không cả bàn tay, không cầm hoa / ly, không đồ vật có chữ)", imgCalls.length > 0 && imgCalls.every((c) => /Professional nail salon portfolio photograph/.test(c.prompt) && /close-up of the fingertips/.test(c.prompt) && /four slender fingers side by side/.test(c.prompt) && /plain soft cream background/.test(c.prompt) && !/(flower|cup|coffee|bottle|table|window|marble)/i.test(c.prompt.split("Professional nail salon portfolio photograph")[1] || "")), imgCalls.map((c) => c.prompt.slice(-140)).join(" || "));
 
   const drafts = (await admin.req("/api/admin/designs")).data.drafts;
   const d0 = drafts.find((d) => d.occasion === "halloween");

@@ -22,7 +22,23 @@ const flux = []; // { prompt, id }
 const judged = []; // ảnh nào được đưa đi chấm
 let verdicts = []; // hàng đợi kết quả chấm; hết → điểm 8
 let judgeDown = false;
-const ok = (score, over = {}) => ({ hand: true, fiveFingers: true, textFree: true, nailsClear: true, matches: true, realistic: true, score, issues: [], ...over });
+// Câu trả lời dạng mới: AI phải ĐẾM bàn tay / ngón / móng và trả lời từng lỗi cụ thể.
+const ok = (score, over = {}) => ({ hands: 1, fingers: 5, nails: 4, extraDigits: false, fusedOrMelted: false, palmSideNails: false, floatingNail: false, artOnSkin: false, text: false, nailsClear: true, matches: true, realistic: true, score, issues: [], ...over });
+// Gemini GIẢ (:4993) — AI chấm thứ 2. Chỉ trả lời câu hỏi có ảnh; null = đang tắt (không trả lời được).
+let gemVerdicts = null;
+const gem = http.createServer((req, res) => {
+  let b = "";
+  req.on("data", (c) => (b += c));
+  req.on("end", () => {
+    const body = JSON.parse(b || "{}");
+    const hasImg = body.contents?.[0]?.parts?.some?.((p) => p.inlineData);
+    res.setHeader("content-type", "application/json");
+    if (!gemVerdicts || !hasImg) return res.writeHead(500).end(JSON.stringify({ error: { message: "off" } }));
+    const v = gemVerdicts.length ? gemVerdicts.shift() : ok(9);
+    res.end(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(v) }] } }] }));
+  });
+});
+await new Promise((r) => gem.listen(4993, "127.0.0.1", r));
 const cf = http.createServer((req, res) => {
   let b = "";
   req.on("data", (c) => (b += c));
@@ -52,26 +68,26 @@ const errors = [];
 
 try {
   // Q1: ảnh 1 lỗi ngón (AI cho 9 nhưng fiveFingers=false → ép 3), ảnh 2 đạt 8 → giữ ảnh 2, dừng (không vẽ ảnh 3)
-  verdicts = [ok(9, { fiveFingers: false, issues: ["six fingers"] }), ok(8)];
+  verdicts = [ok(9, { nails: 7 }), ok(8)];
   const f0 = flux.length;
   const c1 = await cron(1);
   const id1 = c1.created?.[0];
   const r1 = id1 ? await row(id1) : null;
   const drawn1 = flux.slice(f0);
-  R.check("Q1", "Vẽ ảnh ứng viên → AI chấm từng ảnh → ảnh lỗi ngón bị loại dù AI cho 9 điểm, giữ ảnh 2 (8/10), dừng sớm", drawn1.length === 2 && imgOf(r1?.imageUrl) === drawn1[1].id && /\[q:8\]/.test(r1?.prompt || "") && JSON.stringify(judged.slice(-2)) === JSON.stringify(drawn1.map((d) => d.id)),
+  R.check("Q1", "Vẽ ảnh ứng viên → AI chấm từng ảnh → ảnh đếm ra 7 móng / 1 bàn tay bị loại dù AI cho 9 điểm, giữ ảnh 2 (8/10), dừng sớm", drawn1.length === 2 && imgOf(r1?.imageUrl) === drawn1[1].id && /\[q:8\]/.test(r1?.prompt || "") && JSON.stringify(judged.slice(-2)) === JSON.stringify(drawn1.map((d) => d.id)),
     JSON.stringify({ drawn: drawn1.map((d) => d.id), kept: imgOf(r1?.imageUrl), judged: judged.slice(-2), q: r1?.prompt?.match(/\[q:[^\]]*\]/)?.[0], err: c1.errors }));
   R.check("Q2", "2 ảnh ứng viên khác bối cảnh; khung ảnh chỉ mô tả điều muốn có (không câu phủ định gợi ra chữ / thừa ngón)",
     drawn1.length === 2 && drawn1[0].prompt !== drawn1[1].prompt && drawn1.every((d) => { const style = d.prompt.split(". Professional nail salon portfolio photograph")[1]; return !!style && !/\b(no|not|without|never)\b/i.test(style) && !/(woman|skin)/i.test(style); }),
     drawn1.map((d) => d.prompt.slice(-160)).join(" || "));
 
   // Q3: cả 3 ảnh đều xấu (có chữ → ép 3; 4; 4.5) → KHÔNG đăng ảnh xấu, đánh dấu thử hôm nay, báo lỗi rõ
-  verdicts = [ok(9.5, { textFree: false, issues: ["gibberish text"] }), ok(4, { issues: ["blurry nails"] }), ok(4.5)];
+  verdicts = [ok(9.5, { text: true, issues: ["gibberish text"] }), ok(9, { palmSideNails: true, issues: ["nails on palm side"] }), ok(6.5)];
   const f1 = flux.length;
   const c2 = await cron(1);
   const id2 = c2.created?.[0];
   const r2 = id2 ? await row(id2) : null;
-  R.check("Q3", "3 ảnh đều dưới 5 điểm → không đăng ảnh xấu (giữ hình minh hoạ), báo \"Ảnh chưa đạt\" kèm lỗi, đánh dấu để mai vẽ lại",
-    flux.length - f1 === 3 && r2 && r2.imageUrl === null && r2.prompt.includes(`[try:${today}]`) && c2.errors?.some((e) => /Ảnh chưa đạt \(4\.5\/10 sau 3 ảnh/.test(e)),
+  R.check("Q3", "3 ảnh đều dưới 7 điểm (có chữ; móng ở phía lòng bàn tay; 6.5) → không đăng (giữ hình minh hoạ), báo \"Ảnh chưa đạt\", đánh dấu để mai vẽ lại",
+    flux.length - f1 === 3 && r2 && r2.imageUrl === null && r2.prompt.includes(`[try:${today}]`) && c2.errors?.some((e) => /Ảnh chưa đạt \(6\.5\/10 sau 3 ảnh/.test(e)),
     JSON.stringify({ drawn: flux.length - f1, img: r2?.imageUrl, err: c2.errors }));
 
   // Q4: lượt sau trong ngày: vẽ mẫu mới, KHÔNG vẽ lại mẫu vừa hỏng (không đốt hạn mức vào 1 mẫu khó)
@@ -98,6 +114,20 @@ try {
   judgeDown = false;
   const r4 = c4.created?.[0] ? await row(c4.created[0]) : null;
   R.check("Q5", "AI chấm không trả lời → vẫn nhận ảnh đầu tiên như trước (không có điểm), không treo lượt vẽ", flux.length - f3 === 1 && imgOf(r4?.imageUrl) === flux.at(-1).id && !/\[q:/.test(r4?.prompt || ""), JSON.stringify({ drawn: flux.length - f3, kept: imgOf(r4?.imageUrl), err: c4.errors }));
+
+  // Q11: có 2 AI chấm → lấy kết quả khắt khe hơn
+  // (bỏ dấu đã vẽ hôm nay của các mẫu trên để không chạm trần AI_IMAGES_DAILY=3 của server test)
+  await db.execute({ sql: `UPDATE "NailDesign" SET prompt = replace(prompt, ?, '')`, args: [`[img:${today}]`] });
+  gemVerdicts = [ok(9, { hands: 2, nails: 8, fingers: 10 }), ok(8.5)];
+  verdicts = [ok(9), ok(9)];
+  const f5 = flux.length;
+  const c6 = await cron(1);
+  gemVerdicts = null;
+  const r6 = c6.created?.[0] ? await row(c6.created[0]) : null;
+  const drawn6 = flux.slice(f5);
+  R.check("Q11", "2 AI chấm song song: Cloudflare cho 9 nhưng Gemini đếm ra 2 bàn tay → ảnh 1 bị loại; ảnh 2 cả hai cùng đạt → giữ, điểm = điểm thấp hơn (8.5)",
+    drawn6.length >= 2 && imgOf(r6?.imageUrl) === drawn6[1].id && /\[q:8\.5\]/.test(r6?.prompt || ""),
+    JSON.stringify({ drawn: drawn6.map((d) => d.id), kept: imgOf(r6?.imageUrl), q: r6?.prompt?.match(/\[q:[^\]]*\]/)?.[0], err: c6.errors }));
 
   // Q7: admin thấy điểm chấm ảnh
   const a = await registerUser({ name: "QA Judge Admin" });
@@ -139,6 +169,7 @@ try {
 } finally {
   await browser?.close();
   cf.close();
+  gem.close();
 }
 const s = R.summary();
 process.exit(s.failed ? 1 : 0);

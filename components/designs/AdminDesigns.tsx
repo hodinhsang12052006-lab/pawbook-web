@@ -154,7 +154,7 @@ export default function AdminDesigns() {
                 <DesignVisual d={d} />
                 <AiBadge d={d} className="absolute left-2 top-2" />
                 {typeof d.quality === "number" && (
-                  <span title="Điểm AI chấm ảnh (0–10): đủ ngón, không chữ, móng rõ, đúng mẫu" className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-black ring-1 ${d.quality >= 7 ? "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40" : "bg-amber-500/20 text-amber-200 ring-amber-400/40"}`}>
+                  <span title="Điểm AI chấm ảnh (0–10): đủ ngón, không chữ, móng rõ, đúng mẫu" className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-black ring-1 ${d.quality >= 8 ? "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40" : "bg-amber-500/20 text-amber-200 ring-amber-400/40"}`}>
                     Ảnh {d.quality}/10
                   </span>
                 )}

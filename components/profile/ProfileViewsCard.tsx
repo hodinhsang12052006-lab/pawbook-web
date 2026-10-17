@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, ArrowRight, Store } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
@@ -23,6 +23,7 @@ interface ViewStats {
 export default function ProfileViewsCard({ compact = false, role }: { compact?: boolean; role?: string }) {
   useTr(); // render lại khi đổi VI/EN
   const [stats, setStats] = useState<ViewStats | null>(null);
+  const boxRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -35,11 +36,31 @@ export default function ProfileViewsCard({ compact = false, role }: { compact?: 
     };
   }, []);
 
-  if (!stats || (compact && stats.viewers === 0)) return null;
+  // Trang chủ: thẻ tải sau ~0.7s từng đẩy cả bảng tin xuống ~210px (CLS). Nhớ chiều cao THẬT của thẻ lần
+  // trước (pn_pv_h) → script đầu trang đặt html[data-pv] + --pv-h → giữ sẵn đúng chỗ trong lúc tải.
+  const hidden = compact && !!stats && stats.viewers === 0;
+  useEffect(() => {
+    if (!compact || !stats) return;
+    const el = document.documentElement;
+    if (hidden) {
+      try { localStorage.removeItem("pn_pv_h"); } catch {}
+      el.removeAttribute("data-pv");
+      return;
+    }
+    const h = Math.round(boxRef.current?.getBoundingClientRect().height || 0);
+    if (h > 0) {
+      try { localStorage.setItem("pn_pv_h", String(h)); } catch {}
+      el.style.setProperty("--pv-h", `${h}px`);
+      el.setAttribute("data-pv", "");
+    }
+  }, [compact, stats, hidden]);
+
+  if (!stats) return compact ? <div aria-hidden data-pv-slot className="hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-pv]_&]:block" style={{ height: "var(--pv-h, 0px)" }} /> : null;
+  if (hidden) return null;
   const isTech = role !== "OWNER";
 
   return (
-    <section id="ai-da-xem" aria-label={tr("Ai đã xem hồ sơ bạn", "Who viewed your profile")} className="scroll-mt-24 rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
+    <section ref={boxRef} id="ai-da-xem" aria-label={tr("Ai đã xem hồ sơ bạn", "Who viewed your profile")} className="scroll-mt-24 rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/25">
           <Eye className="h-5 w-5" />

@@ -17,7 +17,7 @@ const svg = (body: string, size = 120) =>
   `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'>${body}</svg>`)}")`;
 
 // Họa tiết "móng + hoa" vẽ nét mảnh, rất mờ — nền nhận diện ngành nail.
-const NAIL_PATTERN = svg(
+export const NAIL_PATTERN = svg(
   "<g fill='none' stroke='rgba(244,114,182,0.13)' stroke-width='1.4'>" +
     "<path d='M24 18c-6 0-9 6-9 14v16c0 4 3 6 9 6s9-2 9-6V32c0-8-3-14-9-14z'/>" +
     "<path d='M18 26c3-3 9-3 12 0'/>" +
@@ -34,7 +34,7 @@ const GLITTER = svg(
 );
 
 export const CHAT_WALLPAPERS: ChatWallpaper[] = [
-  { id: "default", vi: "PawNail", en: "PawNail", style: {}, swatch: "radial-gradient(circle at 90% 10%, rgba(236,72,153,.35), transparent 60%), radial-gradient(circle at 10% 90%, rgba(139,92,246,.3), transparent 60%), #0a1020" },
+  { id: "default", vi: "PawNail Aurora", en: "PawNail Aurora", style: { backgroundColor: "#07061a" }, swatch: "radial-gradient(circle at 90% 10%, rgba(236,72,153,.35), transparent 60%), radial-gradient(circle at 10% 90%, rgba(139,92,246,.3), transparent 60%), #0a1020" },
   {
     id: "nails",
     vi: "Hoa móng",
@@ -118,3 +118,15 @@ export function saveWallpaper(chatKey: string | null, id: string, forAll: boolea
 }
 
 export const wallpaperById = (id: string) => CHAT_WALLPAPERS.find((w) => w.id === id) ?? CHAT_WALLPAPERS[0];
+
+// Màu 3 quầng sáng trôi phía sau tin nhắn (components/chat/ChatBackdrop) theo từng chủ đề.
+export const WALLPAPER_ORBS: Record<string, [string, string, string]> = {
+  default: ["rgba(236,72,153,.55)", "rgba(124,58,237,.5)", "rgba(20,184,166,.28)"],
+  nails: ["rgba(236,72,153,.4)", "rgba(190,24,93,.35)", "rgba(251,191,36,.18)"],
+  rose: ["rgba(244,114,182,.5)", "rgba(251,113,133,.4)", "rgba(217,70,239,.25)"],
+  aurora: ["rgba(139,92,246,.55)", "rgba(59,130,246,.4)", "rgba(217,70,239,.3)"],
+  glitter: ["rgba(250,204,21,.25)", "rgba(236,72,153,.3)", "rgba(255,255,255,.12)"],
+  marble: ["rgba(203,213,225,.18)", "rgba(148,163,184,.15)", "rgba(244,114,182,.12)"],
+  ocean: ["rgba(20,184,166,.45)", "rgba(14,165,233,.45)", "rgba(99,102,241,.25)"],
+  champagne: ["rgba(251,191,36,.35)", "rgba(244,114,182,.3)", "rgba(253,186,116,.22)"],
+};

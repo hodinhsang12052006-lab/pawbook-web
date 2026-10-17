@@ -45,6 +45,8 @@ for (let i = 0; i < HISTORY; i++) {
 }
 
 const page = await tech.ctx.newPage();
+// Đo A/B: CHAT_PERF_CSS="…" chèn CSS tắt bớt hiệu ứng để tìm đúng thứ gây khựng phím (không cần build lại)
+if (process.env.CHAT_PERF_CSS) await page.addInitScript((css) => { document.addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st); }); }, process.env.CHAT_PERF_CSS);
 const cdp = await page.context().newCDPSession(page);
 await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
 const errors = [];

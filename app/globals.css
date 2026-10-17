@@ -427,3 +427,65 @@ body {
 @keyframes pn-scan { 0% { top: -4rem; } 100% { top: 100%; } }
 .pn-scan { animation: pn-scan 1.6s ease-in-out infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .pn-scan { animation: none; top: 40%; } }
+
+/* ============ MESSENGER 2.0 ============
+   Nền "sống" (quầng sáng trôi chậm — chỉ animate transform, không filter → mượt trên máy yếu),
+   bong bóng gradient / kính, tin mới trượt vào. Tôn trọng prefers-reduced-motion. */
+.pn-chat-backdrop { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.pn-orb { position: absolute; width: 70vmax; height: 70vmax; border-radius: 9999px; opacity: .8; will-change: transform; }
+.pn-orb-a { top: -35vmax; right: -25vmax; animation: pn-drift-a 26s ease-in-out infinite alternate; }
+.pn-orb-b { bottom: -40vmax; left: -30vmax; animation: pn-drift-b 32s ease-in-out infinite alternate; }
+.pn-orb-c { top: 30%; left: 35%; width: 45vmax; height: 45vmax; opacity: .5; animation: pn-drift-c 38s ease-in-out infinite alternate; }
+@keyframes pn-drift-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-8vmax, 6vmax, 0) scale(1.12); } }
+@keyframes pn-drift-b { from { transform: translate3d(0, 0, 0) scale(1.05); } to { transform: translate3d(9vmax, -5vmax, 0) scale(.95); } }
+@keyframes pn-drift-c { from { transform: translate3d(-6vmax, 0, 0); } to { transform: translate3d(6vmax, -6vmax, 0); } }
+.pn-vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(2, 4, 12, .55) 100%); }
+.pn-grain { position: absolute; inset: 0; opacity: .22; background-size: 140px 140px; }
+
+/* Bong bóng */
+.pn-bubble-me {
+  background: linear-gradient(135deg, #ec4899 0%, #d946ef 55%, #8b5cf6 120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 22px -12px rgba(236, 72, 153, .75);
+  color: #fff;
+}
+.pn-bubble-them {
+  background: linear-gradient(180deg, rgba(41, 37, 68, .82), rgba(30, 27, 50, .82));
+  border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 8px 22px -14px rgba(0, 0, 0, .8);
+  color: #f1f5f9;
+}
+@keyframes pn-in-me { from { opacity: 0; transform: translate3d(14px, 6px, 0) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes pn-in-them { from { opacity: 0; transform: translate3d(-14px, 6px, 0) scale(.94); } to { opacity: 1; transform: none; } }
+.pn-in-me { animation: pn-in-me .32s cubic-bezier(.2, .9, .25, 1.15) both; transform-origin: bottom right; }
+.pn-in-them { animation: pn-in-them .32s cubic-bezier(.2, .9, .25, 1.15) both; transform-origin: bottom left; }
+
+/* Thanh trên / khung soạn tin dạng kính */
+.pn-glass-bar {
+  background: linear-gradient(180deg, rgba(10, 8, 22, .78), rgba(10, 8, 22, .55));
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+.pn-glass-bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(236, 72, 153, .55), rgba(139, 92, 246, .55), transparent); }
+/* Khung soạn tin KHÔNG dùng backdrop-filter: nó không đè lên tin nhắn nào (chỉ có nền phía sau) mà lớp mờ
+   phải tính lại mỗi lần gõ 1 chữ → khựng phím trên máy yếu. Gradient đặc nhìn y hệt, nhẹ hơn nhiều. */
+.pn-composer { background: linear-gradient(0deg, rgba(9, 7, 20, .96), rgba(12, 9, 26, .9)); }
+.pn-input-wrap { position: relative; border-radius: 9999px; background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); transition: box-shadow .2s ease, background-color .2s ease; }
+.pn-input-wrap:focus-within { background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px rgba(236, 72, 153, .6), 0 0 0 4px rgba(236, 72, 153, .12); }
+/* Nút gửi phát sáng: vòng sáng là ::after chỉ đổi transform + opacity (chạy trên GPU) — KHÔNG animate
+   box-shadow (bắt trình duyệt vẽ lại mỗi khung hình → gõ phím khựng; chat_perf bắt được 17/10/2026). */
+.pn-send-on { position: relative; box-shadow: 0 6px 18px -6px rgba(217, 70, 239, .8); }
+.pn-send-on::after { content: ""; position: absolute; inset: 0; border-radius: 9999px; border: 2px solid rgba(236, 72, 153, .55); animation: pn-send-ring 2.2s ease-out infinite; pointer-events: none; will-change: transform, opacity; }
+@keyframes pn-send-ring { from { transform: scale(1); opacity: .9; } 70%, to { transform: scale(1.45); opacity: 0; } }
+/* Đang gõ → quầng sáng nền đứng yên (lớp kính mờ của khung soạn tin không phải tính lại mỗi khung hình) */
+.chat-wallpaper:focus-within .pn-orb { animation-play-state: paused; }
+.pn-date-pill { background: rgba(15, 12, 32, .62); border: 1px solid rgba(255, 255, 255, .08); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.pn-presence-ring { box-shadow: 0 0 0 2px rgba(10, 8, 22, 1), 0 0 0 3.5px rgba(52, 211, 153, .9), 0 0 14px 2px rgba(52, 211, 153, .35); }
+
+/* Danh sách chat */
+.pn-conv-active { background: linear-gradient(90deg, rgba(236, 72, 153, .16), rgba(139, 92, 246, .08)); box-shadow: inset 0 0 0 1px rgba(236, 72, 153, .28); }
+.pn-list-hero { background: radial-gradient(28rem 12rem at 0% 0%, rgba(236, 72, 153, .22), transparent 70%), radial-gradient(24rem 12rem at 100% 0%, rgba(139, 92, 246, .2), transparent 70%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pn-orb-a, .pn-orb-b, .pn-orb-c, .pn-send-on::after { animation: none; }
+  .pn-in-me, .pn-in-them { animation-duration: .01s; }
+}

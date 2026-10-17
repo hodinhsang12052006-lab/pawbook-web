@@ -72,7 +72,7 @@ function MessageRowImpl({
         msg.sender?.name || (!activeChat.isGroup ? activeChat.name : "U"),
         msg.senderId
       );
-  const animClass = fresh ? "message-slide-up" : "";
+  const animClass = fresh ? (isSelf ? "pn-in-me" : "pn-in-them") : "";
 
   const msgDay = new Date(msg.createdAt).toDateString();
   const showDateSeparator = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== msgDay;
@@ -127,8 +127,8 @@ function MessageRowImpl({
     [...(msg.content || "").matchAll(/\p{Extended_Pictographic}/gu)].length <= 3;
   // Bo góc theo cụm: tin nối tiếp cùng người thì góc phía người gửi bo nhỏ lại (liền khối như Messenger).
   const corner = isSelf
-    ? `${groupedWithPrev ? "rounded-tr-md" : ""} ${!isLastInGroup ? "rounded-br-md" : ""}`
-    : `${groupedWithPrev ? "rounded-tl-md" : ""} ${!isLastInGroup ? "rounded-bl-md" : ""}`;
+    ? `${groupedWithPrev ? "rounded-tr-[6px]" : ""} ${!isLastInGroup ? "rounded-br-[6px]" : "rounded-br-[8px]"}`
+    : `${groupedWithPrev ? "rounded-tl-[6px]" : ""} ${!isLastInGroup ? "rounded-bl-[6px]" : "rounded-bl-[8px]"}`;
   const isSeen = isLastSelf && !activeChat.isGroup && !!seenAt && new Date(seenAt).getTime() >= new Date(msg.createdAt).getTime();
   const dateSeparatorLabel = (() => {
     if (!showDateSeparator) return null;
@@ -143,11 +143,11 @@ function MessageRowImpl({
   const timeGap = !showDateSeparator && !!prevMsg && new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 30 * 60_000;
   const dateSeparator = showDateSeparator ? (
     <div key={`sep-${msg.id || idx}`} className="my-5 flex w-full items-center justify-center">
-      <span className="text-[11px] font-semibold text-slate-500">{dateSeparatorLabel}</span>
+      <span className="pn-date-pill rounded-full px-3 py-1 text-[11px] font-semibold text-slate-300">{dateSeparatorLabel}</span>
     </div>
   ) : timeGap ? (
     <div key={`gap-${msg.id || idx}`} className="my-4 flex w-full items-center justify-center">
-      <span className="text-[11px] font-semibold text-slate-500">{new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
+      <span className="pn-date-pill rounded-full px-3 py-1 text-[11px] font-semibold text-slate-300">{new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
     </div>
   ) : null;
 
@@ -267,10 +267,8 @@ function MessageRowImpl({
             ) : (
               <div
                 className={`relative break-words rounded-[20px] px-3.5 py-2 text-[15px] leading-snug sm:text-sm ${corner} ${
-                  isSelf
-                    ? "bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-sm shadow-pink-600/20"
-                    : "bg-slate-800/90 text-slate-50"
-                } ${msg.type === "IMAGE" || msg.type === "VIDEO" || msg.type === "AUDIO" ? "!bg-none !bg-transparent !p-0 !shadow-none" : ""}`}
+                  isSelf ? "pn-bubble-me" : "pn-bubble-them"
+                } ${msg.type === "IMAGE" || msg.type === "VIDEO" || msg.type === "AUDIO" ? "!bg-none !bg-transparent !p-0 !shadow-none !border-0" : ""}`}
               >
                 {msg.type === "IMAGE" ? (
                   // Plain <img>, not next/image: content comes from

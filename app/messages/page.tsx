@@ -114,7 +114,10 @@ export default async function MessagesPage() {
 
   return (
     <div className="flex flex-col h-[100dvh] text-slate-100 select-none overflow-hidden">
-      <Navbar />
+      {/* Điện thoại: đang mở 1 cuộc trò chuyện (html[data-chat-open]) → ẩn thanh chung, chat toàn màn hình như app */}
+      <div className="flex-none max-md:[html[data-chat-open]_&]:hidden">
+        <Navbar />
+      </div>
       {/* Cùng khung max-w-7xl với Navbar — trước đây khung chat tràn sát 2 mép
           màn hình trong khi logo/nút phía trên nằm giữa, nhìn lệch hẳn. Desktop:
           khung bo góc nổi trên nền; mobile: full màn hình như app nhắn tin. */}

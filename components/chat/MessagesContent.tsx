@@ -20,7 +20,9 @@ import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
 import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
-import { Pin, Palette, Image as ImageIcon, Mic } from "lucide-react";
+import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon } from "lucide-react";
+import ChatBackdrop from "./ChatBackdrop";
+import ChatSuggestions from "./ChatSuggestions";
 import { type Reaction, toggleReaction } from "@/lib/chatReactions";
 import MediaPicker from "./MediaPicker";
 import VoiceRecorder from "./VoiceRecorder";
@@ -86,12 +88,15 @@ export default function MessagesContent({
   // rỗng ↔ có chữ (để bật/tắt nút Gửi).
   const inputRef = useRef<HTMLInputElement>(null);
   const [hasText, setHasTextState] = useState(false);
+  // Đang gõ → 3 nút (ảnh / ghi âm / GIF) thu vào 1 nút "+" cho ô nhập rộng ra (như Messenger)
+  const [toolsOpen, setToolsOpen] = useState(false);
   const hasTextRef = useRef(false);
   // Chỉ gọi setState khi THẬT SỰ đổi (gọi với cùng giá trị React vẫn có thể chạy lại thân component).
   const setHasText = useCallback((v: boolean) => {
     if (hasTextRef.current === v) return;
     hasTextRef.current = v;
     setHasTextState(v);
+    if (!v) setToolsOpen(false); // xoá hết chữ → hiện lại các nút ảnh / ghi âm / GIF
   }, []);
   const setMessageText = useCallback((v: string | ((prev: string) => string)) => {
     const el = inputRef.current;
@@ -137,6 +142,11 @@ export default function MessagesContent({
   const [showChatMenu, setShowChatMenu] = useState(false);
   // Hình nền khung chat — riêng từng cuộc trò chuyện, lưu trên thiết bị.
   const [wallpaperId, setWallpaperId] = useState("default");
+  useEffect(() => {
+    const el = document.documentElement;
+    el.toggleAttribute("data-chat-open", !!activeChat);
+    return () => el.removeAttribute("data-chat-open");
+  }, [activeChat]);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const [wallpaperForAll, setWallpaperForAll] = useState(false);
   useEffect(() => {
@@ -1120,10 +1130,11 @@ export default function MessagesContent({
   return (
     <div className="flex w-full h-full overflow-hidden">
       {/* LEFT COLUMN: CONVERSATION LIST */}
-      <div className={`w-full md:w-[30%] border-r border-slate-850 flex flex-col h-full bg-slate-950/20 ${activeChat ? "hidden md:flex" : "flex"}`}>
-        <div className="p-4 border-b border-slate-850 flex items-center justify-between gap-3 flex-shrink-0 bg-slate-900/10">
+      <div className={`relative isolate w-full md:w-[30%] border-r border-white/[0.06] flex flex-col h-full overflow-hidden ${activeChat ? "hidden md:flex" : "flex"}`}>
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-50 md:opacity-30"><ChatBackdrop theme="default" /></div>
+        <div className="pn-list-hero p-4 pb-3 flex items-center justify-between gap-3 flex-shrink-0">
           <div>
-            <h2 className="text-sm font-black text-slate-100">{t("messenger.title")}</h2>
+            <h2 className="bg-gradient-to-r from-white via-pink-100 to-fuchsia-200 bg-clip-text text-xl font-black tracking-tight text-transparent">{t("messenger.title")}</h2>
             <p className="text-[10px] text-slate-500 font-semibold tracking-wide uppercase mt-0.5">{t("messenger.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -1138,8 +1149,8 @@ export default function MessagesContent({
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="p-3.5 border-b border-slate-850/60 bg-slate-950/20 flex items-center gap-2">
-            <Search className="h-4 w-4 text-slate-600" />
+          <div className="mx-3 mb-2 flex items-center gap-2 rounded-full bg-white/[0.06] px-3.5 py-2.5 ring-1 ring-white/10 focus-within:ring-pink-500/50">
+            <Search className="h-4 w-4 text-slate-400" />
             <input
               type="search"
               value={listQuery}
@@ -1210,7 +1221,7 @@ export default function MessagesContent({
                       conversationId: conv.id,
                     })}
                     aria-current={isActive ? "true" : undefined}
-                    className={`relative flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors duration-150 ${isActive ? "bg-white/[0.07] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-gradient-to-b before:from-pink-500 before:to-fuchsia-500" : "hover:bg-white/[0.04]"}`}
+                    className={`relative flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors duration-150 ${isActive ? "pn-conv-active" : unread > 0 ? "bg-white/[0.035] hover:bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
                   >
                     {isGroup ? (
                       <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
@@ -1249,6 +1260,7 @@ export default function MessagesContent({
                   </button>
                 );
               })}
+              {conversations.length < 4 && !listQuery && <ChatSuggestions role={currentUser?.role ?? null} market={currentUser?.market ?? null} />}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-8 space-y-2 mt-8 animate-fadeIn">
@@ -1268,14 +1280,16 @@ export default function MessagesContent({
       </div>
 
       {/* RIGHT COLUMN: MAIN CHAT PANEL */}
-      <div data-wallpaper={wallpaperId} style={activeChat ? wallpaperById(wallpaperId).style : undefined} className={`chat-wallpaper flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
+      <div data-wallpaper={wallpaperId} style={activeChat ? wallpaperById(wallpaperId).style : undefined} className={`chat-wallpaper isolate flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
         {activeChat ? (
           <>
-            <div className="p-4 border-b border-white/5 bg-slate-950/70 backdrop-blur-md flex items-center justify-between gap-3 flex-none z-10">
+            <ChatBackdrop theme={wallpaperId} />
+            <div className="pn-glass-bar relative flex flex-none items-center justify-between gap-3 px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:px-4 sm:py-3 z-10">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveChat(null)}
-                  className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white md:hidden cursor-pointer mr-1 flex items-center gap-1 whitespace-nowrap text-xs font-bold transition-all border border-slate-800"
+                  aria-label={tr("Quay lại danh sách", "Back to chats")}
+                  className="-ml-1 mr-0.5 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-slate-200 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white md:hidden"
                 >
                   <ArrowLeft className="h-4 w-4" /><span className="sr-only">{locale === "vi" ? tr("Quay lại", "Back") : "Back"}</span>
                 </button>
@@ -1333,6 +1347,15 @@ export default function MessagesContent({
                   mid-call, or navigating away from /messages altogether). */}
               {!activeChat.isGroup && (
                 <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowWallpaperPicker(true)}
+                    className="hidden h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300 sm:flex"
+                    title={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
+                    aria-label={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
+                  >
+                    <Palette className="h-5 w-5" />
+                  </button>
                   <button
                     onPointerEnter={preloadCallSdk}
                     onClick={() => callPartner && startCall(callPartner, "audio")}
@@ -1394,7 +1417,7 @@ export default function MessagesContent({
               )}
             </div>
 
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] px-3 py-4 sm:px-6 space-y-3 bg-slate-950/20 custom-scrollbar flex flex-col min-w-0 relative">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] px-3 py-4 sm:px-6 space-y-3 custom-scrollbar flex flex-col min-w-0 relative">
               <div ref={chatObserverTarget} className="h-2 w-full flex-none" />
 
               {/* Nhãn nổi (cao 0, dính đỉnh) — KHÔNG chiếm chỗ, nên hiện/ẩn không đẩy
@@ -1514,7 +1537,7 @@ export default function MessagesContent({
                 </button>
               </div>
             ) : (
-            <div className="relative flex-none z-10 border-t border-white/5 bg-slate-950/80 px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-4">
+            <div className="pn-composer relative flex-none z-10 border-t border-white/[0.06] px-2.5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
               {(showEmoji || showGifs) && (
                 <MediaPicker
                   tab={chatPanelTab}
@@ -1536,6 +1559,18 @@ export default function MessagesContent({
                 </div>
               ) : (
               <form onSubmit={(e) => handleSendMessage(e)} className="flex items-center gap-1 sm:gap-1.5">
+                {hasText && !toolsOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setToolsOpen(true)}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-pink-300 ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    title={tr("Ảnh, ghi âm, GIF", "Photo, voice, GIF")}
+                    aria-label={tr("Mở thêm: ảnh, ghi âm, GIF", "More: photo, voice, GIF")}
+                  >
+                    <PlusIcon className="h-5 w-5" />
+                  </button>
+                ) : (
+                <>
                 <button
                   type="button"
                   onClick={handleUploadImage}
@@ -1571,8 +1606,10 @@ export default function MessagesContent({
                 >
                   <span className="rounded-md border-2 border-current px-1 py-px leading-none">GIF</span>
                 </button>
+                </>
+                )}
 
-                <div className="relative flex min-w-0 flex-1 items-center">
+                <div className="pn-input-wrap flex min-w-0 flex-1 items-center">
                   <input
                     type="text"
                     ref={inputRef}
@@ -1591,7 +1628,7 @@ export default function MessagesContent({
                     enterKeyHint="send"
                     autoComplete="off"
                     placeholder={t("messenger.inputPlaceholder")}
-                    className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[0.06] py-2.5 pl-4 pr-11 text-base text-slate-100 placeholder-slate-500 transition-colors focus:border-pink-500/60 focus:bg-white/[0.08] focus:outline-none sm:text-sm"
+                    className="min-w-0 flex-1 rounded-full border-0 bg-transparent py-2.5 pl-4 pr-11 text-base text-slate-100 placeholder-slate-400/70 focus:outline-none sm:text-sm"
                   />
                   <button
                     type="button"
@@ -1614,7 +1651,7 @@ export default function MessagesContent({
                   disabled={!hasText}
                   onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
                   // Chỉ đổi độ mờ + kích thước (rẻ, chạy trên GPU) — tránh khựng phím đầu trên máy yếu.
-                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-md shadow-pink-500/20 transition-[transform,opacity] duration-150 ${hasText ? "scale-100 opacity-100" : "scale-90 opacity-40"}`}
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-md shadow-pink-500/20 transition-[transform,opacity] duration-150 ${hasText ? "pn-send-on scale-100 opacity-100" : "scale-90 opacity-40"}`}
                 >
                   <Send className="h-[18px] w-[18px] -translate-x-px translate-y-px" />
                 </button>

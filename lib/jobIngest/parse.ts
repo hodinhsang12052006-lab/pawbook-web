@@ -66,7 +66,15 @@ const ZIP3: [number, number, string][] = [
   [716, 729, "AR"], [730, 749, "OK"], [750, 799, "TX"], [800, 816, "CO"], [820, 831, "WY"], [832, 838, "ID"], [840, 847, "UT"], [850, 865, "AZ"], [870, 884, "NM"],
   [889, 898, "NV"], [900, 961, "CA"], [967, 968, "HI"], [970, 979, "OR"], [980, 994, "WA"], [995, 999, "AK"],
 ];
-const usStateFromZip = (zip: string) => { const n = Number(zip.slice(0, 3)); return ZIP3.find(([a, b]) => n >= a && n <= b)?.[2] ?? null; };
+/** Bang theo ZIP ghi ngay sau mã / tên bang trong bài ("Waxahachie, TX 75165" · "HILO, HAWAII 96720"). */
+export function zipStateInText(text: string): string | null {
+  for (const m of String(text || "").matchAll(/([A-Za-z]{2,})[ ,]+(\d{5})\b/g)) {
+    const w = m[1];
+    if ((w.length === 2 && US_CODES.has(w.toUpperCase()) && w === w.toUpperCase()) || US_STATE_NAMES[w.toLowerCase()]) return usStateFromZip(m[2]);
+  }
+  return null;
+}
+export const usStateFromZip = (zip: string) => { const n = Number(zip.slice(0, 3)); return ZIP3.find(([a, b]) => n >= a && n <= b)?.[2] ?? null; };
 const auStateFromPostcode = (pc: string) => {
   const n = Number(pc);
   if ((n >= 2600 && n <= 2618) || (n >= 2900 && n <= 2920)) return "ACT";
@@ -162,9 +170,23 @@ export function parseLocation(loc: string): { city: string | null; state: string
 
 /** "Tiệm đông khách ở thành phố Billings, bang Montana" / "Thuộc thành phố Minot" / "city of Tulsa" → tên thành phố. */
 export function cityFromText(text: string): string | null {
-  const m = String(text || "").normalize("NFKC").match(/(?:th[àa]nh ph[ốo]|\btp\.?|city of)\s+([A-Z][\p{L}.'-]+(?:\s[A-Z][\p{L}.'-]+){0,2})/u);
+  let m = String(text || "").normalize("NFKC").match(/(?:th[àa]nh ph[ốo]|\btp\.?|city of)\s+([A-Z][\p{L}.'-]+(?:\s[A-Z][\p{L}.'-]+){0,2})/u);
+  // "HILO, HAWAII 96720" / "Tiệm nail tại Hilo, Hawaii" — thành phố đứng ngay trước tên bang viết đầy đủ
+  if (!m) {
+    const t = String(text || "").normalize("NFKC");
+    for (const name of Object.keys(US_STATE_NAMES).filter((k) => k.length > 4).sort((a, b) => b.length - a.length)) {
+      const re = new RegExp(String.raw`(?:^|[\s–—:•(-])([A-Za-z][A-Za-z.'-]+(?:\s[A-Za-z][A-Za-z.'-]+){0,2}),\s*` + name + String.raw`\b`, "i");
+      const hit = t.match(re);
+      if (!hit) continue;
+      const words = hit[1].split(/\s+/).filter((w) => !/^(t[ạa]i|ở|in|at|bang|state|nails?|salon|ti[ệe]m|vùng|khu)$/i.test(w));
+      // chỉ giữ phần cuối viết hoa chữ đầu / in hoa ("tại Hilo" → "Hilo", "nail & beauty – HILO" → "HILO")
+      const tail: string[] = [];
+      for (let i = words.length - 1; i >= 0 && /^[A-Z]/.test(words[i]); i--) tail.unshift(words[i]);
+      if (tail.length) { m = [hit[0], tail.join(" ")] as unknown as RegExpMatchArray; break; }
+    }
+  }
   if (!m) return null;
-  const c = m[1].replace(/[.,]+$/, "").trim();
+  const c = cleanCity(m[1].replace(/[.,]+$/, "").trim());
   // Không nhận tên bang ("thành phố New York" vẫn là thành phố — nhưng "bang" đứng ngay sau thì cắt)
   return c.length >= 3 && c.length <= 30 ? titleCase(c.replace(/\s+(bang|state)$/i, "")) : null;
 }
@@ -275,7 +297,7 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
   // Tên người đăng tool gửi kèm: "Thuy Cao", "Kaia Vu", cả tên 1 chữ "Noah" (không có chữ nail / spa / salon…)
   const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){0,3}$/u.test(n);
   // Tên kiểu câu nói: "Tiệm Nails Ở Acworth", "Tiệm Mình Ở York", "Tiệm Em Đông Khách", "Chủ Tiệm Nails USA"
-  const sentenceLike = /(\s[ởỞ]\s|^ti[ệe]m\s+(nails?\s+)?[ởỞ]\s|^ti[ệe]m\s+(m[ìi]nh|em|t[ôo]i)\b|^ch[ủu]\s+ti[ệe]m)/i.test(n);
+  const sentenceLike = /(\s[ởỞ]\s|\st[ạa]i\s|h[ỗo] tr[ợo]|^ti[ệe]m\s+(nails?\s+)?[ởỞ]\s|^ti[ệe]m\s+(m[ìi]nh|em|t[ôo]i)\b|^ch[ủu]\s+ti[ệe]m)/i.test(n);
   // Tên kiểu lời khen chứ không phải tên riêng: "Salon Sạch Sẽ", "Tiệm Sang Trọng", "Tiệm Đông Khách"
   const praiseLike = /(s[ạa]ch s[ẽe]|sang tr[ọo]ng|[đd][ôo]ng kh[áa]ch|tr[ẻe] trung|tho[ảa]i m[áa]i|vui v[ẻe]|hi[ềe]n l[àa]nh|uy t[íi]n)/i.test(n);
   if (!n || personLike || sentenceLike || praiseLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";

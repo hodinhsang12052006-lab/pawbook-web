@@ -137,5 +137,13 @@ const ad = "Điều gì khiến khách đăng tin cần thợ renew tại Vietna
 ok("S18", "Quảng cáo dịch vụ đăng tin của web khác → không phải tin tuyển; tin tuyển thật không bị coi là quảng cáo",
   isAdPost(ad) && !parseJobPost(ad).isHiring && !isAdPost(hire1) && !isAdPost(hire2) && !isAdPost(dorado), JSON.stringify([isAdPost(ad), parseJobPost(ad).isHiring, isAdPost(hire1)]));
 
+const hilo1 = "CẦN TUYỂN THỢ NAIL & BEAUTY – HILO, HAWAII 96720\nAcrylic / Bột / Design\nTiệm hỗ trợ khách, lịch hẹn, walk-in & quảng cáo.";
+const hilo2 = "Tiệm nail tại Hilo, Hawaii cần tuyển thợ nail có kinh nghiệm, làm việc nghiêm túc và chuyên nghiệp.";
+const h1 = tidyIngestJob({ source: "ingest", salonName: "Tiệm Hỗ Trợ Khách", city: "", state: "IN", salaryAmount: "", description: hilo1, market: "US" });
+const h2 = tidyIngestJob({ source: "ingest", salonName: "Tiệm Nail Tại Hilo", city: "", state: "HI", salaryAmount: "", description: hilo2, market: "US" });
+ok("S19", "ZIP trong bài thắng bang tool gửi sai (\"HILO, HAWAII 96720\" mà tool ghi IN → HI); thành phố trước tên bang (\"tại Hilo, Hawaii\" → Hilo); tên tiệm kiểu câu (\"Tiệm Hỗ Trợ Khách\", \"Tiệm Nail Tại Hilo\") → \"Tiệm nail Hilo\"",
+  h1.state === "HI" && h1.city === "Hilo" && h1.salonName === "Tiệm nail Hilo" && h2.state === "HI" && h2.city === "Hilo" && h2.salonName === "Tiệm nail Hilo",
+  JSON.stringify([h1.state, h1.city, h1.salonName, h2.state, h2.city, h2.salonName]));
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

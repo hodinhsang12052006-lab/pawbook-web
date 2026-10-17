@@ -22,7 +22,7 @@ export default function Navbar() {
   const { unreadCount, resetUnread } = useUnreadMessages();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800/70 bg-slate-950/70 backdrop-blur-xl after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent">
+    <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Logo & Brand */}
         <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">

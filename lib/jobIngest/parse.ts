@@ -198,6 +198,8 @@ export function findSalary(text: string, market: "US" | "AU" | null): { salaryTy
   const range = t.match(new RegExp(`(${money})\\s*(?:-|–|đến|to)\\s*(${money}|\\d{2,3}(?:[,.]\\d{3})?)\\s*(?:\\/|một|1|mỗi|per)?\\s*(tuần|tuan|week|wk|tháng|thang|month|giờ|gio|hour|hr|ngày|ngay|day)?`, "i"));
   const single = t.match(new RegExp(`(?:lương|luong|bao|guarantee|từ|tu|min|minimum|salary|pay)?\\s*(${money})\\s*\\+?\\s*(?:\\/|một|1|mỗi|per)\\s*(tuần|tuan|week|wk|tháng|thang|month|giờ|gio|hour|hr|ngày|ngay|day)`, "i"));
   const biweekly = t.match(new RegExp(`(${money})\\s*\\+?\\s*(?:\\/|mỗi|per|every)\\s*2\\s*(tuần|tuan|weeks?)`, "i"));
+  // "bao lương 1000 and up 1 tuần" / "income đảm bảo 1,200+ mỗi tuần" — chữ lương đứng trước, đơn vị đứng xa sau số
+  const payWord = t.match(new RegExp(`(?:bao l[ươ]+ng|l[ươ]+ng|income|thu nh[ậa]p)\\s*(?:từ|tu|đảm bảo|dam bao|tối thiểu)?\\s*(${money})\\s*(\\+|and up|up|trở lên|tro len)?[^$\\d]{0,18}?(?:1\\s*|một\\s*|mỗi\\s*|per\\s*)?(tuần|tuan|week|tháng|thang|month)`, "i"));
   const unitVi = (u?: string) => {
     const x = strip(u || "");
     if (/^(tuan|week|wk)/.test(x)) return "tuần";
@@ -215,6 +217,7 @@ export function findSalary(text: string, market: "US" | "AU" | null): { salaryTy
   if (biweekly) { unit = "tuần"; amount = `${fmt(biweekly[1])}/2 tuần`; }
   else if (range && !smallRange) { unit = unitVi(range[3]); amount = `${fmt(range[1])}-${fmt(range[2]).slice(1)}${unit ? `/${unit}` : ""}`; }
   else if (single) { unit = unitVi(single[2]); amount = `${fmt(single[1])}${/\+/.test(single[0]) ? "+" : ""}/${unit}`; }
+  else if (payWord) { unit = unitVi(payWord[3]); amount = `${fmt(payWord[1])}${payWord[2] ? "+" : ""}/${unit}`; }
   const aud = market === "AU";
   const type =
     split && !range && !single ? "% Ăn chia" :
@@ -237,6 +240,8 @@ export function safeToolSalary(toolSalary: string, text: string): string | null 
   if (digits.some((d) => d.length >= 7 || phones.some((ph) => ph.includes(d) && d.length >= 3))) return null;
   if (!digits.every((d) => Number(d) >= 10 && Number(d) <= 20000)) return null;
   if (!/(\$|tu[ầa]n|week|th[áa]ng|month|gi[ờo]|hour|hr|ng[àa]y|day|l[ươu][ơo]?ng|chia|\d\s*\/\s*\d)/i.test(v)) return null;
+  const bare = v.match(/^(?:bao\s*l[ươ]+ng|l[ươ]+ng|income)\s*:?\s*\$?\s*(\d[\d,.]*)\s*(\+)?$/i);
+  if (bare) return `$${Number(bare[1].replace(/[^\d]/g, "")).toLocaleString("en-US")}${bare[2] ? "+" : ""}`;
   return v.slice(0, 40);
 }
 

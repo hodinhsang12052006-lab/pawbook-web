@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { getBadges } from "@/lib/badges";
 import { toE164 } from "@/lib/sms";
 
@@ -111,10 +113,11 @@ export async function GET(req: NextRequest) {
     if (wantBadges && user.role === "ADMIN") {
       const since = new Date(Date.now() - 30 * 86_400_000);
       const [members, availableTechs, jobs30d, posts] = await Promise.all([
-        prisma.user.count({ where: { role: { in: ["TECHNICIAN", "OWNER"] } } }),
-        prisma.technicianProfile.count({ where: { status: { in: ["AVAILABLE", "URGENT"] } } }),
-        prisma.job.count({ where: { createdAt: { gte: since } } }),
-        prisma.post.count(),
+        // KHÔNG đếm tài khoản dữ liệu mẫu (lib/demo) / tài khoản hệ thống đăng hộ tin tổng hợp
+        prisma.user.count({ where: { role: { in: ["TECHNICIAN", "OWNER"] }, AND: [realOnly(), { NOT: { email: { endsWith: "@feed.pawnail.invalid" } } }] } }),
+        prisma.technicianProfile.count({ where: { status: { in: ["AVAILABLE", "URGENT"] }, user: realOnly() } }),
+        prisma.job.count({ where: { createdAt: { gte: since }, owner: realOnly(), ...activeJobWhere() } }),
+        prisma.post.count({ where: { status: "published", author: realOnly() } }),
       ]).catch(() => [0, 0, 0, 0]);
       official = { members, availableTechs, jobs30d, posts };
     }

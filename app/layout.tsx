@@ -80,6 +80,8 @@ export default function RootLayout({
           <span className="aurora aurora-1" />
           <span className="aurora aurora-2" />
           <span className="aurora aurora-3" />
+          <span className="aurora aurora-4" />
+          <span className="glitter" />
           <span className="beam" />
           <span className="grain" />
         </div>

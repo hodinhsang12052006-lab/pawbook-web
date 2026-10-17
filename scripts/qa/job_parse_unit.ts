@@ -103,5 +103,11 @@ ok("S11", "Thành phố \". LARGO\" → \"Largo\", \"SAN FRANCISCO\" → \"San F
 
 ok("S12", "Tên tự tạo \"Tiệm nail . LARGO\" → \"Tiệm nail Largo\"; \"Tiệm nail Kim\" giữ", cleanSalonName("Tiệm nail . LARGO", "Largo", "FL") === "Tiệm nail Largo" && cleanSalonName("Tiệm nail Kim", "Houston", "TX") === "Tiệm nail Kim", [cleanSalonName("Tiệm nail . LARGO", "Largo", "FL"), cleanSalonName("Tiệm nail Kim", "Houston", "TX")].join(" | "));
 
+ok("S13", "\"bao lương 1000 and up 1 tuần\" → \"$1,000+/tuần\"; lương tool \"bao lương 1000\" → \"$1,000\"; \"income đảm bảo 1,200 mỗi tuần\" → \"$1,200/tuần\"",
+  findSalary("Tiệm mình cần thêm 1 thợ làm everything, sẽ bao lương 1000 and up 1 tuần. Gọi 770-555-0136", "US").salaryAmount === "$1,000+/tuần" &&
+  safeToolSalary("bao lương 1000", "bao lương 1000 and up") === "$1,000" &&
+  findSalary("income đảm bảo 1,200 mỗi tuần, tip cao", "US").salaryAmount === "$1,200/tuần",
+  [findSalary("Tiệm mình cần thêm 1 thợ làm everything, sẽ bao lương 1000 and up 1 tuần. Gọi 770-555-0136", "US").salaryAmount, safeToolSalary("bao lương 1000", "x"), findSalary("income đảm bảo 1,200 mỗi tuần, tip cao", "US").salaryAmount].join(" | "));
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

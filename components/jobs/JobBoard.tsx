@@ -275,11 +275,18 @@ function JobCard({
 
       {/* Con số lương — thứ đầu tiên thợ nhìn vào, phải to/đậm/tương phản nhất card. */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1.5 pl-2.5 pr-3 shadow-lg shadow-emerald-500/20">
-          <DollarSign className="h-5 w-5 text-emerald-950" />
-          <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl">{dt(job.salaryAmount)}</span>
-        </span>
-        {job.salaryType !== job.salaryAmount && <span className="text-xs font-semibold text-slate-500">{valueLabel(job.salaryType)}</span>}
+        {/\d/.test(job.salaryAmount || "") ? (
+          <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1.5 pl-2.5 pr-3 shadow-lg shadow-emerald-500/20">
+            <DollarSign className="h-5 w-5 text-emerald-950" />
+            <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl">{dt(job.salaryAmount)}</span>
+          </span>
+        ) : (
+          // Chưa ghi con số → nhãn gọn, không khối xanh to có dấu "$" trống
+          <span className="inline-flex items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-sm font-bold text-emerald-200">
+            {job.salaryType && job.salaryType !== "Thỏa thuận" ? `${valueLabel(job.salaryType)} · ${tr("thỏa thuận", "negotiable")}` : tr("Lương thỏa thuận", "Pay negotiable")}
+          </span>
+        )}
+        {/\d/.test(job.salaryAmount || "") && job.salaryType !== job.salaryAmount && <span className="text-xs font-semibold text-slate-500">{valueLabel(job.salaryType)}</span>}
       </div>
 
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
@@ -308,7 +315,7 @@ function JobCard({
 
       {job.benefits.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {job.benefits.map((benefit) => (
+          {job.benefits.filter((b) => !(b === "Bao lương" && /bao l/i.test(job.salaryType || ""))).map((benefit) => (
             <span key={benefit} className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">
               {benefitIcon(benefit)} {valueLabel(benefit)}
             </span>

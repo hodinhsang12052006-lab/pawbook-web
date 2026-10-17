@@ -56,10 +56,14 @@ export default function JobFeedCard({ job }: { job: JobType }) {
       <Link href={`/jobs/${job.id}`} className="block space-y-2.5 px-4 py-3">
         <h3 className="text-[17px] font-black leading-snug text-white">{dt(job.title)}</h3>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1 pl-2 pr-2.5 shadow-lg shadow-emerald-500/20">
-            <DollarSign className="h-4 w-4 text-emerald-950" />
-            <span className="text-base font-black leading-none text-emerald-950">{dt(job.salaryAmount)}</span>
-          </span>
+          {/\d/.test(job.salaryAmount || "") ? (
+            <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1 pl-2 pr-2.5 shadow-lg shadow-emerald-500/20">
+              <DollarSign className="h-4 w-4 text-emerald-950" />
+              <span className="text-base font-black leading-none text-emerald-950">{dt(job.salaryAmount)}</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-200">{tr("Lương thỏa thuận", "Pay negotiable")}</span>
+          )}
           {job.skills.slice(0, 3).map((s) => (
             <span key={s} className="rounded-lg border border-pink-500/25 bg-pink-500/10 px-2 py-0.5 text-[11px] font-bold text-pink-200">{valueLabel(s)}</span>
           ))}

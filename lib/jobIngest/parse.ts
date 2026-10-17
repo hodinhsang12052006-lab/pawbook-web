@@ -248,7 +248,8 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
   n = n.replace(/^(ti[ệe]m (nail|nails)|nail salon)\s*\(([^)]+)\)$/i, "").trim();
   n = n.replace(/\s*\([^)]*\)\s*$/, "").trim();
   const SALON_WORD = /(nail|spa|salon|beauty|ti[ệe]m|studio|lounge|bar|lash|brow|tips?)/i;
-  const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){1,3}$/u.test(n);
+  // Tên người đăng tool gửi kèm: "Thuy Cao", "Kaia Vu", cả tên 1 chữ "Noah" (không có chữ nail / spa / salon…)
+  const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){0,3}$/u.test(n);
   // Tên kiểu câu nói: "Tiệm Nails Ở Acworth", "Tiệm Mình Ở York", "Tiệm Em Đông Khách", "Chủ Tiệm Nails USA"
   const sentenceLike = /(\s[ởỞ]\s|^ti[ệe]m\s+(nails?\s+)?[ởỞ]\s|^ti[ệe]m\s+(m[ìi]nh|em|t[ôo]i)\b|^ch[ủu]\s+ti[ệe]m)/i.test(n);
   if (!n || personLike || sentenceLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
@@ -256,7 +257,12 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
 }
 
 /** "I Inverness" → "Inverness" (chữ cái thừa đầu tên thành phố do tool cắt dòng). */
-export const cleanCity = (c: string | null | undefined) => String(c || "").replace(/^[A-Za-z]\s+(?=[A-Z][a-z])/, "").trim();
+export const cleanCity = (c: string | null | undefined) => {
+  let v = String(c || "").replace(/^[^\p{L}]+/u, "").replace(/^[A-Za-z]\s+(?=[A-Z][a-z])/, "").replace(/\s+/g, " ").trim();
+  // ". LARGO" / "SAN FRANCISCO" → "Largo" / "San Francisco" (tool hay gửi chữ in hoa toàn bộ)
+  if (v.length > 2 && v === v.toUpperCase() && /\p{L}{3}/u.test(v)) v = v.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
+  return v;
+};
 
 const HIRING = /(c[ầa]n (g[ấa]p )?(th[ợo]|ng[ườu][ờo]i)|tuy[ểe]n (g[ấa]p )?th[ợo]|ki[ếe]m th[ợo]|t[ìi]m th[ợo]|need(ed|ing)? (nail )?tech|hiring|now hiring|looking for (nail )?tech|nail tech wanted|c[ầa]n g[ấa]p)/i;
 // (bài sang / bán tiệm do isSalonSale lo — có ngoại lệ cho bài ghi rõ "cần thợ")

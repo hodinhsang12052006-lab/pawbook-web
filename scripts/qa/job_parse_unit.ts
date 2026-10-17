@@ -96,5 +96,10 @@ ok("S10", "Mã vùng SĐT → bang: 281 TX · 714 CA · 404 GA · 770 GA · 336 
   stateFromUsPhone("+61412555019") === null && stateFromUsPhone("(783) 523-4566") === null && stateFromUsPhone("12345") === null && stateFromUsPhone(null) === null,
   [stateFromUsPhone("+12815550142"), stateFromUsPhone("(783) 523-4566"), stateFromUsPhone("+61412555019")].join(","));
 
+ok("S11", "Thành phố \". LARGO\" → \"Largo\", \"SAN FRANCISCO\" → \"San Francisco\"; tên người 1 chữ \"Noah\" → \"Tiệm nail Portland\"; \"TN Nails\", \"Wynn Nail Spa\" giữ",
+  cleanCity(". LARGO") === "Largo" && cleanCity("SAN FRANCISCO") === "San Francisco" && cleanCity("Fort Worth") === "Fort Worth" && cleanCity("NY") === "NY" &&
+  cleanSalonName("Noah", "Portland", "OR") === "Tiệm nail Portland" && cleanSalonName("TN Nails", "Escondido", "CA") === "TN Nails" && cleanSalonName("Wynn Nail Spa", "Dallas", "TX") === "Wynn Nail Spa",
+  [cleanCity(". LARGO"), cleanCity("SAN FRANCISCO"), cleanSalonName("Noah", "Portland", "OR")].join(" | "));
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

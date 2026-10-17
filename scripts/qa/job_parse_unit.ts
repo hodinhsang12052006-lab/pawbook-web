@@ -101,5 +101,7 @@ ok("S11", "Thành phố \". LARGO\" → \"Largo\", \"SAN FRANCISCO\" → \"San F
   cleanSalonName("Noah", "Portland", "OR") === "Tiệm nail Portland" && cleanSalonName("TN Nails", "Escondido", "CA") === "TN Nails" && cleanSalonName("Wynn Nail Spa", "Dallas", "TX") === "Wynn Nail Spa",
   [cleanCity(". LARGO"), cleanCity("SAN FRANCISCO"), cleanSalonName("Noah", "Portland", "OR")].join(" | "));
 
+ok("S12", "Tên tự tạo \"Tiệm nail . LARGO\" → \"Tiệm nail Largo\"; \"Tiệm nail Kim\" giữ", cleanSalonName("Tiệm nail . LARGO", "Largo", "FL") === "Tiệm nail Largo" && cleanSalonName("Tiệm nail Kim", "Houston", "TX") === "Tiệm nail Kim", [cleanSalonName("Tiệm nail . LARGO", "Largo", "FL"), cleanSalonName("Tiệm nail Kim", "Houston", "TX")].join(" | "));
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

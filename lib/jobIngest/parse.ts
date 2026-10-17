@@ -247,6 +247,8 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
   let n = String(name || "").replace(/\s+/g, " ").trim();
   n = n.replace(/^(ti[ệe]m (nail|nails)|nail salon)\s*\(([^)]+)\)$/i, "").trim();
   n = n.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  // "Tiệm nail . LARGO" (tên tự tạo từ thành phố bẩn) → "Tiệm nail Largo"
+  n = n.replace(/^(ti[ệe]m nails?)\s+(.+)$/iu, (_m, a: string, b: string) => `${a} ${cleanCity(b)}`).trim();
   const SALON_WORD = /(nail|spa|salon|beauty|ti[ệe]m|studio|lounge|bar|lash|brow|tips?)/i;
   // Tên người đăng tool gửi kèm: "Thuy Cao", "Kaia Vu", cả tên 1 chữ "Noah" (không có chữ nail / spa / salon…)
   const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){0,3}$/u.test(n);
@@ -257,12 +259,12 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
 }
 
 /** "I Inverness" → "Inverness" (chữ cái thừa đầu tên thành phố do tool cắt dòng). */
-export const cleanCity = (c: string | null | undefined) => {
+export function cleanCity(c: string | null | undefined): string {
   let v = String(c || "").replace(/^[^\p{L}]+/u, "").replace(/^[A-Za-z]\s+(?=[A-Z][a-z])/, "").replace(/\s+/g, " ").trim();
   // ". LARGO" / "SAN FRANCISCO" → "Largo" / "San Francisco" (tool hay gửi chữ in hoa toàn bộ)
   if (v.length > 2 && v === v.toUpperCase() && /\p{L}{3}/u.test(v)) v = v.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
   return v;
-};
+}
 
 const HIRING = /(c[ầa]n (g[ấa]p )?(th[ợo]|ng[ườu][ờo]i)|tuy[ểe]n (g[ấa]p )?th[ợo]|ki[ếe]m th[ợo]|t[ìi]m th[ợo]|need(ed|ing)? (nail )?tech|hiring|now hiring|looking for (nail )?tech|nail tech wanted|c[ầa]n g[ấa]p)/i;
 // (bài sang / bán tiệm do isSalonSale lo — có ngoại lệ cho bài ghi rõ "cần thợ")

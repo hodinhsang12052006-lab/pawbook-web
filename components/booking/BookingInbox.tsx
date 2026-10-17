@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import FeatureGate from "@/components/common/FeatureGate";
 import { NEXT, TIME_LABEL, dateLabel, reviewSms, smsText, type BookingStatus, type BookingTime } from "@/lib/booking";
 
 // "Lịch hẹn" của thợ / tiệm: yêu cầu khách gửi từ menu (không cần tài khoản). Gọi / nhắn SMS soạn sẵn
@@ -71,7 +72,20 @@ export default function BookingInbox() {
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-pink-400" /></div>;
   if (!user || (user.role !== "TECHNICIAN" && user.role !== "OWNER")) {
-    return <p className="rounded-3xl bg-white/[0.03] p-8 text-center text-sm text-slate-400 ring-1 ring-white/10">{tr("Trang dành cho thợ và chủ tiệm.", "For nail techs and salon owners.")}</p>;
+    return (
+      <FeatureGate
+        icon={CalendarCheck}
+        loggedIn={!!user}
+        path="/bookings"
+        title={tr("Nhận lịch hẹn từ khách", "Take client bookings")}
+        lead={tr("Khách xem menu của bạn rồi đặt lịch ngay trên điện thoại — không cần app, không cần gọi.", "Clients browse your menu and book right from their phone — no app, no calls.")}
+        points={[
+          tr("Link menu + QR riêng để dán ở tiệm, gửi qua tin nhắn, đăng Facebook", "Your own menu link + QR to post in the salon, text or share on Facebook"),
+          tr("Lịch mới báo ngay về máy — xác nhận giờ bằng 1 chạm, nhắn khách bằng SMS soạn sẵn", "Instant alerts for new requests — confirm a time in one tap, text the client with a ready-made SMS"),
+          tr("Làm xong gửi link đánh giá — khách khen thật hiện ngay trên menu của bạn", "Send a review link after the visit — real client praise shows on your menu"),
+        ]}
+      />
+    );
   }
   const techName = user.name || "PawNail";
 

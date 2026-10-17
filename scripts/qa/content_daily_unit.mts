@@ -48,7 +48,7 @@ ok("N1", "Đăng 2 tin ngành (Mỹ + Úc), bỏ tin cũ > 4 ngày", r1.posted.l
 const fakeOnly = [{ ...news[1], link: `https://example.com/b2-${t}`, title: `Salon tariffs hit nail supply costs again ${t}`, publishedAt: new Date(now.getTime() + 5 * 86400e3 - 3600e3).toISOString() }];
 const rf = await publishNewsPosts(new Date(now.getTime() + 5 * 86400e3), { news: fakeOnly, max: 2 });
 const all = await prisma.post.findMany({ where: { authorId: admin.id }, select: { content: true } });
-ok("N2", "Tin AI chèn số liệu KHÔNG có trong nguồn ('37%') → bị chặn, không đăng", rf.posted.length === 0 && rf.skipped.some((x) => x.includes("số liệu")) && !all.some((p) => p.content.includes("37%")), JSON.stringify(rf));
+ok("N2", "Tin AI chèn số liệu KHÔNG có trong nguồn ('37%') → bị chặn (bởi lọc số liệu hoặc lọc bài yếu), không đăng", rf.posted.length === 0 && rf.skipped.some((x) => x.includes("số liệu") || x.includes("bài viết yếu")) && !all.some((p) => p.content.includes("37%")), JSON.stringify(rf));
 const p0 = posts[0]?.content || "";
 ok("N3", "Bài có 📰 + ý chính + 'ý nghĩa với thợ/chủ tiệm' + Nguồn & link bài gốc + hashtag", p0.startsWith("📰") && p0.includes("• ") && p0.includes("👉") && p0.includes(`Nguồn: KHOU — https://example.com/a-${t}`) && p0.includes("#TinNganhNail"), p0);
 ok("N4", "Gắn đúng thị trường (tin Úc → AU)", posts.some((p) => p.market === "AU") && posts.some((p) => p.market === "US"));

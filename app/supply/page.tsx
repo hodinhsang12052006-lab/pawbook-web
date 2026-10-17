@@ -269,9 +269,9 @@ export default function SupplyPage() {
           </div>
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-            <Package className="h-10 w-10 text-slate-700" />
-            <p className="text-base font-bold text-slate-300">{tr("Chưa có sản phẩm nào trong kho hàng", "No products listed yet")}</p>
-            <p className="text-sm text-slate-500">{tr("Chủ tiệm hãy là người đầu tiên đăng bán sỉ vật tư.", "Salon owners — be the first to list wholesale supplies.")}</p>
+            <Package className="h-10 w-10 text-amber-300/70" />
+            <p className="text-base font-bold text-slate-200">{tr("Tiệm dư vật tư? Bán lại cho tiệm khác", "Got extra supplies? Sell them to other salons")}</p>
+            <p className="max-w-sm text-sm text-slate-400">{tr("Bột, gel, ghế pedi, máy hơ… đăng miễn phí — tiệm cần mua nhắn thẳng cho bạn, không qua trung gian, không phí.", "Powder, gel, pedi chairs, lamps… list for free — buyers message you directly, no middleman, no fees.")}</p>
           </div>
         ) : (
           <>

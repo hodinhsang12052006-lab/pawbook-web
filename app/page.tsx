@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import HeroPulse from "@/components/home/HeroPulse";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import JobBoard from "@/components/jobs/JobBoard";
@@ -185,16 +186,18 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-br from-pink-600/20 via-fuchsia-600/10 to-slate-950" />
           <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-pink-500/20 blur-3xl" />
           <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
+          <div aria-hidden className="hero-spot pointer-events-none absolute inset-0" />
+          <div aria-hidden className="hero-grid pointer-events-none absolute inset-0" />
 
           <div className="relative mx-auto max-w-4xl px-4 py-10 sm:py-14 text-center space-y-6">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 px-3 py-1 text-xs font-bold text-pink-300 uppercase tracking-wider">
               <Sparkles className="h-3.5 w-3.5" />{tr(" 100% miễn phí kết nối", " 100% free to connect")}
             </span>
 
-            <h1 className="text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight">
-              {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE NAIL INDUSTRY MARKETPLACE ")}<br className="hidden sm:block" />
+            <h1 className="hero-title-glow text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight [text-wrap:balance]">
+              {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE #1 NAIL JOBS MARKETPLACE ")}<br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
-                {tr("HẢI NGOẠI #1", "#1 OVERSEAS")}
+                {tr("HẢI NGOẠI #1", "FOR VIETNAMESE PROS")}
               </span>{tr(" TẠI MỸ & ÚC", " IN THE US & AUSTRALIA")}
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto">
@@ -215,6 +218,7 @@ export default function HomePage() {
                 <Store className="h-5 w-5" />{tr(" ĐĂNG TIN TUYỂN THỢ GẤP", " POST AN URGENT JOB")}
               </button>
             </div>
+            <HeroPulse />
           </div>
         </section>
       )}

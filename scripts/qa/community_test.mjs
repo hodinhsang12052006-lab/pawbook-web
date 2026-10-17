@@ -83,7 +83,7 @@ try {
   await poll.getByRole("button", { name: /Khách chọn/ }).click();
   await p.waitForTimeout(1200);
   const ptxt = await poll.innerText();
-  R.check("U1", "Bảng tin: thăm dò hiện, bấm 1 chạm → hiện % và tổng phiếu", /%/.test(ptxt) && /người đã bình chọn/.test(ptxt), ptxt.slice(0, 160));
+  R.check("U1", "Bảng tin: thăm dò hiện, bấm 1 chạm → hiện % (tổng phiếu chỉ hiện khi ≥ 5, không lộ \"0 phiếu\")", /%/.test(ptxt) && /người đã bình chọn|Cảm ơn bạn đã bình chọn/.test(ptxt), ptxt.slice(0, 160));
   await p.screenshot({ path: `${process.env.TEMP || "."}/community_poll.png` }).catch(() => {});
   const anonCard = p.locator("article", { hasText: sec }).first();
   await anonCard.scrollIntoViewIfNeeded().catch(() => {});

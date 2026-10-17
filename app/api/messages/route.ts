@@ -8,6 +8,7 @@ import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
 import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
 import { sendPush } from "@/lib/push";
+import { coldDmBlocked } from "@/lib/abuseGuard";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -370,6 +371,12 @@ export async function POST(req: Request) {
       if (existing) {
         activeConversationId = existing.id;
       } else {
+        // Chống spam: mở cuộc trò chuyện MỚI với người lạ có giới hạn / ngày (lib/abuseGuard).
+        if (typeof receiverId !== "string" || receiverId === userId) {
+          return NextResponse.json({ error: "Người nhận không hợp lệ." }, { status: 400 });
+        }
+        const capped = await coldDmBlocked(userId);
+        if (capped) return NextResponse.json({ error: capped, code: "COLD_DM_LIMIT" }, { status: 429 });
         // Create new conversation
         const createdConv = await prisma.conversation.create({
           data: {
@@ -435,6 +442,16 @@ export async function POST(req: Request) {
             { status: 403 }
           );
         }
+      }
+    }
+
+    // Chống spam: tin ĐẦU TIÊN trong cuộc trò chuyện 1-1 vừa mở (qua /api/conversations) cũng tính là
+    // "nhắn người lạ" — chỉ kiểm tra với cuộc trò chuyện mới (< 24h) để chat thường không tốn thêm truy vấn.
+    if (!conversation.isGroup && conversationId && Date.now() - new Date(conversation.createdAt).getTime() < 86_400_000) {
+      const hasAny = await prisma.message.findFirst({ where: { conversationId: activeConversationId }, select: { id: true } });
+      if (!hasAny) {
+        const capped = await coldDmBlocked(userId);
+        if (capped) return NextResponse.json({ error: capped, code: "COLD_DM_LIMIT" }, { status: 429 });
       }
     }
 

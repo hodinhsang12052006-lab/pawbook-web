@@ -1,7 +1,9 @@
 // Kiểm thử bộ tách tin tuyển thợ (lib/jobIngest/parse.ts) bằng các kiểu bài hay gặp trong nhóm.
 // Bài & số điện thoại dưới đây là HƯ CẤU (đầu số 555-01xx dành cho ví dụ).   npx tsx scripts/qa/job_parse_unit.ts
 import { stateFromUsPhone } from "../../lib/jobIngest/areaCodes";
-import { parseJobPost, findPhone, parseLocation, isSalonSale, safeToolSalary, cleanSalonName, cleanCity, findSalary } from "../../lib/jobIngest/parse";
+import { parseJobPost, findPhone, parseLocation, isSalonSale, safeToolSalary, cleanSalonName, cleanCity, findSalary, isJobSeeking, isAdPost, findSalonName, cityFromText } from "../../lib/jobIngest/parse";
+import { tidyIngestJob } from "../../lib/jobIngest/display";
+import { placeLabel } from "../../lib/stateNames";
 
 let pass = 0, fail = 0;
 const ok = (id: string, desc: string, cond: boolean, detail = "") => {
@@ -70,8 +72,8 @@ const both = "Cần thợ bột gấp, tiệm khu Houston TX. Bao lương $1,000
 ok("S4", "Bài tuyển thợ có nhắc chuyện sang tiệm vẫn là bài tuyển", !isSalonSale(both) && parseJobPost(both).isHiring && parseJobPost(both).salaryAmount === "$1,000/tuần", JSON.stringify([isSalonSale(both), parseJobPost(both).isHiring, parseJobPost(both).salaryAmount]));
 ok("S5", "Tên tiệm gọn: bỏ \"(tên người đăng)\", tên kiểu câu tuyển → \"Tiệm nail <thành phố>\"; tên thật giữ nguyên",
   cleanSalonName("Tiệm Nail (Annie Linhh Nguyen)", "San Francisco", "CA") === "Tiệm nail San Francisco" &&
-  cleanSalonName("Tiem Ở Alabama Cần Gấp 1 Thợ Nữ Trẻ", "", "AL") === "Tiệm nail AL" &&
-  cleanSalonName("Tiệm Khách Đông (Jimmy Le)", null, "MD") === "Tiệm nail MD" &&
+  cleanSalonName("Tiem Ở Alabama Cần Gấp 1 Thợ Nữ Trẻ", "", "AL") === "Tiệm nail ở Alabama" &&
+  cleanSalonName("Tiệm Khách Đông (Jimmy Le)", null, "MD") === "Tiệm nail ở Maryland" &&
   cleanSalonName("Lucky Nails & Spa", "Houston", "TX") === "Lucky Nails & Spa" &&
   cleanSalonName("Viet Nails", "Inverness", "FL") === "Viet Nails",
   [cleanSalonName("Tiệm Nail (Annie Linhh Nguyen)", "San Francisco", "CA"), cleanSalonName("Tiem Ở Alabama Cần Gấp 1 Thợ Nữ Trẻ", "", "AL"), cleanSalonName("Tiệm Khách Đông (Jimmy Le)", null, "MD")].join(" | "));
@@ -80,13 +82,13 @@ ok("S6", "Thành phố \"I Inverness\" → \"Inverness\"; tên bình thường g
 const nd = "TUYỂN THỢ NAIL – BAO LƯƠNG ĐẾN $4,000 / 2 TUẦN NORTH DAKOTA. Bao lương: $4,000 / 2 tuần – Thợ làm đủ thứ. $3,500 / 2 tuần – Thợ chân tay nước. Pedicure: $43 – $135. Acrylic & Special Shape: $55. Gọi 701-555-0110";
 ok("S7", "Lương 2 tuần/lần \"$4,000 / 2 tuần\" được nhận; giá dịch vụ \"Pedicure: $43 – $135\" không bị hiểu là lương", findSalary(nd, "US").salaryAmount === "$4,000/2 tuần" && findSalary("Pedicure: $43 – $135, tip cao", "US").salaryAmount === "Thỏa thuận", findSalary(nd, "US").salaryAmount);
 ok("S8", "Tên NGƯỜI ĐĂNG tool gửi kèm (\"Thuy Cao\", \"Kaia Vu\", \"Huynh Tien Tien\") → \"Tiệm nail <thành phố>\"; tên tiệm thật giữ",
-  cleanSalonName("Thuy Cao", "", "NC") === "Tiệm nail NC" && cleanSalonName("Kaia Vu", "Houston", "TX") === "Tiệm nail Houston" && cleanSalonName("Huynh Tien Tien", "", "ND") === "Tiệm nail ND" &&
+  cleanSalonName("Thuy Cao", "", "NC") === "Tiệm nail ở North Carolina" && cleanSalonName("Kaia Vu", "Houston", "TX") === "Tiệm nail Houston" && cleanSalonName("Huynh Tien Tien", "", "ND") === "Tiệm nail ở North Dakota" &&
   cleanSalonName("Glam Nails", "", "TX") === "Glam Nails" && cleanSalonName("Blossom Nail Lounge", "Plano", "TX") === "Blossom Nail Lounge" && cleanSalonName("GA Towne Lake Nails", "", "GA") === "GA Towne Lake Nails",
   [cleanSalonName("Thuy Cao", "", "NC"), cleanSalonName("Kaia Vu", "Houston", "TX"), cleanSalonName("Glam Nails", "", "TX")].join(" | "));
 
 ok("S9", "Tên kiểu câu nói (\"Tiệm Nails Ở Acworth\", \"Tiệm Mình Ở York\", \"Tiệm Em Đông Khách\", \"Chủ Tiệm Nails USA\") → \"Tiệm nail <thành phố>\"",
   cleanSalonName("Tiệm Nails Ở Acworth", "Acworth", "GA") === "Tiệm nail Acworth" && cleanSalonName("Tiệm Mình Ở York", "York", "PA") === "Tiệm nail York" &&
-  cleanSalonName("Tiệm Ở South Carolina", "", "SC") === "Tiệm nail SC" && cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL") === "Tiệm nail Tampa" &&
+  cleanSalonName("Tiệm Ở South Carolina", "", "SC") === "Tiệm nail ở South Carolina" && cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL") === "Tiệm nail Tampa" &&
   cleanSalonName("Chủ Tiệm Nails USA", "Moncks Corner", "SC") === "Tiệm nail Moncks Corner" && cleanSalonName("Lucky Nails & Spa", "Houston", "TX") === "Lucky Nails & Spa",
   [cleanSalonName("Tiệm Nails Ở Acworth", "Acworth", "GA"), cleanSalonName("Tiệm Em Đông Khách", "Tampa", "FL"), cleanSalonName("Chủ Tiệm Nails USA", "Moncks Corner", "SC")].join(" | "));
 
@@ -97,7 +99,7 @@ ok("S10", "Mã vùng SĐT → bang: 281 TX · 714 CA · 404 GA · 770 GA · 336 
   [stateFromUsPhone("+12815550142"), stateFromUsPhone("(783) 523-4566"), stateFromUsPhone("+61412555019")].join(","));
 
 ok("S11", "Thành phố \". LARGO\" → \"Largo\", \"SAN FRANCISCO\" → \"San Francisco\"; tên người 1 chữ \"Noah\" → \"Tiệm nail Portland\"; \"TN Nails\", \"Wynn Nail Spa\" giữ",
-  cleanCity(". LARGO") === "Largo" && cleanCity("SAN FRANCISCO") === "San Francisco" && cleanCity("Fort Worth") === "Fort Worth" && cleanCity("NY") === "NY" &&
+  cleanCity(". LARGO") === "Largo" && cleanCity("SAN FRANCISCO") === "San Francisco" && cleanCity("Fort Worth") === "Fort Worth" && cleanCity("NY") === "" &&
   cleanSalonName("Noah", "Portland", "OR") === "Tiệm nail Portland" && cleanSalonName("TN Nails", "Escondido", "CA") === "TN Nails" && cleanSalonName("Wynn Nail Spa", "Dallas", "TX") === "Wynn Nail Spa",
   [cleanCity(". LARGO"), cleanCity("SAN FRANCISCO"), cleanSalonName("Noah", "Portland", "OR")].join(" | "));
 
@@ -108,6 +110,32 @@ ok("S13", "\"bao lương 1000 and up 1 tuần\" → \"$1,000+/tuần\"; lương 
   safeToolSalary("bao lương 1000", "bao lương 1000 and up") === "$1,000" &&
   findSalary("income đảm bảo 1,200 mỗi tuần, tip cao", "US").salaryAmount === "$1,200/tuần",
   [findSalary("Tiệm mình cần thêm 1 thợ làm everything, sẽ bao lương 1000 and up 1 tuần. Gọi 770-555-0136", "US").salaryAmount, safeToolSalary("bao lương 1000", "x"), findSalary("income đảm bảo 1,200 mỗi tuần, tip cao", "US").salaryAmount].join(" | "));
+
+// ---- 17/10/2026: soi dữ liệu thật trên web ----
+const seeker = "Góc tìm việc\nEm nam phụ cứng ( thợ non ) hoà đồng , hiền lành , chịu khó ,Tìm nơi để nâng cao tay nghề . Hiện anh chị chủ shop nào cần thợ để lại sdt em liên lạc hoặc gọi sdt của e 07922694360\nEm cảm ơn mn đã đọc bài ạ";
+const seeker2 = "Em nữ 28 tuổi, làm bột + chân tay nước 5 năm, đang cần tìm chỗ làm ở Houston. Tiệm nào cần thợ ib em nha";
+const hire1 = "CẦN THỢ GẤP!!!\nTiệm đông khách ở thành phố Billings, bang Montana. Income cao. Tip hậu.\nBao lương $2000 -$2500/tuần tùy theo tay nghề.\nQuý anh chị có nhu cầu tìm việc, muốn thay đổi môi trường làm việc hoặc đang tìm 1 nơi làm việc ổn định lâu dài, xin gọi hoặc text: Thảo 657-555-0194";
+const hire2 = "Tiệm em ở Atlanta đông khách, thợ nào cần việc gọi em 770-555-0136. Cần thợ bột gấp";
+const hire3 = "Tiệm mình cần tìm thợ chân tay nước, anh chị nào đang tìm nơi làm việc lâu dài thì gọi 404-555-0177";
+ok("S14", "Bài THỢ TÌM VIỆC (\"Góc tìm việc… chủ shop nào cần thợ để lại sđt\", \"em… cần tìm chỗ làm\") → không phải tin tuyển",
+  isJobSeeking(seeker) && !parseJobPost(seeker).isHiring && isJobSeeking(seeker2) && !parseJobPost(seeker2).isHiring, JSON.stringify([isJobSeeking(seeker), isJobSeeking(seeker2)]));
+ok("S15", "Tin tuyển THẬT có câu \"thợ nào cần việc gọi em\" / \"anh chị đang tìm nơi làm việc\" / \"có nhu cầu tìm việc\" → vẫn là tin tuyển (không lọc nhầm)",
+  !isJobSeeking(hire1) && parseJobPost(hire1).isHiring && !isJobSeeking(hire2) && parseJobPost(hire2).isHiring && !isJobSeeking(hire3) && parseJobPost(hire3).isHiring,
+  JSON.stringify([isJobSeeking(hire1), isJobSeeking(hire2), isJobSeeking(hire3), parseJobPost(hire1).isHiring, parseJobPost(hire2).isHiring, parseJobPost(hire3).isHiring]));
+const dorado = "DORADO NAIL BAR WAXAHACHIE\nĐANG TÌM THÊM NHIỀU ĐỒNG ĐỘI\n TUYỂN THỢ NAIL\n MÔI TRƯỜNG LÀM VIỆC SANG TRỌNG, SẠCH SẼ\n LIÊN HỆ ANGELA\n(469) 555-0142\n---\n 𝗗𝗼𝗿𝗮𝗱𝗼 𝗡𝗮𝗶𝗹 𝗕𝗮𝗿 - 1980 US-77 Suite 120, Waxahachie, TX 75165 Ẩn bớt";
+const tidy = tidyIngestJob({ source: "ingest", salonName: "Salon Sạch Sẽ", city: "Waxahachie", state: "TX", salaryAmount: "Thỏa thuận", description: dorado, market: "US" });
+ok("S16", "Tên tiệm kiểu lời khen (\"Salon Sạch Sẽ\") → lấy tên thật trong bài (\"Dorado Nail Bar\", cả chữ in đậm Facebook); bỏ \"Ẩn bớt\" cuối bài",
+  cleanSalonName("Salon Sạch Sẽ", "Waxahachie", "TX") === "Tiệm nail Waxahachie" && tidy.salonName === "Dorado Nail Bar" && !/Ẩn bớt\s*$/.test(tidy.description || "") && findSalonName("𝗗𝗼𝗿𝗮𝗱𝗼 𝗡𝗮𝗶𝗹 𝗕𝗮𝗿 - Waxahachie") === "Dorado Nail Bar",
+  JSON.stringify([cleanSalonName("Salon Sạch Sẽ", "Waxahachie", "TX"), tidy.salonName, findSalonName("𝗗𝗼𝗿𝗮𝗱𝗼 𝗡𝗮𝗶𝗹 𝗕𝗮𝗿 - Waxahachie"), (tidy.description || "").slice(-20)]));
+const mt = tidyIngestJob({ source: "ingest", salonName: "Tiệm nail MT", city: "", state: "MT", salaryAmount: "", description: hire1, market: "US" });
+const mn = tidyIngestJob({ source: "ingest", salonName: "Tiệm nail MN", city: "MN", state: "MN", salaryAmount: "", description: "Cần thợ nail gấp, gọi 612-555-0101", market: "US" });
+ok("S17", "Thiếu thành phố → lấy từ \"thành phố Billings, bang Montana\"; thành phố = mã bang (\"MN\") → \"Tiệm nail ở Minnesota\", nơi chốn không ra \"MN, Minnesota\"",
+  cityFromText(hire1) === "Billings" && mt.city === "Billings" && mt.salonName === "Tiệm nail Billings" && mn.city === "" && mn.salonName === "Tiệm nail ở Minnesota" && placeLabel("MN", "US", "MN") === "Minnesota" && placeLabel("Houston", "US", "TX") === "Houston, Texas",
+  JSON.stringify([cityFromText(hire1), mt.city, mt.salonName, mn.city, mn.salonName, placeLabel("MN", "US", "MN")]));
+
+const ad = "Điều gì khiến khách đăng tin cần thợ renew tại Vietnailshelper đến 3 lần?\nChỉ có thể nói là chất lượng và uy tín. Tin được take care tận tình, có thể thay đổi nội dung khi cần, khóa tin khi đã đủ thợ.\nMuốn trải nghiệm dịch vụ, Call/Text Annie: 714-555-0148";
+ok("S18", "Quảng cáo dịch vụ đăng tin của web khác → không phải tin tuyển; tin tuyển thật không bị coi là quảng cáo",
+  isAdPost(ad) && !parseJobPost(ad).isHiring && !isAdPost(hire1) && !isAdPost(hire2) && !isAdPost(dorado), JSON.stringify([isAdPost(ad), parseJobPost(ad).isHiring, isAdPost(hire1)]));
 
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

@@ -26,6 +26,9 @@ export CF_ACCOUNT_ID=test-acc CF_AI_TOKEN=test-cf-token CF_AI_ALLOW_TEST=1 CF_AI
 # Các bộ test dùng tài khoản MẪU (…@pawnailjobs.demo) → cho hiện dữ liệu mẫu; demo_hidden_test chạy server
 # thứ 2 KHÔNG có cờ này để kiểm tra web thật ẩn dữ liệu mẫu.
 export SHOW_DEMO_DATA="${SHOW_DEMO_DATA-1}"
+# Chống spam (lib/abuseGuard): tài khoản mẫu cũ được nới để cả bộ test chạy trong 1 ngày không chạm trần;
+# trần cho tài khoản MỚI giữ như thật (20 người lạ / ngày) để security_round4 kiểm tra.
+export JOBS_PER_DAY="${JOBS_PER_DAY:-60}" COLD_DM_DAILY="${COLD_DM_DAILY:-200}"
 export SESSION_RECHECK_MS=0 SMS_LIVE=1 INGEST_KEY=test-ingest-key-0123456789abcdef
 export RESEND_API_KEY=test-resend EMAIL_FROM="PawNail Jobs <no-reply@bitpawos.com>" RESEND_ALLOW_TEST=1 RESEND_TEST_BASE=http://127.0.0.1:4991
 exec npx next start -p "${QA_PORT:-3000}"

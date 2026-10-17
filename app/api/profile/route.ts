@@ -206,6 +206,19 @@ export async function PUT(req: Request) {
       }
     }
 
+    // Trạng thái thợ chỉ có 3 giá trị — chuỗi lạ làm thợ "biến mất" khỏi bộ lọc Thợ rảnh / hiện nhãn rác.
+    if (technician?.status !== undefined && technician.status !== null && !["AVAILABLE", "URGENT", "BETTER"].includes(technician.status)) {
+      return NextResponse.json({ error: "Trạng thái không hợp lệ." }, { status: 400 });
+    }
+    // Ảnh đại diện / ảnh tác phẩm: chỉ ảnh thật (https hoặc ảnh nhúng data:image) — chặn scheme lạ.
+    const imgOk = (u: unknown) => typeof u === "string" && (u === "" || /^(https:\/\/|\/(?!\/))[^\s"'<>]+$/i.test(u) || /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(u));
+    if (avatarUrl !== undefined && avatarUrl !== null && !imgOk(avatarUrl)) {
+      return NextResponse.json({ error: "Ảnh đại diện không hợp lệ." }, { status: 400 });
+    }
+    if (Array.isArray(portfolio) && portfolio.some((u: unknown) => !imgOk(u) || u === "")) {
+      return NextResponse.json({ error: "Ảnh tác phẩm không hợp lệ." }, { status: 400 });
+    }
+
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;

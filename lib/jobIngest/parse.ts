@@ -2,6 +2,8 @@
 // SĐT (Mỹ/Úc), tên tiệm, địa chỉ + ZIP/postcode → bang/thành phố, lương, kỹ năng, quyền lợi, tin gấp.
 // Thuần hàm (không đụng DB) → dễ kiểm thử: scripts/qa/job_parse_unit.ts
 
+import { anyStateName } from "@/lib/stateNames";
+
 export interface ParsedJob {
   isHiring: boolean;
   market: "US" | "AU" | null;
@@ -109,7 +111,10 @@ export function findPhone(text: string): { e164: string; display: string; market
 const SALON_WORD = /\b(nails?|spa|salon|beauty|lounge|bar|studio)\b/i;
 /** Tên tiệm: "Tiệm Lucky Nails", "Happy Nails & Spa", "LV Nail Lounge"… */
 export function findSalonName(text: string): string | null {
-  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  // Chữ in đậm kiểu Facebook ("𝗗𝗼𝗿𝗮𝗱𝗼 𝗡𝗮𝗶𝗹 𝗕𝗮𝗿") → chữ thường (NFKC); dòng VIẾT HOA HẾT ("DORADO NAIL BAR
+  // WAXAHACHIE") thêm 1 bản Viết Hoa Chữ Đầu để mẫu tên tiệm (phân biệt hoa/thường) bắt được.
+  const raw = String(text || "").normalize("NFKC").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const lines = raw.flatMap((l) => (l.length > 3 && l === l.toUpperCase() && /\p{L}{3}/u.test(l) ? [l, l.toLowerCase().replace(/(^|[\s'&-])\p{L}/gu, (m) => m.toUpperCase())] : [l]));
   const pats = [
     /(?:ti[ệe]m|salon|nail salon|t[ạa]i)\s*[:\-–]?\s*([A-Z0-9][\w'’&.\- ]{1,40}?\s(?:Nail\s+(?:Spa|Salon|Lounge|Bar|Studio)|Nails?(?:\s*(?:&|and)\s*Spa)?|Spa|Salon|Beauty(?:\s+Bar)?|Lounge))\b/,
     /\b([A-Z0-9][\w'’&.\-]*(?:\s+[A-Z0-9&][\w'’&.\-]*){0,4}\s(?:Nail\s+(?:Spa|Salon|Lounge|Bar|Studio)|Nails?(?:\s*(?:&|and)\s*Spa)?|Beauty\s+Bar))\b/,
@@ -153,6 +158,15 @@ export function parseLocation(loc: string): { city: string | null; state: string
   if (zip) { const st = usStateFromZip(zip[1]); if (st) return { city: null, state: st, zip: zip[1], market: "US" }; }
   const p = findPlace(t);
   return { city: p.city, state: p.state, zip: null, market: p.market };
+}
+
+/** "Tiệm đông khách ở thành phố Billings, bang Montana" / "Thuộc thành phố Minot" / "city of Tulsa" → tên thành phố. */
+export function cityFromText(text: string): string | null {
+  const m = String(text || "").normalize("NFKC").match(/(?:th[àa]nh ph[ốo]|\btp\.?|city of)\s+([A-Z][\p{L}.'-]+(?:\s[A-Z][\p{L}.'-]+){0,2})/u);
+  if (!m) return null;
+  const c = m[1].replace(/[.,]+$/, "").trim();
+  // Không nhận tên bang ("thành phố New York" vẫn là thành phố — nhưng "bang" đứng ngay sau thì cắt)
+  return c.length >= 3 && c.length <= 30 ? titleCase(c.replace(/\s+(bang|state)$/i, "")) : null;
 }
 
 /** Bang + thành phố khi không có địa chỉ đầy đủ. */
@@ -248,7 +262,10 @@ export function safeToolSalary(toolSalary: string, text: string): string | null 
 /** Tên tiệm hiển thị gọn: bỏ "(tên người đăng)", tên kiểu câu tuyển dụng ("Tiem Ở Alabama Cần Gấp 1 Thợ…")
  *  → "Tiệm nail <thành phố>". */
 export function cleanSalonName(name: string | null | undefined, city?: string | null, state?: string | null): string {
-  const fallback = `Tiệm nail ${(city || state || "").trim()}`.trim();
+  // Không có tên tiệm → "Tiệm nail Largo" / "Tiệm nail ở Minnesota" (không ra "Tiệm nail MN").
+  const realCity = cleanCity(city);
+  const stateFull = state ? (anyStateName(state) || state.trim()) : "";
+  const fallback = realCity ? `Tiệm nail ${realCity}` : stateFull ? `Tiệm nail ở ${stateFull}` : "Tiệm nail";
   let n = String(name || "").replace(/\s+/g, " ").trim();
   n = n.replace(/^(ti[ệe]m (nail|nails)|nail salon)\s*\(([^)]+)\)$/i, "").trim();
   n = n.replace(/\s*\([^)]*\)\s*$/, "").trim();
@@ -259,12 +276,15 @@ export function cleanSalonName(name: string | null | undefined, city?: string | 
   const personLike = !SALON_WORD.test(n) && /^(\p{Lu}[\p{Ll}\p{Lu}]*)(\s\p{Lu}[\p{Ll}\p{Lu}]*){0,3}$/u.test(n);
   // Tên kiểu câu nói: "Tiệm Nails Ở Acworth", "Tiệm Mình Ở York", "Tiệm Em Đông Khách", "Chủ Tiệm Nails USA"
   const sentenceLike = /(\s[ởỞ]\s|^ti[ệe]m\s+(nails?\s+)?[ởỞ]\s|^ti[ệe]m\s+(m[ìi]nh|em|t[ôo]i)\b|^ch[ủu]\s+ti[ệe]m)/i.test(n);
-  if (!n || personLike || sentenceLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
+  // Tên kiểu lời khen chứ không phải tên riêng: "Salon Sạch Sẽ", "Tiệm Sang Trọng", "Tiệm Đông Khách"
+  const praiseLike = /(s[ạa]ch s[ẽe]|sang tr[ọo]ng|[đd][ôo]ng kh[áa]ch|tr[ẻe] trung|tho[ảa]i m[áa]i|vui v[ẻe]|hi[ềe]n l[àa]nh|uy t[íi]n)/i.test(n);
+  if (!n || personLike || sentenceLike || praiseLike || n.split(" ").length > 6 || /(c[ầa]n|tuy[ểe]n|g[ấa]p|th[ợo]|hiring|kh[áa]ch [đd][ôo]ng|c[áa]ch nh[àa]|ở v[ùu]ng)/i.test(n) || /^ti[ệe]m (nail|nails)?$/i.test(n)) return fallback || "Tiệm nail";
   return n.slice(0, 60);
 }
 
 /** "I Inverness" → "Inverness" (chữ cái thừa đầu tên thành phố do tool cắt dòng). */
 export function cleanCity(c: string | null | undefined): string {
+  if (/^\s*[A-Za-z]{2,3}\s*$/.test(String(c || "")) && anyStateName(String(c))) return ""; // "MN" là mã bang, không phải thành phố
   let v = String(c || "").replace(/^[^\p{L}]+/u, "").replace(/^[A-Za-z]\s+(?=[A-Z][a-z])/, "").replace(/\s+/g, " ").trim();
   // ". LARGO" / "SAN FRANCISCO" → "Largo" / "San Francisco" (tool hay gửi chữ in hoa toàn bộ)
   if (v.length > 2 && v === v.toUpperCase() && /\p{L}{3}/u.test(v)) v = v.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
@@ -273,7 +293,16 @@ export function cleanCity(c: string | null | undefined): string {
 
 const HIRING = /(c[ầa]n (g[ấa]p )?(th[ợo]|ng[ườu][ờo]i)|tuy[ểe]n (g[ấa]p )?th[ợo]|ki[ếe]m th[ợo]|t[ìi]m th[ợo]|need(ed|ing)? (nail )?tech|hiring|now hiring|looking for (nail )?tech|nail tech wanted|c[ầa]n g[ấa]p)/i;
 // (bài sang / bán tiệm do isSalonSale lo — có ngoại lệ cho bài ghi rõ "cần thợ")
-const SEEKING = /(t[ìi]m vi[ệe]c|c[ầa]n vi[ệe]c|ki[ếe]m vi[ệe]c|xin vi[ệe]c|looking for (a )?job|need (a )?job)/i;
+const SEEKING = /(?<!(?:ai|n[àa]o|th[ợo]|b[ạa]n|c[ầa]u|ch[ịi]|anh)\s)(t[ìi]m vi[ệe]c|c[ầa]n vi[ệe]c|ki[ếe]m vi[ệe]c|xin vi[ệe]c|looking for (a )?job|need (a )?job)/i;
+// Bài THỢ TÌM VIỆC (không phải tiệm tuyển) — tool hay gửi kèm vì có chữ "cần thợ" ("chủ shop nào cần thợ để lại sđt"):
+// "Góc tìm việc · Em nam phụ cứng… tìm nơi để nâng cao tay nghề" từng hiện thành tin "Cần thợ Nail" (17/10/2026).
+const SEEKING_STRONG = /(g[óo]c t[ìi]m vi[ệe]c|(?:^|[\s,.(])(em|m[ìi]nh|t[ôo]i)\s(?:(?:(?!anh ch|ch[ịi] n|n[àa]o |\bai |b[ạa]n n)[^.\n]){0,60}\s)?(?<!(?:ai|n[àa]o|th[ợo]|ti[ệe]m|c[ầa]u)\s)(t[ìi]m|c[ầa]n|ki[ếe]m)\s+(n[ơo]i|ch[ỗo] l[àa]m|vi[ệe]c)(?![\p{L}])|(ch[ủu] (shop|ti[ệe]m)|ti[ệe]m|anh ch[ịi]|c[ôo] ch[úu]) n[àa]o c[ầa]n th[ợo][^.\n]{0,60}(đ[ểe] l[ạa]i|li[êe]n l[ạa]c|\bib\b|inbox|g[ọo]i (cho )?e))/iu;
+// QUẢNG CÁO dịch vụ đăng tin / web tuyển thợ khác ("đăng tin cần thợ renew tại Vietnailshelper… muốn trải nghiệm
+// dịch vụ, call Annie") — không phải tiệm tuyển thợ (17/10/2026 lọt lên mục Việc làm thành "Cần thợ Nail gấp").
+const AD_POST = /(d[ịi]ch v[ụu] [đd][ăa]ng tin|[đd][ăa]ng tin (c[ầa]n th[ợo] )?(renew )?t[ạa]i [A-Z]|tr[ảa]i nghi[ệe]m d[ịi]ch v[ụu]|vietnails?helper|kh[óo]a tin khi)/i;
+export const isAdPost = (text: string) => AD_POST.test(String(text || ""));
+/** Bài thợ đi tìm việc — không đưa vào mục Việc làm dù có chữ "cần thợ". */
+export const isJobSeeking = (text: string) => SEEKING_STRONG.test(String(text || "").slice(0, 400)) || SEEKING.test(String(text || "").slice(0, 160));
 
 export function parseJobPost(raw: string): ParsedJob {
   const text = String(raw || "").slice(0, 6000);
@@ -293,11 +322,11 @@ export function parseJobPost(raw: string): ParsedJob {
   const isUrgent = /(g[ấa]p|urgent|asap|ngay|immediately)/i.test(text);
   const sal = findSalary(text, market);
   const salonName = findSalonName(text);
-  const isHiring = HIRING.test(text) && !SEEKING.test(text.slice(0, 160)) && !sale;
+  const isHiring = HIRING.test(text) && !isJobSeeking(text) && !isAdPost(text) && !sale;
   const title = `Cần thợ ${skills.length ? skills.slice(0, 2).join("/") : "Nail"}${isUrgent ? " gấp" : ""}`;
   return {
     isHiring, isSale: sale, market, phone: ph?.e164 ?? null, phoneDisplay: ph?.display ?? null, salonName, address: addr?.address ?? null, zip: addr?.zip ?? null,
-    state, city: place.city ?? addr?.city ?? null, salaryType: sal.salaryType, salaryAmount: sal.salaryAmount, skills, benefits, isUrgent,
+    state, city: place.city ?? addr?.city ?? cityFromText(text), salaryType: sal.salaryType, salaryAmount: sal.salaryAmount, skills, benefits, isUrgent,
     title: title.slice(0, 80),
   };
 }

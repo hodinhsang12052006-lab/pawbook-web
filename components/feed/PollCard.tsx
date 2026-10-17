@@ -52,7 +52,7 @@ export default function PollCard({ postId, poll }: { postId: string; poll: PollD
         );
       })}
       <p className="text-[11px] text-slate-500">
-        {p.total ? tr(`${p.total} người đã bình chọn`, `${p.total} votes`) : tr("Hãy là người bình chọn đầu tiên", "Be the first to vote")}
+        {p.total >= 5 ? tr(`${p.total} người đã bình chọn`, `${p.total} votes`) : voted ? tr("Cảm ơn bạn đã bình chọn", "Thanks for voting") : tr("Bình chọn để xem thợ khác trả lời sao", "Vote to see how other techs answered")}
         {voted ? tr(" · bấm lựa chọn khác để đổi", " · tap another option to change") : ""}
       </p>
     </div>

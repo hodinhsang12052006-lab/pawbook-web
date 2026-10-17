@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { placeLabel } from "@/lib/stateNames";
 import { dtEn } from "@/lib/i18n/dataEn";
 
@@ -36,7 +37,7 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 6,
         select: {
-          id: true, title: true, salonName: true, city: true, state: true, market: true, salaryAmount: true, isUrgent: true, createdAt: true,
+          id: true, title: true, salonName: true, city: true, state: true, market: true, salaryAmount: true, isUrgent: true, createdAt: true, source: true, description: true,
           owner: { select: { id: true, name: true, avatarUrl: true } },
         },
       }),
@@ -58,7 +59,7 @@ export async function GET() {
     const verb = (d: Date, fresh: string, old: string) => (now - d.getTime() < FRESH_MS ? fresh : old);
 
     const events: ActivityEvent[] = [
-      ...jobs.map((j) => ({
+      ...jobs.map(tidyIngestJob).map((j) => ({
         kind: "job" as const,
         title: j.isUrgent ? "Tin tuyển gấp" : "Tin tuyển mới",
         text: `${j.salonName} tại ${placeLabel(j.city, j.market, j.state)} ${verb(j.createdAt, "vừa đăng", "đang tuyển")}: “${j.title}”`,

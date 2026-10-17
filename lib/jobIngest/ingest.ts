@@ -9,7 +9,7 @@ import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
 import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
-import { cleanCity, cleanSalonName, findPhone, isSalonSale, parseJobPost, safeToolSalary, type ParsedJob } from "@/lib/jobIngest/parse";
+import { cleanCity, cleanSalonName, findPhone, isAdPost, isJobSeeking, isSalonSale, parseJobPost, safeToolSalary, type ParsedJob } from "@/lib/jobIngest/parse";
 
 export const INGEST_SOURCE = "ingest";
 export const INGEST_OWNER_EMAIL = "tonghop@feed.pawnail.invalid";
@@ -20,12 +20,14 @@ export const ingestTtlDays = () => Math.min(60, Math.max(3, Number(process.env.I
 // Chỉ áp cho tin TỔNG HỢP (source = ingest); tin chủ tiệm tự đăng không bao giờ bị ẩn theo chữ.
 // (SQLite so khớp không phân biệt hoa/thường với chữ Latin, CÓ phân biệt với chữ có dấu → liệt kê đủ kiểu viết.)
 const SALE_WORDS = ["sang tiệm", "Sang tiệm", "SANG TIỆM", "cần sang", "Cần sang", "CẦN SANG", "bán tiệm", "Bán tiệm", "BÁN TIỆM", "cần bán", "Cần bán", "CẦN BÁN", "giá sang", "Giá sang", "GIÁ SANG", "nhận cọc", "Nhận cọc", "for sale"];
+// Bài THỢ TÌM VIỆC lọt vào trước khi có bộ lọc isJobSeeking (17/10/2026) — ẩn lúc hiển thị (không xoá).
+const SEEK_WORDS = ["Góc tìm việc", "góc tìm việc", "GÓC TÌM VIỆC", "chủ shop nào cần thợ", "Chủ shop nào cần thợ", "Vietnailshelper", "trải nghiệm dịch vụ", "dịch vụ đăng tin"];
 /** Điều kiện Prisma: tin còn hạn (tin chủ tiệm tự đăng không có hạn), không phải bài sang / bán tiệm. */
 export const activeJobWhere = () => ({
   AND: [
     { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
     // Viết dạng OR (không dùng NOT(a AND b)): source NULL → so sánh SQL ra NULL, NOT(NULL) sẽ ẩn nhầm tin tự đăng.
-    { OR: [{ source: null }, { source: { not: "ingest" } }, { NOT: { OR: SALE_WORDS.map((w) => ({ description: { contains: w } })) } }] },
+    { OR: [{ source: null }, { source: { not: "ingest" } }, { NOT: { OR: [...SALE_WORDS, ...SEEK_WORDS].map((w) => ({ description: { contains: w } })) } }] },
   ],
 });
 
@@ -99,6 +101,9 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
 
   if (text && p.isSale) return { status: "skipped", reason: "bài sang / bán tiệm, không phải tuyển thợ" };
   if (text && !p.isHiring && !input.salonName) return { status: "skipped", reason: "không phải bài tuyển thợ" };
+  // Tool gửi kèm tên tiệm nhưng thật ra là bài THỢ TÌM VIỆC ("chủ shop nào cần thợ để lại sđt") → bỏ.
+  if (text && isJobSeeking(text)) return { status: "skipped", reason: "bài thợ tìm việc, không phải tiệm tuyển" };
+  if (text && isAdPost(text)) return { status: "skipped", reason: "quảng cáo dịch vụ đăng tin, không phải tiệm tuyển" };
   if (!phone || !phoneDisplay) return { status: "skipped", reason: "không có SĐT Mỹ/Úc" };
   if (!market || !state) return { status: "skipped", reason: "không xác định được bang" };
   if (blocked.has(phone)) return { status: "skipped", reason: "tiệm đã yêu cầu gỡ tin" };

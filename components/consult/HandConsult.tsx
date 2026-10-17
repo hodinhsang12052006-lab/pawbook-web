@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import FeatureGate from "@/components/common/FeatureGate";
 import { cdnImage } from "@/lib/cdnImage";
 import { priceLabel, type PublicMenuItem } from "@/lib/menu";
 import { DesignCard, DesignSheet, type Design } from "@/components/designs/DesignViews";
@@ -142,12 +143,18 @@ export default function HandConsult() {
   if (userLoading) return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-pink-400" /></div>;
   if (!user || (user.role !== "TECHNICIAN" && user.role !== "OWNER" && user.role !== "ADMIN")) {
     return (
-      <div className="rounded-3xl bg-white/[0.03] p-8 text-center ring-1 ring-white/10">
-        <Hand className="mx-auto h-10 w-10 text-pink-300" />
-        <h1 className="mt-3 text-xl font-black text-white">{tr("Soi tay tư vấn", "Hand consultation")}</h1>
-        <p className="mt-2 text-sm text-slate-400">{tr("Công cụ dành cho thợ nail và chủ tiệm: chụp tay khách → tình trạng, quy trình và mẫu hợp nhất.", "A tool for nail techs and salon owners: snap a client's hand → condition, service plan and best-matching designs.")}</p>
-        {!user && <Link href="/auth/login?callbackUrl=%2Fconsult" className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white">{tr("Đăng nhập", "Log in")}</Link>}
-      </div>
+      <FeatureGate
+        icon={Hand}
+        loggedIn={!!user}
+        path="/consult"
+        title={tr("Soi tay tư vấn bằng AI", "AI hand consultation")}
+        lead={tr("Khách không biết làm mẫu gì? Chụp tay khách — vài giây có ngay lời tư vấn như thợ lâu năm.", "Client can't decide? Snap their hand — in seconds you get advice like a seasoned tech.")}
+        points={[
+          tr("Nhận ra tình trạng da tay, móng (khô, nứt, móng yếu…) và cách xử lý an toàn", "Spots skin & nail condition (dry, cracked, weak nails…) and how to treat it safely"),
+          tr("Gợi ý quy trình làm + thời gian + giá, đúng với menu của bạn", "Suggests the service steps, time and price from your own menu"),
+          tr("Đưa khách xem ngay các mẫu hợp tay, hợp dáng móng — chốt đơn nhanh hơn", "Shows the client designs that suit their hands — close the sale faster"),
+        ]}
+      />
     );
   }
 

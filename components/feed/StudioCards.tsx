@@ -110,7 +110,7 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
               <span className="text-[11px] font-semibold text-white/70">{c.posts}{tr(" bài đã tham gia", " entries so far")}</span>
             </div>
           ) : (
-            <span className="text-[11px] font-semibold text-white/60">{tr("Chưa ai tham gia — bài đầu tiên dễ lên Top nhất!", "No entries yet — the first post has the best shot at #1!")}</span>
+            <span className="text-[11px] font-semibold text-white/60">{tr("Đăng ảnh mẫu bạn làm — bài được thích nhiều nhất được ghim Top tuần 🏆", "Post your set — the most-liked one gets pinned #1 this week 🏆")}</span>
           )}
         </div>
       </div>
@@ -178,13 +178,13 @@ export function ChallengeBoard({ studio }: { studio: Studio }) {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-pink-500/15 text-pink-300"><Trophy className="h-4 w-4" /></span>
             {tr("Thử thách #", "Challenge #")}{c.hashtag}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">{t.emoji} {dt(t.title)} · {c.posts}{tr(" bài tham gia · xếp theo lượt thích thật", " entries · ranked by real likes")}</p>
+          <p className="mt-1 text-xs text-slate-500">{t.emoji} {dt(t.title)}{c.posts >= 3 ? ` · ${c.posts}${tr(" bài tham gia", " entries")}` : ""}{tr(" · xếp theo lượt thích thật", " · ranked by real likes")}</p>
         </div>
         <Link href="/?tab=feed" className="flex-shrink-0 text-xs font-bold text-pink-300 hover:text-pink-200">{tr("Tham gia →", "Join in →")}</Link>
       </div>
       {c.entries.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-slate-400">
-          {tr("Chưa có bài nào — đăng mẫu móng kèm ", "No entries yet — post your nails with ")}<b className="text-pink-300">#{c.hashtag}</b>{tr(" để giành Top 1 tuần này.", " to grab #1 this week.")}
+          {tr("Đăng mẫu móng kèm ", "Post your nails with ")}<b className="text-pink-300">#{c.hashtag}</b>{tr(" — bài được thích nhiều nhất lên Top 1, hiện trước mọi tiệm đang tìm thợ.", " — the most-liked set takes #1 and is shown to every salon hiring.")}
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2.5">

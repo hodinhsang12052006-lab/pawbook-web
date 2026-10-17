@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { groupCreateBlocked } from "@/lib/abuseGuard";
 
 export async function POST(req: Request) {
   try {
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { isGroup, name, participantIds } = body;
 
-    if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+    if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0 || participantIds.some((id: unknown) => typeof id !== "string")) {
       return NextResponse.json(
         { error: "Danh sách người tham gia không hợp lệ." },
         { status: 400 }
@@ -76,6 +77,12 @@ export async function POST(req: Request) {
       if (existing) {
         return NextResponse.json(existing);
       }
+    }
+
+    // Chống spam: nhóm chat kéo hàng trăm người vào rồi rải tin (lib/abuseGuard).
+    if (isGroup || uniqueIds.length > 2) {
+      const capped = await groupCreateBlocked(currentUserId, uniqueIds.length);
+      if (capped) return NextResponse.json({ error: capped }, { status: 429 });
     }
 
     // Create new conversation (Group or 1-to-1)

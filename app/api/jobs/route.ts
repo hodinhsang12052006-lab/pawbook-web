@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { jobPostBlocked } from "@/lib/abuseGuard";
 import { realOnly } from "@/lib/demo";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
@@ -114,6 +115,10 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
+
+    // Chống tin rác / lừa đảo hàng loạt: tối đa vài tin / tiệm / ngày (lib/abuseGuard).
+    const capped = await jobPostBlocked(userId);
+    if (capped) return NextResponse.json({ error: capped, code: "JOB_LIMIT" }, { status: 429 });
 
     const body = await req.json();
     const {

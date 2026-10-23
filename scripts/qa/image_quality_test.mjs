@@ -107,13 +107,14 @@ try {
   R.check("Q6", "Đếm đúng số ảnh ứng viên trong ngày (6); chạm hạn mức 40/ngày → không vẽ thêm, mẫu vẫn tạo (hình minh hoạ)", used === 6 && flux.length === f4 && r5 && r5.imageUrl === null, JSON.stringify({ used, drawn: flux.length - f4, created: c5.created?.length }));
   await db.execute({ sql: `DELETE FROM "AppSetting" WHERE key = ?`, args: [`img_cand:${today}`] });
 
-  // Q5: AI chấm hỏng → giữ cách cũ (nhận ảnh đầu, không chấm, không chặn cả lượt vẽ)
+  // Q5: AI chấm hỏng → KHÔNG đăng ảnh chưa chấm (24/10/2026: ảnh chưa chấm từng lọt lên web — có chữ lạ, sai mô tả);
+  // mẫu giữ hình minh hoạ, lượt sau vẽ lại; không treo lượt vẽ
   judgeDown = true;
   const f3 = flux.length;
   const c4 = await cron(1);
   judgeDown = false;
   const r4 = c4.created?.[0] ? await row(c4.created[0]) : null;
-  R.check("Q5", "AI chấm không trả lời → vẫn nhận ảnh đầu tiên như trước (không có điểm), không treo lượt vẽ", flux.length - f3 === 1 && imgOf(r4?.imageUrl) === flux.at(-1).id && !/\[q:/.test(r4?.prompt || ""), JSON.stringify({ drawn: flux.length - f3, kept: imgOf(r4?.imageUrl), err: c4.errors }));
+  R.check("Q5", "AI chấm không trả lời → KHÔNG đăng ảnh chưa chấm (mẫu giữ hình minh hoạ, lượt sau vẽ lại), không treo lượt vẽ", flux.length - f3 === 1 && !!r4 && r4.imageUrl === null && !/\[img:/.test(r4?.prompt || ""), JSON.stringify({ drawn: flux.length - f3, kept: r4?.imageUrl, err: c4.errors }));
 
   // Q11: có 2 AI chấm → lấy kết quả khắt khe hơn
   // (bỏ dấu đã vẽ hôm nay của các mẫu trên để không chạm trần AI_IMAGES_DAILY=3 của server test)

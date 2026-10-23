@@ -15,7 +15,7 @@ import { tr } from "@/lib/i18n/tr";
 // sau 15 giây; "Để sau" = im 14 ngày; đã cài / đang trong app thì không bao giờ hiện.
 const KEY = "pn_install";
 const SNOOZE_MS = 14 * 86_400_000;
-const QUIET = [/^\/auth/, /^\/messages/, /^\/admin/, /^\/jobs\/create/, /^\/calls?/];
+const QUIET = [/^\/auth/, /^\/messages/, /^\/admin/, /^\/jobs\/create/, /^\/calls?/, /^\/tryon/]; // đang làm việc (Thử mẫu: banner che nút Tải / Bộ khác)
 
 interface BIPEvent extends Event { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 type Mode = "android" | "ios" | "inapp";

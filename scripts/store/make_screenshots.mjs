@@ -44,8 +44,11 @@ for (const t of TARGETS) {
       for (const [b, tip] of [[[272, 425], [272, 322]], [[385, 430], [380, 312]], [[505, 422], [500, 308]], [[618, 400], [615, 310]]]) {
         for (const [x, y] of [b, tip]) { const box = await img.boundingBox(); await p.mouse.click(box.x + (x / 900) * box.width, box.y + (y / 900) * box.height); }
       }
+      // chờ máy nhận đủ 4 móng (viền móng hiện trên ảnh) rồi mới tạo mẫu; chờ 4 ảnh mẫu đầu vẽ xong
+      await p.waitForFunction(() => document.querySelectorAll('svg[data-testid="nail-overlay"] polygon[data-nail]').length >= 4, null, { timeout: 30000 }).catch(() => {});
       await p.getByRole("button", { name: /Tạo mẫu/ }).click();
       await p.locator("button[aria-pressed]").first().waitFor({ timeout: 20000 });
+      await p.waitForFunction(() => document.querySelectorAll("img[data-look]").length >= 4, null, { timeout: 40000 }).catch(() => {});
       await p.locator("button[aria-pressed]").first().evaluate((e) => window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 90));
       await p.waitForTimeout(1200);
     }

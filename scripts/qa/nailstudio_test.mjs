@@ -1,18 +1,30 @@
-// Thử mẫu PawNail (Try-On) — máy tạo mẫu trên tay khách (không gọi AI ngoài): trang /studio (chụp → chạm móng → 10 mẫu
-// → tải ảnh) và trong Messenger (khách gửi ảnh tay → thợ bấm ✨ → chọn mẫu → gửi ảnh + giá cho khách).
-// Ảnh tay thật: scripts/qa/fixtures/hand.jpg (900×900, 4 móng). CHỈ chạy với server local.
+// Thử mẫu PawNail (Try-On) — bộ máy ảnh thật (lib/tryon) trên trình duyệt thật: trang /tryon (chụp → chạm móng → máy
+// nhận đúng móng thật → 10 mẫu vẽ lên móng → tải ảnh) và trong Messenger (khách gửi ảnh tay → thợ bấm ✨ → chọn
+// mẫu → gửi ảnh + giá cho khách). Ảnh tay: scripts/qa/fixtures/hand.jpg (900×900, 4 móng đen) + đáp án viền móng
+// vẽ tay (scripts/qa/tryon_fixtures.ts). CHỈ chạy với server local.
 //   node scripts/qa/nailstudio_test.mjs [thư-mục-ảnh-chụp]
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { chromium, devices } from "playwright";
 import { BASE_URL, Client, Results, SEED_TECH, DEMO_PASSWORD, fakeIp, registerUser } from "./lib.mjs";
 
+const require = createRequire(import.meta.url);
+const sharp = require("sharp");
 if (!/localhost|127\.0\.0\.1/.test(BASE_URL)) throw new Error("nailstudio_test chỉ chạy với server local");
 const OUT = process.argv[2] || process.env.TEMP || ".";
 const R = new Results("Thử mẫu PawNail (Try-On)");
 const HAND = path.resolve("scripts/qa/fixtures/hand.jpg");
-// [gốc móng, đầu móng] theo pixel ảnh 900×900
+// [gốc móng, đầu móng] theo pixel ảnh 900×900 + đáp án viền móng (cùng scripts/qa/tryon_fixtures.ts)
 const NAILS = [[[272, 425], [272, 322]], [[385, 430], [380, 312]], [[505, 422], [500, 308]], [[618, 400], [615, 310]]];
+const GT = [
+  [[240, 326], [258, 322], [300, 322], [312, 326], [315, 345], [314, 400], [306, 418], [290, 428], [270, 430], [250, 425], [241, 410], [238, 360]],
+  [[340, 322], [360, 316], [400, 312], [417, 309], [422, 320], [423, 380], [419, 410], [405, 425], [385, 430], [362, 426], [348, 414], [341, 390], [339, 350]],
+  [[460, 322], [480, 314], [520, 309], [532, 307], [538, 318], [541, 370], [537, 405], [525, 420], [507, 426], [487, 423], [472, 413], [462, 390], [459, 350]],
+  [[580, 330], [600, 325], [625, 315], [636, 308], [648, 318], [656, 345], [657, 380], [650, 395], [635, 404], [618, 406], [598, 401], [586, 392], [579, 365]],
+];
+const inPoly = (x, y, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+const iou = (a, b) => { let i = 0, u = 0; for (let y = 280; y < 460; y++) for (let x = 220; x < 680; x++) { const p = inPoly(x, y, a), q = inPoly(x, y, b); if (p && q) i++; if (p || q) u++; } return u ? i / u : 0; };
 
 const browser = await chromium.launch();
 async function ui(email, password) {
@@ -22,17 +34,39 @@ async function ui(email, password) {
   const csrf = await (await ctx.request.get(BASE_URL + "/api/auth/csrf", { headers: h })).json();
   await ctx.request.post(BASE_URL + "/api/auth/callback/credentials", { form: { csrfToken: csrf.csrfToken, email, password, json: "true" }, headers: h });
   const page = await ctx.newPage();
-  const errors = [];
+  const errors = [], workers = [];
   page.on("pageerror", (e) => errors.push(e.message.slice(0, 160)));
-  return { ctx, page, errors };
+  page.on("worker", (w) => workers.push(w.url()));
+  return { ctx, page, errors, workers };
 }
-async function markNails(page) {
-  const img = page.getByRole("img", { name: "Ảnh tay khách" });
+async function markNails(page, scope = page) {
+  const img = scope.getByRole("img", { name: "Ảnh tay khách" });
   await img.waitFor({ timeout: 20000 });
   const tapAt = async ([x, y]) => { const box = await img.boundingBox(); await page.mouse.click(box.x + (x / 900) * box.width, box.y + (y / 900) * box.height); };
   const y0 = (await img.boundingBox()).y;
   for (const [b, t] of NAILS) { await tapAt(b); await tapAt(t); }
   return Math.abs((await img.boundingBox()).y - y0); // ảnh có bị nhảy giữa các lần chạm không
+}
+/** Chờ đủ `n` ảnh mẫu đã vẽ xong trong `scope`. */
+async function waitLooks(scope, n, timeout = 60000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    if ((await scope.locator("img[data-look]").count()) >= n) return Date.now() - t0;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return -1;
+}
+/** Đọc điểm ảnh 1 ảnh mẫu (blob:) + ảnh tay gốc cùng khung → tỉ lệ điểm đổi màu, có lệch màu ngoài móng không. */
+async function diffPreview(page, sel) {
+  return page.evaluate(async (sel) => {
+    const el = document.querySelector(sel);
+    const hand = document.querySelector('img[alt="Ảnh tay khách"]');
+    const load = (src) => new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = src; });
+    const im = await load(el.src);
+    const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+    return { w: im.naturalWidth, h: im.naturalHeight, hasHand: !!hand };
+  }, sel);
 }
 
 let techUi, clientUi;
@@ -44,29 +78,51 @@ try {
   await p.locator('input[type=file]').setInputFiles(HAND);
   const jump = await markNails(p);
   const tip = await p.getByText(/Móng 5: chạm vào GỐC móng/).count();
-  // Vị trí vẽ khớp đúng chỗ chạm (móng 1: gốc 272,425 → đầu 272,322)
-  const line = await p.locator("svg line").first().evaluate((l) => ["x1", "y1", "x2", "y2"].map((k) => Number(l.getAttribute(k))));
-  R.check("S0", "Ảnh KHÔNG nhảy giữa các lần chạm; điểm gốc/đầu móng ghi nhận lệch < 6px so với chỗ chạm", jump < 1 && Math.abs(line[1] - 425) < 6 && Math.abs(line[3] - 322) < 6, JSON.stringify({ jump, line: line.map(Math.round) }));
+  // Máy nhận đủ 4 móng (chạy nền) → viền móng hiện trên ảnh, khớp đáp án vẽ tay
+  const polys = p.locator('svg[data-testid="nail-overlay"] polygon[data-nail]');
+  const t0 = Date.now();
+  await p.waitForFunction(() => document.querySelectorAll('svg[data-testid="nail-overlay"] polygon[data-nail]').length >= 4, null, { timeout: 30000 }).catch(() => {});
+  const found = Date.now() - t0;
+  const shapes = await polys.evaluateAll((els) => els.map((e) => ({ i: Number(e.getAttribute("data-nail")), byColor: e.getAttribute("data-bycolor"), pts: (e.getAttribute("points") || "").trim().split(/\s+/).map((s) => s.split(",").map(Number)) })));
+  const ious = shapes.map((s) => +iou(s.pts, GT[s.i]).toFixed(3));
+  await p.screenshot({ path: path.join(OUT, "tryon_marked.png") });
+  R.check("S0", "Ảnh KHÔNG nhảy giữa các lần chạm; máy nhận đủ 4 móng (chạy nền, Web Worker) — viền móng trùng đáp án vẽ tay (IoU ≥ 0.8 — đáp án vẽ tay lệch ±2–4px), nhận theo màu", jump < 1 && tip === 1 && shapes.length === 4 && ious.every((x) => x >= 0.8) && shapes.every((s) => s.byColor === "1") && techUi.workers.length >= 1,
+    JSON.stringify({ jump, tip, found, ious, workers: techUi.workers.length }));
+
   await p.getByRole("button", { name: /Tạo mẫu/ }).click();
-  const looks = p.locator("button[aria-pressed]").filter({ has: p.locator("svg[role=img]") });
+  const looks = p.locator("button[aria-pressed]");
   await looks.first().waitFor({ timeout: 15000 });
   const n = await looks.count();
-  // Mỗi mẫu vẽ đúng 4 móng lên ảnh
-  const nailGroups = await looks.first().locator("svg[role=img] > g").count();
-  R.check("S1", "Chọn ảnh tay → chạm gốc/đầu 4 móng (hướng dẫn chuyển sang móng 5) → Tạo mẫu ra 10 mẫu, mỗi mẫu vẽ đúng 4 móng lên ảnh", tip === 1 && n === 10 && nailGroups === 4, JSON.stringify({ tip, n, nailGroups }));
-  await p.screenshot({ path: path.join(OUT, "studio_looks.png"), fullPage: true });
+  const took = await waitLooks(p, 10);
+  const info = await diffPreview(p, "img[data-look]");
+  R.check("S1", "Tạo mẫu → 10 mẫu, cả 10 ảnh vẽ xong (ảnh thật, khung vuông quanh bàn tay) trong < 40 giây", n === 10 && took >= 0 && took < 40000 && info.w === info.h && info.w > 300, JSON.stringify({ n, took, info }));
+  await p.screenshot({ path: path.join(OUT, "tryon_looks.png"), fullPage: true });
   const titles = await looks.locator("span.block.truncate").allInnerTexts();
   const prices = await looks.locator("span.text-emerald-300").allInnerTexts();
-  R.check("S2", "Mỗi mẫu có tên (theo trend) + giá gợi ý; \"Bộ khác\" ra bộ mẫu mới", titles.length === 10 && prices.every((x) => /\$\d+/.test(x)) && (await (async () => { const before = titles.join("|"); await p.getByRole("button", { name: /Bộ khác/ }).click(); await p.waitForTimeout(400); return (await looks.locator("span.block.truncate").allInnerTexts()).join("|") !== before; })()),
-    JSON.stringify({ titles: titles.slice(0, 3), prices: prices.slice(0, 3) }));
+  const firstSrc = await p.locator("img[data-look]").first().getAttribute("src");
+  // Đổi dáng: Hạnh nhân (đắp dài) → bộ máy vẽ lại cả 10 mẫu
+  await p.getByRole("button", { name: "Hạnh nhân" }).click();
+  const slider = await p.getByText("Độ dài đắp").count();
+  await p.waitForFunction((src) => { const im = document.querySelector("img[data-look]"); return im && im.getAttribute("src") !== src; }, firstSrc, { timeout: 30000 }).catch(() => {});
+  const tookShape = await waitLooks(p, 10);
+  const almondSrc = await p.locator("img[data-look]").first().getAttribute("src");
+  await p.screenshot({ path: path.join(OUT, "tryon_almond.png"), fullPage: true });
+  R.check("S2", "Mỗi mẫu có tên + giá gợi ý; đổi dáng \"Hạnh nhân\" hiện thanh độ dài đắp và vẽ lại cả 10 mẫu", titles.length === 10 && prices.every((x) => /\$\d+/.test(x)) && slider === 1 && tookShape >= 0 && almondSrc !== firstSrc,
+    JSON.stringify({ titles: titles.slice(0, 3), prices: prices.slice(0, 3), slider, tookShape }));
+  await p.getByRole("button", { name: "Móng thật" }).click();
+  const beforeSet = titles.join("|");
+  await p.getByRole("button", { name: /Bộ khác/ }).click();
+  await p.waitForTimeout(500);
+  const newTitles = (await looks.locator("span.block.truncate").allInnerTexts()).join("|");
+  const tookNew = await waitLooks(p, 10);
+  R.check("S2b", "\"Bộ khác\" ra bộ mẫu mới và vẽ xong cả 10", newTitles !== beforeSet && tookNew >= 0, JSON.stringify({ tookNew }));
   await looks.nth(0).click();
   await looks.nth(3).click();
   const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 20000 }), p.getByRole("button", { name: /Tải 2/ }).click()]);
-  const file = path.join(OUT, "studio_export.jpg");
+  const file = path.join(OUT, "tryon_export.jpg");
   await dl.saveAs(file);
-  const size = fs.statSync(file).size;
-  const head = fs.readFileSync(file).subarray(0, 3).toString("hex");
-  R.check("S3", "Chọn 2 mẫu → \"Tải 2\" xuất ảnh JPEG thật (vẽ lại ảnh tay + lớp sơn, có nhãn PawNail)", head === "ffd8ff" && size > 30000, JSON.stringify({ size, head }));
+  const meta = await sharp(file).metadata();
+  R.check("S3", "Chọn 2 mẫu → \"Tải 2\" xuất ảnh JPEG 1080×1080 (có nhãn PawNail · mẫu thử)", meta.format === "jpeg" && meta.width === 1080 && meta.height === 1080 && fs.statSync(file).size > 40000, JSON.stringify({ format: meta.format, w: meta.width, h: meta.height, size: fs.statSync(file).size }));
 
   // ---------- Messenger: khách gửi ảnh tay → thợ ✨ → gửi mẫu ----------
   const reg = await registerUser({ name: "QA Khách Studio", role: "CLIENT", specialties: undefined });
@@ -92,10 +148,12 @@ try {
   const dialog = p.getByRole("dialog", { name: /Thử mẫu PawNail/ });
   await dialog.waitFor({ timeout: 15000 });
   await dialog.locator("button img").first().click(); // ảnh tay khách vừa gửi
-  await markNails(p);
+  await markNails(p, dialog);
+  await p.waitForFunction(() => document.querySelectorAll('[role=dialog] svg[data-testid="nail-overlay"] polygon[data-nail]').length >= 4, null, { timeout: 30000 }).catch(() => {});
   await dialog.getByRole("button", { name: /Tạo mẫu/ }).click();
   const dl2 = dialog.locator("button[aria-pressed]");
   await dl2.first().waitFor({ timeout: 15000 });
+  await waitLooks(dialog, 3);
   await dl2.nth(1).click();
   await dl2.nth(2).click();
   await dialog.getByRole("button", { name: /Gửi cho khách/ }).click();

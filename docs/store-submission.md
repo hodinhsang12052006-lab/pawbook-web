@@ -40,7 +40,7 @@ DÀNH CHO KHÁCH LÀM NAIL
 • Lưu mẫu yêu thích, mẹo giữ móng đẹp mỗi ngày
 
 THỬ MẪU TRÊN TAY (PawNail Try-On)
-• Chụp mu bàn tay, chạm vào từng móng — 10 mẫu nail trend được vẽ lên chính tay bạn trong vài giây
+• Chụp mu bàn tay, chạm vào từng móng — máy nhận đúng viền móng thật, vẽ 10 mẫu nail trend lên chính móng bạn như ảnh chụp (giữ ánh sáng thật, bóng / nhám / chrome / mắt mèo / nhũ, giữ dáng móng hoặc đắp dài)
 • Thợ & tiệm gửi 5–10 mẫu thử trên tay khách ngay trong tin nhắn, kèm giá gợi ý
 • Chạy ngay trên điện thoại, không tốn phí
 
@@ -77,7 +77,7 @@ FOR NAIL CLIENTS
 • Save looks you love, plus a daily nail-care tip
 
 TRY LOOKS ON YOUR OWN HAND (PawNail Try-On)
-• Snap the back of your hand, tap each nail — 10 trending designs are painted onto your hand in seconds
+• Snap the back of your hand, tap each nail — PawNail finds each real nail outline and paints 10 trending looks onto your own nails like a real photo (real lighting, glossy / matte / chrome / cat-eye / glitter, natural shape or extensions)
 • Techs and salons send 5–10 try-on looks with suggested prices right inside the chat
 • Runs on your phone, free
 

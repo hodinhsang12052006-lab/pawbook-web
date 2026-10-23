@@ -369,12 +369,15 @@ async function drawBest(subject: string, seed: string, deadline: number, max = c
   let best: Best | null = null;
   for (let k = 0; k < max; k++) {
     const budget = deadline - Date.now() - 4000;
-    if (budget < (k === 0 ? 8000 : 20_000)) break; // ảnh thứ 2+ cần đủ giờ vẽ + chấm
+    // mỗi ảnh cần đủ giờ VẼ + CHẤM (~10s) — không đủ thì để lượt sau, KHÔNG vẽ rồi đăng mà chưa chấm
+    if (budget < (k === 0 ? 18_000 : 22_000)) break;
     if (!(await takeCandidate())) break;
     // Mỗi ảnh ứng viên một bối cảnh khác → thêm cơ hội ra ảnh đẹp.
-    const img = await cfImage(`${subject}. ${photoStyle(k ? `${seed}:${k}` : seed)}`, Math.min(30_000, budget));
-    const verdict = deadline - Date.now() > 9000 ? await judgeImage(img, subject).catch(() => null) : null;
-    if (!verdict) return best ?? { img, verdict: null, tried: k + 1 }; // không có AI chấm → giữ cách cũ (nhận ảnh)
+    const img = await cfImage(`${subject}. ${photoStyle(k ? `${seed}:${k}` : seed)}`, Math.min(30_000, budget - 10_000));
+    const verdict = await judgeImage(img, subject).catch(() => null);
+    // Không chấm được (máy chấm lỗi / hết giờ) → KHÔNG nhận ảnh này. Từng nhận ảnh chưa chấm (23/10/2026: 4 ảnh
+    // lọt qua, 2 ảnh lỗi — chữ lạ trên ảnh, sai mô tả "mắt mèo"). Giữ ảnh đã chấm tốt nhất (nếu có), mai vẽ lại.
+    if (!verdict) return best;
     if (!best || !best.verdict || verdict.score > best.verdict.score) best = { img, verdict, tried: k + 1 };
     else best.tried = k + 1;
     if (verdict.score >= PASS_SCORE) break;
@@ -398,7 +401,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
         const best = await drawBest(job.subject, job.id, deadline);
         if (!best) { left++; queue.length = 0; return; } // hết hạn mức ảnh ứng viên hôm nay / hết giờ
         const score = best.verdict?.score;
-        if (score !== undefined && score < KEEP_SCORE) {
+        if (score === undefined || score < KEEP_SCORE) {
           // Ảnh tốt nhất vẫn xấu → không đăng; đánh dấu đã thử hôm nay, mai vẽ lại.
           await prisma.nailDesign.update({ where: { id: job.id }, data: { prompt: `${job.prompt}${tryMark()}`.slice(0, 2000) } });
           errors.push(`Ảnh chưa đạt (${score}/10 sau ${best.tried} ảnh: ${best.verdict?.issues.join(", ") || "chất lượng thấp"}) — giữ hình minh hoạ, mai vẽ lại.`);
@@ -458,10 +461,13 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
   const subject = subjectOf(row.prompt);
   if (!subject) return { error: "Mẫu này không có mô tả ảnh để vẽ." };
   try {
-    // Vẽ 2 ảnh, AI chấm, lấy ảnh đẹp hơn; hết hạn mức ảnh ứng viên → vẽ 1 ảnh như cũ.
+    // Vẽ 2 ảnh, AI chấm, lấy ảnh đẹp hơn. Chưa chấm được / ảnh chưa đạt → GIỮ ảnh cũ, không thay bằng ảnh chưa
+    // qua kiểm tra (trước đây hết hạn mức thì vẽ 1 ảnh rồi đăng thẳng).
     const best = await drawBest(subject, `${id}${n}`, Date.now() + 55_000, 2);
-    const imageUrl = await store(best?.img ?? (await cfImage(`${subject}. ${photoStyle(id + n)}`)));
-    const q = best?.verdict ? `[q:${best.verdict.score}]` : "";
+    if (!best?.verdict) return { error: "Chưa chấm được ảnh mới (hết lượt / máy chấm bận) — giữ ảnh cũ, thử lại sau." };
+    if (best.verdict.score < KEEP_SCORE) return { error: `Ảnh vẽ lại chưa đạt (${best.verdict.score}/10: ${best.verdict.issues.join(", ") || "chất lượng thấp"}) — giữ ảnh cũ, thử lại sau.` };
+    const imageUrl = await store(best.img);
+    const q = `[q:${best.verdict.score}]`;
     await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]${q}${imgMark()}`.slice(0, 2000) } });
     return { imageUrl, redraws: n + 1 };
   } catch (err) {

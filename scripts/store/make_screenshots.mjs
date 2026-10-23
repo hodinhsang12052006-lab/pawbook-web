@@ -12,10 +12,11 @@ fs.mkdirSync(OUT, { recursive: true });
 const SHOTS = [
   { path: "/", title: "Việc nail gấp tại Mỹ & Úc", sub: "Tìm việc, tìm thợ — miễn phí, nhắn trực tiếp" },
   { path: "/?tab=jobs", title: "Tin tuyển thợ mới mỗi ngày", sub: "Lọc theo bang, lương, kỹ năng — tin gấp lên đầu", scrollTo: /tin đang tuyển/ },
-  { path: "/jobs/cmui3d1jt007nu2m8hzfymgsr", title: "Xem lương, chỗ ở, liên hệ", sub: "Gọi hoặc nhắn tiệm chỉ 1 chạm" },
-  { path: "/designs", title: "Mẫu nail mới mỗi ngày", sub: "Kèm vật tư, các bước làm và giá gợi ý" },
-  { path: "/profile/cmv261cbf0000kz06racm3k1t", title: "Tin thuế, tip & quyền lợi", sub: "Cập nhật từ IRS, ATO, Fair Work — dễ hiểu" },
-  { path: "/auth/register", title: "Đăng ký 1 phút", sub: "Thợ nail hay chủ tiệm — đều miễn phí" },
+  { path: "/jobs/__LATEST__", title: "Xem lương, chỗ ở, liên hệ", sub: "Gọi hoặc nhắn tiệm chỉ 1 chạm" },
+  // Thử mẫu: chụp tay → chạm móng → 10 mẫu trend vẽ lên tay (ảnh tay mẫu: scripts/qa/fixtures/hand.jpg)
+  { path: "/tryon", title: "Thử mẫu trên chính tay bạn", sub: "Chụp tay → 10 mẫu nail trend trong vài giây", tryon: true },
+  { path: "/designs", title: "Mẫu nail mới mỗi ngày", sub: "Ý tưởng theo mùa, giá gợi ý — lưu mẫu bạn thích" },
+  { path: "/auth/register", title: "Thợ, chủ tiệm hay khách", sub: "Đăng ký 1 phút — đều miễn phí" },
 ];
 // Apple iPhone 6.7"/6.9": 1290×2796 · Google Play điện thoại: 1080×1920
 const TARGETS = [
@@ -29,8 +30,25 @@ for (const t of TARGETS) {
     // 1) chụp trang thật (khung điện thoại, độ nét 3x)
     const ctx = await browser.newContext({ viewport: { width: t.vw, height: t.vh }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, locale: "vi-VN", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" });
     const p = await ctx.newPage();
-    await p.goto(SITE + s.path, { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
+    let target = s.path;
+    if (target.includes("__LATEST__")) {
+      const jobs = await (await fetch(SITE + "/api/jobs?page=1&pageSize=1")).json().catch(() => []);
+      target = target.replace("__LATEST__", jobs?.[0]?.id || "");
+    }
+    await p.goto(SITE + target, { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
     await p.waitForTimeout(2500);
+    if (s.tryon) {
+      await p.locator("input[type=file]").setInputFiles(path.resolve("scripts/qa/fixtures/hand.jpg"));
+      const img = p.getByRole("img", { name: "Ảnh tay khách" });
+      await img.waitFor({ timeout: 20000 });
+      for (const [b, tip] of [[[272, 425], [272, 322]], [[385, 430], [380, 312]], [[505, 422], [500, 308]], [[618, 400], [615, 310]]]) {
+        for (const [x, y] of [b, tip]) { const box = await img.boundingBox(); await p.mouse.click(box.x + (x / 900) * box.width, box.y + (y / 900) * box.height); }
+      }
+      await p.getByRole("button", { name: /Tạo mẫu/ }).click();
+      await p.locator("button[aria-pressed]").first().waitFor({ timeout: 20000 });
+      await p.locator("button[aria-pressed]").first().evaluate((e) => window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 90));
+      await p.waitForTimeout(1200);
+    }
     // Cuộn tới đúng phần cần khoe (VD danh sách việc), bỏ qua banner đầu trang
     if (s.scrollTo) {
       await p.getByText(s.scrollTo).first().evaluate((e) => window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 140)).catch(() => {});

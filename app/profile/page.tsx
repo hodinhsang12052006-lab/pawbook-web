@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import ClientAccount from "@/components/client/ClientAccount";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
 import { Loader2, Save, Upload, X, Trash2, Flame, CheckCircle2, AlertTriangle, Wallet, ArrowRight, Radar, Camera, Eye, Store, Sparkles, UserRound, Briefcase, Plus, ShieldAlert, LogOut, Home as HomeIcon, Volume2, BellRing, Mail, Gift, BookOpen } from "lucide-react";
@@ -294,6 +295,15 @@ export default function ProfilePage() {
         <main className="mx-auto flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 text-pink-500 animate-spin" />
         </main>
+      </div>
+    );
+  }
+
+  if (profile?.role === "CLIENT") {
+    return (
+      <div className="flex flex-col min-h-screen text-slate-100">
+        <Navbar />
+        <main className="flex-1 px-4 py-6 pb-28"><ClientAccount profile={profile} /></main>
       </div>
     );
   }

@@ -20,6 +20,8 @@ export default function DesignsPage() {
   const [occasion, setOccasion] = useState<string | null>(null);
   const [skill, setSkill] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
+  // /designs?saved=1 (lối tắt "Mẫu đã lưu" của khách) → mở thẳng mục Đã lưu
+  useEffect(() => { try { if (new URL(window.location.href).searchParams.get("saved") === "1") setSavedOnly(true); } catch {} }, []);
   const [open, setOpen] = useState<Design | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);

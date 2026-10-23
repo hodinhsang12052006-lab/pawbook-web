@@ -84,6 +84,7 @@ function useTools(): Tool[] {
     roleTool,
     ...(user?.role === "TECHNICIAN" || user?.role === "OWNER"
       ? [{ href: "/bookings", label: tr("Lịch hẹn", "Bookings"), stat: newBookings > 0 ? tr(`${newBookings} khách mới đặt lịch`, `${newBookings} new requests`) : tr("Khách đặt từ menu / mã QR", "Requests from your menu / QR"), icon: CalendarCheck, tone: "bg-pink-500/15 text-pink-300", badge: newBookings } as Tool,
+        { href: "/tryon", label: tr("Thử mẫu trên tay", "Try-on looks"), stat: tr("Vẽ 10 mẫu trend lên tay khách + giá", "Paint 10 trending looks on a client's hand"), icon: Sparkles, tone: "bg-fuchsia-500/15 text-fuchsia-300" } as Tool,
         { href: "/consult", label: tr("Soi tay tư vấn", "Hand consult"), stat: tr("Chụp tay khách → tình trạng + mẫu hợp", "Snap a client's hand → condition + matching designs"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
       : []),
     { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },

@@ -57,6 +57,7 @@ function PrivacyVi() {
           <li><strong className={B}>Giphy</strong> — thư viện GIF trong khung chat (chỉ khi bạn tìm/chọn GIF).</li>
           <li><strong className={B}>Thợ / tiệm bạn đặt lịch</strong> — khi bạn đặt lịch từ menu (không cần tài khoản), tên + số điện thoại + ngày giờ mong muốn chỉ gửi cho đúng thợ / tiệm đó để liên hệ xác nhận, không hiện công khai. Yêu cầu đặt lịch tự xoá sau 90 ngày (thợ cũng xoá được bất cứ lúc nào).</li>
           <li><strong className={B}>Google Gemini, Cloudflare Workers AI</strong> — tính năng &quot;Soi tay tư vấn&quot;: ảnh tay / chân do thợ chụp (khi khách đồng ý) được gửi tới AI để nhận diện tình trạng móng rồi bỏ ngay. PawNail <strong className={B}>không lưu</strong> ảnh này và không gắn ảnh với tên khách.</li>
+          <li><strong className={B}>Thử mẫu trên tay (PawNail Try-On)</strong> — ảnh tay được xử lý <strong className={B}>ngay trên điện thoại của bạn</strong>, không gửi tới AI hay máy chủ nào. Ảnh mẫu thử chỉ được tải lên khi bạn chủ động bấm Gửi trong tin nhắn (khi đó lưu như ảnh tin nhắn thường).</li>
         </ul>
       </section>
       <section className={S}>
@@ -126,6 +127,7 @@ function PrivacyEn() {
           <li><strong className={B}>Giphy</strong> — GIF library in chat (only when you search for or pick a GIF).</li>
           <li><strong className={B}>The tech / salon you book with</strong> — when you book from a menu (no account needed), your name, phone number and preferred time go only to that tech / salon so they can confirm; never shown publicly. Booking requests are deleted automatically after 90 days (the tech can delete them any time).</li>
           <li><strong className={B}>Google Gemini, Cloudflare Workers AI</strong> — the &quot;Hand consultation&quot; tool: a hand / foot photo taken by a technician (with the client&apos;s consent) is sent to the AI to recognise nail condition and then discarded. PawNail <strong className={B}>does not store</strong> these photos or link them to a client&apos;s name.</li>
+          <li><strong className={B}>Try looks on your hand (PawNail Try-On)</strong> — hand photos are processed <strong className={B}>on your phone</strong> and are not sent to any AI or server. A try-on image is uploaded only when you choose to Send it in a chat (it is then stored like any chat photo).</li>
         </ul>
       </section>
       <section className={S}>

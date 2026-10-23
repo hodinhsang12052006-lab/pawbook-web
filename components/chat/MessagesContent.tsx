@@ -20,9 +20,13 @@ import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
 import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
-import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon } from "lucide-react";
+import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon, Sparkles as SparklesIcon, X as XIcon } from "lucide-react";
 import ChatBackdrop from "./ChatBackdrop";
 import ChatSuggestions from "./ChatSuggestions";
+import ChatContextCard from "./ChatContextCard";
+import dynamic from "next/dynamic";
+// Thử mẫu PawNail (vẽ mẫu lên ảnh tay khách) — tải khi mở, không làm nặng Messenger lúc vào.
+const NailStudio = dynamic(() => import("@/components/studio/NailStudio"), { ssr: false });
 import { type Reaction, toggleReaction } from "@/lib/chatReactions";
 import MediaPicker from "./MediaPicker";
 import VoiceRecorder from "./VoiceRecorder";
@@ -90,6 +94,7 @@ export default function MessagesContent({
   const [hasText, setHasTextState] = useState(false);
   // Đang gõ → 3 nút (ảnh / ghi âm / GIF) thu vào 1 nút "+" cho ô nhập rộng ra (như Messenger)
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
   const hasTextRef = useRef(false);
   // Chỉ gọi setState khi THẬT SỰ đổi (gọi với cùng giá trị React vẫn có thể chạy lại thân component).
   const setHasText = useCallback((v: boolean) => {
@@ -1270,8 +1275,8 @@ export default function MessagesContent({
               <p className="text-sm font-bold text-slate-200">{t("messenger.noConversations")}</p>
               <p className="text-xs text-slate-500 max-w-[240px] leading-relaxed">{t("messenger.noConversationsHint")}</p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
-                <Link href={currentUser?.role === "OWNER" ? "/?tab=portfolio" : "/?tab=jobs"} className="rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20">
-                  {currentUser?.role === "OWNER" ? t("messenger.ctaFindTechs") : t("messenger.ctaFindJobs")}
+                <Link href={currentUser?.role === "OWNER" ? "/?tab=portfolio" : currentUser?.role === "CLIENT" ? "/salons" : "/?tab=jobs"} className="rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-pink-600/20">
+                  {currentUser?.role === "OWNER" ? t("messenger.ctaFindTechs") : currentUser?.role === "CLIENT" ? tr("Tìm tiệm gần bạn", "Find a salon near you") : t("messenger.ctaFindJobs")}
                 </Link>
               </div>
             </div>
@@ -1461,6 +1466,16 @@ export default function MessagesContent({
                 </div>
               )}
 
+              {!activeChat.isGroup && !chatNextCursor && currentUser?.id && (
+                <ChatContextCard
+                  meRole={currentUser.role}
+                  meId={currentUser.id}
+                  partner={{ id: activeChat.id, name: activeChat.name, role: activeChat.role, isGroup: activeChat.isGroup }}
+                  onStudio={() => setStudioOpen(true)}
+                  onSendText={(text) => handleSendMessage(null, text)}
+                />
+              )}
+
               {chatMessages.length > 0 ? (
                 chatMessages.map((msg, idx) => {
                   const isLastSelf = idx === lastSelfIndex;
@@ -1538,6 +1553,31 @@ export default function MessagesContent({
               </div>
             ) : (
             <div className="pn-composer relative flex-none z-10 border-t border-white/[0.06] px-2.5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
+              {studioOpen && activeChat && (
+                <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setStudioOpen(false)}>
+                  <div role="dialog" aria-label={tr("Thử mẫu PawNail — tạo mẫu trên tay khách", "PawNail Try-On — looks on the client's hand")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{tr("Tạo mẫu trên tay khách", "Try-on looks")}</p>
+                      <button type="button" onClick={() => setStudioOpen(false)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
+                    </div>
+                    <NailStudio
+                      market={currentUser?.market === "AU" ? "AU" : "US"}
+                      photos={chatMessages.filter((m) => m.type === "IMAGE" && m.senderId !== currentUser?.id && /^(https:\/\/|data:image\/)/.test(m.content)).map((m) => m.content).reverse()}
+                      sendLabel={tr("Gửi cho khách", "Send to client")}
+                      onSend={async ({ blobs, looks }) => {
+                        for (let i = 0; i < blobs.length; i++) {
+                          const url = await uploadMedia(new File([blobs[i]], `pawnail-studio-${i + 1}.jpg`, { type: "image/jpeg" }));
+                          await handleSendMessage(null, url, "IMAGE");
+                        }
+                        const lines = looks.map((l, i) => `${i + 1}. ${tr(l.title.vi, l.title.en)} — ${l.priceHint}`);
+                        await handleSendMessage(null, [tr(`✨ ${looks.length} mẫu thử trên tay chị/anh (PawNail):`, `✨ ${looks.length} try-on looks on your hand (PawNail):`), ...lines, tr("Chị/anh thích mẫu nào nhắn em nhé — giá chính xác theo menu tiệm.", "Tell me which one you like — exact price per our menu.")].join("\n"));
+                        setStudioOpen(false);
+                        toast.success(tr("Đã gửi mẫu cho khách.", "Looks sent."));
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
               {(showEmoji || showGifs) && (
                 <MediaPicker
                   tab={chatPanelTab}
@@ -1606,6 +1646,17 @@ export default function MessagesContent({
                 >
                   <span className="rounded-md border-2 border-current px-1 py-px leading-none">GIF</span>
                 </button>
+                {["TECHNICIAN", "OWNER", "ADMIN"].includes(currentUser?.role) && !activeChat?.isGroup && (
+                  <button
+                    type="button"
+                    onClick={() => { handleCloseMediaPanel(); setStudioOpen(true); }}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/5 hover:text-pink-300"
+                    title={tr("Tạo mẫu trên tay khách (Thử mẫu PawNail)", "Try-on looks on the client's hand")}
+                    aria-label={tr("Tạo mẫu", "Try-on looks")}
+                  >
+                    <SparklesIcon className="h-[22px] w-[22px]" />
+                  </button>
+                )}
                 </>
                 )}
 

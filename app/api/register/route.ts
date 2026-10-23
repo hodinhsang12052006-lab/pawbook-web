@@ -7,7 +7,7 @@ import { isRateLimited, recordAttempt, getClientIp } from "@/lib/rateLimit";
 import { attachReferral, readRef } from "@/lib/referral";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_ROLES = ["OWNER", "TECHNICIAN"];
+const VALID_ROLES = ["OWNER", "TECHNICIAN", "CLIENT"];
 const VALID_MARKETS = ["US", "AU"];
 
 // Không giới hạn tốc độ trước đây — bcrypt.hash(password, 10) cố tình chậm
@@ -102,6 +102,17 @@ export async function POST(req: Request) {
     // thiếu chuyên nghiệp) — chưa có ảnh thì <Avatar> tự vẽ chữ cái đầu trên
     // nền gradient theo tên, xem lib/avatar.ts.
     const defaultAvatar = null;
+
+    if (role === "CLIENT") {
+      // Khách đi làm nail: không hồ sơ thợ, không tin tuyển mồi — chỉ tài khoản + khu vực.
+      const user = await prisma.user.create({
+        data: { name, email, password: hashedPassword, role: Role.CLIENT, market: marketEnum, phone: phone || null, state: state || null, city: city || null, avatarUrl: defaultAvatar },
+      });
+      await attachReferral(user.id, name, ref);
+      await openWelcomeChat({ userId: user.id, name, role: "CLIENT", email, phone, market: marketEnum, state, city, via: "email" }).catch((e) => console.error("welcome chat error:", e));
+      const { password: _, ...userWithoutPassword } = user;
+      return NextResponse.json({ message: "Đăng ký thành công!", user: userWithoutPassword }, { status: 201 });
+    }
 
     if (role === "TECHNICIAN") {
       const {

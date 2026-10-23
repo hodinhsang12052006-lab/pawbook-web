@@ -3,7 +3,7 @@
 import { cdnImage } from "@/lib/cdnImage";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2, BookOpen } from "lucide-react";
+import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2, BookOpen, MapPin, MessageCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -149,6 +149,9 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
 
   const [menuBusy, setMenuBusy] = useState(false);
   const canMenu = user?.role === "TECHNICIAN" || user?.role === "OWNER";
+  // Khách đi làm nail KHÔNG cần vật tư / các bước (thông tin nghề) — cần giá + chỗ làm được mẫu này.
+  const isClient = user?.role === "CLIENT";
+  const isPro = canMenu || user?.role === "ADMIN";
   const addToMenu = async () => {
     setMenuBusy(true);
     try {
@@ -193,6 +196,12 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
             </div>
           </div>
 
+          {isClient ? (
+            <Link href="/salons" className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
+              <MapPin className="h-4 w-4" /> {tr("Tìm tiệm / thợ làm mẫu này", "Find a salon for this look")}
+            </Link>
+          ) : isPro ? (
+            <>
           <section aria-label={tr("Vật tư cần chuẩn bị", "Materials to prepare")} className="space-y-2">
             <h3 className="flex items-center gap-2 text-sm font-black text-white"><ShoppingBag className="h-4 w-4 text-emerald-300" />{tr(" Vật tư cần chuẩn bị", " Materials to prepare")}</h3>
             <ul className="space-y-1.5">
@@ -225,20 +234,71 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
             </ol>
           </section>
 
+            </>
+          ) : (
+            // Khách chưa đăng nhập: có thể là thợ hoặc khách — phần nghề thu gọn, không lấn ảnh mẫu.
+            <details className="group rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-slate-200">
+                {tr("Dành cho thợ: vật tư & các bước làm", "For techs: materials & steps")}
+                <ListChecks className="h-4 w-4 text-sky-300" />
+              </summary>
+              <div className="mt-3 space-y-4">
+          <section aria-label={tr("Vật tư cần chuẩn bị", "Materials to prepare")} className="space-y-2">
+            <h3 className="flex items-center gap-2 text-sm font-black text-white"><ShoppingBag className="h-4 w-4 text-emerald-300" />{tr(" Vật tư cần chuẩn bị", " Materials to prepare")}</h3>
+            <ul className="space-y-1.5">
+              {d.materials.map((m, i) => (
+                <li key={i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+                  <input
+                    type="checkbox"
+                    aria-label={tr(m.vi, m.en || m.vi)}
+                    checked={checked.has(i)}
+                    onChange={() => setChecked((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
+                    className="h-4 w-4 accent-emerald-500"
+                  />
+                  <span className={`min-w-0 flex-1 text-sm ${checked.has(i) ? "text-slate-500 line-through" : "text-slate-200"}`}>{tr(m.vi, m.en || m.vi)}</span>
+                  <span className="flex-shrink-0 text-[11px] text-slate-500">{tr(m.qty, qtyEn(m.qty))}</span>
+                  <Link href={`/supply?q=${encodeURIComponent(m.vi)}`} className="flex-shrink-0 text-[11px] font-bold text-emerald-300 hover:underline">{tr("Tìm mua", "Find")}</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section aria-label={tr("Các bước làm", "Steps")} className="space-y-2">
+            <h3 className="flex items-center gap-2 text-sm font-black text-white"><ListChecks className="h-4 w-4 text-sky-300" />{tr(" Các bước làm", " Steps")}</h3>
+            <ol className="space-y-1.5">
+              {d.steps.map((s, i) => (
+                <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-300">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-[11px] font-black text-sky-300">{i + 1}</span>
+                  <span className="pt-0.5">{tr(s.vi, s.en || s.vi)}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+              </div>
+            </details>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={save} disabled={busy} className={`flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm font-black ring-1 ${d.saved ? "bg-pink-500/15 text-pink-200 ring-pink-500/40" : "bg-white/[0.06] text-white ring-white/10"}`}>
               <Bookmark className={`h-4 w-4 ${d.saved ? "fill-pink-300" : ""}`} /> {d.saved ? tr("Đã lưu", "Saved") : tr("Lưu mẫu", "Save")}
             </button>
-            <button type="button" onClick={tryIt} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
-              <Camera className="h-4 w-4" /> {tr("Tôi làm mẫu này", "I made this")}
-            </button>
+            {isClient ? (
+              <Link href={`/salons?look=${encodeURIComponent(d.title)}`} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-black text-white ring-1 ring-white/10">
+                <MessageCircle className="h-4 w-4" /> {tr("Hỏi giá tiệm", "Ask a salon")}
+              </Link>
+            ) : (
+              <button type="button" onClick={tryIt} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
+                <Camera className="h-4 w-4" /> {tr("Tôi làm mẫu này", "I made this")}
+              </button>
+            )}
           </div>
           {canMenu && (
             <button type="button" onClick={addToMenu} disabled={menuBusy} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08] disabled:opacity-50">
               <BookOpen className="h-4 w-4 text-amber-300" /> {tr("Thêm vào menu của tôi", "Add to my menu")}
             </button>
           )}
-          <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>
+          {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Briefcase, ChevronRight, Megaphone, Sparkles } from "lucide-react";
+import { Briefcase, ChevronRight, Megaphone, Sparkles, Store } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -15,13 +15,17 @@ interface Tech { user?: { id: string; name: string; avatarUrl: string | null }; 
 export default function ChatSuggestions({ role, market }: { role: string | null; market: string | null }) {
   useTr();
   const owner = role === "OWNER";
+  const client = role === "CLIENT";
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [techs, setTechs] = useState<Tech[] | null>(null);
+  const [salons, setSalons] = useState<{ id: string; name: string; avatarUrl: string | null; city: string | null; services: { name: string; priceFrom: number }[] }[] | null>(null);
   const m = market === "AU" ? "AU" : "US";
   useEffect(() => {
-    if (owner) fetch(`/api/technicians?market=${m}`).then((r) => (r.ok ? r.json() : [])).then((d) => setTechs((Array.isArray(d) ? d : []).slice(0, 3))).catch(() => setTechs([]));
+    // Khách đi làm nail: gợi ý tiệm / thợ có menu để nhắn hỏi mẫu — KHÔNG gợi ý việc làm.
+    if (client) fetch(`/api/salons?market=${m}&limit=3`).then((r) => (r.ok ? r.json() : { items: [] })).then((d) => setSalons(Array.isArray(d.items) ? d.items : [])).catch(() => setSalons([]));
+    else if (owner) fetch(`/api/technicians?market=${m}`).then((r) => (r.ok ? r.json() : [])).then((d) => setTechs((Array.isArray(d) ? d : []).slice(0, 3))).catch(() => setTechs([]));
     else fetch(`/api/jobs?market=${m}&page=1&pageSize=5`).then((r) => (r.ok ? r.json() : [])).then((d) => setJobs((Array.isArray(d) ? d : []).slice(0, 3))).catch(() => setJobs([]));
-  }, [owner, m]);
+  }, [owner, client, m]);
 
   const head = (
     <p className="flex items-center gap-1.5 px-2 pb-2 pt-4 text-[11px] font-black uppercase tracking-wider text-slate-400">
@@ -29,6 +33,28 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
     </p>
   );
   const card = "flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3 ring-1 ring-white/[0.07] transition-colors hover:bg-white/[0.07]";
+
+  if (client) {
+    if (!salons || !salons.length) return null;
+    return (
+      <section aria-label={tr("Gợi ý cho bạn", "Suggested for you")}>
+        {head}
+        <div className="space-y-2">
+          {salons.map((s) => (
+            <Link key={s.id} href={`/messages?to=${s.id}`} className={card}>
+              <Avatar src={s.avatarUrl} name={s.name} seed={s.id} className="h-10 w-10" alt="" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold text-white">{s.name}</span>
+                <span className="block truncate text-xs text-slate-400">{s.services[0] ? `${s.services[0].name} · $${s.services[0].priceFrom}+` : tr("Nhắn hỏi mẫu & giá", "Ask about looks & prices")}{s.city ? ` · ${s.city}` : ""}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-500" />
+            </Link>
+          ))}
+          <Link href="/salons" className="flex items-center gap-1.5 px-2 pt-1 text-xs font-bold text-pink-300 hover:underline"><Store className="h-3.5 w-3.5" />{tr("Xem tiệm & thợ quanh bạn →", "See salons near you →")}</Link>
+        </div>
+      </section>
+    );
+  }
 
   if (owner) {
     if (techs === null) return null;

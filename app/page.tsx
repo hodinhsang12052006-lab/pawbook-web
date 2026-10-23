@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import HeroPulse from "@/components/home/HeroPulse";
+import ClientHome from "@/components/client/ClientHome";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import JobBoard from "@/components/jobs/JobBoard";
@@ -176,6 +177,18 @@ export default function HomePage() {
   // đẩy cả trang xuống — CLS 0.8). Máy từng đăng nhập → CSS ẩn ngay từ đầu (html[data-authed]).
   const showHero = !sessionUser;
 
+  // Khách đi làm nail: trang chủ riêng (mẫu, tiệm quanh bạn, đặt lịch) — không lẫn việc làm / tuyển thợ.
+  if (sessionUser?.role === "CLIENT") {
+    return (
+      <div className="flex min-h-screen flex-col text-slate-100">
+        <Navbar />
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 pb-28 md:pb-8">
+          <ClientHome user={sessionUser} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
@@ -219,6 +232,10 @@ export default function HomePage() {
               </button>
             </div>
             <HeroPulse />
+            {/* Khách đi làm nail có lối riêng — không phải đọc chuyện việc làm / tuyển thợ */}
+            <a href="/salons" className="mx-auto inline-flex items-center gap-1.5 text-sm font-semibold text-pink-200/90 underline-offset-4 hover:underline">
+              💅 {tr("Bạn đi làm nail? Xem mẫu & tìm tiệm gần bạn", "Getting your nails done? Browse looks & find a salon")} →
+            </a>
           </div>
         </section>
       )}

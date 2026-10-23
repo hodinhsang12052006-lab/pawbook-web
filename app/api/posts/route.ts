@@ -167,6 +167,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bài." }, { status: 401 });
     }
 
+    // Bảng tin là cộng đồng NGHỀ (thợ / chủ tiệm) — khách đi làm nail không đăng ở đây.
+    if ((session.user as { role?: string }).role === "CLIENT") {
+      return NextResponse.json({ error: "Bảng tin dành cho thợ và chủ tiệm. Bạn có thể nhắn tiệm hoặc để lại đánh giá sau khi làm móng." }, { status: 403 });
+    }
+
     const body = await req.json();
     const { content, postType, mediaUrls } = body;
     // "Tâm sự ẩn danh": không hiện tên; vào hàng CHỜ DUYỆT (chặn bôi nhọ tên tiệm / người); tối đa 3 bài/ngày.

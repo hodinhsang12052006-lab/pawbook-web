@@ -38,6 +38,10 @@ const US_ALL: Record<string, string> = {
   UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
 };
 const AU_ALL: Record<string, string> = { ...AU_STATE_NAMES, TAS: "Tasmania", NT: "Northern Territory" };
+/** Đủ mã bang để CHỌN (đăng ký / hoàn tất hồ sơ): 10 bang đông thợ Việt lên đầu, còn lại theo ABC. */
+const US_TOP = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
+export const US_ALL_CODES = [...US_TOP, ...Object.keys(US_ALL).filter((c) => !US_TOP.includes(c)).sort((a, b) => US_ALL[a].localeCompare(US_ALL[b]))];
+export const AU_ALL_CODES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT", "TAS", "NT"];
 
 export function stateName(market: "US" | "AU", code: string | null | undefined): string {
   if (!code) return "";

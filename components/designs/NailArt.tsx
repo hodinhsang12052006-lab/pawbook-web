@@ -11,7 +11,7 @@ import { tr } from "@/lib/i18n/tr";
 // đúng như các bước làm mà máy tạo mẫu viết ra.
 
 const W = 26;
-const NAIL: Record<string, string> = {
+export const NAIL: Record<string, string> = {
   square: `M0 64 L0 9 Q0 2 7 2 L19 2 Q26 2 26 9 L26 64 Q13 74 0 64 Z`,
   oval: `M0 64 L0 18 C0 4 26 4 26 18 L26 64 Q13 74 0 64 Z`,
   almond: `M0 64 L0 24 C0 11 9 1 13 1 C17 1 26 11 26 24 L26 64 Q13 74 0 64 Z`,
@@ -20,17 +20,17 @@ const NAIL: Record<string, string> = {
 };
 // Ngón: [tâm x, đỉnh ngón y] — xoè nhẹ như bàn tay giơ lên.
 const FINGERS: [number, number][] = [[38, 70], [84, 38], [130, 26], [176, 40], [220, 82]];
-const ACCENT = new Set([1, 3]); // ngón trỏ + ngón áp út
-const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline", "doublefrench", "swirl", "milkbath", "negative", "velvet", "candycorn"]);
+export const ACCENT = new Set([1, 3]); // ngón trỏ + ngón áp út
+export const ALL_NAILS = new Set(["french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline", "doublefrench", "swirl", "milkbath", "negative", "velvet", "candycorn"]);
 
-function hash(s: string) {
+export function hash(s: string) {
   let h = 2166136261;
   for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   return () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0) % 1000) / 1000;
 }
 
 /** Hoạ tiết trên 1 móng, toạ độ của móng (rộng 26, đầu móng ở trên ~y2, chân móng ~y64). */
-function Motif({ pattern, c2, metal, i, rnd, uid, outline }: { pattern: string; c2: string; metal: string; i: number; rnd: () => number; uid: string; outline: string }) {
+export function Motif({ pattern, c2, metal, i, rnd, uid, outline }: { pattern: string; c2: string; metal: string; i: number; rnd: () => number; uid: string; outline: string }) {
   switch (pattern) {
     case "french":
       return <path d="M-3 17 Q13 7 29 17 L29 -8 L-3 -8 Z" fill={c2} />;

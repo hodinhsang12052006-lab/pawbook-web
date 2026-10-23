@@ -195,7 +195,8 @@ export default function FomoToast() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, paused, showKey]);
 
-  if (!current || quiet) return null;
+  // Khách đi làm nail không cần tin tuyển thợ / thợ cập nhật portfolio — đó là chuyện nghề.
+  if (!current || quiet || user?.role === "CLIENT") return null;
   const msg = locale === "en" && current.en ? { ...current, ...current.en } : current;
   const st = KIND_STYLE[current.kind] ?? KIND_STYLE.survey;
   const Icon = st.icon;

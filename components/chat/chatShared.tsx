@@ -106,7 +106,7 @@ export function describeCall(body: string) {
 }
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
-export const ROLE_VI = (): Record<string, string> => ({ OWNER: tr("Chủ tiệm", "Salon owner"), TECHNICIAN: tr("Thợ Nail", "Nail tech"), ADMIN: tr("Quản trị viên", "Admin") });
+export const ROLE_VI = (): Record<string, string> => ({ OWNER: tr("Chủ tiệm", "Salon owner"), TECHNICIAN: tr("Thợ Nail", "Nail tech"), ADMIN: tr("Quản trị viên", "Admin"), CLIENT: tr("Khách làm nail", "Nail client") });
 
 export interface ConversationType {
   id: string;

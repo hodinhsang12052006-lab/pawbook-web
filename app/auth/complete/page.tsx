@@ -1,22 +1,23 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Sparkles, Store, Loader2, Phone, MapPin } from "lucide-react";
+import { Sparkles, Store, Loader2, Phone, MapPin, Heart } from "lucide-react";
 import toast from "react-hot-toast";
-import { stateName } from "@/lib/stateNames";
+import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
 // Người đăng nhập Google/Apple lần đầu: chọn vai trò + khu vực + SĐT (1 màn,
 // ~20 giây) rồi vào app. Đã hoàn tất rồi mà vào lại đây → về trang chủ.
-const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
-const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Đủ 50 bang (trước chỉ 10 → thợ ở MN, MT… kẹt ở bước này).
+const US_STATES = US_ALL_CODES;
+const AU_STATES = AU_ALL_CODES;
 
 export default function CompleteProfilePage() {
   useTr(); // render lại khi đổi VI/EN
   const [ready, setReady] = useState(false);
-  const [role, setRole] = useState<"TECHNICIAN" | "OWNER" | null>(null);
+  const [role, setRole] = useState<"TECHNICIAN" | "OWNER" | "CLIENT" | null>(null);
   const [name, setName] = useState("");
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [state, setState] = useState("");
@@ -24,6 +25,7 @@ export default function CompleteProfilePage() {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const states = market === "US" ? US_STATES : AU_STATES;
+  useEffect(() => { try { if (localStorage.getItem("pn_role_hint") === "CLIENT") setRole("CLIENT"); } catch {} }, []);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -49,8 +51,9 @@ export default function CompleteProfilePage() {
   }, []);
 
   const submit = async () => {
-    if (!role || !state || !city.trim() || !name.trim() || phone.replace(/\D/g, "").length < 8) {
-      toast.error(tr("Nhập tên, chọn vai trò, bang, thành phố và số điện thoại nhé.", "Enter your name, pick a role, state, city and phone number."));
+    const isClient = role === "CLIENT";
+    if (!role || !state || !name.trim() || (!isClient && (!city.trim() || phone.replace(/\D/g, "").length < 8))) {
+      toast.error(isClient ? tr("Nhập tên và chọn khu vực của bạn nhé.", "Enter your name and pick your area.") : tr("Nhập tên, chọn vai trò, bang, thành phố và số điện thoại nhé.", "Enter your name, pick a role, state, city and phone number."));
       return;
     }
     setBusy(true);
@@ -58,12 +61,13 @@ export default function CompleteProfilePage() {
       const res = await fetch("/api/profile/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, market, state, city, name, phone: `${market === "US" ? "+1" : "+61"} ${phone.trim()}` }),
+        body: JSON.stringify({ role, market, state, city, name, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || tr("Không lưu được, thử lại.", "Couldn't save, try again."));
       await fetch("/api/auth/session"); // làm mới phiên với vai trò vừa chọn
-      window.location.href = role === "OWNER" ? "/jobs/create" : "/?tab=jobs";
+      try { localStorage.removeItem("pn_role_hint"); } catch {}
+      window.location.href = role === "OWNER" ? "/jobs/create" : role === "CLIENT" ? "/" : "/?tab=jobs";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tr("Không lưu được, thử lại.", "Couldn't save, try again."));
       setBusy(false);
@@ -89,6 +93,13 @@ export default function CompleteProfilePage() {
       </div>
 
       <div className="space-y-2.5" role="radiogroup" aria-label={tr("Bạn là ai?", "Who are you?")}>
+        <button type="button" role="radio" aria-checked={role === "CLIENT"} onClick={() => setRole("CLIENT")} className={card(role === "CLIENT")}>
+          <Heart className="h-7 w-7 flex-shrink-0 text-pink-400" />
+          <span>
+            <span className="block font-bold text-white">{tr("Tôi đi làm nail (khách)", "I get my nails done")}</span>
+            <span className="block text-xs text-slate-400">{tr("Xem mẫu trend, tìm tiệm gần bạn, đặt lịch", "Browse looks, find salons near you, book")}</span>
+          </span>
+        </button>
         <button type="button" role="radio" aria-checked={role === "TECHNICIAN"} onClick={() => setRole("TECHNICIAN")} className={card(role === "TECHNICIAN")}>
           <Sparkles className="h-7 w-7 flex-shrink-0 text-pink-400" />
           <span>
@@ -143,7 +154,7 @@ export default function CompleteProfilePage() {
       </div>
 
       <div>
-        <label htmlFor="c-phone" className="mb-1.5 flex items-center gap-1 text-sm font-bold text-slate-300"><Phone className="h-3.5 w-3.5" />{tr(" Số điện thoại", " Phone number")}</label>
+        <label htmlFor="c-phone" className="mb-1.5 flex items-center gap-1 text-sm font-bold text-slate-300"><Phone className="h-3.5 w-3.5" />{tr(" Số điện thoại", " Phone number")}{role === "CLIENT" && <span className="font-normal text-slate-500">{tr(" (không bắt buộc)", " (optional)")}</span>}</label>
         <div className="flex gap-2">
           <span className="flex min-h-[48px] items-center rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm font-bold text-slate-300">{market === "US" ? "+1" : "+61"}</span>
           <input id="c-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555 123 4567" className="input-field flex-1" />

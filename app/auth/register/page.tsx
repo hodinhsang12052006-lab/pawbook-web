@@ -2,16 +2,17 @@
 
 import React, { useContext, useEffect, useState } from "react";
 import Link from "next/link";
-import { Sparkles, Store, ArrowRight, UserPlus, SlidersHorizontal, MessageCircle, ChevronDown } from "lucide-react";
+import { Sparkles, Store, ArrowRight, UserPlus, SlidersHorizontal, MessageCircle, ChevronDown, Heart } from "lucide-react";
 import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
 import OwnerRegisterForm from "@/components/auth/OwnerRegisterForm";
+import ClientRegisterForm from "@/components/auth/ClientRegisterForm";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { tr } from "@/lib/i18n/tr";
 
-type Role = "technician" | "owner" | null;
+type Role = "technician" | "owner" | "client" | null;
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
@@ -60,6 +61,20 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
           <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.ownerTitle")}</p>
           <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.ownerDesc")}</p>
           <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.ownerPerks")}</p>
+        </div>
+        <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
+      </button>
+
+      {/* Khách đi làm nail: thế giới riêng (mẫu, tiệm quanh bạn, đặt lịch) — tách khỏi 2 thẻ nghề ở trên */}
+      <button
+        type="button"
+        onClick={() => onPick("client")}
+        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border border-dashed p-4 text-left transition-all ${PRESS} ${isDark ? "border-pink-500/30 bg-pink-500/[0.04]" : "border-pink-300 bg-pink-50"} hover:border-pink-500/60`}
+      >
+        <Heart className="h-7 w-7 text-pink-400 flex-shrink-0" />
+        <div className="flex-1">
+          <p className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{tr("Bạn đi làm nail? (khách)", "Getting your nails done?")}</p>
+          <p className={`text-xs ${labelClass}`}>{tr("Xem mẫu trend, tìm tiệm gần bạn, đặt lịch — không có việc làm / tuyển thợ", "Browse looks, find salons, book — no jobs or hiring")}</p>
         </div>
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
@@ -133,7 +148,7 @@ export default function CustomRegisterPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const r = params.get("role");
-    if (r === "technician" || r === "owner") setRole(r);
+    if (r === "technician" || r === "owner" || r === "client") setRole(r);
     setReady(true);
   }, []);
 
@@ -181,5 +196,6 @@ export default function CustomRegisterPage() {
 
   if (role === "technician") return <TechnicianRegisterForm />;
   if (role === "owner") return <OwnerRegisterForm />;
+  if (role === "client") return <ClientRegisterForm />;
   return <RolePicker onPick={pickRole} />;
 }

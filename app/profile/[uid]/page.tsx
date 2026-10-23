@@ -5,6 +5,7 @@ import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
   Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone, BookOpen,
+  CalendarCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -67,6 +68,12 @@ export default function PublicProfilePage({ params }: PageProps) {
   useEffect(() => {
     if (tab === "menu" && menuCount === 0 && !isSelf) setTab("overview");
   }, [tab, menuCount, isSelf]);
+  // KHÁCH đi làm nail xem hồ sơ tiệm/thợ: cần menu + giá + đánh giá + đặt lịch — không cần chuyện tuyển dụng
+  // ("Đang tìm việc gấp", "Có chỗ ở cho thợ", tab Tin tuyển). Có menu → mở thẳng tab Menu.
+  const viewerIsClient = viewer?.role === "CLIENT";
+  useEffect(() => {
+    if (viewerIsClient && (menuCount ?? 0) > 0 && tab === "overview") setTab("menu");
+  }, [viewerIsClient, menuCount]); // eslint-disable-line react-hooks/exhaustive-deps
   const [unlocked, setUnlocked] = useState(false);
   const [checkingUnlock, setCheckingUnlock] = useState(false);
 
@@ -208,6 +215,23 @@ export default function PublicProfilePage({ params }: PageProps) {
     );
   }
 
+  // Khách đi làm nail: không có hồ sơ nghề công khai — chỉ thẻ gọn + nút nhắn (tiệm mở từ tin nhắn).
+  if (profile.role === "CLIENT") {
+    return (
+      <div className="flex min-h-screen flex-col text-slate-100">
+        <Navbar />
+        <main className="mx-auto w-full max-w-md px-4 py-10">
+          <div className="rounded-3xl bg-white/[0.04] p-6 text-center ring-1 ring-white/10">
+            <Avatar src={profile.avatarUrl} name={profile.name} seed={profile.id} className="mx-auto h-20 w-20" />
+            <p className="mt-3 text-lg font-black text-white">{profile.name}</p>
+            <p className="text-sm text-slate-400">{tr("Khách PawNail", "PawNail client")}{profile.city ? ` · ${profile.city}` : ""}</p>
+            {!isSelf && <Link href={`/messages?to=${profile.id}`} className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white">{tr("Nhắn tin", "Message")}</Link>}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const tech = profile.technicianProfile;
   const isOwnerProfile = profile.role === "OWNER";
   const isTech = profile.role === "TECHNICIAN" && tech;
@@ -225,7 +249,7 @@ export default function PublicProfilePage({ params }: PageProps) {
     ? [
         { label: tr("Điểm uy tín", "Trust score"), value: fmtScore(trustSummary?.avgOverall), star: true },
         { label: tr("Đánh giá", "Reviews"), value: reviewCount },
-        { label: tr("Đang tuyển", "Hiring"), value: profile.jobs?.length ?? 0 },
+        ...(viewerIsClient ? [] : [{ label: tr("Đang tuyển", "Hiring"), value: profile.jobs?.length ?? 0 }]),
         { label: tr("Ảnh tiệm", "Salon photos"), value: galleryCount ?? 0 },
       ]
     : [
@@ -250,9 +274,18 @@ export default function PublicProfilePage({ params }: PageProps) {
         { key: "reviews", label: tr("Đánh giá", "Reviews"), icon: ShieldCheck, count: reviewCount },
       ];
   // Khách chỉ thấy tab Menu khi đã có mẫu (tránh "Chưa có mẫu nào" ở mọi hồ sơ mới).
-  const tabs = allTabs.filter((t) => t.key !== "menu" || isSelf || (menuCount ?? 0) > 0);
+  const tabs = allTabs.filter((t) => (t.key !== "menu" || isSelf || (menuCount ?? 0) > 0) && !(viewerIsClient && t.key === "jobs"));
 
-  const primaryAction = isSelf ? (
+  const primaryAction = viewerIsClient && (menuCount ?? 0) > 0 ? (
+    <div className="flex gap-2">
+      <Link href={`/menu/${profile.id}`} className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 text-sm font-bold text-white shadow-lg shadow-pink-600/25">
+        <CalendarCheck className="h-4 w-4" />{tr("Đặt lịch", "Book")}
+      </Link>
+      <button onClick={handleContactClick} className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/10">
+        <MessageCircle className="h-4 w-4" />{tr("Nhắn hỏi mẫu", "Message")}
+      </button>
+    </div>
+  ) : isSelf ? (
     <Link
       href="/profile"
       className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-white/[0.06] px-5 text-sm font-bold text-white ring-1 ring-white/10 transition-colors hover:bg-white/10"
@@ -327,7 +360,7 @@ export default function PublicProfilePage({ params }: PageProps) {
                 {isOwnerProfile ? <Store className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
                 {isOwnerProfile ? tr("Chủ tiệm", "Salon owner") : tr("Thợ Nail", "Nail tech")}
               </span>
-              {isTech && (tech.status === "URGENT" ? (
+              {isTech && !viewerIsClient && (tech.status === "URGENT" ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-300 ring-1 ring-red-500/25">
                   <Flame className="h-3.5 w-3.5" />{tr(" Đang tìm việc gấp", " Needs work now")}
                 </span>
@@ -336,7 +369,7 @@ export default function PublicProfilePage({ params }: PageProps) {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{tr(" Sẵn sàng nhận việc", " Open to work")}
                 </span>
               ))}
-              {isOwnerProfile && profile.housingSupport && (
+              {isOwnerProfile && profile.housingSupport && !viewerIsClient && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-200 ring-1 ring-sky-500/25">
                   <HomeIcon className="h-3.5 w-3.5" />{tr(" Có chỗ ở cho thợ", " Housing for techs")}
                 </span>

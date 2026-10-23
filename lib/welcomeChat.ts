@@ -13,7 +13,7 @@ import { getOfficialAccount } from "@/lib/official";
 export interface WelcomeInfo {
   userId: string;
   name: string;
-  role: "TECHNICIAN" | "OWNER";
+  role: "TECHNICIAN" | "OWNER" | "CLIENT";
   email?: string | null;
   phone?: string | null;
   market: "US" | "AU";
@@ -43,7 +43,7 @@ const list = (x?: string[]) => (x && x.length ? x.join(", ") : null);
 export function registrationSummary(i: WelcomeInfo): string {
   const place = [i.city, i.state ? stateName(i.market, i.state) : null].filter(Boolean).join(", ");
   const rows: [string, string | null | undefined][] = [
-    ["Vai trò", i.role === "OWNER" ? "Chủ tiệm" : "Thợ nail"],
+    ["Vai trò", i.role === "OWNER" ? "Chủ tiệm" : i.role === "CLIENT" ? "Khách làm nail" : "Thợ nail"],
     ["Họ tên", i.name],
     ...(i.role === "OWNER" ? ([["Tên tiệm", i.salonName]] as [string, string | null | undefined][]) : []),
     ["Số điện thoại", i.phone],
@@ -51,7 +51,9 @@ export function registrationSummary(i: WelcomeInfo): string {
     ["Khu vực", `${place || "chưa ghi"} (${i.market === "AU" ? "Úc" : "Mỹ"})`],
     ["Đăng ký bằng", i.via === "google" ? "Google" : i.via === "facebook" ? "Facebook" : i.via === "phone" ? "Số điện thoại" : i.via === "social" ? "Google / Facebook / SĐT" : "Email"],
   ];
-  if (i.role === "OWNER") {
+  if (i.role === "CLIENT") {
+    // khách: không có kỹ năng / lương — chỉ thông tin liên hệ + khu vực
+  } else if (i.role === "OWNER") {
     rows.push(["Cần tuyển", list(i.urgentRole)], ["Lương", [i.salaryAmount, i.salaryType].filter(Boolean).join(" · ") || null], ["Chỗ ở cho thợ", i.hasHousing === undefined ? null : i.hasHousing ? "Có" : "Không"]);
   } else {
     rows.push(
@@ -86,6 +88,11 @@ export function welcomeText(i: Pick<WelcomeInfo, "name" | "role">, existing = fa
   }
   // Gọi đủ họ tên: tên Việt (Trần Thị Lan) và kiểu Tây (Lan Tran) thứ tự ngược nhau — đoán "tên" dễ sai.
   const first = i.name.trim();
+  if (i.role === "CLIENT") {
+    return `Chào mừng ${first} đến với PawNail 💅
+
+Ở đây bạn xem mẫu nail trend mỗi ngày, tìm tiệm / thợ gần bạn với ảnh thật + bảng giá, nhắn hỏi mẫu và đặt lịch không cần gọi điện. Mẹo: bấm Lưu những mẫu bạn thích để lần sau đưa thợ xem ngay. Cần hỗ trợ gì cứ nhắn ở đây nhé!`;
+  }
   return i.role === "OWNER"
     ? `Chào mừng ${first} đến với PawNail Jobs 🎉\n\nTin tuyển thợ của tiệm đã lên bảng việc, thợ gần tiệm sẽ thấy ngay. Anh/chị cần hỗ trợ gì — đăng tin, tìm thợ, hay góp ý — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`
     : `Chào mừng ${first} đến với PawNail Jobs 🎉\n\nBạn đã có hồ sơ để tiệm tìm tới. Mẹo: đăng 3–5 ảnh tay nghề để được nhắn nhiều hơn. Bạn cần hỗ trợ gì — tìm việc, sửa hồ sơ, hay báo tin lạ — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`;

@@ -20,7 +20,8 @@ export interface Verdict {
   judge: string;
 }
 
-const DEFECTS = ["extraDigits", "fusedOrMelted", "palmSideNails", "floatingNail", "artOnSkin", "text"] as const;
+// 23/10/2026: soi 43 ảnh vẽ bằng bộ chấm mới → còn lọt móng mọc GIỮA đốt ngón và móng xếp 2 HÀNG (2 bàn tay chồng).
+const DEFECTS = ["extraDigits", "fusedOrMelted", "palmSideNails", "floatingNail", "artOnSkin", "text", "nailNotAtTip", "twoRows"] as const;
 
 const SCHEMA = {
   type: "object",
@@ -34,6 +35,8 @@ const SCHEMA = {
     floatingNail: { type: "boolean" },
     artOnSkin: { type: "boolean" },
     text: { type: "boolean" },
+    nailNotAtTip: { type: "boolean" },
+    twoRows: { type: "boolean" },
     nailsClear: { type: "boolean" },
     matches: { type: "boolean" },
     realistic: { type: "boolean" },
@@ -57,6 +60,8 @@ Then answer each defect question (true = the defect IS present):
 - floatingNail: a nail or nail-art piece floats detached from any finger.
 - artOnSkin: nail art (cats, eyes, lines, stickers) is printed on the skin instead of on a nail.
 - text: any letters, words, numbers, signature, logo or watermark anywhere, even tiny or faint.
+- nailNotAtTip: any nail sits in the middle of a finger or on a knuckle instead of at the very fingertip.
+- twoRows: the nails form two separate rows or clusters (e.g. two hands overlapping, fingers folded under others).
 Then:
 - nailsClear: the nails are sharp, fully visible and neatly finished.
 - matches: the nails match the described shape, colours and nail art.
@@ -66,7 +71,7 @@ Then:
 
 interface Raw {
   hands?: number; fingers?: number; nails?: number;
-  extraDigits?: boolean; fusedOrMelted?: boolean; palmSideNails?: boolean; floatingNail?: boolean; artOnSkin?: boolean; text?: boolean;
+  extraDigits?: boolean; fusedOrMelted?: boolean; palmSideNails?: boolean; floatingNail?: boolean; artOnSkin?: boolean; text?: boolean; nailNotAtTip?: boolean; twoRows?: boolean;
   hand?: boolean; fiveFingers?: boolean; textFree?: boolean; // dạng câu trả lời cũ — vẫn hiểu
   nailsClear?: boolean; matches?: boolean; realistic?: boolean; score?: number | string; issues?: unknown;
 }
@@ -75,7 +80,7 @@ const num = (v: unknown) => (v === undefined || v === null || v === "" || Number
 
 /** Giải phẫu bàn tay có ổn không (dựa trên số đếm + câu trả lời lỗi). */
 export function anatomyOk(r: Raw): boolean {
-  if (r.fiveFingers === false || r.extraDigits === true || r.fusedOrMelted === true || r.palmSideNails === true || r.floatingNail === true || r.artOnSkin === true) return false;
+  if (r.fiveFingers === false || r.extraDigits === true || r.fusedOrMelted === true || r.palmSideNails === true || r.floatingNail === true || r.artOnSkin === true || r.nailNotAtTip === true || r.twoRows === true) return false;
   const hands = num(r.hands), fingers = num(r.fingers), nails = num(r.nails);
   if (hands !== undefined && (hands < 1 || hands > 1)) return false; // ảnh mẫu chỉ nên có 1 bàn tay
   if (hands !== undefined && fingers !== undefined && fingers > hands * 5) return false;

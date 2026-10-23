@@ -12,7 +12,8 @@ App native mở thẳng https://www.bitpawos.com (hosted mode) — sửa web là
 
 **Tên app (≤30):** PawNail Jobs
 **Phụ đề iOS (≤30):** Việc làm nail Mỹ & Úc
-**Mô tả ngắn Google Play (≤80):** Tìm việc nail, tuyển thợ nail tại Mỹ & Úc — miễn phí, nhắn tin trực tiếp.
+**Mô tả ngắn Google Play (≤80):** Việc làm nail, tuyển thợ & tìm tiệm nail tại Mỹ, Úc — thử mẫu trên tay bạn.
+> Cập nhật 23/10/2026: app có thêm phần **cho khách làm nail** (tìm tiệm, đặt lịch) và **Thử mẫu trên tay**. Cân nhắc đổi tên store thành **"PawNail: Nail Jobs & Salons"** (27 ký tự) để khách tìm thấy — tên trong app (capacitor.config `appName`) đổi thì phải build lại.
 
 **Mô tả đầy đủ (tiếng Việt):**
 ```
@@ -32,8 +33,19 @@ DÀNH CHO CHỦ TIỆM
 • Xem thợ đang rảnh quanh tiệm kèm ảnh tay nghề thật
 • Nhắn tin, gọi ngay cho thợ — không phí, không trung gian
 
+DÀNH CHO KHÁCH LÀM NAIL
+• Tìm tiệm & thợ quanh bạn: ảnh tác phẩm thật, bảng giá, đánh giá của khách thật
+• Đặt lịch ngay trên menu tiệm — không cần gọi điện
+• Nhắn hỏi mẫu, gửi ảnh mẫu bạn thích để được báo giá đúng
+• Lưu mẫu yêu thích, mẹo giữ móng đẹp mỗi ngày
+
+THỬ MẪU TRÊN TAY (PawNail Try-On)
+• Chụp mu bàn tay, chạm vào từng móng — 10 mẫu nail trend được vẽ lên chính tay bạn trong vài giây
+• Thợ & tiệm gửi 5–10 mẫu thử trên tay khách ngay trong tin nhắn, kèm giá gợi ý
+• Chạy ngay trên điện thoại, không tốn phí
+
 MẪU NAIL MỚI MỖI NGÀY
-• Ý tưởng theo mùa lễ và xu hướng, có sẵn vật tư, các bước làm và giá gợi ý
+• Ý tưởng theo mùa lễ và xu hướng, giá gợi ý; thợ xem thêm vật tư & các bước làm
 • Ảnh thật từ thợ & tiệm khắp Mỹ và Úc
 
 An toàn: chặn & báo cáo người dùng, tự xoá tài khoản bất cứ lúc nào.
@@ -58,8 +70,19 @@ FOR SALON OWNERS
 • Browse available techs near your salon with real work photos
 • Message or call techs instantly — no fees, no agency
 
+FOR NAIL CLIENTS
+• Find salons and techs near you: real work photos, prices and genuine client reviews
+• Book straight from the salon's menu — no phone call needed
+• Message salons about a look and send photos for an exact quote
+• Save looks you love, plus a daily nail-care tip
+
+TRY LOOKS ON YOUR OWN HAND (PawNail Try-On)
+• Snap the back of your hand, tap each nail — 10 trending designs are painted onto your hand in seconds
+• Techs and salons send 5–10 try-on looks with suggested prices right inside the chat
+• Runs on your phone, free
+
 NEW NAIL DESIGNS DAILY
-• Seasonal and trending ideas with materials, steps and suggested prices
+• Seasonal and trending ideas with suggested prices; techs also see materials and steps
 • Real work from techs and salons in the US and Australia
 
 Safety: block & report users, delete your account any time.
@@ -85,6 +108,9 @@ Vietnamese and English.
 | Tên, email, số điện thoại | Có | Tài khoản, liên hệ | Có | Không |
 | Thành phố / bang (người dùng tự nhập, KHÔNG dùng GPS) | Có | Hiển thị việc/thợ gần | Có | Không |
 | Ảnh / video (portfolio, bài đăng) | Có | Nội dung người dùng | Có | Không |
+| Ảnh tay — **Thử mẫu (Try-On)** | Xử lý NGAY TRÊN MÁY; chỉ tải lên khi người dùng bấm Gửi trong tin nhắn | Tạo ảnh mẫu thử | Có (khi gửi) | Không |
+| Ảnh tay — **Soi tay tư vấn** | Gửi tới dịch vụ AI (Google Gemini / Cloudflare) để phân tích, PawNail không lưu ảnh | Gợi ý chăm sóc + mẫu hợp | Không | Không |
+| Lịch hẹn (tên, SĐT khách, dịch vụ, ngày giờ) | Có | Đặt lịch với tiệm | Có | Không |
 | Tin nhắn trong app | Có | Nhắn tin giữa người dùng | Có | Không |
 | Âm thanh/hình ảnh cuộc gọi | Truyền trực tiếp, KHÔNG lưu | Gọi thoại/video | — | Không |
 | Mã thiết bị nhận thông báo đẩy | Có | Gửi thông báo | Có | Không |

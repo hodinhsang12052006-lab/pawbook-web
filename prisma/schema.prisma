@@ -12,6 +12,7 @@ enum Role {
   OWNER // Chủ tiệm nail — đăng tin tuyển thợ
   TECHNICIAN // Thợ nail — đăng portfolio tìm việc
   ADMIN
+  CLIENT // Khách đi làm nail — xem mẫu, tìm tiệm/thợ, đặt lịch, nhắn tin (KHÔNG thấy việc làm / tuyển thợ)
 }
 
 enum Market {

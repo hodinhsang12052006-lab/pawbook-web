@@ -9,7 +9,7 @@ const ok = (id: string, desc: string, cond: boolean, detail = "") => {
   cond ? pass++ : fail++;
   console.log(`${cond ? "✅" : "❌"} [${id}] ${desc}${cond ? "" : "  → " + detail}`);
 };
-const clean = { hands: 1, fingers: 5, nails: 4, extraDigits: false, fusedOrMelted: false, palmSideNails: false, floatingNail: false, artOnSkin: false, text: false, nailsClear: true, matches: true, realistic: true };
+const clean = { hands: 1, fingers: 5, nails: 4, extraDigits: false, fusedOrMelted: false, palmSideNails: false, floatingNail: false, artOnSkin: false, text: false, nailNotAtTip: false, twoRows: false, nailsClear: true, matches: true, realistic: true };
 const v = (score: number, over: Record<string, unknown> = {}) => ({ ...clean, score, ...over });
 
 ok("J1", "Ảnh sạch, AI cho 8.5 → giữ 8.5 (đạt)", finalScore(v(8.5)) === 8.5 && anatomyOk(v(8.5)));
@@ -28,6 +28,9 @@ ok("J13", "Sai hoạ tiết so với mô tả → tối đa 6 (dưới ngưỡng
 ok("J14", "Câu trả lời dạng cũ (fiveFingers=false) vẫn hiểu → loại", finalScore({ hand: true, fiveFingers: false, textFree: true, score: 9 }) <= 3);
 ok("J15", "AI trả số đếm dạng chữ (\"7\") vẫn hiểu", finalScore(v(9, { nails: "7" })) <= 3);
 ok("J16", "Ngưỡng: đạt ≥ 8, giữ ≥ 7", PASS === 8 && KEEP === 7);
+
+ok("J17", "Móng mọc giữa đốt ngón (ảnh #18 ngày 23/10) → loại", finalScore(v(9, { nailNotAtTip: true })) <= 3);
+ok("J18", "Móng xếp 2 hàng / 2 bàn tay chồng (ảnh #37, #42) → loại", finalScore(v(9, { twoRows: true })) <= 3);
 
 console.log(`\nLuật chấm ảnh mẫu nail: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

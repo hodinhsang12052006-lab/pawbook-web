@@ -4,7 +4,8 @@
 // ẢNH tác phẩm thật → GIÁ dịch vụ → ĐÁNH GIÁ của khách thật. Bấm thẻ → menu + đặt lịch; nút Nhắn tin hỏi mẫu.
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, MessageCircle, Star, Store, Sparkles } from "lucide-react";
+import { MapPin, MessageCircle, Share2, Star, Store, Sparkles, Wand2 } from "lucide-react";
+import toast from "react-hot-toast";
 import Avatar from "@/components/ui/Avatar";
 import { cdnImage } from "@/lib/cdnImage";
 import { stateName } from "@/lib/stateNames";
@@ -72,9 +73,18 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
 export default function SalonDirectory({ market = "US", state = "", limit = 24, compact = false }: { market?: "US" | "AU"; state?: string; limit?: number; compact?: boolean }) {
   useTr();
   const [items, setItems] = useState<SalonItem[] | null>(null);
+  // Mời tiệm quen: điện thoại → bảng chia sẻ (Zalo, Messenger, iMessage…); máy không hỗ trợ → chép lời mời để dán
+  const invite = async () => {
+    const url = `${window.location.origin}/auth/register?role=owner`;
+    const text = tr("Tiệm mình lên PawNail đi — khách xem menu, thử mẫu trên tay rồi đặt lịch ngay trên app, miễn phí cho tiệm:", "Join PawNail — clients see your menu, try looks on their hand and book right in the app. Free for salons:");
+    if (typeof navigator.share === "function") {
+      try { await navigator.share({ title: "PawNail", text, url }); return; } catch (e) { if ((e as Error).name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); toast.success(tr("Đã chép lời mời — dán gửi tiệm qua Zalo / Messenger.", "Invite copied — paste it to your salon.")); }
+    catch { toast(url); }
+  };
   useEffect(() => {
     let off = false;
-    setItems(null);
     fetch(`/api/salons?market=${market}&state=${encodeURIComponent(state)}&limit=${limit}`)
       .then((r) => r.json())
       .then((d) => { if (!off) setItems(Array.isArray(d.items) ? d.items : []); })
@@ -84,11 +94,16 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
 
   if (items === null) return <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>{Array.from({ length: compact ? 2 : 4 }).map((_, i) => <div key={i} className="h-64 animate-pulse rounded-3xl bg-white/[0.04]" />)}</div>;
   if (!items.length) {
+    // Nói THẬT (chưa có tiệm nào lên menu ở đây) + 2 việc khách làm được ngay — không hứa "sẽ báo" khi chưa có
     return (
-      <div className="rounded-3xl bg-white/[0.03] p-6 text-center ring-1 ring-white/10">
+      <div className="rounded-3xl bg-white/[0.03] p-5 text-center ring-1 ring-white/10" data-testid="salons-empty">
         <Store className="mx-auto h-8 w-8 text-pink-300/70" />
-        <p className="mt-2 text-sm font-bold text-white">{tr("Các tiệm đang lên menu", "Salons are setting up their menus")}</p>
-        <p className="mt-1 text-xs text-slate-400">{tr("Lưu mẫu bạn thích — khi tiệm gần bạn có menu, PawNail báo bạn ngay.", "Save looks you love — we'll tell you when a salon near you has a menu.")}</p>
+        <p className="mt-2 text-sm font-bold text-white">{state ? tr(`Chưa có tiệm ở ${stateName(market, state)} lên menu trên PawNail`, `No salons in ${stateName(market, state)} have a menu on PawNail yet`) : tr("Các tiệm đang lên menu", "Salons are still setting up their menus")}</p>
+        <p className="mt-1 text-xs text-slate-400">{tr("Trong lúc chờ: thử mẫu trên tay bạn, lưu mẫu thích — và mời tiệm quen của bạn vào PawNail (miễn phí cho tiệm).", "Meanwhile: try looks on your hand, save the ones you love — and invite your usual salon to PawNail (free for salons).")}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Link href="/tryon" className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-xs font-black text-white"><Wand2 className="h-4 w-4" />{tr("Thử mẫu trên tay", "Try on my hand")}</Link>
+          <button type="button" onClick={invite} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] text-xs font-bold text-slate-200 ring-1 ring-white/10"><Share2 className="h-4 w-4" />{tr("Mời tiệm quen", "Invite my salon")}</button>
+        </div>
       </div>
     );
   }

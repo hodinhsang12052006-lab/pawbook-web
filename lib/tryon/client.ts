@@ -50,7 +50,7 @@ export class TryOnClient {
 
   call(msg: TryOnMsg): Promise<TryOnReply> {
     if (msg.kind === "image") this.log = [msg];
-    else if (msg.kind === "nail" || msg.kind === "remove" || msg.kind === "style") this.log.push(msg);
+    else if (msg.kind !== "render") this.log.push(msg);
     if (!this.worker) return new Promise((ok, bad) => setTimeout(() => this.runLocal(msg).then(ok, bad), 0));
     const id = ++this.seq;
     return new Promise((ok, bad) => {

@@ -4,7 +4,7 @@
 // ẩn để chuyển thành điểm ảnh — bộ máy ảnh thật (lib/tryon/engine) phủ lớp này lên móng, cho nhận ánh
 // sáng của ảnh và cắt đúng mép móng thật. Màu nền / hiệu ứng / bóng đều do bộ máy vẽ, không vẽ ở đây.
 import React, { forwardRef, useId } from "react";
-import { NAIL, ACCENT, ALL_NAILS, Motif, hash } from "@/components/designs/NailArt";
+import { NAIL, Motif, hash } from "@/components/designs/NailArt";
 import { hasMotif, motifTransform, type StudioLook } from "@/lib/studio";
 import type { Crop, NailInfo } from "@/lib/tryon/session";
 
@@ -25,7 +25,7 @@ const TryOnMotif = forwardRef<SVGSVGElement, { look: StudioLook; nails: NailInfo
         <linearGradient id={`cr${uid}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="40%" stopColor={metal} /><stop offset="60%" stopColor="#ffffff" /><stop offset="100%" stopColor={metal} /></linearGradient>
       </defs>
       {nails.map((n, i) =>
-        hasMotif(look.pattern, i, nails.length, ALL_NAILS, ACCENT) ? (
+        hasMotif(look.pattern, n.accent, nails.length) ? (
           <g key={i} transform={motifTransform(n.geo)}>
             <Motif pattern={look.pattern} c2={c2} metal={metal} i={i} rnd={rnd} uid={uid} outline={path} />
           </g>

@@ -114,7 +114,7 @@ try {
   const c4 = await cron(1);
   judgeDown = false;
   const r4 = c4.created?.[0] ? await row(c4.created[0]) : null;
-  R.check("Q5", "AI chấm không trả lời → KHÔNG đăng ảnh chưa chấm (mẫu giữ hình minh hoạ, lượt sau vẽ lại), không treo lượt vẽ", flux.length - f3 === 1 && !!r4 && r4.imageUrl === null && !/\[img:/.test(r4?.prompt || ""), JSON.stringify({ drawn: flux.length - f3, kept: r4?.imageUrl, err: c4.errors }));
+  R.check("Q5", "AI chấm không trả lời → KHÔNG đăng ảnh chưa chấm (mẫu giữ hình minh hoạ, lượt sau vẽ lại; 2 luồng vẽ song song nên tối đa 2 ảnh bị bỏ), không treo lượt vẽ", flux.length - f3 >= 1 && flux.length - f3 <= 2 && !!r4 && r4.imageUrl === null && !/\[img:/.test(r4?.prompt || ""), JSON.stringify({ drawn: flux.length - f3, kept: r4?.imageUrl, err: c4.errors }));
 
   // Q11: có 2 AI chấm → lấy kết quả khắt khe hơn
   // (bỏ dấu đã vẽ hôm nay của các mẫu trên để không chạm trần AI_IMAGES_DAILY=3 của server test)
@@ -136,7 +136,7 @@ try {
   await a.client.login(a.body.email, a.body.password);
   const st = (await a.client.req("/api/admin/designs")).data;
   const all = [...(st.drafts || []), ...(st.published || [])];
-  R.check("Q7", "Trang admin nhận điểm chấm ảnh (8/10) của mẫu đã vẽ", all.find((d) => d.id === id1)?.quality === 8 && all.find((d) => d.id === c4.created?.[0])?.quality === null, JSON.stringify(all.map((d) => [d.id === id1, d.quality])));
+  R.check("Q7", "Trang admin nhận điểm chấm ảnh (8/10) của mẫu đã vẽ; mẫu bị bỏ ảnh lúc AI chấm hỏng thì chưa có điểm, hoặc đã được vẽ bù + chấm đạt (≥ 7) ở lượt sau", all.find((d) => d.id === id1)?.quality === 8 && ((q4) => q4 == null || q4 >= 7)(all.find((d) => d.id === c4.created?.[0])?.quality), JSON.stringify({ c4: c4.created, inList: all.some((d) => d.id === c4.created?.[0]), q: all.map((d) => [d.id === id1, d.quality]) }));
 
   // Q8: ảnh thật từ menu thợ ở trang Mẫu nail (bỏ ảnh AI chép từ kho, bỏ mẫu đang ẩn)
   const tech = new Client();

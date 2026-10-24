@@ -52,6 +52,14 @@ try {
   await c.page.getByText(/Chào .*💅/).first().waitFor({ timeout: 20000 });
   await c.page.waitForTimeout(1500);
   const body = await c.page.locator("main").innerText();
+  // Thẻ THỬ MẪU đầu trang: ảnh trước / sau thật (tải được), dẫn tới /tryon, nói rõ "soi tông da + dáng móng"
+  const hero = c.page.getByTestId("tryon-hero");
+  const heroOk = await hero.evaluate((a) => {
+    const imgs = [...a.querySelectorAll("img")];
+    return { href: a.getAttribute("href"), imgs: imgs.length, loaded: imgs.every((i) => i.complete && i.naturalWidth > 100), text: a.textContent || "" };
+  }).catch(() => null);
+  R.check("C13", "Trang chủ khách mở đầu bằng thẻ Thử mẫu: ảnh trước / sau thật (cả 2 tải được), \"Chụp tay — xem mẫu hợp với BẠN\", dẫn tới /tryon",
+    !!heroOk && heroOk.href === "/tryon" && heroOk.imgs === 2 && heroOk.loaded && /Chụp tay/.test(heroOk.text) && /tông da/.test(heroOk.text), JSON.stringify(heroOk));
   const nav = await c.page.locator("nav").last().innerText().catch(() => "");
   const ov = await c.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   R.check("C5", "Trang chủ khách: lời chào, Mẫu trend / Tiệm gần bạn / Mẫu đã lưu, khối \"Tiệm & thợ quanh bạn\"; KHÔNG có Việc gấp / Thợ rảnh / tuyển thợ / Bảng tin nghề; không tràn ngang",

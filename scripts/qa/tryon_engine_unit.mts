@@ -3,10 +3,14 @@
 // móng gần màu da → khuôn dự phòng, đắp dài, ngoài móng không đổi 1 điểm ảnh, đúng màu, giữ ánh sáng thật,
 // xoá đá đính / chỉ bạc cũ, hiệu ứng nhám / chrome / nhũ / mắt mèo, độ trong, hoạ tiết, phiên Worker, tốc độ.
 //   npx tsx scripts/qa/tryon_engine_unit.mts
+// + tự dò móng (chỉ chụp ảnh), chạm 1 lần, soi tay (tông da / dáng móng), 10 mẫu gợi ý, hoạ tiết bộ máy tự vẽ.
 import path from "node:path";
 import { createRequire } from "node:module";
-import { segmentNail, renderLook, lab, type Img, type LookColors, type NailSeg } from "../../lib/tryon/engine";
-import { TryOnSession } from "../../lib/tryon/session";
+import { segmentNail, renderLook, rasterNail, fitNail, lab, type Img, type LookColors, type NailSeg } from "../../lib/tryon/engine";
+import { TryOnSession, autoNails, tapFit } from "../../lib/tryon/session";
+import { profileFromModels } from "../../lib/tryon/profile";
+import { adviceLooks } from "../../lib/tryon/advice";
+import { hasMotif } from "../../lib/studio";
 import { FIXTURES, inPoly, polyDist } from "./tryon_fixtures";
 
 const require = createRequire(import.meta.url);
@@ -240,7 +244,7 @@ ok("E9", `Đúng màu sơn: trung vị lõi móng lệch màu đặt ΔE ≤ 10 
   const motif = { w: im.w, h: im.h, data: new Uint8ClampedArray(im.w * im.h * 4) };
   const paint = (x0: number, y0: number) => { for (let y = y0; y < y0 + 16; y++) for (let x = x0; x < x0 + 16; x++) { const i = (y * im.w + x) * 4; motif.data[i] = 220; motif.data[i + 3] = 255; } };
   paint(214, 392); paint(40, 40);
-  const withMotif = renderLook(im, segs, LOOK(["#f4efe6"], "glossy"), motif);
+  const withMotif = renderLook(im, segs, LOOK(["#f4efe6"], "glossy", { pattern: "hearts" }), motif); // hoạ tiết SVG (tim) — mẫu trơn bộ máy tự vẽ, không dùng lớp SVG
   const ci = (400 * im.w + 222) * 4, oi = (48 * im.w + 48) * 4;
   ok("E13", "Độ trong 60% = trộn đúng 60% màu mới + 40% móng thật; mix màu: ngón 3–4 đổi màu phụ; hoạ tiết hiện trên móng (đỏ), ngoài móng bị bỏ",
     err / n < 2.5 && medL(segs[0]) < 60 && medL(segs[2]) > 150 && withMotif.data[ci] > withMotif.data[ci + 1] + 60 && withMotif.data[oi] === im.data[oi],
@@ -260,31 +264,120 @@ ok("E9", `Đúng màu sơn: trung vị lõi móng lệch màu đặt ΔE ≤ 10 
   ok("E16", `Mép móng sạch: đổi móng đen sang trắng sữa, điểm mép tối (< 120) chỉ ${r2((100 * dark) / n)}% (≤ 3.5%; không xử lý mép: 5.2%) — phần pha ở mép lấy màu da ngoài mép, không lấy sơn cũ`, dark / n <= 0.035);
 }
 
-// ---------------- 7. phiên (Worker) + đường viền
+// ---------------- 7. tự dò móng / chạm 1 lần / soi tay / gợi ý mẫu / phiên (Worker)
+const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
+  let i = 0, u = 0;
+  const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
+  for (let y = Math.min(seg.y0, ...ys); y < Math.max(seg.y0 + seg.h, ...ys); y++) for (let x = Math.min(seg.x0, ...xs); x < Math.max(seg.x0 + seg.w, ...xs); x++) {
+    const a = A(seg, x, y) >= 0.5, g = inPoly(x, y, poly);
+    if (a && g) i++; if (a || g) u++;
+  }
+  return u ? i / u : 0;
+};
+{
+  // TỰ DÒ: không được nhận nhầm (mọi móng nhận phải trùng 1 móng thật ≥ 0.6), nhận được ≥ 8/20 móng ở 5 ảnh khó
+  let found = 0, wrong = 0;
+  const notes: string[] = [];
+  for (const fx of FIXTURES) {
+    const r = autoNails(imgs[fx.file]);
+    for (const n of r.nails) {
+      const seg = rasterNail(imgs[fx.file], n.model);
+      const best = Math.max(...fx.outlines.map((p) => iouSegPoly(seg, p)));
+      if (best >= 0.6) found++; else { wrong++; notes.push(`${fx.file} IoU ${r2(best)}`); }
+    }
+  }
+  ok("E17", `Tự dò móng (khách chỉ chụp ảnh): KHÔNG nhận nhầm vùng nào (${wrong}), nhận đúng ${found}/20 móng ở 5 ảnh cận khó (≥ 7) — móng sót thì chạm 1 lần`, wrong === 0 && found >= 7, notes.join(" | "));
+}
+{
+  // CHẠM 1 LẦN giữa móng (đúng tâm + lệch 8px): khuôn trùng móng thật
+  const vals: number[] = [];
+  for (const fx of FIXTURES) for (const [k, poly] of fx.outlines.entries()) for (const [dx, dy] of [[0, 0], [8, -6]]) {
+    const cxp = poly.reduce((a, p) => a + p[0], 0) / poly.length, cyp = poly.reduce((a, p) => a + p[1], 0) / poly.length;
+    const [mb, mt] = fx.marks[(k + 1) % fx.marks.length], hl = Math.hypot(mt[0] - mb[0], mt[1] - mb[1]);
+    const r = tapFit(imgs[fx.file], { x: cxp + dx, y: cyp + dy }, { x: (mt[0] - mb[0]) / hl, y: (mt[1] - mb[1]) / hl });
+    vals.push(r ? iouSegPoly(rasterNail(imgs[fx.file], r.model), poly) : 0);
+  }
+  const mean = avg(vals), good = vals.filter((v) => v >= 0.75).length;
+  ok("E18", `Chạm 1 lần giữa móng (40 lần, 5 ảnh, lệch tâm 8px): trùng móng thật TB ${r2(mean)} (≥ 0.75), ${good}/40 lần ≥ 0.75 (≥ 28), không lần nào hỏng hẳn (< 0.3)`, mean >= 0.75 && good >= 28 && Math.min(...vals) >= 0.3, vals.map(r2).join(" "));
+}
+{
+  // SOI TAY: tông da / độ dài móng đúng như mắt thợ nhìn
+  const prof = (file: string) => profileFromModels(FIXTURES.find((f) => f.file === file)!.marks.map((m) => fitNail(imgs[file], mark(m))))!;
+  const pink = prof("pink.jpg"), white = prof("white.jpg"), hand = prof("hand.jpg"), olive = prof("olive.jpg");
+  ok("E19", "Soi tay: tay ảnh hồng = da sáng, tông lạnh (ngả hồng) · tay ảnh trắng = tông ấm (ngả vàng) · móng xanh rêu dài, móng đen vừa · màu đang sơn đúng (đen, xanh rêu)",
+    pink.undertone === "cool" && pink.depth === "fair" && white.undertone === "warm" && olive.length === "long" && hand.length === "medium"
+    && !!hand.polishHex && lab(...(hand.polishHex.match(/[0-9a-f]{2}/g)!.map((h) => parseInt(h, 16)) as [number, number, number]))[0] < 15
+    && !!olive.polishHex && lab(...(olive.polishHex.match(/[0-9a-f]{2}/g)!.map((h) => parseInt(h, 16)) as [number, number, number]))[2] > 10,
+    JSON.stringify({ pink, white: white.undertone, olive: olive.length, hand: [hand.length, hand.polishHex], olivePolish: olive.polishHex }));
+  const set = adviceLooks(pink, "US", "x1"), set2 = adviceLooks(pink, "US", "x2"), au = adviceLooks(white, "AU", "x1", true);
+  const pats = new Set(set.map((l) => l.pattern));
+  ok("E20", "10 mẫu gợi ý: đủ 10, không trùng, mỗi mẫu có nhãn + lý do + giá ($ / A$ theo thị trường, đắp móng giá cao hơn); có glazed donut, micro French, velvet, aura, baby boomer, ombre; dáng theo tay (móng dài → hạnh nhân); \"Bộ khác\" đổi màu",
+    set.length === 10 && new Set(set.map((l) => l.id)).size === 10 && set.every((l) => l.why.vi && l.tag.vi && /^\$\d+–\d+$/.test(l.priceHint))
+    && au.every((l) => /^A\$\d+–\d+$/.test(l.priceHint)) && set.some((l) => /Glazed donut/.test(l.title.vi)) && set.some((l) => /Micro French/.test(l.title.vi))
+    && ["velvet", "aura", "babyboomer", "ombre"].every((p) => pats.has(p)) && set.every((l) => l.shape === "almond")
+    && JSON.stringify(set.map((l) => l.palette)) !== JSON.stringify(set2.map((l) => l.palette)),
+    JSON.stringify(set.map((l) => [l.title.vi, l.priceHint])));
+}
+{
+  // HOẠ TIẾT TỰ VẼ đúng chỗ trên móng thật
+  const im = imgs["olive.jpg"], segs = segsOf["olive.jpg"].map((s, i) => Object.assign(Object.create(Object.getPrototypeOf(s)), s, { accent: i === 1 || i === 2 }) as NailSeg);
+  const seg = segs[0];
+  const colAt = (out: Img, along: number, across = 0) => {
+    let best = -1, bd = Infinity;
+    for (let k = 0; k < seg.alpha.length; k++) { if (seg.alpha[k] < 1) continue; const d = Math.abs(seg.along[k] - along) + Math.abs(seg.across[k] - across) * 0.5; if (d < bd) { bd = d; best = k; } }
+    const x = seg.x0 + (best % seg.w), y = seg.y0 + Math.floor(best / seg.w), i = (y * out.w + x) * 4;
+    return lab(out.data[i], out.data[i + 1], out.data[i + 2]);
+  };
+  const fr = renderLook(im, segs, LOOK(["#f6d5d0", "#111111", "#d4af37"], "matte", { pattern: "french" }));
+  const om = renderLook(im, segs, LOOK(["#f8fafc", "#7f1d1d", "#d4af37"], "matte", { pattern: "ombre" }));
+  const au = renderLook(im, segs, LOOK(["#e8c4a8", "#ec4899", "#d4af37"], "matte", { pattern: "aura" }));
+  const gm = renderLook(im, segs, LOOK(["#e8c4a8", "#ffffff", "#c0c0c0"], "glossy", { pattern: "gemcluster" }));
+  const tt = renderLook(im, segs, LOOK(["#b45309", "#5b3a29", "#d4af37"], "glossy", { pattern: "tortoise" }));
+  const frTip = colAt(fr, 0.97), frBase = colAt(fr, 0.4);
+  const omL = [0.2, 0.5, 0.85].map((a) => colAt(om, a)[0]);
+  const auMid = colAt(au, 0.5), auEdge = colAt(au, 0.15, 0.75);
+  // đá: chỉ trên móng điểm nhấn (móng 2, 3), móng 1 vẫn nền trơn
+  const plainG = renderLook(im, segs, LOOK(["#e8c4a8", "#ffffff", "#c0c0c0"], "glossy"));
+  const bright = (out: Img, s2: NailSeg) => { let n = 0, b = 0; for (let k = 0; k < s2.alpha.length; k++) { if (s2.alpha[k] < 1 || s2.along[k] > 0.7) continue; n++; const x = s2.x0 + (k % s2.w), y = s2.y0 + Math.floor(k / s2.w); if (Math.abs(lumaAt(out, x, y) - lumaAt(plainG, x, y)) > 30) b++; } return b / n; }; // khác hẳn bản không đá
+  let dark = 0, nT = 0;
+  core(seg, (x, y) => { nT++; if (lumaAt(tt, x, y) < 60) dark++; });
+  ok("E21", "Hoạ tiết tự vẽ bám móng thật: French đen ở ĐẦU móng (chân móng vẫn hồng) · ombre trắng → đỏ rượu đậm dần về đầu móng · aura hồng ở giữa, nude ở mép · cụm đá chỉ trên móng điểm nhấn · đồi mồi có đốm nâu 10–65% mặt móng",
+    frTip[0] < 25 && frBase[0] > 70 && omL[0] > omL[1] && omL[1] > omL[2] + 10 && auMid[1] > auEdge[1] + 8
+    && bright(gm, segs[1]) > 0.02 && bright(gm, segs[0]) < 0.005 && dark / nT > 0.1 && dark / nT < 0.65,
+    JSON.stringify({ frTip: frTip.map(Math.round), frBase: frBase.map(Math.round), omL: omL.map(Math.round), auMid: auMid.map(Math.round), auEdge: auEdge.map(Math.round), gem1: r2(bright(gm, segs[1])), gem0: r2(bright(gm, segs[0])), tort: r2(dark / nT) }));
+  ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết khác (tim, hoa…) vẫn có lớp SVG trên móng điểm nhấn",
+    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("hearts", true, 4) && !hasMotif("hearts", false, 4) && hasMotif("swirl", false, 4));
+}
 {
   const im = imgs["hand.jpg"], s = new TryOnSession();
   s.handle({ kind: "image", img: { w: im.w, h: im.h, buffer: im.data.slice().buffer } });
-  const infos = FIXTURES[0].marks.map((m, i) => s.handle({ kind: "nail", index: i, mark: mark(m) }).reply);
+  const auto = s.handle({ kind: "auto" }).reply;
+  const nAuto = auto.kind === "nails" ? auto.nails.length : 0;
+  // móng còn thiếu: chạm 1 lần vào giữa (tâm đáp án móng chưa có)
+  const have = auto.kind === "nails" ? auto.nails : [];
+  const missing = FIXTURES[0].outlines.filter((poly) => !have.some((n) => { const c = n.outline.reduce((a, p) => ({ x: a.x + p.x / n.outline.length, y: a.y + p.y / n.outline.length }), { x: 0, y: 0 }); return inPoly(c.x, c.y, poly); }));
+  let last = auto;
+  for (const [k, poly] of missing.entries()) last = s.handle({ kind: "tap", id: `t${k}`, point: { x: poly.reduce((a, p) => a + p[0], 0) / poly.length, y: poly.reduce((a, p) => a + p[1], 0) / poly.length } }).reply;
+  const n4 = last.kind === "nails" ? last.nails.length : 0;
+  const profOk = last.kind === "nails" && !!last.profile && last.profile.nails === n4;
+  const accents = last.kind === "nails" ? last.nails.filter((n) => n.accent).length : 0;
+  const firstId = last.kind === "nails" ? last.nails[0].id : "";
+  const dropped = s.handle({ kind: "drop", id: firstId }).reply;
   const styled = s.handle({ kind: "style", lengthFactor: 1.4, shape: "almond" }).reply;
   const crop = { x: 200, y: 200, w: 500, h: 300 };
   const r1 = s.handle({ kind: "render", look: LOOK(["#141416"], "glossy"), motif: null, crop }).reply;
-  s.handle({ kind: "remove", from: 2 });
-  const r2b = s.handle({ kind: "render", look: LOOK(["#f4efe6"], "glossy"), motif: null, crop }).reply;
-  const px = (r: typeof r1, x: number, y: number) => (r.kind === "image" ? new Uint8ClampedArray(r.img.buffer)[((y - crop.y) * crop.w + (x - crop.x)) * 4] : -1);
-  // móng 3 (505,370) sau khi bỏ: trở lại màu gốc; móng 1 (272,380): trắng sữa
-  const orig3 = im.data[(370 * im.w + 505) * 4];
-  const lens = styled.kind === "nails" ? styled.nails.map((n) => Math.hypot(n.geo.tip.x - n.geo.base.x, n.geo.tip.y - n.geo.base.y)) : [];
-  const nat = infos.map((r) => (r.kind === "nail" ? Math.hypot(r.nail.geo.tip.x - r.nail.geo.base.x, r.nail.geo.tip.y - r.nail.geo.base.y) : 0));
+  const miss = s.handle({ kind: "tap", id: "bg", point: { x: 60, y: 60 } }).reply; // chạm vào nền → không thêm móng
   // đường viền ≈ mặt nạ
   const seg = segsOf["hand.jpg"][1];
   let polyA = 0; const o = seg.outline;
   for (let i = 0, j = o.length - 1; i < o.length; j = i++) polyA += (o[j].x + o[i].x) * (o[j].y - o[i].y);
   polyA = Math.abs(polyA / 2);
   const maskA = seg.alpha.reduce((a, v) => a + v, 0);
-  ok("E14", "Phiên Thử mẫu: nạp ảnh → 4 móng → đắp hạnh nhân ×1.4 (đầu móng dài ra ×1.4) → vẽ trong khung cắt; bỏ móng 3–4 thì móng đó về ảnh gốc; đường viền khớp diện tích mặt nạ (±6%)",
-    infos.every((r) => r.kind === "nail" && r.nail.byColor) && lens.every((l, i) => Math.abs(l / nat[i] - 1.4) < 0.03) && r1.kind === "image" && r1.img.w === 500 && r1.img.h === 300
-    && px(r2b, 505, 370) === orig3 && px(r2b, 272, 380) > 200 && Math.abs(polyA / maskA - 1) < 0.06,
-    JSON.stringify({ lens: lens.map((l, i) => r2(l / nat[i])), n3: [px(r2b, 505, 370), orig3], n1: px(r2b, 272, 380), outline: r2(polyA / maskA) }));
+  ok("E14", "Phiên Thử mẫu: nạp ảnh → TỰ nhận móng → chạm 1 lần thêm móng sót = đủ 4 móng (soi tay theo đủ 4 móng, 2 móng điểm nhấn) → bỏ 1 móng còn 3 → đắp hạnh nhân ×1.4 → vẽ đúng khung cắt; chạm vào nền không thêm móng; đường viền khớp mặt nạ (±6%)",
+    nAuto >= 2 && n4 === 4 && profOk && accents === 2 && dropped.kind === "nails" && dropped.nails.length === 3 && styled.kind === "nails"
+    && styled.nails.every((n) => n.geo.tip && n.geo.width > 0) && r1.kind === "image" && r1.img.w === 500 && r1.img.h === 300
+    && miss.kind === "nails" && !miss.added && miss.nails.length === 3 && Math.abs(polyA / maskA - 1) < 0.06,
+    JSON.stringify({ nAuto, n4, profOk, accents, dropped: dropped.kind === "nails" ? dropped.nails.length : -1, miss: miss.kind === "nails" ? [miss.added, miss.nails.length] : null, outline: r2(polyA / maskA) }));
 }
 
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)

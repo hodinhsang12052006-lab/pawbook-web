@@ -32,6 +32,26 @@ export default function ClientHome({ user }: { user: { id: string; name?: string
         <p className="mt-0.5 text-sm text-slate-400">{tr("Hôm nay muốn làm móng kiểu gì?", "What look are you in the mood for?")}</p>
       </header>
 
+      {/* THỬ MẪU TRÊN TAY — lý do số 1 để khách mở app khi đang phân vân làm mẫu gì: ảnh trước / sau THẬT do bộ máy vẽ */}
+      <Link href="/tryon" className="group block overflow-hidden rounded-3xl bg-gradient-to-br from-fuchsia-600/30 via-pink-600/20 to-amber-500/15 ring-1 ring-pink-400/30" data-testid="tryon-hero">
+        <div className="relative grid grid-cols-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tryon/teaser-before.jpg" alt={tr("Trước", "Before")} width={416} height={320} className="aspect-[13/10] w-full object-cover" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tryon/teaser-after.jpg" alt={tr("Sau khi thử mẫu", "After try-on")} width={416} height={320} className="aspect-[13/10] w-full object-cover" />
+          <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">{tr("Trước", "Before")}</span>
+          <span className="absolute right-2 top-2 rounded-full bg-pink-600/90 px-2 py-0.5 text-[10px] font-bold text-white">{tr("Thử mẫu", "Try-on")}</span>
+          <span className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-white/70" aria-hidden />
+        </div>
+        <span className="flex items-center gap-3 p-3.5">
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-fuchsia-600 shadow-lg shadow-pink-600/30"><Wand2 className="h-5 w-5 text-white" /></span>
+          <span className="min-w-0">
+            <span className="block text-[15px] font-black text-white">{tr("Chụp tay — xem mẫu hợp với BẠN", "Snap your hand — see looks made for YOU")}</span>
+            <span className="block text-xs text-white/70">{tr("Máy tự nhận móng, soi tông da + dáng móng, vẽ 10 mẫu trend lên chính móng bạn", "We find your nails, read your skin tone + nail shape, and paint 10 trending looks on them")}</span>
+          </span>
+        </span>
+      </Link>
+
       <nav aria-label={tr("Lối tắt", "Shortcuts")} className="grid grid-cols-3 gap-2.5">
         {tiles.map(({ href, icon: Icon, title, sub, tone }) => (
           <Link key={href} href={href} className={`flex min-h-[104px] flex-col justify-between rounded-3xl bg-gradient-to-br p-3.5 ring-1 ring-white/10 transition active:scale-[0.98] ${tone}`}>
@@ -43,15 +63,6 @@ export default function ClientHome({ user }: { user: { id: string; name?: string
           </Link>
         ))}
       </nav>
-
-      {/* Thử mẫu PawNail: thử mẫu trên chính tay mình — lý do để mở app khi đang phân vân làm mẫu gì */}
-      <Link href="/tryon" className="relative flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-r from-fuchsia-600/30 via-pink-600/20 to-amber-500/15 p-4 ring-1 ring-pink-400/30">
-        <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-fuchsia-600 shadow-lg shadow-pink-600/30"><Wand2 className="h-6 w-6 text-white" /></span>
-        <span className="min-w-0">
-          <span className="block text-[15px] font-black text-white">{tr("Thử mẫu trên tay bạn", "Try looks on your hand")}</span>
-          <span className="block text-xs text-white/70">{tr("Chụp tay → 10 mẫu trend vẽ lên móng bạn trong vài giây", "Snap your hand → 10 trending looks painted on in seconds")}</span>
-        </span>
-      </Link>
 
       <DesignsStrip />
 

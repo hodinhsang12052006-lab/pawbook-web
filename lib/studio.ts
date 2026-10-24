@@ -5,6 +5,7 @@
 // ẢNH do PawNail tự viết, không phải mạng nơ-ron; khi có đủ ảnh thật có thể dạy model riêng trên dữ liệu này.
 import { generateEngineDesigns, type EngineDesign } from "@/lib/designEngine";
 import type { Finish, LookColors } from "@/lib/tryon/engine";
+import { ALL_NAIL_PATTERNS, PROCEDURAL } from "@/lib/tryon/patterns";
 
 export interface Pt { x: number; y: number }
 export interface NailMark { base: Pt; tip: Pt }
@@ -74,7 +75,7 @@ const seedOf = (s: string) => { let h = 2166136261; for (const c of s) h = Math.
 export function lookColors(look: StudioLook): LookColors {
   const pal = look.palette.length ? look.palette : ["#ec4899", "#a855f7"];
   return {
-    colors: [BASE_FILL[look.pattern] ?? pal[0], pal[1] ?? pal[0]],
+    colors: [BASE_FILL[look.pattern] ?? pal[0], pal[1] ?? pal[0], pal[2] ?? pal[pal.length - 1]],
     finish: FINISHES.includes(look.finish as Finish) ? (look.finish as Finish) : "glossy",
     pattern: look.pattern,
     seed: seedOf(look.id),
@@ -83,9 +84,10 @@ export function lookColors(look: StudioLook): LookColors {
   };
 }
 
-/** Móng thứ i (trong n móng) có vẽ hoạ tiết không: hoạ tiết toàn bộ → mọi móng; hoạ tiết điểm nhấn → ngón trỏ + áp út. */
-export function hasMotif(pattern: string, i: number, n: number, allNails: Set<string>, accent: Set<number>): boolean {
-  return pattern !== "solid" && pattern !== "mixmatch" && pattern !== "jelly" && (allNails.has(pattern) || accent.has(i) || n < 3);
+/** Móng có cần lớp hoạ tiết SVG không: hoạ tiết bộ máy tự vẽ (french, ombre, đá 3D…) → không; còn lại: hoạ tiết
+ *  toàn bộ → mọi móng, hoạ tiết điểm nhấn → móng điểm nhấn (bộ máy chọn theo vị trí trên bàn tay). */
+export function hasMotif(pattern: string, accent: boolean, n: number): boolean {
+  return !PROCEDURAL.has(pattern) && (ALL_NAIL_PATTERNS.has(pattern) || accent || n < 3);
 }
 
 /** Mở ảnh tay, thu nhỏ (điện thoại chụp 12MP) xuống cạnh dài tối đa `max` px → Blob JPEG (xem nhanh qua blob:)

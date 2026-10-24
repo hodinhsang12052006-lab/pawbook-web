@@ -15,8 +15,7 @@ if (!/localhost|127\.0\.0\.1/.test(BASE_URL)) throw new Error("nailstudio_test c
 const OUT = process.argv[2] || process.env.TEMP || ".";
 const R = new Results("Thử mẫu PawNail (Try-On)");
 const HAND = path.resolve("scripts/qa/fixtures/hand.jpg");
-// [gốc móng, đầu móng] theo pixel ảnh 900×900 + đáp án viền móng (cùng scripts/qa/tryon_fixtures.ts)
-const NAILS = [[[272, 425], [272, 322]], [[385, 430], [380, 312]], [[505, 422], [500, 308]], [[618, 400], [615, 310]]];
+// đáp án viền móng ảnh hand.jpg 900×900 (cùng scripts/qa/tryon_fixtures.ts)
 const GT = [
   [[240, 326], [258, 322], [300, 322], [312, 326], [315, 345], [314, 400], [306, 418], [290, 428], [270, 430], [250, 425], [241, 410], [238, 360]],
   [[340, 322], [360, 316], [400, 312], [417, 309], [422, 320], [423, 380], [419, 410], [405, 425], [385, 430], [362, 426], [348, 414], [341, 390], [339, 350]],
@@ -39,13 +38,25 @@ async function ui(email, password) {
   page.on("worker", (w) => workers.push(w.url()));
   return { ctx, page, errors, workers };
 }
-async function markNails(page, scope = page) {
+const polyCount = (page, scope = "") => page.evaluate((sc) => document.querySelectorAll(`${sc} svg[data-testid="nail-overlay"] polygon[data-nail]`).length, scope);
+const readPolys = (page, scope = "") => page.evaluate((sc) => [...document.querySelectorAll(`${sc} svg[data-testid="nail-overlay"] polygon[data-nail]`)].map((e) => ({ byColor: e.getAttribute("data-bycolor"), pts: (e.getAttribute("points") || "").trim().split(/\s+/).map((q) => q.split(",").map(Number)) })), scope);
+const centre = (poly) => [poly.reduce((a, p) => a + p[0], 0) / poly.length, poly.reduce((a, p) => a + p[1], 0) / poly.length];
+/** Chọn ảnh xong: chờ máy TỰ NHẬN móng; móng nào sót thì chạm 1 lần vào giữa (như khách làm). */
+async function autoNails(page, scope = page, sc = "") {
   const img = scope.getByRole("img", { name: "Ảnh tay khách" });
   await img.waitFor({ timeout: 20000 });
+  await page.waitForFunction(() => !document.body.innerText.includes("Đang tìm móng trên ảnh"), null, { timeout: 30000 }).catch(() => {});
+  const auto = await polyCount(page, sc);
   const tapAt = async ([x, y]) => { const box = await img.boundingBox(); await page.mouse.click(box.x + (x / 900) * box.width, box.y + (y / 900) * box.height); };
   const y0 = (await img.boundingBox()).y;
-  for (const [b, t] of NAILS) { await tapAt(b); await tapAt(t); }
-  return Math.abs((await img.boundingBox()).y - y0); // ảnh có bị nhảy giữa các lần chạm không
+  for (const poly of GT) {
+    const have = (await readPolys(page, sc)).some((p) => inPoly(...centre(p.pts), poly));
+    if (have) continue;
+    const n = await polyCount(page, sc);
+    await tapAt(centre(poly));
+    await page.waitForFunction(([s2, n0]) => document.querySelectorAll(`${s2} svg[data-testid="nail-overlay"] polygon[data-nail]`).length > n0, [sc, n], { timeout: 15000 }).catch(() => {});
+  }
+  return { auto, total: await polyCount(page, sc), tapAt, jump: Math.abs((await img.boundingBox()).y - y0) };
 }
 /** Chờ đủ `n` ảnh mẫu đã vẽ xong trong `scope`. */
 async function waitLooks(scope, n, timeout = 60000) {
@@ -76,32 +87,48 @@ try {
   const p = techUi.page;
   await p.goto(BASE_URL + "/tryon");
   await p.locator('input[type=file]').setInputFiles(HAND);
-  const jump = await markNails(p);
-  const tip = await p.getByText(/Móng 5: chạm vào GỐC móng/).count();
-  // Máy nhận đủ 4 móng (chạy nền) → viền móng hiện trên ảnh, khớp đáp án vẽ tay
-  const polys = p.locator('svg[data-testid="nail-overlay"] polygon[data-nail]');
   const t0 = Date.now();
-  await p.waitForFunction(() => document.querySelectorAll('svg[data-testid="nail-overlay"] polygon[data-nail]').length >= 4, null, { timeout: 30000 }).catch(() => {});
+  const { auto, total, tapAt, jump } = await autoNails(p);
   const found = Date.now() - t0;
-  const shapes = await polys.evaluateAll((els) => els.map((e) => ({ i: Number(e.getAttribute("data-nail")), byColor: e.getAttribute("data-bycolor"), pts: (e.getAttribute("points") || "").trim().split(/\s+/).map((s) => s.split(",").map(Number)) })));
-  const ious = shapes.map((s) => +iou(s.pts, GT[s.i]).toFixed(3));
+  const shapes = (await readPolys(p)).map((x) => ({ ...x, iou: Math.max(...GT.map((g) => iou(x.pts, g))) }));
+  const ious = shapes.map((x) => +x.iou.toFixed(3));
+  const profileCard = await p.getByTestId("hand-profile").innerText().catch(() => "");
   await p.screenshot({ path: path.join(OUT, "tryon_marked.png") });
-  R.check("S0", "Ảnh KHÔNG nhảy giữa các lần chạm; máy nhận đủ 4 móng (chạy nền, Web Worker) — viền móng trùng đáp án vẽ tay (IoU ≥ 0.8 — đáp án vẽ tay lệch ±2–4px), nhận theo màu", jump < 1 && tip === 1 && shapes.length === 4 && ious.every((x) => x >= 0.8) && shapes.every((s) => s.byColor === "1") && techUi.workers.length >= 1,
-    JSON.stringify({ jump, tip, found, ious, workers: techUi.workers.length }));
-
+  R.check("S0", "Chụp ảnh → máy TỰ NHẬN móng chắc chắn (Web Worker, không chạm gì) ≥ 2/4; chạm 1 lần vào móng sót → đủ 4; mọi viền trùng đáp án (IoU ≥ 0.75); thẻ \"Soi tay của bạn\" (tông da, độ dài móng, dáng hợp nhất)",
+    auto >= 2 && total === 4 && jump < 1 && ious.every((x) => x >= 0.75) && shapes.every((x) => x.byColor === "1") && /Soi tay/.test(profileCard) && /tông/.test(profileCard) && /Dáng hợp nhất/.test(profileCard) && techUi.workers.length >= 1,
+    JSON.stringify({ auto, total, found, ious, profileCard: profileCard.replace(/\n/g, " · "), workers: techUi.workers.length }));
+  // chạm vào nền (áo len, góc trên trái) → KHÔNG thêm móng; chạm vào viền 1 móng → bỏ; chạm lại giữa móng → nhận lại
+  const idle = () => p.waitForFunction(() => document.querySelector("[data-busy]")?.getAttribute("data-busy") === "0", null, { timeout: 20000 }).catch(() => {});
+  const t1 = Date.now();
+  await tapAt([60, 60]);
+  await p.waitForTimeout(150); await idle();
+  const bgMs = Date.now() - t1;
+  const afterBg = await polyCount(p);
+  const bgToast = await p.getByText(/Chưa nhận ra móng ở đó/).count();
+  await tapAt(centre(GT[1]));
+  await p.waitForTimeout(400); await idle();
+  const afterDrop = await polyCount(p);
+  await tapAt(centre(GT[1]));
+  await p.waitForFunction(() => document.querySelectorAll('svg[data-testid="nail-overlay"] polygon[data-nail]').length >= 4, null, { timeout: 15000 }).catch(() => {});
+  const afterReadd = await polyCount(p);
+  R.check("S0b", "Chạm vào nền → không thêm móng (báo \"Chưa nhận ra móng ở đó\"); chạm vào viền móng → bỏ móng; chạm lại giữa móng → nhận lại", afterBg === 4 && bgToast >= 1 && afterDrop === 3 && afterReadd === 4, JSON.stringify({ afterBg, bgToast, bgMs, afterDrop, afterReadd }));
   await p.getByRole("button", { name: /Tạo mẫu/ }).click();
   const looks = p.locator("button[aria-pressed]");
   await looks.first().waitFor({ timeout: 15000 });
   const n = await looks.count();
   const took = await waitLooks(p, 10);
   const info = await diffPreview(p, "img[data-look]");
-  R.check("S1", "Tạo mẫu → 10 mẫu, cả 10 ảnh vẽ xong (ảnh thật, khung vuông quanh bàn tay) trong < 40 giây", n === 10 && took >= 0 && took < 40000 && info.w === info.h && info.w > 300, JSON.stringify({ n, took, info }));
+  const why = await looks.locator("span.line-clamp-2").allInnerTexts();
+  const tags = await p.locator("button[aria-pressed] > span.absolute.left-2").allInnerTexts();
+  R.check("S1", "Tạo mẫu → 10 mẫu HỢP TAY (mỗi mẫu có nhãn: Hợp tông da / Trend 2026 / Làm ngón thon / Cá tính + lý do), cả 10 ảnh vẽ xong (ảnh thật, khung vuông quanh bàn tay) trong < 40 giây",
+    n === 10 && took >= 0 && took < 40000 && info.w === info.h && info.w > 300 && why.length === 10 && why.every((x) => x.length > 15) && tags.length === 10 && tags.some((x) => /Trend/.test(x)) && tags.some((x) => /tông da/.test(x)),
+    JSON.stringify({ n, took, info, tags: [...new Set(tags)], why: why.slice(0, 2) }));
   await p.screenshot({ path: path.join(OUT, "tryon_looks.png"), fullPage: true });
   const titles = await looks.locator("span.block.truncate").allInnerTexts();
   const prices = await looks.locator("span.text-emerald-300").allInnerTexts();
   const firstSrc = await p.locator("img[data-look]").first().getAttribute("src");
   // Đổi dáng: Hạnh nhân (đắp dài) → bộ máy vẽ lại cả 10 mẫu
-  await p.getByRole("button", { name: "Hạnh nhân" }).click();
+  await p.getByRole("button", { name: /^Hạnh nhân/ }).click();
   const slider = await p.getByText("Độ dài đắp").count();
   await p.waitForFunction((src) => { const im = document.querySelector("img[data-look]"); return im && im.getAttribute("src") !== src; }, firstSrc, { timeout: 30000 }).catch(() => {});
   const tookShape = await waitLooks(p, 10);
@@ -118,11 +145,11 @@ try {
   R.check("S2b", "\"Bộ khác\" ra bộ mẫu mới và vẽ xong cả 10", newTitles !== beforeSet && tookNew >= 0, JSON.stringify({ tookNew }));
   await looks.nth(0).click();
   await looks.nth(3).click();
-  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 20000 }), p.getByRole("button", { name: /Tải 2/ }).click()]);
+  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 20000 }), p.getByRole("button", { name: /Chia sẻ 2/ }).click()]);
   const file = path.join(OUT, "tryon_export.jpg");
   await dl.saveAs(file);
   const meta = await sharp(file).metadata();
-  R.check("S3", "Chọn 2 mẫu → \"Tải 2\" xuất ảnh JPEG 1080×1080 (có nhãn PawNail · mẫu thử)", meta.format === "jpeg" && meta.width === 1080 && meta.height === 1080 && fs.statSync(file).size > 40000, JSON.stringify({ format: meta.format, w: meta.width, h: meta.height, size: fs.statSync(file).size }));
+  R.check("S3", "Chọn 2 mẫu → \"Chia sẻ 2\" (máy không chia sẻ ảnh được → tải về) xuất ảnh JPEG 1080×1080 (có nhãn PawNail · mẫu thử)", meta.format === "jpeg" && meta.width === 1080 && meta.height === 1080 && fs.statSync(file).size > 40000, JSON.stringify({ format: meta.format, w: meta.width, h: meta.height, size: fs.statSync(file).size }));
 
   // ---------- Messenger: khách gửi ảnh tay → thợ ✨ → gửi mẫu ----------
   const reg = await registerUser({ name: "QA Khách Studio", role: "CLIENT", specialties: undefined });
@@ -148,8 +175,7 @@ try {
   const dialog = p.getByRole("dialog", { name: /Thử mẫu PawNail/ });
   await dialog.waitFor({ timeout: 15000 });
   await dialog.locator("button img").first().click(); // ảnh tay khách vừa gửi
-  await markNails(p, dialog);
-  await p.waitForFunction(() => document.querySelectorAll('[role=dialog] svg[data-testid="nail-overlay"] polygon[data-nail]').length >= 4, null, { timeout: 30000 }).catch(() => {});
+  await autoNails(p, dialog, "[role=dialog]");
   await dialog.getByRole("button", { name: /Tạo mẫu/ }).click();
   const dl2 = dialog.locator("button[aria-pressed]");
   await dl2.first().waitFor({ timeout: 15000 });

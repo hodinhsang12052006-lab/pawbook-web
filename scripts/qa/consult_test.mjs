@@ -154,8 +154,13 @@ R.check("C12", "Chưa tích “Khách đồng ý” → không cho chụp, nhắ
 await p.getByRole("button", { name: "Tự nhiên" }).click();
 await p.getByRole("checkbox", { name: /Khách đồng ý/ }).check();
 const nGem = calls.gemini.length;
+// Ghi lại hễ chữ "Đang soi" từng hiện: AI giả trả lời trong vài ms trên máy rảnh → hỏi lại theo chu kỳ dễ trượt mất
+await p.evaluate(() => {
+  window.__sawScan = false;
+  new MutationObserver(() => { if (document.body.textContent.includes("Đang soi tay khách…")) window.__sawScan = true; }).observe(document.body, { childList: true, subtree: true, characterData: true });
+});
 await p.locator('input[type=file][capture]').setInputFiles(jpgPath);
-const scanning = await p.getByText("Đang soi tay khách…").waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+const scanning = await p.waitForFunction(() => window.__sawScan, null, { timeout: 5000 }).then(() => true).catch(() => false);
 await p.getByText("Hợp với khách").waitFor({ timeout: 20000 }).catch(() => {});
 const ui = await p.evaluate(() => document.body.textContent);
 const sentSmall = calls.gemini.length === nGem + 1;

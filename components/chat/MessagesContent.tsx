@@ -24,9 +24,12 @@ import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon, Sparkles as Sp
 import ChatBackdrop from "./ChatBackdrop";
 import ChatSuggestions from "./ChatSuggestions";
 import ChatContextCard from "./ChatContextCard";
+import ChatAssist from "./ChatAssist";
+import { replyInVietnamese, starters } from "@/lib/chatAssist";
 import dynamic from "next/dynamic";
 // Thử mẫu PawNail (vẽ mẫu lên ảnh tay khách) — tải khi mở, không làm nặng Messenger lúc vào.
 const NailStudio = dynamic(() => import("@/components/studio/NailStudio"), { ssr: false });
+const HandConsult = dynamic(() => import("@/components/consult/HandConsult"), { ssr: false });
 import { type Reaction, toggleReaction } from "@/lib/chatReactions";
 import MediaPicker from "./MediaPicker";
 import VoiceRecorder from "./VoiceRecorder";
@@ -95,6 +98,7 @@ export default function MessagesContent({
   // Đang gõ → 3 nút (ảnh / ghi âm / GIF) thu vào 1 nút "+" cho ô nhập rộng ra (như Messenger)
   const [toolsOpen, setToolsOpen] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [consult, setConsult] = useState<{ image: string | null } | null>(null); // Soi tay tư vấn ngay trong chat
   const hasTextRef = useRef(false);
   // Chỉ gọi setState khi THẬT SỰ đổi (gọi với cùng giá trị React vẫn có thể chạy lại thân component).
   const setHasText = useCallback((v: boolean) => {
@@ -1110,6 +1114,16 @@ export default function MessagesContent({
     ? { id: activeChat.id, name: activeChat.name, avatarUrl: activeChat.avatarUrl, isGroup: activeChat.isGroup, conversationId: activeChat.conversationId }
     : null;
 
+  // Khách đang nhắn với tiệm / thợ → ✨ là "Thử mẫu trên tay mình rồi gửi tiệm"
+  const clientChat = currentUser?.role === "CLIENT" && !activeChat?.isGroup && (activeChat?.role === "TECHNICIAN" || activeChat?.role === "OWNER");
+  // Tin của đối phương mà mình CHƯA trả lời (để Trợ lý PawNail gợi ý đúng câu cần trả lời). Vòng lặp dừng ngay
+  // ở tin đầu tiên của mình tính từ cuối lên — rẻ, không cần useMemo; ChatAssist tự memo theo nội dung.
+  let unanswered: { content: string; type: "TEXT" | "IMAGE" } | null = null;
+  for (let i = chatMessages.length - 1; i >= 0; i--) {
+    const m = chatMessages[i];
+    if (m.senderId === currentUser?.id) break;
+    if (m.type === "IMAGE" || !m.type || m.type === "TEXT") { unanswered = { content: String(m.content || ""), type: m.type === "IMAGE" ? "IMAGE" : "TEXT" }; break; }
+  }
   // Props ỔN ĐỊNH cho MessageRow (React.memo): đối tượng/hàm giữ nguyên danh
   // tính giữa các lần render, gọi bản mới nhất qua ref.
   const rowChat = useMemo(
@@ -1507,10 +1521,8 @@ export default function MessagesContent({
                   <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{t("messenger.noMessagesHint")}</p>
                   {/* Gợi ý câu mở đầu theo vai trò — bấm để điền sẵn vào ô nhập. */}
                   <div className="mt-1 flex max-w-md flex-wrap justify-center gap-2">
-                    {(currentUser?.role === "OWNER"
-                      ? [tr("Chào bạn, tiệm mình đang cần thợ, bạn còn nhận việc không?", "Hi! Our salon is hiring — are you still taking work?"), tr("Bạn làm được Bột/Dip/Gel-X không?", "Can you do acrylic/dip/Gel-X?"), tr("Khi nào bạn có thể ghé tiệm thử tay nghề?", "When can you come by for a skills trial?")]
-                      : [tr("Chào anh/chị, tiệm còn tuyển thợ không ạ?", "Hi, is the salon still hiring?"), tr("Cho em hỏi lương và cách chia turn ạ?", "What's the pay and how are turns split?"), tr("Tiệm có hỗ trợ chỗ ở không ạ?", "Does the salon help with housing?")]
-                    ).map((starter) => (
+                    {/* đúng cặp vai trò: khách hỏi tiệm (lịch, giá) khác hẳn thợ hỏi việc — trước đây khách cũng thấy "tiệm còn tuyển thợ không" */}
+                    {starters(currentUser?.role, activeChat.role, tr).map((starter) => (
                       <button
                         key={starter}
                         type="button"
@@ -1555,28 +1567,65 @@ export default function MessagesContent({
             <div className="pn-composer relative flex-none z-10 border-t border-white/[0.06] px-2.5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
               {studioOpen && activeChat && (
                 <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setStudioOpen(false)}>
-                  <div role="dialog" aria-label={tr("Thử mẫu PawNail — tạo mẫu trên tay khách", "PawNail Try-On — looks on the client's hand")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+                  <div role="dialog" aria-label={clientChat ? tr("Thử mẫu PawNail — thử mẫu trên tay bạn", "PawNail Try-On — looks on your hand") : tr("Thử mẫu PawNail — tạo mẫu trên tay khách", "PawNail Try-On — looks on the client's hand")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{tr("Tạo mẫu trên tay khách", "Try-on looks")}</p>
+                      <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{clientChat ? tr("Thử mẫu trên tay bạn", "Try looks on your hand") : tr("Tạo mẫu trên tay khách", "Try-on looks")}</p>
                       <button type="button" onClick={() => setStudioOpen(false)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
                     </div>
                     <NailStudio
                       market={currentUser?.market === "AU" ? "AU" : "US"}
-                      photos={chatMessages.filter((m) => m.type === "IMAGE" && m.senderId !== currentUser?.id && /^(https:\/\/|data:image\/)/.test(m.content)).map((m) => m.content).reverse()}
-                      sendLabel={tr("Gửi cho khách", "Send to client")}
+                      // Thợ: ảnh KHÁCH gửi · Khách: ảnh tay của CHÍNH MÌNH đã gửi (hoặc chụp mới trong Studio)
+                      photos={chatMessages.filter((m) => m.type === "IMAGE" && (clientChat ? m.senderId === currentUser?.id : m.senderId !== currentUser?.id) && /^(https:\/\/|data:image\/)/.test(m.content)).map((m) => m.content).reverse()}
+                      sendLabel={clientChat ? tr("Gửi cho tiệm", "Send to the salon") : tr("Gửi cho khách", "Send to client")}
                       onSend={async ({ blobs, looks }) => {
                         for (let i = 0; i < blobs.length; i++) {
                           const url = await uploadMedia(new File([blobs[i]], `pawnail-studio-${i + 1}.jpg`, { type: "image/jpeg" }));
                           await handleSendMessage(null, url, "IMAGE");
                         }
-                        const lines = looks.map((l, i) => `${i + 1}. ${tr(l.title.vi, l.title.en)} — ${l.priceHint}`);
-                        await handleSendMessage(null, [tr(`✨ ${looks.length} mẫu thử trên tay chị/anh (PawNail):`, `✨ ${looks.length} try-on looks on your hand (PawNail):`), ...lines, tr("Chị/anh thích mẫu nào nhắn em nhé — giá chính xác theo menu tiệm.", "Tell me which one you like — exact price per our menu.")].join("\n"));
+                        const lines = looks.map((l, i) => `${i + 1}. ${tr(l.title.vi, l.title.en)}${clientChat ? "" : ` — ${l.priceHint}`}`);
+                        await handleSendMessage(null, (clientChat
+                          ? [tr(`✨ Em thử ${looks.length} mẫu trên tay mình (PawNail):`, `✨ I tried ${looks.length} looks on my hand (PawNail):`), ...lines, tr("Tiệm làm được mẫu này không ạ? Giá bao nhiêu và khi nào còn lịch ạ?", "Can you do one of these? How much, and when do you have an opening?")]
+                          : [tr(`✨ ${looks.length} mẫu thử trên tay chị/anh (PawNail):`, `✨ ${looks.length} try-on looks on your hand (PawNail):`), ...lines, tr("Chị/anh thích mẫu nào nhắn em nhé — giá chính xác theo menu tiệm.", "Tell me which one you like — exact price per our menu.")]
+                        ).join("\n"));
                         setStudioOpen(false);
-                        toast.success(tr("Đã gửi mẫu cho khách.", "Looks sent."));
+                        toast.success(clientChat ? tr("Đã gửi mẫu cho tiệm.", "Sent to the salon.") : tr("Đã gửi mẫu cho khách.", "Looks sent."));
                       }}
                     />
                   </div>
                 </div>
+              )}
+              {consult && activeChat && (
+                <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setConsult(null)}>
+                  <div role="dialog" aria-label={tr("Soi tay tư vấn cho khách", "Hand consult for the client")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()} data-testid="chat-consult">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{tr("Soi tay tư vấn", "Hand consult")}</p>
+                      <button type="button" onClick={() => setConsult(null)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
+                    </div>
+                    <HandConsult
+                      embedded
+                      chatImage={consult.image ?? undefined}
+                      vi={unanswered?.type === "TEXT" ? replyInVietnamese(unanswered.content, locale === "vi") : locale === "vi"}
+                      onShare={async (text) => {
+                        await handleSendMessage(null, text);
+                        setConsult(null);
+                        toast.success(tr("Đã gửi tư vấn cho khách.", "Advice sent."));
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {/* đang gõ → ẩn thanh gợi ý cho ô nhập + bàn phím đủ chỗ (bấm gợi ý xong cũng ẩn: đã dùng).
+                  Chờ tin của cuộc trò chuyện nạp xong (activeBucket) — không thì thoáng hiện gợi ý "chưa có tin" rồi mới đổi. */}
+              {!recording && !hasText && !!activeBucket && currentUser && activeChat && !activeChat.isGroup && (
+                <ChatAssist
+                  me={{ id: currentUser.id, role: currentUser.role, market: currentUser.market }}
+                  partner={{ id: activeChat.id, role: activeChat.role, isGroup: !!activeChat.isGroup }}
+                  last={unanswered}
+                  onFill={(text) => { setMessageText(text); setToolsOpen(false); inputRef.current?.focus(); }}
+                  onStudio={() => { handleCloseMediaPanel(); setStudioOpen(true); }}
+                  onConsult={(image) => { handleCloseMediaPanel(); setConsult({ image }); }}
+                  onPhoto={handleUploadImage}
+                />
               )}
               {(showEmoji || showGifs) && (
                 <MediaPicker
@@ -1646,12 +1695,12 @@ export default function MessagesContent({
                 >
                   <span className="rounded-md border-2 border-current px-1 py-px leading-none">GIF</span>
                 </button>
-                {["TECHNICIAN", "OWNER", "ADMIN"].includes(currentUser?.role) && !activeChat?.isGroup && (
+                {(["TECHNICIAN", "OWNER", "ADMIN"].includes(currentUser?.role) || clientChat) && !activeChat?.isGroup && (
                   <button
                     type="button"
                     onClick={() => { handleCloseMediaPanel(); setStudioOpen(true); }}
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/5 hover:text-pink-300"
-                    title={tr("Tạo mẫu trên tay khách (Thử mẫu PawNail)", "Try-on looks on the client's hand")}
+                    title={clientChat ? tr("Thử mẫu trên tay bạn rồi gửi tiệm", "Try looks on your hand, then send to the salon") : tr("Tạo mẫu trên tay khách (Thử mẫu PawNail)", "Try-on looks on the client's hand")}
                     aria-label={tr("Tạo mẫu", "Try-on looks")}
                   >
                     <SparklesIcon className="h-[22px] w-[22px]" />

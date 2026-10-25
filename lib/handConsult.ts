@@ -456,3 +456,21 @@ export const VISION_SCHEMA = {
   },
   required: ["isTarget", "skinTone", "undertone", "fingerLength", "bedWidth", "nailLength", "currentShape", "hasProduct", "conditions", "note"],
 };
+
+/** Tin nhắn TƯ VẤN gửi khách ngay trong chat (thợ bấm "Gửi tư vấn cho khách"): ngắn, gạch đầu dòng, đúng ngôn ngữ khách,
+ *  giá lấy từ menu thật của thợ. */
+export function consultSummary(a: Advice, menu: { name: string; priceFrom: number; priceTo: number | null }[], market: "US" | "AU", vi: boolean): string {
+  const k = vi ? 0 : 1;
+  const L = (x: L) => x[k];
+  const money = (n: number) => `${market === "AU" ? "A$" : "$"}${Math.round(n)}`;
+  const lines = [vi ? "💅 Tư vấn cho tay chị/anh (PawNail):" : "💅 Your nail consult (PawNail):"];
+  if (a.redFlags.length) lines.push(`⚠️ ${vi ? "Cần lưu ý" : "Please note"}: ${a.redFlags.map((c) => (CONDITIONS[c] ? L(CONDITIONS[c].label) : c)).join(", ")}`);
+  if (a.shapes[0]) lines.push(`• ${vi ? "Dáng hợp" : "Best shape"}: ${L(LABELS.shape[a.shapes[0].id])} — ${L(a.shapes[0].why)}`);
+  lines.push(`• ${vi ? "Độ dài" : "Length"}: ${L(a.length)}`);
+  lines.push(`• ${vi ? "Kỹ thuật" : "Technique"}: ${a.technique.id} — ${L(a.technique.why)}`);
+  if (a.palette.length) lines.push(`• ${vi ? "Màu hợp tông" : "Colours that suit you"}: ${a.palette.slice(0, 4).map((p) => L(p.name)).join(", ")}`);
+  const priced = menu.filter((m) => m.priceFrom > 0).slice(0, 3);
+  if (priced.length) lines.push(`• ${vi ? "Gợi ý từ menu tiệm" : "From our menu"}: ${priced.map((m) => `${m.name} ${money(m.priceFrom)}${m.priceTo && m.priceTo > m.priceFrom ? `–${Math.round(m.priceTo)}` : ""}`).join(", ")}`);
+  if (a.care[0]) lines.push(`• ${vi ? "Dặn dò" : "Aftercare"}: ${L(a.care[0])}`);
+  return lines.join("\n");
+}

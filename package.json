@@ -21,7 +21,8 @@
     "qa:load": "node scripts/qa/load_test.mjs",
     "qa:hardening": "node scripts/qa/security_hardening.mjs",
     "qa:snap": "node scripts/qa/snapshots.mjs",
-    "qa:tryon": "tsx scripts/qa/tryon_engine_unit.mts"
+    "qa:tryon": "tsx scripts/qa/tryon_engine_unit.mts",
+    "qa:chat-assist": "tsx scripts/qa/chat_assist_unit.mts && node scripts/qa/chat_assist_test.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

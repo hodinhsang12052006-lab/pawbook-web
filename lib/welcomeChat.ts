@@ -91,11 +91,18 @@ export function welcomeText(i: Pick<WelcomeInfo, "name" | "role">, existing = fa
   if (i.role === "CLIENT") {
     return `Chào mừng ${first} đến với PawNail 💅
 
-Ở đây bạn xem mẫu nail trend mỗi ngày, tìm tiệm / thợ gần bạn với ảnh thật + bảng giá, nhắn hỏi mẫu và đặt lịch không cần gọi điện. Mẹo: bấm Lưu những mẫu bạn thích để lần sau đưa thợ xem ngay. Cần hỗ trợ gì cứ nhắn ở đây nhé!`;
+Ở đây bạn xem mẫu nail trend mỗi ngày, tìm tiệm / thợ gần bạn với ảnh thật + bảng giá, nhắn hỏi mẫu và đặt lịch không cần gọi điện.
+
+✨ Thử mẫu trên tay: chụp 1 ảnh bàn tay → xem ngay 10 mẫu trend trên chính tay bạn → gửi mẫu thích cho tiệm hỏi giá + lịch (bấm ✨ trong khung chat với tiệm).
+Mẹo: bấm Lưu những mẫu bạn thích để lần sau đưa thợ xem ngay. Cần hỗ trợ gì cứ nhắn ở đây nhé!`;
   }
   return i.role === "OWNER"
-    ? `Chào mừng ${first} đến với PawNail Jobs 🎉\n\nTin tuyển thợ của tiệm đã lên bảng việc, thợ gần tiệm sẽ thấy ngay. Anh/chị cần hỗ trợ gì — đăng tin, tìm thợ, hay góp ý — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`
-    : `Chào mừng ${first} đến với PawNail Jobs 🎉\n\nBạn đã có hồ sơ để tiệm tìm tới. Mẹo: đăng 3–5 ảnh tay nghề để được nhắn nhiều hơn. Bạn cần hỗ trợ gì — tìm việc, sửa hồ sơ, hay báo tin lạ — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`;
+    ? `Chào mừng ${first} đến với PawNail Jobs 🎉\n\nTin tuyển thợ của tiệm đã lên bảng việc, thợ gần tiệm sẽ thấy ngay. Mẹo: thêm Menu mẫu nail (có giá) của tiệm — khách nhắn hỏi giá, Trợ lý PawNail gợi ý câu trả lời đúng giá menu, bấm 1 cái là gửi.
+
+Anh/chị cần hỗ trợ gì — đăng tin, tìm thợ, hay góp ý — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`
+    : `Chào mừng ${first} đến với PawNail Jobs 🎉\n\nBạn đã có hồ sơ để tiệm tìm tới. Mẹo: đăng 3–5 ảnh tay nghề để được nhắn nhiều hơn, và thêm Menu mẫu nail (có giá) — khách nhắn hỏi giá / gửi ảnh tay, Trợ lý PawNail gợi ý câu trả lời + vẽ thử mẫu lên tay khách.
+
+Bạn cần hỗ trợ gì — tìm việc, sửa hồ sơ, hay báo tin lạ — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`;
 }
 
 /** Mở (hoặc dùng lại) cuộc trò chuyện chính thức ↔ người mới và gửi 2 tin. Trả về conversationId. */

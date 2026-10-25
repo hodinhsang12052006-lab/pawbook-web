@@ -12,7 +12,7 @@ import { cdnImage } from "@/lib/cdnImage";
 import { priceLabel, type PublicMenuItem } from "@/lib/menu";
 import { DesignCard, DesignSheet, type Design } from "@/components/designs/DesignViews";
 import {
-  BED_WIDTHS, CONDITIONS, CONDITION_IDS, FINGER_LENGTHS, LABELS, NAIL_LENGTHS, SKIN_TONES, UNDERTONES, buildAdvice,
+  BED_WIDTHS, CONDITIONS, CONDITION_IDS, FINGER_LENGTHS, LABELS, NAIL_LENGTHS, SKIN_TONES, UNDERTONES, buildAdvice, consultSummary,
   type Advice, type Part, type Perception, type Prefs, type Shape,
 } from "@/lib/handConsult";
 
@@ -56,7 +56,8 @@ async function shrink(file: File): Promise<{ dataUrl: string; preview: string }>
 
 const DEFAULT_PERCEPTION = (part: Part): Perception => ({ part, skinTone: "medium", undertone: "neutral", fingerLength: "medium", bedWidth: "medium", nailLength: "short", currentShape: null, hasProduct: false, conditions: [] });
 
-export default function HandConsult() {
+/** `chatImage`: ảnh tay khách gửi trong chat (mở từ Messenger) · `onShare`: gửi tư vấn vào chat · `vi`: khách nói tiếng Việt. */
+export default function HandConsult({ chatImage, onShare, vi = true, embedded = false }: { chatImage?: string; onShare?: (text: string) => void; vi?: boolean; embedded?: boolean } = {}) {
   useTr();
   const { user, loading: userLoading } = useSessionUser();
   const [part, setPart] = useState<Part>("HAND");
@@ -131,6 +132,26 @@ export default function HandConsult() {
     }, 450);
   };
 
+  // Ảnh khách gửi trong chat → File (data: đọc thẳng base64 — CSP chặn fetch(data:); ảnh Cloudinary tải qua CORS)
+  const analyseChatImage = async () => {
+    if (!chatImage) return;
+    if (!consent) { needConsent(); return; }
+    try {
+      let blob: Blob;
+      if (chatImage.startsWith("data:")) {
+        const [head, b64] = chatImage.split(",");
+        const bin = atob(b64), arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        blob = new Blob([arr], { type: head.match(/data:([^;]+)/)?.[1] || "image/jpeg" });
+      } else {
+        blob = await (await fetch(chatImage, { mode: "cors" })).blob();
+      }
+      await analyse(new File([blob], "chat-hand.jpg", { type: blob.type || "image/jpeg" }));
+    } catch {
+      toast.error(tr("Không mở được ảnh này — thử chụp lại.", "Couldn't open this photo — try taking a new one."));
+    }
+  };
+
   const reset = () => {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
@@ -160,7 +181,7 @@ export default function HandConsult() {
 
   return (
     <div className="space-y-5" ref={topRef}>
-      <header className="space-y-1">
+      <header className={embedded ? "hidden" : "space-y-1"}>
         <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Hand className="h-6 w-6 text-pink-300" />{tr("Soi tay tư vấn", "Hand consultation")}</h1>
         <p className="text-sm text-slate-400">{tr("Chụp tay khách → xem tình trạng, quy trình nên làm và những mẫu hợp nhất. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand → see its condition, the right service plan and the best-matching designs. Show the client your screen.")}</p>
       </header>
@@ -179,7 +200,7 @@ export default function HandConsult() {
           {part === "HAND" && <Chips title={tr("Độ dài khách muốn", "Preferred length")} items={LENGTHS} value={prefs.length ?? null} onChange={(v) => setPrefs((p) => ({ ...p, length: v }))} />}
           <Chips title={tr("Phong cách", "Style")} items={VIBES} value={prefs.vibe ?? null} onChange={(v) => setPrefs((p) => ({ ...p, vibe: v }))} />
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-500/[0.06] p-3.5 ring-1 ring-emerald-500/20">
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-emerald-500/[0.06] p-3.5 ring-1 ring-emerald-500/20" data-testid="consult-consent">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 accent-emerald-500" />
             <span className="text-sm text-slate-200">
               <b>{tr("Khách đồng ý cho chụp tay", "Client agrees to a hand photo")}</b>
@@ -187,6 +208,18 @@ export default function HandConsult() {
             </span>
           </label>
 
+          {chatImage && (
+            <div className="flex items-center gap-3 rounded-2xl bg-pink-500/[0.07] p-3 ring-1 ring-pink-400/25">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={chatImage} alt="" className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white">{tr("Ảnh khách vừa gửi trong chat", "Photo the client just sent")}</p>
+                <button type="button" onClick={analyseChatImage} className="mt-1.5 inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 text-sm font-black text-white">
+                  <Sparkles className="h-4 w-4" />{tr("Soi ảnh này", "Analyse this photo")}
+                </button>
+              </div>
+            </div>
+          )}
           <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) analyse(f); }} />
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) analyse(f); }} />
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -224,6 +257,11 @@ export default function HandConsult() {
         </section>
       )}
 
+      {phase === "result" && result && onShare && (
+        <button type="button" onClick={() => onShare(consultSummary(result.advice, result.menu, user.market === "AU" ? "AU" : "US", vi))} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-pink-600/25">
+          <Sparkles className="h-4 w-4" />{tr("Gửi tư vấn cho khách", "Send this consult to the client")}
+        </button>
+      )}
       {phase === "result" && result && (
         <ResultView
           r={result}

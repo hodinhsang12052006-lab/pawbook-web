@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
             city: true,
             salaryType: true,
             salaryAmount: true,
+            benefits: true, // công khai như trên bảng việc (Trợ lý tuyển thợ trả lời "có chỗ ở không")
             createdAt: true,
           },
           orderBy: { createdAt: "desc" },

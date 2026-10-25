@@ -95,6 +95,16 @@ try {
     const cfg2 = (await a.client.req("/api/admin/designs")).data;
     await a.client.req("/api/admin/designs", { method: "PATCH", json: { render: true } });
     R.check("A12", "Admin tắt / bật lại được ảnh máy PawNail tự vẽ (không cần sửa code)", off.status === 200 && cfg2.render === false);
+    // nút "Vẽ lại toàn bộ ngay": admin vẽ lại hết ảnh cũ trong vài lượt gọi (không chờ cron 8 ảnh / lượt)
+    const olds = mine.slice(0, 2);
+    for (const m of olds) await db.execute({ sql: `UPDATE "NailDesign" SET imageUrl = ?, prompt = replace(prompt, substr(prompt, instr(prompt, '[pr:')), '') WHERE id = ?`, args: [IMG, m.id] });
+    const leftBefore = (await a.client.req("/api/admin/designs")).data.oldImages;
+    const ra = await a.client.req("/api/admin/designs", { method: "PATCH", json: { action: "rerender-all" } });
+    const rows2 = (await db.execute(`SELECT imageUrl, prompt FROM "NailDesign" WHERE id IN (${olds.map(() => "?").join(",")})`, olds.map((m) => m.id))).rows;
+    const anon = await fetch(BASE_URL + "/api/admin/designs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "rerender-all" }) });
+    R.check("A13", `Admin "Vẽ lại toàn bộ ngay": ảnh cũ chờ vẽ ${leftBefore} → vẽ ${ra.data?.done} ảnh / lượt gọi, còn ${ra.data?.left}; ảnh mới có dấu thế hệ tay mẫu (:h2), link ảnh cũ giữ lại; khách không gọi được (401)`,
+      leftBefore >= olds.length && ra.status === 200 && ra.data.done >= olds.length && ra.data.left < leftBefore && rows2.every((r) => r.imageUrl !== IMG && String(r.prompt).includes(":h2]") && String(r.prompt).includes(`[ai:${IMG}]`)) && anon.status === 401,
+      JSON.stringify({ leftBefore, ra: ra.data, anon: anon.status }));
   } else R.check("A11", "Có mẫu hoạ tiết bộ máy vẽ được để thử thay ảnh", false, JSON.stringify(made.map((r) => r.pattern)));
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Lightbulb, TrendingUp, X, Trophy, Heart, Sparkles, ArrowRight } from "lucide-react";
@@ -15,21 +15,42 @@ export type Studio = StudioData & { tip: string };
 // Dùng chung 1 lần tải cho cả bảng tin (thẻ chủ đề, mẹo, tổng kết) và ô soạn
 // bài (gợi ý hashtag) — tránh gọi API nhiều lần trên cùng 1 trang.
 const cache = new Map<string, Promise<Studio | null>>();
-export function useStudio(market: "US" | "AU", role: string | undefined) {
+/** undefined = đang tải (bảng tin giữ chỗ cho thẻ chủ đề), null = không có nội dung Studio. */
+export function useStudio(market: "US" | "AU", role: string | undefined): Studio | null | undefined {
   const key = `${market}:${role === "OWNER" ? "OWNER" : "TECHNICIAN"}`;
-  const [data, setData] = useState<Studio | null>(null);
+  const [st, setSt] = useState<{ key: string; data: Studio | null } | null>(null);
   useEffect(() => {
     let alive = true;
     if (!cache.has(key)) {
       const [m, r] = key.split(":");
       cache.set(key, fetch(`/api/studio?market=${m}&role=${r}`).then((res) => (res.ok ? res.json() : null)).catch(() => null));
     }
-    cache.get(key)!.then((d) => alive && setData(d));
+    cache.get(key)!.then((d) => alive && setSt({ key, data: d }));
     return () => {
       alive = false;
     };
   }, [key]);
-  return data;
+  return st && st.key === key ? st.data : undefined;
+}
+
+// Thẻ "Chủ đề tuần" tải sau bảng tin: nhớ chiều cao lần trước (pn_th_h) → script đầu trang đặt html[data-th] + --th-h
+// → giữ sẵn đúng chỗ khi đang tải (thẻ ~150px chen vào sau từng đẩy tin việc + bài đăng xuống — CLS, cls_test 25/10).
+export function rememberTheme(h: number | null) {
+  try {
+    const d = document.documentElement;
+    if (h) {
+      localStorage.setItem("pn_th_h", String(h));
+      d.setAttribute("data-th", "");
+      d.style.setProperty("--th-h", `${h}px`);
+    } else {
+      localStorage.removeItem("pn_th_h");
+      d.removeAttribute("data-th");
+    }
+  } catch {}
+}
+/** Chỗ giữ cho thẻ "Chủ đề tuần" khi đang tải (chỉ hiện nếu lần trước có thẻ). */
+export function ThemeSlot() {
+  return <div aria-hidden className="hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-th]_&]:block" style={{ height: "var(--th-h, 0px)" }} />;
 }
 
 const STUDIO_LABEL = (
@@ -44,20 +65,20 @@ const today = () => new Date().toISOString().slice(0, 10);
 /** Thẻ "Chủ đề tuần + thử thách hashtag" đầu bảng tin. */
 export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner: boolean; onJoin: (hashtag: string) => void }) {
   useTr(); // render lại khi đổi VI/EN
-  const [hidden, setHidden] = useState(true);
-  useEffect(() => {
-    try {
-      setHidden(localStorage.getItem(HIDE_KEY) === today());
-    } catch {
-      setHidden(false);
-    }
-  }, []);
+  // Thẻ chỉ dựng sau khi tải Studio (không có ở HTML máy chủ) → đọc localStorage ngay lúc khởi tạo được, không
+  // cần render "ẩn" trước rồi mới hiện (từng là 1 lần giật bố cục nữa)
+  const [hidden, setHidden] = useState(() => {
+    try { return localStorage.getItem(HIDE_KEY) === today(); } catch { return false; }
+  });
   const t = studio.theme;
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => { rememberTheme(!t || hidden ? null : ref.current?.offsetHeight ?? null); }, [t, hidden]);
   if (!t || hidden) return null;
   const c = studio.challenge;
 
   return (
     <section
+      ref={ref}
       aria-label={tr(`Chủ đề tuần: ${t.title}`, `Theme of the week: ${dt(t.title)}`)}
       className="relative overflow-hidden rounded-2xl border border-white/10 p-4 shadow-xl shadow-black/30 sm:p-5"
       style={{ background: `linear-gradient(135deg, ${t.colors[0]}38, ${t.colors[1]}2e), #0b1020` }}

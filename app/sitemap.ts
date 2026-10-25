@@ -3,6 +3,9 @@ import prisma from "@/lib/prisma";
 import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
 
+// Tạo mỗi lần Google đọc (không đóng băng lúc deploy): tin tuyển + mẫu nail mới mỗi ngày phải có mặt ngay
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SITE_URL;
 
@@ -23,6 +26,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   } catch (e) {
     console.error("Sitemap jobs query failed:", e);
+  }
+
+  // Trang riêng từng mẫu nail đã đăng (có ảnh) — mỗi ngày thêm mẫu mới cho Google
+  let designUrls: MetadataRoute.Sitemap = [];
+  try {
+    const designs = await prisma.nailDesign.findMany({
+      where: { status: "published", imageUrl: { not: null } },
+      select: { id: true, publishedAt: true },
+      orderBy: { publishedAt: "desc" },
+      take: 3000,
+    });
+    designUrls = designs.map((d) => ({ url: `${baseUrl}/designs/${d.id}`, lastModified: d.publishedAt ?? undefined, changeFrequency: "weekly" as const, priority: 0.6 }));
+  } catch (e) {
+    console.error("Sitemap designs query failed:", e);
   }
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -51,5 +68,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  return [...staticPages, ...jobUrls];
+  return [...staticPages, ...jobUrls, ...designUrls];
 }

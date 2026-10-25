@@ -61,7 +61,7 @@ export async function GET(req: Request) {
       r.backfilled = b.drawn;
       r.errors.push(...b.errors);
       // thay dần ảnh AI cũ bằng ảnh máy PawNail vẽ trên tay mẫu (ảnh cũ giữ link để khôi phục)
-      const rr = await rerenderAiImages(deadline);
+      const rr = await rerenderAiImages(deadline, 20); // còn giờ thì vẽ tới 20 ảnh / lượt (hết giờ tự dừng)
       r.rerendered = rr.done;
       r.errors.push(...rr.errors);
     }

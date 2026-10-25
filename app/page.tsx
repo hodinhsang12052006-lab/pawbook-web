@@ -252,7 +252,6 @@ export default function HomePage() {
                 <div className="h-[50px] px-1 pt-1 md:h-[54px]"><div className="h-6 w-56 rounded-lg bg-white/[0.05]" /><div className="mt-2 h-3.5 w-40 rounded bg-white/[0.04]" /></div>
                 {tab === "feed" && <div className="h-[98px] rounded-2xl bg-white/[0.03] md:hidden" />}
                 <div className="hidden h-[246px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-onb]_&]:block" />
-                {tab === "feed" && <div className="hidden h-[128px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 md:!hidden [html[data-cmp]:not([data-onb])_&]:block" />}
               </div>
             )}
 
@@ -276,6 +275,16 @@ export default function HomePage() {
 
             {/* Render cả khi phiên đang tải: thẻ tự giữ chỗ (html[data-mn]) để không giật bố cục */}
             {tab === "feed" && <MenuNudge />}
+
+            {/* Giữ chỗ phần SAU thẻ menu (đúng thứ tự thật): "Ai đã xem hồ sơ" (cao bằng lần trước — --pv-h) +
+                "Hoàn thiện hồ sơ". Thiếu chỗ cho thẻ "Ai xem hồ sơ" (thợ ~246px) từng đẩy bảng tin xuống khi phiên
+                tải xong (CLS 0.17 — cls_test 25/10). */}
+            {sessionLoading && tab === "feed" && (
+              <div aria-hidden className="hidden space-y-5 [html[data-authed][data-pv]_&]:block [html[data-authed][data-cmp]_&]:block">
+                <div className="hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-pv]_&]:block" style={{ height: "var(--pv-h, 0px)" }} />
+                <div className="hidden h-[128px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 md:!hidden [html[data-cmp]:not([data-onb])_&]:block" />
+              </div>
+            )}
 
             {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
 

@@ -17,6 +17,7 @@ import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { dt } from "@/lib/i18n/dataEn";
 import { useTr } from "@/lib/i18n/useTr";
+import NailTrendRadar from "@/components/designs/NailTrendRadar";
 
 interface RadarPublic {
   pulse: { questionId: string; topic: string; week: string; total: number; options: { id: string; label: string; votes: number; pct: number }[] }[];
@@ -124,6 +125,8 @@ export default function TrendsPage() {
         </header>
 
         {studio?.challenge && <ChallengeBoard studio={studio} />}
+
+        <NailTrendRadar />
 
         {error && <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{tr("Không tải được xu hướng. Vui lòng thử lại sau.", "Couldn't load trends. Please try again later.")}</p>}
         {!data && !error && <Skeleton />}

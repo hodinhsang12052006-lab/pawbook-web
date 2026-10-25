@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
-interface State { enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; review?: boolean; madeToday: number; drafts: (Design & { quality?: number | null })[]; published: (Design & { quality?: number | null })[]; needsSql?: boolean }
+interface State { oldImages?: number; enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; review?: boolean; madeToday: number; drafts: (Design & { quality?: number | null })[]; published: (Design & { quality?: number | null })[]; needsSql?: boolean }
 
 // Phòng nội dung → "Mẫu nail AI": tạo mẫu bằng Gemini, DUYỆT trước khi người
 // dùng thấy (AI hay vẽ sai ngón tay / mô tả lệch — admin là người chốt).
@@ -14,6 +14,7 @@ export default function AdminDesigns() {
   const [st, setSt] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
+  const [redrawAll, setRedrawAll] = useState<{ done: number; left: number } | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/admin/designs")
@@ -61,6 +62,24 @@ export default function AdminDesigns() {
     const r = await res.json().catch(() => ({}));
     if (!res.ok) return toast.error(r.error || "Không duyệt được.");
     toast.success(`Đã đăng ${r.count} mẫu.`);
+    load();
+  };
+
+  // Vẽ lại TOÀN BỘ ảnh cũ bằng máy PawNail: gọi lặp (~50 giây / lần) tới khi hết hoặc không vẽ thêm được
+  const rerenderAll = async () => {
+    if (!st?.oldImages || !confirm(`Vẽ lại ${st.oldImages} ảnh cũ bằng máy PawNail? Mất khoảng ${Math.max(1, Math.ceil(st.oldImages / 18))} phút — giữ trang này mở tới khi xong.`)) return;
+    let done = 0, left = st.oldImages;
+    setRedrawAll({ done, left });
+    for (let round = 0; round < 40 && left > 0; round++) {
+      const res = await fetch("/api/admin/designs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "rerender-all" }) }).catch(() => null);
+      const r = res && res.ok ? await res.json().catch(() => null) : null;
+      if (!r) { toast.error("Bị ngắt giữa chừng — bấm lại để vẽ tiếp phần còn lại."); break; }
+      done += r.done; left = r.left;
+      setRedrawAll({ done, left });
+      if (!r.done) { if (r.errors?.length) toast.error(r.errors[0]); break; }
+    }
+    setRedrawAll(null);
+    toast.success(left ? `Đã vẽ lại ${done} ảnh, còn ${left} ảnh chưa vẽ được.` : `Đã vẽ lại xong ${done} ảnh.`);
     load();
   };
 
@@ -126,6 +145,18 @@ export default function AdminDesigns() {
           </button>
         </div>
       </div>
+      {!!(st?.oldImages || redrawAll) && (
+        <div data-testid="rerender-all" className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-violet-500/10 px-3 py-2 ring-1 ring-violet-400/30">
+          <p className="text-xs text-violet-100">
+            {redrawAll
+              ? `Đang vẽ lại… đã xong ${redrawAll.done} ảnh, còn ${redrawAll.left}.`
+              : `${st?.oldImages} mẫu còn ảnh cũ (ảnh AI / tay mẫu cũ) — máy PawNail vẽ lại trên 10 tay mẫu thật, mỗi lượt cron tự vẽ 8 ảnh.`}
+          </p>
+          <button type="button" onClick={rerenderAll} disabled={!!redrawAll} className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-violet-600 px-3 text-xs font-black text-white disabled:opacity-50">
+            {redrawAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Vẽ lại toàn bộ ngay
+          </button>
+        </div>
+      )}
       {st && (st.cfImages ? (
         <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200 ring-1 ring-emerald-500/25">Ảnh thật: Cloudflare Workers AI (gói miễn phí) — tối đa {st.cfImages} ảnh/ngày, hết lượt thì dùng hình minh hoạ, không tốn tiền.</p>
       ) : (

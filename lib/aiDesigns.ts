@@ -9,6 +9,7 @@ import { SAMPLE_DESIGNS } from "@/lib/designSamples";
 import { generateEngineDesigns, generateOccasionBatch, PATTERN_IDS, type EngineDesign } from "@/lib/designEngine";
 import { cfDailyImages, cfImage, cfImageEnabled } from "@/lib/cfImage";
 import { canRenderPattern, renderDesignImage, pickHand, spreadVariant } from "@/lib/designRender";
+import { PROCEDURAL } from "@/lib/tryon/patterns";
 
 // "Mẫu nail AI mỗi ngày":
 //   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
@@ -413,15 +414,22 @@ async function renderAndStore(id: string, variant = 0, used?: Set<string>): Prom
   return imageUrl;
 }
 
+// mẫu đang hiện còn ảnh cũ (ảnh AI / ảnh vẽ bằng bộ tay mẫu cũ) mà máy PawNail vẽ lại được
+const oldImageWhere = () => ({ provider: "pawnail", status: "published", imageUrl: { not: null }, pattern: { in: [...PROCEDURAL] }, NOT: { prompt: { contains: `:${RENDER_GEN}]` } } });
+/** Số ảnh cũ còn chờ vẽ lại (admin xem tiến độ). */
+export async function oldImagesLeft(): Promise<number> {
+  return prisma.nailDesign.count({ where: oldImageWhere() });
+}
+
 /** Thay dần ảnh AI cũ (và ảnh máy vẽ bằng bộ tay mẫu cũ) bằng ảnh máy PawNail vẽ — mẫu mới đăng trước, mỗi lượt vài mẫu. */
 export async function rerenderAiImages(deadline: number, max = 8): Promise<{ done: number; errors: string[] }> {
   const errors: string[] = [];
   if (!storageReady() || !(await renderOn())) return { done: 0, errors };
   const rows = await prisma.nailDesign.findMany({
-    where: { provider: "pawnail", status: "published", imageUrl: { not: null }, NOT: { prompt: { contains: `:${RENDER_GEN}]` } } },
+    where: oldImageWhere(),
     select: { id: true, pattern: true },
     orderBy: { publishedAt: "desc" },
-    take: 80,
+    take: Math.max(80, max * 2),
   });
   let done = 0;
   const used = new Set<string>();

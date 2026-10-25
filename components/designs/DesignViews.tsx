@@ -3,7 +3,7 @@
 import { cdnImage } from "@/lib/cdnImage";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2, BookOpen, MapPin, MessageCircle } from "lucide-react";
+import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2, BookOpen, MapPin, MessageCircle, Share2, ExternalLink, Hand } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -120,17 +120,34 @@ export function DesignCard({ d, onOpen, compact = false }: { d: Design; onOpen: 
 
 export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () => void; onSaved: (saved: boolean, saves: number) => void }) {
   useTr(); // render lại khi đổi VI/EN
-  const { user } = useSessionUser();
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-  const occ = occasionLabel(d.occasion);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div role="dialog" aria-label={designTitle(d)} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="relative aspect-square w-full bg-slate-900">
+          <DesignVisual d={d} width={1024} />
+          <AiBadge d={d} className="absolute left-3 top-3" />
+          <button type="button" onClick={onClose} aria-label={tr("Đóng", "Close")} className="absolute right-3 top-3 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"><X className="h-5 w-5" /></button>
+        </div>
+        <DesignDetail d={d} onSaved={onSaved} />
+      </div>
+    </div>
+  );
+}
+
+/** Thân trang mẫu (dùng chung: bảng trượt trong /designs và trang riêng /designs/[id] để chia sẻ / Google tìm thấy). */
+export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; onSaved: (saved: boolean, saves: number) => void; standalone?: boolean }) {
+  useTr(); // render lại khi đổi VI/EN
+  const { user } = useSessionUser();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const occ = occasionLabel(d.occasion);
 
   const save = async () => {
     if (!user) return router.push("/auth/login");
@@ -179,132 +196,151 @@ export function DesignSheet({ d, onClose, onSaved }: { d: Design; onClose: () =>
     router.push("/?tab=feed");
   };
 
+  // Chia sẻ link trang mẫu (thợ gửi khách "mẫu này nè", khách gửi bạn) — trang có ảnh xem trước khi dán vào chat
+  const share = async () => {
+    const url = `${window.location.origin}/designs/${d.id}`;
+    try {
+      if (navigator.share) { await navigator.share({ title: designTitle(d), url }); return; }
+    } catch { return; } // người dùng đóng bảng chia sẻ
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(tr("Đã chép link mẫu — dán gửi khách / bạn bè.", "Link copied — paste it to a client or friend."));
+    } catch {
+      toast(url);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <div role="dialog" aria-label={designTitle(d)} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-        <div className="relative aspect-square w-full bg-slate-900">
-          <DesignVisual d={d} width={1024} />
-          <AiBadge d={d} className="absolute left-3 top-3" />
-          <button type="button" onClick={onClose} aria-label={tr("Đóng", "Close")} className="absolute right-3 top-3 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="space-y-5 p-5 pb-[max(20px,env(safe-area-inset-bottom))]">
-          <div className="space-y-1.5">
-            {occ && <p className="text-[11px] font-black uppercase tracking-wider text-pink-300">{occ}</p>}
-            <h2 className="text-xl font-black leading-tight text-white">{designTitle(d)}</h2>
-            <p className="text-sm leading-relaxed text-slate-300">{tr(d.description, d.descriptionEn || d.description)}</p>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-slate-200">{DIFF()[d.difficulty - 1]}</span>
-              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-slate-200">⏱ {d.minutes}{tr(" phút", " min")}</span>
-              {d.priceHint && <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">{tr("Giá gợi ý ", "Suggested price ")}{d.priceHint}</span>}
-              {d.skills.map((s) => <span key={s} className="rounded-full bg-pink-500/10 px-2.5 py-1 text-[11px] font-semibold text-pink-300">{valueLabel(s)}</span>)}
-            </div>
-          </div>
-
-          {isClient ? (
-            <Link href="/salons" className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
-              <MapPin className="h-4 w-4" /> {tr("Tìm tiệm / thợ làm mẫu này", "Find a salon for this look")}
-            </Link>
-          ) : isPro ? (
-            <>
-          <section aria-label={tr("Vật tư cần chuẩn bị", "Materials to prepare")} className="space-y-2">
-            <h3 className="flex items-center gap-2 text-sm font-black text-white"><ShoppingBag className="h-4 w-4 text-emerald-300" />{tr(" Vật tư cần chuẩn bị", " Materials to prepare")}</h3>
-            <ul className="space-y-1.5">
-              {d.materials.map((m, i) => (
-                <li key={i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
-                  <input
-                    type="checkbox"
-                    aria-label={tr(m.vi, m.en || m.vi)}
-                    checked={checked.has(i)}
-                    onChange={() => setChecked((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
-                    className="h-4 w-4 accent-emerald-500"
-                  />
-                  <span className={`min-w-0 flex-1 text-sm ${checked.has(i) ? "text-slate-500 line-through" : "text-slate-200"}`}>{tr(m.vi, m.en || m.vi)}</span>
-                  <span className="flex-shrink-0 text-[11px] text-slate-500">{tr(m.qty, qtyEn(m.qty))}</span>
-                  <Link href={`/supply?q=${encodeURIComponent(m.vi)}`} className="flex-shrink-0 text-[11px] font-bold text-emerald-300 hover:underline">{tr("Tìm mua", "Find")}</Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section aria-label={tr("Các bước làm", "Steps")} className="space-y-2">
-            <h3 className="flex items-center gap-2 text-sm font-black text-white"><ListChecks className="h-4 w-4 text-sky-300" />{tr(" Các bước làm", " Steps")}</h3>
-            <ol className="space-y-1.5">
-              {d.steps.map((s, i) => (
-                <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-300">
-                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-[11px] font-black text-sky-300">{i + 1}</span>
-                  <span className="pt-0.5">{tr(s.vi, s.en || s.vi)}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-            </>
-          ) : (
-            // Khách chưa đăng nhập: có thể là thợ hoặc khách — phần nghề thu gọn, không lấn ảnh mẫu.
-            <details className="group rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-slate-200">
-                {tr("Dành cho thợ: vật tư & các bước làm", "For techs: materials & steps")}
-                <ListChecks className="h-4 w-4 text-sky-300" />
-              </summary>
-              <div className="mt-3 space-y-4">
-          <section aria-label={tr("Vật tư cần chuẩn bị", "Materials to prepare")} className="space-y-2">
-            <h3 className="flex items-center gap-2 text-sm font-black text-white"><ShoppingBag className="h-4 w-4 text-emerald-300" />{tr(" Vật tư cần chuẩn bị", " Materials to prepare")}</h3>
-            <ul className="space-y-1.5">
-              {d.materials.map((m, i) => (
-                <li key={i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
-                  <input
-                    type="checkbox"
-                    aria-label={tr(m.vi, m.en || m.vi)}
-                    checked={checked.has(i)}
-                    onChange={() => setChecked((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
-                    className="h-4 w-4 accent-emerald-500"
-                  />
-                  <span className={`min-w-0 flex-1 text-sm ${checked.has(i) ? "text-slate-500 line-through" : "text-slate-200"}`}>{tr(m.vi, m.en || m.vi)}</span>
-                  <span className="flex-shrink-0 text-[11px] text-slate-500">{tr(m.qty, qtyEn(m.qty))}</span>
-                  <Link href={`/supply?q=${encodeURIComponent(m.vi)}`} className="flex-shrink-0 text-[11px] font-bold text-emerald-300 hover:underline">{tr("Tìm mua", "Find")}</Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section aria-label={tr("Các bước làm", "Steps")} className="space-y-2">
-            <h3 className="flex items-center gap-2 text-sm font-black text-white"><ListChecks className="h-4 w-4 text-sky-300" />{tr(" Các bước làm", " Steps")}</h3>
-            <ol className="space-y-1.5">
-              {d.steps.map((s, i) => (
-                <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-300">
-                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-[11px] font-black text-sky-300">{i + 1}</span>
-                  <span className="pt-0.5">{tr(s.vi, s.en || s.vi)}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-              </div>
-            </details>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={save} disabled={busy} className={`flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm font-black ring-1 ${d.saved ? "bg-pink-500/15 text-pink-200 ring-pink-500/40" : "bg-white/[0.06] text-white ring-white/10"}`}>
-              <Bookmark className={`h-4 w-4 ${d.saved ? "fill-pink-300" : ""}`} /> {d.saved ? tr("Đã lưu", "Saved") : tr("Lưu mẫu", "Save")}
-            </button>
-            {isClient ? (
-              <Link href={`/salons?look=${encodeURIComponent(d.title)}`} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-black text-white ring-1 ring-white/10">
-                <MessageCircle className="h-4 w-4" /> {tr("Hỏi giá tiệm", "Ask a salon")}
-              </Link>
-            ) : (
-              <button type="button" onClick={tryIt} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
-                <Camera className="h-4 w-4" /> {tr("Tôi làm mẫu này", "I made this")}
-              </button>
-            )}
-          </div>
-          {canMenu && (
-            <button type="button" onClick={addToMenu} disabled={menuBusy} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08] disabled:opacity-50">
-              <BookOpen className="h-4 w-4 text-amber-300" /> {tr("Thêm vào menu của tôi", "Add to my menu")}
-            </button>
-          )}
-          {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
+    <div className={standalone ? "space-y-5" : "space-y-5 p-5 pb-[max(20px,env(safe-area-inset-bottom))]"}>
+      <div className="space-y-1.5">
+        {occ && <p className="text-[11px] font-black uppercase tracking-wider text-pink-300">{occ}</p>}
+        {standalone ? <h1 className="text-2xl font-black leading-tight text-white sm:text-3xl">{designTitle(d)}</h1> : <h2 className="text-xl font-black leading-tight text-white">{designTitle(d)}</h2>}
+        <p className="text-sm leading-relaxed text-slate-300">{tr(d.description, d.descriptionEn || d.description)}</p>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-slate-200">{DIFF()[d.difficulty - 1]}</span>
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-slate-200">⏱ {d.minutes}{tr(" phút", " min")}</span>
+          {d.priceHint && <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">{tr("Giá gợi ý ", "Suggested price ")}{d.priceHint}</span>}
+          {d.skills.map((s) => <span key={s} className="rounded-full bg-pink-500/10 px-2.5 py-1 text-[11px] font-semibold text-pink-300">{valueLabel(s)}</span>)}
         </div>
       </div>
+
+      {isClient ? (
+        <Link href="/salons" className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
+          <MapPin className="h-4 w-4" /> {tr("Tìm tiệm / thợ làm mẫu này", "Find a salon for this look")}
+        </Link>
+      ) : isPro ? (
+        <>
+      <section aria-label={tr("Vật tư cần chuẩn bị", "Materials to prepare")} className="space-y-2">
+        <h3 className="flex items-center gap-2 text-sm font-black text-white"><ShoppingBag className="h-4 w-4 text-emerald-300" />{tr(" Vật tư cần chuẩn bị", " Materials to prepare")}</h3>
+        <ul className="space-y-1.5">
+          {d.materials.map((m, i) => (
+            <li key={i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+              <input
+                type="checkbox"
+                aria-label={tr(m.vi, m.en || m.vi)}
+                checked={checked.has(i)}
+                onChange={() => setChecked((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
+                className="h-4 w-4 accent-emerald-500"
+              />
+              <span className={`min-w-0 flex-1 text-sm ${checked.has(i) ? "text-slate-500 line-through" : "text-slate-200"}`}>{tr(m.vi, m.en || m.vi)}</span>
+              <span className="flex-shrink-0 text-[11px] text-slate-500">{tr(m.qty, qtyEn(m.qty))}</span>
+              <Link href={`/supply?q=${encodeURIComponent(m.vi)}`} className="flex-shrink-0 text-[11px] font-bold text-emerald-300 hover:underline">{tr("Tìm mua", "Find")}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-label={tr("Các bước làm", "Steps")} className="space-y-2">
+        <h3 className="flex items-center gap-2 text-sm font-black text-white"><ListChecks className="h-4 w-4 text-sky-300" />{tr(" Các bước làm", " Steps")}</h3>
+        <ol className="space-y-1.5">
+          {d.steps.map((s, i) => (
+            <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-300">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-[11px] font-black text-sky-300">{i + 1}</span>
+              <span className="pt-0.5">{tr(s.vi, s.en || s.vi)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+        </>
+      ) : (
+        // Khách chưa đăng nhập: có thể là thợ hoặc khách — phần nghề thu gọn, không lấn ảnh mẫu.
+        <details className="group rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-slate-200">
+            {tr("Dành cho thợ: vật tư & các bước làm", "For techs: materials & steps")}
+            <ListChecks className="h-4 w-4 text-sky-300" />
+          </summary>
+          <div className="mt-3 space-y-4">
+      <section aria-label={tr("Vật tư cần chuẩn bị", "Materials to prepare")} className="space-y-2">
+        <h3 className="flex items-center gap-2 text-sm font-black text-white"><ShoppingBag className="h-4 w-4 text-emerald-300" />{tr(" Vật tư cần chuẩn bị", " Materials to prepare")}</h3>
+        <ul className="space-y-1.5">
+          {d.materials.map((m, i) => (
+            <li key={i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+              <input
+                type="checkbox"
+                aria-label={tr(m.vi, m.en || m.vi)}
+                checked={checked.has(i)}
+                onChange={() => setChecked((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
+                className="h-4 w-4 accent-emerald-500"
+              />
+              <span className={`min-w-0 flex-1 text-sm ${checked.has(i) ? "text-slate-500 line-through" : "text-slate-200"}`}>{tr(m.vi, m.en || m.vi)}</span>
+              <span className="flex-shrink-0 text-[11px] text-slate-500">{tr(m.qty, qtyEn(m.qty))}</span>
+              <Link href={`/supply?q=${encodeURIComponent(m.vi)}`} className="flex-shrink-0 text-[11px] font-bold text-emerald-300 hover:underline">{tr("Tìm mua", "Find")}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-label={tr("Các bước làm", "Steps")} className="space-y-2">
+        <h3 className="flex items-center gap-2 text-sm font-black text-white"><ListChecks className="h-4 w-4 text-sky-300" />{tr(" Các bước làm", " Steps")}</h3>
+        <ol className="space-y-1.5">
+          {d.steps.map((s, i) => (
+            <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-300">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-[11px] font-black text-sky-300">{i + 1}</span>
+              <span className="pt-0.5">{tr(s.vi, s.en || s.vi)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+          </div>
+        </details>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={save} disabled={busy} className={`flex min-h-[48px] items-center justify-center gap-2 rounded-2xl text-sm font-black ring-1 ${d.saved ? "bg-pink-500/15 text-pink-200 ring-pink-500/40" : "bg-white/[0.06] text-white ring-white/10"}`}>
+          <Bookmark className={`h-4 w-4 ${d.saved ? "fill-pink-300" : ""}`} /> {d.saved ? tr("Đã lưu", "Saved") : tr("Lưu mẫu", "Save")}
+        </button>
+        {isClient ? (
+          <Link href={`/salons?look=${encodeURIComponent(d.title)}`} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-black text-white ring-1 ring-white/10">
+            <MessageCircle className="h-4 w-4" /> {tr("Hỏi giá tiệm", "Ask a salon")}
+          </Link>
+        ) : (
+          <button type="button" onClick={tryIt} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">
+            <Camera className="h-4 w-4" /> {tr("Tôi làm mẫu này", "I made this")}
+          </button>
+        )}
+      </div>
+      {canMenu && (
+        <button type="button" onClick={addToMenu} disabled={menuBusy} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08] disabled:opacity-50">
+          <BookOpen className="h-4 w-4 text-amber-300" /> {tr("Thêm vào menu của tôi", "Add to my menu")}
+        </button>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={share} data-testid="design-share" className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08]">
+          <Share2 className="h-4 w-4 text-sky-300" /> {tr("Chia sẻ mẫu", "Share")}
+        </button>
+        {standalone ? (
+          <Link href="/tryon" className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08]">
+            <Hand className="h-4 w-4 text-pink-300" /> {tr("Thử trên tay bạn", "Try on your hand")}
+          </Link>
+        ) : (
+          <Link href={`/designs/${d.id}`} data-testid="design-open-page" className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10 hover:bg-white/[0.08]">
+            <ExternalLink className="h-4 w-4 text-sky-300" /> {tr("Mở trang mẫu", "Open design page")}
+          </Link>
+        )}
+      </div>
+      {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
     </div>
   );
 }

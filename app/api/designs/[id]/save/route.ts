@@ -18,3 +18,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const saves = await prisma.nailDesignSave.count({ where: { designId: id } });
   return NextResponse.json({ saved: !existing, saves });
 }
+
+// GET /api/designs/:id/save — người đang xem đã lưu mẫu chưa + tổng lượt lưu (trang riêng mẫu dựng sẵn phía máy chủ)
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const userId = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
+  const { id } = await params;
+  const saves = await prisma.nailDesignSave.count({ where: { designId: id } });
+  const saved = userId ? !!(await prisma.nailDesignSave.findUnique({ where: { userId_designId: { userId, designId: id } } })) : false;
+  return NextResponse.json({ saved, saves });
+}

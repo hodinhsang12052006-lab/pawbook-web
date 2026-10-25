@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
 import { cfDailyImages, cfImageEnabled } from "@/lib/cfImage";
-import { dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion, generateSamples, imagesDrawnToday, OCCASION_BATCH_MAX, redrawImage, storageReady, textOnly, toPublic, upcomingThemes } from "@/lib/aiDesigns";
+import { dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion, generateSamples, imagesDrawnToday, OCCASION_BATCH_MAX, oldImagesLeft, redrawImage, rerenderAiImages, storageReady, textOnly, toPublic, upcomingThemes } from "@/lib/aiDesigns";
 import { getSetting, setSetting } from "@/lib/settings";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
@@ -15,6 +15,8 @@ import { getSetting, setSetting } from "@/lib/settings";
 //   PATCH { id, action: "redraw" } — vẽ lại ảnh (Cloudflare miễn phí, tối đa 3 lần/mẫu)
 //   PATCH { ids: [...], status }    — duyệt / bỏ hàng loạt (tối đa 200)
 //   POST  { mode: "occasion", occasion, count } — tạo CẢ BỘ mẫu cho 1 dịp lễ (tối đa 150)
+//   PATCH { action: "rerender-all" } — vẽ lại ảnh cũ bằng máy PawNail trong ~50 giây / lần gọi (trang admin gọi lặp
+//                                      tới khi hết) → trả { done, left, errors }
 export const maxDuration = 60; // vẽ ảnh mất 10–30 giây
 
 const missing = (err: unknown) => /no such table|P2021/i.test(String((err as Error)?.message || err));
@@ -53,6 +55,7 @@ export async function GET() {
       dailyLimit: dailyLimit(),
       review: await designsNeedReview(), // mẫu mới chờ duyệt (true) hay lên thẳng (false)
       render: (await getSetting("design_render")) !== "0", // ảnh mẫu do máy PawNail vẽ trên tay mẫu (mặc định bật)
+      oldImages: await oldImagesLeft().catch(() => 0), // ảnh cũ còn chờ máy PawNail vẽ lại
       madeToday,
       drafts: drafts.map(withQuality),
       published: published.map(withQuality),
@@ -109,6 +112,10 @@ export async function PATCH(req: Request) {
     if (!ids.length || !["published", "rejected"].includes(body.status ?? "")) return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 400 });
     const r = await prisma.nailDesign.updateMany({ where: { id: { in: ids }, status: "draft" }, data: { status: body.status, publishedAt: body.status === "published" ? new Date() : null } });
     return NextResponse.json({ ok: true, count: r.count });
+  }
+  if (body.action === "rerender-all") {
+    const r = await rerenderAiImages(Date.now() + 50_000, 60);
+    return NextResponse.json({ done: r.done, errors: r.errors.slice(0, 5), left: await oldImagesLeft() });
   }
   if (body.id && body.action === "redraw") {
     const r = await redrawImage(body.id);

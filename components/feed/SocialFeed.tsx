@@ -8,7 +8,7 @@ import SupplyProductCard, { SupplyProductType } from "./SupplyProductCard";
 import CreatePostComposer from "./CreatePostComposer";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
-import { useStudio, ThemeCard, TipCard, RecapCard } from "./StudioCards";
+import { useStudio, ThemeCard, ThemeSlot, rememberTheme, TipCard, RecapCard } from "./StudioCards";
 import PulseCard from "./PulseCard";
 import RadarPostCard, { type RadarPost } from "./RadarPostCard";
 import { tr } from "@/lib/i18n/tr";
@@ -112,6 +112,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   const { user } = useSessionUser();
   const isTech = user?.role === "TECHNICIAN";
   const studio = useStudio(market, user?.role);
+  // tuần này không có thẻ chủ đề → bỏ chỗ giữ (lần sau không chừa khoảng trống rồi xẹp xuống)
+  useEffect(() => { if (studio !== undefined && !studio?.theme) rememberTheme(null); }, [studio]);
   const [radarPosts, setRadarPosts] = useState<RadarPost[]>([]);
   useEffect(() => {
     let alive = true;
@@ -280,8 +282,9 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
           tỉ lệ "chủ tìm thợ" áp đảo "thợ tìm việc" trên thị trường, nên đây
           chính là lúc đúng nhất để nhắc thợ đăng bài — họ đang là bên được
           săn đón, chỉ cần xuất hiện là dễ được chủ để ý ngay. */}
+      {studio === undefined && <ThemeSlot />}
       {studio?.theme && <ThemeCard studio={studio} isOwner={user?.role === "OWNER"} onJoin={joinChallenge} />}
-      {isTech && !studio?.theme && (
+      {isTech && studio !== undefined && !studio?.theme && (
         <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
           <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />
           <p className="text-xs sm:text-sm text-slate-200">

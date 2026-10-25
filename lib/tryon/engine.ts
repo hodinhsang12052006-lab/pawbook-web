@@ -1088,8 +1088,8 @@ function edgeDistance(seg: NailSeg): Float32Array {
 }
 
 /** Lớp NHŨ theo từng điểm ảnh của móng: a = độ phủ hạt, d = độ sáng khuếch tán của hạt, f = độ loé (mặt hạt nghiêng
- *  đúng về đèn), h = sắc holo (0…1), x = tia sao lấp lánh quanh vài hạt loé mạnh nhất. */
-interface Glitter { a: Float32Array; d: Float32Array; f: Float32Array; h: Float32Array; x: Float32Array }
+ *  đúng về đèn), h = sắc holo (0…1), m = 1 hạt màu KIM LOẠI / 0 hạt cùng màu nền, x = tia sao quanh vài hạt loé nhất. */
+interface Glitter { a: Float32Array; d: Float32Array; f: Float32Array; h: Float32Array; m: Float32Array; x: Float32Array }
 /**
  * NHŨ thật (gel nhũ / nhũ loang): hạt LỤC GIÁC kim loại 2 cỡ xếp sát nhau — hạt mịn (~35% mặt móng, lưới lục giác
  * lệch ngẫu nhiên) + hạt to 2.5–4px (~6%). Mỗi hạt là 1 mặt phẳng nghiêng ngẫu nhiên (cộng độ cong móng) → chỉ hạt
@@ -1097,11 +1097,12 @@ interface Glitter { a: Float32Array; d: Float32Array; f: Float32Array; h: Float3
  * Không còn chấm trắng rải đều nhìn như giấy ráp / gàu (#2, #21). `dens(u, t)` 0…1: mật độ theo vị trí (nhũ loang,
  * dải giữa baby boomer, chỉ đầu French…); `grow`: hạt to dần ở chỗ dày (nhũ loang: hạt to ở gốc loang). Cỡ hạt theo bề
  * ngang móng (hw/45) nhưng bán kính không dưới 1.2px — nhỏ hơn thì sau resize / JPEG thành bụi xám. `H`: hướng nửa
- * đường đèn–mắt của móng (như H3 trong renderLook).
+ * đường đèn–mắt của móng (như H3 trong renderLook). `baseMix`: tỉ lệ hạt MỊN cùng màu nền (gel nhũ đỏ = nhũ đỏ lấp lánh
+ * + điểm hạt vàng; toàn hạt vàng trên nền đỏ nhìn như rắc đường cát) — hạt to luôn màu kim loại.
  */
-function glitterLayer(seg: NailSeg, seed: number, H: number[], dens?: (u: number, t: number) => number, grow = 0): Glitter {
+function glitterLayer(seg: NailSeg, seed: number, H: number[], dens?: (u: number, t: number) => number, grow = 0, baseMix = 0): Glitter {
   const { w, h } = seg, n = w * h;
-  const G: Glitter = { a: new Float32Array(n), d: new Float32Array(n), f: new Float32Array(n), h: new Float32Array(n), x: new Float32Array(n) };
+  const G: Glitter = { a: new Float32Array(n), d: new Float32Array(n), f: new Float32Array(n), h: new Float32Array(n), m: new Float32Array(n), x: new Float32Array(n) };
   let sEnd = 1, area = 0;
   for (let k = 0; k < n; k++) if (seg.alpha[k] > 0) { area++; if (seg.alpha[k] >= 0.5 && seg.along[k] > sEnd) sEnd = seg.along[k]; }
   const sc = Math.max(0.7, Math.min(1.5, seg.hw / 45));
@@ -1119,6 +1120,7 @@ function glitterLayer(seg: NailSeg, seed: number, H: number[], dens?: (u: number
     // hạt không loé phần lớn phản chiếu phòng tối → kim loại sẫm, ít hạt sáng vừa (đều sáng thì thành cát / đường cát)
     const fl = 1.7 * Math.pow(ndh, 24), df = (hex ? 0.12 : 0.07) + (hex ? 0.6 : 0.5) * hash2(i, 7, seed) ** 1.7, hu = hash2(i, 8, seed);
     const rot = hash2(i, 9, seed) * 1.0472, cr = Math.cos(rot), sr = Math.sin(rot);
+    const mt = hex || hash2(i, 10, seed) >= baseMix ? 1 : 0;
     const R = Math.ceil(r + 1);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
       const X = xi + dx, Y = yi + dy;
@@ -1131,7 +1133,7 @@ function glitterLayer(seg: NailSeg, seed: number, H: number[], dens?: (u: number
       else dd = Math.hypot(px, py) - r;
       const cv = Math.max(0, Math.min(1, 0.5 - dd));
       if (cv <= 0) continue;
-      if (cv >= 0.5 || G.a[K] < cv) { G.d[K] = df; G.f[K] = fl; G.h[K] = hu; } // hạt vẽ sau nằm trên
+      if (cv >= 0.5 || G.a[K] < cv) { G.d[K] = df; G.f[K] = fl; G.h[K] = hu; G.m[K] = mt; } // hạt vẽ sau nằm trên
       G.a[K] += (1 - G.a[K]) * cv;
     }
     return fl;
@@ -1469,12 +1471,20 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const gfTip = hash2(look.seed, 41, 3) >= 0.35;
     const gDens = pat === "glitterfade" ? (uu: number) => (gfTip ? smooth(0.3, 0.95, uu) ** 1.3 : 1 - smooth(0.05, 0.62, uu))
       : pat === "babyboomer" ? (uu: number) => 0.42 * smooth(0.3, 0.52, uu) * (1 - smooth(0.62, 0.86, uu)) : undefined;
-    const glit = (pat === "glitterfade" ? onNail : fin === "glitter") ? glitterLayer(seg, look.seed + i * 17, H3, gDens, pat === "glitterfade" ? 0.7 : 0) : null;
+    // nhũ phủ cả móng: ~75% hạt mịn cùng màu nền (nhũ đỏ / nhũ hồng…) + hạt mịn còn lại và hạt to màu kim loại; nhũ loang /
+    // baby boomer: toàn hạt kim loại
+    const gAll = pat !== "glitterfade" && pat !== "babyboomer";
+    const glit = (pat === "glitterfade" ? onNail : fin === "glitter") ? glitterLayer(seg, look.seed + i * 17, H3, gDens, pat === "glitterfade" ? 0.7 : 0, gAll ? 0.75 : 0) : null;
     const gCol = pat === "glitterfade" && Math.abs(c2[0] - c1[0]) + Math.abs(c2[1] - c1[1]) + Math.abs(c2[2] - c1[2]) > 0.03 ? c2 : metal;
     // hạt nhũ đậm sắc hơn mặt gương lớn (F0 kim loại có sàn 0.25 → nhũ vàng nhạt ra màu kaki)
     const gMx = Math.max(gCol[0], gCol[1], gCol[2], 1e-3), gF0m = metalF0(gCol);
     const gF0 = mix3(gF0m, [gCol[0] / gMx, gCol[1] / gMx, gCol[2] / gMx], 0.5 * smooth(0.14, 0.34, lum(gCol)));
     const gHolo = Math.max(gCol[0], gCol[1], gCol[2]) - Math.min(gCol[0], gCol[1], gCol[2]) < 0.1 * Math.max(gCol[0], gCol[1], gCol[2], 0.05);
+    // hạt cùng màu nền = màu nền ánh kim (đậm sắc + sáng hơn nền); nền SÁNG (nude, trắng sữa, hồng phấn): hạt không loé
+    // cũng sáng (phản chiếu phòng sáng) — hạt tối trên nền sáng nhìn như hạt tiêu / bụi bẩn (baby boomer, nhũ loang vàng)
+    const bMx = Math.max(base0[0], base0[1], base0[2], 1e-3);
+    const gBase = mix3(base0, [base0[0] / bMx, base0[1] / bMx, base0[2] / bMx], 0.5);
+    const gLight = smooth(0.18, 0.5, lum(base0));
     // hạt nhũ từ tính (mắt mèo / velvet): ô lưới ~0.05 hw (≥ 2.2px), chấm σ ~0.62px theo cỡ móng
     const gCell = Math.max(2.2, 0.05 * seg.hw), gRad = Math.max(0.62, (0.62 * seg.hw) / 45);
     // chrome màu (colorchrome) là hiệu ứng chrome dù đơn ghi hiệu ứng gì
@@ -1888,58 +1898,77 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         r += (mc[0] - r) * metalMix; g += (mc[1] - g) * metalMix; b += (mc[2] - b) * metalMix;
       }
       if (velvet || fin === "cateye") {
-        // toạ độ hạt nhũ từ tính theo hw (t ngang, sH dọc) — hạt / cụm hạt bám theo móng, cỡ ~0.05 hw (2–3px), làm từ
-        // nhiễu MƯỢT (không phải nhiễu từng điểm ảnh — từng ra mặt giấy ráp / nhiễu cảm biến)
-        // hạt nhũ từ tính: chấm RỜI ~1.5px trên lưới ô ~0.05 hw (`sparkleAt`), mật độ theo CỤM (nhiễu mượt ~0.24 hw);
-        // ngưỡng hạ (`thr` nhỏ) ở chỗ nhũ dày → nhiều hạt hơn. Ngưỡng nhiễu mượt từng ra vệt sâu đo / sơn xịt (vòng trước)
-        const sH = (s * seg.L) / Math.max(4, seg.hw);
-        const cl = vnoise(t / 0.24 + 5.1, sH / 0.24, seedN + 32);
-        const spk = (thr: number) => sparkleAt(t * seg.hw, s * seg.L, gCell, thr + 0.08 * (0.5 - cl), seedN + 31, gRad);
+        // toạ độ theo px trên móng (t ngang × hw, s dọc × L) — ánh nhũ từ tính là NHIỄU MƯỢT cỡ ô ~0.05 hw (≥ 2.2px, 2
+        // tầng) nhân vào độ sáng dải: ra mặt nhũ lấp lánh mịn. Nhiễu từng điểm ảnh / chấm rời rải khắp móng từng ra mặt
+        // giấy ráp, "bụi", vải bò lốm đốm (velvet navy, aurora vòng trước)
+        const px = t * seg.hw, py = s * seg.L;
+        const grain = 0.6 * vnoise(px / gCell + 5.1, py / gCell, seedN + 32) + 0.4 * vnoise(px / (2.1 * gCell), py / (2.1 * gCell) + 3.3, seedN + 34);
+        const shim = (grain - 0.5) * 2; // -1…1
+        // vài hạt loé RỜI (σ ~0.6px theo cỡ móng) — chỉ hạt rất sáng của cụm (ngưỡng cao), không rải đều
+        const spk = (thr: number) => sparkleAt(px, py, gCell * 1.6, thr, seedN + 31, gRad);
         const lightK = 0.55 + 0.45 * smooth(-0.8, 1, shade);
         if (velvet) {
-          // VELVET (nhung từ tính): nam châm phẳng kéo nhũ siêu mịn thành 1 QUẦNG SÁNG MỀM RỘNG (~60% bề ngang, phẳng
-          // giữa rồi mới tắt dần) ôm theo độ cong móng, 2 mép chìm tối như vải nhung; ánh nhung = CHÍNH màu nền sáng lên
-          // (đỏ rượu → đỏ ánh, navy → xanh ánh, không pha trắng — pha trắng ra màu bụi); trong quầng là hạt nhũ mịn lấp
-          // lánh. Bóng top coat (vệt cửa sổ) tính riêng ở bước 5 → vẫn thấy lớp bóng phủ trên nhung
-          const mxC = Math.max(c1[0], c1[1], c1[2], 1e-3);
-          const glow: RGB = [0.06 + (0.9 * c1[0]) / mxC, 0.06 + (0.9 * c1[1]) / mxC, 0.06 + (0.9 * c1[2]) / mxC];
+          // VELVET (nhung từ tính): nam châm phẳng kéo nhũ siêu mịn thành 1 QUẦNG SÁNG RỘNG (~60% bề ngang, phẳng giữa
+          // rồi mới tắt dần) ôm theo độ cong móng, 2 mép chìm TỐI như vải nhung; ánh nhung = CHÍNH màu nền sáng rực lên
+          // (đỏ rượu → đỏ ánh, navy → xanh lam ánh, không pha trắng — pha trắng ra màu bụi); mặt quầng là ánh nhũ mịn ±8%
+          // + rất ít hạt loé. Bóng top coat (vệt cửa sổ) tính riêng ở bước 5 → vẫn thấy lớp bóng phủ trên nhung
+          // ánh nhung = màu nền nhân sáng (giữ tỉ lệ kênh, đậm sắc thêm chút), đỉnh sáng ≤ ~6× nền: navy → xanh lam ánh
+          // (chuẩn hoá về kênh lớn nhất từng đẩy navy thành xanh dừa cạn nhạt, mất chất navy)
+          const mxC = Math.max(c1[0], c1[1], c1[2], 1e-3), pk = Math.min(0.42, 6 * mxC);
+          const glow: RGB = [pk * (c1[0] / mxC) ** 1.4, pk * (c1[1] / mxC) ** 1.4, pk * (c1[2] / mxC) ** 1.4];
           const tcV = side * 0.16 + 0.07 * Math.sin(2.2 * u + look.seed) - 0.14 * side * (u - 0.5) * (u - 0.5);
-          const field = (1 - smooth(0.3, 0.95, Math.abs(t - tcV))) * (0.45 + 0.55 * smooth(0.04, 0.45, u)) * (1 - 0.3 * smooth(0.85, 1.05, u));
-          const plush = (vnoise(t / 0.09 + 3.7, sH / 0.09, seedN + 33) - 0.5) * 0.3; // vân nhung mềm
-          const dim = 0.36 + 0.64 * field; // mép chìm như nhung
+          const field = (1 - smooth(0.15, 0.72, Math.abs(t - tcV))) * (0.4 + 0.6 * smooth(0.04, 0.45, u)) * (1 - 0.3 * smooth(0.85, 1.05, u));
+          const plush = (vnoise(t / 0.09 + 3.7, (s * seg.L) / Math.max(4, seg.hw) / 0.09, seedN + 33) - 0.5) * 0.24; // vân nhung mềm
+          const dim = 0.3 + 0.7 * field; // mép chìm như nhung
           r *= dim; g *= dim; b *= dim;
-          const amt = 0.46 * field * (1 + plush) * lightK * edge;
+          // mặt nhung: ánh nhũ mịn ±~25% trong quầng (thấy rõ vân nhũ như nhung nhàu), nhỏ dần ra mép
+          const amt = 1.15 * field * (1 + plush + 0.26 * shim * field) * lightK * edge;
           r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
-          // hạt nhung mịn chủ yếu trong quầng sáng, mép tối gần như không có — rải đều cả móng ra mặt "bụi"
-          const sp = spk(0.9 - 0.16 * field) * (0.1 + 0.9 * field * field) * 0.5 * lightK * edge;
-          r += (0.55 * glow[0] + 0.45) * sp; g += (0.55 * glow[1] + 0.45) * sp; b += (0.55 * glow[2] + 0.45) * sp;
+          // hạt loé thưa cùng sắc nền (đỏ ánh hồng, lam ánh trắng xanh) — hạt trắng từng nhìn như bụi bám
+          const sp = sparkleAt(px, py, gCell * 1.5, 0.93, seedN + 35, Math.max(1, gRad * 1.4)) * field * field * 0.5 * lightK * edge;
+          r += (0.75 * glow[0] / pk + 0.25) * sp; g += (0.75 * glow[1] / pk + 0.25) * sp; b += (0.75 * glow[2] / pk + 0.25) * sp;
         } else {
-          // MẮT MÈO: nam châm kéo nhũ từ tính thành 1 dải sáng CONG theo độ cong móng (vòng cung quanh đỉnh móng), mỗi
-          // móng lệch góc / vị trí nhẹ khác nhau; dải dựng từ CỤM HẠT nhũ lấp lánh màu KIM LOẠI (bạc / vàng) hoà sắc nền —
-          // không phải vệt trắng mờ + nhiễu từng điểm ảnh (nhìn như vệt nhựa, #54). 9D: 3 dải song song + hạt nhũ rải
-          // khắp móng như dải ngân hà. Aurora: GIỮ độ rực đổi sắc (tile đẹp nhất), chỉ cong dải + hạt cụm
+          // MẮT MÈO: nam châm kéo nhũ từ tính thành 1 dải CONG theo độ cong móng (vòng cung quanh đỉnh móng), mỗi móng
+          // lệch góc / vị trí nhẹ khác nhau. Dải = LÕI mảnh màu KIM LOẠI (bạc / vàng, sáng trắng ở chỗ nhũ dày) + QUẦNG
+          // rộng là màu nền sáng lên; ngoài dải chỉ ánh nhũ rất mờ. Không phải vệt trắng mờ + nhiễu từng điểm ảnh (vệt
+          // nhựa, #54), cũng không trộn sắc nền vào lõi (đỏ rượu + vàng từng ra vệt cam đồng). 9D: 3 dải song song + ánh
+          // nhũ cầu vồng nhẹ + hạt loé rải thưa như dải ngân hà. Aurora: GIỮ độ rực đổi sắc (tile đẹp nhất), chỉ cong dải
+          // + hạt mịn
           const slope = 0.32 + 0.16 * (hash2(seedN, 21, 7) - 0.5), off = 0.06 * (hash2(seedN, 22, 7) - 0.5);
           const d = (s - 0.52 - off) * 0.9 + t * slope - 0.12 * (1 - t * t);
           const g2 = (x: number, sg: number) => Math.exp(-(x * x) / (2 * sg * sg));
-          let band = 0.62 * g2(d, 0.055) + 0.38 * g2(d, 0.15);
           const nine = look.cat === "9d";
-          if (nine) band = Math.max(band, 0.5 * g2(d - 0.21, 0.04) + 0.2 * g2(d - 0.21, 0.1), 0.42 * g2(d + 0.23, 0.04) + 0.18 * g2(d + 0.23, 0.1));
-          // hạt sáng dày trong dải, thưa ngoài dải (9D: rải khắp móng)
-          const gr = spk(0.88 - 0.3 * band - (nine ? 0.08 : 0));
-          let glow: RGB;
+          let core = g2(d, 0.05), halo = g2(d, 0.16);
+          if (nine) {
+            core = Math.max(core, 0.75 * g2(d - 0.21, 0.04), 0.65 * g2(d + 0.23, 0.04));
+            halo = Math.max(halo, 0.7 * g2(d - 0.21, 0.11), 0.6 * g2(d + 0.23, 0.11));
+          }
+          const lf = edge * (1 + 0.3 * shade);
           if (pat === "auroracat") {
             // AURORA: dải từ tính đổi sắc hồng → tím → xanh băng → xanh ngọc theo bề ngang (như cực quang)
             const hq = 2.2 * t + 1.4 * s + ph;
-            glow = [0.55 + 0.4 * Math.sin(hq), 0.5 + 0.4 * Math.sin(hq + 2.1), 0.62 + 0.38 * Math.sin(hq + 4.2)];
+            const glow: RGB = [0.55 + 0.4 * Math.sin(hq), 0.5 + 0.4 * Math.sin(hq + 2.1), 0.62 + 0.38 * Math.sin(hq + 4.2)];
+            const band = 0.62 * core + 0.38 * halo;
+            const amt = (band * (1 + 0.22 * shim) + 0.008 * (1 + shim) * (1 - band)) * lf * 1.25; // ngoài dải gần như đen
+            r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
           } else {
             const mxC = Math.max(base0[0], base0[1], base0[2], 1e-3), mF = metalF0(metal);
-            const hueC: RGB = [base0[0] / mxC, base0[1] / mxC, base0[2] / mxC];
-            glow = mix3(hueC, mF, 0.55);
-            if (nine) { const hq = 3 * t + 2 * s + ph; glow = mix3(glow, [0.6 + 0.4 * Math.sin(hq), 0.6 + 0.4 * Math.sin(hq + 2.1), 0.6 + 0.4 * Math.sin(hq + 4.2)], 0.3); }
+            const mfx = Math.max(mF[0], mF[1], mF[2], 1e-3);
+            // lõi: màu kim loại chuẩn hoá (vàng ra vàng, bạc ra bạc), cụm nhũ dày thì sáng gần trắng
+            let cC: RGB = [mF[0] / mfx, mF[1] / mfx, mF[2] / mfx];
+            // quầng: màu nền sáng lên (chuẩn hoá theo kênh lớn nhất), pha chút kim loại cho ánh nhũ
+            let hC: RGB = mix3([base0[0] / mxC, base0[1] / mxC, base0[2] / mxC], cC, 0.15);
+            if (nine) {
+              const hq = 3 * t + 2 * s + ph, rb: RGB = [0.6 + 0.4 * Math.sin(hq), 0.6 + 0.4 * Math.sin(hq + 2.1), 0.6 + 0.4 * Math.sin(hq + 4.2)];
+              cC = mix3(cC, rb, 0.35); hC = mix3(hC, rb, 0.35);
+            }
+            // ngoài dải chỉ ánh nhũ rất mờ — cộng nhiều thì nền đỏ rượu bạc thành nâu hồng đục
+            const cAmt = core * (0.55 + 0.35 * shim) * lf, hAmt = (0.24 * halo * (1 + 0.15 * shim) + 0.012 * (1 + shim) * (1 - halo)) * lf;
+            r += cC[0] * cAmt + hC[0] * hAmt; g += cC[1] * cAmt + hC[1] * hAmt; b += cC[2] * cAmt + hC[2] * hAmt;
           }
-          const lf = edge * (1 + 0.3 * shade) * (pat === "auroracat" ? 1.25 : 1);
-          const amt = (band * (0.72 + 0.6 * gr) + (nine ? 0.35 : 0.18) * gr * (1 - band)) * lf;
-          r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
+          // hạt loé rời: dày trong lõi, thưa trong quầng; 9D rải thưa khắp móng
+          const sp = spk(0.93 - 0.12 * core - (nine ? 0.015 : 0)) * (nine ? 0.25 + 0.75 * Math.max(core, halo) : core + 0.3 * halo) * 0.7 * lf;
+          r += (1 - r) * Math.min(1, sp); g += (1 - g) * Math.min(1, sp); b += (1 - b) * Math.min(1, sp);
         }
       }
       if (motif && !PROCEDURAL.has(pat)) { // hoạ tiết (lớp SVG) phủ lên màu nền, cũng nhận ánh sáng
@@ -1959,8 +1988,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           const lk = (0.72 + 0.42 * smooth(-1, 1, shade)) * edge;
           const hu = glit.h[k] * 6.2832;
           const rb: RGB = [0.5 + 0.5 * Math.cos(hu), 0.5 + 0.5 * Math.cos(hu - 2.094), 0.5 + 0.5 * Math.cos(hu + 2.094)];
-          const fc = gHolo ? mix3(gF0, rb, 0.22) : gF0, fC = gHolo ? mix3(rb, [1, 1, 1], 0.3) : mix3(gF0, [1, 1, 1], 0.55);
-          const fd = glit.d[k] * lk, ff = glit.f[k] * lk;
+          const mt = glit.m[k] > 0.5, d0 = glit.d[k];
+          const fc = !mt ? gBase : gHolo ? mix3(gF0, rb, 0.22) : gF0;
+          const fC = !mt ? mix3(gBase, [1, 1, 1], 0.45) : gHolo ? mix3(rb, [1, 1, 1], 0.3) : mix3(gF0, [1, 1, 1], 0.55);
+          // hạt cùng màu nền: quanh độ sáng nền (đậm hơn / sáng hơn xen kẽ = mặt nhũ có chiều sâu); nền sáng: nâng sàn
+          const fd = (!mt ? 0.25 + 1.25 * d0 : d0 + (0.45 + 0.6 * d0 - d0) * gLight) * lk, ff = glit.f[k] * lk;
           r += (fc[0] * fd + fC[0] * ff - r) * ga; g += (fc[1] * fd + fC[1] * ff - g) * ga; b += (fc[2] * fd + fC[2] * ff - b) * ga;
         }
         const gx = glit.x[k];

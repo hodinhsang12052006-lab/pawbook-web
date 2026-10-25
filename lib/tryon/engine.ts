@@ -932,7 +932,7 @@ function lightMap(img: Img, seg: NailSeg): LightMap {
  * nhỏ sẽ ra sọc như viên bi sọc (vòng trước).
  */
 function sphereMetal(tint: RGB, nx: number, ny: number, nz: number, L: number[], side: number): RGB {
-  const f0 = metalF0(tint);
+  const { f0, fD } = metalConsts(tint, false);
   const rx = 2 * nz * nx, ry = 2 * nz * ny, rz = 2 * nz * nz - 1; // tia phản xạ của hướng nhìn (0,0,1)
   const toL = Math.max(0, rx * L[0] + ry * L[1] + rz * L[2]);
   // mặt PHẲNG / gần phẳng (đỉnh charm, nét kim loại vẽ ép phẳng) soi thẳng lên "trần softbox" → sáng ánh kim; thiếu
@@ -942,9 +942,8 @@ function sphereMetal(tint: RGB, nx: number, ny: number, nz: number, L: number[],
   const ceil = 0.6 * smooth(0.72, 0.995, rz);
   // phần sáng (đèn + trần softbox) giữ F0, phần tối (phòng + mép) đậm sắc hơn — vàng tối là hổ phách, không ra kaki
   const hiE = 1.5 * Math.pow(toL, 10) + ceil, loE = 0.06 + 0.32 * smooth(-0.3, 0.9, ry * 0.7 + rx * side * 0.5) + 0.38 * Math.pow(1 - Math.max(0, nz), 2.2);
-  const fm = Math.max(f0[0], f0[1], f0[2], 1e-3), dp = (c: number) => c * (c / fm) ** (0.6 * smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2]));
   const hot = smooth(0.85, 1.45, hiE + loE) * 0.7;
-  const o = shoulder([dp(f0[0]) * loE + f0[0] * hiE, dp(f0[1]) * loE + f0[1] * hiE, dp(f0[2]) * loE + f0[2] * hiE], 0.4);
+  const o = shoulder([fD[0] * loE + f0[0] * hiE, fD[1] * loE + f0[1] * hiE, fD[2] * loE + f0[2] * hiE], 0.4);
   return [o[0] + (1 - o[0]) * hot, o[1] + (1 - o[1]) * hot, o[2] + (1 - o[2]) * hot];
 }
 
@@ -971,21 +970,22 @@ function metalF0(tint: RGB): RGB {
  * bóng, không có chất kim loại). `v` = năng lượng tuyến tính từng kênh (có thể > 1).
  */
 function shoulder(v: RGB, k = 0.75): RGB {
-  const m = Math.max(v[0], v[1], v[2]);
-  const bleed = k * smooth(0.85, 2.4, m);
-  const ch = (x: number) => { const c = Math.min(1, x); return c + (1 - c) * bleed; };
-  return [ch(v[0]), ch(v[1]), ch(v[2])];
+  // không tạo closure trong hàm gọi theo từng điểm ảnh (tsx/esbuild bọc mỗi closure bằng __name → chậm hẳn)
+  const bleed = k * smooth(0.85, 2.4, Math.max(v[0], v[1], v[2]));
+  const r = Math.min(1, v[0]), g = Math.min(1, v[1]), b = Math.min(1, v[2]);
+  return [r + (1 - r) * bleed, g + (1 - g) * bleed, b + (1 - b) * bleed];
 }
+/** Gauss chưa chuẩn hoá (dải mắt mèo) — hàm ngoài vòng lặp điểm ảnh. */
+const gauss = (x: number, sg: number) => Math.exp(-(x * x) / (2 * sg * sg));
 
 /** Sợi kim loại tròn mảnh (line vàng / bạc nổi): `n` = vị trí ngang trên sợi (-1…1). */
 function wireShade(tint: RGB, n: number, shade: number, side: number): RGB {
-  const f0 = metalF0(tint);
+  const { f0, fD } = metalConsts(tint, false); // fD: mép tối đậm sắc (vàng ≠ kaki)
   // sợi trụ: lõi sáng lệch về phía đèn, 2 mép tối dần (Fresnel nhẹ ở sát mép để sợi không thành vệt xám dẹt)
   const hiE = 1.15 * Math.exp(-(((n - side * 0.28) / 0.5) ** 2));
   const loE = Math.max(0.02, 0.18 - 0.14 * n * n + 0.12 * smooth(0.75, 1, Math.abs(n)) + 0.1 * smooth(-1, 1, shade));
-  const fm = Math.max(f0[0], f0[1], f0[2], 1e-3), dp = (c: number) => c * (c / fm) ** (0.6 * smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2])); // mép tối đậm sắc (vàng ≠ kaki)
   const hot = smooth(0.95, 1.4, hiE + loE) * 0.6;
-  const o = shoulder([dp(f0[0]) * loE + f0[0] * hiE, dp(f0[1]) * loE + f0[1] * hiE, dp(f0[2]) * loE + f0[2] * hiE], 0.4);
+  const o = shoulder([fD[0] * loE + f0[0] * hiE, fD[1] * loE + f0[1] * hiE, fD[2] * loE + f0[2] * hiE], 0.4);
   return [o[0] + (1 - o[0]) * hot, o[1] + (1 - o[1]) * hot, o[2] + (1 - o[2]) * hot];
 }
 
@@ -999,7 +999,14 @@ function wireShade(tint: RGB, n: number, shade: number, side: number): RGB {
  * đầu móng = "ống nhôm sọc dọc", #15). `soft`: CHROME MÀU (bột chrome trên gel màu) — 1 dải sáng RỘNG mềm giữ sắc nền,
  * 1 dải phụ mờ, 2 mép chìm tối (không có dải softbox gắt).
  */
-function metalShade(tint: RGB, q: number, v: number, shade: number, side: number, qu = 0, soft = false): RGB {
+/** Hằng số kim loại theo màu (F0, F0 phần tối, F0 dải sáng, gain) — nhớ 3 màu gần nhất (nền chrome + kim loại nhấn
+ *  xen kẽ trong cùng 1 điểm ảnh): mỗi móng gọi cùng màu cho hàng chục nghìn điểm, tính lại `**` mỗi điểm từng làm chrome
+ *  chậm gấp 3. */
+const metalMemo = [0, 1, 2].map(() => ({ r: -1, g: -1, b: -1, soft: false, f0: [0, 0, 0] as RGB, fD: [0, 0, 0] as RGB, fB: [0, 0, 0] as RGB, gain: 1 }));
+let metalMemoNext = 0;
+function metalConsts(tint: RGB, soft: boolean) {
+  for (const M of metalMemo) if (M.r === tint[0] && M.g === tint[1] && M.b === tint[2] && M.soft === soft) return M;
+  const M = metalMemo[metalMemoNext]; metalMemoNext = (metalMemoNext + 1) % metalMemo.length;
   const f0 = metalF0(tint), fm = Math.max(f0[0], f0[1], f0[2], 1e-3);
   // phản chiếu TỐI (phòng, da tay, nền vải) đậm sắc hơn phản chiếu sáng — ánh dội nhiều lần trên kim loại màu: phần tối
   // của vàng là vàng nâu hổ phách (không phải kaki / ô liu như vòng trước); bạc trung tính gần như không đổi. Chỉ cho kim
@@ -1007,10 +1014,16 @@ function metalShade(tint: RGB, q: number, v: number, shade: number, side: number
   // cam). Chrome màu: dải sáng đậm sắc nhẹ (nâu → đồng, không ra be xám)
   const kB = smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2]);
   const deep = (e: number): RGB => [f0[0] * (f0[0] / fm) ** e, f0[1] * (f0[1] / fm) ** e, f0[2] * (f0[2] / fm) ** e];
-  const fD = deep(0.6 * kB), fB = soft ? deep(0.2) : f0;
+  M.r = tint[0]; M.g = tint[1]; M.b = tint[2]; M.soft = soft;
+  M.f0 = f0; M.fD = deep(0.6 * kB); M.fB = soft ? deep(0.2) : f0;
   // ánh softbox là nguồn RẤT sáng (HDR): trên kim loại màu tối F0 nhỏ → nhân thêm `gain` cho riêng phần softbox để
   // dải sáng là màu nền rực lên (mận → hồng mận sáng, nâu → đồng), còn nền phòng (lo) giữ đúng độ tối của màu
-  const gain = Math.min(soft ? 5 : 4, Math.max(soft ? 2.2 : 1, 0.8 / fm));
+  M.gain = Math.min(soft ? 5 : 4, Math.max(soft ? 2.2 : 1, 0.8 / fm));
+  return M;
+}
+
+function metalShade(tint: RGB, q: number, v: number, shade: number, side: number, qu = 0, soft = false): RGB {
+  const { fD, fB, gain } = metalConsts(tint, soft);
   const qq = q * side, ab = Math.abs(q), bend = 0.22 * qu * qu; // qq: softbox chính (qq ≈ +0.42) luôn ở phía có đèn
   const tpS = Math.exp(-((qu / 0.5) ** 2)), tpB = Math.exp(-((qu / 0.9) ** 2)); // dải sắc thon nhanh, dải rộng thon chậm
   let lo: number, hi: number, hot: number;
@@ -1489,6 +1502,17 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const gLight = smooth(0.18, 0.5, lum(base0));
     // hạt nhũ từ tính (mắt mèo / velvet): ô lưới ~0.05 hw (≥ 2.2px), chấm σ ~0.62px theo cỡ móng
     const gCell = Math.max(2.2, 0.05 * seg.hw), gRad = Math.max(0.62, (0.62 * seg.hw) / 45);
+    // hằng số mắt mèo / velvet theo móng (tính 1 lần, không lặp mỗi điểm ảnh)
+    // velvet: ánh nhung = màu nền nhân sáng (giữ tỉ lệ kênh, đậm sắc thêm chút), đỉnh sáng ≤ ~6× nền: navy → xanh lam
+    // ánh (chuẩn hoá về kênh lớn nhất từng đẩy navy thành xanh dừa cạn nhạt, mất chất navy)
+    const vMx = Math.max(c1[0], c1[1], c1[2], 1e-3), vPk = Math.min(0.42, 6 * vMx);
+    const vGlow: RGB = [vPk * (c1[0] / vMx) ** 1.4, vPk * (c1[1] / vMx) ** 1.4, vPk * (c1[2] / vMx) ** 1.4];
+    const vSpk: RGB = [0.75 * (c1[0] / vMx) ** 1.4 + 0.25, 0.75 * (c1[1] / vMx) ** 1.4 + 0.25, 0.75 * (c1[2] / vMx) ** 1.4 + 0.25];
+    // mắt mèo: lõi = màu kim loại chuẩn hoá (vàng ra vàng, bạc ra bạc); quầng = màu nền sáng lên + chút ánh kim loại
+    const cF = metalF0(metal), cFx = Math.max(cF[0], cF[1], cF[2], 1e-3), bMx0 = Math.max(base0[0], base0[1], base0[2], 1e-3);
+    const catCore: RGB = [cF[0] / cFx, cF[1] / cFx, cF[2] / cFx];
+    const catHalo = mix3([base0[0] / bMx0, base0[1] / bMx0, base0[2] / bMx0], catCore, 0.15);
+    const catSlope = 0.32 + 0.16 * (hash2(look.seed + i * 13, 21, 7) - 0.5), catOff = 0.06 * (hash2(look.seed + i * 13, 22, 7) - 0.5);
     // chrome màu (colorchrome) là hiệu ứng chrome dù đơn ghi hiệu ứng gì
     const chromeF = fin === "chrome" || pat === "colorchrome";
     // chrome trên nền trắng / ngọc trai / champagne = glazed donut (bạc xám vẫn là gương kim loại); thạch + chrome = thạch
@@ -1906,44 +1930,38 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const px = t * seg.hw, py = s * seg.L;
         const grain = 0.6 * vnoise(px / gCell + 5.1, py / gCell, seedN + 32) + 0.4 * vnoise(px / (2.1 * gCell), py / (2.1 * gCell) + 3.3, seedN + 34);
         const shim = (grain - 0.5) * 2; // -1…1
-        // vài hạt loé RỜI (σ ~0.6px theo cỡ móng) — chỉ hạt rất sáng của cụm (ngưỡng cao), không rải đều
-        const spk = (thr: number) => sparkleAt(px, py, gCell * 1.6, thr, seedN + 31, gRad);
         const lightK = 0.55 + 0.45 * smooth(-0.8, 1, shade);
         if (velvet) {
           // VELVET (nhung từ tính): nam châm phẳng kéo nhũ siêu mịn thành 1 QUẦNG SÁNG RỘNG (~60% bề ngang, phẳng giữa
           // rồi mới tắt dần) ôm theo độ cong móng, 2 mép chìm TỐI như vải nhung; ánh nhung = CHÍNH màu nền sáng rực lên
-          // (đỏ rượu → đỏ ánh, navy → xanh lam ánh, không pha trắng — pha trắng ra màu bụi); mặt quầng là ánh nhũ mịn ±8%
-          // + rất ít hạt loé. Bóng top coat (vệt cửa sổ) tính riêng ở bước 5 → vẫn thấy lớp bóng phủ trên nhung
-          // ánh nhung = màu nền nhân sáng (giữ tỉ lệ kênh, đậm sắc thêm chút), đỉnh sáng ≤ ~6× nền: navy → xanh lam ánh
-          // (chuẩn hoá về kênh lớn nhất từng đẩy navy thành xanh dừa cạn nhạt, mất chất navy)
-          const mxC = Math.max(c1[0], c1[1], c1[2], 1e-3), pk = Math.min(0.42, 6 * mxC);
-          const glow: RGB = [pk * (c1[0] / mxC) ** 1.4, pk * (c1[1] / mxC) ** 1.4, pk * (c1[2] / mxC) ** 1.4];
+          // (đỏ rượu → đỏ ánh, navy → xanh lam ánh, không pha trắng — pha trắng ra màu bụi); mặt quầng là ánh nhũ mịn
+          // (thấy rõ vân nhũ như nhung nhàu, nhỏ dần ra mép) + hạt loé thưa cùng sắc nền (hạt trắng nhìn như bụi bám).
+          // Bóng top coat (vệt cửa sổ) tính riêng ở bước 5 → vẫn thấy lớp bóng phủ trên nhung
           const tcV = side * 0.16 + 0.07 * Math.sin(2.2 * u + look.seed) - 0.14 * side * (u - 0.5) * (u - 0.5);
           const field = (1 - smooth(0.15, 0.72, Math.abs(t - tcV))) * (0.4 + 0.6 * smooth(0.04, 0.45, u)) * (1 - 0.3 * smooth(0.85, 1.05, u));
           const plush = (vnoise(t / 0.09 + 3.7, (s * seg.L) / Math.max(4, seg.hw) / 0.09, seedN + 33) - 0.5) * 0.24; // vân nhung mềm
           const dim = 0.3 + 0.7 * field; // mép chìm như nhung
           r *= dim; g *= dim; b *= dim;
-          // mặt nhung: ánh nhũ mịn ±~25% trong quầng (thấy rõ vân nhũ như nhung nhàu), nhỏ dần ra mép
           const amt = 1.15 * field * (1 + plush + 0.26 * shim * field) * lightK * edge;
-          r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
-          // hạt loé thưa cùng sắc nền (đỏ ánh hồng, lam ánh trắng xanh) — hạt trắng từng nhìn như bụi bám
-          const sp = sparkleAt(px, py, gCell * 1.5, 0.93, seedN + 35, Math.max(1, gRad * 1.4)) * field * field * 0.5 * lightK * edge;
-          r += (0.75 * glow[0] / pk + 0.25) * sp; g += (0.75 * glow[1] / pk + 0.25) * sp; b += (0.75 * glow[2] / pk + 0.25) * sp;
+          r += vGlow[0] * amt; g += vGlow[1] * amt; b += vGlow[2] * amt;
+          const spw = field * field * 0.5 * lightK * edge;
+          if (spw > 0.01) {
+            const sp = sparkleAt(px, py, gCell * 1.5, 0.93, seedN + 35, Math.max(1, gRad * 1.4)) * spw;
+            r += vSpk[0] * sp; g += vSpk[1] * sp; b += vSpk[2] * sp;
+          }
         } else {
           // MẮT MÈO: nam châm kéo nhũ từ tính thành 1 dải CONG theo độ cong móng (vòng cung quanh đỉnh móng), mỗi móng
           // lệch góc / vị trí nhẹ khác nhau. Dải = LÕI mảnh màu KIM LOẠI (bạc / vàng, sáng trắng ở chỗ nhũ dày) + QUẦNG
-          // rộng là màu nền sáng lên; ngoài dải chỉ ánh nhũ rất mờ. Không phải vệt trắng mờ + nhiễu từng điểm ảnh (vệt
-          // nhựa, #54), cũng không trộn sắc nền vào lõi (đỏ rượu + vàng từng ra vệt cam đồng). 9D: 3 dải song song + ánh
-          // nhũ cầu vồng nhẹ + hạt loé rải thưa như dải ngân hà. Aurora: GIỮ độ rực đổi sắc (tile đẹp nhất), chỉ cong dải
-          // + hạt mịn
-          const slope = 0.32 + 0.16 * (hash2(seedN, 21, 7) - 0.5), off = 0.06 * (hash2(seedN, 22, 7) - 0.5);
-          const d = (s - 0.52 - off) * 0.9 + t * slope - 0.12 * (1 - t * t);
-          const g2 = (x: number, sg: number) => Math.exp(-(x * x) / (2 * sg * sg));
+          // rộng là màu nền sáng lên; ngoài dải chỉ ánh nhũ rất mờ (cộng nhiều thì nền đỏ rượu bạc thành nâu hồng đục).
+          // Không phải vệt trắng mờ + nhiễu từng điểm ảnh (vệt nhựa, #54), cũng không trộn sắc nền vào lõi (đỏ rượu + vàng
+          // từng ra vệt cam đồng). 9D: 3 dải song song + ánh nhũ cầu vồng nhẹ + hạt loé rải thưa như dải ngân hà.
+          // Aurora: GIỮ độ rực đổi sắc (tile đẹp nhất), chỉ cong dải + hạt mịn, ngoài dải gần như đen
+          const d = (s - 0.52 - catOff) * 0.9 + t * catSlope - 0.12 * (1 - t * t);
           const nine = look.cat === "9d";
-          let core = g2(d, 0.05), halo = g2(d, 0.16);
+          let core = gauss(d, 0.05), halo = gauss(d, 0.16);
           if (nine) {
-            core = Math.max(core, 0.75 * g2(d - 0.21, 0.04), 0.65 * g2(d + 0.23, 0.04));
-            halo = Math.max(halo, 0.7 * g2(d - 0.21, 0.11), 0.6 * g2(d + 0.23, 0.11));
+            core = Math.max(core, 0.75 * gauss(d - 0.21, 0.04), 0.65 * gauss(d + 0.23, 0.04));
+            halo = Math.max(halo, 0.7 * gauss(d - 0.21, 0.11), 0.6 * gauss(d + 0.23, 0.11));
           }
           const lf = edge * (1 + 0.3 * shade);
           if (pat === "auroracat") {
@@ -1951,26 +1969,23 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             const hq = 2.2 * t + 1.4 * s + ph;
             const glow: RGB = [0.55 + 0.4 * Math.sin(hq), 0.5 + 0.4 * Math.sin(hq + 2.1), 0.62 + 0.38 * Math.sin(hq + 4.2)];
             const band = 0.62 * core + 0.38 * halo;
-            const amt = (band * (1 + 0.22 * shim) + 0.008 * (1 + shim) * (1 - band)) * lf * 1.25; // ngoài dải gần như đen
+            const amt = (band * (1 + 0.22 * shim) + 0.008 * (1 + shim) * (1 - band)) * lf * 1.25;
             r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
           } else {
-            const mxC = Math.max(base0[0], base0[1], base0[2], 1e-3), mF = metalF0(metal);
-            const mfx = Math.max(mF[0], mF[1], mF[2], 1e-3);
-            // lõi: màu kim loại chuẩn hoá (vàng ra vàng, bạc ra bạc), cụm nhũ dày thì sáng gần trắng
-            let cC: RGB = [mF[0] / mfx, mF[1] / mfx, mF[2] / mfx];
-            // quầng: màu nền sáng lên (chuẩn hoá theo kênh lớn nhất), pha chút kim loại cho ánh nhũ
-            let hC: RGB = mix3([base0[0] / mxC, base0[1] / mxC, base0[2] / mxC], cC, 0.15);
+            let cC = catCore, hC = catHalo;
             if (nine) {
               const hq = 3 * t + 2 * s + ph, rb: RGB = [0.6 + 0.4 * Math.sin(hq), 0.6 + 0.4 * Math.sin(hq + 2.1), 0.6 + 0.4 * Math.sin(hq + 4.2)];
               cC = mix3(cC, rb, 0.35); hC = mix3(hC, rb, 0.35);
             }
-            // ngoài dải chỉ ánh nhũ rất mờ — cộng nhiều thì nền đỏ rượu bạc thành nâu hồng đục
             const cAmt = core * (0.55 + 0.35 * shim) * lf, hAmt = (0.24 * halo * (1 + 0.15 * shim) + 0.012 * (1 + shim) * (1 - halo)) * lf;
             r += cC[0] * cAmt + hC[0] * hAmt; g += cC[1] * cAmt + hC[1] * hAmt; b += cC[2] * cAmt + hC[2] * hAmt;
           }
-          // hạt loé rời: dày trong lõi, thưa trong quầng; 9D rải thưa khắp móng
-          const sp = spk(0.93 - 0.12 * core - (nine ? 0.015 : 0)) * (nine ? 0.25 + 0.75 * Math.max(core, halo) : core + 0.3 * halo) * 0.7 * lf;
-          r += (1 - r) * Math.min(1, sp); g += (1 - g) * Math.min(1, sp); b += (1 - b) * Math.min(1, sp);
+          // hạt loé rời (σ ~0.6px theo cỡ móng), chỉ hạt rất sáng của cụm: dày trong lõi, thưa trong quầng; 9D rải thưa khắp móng
+          const spw = (nine ? 0.25 + 0.75 * Math.max(core, halo) : core + 0.3 * halo) * 0.7 * lf;
+          if (spw > 0.01) {
+            const sp = Math.min(1, sparkleAt(px, py, gCell * 1.6, 0.93 - 0.12 * core - (nine ? 0.015 : 0), seedN + 31, gRad) * spw);
+            r += (1 - r) * sp; g += (1 - g) * sp; b += (1 - b) * sp;
+          }
         }
       }
       if (motif && !PROCEDURAL.has(pat)) { // hoạ tiết (lớp SVG) phủ lên màu nền, cũng nhận ánh sáng

@@ -1048,6 +1048,11 @@ function forcedKeys(pid: string, k: [CK, CK, CK]): [CK, CK, CK] {
     case "milkbath": return ["white", k[1] === "white" || k[1] === "milky" ? "babyPink" : k[1], k[2]];
     case "fr-pinkwhite": return [k[0] === "sheer" ? "sheer" : "pinkNude", "white", k[2]];
     case "fr-santa": case "fr-candycane": return [k[0], RED_TIP.includes(k[1]) ? k[1] : "cherry", k[2]];
+    // nhũ (French nhũ, nhũ loang) là màu KIM LOẠI; chrome màu chỉ 1 màu nền — màu phụ không có trên móng thì không ghi vào bảng
+    // màu (ô màu dưới ảnh mẫu phải đúng màu khách thấy); đầu French đồi mồi luôn tông caramel
+    case "fr-glitter": case "glitterfade": return [k[0], k[2], k[2]];
+    case "colorchrome": return [k[0], k[0], k[2]];
+    case "fr-tortoise": return [k[0], "caramel", k[2]];
     default: return k;
   }
 }

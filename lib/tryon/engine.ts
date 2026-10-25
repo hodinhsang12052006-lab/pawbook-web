@@ -938,10 +938,12 @@ function sphereMetal(tint: RGB, nx: number, ny: number, nz: number, L: number[],
   // mặt PHẲNG / gần phẳng (đỉnh charm, nét kim loại vẽ ép phẳng) soi thẳng lên "trần softbox" → sáng ánh kim; thiếu
   // nó mặt phẳng chỉ phản chiếu ~0.2 → dơi bạc / trăng vàng / nơ ra màu xám lì như giấy (#23, #47)
   const ceil = 0.75 * smooth(0.86, 0.985, rz);
-  const env = 0.06 + 1.5 * Math.pow(toL, 10) + 0.32 * smooth(-0.3, 0.9, ry * 0.7 + rx * side * 0.5) + 0.38 * Math.pow(1 - Math.max(0, nz), 2.2) + ceil;
-  const hot = smooth(0.85, 1.45, env) * 0.7;
-  const ch = (f: number) => { const c = Math.min(1, f * env); return c + (1 - c) * hot; };
-  return [ch(f0[0]), ch(f0[1]), ch(f0[2])];
+  // phần sáng (đèn + trần softbox) giữ F0, phần tối (phòng + mép) đậm sắc hơn — vàng tối là hổ phách, không ra kaki
+  const hiE = 1.5 * Math.pow(toL, 10) + ceil, loE = 0.06 + 0.32 * smooth(-0.3, 0.9, ry * 0.7 + rx * side * 0.5) + 0.38 * Math.pow(1 - Math.max(0, nz), 2.2);
+  const fm = Math.max(f0[0], f0[1], f0[2], 1e-3), dp = (c: number) => c * (c / fm) ** (0.6 * smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2]));
+  const hot = smooth(0.85, 1.45, hiE + loE) * 0.7;
+  const o = shoulder([dp(f0[0]) * loE + f0[0] * hiE, dp(f0[1]) * loE + f0[1] * hiE, dp(f0[2]) * loE + f0[2] * hiE], 0.4);
+  return [o[0] + (1 - o[0]) * hot, o[1] + (1 - o[1]) * hot, o[2] + (1 - o[2]) * hot];
 }
 
 /**
@@ -953,21 +955,36 @@ function sphereMetal(tint: RGB, nx: number, ny: number, nz: number, L: number[],
 function metalF0(tint: RGB): RGB {
   const mx = Math.max(tint[0], tint[1], tint[2], 1e-3), L = 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2];
   const k = smooth(0.14, 0.34, L);
-  // KHÔNG kẹp từng kênh ở đây (kẹp → hồng cánh sen mất kênh đỏ thành tím mận bụi); gần ĐEN thì cộng chút phản xạ trung
-  // tính — chrome đen là gương xám khói (gunmetal), không phải sơn đen bóng
-  const blk = 0.1 * (1 - smooth(0.004, 0.03, L));
+  // KHÔNG kẹp từng kênh ở đây (kẹp → hồng cánh sen mất kênh đỏ thành tím mận bụi); chỉ màu gần ĐEN thật (L tuyến tính
+  // < ~0.012) mới cộng phản xạ trung tính — chrome đen là gương xám khói (gunmetal), không phải sơn đen bóng. Ngưỡng cao
+  // hơn thì nâu sô-cô-la #3b2418 cũng bị pha xám → chrome nâu ra màu bùn
+  const blk = 0.15 * (1 - smooth(0.003, 0.012, L));
   const f = (c: number) => (2.2 * c + blk) * (1 - k) + (0.25 + (0.75 * c) / mx) * k;
   return [f(tint[0]), f(tint[1]), f(tint[2])];
+}
+
+/**
+ * "Vai" ánh sáng của kim loại màu: kênh vượt 1 (ánh softbox trên vàng / đồng / chrome màu) tràn sang các kênh còn lại
+ * như máy ảnh thật cháy sáng — lõi dải sáng ngả trắng ánh màu thay vì đỏ cam bão hoà (chrome caramel từng ra sơn cam
+ * bóng, không có chất kim loại). `v` = năng lượng tuyến tính từng kênh (có thể > 1).
+ */
+function shoulder(v: RGB, k = 0.75): RGB {
+  const m = Math.max(v[0], v[1], v[2]);
+  const bleed = k * smooth(0.85, 2.4, m);
+  const ch = (x: number) => { const c = Math.min(1, x); return c + (1 - c) * bleed; };
+  return [ch(v[0]), ch(v[1]), ch(v[2])];
 }
 
 /** Sợi kim loại tròn mảnh (line vàng / bạc nổi): `n` = vị trí ngang trên sợi (-1…1). */
 function wireShade(tint: RGB, n: number, shade: number, side: number): RGB {
   const f0 = metalF0(tint);
   // sợi trụ: lõi sáng lệch về phía đèn, 2 mép tối dần (Fresnel nhẹ ở sát mép để sợi không thành vệt xám dẹt)
-  const env = 0.18 + 1.15 * Math.exp(-(((n - side * 0.28) / 0.5) ** 2)) - 0.14 * n * n + 0.12 * smooth(0.75, 1, Math.abs(n)) + 0.1 * smooth(-1, 1, shade);
-  const hot = smooth(0.95, 1.4, env) * 0.6;
-  const ch = (f: number) => { const c = Math.min(1, f * env); return c + (1 - c) * hot; };
-  return [ch(f0[0]), ch(f0[1]), ch(f0[2])];
+  const hiE = 1.15 * Math.exp(-(((n - side * 0.28) / 0.5) ** 2));
+  const loE = Math.max(0.02, 0.18 - 0.14 * n * n + 0.12 * smooth(0.75, 1, Math.abs(n)) + 0.1 * smooth(-1, 1, shade));
+  const fm = Math.max(f0[0], f0[1], f0[2], 1e-3), dp = (c: number) => c * (c / fm) ** (0.6 * smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2])); // mép tối đậm sắc (vàng ≠ kaki)
+  const hot = smooth(0.95, 1.4, hiE + loE) * 0.6;
+  const o = shoulder([dp(f0[0]) * loE + f0[0] * hiE, dp(f0[1]) * loE + f0[1] * hiE, dp(f0[2]) * loE + f0[2] * hiE], 0.4);
+  return [o[0] + (1 - o[0]) * hot, o[1] + (1 - o[1]) * hot, o[2] + (1 - o[2]) * hot];
 }
 
 /**
@@ -981,33 +998,46 @@ function wireShade(tint: RGB, n: number, shade: number, side: number): RGB {
  * 1 dải phụ mờ, 2 mép chìm tối (không có dải softbox gắt).
  */
 function metalShade(tint: RGB, q: number, v: number, shade: number, side: number, qu = 0, soft = false): RGB {
-  const f0 = metalF0(tint);
+  const f0 = metalF0(tint), fm = Math.max(f0[0], f0[1], f0[2], 1e-3);
+  // phản chiếu TỐI (phòng, da tay, nền vải) đậm sắc hơn phản chiếu sáng — ánh dội nhiều lần trên kim loại màu: phần tối
+  // của vàng là vàng nâu hổ phách (không phải kaki / ô liu như vòng trước); bạc trung tính gần như không đổi. Chỉ cho kim
+  // loại SÁNG (F0 đã chuẩn hoá) — chrome màu tối F0 chính là màu nền, đậm thêm thì lệch sắc (mận → tím, caramel → đỏ
+  // cam). Chrome màu: dải sáng đậm sắc nhẹ (nâu → đồng, không ra be xám)
+  const kB = smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2]);
+  const deep = (e: number): RGB => [f0[0] * (f0[0] / fm) ** e, f0[1] * (f0[1] / fm) ** e, f0[2] * (f0[2] / fm) ** e];
+  const fD = deep(0.6 * kB), fB = soft ? deep(0.2) : f0;
   // ánh softbox là nguồn RẤT sáng (HDR): trên kim loại màu tối F0 nhỏ → nhân thêm `gain` cho riêng phần softbox để
   // dải sáng là màu nền rực lên (mận → hồng mận sáng, nâu → đồng), còn nền phòng (lo) giữ đúng độ tối của màu
-  const gain = Math.min(soft ? 5 : 4, Math.max(soft ? 1.6 : 1, 0.8 / Math.max(f0[0], f0[1], f0[2], 1e-3)));
+  const gain = Math.min(soft ? 5 : 4, Math.max(soft ? 2.2 : 1, 0.8 / fm));
   const qq = q * side, ab = Math.abs(q), bend = 0.22 * qu * qu; // qq: softbox chính (qq ≈ +0.42) luôn ở phía có đèn
   const tpS = Math.exp(-((qu / 0.5) ** 2)), tpB = Math.exp(-((qu / 0.9) ** 2)); // dải sắc thon nhanh, dải rộng thon chậm
   let lo: number, hi: number, hot: number;
   if (soft) {
-    // dải phản chiếu RỘNG có mép rõ (bóng cửa sổ trên kim loại — mép mềm như quầng thì chỉ ra sơn bóng thường)
+    // CHROME MÀU: 1 dải phản chiếu RỘNG có mép rõ (bóng cửa sổ trên kim loại — mép mềm như quầng thì chỉ ra sơn bóng
+    // thường) + lõi sáng mảnh trong dải, giữa móng đúng màu nền, 2 mép chìm ~×0.45 (mặt cong quay khỏi đèn)
     const c = 0.28 - bend, dq = Math.abs(qq - c);
-    lo = (0.38 + 0.1 * smooth(-1, 1, shade)) * (1 - 0.62 * smooth(0.55, 1, ab));
+    lo = (0.4 + 0.12 * smooth(-1, 1, shade)) * (1 - 0.55 * smooth(0.5, 1, ab));
     hi = 0.55 * (1 - smooth(0.1, 0.3, dq)) * (0.3 + 0.7 * tpB)
-      + 0.35 * Math.exp(-(((qq - c - 0.03) / 0.06) ** 2)) * tpS
-      + 0.15 * Math.exp(-((qq / 0.5) ** 2)) * tpB
+      + 0.45 * Math.exp(-(((qq - c - 0.03) / 0.06) ** 2)) * tpS
+      + 0.12 * Math.exp(-((qq / 0.5) ** 2)) * tpB
       + 0.1 * Math.exp(-(((qq + 0.5 - 0.5 * bend) / 0.14) ** 2)) * tpB;
-    hot = smooth(0.6, 1.0, hi) * 0.3;
+    hot = smooth(0.75, 1.1, hi) * 0.25;
   } else {
-    const c = 0.42 - bend;
-    lo = 0.05 + 0.58 * Math.exp(-(((qq - 0.02) / 0.45) ** 2)) * (0.6 + 0.4 * tpB) * (0.8 + 0.2 * Math.sin(3.2 * v + 1))
-      + 0.18 * smooth(0.68, 1.05, ab) + 0.1 * smooth(-1, 1, shade);
-    lo *= 1 - 0.6 * Math.exp(-(((qq - c + 0.22) / 0.1) ** 2)) * (0.3 + 0.7 * tpB); // đường chân trời tối cạnh dải sáng
-    hi = 1.25 * Math.exp(-(((qq - c) / (0.15 * (0.55 + 0.45 * tpS))) ** 2)) * (0.1 + 0.9 * tpS)
-      + 0.12 * Math.exp(-(((qq + 0.52 - 0.5 * bend) / 0.09) ** 2)) * tpS;
+    // GƯƠNG: softbox là 1 khối sáng mép RÕ (hình chữ nhật phản chiếu, không phải vệt gauss mờ — mờ thì ra nhôm xước),
+    // ngay cạnh là đường chân trời TỐI, nền phòng sáng vừa, vệt mảnh phía đối diện, mép Fresnel
+    const c = 0.42 - bend, wS = 0.12 * (0.6 + 0.4 * tpS), dS = Math.abs(qq - c);
+    lo = 0.06 + 0.66 * Math.exp(-(((qq - 0.02) / 0.45) ** 2)) * (0.6 + 0.4 * tpB) * (0.8 + 0.2 * Math.sin(3.2 * v + 1))
+      + 0.2 * smooth(0.68, 1.05, ab) + 0.1 * smooth(-1, 1, shade);
+    lo *= 1 - 0.78 * Math.exp(-(((qq - c + wS + 0.11) / 0.075) ** 2)) * (0.3 + 0.7 * tpB); // đường chân trời tối
+    lo *= 1 - 0.4 * smooth(-0.3, -0.7, qq) * (1 - smooth(0.82, 1, ab)); // nửa xa đèn phản chiếu phòng tối (trừ mép Fresnel)
+    hi = 1.3 * (1 - smooth(wS, wS + 0.05, dS)) * (0.1 + 0.9 * tpS)
+      + 0.22 * Math.exp(-((dS / 0.2) ** 2)) * tpB // quầng loé quanh softbox
+      + 0.14 * Math.exp(-(((qq + 0.52 - 0.5 * bend) / 0.07) ** 2)) * tpS;
     hot = smooth(0.7, 1.3, hi) * 0.7; // chỉ lõi softbox cháy gần trắng
   }
-  const ch = (f: number) => { const x = Math.min(1, f * (lo + gain * hi)); return x + (1 - x) * hot; };
-  return [ch(f0[0]), ch(f0[1]), ch(f0[2])];
+  const g = gain * hi;
+  const o = shoulder([fD[0] * lo + fB[0] * g, fD[1] * lo + fB[1] * g, fD[2] * lo + fB[2] * g], soft ? 0.6 : 0.4);
+  return [o[0] + (1 - o[0]) * hot, o[1] + (1 - o[1]) * hot, o[2] + (1 - o[2]) * hot];
 }
 
 /** Màu DA ngay ngoài mép móng cho từng điểm mép (0 < độ phủ < 1): trung bình các điểm ngoài khuôn trong bán kính 2px. */
@@ -2183,7 +2213,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       spec = Math.min(1, spec * gloss);
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : fin === "chrome" && !glazed ? 0.45 : 0.92);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : chromeF && !glazed ? 0.45 : 0.92);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

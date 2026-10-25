@@ -65,6 +65,27 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "Milk bath hoa hồng", colors: ["#f8fafc", "#f9a8d4", "#d4af37"], finish: "glossy", pattern: "milkbath", seed: 55 },
   { name: "Phù thuỷ tím viền vàng", colors: ["#3b1f3a", "#ffffff", "#d4af37"], finish: "cateye", pattern: "witchy", seed: 56 },
   { name: "Ren trắng nền hồng", colors: ["#f2c4c4", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "lace", seed: 57 },
+  // hoạ tiết vẽ tay (A2): mỗi hoạ tiết trên nền tối + nền sáng — soát cỡ, liner, vệt bóng vẽ, không bị mép cắt
+  { name: "Ma trắng nền nude sữa", colors: ["#f6d5d0", "#111111", "#c0c0c0"], finish: "glossy", pattern: "ghost", seed: 70 },
+  { name: "Bí ngô nền đen", colors: ["#151314", "#ffffff", "#d4af37"], finish: "glossy", pattern: "jackolantern", seed: 71 },
+  { name: "Dơi đen nền nude", colors: ["#e8c4a8", "#111111", "#c0c0c0"], finish: "glossy", pattern: "bats", seed: 72 },
+  { name: "Dơi đen nền cam cháy", colors: ["#c4541f", "#111111", "#c0c0c0"], finish: "glossy", pattern: "bats", seed: 73 },
+  { name: "Đầu lâu đen nền nude", colors: ["#e8c4a8", "#111111", "#c0c0c0"], finish: "glossy", pattern: "skull", seed: 74 },
+  { name: "Mèo đen nền nude", colors: ["#f2c4c4", "#111111", "#c0c0c0"], finish: "glossy", pattern: "blackcat", seed: 75 },
+  { name: "Trăng sao vàng nền đỏ rượu", colors: ["#7a0f1f", "#ffffff", "#d4af37"], finish: "glossy", pattern: "moonstars", seed: 76 },
+  { name: "Bông tuyết nền navy", colors: ["#1f2a44", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "snow", seed: 77 },
+  { name: "Bông tuyết bạc nền trắng sữa", colors: ["#f2ede6", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "snow", seed: 78 },
+  { name: "Cherry nền hồng sữa", colors: ["#f6d5d0", "#c8102e", "#d4af37"], finish: "glossy", pattern: "cherry", seed: 79 },
+  { name: "Lá thu nền kem", colors: ["#f2ede6", "#b5532a", "#d4af37"], finish: "glossy", pattern: "leaf", seed: 80 },
+  { name: "Hoa nhí bơ nền nude", colors: ["#e8c4a8", "#f6e7a8", "#d4af37"], finish: "glossy", pattern: "floral", seed: 81 },
+  { name: "Hoa đào nền trắng sữa", colors: ["#f2ede6", "#f4b6c2", "#d4af37"], finish: "glossy", pattern: "blossom", seed: 82 },
+  { name: "Tim đỏ nền hồng sữa", colors: ["#f6d5d0", "#c8102e", "#d4af37"], finish: "glossy", pattern: "hearts", seed: 83 },
+  { name: "Holly nền trắng sữa", colors: ["#f2ede6", "#b3122e", "#d4af37"], finish: "glossy", pattern: "holly", seed: 84 },
+  { name: "Holly nền đỏ nhung", colors: ["#7a0f1f", "#b3122e", "#d4af37"], finish: "glossy", pattern: "holly", seed: 85 },
+  { name: "Quả châu đỏ nền trắng sữa", colors: ["#f2ede6", "#b3122e", "#d4af37"], finish: "glossy", pattern: "ornament", seed: 86 },
+  { name: "Quả châu đỏ nền navy", colors: ["#1f2a44", "#c8102e", "#d4af37"], finish: "glossy", pattern: "ornament", seed: 87 },
+  { name: "Hoa gel 3D nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#f5f0e8"], finish: "glossy", pattern: "gelflower", seed: 88 },
+  { name: "Hoa gel 3D hồng nền trắng sữa", colors: ["#f2ede6", "#f4c7cf", "#f5f0e8"], finish: "glossy", pattern: "gelflower", seed: 89 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

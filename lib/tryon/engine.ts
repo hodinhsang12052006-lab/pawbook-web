@@ -1532,6 +1532,30 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const jit = hash2(seedN, 11, 3) - 0.5, jit2 = hash2(seedN, 12, 3) - 0.5; // vệt phản chiếu tổng hợp hơi khác nhau mỗi móng
     // nét kim loại: 1 đường cong mềm dọc móng (mỗi móng lệch pha khác nhau)
     const ph = hash2(seedN, 3, 5) * 6.28, amp = 0.32 + 0.18 * hash2(seedN, 4, 5);
+    // PHẦN ĐẮP nối tiếp móng thật: mượn PROFILE ánh sáng ngang (lm.shade theo t) của móng thật ngay trước đầu móng
+    // (s 0.7–0.92) và vị trí vệt bóng THẬT, đặt theo bề ngang thật của phần đắp (tq) — độ cong C + ánh đèn liền mạch qua
+    // chỗ nối. (Đa thức ánh sáng ngoại suy ra ngoài móng thật lệch dần; đèn Lambert tự tính thì phía khuất tối hơn hẳn
+    // móng thật ngay cạnh → 1 nấc sáng / tối ở chỗ nối như ghép 2 mảnh.)
+    const NBP = 23, prof = seg.ext ? new Float32Array(NBP) : null;
+    let streakT = NaN;
+    if (prof) {
+      const sum = new Float32Array(NBP), cnt = new Float32Array(NBP);
+      let sw = 0, st = 0, n = 0;
+      for (let k = 0; k < seg.alpha.length; k++) {
+        if (seg.alpha[k] < 0.99 || !seg.natural[k] || seg.along[k] < 0.7 || seg.along[k] > 0.92) continue;
+        const b = Math.round(((Math.max(-1.1, Math.min(1.1, seg.across[k])) + 1.1) / 2.2) * (NBP - 1));
+        sum[b] += lm.shade[k]; cnt[b]++; n++;
+        if (seg.along[k] > 0.55 && lm.spec[k] > 0.1) { sw += lm.spec[k]; st += lm.spec[k] * seg.across[k]; }
+      }
+      for (let b = 0; b < NBP; b++) {
+        let q = b;
+        for (let d = 1; !cnt[q] && d < NBP; d++) q = b - d >= 0 && cnt[b - d] ? b - d : b + d < NBP && cnt[b + d] ? b + d : q;
+        prof[b] = cnt[q] ? sum[q] / cnt[q] : 0;
+      }
+      if (n < 30) prof.fill(0);
+      if (lm.streak && sw > 2) streakT = st / sw;
+    }
+    const profAt = (tv: number) => { const f = ((Math.max(-1.1, Math.min(1.1, tv)) + 1.1) / 2.2) * (NBP - 1), b = Math.min(NBP - 2, Math.floor(f)); return prof![b] + (prof![b + 1] - prof![b]) * (f - b); };
     const PA = paintOf(seg);
     for (let k = 0; k < seg.alpha.length; k++) {
       const a = PA[k] * op; if (a <= 0) continue;
@@ -1548,17 +1572,19 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       // 2 mép móng cong → tối dần; mép phía đèn tối ít hơn (gel bóng phản chiếu phòng sáng) — tối đều 2 bên + mép chân
       // móng tối thì cộng lại thành viền sẫm quanh móng như sticker
       let edge = 1 - (t * side > 0 ? 0.17 : 0.28) * Math.pow(Math.max(0, (at - 0.62) / 0.38), 2);
-      // phần đắp: ĐỘ CONG C nối tiếp móng thật theo bề ngang THẬT tại chỗ (tl) — pháp tuyến trụ, đèn chung: phía đèn
-      // sáng, phía khuất tối hẳn, 2 mép (|tl| > 0.8) tối thêm ~25%; ánh sáng ảnh thật ở đầu móng chỉ mượn 1 nửa
+      // phần đắp: ĐỘ CONG C nối tiếp móng thật theo bề ngang THẬT tại chỗ (tl, đầu thon vẫn tới ±1): ánh sáng = profile
+      // ngang của móng thật (prof) tối dần nhẹ về đầu; mép theo PHÁP TUYẾN TRỤ (nx = 0.93·t): 2 mép |t| > 0.8 tối ~25%,
+      // phía đèn tối ít hơn phía khuất. Chuyển dần trong s 0.97–1.25 (không nấc ở chỗ nối).
       const tl = extT && extW > 0 ? extT[k] : t;
-      const tq = t + (tl - t) * extW; // vị trí ngang dùng cho vệt phản chiếu / chrome (bám bề ngang thật của phần đắp)
+      // vị trí ngang dùng cho ánh sáng / vệt phản chiếu / chrome: chuyển DẦN sang bề ngang thật của phần đắp (2 bên phần
+      // đắp thon không đều → chuyển gấp thì vệt bóng gãy ngang 2–3px ở chỗ nối)
+      const tq = t + (tl - t) * (seg.ext ? smooth(0.97, 1.3, s) : 0);
       if (extW > 0) {
-        const nx = Math.max(-1, Math.min(1, tl)) * 0.93, nz = Math.sqrt(1 - nx * nx);
-        const dif = (n: number, z: number) => Math.max(0, (n * L3[0] + z * L3[2] + 0.5) / 1.5); // Lambert "bọc" (có ánh môi trường)
-        const cyl = 1 + 0.5 * (dif(nx, nz) / dif(0, 1) - 1);
-        const eE = cyl * (1 - 0.25 * smooth(0.72, 1, Math.abs(tl))) * (1 - 0.06 * smooth(1, 1.5, s));
-        shade += (0.5 * lm.shade[k] - 0.08 * Math.max(0, s - 1) - 0.03 - shade) * extW;
-        edge += (eE - edge) * extW;
+        const nx = Math.max(-1, Math.min(1, tq)) * 0.93, nz = Math.sqrt(1 - nx * nx);
+        const cyl = 1 - 0.4 * (1 - nz) + 0.12 * nx * side;
+        const eW = smooth(0.97, 1.25, s);
+        shade += ((prof ? profAt(tq) : 0.85 * lm.shade[k] - 0.03 - 0.12 * tq * tq) - 0.1 * Math.max(0, s - 1) - shade) * extW;
+        edge += (cyl * (1 - 0.05 * smooth(1, 1.5, s)) - edge) * eW;
       }
       const cut = 1 - 0.06 * (1 - smooth(0, 0.1, s)); // chân móng hơi tối (nhẹ — khe + gờ gel ở 4b mới là chi tiết chân móng)
       // ---- 1) màu nền theo hoạ tiết (toạ độ móng thật)
@@ -2183,9 +2209,10 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const gw = Math.max(1, Math.min(1.8, 0.033 * seg.hw)); // bề rộng khe chân móng (px)
         const gap = cutZ * (1 - smooth(gw - 0.5, gw + 0.5, eS));
         const sideZ = (1 - cutZ) * (1 - tipZone) * (1 - extW);
-        // gờ gel: ngay sau khe ở chân móng, sát mép ở 2 bên
-        const men = cutZ * 0.16 * Math.exp(-(((eS - gw - 0.6) / 0.5) ** 2)) + sideZ * 0.1 * Math.exp(-(((eS - 0.9) / 0.5) ** 2));
-        const hi = men * lit * glossK;
+        // gờ gel: ngay sau khe ở chân móng, sát mép ở 2 bên — chỉ đoạn quay hẳn về đèn (cộng sáng đều cả 2 bên thì trên
+        // sơn tối thành 1 viền xám quanh móng như sticker — soi p067 đen)
+        const men = cutZ * 0.16 * lit * Math.exp(-(((eS - gw - 0.6) / 0.5) ** 2)) + sideZ * 0.06 * lit * lit * Math.exp(-(((eS - 0.9) / 0.5) ** 2));
+        const hi = men * glossK;
         r += (1 - r) * hi; g += (1 - g) * hi; b += (1 - b) * hi;
         const shE = (cutZ * 0.07 + sideZ * 0.06) * away * Math.exp(-Math.max(0, eS - cutZ * gw) / 1.1);
         r *= 1 - shE; g *= 1 - shE; b *= 1 - shE;
@@ -2202,14 +2229,18 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         if (extW > 0) {
           // rõ nhất ở mép CẮT đầu móng (pháp tuyến dọc trục), 2 cạnh thon của phần đắp nhẹ hơn (không thành nét viền)
           const cap = Math.max(0, nrm[2 * k] * axUx + nrm[2 * k + 1] * axUy);
-          const fe = extW * Math.exp(-(((eS - 0.6) / 0.6) ** 2)) * (0.4 + 0.6 * cap);
-          const up = 0.34 * Math.pow(lit, 0.7) * fe * (fin === "matte" ? 0.55 : 1), dn = 0.34 * Math.pow(away, 0.7) * fe;
+          const fe = extW * Math.exp(-(((eS - 0.6) / 0.6) ** 2)) * (0.25 + 0.75 * cap);
+          // nét sáng cộng thêm: trên sơn tối cùng mức cộng thành nét trắng gắt → theo độ sáng nền
+          const up = 0.3 * Math.pow(lit, 0.8) * fe * (fin === "matte" ? 0.55 : 1) * (0.4 + 0.6 * Math.min(1, 2 * lum(base))), dn = 0.32 * Math.pow(away, 0.7) * fe;
           r += (1 - r) * up; g += (1 - g) * up; b += (1 - b) * up;
           r *= 1 - dn; g *= 1 - dn; b *= 1 - dn;
         }
       }
       // ---- 5) bóng gương: vệt bóng THẬT (dọc móng, không sát mép) hoặc vệt phản chiếu tổng hợp
-      const inner = (1 - smooth(0.78, 0.98, at)) * smooth(0.02, 0.1, s) * (1 - smooth(0.94, 1.02, s));
+      // móng đắp: đầu móng THẬT trong ảnh (s ≈ 1) không còn là mép — ánh đèn / phản chiếu của ảnh ở đó (mép tự do cũ
+      // loá sáng) thành 1 vạch ngang cắt qua móng như chỗ nối 2 mảnh → tắt dần trước đó, phần đắp nhận tiếp vệt bóng
+      const realK = seg.ext ? 1 - smooth(0.86, 0.97, s) : 1 - smooth(0.94, 1.02, s);
+      const inner = (1 - smooth(0.78, 0.98, at)) * smooth(0.02, 0.1, s) * realK;
       let spec = lm.spec[k] * inner;
       if (synth) {
         // ảnh không có ánh đèn để mượn → vẽ PHẢN CHIẾU CỬA SỔ MỀM như ảnh chụp thật: mép mờ (gauss, không phải thanh
@@ -2227,17 +2258,18 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const rim = 0.12 * Math.exp(-(((tq + side * 0.66) / 0.07) ** 2)) * smooth(0.3, 0.45, u) * (1 - smooth(0.6, 0.78, u));
         spec = Math.max(spec, synth * (0.82 * core + halo + rim));
       }
-      if (extW > 0 && fin !== "matte") {
-        // ánh đèn thật của ảnh dừng ở mép móng thật → phần đắp vẽ tiếp vệt phản chiếu mềm (cùng phía đèn), theo bề ngang
-        // thật của phần đắp (đầu nhọn: vệt thon dần theo độ cong C), không thì nửa móng bóng nửa móng lì như dán giấy
-        const tcE = side * (0.4 + tcOff + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5)), wE = 0.09 * widK;
+      if (seg.ext && fin !== "matte") {
+        // ánh đèn thật của ảnh dừng ở mép móng thật → phần đắp vẽ tiếp vệt phản chiếu mềm ĐÚNG CHỖ vệt bóng thật (streakT,
+        // không có thì như vệt tổng hợp), theo bề ngang thật của phần đắp (đầu nhọn: vệt thon dần theo độ cong C); nhận
+        // tiếp đúng đoạn vệt thật mờ đi (realK) — không thì vệt đứt 1 khúc / gãy ngang ở chỗ nối
+        const tcE = Number.isFinite(streakT) ? streakT : side * (0.4 + tcOff + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5)), wE = 0.09 * widK;
         const coreE = Math.exp(-(((tq - tcE) / wE) ** 2)), haloE = 0.08 * Math.exp(-(((tq - tcE) / (2.2 * wE)) ** 2));
-        spec = Math.max(spec, 0.7 * extW * (1 - smooth(0.86, 0.98, u)) * (0.82 * coreE + haloE));
+        spec = Math.max(spec, 0.62 * (1 - realK) * (1 - smooth(0.86, 0.98, u)) * (0.82 * coreE + haloE));
       }
       spec = Math.min(1, spec * gloss);
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : fin === "chrome" && !glazed ? 0.45 : 0.92);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : fin === "chrome" && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

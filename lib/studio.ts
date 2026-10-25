@@ -68,7 +68,8 @@ export function studioLooks(n: number, market: "US" | "AU", salt: string, opts: 
 
 const FINISHES: Finish[] = ["glossy", "matte", "chrome", "cateye", "glitter"];
 /** Nền đặc riêng của vài hoạ tiết (như NailArt). */
-const BASE_FILL: Record<string, string> = { tortoise: "#b45309", babyboomer: "#f2c4c4", milkbath: "#f8fafc", negative: "#f3d6c8" };
+// (negative: bỏ — nền là móng trần dựng lại trong bộ máy; màu bảng dùng cho khối hình học)
+const BASE_FILL: Record<string, string> = { tortoise: "#b45309", babyboomer: "#f2c4c4", milkbath: "#f8fafc" };
 const seedOf = (s: string) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 100000; };
 
 /** Mẫu (bảng màu + hiệu ứng + hoạ tiết) → thông số tô của bộ máy ảnh thật. */
@@ -79,9 +80,9 @@ export function lookColors(look: StudioLook): LookColors {
     finish: FINISHES.includes(look.finish as Finish) ? (look.finish as Finish) : "glossy",
     pattern: look.pattern,
     seed: seedOf(look.id),
-    // negative space: hơi trong (móng thật thấy nhẹ). Thạch: bộ máy tự dựng lớp gel trong trên giường móng (không lấy
-    // điểm ảnh cũ) → phủ đặc 1; để 0.85 thì màu + dáng móng cũ lộ 15% và mất bóng chân móng (thạch nhìn "dị", 25/10)
-    opacity: look.pattern === "negative" ? 0.9 : 1,
+    // luôn phủ đặc 1: thạch / negative / French / syrup… bộ máy tự dựng lớp gel trong trên giường móng (không lấy điểm ảnh
+    // cũ); để < 1 thì màu + hoạ tiết móng cũ lộ ra (negative 0.9 từng lộ hoạ tiết cũ — #43) và mất bóng chân móng
+    opacity: 1,
   };
 }
 

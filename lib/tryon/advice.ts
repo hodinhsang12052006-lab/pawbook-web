@@ -80,10 +80,28 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       why: { vi: `Baby boomer chuyển trắng sữa — ${slim.vi}`, en: `Baby boomer milky fade — ${slim.en}` } },
     { spec: { shape, finish: "glossy", pattern: "ombre", colors: [t.nude[0], pick(t.deepOf), metal], style: "trend" }, tag: TAG.slim,
       why: { vi: `Ombre dọc móng kéo dài ngón — ${slim.vi}`, en: `A vertical ombre draws the eye along the nail — ${slim.en}` } },
-    { spec: { shape, finish: "glossy", pattern: pick(["chromeline", "lines", "tortoise"]), colors: [pick([nude, "white", "espresso"] as CK[]), "nude", metal], style: "trend" }, tag: TAG.bold,
-      why: { vi: `Nét ${COLORS[metal].vi} mảnh — chi tiết nhỏ mà nổi, hợp ${tone.vi}`, en: `Fine ${COLORS[metal].en} detail — small but standout, suits ${tone.en}` } },
-    { spec: { shape, finish: pick(["glossy", "matte"] as const), pattern: "solid", colors: [deep ? pick(["hotPink", "emerald", "cherry"] as CK[]) : pick(["mocha", "butter", "cherry", "olive"] as CK[]), "white", metal], style: "trend" }, tag: TAG.bold,
-      why: { vi: "Màu đang lên mùa này — chụp ảnh lên màu rất đẹp", en: "This season's rising shade — photographs beautifully" } },
+    // 2 mẫu "WOW" mỗi bộ (khách lướt thấy là muốn chụp): 1 mẫu chi tiết KIM LOẠI + 1 mẫu 3D — xoay vòng theo "Bộ khác"
+    (() => {
+      const kind = pick(["chromeline", "chromefrench", "lines", "marble", "tortoise"] as const);
+      if (kind === "chromefrench") return { spec: { shape, finish: "glossy" as const, pattern: "chromefrench", colors: [nude, metal, metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
+        why: { vi: `Đầu French tráng gương ${COLORS[metal].vi} — đang thay French trắng, ${tone.vi} lên màu sang`, en: `Mirror ${COLORS[metal].en} chrome French — replacing the white French, luxe on ${tone.en}` } };
+      if (kind === "marble") return { spec: { shape, finish: "glossy" as const, pattern: "marble", colors: ["white", "smoke", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
+        why: { vi: `Vân đá trắng gân ${COLORS[metal].vi} trên 2 ngón — sang kiểu tối giản`, en: `White marble with ${COLORS[metal].en} veins on two nails — minimal luxe` } };
+      if (kind === "tortoise") return { spec: { shape, finish: "glossy" as const, pattern: "tortoise", colors: ["caramel", "chocolate", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
+        why: { vi: "Đồi mồi hổ phách — mẫu thu đông lên tay nào cũng sang", en: "Amber tortoiseshell — the autumn look that flatters every hand" } };
+      return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: [pick([nude, "white", "espresso"] as CK[]), "nude", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
+        why: { vi: `Nét ${COLORS[metal].vi} nổi mảnh — chi tiết nhỏ mà bắt sáng, hợp ${tone.vi}`, en: `A fine raised ${COLORS[metal].en} line — small but catches the light, suits ${tone.en}` } };
+    })(),
+    (() => {
+      const kind = pick(["pearls", "droplets", "gemcluster"] as const);
+      const soft = pick([...t.pastel, ...t.nude] as CK[]);
+      if (kind === "pearls") return { spec: { shape, finish: "glossy" as const, pattern: "pearls", colors: [pick(["pinkNude", "sheer", "white", soft] as CK[]), "white", "pearl"] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Viền ngọc trai chân móng — điểm nhấn cô dâu / tiệc, nhẹ nhàng mà sang", en: "A pearl cuticle arc — bridal and party-ready, soft but luxe" } };
+      if (kind === "droplets") return { spec: { shape, finish: "glossy" as const, pattern: "droplets", colors: [pick(["babyPink", "sheer", "lavender", "sky", soft] as CK[]), "white", "silver"] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Giọt nước 3D trong veo — mẫu đang viral, móng như vừa đọng sương", en: "Glassy 3D water drops — viral right now, dewy like morning mist" } };
+      return { spec: { shape, finish: "glossy" as const, pattern: "gemcluster", colors: [nude, "white", "silver"] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Cụm đá pha lê + ngọc trai trên 2 ngón — lấp lánh mỗi lần cử động tay", en: "A crystal-and-pearl cluster on two nails — sparkles every time you move" } };
+    })(),
   ];
   return items.map((it, i) => {
     const d = buildDesign({ occasion: null, system: sys, ...it.spec } as EngineSpec, market);

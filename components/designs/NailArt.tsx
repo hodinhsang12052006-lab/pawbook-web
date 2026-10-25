@@ -97,6 +97,19 @@ export function Motif({ pattern, c2, metal, i, rnd, uid, outline }: { pattern: s
       return <path d="M13 26 L15 32 L21 34 L15 36 L13 42 L11 36 L5 34 L11 32 Z" fill={metal} />;
     case "gems":
       return <g fill="#ffffff" stroke="#94a3b8" strokeWidth={0.4}>{[[5, 56], [9, 60], [13, 61.5], [17, 60], [21, 56]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r={1.9} />)}</g>;
+    case "droplets":
+      // giọt nước 3D: vòng khúc xạ xám nhạt + chấm sáng (bản vẽ phẳng cho thẻ mẫu; ảnh thử trên tay do lib/tryon vẽ thật)
+      return (
+        <g>
+          {[[10, 30, 4.2], [18, 42, 2.6], [9, 50, 1.9], [17, 22, 1.5]].map(([x, y, r], k) => (
+            <g key={k}>
+              <circle cx={x + 0.6} cy={y + 0.8} r={r} fill="#000000" opacity={0.12} />
+              <circle cx={x} cy={y} r={r} fill="#ffffff" fillOpacity={0.28} stroke="#94a3b8" strokeOpacity={0.7} strokeWidth={0.45} />
+              <circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * 0.22} fill="#ffffff" />
+            </g>
+          ))}
+        </g>
+      );
     case "pearls":
       return <g fill="#fffaf0" stroke="#e7dccb" strokeWidth={0.4}>{[[8, 58], [13, 60], [18, 58]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r={2.4} />)}</g>;
     case "leaf":

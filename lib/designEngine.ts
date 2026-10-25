@@ -367,6 +367,14 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `${c1.en} nails with small 3D ${metal.en} bow charms on two accent nails`,
   },
   {
+    id: "droplets", occasions: ["korean", "any"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`${capVi(c1.vi)} giọt nước 3D`, `${cap(c1.en)} with 3D water drops`),
+    why: s("giọt nước 3D trong veo đang viral — móng như vừa đọng sương, chụp ảnh rất ăn", "glassy 3D water drops are viral right now — dewy and very photogenic"),
+    materials: () => [m("Gel đặc trong suốt (gel giọt nước 3D / builder trong)", "Clear thick gel (3D drop gel / clear builder)"), m("Cây chấm bi", "Dotting tool", "1 cây"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")],
+    steps: () => [s("Chấm từng giọt gel đặc trong suốt to nhỏ khác nhau lên móng, chờ 5 giây cho giọt tự tròn rồi hơ đèn 60 giây", "Dot clear thick gel in mixed sizes, wait 5s for each drop to dome, then cure 60s"), s("Phủ top bóng mỏng cả móng lẫn giọt, hơ đèn", "Thin glossy top coat over the nail and drops, cure")],
+    image: ({ c1 }) => `${c1.en} nails decorated with several glossy clear 3D water droplets of different sizes`,
+  },
+  {
     id: "gemcluster", occasions: ["korean", "prom", "newyear"], finishes: ["glossy"], systems: ["gelx", "acrylic"], minutes: 25, price: 18, difficulty: 2, design: true,
     title: ({ c1 }) => s(`${capVi(c1.vi)} cụm đá & charm`, `${cap(c1.en)} with crystal clusters`),
     why: s("cụm đá mix charm trên 2 ngón là điểm nhấn sang kiểu Hàn — giá bán cao", "crystal-and-charm clusters on two nails are a luxe Korean-style accent — a high-ticket add-on"),

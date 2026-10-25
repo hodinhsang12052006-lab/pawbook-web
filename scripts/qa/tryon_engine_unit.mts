@@ -346,7 +346,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     && bright(gm, segs[1]) > 0.02 && bright(gm, segs[0]) < 0.005 && dark / nT > 0.1 && dark / nT < 0.65,
     JSON.stringify({ frTip: frTip.map(Math.round), frBase: frBase.map(Math.round), omL: omL.map(Math.round), auMid: auMid.map(Math.round), auEdge: auEdge.map(Math.round), gem1: r2(bright(gm, segs[1])), gem0: r2(bright(gm, segs[0])), tort: r2(dark / nT) }));
   ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết khác (tim, hoa…) vẫn có lớp SVG trên móng điểm nhấn",
-    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("hearts", true, 4) && !hasMotif("hearts", false, 4) && hasMotif("swirl", false, 4));
+    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "droplets", "chromefrench", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("hearts", true, 4) && !hasMotif("hearts", false, 4) && hasMotif("swirl", false, 4));
 }
 {
   const im = imgs["hand.jpg"], s = new TryOnSession();
@@ -378,6 +378,66 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     && styled.nails.every((n) => n.geo.tip && n.geo.width > 0) && r1.kind === "image" && r1.img.w === 500 && r1.img.h === 300
     && miss.kind === "nails" && !miss.added && miss.nails.length === 3 && Math.abs(polyA / maskA - 1) < 0.06,
     JSON.stringify({ nAuto, n4, profOk, accents, dropped: dropped.kind === "nails" ? dropped.nails.length : -1, miss: miss.kind === "nails" ? [miss.added, miss.nails.length] : null, outline: r2(polyA / maskA) }));
+}
+
+{
+  // HIỆU ỨNG TREND "BẮT MẮT" phải ra CHẤT THẬT (đo bằng số, không chỉ nhìn): gương kim loại, nhung, ngọc trai 3D,
+  // giọt nước 3D, viền chỉ kim loại đồi mồi; bộ 10 mẫu luôn có 1 mẫu kim loại + 1 mẫu 3D
+  const px = (seg: NailSeg, fn: (x: number, y: number, k: number) => void) => {
+    for (let k = 0; k < seg.alpha.length; k++) if (seg.alpha[k] >= 0.99) fn(seg.x0 + (k % seg.w), seg.y0 + Math.floor(k / seg.w), k);
+  };
+  const sd = (a: number[]) => { const m = avg(a); return Math.sqrt(avg(a.map((x) => (x - m) ** 2))); };
+  // a) French tráng gương bạc: đầu móng có dải sáng gắt + mảng tối (gương), không phải xám phẳng
+  const hi = imgs["hand.jpg"], hs = segsOf["hand.jpg"];
+  const cf = renderLook(hi, hs, LOOK(["#f6d5d0", "#ffffff", "#c0c0c0"], "glossy", { pattern: "chromefrench" }));
+  const tipL: number[] = [];
+  for (const sg of hs) px(sg, (x, y, k) => { if (sg.along[k] > 0.94 && Math.abs(sg.across[k]) < 0.8) tipL.push(lumaAt(cf, x, y)); });
+  const tipOk = sd(tipL) >= 30 && Math.max(...tipL) >= 215 && Math.min(...tipL) <= 120;
+  // b) velvet đỏ rượu: giữ độ đậm màu (không bạc thành nâu bụi), giữa móng sáng hơn mép (quầng từ tính)
+  const pi = imgs["pink.jpg"], ps = segsOf["pink.jpg"];
+  const vel = renderLook(pi, ps, LOOK(["#7f1d1d", "#ffffff", "#d4af37"], "cateye", { pattern: "velvet" }));
+  const sol = renderLook(pi, ps, LOOK(["#7f1d1d"], "glossy"));
+  const chroma = (out: Img) => { const c: number[] = []; for (const sg of ps) core(sg, (x, y) => { const i = (y * out.w + x) * 4; const L2 = lab(out.data[i], out.data[i + 1], out.data[i + 2]); c.push(Math.hypot(L2[1], L2[2])); }); return med(c); };
+  const mid: number[] = [], rim: number[] = [];
+  for (const sg of ps) px(sg, (x, y, k) => { if (sg.along[k] < 0.3 || sg.along[k] > 0.8) return; const a = Math.abs(sg.across[k]); if (a < 0.25) mid.push(lumaAt(vel, x, y)); else if (a > 0.7 && a < 0.9) rim.push(lumaAt(vel, x, y)); });
+  const velOk = chroma(vel) >= 0.85 * chroma(sol) && med(mid) > med(rim) + 6;
+  // c) ngọc trai: có điểm bóng gương (≥ 235) + bóng tiếp xúc tối hơn nền (≥ 20) quanh hạt, chỉ ở móng điểm nhấn
+  const plainP = renderLook(pi, ps, LOOK(["#f6d5d0"], "glossy"));
+  const prl = renderLook(pi, ps, LOOK(["#f6d5d0", "#ffffff", "#f5f0e8"], "glossy", { pattern: "pearls" }));
+  let pHi = 0, pSh = 0, pOff = 0;
+  ps.forEach((sg, i) => px(sg, (x, y) => {
+    const d = lumaAt(prl, x, y) - lumaAt(plainP, x, y);
+    if (i === 2 || i === 3) { if (lumaAt(prl, x, y) >= 235 && d > 8) pHi++; if (d <= -20) pSh++; } else if (Math.abs(d) > 20) pOff++;
+  }));
+  const pearlOk = pHi >= 6 && pSh >= 20 && pOff === 0;
+  // d) giọt nước 3D: có trên MỌI móng, mỗi móng có cả điểm sáng (bóng cửa sổ / ánh hội tụ) lẫn vòng khúc xạ tối
+  const drp = renderLook(pi, ps, LOOK(["#f2c4c4", "#ffffff", "#c0c0c0"], "glossy", { pattern: "droplets" }));
+  const plainD = renderLook(pi, ps, LOOK(["#f2c4c4"], "glossy"));
+  const dropNails = ps.map((sg) => { let up = 0, dn = 0; px(sg, (x, y) => { const d = lumaAt(drp, x, y) - lumaAt(plainD, x, y); if (d >= 25) up++; if (d <= -25) dn++; }); return up >= 5 && dn >= 15; });
+  // e) đồi mồi "viền bạc / vàng": viền chỉ kim loại sáng sát mép CHỈ trên 2 móng điểm nhấn
+  const oi = imgs["olive.jpg"], os = segsOf["olive.jpg"].map((s, i) => Object.assign(Object.create(Object.getPrototypeOf(s)), s, { accent: i === 1 || i === 2 }) as NailSeg);
+  const tor = renderLook(oi, os, LOOK(["#b45309", "#5b3a29", "#c0c0c0"], "glossy", { pattern: "tortoise" }));
+  const rimBright = (sg: NailSeg) => {
+    let n = 0, b = 0;
+    px(sg, (x, y, k) => {
+      const xx = k % sg.w, yy = Math.floor(k / sg.w);
+      let edgeNear = false;
+      for (let dy = -4; dy <= 4 && !edgeNear; dy++) for (let dx = -4; dx <= 4; dx++) { const X = xx + dx, Y = yy + dy; if (X < 0 || Y < 0 || X >= sg.w || Y >= sg.h || sg.alpha[Y * sg.w + X] < 0.5) { edgeNear = true; break; } }
+      if (!edgeNear || sg.along[k] < 0.15 || sg.along[k] > 0.85) return;
+      n++; if (lumaAt(tor, x, y) > 150) b++;
+    });
+    return n ? b / n : 0;
+  };
+  const rimAcc = rimBright(os[1]), rimPlain = rimBright(os[0]);
+  // f) bộ 10 mẫu: luôn 1 mẫu chi tiết kim loại + 1 mẫu 3D; "Bộ khác" xoay nhiều kiểu 3D
+  const prof = profileFromModels(FIXTURES.find((f) => f.file === "pink.jpg")!.marks.map((m) => fitNail(pi, mark(m))))!;
+  const METALS = new Set(["chromeline", "lines", "chromefrench", "marble", "tortoise"]), THREE_D = new Set(["pearls", "droplets", "gemcluster"]);
+  const sets = ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8"].map((salt) => adviceLooks(prof, "US", salt));
+  const wowOk = sets.every((st) => st.filter((l) => METALS.has(l.pattern)).length === 1 && st.filter((l) => THREE_D.has(l.pattern)).length === 1);
+  const kinds3d = new Set(sets.flatMap((st) => st.filter((l) => THREE_D.has(l.pattern)).map((l) => l.pattern)));
+  ok("E23", `Trend bắt mắt ra chất thật: French gương bạc (độ lệch sáng đầu móng ${Math.round(sd(tipL))} ≥ 30, có dải sáng + mảng tối) · velvet giữ màu (độ đậm ${Math.round(chroma(vel))} / sơn thường ${Math.round(chroma(sol))}) + giữa sáng hơn mép · ngọc trai có điểm bóng + bóng tiếp xúc, chỉ móng nhấn · giọt nước 3D đủ ${dropNails.filter(Boolean).length}/4 móng · đồi mồi viền kim loại móng nhấn ${Math.round(rimAcc * 100)}% (móng thường ${Math.round(rimPlain * 100)}%) · mỗi bộ 10 mẫu có 1 mẫu kim loại + 1 mẫu 3D (${[...kinds3d].join(", ")})`,
+    tipOk && velOk && pearlOk && dropNails.every(Boolean) && rimAcc >= 0.2 && rimPlain < 0.08 && wowOk && kinds3d.size >= 2,
+    JSON.stringify({ tip: [Math.round(sd(tipL)), Math.max(...tipL), Math.min(...tipL)], vel: [Math.round(chroma(vel)), Math.round(chroma(sol)), Math.round(med(mid)), Math.round(med(rim))], pearl: [pHi, pSh, pOff], drops: dropNails, rim: [r2(rimAcc), r2(rimPlain)], wowOk, kinds3d: [...kinds3d] }));
 }
 
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)

@@ -531,13 +531,30 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   // ngón út hẹp nhất nằm cuối dù đứng đầu mảng (ảnh p067: móng 0 là ngón út)
   const fake = (x: number, hw: number) => ({ base: { x, y: 300 }, tip: { x, y: 200 }, hw });
   if (nailOrder([fake(100, 20), fake(200, 30), fake(300, 32), fake(400, 29)]).join() !== "3,2,1,0") bad.push(`ngón út: ${nailOrder([fake(100, 20), fake(200, 30), fake(300, 32), fake(400, 29)])}`);
+  // 2 móng đầu mút rộng bằng nhau → móng NGẮN hơn là ngón út (so diện tích hw × L)
+  const fakeL = (x: number, hw: number, L: number) => ({ base: { x, y: 300 }, tip: { x, y: 300 - L }, hw, L });
+  const oL = nailOrder([fakeL(100, 30, 80), fakeL(200, 33, 120), fakeL(300, 34, 125), fakeL(400, 30, 110)]);
+  if (oL.join() !== "3,2,1,0") bad.push(`ngón út theo bề dài: ${oL}`);
   // echo: bỏ hạt to nhất (trăng → sao) / 2 bản nhỏ / 1 viên lẻ ở chân móng; cỡ / lật / dời
   const bs = [{ u: 0.5, t: 0, r: 0.5, kind: "moon" }, { u: 0.3, t: 0.4, r: 0.2, kind: "star" }, { u: 0.8, t: 0.4, r: 0.14, kind: "star" }];
   const rest = applyBeadOpts(bs, { role: "echo" }), twin = applyBeadOpts([bs[0]], { role: "echo" }), one = applyBeadOpts([{ u: 0.3, t: 0, r: 0.33, kind: "gem" }, { u: 0.5, t: 0.4, r: 0.15, kind: "gem" }], { role: "echo" });
   const mv = applyBeadOpts(bs, { scale: 0.5, mirror: true, uShift: 0.05 });
   if (rest.length !== 2 || rest.some((b) => b.kind === "moon")) bad.push(`echo rest: ${JSON.stringify(rest)}`);
   if (twin.length !== 2 || twin.some((b) => b.r >= 0.5)) bad.push(`echo twin: ${JSON.stringify(twin)}`);
-  if (one.length !== 1 || one[0].r >= 0.33 || one[0].u > 0.3) bad.push(`echo 1 viên: ${JSON.stringify(one)}`);
+  // 1 viên lẻ ở chân móng: nhỏ hơn viên to nhất của cụm nhưng vẫn đọc được là viên đá (≥ 0.22 hw ≈ 7px), không phải hạt bụi
+  if (one.length !== 1 || one[0].r >= 0.33 || one[0].r < 0.22 || one[0].u > 0.3) bad.push(`echo 1 viên: ${JSON.stringify(one)}`);
+  // mọi hoạ tiết vẽ / charm (đủ hạt giống): có echo, echo KHÔNG phải bản sao hero (mẫu khác / chọn hạt / thu nhỏ), thread
+  // không bao giờ trơn (French / gương / nhũ loang), chỉ móng quiet được trơn
+  const MOTIFS = ["ghost", "bats", "jackolantern", "skull", "blackcat", "cherry", "hearts", "floral", "blossom", "leaf", "snow", "stars", "moonstars", "mummy", "eyeball", "web", "gems", "gemcluster", "pearls", "charm3d", "droplets", "chromedrops", "holly", "ornament", "gelflower"];
+  for (const p of MOTIFS) for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const ex = expandSet(LOOK(["#111111", "#ffffff", "#c0c0c0"], "glossy", { pattern: p, seed }), 4), ns = ex.nails ?? [];
+    const e = ns.find((o) => o?.role === "echo"), th = ns.filter((o) => o?.role === "thread");
+    const clone = !e || (e.pattern === p && (!e.pick || e.pick === "all") && (e.scale ?? 1) >= 1);
+    if (clone || !ns.some((o) => o?.role === "hero" && o.pattern === p) || th.some((o) => !o?.art || (o.pattern === "solid" && o.finish !== "chrome")) || ns.some((o) => o?.role !== "quiet" && !o?.art)) bad.push(`${p}/${seed}: ${JSON.stringify(ns)}`);
+  }
+  // cherry: đầu French echo lấy màu ĐỎ của bảng màu (đỏ son #b91c1c), bảng màu không có đỏ thì đỏ cherry
+  const chE = (cols: string[]) => (expandSet(LOOK(cols, "glossy", { pattern: "cherry" }), 4).nails ?? []).find((o) => o?.role === "echo")?.colors?.[1];
+  if (chE(["#f9a8d4", "#b91c1c", "#d4af37"]) !== "#b91c1c" || chE(["#f8f4ee", "#ffffff", "#d4af37"]) !== "#b3122e") bad.push(`cherry echo đỏ: ${chE(["#f9a8d4", "#b91c1c", "#d4af37"])} / ${chE(["#f8f4ee", "#ffffff", "#d4af37"])}`);
   // thu ×0.5 quanh tâm nhóm (u 0.533, t 0.267) rồi lật + dời 0.05; trăng 0.5 → 0.25 nhưng không nhỏ hơn sàn 0.3 (vẽ tay)
   if (Math.abs(mv[0].r - 0.3) > 1e-6 || Math.abs(mv[1].r - 0.16) > 1e-6 || Math.abs(mv[0].u - 0.5667) > 0.005 || Math.abs(mv[0].t + 0.1333) > 0.005 || mv[1].t >= 0) bad.push(`cỡ / lật / dời: ${JSON.stringify(mv)}`);
   // hoạ tiết in lặp: ≤ 2 móng, không kề; không còn trong ALL_NAIL_PATTERNS; chấm bi mắt mèo đủ 4 móng
@@ -568,7 +585,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     const each = ps.map((sg) => lumD(out, ref, sg));
     if (each.filter((v) => v < 0.004).length > 1) bad.push(`${th} vẽ: ${each.map(r2).join("/")}`);
   }
-  ok("E28", `Bộ phối hero / echo / thread / quiet: 4 móng (trỏ echo · áp út hero · út thread), 5 móng (hero 3 · echo 1), ≤ 3 móng hero giữa; kho mẫu chỉ định ngón; ngón út luôn cuối; echo bỏ hạt to / 2 bản nhỏ / 1 viên lẻ; in lặp ≤ 2 móng không kề; chấm bi mắt mèo đủ 4 móng; ${THEME_SETS.length} bộ chủ đề mỗi móng 1 kiểu cùng bảng màu`, !bad.length, bad.join(" | "));
+  ok("E28", `Bộ phối hero / echo / thread / quiet: 4 móng (trỏ echo · áp út hero · út thread), 5 móng (hero 3 · echo 1), ≤ 3 móng hero giữa; kho mẫu chỉ định ngón; ngón út (nhỏ nhất hw × L) luôn cuối; echo bỏ hạt to / 2 bản nhỏ / 1 viên lẻ đọc được; 25 hoạ tiết vẽ / charm × 6 hạt giống: echo không phải bản sao hero, thread không trơn; cherry echo French đỏ theo bảng màu; in lặp ≤ 2 móng không kề; chấm bi mắt mèo đủ 4 móng; ${THEME_SETS.length} bộ chủ đề mỗi móng 1 kiểu cùng bảng màu`, !bad.length, bad.join(" | "));
 }
 
 // ---------------- 7c. dáng móng ĐẮP nhọn + sơn THẠCH trong

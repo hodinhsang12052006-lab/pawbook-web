@@ -90,8 +90,10 @@ for (const h of HANDS) for (const shape of h.long ? ["gel", "almond", "coffin", 
   minFill = Math.min(minFill, fill); minPad = Math.min(minPad, pad);
   if (shape !== "gel") { maxLf = Math.max(maxLf, p.opts.lengthFactor); minLf = Math.min(minLf, p.opts.lengthFactor); }
   if (fill < 0.5 || pad < 0.02 * OUT_SIZE) frameBad.push(`${h.file}/${shape}: móng ${Math.round(fill * 100)}% bề ngang, cách mép ${pad}px`);
+  // vùng riêng của tay (né móng / ngón cái lấp ló ở mép ảnh gốc): khung cắt nằm gọn trong đó với mọi dáng đắp
+  if (h.box && (p.box.x < h.box[0] || p.box.y < h.box[1] || p.box.x + p.box.size > h.box[0] + h.box[2] || p.box.y + p.box.size > h.box[1] + h.box[2])) frameBad.push(`${h.file}/${shape}: khung ${JSON.stringify(p.box)} lọt ra ngoài vùng ${h.box}`);
 }
-ok("R9", `Khung chặt: bộ móng ≥ 50% bề ngang ô trên mọi tay + dáng đắp (thấp nhất ${Math.round(minFill * 100)}%), đầu móng đắp không bị cắt (cách mép ≥ ${minPad}px)`, !frameBad.length, frameBad.join(" | "));
+ok("R9", `Khung chặt: bộ móng ≥ 50% bề ngang ô trên mọi tay + dáng đắp (thấp nhất ${Math.round(minFill * 100)}%), đầu móng đắp không bị cắt (cách mép ≥ ${minPad}px), không lộ móng lấp ló ngoài vùng riêng của tay`, !frameBad.length, frameBad.join(" | "));
 ok("R10", `Đắp dài có trần ×1.45 (phần đắp phẳng dài hơn nhìn như giấy dán): hệ số đắp ${minLf.toFixed(2)}–${maxLf.toFixed(2)}`, maxLf <= 1.45 && minLf >= 1.08, `${minLf}–${maxLf}`);
 
 // VẼ Ở ĐÚNG CỠ ẢNH RA: ảnh tay cắt + phóng lên 1024 TRƯỚC, móng vẽ thẳng trên đó (móng to: nửa bề ngang ≥ 40px), và JPEG

@@ -920,6 +920,9 @@ interface Role {
 }
 const hx = (k: CK) => COLORS[k].hex;
 const chroma = (hex: string) => { const [, a, b] = lab(hex); return Math.hypot(a, b); };
+/** cùng nhiệt độ màu (ấm: đỏ / hồng / cam / nâu / nude / vàng · lạnh: xanh / tím · trắng / xám / đen đi được cả hai) */
+const tempOf = (k: CK) => { const f = hueFamily(hx(k)); return ["white", "grey", "black"].includes(f) ? "n" : ["red", "pink", "orange", "brown", "nude", "yellow"].includes(f) ? "w" : "c"; };
+const sameTemp = (a: CK, b: CK) => tempOf(a) === "n" || tempOf(b) === "n" || tempOf(a) === tempOf(b);
 const SH4: Shape[] = ["almond", "oval", "square", "coffin"], SH5: Shape[] = [...SH4, "stiletto"], SHORT: Shape[] = ["oval", "square", "almond"];
 /** nền trong / nude / sữa — nền của French và nail Hàn */
 const SHEER: CK[] = ["sheer", "pinkNude", "nude", "milky", "white", "cloudDancer", "bone", "greige", "babyPink", "frangipani"];
@@ -933,7 +936,8 @@ const marbleOk = ([a, b]: [CK, CK, CK]) =>
 const ROLES: Record<string, Role> = {
   solid: { g: "tone", shapes: SH5, pal: [["milky", "pearl", "pearl"], ["cherry", "gold", "gold"], ["espresso", "nude", "gold"], ["black", "silver", "silver"]] },
   french: { g: "tip", base: "sheer", pal: [["sheer", "white", "gold"], ["sheer", "espresso", "gold"], ["nude", "burgundy", "gold"], ["milky", "black", "silver"]] },
-  ombre: { g: "glow", pal: [["nude", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["nude", "coffee", "gold"], ["pinkNude", "raspberry", "gold"]] },
+  // ombre: chân móng sáng → đầu móng đậm hơn 20–66 L*, cùng nhiệt độ màu (nâu ấm → trắng lạnh nhìn như ố #3), không loang ra trắng đặc
+  ombre: { g: "glow", ok: ([a, b]) => Lof(hx(a)) - Lof(hx(b)) >= 20 && Lof(hx(a)) - Lof(hx(b)) <= 66 && Lof(hx(b)) < 90 && sameTemp(a, b), pal: [["nude", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["nude", "coffee", "gold"], ["pinkNude", "raspberry", "gold"]] },
   // aura: nền trong / sữa với lõi màu rực đậm hơn ≥ 20 L*, hoặc nền gần đen với lõi rực (aura nude trên cherry cola = vết bẩn)
   aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && ((SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20) || Lof(hx(a)) < 20), pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["black", "persimmon", "gold"], ["black", "periwinkle", "silver"]] },
   tortoise: { g: "tone", pal: [["caramel", "chocolate", "gold"]] },
@@ -1024,7 +1028,7 @@ const ROLES: Record<string, Role> = {
   gelflower: { g: "relief", base: "sheer", pal: [["sheer", "milky", "pearl"], ["milky", "babyPink", "pearl"], ["nude", "milky", "gold"], ["sheer", "lavender", "pearl"]] },
   // bộ phối theo dịp: 2 màu chính phải tách nhau (móng chính / móng nối)
   // Halloween "moody luxe": nền tối, hoặc trắng ngà / trắng sữa + đen — không nền cam bí ngô dưới ma / đầu lâu
-  "mix-halloween": { g: "glow", shapes: SH5, ok: ([a]) => Lof(hx(a)) < 30 || a === "bone" || a === "milky", pal: [["black", "pumpkin", "silver"], ["milky", "black", "silver"], ["plumNoir", "bone", "silver"]] },
+  "mix-halloween": { g: "glow", shapes: SH5, ok: ([a]) => (Lof(hx(a)) < 30 && chroma(hx(a)) < 35) || a === "bone" || a === "milky", pal: [["black", "pumpkin", "silver"], ["milky", "black", "silver"], ["plumNoir", "bone", "silver"]] },
   "mix-christmas": { g: "glow", pal: [["redVelvet", "milky", "gold"], ["milky", "redVelvet", "gold"], ["emerald", "milky", "gold"]] },
   "mix-valentine": { g: "glow", pal: [["sheer", "cherry", "gold"], ["milky", "raspberry", "roseGold"], ["cherry", "milky", "gold"]] },
   "mix-fall": { g: "glow", pal: [["espresso", "caramel", "gold"], ["bone", "cinnamon", "gold"], ["mulledWine", "nude", "gold"]] },
@@ -1370,9 +1374,10 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   // bảng mặc định của hoạ tiết / bảng trend); đủ nude rồi → nền có màu; khác họ màu mẫu liền trước
   const wants = (k: [CK, CK, CK]) => o.need.some((q) => tr(k)[q]);
   // (bảng lấp chỉ tiêu mà cùng họ màu với mẫu liền trước — VD lượt cần màu đá quý, bảng nail Hàn chỉ có mâm xôi đỏ ngay
-  // sau mẫu đỏ rượu — cũng mượn: lục bảo / cobalt…)
+  // sau mẫu đỏ rượu — cũng mượn: lục bảo / cobalt…). Ô dịp lễ chỉ mượn bảng mặc định của hoạ tiết, không mượn bảng trend
+  // (từng ra "Bộ Halloween xanh cobalt")
   const good = (k: [CK, CK, CK]) => wants(k) && (!o.avoidFam || tr(k).fam !== o.avoidFam);
-  if (o.need.length && !o.strict && !cands.some(good)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...PALETTES.trend]).filter(good); if (ext.length) cands = ext; }
+  if (o.need.length && !o.strict && !cands.some(good)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...(o.occ ? [] : PALETTES.trend)]).filter(good); if (ext.length) cands = ext; }
   for (const f of [o.need.length ? wants : null, o.avoidNude ? (k: [CK, CK, CK]) => !tr(k).nude : null, o.avoidWhite ? (k: [CK, CK, CK]) => !tr(k).white : null, o.avoidFam ? (k: [CK, CK, CK]) => tr(k).fam !== o.avoidFam : null]) {
     if (!f) continue;
     const w = cands.filter(f);

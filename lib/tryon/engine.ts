@@ -1120,9 +1120,11 @@ const glint = (x: number, y: number, cx: number, cy: number, rr: number) => {
   const b = Math.max(0.12 * rr, 1.1 * PS.px);
   return (Math.hypot(ta / (0.36 * rr), ra / b) - 1) * b;
 };
-const MAPLE: [number, number, number][] = [[0, 1, 0.52], [0.98, 0.9, 0.5], [-0.98, 0.9, 0.5], [2.05, 0.58, 0.42], [-2.05, 0.58, 0.42]];
-const HOLLY: [number, number, number][] = [[0.47, -0.12, -1.92], [-0.49, -0.05, 1.78]];
-const BERRY: [number, number][] = [[-0.11, 0.12], [0.12, 0.14], [0.01, -0.07]];
+/** lá phong: [góc thuỳ (0 = lên), dài, nửa bề rộng góc] — thuỳ nhọn ĐẦY ĐẶN, khe giữa thuỳ nông vừa */
+const MAPLE: [number, number, number][] = [[0, 1, 0.62], [1.08, 0.93, 0.6], [-1.08, 0.93, 0.6], [2.2, 0.6, 0.5], [-2.2, 0.6, 0.5]];
+/** ô rô: 2 lá xoè chữ V từ gốc (0, −0.14): [tâm x, tâm y, góc trục lá] + 3 quả chụm ở gốc */
+const HOLLY: [number, number, number][] = [[-0.45, 0.17, 2.53], [0.5, 0.13, 0.5]];
+const BERRY: [number, number][] = [[-0.15, -0.22], [0.15, -0.2], [0.0, -0.45]];
 /**
  * HOẠ TIẾT VẼ TAY — nhiều LỚP khoảng cách có dấu (âm = trong; đơn vị = bán kính hoạ tiết; trục y hướng lên), ghi vào `o`:
  * o[0] thân chính (viền liner, bóng vẽ, đổ bóng vẽ) · o[1..4] các lớp vẽ đè (mắt, cuống, lá, đốm bóng…) · o[5] bóng hình
@@ -1251,22 +1253,27 @@ function paintedSD(kind: string, x: number, y: number, o: Float64Array): void {
       break;
     }
     case "leaf": {
-      // LÁ PHONG vẽ tay: 5 thuỳ NHỌN (thuỳ trên + 2 thuỳ bên dài, 2 thuỳ dưới ngắn), khe sâu giữa thuỳ, mép răng cưa nhỏ,
-      // gân sáng toả từ cuống; nửa lá phía khuất đèn tông đậm (thay gân mảnh 1px — nhoè). Lá nhỏ (< 13px): lá nhọn đơn
-      // giản (thuỳ phong ở cỡ đó nhoè thành cỏ ba lá)
-      const stem = qStroke(x, y, 0, -0.05, 0.03, -0.55, 0.1, -0.98, Math.max(0.036, 1 * px), Math.max(0.024, 0.75 * px), 4);
+      // LÁ PHONG vẽ tay: 5 thuỳ nhọn ĐẦY ĐẶN (thuỳ trên + 2 thuỳ bên dài, 2 thuỳ dưới ngắn), mép răng cưa nhỏ ở phần ngoài
+      // thuỳ, tông sáng dần ra chóp thuỳ (như lá loang 2 màu); nửa lá phía khuất đèn tông đậm thay cho gân mảnh 1px (nhoè).
+      // Gân chỉ còn ở lá to (≥ 22px, nét ≥ 2px). Thuỳ mảnh kiểu cũ ở cỡ móng nhìn như cỏ ba lá tím. Lá nhỏ (< 12px): lá
+      // nhọn đơn giản (thuỳ phong ở cỡ đó nhoè)
+      const stem = qStroke(x, y, 0, -0.2, 0.03, -0.62, 0.12, -0.98, Math.max(0.05, 1.1 * px), Math.max(0.035, 0.85 * px), 4);
       let leaf: number, vein = 9;
-      if (px > 0.075) leaf = vesica(y - 0.06, x, 0.88, 0.4);
+      const rho = Math.hypot(x, y - 0.04);
+      if (px > 0.085) leaf = vesica(y - 0.06, x, 0.9, 0.42);
       else {
-        const a = Math.atan2(x, y - 0.02), rho = Math.hypot(x, y - 0.02);
-        let rm = 0.34;
-        for (const [ai, li, wi] of MAPLE) { let da = Math.abs(a - ai); if (da > Math.PI) da = 2 * Math.PI - da; const q = Math.max(0, 1 - da / wi); rm = Math.max(rm, 0.34 + (li - 0.34) * Math.pow(q, 1.3)); }
-        rm += 0.07 * (Math.abs((((a * 22) / Math.PI) % 2 + 2) % 2 - 1) - 0.5) * smooth(0.5, 0.75, rm); // răng cưa
-        leaf = (rho - rm) * 0.62;
-        for (const [ai, li] of MAPLE) vein = Math.min(vein, segDist(x, y, 0, 0.02, li * 0.8 * Math.sin(ai), 0.02 + li * 0.8 * Math.cos(ai)));
-        vein = Math.max(vein - Math.max(0.016, 0.55 * px), leaf + 0.04);
+        const a = Math.atan2(x, y - 0.04);
+        let rm = 0.46;
+        for (const [ai, li, wi] of MAPLE) { let da = Math.abs(a - ai); if (da > Math.PI) da = 2 * Math.PI - da; const q = Math.max(0, 1 - da / wi); rm = Math.max(rm, 0.46 + (li - 0.46) * q); }
+        rm += 0.06 * (Math.abs((((a * 24) / Math.PI) % 2 + 2) % 2 - 1) - 0.5) * smooth(0.55, 0.8, rm); // răng cưa
+        leaf = (rho - rm) * 0.6;
+        if (px < 0.045) {
+          for (const [ai, li] of MAPLE) vein = Math.min(vein, segDist(x, y, 0, 0.04, li * 0.72 * Math.sin(ai), 0.04 + li * 0.72 * Math.cos(ai)));
+          vein = Math.max(vein - Math.max(0.022, 1.05 * px), leaf + 0.06);
+        }
       }
       o[0] = leaf; o[1] = Math.max(leaf, PS.lx > 0 ? x : -x); o[2] = vein; o[3] = stem; o[5] = Math.min(leaf, stem);
+      o[6] = 0.2 * smooth(0.45, 1, rho) - 0.12 * (1 - smooth(0.05, 0.4, rho));
       break;
     }
     case "gleaf": { const lf = vesica(y, x, 1, 0.34); o[0] = o[5] = lf; o[1] = Math.max(lf, PS.lx > 0 ? x : -x); break; }
@@ -1302,21 +1309,21 @@ function paintedSD(kind: string, x: number, y: number, o: Float64Array): void {
     }
     case "heart": o[0] = o[5] = heartSD(x, y); break;
     case "holly": {
-      // nhành Ô RÔ (holly): 2 lá gai — mép là chuỗi cung lõm giữa các gai, 2 tông + gân giữa sáng — và 3 quả đỏ chụm có
-      // vệt bóng
+      // nhành Ô RÔ (holly): 2 lá gai xoè chữ V — mép là chuỗi cung lõm giữa 4 gai nhọn, 2 tông (nửa khuất đèn đậm) + gân
+      // giữa sáng — và 3 quả đỏ chụm ở gốc có vệt bóng. Nhành nằm ngang mảnh kiểu cũ nhìn như cọng rau trang trí
       let lv = 9, dk = 9, rib = 9;
       for (const [cx, cy, ang] of HOLLY) {
-        const ca = Math.cos(ang), sa = Math.sin(ang), p = ((x - cx) * -sa + (y - cy) * ca) / 0.5, q = (x - cx) * ca + (y - cy) * sa;
-        const fn = ((((p + 1) * 1.75) % 1) + 1) % 1;
-        const w = 0.24 * Math.pow(Math.sqrt(Math.max(0, 1 - p * p)), 0.7) * (1 - 0.3 * Math.pow(Math.sin(Math.PI * fn), 0.9));
-        const d = Math.max(Math.abs(q) - w, (Math.abs(p) - 1) * 0.5) * 0.85;
+        const ca = Math.cos(ang), sa = Math.sin(ang), p = ((x - cx) * ca + (y - cy) * sa) / 0.56, q = -(x - cx) * sa + (y - cy) * ca;
+        const fn = ((((p + 1) * 2) % 1) + 1) % 1;
+        const w = 0.3 * Math.pow(Math.max(0, 1 - p * p), 0.45) * (1 - 0.34 * Math.pow(Math.sin(Math.PI * fn), 0.8));
+        const d = Math.max(Math.abs(q) - w, (Math.abs(p) - 1) * 0.56) * 0.85;
         lv = Math.min(lv, d);
-        dk = Math.min(dk, Math.max(d, PS.lx * ca + PS.ly * sa > 0 ? q : -q));
-        rib = Math.min(rib, Math.max(Math.abs(q) - Math.max(0.015, 0.55 * px), Math.abs(p) - 0.85, d + 0.02));
+        dk = Math.min(dk, Math.max(d, -sa * PS.lx + ca * PS.ly > 0 ? q : -q));
+        rib = Math.min(rib, Math.max(Math.abs(q) - Math.max(0.022, 0.75 * px), Math.abs(p) - 0.82, d + 0.03));
       }
       o[0] = lv; o[1] = dk; o[2] = rib;
       let br = 9, gl = 9;
-      for (const [bx, by] of BERRY) { br = Math.min(br, Math.hypot(x - bx, y - by) - 0.15); gl = Math.min(gl, glint(x, y, bx, by, 0.15)); }
+      for (const [bx, by] of BERRY) { br = Math.min(br, Math.hypot(x - bx, y - by) - 0.17); gl = Math.min(gl, glint(x, y, bx, by, 0.17)); }
       o[3] = br; o[4] = gl; o[5] = Math.min(lv, br);
       break;
     }
@@ -1369,6 +1376,20 @@ function contrastOn(c: RGB, bg: RGB, min: number): RGB {
   for (let i = 0; i < 8 && Math.abs(Lst(x) - lb) < min; i++) x = up ? mix3(x, [1, 1, 1], 0.25) : sc3(x, 0.72);
   return x;
 }
+/** CIELAB từ RGB tuyến tính → ΔE: hoa bơ trên nude khác nhau chủ yếu ở SẮC (b*), đo mỗi L* thì bị coi là "trùng nền" */
+const labOf = (c: RGB) => {
+  const f = (v: number) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+  const fx = f((0.4124 * c[0] + 0.3576 * c[1] + 0.1805 * c[2]) / 0.9505), fy = f(0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]), fz = f((0.0193 * c[0] + 0.1192 * c[1] + 0.9505 * c[2]) / 1.089);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+};
+const dE = (a: RGB, b: RGB) => { const p = labOf(a), q = labOf(b); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+/** màu vẽ: lấy màu đầu tiên trong danh sách tách khỏi nền ≥ `min` ΔE, không có thì lấy màu tách nhất. KHÔNG làm tối màu
+ *  sáng để ép tương phản (hoa bơ bị làm tối thành xám rêu) — đổi hẳn sang màu sơn khác */
+function pickPaint(cands: RGB[], base: RGB, min: number): RGB {
+  let best = cands[0], bd = -1;
+  for (const c of cands) { const d = dE(c, base); if (d >= min) return c; if (d > bd) { bd = d; best = c; } }
+  return best;
+}
 const PK = {
   white: hexLin("#f4f2ed"), black: hexLin("#151314"), liner: hexLin("#1d1b1c"), blush: hexLin("#f29aa8"),
   pumpkin: hexLin("#f07c1b"), pumpkinD: hexLin("#5e2306"), stem: hexLin("#4e3d19"), vine: hexLin("#3f7a26"),
@@ -1376,18 +1397,25 @@ const PK = {
   catEye: hexLin("#f2c230"), bone: hexLin("#e9e1d3"), vein: hexLin("#f0c66a"), fleaf: hexLin("#5f7f4a"),
   blossom: hexLin("#f4b6c2"), blossomC: hexLin("#8a2346"), blossomS: hexLin("#b0305a"), floralC: hexLin("#e9b949"),
   holly: hexLin("#2f6b3a"), hollyRib: hexLin("#86b273"), berry: hexLin("#b3122e"), milk: hexLin("#f3eee8"), pfC: hexLin("#ecc14f"),
+  // cánh hoa dự phòng khi màu mẫu trùng nền: trắng kem, bơ, hồng phấn, tím oải hương, hồng đào đậm
+  petals: ["#f7f3ee", "#f1cf5b", "#f29aa8", "#b9a3d9", "#d9607a"].map(hexLin),
+  blossoms: ["#f4b6c2", "#e98aa0", "#d9607a", "#f7f3ee"].map(hexLin),
+  ice: hexLin("#7fa3cc"), navy: hexLin("#1f2a44"),
 };
-/** lá thu: gỉ sắt / vàng nghệ / đỏ thẫm / cam cháy — chỉ lấy màu tách hẳn khỏi nền (lá gỉ sắt trên nền nâu thì biến mất) */
-const LEAF_COLS = ["#b5532a", "#c8892b", "#7a1f1f", "#9c3d12"].map(hexLin);
+/** lá thu: gỉ sắt / vàng nghệ / cam cháy / đỏ thẫm / vàng mù tạt / vàng nhạt — chỉ lấy màu tách hẳn khỏi nền (ΔE; lá gỉ
+ *  sắt / đỏ thẫm trên nền nâu mocha thì chìm → tự sang tông vàng). Đỏ thẫm xếp sau: lá nhỏ đỏ thẫm dưới vệt bóng lớp top
+ *  ngả tím (từng bị chê "cỏ ba lá tím") */
+const LEAF_COLS = ["#b5532a", "#c8892b", "#9c3d12", "#7a1f1f", "#e3a33b", "#f0cf8a"].map(hexLin);
 function leafCol(tint: number, base: RGB): RGB {
-  const ok = LEAF_COLS.filter((c) => Math.abs(Lst(c) - Lst(base)) >= 22);
-  const pool = ok.length ? ok : [...LEAF_COLS].sort((a, b) => Math.abs(Lst(b) - Lst(base)) - Math.abs(Lst(a) - Lst(base))).slice(0, 1);
+  const ok = LEAF_COLS.filter((c) => Math.abs(Lst(c) - Lst(base)) >= 18 || dE(c, base) >= 40); // lá nhỏ cần tách SÁNG TỐI, khác sắc thôi chưa đủ
+  const pool = ok.length ? ok : [...LEAF_COLS].sort((a, b) => dE(b, base) - dE(a, base)).slice(0, 1);
   return pool[tint % pool.length];
 }
 
-/** 1 bước vẽ: tô lớp L (màu c hoặc kim loại), hoặc VIỀN liner phía trong mép lớp L; tone: tông o[6]; hi: vệt bóng trắng
- *  vẽ theo mép phía đèn; sh: đổ bóng vẽ phía khuất đèn; a: độ phủ */
-interface POp { L: number; c?: RGB; a?: number; line?: boolean; metal?: boolean; tone?: boolean; hi?: number; sh?: number }
+/** 1 bước vẽ: tô lớp L (màu c hoặc kim loại); line: lớp VIỀN liner (tô kín hình L, đặt TRƯỚC lớp màu); ins: thu lớp này
+ *  vào trong viền của lớp `ins` (1 bề liner); tone: tông o[6]; hi: vệt bóng trắng vẽ theo mép phía đèn; sh: đổ bóng vẽ phía
+ *  khuất đèn; a: độ phủ */
+interface POp { L: number; c?: RGB; a?: number; line?: boolean; ins?: number; metal?: boolean; tone?: boolean; hi?: number; sh?: number }
 /** Bề ngang THẬT (px) theo từng đoạn dọc móng + vành điểm sát mép. `across` chuẩn hoá theo bề ngang TẠI CHỖ (móng thon
  *  về chân / đầu, nhọn ở móng đắp) → nhân seg.hw cố định thì hoạ tiết bị bóp méo ở 2 đầu móng. */
 interface PGeo { s0: number; ds: number; hw: Float32Array; ring: Int32Array }
@@ -1436,28 +1464,32 @@ const hwAt = (g: PGeo, s: number) => { const f = Math.max(0, Math.min(g.hw.lengt
 function paintOps(kind: string, tint: number, base: RGB, c2: RGB, metal: RGB, pat: string, v: number): POp[] {
   const W = PK.white, K = PK.black, light = Lst(base) > 45;
   switch (kind) {
-    case "ghost": return [{ L: 0, c: W, sh: 0.1 }, { L: 0, c: PK.liner, line: true }, { L: 1, c: K }, { L: 2, c: PK.blush, a: 0.55 }];
-    case "pumpkin": return [{ L: 0, c: PK.pumpkin, tone: true, hi: 0.5, sh: 0.12 }, { L: 0, c: PK.pumpkinD, line: true }, { L: 1, c: K }, { L: 2, c: PK.stem }, { L: 3, c: PK.vine }];
+    // thứ tự: liner (tô kín hình) → lớp màu thu vào 1 bề viền (ins) → chi tiết vẽ đè (mắt, cuống, đốm bóng…)
+    case "ghost": return [{ L: 0, c: PK.liner, line: true }, { L: 0, c: W, sh: 0.1, ins: 0 }, { L: 1, c: K }, { L: 2, c: PK.blush, a: 0.55 }];
+    case "pumpkin": return [{ L: 0, c: PK.pumpkinD, line: true }, { L: 0, c: PK.pumpkin, tone: true, hi: 0.5, sh: 0.12, ins: 0 }, { L: 1, c: K }, { L: 2, c: PK.stem }, { L: 3, c: PK.vine }];
     // dơi đen trên nền sáng / cam; dơi kim loại chỉ trên nền tối (dơi bạc trên nude, dơi vàng trên đen từng gần như tàng hình)
-    case "bat": return light ? [{ L: 0, c: K, hi: 0.16 }] : [{ L: 0, metal: true }];
+    // (dơi đen KHÔNG có vệt bóng vẽ: cánh mỏng hơn 2 lần khoảng lùi của vệt → vệt chạy giữa cánh thành sọc xám)
+    case "bat": return light ? [{ L: 0, c: K }] : [{ L: 0, metal: true }];
     case "moon": return [{ L: 0, metal: true }];
-    case "flake": case "pdot": return Lst(base) > 86 ? [{ L: 0, metal: true }] : [{ L: 0, c: W }];
-    case "cherry": return [{ L: 1, c: PK.stem }, { L: 2, c: PK.leaf }, { L: 3, c: PK.leafD }, { L: 2, c: PK.leafL, line: true }, { L: 0, c: PK.cherry, sh: 0.42 }, { L: 0, c: PK.cherryD, line: true }, { L: 4, c: W, a: 0.92 }];
+    // bông tuyết trắng; trên nền trắng sữa / sáng thì xanh băng (bạc trên trắng sữa nhạt gần như mất hẳn)
+    case "flake": case "pdot": return [{ L: 0, c: pickPaint([sameC(c2, base) ? W : c2, W, PK.ice, PK.navy], base, 25) }];
+    case "cherry": return [{ L: 1, c: PK.stem }, { L: 2, c: PK.leafL, line: true }, { L: 2, c: PK.leaf, ins: 2 }, { L: 3, c: PK.leafD, ins: 2 }, { L: 0, c: PK.cherryD, line: true }, { L: 0, c: PK.cherry, sh: 0.42, ins: 0 }, { L: 4, c: W, a: 0.92 }];
     case "cat": return [{ L: 2, c: K }, { L: 0, c: K, hi: 0.14 }, { L: 1, c: PK.catEye }];
-    case "skull": return v ? [{ L: 0, c: K, hi: 0.14 }] : [{ L: 0, c: PK.bone, sh: 0.14 }, { L: 0, c: K, line: true }, { L: 1, c: K }];
-    case "leaf": { const c = leafCol(tint, base); return [{ L: 3, c: sc3(c, 0.55) }, { L: 0, c }, { L: 1, c: sc3(c, 0.6) }, { L: 2, c: mix3(c, PK.vein, 0.55), a: 0.6 }, { L: 0, c: sc3(c, 0.32), line: true }]; }
-    case "gleaf": return [{ L: 0, c: PK.fleaf }, { L: 1, c: sc3(PK.fleaf, 0.62) }, { L: 0, c: sc3(PK.fleaf, 0.4), line: true }];
+    case "skull": return v ? [{ L: 0, c: K, hi: 0.14 }] : [{ L: 0, c: K, line: true }, { L: 0, c: PK.bone, sh: 0.14, ins: 0 }, { L: 1, c: K }];
+    case "leaf": { const c = leafCol(tint, base); return [{ L: 3, c: sc3(c, 0.45) }, { L: 0, c: sc3(c, 0.3), line: true }, { L: 0, c, tone: true, ins: 0 }, { L: 1, c: sc3(c, 0.62), ins: 0 }, { L: 2, c: mix3(c, PK.vein, 0.5), a: 0.55, ins: 0 }]; }
+    case "gleaf": return [{ L: 0, c: sc3(PK.fleaf, 0.4), line: true }, { L: 0, c: PK.fleaf, ins: 0 }, { L: 1, c: sc3(PK.fleaf, 0.62), ins: 0 }];
     case "flower": case "bud": {
-      const p = contrastOn(pat === "blossom" ? PK.blossom : sameC(c2, base) ? W : c2, base, 26);
-      if (kind === "bud") return [{ L: 2, c: PK.fleaf }, { L: 0, c: p, tone: true }, { L: 0, c: sc3(p, 0.55), line: true }, { L: 1, c: PK.fleaf }];
+      // cánh hoa: màu mẫu nếu tách khỏi nền (ΔE ≥ 18 — có viền liner đậm đỡ), không thì đổi sang màu sơn khác trong bảng
+      const p = pat === "blossom" ? pickPaint(PK.blossoms, base, 18) : pickPaint(sameC(c2, base) ? PK.petals : [c2, ...PK.petals], base, 18);
+      if (kind === "bud") return [{ L: 2, c: PK.fleaf }, { L: 0, c: sc3(p, 0.55), line: true }, { L: 0, c: p, tone: true, ins: 0 }, { L: 1, c: PK.fleaf }];
       const ctr = v ? PK.blossomC : PK.floralC;
-      return [{ L: 0, c: p, tone: true }, { L: 1, c: sc3(p, 0.68), a: 0.75 }, { L: 0, c: sc3(p, 0.52), line: true }, { L: 2, c: ctr }, { L: 2, c: sc3(ctr, 0.55), line: true }, { L: 3, c: v ? PK.blossomS : sc3(PK.floralC, 0.5) }, { L: 4, c: PK.floralC }];
+      return [{ L: 0, c: sc3(p, 0.52), line: true }, { L: 0, c: p, tone: true, ins: 0 }, { L: 1, c: sc3(p, 0.68), a: 0.75, ins: 0 }, { L: 2, c: sc3(ctr, 0.55), line: true }, { L: 2, c: ctr, ins: 2 }, { L: 3, c: v ? PK.blossomS : sc3(PK.floralC, 0.5) }, { L: 4, c: PK.floralC }];
     }
-    case "heart": { const h = contrastOn(sameC(c2, base) ? PK.cherry : c2, base, 28); return [{ L: 0, c: h, hi: 0.85, sh: 0.25 }, { L: 0, c: sc3(h, 0.42), line: true }]; }
-    case "holly": return [{ L: 0, c: PK.holly }, { L: 1, c: sc3(PK.holly, 0.55) }, { L: 2, c: PK.hollyRib, a: 0.6 }, { L: 0, c: sc3(PK.holly, 0.3), line: true }, { L: 3, c: PK.berry, sh: 0.35 }, { L: 3, c: sc3(PK.berry, 0.35), line: true }, { L: 4, c: W, a: 0.92 }];
+    case "heart": { const h = contrastOn(sameC(c2, base) ? PK.cherry : c2, base, 28); return [{ L: 0, c: sc3(h, 0.42), line: true }, { L: 0, c: h, hi: 0.85, sh: 0.25, ins: 0 }]; }
+    case "holly": return [{ L: 0, c: sc3(PK.holly, 0.3), line: true }, { L: 0, c: PK.holly, ins: 0 }, { L: 1, c: sc3(PK.holly, 0.55), ins: 0 }, { L: 2, c: PK.hollyRib, a: 0.6, ins: 0 }, { L: 3, c: sc3(PK.berry, 0.35), line: true }, { L: 3, c: PK.berry, sh: 0.35, ins: 3 }, { L: 4, c: W, a: 0.92 }];
     case "ornament": {
       const b = contrastOn(sameC(c2, metal) || sameC(c2, base) ? PK.berry : c2, base, 25);
-      return [{ L: 3, metal: true }, { L: 0, c: b, tone: true, hi: 0.35 }, { L: 1, metal: true }, { L: 0, metal: true, line: true }, { L: 2, metal: true }, { L: 4, c: W, a: 0.88 }];
+      return [{ L: 3, metal: true }, { L: 0, metal: true, line: true }, { L: 0, c: b, tone: true, hi: 0.35, ins: 0 }, { L: 1, metal: true, ins: 0 }, { L: 2, metal: true }, { L: 4, c: W, a: 0.88 }];
     }
     case "pflower": return [{ L: 0, c: sc3(c2, 0.95), a: 0.7 }, { L: 1, c: PK.pfC, a: 0.7 }];
     default: return [{ L: 0, c: c2 }];
@@ -1501,7 +1533,6 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
       place();
     }
   }
-  if (typeof process !== "undefined" && process.env?.A2DBG) console.log("fit", kind, "r", bd.r, "hw", seg.hw.toFixed(1), "sc", sc.toFixed(2), "u", u0.toFixed(2), "t", t0.toFixed(2), "R", F.R.toFixed(1), "ring", geo.ring.length, "hwAt", hwAt(geo, F.s0).toFixed(1));
   F.jit = kind === "gelflower" ? 0 : Math.min(0.02, 0.6 / F.R);
   F.lw = Math.min(Math.max(1.5, Math.min(3, 0.045 * seg.hw)), 0.14 * F.R);
   F.bev = Math.min(0.3 * F.R, 4);
@@ -1544,32 +1575,35 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     // hoạ tiết vẽ tay (Halloween / Giáng sinh / hoa / cherry): r = nửa cỡ NHÌN THẤY — nhân vật rộng ~55–65% móng, lệch khỏi
     // tâm (u 0.5–0.62, |t| ≤ 0.12; chạm mép thì renderLook tự thu nhỏ / dời vào), hoạ tiết hữu cơ tràn ra mép
     case "ghost": return [{ u: 0.56 + 0.05 * j(1), t: 0.2 * j(2), r: 0.92, kind: "ghost", rot: 0.2 * j(3) }];
-    case "jackolantern": return [{ u: 0.58 + 0.05 * j(1), t: 0.2 * j(2), r: 0.7, kind: "pumpkin", rot: 0.15 * j(3) }];
+    case "jackolantern": return [{ u: 0.58 + 0.05 * j(1), t: 0.2 * j(2), r: 0.76, kind: "pumpkin", rot: 0.15 * j(3) }];
     // dơi: 1 con to giữa móng + 2 con nhỏ dần bay chéo về 1 góc đầu móng
-    case "bats": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.5 + 0.03 * j(1), t: 0.06 * sd, r: 0.66, kind: "bat", rot: 0.2 * j(2) }, { u: 0.72, t: 0.3 * sd, r: 0.3, kind: "bat", rot: 0.35 * j(3) }, { u: 0.86, t: 0.44 * sd, r: 0.2, kind: "bat", rot: 0.4 * j(4) }]; }
+    case "bats": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.5 + 0.03 * j(1), t: 0.06 * sd, r: 0.66, kind: "bat", rot: 0.2 * j(2) }, { u: 0.72, t: 0.3 * sd, r: 0.34, kind: "bat", rot: 0.35 * j(3) }, { u: 0.86, t: 0.42 * sd, r: 0.26, kind: "bat", rot: 0.4 * j(4) }]; }
     // trăng khuyết kim loại to (≈ 50% bề ngang) sát 1 bên, miệng quay vào giữa móng + 3 sao nhỏ dần phía bên kia
-    case "moonstars": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.5 + 0.04 * j(1), t: 0.3 * sd, r: 0.54, kind: "moon", rot: 0.25 * j(2) }, { u: 0.27, t: -0.34 * sd, r: 0.2, kind: "star", rot: 0.6 * j(3) }, { u: 0.68, t: -0.4 * sd, r: 0.16, kind: "star", rot: 0.6 * j(4) }, { u: 0.84, t: -0.02 * sd, r: 0.13, kind: "star", rot: 0.6 * j(5) }]; }
+    case "moonstars": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.5 + 0.04 * j(1), t: 0.3 * sd, r: 0.54, kind: "moon", rot: 0.25 * j(2) }, { u: 0.26, t: -0.32 * sd, r: 0.28, kind: "star", rot: 0.6 * j(3) }, { u: 0.68, t: -0.4 * sd, r: 0.22, kind: "star", rot: 0.6 * j(4) }, { u: 0.86, t: -0.04 * sd, r: 0.18, kind: "star", rot: 0.6 * j(5) }]; }
     // bông tuyết: 1 bông to lệch ra mép (mép móng cắt bớt) + 1 bông vừa + chấm tuyết rơi — bỏ bông tí hon (nhoè thành dấu *)
     case "snow": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.62 + 0.04 * j(1), t: 0.45 * sd, r: 0.6, kind: "flake", rot: 0.5 * j(2) }, { u: 0.3, t: -0.3 * sd, r: 0.33, kind: "flake", rot: 0.5 * j(3) }, { u: 0.5, t: -0.52 * sd, r: 0.08, kind: "pdot" }, { u: 0.2, t: 0.3 * sd, r: 0.075, kind: "pdot" }, { u: 0.84, t: -0.3 * sd, r: 0.085, kind: "pdot" }, { u: 0.38, t: 0.12 * sd, r: 0.07, kind: "pdot" }]; }
     case "cherry": return [{ u: 0.55 + 0.04 * j(1), t: 0.3 * j(2), r: 0.84, kind: "cherry", rot: 0.2 * j(3) }];
     // NHÀNH Ô RÔ (holly) Giáng sinh: 2 lá gai + 3 quả đỏ, rộng ~60% móng
-    case "holly": return [{ u: 0.56 + 0.05 * j(1), t: 0.2 * j(2), r: 0.68, kind: "holly", rot: 0.25 * j(3) }];
+    case "holly": return [{ u: 0.56 + 0.05 * j(1), t: 0.2 * j(2), r: 0.9, kind: "holly", rot: 0.25 * j(3) }];
     // QUẢ CHÂU Giáng sinh: quả cầu bóng + dải / nắp / khoen kim loại (+ dây treo về mép đầu móng)
-    case "ornament": return [{ u: 0.56 + 0.04 * j(1), t: 0.2 * j(2), r: 0.8, kind: "ornament", rot: 0.12 * j(3) }];
+    case "ornament": return [{ u: 0.56 + 0.04 * j(1), t: 0.2 * j(2), r: 0.86, kind: "ornament", rot: 0.12 * j(3) }];
     // HOA GEL 3D kiểu Hàn: 1 bông nổi lệch 1 bên nửa chân móng + 2 ngọc trai nhỏ dần chạy chéo về đầu móng
-    case "gelflower": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.42 + 0.04 * j(1), t: 0.14 * sd, r: 0.56, kind: "gelflower", rot: 6.28 * j(2) }, { u: 0.68, t: -0.26 * sd, r: 0.12, kind: "pearl" }, { u: 0.8, t: -0.1 * sd, r: 0.1, kind: "pearl" }]; }
+    case "gelflower": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.42 + 0.04 * j(1), t: 0.12 * sd, r: 0.7, kind: "gelflower", rot: 6.28 * j(2) }, { u: 0.74, t: -0.3 * sd, r: 0.16, kind: "pearl" }, { u: 0.87, t: -0.12 * sd, r: 0.13, kind: "pearl" }]; }
     case "blackcat": return [{ u: 0.55 + 0.04 * j(1), t: 0.2 * j(2), r: 0.86, kind: "cat", rot: 0.08 * j(3) }];
     case "skull": return [{ u: 0.56 + 0.04 * j(1), t: 0.2 * j(2), r: 0.68, kind: "skull", rot: 0.2 * j(3) }];
     case "eyeball": return [{ u: 0.48 + 0.03 * j(1), t: 0.03 * j(2), r: 0.6, kind: "eye" }];
     // lá thu vẽ tay: 3 lá nhỏ dần "rơi" chéo từ 1 góc đầu móng, lá to bị mép cắt, mỗi lá xoay / màu khác nhau
-    case "leaf": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.8, t: 0.52 * sd, r: 0.46, kind: "leaf", rot: -0.6 * sd + 0.4 * j(1), tint: 0 }, { u: 0.52, t: -0.04 * sd, r: 0.3, kind: "leaf", rot: 0.5 * sd + 0.5 * j(2), tint: 1 }, { u: 0.3, t: -0.36 * sd, r: 0.18, kind: "leaf", rot: 1.2 * sd + 0.5 * j(3), tint: 2 }]; }
+    // (lá phong thuỳ nhọn nhìn nhỏ hơn khung ~25% → r lớn hơn cỡ nhìn thấy 0.45 / 0.3 / 0.18 của kế hoạch)
+    case "leaf": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.8, t: 0.5 * sd, r: 0.72, kind: "leaf", rot: -0.6 * sd + 0.4 * j(1), tint: 0 }, { u: 0.44, t: -0.14 * sd, r: 0.46, kind: "leaf", rot: 0.5 * sd + 0.5 * j(2), tint: 1 }, { u: 0.19, t: 0.3 * sd, r: 0.28, kind: "leaf", rot: 1.2 * sd + 0.5 * j(3), tint: 2 }]; }
     case "witchy": return [{ u: 0.18, t: 0.02, r: 0.24, kind: "star", rot: 0.4 * j(1) }];
     case "milkbath": return [{ u: 0.3, t: -0.3, r: 0.3, kind: "pflower", rot: 6.28 * j(1) }, { u: 0.55, t: 0.28, r: 0.26, kind: "pflower", rot: 6.28 * j(2) }, { u: 0.78, t: -0.2, r: 0.2, kind: "pflower", rot: 6.28 * j(3) }, { u: 0.2, t: 0.4, r: 0.16, kind: "pflower", rot: 6.28 * j(4) }];
     // hoa vẽ tay: 1 bông to ở góc đầu móng (mép cắt bớt) + 2 lá xanh lấp ló dưới bông + 1–2 nụ; mỗi móng lật bên khác nhau
     case "floral": case "blossom": {
-      const sd = j(6) > 0 ? 1 : -1, fu = 0.74 + 0.04 * j(1), ft = 0.5 * sd;
+      // bông chính r 0.72 (mặt móng cong làm bông lệch mép co lại → nhìn ≈ 55% bề ngang, mép cắt 1 bên), lá 0.4 / 0.34, nụ
+      // 0.26 / 0.2 — nụ / lá nhỏ hơn thì chỉ còn chấm
+      const sd = j(6) > 0 ? 1 : -1, fu = 0.72 + 0.04 * j(1), ft = 0.42 * sd;
       const lf = (du: number, dt: number, r: number, k: number): Bead => ({ u: fu + du, t: ft + dt, r, kind: "gleaf", rot: Math.atan2(-dt, du * 2.7) + 0.25 * j(k) });
-      return [lf(-0.17, -0.32 * sd, 0.27, 2), lf(0.06, -0.52 * sd, 0.22, 3), { u: fu, t: ft, r: 0.5, kind: "flower", rot: 6.28 * j(4) }, { u: 0.4, t: -0.3 * sd, r: 0.17, kind: "bud", rot: -0.5 * sd + 0.3 * j(5) }, ...(j(8) > 0 ? [{ u: 0.22, t: 0.26 * sd, r: 0.13, kind: "bud" as const, rot: 0.4 * sd + 0.3 * j(9) }] : [])];
+      return [lf(-0.22, -0.4 * sd, 0.4, 2), lf(0.08, -0.7 * sd, 0.34, 3), { u: fu, t: ft, r: 0.72, kind: "flower", rot: 6.28 * j(4) }, { u: 0.34, t: -0.3 * sd, r: 0.26, kind: "bud", rot: -0.5 * sd + 0.3 * j(5) }, ...(j(8) > 0 ? [{ u: 0.15, t: 0.24 * sd, r: 0.2, kind: "bud" as const, rot: 0.4 * sd + 0.3 * j(9) }] : [])];
     }
     case "droplets": case "chromedrops": case "droplet": {
       // giọt nước 3D (trend "water drop / bubble nails"): 1 giọt to + 2–3 giọt nhỏ rải tự nhiên, không chồng nhau
@@ -2153,7 +2187,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
                 const mx = X0 / 0.2, my = Y0 / 0.2, mz = Math.sqrt(Math.max(0, 1 - mx * mx - my * my));
                 const qx = fl * mx * crP - my * srP, qy = fl * mx * srP + my * crP;
                 const pl = Math.max(0, qx * L3[0] + qy * L3[1] + mz * L3[2]), ph2 = Math.max(0, qx * H3[0] + qy * H3[1] + mz * H3[2]);
-                const pd = (0.25 + 0.8 * pl) * (0.75 + 0.25 * mz), ps = 1.1 * Math.pow(ph2, 50) + 0.15 * Math.pow(ph2, 8), ir = 0.06 * Math.sin(6 * (qx * 0.7 - qy * 0.6) + 1.3);
+                const pd = (0.42 + 0.68 * pl) * (0.8 + 0.2 * mz), ps = 1.1 * Math.pow(ph2, 50) + 0.15 * Math.pow(ph2, 8), ir = 0.06 * Math.sin(6 * (qx * 0.7 - qy * 0.6) + 1.3);
                 pr += (0.93 * pd * (1 + ir) + ps - pr) * cp; pg += (0.9 * pd + ps - pg) * cp; pb += (0.86 * pd * (1 + 0.8 * ir) + ps - pb) * cp;
               }
             }
@@ -2162,10 +2196,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             continue;
           }
           const litK = (1 + contrast * shade) * edge * cut;
+          // liner = tô KÍN cả hình bằng màu viền trước, rồi lớp màu thu vào trong 1 bề viền (ins) — vẽ viền thành 1 dải đè lên
+          // mép lớp màu thì điểm ảnh mép (phủ ½) còn lẫn màu thân → vòng xám quanh đầu lâu / ma trên nền đen
+          const lwq = F.lw * (0.85 + 0.3 * vnoise(X0 * 3.1, Y0 * 3.1, 73)); // liner run ±15% như nét cọ
           for (const op of F.ops) {
             const q = op.L, dp = DP[q];
             let cv = 1 - smooth(-0.75, 0.75, dp);
-            if (op.line) cv -= 1 - smooth(-0.75, 0.75, dp + F.lw * (0.85 + 0.3 * vnoise(X0 * 3.1, Y0 * 3.1, 73))); // liner run ±15%
+            if (op.ins !== undefined) cv = Math.min(cv, 1 - smooth(-0.75, 0.75, DP[op.ins] + lwq));
             cv *= op.a ?? 1;
             if (cv <= 0.003) continue;
             let pr: number, pg: number, pb: number;

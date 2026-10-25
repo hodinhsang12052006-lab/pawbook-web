@@ -126,11 +126,12 @@ export function spreadVariant(d: RenderableDesign, used: Set<string>, from = 0):
 
 // ---------------------------------------------------------------- khung ảnh
 /**
- * Bộ móng (kể cả phần đắp) chiếm ~80% bề NGANG ô ảnh (≤ 70% bề cao): móng to rõ trong ô kho mẫu 2 cột trên điện thoại,
- * vẫn còn đốt ngón + chút nền cho tự nhiên. Khung cũ (lề 0.42 quanh điểm chạm) để cả bàn tay + áo len → 4 móng chỉ
- * chiếm 7–14% diện tích ô, hoạ tiết thành chấm li ti (hội đồng chấm 25/10).
+ * Bộ móng (kể cả phần đắp) chiếm ~78% bề NGANG ô ảnh (≤ 68% bề cao — lề ~0.14 mỗi bên): móng to rõ trong ô kho mẫu
+ * 2 cột trên điện thoại, vẫn còn đốt ngón + chút nền cho tự nhiên. Khung cũ (lề 0.42 quanh điểm chạm) để cả bàn tay +
+ * áo len → 4 móng chỉ chiếm 7–14% diện tích ô, hoạ tiết thành chấm li ti (hội đồng chấm 25/10). Chặt hơn nữa (86%)
+ * thì móng ngoài cùng sát mép ô, nhìn như ảnh bị cắt cụt, và ảnh tay phải phóng > ×2 (da / len mờ hẳn — soi 26/10).
  */
-const FILL_W = 0.86, FILL_H = 0.74;
+const FILL_W = 0.78, FILL_H = 0.68;
 /** Dời khung 1 chút về phía CHÂN móng: thấy ngón tay nhiều hơn khoảng nền trống sau đầu móng. */
 const TOWARD_FINGER = 0.05;
 /** Lề tối thiểu quanh mép móng (theo cạnh khung) — đầu móng đắp không bao giờ chạm / bị cắt ở mép ảnh. */
@@ -160,23 +161,29 @@ function frameFor(hand: Hand, fit: HandFit, opts: { lengthFactor: number; shape?
   let dx = 0, dy = 0;
   for (const [b, t] of hand.marks) { const l = Math.hypot(b[0] - t[0], b[1] - t[1]) || 1; dx += (b[0] - t[0]) / l; dy += (b[1] - t[1]) / l; }
   const dl = Math.hypot(dx, dy) || 1;
-  // vùng được phép: khung riêng của tay (né móng lấp ló) nếu bộ móng nằm gọn trong đó, không thì cả ảnh
+  // vùng được phép: khung riêng của tay (né móng lấp ló); phần đắp dài lọt ra ngoài thì nới vùng VỪA ĐỦ chứa bộ móng
+  // (nới cả ảnh như trước thì khung dời về phía móng lấp ló đúng lúc ảnh cần né nó nhất)
   const pad0 = 12;
-  const okBox = hand.box && e.x0 >= hand.box[0] + pad0 && e.x1 <= hand.box[0] + hand.box[2] - pad0 && e.y0 >= hand.box[1] + pad0 && e.y1 <= hand.box[1] + hand.box[2] - pad0;
-  const rx = okBox ? Math.max(0, hand.box![0]) : 0, ry = okBox ? Math.max(0, hand.box![1]) : 0;
-  const rw = okBox ? Math.min(img.w, hand.box![0] + hand.box![2]) - rx : img.w, rh = okBox ? Math.min(img.h, hand.box![1] + hand.box![2]) - ry : img.h;
-  const size = Math.min(rw, rh, Math.max(ex / FILL_W, ey / FILL_H, 64));
+  const [bx, by, bs] = hand.box ?? [0, 0, Math.max(img.w, img.h)];
+  const rx = Math.max(0, Math.min(bx, e.x0 - pad0)), ry = Math.max(0, Math.min(by, e.y0 - pad0));
+  const rw = Math.min(img.w, Math.max(bx + bs, e.x1 + pad0)) - rx, rh = Math.min(img.h, Math.max(by + bs, e.y1 + pad0)) - ry;
+  // cạnh khung theo tỉ lệ lấp đầy; vùng hẹp hơn thì thu về vùng — nhưng không bao giờ nhỏ hơn bộ móng + lề (đầu móng
+  // đắp không bị cắt) và không vượt ảnh
+  const full = Math.min(img.w, img.h), need = Math.min(full, Math.max(ex, ey) / (1 - 2 * MIN_PAD));
+  let size = Math.min(full, Math.max(ex / FILL_W, ey / FILL_H, 64));
+  if (size > Math.min(rw, rh)) size = Math.max(Math.min(rw, rh), need);
+  size = Math.round(size);
   const pad = MIN_PAD * size;
-  // tâm: giữa bộ móng, dời về phía ngón tay — nhưng giữ đủ lề quanh mọi mép móng
-  const place = (lo: number, hi: number, shift: number, r0: number, rl: number) => {
+  // tâm: giữa bộ móng, dời về phía ngón tay — giữ đủ lề quanh mọi mép móng, nằm trong vùng (nếu vừa), rồi trong ảnh
+  const place = (lo: number, hi: number, shift: number, r0: number, rl: number, n: number) => {
     let c = (lo + hi) / 2 + shift * TOWARD_FINGER * size;
     const cMin = hi + pad - size / 2, cMax = lo - pad + size / 2;
     c = cMin <= cMax ? Math.min(cMax, Math.max(cMin, c)) : (lo + hi) / 2;
-    return Math.min(r0 + rl - size, Math.max(r0, c - size / 2));
+    let v = c - size / 2;
+    if (rl >= size) v = Math.min(r0 + rl - size, Math.max(r0, v));
+    return Math.round(Math.min(n - size, Math.max(0, v)));
   };
-  const x = place(e.x0, e.x1, dx / dl, rx, rw), y = place(e.y0, e.y1, dy / dl, ry, rh);
-  const left = Math.max(0, Math.round(x)), top = Math.max(0, Math.round(y));
-  return { x: left, y: top, size: Math.min(Math.round(size), img.w - left, img.h - top) };
+  return { x: place(e.x0, e.x1, dx / dl, rx, rw, img.w), y: place(e.y0, e.y1, dy / dl, ry, rh, img.h), size };
 }
 
 /** Khung đã cắt + phóng lên OUT_SIZE (giữ vài khung gần nhất — mỗi khung 4MB). */

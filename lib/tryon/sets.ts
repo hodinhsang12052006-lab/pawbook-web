@@ -28,6 +28,9 @@ function lstar(hex: string): number {
 /** mẫu mới của nhóm khác (holly, glitterfade, fr-*…) chỉ dùng khi bộ máy đã đăng ký vẽ được; không thì mẫu dự phòng */
 const has = (id: string) => PROCEDURAL.has(id);
 const avail = (ids: string | string[]) => { const a = Array.isArray(ids) ? ids : [ids]; return a.find(has) ?? a[a.length - 1]; };
+/** màu đỏ rõ (đỏ cherry / đỏ tim) — đầu French echo lấy đúng màu đỏ của bảng màu thay vì 1 màu đỏ cố định */
+const redish = (hex: string) => { const v = parseInt(hex.replace("#", ""), 16); if (!Number.isFinite(v)) return false; const r = (v >> 16) & 255, g = (v >> 8) & 255, b = v & 255; return r > 130 && r > 1.8 * g && r > 1.4 * b; };
+const redOf = (p: Pal) => (redish(p.c2) ? p.c2 : redish(p.m) ? p.m : CHERRY);
 
 // ECHO theo từng hoạ tiết. Không có trong bảng: hạt (đá / hoạ tiết vẽ) tự lấy phần nhỏ (bỏ hạt to nhất) hoặc 2 bản nhỏ;
 // hoạ tiết nền (in lặp) lặp lại trên móng echo (hạt giống mỗi móng khác nhau → bố cục khác)
@@ -35,12 +38,15 @@ const ECHO: Record<string, EchoSpec[]> = {
   ghost: [{ pick: "twin", scale: 0.6 }, { pattern: "web" }],
   bats: [{ pick: "rest", scale: 0.95, mirror: true }],
   jackolantern: [{ pattern: "french", colors: (p) => [p.c1, ORANGE, p.m] }, { pick: "twin", scale: 0.58 }],
-  skull: [{ pattern: "web" }],
+  skull: [{ pattern: "web" }, { pick: "twin", scale: 0.58 }],
   mummy: [{ pattern: "web" }, { pattern: "ghost", pick: "twin", scale: 0.6 }],
-  eyeball: [{ pattern: "web" }],
+  eyeball: [{ pattern: "web" }, { pick: "twin", scale: 0.62 }],
   web: [{ pattern: "bats", pick: "rest", scale: 0.9 }],
   blackcat: [{ pattern: "moonstars", pick: "first", scale: 0.8 }],
-  cherry: [{ pattern: "french", colors: (p) => [p.c1, CHERRY, p.m] }],
+  cherry: [{ pattern: "french", colors: (p) => [p.c1, redOf(p), p.m] }],
+  // sóng biển → đầu French trắng (bọt sóng); ren cô dâu → French trắng cổ điển: echo cùng chủ đề, không lặp lại hoạ tiết
+  waves: [{ pattern: "french" }],
+  lace: [{ pattern: "french" }],
   hearts: [{ pick: "rest", scale: 0.9, mirror: true }],
   floral: [{ pick: "second", scale: 0.95 }],
   blossom: [{ pick: "second", scale: 0.95 }],
@@ -53,7 +59,7 @@ const ECHO: Record<string, EchoSpec[]> = {
   pearls: [{ pick: "first" }],
   charm3d: [{ pattern: "pearls", pick: "all", scale: 0.62, uShift: -0.02 }],
   droplets: [{ pick: "rest" }], chromedrops: [{ pick: "rest" }], droplet: [{ pick: "rest" }],
-  holly: [{ pattern: ["fr-candycane", "holly"], pick: "twin", scale: 0.58, colors: (p) => [p.c1, CHERRY, p.m] }],
+  holly: [{ pattern: ["fr-candycane", "holly"], pick: "twin", scale: 0.58, colors: (p) => [p.c1, redOf(p), p.m] }],
   ornament: [{ pick: "first", scale: 0.55, mirror: true }],
   gelflower: [{ pick: "first", scale: 0.55, mirror: true }],
   tortoise: [{ pattern: ["fr-tortoise", "tortoise"] }],
@@ -67,17 +73,20 @@ const SKIP = new Set(["solid", "mixmatch"]);
 
 /**
  * Thứ tự móng theo vị trí trên bàn tay (trỏ → út; đủ 5 móng: cái → út): xếp theo hình chiếu tâm móng lên phương
- * vuông góc với hướng móng trung bình, rồi lật để móng ĐẦU MÚT HẸP NHẤT (ngón út) nằm cuối. Thứ tự móng trong Thử mẫu
- * là thứ tự chạm, không phải thứ tự ngón → không dùng chỉ số mảng.
+ * vuông góc với hướng móng trung bình, rồi lật để móng ĐẦU MÚT NHỎ NHẤT (ngón út: hẹp + ngắn nhất) nằm cuối. So diện
+ * tích hw × L chứ không chỉ bề ngang — 2 móng đầu mút rộng gần bằng nhau (p063: 45 / 49px) thì bề dài phân định thêm.
+ * Đã soát 10 tay kho mẫu (p067, ombre, p027: ngón út ở chỉ số 0). Thứ tự móng trong Thử mẫu là thứ tự chạm, không phải
+ * thứ tự ngón → không dùng chỉ số mảng.
  */
-export function nailOrder(segs: { base: { x: number; y: number }; tip: { x: number; y: number }; hw: number }[]): number[] {
+export function nailOrder(segs: { base: { x: number; y: number }; tip: { x: number; y: number }; hw: number; L?: number }[]): number[] {
   const n = segs.length, ord = Array.from({ length: n }, (_, i) => i);
   if (n < 2) return ord;
   let ax = 0, ay = 0;
   for (const s of segs) { const dx = s.tip.x - s.base.x, dy = s.tip.y - s.base.y, l = Math.hypot(dx, dy) || 1; ax += dx / l; ay += dy / l; }
   const key = (s: (typeof segs)[number]) => ((s.base.x + s.tip.x) / 2) * -ay + ((s.base.y + s.tip.y) / 2) * ax;
   ord.sort((a, b) => key(segs[a]) - key(segs[b]));
-  if (segs[ord[0]].hw < segs[ord[n - 1]].hw) ord.reverse();
+  const size = (s: (typeof segs)[number]) => s.hw * (s.L ?? Math.hypot(s.tip.x - s.base.x, s.tip.y - s.base.y));
+  if (size(segs[ord[0]]) < size(segs[ord[n - 1]])) ord.reverse();
   return ord;
 }
 
@@ -271,7 +280,9 @@ export function applyBeadOpts<B extends BeadLike>(beads: B[], ov?: NailOverride 
   const byR = [...beads].sort((a, b) => b.r - a.r);
   const sel = pick === "rest" ? byR.slice(1) : pick === "first" || pick === "twin" ? [byR[0]] : pick === "second" ? [byR[1]] : beads;
   const stone = sel.every((b) => STONE.has(b.kind));
-  const sc = ov.scale ?? (pick === "twin" ? 0.6 : single ? (stone ? 0.62 : 0.65) : 1);
+  // 1 viên lẻ ×0.78 (viên to nhất cụm 0.33 → 0.26 hw ≈ 8–15px): ×0.62 cũ chỉ còn 1 chấm sáng ~6px ở ảnh kho mẫu, nhìn
+  // như hạt bụi chứ không ra viên đá đính; vẫn nhỏ hơn hẳn cụm của hero
+  const sc = ov.scale ?? (pick === "twin" ? 0.6 : single ? (stone ? 0.78 : 0.7) : 1);
   const sg = ov.mirror ? -1 : 1, du = ov.uShift ?? 0, dt = ov.tShift ?? 0;
   const sized = (b: B, k = 1) => Math.max(sc * k < 1 ? FLOOR[b.kind] ?? 0.3 : 0, b.r * sc * k);
   let out: B[];

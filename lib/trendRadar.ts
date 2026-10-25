@@ -66,7 +66,7 @@ export const TREND_RADAR: Trend[] = [
   { id: "gothic-chrome", name: { vi: "Chrome gothic", en: "Gothic chrome" }, source: PP("\"gothic chrome nails\" +400%", "\"gothic chrome nails\" +400%"), weight: 1,
     looks: [{ pattern: "solid", finish: "chrome", colors: [["black", "black", "silver"], ["aubergine", "aubergine", "silver"]], shapes: ["stiletto", "almond"] }] },
   { id: "cool-blue", name: { vi: "Xanh băng", en: "Cool blue" }, source: PP("màu xanh băng tăng 235% lượt tìm", "cool blue searches +235%"), weight: 2,
-    looks: [{ pattern: "solid", finish: "chrome", colors: [["coolBlue", "coolBlue", "silver"]] }, { pattern: "jelly", finish: "glossy", colors: [["coolBlue", "milky", "silver"]] }] },
+    looks: [{ pattern: "solid", finish: "chrome", colors: [["coolBlue", "coolBlue", "silver"]] }, { pattern: "glitterfade", finish: "glitter", colors: [["coolBlue", "silver", "silver"]] }] },
   { id: "plum-noir", name: { vi: "Tím mận đậm", en: "Plum noir" }, source: PP("tím mận đậm tăng 220% lượt tìm", "plum noir searches +220%"), weight: 2,
     looks: [{ pattern: "velvet", finish: "cateye", colors: [["plumNoir", "milky", "gold"]] }, { pattern: "solid", finish: "glossy", colors: [["plumNoir", "milky", "gold"]] }, { pattern: "fr-micro", finish: "glossy", colors: [["sheer", "plumNoir", "gold"]] }] },
   { id: "wasabi", name: { vi: "Xanh wasabi", en: "Wasabi green" }, source: PP("xanh wasabi tăng 175% lượt tìm", "wasabi green searches +175%"), weight: 1,

@@ -933,7 +933,8 @@ const ROLES: Record<string, Role> = {
   solid: { g: "tone", shapes: SH5, pal: [["milky", "pearl", "pearl"], ["cherry", "gold", "gold"], ["espresso", "nude", "gold"], ["black", "silver", "silver"]] },
   french: { g: "tip", base: "sheer", pal: [["sheer", "white", "gold"], ["sheer", "espresso", "gold"], ["nude", "burgundy", "gold"], ["milky", "black", "silver"]] },
   ombre: { g: "glow", pal: [["nude", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["nude", "coffee", "gold"], ["pinkNude", "raspberry", "gold"]] },
-  aura: { g: "glow", pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["black", "persimmon", "gold"], ["black", "periwinkle", "silver"]] },
+  // aura: nền trong / sữa với lõi màu rực đậm hơn ≥ 20 L*, hoặc nền gần đen với lõi rực (aura nude trên cherry cola = vết bẩn)
+  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && ((SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20) || Lof(hx(a)) < 20), pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["black", "persimmon", "gold"], ["black", "periwinkle", "silver"]] },
   tortoise: { g: "tone", pal: [["caramel", "chocolate", "gold"]] },
   marble: { g: "glow", ok: marbleOk, pal: [["milky", "smoke", "gold"], ["cloudDancer", "pewter", "gold"], ["black", "milky", "gold"], ["emerald", "milky", "gold"], ["jade", "milky", "gold"]] },
   lines: { g: "line", on: "metal", pal: [["black", "milky", "gold"], ["navy", "milky", "silver"], ["espresso", "nude", "gold"]] },
@@ -959,14 +960,16 @@ const ROLES: Record<string, Role> = {
   auroracat: { g: "tone", base: "dark", shapes: SH5, pal: [["black", "milky", "silver"], ["navy", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
   stripes: { g: "line", pal: [["nude", "black", "gold"], ["cloudDancer", "coffee", "gold"], ["milky", "navy", "silver"]] },
   chocodip: { g: "tone", shapes: ["almond", "oval"], pal: [["strawberry", "chocolate", "gold"]] },
-  fawn: { g: "glow", pal: [["caramel", "cloudDancer", "gold"], ["coffee", "nude", "gold"]] },
+  // da hươu: tông ấm (caramel, nâu, nude, kem) — đốm kem trên nền lục bảo nhìn thành chấm bi, không ra da hươu
+  fawn: { g: "glow", ok: ([a, b]) => [a, b].every((c) => ["brown", "orange", "nude", "white"].includes(hueFamily(hx(c)))), pal: [["caramel", "cloudDancer", "gold"], ["coffee", "nude", "gold"]] },
   chromedrops: { g: "relief", on: "metal", pal: [["milky", "silver", "silver"], ["sheer", "gold", "gold"], ["black", "silver", "silver"]] },
   // giọt nước 3D chỉ đọc ra trên nền tối bóng (trên nền trắng / pastel đặc nhìn như vòng đệm xám #30)
   droplets: { g: "tone", base: "dark", pal: [["black", "milky", "silver"], ["emerald", "milky", "gold"], ["plumNoir", "milky", "silver"]] },
   droplet: { g: "tone", base: "dark" },
   gemcluster: { g: "relief", on: "#f4f4f6", pal: [["pinkNude", "milky", "silver"], ["black", "milky", "silver"], ["mocha", "milky", "gold"]] },
   foil: { g: "relief", on: "metal", pal: [["black", "milky", "gold"], ["burgundy", "nude", "gold"], ["milky", "nude", "gold"]] },
-  chromeline: { g: "relief", on: "metal", pal: [["milky", "nude", "silver"], ["black", "milky", "silver"], ["nude", "milky", "gold"]] },
+  // line nổi tráng gương mảnh: cần nền tách hẳn kim loại (bạc trên xám be gần như tàng hình — soi lượt 25/10)
+  chromeline: { g: "glow", on: "metal", pal: [["black", "milky", "silver"], ["navy", "milky", "silver"], ["espresso", "nude", "gold"], ["emerald", "milky", "gold"]] },
   mixmatch: { g: "tone", ok: ([a, b]) => a !== b && Math.hypot(...lab(hx(a)).map((v, i) => v - lab(hx(b))[i])) >= 18, pal: [["espresso", "caramel", "gold"], ["plumNoir", "periwinkle", "silver"], ["navy", "sky", "silver"]] },
   doublefrench: { g: "tip", base: "sheer", shapes: ["almond", "square", "coffin"], pal: [["sheer", "black", "gold"], ["milky", "espresso", "gold"]] },
   swirl: { g: "glow", pal: [["milky", "raspberry", "gold"], ["nude", "burnt", "gold"], ["sheer", "cobalt", "silver"]] },
@@ -979,18 +982,19 @@ const ROLES: Record<string, Role> = {
   lace: { g: "tip", on: "#f4f4f6", base: "sheer", pal: [["sheer", "milky", "pearl"], ["pinkNude", "milky", "pearl"], ["nude", "milky", "gold"]] },
   negative: { g: "glow", vs: "#e4bcb2", pal: [["nude", "espresso", "gold"], ["nude", "black", "gold"], ["nude", "burgundy", "gold"]] },
   velvet: { g: "tone", base: "dark", shapes: SH5, pal: [["plumNoir", "milky", "gold"], ["redVelvet", "milky", "gold"], ["espresso", "milky", "gold"]] },
-  ghost: { g: "motif", on: W, pal: [["black", "milky", "silver"], ["burnt", "milky", "gold"], ["plumNoir", "milky", "silver"]] },
+  // ma / đầu lâu / xác ướp: chỉ nền tối kiểu "moody luxe" (không ma trắng trên nền cam bí ngô / pastel — nhìn như đồ hoá trang)
+  ghost: { g: "motif", on: W, ok: ([a]) => Lof(hx(a)) < 30, pal: [["black", "milky", "silver"], ["mulledWine", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
   jackolantern: { g: "motif", on: "#ef8227", pal: [["black", "milky", "gold"], ["nude", "black", "gold"]] },
   // dơi chỉ bạc: dơi vàng trên nền đen nhìn thành vệt vàng nhoè (soi lượt sắp ra 25/10)
   bats: { g: "motif", on: "metal", shapes: SH5, ok: ([, , mt]) => mt === "silver", pal: [["aubergine", "milky", "silver"], ["black", "milky", "silver"], ["mulledWine", "milky", "silver"]] },
   candycorn: { g: "tone" },
-  skull: { g: "motif", on: W, shapes: SH5, pal: [["black", "milky", "silver"], ["mulledWine", "milky", "silver"]] },
+  skull: { g: "motif", on: W, shapes: SH5, ok: ([a]) => Lof(hx(a)) < 30, pal: [["black", "milky", "silver"], ["mulledWine", "milky", "silver"]] },
   eyeball: { g: "motif", on: W },
   slimedrip: { g: "motif", on: "#76c326", pal: [["black", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
   moonstars: { g: "motif", on: "metal", shapes: SH5, pal: [["navy", "milky", "gold"], ["black", "milky", "gold"], ["mulledWine", "milky", "gold"]] },
   blackcat: { g: "motif", on: K, pal: [["burnt", "milky", "gold"], ["nude", "milky", "gold"], ["milky", "black", "gold"]] },
   witchy: { g: "tone", base: "dark" },
-  mummy: { g: "motif", on: "#e6e2da", pal: [["black", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
+  mummy: { g: "motif", on: "#e6e2da", ok: ([a]) => Lof(hx(a)) < 30, pal: [["black", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
   stitches: { g: "line", on: K },
   // French biến tấu: nền trong, đầu c2
   "fr-micro": { g: "tip", base: "sheer", pal: [["sheer", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["milky", "black", "silver"], ["sheer", "olive", "gold"], ["sheer", "cherry", "gold"]] },
@@ -1072,10 +1076,14 @@ export function paletteOk(pid: string, colors: [string, string, string]): boolea
 /** Hiệu ứng hợp nền: nhũ chỉ ở French nhũ / nhũ loang / baby boomer; nhám chỉ nền trung–tối (L* < 55, nền sáng nhám
  *  nhìn như bút xoá #1); mắt mèo / velvet chỉ nền tối (L* < 45 — nền sáng ra móng trắng trơn, dải sáng không đọc được). */
 const GLITTER_OK = new Set(["glitterfade", "fr-glitter", "babyboomer"]);
+const CHROME_ANY = new Set(["solid", "colorchrome", "jelly"]); // chrome là chính mẫu (trơn / chrome màu) hoặc thạch tráng ngọc trai
 export function finishOk(pid: string, c1hex: string, f: Finish): boolean {
   if (f === "glitter") return GLITTER_OK.has(pid);
   if (f === "matte") return Lof(c1hex) < 55;
   if (f === "cateye") return Lof(c1hex) < 45;
+  // chrome trên mẫu có hoạ tiết / French: chỉ nền thật sáng (L* ≥ 84) — bộ vẽ ra lớp glazed ngọc trai, vẫn thấy màu + hoạ tiết.
+  // Nền trung–tối thì bột chrome thành gương bạc phủ mất hoạ tiết (aura cherry cola, sao trên lục bảo ra bạc / xanh bạc hà).
+  if (f === "chrome") return CHROME_ANY.has(pid) || Lof(c1hex) >= 84;
   return true;
 }
 /** Dáng móng được phép của hoạ tiết: dáng nhọn chỉ cho mẫu trơn / mắt mèo / aurora / chrome màu / French V / Halloween
@@ -1131,7 +1139,8 @@ const FINISH_STEP: Record<Finish, (p: PCtx) => { materials: Mat[]; steps: Bi[]; 
   matte: () => ({ materials: [m("Top nhám (matte top)", "Matte top coat")], steps: [s("Phủ top nhám, hơ đèn (muốn hoạ tiết kim loại nổi thì chấm lại top bóng lên nét)", "Matte top coat, cure (dab glossy top back over metallic details to make them pop)")], minutes: 3, price: 3 }),
   chrome: ({ c1, keepHue }) => ({
     // nền sáng → bột ánh ngọc trai (glazed); chrome màu → bột trong giữ sắc nền (nâu vẫn nâu, không ra bạc)
-    materials: [keepHue ? m("Bột tráng gương trong (giữ màu nền)", "Clear mirror chrome powder (keeps the base colour)", "1 hũ")
+    // nền có màu rõ (hồng cánh sen, đỏ cherry…) dùng bột trong giữ màu — bột bạc biến móng đỏ thành móng bạc, sai tên mẫu
+    materials: [keepHue || (Lof(c1.hex) <= 70 && chroma(c1.hex) >= 20) ? m("Bột tráng gương trong (giữ màu nền)", "Clear mirror chrome powder (keeps the base colour)", "1 hũ")
       : m(`Bột tráng gương ${Lof(c1.hex) > 70 ? "ánh ngọc trai" : "bạc"}`, `${Lof(c1.hex) > 70 ? "Pearl" : "Silver"} chrome powder`, "1 hũ"), m("Mút xoa bột chrome", "Chrome applicator sponge", "1 gói"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")],
     steps: [s("Phủ top no-wipe, hơ đèn, xoa bột chrome đều tay bằng mút", "No-wipe top, cure, buff chrome powder in with a sponge"), s("Phủ top khoá bột, hơ đèn", "Seal with top coat, cure")],
     minutes: 8, price: 8,
@@ -1411,8 +1420,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   // mix: ô dịp lễ lần này thử bộ phối mỗi móng một kiểu (3/4 số lần → ~60% ô dịp lễ ra bộ phối: đủ ≥ 50% mà 3 lượt/ngày
   // không lượt nào cũng 1 tên "Bộ … mỗi móng một kiểu")
   type Steer = { need: Need[]; avoidNude: boolean; avoidWhite: boolean; avoidFam?: string; mix?: boolean };
-  const radarCand = (st: Steer): { d: EngineDesign; id: string } | null => {
-    const okLook = (l: Trend["looks"][number]) => { const p = PATTERNS.find((x) => x.id === (ALIAS[l.pattern] ?? l.pattern)); return !!p && live(p) && !usedPatterns.has(p.id); };
+  // fresh: chưa nới luật (bậc < 2) → bỏ luôn hoạ tiết của 3 lượt trước khỏi danh sách chọn (không trông vào loại dần)
+  const radarCand = (st: Steer, fresh: boolean): { d: EngineDesign; id: string } | null => {
+    const okLook = (l: Trend["looks"][number]) => { const p = PATTERNS.find((x) => x.id === (ALIAS[l.pattern] ?? l.pattern)); return !!p && live(p) && !usedPatterns.has(p.id) && !(fresh && recent.has(p.id)); };
     // trend gắn dịp lễ chỉ khi dịp đó đang / sắp diễn ra (cùng danh sách dịp của lượt tạo mẫu)
     const pool = radarTrends.filter((t) => !usedRadar.has(t.id) && (!t.occasion || occs.some((o) => o.id === t.occasion)) && t.looks.some(okLook));
     if (!pool.length) return null;
@@ -1425,7 +1435,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     return d && { d, id: tr.id };
   };
 
-  const poolCand = (kind: Slot, tries: number, st: Steer): EngineDesign | null => {
+  const poolCand = (kind: Slot, tries: number, st: Steer, fresh: boolean): EngineDesign | null => {
     const need = st.need;
     let occ: OccasionInfo | null = null, style: "korean" | "trend" | null = null;
     const mixOf = (o: OccasionInfo) => PATTERNS.find((p) => p.id === `mix-${o.id}` && live(p) && !usedPatterns.has(p.id));
@@ -1456,6 +1466,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     else if (need.includes("metal")) { const f = pool.filter((p) => METAL_DOM.has(p.id) || p.finishes.includes("chrome")); if (f.length) pool = f; }
     // lượt đã đủ 2 mẫu nền trong / nude → bỏ hoạ tiết bắt buộc nền trong (French, má hồng…) cho ô này
     if (st.avoidNude) { const f = pool.filter((p) => ROLES[p.id]?.base !== "sheer"); if (f.length) pool = f; }
+    if (fresh) { const f = pool.filter((p) => !recent.has(p.id)); if (f.length) pool = f; }
     if (!pool.length) return null;
     let pat = pick(r, pool);
     // Hashtag đang lên khớp hoạ tiết → ưu tiên (1/3 số lần), nếu hoạ tiết đó hợp ô này.
@@ -1505,8 +1516,8 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
       const lvl = Math.floor(tries / 60); // nới dần luật mềm khi bí (xem accept)
       const kind: Slot = slot === "radar" && (!radarTrends.length || tries >= 30) ? (tries % 2 ? "trend" : "korean") : slot;
       let d: EngineDesign | null = null, rid: string | null = null;
-      if (kind === "radar") { const c = radarCand(st); if (c) { d = c.d; rid = c.id; } }
-      else d = poolCand(kind, tries, st);
+      if (kind === "radar") { const c = radarCand(st, lvl < 2); if (c) { d = c.d; rid = c.id; } }
+      else d = poolCand(kind, tries, st, lvl < 2);
       if (d && accept(d, lvl)) { made = d; if (rid) usedRadar.add(rid); }
     }
     if (!made) continue;

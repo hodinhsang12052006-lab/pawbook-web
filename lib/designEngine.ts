@@ -243,6 +243,10 @@ const LINER_BRUSH = m("Cọ nét mảnh 7–9mm", "7–9mm liner brush", "1 cây
 const DOT = m("Cây chấm bi (dotting tool)", "Dotting tool", "1 cây");
 const isMai = (a: Color, b: Color) => a.hex === COLORS.lemon.hex || b.hex === COLORS.lemon.hex;
 const ACC = s("ngón áp út và ngón trỏ", "ring and index fingers");
+// Tên phải nói đúng cái khách thấy: French / nền trong mà chọn hiệu ứng chrome thì cả bộ được tráng (nền sáng → ánh ngọc
+// trai kiểu glazed) — ghi rõ vào tên, không để tên "French micro" mà ảnh ra móng tráng gương.
+const gz = (t: Bi, { finish, c1 }: PCtx): Bi => finish !== "chrome" ? t
+  : Lof(c1.hex) > 70 ? s(`${t.vi} tráng ngọc trai`, `${t.en} with a pearl glaze`) : s(`${t.vi} tráng gương`, `${t.en} with a chrome glaze`);
 // Bộ phối theo dịp (mix-*): bộ máy (lib/tryon/sets) tự chia vai từng móng; ở đây chỉ là tên + công thức cho thợ.
 const MIX_NAME: Record<"halloween" | "christmas" | "valentine" | "fall" | "newyear", { vi: string; en: string; motifVi: string; motifEn: string; heroVi: string; heroEn: string }> = {
   halloween: { vi: "Halloween", en: "Halloween", motifVi: "ma, dơi, mạng nhện + móng trơn", motifEn: "ghost, bats, web plus a solid nail", heroVi: "ma / dơi / bí ngô", heroEn: "ghost, bat or pumpkin" },
@@ -268,7 +272,7 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "french", occasions: "any", finishes: ["glossy", "chrome", "cateye"], minutes: 15, price: 8, difficulty: 2, design: true,
-    title: ({ c1, c2 }) => s(`French ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} French on ${c1.en}`),
+    title: (p) => gz(s(`French ${p.c2.vi} nền ${p.c1.vi}`, `${cap(p.c2.en)} French on ${p.c1.en}`), p),
     why: s("French kiểu mới (đầu màu, viền mảnh) đang thay French trắng cổ điển", "modern French tips (colored, micro-thin) are replacing the classic white French"),
     materials: ({ c2, sys }) => [sys.id === "dip" ? m(`Bột dip ${c2.vi} (đầu French)`, `${cap(c2.en)} dip powder (French tips)`, "1 hũ") : m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), m("Cọ French dẹt", "Flat French brush", "1 cây")],
     steps: ({ c2, sys }) => [sys.id === "dip" ? s(`Nhúng nghiêng đầu móng vào bột ${c2.vi} tạo đường French`, `Dip the tips at an angle into ${c2.en} powder for the French line`) : s(`Kẻ đầu French ${c2.vi} mảnh, đều 2 bên, hơ đèn`, `Paint a thin, even ${c2.en} French tip, cure`)],
@@ -284,7 +288,7 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "aura", occasions: ["spring", "summer", "valentine", "prom", "any"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 2, design: true,
-    title: ({ c1, c2 }) => s(`Aura ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} aura on ${c1.en}`),
+    title: (p) => gz(s(`Aura ${p.c2.vi} nền ${p.c1.vi}`, `${cap(p.c2.en)} aura on ${p.c1.en}`), p),
     why: s("móng aura (vầng sáng giữa móng) đang là trend lên nhanh trên mạng xã hội", "aura nails (a glowing center blush) are one of the fastest-rising trends on social"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (vầng aura)`, `${cap(c2.en)} gel (aura)`), m("Mút nhỏ hoặc máy phun airbrush", "Small sponge or airbrush", "1 cái")],
     steps: ({ c2 }) => [s(`Chấm tán ${c2.vi} thành vầng tròn mờ giữa móng, hơ đèn; tán thêm lớp 2 cho đậm tâm`, `Dab ${c2.en} into a soft circle in the center, cure; add a second pass for a deeper core`)],
@@ -726,7 +730,7 @@ export const PATTERNS: Pattern[] = [
   // (French là nhóm mẫu được đặt nhiều nhất ở tiệm Mỹ; màu đậm của bảng màu dồn lên đầu móng, không nằm dưới đầu trắng)
   {
     id: "fr-micro", occasions: ["any", "korean", "trend", "fall", "wedding"], finishes: ["glossy", "chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 1, design: true,
-    title: ({ c1, c2 }) => s(`French micro ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} micro French on ${c1.en}`),
+    title: (p) => gz(s(`French micro ${p.c2.vi} nền ${p.c1.vi}`, `${cap(p.c2.en)} micro French on ${p.c1.en}`), p),
     why: s("micro French (đầu móng mảnh 1–2mm) là kiểu French được đặt nhiều nhất bây giờ — tinh tế, hợp cả móng ngắn", "the micro French (a 1–2 mm tip line) is the most-booked French right now — subtle and great even on short nails"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), m("Cọ nét mảnh hoặc mút silicone in French", "Liner brush or silicone French stamper", "1 cây")],
     steps: ({ c2 }) => [s(`Kẻ đường French ${c2.vi} thật mảnh (1–2mm) ôm sát mép móng, 2 bên đều nhau, hơ đèn`, `Paint a very thin (1–2 mm) ${c2.en} French line hugging the free edge, even on both sides, cure`)],
@@ -734,7 +738,7 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "fr-deep", occasions: ["any", "trend", "wedding", "valentine"], finishes: ["glossy", "chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
-    title: ({ c1, c2 }) => s(`French sâu ${c2.vi} nền ${c1.vi}`, `Deep ${c2.en} French on ${c1.en}`),
+    title: (p) => gz(s(`French sâu ${p.c2.vi} nền ${p.c1.vi}`, `Deep ${p.c2.en} French on ${p.c1.en}`), p),
     why: s("French đường cười sâu (2 bên kéo xuống gần nửa móng) làm móng thon dài — kiểu French sang của tiệm Mỹ", "a deep smile-line French (sides reaching halfway down) makes nails look long and slim — the upscale salon French"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), m("Cọ French dẹt", "Flat French brush", "1 cây")],
     steps: ({ c2 }) => [s(`Kẻ đường cười French ${c2.vi} sâu: giữa móng cao, 2 bên kéo xuống ôm mép móng, tô kín đầu móng, hơ đèn`, `Paint a deep ${c2.en} smile line — high in the centre, sides sweeping down along the sidewalls — fill the tip, cure`)],
@@ -742,7 +746,7 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "fr-v", occasions: ["trend", "halloween", "prom", "newyear"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 8, difficulty: 2, design: true,
-    title: ({ c1, c2 }) => s(`French chữ V ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} V-French on ${c1.en}`),
+    title: (p) => gz(s(`French chữ V ${p.c2.vi} nền ${p.c1.vi}`, `${cap(p.c2.en)} V-French on ${p.c1.en}`), p),
     why: s("French chữ V (đầu móng nhọn hình mũi tên) làm móng dài và sắc hơn — hợp dáng hạnh nhân, coffin, nhọn", "the V-French (a pointed chevron tip) makes nails look longer and sharper — made for almond, coffin and stiletto"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), LINER_BRUSH],
     steps: ({ c2 }) => [s(`Kẻ 2 đường chéo ${c2.vi} từ 2 mép móng gặp nhau ở giữa thành chữ V, tô kín phần đầu móng, hơ đèn`, `Draw two ${c2.en} diagonals from each sidewall meeting in the centre as a V, fill the tip, cure`)],
@@ -816,7 +820,7 @@ export const PATTERNS: Pattern[] = [
   // ---------------- Nail Hàn: syrup / má hồng / clean girl (nền trong, bóng như kính) ----------------
   {
     id: "syrup", occasions: ["korean", "trend", "summer"], finishes: ["glossy", "chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 1, design: true, ownColor: true,
-    title: ({ c1 }) => s(`Syrup ${c1.vi} trong veo`, `${cap(c1.en)} syrup nails`),
+    title: (p) => gz(s(`Syrup ${p.c1.vi} trong veo`, `${cap(p.c1.en)} syrup nails`), p),
     why: s("nail syrup (thạch màu trong, đậm dần về đầu móng như siro) là trend nail Hàn đang lên — nhẹ mà vẫn có màu", "syrup nails (sheer jelly colour that deepens toward the tip like syrup) are a rising Korean trend — light yet colourful"),
     materials: ({ c1 }) => [m(`Gel thạch (syrup) ${c1.vi}`, `${cap(c1.en)} syrup jelly gel`), m("Cọ dẹt tán màu", "Flat blending brush", "1 cây")],
     steps: ({ c1 }) => [s(`Quét 1 lớp thạch ${c1.vi} thật mỏng cả móng để vẫn thấy móng thật, hơ đèn`, `Brush one very thin ${c1.en} jelly coat over the whole nail so the natural nail shows, cure`), s("Quét lớp 2 chỉ ở nửa đầu móng, tán mờ ranh giới về phía chân móng cho đậm dần, hơ đèn", "Add a second coat only on the tip half, feathering it toward the cuticle so the colour deepens, cure")],
@@ -824,7 +828,7 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "blush", occasions: ["korean", "valentine", "spring"], finishes: ["glossy", "chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 6, difficulty: 1, design: true,
-    title: ({ c1, c2 }) => s(`Nail má hồng tông ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} blush nails on ${c1.en}`),
+    title: (p) => gz(s(`Nail má hồng tông ${p.c2.vi} nền ${p.c1.vi}`, `${cap(p.c2.en)} blush nails on ${p.c1.en}`), p),
     why: s("nail má hồng (blush) — vầng màu ửng nhẹ giữa móng trên nền trong — là kiểu Hàn \"ửng hồng tự nhiên\" đang được lưu nhiều", "blush nails — a soft flush of colour in the centre of a sheer nail — are the Korean 'natural flush' look everyone saves"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (vầng má hồng)`, `${cap(c2.en)} gel (blush)`), m("Mút nhỏ hoặc cọ tán", "Small sponge or blending brush", "1 cái")],
     steps: ({ c2 }) => [s(`Chấm tán ${c2.vi} thành vầng mờ ở giữa móng, mép tan hẳn vào nền, hơ đèn; dặm lớp 2 ở tâm`, `Dab ${c2.en} into a soft glow in the centre, edges fully blended into the base, cure; build the centre with a second pass`)],
@@ -832,7 +836,7 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "cleanmilky", occasions: ["korean", "wedding", "any"], finishes: ["glossy", "chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 1, design: true,
-    title: ({ c1, metal }) => s(`Clean girl ${c1.vi} đính hạt ${metal.vi}`, `Clean-girl ${c1.en} with ${metal.en} micro studs`),
+    title: (p) => gz(s(`Clean girl ${p.c1.vi} đính hạt ${p.metal.vi}`, `Clean-girl ${p.c1.en} with ${p.metal.en} micro studs`), p),
     why: s("kiểu \"clean girl\" — nền trong sạch sẽ + 1 điểm nhấn kim loại nhỏ — là nail tối giản khách văn phòng đặt nhiều nhất", "the 'clean girl' look — a clean sheer base with one tiny metal accent — is the minimalist set office clients book most"),
     materials: ({ metal }) => [m(`Hạt kim loại mini ${metal.vi}`, `Mini ${metal.en} studs`, "1 gói"), m("Gel dán charm", "Charm gel")],
     steps: ({ metal }) => [s(`Chấm gel dán, đặt 1 hạt ${metal.vi} nhỏ sát chân móng (3 ngón), hơ đèn 60 giây; phủ top quanh viền hạt`, `Dot charm gel and set one tiny ${metal.en} stud at the cuticle of three nails, cure 60s; top coat around the stud`)],
@@ -885,7 +889,8 @@ export const PATTERNS: Pattern[] = [
 
   // ---------------- Bộ phối theo dịp: MỖI MÓNG MỘT KIỂU (móng chính / móng phụ / móng nối), không 2 móng giống nhau ----------------
   ...(["halloween", "christmas", "valentine", "fall", "newyear"] as const).map((occ): Pattern => ({
-    id: `mix-${occ}`, occasions: occ === "fall" ? ["fall", "thanksgiving"] : [occ], finishes: ["glossy", "cateye", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 25, price: 15, difficulty: 2, design: true,
+    // chỉ bóng: chrome / mắt mèo phủ cả bộ thì móng chính vẽ tay mất nét (bộ máy tự cho móng nối làm velvet / chrome nếu cần)
+    id: `mix-${occ}`, occasions: occ === "fall" ? ["fall", "thanksgiving"] : [occ], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 25, price: 15, difficulty: 2, design: true,
     title: ({ c1, c2 }) => s(`Bộ ${MIX_NAME[occ].vi} mỗi móng một kiểu (${c1.vi} – ${c2.vi})`, `Mismatched ${MIX_NAME[occ].en} set (${c1.en} & ${c2.en})`),
     why: s(`bộ phối mỗi móng một hoạ tiết (${MIX_NAME[occ].motifVi}) là cách tiệm làm mẫu ${MIX_NAME[occ].vi} thật — có móng chính, móng phụ, không 2 móng giống hệt nhau`, `a mismatched set (${MIX_NAME[occ].motifEn}) is how real salons do ${MIX_NAME[occ].en} — one hero nail, supporting nails, no two alike`),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (hoạ tiết)`, `${cap(c2.en)} gel (art)`), m("Gel trắng đặc + gel đen vẽ nét", "Opaque white gel + black liner gel"), LINER_BRUSH, DOT],
@@ -966,7 +971,8 @@ const ROLES: Record<string, Role> = {
   doublefrench: { g: "tip", base: "sheer", shapes: ["almond", "square", "coffin"], pal: [["sheer", "black", "gold"], ["milky", "espresso", "gold"]] },
   swirl: { g: "glow", pal: [["milky", "raspberry", "gold"], ["nude", "burnt", "gold"], ["sheer", "cobalt", "silver"]] },
   milkbath: { g: "motif", pal: [["milky", "hotPink", "gold"], ["milky", "raspberry", "gold"], ["milky", "coral", "gold"]] },
-  leopard: { g: "motif", on: K, shapes: SH4, ok: ([a, b]) => a !== b, pal: [["nude", "caramel", "gold"], ["caramel", "espresso", "gold"], ["babyPink", "raspberry", "roseGold"]] },
+  // da báo: đốm là tông ấm (caramel, nâu, đỏ, hồng) — đốm trắng sữa trên mocha nhìn như vết sơn bong, không ra da báo
+  leopard: { g: "motif", on: K, shapes: SH4, ok: ([a, b]) => a !== b && ["brown", "orange", "red", "pink"].includes(hueFamily(hx(b))), pal:[["nude", "caramel", "gold"], ["caramel", "espresso", "gold"], ["babyPink", "raspberry", "roseGold"]] },
   checker: { g: "glow", shapes: SHORT, pal: [["milky", "cherry", "gold"], ["milky", "black", "silver"], ["bone", "coffee", "gold"]] },
   cherry: { g: "motif", on: "#c3101c", shapes: SH4, pal: [["milky", "cherry", "gold"], ["sheer", "cherry", "gold"], ["nude", "cherry", "gold"]] },
   // ren: đặt ở đầu móng / góc, ren trắng trên nền trong (không quấn ngang thân như vớ #42)
@@ -975,7 +981,8 @@ const ROLES: Record<string, Role> = {
   velvet: { g: "tone", base: "dark", shapes: SH5, pal: [["plumNoir", "milky", "gold"], ["redVelvet", "milky", "gold"], ["espresso", "milky", "gold"]] },
   ghost: { g: "motif", on: W, pal: [["black", "milky", "silver"], ["burnt", "milky", "gold"], ["plumNoir", "milky", "silver"]] },
   jackolantern: { g: "motif", on: "#ef8227", pal: [["black", "milky", "gold"], ["nude", "black", "gold"]] },
-  bats: { g: "motif", on: "metal", shapes: SH5, pal: [["aubergine", "milky", "silver"], ["black", "milky", "gold"]] },
+  // dơi chỉ bạc: dơi vàng trên nền đen nhìn thành vệt vàng nhoè (soi lượt sắp ra 25/10)
+  bats: { g: "motif", on: "metal", shapes: SH5, ok: ([, , mt]) => mt === "silver", pal: [["aubergine", "milky", "silver"], ["black", "milky", "silver"], ["mulledWine", "milky", "silver"]] },
   candycorn: { g: "tone" },
   skull: { g: "motif", on: W, shapes: SH5, pal: [["black", "milky", "silver"], ["mulledWine", "milky", "silver"]] },
   eyeball: { g: "motif", on: W },
@@ -993,7 +1000,7 @@ const ROLES: Record<string, Role> = {
   "fr-pinkwhite": { g: "tone", base: "sheer", pal: [["pinkNude", "white", "gold"], ["sheer", "white", "silver"]] },
   "fr-halfmoon": { g: "tip", base: "sheer", pal: [["nude", "burgundy", "gold"], ["milky", "black", "gold"], ["sheer", "espresso", "gold"]] },
   "fr-skittle": { g: "tip", base: "sheer", pal: [["sheer", "coffee", "gold"], ["sheer", "burgundy", "gold"], ["milky", "sage", "gold"], ["sheer", "hotPink", "gold"]] },
-  "fr-glitter": { g: "tone", base: "sheer", pal: [["sheer", "gold", "gold"], ["nude", "gold", "gold"], ["milky", "silver", "silver"]] },
+  "fr-glitter": { g: "tone", base: "sheer", ok: ([, , mt]) => mt !== "pearl", pal: [["sheer", "gold", "gold"], ["nude", "gold", "gold"], ["milky", "silver", "silver"]] },
   "fr-santa": { g: "tip", base: "sheer", pal: [["sheer", "cherry", "gold"], ["milky", "redVelvet", "gold"]] },
   "fr-candycane": { g: "tip", base: "sheer", pal: [["milky", "cherry", "gold"], ["sheer", "redVelvet", "gold"]] },
   "fr-tortoise": { g: "tone", base: "sheer", pal: [["sheer", "caramel", "gold"], ["nude", "caramel", "gold"]] },
@@ -1002,14 +1009,17 @@ const ROLES: Record<string, Role> = {
   blush: { g: "glow", base: "sheer", pal: [["sheer", "hotPink", "pearl"], ["sheer", "raspberry", "pearl"], ["nude", "persimmon", "gold"]] },
   cleanmilky: { g: "tone", base: "sheer", pal: [["milky", "pearl", "gold"], ["sheer", "milky", "gold"], ["pinkNude", "milky", "pearl"]] },
   // chrome màu / nhũ loang
-  colorchrome: { g: "tone", shapes: SH5, pal: [["espresso", "espresso", "gold"], ["caramel", "caramel", "gold"], ["pewter", "pewter", "silver"], ["mulledWine", "mulledWine", "gold"], ["emerald", "emerald", "gold"], ["cherry", "cherry", "gold"]] },
+  // chrome màu cần nền có sắc (trung–đậm, hoặc màu rực như aqua / san hô) — nude / pastel nhạt tráng gương ra bạc be
+  // nhạt, không còn "giữ màu" (soi lượt 25/10: "Chrome nude be" ra sọc bạc); xám thiếc / champagne là màu kim loại sẵn
+  colorchrome: { g: "tone", shapes: SH5, ok: ([a]) => a === "pewter" || a === "champagne" || (chroma(hx(a)) >= 12 && Lof(hx(a)) < 62) || chroma(hx(a)) >= 28, pal: [["espresso", "espresso", "gold"], ["caramel", "caramel", "gold"], ["pewter", "pewter", "silver"], ["mulledWine", "mulledWine", "gold"], ["emerald", "emerald", "gold"], ["cherry", "cherry", "gold"]] },
   glitterfade: { g: "tone", shapes: SH5, ok: ([, , mt]) => mt !== "pearl", pal: [["sheer", "gold", "gold"], ["black", "silver", "silver"], ["nude", "roseGold", "roseGold"], ["cherry", "gold", "gold"]] },
   // hoạ tiết vẽ tay mới
   holly: { g: "motif", on: "#1f5a32", pal: [["milky", "redVelvet", "gold"], ["bone", "cherry", "gold"], ["sheer", "redVelvet", "gold"]] },
   ornament: { g: "motif", pal: [["milky", "redVelvet", "gold"], ["sheer", "emerald", "gold"], ["redVelvet", "milky", "gold"]] },
   gelflower: { g: "relief", base: "sheer", pal: [["sheer", "milky", "pearl"], ["milky", "babyPink", "pearl"], ["nude", "milky", "gold"], ["sheer", "lavender", "pearl"]] },
   // bộ phối theo dịp: 2 màu chính phải tách nhau (móng chính / móng nối)
-  "mix-halloween": { g: "glow", shapes: SH5, pal: [["black", "pumpkin", "silver"], ["milky", "black", "silver"], ["plumNoir", "bone", "silver"]] },
+  // Halloween "moody luxe": nền tối, hoặc trắng ngà / trắng sữa + đen — không nền cam bí ngô dưới ma / đầu lâu
+  "mix-halloween": { g: "glow", shapes: SH5, ok: ([a]) => Lof(hx(a)) < 30 || a === "bone" || a === "milky", pal: [["black", "pumpkin", "silver"], ["milky", "black", "silver"], ["plumNoir", "bone", "silver"]] },
   "mix-christmas": { g: "glow", pal: [["redVelvet", "milky", "gold"], ["milky", "redVelvet", "gold"], ["emerald", "milky", "gold"]] },
   "mix-valentine": { g: "glow", pal: [["sheer", "cherry", "gold"], ["milky", "raspberry", "roseGold"], ["cherry", "milky", "gold"]] },
   "mix-fall": { g: "glow", pal: [["espresso", "caramel", "gold"], ["bone", "cinnamon", "gold"], ["mulledWine", "nude", "gold"]] },
@@ -1052,7 +1062,7 @@ export function paletteOk(pid: string, colors: [string, string, string]): boolea
   const k = forcedKeys(pat.id, colors as [CK, CK, CK]);
   const [c1, c2, mt] = k.map(hx);
   if (role.base === "sheer" && !SHEER.includes(k[0])) return false;
-  if (role.base === "dark" && Lof(c1) >= 50) return false;
+  if (role.base === "dark" && Lof(c1) >= 45) return false;
   if (pat.badBase?.includes(k[0]) || !metalOk(k[0], k[2]) || (role.ok && !role.ok(k))) return false;
   if (role.g === "tone") return true;
   const fg = role.on === "metal" ? mt : !role.on || role.on === "c2" ? c2 : role.on, bg = role.vs ?? c1;
@@ -1060,12 +1070,12 @@ export function paletteOk(pid: string, colors: [string, string, string]): boolea
   return contrastOk(fg, bg, GATE_MIN[role.g]);
 }
 /** Hiệu ứng hợp nền: nhũ chỉ ở French nhũ / nhũ loang / baby boomer; nhám chỉ nền trung–tối (L* < 55, nền sáng nhám
- *  nhìn như bút xoá #1); mắt mèo / velvet chỉ nền tối (L* < 50 — nền trắng ra móng trắng trơn). */
+ *  nhìn như bút xoá #1); mắt mèo / velvet chỉ nền tối (L* < 45 — nền sáng ra móng trắng trơn, dải sáng không đọc được). */
 const GLITTER_OK = new Set(["glitterfade", "fr-glitter", "babyboomer"]);
 export function finishOk(pid: string, c1hex: string, f: Finish): boolean {
   if (f === "glitter") return GLITTER_OK.has(pid);
   if (f === "matte") return Lof(c1hex) < 55;
-  if (f === "cateye") return Lof(c1hex) < 50;
+  if (f === "cateye") return Lof(c1hex) < 45;
   return true;
 }
 /** Dáng móng được phép của hoạ tiết: dáng nhọn chỉ cho mẫu trơn / mắt mèo / aurora / chrome màu / French V / Halloween
@@ -1326,10 +1336,11 @@ const palKey = (occId: string, market: "US" | "AU") => (market === "AU" && occId
 type Slot = "easy" | "radar" | "korean" | "occasion" | "trend";
 type Need = (typeof QUOTA)[number];
 const SLOT_PLAN: Slot[] = ["easy", "radar", "korean", "occasion", "radar", "trend"];
-const BASIC_OK = new Set(["solid", "french", "ombre", "aura", "fr-micro", "colorchrome", "glitterfade"]);
+// màu trơn (solid) chỉ ra từ radar trend (có nguồn) hoặc làm móng nối trong bộ phối — không tự bốc vào ô thường (≤ 1 mẫu trơn / 6)
+const BASIC_OK = new Set(["french", "ombre", "aura", "lines", "fr-micro", "colorchrome", "glitterfade"]);
 // Hoạ tiết "chung" ghép được với mọi dịp lễ (với bảng màu của dịp đó) — French biến tấu, chrome màu, nhũ loang, velvet…
-const OCCASION_BASICS = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-skittle", "fr-glitter", "colorchrome", "glitterfade", "velvet", "aura", "french", "chromefrench", "ombre", "solid", "doublefrench", "foil", "gemcluster"];
-const EASY_FIRST = new Set(["fr-micro", "syrup", "glitterfade"]);
+const OCCASION_BASICS = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-skittle", "fr-glitter", "colorchrome", "glitterfade", "velvet", "aura", "french", "chromefrench", "ombre", "doublefrench", "foil", "gemcluster"];
+const EASY_FIRST = new Set(["fr-micro", "syrup", "cleanmilky"]);
 
 interface ComposeOpts {
   market: "US" | "AU"; occ: OccasionInfo | null; style?: "korean" | "trend" | null; easy?: boolean; need: Need[];
@@ -1348,7 +1359,10 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   // lượt còn thiếu nền tối / màu đá quý mà sắp hết ô → ưu tiên bảng màu lấp chỉ tiêu đó (bảng của dịp không có thì mượn
   // bảng mặc định của hoạ tiết / bảng trend); đủ nude rồi → nền có màu; khác họ màu mẫu liền trước
   const wants = (k: [CK, CK, CK]) => o.need.some((q) => tr(k)[q]);
-  if (o.need.length && !o.strict && !cands.some(wants)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...PALETTES.trend]).filter(wants); if (ext.length) cands = ext; }
+  // (bảng lấp chỉ tiêu mà cùng họ màu với mẫu liền trước — VD lượt cần màu đá quý, bảng nail Hàn chỉ có mâm xôi đỏ ngay
+  // sau mẫu đỏ rượu — cũng mượn: lục bảo / cobalt…)
+  const good = (k: [CK, CK, CK]) => wants(k) && (!o.avoidFam || tr(k).fam !== o.avoidFam);
+  if (o.need.length && !o.strict && !cands.some(good)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...PALETTES.trend]).filter(good); if (ext.length) cands = ext; }
   for (const f of [o.need.length ? wants : null, o.avoidNude ? (k: [CK, CK, CK]) => !tr(k).nude : null, o.avoidWhite ? (k: [CK, CK, CK]) => !tr(k).white : null, o.avoidFam ? (k: [CK, CK, CK]) => tr(k).fam !== o.avoidFam : null]) {
     if (!f) continue;
     const w = cands.filter(f);
@@ -1394,7 +1408,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   // RADAR TREND: 2/6 ô lấy từ trend đang lên trong mùa (theo thị trường: Úc ngược mùa) — xoay vòng theo ngày
   const radarTrends = input.radar === false ? [] : activeTrends(new Date(`${input.date}T12:00:00Z`), input.market);
 
-  type Steer = { need: Need[]; avoidNude: boolean; avoidWhite: boolean; avoidFam?: string };
+  // mix: ô dịp lễ lần này thử bộ phối mỗi móng một kiểu (3/4 số lần → ~60% ô dịp lễ ra bộ phối: đủ ≥ 50% mà 3 lượt/ngày
+  // không lượt nào cũng 1 tên "Bộ … mỗi móng một kiểu")
+  type Steer = { need: Need[]; avoidNude: boolean; avoidWhite: boolean; avoidFam?: string; mix?: boolean };
   const radarCand = (st: Steer): { d: EngineDesign; id: string } | null => {
     const okLook = (l: Trend["looks"][number]) => { const p = PATTERNS.find((x) => x.id === (ALIAS[l.pattern] ?? l.pattern)); return !!p && live(p) && !usedPatterns.has(p.id); };
     // trend gắn dịp lễ chỉ khi dịp đó đang / sắp diễn ra (cùng danh sách dịp của lượt tạo mẫu)
@@ -1413,7 +1429,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     const need = st.need;
     let occ: OccasionInfo | null = null, style: "korean" | "trend" | null = null;
     const mixOf = (o: OccasionInfo) => PATTERNS.find((p) => p.id === `mix-${o.id}` && live(p) && !usedPatterns.has(p.id));
-    if (kind === "occasion") occ = occs.find((o) => mixOf(o)) ?? occs[(Math.floor(out.length / 6) + Math.floor(tries / 20)) % occs.length];
+    // ô dịp lễ: lấy bộ phối thì lấy dịp có bộ phối; không thì xoay vòng các dịp (bảng màu Valentine toàn đỏ / hồng — xoay
+    // sang Tết / xuân mới tránh được 2 ô đỏ liền nhau)
+    if (kind === "occasion") occ = (st.mix && tries < 40 ? occs.find((o) => mixOf(o)) : undefined) ?? occs[(Math.floor(out.length / 6) + Math.floor(tries / 20)) % occs.length];
     else if (kind === "easy" && occs.length) occ = occs[Math.floor(tries / 20) % occs.length];
     else style = kind === "korean" ? "korean" : kind === "trend" ? "trend" : r() < 0.5 ? "korean" : "trend";
     const occId = occ?.id ?? style!;
@@ -1423,9 +1441,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
       const special = PATTERNS.filter((p) => live(p) && tagged(p) && !p.id.startsWith("mix-"));
       const basics = PATTERNS.filter((p) => live(p) && OCCASION_BASICS.includes(p.id) && !special.includes(p));
       const mix = mixOf(occ);
-      // ô dịp lễ: bộ phối mỗi móng một kiểu trước (≥ 50% ô dịp lễ); còn lại 45% hoạ tiết riêng của dịp, 55% hoạ tiết
+      // ô dịp lễ: bộ phối mỗi móng một kiểu (≥ 50% ô dịp lễ, xem st.mix); còn lại 45% hoạ tiết riêng của dịp, 55% hoạ tiết
       // chung trên bảng màu của dịp (French biến tấu, chrome màu, nhũ loang, velvet…) — không ngập sticker Halloween
-      if (kind === "occasion" && mix && tries < 40) pool = [mix];
+      if (kind === "occasion" && mix && st.mix && tries < 40) pool = [mix];
       else pool = special.length && r() < 0.45 ? special : [...basics, ...special.filter((p) => !OCC_MOTIF.has(p.id))];
     } else pool = PATTERNS.filter((p) => live(p) && (tagged(p) || BASIC_OK.has(p.id)));
     if (kind === "easy") {
@@ -1450,18 +1468,22 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     return compose(r, pat, PALETTES[palKey(occId, input.market)] ?? PALETTES.any, { market: input.market, occ, style, easy: kind === "easy", ...st, tag });
   };
 
+  // Nới luật theo bậc khi bí (mỗi bậc 60 lần thử): 0 đủ luật · 1 bỏ "≤ 2 mẫu / họ màu" · 2 bỏ né 3 lượt trước ·
+  // 3 bỏ chỉ tiêu mềm (nude / trắng / trơn / 2 ô liền nhau cùng họ màu) · 4 cuối cùng mới cho trùng hoạ tiết trong lượt.
+  // Trần hoạ tiết dịp lễ (≤ 2 / 6) giữ tới bậc 4 — lượt nào cũng không ngập sticker.
   const accept = (d: EngineDesign, lvl: number): boolean => {
     const k = out.length, p6 = k % 6, block = out.slice(k - p6), full = n - (k - p6) >= 6;
     if (usedTitles.has(d.title.vi.toLowerCase())) return false;
     const fam = MOTIF_FAM[d.pattern];
-    if (lvl < 3 && (usedPatterns.has(d.pattern) || (fam && usedFams.has(fam)))) return false;
+    if (lvl < 4 && (usedPatterns.has(d.pattern) || (fam && usedFams.has(fam)))) return false;
     if (lvl < 2 && (recent.has(d.pattern) || (fam && recentFams.has(fam)))) return false;
     const T = designTraits(d), bt = block.map(designTraits);
+    if (lvl < 4 && T.motif && bt.filter((x) => x.motif).length >= 2) return false;
     if (lvl < 3) {
       if (full && QUOTA.filter((q) => !T[q] && !bt.some((x) => x[q])).length > 5 - p6) return false;
-      if ((T.nude && bt.filter((x) => x.nude).length >= 2) || (T.white && bt.some((x) => x.white)) || (T.motif && bt.filter((x) => x.motif).length >= 2) || (T.plain && bt.some((x) => x.plain))) return false;
+      if ((T.nude && bt.filter((x) => x.nude).length >= 2) || (T.white && bt.some((x) => x.white)) || (T.plain && bt.some((x) => x.plain))) return false;
+      if (k > 0 && designTraits(out[k - 1]).fam === T.fam) return false;
     }
-    if (lvl < 2 && k > 0 && designTraits(out[k - 1]).fam === T.fam) return false;
     if (lvl < 1 && bt.filter((x) => x.fam === T.fam).length >= 2) return false;
     return true;
   };
@@ -1477,10 +1499,10 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     // French gần như luôn là nền trong (nude) → đã có 1 mẫu nude mà chưa có French thì ô này nhắm French luôn (còn đúng 1 suất nude)
     const nudeN = bt.filter((x) => x.nude).length;
     const need = unmet.length >= 5 - p6 ? unmet : unmet.includes("french") && nudeN >= 1 ? (["french"] as Need[]) : [];
-    const st: Steer = { need, avoidNude: nudeN >= 2, avoidWhite: bt.some((x) => x.white), avoidFam: k ? designTraits(out[k - 1]).fam : undefined };
+    const st: Steer = { need, avoidNude: nudeN >= 2, avoidWhite: bt.some((x) => x.white), avoidFam: k ? designTraits(out[k - 1]).fam : undefined, mix: r() < 0.75 };
     let made: EngineDesign | null = null;
-    for (let tries = 0; !made && tries < 240; tries++) {
-      const lvl = tries < 60 ? 0 : tries < 120 ? 1 : tries < 180 ? 2 : 3; // nới dần luật mềm khi bí
+    for (let tries = 0; !made && tries < 300; tries++) {
+      const lvl = Math.floor(tries / 60); // nới dần luật mềm khi bí (xem accept)
       const kind: Slot = slot === "radar" && (!radarTrends.length || tries >= 30) ? (tries % 2 ? "trend" : "korean") : slot;
       let d: EngineDesign | null = null, rid: string | null = null;
       if (kind === "radar") { const c = radarCand(st); if (c) { d = c.d; rid = c.id; } }

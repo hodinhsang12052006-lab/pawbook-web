@@ -65,6 +65,24 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "Milk bath hoa hồng", colors: ["#f8fafc", "#f9a8d4", "#d4af37"], finish: "glossy", pattern: "milkbath", seed: 55 },
   { name: "Phù thuỷ tím viền vàng", colors: ["#3b1f3a", "#ffffff", "#d4af37"], finish: "cateye", pattern: "witchy", seed: 56 },
   { name: "Ren trắng nền hồng", colors: ["#f2c4c4", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "lace", seed: 57 },
+  // hiệu ứng hoàn thiện (A3): chrome màu giữ sắc nền, nhũ loang, mắt mèo dải cong + hạt kim loại, velvet, aurora
+  { name: "A3 Chrome mận (giữ màu mận)", colors: ["#4a1d3f", "#4a1d3f", "#c0c0c0"], finish: "chrome", pattern: "solid", seed: 70 },
+  { name: "A3 Tím mận đính đá chrome", colors: ["#581c87", "#ffffff", "#c0c0c0"], finish: "chrome", pattern: "gems", seed: 71 },
+  { name: "A3 Chrome màu nâu chocolate", colors: ["#3b2418", "#3b2418", "#d4af37"], finish: "chrome", pattern: "colorchrome", seed: 72 },
+  { name: "A3 Chrome màu caramel", colors: ["#b45309", "#b45309", "#d4af37"], finish: "chrome", pattern: "colorchrome", seed: 73 },
+  { name: "A3 Chrome màu hồng tráng ngọc trai", colors: ["#f4c7cf", "#f5f0e8", "#f5f0e8"], finish: "chrome", pattern: "colorchrome", seed: 74 },
+  { name: "A3 Nhũ loang vàng nền nude", colors: ["#f6d5d0", "#d4af37", "#d4af37"], finish: "glitter", pattern: "glitterfade", seed: 75 },
+  { name: "A3 Nhũ loang bạc nền đen", colors: ["#151314", "#c0c0c0", "#c0c0c0"], finish: "glitter", pattern: "glitterfade", seed: 78 },
+  { name: "A3 Đỏ phủ nhũ vàng", colors: ["#b3122e", "#ffffff", "#d4af37"], finish: "glitter", pattern: "solid", seed: 76 },
+  { name: "A3 Baby boomer nhũ", colors: ["#f2c4c4", "#f8fafc", "#c0c0c0"], finish: "glitter", pattern: "babyboomer", seed: 77 },
+  { name: "A3 Mắt mèo đỏ rượu", colors: ["#5a1a2a", "#ffffff", "#d4af37"], finish: "cateye", pattern: "solid", seed: 80 },
+  { name: "A3 Mắt mèo 9D đen bạc", colors: ["#151314", "#ffffff", "#c0c0c0"], finish: "cateye", pattern: "solid", seed: 81, cat: "9d" },
+  { name: "A3 Mắt mèo chấm bi tím mận", colors: ["#3e1530", "#f8fafc", "#c0c0c0"], finish: "cateye", pattern: "polka", seed: 82 },
+  { name: "A3 Velvet đỏ nhung", colors: ["#7a0f1f", "#ffffff", "#d4af37"], finish: "cateye", pattern: "velvet", seed: 83 },
+  { name: "A3 Velvet navy", colors: ["#1f2a44", "#ffffff", "#c0c0c0"], finish: "cateye", pattern: "velvet", seed: 84 },
+  { name: "A3 Mắt mèo aurora", colors: ["#111111", "#ffffff", "#c0c0c0"], finish: "cateye", pattern: "auroracat", seed: 85 },
+  { name: "A3 Trắng sữa tráng gương", colors: ["#f2ede6", "#f2ede6", "#c0c0c0"], finish: "chrome", pattern: "solid", seed: 86 },
+  { name: "A3 Chrome bạc gương", colors: ["#c0c0c0", "#c0c0c0", "#c0c0c0"], finish: "chrome", pattern: "solid", seed: 87 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

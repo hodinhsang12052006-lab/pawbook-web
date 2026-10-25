@@ -1311,7 +1311,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const LxB = side * 0.55, LyB = 0.42 * upS, LzB = 0.72, Ln = Math.hypot(LxB, LyB, LzB);
     const L3 = [LxB / Ln, LyB / Ln, LzB / Ln], H3n = Math.hypot(L3[0], L3[1], L3[2] + 1), H3 = [L3[0] / H3n, L3[1] / H3n, (L3[2] + 1) / H3n];
     const glit = look.finish === "glitter" ? glitterLayer(seg, look.seed + i * 17) : null;
-    const glazed = look.finish === "chrome" && lum(base0) > 0.62; // chrome trên nền trắng / ngọc trai / champagne = glazed donut (bạc xám vẫn là gương kim loại)
+    // chrome trên nền trắng / ngọc trai / champagne = glazed donut (bạc xám vẫn là gương kim loại); thạch + chrome = thạch
+    // tráng ngọc trai (bột chrome mờ trên gel trong) — không phải gương kim loại (từng ra sọc tím xám như inox)
+    const glazed = look.finish === "chrome" && (lum(base0) > 0.62 || pat === "jelly");
     const velvet = pat === "velvet" || (look.finish === "cateye" && pat === "velvet");
     const gloss = look.finish === "matte" ? 0.06 : look.finish === "chrome" ? 1.0 : 0.9;
     const contrast = look.finish === "matte" ? 0.3 : 0.5;

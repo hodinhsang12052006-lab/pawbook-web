@@ -3,7 +3,7 @@
 // hình (ma, bí ngô…) báo chưa vẽ được (để đường cũ lo); ảnh thật sự khác nhau theo màu / hoạ tiết.
 //   npx tsx scripts/qa/design_render_unit.mts
 import { createRequire } from "node:module";
-import { renderDesignImage, canRenderPattern, HANDS } from "../../lib/designRender";
+import { renderDesignImage, canRenderPattern, HANDS, pickHand, spreadVariant } from "../../lib/designRender";
 import { PROCEDURAL } from "../../lib/tryon/patterns";
 import { PATTERN_IDS } from "../../lib/designEngine";
 const require = createRequire(import.meta.url);
@@ -41,6 +41,25 @@ ok("R4", "MỌI hoạ tiết trong máy tạo mẫu (kể cả Halloween / Gián
 const stat = async (b64: string) => { const { data } = await sharp(Buffer.from(b64, "base64")).extract({ left: 256, top: 256, width: 512, height: 512 }).raw().toBuffer({ resolveWithObject: true }); let r = 0, bl = 0; for (let i = 0; i < data.length; i += 3) { r += data[i]; bl += data[i + 2]; } return { r: r / (data.length / 3), b: bl / (data.length / 3) }; };
 const wine = await stat((await renderDesignImage(D("col", "solid", { palette: ["#7f1d1d"] }))).base64), nude = await stat((await renderDesignImage(D("col", "solid", { palette: ["#e8c4a8"] }))).base64);
 ok("R5", "Đổi màu mẫu → ảnh đổi màu thật (đỏ rượu tối hơn rõ nude trên cùng tay)", nude.r - wine.r > 8 && nude.b - wine.b > 8, JSON.stringify({ wine, nude }));
+
+// tay mẫu đa dạng: 6 mẫu 1 lượt (như cron) → 6 bàn tay khác nhau; ≥ 10 tay mẫu (5 tay cũ lặp bố cục liên tục)
+const batch = Array.from({ length: 6 }, (_, i) => D(`batch-${i}`, ["solid", "french", "leopard", "marble", "aura", "stars"][i]));
+const usedH = new Set<string>(), picked = batch.map((d) => { const v = spreadVariant(d, usedH); const f = pickHand(d, v).file; usedH.add(f); return f; });
+ok("R6", `Kho mẫu không lặp bàn tay: ${HANDS.length} tay mẫu (≥ 10, ${HANDS.filter((h) => h.long).length} tay móng dài cho bộ đắp); 1 lượt 6 mẫu dùng ${new Set(picked).size}/6 tay khác nhau`,
+  HANDS.length >= 10 && HANDS.filter((h) => h.long).length >= 4 && new Set(picked).size === 6, picked.join(","));
+
+// sơn thạch (trong) không vẽ trên tay mà móng gốc có hoạ tiết (lá / sao lộ mờ qua lớp thạch)
+const sheerHands = new Set(Array.from({ length: 60 }, (_, i) => pickHand(D(`sheer-${i}`, "jelly", { palette: ["#e75480", "#ffffff", "#c0c0c0"] })).file));
+ok("R7", "Sơn thạch trong chỉ vẽ trên tay mẫu có móng gốc trơn (không lộ hoạ tiết cũ)", [...sheerHands].every((f) => !HANDS.find((h) => h.file === f)!.deco), [...sheerHands].join(","));
+
+// bộ đắp móng nhọn vẽ được trên MỌI tay móng dài (tay mới thêm vào có khuôn móng khớp, không lỗi)
+const longFiles = HANDS.filter((h) => h.long).map((h) => h.file), extOk: string[] = [];
+for (const file of longFiles) {
+  let id = "";
+  for (let k = 0; k < 800 && !id; k++) { const d = D(`len-${k}`, "solid", { skills: ["Gel-X"], shape: "stiletto" }); if (pickHand(d).file === file) id = d.id; }
+  if (id) { const r = await renderDesignImage(D(id, "solid", { skills: ["Gel-X"], shape: "stiletto" })); if (r.hand === file) extOk.push(file); }
+}
+ok("R8", `Bộ đắp móng nhọn vẽ được trên mọi tay móng dài (${extOk.length}/${longFiles.length})`, extOk.length === longFiles.length, longFiles.filter((f) => !extOk.includes(f)).join(","));
 
 console.log(`\n${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

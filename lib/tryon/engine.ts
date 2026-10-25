@@ -937,7 +937,9 @@ function sphereMetal(tint: RGB, nx: number, ny: number, nz: number, L: number[],
   const toL = Math.max(0, rx * L[0] + ry * L[1] + rz * L[2]);
   // mặt PHẲNG / gần phẳng (đỉnh charm, nét kim loại vẽ ép phẳng) soi thẳng lên "trần softbox" → sáng ánh kim; thiếu
   // nó mặt phẳng chỉ phản chiếu ~0.2 → dơi bạc / trăng vàng / nơ ra màu xám lì như giấy (#23, #47)
-  const ceil = 0.75 * smooth(0.86, 0.985, rz);
+  // trần sáng RỘNG + mềm: mép rõ (smooth hẹp gần rz = 1) thì trên giọt chrome tròn thành 1 đĩa trắng thứ 2 giữa đỉnh
+  // cạnh điểm đèn → nhìn như con mắt
+  const ceil = 0.6 * smooth(0.72, 0.995, rz);
   // phần sáng (đèn + trần softbox) giữ F0, phần tối (phòng + mép) đậm sắc hơn — vàng tối là hổ phách, không ra kaki
   const hiE = 1.5 * Math.pow(toL, 10) + ceil, loE = 0.06 + 0.32 * smooth(-0.3, 0.9, ry * 0.7 + rx * side * 0.5) + 0.38 * Math.pow(1 - Math.max(0, nz), 2.2);
   const fm = Math.max(f0[0], f0[1], f0[2], 1e-3), dp = (c: number) => c * (c / fm) ** (0.6 * smooth(0.14, 0.34, 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2]));

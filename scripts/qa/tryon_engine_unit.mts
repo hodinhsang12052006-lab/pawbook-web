@@ -484,6 +484,35 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   ok("E25", `Hoạ tiết trend & mùa lễ tự vẽ (${accentOnly.length + allNails.length} mẫu): ma / bí ngô / dơi / trăng / mạng nhện / bông tuyết / caro / kẹo gậy / cherry / hoa / mèo đen / đầu lâu / mắt quỷ / slime / xác ướp / da hươu chỉ trên 2 móng nhấn; chấm bi mắt mèo / sọc / dâu nhúng sô-cô-la / mắt mèo aurora / kẹo bắp trên cả 4 móng`, !bad.length, bad.join(" | "));
 }
 
+// ---------------- 7c. dáng móng ĐẮP nhọn + sơn THẠCH trong
+{
+  // độ "gai": bề ngang theo dọc móng (mỗi 0.04), sau chỗ rộng nhất — chỗ gãy khúc lồi lớn nhất / bề ngang lớn nhất.
+  // Bản cũ: đầu móng thật tròn giữ nguyên + mũi nhọn mọc ra = gai hoa hồng (TB 0.17, 16/20 móng > 0.09)
+  const thorn = (seg: NailSeg) => {
+    const B = 0.04, bins = new Map<number, number>();
+    for (let k = 0; k < seg.alpha.length; k++) if (seg.alpha[k] >= 0.5) { const b = Math.floor(seg.along[k] / B); bins.set(b, (bins.get(b) ?? 0) + 1); }
+    const ks = [...bins.keys()].sort((a, b) => a - b), w = ks.map((k) => bins.get(k)!), mx = Math.max(...w), im = w.indexOf(mx);
+    let worst = 0;
+    for (let i = Math.max(im, 1); i < w.length - 1; i++) if (ks[i] * B > 0.6) worst = Math.max(worst, (w[i - 1] + w[i + 1] - 2 * w[i]) / mx);
+    return worst;
+  };
+  const th = FIXTURES.flatMap((fx) => fx.marks.map((m) => thorn(segmentNail(imgs[fx.file], mark(m), { lengthFactor: 1.25, shape: "stiletto" }))));
+  const spiky = th.filter((v) => v > 0.09).length;
+  ok("E26", `Móng đắp nhọn (stiletto): 2 cạnh thon đều từ thành móng tới đỉnh như thợ dũa — không phải đầu móng tròn + gai nhọn mọc ra (độ gãy khúc TB ${r2(avg(th))} ≤ 0.08 · ${spiky}/20 móng > 0.09, ≤ 4)`,
+    avg(th) <= 0.08 && spiky <= 4, th.map(r2).join(" "));
+
+  // THẠCH: gel trong → thấy móng thật (đầu móng trắng đục sáng hơn hẳn sơn đặc), móng cũ sơn đen KHÔNG lộ qua
+  const jBad: string[] = [];
+  for (const fx of FIXTURES) {
+    const im = imgs[fx.file], segs = segsOf[fx.file];
+    const zone = (out: Img, a0: number, a1: number) => { let sum = 0, n = 0; for (const seg of segs) for (let k = 0; k < seg.alpha.length; k++) { if (seg.alpha[k] < 1 || Math.abs(seg.across[k]) > 0.5 || seg.along[k] < a0 || seg.along[k] > a1) continue; sum += lumaAt(out, seg.x0 + (k % seg.w), seg.y0 + Math.floor(k / seg.w)); n++; } return sum / Math.max(1, n); };
+    const J = renderLook(im, segs, LOOK(["#c2185b"], "glossy", { pattern: "jelly" })), S = renderLook(im, segs, LOOK(["#c2185b"], "glossy"));
+    const tipGain = (zone(J, 0.86, 0.95) - zone(J, 0.4, 0.6)) - (zone(S, 0.86, 0.95) - zone(S, 0.4, 0.6)), lift = zone(J, 0.3, 0.7) / zone(S, 0.3, 0.7);
+    if (tipGain < 8 || lift < 1.15) jBad.push(`${fx.file}: đầu móng +${r2(tipGain)} · sáng ×${r2(lift)}`);
+  }
+  ok("E27", "Sơn thạch (jelly) trong thật: đầu móng (mép tự do) sáng hơn sơn đặc ≥ 8, cả móng sáng hơn ≥ 1.15× (thấy giường móng hồng bên dưới) — cả trên tay đang sơn ĐEN (màu cũ không lộ)", !jBad.length, jBad.join(" | "));
+}
+
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)
 {
   const t = performance.now();

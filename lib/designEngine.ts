@@ -723,9 +723,9 @@ const range = (lo: number, market: "US" | "AU") => {
 export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: OccasionInfo | null, trendTag?: string | null, radar?: { name: Bi; source: Bi } | null): EngineDesign {
   const sys = SYSTEMS.find((x) => x.id === spec.system)!;
   const pat = PATTERNS.find((x) => x.id === spec.pattern)!;
-  // dâu nhúng sô-cô-la: đầu móng LUÔN là sô-cô-la, nền là màu dâu (nền trắng / nude → đỏ dâu)
-  const LIGHT_BASE: CK[] = ["white", "pearl", "sheer", "cloudDancer", "nude", "butter", "champagne", "greige"];
-  const keys: [CK, CK, CK] = spec.pattern === "chocodip" ? [LIGHT_BASE.includes(spec.colors[0]) ? "strawberry" : spec.colors[0], "chocolate", spec.colors[2]] : spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.pattern === "babyboomer" ? ["pinkNude", "white", spec.colors[2]] : spec.pattern === "milkbath" ? ["white", spec.colors[1] === "white" ? "babyPink" : spec.colors[1], spec.colors[2]] : spec.colors;
+  // dâu nhúng sô-cô-la: đầu móng LUÔN là sô-cô-la, nền LUÔN là màu dâu (đỏ / hồng) — nền navy, rêu, nâu… → đỏ dâu
+  const BERRY: CK[] = ["strawberry", "cherry", "raspberry", "babyPink", "pinkNude"];
+  const keys: [CK, CK, CK] = spec.pattern === "chocodip" ? [BERRY.includes(spec.colors[0]) ? spec.colors[0] : "strawberry", "chocolate", spec.colors[2]] : spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.pattern === "babyboomer" ? ["pinkNude", "white", spec.colors[2]] : spec.pattern === "milkbath" ? ["white", spec.colors[1] === "white" ? "babyPink" : spec.colors[1], spec.colors[2]] : spec.colors;
   const [c1, c2, metal] = keys.map((k) => COLORS[k]) as [Color, Color, Color];
   const ctx: PCtx = { c1, c2, metal, sys, finish: spec.finish };
   const shapeName = SHAPE_NAME[spec.shape];

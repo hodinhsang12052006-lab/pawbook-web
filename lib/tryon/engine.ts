@@ -435,7 +435,30 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
   const natL = fit.s1 - fit.s0;
   const Ltot = fit.s0 + natL * lf;
   const ext = lf > 1.02;
-  const extHalf = (s: number) => (ext && s >= fit.s0 + 0.5 * natL ? halfWidthAt(shape, s - fit.s0, Ltot - fit.s0, fitBody(fit, Math.min(s, fit.s1), L)) : 0);
+  // dáng móng ĐẮP = BAO LỒI của móng thật (cả đầu móng bo tròn) + dáng đầu móng mới: 2 cạnh thon THẲNG tiếp tuyến từ
+  // thành móng tới đỉnh — như thợ dũa thật. (Chỉ lấy hợp "móng thật ∪ dáng" thì đầu móng thật tròn vẫn nguyên, đầu
+  // nhọn mọc ra thành cái GAI — móng nhọn / hạnh nhân nhìn như gai hoa hồng.)
+  const ES = 0.25, eA = fit.s0 + 0.5 * natL, eN = ext ? Math.max(2, Math.ceil((Ltot - eA) / ES) + 1) : 0;
+  const extTab = new Float32Array(eN);
+  if (ext) {
+    const W2 = 2 * fit.hw, rT = shape === "stiletto" ? 0.03 * W2 : shape === "almond" ? 0.2 * W2 : shape === "oval" ? 0.42 * W2 : 0;
+    const hx: number[] = [], hy: number[] = [];
+    for (let i = 0; i < eN; i++) {
+      const sx = Math.min(Ltot, eA + i * ES), body = fitBody(fit, Math.min(sx, fit.s1), L);
+      let v = Math.max(fitHalf(fit, sx, L), halfWidthAt(shape, sx - fit.s0, Ltot - fit.s0, body));
+      if (rT > 0) { const dq = sx - (Ltot - rT); v = dq <= 0 ? Math.max(v, Math.min(body, rT)) : Math.max(Math.min(v, rT * Math.sqrt(Math.max(0, 1 - (dq / rT) ** 2))), 0); }
+      // bao lồi trên (monotone chain): bỏ điểm làm đường biên lõm vào
+      while (hx.length >= 2 && (hx[hx.length - 1] - hx[hx.length - 2]) * (v - hy[hy.length - 2]) - (hy[hy.length - 1] - hy[hy.length - 2]) * (sx - hx[hx.length - 2]) >= 0) { hx.pop(); hy.pop(); }
+      hx.push(sx); hy.push(v);
+    }
+    for (let i = 0, j = 0; i < eN; i++) {
+      const sx = Math.min(Ltot, eA + i * ES);
+      while (j < hx.length - 2 && hx[j + 1] < sx) j++;
+      const q = hx[j + 1] > hx[j] ? Math.min(1, Math.max(0, (sx - hx[j]) / (hx[j + 1] - hx[j]))) : 0;
+      extTab[i] = hy[j] + (hy[j + 1] - hy[j]) * q;
+    }
+  }
+  const extHalf = (s: number) => { if (!ext || s < eA || s > Ltot) return 0; const f = (s - eA) / ES, i = Math.floor(f), q = f - i; return i + 1 < eN ? extTab[i] + (extTab[i + 1] - extTab[i]) * q : extTab[eN - 1]; };
   const halfU = (s: number) => Math.max(fitBody(fg, Math.min(Math.max(s, fit.s0), fit.s1), L), extHalf(s));
   const sLo = fg.s0 - Math.abs(fit.bs) * fg.hw * 1.4, sHi = Math.max(fg.s1 + (Math.abs(fit.ts) + Math.max(0, fit.tc)) * fg.hw * 1.4, ext ? Ltot : 0);
   let maxHalf = 0;
@@ -1095,13 +1118,28 @@ function paintedSD(kind: string, x: number, y: number): { d: number; part: numbe
       return { d: Math.min(stem, Math.min(c1, c2)), part: stem < Math.min(c1, c2) ? 2 : 0 };
     }
     case "cat": {
-      // mèo đen ngồi: thân + đầu tròn + 2 tai nhọn + đuôi cong
-      const body = ellSD(x, y, 0, -0.28, 0.36, 0.42);
-      const head = Math.hypot(x, y - 0.3) - 0.25;
-      const earL = Math.max(-(y - 0.4), (y - 0.4) - 0.24 + 1.7 * Math.abs(x + 0.15));
-      const earR = Math.max(-(y - 0.4), (y - 0.4) - 0.24 + 1.7 * Math.abs(x - 0.15));
-      const tail = Math.min(segDist(x, y, 0.3, -0.62, 0.62, -0.42), segDist(x, y, 0.62, -0.42, 0.66, -0.08)) - 0.065;
-      return { d: Math.min(body, head, earL, earR, tail), part: 0 };
+      // mèo đen NGỒI (dáng quả lê): mông rộng tròn → lưng thon dần → đầu liền thân (không thắt cổ — 2 hình tròn chồng
+      // nhau từng nhìn như người tuyết / con bọ), 2 tai nhọn hơi xoè, đuôi to ở gốc cong vòng lên 1 bên, 2 mắt vàng
+      const sm = (a: number, b: number, k: number) => { const h = Math.max(0, Math.min(1, 0.5 + (0.5 * (b - a)) / k)); return b + (a - b) * h - k * h * (1 - h); };
+      const hip = ellSD(x, y, 0, -0.36, 0.4, 0.32), chest = ellSD(x, y, 0, -0.04, 0.22, 0.3);
+      const body = Math.max(sm(hip, chest, 0.16), -(y + 0.64)); // đáy phẳng (đang ngồi)
+      const head = ellSD(x, y, 0, 0.34, 0.26, 0.22);
+      const ear = (sx: number) => { const ax = sx * 0.21, ay = 0.7, bx = sx * 0.04, by = 0.46, cx2 = sx * 0.26, cy2 = 0.36; // tam giác đỉnh (ax, ay)
+        const e1 = ((bx - ax) * (y - ay) - (by - ay) * (x - ax)) * sx, e2 = ((cx2 - bx) * (y - by) - (cy2 - by) * (x - bx)) * sx, e3 = ((ax - cx2) * (y - cy2) - (ay - cy2) * (x - cx2)) * sx;
+        return -Math.min(e1, e2, e3) * 2.4; };
+      const sil = sm(sm(body, head, 0.07), Math.min(ear(-1), ear(1)), 0.03);
+      // đuôi: đường cong bậc 2 từ mông phải vòng ra ngoài rồi uốn lên, thon dần về chóp
+      let tail = 9;
+      for (let i = 0; i < 10; i++) {
+        const q0 = i / 10, q1 = (i + 1) / 10;
+        const P = (q: number) => [(1 - q) * (1 - q) * 0.3 + 2 * (1 - q) * q * 0.78 + q * q * 0.5, (1 - q) * (1 - q) * -0.58 + 2 * (1 - q) * q * -0.6 + q * q * 0.02];
+        const [ax, ay] = P(q0), [bx, by] = P(q1);
+        tail = Math.min(tail, segDist(x, y, ax, ay, bx, by) - (0.095 - 0.045 * q0));
+      }
+      const d = sm(sil, tail, 0.04);
+      const eyes = Math.min(ellSD(x, y, -0.1, 0.33, 0.055, 0.04), ellSD(x, y, 0.1, 0.33, 0.055, 0.04));
+      if (d < 0 && eyes < 0) return { d: eyes, part: 1 };
+      return { d, part: 0 };
     }
     case "skull": {
       const cran = Math.hypot(x, y - 0.12) - 0.5, jaw = Math.max(Math.abs(x) - 0.3, Math.abs(y + 0.28) - 0.18) - 0.04;
@@ -1288,6 +1326,29 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         switch (pat) {
           case "ombre": base = mix3(c1, c2, smooth(0.25, 0.92, u)); break;
           case "babyboomer": base = mix3(c1, c2, smooth(0.2, 0.88, u)); break;
+          case "jelly": {
+            // THẠCH (sheer jelly): gel màu TRONG như kính màu — thấy móng thật bên dưới (giường móng hồng, liềm sáng ở
+            // chân, mép tự do trắng đục ở đầu) nhuộm màu; 2 mép + đầu móng lớp gel dày hơn → màu đậm hơn. Móng cũ trong
+            // ảnh có thể đang sơn tối → dựng lại móng thật (không lấy điểm ảnh cũ). Phần đắp dài là gel trong → thấy
+            // mờ nền phía sau.
+            // liềm chân móng nhỏ, mờ (phần lớn nằm dưới da) — to / rõ là thành mẫu "half-moon", không phải thạch
+            const lunD = Math.hypot(t / 0.5, (s + 0.02) / 0.14);
+            const lun = (1 - smooth(0.6, 1.05, lunD)) * 0.3;
+            const free = seg.ext ? smooth(0.86, 0.97, s) : 0.55 * smooth(0.82, 0.96, u);
+            const ridge = 0.03 * (vnoise(t * 9, 0.4 * u, look.seed + 5) - 0.5); // vân dọc rất nhẹ của móng thật
+            let und: RGB = mix3(mix3([0.6, 0.34, 0.31], [0.86, 0.74, 0.7], lun), [0.86, 0.83, 0.79], free);
+            und = [und[0] * (1 + ridge), und[1] * (1 + ridge), und[2] * (1 + ridge)];
+            if (extW > 0) {
+              const bg: RGB = [LIN[img.data[idx]], LIN[img.data[idx + 1]], LIN[img.data[idx + 2]]];
+              und = mix3(und, mix3(bg, [0.8, 0.78, 0.75], 0.45), 0.45 * extW);
+            }
+            const mx = Math.max(c1[0], c1[1], c1[2], 1e-3);
+            const dens = 0.55 + 0.3 * smooth(0.55, 1, at) + 0.15 * smooth(0.82, 1, u);
+            const filt: RGB = [1 + (c1[0] / mx - 1) * dens, 1 + (c1[1] / mx - 1) * dens, 1 + (c1[2] / mx - 1) * dens];
+            const deep = 1 - 0.14 * smooth(0.6, 1, at);
+            base = mix3([und[0] * filt[0] * deep, und[1] * filt[1] * deep, und[2] * filt[2] * deep], c1, 0.18 + 0.22 * dens);
+            break;
+          }
           case "aura": {
             // aura: quầng màu phun mềm (airbrush) giữa móng, màu dịu, lan rộng ~60% mặt móng
             // quầng ngả hồng một chút cho ấm, không xanh lạnh như vệt đèn
@@ -1353,16 +1414,39 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "mummy": {
-            // XÁC ƯỚP: dải băng trắng chéo đan nhau kín móng, chừa 1 khe có 2 con mắt nhìn ra
-            const v1 = ((t * 0.9 + u * 1.6) * 3.2) % 1, v2 = ((-t * 0.8 + u * 1.5) * 3.4 + 0.3) % 1;
-            const b1 = 1 - smooth(0.4, 0.46, Math.abs(((v1 + 1) % 1) - 0.5)), b2 = 1 - smooth(0.38, 0.44, Math.abs(((v2 + 1) % 1) - 0.5));
-            const gapE = 1 - smooth(0.06, 0.09, Math.abs(u - 0.56));
-            const wrap = Math.max(b1, b2) * (1 - gapE);
-            base = mix3(base, [0.86 - 0.08 * b1 * b2, 0.84 - 0.08 * b1 * b2, 0.8 - 0.08 * b1 * b2], wrap);
-            for (const ex of [-0.22, 0.22]) {
-              const de = Math.hypot((t - ex) * seg.hw, (u - 0.56) * seg.L * sEnd);
-              base = mix3(base, [0.95, 0.95, 0.95], 1 - smooth(0.11 * seg.hw - 0.6, 0.11 * seg.hw + 0.6, de));
-              base = mix3(base, [0.01, 0.01, 0.01], 1 - smooth(0.05 * seg.hw - 0.5, 0.05 * seg.hw + 0.5, Math.hypot((t - ex - 0.03) * seg.hw, (u - 0.56) * seg.L * sEnd)));
+            // XÁC ƯỚP: 7 dải băng GẠC trắng quấn ngang, mỗi dải lệch góc 1 chút, dải sau đè dải trước (bóng đổ mảnh dưới
+            // mép), thớ gạc mịn + mép hơi xơ; chừa 1 khe đen giữa móng có 2 con mắt ló ra (lưới trám chấm bi từng nhìn
+            // như vải bọc ghế, không ra xác ướp)
+            const Lp = seg.L * sEnd, X = t * seg.hw, Y = u * Lp;
+            const ye = 0.5 * Lp, gH = Math.max(2.2, 0.075 * Lp), inGap = Math.abs(Y - ye + 0.1 * X);
+            let mc: RGB = base;
+            for (let q = 0; q < 7; q++) {
+              const hq = hash2(seedN, 40 + q, 7), hq2 = hash2(seedN, 50 + q, 7);
+              const yc = ((q + 0.5) / 7) * Lp * 1.06 - 0.03 * Lp + (hq - 0.5) * 0.05 * Lp;
+              const th = (q % 2 ? 1 : -1) * (0.08 + 0.2 * hq2);
+              const wq = Lp * (0.135 + 0.035 * hq);
+              const perp = (Y - yc) * Math.cos(th) - X * Math.sin(th), along = (Y - yc) * Math.sin(th) + X * Math.cos(th);
+              const half = wq / 2 + 0.55 * (vnoise(along * 0.4, q * 3.1, seedN + 9) - 0.5); // mép gạc hơi xơ
+              const gapK = smooth(gH - 0.7, gH + 0.7, inGap);
+              const ds = Math.abs(perp) - half;
+              // bóng đổ của dải này lên lớp bên dưới (1–2px ngay ngoài mép)
+              if (ds > 0 && ds < 2.2) { const sh = 0.32 * (1 - ds / 2.2) * gapK; mc = [mc[0] * (1 - sh), mc[1] * (1 - sh), mc[2] * (1 - sh)]; }
+              const cq = (1 - smooth(-0.7, 0.7, ds)) * gapK;
+              if (cq <= 0) continue;
+              const g0 = 0.74 + 0.1 * hq;
+              const round = 1 - 0.13 * Math.min(1, (perp / Math.max(1, half)) ** 2); // dải băng hơi phồng → mép tối nhẹ
+              const fib = 0.04 * Math.sin(along * 2.3 + hq * 6) * Math.sin(perp * 2.7 + hq2 * 5) + 0.05 * (vnoise(along * 0.7, perp * 1.1, seedN + q) - 0.5);
+              const k2 = round * (1 + fib);
+              mc = mix3(mc, [g0 * k2, g0 * 0.985 * k2, g0 * 0.94 * k2], cq);
+            }
+            base = mc;
+            // 2 con mắt trong khe: lòng trắng tròn + con ngươi đen liếc vào giữa
+            const re = Math.max(1.6, Math.min(gH * 0.8, 0.15 * seg.hw));
+            for (const ex of [-0.3, 0.3]) {
+              const exX = ex * seg.hw, exY = ye - 0.1 * exX;
+              const dW = Math.hypot(X - exX, Y - exY), dP = Math.hypot(X - exX + Math.sign(ex) * 0.28 * re, Y - exY);
+              base = mix3(base, [0.93, 0.93, 0.9], 1 - smooth(re - 0.6, re + 0.6, dW));
+              base = mix3(base, [0.01, 0.01, 0.01], 1 - smooth(0.5 * re - 0.5, 0.5 * re + 0.5, dP));
             }
             break;
           }
@@ -1689,7 +1773,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             case "flake": col = paint(W); break;
             case "flower": col = paint(ps.part === 1 ? [0.95, 0.7, 0.06] : c2); break;
             case "pflower": col = ps.part === 1 ? [0.92, 0.72, 0.2] : [c2[0] * 0.95, c2[1] * 0.95, c2[2] * 0.95]; break; // ép phẳng, không nổi
-            case "cat": col = paint(K); break;
+            case "cat": col = paint(ps.part === 1 ? [0.82, 0.55, 0.03] : K); break;
             case "skull": col = paint(ps.part === 1 ? K : W); break;
             default: { // dơi, trăng: màu kim loại của mẫu (dơi bạc / trăng vàng) — ánh kim
               const mc = sphereMetal(metal, nx, ny, nz2, L3, side);

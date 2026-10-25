@@ -57,7 +57,7 @@ export const TREND_RADAR: Trend[] = [
   { id: "two-tone-cat-eye", name: { vi: "Mắt mèo 2 tông", en: "Two-tone cat eye" }, source: PP("\"two tone cat eye nails\" +515%", "\"two tone cat eye nails\" +515%"), weight: 2,
     looks: [{ pattern: "mixmatch", finish: "cateye", colors: [["plumNoir", "navy", "silver"], ["burgundy", "plumNoir", "gold"], ["coolBlue", "periwinkle", "silver"]] }] },
   { id: "jade-marble", name: { vi: "Vân đá ngọc bích", en: "Jade marble" }, source: PP("\"jade marble nails\" +450%", "\"jade marble nails\" +450%"), weight: 2,
-    looks: [{ pattern: "marble", finish: "glossy", colors: [["jade", "white", "gold"]] }, { pattern: "solid", finish: "glossy", colors: [["jade", "white", "gold"]] }] },
+    looks: [{ pattern: "marble", finish: "glossy", colors: [["jade", "white", "gold"], ["jade", "white", "silver"]] }] },
   { id: "gothic-chrome", name: { vi: "Chrome gothic", en: "Gothic chrome" }, source: PP("\"gothic chrome nails\" +400%", "\"gothic chrome nails\" +400%"), weight: 1,
     looks: [{ pattern: "solid", finish: "chrome", colors: [["black", "black", "silver"], ["aubergine", "aubergine", "silver"]], shapes: ["stiletto", "almond"] }] },
   { id: "cool-blue", name: { vi: "Xanh băng", en: "Cool blue" }, source: PP("màu xanh băng tăng 235% lượt tìm", "cool blue searches +235%"), weight: 2,

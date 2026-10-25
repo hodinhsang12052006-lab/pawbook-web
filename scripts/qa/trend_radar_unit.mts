@@ -45,5 +45,13 @@ const all = Array.from({ length: 10 }, (_, i) => day("2026-10-25", String(i))).f
 const drawable = all.filter((d) => PROCEDURAL.has(d.pattern)).length / all.length;
 ok("T7", `Phần lớn mẫu mỗi ngày máy PawNail tự vẽ được ảnh (${Math.round(drawable * 100)}% ≥ 80%) — ít phải nhờ AI vẽ`, drawable >= 0.8);
 
+// dâu nhúng sô-cô-la: nền LUÔN màu dâu (đỏ / hồng), đầu LUÔN sô-cô-la — từng ra "dâu nhúng" nền navy / xanh rêu / nâu
+const BERRY = new Set(["#e0354a", "#b91c1c", "#c2185b", "#f9a8d4", "#f2c4c4"]);
+const choco = Array.from({ length: 40 }, (_, i) => ["2026-02-10", "2026-06-10", "2026-10-25"].flatMap((dt) => generateEngineDesigns(6, { market: "US", date: dt, occasions: [], risingTags: [], usedTitles: new Set(), salt: String(i) }))).flat().filter((d) => d.pattern === "chocodip");
+ok("T8", `Dâu nhúng sô-cô-la (${choco.length} mẫu): nền luôn màu dâu đỏ / hồng, đầu móng luôn nâu sô-cô-la`, choco.length >= 3 && choco.every((d) => BERRY.has(d.palette[0]) && d.palette[1] === COLORS.chocolate.hex), choco.filter((d) => !BERRY.has(d.palette[0])).map((d) => d.title.vi).join(" | "));
+// trend tên "vân đá" phải ra mẫu vân đá thật (không ra móng trơn mượn tên trend)
+const misnamed = TREND_RADAR.filter((t) => /vân đá/i.test(t.name.vi) && t.looks.some((l) => l.pattern !== "marble")).map((t) => t.id);
+ok("T9", "Tên trend khớp mẫu vẽ ra (trend \"vân đá\" chỉ ra vân đá)", !misnamed.length, misnamed.join(","));
+
 console.log(`\n${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

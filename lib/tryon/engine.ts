@@ -1377,15 +1377,22 @@ const fromOk = (o: RGB): RGB => {
 /** Cùng sắc độ, đổi độ sáng OKLab (skittle, má hồng) — chroma giảm dần khi quá sáng để không bệt. */
 const okShift = (c: RGB, dL: number, kC = 1): RGB => { const o = okOf(c), L = Math.min(0.93, Math.max(0.28, o[0] + dL)), cs = kC * (1 - 0.6 * smooth(0.82, 0.95, L)); return fromOk([L, o[1] * cs, o[2] * cs]); };
 
-/** Kiểu đường French của 1 móng: 0 = đường cười (giữa mảnh, 2 bên ôm sâu xuống — "smile"), 1 = chữ V, 2 = lệch 1 bên. */
-interface FrStyle { kind: 0 | 1 | 2; yc: number; ysL: number; ysR: number; p: number; sg: number; bow: number }
-function frStyle(tp: TipProfile, pat: string, designSeed: number): FrStyle {
+/** Kiểu đường French của 1 móng: 0 = đường cười (giữa mảnh, 2 bên ôm sâu xuống — "smile"), 1 = chữ V, 2 = lệch 1 bên,
+ *  3 = sóng (wv: sâu, biên độ, tần số, pha — song song mép tự do thật, gợn sóng NỐI TIẾP qua các móng như 1 con sóng). */
+interface FrStyle { kind: 0 | 1 | 2 | 3; yc: number; ysL: number; ysR: number; p: number; sg: number; bow: number; wv?: [number, number, number, number] }
+function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0): FrStyle {
   const key = "fr:" + pat, hit = tp.memo[key] as FrStyle | undefined;
   if (hit) return hit;
   const E0 = tipE(tp, 0), EL = tipE(tp, -0.97), ER = tipE(tp, 0.97), len = tp.len, px = 1 / Math.max(8, tp.hw);
   // đường cười: giữa sâu dc; 2 đầu chạm thành móng ở chỗ mép tự do bắt đầu (móng oval / hạnh nhân đã tự cong xuống
-  // sẵn → chỉ thêm chút; móng vuông → 2 bên sâu hơn giữa `horn` lần)
-  const smile = (dc: number, horn: number): FrStyle => { const sd = (Ex: number) => Ex - Math.max(dc * horn - (E0 - Ex), dc * 0.35); return { kind: 0, yc: E0 - dc, ysL: sd(EL), ysR: sd(ER), p: 2.2, sg: 1, bow: 0 }; };
+  // sẵn → chỉ thêm chút; móng vuông → 2 bên sâu hơn giữa `horn` lần). Móng NHỌN (stiletto, hạnh nhân nhọn: mép tụt
+  // nhanh từ chóp, pt lớn): đường cười cong p = 2.2 nằm TRÊN mép ở giữa 2 bên → chỉ tô được mỗi chóp (tam giác nhỏ =
+  // "răng nanh" #35) → nắn dần thành chữ V song song 2 mép (p → 1) và sâu hơn để đầu màu ôm theo mũi nhọn
+  const pt = E0 - (tipE(tp, -0.5) + tipE(tp, 0.5)) / 2, kp = smooth(0.3, 0.75, pt);
+  const smile = (dc0: number, horn: number): FrStyle => {
+    const dc = dc0 * (1 + 0.7 * kp), sd = (Ex: number) => Ex - Math.max(dc * horn - (E0 - Ex), dc * (0.35 + 0.3 * kp));
+    return { kind: 0, yc: E0 - dc, ysL: sd(EL), ysR: sd(ER), p: 2.2 - 1.2 * kp, sg: 1, bow: 0 };
+  };
   let st: FrStyle;
   switch (pat) {
     case "fr-micro": st = smile(Math.max(0.17, 3.2 * px), 1.25); break; // ≥ 3px — mảnh hơn nữa thì ảnh 400px mất nét
@@ -1400,37 +1407,54 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number): FrStyle {
       const sg = hash2(designSeed, 5, 77) > 0.5 ? 1 : -1, Ed = sg > 0 ? EL : ER, Et = sg > 0 ? ER : EL;
       st = { kind: 2, yc: 0, ysL: Ed - Math.max(0.85, 0.3 * len), ysR: Et - 0.04, p: 1, sg, bow: 0.1 }; break;
     }
+    case "fr-wave": {
+      // ~1.4 con sóng / móng, biên độ ≥ 4px (nhỏ hơn thì ảnh gallery chỉ thấy đường run tay, không ra sóng); pha cộng
+      // dồn theo bề ngang móng + khe ngón (~2.4 hw) → sóng chạy liền từ ngón trỏ sang ngón út
+      const k = 4.4, amp = Math.max(0.1, 4 * px), ph = 6.28 * hash2(designSeed, 6, 77) + nail * k * 2.4;
+      st = { kind: 3, yc: 0, ysL: 0, ysR: 0, p: 1, sg: 1, bow: 0, wv: [Math.max(0.36, 0.12 * len), amp, k, ph] }; break;
+    }
     default: st = smile(Math.max(0.3, 0.11 * len), 1.45); // french, doublefrench, skittle, nhũ, đồi mồi
   }
   tp.memo[key] = st;
   return st;
 }
-/** Khoảng cách có dấu (hw, > 0 = trong đầu French; vuông góc với đường French) + v: 0 ở mép tự do → 1 ở đường French. */
-const FRL = { d: 0, v: 0 };
+/** Khoảng cách có dấu (hw, > 0 = trong đầu French; vuông góc với đường French) + v: 0 ở mép tự do → 1 ở đường French
+ *  + g: cách mép tự do (hw) + dep: bề sâu đầu móng tại cột này (hw). */
+const FRL = { d: 0, v: 0, g: 0, dep: 0 };
 function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number): typeof FRL {
   const tc = Math.max(-1, Math.min(1, t)), at = Math.abs(tc), sgn = tc < 0 ? -1 : 1;
   let yl: number, sl: number;
   if (st.kind === 2) { const q = (1 + st.sg * tc) / 2; yl = st.ysL + q * (st.ysR - st.ysL) + st.bow * (1 - tc * tc); sl = 0.5 * st.sg * (st.ysR - st.ysL) - 2 * st.bow * tc; }
-  else { const ys = sgn < 0 ? st.ysL : st.ysR, w = Math.pow(at, st.p); yl = st.yc + w * (ys - st.yc); sl = st.p * Math.pow(at, st.p - 1) * sgn * (ys - st.yc); }
+  else if (st.kind === 3 && st.wv) {
+    // sóng: song song mép tự do thật (2 bên sâu thêm chút như đường cười) + gợn sin
+    const [dep, amp, k, ph] = st.wv, de = (tipE(tp, tc + 0.03) - tipE(tp, tc - 0.03)) / 0.06;
+    yl = tipE(tp, tc) - dep * (1 + 0.5 * tc * tc) - amp * Math.sin(k * tc + ph);
+    sl = de - dep * tc - amp * k * Math.cos(k * tc + ph);
+  } else { const ys = sgn < 0 ? st.ysL : st.ysR, w = Math.pow(at, st.p); yl = st.yc + w * (ys - st.yc); sl = st.p * Math.pow(at, st.p - 1) * sgn * (ys - st.yc); }
   const e = tipE(tp, t);
   FRL.d = (Yh - yl) / Math.sqrt(1 + sl * sl);
-  FRL.v = Math.max(0, Math.min(1, (e - Yh) / Math.max(1e-3, e - yl)));
+  FRL.g = e - Yh; FRL.dep = Math.max(1e-3, e - yl);
+  FRL.v = Math.max(0, Math.min(1, FRL.g / FRL.dep));
   return FRL;
 }
 /**
  * Đầu French TRÁNG GƯƠNG: phản chiếu đặt NGANG đầu móng theo v (0 = mép tự do, 1 = đường French) — 1 dải sáng gắt cong
  * theo đầu móng, dải tối "chân trời" sát dưới, vành Fresnel sáng mảnh ở mép tự do (≤ 1.5px), sáng hơn phía có đèn.
  * metalShade đặt dải theo bề ngang móng → trong đầu micro chỉ ra vài vệt dọc ngắn trên nền xám phẳng (#22).
+ * Dải ngang chỉ trải trên ≤ 0.5 hw sát mép tự do (phần đầu móng cong xuống soi trần nhà): đầu móng sâu (coffin, 2 thành
+ * móng ôm dài) mà trải dải theo cả bề sâu thì ra cái KHUNG viền xám — phần xa mép soi như chrome trơn: vệt DỌC sáng phía
+ * có đèn, vệt tối phía kia (theo độ cong ngang của móng).
  */
-function tipMirror(tint: RGB, v: number, t: number, ePx: number, side: number): RGB {
+function tipMirror(tint: RGB, g: number, dep: number, t: number, ePx: number, side: number): RGB {
   const mx = Math.max(tint[0], tint[1], tint[2], 1e-3);
   const f0: RGB = [0.25 + (0.75 * tint[0]) / mx, 0.25 + (0.75 * tint[1]) / mx, 0.25 + (0.75 * tint[2]) / mx];
-  const vb = 0.36 + 0.07 * t * t;
-  const env = 0.06
-    + 1.35 * Math.exp(-(((v - vb) / 0.13) ** 2)) * (0.82 + 0.18 * side * t)
-    + 0.32 * smooth(0.84, 1.0, v)
-    + 0.95 * Math.exp(-ePx / 1.1) * (1 - smooth(0.3, 0.55, v))
-    + 0.14 * Math.exp(-(((t - side * 0.6) / 0.25) ** 2));
+  const span = Math.min(dep, 0.5), w = Math.min(1, g / span), far = smooth(0.75, 1.1, g / span) * smooth(0.3, 0.6, dep);
+  const env = 0.12 + 0.2 * (1 - far)
+    + 1.2 * Math.exp(-(((w - 0.4 - 0.05 * t * t) / 0.16) ** 2)) * (0.82 + 0.18 * side * t) * (1 - 0.6 * far)
+    - 0.16 * Math.exp(-(((w - 0.86) / 0.1) ** 2)) * (1 - far)
+    + 0.95 * Math.exp(-ePx / 1.1) * (1 - smooth(0.3, 0.55, w))
+    + far * (0.95 * Math.exp(-(((t - side * 0.42) / 0.17) ** 2)) + 0.3 * Math.exp(-(((t + side * 0.75) / 0.12) ** 2)))
+    + 0.1 * Math.exp(-(((t - side * 0.6) / 0.25) ** 2));
   const hot = smooth(0.85, 1.45, env) * 0.7;
   const ch = (f: number) => { const c = Math.min(1, f * env); return c + (1 - c) * hot; };
   return [ch(f0[0]), ch(f0[1]), ch(f0[2])];
@@ -1470,12 +1494,12 @@ function pressedFor(tp: TipProfile, seed: number): Pressed[] {
   const h = (k: number) => hash2(seed, k, 53), out: Pressed[] = [], L = Math.max(1.6, tp.len);
   const nF = 2 + (h(1) > 0.45 ? 1 : 0);
   for (let q = 0, tries = 0; out.length < nF && tries < 40; tries++, q++) {
-    const r = out.length === 0 ? 0.42 + 0.08 * h(10 + q) : 0.28 + 0.1 * h(10 + q);
+    const r = out.length === 0 ? 0.52 + 0.1 * h(10 + q) : 0.32 + 0.1 * h(10 + q); // hoa chính ~50–60% bề ngang móng
     const f: Pressed = { t: (h(20 + q) - 0.5) * 1.5, y: L * (0.22 + 0.62 * h(30 + q)), r, rot: 6.28 * h(40 + q), kind: 0, col: out.length === 0 ? 0 : 1 + Math.floor(h(50 + q) * 4), n: h(60 + q) > 0.6 ? 6 : 5 };
     if (out.every((o) => Math.hypot(o.t - f.t, o.y - f.y) > 0.75 * (o.r + f.r))) out.push(f);
   }
   const flowers = out.slice();
-  for (let q = 0; q < 2; q++) { const f = flowers[q % flowers.length], a = 6.28 * h(70 + q); out.push({ t: f.t + Math.cos(a) * f.r * 1.15, y: f.y + Math.sin(a) * f.r * 1.15, r: 0.2 + 0.05 * h(80 + q), rot: a + 0.4 * (h(85 + q) - 0.5), kind: 1, col: 0, n: 0 }); }
+  for (let q = 0; q < 2; q++) { const f = flowers[q % flowers.length], a = 6.28 * h(70 + q); out.push({ t: f.t + Math.cos(a) * f.r * 1.15, y: f.y + Math.sin(a) * f.r * 1.15, r: 0.24 + 0.06 * h(80 + q), rot: a + 0.4 * (h(85 + q) - 0.5), kind: 1, col: 0, n: 0 }); }
   const nG = 2 + Math.floor(h(90) * 3);
   for (let q = 0; q < nG; q++) out.push({ t: (h(100 + q) - 0.5) * 1.4, y: L * (0.15 + 0.75 * h(110 + q)), r: Math.max(0.07, 3 / Math.max(8, tp.hw)) * (1 + 0.5 * h(120 + q)), rot: 6.28 * h(130 + q), kind: 2, col: 0, n: 0 });
   tp.memo.pressed = out;
@@ -1593,12 +1617,12 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "french": case "chromefrench": case "doublefrench":
-          case "fr-micro": case "fr-deep": case "fr-v": case "fr-side": case "fr-pinkwhite": case "fr-skittle": case "fr-glitter": case "fr-santa": case "fr-candycane": case "fr-tortoise": {
+          case "fr-micro": case "fr-deep": case "fr-v": case "fr-side": case "fr-wave": case "fr-pinkwhite": case "fr-skittle": case "fr-glitter": case "fr-santa": case "fr-candycane": case "fr-tortoise": {
             // HỌ FRENCH: nền gel hồng TRONG trên giường móng dựng lại (không lấy màu móng cũ) + đầu móng bám MÉP TỰ DO THẬT
-            // (tipProfile): micro / cổ điển / sâu / chữ V / lệch. Đầu móng: màu c2 · tráng gương · nhũ · skittle (mỗi móng
-            // 1 nấc đậm nhạt cùng sắc) · Santa (đỏ + viền lông trắng) · kẹo gậy · đồi mồi. Mép đường French sắc (~0.6px).
+            // (tipProfile): micro / cổ điển / sâu / chữ V / lệch / sóng. Đầu móng: màu c2 · tráng gương · nhũ · skittle (mỗi
+            // móng 1 nấc đậm nhạt cùng sắc) · Santa (đỏ + viền lông trắng) · kẹo gậy · đồi mồi. Mép đường French sắc (~0.6px).
             const Yh = s * tipP.kL, aa = 0.6 / Math.max(8, seg.hw);
-            const fl = frLine(tipP, frStyle(tipP, pat, look.seed), t, Yh), d = fl.d, m = smooth(-aa, aa, d);
+            const fl = frLine(tipP, frStyle(tipP, pat, look.seed, i), t, Yh), d = fl.d, m = smooth(-aa, aa, d);
             // pink & white (bột): nền hồng GẦN ĐẶC — bảng màu không có hồng nhạt thì dùng hồng #f2c9c4 của thợ
             const pw = pat === "fr-pinkwhite", bc: RGB = pw && !(c1[0] > 0.55 && c1[0] > 1.15 * c1[2]) ? [0.888, 0.584, 0.552] : c1;
             base = mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), bc, pw ? 0.9 : sheerDens(bc));
@@ -1608,13 +1632,21 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               if (pat === "chromefrench" || (!ownFill && c2[0] === metal[0] && c2[1] === metal[1] && c2[2] === metal[2])) {
                 // đầu móng KIM LOẠI: phản chiếu gương theo bề sâu đầu móng — tô thẳng màu cuối (chia trước hệ số ánh sáng
                 // bước 2, phản chiếu đã gồm ánh sáng)
-                const mc = tipMirror(metal, fl.v, t, eDist[k], side), lit = Math.max(0.3, (1 + contrast * shade) * edge * cut);
+                const mc = tipMirror(metal, fl.g, fl.dep, t, eDist[k], side), lit = Math.max(0.3, (1 + contrast * shade) * edge * cut);
                 tip = [mc[0] / lit, mc[1] / lit, mc[2] / lit];
               } else if (pat === "fr-skittle") {
-                // SKITTLE: cùng sắc c2, mỗi móng 1 nấc sáng (OKLab ~ 12 L*) — đọc như dải màu có chủ ý qua 4 ngón
+                // SKITTLE: cùng sắc c2, ngón trỏ sáng nhất → ngón út đậm nhất, mỗi móng 1 nấc OKLab 0.1 (~12 L*) — đọc như
+                // dải màu có chủ ý qua 4 ngón. Nấc sáng nhất vẫn đậm hơn nền hồng trong ≥ 0.15 (nấc nhạt sát nền thì mất đầu)
                 let sk = tipP.memo.skit as RGB | undefined;
-                if (!sk) sk = tipP.memo.skit = okShift(c2, -0.085 * (i - (segs.length - 1) / 2));
+                if (!sk) {
+                  const L0 = okOf(c2)[0], n = Math.max(1, segs.length - 1), top = Math.max(0.3 + 0.1 * n, Math.min(L0 + 0.05 * n, 0.72));
+                  sk = tipP.memo.skit = okShift(c2, top - 0.1 * i - L0, 1.1);
+                }
                 tip = sk;
+              } else if (pat === "fr-wave") {
+                // SÓNG: viền bọt trắng ≥ 2.6px ngay đường French → 1 dải sóng sáng hơn cùng sắc → thân sóng c2 đậm
+                const wF = Math.max(0.075, 2.6 / seg.hw), wB = Math.max(0.12, 0.3 * fl.dep);
+                tip = mix3(mix3(okShift(c2, 0.13, 0.9), c2, smooth(wF + wB - aa, wF + wB + aa, d)), [0.95, 0.95, 0.93], 1 - smooth(wF - aa, wF + aa, d));
               } else if (pat === "fr-glitter") {
                 const fk = flakeAt(X, Y, Math.max(2.6, 0.075 * seg.hw), seedN + 7), mx2 = Math.max(c2[0], c2[1], c2[2], 1e-3);
                 const f0: RGB = [0.5 * c2[0] + 0.5 * (0.25 + (0.75 * c2[0]) / mx2), 0.5 * c2[1] + 0.5 * (0.25 + (0.75 * c2[1]) / mx2), 0.5 * c2[2] + 0.5 * (0.25 + (0.75 * c2[2]) / mx2)];
@@ -1626,20 +1658,27 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
                 const P = Math.max(0.21, 8 / seg.hw), ts = Math.asin(0.95 * Math.max(-1, Math.min(1, t))) / 1.2532;
                 const q = (ts * 0.79 + Yh * 0.62) / P, tri = Math.abs((((q % 2) + 2) % 2) - 1), aS = 0.7 / (P * seg.hw);
                 tip = mix3([0.9, 0.885, 0.86], c2, smooth(0.5 - aS, 0.5 + aS, tri));
-              } else if (pat === "fr-tortoise") tip = tortoiseAt(t, Yh, seedN);
+              } else if (pat === "fr-tortoise") tip = tortoiseAt(1.3 * t, 1.3 * Yh, seedN); // đốm ~0.2–0.4 hw: đầu móng ngắn vẫn thấy 2–3 đốm
               base = mix3(base, tip, m);
             }
             if (pat === "fr-santa") {
-              // viền LÔNG TRẮNG nổi dọc đường French (gel trắng chấm xù): 2 mép lởm chởm mềm, mặt lông lổn nhổn sáng tối
-              // (búi ≥ 2px), bóng đổ mảnh phía chân móng
-              const sc = Math.max(2.2, 0.075 * seg.hw);
-              const lo = -0.1 + 0.055 * (2 * vnoise(X / sc, Y / sc, seedN + 31) - 1), hi = 0.11 + 0.055 * (2 * vnoise(X / sc + 17, Y / sc, seedN + 32) - 1);
-              const inLo = smooth(lo - aa, lo + aa, d), fur = inLo * (1 - smooth(hi - aa, hi + aa, d));
-              const shd = 0.24 * smooth(lo - 0.1, lo, d) * (1 - inLo);
+              // viền LÔNG TRẮNG nổi dọc đường French (gel trắng chấm bông): 2 mép gợn thành búi to cỡ bề dày dải (~0.2 hw —
+              // gợn nhỏ vài px hay nhiễu "billow" có khe nhọn đều ra mép răng cưa như giấy xé), mép hơi nhoè (~1.5px) như
+              // sợi lông; mặt lông phồng giữa dải + lổn nhổn từng búi ≥ 2.6px, bóng đổ mềm phía chân móng
+              const sc = Math.max(5, 0.2 * seg.hw), sc2 = Math.max(3, 0.09 * seg.hw), aF = 1.5 / Math.max(8, seg.hw);
+              const e1 = 0.7 * vnoise(X / sc, Y / sc, seedN + 31) + 0.3 * vnoise(X / sc2, Y / sc2, seedN + 35);
+              const e2 = 0.7 * vnoise(X / sc + 17, Y / sc, seedN + 32) + 0.3 * vnoise(X / sc2 + 9, Y / sc2, seedN + 36);
+              const lo = -0.06 - 0.13 * e1, hi = 0.06 + 0.13 * e2;
+              const bl = (x: number, y: number, sd: number) => 1 - Math.abs(2 * vnoise(x, y, sd) - 1);
+              const inLo = smooth(lo - aF, lo + aF, d), fur = inLo * (1 - smooth(hi - aF, hi + aF, d));
+              const shd = 0.26 * smooth(lo - 0.12, lo, d) * (1 - inLo);
               base = [base[0] * (1 - shd), base[1] * (1 - shd), base[2] * (1 - shd)];
-              const bump = 0.6 * vnoise(X / (0.7 * sc), Y / (0.7 * sc), seedN + 33) + 0.4 * vnoise(X / (1.6 * sc), Y / (1.6 * sc), seedN + 34);
-              const fv = 0.66 + 0.44 * bump + 0.06 * Math.max(0, Math.min(1, (d - lo) / Math.max(0.05, hi - lo)));
-              base = mix3(base, [0.93 * fv, 0.92 * fv, 0.9 * fv], fur);
+              if (fur > 0) {
+                const hq = Math.max(0, Math.min(1, (d - lo) / Math.max(0.05, hi - lo))), dome = Math.max(0, Math.sin(3.1416 * hq));
+                const puff = 0.6 * bl(X / sc2, Y / sc2, seedN + 33) + 0.4 * vnoise(X / (0.5 * sc), Y / (0.5 * sc), seedN + 34);
+                const fv = 0.58 + 0.18 * Math.sqrt(dome) + 0.26 * puff;
+                base = mix3(base, [0.95 * fv, 0.94 * fv, 0.92 * fv], fur);
+              }
             }
             if (pat === "doublefrench") {
               // viền kim loại thứ 2 song song dưới đường French (≥ 2.6px, cách 1 khe nền) — sợi nổi: lõi sáng, 2 mép tối
@@ -1653,7 +1692,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // HALF-MOON: nền gel hồng trong + nửa trăng c2 ôm chân móng, viền chỉ kim loại ≥ 2.4px dọc vòm trăng
             const Yh = s * tipP.kL, aa = 0.6 / Math.max(8, seg.hw);
             base = mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), c1, sheerDens(c1));
-            const ra = 1.12, rb = Math.max(0.78, Math.min(1.1, 0.32 * tipP.len)), qx = t / ra, qy = Yh / rb, q = Math.hypot(qx, qy);
+            const ra = 1.12, rb = Math.max(0.66, Math.min(1.05, 0.3 * tipP.len)), qx = t / ra, qy = Yh / rb, q = Math.hypot(qx, qy);
             const d = (1 - q) / Math.max(0.3, Math.hypot(qx / ra, qy / rb) / Math.max(1e-3, q)); // > 0 trong trăng (hw)
             base = mix3(base, c2, smooth(-aa, aa, d));
             const w = Math.max(0.075, 2.4 / seg.hw), n = d / (w / 2), mm = 1 - smooth(1 - (2 * aa) / w, 1 + (2 * aa) / w, Math.abs(n));
@@ -1669,10 +1708,15 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           }
           case "blush": {
             // MÁ HỒNG (blush nails): nude trong + 1 quầng má hồng c2 loang mềm giữa móng (tán bằng mút) — màu quầng ép đậm
-            // hơn nền ≥ 0.1 OKLab (hồng nhạt trên hồng sữa thì không thấy quầng)
+            // hơn nền ≥ 0.15 OKLab (hồng nhạt trên hồng sữa thì không thấy quầng). Hồng nhạt ép đậm trong OKLab ngả TÍM cà
+            // (b < 0) → quầng nhìn như vết bầm: nắn sắc về hồng ấm / san hô (b ≥ 0.2a)
             base = mix3(nailBed(tipP, seg, s, t, s * tipP.kL, extW, img.data, idx), c1, 0.6);
             let fc = tipP.memo.blush as RGB | undefined;
-            if (!fc) { const o2 = okOf(c2); fc = tipP.memo.blush = okShift(c2, Math.min(0, okOf(mix3(tipP.bed, c1, 0.6))[0] - 0.15 - o2[0]), Math.min(1.6, Math.max(1, 0.09 / Math.max(0.01, Math.hypot(o2[1], o2[2]))))); }
+            if (!fc) {
+              const o2 = okOf(c2), kC = Math.min(1.6, Math.max(1, 0.09 / Math.max(0.01, Math.hypot(o2[1], o2[2]))));
+              const L = Math.min(o2[0], okOf(mix3(tipP.bed, c1, 0.6))[0] - 0.15), a = o2[1] * kC;
+              fc = tipP.memo.blush = fromOk([L, a, a > 0 ? Math.max(o2[2] * kC, 0.2 * a) : o2[2] * kC]);
+            }
             const cu = 0.5 + 0.06 * (hash2(seedN, 7, 9) - 0.5), ct = 0.1 * (hash2(seedN, 8, 9) - 0.5);
             base = mix3(base, fc, 0.7 * Math.exp(-0.5 * (((t - ct) / 0.36) ** 2 + ((u - cu) / 0.2) ** 2)));
             break;
@@ -1820,7 +1864,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // bảng màu hoa khô thật; hoa 0.24–0.44 hw, cho lẹm mép móng như ép thật; mỗi móng bố cục riêng. Sữa = c1 ngả ấm
             // (gel sữa không xanh lạnh như #f8fafc).
             const Yh = s * tipP.kL, milk = mix3(c1, [0.886, 0.846, 0.791], 0.4);
-            let und = mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), milk, 0.5);
+            let und = mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), milk, 0.45);
             let mainC = tipP.memo.flower as RGB | undefined;
             if (!mainC) { const o = okOf(c2); mainC = tipP.memo.flower = Math.hypot(o[1], o[2]) < 0.08 ? PRESSED_COLS[0] : okShift(c2, Math.min(0, 0.6 - o[0]), 1.3); }
             for (const f of pressedFor(tipP, seedN)) {
@@ -1832,30 +1876,38 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
                 const an = Math.atan2(y, x), rho = Math.hypot(x, y);
                 // mỗi cánh dài ngắn / lệch khác nhau (hoa ép thật không đều như hình vẽ máy)
                 const pk = Math.round((an * f.n) / 6.2832), pj = hash2(pk + 9, Math.round(f.rot * 100), seedN);
-                const rE = (0.48 + 0.52 * Math.pow(Math.abs(Math.cos((f.n * (an + 0.12 * (pj - 0.5))) / 2)), 1.3)) * (0.84 + 0.3 * pj);
+                const rE = (0.56 + 0.44 * Math.pow(Math.abs(Math.cos((f.n * (an + 0.12 * (pj - 0.5))) / 2)), 1.3)) * (0.84 + 0.3 * pj);
                 const cov = 1 - smooth(rE - aF, rE + aF, rho);
                 if (cov <= 0) continue;
                 const pc = f.col === 0 ? mainC : PRESSED_COLS[f.col - 1];
-                const vein = 1 - 0.14 * Math.pow(Math.abs(Math.sin((f.n * an) / 2)), 10) * smooth(0.25, 0.6, rho);
-                // cánh mỏng: đậm ở gốc cánh, nhạt dần ra mép, viền mép cánh hơi sẫm (cánh khô)
-                let col = mix3(okShift(pc, -0.06), mix3(pc, [0.95, 0.93, 0.9], 0.3), smooth(0.2, 0.85, rho / rE));
-                col = mix3(col, okShift(pc, -0.1), 0.5 * smooth(rE - 0.16, rE - 0.03, rho));
+                // khe giữa 2 cánh sẫm hơn (đọc ra từng cánh riêng), gân giữa cánh sáng mảnh
+                const ac = Math.abs(Math.cos((f.n * an) / 2));
+                const vein = (1 - 0.2 * Math.pow(1 - ac, 6) * smooth(0.22, 0.5, rho)) * (1 + 0.08 * Math.pow(ac, 30) * smooth(0.3, 0.6, rho));
+                // cánh ép thật: gốc cánh đậm + 1 vòng "mắt" sẫm quanh nhuỵ (như violet / lưu ly ép), nhạt + TRONG dần ra mép
+                // cánh, viền mép cánh hơi sẫm (cánh khô). Nhạt ra mép chỉ 15% về trắng — 30% cũ + lớp sữa → hoa bệt phấn
+                let col = mix3(okShift(pc, -0.05), mix3(pc, [0.95, 0.93, 0.9], 0.15), smooth(0.25, 0.9, rho / rE));
+                col = mix3(col, okShift(pc, -0.15, 1.15), 0.7 * Math.exp(-(((rho - 0.27) / 0.08) ** 2)));
+                col = mix3(col, okShift(pc, -0.1), 0.45 * smooth(rE - 0.16, rE - 0.03, rho));
                 col = [col[0] * vein, col[1] * vein, col[2] * vein];
-                col = mix3(col, [0.55, 0.3, 0.03], 1 - smooth(0.17 - aF, 0.17 + aF, rho));
-                und = mix3(und, col, 0.95 * cov);
+                // nhuỵ: vàng nghệ, viền ngoài sẫm như chấm phấn hoa
+                col = mix3(col, mix3([0.62, 0.38, 0.035], [0.3, 0.15, 0.02], smooth(0.09, 0.17, rho)), 1 - smooth(0.17 - aF, 0.17 + aF, rho));
+                und = mix3(und, col, cov * (0.96 - 0.22 * smooth(0.55, 1, rho / rE)));
               } else if (f.kind === 1) {
                 // lá: thuôn 2 đầu nhọn, 2 nửa đậm nhạt (gân giữa)
                 const yw = 0.34 * Math.max(0, 1 - x * x), cov = (1 - smooth(-aF, aF, Math.abs(y) - yw)) * (1 - smooth(1 - aF, 1 + aF, Math.abs(x)));
                 if (cov <= 0) continue;
-                const lf: RGB = y > 0 ? [0.2, 0.34, 0.1] : [0.13, 0.24, 0.065];
-                und = mix3(und, lf, 0.8 * cov);
+                const lf: RGB = y > 0 ? [0.19, 0.32, 0.1] : [0.11, 0.21, 0.06];
+                und = mix3(und, lf, 0.88 * cov);
               } else {
                 // vụn lá vàng: mảnh tứ giác méo, phản chiếu gương (tô sau bước ánh sáng)
                 const cov = 1 - smooth(1 - aF, 1 + aF, Math.max(Math.abs(x) * 1.1 + 0.25 * y, Math.abs(y) * 1.3 - 0.2 * x));
                 if (cov > metalMix) { metalMix = 0.92 * cov; metalMirror = true; metalQ = side * (0.3 + 0.2 * hash2(Math.round(f.t * 97), Math.round(f.y * 89), seedN)); } // nghiêng gần hướng đèn → vụn vàng loé sáng, không thành chấm đen
               }
             }
-            base = mix3(und, milk, 0.32);
+            // lớp sữa thứ 2 PHỦ LÊN hoa (0.38: hoa mờ mềm như ngâm sữa, vẫn đọc rõ) — trộn theo độ sáng CẢM NHẬN (căn bậc 2):
+            // trộn tuyến tính với sữa sáng thì 38% sữa đã làm hoa bạc phấn như 60%
+            const vq = (a: number, b: number) => (Math.sqrt(a) * 0.62 + Math.sqrt(b) * 0.38) ** 2;
+            base = [vq(und[0], milk[0]), vq(und[1], milk[1]), vq(und[2], milk[2])];
             break;
           }
           case "web": {

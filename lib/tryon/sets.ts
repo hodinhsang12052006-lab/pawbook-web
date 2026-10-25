@@ -15,7 +15,7 @@ interface Pal { c1: string; c2: string; m: string }
  *  hạt nào / cỡ / lật / dời; `colors` riêng (VD đầu French đỏ của cherry) */
 interface EchoSpec { pattern?: string | string[]; pick?: BeadPick; scale?: number; mirror?: boolean; uShift?: number; tShift?: number; colors?: (p: Pal) => string[] }
 
-const CHERRY = "#b3122e", ORANGE = "#c4541f";
+const CHERRY = "#b3122e", ORANGE = "#c4541f", SLIME = "#76c427"; // SLIME = màu slime cố định của engine (lin 0.18/0.55/0.02)
 const h32 = (a: number, b: number) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 /** độ sáng L* (0–100) của mã hex — so tương phản 2 màu (đầu French trắng trên nền trắng sữa thì không thấy) */
 function lstar(hex: string): number {
@@ -47,6 +47,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   // sóng biển → đầu French trắng (bọt sóng); ren cô dâu → French trắng cổ điển: echo cùng chủ đề, không lặp lại hoạ tiết
   waves: [{ pattern: "french" }],
   lace: [{ pattern: "french" }],
+  // slime chảy → đầu French xanh slime (đúng màu slime bộ máy vẽ) thay vì 2 móng chảy slime giống hệt nhau
+  slimedrip: [{ pattern: "french", colors: (p) => [p.c1, SLIME, p.m] }],
   hearts: [{ pick: "rest", scale: 0.9, mirror: true }],
   floral: [{ pick: "second", scale: 0.95 }],
   blossom: [{ pick: "second", scale: 0.95 }],

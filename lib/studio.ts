@@ -79,8 +79,9 @@ export function lookColors(look: StudioLook): LookColors {
     finish: FINISHES.includes(look.finish as Finish) ? (look.finish as Finish) : "glossy",
     pattern: look.pattern,
     seed: seedOf(look.id),
-    // thạch / negative space: hơi trong (móng thật thấy nhẹ) — móng cũ sẽ được tháo trước khi làm, nên không để lộ màu cũ
-    opacity: look.pattern === "jelly" ? 0.85 : look.pattern === "negative" ? 0.9 : 1,
+    // negative space: hơi trong (móng thật thấy nhẹ). Thạch: bộ máy tự dựng lớp gel trong trên giường móng (không lấy
+    // điểm ảnh cũ) → phủ đặc 1; để 0.85 thì màu + dáng móng cũ lộ 15% và mất bóng chân móng (thạch nhìn "dị", 25/10)
+    opacity: look.pattern === "negative" ? 0.9 : 1,
   };
 }
 

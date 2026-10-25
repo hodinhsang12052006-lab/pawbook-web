@@ -616,8 +616,12 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
 }
 
 // ---------------------------------------------------------------- tô màu theo ánh sáng thật
+/** Ghi đè cho 1 móng trong bộ (bộ móng phối: móng trơn + móng hoạ tiết + móng nhấn — mỗi móng 1 vai, cùng tông). */
+export interface NailOverride { pattern?: string; colors?: string[]; finish?: Finish; art?: boolean }
 export interface LookColors {
   colors: string[]; finish: Finish; pattern: string; seed: number;
+  /** ghi đè theo từng móng (theo thứ tự móng) — không có thì mọi móng theo mẫu chung */
+  nails?: (NailOverride | null | undefined)[];
   /** độ phủ lớp sơn (1 = sơn đặc; thạch / negative space ~0.5 — thấy móng thật bên dưới) */
   opacity?: number;
 }
@@ -1290,12 +1294,18 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
   }
   const op = Math.max(0.05, Math.min(1, look.opacity ?? 1));
   const cols = (look.colors.length ? look.colors : ["#ec4899"]).map(hexToRgb).map((c) => c.map((x) => LIN[x]) as RGB);
-  const c1 = cols[0], c2 = cols[1] ?? cols[0], metal = cols[2] ?? (cols.length > 1 ? cols[cols.length - 1] : [0.69, 0.55, 0.2] as RGB);
-  const pat = look.pattern;
+  const c1L = cols[0], c2L = cols[1] ?? cols[0], metalL = cols[2] ?? (cols.length > 1 ? cols[cols.length - 1] : [0.69, 0.55, 0.2] as RGB);
+  const patL = look.pattern;
   const lum = (c: RGB) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
   segs.forEach((seg, i) => {
+    // mỗi móng có thể có hoạ tiết / màu / hiệu ứng riêng (bộ móng phối: móng trơn + móng hoạ tiết + móng nhấn)
+    const ov = look.nails?.[i] ?? undefined;
+    const pat = ov?.pattern ?? patL;
+    const ovCols = ov?.colors?.length ? ov.colors.map(hexToRgb).map((c) => c.map((x) => LIN[x]) as RGB) : null;
+    const c1 = ovCols ? ovCols[0] : c1L, c2 = ovCols ? ovCols[1] ?? ovCols[0] : c2L, metal = ovCols ? ovCols[2] ?? metalL : metalL;
+    const fin: Finish = ov?.finish ?? look.finish;
     const accent = seg.accent ?? (i === 2 || i === 3);
-    const onNail = ALL_NAIL_PATTERNS.has(pat) || accent || segs.length < 3; // hoạ tiết có vẽ trên móng này không
+    const onNail = ov?.art ?? (ALL_NAIL_PATTERNS.has(pat) || accent || segs.length < 3); // hoạ tiết có vẽ trên móng này không
     const base0 = pat === "mixmatch" && accent ? c2 : c1;
     const { lm, under, eDist } = segMaps(img, seg);
     const side = lm.side;
@@ -1310,14 +1320,14 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     // hướng đèn trong toạ độ khối 3D trên móng (x: ngang móng về phía có đèn, y: về phía đầu móng ≈ phía trên ảnh)
     const LxB = side * 0.55, LyB = 0.42 * upS, LzB = 0.72, Ln = Math.hypot(LxB, LyB, LzB);
     const L3 = [LxB / Ln, LyB / Ln, LzB / Ln], H3n = Math.hypot(L3[0], L3[1], L3[2] + 1), H3 = [L3[0] / H3n, L3[1] / H3n, (L3[2] + 1) / H3n];
-    const glit = look.finish === "glitter" ? glitterLayer(seg, look.seed + i * 17) : null;
+    const glit = fin === "glitter" ? glitterLayer(seg, look.seed + i * 17) : null;
     // chrome trên nền trắng / ngọc trai / champagne = glazed donut (bạc xám vẫn là gương kim loại); thạch + chrome = thạch
     // tráng ngọc trai (bột chrome mờ trên gel trong) — không phải gương kim loại (từng ra sọc tím xám như inox)
-    const glazed = look.finish === "chrome" && (lum(base0) > 0.62 || pat === "jelly");
-    const velvet = pat === "velvet" || (look.finish === "cateye" && pat === "velvet");
-    const gloss = look.finish === "matte" ? 0.06 : look.finish === "chrome" ? 1.0 : 0.9;
-    const contrast = look.finish === "matte" ? 0.3 : 0.5;
-    const synth = look.finish !== "matte" && !lm.streak ? (look.finish === "chrome" && !glazed ? 0.5 : 0.75) : 0;
+    const glazed = fin === "chrome" && (lum(base0) > 0.62 || pat === "jelly");
+    const velvet = pat === "velvet" || (fin === "cateye" && pat === "velvet");
+    const gloss = fin === "matte" ? 0.06 : fin === "chrome" ? 1.0 : 0.9;
+    const contrast = fin === "matte" ? 0.3 : 0.5;
+    const synth = fin !== "matte" && !lm.streak ? (fin === "chrome" && !glazed ? 0.5 : 0.75) : 0;
     // chiều dài thật của mặt nạ (kể cả phần đắp) để hoạ tiết đầu móng (french…) bám đúng đầu móng
     let sEnd = 1;
     for (let k = 0; k < seg.alpha.length; k++) if (seg.alpha[k] >= 0.5 && seg.along[k] > sEnd) sEnd = seg.along[k];
@@ -1670,7 +1680,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       }
       let r = base[0], g = base[1], b = base[2];
       // ---- 2) hiệu ứng + ánh sáng thật
-      if (look.finish === "chrome" && !glazed) {
+      if (fin === "chrome" && !glazed) {
         [r, g, b] = metalShade(base, t, u, shade, side);
         const endK = cut * (0.84 + 0.16 * (1 - smooth(0.84, 1.02, u))); // đầu móng cong xuống → phản chiếu nền tối hơn
         r *= endK; g *= endK; b *= endK;
@@ -1713,7 +1723,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         r *= dim; g *= dim; b *= dim;
         const amt = (0.24 * field * (1 + 0.25 * fine) * lightK + spark * 0.6 * field * lightK) * edge;
         r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
-      } else if (look.finish === "cateye") {
+      } else if (fin === "cateye") {
         // mắt mèo: dải sáng từ tính chéo qua móng: lõi sáng + quầng mềm + ánh lấp lánh nhỏ
         const d = (s - 0.52) * 0.9 + t * 0.32;
         const band = 0.7 * Math.exp(-(d * d) / (2 * 0.06 ** 2)) + 0.35 * Math.exp(-(d * d) / (2 * 0.16 ** 2));
@@ -1743,7 +1753,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const sh = 0.04 * (hash2(X, Y, look.seed + 3) - 0.5); r += sh; g += sh; b += sh;
       }
       // nhám: vân mịn THEO TỈ LỆ độ sáng (±2.5%) — cộng cố định ±0.0125 từng thành hạt cát lốm đốm trên màu tối
-      if (look.finish === "matte") { const nz = 1 + (hash2(X, Y, 7) - 0.5) * 0.05; r *= nz; g *= nz; b *= nz; }
+      if (fin === "matte") { const nz = 1 + (hash2(X, Y, 7) - 0.5) * 0.05; r *= nz; g *= nz; b *= nz; }
       // ---- 3) nét kim loại (line / chrome line): đường cong mềm dọc móng, ánh kim theo ánh sáng
       if (onNail && (pat === "lines" || pat === "chromeline")) {
         const tc = amp * Math.sin(2.4 * u + ph) - 0.05;
@@ -1954,7 +1964,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         // rõ nhất ở CHÂN móng (gel lẩn dưới da), 2 bên rất nhẹ — đều khắp mép thì thành nét viền như vẽ
         const shE = (0.06 + 0.1 * (1 - smooth(0.12, 0.35, u))) * Math.exp(-dE / 1.2) * (1 - tipZone);
         r *= 1 - shE; g *= 1 - shE; b *= 1 - shE;
-        if (look.finish !== "matte") {
+        if (fin !== "matte") {
           const ge = 0.08 * Math.exp(-(((dE - 1.6) / 1.3) ** 2)) * smooth(0.9, 1.0, u);
           r += (1 - r) * ge; g += (1 - g) * ge; b += (1 - b) * ge;
         }
@@ -1979,7 +1989,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const rim = 0.12 * Math.exp(-(((t + side * 0.66) / 0.07) ** 2)) * smooth(0.3, 0.45, u) * (1 - smooth(0.6, 0.78, u));
         spec = Math.max(spec, synth * (0.82 * core + halo + rim));
       }
-      if (extW > 0 && look.finish !== "matte") {
+      if (extW > 0 && fin !== "matte") {
         // ánh đèn thật của ảnh dừng ở mép móng thật → phần đắp vẽ tiếp vệt phản chiếu mềm (cùng phía đèn), không thì
         // nửa móng bóng nửa móng lì như dán giấy
         const tcE = side * (0.4 + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5));
@@ -1989,7 +1999,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       spec = Math.min(1, spec * gloss);
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (look.finish === "matte" ? 0.05 : look.finish === "chrome" && !glazed ? 0.45 : 0.92);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : fin === "chrome" && !glazed ? 0.45 : 0.92);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

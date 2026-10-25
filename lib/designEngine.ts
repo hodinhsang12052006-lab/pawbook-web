@@ -938,8 +938,9 @@ const ROLES: Record<string, Role> = {
   french: { g: "tip", base: "sheer", pal: [["sheer", "white", "gold"], ["sheer", "espresso", "gold"], ["nude", "burgundy", "gold"], ["milky", "black", "silver"]] },
   // ombre: chân móng sáng → đầu móng đậm hơn 20–66 L*, cùng nhiệt độ màu (nâu ấm → trắng lạnh nhìn như ố #3), không loang ra trắng đặc
   ombre: { g: "glow", ok: ([a, b]) => Lof(hx(a)) - Lof(hx(b)) >= 20 && Lof(hx(a)) - Lof(hx(b)) <= 66 && Lof(hx(b)) < 90 && sameTemp(a, b), pal: [["nude", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["nude", "coffee", "gold"], ["pinkNude", "raspberry", "gold"]] },
-  // aura: nền trong / sữa với lõi màu rực đậm hơn ≥ 20 L*, hoặc nền gần đen với lõi rực (aura nude trên cherry cola = vết bẩn)
-  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && ((SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20) || Lof(hx(a)) < 20), pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["black", "persimmon", "gold"], ["black", "periwinkle", "silver"]] },
+  // aura: nền trong / sữa với lõi màu rực đậm hơn ≥ 20 L* (aura nude trên cherry cola = vết bẩn). Nền đen + lõi rực là kiểu
+  // đúng nhưng bộ vẽ aura hiện pha quầng về hồng / trắng → trên nền đen ra vệt xám tím đục (soi 25/10) — mở lại khi vẽ lại aura
+  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20, pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["sheer", "persimmon", "gold"], ["milky", "periwinkle", "silver"]] },
   tortoise: { g: "tone", pal: [["caramel", "chocolate", "gold"]] },
   marble: { g: "glow", ok: marbleOk, pal: [["milky", "smoke", "gold"], ["cloudDancer", "pewter", "gold"], ["black", "milky", "gold"], ["emerald", "milky", "gold"], ["jade", "milky", "gold"]] },
   lines: { g: "line", on: "metal", pal: [["black", "milky", "gold"], ["navy", "milky", "silver"], ["espresso", "nude", "gold"]] },
@@ -982,7 +983,8 @@ const ROLES: Record<string, Role> = {
   // da báo: đốm là tông ấm (caramel, nâu, đỏ, hồng) — đốm trắng sữa trên mocha nhìn như vết sơn bong, không ra da báo
   leopard: { g: "motif", on: K, shapes: SH4, ok: ([a, b]) => a !== b && ["brown", "orange", "red", "pink"].includes(hueFamily(hx(b))), pal:[["nude", "caramel", "gold"], ["caramel", "espresso", "gold"], ["babyPink", "raspberry", "roseGold"]] },
   checker: { g: "glow", shapes: SHORT, pal: [["milky", "cherry", "gold"], ["milky", "black", "silver"], ["bone", "coffee", "gold"]] },
-  cherry: { g: "motif", on: "#c3101c", shapes: SH4, pal: [["milky", "cherry", "gold"], ["sheer", "cherry", "gold"], ["nude", "cherry", "gold"]] },
+  // cherry vẽ tay nhỏ: chỉ nền sáng (trắng sữa / trong / nude) — cherry đỏ trên nâu espresso tối gần như mất hút
+  cherry: { g: "motif", on: "#c3101c", shapes: SH4, ok: ([a]) => Lof(hx(a)) >= 60, pal: [["milky", "cherry", "gold"], ["sheer", "cherry", "gold"], ["nude", "cherry", "gold"]] },
   // ren: đặt ở đầu móng / góc, ren trắng trên nền trong (không quấn ngang thân như vớ #42)
   lace: { g: "tip", on: "#f4f4f6", base: "sheer", pal: [["sheer", "milky", "pearl"], ["pinkNude", "milky", "pearl"], ["nude", "milky", "gold"]] },
   negative: { g: "glow", vs: "#e4bcb2", pal: [["nude", "espresso", "gold"], ["nude", "black", "gold"], ["nude", "burgundy", "gold"]] },

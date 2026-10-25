@@ -46,7 +46,8 @@ const TONE: Record<HandProfile["undertone"], { nude: CK[]; rich: CK[]; metal: CK
 export interface AdviceLook extends StudioLook { why: Bi; tag: Bi }
 
 /** 10 mẫu hợp tay + đang trend. `salt` đổi bộ ("Bộ khác"); `extension`: đang chọn đắp móng (giá theo Gel-X). */
-export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, extension = false): AdviceLook[] {
+export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, extension = false, now = new Date()): AdviceLook[] {
+  const month = now.getUTCMonth() + 1;
   let h = 2166136261;
   for (const c of salt) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0) % 1000) / 1000;
@@ -72,8 +73,21 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       why: { vi: "Glazed donut — ánh ngọc trai tráng gương, mẫu được đặt nhiều nhất năm nay", en: "Glazed donut — pearly chrome glaze, the most-booked look this year" } },
     { spec: { shape, finish: "glossy", pattern: "french", colors: [p.undertone === "warm" ? "nude" : "sheer", pick(["white", rich, metal] as CK[]), metal], style: "trend" }, tag: TAG.trend,
       why: { vi: "Micro French viền mảnh — sang, tối giản, móng mọc ra vẫn đẹp", en: "Micro French — a fine tip line, minimal and luxe, grows out gracefully" } },
-    { spec: { shape, finish: "cateye", pattern: "velvet", colors: [deep ? "plum" : pick(["burgundy", "espresso", "plum", "navy"] as CK[]), "white", metal], style: "trend" }, tag: TAG.trend,
-      why: { vi: "Velvet nhung — mắt mèo rải đều như nhung, lấp lánh dưới đèn", en: "Velvet — cat-eye shimmer spread like velvet, sparkles under light" } },
+    // HỌ MẮT MÈO — nhóm trend tăng mạnh nhất 2026 (Pinterest Predicts 2026): xoay vòng theo "Bộ khác"
+    (() => {
+      const kind = pick(["velvet", "polka", "auroracat", "darkred", "twotone"] as const);
+      const deepC = deep ? "plum" : pick(["burgundy", "espresso", "plum", "navy", "plumNoir"] as CK[]);
+      if (kind === "polka") return { spec: { shape, finish: "cateye" as const, pattern: "polka", colors: [pick(["plumNoir", "black", "navy"] as CK[]), "white", metal === "pearl" ? "silver" : metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Mắt mèo chấm bi — tìm kiếm tăng 1.585% trên Pinterest, vừa sang vừa nghịch", en: "Polka dot cat eye — Pinterest searches up 1,585%, chic yet playful" } };
+      if (kind === "auroracat") return { spec: { shape, finish: "cateye" as const, pattern: "auroracat", colors: [pick(["black", "navy", "plumNoir"] as CK[]), "white", "silver"] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Mắt mèo aurora — dải sáng đổi sắc như cực quang, tìm kiếm +895% trên Pinterest", en: "Aurora cat eye — a colour-shifting band like the northern lights, Pinterest searches +895%" } };
+      if (kind === "darkred") return { spec: { shape, finish: "cateye" as const, pattern: "solid", colors: [pick(["burgundy", "mulledWine", "cherry"] as CK[]), "gold", "gold"] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: `Mắt mèo đỏ sẫm — tìm kiếm +735% trên Pinterest, làm da ${deep ? "đậm sáng bừng" : "trông trắng sáng"}`, en: `Dark red cat eye — Pinterest searches +735%, makes ${deep ? "deeper skin glow" : "skin look brighter"}` } };
+      if (kind === "twotone") return { spec: { shape, finish: "cateye" as const, pattern: "mixmatch", colors: [deepC, pick(["navy", "plumNoir", "periwinkle"] as CK[]), "silver"] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Mắt mèo 2 tông xen kẽ — tìm kiếm +515% trên Pinterest", en: "Two-tone cat eye, alternating — Pinterest searches +515%" } };
+      return { spec: { shape, finish: "cateye" as const, pattern: "velvet", colors: [deepC, "white", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+        why: { vi: "Velvet nhung — mắt mèo rải đều như nhung, lấp lánh dưới đèn", en: "Velvet — cat-eye shimmer spread like velvet, sparkles under light" } };
+    })(),
     { spec: { shape, finish: "glossy", pattern: "aura", colors: [...pick(t.aura), metal] as [CK, CK, CK], style: "trend" }, tag: TAG.trend,
       why: { vi: `Aura nail — quầng màu mềm giữa móng, hợp ${tone.vi}`, en: `Aura nails — a soft glow in the centre, flattering on ${tone.en}` } },
     { spec: { shape: shape === "square" ? "oval" : shape, finish: "glossy", pattern: "babyboomer", colors: ["pinkNude", "white", metal], style: "trend" }, tag: TAG.slim,
@@ -82,7 +96,14 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       why: { vi: `Ombre dọc móng kéo dài ngón — ${slim.vi}`, en: `A vertical ombre draws the eye along the nail — ${slim.en}` } },
     // 2 mẫu "WOW" mỗi bộ (khách lướt thấy là muốn chụp): 1 mẫu chi tiết KIM LOẠI + 1 mẫu 3D — xoay vòng theo "Bộ khác"
     (() => {
-      const kind = pick(["chromeline", "chromefrench", "lines", "marble", "tortoise", "foil", "leopard", "checker"] as const);
+      const fallM = month >= 9 && month <= 11;
+      const kind = pick(["chromeline", "chromefrench", "lines", "marble", "tortoise", "foil", "leopard", "checker", "stripes", "polka", ...(fallM ? (["fawn", "tortoise"] as const) : [])] as const);
+      if (kind === "stripes") return { spec: { shape: shape === "square" ? "almond" : shape, finish: "glossy" as const, pattern: "stripes", colors: [pick([nude, "pinkNude", "cloudDancer"] as CK[]), pick(["white", "espresso", "black"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.slim,
+        why: { vi: `Sọc mảnh dọc móng — kéo dài ngón tay, "almond nails stripes" +694% trên Pinterest`, en: `Fine vertical stripes — lengthen the fingers; "almond nails stripes" +694% on Pinterest` } };
+      if (kind === "polka") return { spec: { shape, finish: "glossy" as const, pattern: "polka", colors: [pick([nude, "cloudDancer", "babyPink"] as CK[]), pick(["chocolate", "burgundy", "white"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
+        why: { vi: "Chấm bi nhỏ tối giản — đang hot lại, hợp móng ngắn", en: "Minimal tiny polka dots — back in style, perfect on short nails" } };
+      if (kind === "fawn") return { spec: { shape, finish: "glossy" as const, pattern: "fawn", colors: [pick(["caramel", "coffee"] as CK[]), "cloudDancer", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
+        why: { vi: "Da hươu (fawn) — animal print mềm của thu 2026, nhẹ nhàng hơn da báo", en: "Fawn print — fall 2026's soft animal print, gentler than leopard" } };
       if (kind === "foil") return { spec: { shape, finish: "glossy" as const, pattern: "foil", colors: [pick([rich, nude, "olive"] as CK[]), "white", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
         why: { vi: `Foil ${COLORS[metal].vi} vụn trên 2 ngón — sang, bắt sáng mỗi lần cử động`, en: `${COLORS[metal].en[0].toUpperCase()}${COLORS[metal].en.slice(1)} foil flakes on two nails — luxe, catches the light as you move` } };
       if (kind === "leopard") return { spec: { shape, finish: "glossy" as const, pattern: "leopard", colors: [nude, pick(["caramel", "chocolate", "cherry"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
@@ -99,7 +120,25 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
         why: { vi: `Nét ${COLORS[metal].vi} nổi mảnh — chi tiết nhỏ mà bắt sáng, hợp ${tone.vi}`, en: `A fine raised ${COLORS[metal].en} line — small but catches the light, suits ${tone.en}` } };
     })(),
     (() => {
-      const kind = pick(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts"] as const);
+      // + hoạ tiết ĐÚNG MÙA (tháng 10: Halloween · 11–12: Giáng sinh · xuân: hoa · hè: cherry)
+      const seasonal = month === 10 ? (["ghost", "bats", "jackolantern", "web", "moonstars"] as const) : month >= 11 ? (["snow", "candy", "plaid", "charm3d"] as const) : month >= 3 && month <= 5 ? (["floral"] as const) : month >= 6 && month <= 8 ? (["cherry"] as const) : ([] as const);
+      const kind = pick(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts", ...seasonal, ...seasonal] as const);
+      if (kind === "ghost" || kind === "bats" || kind === "web" || kind === "moonstars" || kind === "jackolantern") {
+        const base: CK = kind === "jackolantern" ? nude : pick(["black", "plumNoir", "aubergine", "navy"] as CK[]);
+        const label = { ghost: ["ma nhỏ dễ thương", "cute little ghosts"], bats: ["dơi bạc", "silver bats"], web: ["mạng nhện tối giản", "a minimal spiderweb"], moonstars: ["trăng khuyết & sao", "a crescent moon & stars"], jackolantern: ["bí ngô mini", "mini pumpkins"] }[kind];
+        return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: [base, "white", kind === "moonstars" ? "gold" : "silver"] as [CK, CK, CK], style: "trend" as const }, tag: { vi: "Halloween", en: "Halloween" },
+          why: { vi: `Halloween 2026 kiểu "moody luxe": ${label[0]} trên 2 ngón, nền trầm — đi làm vẫn hợp`, en: `Halloween 2026 "moody luxe": ${label[1]} on two nails over a deep base — still office-friendly` } };
+      }
+      if (kind === "snow" || kind === "candy" || kind === "plaid") {
+        const cols: [CK, CK, CK] = kind === "snow" ? [pick(["coolBlue", "navy", "cherry"] as CK[]), "white", "silver"] : kind === "candy" ? ["white", "cherry", "gold"] : [pick(["velvet", "cherry"] as CK[]), "pine", "gold"];
+        const label = { snow: ["bông tuyết", "snowflakes"], candy: ["sọc kẹo gậy", "candy-cane stripes"], plaid: ["caro tartan", "tartan"] }[kind];
+        return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: cols, style: "trend" as const }, tag: { vi: "Giáng sinh", en: "Christmas" },
+          why: { vi: `Giáng sinh 2026: ${label[0]} trên 2 ngón — vào mùa lễ là khách hỏi`, en: `Christmas 2026: ${label[1]} on two nails — the holiday request` } };
+      }
+      if (kind === "floral" || kind === "cherry") {
+        return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: [pick(["white", "sheer", "cloudDancer"] as CK[]), kind === "floral" ? pick(["babyPink", "lavender", "coral"] as CK[]) : "cherry", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
+          why: kind === "floral" ? { vi: "Hoa nhí vẽ tay — mùa xuân là mẫu được đặt nhiều nhất", en: "Hand-painted ditsy florals — the most-booked spring look" } : { vi: "Cherry vẽ tay — dễ thương, rực rỡ mùa hè", en: "Hand-painted cherries — cute and summery" } };
+      }
       const soft = pick([...t.pastel, ...t.nude] as CK[]);
       if (kind === "chromedrops") return { spec: { shape, finish: "glossy" as const, pattern: "chromedrops", colors: [pick([nude, "sheer", "pinkNude", rich] as CK[]), "white", metal === "pearl" ? "silver" : metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
         why: { vi: "Giọt chrome 3D — như giọt kim loại nóng chảy, mẫu đang lên rất nhanh", en: "3D chrome blobs — like drops of molten metal, rising fast" } };

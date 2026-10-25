@@ -12,8 +12,8 @@ import { publishJobDigest } from "@/lib/jobDigestPost";
 // Mặc định dùng MÁY TẠO MẪU PAWNAIL (0đ, không phụ thuộc AI ngoài). Muốn dùng
 // Gemini: đặt DESIGNS_SOURCE=gemini (+ GEMINI_API_KEY) trên Vercel.
 // 3 lượt/ngày (vercel.json: 23:00, 05:00, 13:00 UTC) × 4 mẫu → tối đa 12 mẫu mới mỗi ngày.
-const CRON_ENGINE_COUNT = 4;
-const CRON_ENGINE_PER_DAY = 12;
+const CRON_ENGINE_COUNT = 6; // ảnh do máy PawNail tự vẽ (0đ) → mỗi lượt 6 mẫu, 3 lượt / ngày
+const CRON_ENGINE_PER_DAY = 18;
 // Bảo vệ bằng CRON_SECRET: Vercel tự gửi "Authorization: Bearer <CRON_SECRET>".
 // Không có CRON_SECRET → từ chối mọi lời gọi (không ai gọi ngoài được để đốt tiền AI).
 export const maxDuration = 60;

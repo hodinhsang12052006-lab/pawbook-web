@@ -7,7 +7,10 @@ import { renderDesignImage, canRenderPattern } from "../../lib/designRender";
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
 const [out, nStr = "12", salt = "s1"] = process.argv.slice(2);
-const list = generateEngineDesigns(60, { market: "US", date: "2026-10-25", occasions: [], risingTags: [], usedTitles: new Set(), salt }).filter((d) => canRenderPattern(d.pattern)).slice(0, +nStr);
+// đúng như cron chạy ngầm: 3 lượt × 6 mẫu / ngày, có dịp lễ đang diễn ra (DATE / OCC đổi được)
+const date = process.env.DATE || "2026-10-25", occ = process.env.OCC ?? "halloween";
+const used = new Set<string>();
+const list = ["0", "6", "12"].flatMap((sl) => { const l = generateEngineDesigns(6, { market: "US", date, occasions: occ ? [{ id: occ, title: occ, startsIn: 0 }] : [], risingTags: [], usedTitles: used, salt: `${salt}${sl}` }); l.forEach((d) => used.add(d.title.vi)); return l; }).filter((d) => canRenderPattern(d.pattern)).slice(0, +nStr);
 const W = 420, tiles: Buffer[] = [];
 const label = (txt: string) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="30"><rect width="${W}" height="30" fill="rgba(0,0,0,.6)"/><text x="8" y="20" font-size="14" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 for (const [i, d] of list.entries()) {

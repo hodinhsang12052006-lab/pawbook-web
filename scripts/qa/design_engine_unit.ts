@@ -77,6 +77,8 @@ check("DE20", "Không lặp tên mẫu đã ra trước đó", avoid.length === 
 const kor = all.filter((x) => /^Trend nail Hàn/.test(x.d.description.vi));
 const KOREAN_ONLY = ["jelly", "chromefrench", "charm3d", "gemcluster", "foil", "chromeline", "mixmatch", "babyboomer"];
 const trd = all.filter((x) => /^Trend đang được ưa chuộng/.test(x.d.description.vi));
+// mẫu từ RADAR TREND (lib/trendRadar) ghi rõ nguồn — được dùng hoạ tiết kiểu Hàn (thạch tráng gương, mắt mèo 2 tông…)
+const RADAR = /\((Pinterest Predicts|Màu của năm|Trend thu|Halloween 20|Giáng sinh 20|Năm mới)/;
 check("DE22", "Mẫu quanh năm: nail Hàn + trend đang chuộng chiếm ≥ 40% tổng số, mỗi nhóm ≥ 15%, đa dạng hoạ tiết", kor.length + trd.length >= all.length * 0.4 && kor.length >= all.length * 0.15 && trd.length >= all.length * 0.15 && kor.every((x) => !x.d.occasion) && trd.every((x) => !x.d.occasion) && new Set(kor.map((x) => x.d.pattern)).size >= 10 && new Set(trd.map((x) => x.d.pattern)).size >= 10,
   `Hàn ${kor.length}, trend ${trd.length} / ${all.length}; hoạ tiết Hàn ${new Set(kor.map((x) => x.d.pattern)).size}, trend ${new Set(trd.map((x) => x.d.pattern)).size}`);
 check("DE27", "Velvet: nam châm phẳng lướt đều khắp móng (không tạo dải); Milk bath: nền trắng sữa, hoa nằm dưới lớp thạch; Negative space: chừa móng thật bằng base trong",
@@ -85,7 +87,7 @@ check("DE27", "Velvet: nam châm phẳng lướt đều khắp móng (không t�
   all.filter((x) => x.d.pattern === "negative").every((x) => x.d.steps.some((st) => /base trong/.test(st.vi)) && !x.d.steps.some((st) => /^Sơn 2 lớp gel/.test(st.vi))));
 check("DE28", "Cả năm dùng ≥ 30 hoạ tiết khác nhau", new Set(all.map((x) => x.d.pattern)).size >= 30, String(new Set(all.map((x) => x.d.pattern)).size));
 check("DE23", "Mỗi lô vừa có mẫu theo dịp lễ vừa có mẫu quanh năm (khi đang có dịp lễ)", batches.every((b) => b.some((d) => d.occasion) && b.some((d) => !d.occasion)));
-check("DE24", "Hoạ tiết kiểu Hàn ra đúng chỗ (trend Hàn hoặc dịp được phép), baby boomer luôn hồng nude → trắng sữa", all.filter((x) => KOREAN_ONLY.includes(x.d.pattern)).every((x) => /^Trend nail Hàn/.test(x.d.description.vi) || (x.d.occasion && (PATTERNS.find((p) => p.id === x.d.pattern)!.occasions as string[]).includes(x.d.occasion))) && all.filter((x) => x.d.pattern === "babyboomer").every((x) => x.d.palette[0] === "#f2c4c4" && x.d.palette[1] === "#f8fafc"));
+check("DE24", "Hoạ tiết kiểu Hàn ra đúng chỗ (trend Hàn hoặc dịp được phép), baby boomer luôn hồng nude → trắng sữa", all.filter((x) => KOREAN_ONLY.includes(x.d.pattern)).every((x) => RADAR.test(x.d.description.vi) || /^Trend nail Hàn/.test(x.d.description.vi) || (x.d.occasion && (PATTERNS.find((p) => p.id === x.d.pattern)!.occasions as string[]).includes(x.d.occasion))) && all.filter((x) => x.d.pattern === "babyboomer").every((x) => x.d.palette[0] === "#f2c4c4" && x.d.palette[1] === "#f8fafc"));
 check("DE25", "Charm/cụm đá: phủ top quanh viền, KHÔNG phủ lên mặt charm/đá", all.filter((x) => ["charm3d", "gemcluster"].includes(x.d.pattern)).every((x) => x.d.steps.some((st) => /không phủ lên mặt/.test(st.vi))));
 
 const dupWord = (t: string) => t.toLowerCase().split(/\s+/).some((w, i, a) => i > 0 && w === a[i - 1]);

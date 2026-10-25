@@ -9,6 +9,7 @@
 // Ngẫu nhiên CÓ HẠT GIỐNG (ngày + thị trường) → cùng ngày chạy lại ra cùng
 // kết quả; tránh trùng tên với các mẫu đã có.
 
+import { activeTrends, type Trend } from "@/lib/trendRadar";
 export interface Bi { vi: string; en: string }
 export type Mat = Bi & { qty: string };
 export type Shape = "almond" | "coffin" | "square" | "oval" | "stiletto";
@@ -54,6 +55,19 @@ export const COLORS = {
   greige: col("xám be", "greige", "#b8ada3"),
   espresso: col("nâu espresso", "espresso brown", "#3b2418"),
   sheer: col("hồng sữa", "milky pink", "#f6d5d0"),
+  // màu 2026 (Pinterest Predicts 2026 · Pantone 2026 · báo cáo thu 2026)
+  wasabi: col("xanh wasabi", "wasabi green", "#b5c42a"),
+  jade: col("xanh ngọc bích", "jade", "#5f9c88"),
+  plumNoir: col("tím mận đậm", "plum noir", "#3e1530"),
+  coolBlue: col("xanh băng", "icy blue", "#a9c7e8"),
+  persimmon: col("cam quả hồng", "persimmon", "#e2552b"),
+  cloudDancer: col("trắng mây", "cloud white", "#f0ece2"),
+  raspberry: col("hồng mâm xôi", "raspberry", "#c2185b"),
+  coffee: col("nâu cà phê", "coffee brown", "#6f4e37"),
+  aubergine: col("tím cà", "aubergine", "#3b1f3a"),
+  mulledWine: col("đỏ rượu ấm", "mulled wine", "#5a1a2a"),
+  periwinkle: col("tím xanh dừa cạn", "periwinkle", "#8f9fe0"),
+  strawberry: col("đỏ dâu", "strawberry red", "#e0354a"),
 } as const;
 type CK = keyof typeof COLORS;
 const METALS: CK[] = ["gold", "silver", "roseGold", "pearl"];
@@ -367,6 +381,46 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `${c1.en} nails with small 3D ${metal.en} bow charms on two accent nails`,
   },
   {
+    id: "polka", occasions: ["trend", "korean", "any"], finishes: ["glossy", "cateye", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true,
+    title: ({ c1, c2, finish }) => finish === "cateye" ? s(`Mắt mèo ${c1.vi} chấm bi ${c2.vi}`, `${cap(c1.en)} polka dot cat eye`) : s(`Chấm bi ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} polka dots on ${c1.en}`),
+    why: s("chấm bi đang hot lại — riêng \"mắt mèo chấm bi\" tăng 1.585% lượt tìm trên Pinterest (Pinterest Predicts 2026)", "polka dots are back — \"polka dot cat eye nails\" searches jumped 1,585% on Pinterest (Pinterest Predicts 2026)"),
+    materials: ({ c2 }) => [m(`Gel vẽ ${c2.vi}`, `${cap(c2.en)} art gel`), DOT],
+    steps: ({ c2 }) => [s(`Chấm bi ${c2.vi} đều tay thành hàng so le trên cả 5 móng (cây chấm bi cỡ vừa), hơ đèn`, `Dot ${c2.en} polka dots in staggered rows on all five nails (medium dotting tool), cure`)],
+    image: ({ c1, c2 }) => `${c1.en} nails with neat small ${c2.en} polka dots in staggered rows on every nail`,
+  },
+  {
+    id: "auroracat", occasions: ["newyear"], badBase: ["white", "pearl", "sheer", "pinkNude", "babyPink", "nude", "cloudDancer", "butter"], finishes: ["cateye"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 8, difficulty: 2, design: true,
+    title: ({ c1 }) => s(`Mắt mèo aurora nền ${c1.vi}`, `Aurora cat eye on ${c1.en}`),
+    why: s("mắt mèo aurora đổi sắc như cực quang — tìm kiếm tăng 895% trên Pinterest (Pinterest Predicts 2026)", "aurora cat eye shifts colour like the northern lights — searches up 895% on Pinterest (Pinterest Predicts 2026)"),
+    materials: () => [m("Gel mắt mèo aurora (nhũ đổi màu)", "Aurora (multichrome) cat-eye gel"), m("Nam châm mắt mèo", "Cat-eye magnet", "1 cây")],
+    steps: () => [s("Phủ 1 lớp gel mắt mèo aurora mỏng, hút nam châm nghiêng 45° để dải sáng đổi sắc chạy chéo, hơ đèn ngay", "Apply a thin coat of aurora cat-eye gel, hold the magnet at 45° so the colour-shifting band runs diagonally, cure right away")],
+    image: ({ c1 }) => `${c1.en} cat eye nails with a glowing multichrome aurora band shifting pink, violet and icy blue`,
+  },
+  {
+    id: "stripes", occasions: ["trend", "korean", "summer"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1, c2, metal }) => s(`Sọc mảnh ${c2.vi} & ${metal.vi} nền ${c1.vi}`, `${cap(c2.en)} & ${metal.en} pinstripes on ${c1.en}`),
+    why: s("móng hạnh nhân kẻ sọc tăng 694% lượt tìm (Pinterest Predicts 2026) — làm ngón tay thon dài", "almond nails with stripes are up 694% in searches (Pinterest Predicts 2026) — they make fingers look longer"),
+    materials: ({ c2, metal }) => [LINER(c2), LINER(metal), LINER_BRUSH],
+    steps: ({ c2, metal }) => [s(`Kẻ sọc mảnh dọc móng xen kẽ ${c2.vi} và ${metal.vi} (cọ nét 9mm, kéo 1 lần từ chân lên đầu móng), hơ đèn`, `Pull thin vertical stripes alternating ${c2.en} and ${metal.en} (9mm liner, one stroke base to tip), cure`)],
+    image: ({ c1, c2, metal }) => `${c1.en} almond nails with thin vertical ${c2.en} and ${metal.en} pinstripes`,
+  },
+  {
+    id: "chocodip", occasions: ["trend", "valentine", "summer"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Dâu nhúng sô-cô-la (${c1.vi} – ${c2.vi})`, `Chocolate-covered strawberry (${c1.en} & ${c2.en})`),
+    why: s("\"dâu nhúng sô-cô-la\" là 1 trong các màu nail Pinterest dự báo cho 2026 — ngọt, ấm, rất ăn ảnh", "\"chocolate-covered strawberry\" is one of Pinterest's predicted nail looks for 2026 — sweet, warm and photogenic"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi}`, `${cap(c2.en)} gel`), LINER(COLORS.white), LINER_BRUSH],
+    steps: ({ c2 }) => [s(`Phủ đầu móng bằng gel ${c2.vi} theo đường lượn sóng + 1–2 giọt chảy, hơ đèn`, `Paint the tips in ${c2.en} gel with a wavy edge and one or two drips, cure`), s("Rưới vài nét trắng mảnh chéo lên phần sô-cô-la, hơ đèn", "Drizzle a few thin white diagonal lines over the chocolate, cure")],
+    image: ({ c1, c2 }) => `${c1.en} nails with ${c2.en} chocolate dipped wavy tips and thin white drizzle, like chocolate covered strawberries`,
+  },
+  {
+    id: "fawn", occasions: ["fall", "trend"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
+    title: ({ c1, c2 }) => s(`Da hươu ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} fawn print on ${c1.en}`),
+    why: s("họa tiết da hươu (fawn) mềm mại là bản animal print của mùa thu 2026 — nhẹ nhàng hơn da báo", "soft fawn print is fall 2026's animal print — gentler than leopard"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi}`, `${cap(c2.en)} gel`), m("Cọ tán mềm", "Soft blending brush", "1 cây")],
+    steps: ({ c2 }) => [s(`Chấm các đốm thuôn ${c2.vi} trên ${ACC.vi}, tán nhẹ mép cho loang mềm (không viền), hơ đèn`, `Dab elongated ${c2.en} spots on the ${ACC.en}, soften the edges with a brush (no outline), cure`)],
+    image: ({ c1, c2 }) => `${c1.en} nails with soft ${c2.en} fawn spots on two accent nails`,
+  },
+  {
     id: "chromedrops", occasions: ["korean", "newyear", "any"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true,
     title: ({ c1, metal }) => s(`${capVi(c1.vi)} giọt chrome ${metal.vi} 3D`, `${cap(c1.en)} with 3D ${metal.en} chrome drops`),
     why: s("giọt chrome kim loại 3D (blob) là trend lên ngôi — như giọt bạc / vàng nóng chảy trên móng, cực bắt sáng", "3D chrome blobs are trending hard — like drops of molten silver or gold, super eye-catching"),
@@ -666,10 +720,12 @@ const range = (lo: number, market: "US" | "AU") => {
 };
 
 /** Ghép 1 mẫu hoàn chỉnh từ thông số (dùng cho máy tạo mẫu và cho kiểm thử). */
-export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: OccasionInfo | null, trendTag?: string | null): EngineDesign {
+export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: OccasionInfo | null, trendTag?: string | null, radar?: { name: Bi; source: Bi } | null): EngineDesign {
   const sys = SYSTEMS.find((x) => x.id === spec.system)!;
   const pat = PATTERNS.find((x) => x.id === spec.pattern)!;
-  const keys: [CK, CK, CK] = spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.pattern === "babyboomer" ? ["pinkNude", "white", spec.colors[2]] : spec.pattern === "milkbath" ? ["white", spec.colors[1] === "white" ? "babyPink" : spec.colors[1], spec.colors[2]] : spec.colors;
+  // dâu nhúng sô-cô-la: đầu móng LUÔN là sô-cô-la, nền là màu dâu (nền trắng / nude → đỏ dâu)
+  const LIGHT_BASE: CK[] = ["white", "pearl", "sheer", "cloudDancer", "nude", "butter", "champagne", "greige"];
+  const keys: [CK, CK, CK] = spec.pattern === "chocodip" ? [LIGHT_BASE.includes(spec.colors[0]) ? "strawberry" : spec.colors[0], "chocolate", spec.colors[2]] : spec.pattern === "tortoise" ? ["caramel", "chocolate", spec.colors[2]] : spec.pattern === "babyboomer" ? ["pinkNude", "white", spec.colors[2]] : spec.pattern === "milkbath" ? ["white", spec.colors[1] === "white" ? "babyPink" : spec.colors[1], spec.colors[2]] : spec.colors;
   const [c1, c2, metal] = keys.map((k) => COLORS[k]) as [Color, Color, Color];
   const ctx: PCtx = { c1, c2, metal, sys, finish: spec.finish };
   const shapeName = SHAPE_NAME[spec.shape];
@@ -704,7 +760,9 @@ export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: 
   const skills = [sys.skill, pat.design ? "Design" : null].filter((x): x is string => !!x);
 
   const title = pat.title(ctx);
-  const when = occ
+  const when = radar && !occ
+    ? s(`Trend đang được ưa chuộng · ${radar.name.vi}`, `A trend clients are loving · ${radar.name.en}`)
+    : occ
     ? occ.startsIn > 0
       ? s(`Chuẩn bị cho ${OCC_VI[occ.id] ?? occ.title}${occ.emoji ? " " + occ.emoji : ""} (còn ~${occ.startsIn} ngày)`, `Get ready for ${occTitleEn(occ.id) ?? occ.title}${occ.emoji ? " " + occ.emoji : ""} (in ~${occ.startsIn} days)`)
       : s(`Đang vào ${OCC_VI[occ.id] ?? occ.title}${occ.emoji ? " " + occ.emoji : ""}`, `${occTitleEn(occ.id) ?? occ.title} season is here${occ.emoji ? " " + occ.emoji : ""}`)
@@ -717,9 +775,10 @@ export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: 
     ? s("Thợ mới làm đẹp được", "Newer techs can do it beautifully")
     : difficulty === 2 ? s("Hợp khách thích nổi bật vừa phải", "Great for clients who like a little statement") : s("Mẫu nghệ thuật cho khách đi tiệc, nên báo giá cao", "An art set for party clients, price it high");
   const trend = trendTag ? s(` · đang lên #${trendTag} trên PawNail`, ` · #${trendTag} is rising on PawNail`) : s("", "");
+  const src = !radar ? s("", "") : occ ? s(` · ${radar.name.vi} (${radar.source.vi})`, ` · ${radar.name.en} (${radar.source.en})`) : s(` (${radar.source.vi})`, ` (${radar.source.en})`);
   const description: Bi = {
-    vi: `${when.vi}: ${pat.why.vi}${trend.vi}. ${who.vi}. Làm ${sys.name.vi}, dáng ${shapeName.vi}, khoảng ${minutes} phút.`,
-    en: `${when.en}: ${pat.why.en}${trend.en}. ${who.en}. ${cap(sys.name.en)}, ${shapeName.en} shape, about ${minutes} minutes.`,
+    vi: `${when.vi}${src.vi}: ${pat.why.vi}${trend.vi}. ${who.vi}. Làm ${sys.name.vi}, dáng ${shapeName.vi}, khoảng ${minutes} phút.`,
+    en: `${when.en}${src.en}: ${pat.why.en}${trend.en}. ${who.en}. ${cap(sys.name.en)}, ${shapeName.en} shape, about ${minutes} minutes.`,
   };
 
   const length = spec.shape === "stiletto" || spec.shape === "coffin" ? "long" : spec.shape === "square" || spec.shape === "oval" ? "short" : "medium-length";
@@ -765,7 +824,34 @@ const TAG_HINTS: [RegExp, { pattern?: string; finish?: Finish }][] = [
   [/glitter|nhu|nhũ/i, { finish: "glitter" }], [/matte|nham/i, { finish: "matte" }], [/flower|hoa|floral/i, { pattern: "floral" }], [/heart|tim/i, { pattern: "hearts" }],
 ];
 
-export interface EngineInput { market: "US" | "AU"; date: string; occasions: OccasionInfo[]; risingTags: string[]; usedTitles: Set<string>; salt?: string }
+export interface EngineInput { market: "US" | "AU"; date: string; occasions: OccasionInfo[]; risingTags: string[]; usedTitles: Set<string>; salt?: string; /** false: không lấy từ radar trend */ radar?: boolean }
+
+/**
+ * 1 mẫu từ RADAR TREND (lib/trendRadar): chọn trend đang trong mùa (ưu tiên trend "nóng"), lấy đúng công thức
+ * (hoạ tiết + hiệu ứng + màu + dáng), ghép hệ móng làm được hiệu ứng đó. null nếu không ghép được.
+ */
+function radarDesign(r: () => number, trends: Trend[], used: Set<string>, market: "US" | "AU", occs: OccasionInfo[]): EngineDesign | null {
+  // trend gắn dịp lễ chỉ khi dịp đó đang / sắp diễn ra (cùng danh sách dịp của lượt tạo mẫu)
+  const pool = trends.filter((t) => !used.has(t.id) && (!t.occasion || occs.some((o) => o.id === t.occasion)));
+  if (!pool.length) return null;
+  // trend theo mùa / dịp lễ đang diễn ra được ưu tiên gấp đôi (chỉ "nóng" trong vài tuần)
+  const wOf = (t: Trend) => t.weight * (t.months ? 2 : 1);
+  const total = pool.reduce((a, t) => a + wOf(t), 0);
+  let x = r() * total, tr = pool[0];
+  for (const t of pool) { x -= wOf(t); if (x <= 0) { tr = t; break; } }
+  used.add(tr.id);
+  const look = pick(r, tr.looks);
+  const pat = PATTERNS.find((p) => p.id === look.pattern);
+  if (!pat) return null;
+  const colors = pick(r, look.colors).map((c) => (c in COLORS ? c : "nude")) as [CK, CK, CK];
+  const sysPool = SYSTEMS.filter((x2) => (!pat.systems || pat.systems.includes(x2.id)) && x2.finishes.includes(look.finish) && (x2.id !== "dip" || DIP_POWDER_PATTERNS.includes(pat.id)));
+  if (!sysPool.length) return null;
+  const sys = pick(r, sysPool);
+  const shapes = (look.shapes ?? sys.shapes).filter((sh) => sys.shapes.includes(sh));
+  const shape = pick(r, shapes.length ? shapes : sys.shapes);
+  const occ = tr.occasion ? occs.find((o) => o.id === tr.occasion) ?? null : null;
+  return buildDesign({ occasion: occ?.id ?? null, system: sys.id, shape, finish: look.finish, pattern: pat.id, colors, ...(occ ? {} : { style: "trend" as const }) }, market, occ, null, { name: tr.name, source: tr.source });
+}
 
 /** Tạo `n` mẫu khác nhau: ưu tiên dịp lễ đang/sắp tới, trộn hệ móng/độ khó, không trùng tên đã có. */
 export function generateEngineDesigns(n: number, input: EngineInput): EngineDesign[] {
@@ -776,14 +862,30 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   const usedTitles = new Set([...input.usedTitles].map((t) => t.toLowerCase()));
   const tags = input.risingTags.map((t) => t.replace(/^#/, ""));
 
+  // RADAR TREND: ~1/3 số mẫu (ô 2, 5, 8…) lấy từ trend đang lên trong mùa — xoay vòng theo ngày (hạt giống theo ngày);
+  // ô đầu mỗi lô vẫn là mẫu DỄ cho thợ mới, phần còn lại chia đều dịp lễ / quanh năm (nail Hàn bán chạy vẫn đủ chỗ)
+  const radarTrends = input.radar === false ? [] : activeTrends(new Date(`${input.date}T12:00:00Z`));
+  const usedRadar = new Set<string>();
   for (let i = 0, tries = 0; out.length < n && tries < n * 60; tries++) {
-    // Một nửa theo dịp lễ, một nửa "quanh năm" — trong đó phần lớn là trend nail Hàn
-    // tối giản (nude, thạch trong, French tráng gương, charm, cụm đá) khách đặt nhiều.
-    const yearRound = !occs.length || out.length % 2 === 1;
+    if (radarTrends.length && out.length % 3 === 1 && usedRadar.size < radarTrends.length && tries < n * 30) {
+      const d = radarDesign(r, radarTrends, usedRadar, input.market, occs);
+      if (d && !usedTitles.has(d.title.vi.toLowerCase())) {
+        usedTitles.add(d.title.vi.toLowerCase());
+        usedPatterns.add(d.pattern);
+        out.push(d);
+        i++;
+        continue;
+      }
+      continue;
+    }
+    // Còn lại: nửa theo dịp lễ đang / sắp tới (có radar thì 1/4 tổng), nửa "quanh năm" — trong đó phần lớn là trend
+    // nail Hàn tối giản (nude, thạch trong, French tráng gương, charm, cụm đá) khách đặt nhiều.
+    const yearRound = !occs.length || (radarTrends.length ? out.length % 3 === 2 : out.length % 2 === 1);
     const occ = yearRound ? null : occs[(i + Math.floor(tries / 20)) % occs.length];
     // Quanh năm: ~45% nail Hàn, ~45% trend đang chuộng, còn lại mẫu cơ bản dễ bán.
     const roll = yearRound ? r() : 1;
-    const style: "korean" | "trend" | null = roll < 0.45 ? "korean" : roll < 0.9 ? "trend" : null;
+    // (radar đã lo phần trend mới → ô quanh năm nghiêng nail Hàn tối giản — nhóm khách đặt nhiều nhất)
+    const style: "korean" | "trend" | null = roll < 0.52 ? "korean" : roll < 0.9 ? "trend" : null;
     const korean = style === "korean";
     const occId = occ?.id ?? style ?? "any";
     const BASIC_OK = new Set(["solid", "french", "ombre", "aura", "lines"]);

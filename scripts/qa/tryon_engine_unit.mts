@@ -247,7 +247,7 @@ ok("E9", `Đúng màu sơn: trung vị lõi móng lệch màu đặt ΔE ≤ 10 
   const motif = { w: im.w, h: im.h, data: new Uint8ClampedArray(im.w * im.h * 4) };
   const paint = (x0: number, y0: number) => { for (let y = y0; y < y0 + 16; y++) for (let x = x0; x < x0 + 16; x++) { const i = (y * im.w + x) * 4; motif.data[i] = 220; motif.data[i + 3] = 255; } };
   paint(214, 392); paint(40, 40);
-  const withMotif = renderLook(im, segs, LOOK(["#f4efe6"], "glossy", { pattern: "floral" }), motif); // hoạ tiết SVG (hoa) — tim / sao… giờ bộ máy tự vẽ, không dùng lớp SVG
+  const withMotif = renderLook(im, segs, LOOK(["#f4efe6"], "glossy", { pattern: "custom-svg" }), motif); // lớp SVG giờ chỉ cho hoạ tiết MỚI chưa tự vẽ (mọi hoạ tiết trong máy tạo mẫu đã tự vẽ)
   const ci = (400 * im.w + 222) * 4, oi = (48 * im.w + 48) * 4;
   ok("E13", "Độ trong 60% = trộn đúng 60% màu mới + 40% móng thật; mix màu: ngón 3–4 đổi màu phụ; hoạ tiết hiện trên móng (đỏ), ngoài móng bị bỏ",
     err / n < 2.5 && medL(segs[0]) < 60 && medL(segs[2]) > 150 && withMotif.data[ci] > withMotif.data[ci + 1] + 60 && withMotif.data[oi] === im.data[oi],
@@ -314,10 +314,10 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     JSON.stringify({ pink, white: white.undertone, olive: olive.length, hand: [hand.length, hand.polishHex], olivePolish: olive.polishHex }));
   const set = adviceLooks(pink, "US", "x1"), set2 = adviceLooks(pink, "US", "x2"), au = adviceLooks(white, "AU", "x1", true);
   const pats = new Set(set.map((l) => l.pattern));
-  ok("E20", "10 mẫu gợi ý: đủ 10, không trùng, mỗi mẫu có nhãn + lý do + giá ($ / A$ theo thị trường, đắp móng giá cao hơn); có glazed donut, micro French, velvet, aura, baby boomer, ombre; dáng theo tay (móng dài → hạnh nhân); \"Bộ khác\" đổi màu",
+  ok("E20", "10 mẫu gợi ý: đủ 10, không trùng, mỗi mẫu có nhãn + lý do + giá ($ / A$ theo thị trường, đắp móng giá cao hơn); có glazed donut, micro French, 1 mẫu họ mắt mèo (velvet / chấm bi / aurora / đỏ sẫm / 2 tông), aura, baby boomer, ombre; dáng theo tay (móng dài → hạnh nhân); \"Bộ khác\" đổi màu",
     set.length === 10 && new Set(set.map((l) => l.id)).size === 10 && set.every((l) => l.why.vi && l.tag.vi && /^\$\d+–\d+$/.test(l.priceHint))
     && au.every((l) => /^A\$\d+–\d+$/.test(l.priceHint)) && set.some((l) => /Glazed donut/.test(l.title.vi)) && set.some((l) => /Micro French/.test(l.title.vi))
-    && ["velvet", "aura", "babyboomer", "ombre"].every((p) => pats.has(p)) && set.every((l) => l.shape === "almond")
+    && ["aura", "babyboomer", "ombre"].every((p) => pats.has(p)) && set.some((l) => l.finish === "cateye") && set.every((l) => l.shape === "almond")
     && JSON.stringify(set.map((l) => l.palette)) !== JSON.stringify(set2.map((l) => l.palette)),
     JSON.stringify(set.map((l) => [l.title.vi, l.priceHint])));
 }
@@ -348,8 +348,8 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     frTip[0] < 25 && frBase[0] > 70 && omL[0] > omL[1] && omL[1] > omL[2] + 10 && auMid[1] > auEdge[1] + 8
     && bright(gm, segs[1]) > 0.02 && bright(gm, segs[0]) < 0.005 && dark / nT > 0.1 && dark / nT < 0.65,
     JSON.stringify({ frTip: frTip.map(Math.round), frBase: frBase.map(Math.round), omL: omL.map(Math.round), auMid: auMid.map(Math.round), auEdge: auEdge.map(Math.round), gem1: r2(bright(gm, segs[1])), gem0: r2(bright(gm, segs[0])), tort: r2(dark / nT) }));
-  ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết còn lại (hoa, ma, bí ngô…) vẫn có lớp SVG trên móng điểm nhấn",
-    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "droplets", "chromefrench", "leopard", "checker", "foil", "stars", "hearts", "charm3d", "chromedrops", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("floral", true, 4) && !hasMotif("floral", false, 4) && hasMotif("swirl", false, 4));
+  ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết mới chưa tự vẽ vẫn có lớp SVG trên móng điểm nhấn",
+    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "droplets", "chromefrench", "leopard", "checker", "foil", "stars", "hearts", "charm3d", "chromedrops", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("custom-svg", true, 4) && !hasMotif("custom-svg", false, 4));
 }
 {
   const im = imgs["hand.jpg"], s = new TryOnSession();
@@ -434,9 +434,10 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const rimAcc = rimBright(os[1]), rimPlain = rimBright(os[0]);
   // f) bộ 10 mẫu: luôn 1 mẫu chi tiết kim loại + 1 mẫu 3D; "Bộ khác" xoay nhiều kiểu 3D
   const prof = profileFromModels(FIXTURES.find((f) => f.file === "pink.jpg")!.marks.map((m) => fitNail(pi, mark(m))))!;
-  const METALS = new Set(["chromeline", "lines", "chromefrench", "marble", "tortoise", "foil", "leopard", "checker"]), THREE_D = new Set(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts"]);
+  const METALS = new Set(["chromeline", "lines", "chromefrench", "marble", "tortoise", "foil", "leopard", "checker", "stripes", "polka", "fawn"]), THREE_D = new Set(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts", "ghost", "bats", "jackolantern", "web", "moonstars", "snow", "candy", "plaid", "floral", "cherry"]);
   const sets = ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8"].map((salt) => adviceLooks(prof, "US", salt));
-  const wowOk = sets.every((st) => st.filter((l) => METALS.has(l.pattern)).length === 1 && st.filter((l) => THREE_D.has(l.pattern)).length === 1);
+  // (chấm bi cũng có trong ô họ mắt mèo — khi đó là hiệu ứng mắt mèo, không tính là mẫu "chi tiết")
+  const wowOk = sets.every((st) => st.filter((l) => METALS.has(l.pattern) && l.finish !== "cateye").length === 1 && st.filter((l) => THREE_D.has(l.pattern)).length === 1);
   const kinds3d = new Set(sets.flatMap((st) => st.filter((l) => THREE_D.has(l.pattern)).map((l) => l.pattern)));
   ok("E23", `Trend bắt mắt ra chất thật: French gương bạc (độ lệch sáng đầu móng ${Math.round(sd(tipL))} ≥ 30, có dải sáng + mảng tối) · velvet giữ màu (độ đậm ${Math.round(chroma(vel))} / sơn thường ${Math.round(chroma(sol))}) + giữa sáng hơn mép · ngọc trai có điểm bóng + bóng tiếp xúc, chỉ móng nhấn · giọt nước 3D đủ ${dropNails.filter(Boolean).length}/4 móng · đồi mồi viền kim loại móng nhấn ${Math.round(rimAcc * 100)}% (móng thường ${Math.round(rimPlain * 100)}%) · mỗi bộ 10 mẫu có 1 mẫu kim loại + 1 mẫu 3D (${[...kinds3d].join(", ")})`,
     tipOk && velOk && pearlOk && dropNails.every(Boolean) && rimAcc >= 0.2 && rimPlain < 0.08 && wowOk && kinds3d.size >= 2,
@@ -460,6 +461,27 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const cdAll = ps.map((sg) => changed(cd, cdRef, sg));
   if (cdAll.some((v) => v < 0.03)) bad.push(`chromedrops: ${cdAll.map(r2).join("/")}`);
   ok("E24", "Trend mới tự vẽ: da báo · bàn cờ · foil · charm sao · charm nơ 3D · tim — đổi rõ 2 móng nhấn, móng thường giữ nguyên; giọt chrome 3D có trên cả 4 móng", !bad.length, bad.join(" | "));
+}
+
+{
+  // HOẠ TIẾT TREND / MÙA LỄ do bộ máy tự vẽ (thay lớp SVG phẳng): hoạ tiết vẽ tay chỉ trên 2 móng nhấn; chấm bi, sọc,
+  // dâu nhúng sô-cô-la, mắt mèo aurora, kẹo bắp trên MỌI móng
+  const pi = imgs["pink.jpg"], ps = segsOf["pink.jpg"];
+  const diff = (out: Img, ref: Img, sg: NailSeg) => { let n = 0, d = 0; for (let k = 0; k < sg.alpha.length; k++) { if (sg.alpha[k] < 0.99) continue; n++; const x = sg.x0 + (k % sg.w), y = sg.y0 + Math.floor(k / sg.w); if (Math.abs(lumaAt(out, x, y) - lumaAt(ref, x, y)) > 25) d++; } return d / n; };
+  const accentOnly: [string, string[]][] = [["ghost", ["#111111", "#ffffff", "#c0c0c0"]], ["jackolantern", ["#e8c4a8", "#ffffff", "#d4af37"]], ["bats", ["#3b1f3a", "#ffffff", "#c0c0c0"]], ["moonstars", ["#1e2a4a", "#ffffff", "#d4af37"]], ["web", ["#111111", "#ffffff", "#c0c0c0"]], ["snow", ["#a9c7e8", "#ffffff", "#c0c0c0"]], ["plaid", ["#9f1239", "#14532d", "#d4af37"]], ["candy", ["#f8fafc", "#b91c1c", "#d4af37"]], ["cherry", ["#f8f4ee", "#ffffff", "#d4af37"]], ["floral", ["#f8f4ee", "#f9a8d4", "#d4af37"]], ["blackcat", ["#c2410c", "#ffffff", "#d4af37"]], ["skull", ["#111111", "#ffffff", "#c0c0c0"]], ["eyeball", ["#111111", "#16a34a", "#c0c0c0"]], ["slimedrip", ["#111111", "#ffffff", "#c0c0c0"]], ["mummy", ["#111111", "#ffffff", "#c0c0c0"]], ["fawn", ["#c68642", "#f3e3cf", "#d4af37"]]];
+  const allNails: [string, string[], LookColors["finish"]][] = [["polka", ["#3e1530", "#f8fafc", "#c0c0c0"], "cateye"], ["stripes", ["#f2c4c4", "#4b2e2a", "#d4af37"], "glossy"], ["chocodip", ["#e0354a", "#4a2a1a", "#d4af37"], "glossy"], ["auroracat", ["#111111", "#ffffff", "#c0c0c0"], "cateye"], ["candycorn", ["#f8fafc", "#ffffff", "#d4af37"], "glossy"]];
+  const bad: string[] = [];
+  for (const [pat, cols] of accentOnly) {
+    const out = renderLook(pi, ps, LOOK(cols, "glossy", { pattern: pat })), ref = renderLook(pi, ps, LOOK([cols[0]], "glossy"));
+    const acc = Math.max(diff(out, ref, ps[2]), diff(out, ref, ps[3])), other = diff(out, ref, ps[0]);
+    if (acc < 0.015 || other > 0.005) bad.push(`${pat}: nhấn ${r2(acc)} · thường ${r2(other)}`);
+  }
+  for (const [pat, cols, fin] of allNails) {
+    const out = renderLook(pi, ps, LOOK(cols, fin, { pattern: pat })), ref = renderLook(pi, ps, LOOK([cols[0]], fin === "cateye" ? "glossy" : fin));
+    const each = ps.map((sg) => diff(out, ref, sg));
+    if (each.some((v) => v < 0.02)) bad.push(`${pat}: ${each.map(r2).join("/")}`);
+  }
+  ok("E25", `Hoạ tiết trend & mùa lễ tự vẽ (${accentOnly.length + allNails.length} mẫu): ma / bí ngô / dơi / trăng / mạng nhện / bông tuyết / caro / kẹo gậy / cherry / hoa / mèo đen / đầu lâu / mắt quỷ / slime / xác ướp / da hươu chỉ trên 2 móng nhấn; chấm bi mắt mèo / sọc / dâu nhúng sô-cô-la / mắt mèo aurora / kẹo bắp trên cả 4 móng`, !bad.length, bad.join(" | "));
 }
 
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)

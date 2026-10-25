@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import { renderDesignImage, canRenderPattern, HANDS } from "../../lib/designRender";
 import { PROCEDURAL } from "../../lib/tryon/patterns";
+import { PATTERN_IDS } from "../../lib/designEngine";
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
 
@@ -32,9 +33,9 @@ const a = await renderDesignImage(D("same", "chromefrench")), b = await renderDe
 ok("R3", "Cùng mẫu → cùng ảnh (ổn định); \"Vẽ lại\" (biến thể khác) → ảnh khác", a.base64 === b.base64 && a.base64 !== c.base64);
 
 let threw = false;
-try { await renderDesignImage(D("x", "jackolantern")); } catch { threw = true; }
-ok("R4", "Hoạ tiết hình (bí ngô, ma…) báo chưa vẽ được → đường cũ (AI + chấm) lo; trend mới (da báo, bàn cờ, foil, charm sao / nơ, tim, giọt chrome) bộ máy vẽ được",
-  threw && !canRenderPattern("jackolantern") && ["leopard", "checker", "foil", "stars", "charm3d", "hearts", "chromedrops", "droplets"].every(canRenderPattern));
+try { await renderDesignImage(D("x", "custom-svg")); } catch { threw = true; }
+ok("R4", "MỌI hoạ tiết trong máy tạo mẫu (kể cả Halloween / Giáng sinh) bộ máy tự vẽ được; hoạ tiết lạ chưa có → báo lỗi để đường AI lo",
+  threw && !canRenderPattern("custom-svg") && PATTERN_IDS.every(canRenderPattern), PATTERN_IDS.filter((p) => !canRenderPattern(p)).join(","));
 
 // ảnh khác nhau thật theo màu (đỏ rượu vs nude cùng tay) — đo trung bình kênh đỏ / xanh dương vùng giữa ảnh
 const stat = async (b64: string) => { const { data } = await sharp(Buffer.from(b64, "base64")).extract({ left: 256, top: 256, width: 512, height: 512 }).raw().toBuffer({ resolveWithObject: true }); let r = 0, bl = 0; for (let i = 0; i < data.length; i += 3) { r += data[i]; bl += data[i + 2]; } return { r: r / (data.length / 3), b: bl / (data.length / 3) }; };

@@ -1002,7 +1002,9 @@ type RGB = [number, number, number];
 const mix3 = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 
 /** Hạt tròn 3D (ngọc trai / đá / chấm) trên móng: vị trí (u0 dọc, t0 ngang) + bán kính theo nửa bề ngang móng. */
-interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "bow" | "heart"; rot?: number }
+type PaintedKind = "ghost" | "pumpkin" | "bat" | "moon" | "flake" | "cherry" | "flower" | "cat" | "skull" | "leaf" | "pflower";
+interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "bow" | "heart" | "eye" | PaintedKind; rot?: number; tint?: number }
+const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "cherry", "flower", "cat", "skull", "leaf", "pflower"]);
 
 /** Ngôi sao 5 cánh (cánh hướng về đầu móng): khoảng cách có dấu tới mép (âm = trong), đơn vị = bán kính ngoài. */
 function starSD(x: number, y: number): number {
@@ -1025,6 +1027,120 @@ function heartSD(x: number, y: number): number {
   const v = f(X, Y), gx = (f(X + e, Y) - f(X - e, Y)) / (2 * e), gy = (f(X, Y + e) - f(X, Y - e)) / (2 * e);
   return v / Math.max(0.05, Math.hypot(gx, gy)) / 1.25;
 }
+/** khoảng cách từ điểm tới đoạn thẳng (a → b) */
+function segDist(x: number, y: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+  const k = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2));
+  return Math.hypot(x - ax - k * dx, y - ay - k * dy);
+}
+const ellSD = (x: number, y: number, cx: number, cy: number, rx: number, ry: number) => (Math.hypot((x - cx) / rx, (y - cy) / ry) - 1) * Math.min(rx, ry);
+/**
+ * HOẠ TIẾT VẼ TAY (gel vẽ nổi nhẹ): ma, bí ngô, dơi, trăng khuyết, bông tuyết, cherry, hoa nhí — khoảng cách có dấu
+ * (âm = trong, đơn vị = bán kính hoạ tiết) + `part` = phần nào (để tô đúng màu: thân ma trắng / mắt đen…).
+ * Trục y hướng về đầu móng (phía trên ảnh).
+ */
+function paintedSD(kind: string, x: number, y: number): { d: number; part: number } {
+  switch (kind) {
+    case "ghost": {
+      // thân: đầu tròn + vạt dưới lượn sóng 3 múi
+      const wave = 0.07 * Math.cos(x * Math.PI * 2.8);
+      const body = y > 0.18 ? Math.hypot(x, y - 0.18) - 0.56 : Math.max(Math.abs(x) - 0.56, -(y + 0.62 - wave));
+      const eyes = Math.min(ellSD(x, y, -0.19, 0.24, 0.085, 0.13), ellSD(x, y, 0.19, 0.24, 0.085, 0.13));
+      const mouth = ellSD(x, y, 0, 0.0, 0.07, 0.1);
+      if (body < 0 && Math.min(eyes, mouth) < 0) return { d: Math.min(eyes, mouth), part: 1 };
+      return { d: body, part: 0 };
+    }
+    case "pumpkin": {
+      const lobes = Math.min(ellSD(x, y, 0, -0.05, 0.42, 0.5), ellSD(x, y, -0.32, -0.07, 0.34, 0.46), ellSD(x, y, 0.32, -0.07, 0.34, 0.46));
+      const stem = Math.max(Math.abs(x - 0.03 - 0.25 * (y - 0.42)) - 0.07, Math.abs(y - 0.55) - 0.14);
+      if (stem < 0 && lobes > -0.02) return { d: stem, part: 1 };
+      // mặt bí ngô: 2 mắt tam giác + miệng răng cưa
+      const tri = (cx: number) => Math.max(-(y - 0.02), (y - 0.02) - 0.17 + 1.6 * Math.abs(x - cx));
+      const mouthTop = -0.2 + 0.1 * Math.abs(x) - 0.05 * (Math.abs(Math.sin(x * 14)) > 0.6 ? 1 : 0);
+      const mouth = Math.max(Math.abs(x) - 0.3, Math.max(mouthTop - y, y - (-0.2 + 0.2 * x * x + 0.08)));
+      const face = Math.min(tri(-0.18), tri(0.18), mouth);
+      if (lobes < 0 && face < 0) return { d: face, part: 2 };
+      return { d: lobes, part: 0 };
+    }
+    case "bat": {
+      // dơi: thân + đầu + 2 tai nhọn; cánh dày, mép trên dốc lên đầu cánh, mép dưới 3 vỏ sò (dáng dơi dễ nhận ở cỡ nhỏ)
+      const ax = Math.abs(x);
+      const body = Math.min(ellSD(x, y, 0, -0.02, 0.15, 0.24), Math.hypot(x, y - 0.24) - 0.12);
+      const ear = Math.max(-(y - 0.26), (y - 0.26) - 0.16 + 2.2 * Math.abs(ax - 0.07));
+      let wing = 1;
+      if (ax >= 0.08 && ax <= 1) {
+        const tn = (ax - 0.08) / 0.92;
+        const upper = 0.1 + 0.32 * tn - 0.1 * tn * tn;
+        const thick = 0.5 * Math.pow(1 - tn, 0.7) + 0.05;
+        const lower = upper - thick + 0.13 * Math.abs(Math.sin(Math.PI * 3 * tn));
+        wing = Math.max(y - upper, lower - y, ax - 1) * 0.7;
+      }
+      return { d: Math.min(body, ear, wing), part: 0 };
+    }
+    case "moon": return { d: Math.max(Math.hypot(x, y) - 1, -(Math.hypot(x - 0.42, y - 0.22) - 0.84)), part: 0 };
+    case "flake": {
+      // bông tuyết 6 cánh: gấp góc về 1 cánh (60°) rồi đo tới trục + 2 nhánh
+      const a = Math.atan2(x, y), rho = Math.hypot(x, y), sec = Math.PI / 3;
+      let f = ((a % sec) + sec) % sec; if (f > sec / 2) f = sec - f;
+      const qx = rho * Math.sin(f), qy = rho * Math.cos(f);
+      const arm = Math.min(segDist(qx, qy, 0, 0, 0, 1), segDist(qx, qy, 0, 0.5, 0.2, 0.7), segDist(qx, qy, 0, 0.72, 0.13, 0.85));
+      return { d: Math.min(arm - 0.075, rho - 0.16), part: 0 };
+    }
+    case "cherry": {
+      const c1 = ellSD(x, y, -0.32, -0.36, 0.3, 0.3), c2 = ellSD(x, y, 0.28, -0.42, 0.3, 0.3);
+      if (Math.min(c1, c2) < 0.0) return { d: Math.min(c1, c2), part: 0 };
+      const stem = Math.min(segDist(x, y, -0.3, -0.08, 0.02, 0.55), segDist(x, y, 0.26, -0.14, 0.02, 0.55)) - 0.035;
+      const leaf = ellSD((x - 0.24) * 0.9 + (y - 0.62) * 0.45, -(x - 0.24) * 0.45 + (y - 0.62) * 0.9, 0, 0, 0.26, 0.11);
+      if (leaf < stem) return { d: leaf, part: 1 };
+      return { d: Math.min(stem, Math.min(c1, c2)), part: stem < Math.min(c1, c2) ? 2 : 0 };
+    }
+    case "cat": {
+      // mèo đen ngồi: thân + đầu tròn + 2 tai nhọn + đuôi cong
+      const body = ellSD(x, y, 0, -0.28, 0.36, 0.42);
+      const head = Math.hypot(x, y - 0.3) - 0.25;
+      const earL = Math.max(-(y - 0.4), (y - 0.4) - 0.24 + 1.7 * Math.abs(x + 0.15));
+      const earR = Math.max(-(y - 0.4), (y - 0.4) - 0.24 + 1.7 * Math.abs(x - 0.15));
+      const tail = Math.min(segDist(x, y, 0.3, -0.62, 0.62, -0.42), segDist(x, y, 0.62, -0.42, 0.66, -0.08)) - 0.065;
+      return { d: Math.min(body, head, earL, earR, tail), part: 0 };
+    }
+    case "skull": {
+      const cran = Math.hypot(x, y - 0.12) - 0.5, jaw = Math.max(Math.abs(x) - 0.3, Math.abs(y + 0.28) - 0.18) - 0.04;
+      const sk = Math.min(cran, jaw);
+      const eyes = Math.min(Math.hypot(x + 0.19, y - 0.06) - 0.14, Math.hypot(x - 0.19, y - 0.06) - 0.14);
+      const nose = Math.max(-(y + 0.2), (y + 0.2) - 0.12 + 1.5 * Math.abs(x));
+      const teeth = Math.max(Math.min(Math.abs(x + 0.13), Math.abs(x), Math.abs(x - 0.13)) - 0.022, Math.abs(y + 0.36) - 0.08);
+      const feat = Math.min(eyes, nose, teeth);
+      if (sk < 0 && feat < 0) return { d: feat, part: 1 };
+      return { d: sk, part: 0 };
+    }
+    case "leaf": {
+      // lá phong 5 thuỳ nhọn + cuống
+      // 5 thuỳ NHỌN (trên, 2 bên trên, 2 bên dưới) + răng cưa nhỏ ở mép — dáng lá phong dễ nhận
+      const a = Math.atan2(x, y), rho = Math.hypot(x, y + 0.08);
+      // thuỳ RỘNG (không mảnh như lá cây khác) — thân lá đặc, mép có mũi nhọn ngắn
+      const pts: [number, number][] = [[0, 0.5], [1.0, 0.42], [-1.0, 0.42], [1.95, 0.22], [-1.95, 0.22]];
+      let lobe = 0.5;
+      for (const [ai, li] of pts) lobe = Math.max(lobe, 0.5 + li * Math.pow(Math.max(0, Math.cos((a - ai) * 1.6)), 3));
+      lobe += 0.04 * Math.max(0, Math.sin(a * 11)) * (Math.abs(a) < 2.4 ? 1 : 0);
+      if (Math.abs(a) > 2.5) lobe = Math.min(lobe, 0.42);
+      const stem = segDist(x, y, 0, -0.05, 0.03, -0.95) - 0.035;
+      return { d: Math.min((rho - lobe) * 0.55, stem), part: 0 };
+    }
+    case "pflower": { // hoa khô ép trong lớp milk bath: phẳng, cánh mảnh
+      const a = Math.atan2(y, x), rho = Math.hypot(x, y);
+      const petal = rho - (0.55 + 0.45 * Math.pow(Math.abs(Math.cos((5 * a) / 2)), 1.4));
+      return Math.hypot(x, y) < 0.18 ? { d: rho - 0.18, part: 1 } : { d: petal * 0.6, part: 0 };
+    }
+    case "flower": {
+      const a = Math.atan2(y, x), rho = Math.hypot(x, y);
+      const petal = rho - (0.62 + 0.38 * Math.pow(Math.abs(Math.cos((5 * a) / 2)), 0.9));
+      const center = rho - 0.24;
+      return center < 0 ? { d: center, part: 1 } : { d: petal * 0.6, part: 0 };
+    }
+    default: return { d: 1, part: 0 };
+  }
+}
+
 /** Nơ 3D: 2 thuỳ phồng + nút giữa + 2 đuôi — độ cao 0…1 (0 = ngoài) và độ phủ khử răng cưa. */
 function bowShape(x: number, y: number): { h: number; cov: number } {
   let h = 0, cov = 0;
@@ -1053,7 +1169,21 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     case "charm3d": return [{ u: 0.38 + 0.03 * j(1), t: 0.02 * j(2), r: 0.9, kind: "bow", rot: 0.15 * j(3) }];
     // tim vẽ tay: 2–3 tim nhỏ rải tự nhiên
     case "hearts": return [{ u: 0.38, t: -0.22 + 0.06 * j(1), r: 0.38, kind: "heart", rot: 0.35 * j(2) }, { u: 0.64, t: 0.3, r: 0.27, kind: "heart", rot: 0.4 * j(3) }, ...(j(6) > 0 ? [{ u: 0.2, t: 0.42, r: 0.19, kind: "heart" as const, rot: 0.4 * j(4) }] : [])];
-    case "droplets": case "chromedrops": {
+    // hoạ tiết vẽ tay (Halloween / Giáng sinh / hoa / cherry): đúng số lượng, cỡ, chỗ đặt như thợ hay vẽ
+    case "ghost": return [{ u: 0.46 + 0.04 * j(1), t: -0.04 + 0.1 * j(2), r: 0.82, kind: "ghost", rot: 0.25 * j(3) }];
+    case "jackolantern": return [{ u: 0.44 + 0.04 * j(1), t: 0.06 * j(2), r: 0.82, kind: "pumpkin", rot: 0.15 * j(3) }];
+    case "bats": return [{ u: 0.6, t: -0.1 + 0.1 * j(1), r: 0.72, kind: "bat", rot: 0.3 * j(2) }, { u: 0.32, t: 0.32, r: 0.42, kind: "bat", rot: 0.4 * j(3) }, { u: 0.82, t: 0.3, r: 0.3, kind: "bat", rot: 0.4 * j(4) }];
+    case "moonstars": return [{ u: 0.56, t: -0.1 + 0.08 * j(1), r: 0.48, kind: "moon", rot: 0.3 * j(2) }, { u: 0.3, t: 0.36, r: 0.2, kind: "star", rot: 0.6 * j(3) }, { u: 0.78, t: 0.4, r: 0.14, kind: "star", rot: 0.6 * j(4) }, { u: 0.22, t: -0.3, r: 0.12, kind: "star", rot: 0.6 * j(5) }];
+    case "snow": return [{ u: 0.5 + 0.05 * j(1), t: -0.1, r: 0.5, kind: "flake", rot: 0.5 * j(2) }, { u: 0.24, t: 0.36, r: 0.28, kind: "flake", rot: 0.5 * j(3) }, { u: 0.76, t: 0.38, r: 0.2, kind: "flake", rot: 0.5 * j(4) }];
+    case "cherry": return [{ u: 0.46 + 0.04 * j(1), t: 0.04 * j(2), r: 0.86, kind: "cherry", rot: 0.25 * j(3) }];
+    case "blackcat": return [{ u: 0.4 + 0.03 * j(1), t: 0.04 * j(2), r: 1.0, kind: "cat", rot: 0.1 * j(3) }];
+    case "skull": return [{ u: 0.46 + 0.03 * j(1), t: 0.04 * j(2), r: 0.7, kind: "skull", rot: 0.2 * j(3) }];
+    case "eyeball": return [{ u: 0.48 + 0.03 * j(1), t: 0.03 * j(2), r: 0.6, kind: "eye" }];
+    case "leaf": return [{ u: 0.46 + 0.03 * j(1), t: 0.04 * j(2), r: 0.75, kind: "leaf", rot: 0.4 * j(3) }];
+    case "witchy": return [{ u: 0.18, t: 0.02, r: 0.24, kind: "star", rot: 0.4 * j(1) }];
+    case "milkbath": return [{ u: 0.3, t: -0.3, r: 0.3, kind: "pflower", rot: 6.28 * j(1) }, { u: 0.55, t: 0.28, r: 0.26, kind: "pflower", rot: 6.28 * j(2) }, { u: 0.78, t: -0.2, r: 0.2, kind: "pflower", rot: 6.28 * j(3) }, { u: 0.2, t: 0.4, r: 0.16, kind: "pflower", rot: 6.28 * j(4) }];
+    case "floral": case "blossom": return [{ u: 0.3, t: -0.32, r: 0.32, kind: "flower", rot: 6.28 * j(1) }, { u: 0.56, t: 0.3, r: 0.28, kind: "flower", rot: 6.28 * j(2) }, { u: 0.78, t: -0.22, r: 0.22, kind: "flower", rot: 6.28 * j(3) }, ...(j(5) > 0 ? [{ u: 0.18, t: 0.42, r: 0.18, kind: "flower" as const, rot: 6.28 * j(4) }] : [])];
+    case "droplets": case "chromedrops": case "droplet": {
       // giọt nước 3D (trend "water drop / bubble nails"): 1 giọt to + 2–3 giọt nhỏ rải tự nhiên, không chồng nhau
       const out: Bead[] = [];
       const sizes = [0.46 + 0.08 * j(1), 0.26 + 0.06 * j(2), 0.17 + 0.04 * j(3), 0.11];
@@ -1061,6 +1191,7 @@ function beadsFor(pattern: string, seed: number): Bead[] {
       for (let k = 0, tries = 0; out.length < want && tries < 60; tries++, k++) {
         const r = sizes[out.length];
         const b: Bead = { u: 0.28 + 0.5 * hash2(seed, 40 + k, 7), t: (hash2(seed, 80 + k, 7) - 0.5) * 2 * (0.82 - r), r, kind: pattern === "chromedrops" ? "mdrop" : "drop" };
+        if (pattern === "droplet") b.r *= 0.9;
         // không chồng nhau: đo theo đơn vị nửa bề ngang móng (chiều dài móng ≈ 2.8 lần nửa bề ngang)
         if (out.every((o) => Math.hypot(o.t - b.t, (o.u - b.u) * 2.8) > (o.r + b.r) * 1.12)) out.push(b);
       }
@@ -1108,8 +1239,16 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const base0 = pat === "mixmatch" && accent ? c2 : c1;
     const { lm, under, eDist } = segMaps(img, seg);
     const side = lm.side;
+    // trục móng trong ảnh: u = gốc → đầu móng, v = hướng t dương. Móng chúc xuống (tay úp, ảnh white / olive) thì
+    // "phía trên ảnh" là phía CHÂN móng → hoạ tiết vẽ tay (mèo, ma, bí ngô…) phải xoay để luôn ĐỨNG THẲNG trong ảnh
+    const axL = Math.hypot(seg.tip.x - seg.base.x, seg.tip.y - seg.base.y) || 1;
+    const axUx = (seg.tip.x - seg.base.x) / axL, axUy = (seg.tip.y - seg.base.y) / axL;
+    let axVx = -axUy, axVy = axUx;
+    { let sg2 = 0; for (let k = 0; k < seg.w * seg.h; k += 5) if (seg.alpha[k] > 0.5) sg2 += seg.across[k] * (((k % seg.w) + seg.x0 - seg.base.x) * axVx + (Math.floor(k / seg.w) + seg.y0 - seg.base.y) * axVy); if (sg2 < 0) { axVx = -axVx; axVy = -axVy; } }
+    const uprightRot = Math.atan2(axVy, -axUy); // góc xoay để trục "lên" của hoạ tiết trùng phía trên ảnh
+    const upS = -axUy >= 0 ? 1 : -1; // đèn chụp ảnh thường từ phía trên ảnh
     // hướng đèn trong toạ độ khối 3D trên móng (x: ngang móng về phía có đèn, y: về phía đầu móng ≈ phía trên ảnh)
-    const LxB = side * 0.55, LyB = 0.42, LzB = 0.72, Ln = Math.hypot(LxB, LyB, LzB);
+    const LxB = side * 0.55, LyB = 0.42 * upS, LzB = 0.72, Ln = Math.hypot(LxB, LyB, LzB);
     const L3 = [LxB / Ln, LyB / Ln, LzB / Ln], H3n = Math.hypot(L3[0], L3[1], L3[2] + 1), H3 = [L3[0] / H3n, L3[1] / H3n, (L3[2] + 1) / H3n];
     const glit = look.finish === "glitter" ? glitterLayer(seg, look.seed + i * 17) : null;
     const glazed = look.finish === "chrome" && lum(base0) > 0.62; // chrome trên nền trắng / ngọc trai / champagne = glazed donut (bạc xám vẫn là gương kim loại)
@@ -1190,6 +1329,168 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               const mm = 1 - smooth(0.6, 1.2, Math.abs(n));
               if (mm > 0) { metalMix = mm; metalQ = Math.max(-1, Math.min(1, n)); }
             }
+            break;
+          }
+          case "slimedrip": {
+            // SLIME XANH chảy từ đầu móng: viền slime lượn + 2–3 giọt chảy dài ngắn khác nhau (đầu giọt tròn)
+            let edge = 0.74 + 0.03 * Math.sin(8 * t + ph);
+            for (let q = 0; q < 3; q++) { const tq = -0.5 + 0.5 * q + 0.15 * Math.sin(ph + q * 2), Lq = 0.16 + 0.12 * hash2(seedN, q, 41); edge -= Lq * Math.exp(-(((t - tq) / 0.09) ** 2)); }
+            base = mix3(c1, [0.18, 0.55, 0.02], smooth(edge - aaU * 2, edge + aaU * 2, u));
+            break;
+          }
+          case "candycorn": {
+            // KẸO BẮP: vàng ở chân móng → cam giữa → trắng đầu móng, ranh giới tán nhẹ
+            base = mix3(mix3([0.9, 0.6, 0.02], [0.88, 0.22, 0.01], smooth(0.32, 0.4, u)), [0.93, 0.92, 0.9], smooth(0.66, 0.74, u));
+            break;
+          }
+          case "stitches": {
+            // ĐƯỜNG KHÂU Frankenstein: 1 vết khâu dọc + vạch ngang ngắn đều nhau
+            const tcS = 0.08 * Math.sin(2 * u + ph);
+            const main2 = 1 - smooth(lineW * 0.7, lineW * 1.4, Math.abs(t - tcS));
+            const fr2 = ((u * 9) % 1 + 1) % 1;
+            const cross = (1 - smooth(0.06, 0.12, Math.abs(fr2 - 0.5))) * (1 - smooth(0.18, 0.22, Math.abs(t - tcS))) * smooth(0.12, 0.2, u) * (1 - smooth(0.85, 0.92, u));
+            base = mix3(base, [0.01, 0.01, 0.01], Math.max(main2 * smooth(0.08, 0.15, u) * (1 - smooth(0.9, 0.96, u)), cross));
+            break;
+          }
+          case "mummy": {
+            // XÁC ƯỚP: dải băng trắng chéo đan nhau kín móng, chừa 1 khe có 2 con mắt nhìn ra
+            const v1 = ((t * 0.9 + u * 1.6) * 3.2) % 1, v2 = ((-t * 0.8 + u * 1.5) * 3.4 + 0.3) % 1;
+            const b1 = 1 - smooth(0.4, 0.46, Math.abs(((v1 + 1) % 1) - 0.5)), b2 = 1 - smooth(0.38, 0.44, Math.abs(((v2 + 1) % 1) - 0.5));
+            const gapE = 1 - smooth(0.06, 0.09, Math.abs(u - 0.56));
+            const wrap = Math.max(b1, b2) * (1 - gapE);
+            base = mix3(base, [0.86 - 0.08 * b1 * b2, 0.84 - 0.08 * b1 * b2, 0.8 - 0.08 * b1 * b2], wrap);
+            for (const ex of [-0.22, 0.22]) {
+              const de = Math.hypot((t - ex) * seg.hw, (u - 0.56) * seg.L * sEnd);
+              base = mix3(base, [0.95, 0.95, 0.95], 1 - smooth(0.11 * seg.hw - 0.6, 0.11 * seg.hw + 0.6, de));
+              base = mix3(base, [0.01, 0.01, 0.01], 1 - smooth(0.05 * seg.hw - 0.5, 0.05 * seg.hw + 0.5, Math.hypot((t - ex - 0.03) * seg.hw, (u - 0.56) * seg.L * sEnd)));
+            }
+            break;
+          }
+          case "waves": {
+            // SÓNG BIỂN: 2–3 đường sóng trắng uốn lượn ở đầu móng
+            let wv = 0;
+            for (let q = 0; q < 3; q++) { const uq = 0.6 + 0.11 * q + 0.025 * Math.sin(9 * t + ph + q * 1.7); wv = Math.max(wv, 1 - smooth(lineW * 0.9, lineW * 1.8, Math.abs(u - uq) * seg.L * sEnd / Math.max(1, seg.hw))); }
+            base = mix3(base, [0.95, 0.96, 0.97], wv);
+            break;
+          }
+          case "negative": {
+            // NEGATIVE SPACE: phần lớn móng để "trần" (lớp base trong → hồng tự nhiên), khối nửa trăng c2 ở chân móng,
+            // viền kim loại mảnh chạy theo mép khối
+            const moon = 0.36 + 0.07 * Math.cos(1.6 * t);
+            base = mix3([0.78, 0.5, 0.45], c2, 1 - smooth(moon - aaU * 2, moon + aaU * 2, u));
+            const nl2 = (u - moon) * seg.L * sEnd / Math.max(1, 1.4);
+            if (Math.abs(nl2) < 1.6) { metalMix = 1 - smooth(0.7, 1.4, Math.abs(nl2)); metalQ = Math.max(-1, Math.min(1, nl2 / 1.2)); }
+            break;
+          }
+          case "lace": {
+            // REN TRẮNG (in stamping): dải ren ngang móng — lưới chấm mịn + mép vỏ sò + hoa nhỏ viền nét
+            const inBand = smooth(0.1, 0.14, u) * (1 - smooth(0.52, 0.56, u));
+            const X = t * seg.hw, Yp = s * seg.L, P = 0.16 * seg.hw;
+            const row = Math.floor(Yp / P), fx = X / P + (row % 2) * 0.5;
+            const mesh = 1 - smooth(0.18 * P, 0.26 * P, Math.hypot((fx - Math.round(fx)) * P, (Yp / P - row - 0.5) * P));
+            const sc = Math.abs(((t * 3.2 + 10) % 1) - 0.5) * 2, scallopU = 0.52 + 0.04 * Math.sqrt(Math.max(0, 1 - sc * sc));
+            const scal = 1 - smooth(0.006, 0.014, Math.abs(u - scallopU));
+            const fl = Math.abs(Math.hypot((t - 0.3 * Math.round(t / 0.3)) * seg.hw, (u - 0.32) * seg.L * sEnd) - 0.09 * seg.hw);
+            const flower = 1 - smooth(lineW * 0.6 * seg.hw, lineW * 1.2 * seg.hw, fl);
+            base = mix3(base, [0.95, 0.95, 0.96], Math.max(mesh * inBand * 0.75, scal, flower * inBand));
+            break;
+          }
+          case "witchy": {
+            // PHÙ THUỶ: viền kim loại mảnh quanh mép móng nhấn (+ 1 charm sao nhỏ ở chân móng — trong bước khối 3D)
+            const n = (eDist[k] - 2.2) / 1.1;
+            const mm = 1 - smooth(0.6, 1.2, Math.abs(n));
+            if (mm > 0) { metalMix = mm; metalQ = Math.max(-1, Math.min(1, n)); }
+            break;
+          }
+          case "milkbath": {
+            // MILK BATH: lớp thạch trắng sữa hơi trong (thấy nhẹ móng hồng bên dưới) — hoa khô ép nằm dưới lớp sữa
+            base = mix3(c1, [0.78, 0.55, 0.5], 0.12);
+            break;
+          }
+          case "web": {
+            // MẠNG NHỆN từ góc đầu móng: 6 tia + các vòng võng xuống giữa 2 tia; nét kim loại mảnh
+            const ax = (t + 1.05) * seg.hw, ay = (sEnd * 1.02 - s) * seg.L; // gốc ở góc đầu móng
+            const rho = Math.hypot(ax, ay), th = Math.atan2(ay, ax);
+            const nR = 6, step = Math.PI / 2 / (nR - 1);
+            const ki = Math.round(th / step), dRay = Math.abs(th - ki * step) * rho;
+            const lw = Math.max(0.6, 0.045 * seg.hw);
+            let line = 1 - smooth(lw * 0.5, lw * 1.2, dRay);
+            const gap = 0.42 * seg.hw, fr = (th / step) % 1, sag = 0.18 * gap * Math.sin(Math.PI * (fr < 0 ? fr + 1 : fr));
+            const ring = Math.abs(((rho + sag) % gap) - gap / 2) - gap / 2;
+            line = Math.max(line, (1 - smooth(lw * 0.5, lw * 1.2, Math.abs(ring))) * smooth(gap * 0.6, gap, rho));
+            base = mix3(base, mix3(metal, [0.95, 0.95, 0.96], 0.35), line * 0.95);
+            break;
+          }
+          case "plaid": {
+            // CARO (tartan): dải ngang + dọc màu c2 chồng nhau (chỗ giao đậm hơn) + kẻ chỉ mảnh màu kim loại / trắng
+            const X = t * seg.hw, Yp = s * seg.L, P = 0.9 * seg.hw;
+            const band = (v: number) => { const f = ((v / P) % 1 + 1) % 1; return 1 - smooth(0.32, 0.36, Math.abs(f - 0.5)); };
+            const thin = (v: number) => { const f = ((v / P + 0.5) % 1 + 1) % 1; return 1 - smooth(0.018, 0.035, Math.abs(f - 0.5)); };
+            const hb = band(Yp), vb = band(X);
+            base = mix3(c1, c2, 0.55 * hb + 0.55 * vb - 0.15 * hb * vb);
+            base = mix3(base, mix3(metal, [1, 1, 1], 0.4), Math.max(thin(X), thin(Yp)) * 0.85);
+            // vân chéo của vải dệt (rất nhẹ)
+            const tw = 0.03 * Math.sin((X + Yp) * 1.6);
+            base = [base[0] * (1 + tw), base[1] * (1 + tw), base[2] * (1 + tw)];
+            break;
+          }
+          case "candy": {
+            // SỌC KẸO GẬY chéo c1 / c2, đều nhau, khử răng cưa
+            const P = 0.55 * seg.hw, v = (t * seg.hw + s * seg.L * 0.9) / P;
+            const tri = Math.abs((((v % 2) + 2) % 2) - 1);
+            base = mix3(c1, c2, smooth(0.5 - 0.7 / P, 0.5 + 0.7 / P, tri));
+            break;
+          }
+          case "swirl": {
+            // SWIRL: 2 dải lượn mềm c2 + 1 nét kim loại mảnh chạy theo (vẽ tay bằng cọ)
+            const tc1 = 0.42 * Math.sin(3.1 * u + ph) - 0.1, tc2 = 0.4 * Math.sin(3.1 * u + ph + 2.2) + 0.25;
+            const w1 = 0.13 + 0.05 * Math.sin(5 * u + ph), w2 = 0.09;
+            const m1 = 1 - smooth(w1 - 0.03, w1 + 0.03, Math.abs(t - tc1)), m2 = 1 - smooth(w2 - 0.03, w2 + 0.03, Math.abs(t - tc2));
+            base = mix3(base, c2, Math.max(m1, m2 * 0.9));
+            const ml = 1 - smooth(lineW * 0.6, lineW * 1.3, Math.abs(t - tc1 - w1 - 0.02));
+            if (ml > 0) { metalMix = ml; metalQ = 0; }
+            break;
+          }
+          case "polka": {
+            // CHẤM BI đều (hàng so le) — chấm tròn mép mịn, hơi nổi; trên nền mắt mèo thì dải sáng vẫn chạy dưới chấm
+            const P = 0.5 * seg.hw, X = t * seg.hw, Yp = s * seg.L;
+            const row = Math.floor(Yp / P), off = (row % 2) * 0.5;
+            const fx = X / P + off, dx = (fx - Math.round(fx)) * P, dy = (Yp / P - row - 0.5) * P;
+            const dd = Math.hypot(dx, dy), rr = 0.15 * seg.hw;
+            base = mix3(base, c2, 1 - smooth(rr - 0.7, rr + 0.7, dd));
+            break;
+          }
+          case "stripes": {
+            // SỌC MẢNH dọc móng (pinstripe): xen kẽ c2 và kim loại, theo độ cong móng
+            const P = 0.38, k = (t + 1) / P, f = k - Math.floor(k), id = Math.floor(k);
+            const w = (id % 2 ? 1.3 : 1.8) * lineW / P;
+            const m = 1 - smooth(w * 0.6, w * 1.2, Math.abs(f - 0.5));
+            if (id % 2) { metalMix = m; metalQ = (f - 0.5) / Math.max(1e-3, w); } else base = mix3(base, c2, m);
+            break;
+          }
+          case "chocodip": {
+            // DÂU NHÚNG SÔ-CÔ-LA: đầu móng phủ sô-cô-la mép lượn + giọt chảy, vài sợi sô-cô-la trắng rưới chéo
+            const edge = 0.68 + 0.04 * Math.sin(7 * t + ph) + 0.09 * Math.max(0, Math.cos(2.6 * t + ph)) ** 6;
+            const choc = smooth(edge - aaU * 2, edge + aaU * 2, u);
+            base = mix3(c1, c2, choc);
+            const dz = Math.abs(Math.sin(9 * (u * 0.9 + t * 0.6) + ph));
+            const driz = (1 - smooth(0.05, 0.11, dz)) * smooth(edge + 0.04, edge + 0.1, u) * (0.6 + 0.4 * Math.sin(3 * t));
+            base = mix3(base, [0.9, 0.85, 0.8], Math.max(0, driz) * 0.9);
+            break;
+          }
+          case "fawn": {
+            // DA HƯƠU (fawn): đốm sáng mềm thuôn dài, mép loang — không viền (khác da báo)
+            const cell = 0.62 * seg.hw, gx = (t * seg.hw) / cell, gy = (s * seg.L) / (cell * 1.25);
+            const ix = Math.floor(gx), iy = Math.floor(gy);
+            let best = 9;
+            for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
+              const ci = ix + i2, cj = iy + j2;
+              if (hash2(ci, cj, seedN + 21) < 0.25) continue;
+              const px = ci + 0.25 + 0.5 * hash2(ci, cj, seedN + 22), py = cj + 0.25 + 0.5 * hash2(ci, cj, seedN + 23);
+              const sz = 0.22 + 0.12 * hash2(ci, cj, seedN + 24);
+              best = Math.min(best, Math.hypot((gx - px) * 1.3, gy - py) / sz);
+            }
+            base = mix3(c1, c2, 0.85 * (1 - smooth(0.65, 1.15, best)));
             break;
           }
           case "leopard": {
@@ -1307,8 +1608,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const d = (s - 0.52) * 0.9 + t * 0.32;
         const band = 0.7 * Math.exp(-(d * d) / (2 * 0.06 ** 2)) + 0.35 * Math.exp(-(d * d) / (2 * 0.16 ** 2));
         const sp = 0.65 + 0.35 * hash2(X, Y, look.seed);
-        const glow = c2 === base0 ? [0.9, 0.85, 0.75] : [c2[0] * 0.6 + 0.4, c2[1] * 0.6 + 0.4, c2[2] * 0.6 + 0.4];
-        const lf = edge * (1 + 0.3 * shade);
+        let glow = c2 === base0 ? [0.9, 0.85, 0.75] : [c2[0] * 0.6 + 0.4, c2[1] * 0.6 + 0.4, c2[2] * 0.6 + 0.4];
+        if (pat === "auroracat") {
+          // AURORA: dải từ tính đổi sắc hồng → tím → xanh băng → xanh ngọc theo bề ngang (như cực quang)
+          const hq = 2.2 * t + 1.4 * s + ph;
+          glow = [0.55 + 0.4 * Math.sin(hq), 0.5 + 0.4 * Math.sin(hq + 2.1), 0.62 + 0.38 * Math.sin(hq + 4.2)];
+        }
+        const lf = edge * (1 + 0.3 * shade) * (pat === "auroracat" ? 1.25 : 1);
         r += glow[0] * band * sp * lf; g += glow[1] * band * sp * lf; b += glow[2] * band * sp * lf;
       }
       if (motif && !PROCEDURAL.has(pat)) { // hoạ tiết (lớp SVG) phủ lên màu nền, cũng nhận ánh sáng
@@ -1353,11 +1659,53 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const dxp = (t - bd.t) * seg.hw, dyp = (s - bd.u * sEnd) * seg.L, R = bd.r * seg.hw;
         const dist = Math.hypot(dxp, dyp) / R;
         const lx = dxp / R, ly = dyp / R;
+        if (PAINTED.has(bd.kind)) {
+          // HOẠ TIẾT VẼ TAY bằng gel: mỗi phần đúng màu (thân ma trắng + mắt đen, bí ngô cam + cuống xanh + mặt đen,
+          // cherry đỏ + lá + cuống…), gel vẽ nổi nhẹ (vòm mềm), bóng theo đèn ảnh; dơi / trăng màu kim loại thì ánh kim
+          if (dist > 1.6) continue;
+          const rotA = uprightRot + (bd.rot ?? 0);
+          const cr = Math.cos(rotA), sr = Math.sin(rotA);
+          const X0 = lx * cr + ly * sr, Y0 = -lx * sr + ly * cr;
+          const ps = paintedSD(bd.kind, X0, Y0);
+          const cov = 1 - smooth(-0.03, 0.03, ps.d);
+          if (cov <= 0) continue;
+          const hh = (dx2: number, dy2: number) => { const q = paintedSD(bd.kind, X0 + dx2, Y0 + dy2).d; return q < 0 ? Math.sqrt(Math.min(1, -q / 0.3)) : 0; };
+          const e = 0.03, gx = (hh(e, 0) - hh(-e, 0)) / (2 * e), gy = (hh(0, e) - hh(0, -e)) / (2 * e);
+          // pháp tuyến về lại hệ toạ độ móng (bỏ xoay)
+          let nx = -(gx * cr - gy * sr) * 0.22, ny = -(gx * sr + gy * cr) * 0.22, nz2 = 1;
+          const nn = Math.hypot(nx, ny, nz2); nx /= nn; ny /= nn; nz2 /= nn;
+          const ndh2 = Math.max(0, nx * H3[0] + ny * H3[1] + nz2 * H3[2]);
+          const paint = (hex: RGB): RGB => {
+            const dif = (0.62 + 0.42 * Math.max(0, nx * L3[0] + ny * L3[1] + nz2 * L3[2])) * (0.85 + 0.25 * smooth(-1, 1, shade));
+            const sp = 0.55 * Math.pow(ndh2, 60);
+            return [hex[0] * dif + sp, hex[1] * dif + sp, hex[2] * dif + sp];
+          };
+          const W: RGB = [0.94, 0.95, 0.96], K: RGB = [0.012, 0.011, 0.012];
+          let col: RGB;
+          switch (bd.kind) {
+            case "ghost": col = paint(ps.part === 1 ? K : W); break;
+            case "pumpkin": col = paint(ps.part === 1 ? [0.06, 0.13, 0.02] : ps.part === 2 ? K : [0.86, 0.22, 0.02]); break;
+            case "cherry": col = paint(ps.part === 1 ? [0.08, 0.2, 0.02] : ps.part === 2 ? [0.09, 0.04, 0.02] : [0.55, 0.01, 0.02]); break;
+            case "flake": col = paint(W); break;
+            case "flower": col = paint(ps.part === 1 ? [0.95, 0.7, 0.06] : c2); break;
+            case "pflower": col = ps.part === 1 ? [0.92, 0.72, 0.2] : [c2[0] * 0.95, c2[1] * 0.95, c2[2] * 0.95]; break; // ép phẳng, không nổi
+            case "cat": col = paint(K); break;
+            case "skull": col = paint(ps.part === 1 ? K : W); break;
+            default: { // dơi, trăng: màu kim loại của mẫu (dơi bạc / trăng vàng) — ánh kim
+              const mc = sphereMetal(metal, nx, ny, nz2, L3, side);
+              col = [mc[0] * 0.9 + 0.6 * Math.pow(ndh2, 90), mc[1] * 0.9 + 0.6 * Math.pow(ndh2, 90), mc[2] * 0.9 + 0.6 * Math.pow(ndh2, 90)];
+            }
+          }
+          const covP = bd.kind === "pflower" ? cov * 0.7 : cov; // hoa khô nằm DƯỚI lớp sữa → nhạt mờ
+          r += (col[0] - r) * covP; g += (col[1] - g) * covP; b += (col[2] - b) * covP;
+          continue;
+        }
         if (bd.kind === "star" || bd.kind === "bow" || bd.kind === "heart") {
           // CHARM / HOẠ TIẾT CÓ HÌNH: sao kim loại, nơ kim loại 3D, tim gel vẽ tay — độ phủ + độ cao từ hình, pháp tuyến từ
           // độ dốc độ cao → bóng gương kim loại / gel thật, bóng đổ theo đúng hình về phía khuất đèn
           if (dist > 1.7) continue;
-          const cr = Math.cos(bd.rot ?? 0), sr = Math.sin(bd.rot ?? 0);
+          const rotA = uprightRot + (bd.rot ?? 0);
+          const cr = Math.cos(rotA), sr = Math.sin(rotA);
           const shapeAt = (x0: number, y0: number) => {
             const x = x0 * cr + y0 * sr, y = -x0 * sr + y0 * cr;
             if (bd.kind === "bow") return bowShape(x, y);
@@ -1448,6 +1796,14 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             Math.min(1.3, v * lightK * (1 + fire * Math.sin(hue + 2.1)) + tr * base[1] + sp),
             Math.min(1.3, v * 1.04 * lightK * (1 + fire * Math.sin(hue + 4.2)) + tr * base[2] + sp),
           ];
+        } else if (bd.kind === "eye") {
+          // MẮT QUỶ 3D: giọt gel trắng tròn (lòng trắng có gân đỏ mảnh), tròng màu c2 + đồng tử đen, điểm bóng gắt
+          const rr = Math.hypot(lx - 0.05, ly - 0.02);
+          const vein = (1 - smooth(0.012, 0.03, Math.abs(Math.sin(9 * Math.atan2(ly, lx) + 3 * dist)) * dist)) * smooth(0.55, 0.9, dist);
+          let base3: RGB = [0.93 - 0.35 * vein, 0.9 - 0.75 * vein, 0.88 - 0.75 * vein];
+          if (rr < 0.44) base3 = mix3(c2[0] + c2[1] + c2[2] > 0.15 ? c2 : [0.05, 0.4, 0.1], [0.01, 0.01, 0.01], 1 - smooth(0.17, 0.2, rr));
+          const dif = (0.35 + 0.75 * ndl) * lightK, sp = 1.3 * Math.pow(ndh, 90);
+          br = [base3[0] * dif + sp, base3[1] * dif + sp, base3[2] * dif + sp];
         } else if (bd.kind === "mdrop") {
           // GIỌT CHROME (blob kim loại 3D): khối cầu tráng gương — phản chiếu phòng chụp theo pháp tuyến cầu + điểm bóng gắt
           const mc = sphereMetal(metal, lx, ly, nz, L3, side);
@@ -1538,12 +1894,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     //      móng như lơ lửng / dán lên ảnh
     if (seg.ext && op >= 0.99) {
       const { w, h } = seg;
-      const ax = seg.tip.x - seg.base.x, ay = seg.tip.y - seg.base.y, al = Math.hypot(ax, ay) || 1;
-      const ux = ax / al, uy = ay / al;
-      let vx = -uy, vy = ux, sgn = 0;
-      for (let k = 0; k < w * h; k += 3) if (seg.alpha[k] > 0.5) sgn += seg.across[k] * (((k % w) + seg.x0 - seg.base.x) * vx + (Math.floor(k / w) + seg.y0 - seg.base.y) * vy);
-      if (sgn < 0) { vx = -vx; vy = -vy; }
-      let lx2 = side * 0.55 * vx + 0.42 * ux, ly2 = side * 0.55 * vy + 0.42 * uy;
+      const ux = axUx, uy = axUy, vx = axVx, vy = axVy;
+      let lx2 = side * 0.55 * vx + 0.42 * upS * ux, ly2 = side * 0.55 * vy + 0.42 * upS * uy;
       const ln = Math.hypot(lx2, ly2) || 1; lx2 /= ln; ly2 /= ln;
       const shift = Math.max(2, 0.1 * seg.hw);
       const A = boxBlur(seg.alpha, w, h, 2);

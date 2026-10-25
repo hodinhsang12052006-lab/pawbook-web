@@ -83,6 +83,10 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "A3 Mắt mèo aurora", colors: ["#111111", "#ffffff", "#c0c0c0"], finish: "cateye", pattern: "auroracat", seed: 85 },
   { name: "A3 Trắng sữa tráng gương", colors: ["#f2ede6", "#f2ede6", "#c0c0c0"], finish: "chrome", pattern: "solid", seed: 86 },
   { name: "A3 Chrome bạc gương", colors: ["#c0c0c0", "#c0c0c0", "#c0c0c0"], finish: "chrome", pattern: "solid", seed: 87 },
+  { name: "A3 Chrome vàng gương", colors: ["#d4af37", "#d4af37", "#d4af37"], finish: "chrome", pattern: "solid", seed: 91 },
+  { name: "A3 Chrome đỏ cherry", colors: ["#b3122e", "#b3122e", "#d4af37"], finish: "chrome", pattern: "solid", seed: 79 },
+  { name: "A3 Chrome đen gunmetal", colors: ["#151314", "#151314", "#c0c0c0"], finish: "chrome", pattern: "solid", seed: 90 },
+  { name: "A3 Nhũ loang vàng hồng từ chân móng", colors: ["#ecc9b8", "#b76e79", "#b76e79"], finish: "glitter", pattern: "glitterfade", seed: 73 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

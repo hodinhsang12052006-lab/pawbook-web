@@ -1040,11 +1040,11 @@ function metalShade(tint: RGB, q: number, v: number, shade: number, side: number
   } else {
     // GƯƠNG: softbox là 1 khối sáng mép RÕ (hình chữ nhật phản chiếu, không phải vệt gauss mờ — mờ thì ra nhôm xước),
     // ngay cạnh là đường chân trời TỐI, nền phòng sáng vừa, vệt mảnh phía đối diện, mép Fresnel
-    const c = 0.42 - bend, wS = 0.12 * (0.6 + 0.4 * tpS), dS = Math.abs(qq - c);
-    lo = 0.06 + 0.66 * Math.exp(-(((qq - 0.02) / 0.45) ** 2)) * (0.6 + 0.4 * tpB) * (0.8 + 0.2 * Math.sin(3.2 * v + 1))
+    const c = 0.42 - bend, wS = 0.15 * (0.6 + 0.4 * tpS), dS = Math.abs(qq - c);
+    lo = 0.06 + 0.78 * Math.exp(-(((qq - 0.02) / 0.45) ** 2)) * (0.6 + 0.4 * tpB) * (0.8 + 0.2 * Math.sin(3.2 * v + 1))
       + 0.2 * smooth(0.68, 1.05, ab) + 0.1 * smooth(-1, 1, shade);
     lo *= 1 - 0.78 * Math.exp(-(((qq - c + wS + 0.11) / 0.075) ** 2)) * (0.3 + 0.7 * tpB); // đường chân trời tối
-    lo *= 1 - 0.4 * smooth(-0.3, -0.7, qq) * (1 - smooth(0.82, 1, ab)); // nửa xa đèn phản chiếu phòng tối (trừ mép Fresnel)
+    lo *= 1 - 0.28 * smooth(-0.3, -0.7, qq) * (1 - smooth(0.82, 1, ab)); // nửa xa đèn phản chiếu phòng tối (trừ mép Fresnel)
     hi = 1.3 * (1 - smooth(wS, wS + 0.05, dS)) * (0.1 + 0.9 * tpS)
       + 0.22 * Math.exp(-((dS / 0.2) ** 2)) * tpB // quầng loé quanh softbox
       + 0.14 * Math.exp(-(((qq + 0.52 - 0.5 * bend) / 0.07) ** 2)) * tpS;

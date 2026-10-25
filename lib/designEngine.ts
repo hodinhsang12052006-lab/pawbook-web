@@ -927,8 +927,9 @@ const RED_TIP: CK[] = ["cherry", "redVelvet", "velvet", "strawberry", "bloodRed"
 const BERRY: CK[] = ["strawberry", "cherry", "raspberry", "babyPink", "pinkNude"];
 const W = "#f0f2f4", K = "#151314"; // trắng / đen của bộ vẽ (ma, đầu lâu, bông tuyết / mèo đen, viền da báo)
 // vân đá: nền SÁNG + vân xám/đen (+ 1 vân vàng), hoặc nền đen / lục bảo / ngọc bích + vân trắng; KHÔNG nền đỏ, đỏ rượu, hồng (nhìn như thịt sống #6)
-const marbleOk = ([a, b]: [CK, CK, CK]) => !["red", "pink", "purple"].includes(hueFamily(hx(a))) &&
-  ((Lof(hx(a)) >= 70 && chroma(hx(b)) < 14 && Lof(hx(b)) <= 62) || (["black", "emerald", "jade", "pine", "navy"].includes(a) && Lof(hx(b)) >= 88));
+const MARBLE_LIGHT: CK[] = ["milky", "white", "cloudDancer", "nude", "greige", "bone", "champagne"];
+const marbleOk = ([a, b]: [CK, CK, CK]) =>
+  (MARBLE_LIGHT.includes(a) && chroma(hx(b)) < 14 && Lof(hx(b)) <= 62) || (["black", "emerald", "jade", "pine", "navy"].includes(a) && Lof(hx(b)) >= 88);
 const ROLES: Record<string, Role> = {
   solid: { g: "tone", shapes: SH5, pal: [["milky", "pearl", "pearl"], ["cherry", "gold", "gold"], ["espresso", "nude", "gold"], ["black", "silver", "silver"]] },
   french: { g: "tip", base: "sheer", pal: [["sheer", "white", "gold"], ["sheer", "espresso", "gold"], ["nude", "burgundy", "gold"], ["milky", "black", "silver"]] },
@@ -1348,7 +1349,7 @@ const SLOT_PLAN: Slot[] = ["easy", "radar", "korean", "occasion", "radar", "tren
 // màu trơn (solid) chỉ ra từ radar trend (có nguồn) hoặc làm móng nối trong bộ phối — không tự bốc vào ô thường (≤ 1 mẫu trơn / 6)
 const BASIC_OK = new Set(["french", "ombre", "aura", "lines", "fr-micro", "colorchrome", "glitterfade"]);
 // Hoạ tiết "chung" ghép được với mọi dịp lễ (với bảng màu của dịp đó) — French biến tấu, chrome màu, nhũ loang, velvet…
-const OCCASION_BASICS = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-skittle", "fr-glitter", "colorchrome", "glitterfade", "velvet", "aura", "french", "chromefrench", "ombre", "doublefrench", "foil", "gemcluster"];
+const OCCASION_BASICS = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-skittle", "fr-glitter", "colorchrome", "glitterfade", "velvet", "aura", "french", "ombre", "doublefrench"];
 const EASY_FIRST = new Set(["fr-micro", "syrup", "cleanmilky"]);
 
 interface ComposeOpts {
@@ -1442,7 +1443,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     // ô dịp lễ: lấy bộ phối thì lấy dịp có bộ phối; không thì xoay vòng các dịp (bảng màu Valentine toàn đỏ / hồng — xoay
     // sang Tết / xuân mới tránh được 2 ô đỏ liền nhau)
     if (kind === "occasion") occ = (st.mix && tries < 40 ? occs.find((o) => mixOf(o)) : undefined) ?? occs[(Math.floor(out.length / 6) + Math.floor(tries / 20)) % occs.length];
-    else if (kind === "easy" && occs.length) occ = occs[Math.floor(tries / 20) % occs.length];
+    // ô dễ: thường theo dịp lễ; 1/3 số lần thử lấy mẫu dễ quanh năm (mẫu dễ của dịp ít — French micro, nhũ loang — mà 3 lượt
+    // trước đã ra thì vẫn có mẫu dễ khác, không lặp)
+    else if (kind === "easy" && occs.length && tries % 3 !== 2) occ = occs[Math.floor(tries / 20) % occs.length];
     else style = kind === "korean" ? "korean" : kind === "trend" ? "trend" : r() < 0.5 ? "korean" : "trend";
     const occId = occ?.id ?? style!;
     const tagged = (p: Pattern) => p.occasions !== "any" && p.occasions.includes(occId);
@@ -1462,7 +1465,8 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
       if (first.length && r() < 0.6) pool = first;
     }
     // cần French: lấy cả nhóm French dùng quanh năm (French tráng gương đi được nền tối khi lượt đã đủ nude)
-    if (need.includes("french")) { const f = PATTERNS.filter((p) => live(p) && FRENCH_FAMILY.has(p.id) && (pool.includes(p) || p.occasions === "any" || ["korean", "trend"].some((x) => (p.occasions as string[]).includes(x)))); if (f.length) pool = f; }
+    // (ô dịp lễ chỉ lấy French của chính dịp đó hoặc French quanh năm — French tráng gương kiểu Hàn không sang ô Noel)
+    if (need.includes("french")) { const f = PATTERNS.filter((p) => live(p) && FRENCH_FAMILY.has(p.id) && (pool.includes(p) || p.occasions === "any" || (p.occasions as string[]).some((x) => x === "any" || (occ ? x === occId : x === "korean" || x === "trend")))); if (f.length) pool = f; }
     else if (need.includes("metal")) { const f = pool.filter((p) => METAL_DOM.has(p.id) || p.finishes.includes("chrome")); if (f.length) pool = f; }
     // lượt đã đủ 2 mẫu nền trong / nude → bỏ hoạ tiết bắt buộc nền trong (French, má hồng…) cho ô này
     if (st.avoidNude) { const f = pool.filter((p) => ROLES[p.id]?.base !== "sheer"); if (f.length) pool = f; }

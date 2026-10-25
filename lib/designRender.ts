@@ -208,12 +208,14 @@ function cropHand(hand: Hand, img: Img, box: Box): Promise<Img> {
 /**
  * Khuôn móng khớp trên ảnh gốc → đúng khuôn đó trong khung đã cắt + phóng ×k (phép đồng dạng: dời gốc, nhân k mọi độ
  * dài; độ dốc / độ cong / tỉ lệ bo là tỉ số nên giữ nguyên). Điểm chấm màu móng (classify) nhận s theo px ảnh gốc.
+ * Toạ độ điểm ảnh = TÂM điểm ảnh: tâm điểm i của khung phóng ứng với x = box.x + (i + ½)/k − ½ trên ảnh gốc (thiếu
+ * ½ thì mặt nạ lệch ½px so với mép móng thật ở ×2 — đúng chỗ mép khử răng cưa 1px).
  */
 function toCrop(m: NailModel, box: Box, k: number): NailModel {
   const f = m.fit, cls = m.classify;
   return {
     ...m,
-    O: { x: (m.O.x - box.x) * k, y: (m.O.y - box.y) * k },
+    O: { x: (m.O.x - box.x + 0.5) * k - 0.5, y: (m.O.y - box.y + 0.5) * k - 0.5 },
     L: m.L * k,
     fit: { ...f, c0: f.c0 * k, hw: f.hw * k, s0: f.s0 * k, s1: f.s1 * k },
     classify: cls ? (s: number) => cls(s / k) : null,

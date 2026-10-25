@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
 import { cfDailyImages, cfImageEnabled } from "@/lib/cfImage";
 import { dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion, generateSamples, imagesDrawnToday, OCCASION_BATCH_MAX, redrawImage, storageReady, textOnly, toPublic, upcomingThemes } from "@/lib/aiDesigns";
-import { setSetting } from "@/lib/settings";
+import { getSetting, setSetting } from "@/lib/settings";
 
 // Mẫu nail AI — chỉ ADMIN (xác minh trong DB):
 //   GET                         — nháp chờ duyệt + mẫu đã đăng gần đây + trạng thái cấu hình
@@ -52,6 +52,7 @@ export async function GET() {
       nextOccasion: (() => { const t = upcomingThemes("US", new Date())[0]; return t ? { id: t.id, title: t.title, emoji: t.emoji } : null; })(),
       dailyLimit: dailyLimit(),
       review: await designsNeedReview(), // mẫu mới chờ duyệt (true) hay lên thẳng (false)
+      render: (await getSetting("design_render")) !== "0", // ảnh mẫu do máy PawNail vẽ trên tay mẫu (mặc định bật)
       madeToday,
       drafts: drafts.map(withQuality),
       published: published.map(withQuality),
@@ -92,7 +93,12 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const a = await admin();
   if (a.error) return a.error;
-  const body = (await req.json().catch(() => ({}))) as { id?: string; ids?: string[]; status?: string; action?: string; review?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { id?: string; ids?: string[]; status?: string; action?: string; review?: unknown; render?: unknown };
+  // Bật / tắt ảnh mẫu do máy PawNail tự vẽ (tắt → quay về AI vẽ + AI chấm) — không cần sửa code
+  if (typeof body.render === "boolean") {
+    await setSetting("design_render", body.render ? "1" : "0");
+    return NextResponse.json({ ok: true, render: body.render });
+  }
   // Công tắc "Duyệt mẫu trước khi đăng"
   if (typeof body.review === "boolean") {
     await setSetting("designs_review", body.review ? "1" : "0");

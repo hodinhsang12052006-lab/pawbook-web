@@ -1,0 +1,19 @@
+// Công cụ soi (không phải test): ảnh mẫu kho "Mẫu nail" do máy PawNail tự vẽ trên tay mẫu — lấy N mẫu thật từ máy
+// tạo mẫu (cùng đường cron dùng) → tờ so sánh, để soi bằng mắt như khách lướt kho mẫu.
+//   npx tsx scripts/qa/design_render_sheet.mts <ra.jpg> [số mẫu] [salt]
+import { createRequire } from "node:module";
+import { generateEngineDesigns } from "../../lib/designEngine";
+import { renderDesignImage, canRenderPattern } from "../../lib/designRender";
+const require = createRequire(import.meta.url);
+const sharp = require("sharp");
+const [out, nStr = "12", salt = "s1"] = process.argv.slice(2);
+const list = generateEngineDesigns(60, { market: "US", date: "2026-10-25", occasions: [], risingTags: [], usedTitles: new Set(), salt }).filter((d) => canRenderPattern(d.pattern)).slice(0, +nStr);
+const W = 420, tiles: Buffer[] = [];
+const label = (txt: string) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="30"><rect width="${W}" height="30" fill="rgba(0,0,0,.6)"/><text x="8" y="20" font-size="14" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
+for (const [i, d] of list.entries()) {
+  const r = await renderDesignImage({ id: `${salt}-${i}`, palette: d.palette, shape: d.shape, finish: d.finish, pattern: d.pattern, skills: d.skills });
+  tiles.push(await sharp(Buffer.from(r.base64, "base64")).resize(W, W).composite([{ input: label(`${d.title.vi} · ${d.skills.join("/")}`), top: 0, left: 0 }]).jpeg({ quality: 86 }).toBuffer());
+}
+const cols = 4, rows = Math.ceil(tiles.length / cols);
+await sharp({ create: { width: cols * (W + 4), height: rows * (W + 4), channels: 3, background: "#111" } }).composite(tiles.map((input, i) => ({ input, left: (i % cols) * (W + 4), top: Math.floor(i / cols) * (W + 4) }))).jpeg({ quality: 86 }).toFile(out);
+console.log(`ok ${list.length}`);

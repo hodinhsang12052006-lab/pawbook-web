@@ -25,6 +25,13 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "Line vàng nổi nền trắng sữa", colors: ["#f5f0e8", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "chromeline", seed: 19 },
   { name: "Đá pha lê nền nude", colors: ["#e8c4a8", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "gems", seed: 20 },
   { name: "Velvet đỏ rượu", colors: ["#7f1d1d", "#ffffff", "#d4af37"], finish: "cateye", pattern: "velvet", seed: 21 },
+  { name: "Da báo nâu nền nude", colors: ["#e8c4a8", "#a0522d", "#d4af37"], finish: "glossy", pattern: "leopard", seed: 22 },
+  { name: "Bàn cờ hồng – nâu espresso", colors: ["#f2c4c4", "#4b2e2a", "#d4af37"], finish: "glossy", pattern: "checker", seed: 23 },
+  { name: "Foil vàng nền xanh rêu", colors: ["#556b2f", "#ffffff", "#d4af37"], finish: "glossy", pattern: "foil", seed: 24 },
+  { name: "Charm sao bạc nền navy", colors: ["#1e2a4a", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "stars", seed: 25 },
+  { name: "Charm nơ bạc nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "charm3d", seed: 26 },
+  { name: "Tim đỏ nền trắng sữa", colors: ["#f8f4ee", "#c81e3a", "#d4af37"], finish: "glossy", pattern: "hearts", seed: 27 },
+  { name: "Giọt chrome bạc nền nude", colors: ["#e8c4a8", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 28 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

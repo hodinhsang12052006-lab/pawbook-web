@@ -367,6 +367,14 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `${c1.en} nails with small 3D ${metal.en} bow charms on two accent nails`,
   },
   {
+    id: "chromedrops", occasions: ["korean", "newyear", "any"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true,
+    title: ({ c1, metal }) => s(`${capVi(c1.vi)} giọt chrome ${metal.vi} 3D`, `${cap(c1.en)} with 3D ${metal.en} chrome drops`),
+    why: s("giọt chrome kim loại 3D (blob) là trend lên ngôi — như giọt bạc / vàng nóng chảy trên móng, cực bắt sáng", "3D chrome blobs are trending hard — like drops of molten silver or gold, super eye-catching"),
+    materials: ({ metal }) => [m("Gel đặc 3D (gel vẽ nổi)", "3D sculpting gel"), m(`Bột tráng gương ${metal.vi}`, `${cap(metal.en)} chrome powder`, "1 hũ"), m("Top gel bóng (no-wipe)", "No-wipe glossy top coat")],
+    steps: ({ metal }) => [s("Chấm gel đặc thành giọt tròn to nhỏ khác nhau, hơ đèn 60 giây", "Dot thick gel into round drops of mixed sizes, cure 60s"), s(`Phủ top no-wipe, hơ đèn, xoa bột tráng gương ${metal.vi} lên các giọt`, `No-wipe top, cure, then buff ${metal.en} chrome powder onto the drops`), s("Phủ top khoá bột, hơ đèn", "Seal with top coat, cure")],
+    image: ({ c1, metal }) => `${c1.en} nails decorated with glossy 3D ${metal.en} chrome blob drops of different sizes`,
+  },
+  {
     id: "droplets", occasions: ["korean", "any"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 10, difficulty: 2, design: true,
     title: ({ c1 }) => s(`${capVi(c1.vi)} giọt nước 3D`, `${cap(c1.en)} with 3D water drops`),
     why: s("giọt nước 3D trong veo đang viral — móng như vừa đọng sương, chụp ảnh rất ăn", "glassy 3D water drops are viral right now — dewy and very photogenic"),

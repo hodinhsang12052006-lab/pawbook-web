@@ -1615,8 +1615,8 @@ export default function MessagesContent({
                 </div>
               )}
               {/* đang gõ → ẩn thanh gợi ý cho ô nhập + bàn phím đủ chỗ (bấm gợi ý xong cũng ẩn: đã dùng).
-                  Chờ tin của cuộc trò chuyện nạp xong (activeBucket) — không thì thoáng hiện gợi ý "chưa có tin" rồi mới đổi. */}
-              {!recording && !hasText && !!activeBucket && currentUser && activeChat && !activeChat.isGroup && (
+                  Chờ tin MỚI của cuộc trò chuyện nạp xong (không dùng bản lưu trên máy) — không thì thoáng hiện gợi ý theo tin cũ rồi mới đổi. */}
+              {!recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && (
                 <ChatAssist
                   me={{ id: currentUser.id, role: currentUser.role, market: currentUser.market }}
                   partner={{ id: activeChat.id, role: activeChat.role, isGroup: !!activeChat.isGroup }}

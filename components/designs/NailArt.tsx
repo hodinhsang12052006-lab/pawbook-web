@@ -97,6 +97,18 @@ export function Motif({ pattern, c2, metal, i, rnd, uid, outline }: { pattern: s
       return <path d="M13 26 L15 32 L21 34 L15 36 L13 42 L11 36 L5 34 L11 32 Z" fill={metal} />;
     case "gems":
       return <g fill="#ffffff" stroke="#94a3b8" strokeWidth={0.4}>{[[5, 56], [9, 60], [13, 61.5], [17, 60], [21, 56]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r={1.9} />)}</g>;
+    case "chromedrops":
+      return (
+        <g>
+          {[[10, 32, 3.8], [18, 44, 2.4], [9, 52, 1.8]].map(([x, y, r], k) => (
+            <g key={k}>
+              <circle cx={x + 0.6} cy={y + 0.8} r={r} fill="#000000" opacity={0.15} />
+              <circle cx={x} cy={y} r={r} fill={metal} />
+              <circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * 0.3} fill="#ffffff" opacity={0.9} />
+            </g>
+          ))}
+        </g>
+      );
     case "droplets":
       // giọt nước 3D: vòng khúc xạ xám nhạt + chấm sáng (bản vẽ phẳng cho thẻ mẫu; ảnh thử trên tay do lib/tryon vẽ thật)
       return (

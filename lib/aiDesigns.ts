@@ -8,6 +8,7 @@ import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 import { SAMPLE_DESIGNS } from "@/lib/designSamples";
 import { generateEngineDesigns, generateOccasionBatch, PATTERN_IDS, type EngineDesign } from "@/lib/designEngine";
 import { cfDailyImages, cfImage, cfImageEnabled } from "@/lib/cfImage";
+import { canRenderPattern, renderDesignImage } from "@/lib/designRender";
 
 // "Mẫu nail AI mỗi ngày":
 //   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
@@ -385,9 +386,65 @@ async function drawBest(subject: string, seed: string, deadline: number, max = c
   return best;
 }
 
+// ---------------- ẢNH DO MÁY PAWNAIL TỰ VẼ (lib/designRender): tay mẫu thật + bộ máy Thử mẫu ----------------
+// AI vẽ cả bàn tay hay lỗi giải phẫu (6 móng, móng lơ lửng, ngón không sơn) và sai hoạ tiết so với tên mẫu (25/10:
+// "bàn cờ" ra hình thoi nhỏ). Máy PawNail vẽ hoạ tiết lên ẢNH TAY THẬT → đúng giải phẫu, đúng mô tả, 0đ, không lượt.
+const renderMark = () => `[pr:${today()}]`;
+/** Tắt bằng cài đặt `design_render` = "0" (mặc định bật). */
+async function renderOn(): Promise<boolean> {
+  try { return (await getSetting("design_render")) !== "0"; } catch { return true; }
+}
+/** Vẽ ảnh 1 mẫu bằng máy PawNail rồi lưu. Ảnh AI cũ (nếu có) giữ link trong prompt [ai:…] — khôi phục được. */
+async function renderAndStore(id: string, variant = 0): Promise<string | null> {
+  const row = await prisma.nailDesign.findUnique({ where: { id }, select: { id: true, palette: true, shape: true, finish: true, pattern: true, skills: true, prompt: true, imageUrl: true } });
+  if (!row || !canRenderPattern(row.pattern)) return null;
+  const img = await renderDesignImage({ id: row.id, palette: parse(row.palette, [] as string[]), shape: row.shape, finish: row.finish, pattern: row.pattern, skills: row.skills.split(",").filter(Boolean) }, variant);
+  const imageUrl = await store(img);
+  const keepOld = row.imageUrl && !row.prompt.includes("[pr:") && !row.prompt.includes("[ai:") ? `[ai:${row.imageUrl}]` : "";
+  const marks = `${row.prompt.match(/\[ai:[^\]]*\]/)?.[0] ?? keepOld}${row.prompt.match(/\[redraws:\d+\]/)?.[0] ?? ""}${renderMark()}`;
+  const base = row.prompt.replace(/\[(q|try|pr|ai|redraws|img):[^\]]*\]/g, "").trimEnd();
+  await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${base.slice(0, 2000 - marks.length)}${marks}` } });
+  return imageUrl;
+}
+
+/** Thay dần ảnh AI cũ (mẫu PawNail đang hiện) bằng ảnh máy PawNail vẽ — mẫu mới đăng trước, mỗi lượt vài mẫu. */
+export async function rerenderAiImages(deadline: number, max = 8): Promise<{ done: number; errors: string[] }> {
+  const errors: string[] = [];
+  if (!storageReady() || !(await renderOn())) return { done: 0, errors };
+  const rows = await prisma.nailDesign.findMany({
+    where: { provider: "pawnail", status: "published", imageUrl: { not: null }, NOT: { prompt: { contains: "[pr:" } } },
+    select: { id: true, pattern: true },
+    orderBy: { publishedAt: "desc" },
+    take: 80,
+  });
+  let done = 0;
+  for (const r of rows) {
+    if (done >= max || deadline - Date.now() < 8000) break;
+    if (!canRenderPattern(r.pattern)) continue;
+    try { if (await renderAndStore(r.id)) done++; } catch (err) { errors.push(`Máy PawNail chưa vẽ lại được ảnh: ${(err as Error).message.slice(0, 120)}`); }
+  }
+  return { done, errors };
+}
+
 async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]): Promise<number> {
+  let rendered = 0;
+  // 1) hoạ tiết máy PawNail tự vẽ được → vẽ bằng máy PawNail (không tốn lượt AI, không lỗi giải phẫu)
+  if (jobs.length && storageReady() && (await renderOn())) {
+    const rest: ImageJob[] = [];
+    for (const job of jobs) {
+      if (deadline - Date.now() < 6000) { rest.push(job); continue; }
+      try {
+        if (await renderAndStore(job.id)) { rendered++; continue; }
+      } catch (err) {
+        errors.push(`Máy PawNail chưa vẽ được ảnh (thử AI): ${(err as Error).message.slice(0, 120)}`);
+      }
+      rest.push(job);
+    }
+    jobs = rest;
+  }
+  // 2) còn lại (hoạ tiết hình: ma, bí ngô…) → AI vẽ + AI chấm như cũ
   // (AI_DESIGNS_TEXT_ONLY chỉ dành cho Gemini — không chặn ảnh Cloudflare miễn phí.)
-  if (!jobs.length || !cfImageEnabled() || !storageReady()) return 0;
+  if (!jobs.length || !cfImageEnabled() || !storageReady()) return rendered;
   const imagesToday = await imagesDrawnToday();
   let left = Math.max(0, cfDailyImages() - imagesToday);
   const queue = [...jobs];
@@ -427,7 +484,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
     }
   };
   await Promise.all([worker(), worker()]);
-  return done;
+  return done + rendered;
 }
 
 /** Vẽ bù ảnh cho mẫu PawNail nháp (14 ngày gần đây) còn thiếu ảnh — lỗi/quá giờ, hoặc
@@ -453,6 +510,21 @@ const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img|q|try|hid):
 /** Admin bấm "Vẽ lại ảnh" (ảnh lỗi tay, sai hoạ tiết…) — tối đa MAX_REDRAWS lần/mẫu.
  *  Luôn dùng khung ảnh MỚI NHẤT (IMAGE_STYLE) với phần mô tả bộ móng đã lưu. */
 export async function redrawImage(id: string): Promise<{ imageUrl?: string; error?: string; redraws?: number }> {
+  // hoạ tiết máy PawNail tự vẽ được → vẽ lại bằng máy (tay mẫu / lật ảnh khác), không giới hạn lượt
+  const r0 = await prisma.nailDesign.findUnique({ where: { id }, select: { pattern: true, prompt: true } });
+  if (r0 && canRenderPattern(r0.pattern) && storageReady() && (await renderOn())) {
+    const n0 = Number(r0.prompt.match(/\[redraws:(\d+)\]/)?.[1] ?? 0);
+    try {
+      const imageUrl = await renderAndStore(id, n0 + 1);
+      if (imageUrl) {
+        const cur = (await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true } }))!.prompt;
+        await prisma.nailDesign.update({ where: { id }, data: { prompt: cur.replace(/\[redraws:\d+\]/, "").replace(renderMark(), `[redraws:${n0 + 1}]${renderMark()}`) } });
+        return { imageUrl, redraws: n0 + 1 };
+      }
+    } catch (err) {
+      return { error: `Máy PawNail chưa vẽ được: ${(err as Error).message.slice(0, 160)}` };
+    }
+  }
   if (!cfImageEnabled() || !storageReady()) return { error: "Chưa bật vẽ ảnh (Cloudflare Workers AI)." };
   const row = await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true } });
   if (!row) return { error: "Không tìm thấy mẫu." };
@@ -519,6 +591,8 @@ export interface PublicDesign {
   finish: string;
   pattern: string;
   provider: string;
+  /** ảnh do máy PawNail vẽ trên tay mẫu (không phải AI vẽ cả bàn tay) — để ghi nhãn đúng nguồn */
+  rendered?: boolean;
   status: string;
   saves: number;
   saved?: boolean;
@@ -536,7 +610,7 @@ const parse = <T,>(s: string, fallback: T): T => {
 export function toPublic(r: {
   id: string; day: string; occasion: string | null; title: string; titleEn: string; description: string; descriptionEn: string; skills: string;
   difficulty: number; minutes: number; priceHint: string; materials: string; steps: string; imageUrl: string | null; videoUrl: string | null;
-  palette?: string; shape?: string; finish?: string; pattern?: string; provider?: string;
+  palette?: string; shape?: string; finish?: string; pattern?: string; provider?: string; prompt?: string;
   status: string; publishedAt: Date | null; _count?: { saves: number };
 }): PublicDesign {
   return {
@@ -545,5 +619,6 @@ export function toPublic(r: {
     materials: parse(r.materials, []), steps: parse(r.steps, []), imageUrl: r.imageUrl, videoUrl: r.videoUrl, status: r.status,
     palette: parse(r.palette ?? "[]", [] as string[]), shape: r.shape ?? "almond", finish: r.finish ?? "glossy", pattern: r.pattern ?? "solid", provider: r.provider ?? "gemini",
     saves: r._count?.saves ?? 0, publishedAt: r.publishedAt?.toISOString() ?? null,
+    rendered: !!r.imageUrl && !!r.prompt?.includes("[pr:"),
   };
 }

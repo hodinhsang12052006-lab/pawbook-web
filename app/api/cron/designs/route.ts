@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
-import { backfillImages, dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion } from "@/lib/aiDesigns";
+import { backfillImages, dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion, rerenderAiImages } from "@/lib/aiDesigns";
 import { sendPush } from "@/lib/push";
 import { publishDailyOfficialPost } from "@/lib/officialDaily";
 import { publishDesignGallery } from "@/lib/designGallery";
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     const occasion = sp.get("occasion");
     const extra = Math.min(occasion ? 150 : 8, Math.max(0, Math.round(Number(sp.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
-    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; official?: unknown; gallery?: unknown; news?: unknown; digest?: unknown } = useGemini
+    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; rerendered?: number; official?: unknown; gallery?: unknown; news?: unknown; digest?: unknown } = useGemini
       ? await generateDesigns("US", Math.ceil(dailyLimit() / 2))
       : occasion && extra
         ? await generateOccasion("US", occasion, extra, deadline)
@@ -60,6 +60,10 @@ export async function GET(req: Request) {
       const b = await backfillImages(deadline);
       r.backfilled = b.drawn;
       r.errors.push(...b.errors);
+      // thay dần ảnh AI cũ bằng ảnh máy PawNail vẽ trên tay mẫu (ảnh cũ giữ link để khôi phục)
+      const rr = await rerenderAiImages(deadline);
+      r.rerendered = rr.done;
+      r.errors.push(...rr.errors);
     }
     // Báo admin chỉ khi đang BẬT duyệt (mặc định mẫu lên thẳng, không cần báo)
     if (r.created.length && (await designsNeedReview())) {
@@ -72,7 +76,7 @@ export async function GET(req: Request) {
       });
     }
     // Ghi tóm tắt vào log Vercel (lỗi vẽ ảnh chỉ nằm trong phản hồi — không ai đọc được khi cron tự chạy).
-    console.log("cron designs:", JSON.stringify({ created: r.created.length, backfilled: r.backfilled, gallery: r.gallery, official: r.official, digest: r.digest, errors: r.errors.slice(0, 5) }).slice(0, 1500));
+    console.log("cron designs:", JSON.stringify({ created: r.created.length, backfilled: r.backfilled, rerendered: r.rerendered, gallery: r.gallery, official: r.official, digest: r.digest, errors: r.errors.slice(0, 5) }).slice(0, 1500));
     return NextResponse.json(r);
   } catch (err) {
     console.error("cron designs error:", err);

@@ -227,9 +227,12 @@ ok("E9", `Đúng màu sơn: trung vị lõi móng lệch màu đặt ΔE ≤ 10 
   const glossy = stats(LOOK(["#141416"], "glossy")), matte = stats(LOOK(["#141416"], "matte"));
   const grey = stats(LOOK(["#b8bcc4"], "glossy")), chrome = stats(LOOK(["#b8bcc4"], "chrome"));
   const glitter = stats(LOOK(["#c9a86a"], "glitter")), cat = stats(LOOK(["#2a1240", "#c4a1ff"], "cateye"));
-  ok("E12", "Hiệu ứng: bóng có vệt sáng (nhám thì không); chrome tương phản kim loại (độ lệch sáng ≥ 2× sơn thường); nhũ có hạt sáng (≥ 1.5%); mắt mèo có dải sáng (≥ 4%)",
-    glossy.p99 - matte.p99 >= 30 && chrome.sd >= 2 * grey.sd && glitter.bright >= 0.015 && cat.bright >= 0.04,
-    JSON.stringify({ glossyP99: r2(glossy.p99), matteP99: r2(matte.p99), chromeSd: r2(chrome.sd), greySd: r2(grey.sd), glitter: r2(glitter.bright), cat: r2(cat.bright) }));
+  // sơn bóng thường giờ mang cả ánh đèn THẬT của ảnh (độ lệch sáng tăng theo) → so chrome với sơn TRƠN nhám (chỉ có
+  // bóng tối–sáng) ≥ 2×, và vẫn phải hơn hẳn sơn bóng thường (≥ 1.8×)
+  const greyM = stats(LOOK(["#b8bcc4"], "matte"));
+  ok("E12", "Hiệu ứng: bóng có vệt sáng (nhám thì không); chrome tương phản kim loại (độ lệch sáng ≥ 2× sơn trơn, ≥ 1.8× sơn bóng); nhũ có hạt sáng (≥ 1.5%); mắt mèo có dải sáng (≥ 4%)",
+    glossy.p99 - matte.p99 >= 30 && chrome.sd >= 2 * greyM.sd && chrome.sd >= 1.8 * grey.sd && glitter.bright >= 0.015 && cat.bright >= 0.04,
+    JSON.stringify({ glossyP99: r2(glossy.p99), matteP99: r2(matte.p99), chromeSd: r2(chrome.sd), greySd: r2(grey.sd), greyMatteSd: r2(greyM.sd), glitter: r2(glitter.bright), cat: r2(cat.bright) }));
 }
 
 // độ trong (thạch / negative space) + mix màu + hoạ tiết
@@ -244,7 +247,7 @@ ok("E9", `Đúng màu sơn: trung vị lõi móng lệch màu đặt ΔE ≤ 10 
   const motif = { w: im.w, h: im.h, data: new Uint8ClampedArray(im.w * im.h * 4) };
   const paint = (x0: number, y0: number) => { for (let y = y0; y < y0 + 16; y++) for (let x = x0; x < x0 + 16; x++) { const i = (y * im.w + x) * 4; motif.data[i] = 220; motif.data[i + 3] = 255; } };
   paint(214, 392); paint(40, 40);
-  const withMotif = renderLook(im, segs, LOOK(["#f4efe6"], "glossy", { pattern: "hearts" }), motif); // hoạ tiết SVG (tim) — mẫu trơn bộ máy tự vẽ, không dùng lớp SVG
+  const withMotif = renderLook(im, segs, LOOK(["#f4efe6"], "glossy", { pattern: "floral" }), motif); // hoạ tiết SVG (hoa) — tim / sao… giờ bộ máy tự vẽ, không dùng lớp SVG
   const ci = (400 * im.w + 222) * 4, oi = (48 * im.w + 48) * 4;
   ok("E13", "Độ trong 60% = trộn đúng 60% màu mới + 40% móng thật; mix màu: ngón 3–4 đổi màu phụ; hoạ tiết hiện trên móng (đỏ), ngoài móng bị bỏ",
     err / n < 2.5 && medL(segs[0]) < 60 && medL(segs[2]) > 150 && withMotif.data[ci] > withMotif.data[ci + 1] + 60 && withMotif.data[oi] === im.data[oi],
@@ -345,8 +348,8 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     frTip[0] < 25 && frBase[0] > 70 && omL[0] > omL[1] && omL[1] > omL[2] + 10 && auMid[1] > auEdge[1] + 8
     && bright(gm, segs[1]) > 0.02 && bright(gm, segs[0]) < 0.005 && dark / nT > 0.1 && dark / nT < 0.65,
     JSON.stringify({ frTip: frTip.map(Math.round), frBase: frBase.map(Math.round), omL: omL.map(Math.round), auMid: auMid.map(Math.round), auEdge: auEdge.map(Math.round), gem1: r2(bright(gm, segs[1])), gem0: r2(bright(gm, segs[0])), tort: r2(dark / nT) }));
-  ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết khác (tim, hoa…) vẫn có lớp SVG trên móng điểm nhấn",
-    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "droplets", "chromefrench", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("hearts", true, 4) && !hasMotif("hearts", false, 4) && hasMotif("swirl", false, 4));
+  ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết còn lại (hoa, ma, bí ngô…) vẫn có lớp SVG trên móng điểm nhấn",
+    ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "droplets", "chromefrench", "leopard", "checker", "foil", "stars", "hearts", "charm3d", "chromedrops", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("floral", true, 4) && !hasMotif("floral", false, 4) && hasMotif("swirl", false, 4));
 }
 {
   const im = imgs["hand.jpg"], s = new TryOnSession();
@@ -431,13 +434,32 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const rimAcc = rimBright(os[1]), rimPlain = rimBright(os[0]);
   // f) bộ 10 mẫu: luôn 1 mẫu chi tiết kim loại + 1 mẫu 3D; "Bộ khác" xoay nhiều kiểu 3D
   const prof = profileFromModels(FIXTURES.find((f) => f.file === "pink.jpg")!.marks.map((m) => fitNail(pi, mark(m))))!;
-  const METALS = new Set(["chromeline", "lines", "chromefrench", "marble", "tortoise"]), THREE_D = new Set(["pearls", "droplets", "gemcluster"]);
+  const METALS = new Set(["chromeline", "lines", "chromefrench", "marble", "tortoise", "foil", "leopard", "checker"]), THREE_D = new Set(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts"]);
   const sets = ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8"].map((salt) => adviceLooks(prof, "US", salt));
   const wowOk = sets.every((st) => st.filter((l) => METALS.has(l.pattern)).length === 1 && st.filter((l) => THREE_D.has(l.pattern)).length === 1);
   const kinds3d = new Set(sets.flatMap((st) => st.filter((l) => THREE_D.has(l.pattern)).map((l) => l.pattern)));
   ok("E23", `Trend bắt mắt ra chất thật: French gương bạc (độ lệch sáng đầu móng ${Math.round(sd(tipL))} ≥ 30, có dải sáng + mảng tối) · velvet giữ màu (độ đậm ${Math.round(chroma(vel))} / sơn thường ${Math.round(chroma(sol))}) + giữa sáng hơn mép · ngọc trai có điểm bóng + bóng tiếp xúc, chỉ móng nhấn · giọt nước 3D đủ ${dropNails.filter(Boolean).length}/4 móng · đồi mồi viền kim loại móng nhấn ${Math.round(rimAcc * 100)}% (móng thường ${Math.round(rimPlain * 100)}%) · mỗi bộ 10 mẫu có 1 mẫu kim loại + 1 mẫu 3D (${[...kinds3d].join(", ")})`,
     tipOk && velOk && pearlOk && dropNails.every(Boolean) && rimAcc >= 0.2 && rimPlain < 0.08 && wowOk && kinds3d.size >= 2,
     JSON.stringify({ tip: [Math.round(sd(tipL)), Math.max(...tipL), Math.min(...tipL)], vel: [Math.round(chroma(vel)), Math.round(chroma(sol)), Math.round(med(mid)), Math.round(med(rim))], pearl: [pHi, pSh, pOff], drops: dropNails, rim: [r2(rimAcc), r2(rimPlain)], wowOk, kinds3d: [...kinds3d] }));
+}
+
+{
+  // TREND MỚI do bộ máy tự vẽ (không còn lớp SVG phẳng): da báo, bàn cờ, foil, charm sao / nơ kim loại 3D, tim vẽ tay chỉ
+  // trên 2 móng nhấn; giọt chrome trên MỌI móng; mỗi mẫu đổi rõ mặt móng nhấn và có cả điểm sáng (kim loại / bóng gel)
+  const pi = imgs["pink.jpg"], ps = segsOf["pink.jpg"];
+  const plain = (c: string) => renderLook(pi, ps, LOOK([c], "glossy"));
+  const changed = (out: Img, ref: Img, sg: NailSeg) => { let n = 0, d = 0; for (let k = 0; k < sg.alpha.length; k++) { if (sg.alpha[k] < 0.99) continue; n++; const x = sg.x0 + (k % sg.w), y = sg.y0 + Math.floor(k / sg.w); if (Math.abs(lumaAt(out, x, y) - lumaAt(ref, x, y)) > 25) d++; } return d / n; };
+  const cases: [string, string[], number][] = [["leopard", ["#e8c4a8", "#a0522d", "#d4af37"], 0.06], ["checker", ["#f2c4c4", "#4b2e2a", "#d4af37"], 0.3], ["foil", ["#556b2f", "#ffffff", "#d4af37"], 0.05], ["stars", ["#1e2a4a", "#ffffff", "#c0c0c0"], 0.03], ["charm3d", ["#f6d5d0", "#ffffff", "#c0c0c0"], 0.03], ["hearts", ["#f8f4ee", "#c81e3a", "#d4af37"], 0.02]];
+  const bad: string[] = [];
+  for (const [pat, cols, min] of cases) {
+    const out = renderLook(pi, ps, LOOK(cols, "glossy", { pattern: pat })), ref = plain(cols[0]);
+    const acc = changed(out, ref, ps[2]), other = changed(out, ref, ps[0]);
+    if (acc < min || other > 0.005) bad.push(`${pat}: nhấn ${r2(acc)} (≥ ${min}) · thường ${r2(other)}`);
+  }
+  const cd = renderLook(pi, ps, LOOK(["#e8c4a8", "#ffffff", "#c0c0c0"], "glossy", { pattern: "chromedrops" })), cdRef = plain("#e8c4a8");
+  const cdAll = ps.map((sg) => changed(cd, cdRef, sg));
+  if (cdAll.some((v) => v < 0.03)) bad.push(`chromedrops: ${cdAll.map(r2).join("/")}`);
+  ok("E24", "Trend mới tự vẽ: da báo · bàn cờ · foil · charm sao · charm nơ 3D · tim — đổi rõ 2 móng nhấn, móng thường giữ nguyên; giọt chrome 3D có trên cả 4 móng", !bad.length, bad.join(" | "));
 }
 
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)

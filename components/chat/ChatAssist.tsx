@@ -56,7 +56,8 @@ export default function ChatAssist({ me, partner, last, onFill, onStudio, onCons
   const chip = `${base} text-pink-100 ring-pink-400/25 hover:bg-pink-500/15`;
 
   const hire: Suggestion[] = useMemo(() => {
-    if (!hireSide) return [];
+    // chờ hồ sơ (kỹ năng, tin tuyển) nạp xong — không thì thoáng hiện câu chung chung rồi mới đổi
+    if (!hireSide || profile?.id !== me.id) return [];
     const origin = typeof window !== "undefined" ? window.location.origin : "https://www.bitpawos.com";
     const msg = lastContent === null || lastType === null ? null : { content: lastContent, type: lastType };
     const p = profile?.id === me.id ? profile : null;

@@ -83,6 +83,12 @@ try {
 
   const a = await registerUser({ name: "QA Designs Admin" });
   await db.execute({ sql: `UPDATE "User" SET role = 'ADMIN' WHERE email = ?`, args: [a.body.email] });
+  // Bài này kiểm đường AI vẽ + AI chấm (vẫn dùng cho hoạ tiết hình) → tắt máy PawNail tự vẽ; cuối bài bật lại.
+  // Đường máy PawNail tự vẽ được kiểm ở designs_autopublish_test (A7–A8) + design_render_unit.
+  await a.client.login(a.body.email, a.body.password);
+  const offR = await a.client.req("/api/admin/designs", { method: "PATCH", json: { render: false } });
+  if (offR.status !== 200) throw new Error("Không tắt được máy PawNail tự vẽ: " + offR.status);
+  globalThis.__qaAdmin = a;
   const admin = a.client;
   await admin.login(a.body.email, a.body.password);
   // Bộ test này kiểm chế độ CÓ DUYỆT (mặc định giờ là lên thẳng — xem designs_autopublish_test.mjs)
@@ -298,5 +304,6 @@ try {
   gemini.close();
   cf.close();
 }
+if (globalThis.__qaAdmin) await globalThis.__qaAdmin.client.req("/api/admin/designs", { method: "PATCH", json: { render: true } });
 const sum = R.summary();
 process.exit(sum.failed ? 1 : 0);

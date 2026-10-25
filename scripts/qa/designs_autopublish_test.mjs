@@ -67,6 +67,35 @@ try {
   await pressed.first().waitFor({ timeout: 15000 });
   R.check("A8", "Bấm 'Đăng mẫu của bạn' → mở ô đăng bài, chọn sẵn loại 'Khoe tay nghề'", (await pressed.count()) > 0);
   R.check("A9", "Không lỗi JS", errors.length === 0, errors.join(" | "));
+
+  // ---- ẢNH MẪU DO MÁY PAWNAIL TỰ VẼ trên tay mẫu (mặc định bật): mẫu mới có hoạ tiết bộ máy vẽ được → ảnh máy vẽ,
+  //      nhãn "Minh hoạ PawNail" (không phải "ảnh AI"); ảnh AI cũ được thay dần, link cũ giữ để khôi phục
+  const rcfg = (await a.client.req("/api/admin/designs")).data;
+  await db.execute(`DELETE FROM "NailDesign" WHERE day = '${new Date().toISOString().slice(0, 10)}' AND provider = 'pawnail'`);
+  const old = (await db.execute(`SELECT id, pattern FROM "NailDesign" WHERE provider = 'pawnail' AND status = 'published' LIMIT 0`)).rows;
+  const cr = await fetch(BASE_URL + "/api/cron/designs?count=3", { headers: { authorization: "Bearer test-cron" } }).then((r) => r.json());
+  const made = (await db.execute({ sql: `SELECT id, pattern, imageUrl, prompt FROM "NailDesign" WHERE id IN (${cr.created.map(() => "?").join(",") || "''"})`, args: cr.created })).rows;
+  const procedural = ["solid", "french", "ombre", "aura", "tortoise", "marble", "lines", "dots", "gems", "pearls", "jelly", "babyboomer", "chromefrench", "droplets", "gemcluster", "chromeline", "mixmatch", "doublefrench", "velvet", "leopard", "checker", "foil", "stars", "hearts", "charm3d", "chromedrops"];
+  const mine = made.filter((r) => procedural.includes(String(r.pattern)));
+  const api = await fetch(BASE_URL + "/api/designs?limit=60").then((r) => r.json());
+  const pub = api.designs.filter((d) => mine.some((m) => m.id === d.id));
+  R.check("A10", "Công tắc admin: ảnh máy PawNail tự vẽ BẬT mặc định; mẫu mới (hoạ tiết bộ máy vẽ được) có ảnh ngay, đánh dấu [pr:], API báo rendered (nhãn 'Minh hoạ PawNail'), không lộ prompt",
+    rcfg.render === true && mine.length >= 1 && mine.every((r) => r.imageUrl && String(r.prompt).includes("[pr:")) && pub.length === mine.length && pub.every((d) => d.rendered === true && !("prompt" in d)),
+    JSON.stringify({ render: rcfg.render, created: cr.created?.length, mine: mine.map((r) => [r.pattern, !!r.imageUrl, String(r.prompt).slice(-22)]), pub: pub.length, old: old.length }));
+  // ảnh AI cũ của 1 mẫu đang hiện → cron thay bằng ảnh máy vẽ, giữ link cũ [ai:…]
+  const target = mine[0];
+  if (target) {
+    await db.execute({ sql: `UPDATE "NailDesign" SET imageUrl = ?, prompt = replace(prompt, substr(prompt, instr(prompt, '[pr:')), '') WHERE id = ?`, args: [IMG, target.id] });
+    const c2 = await fetch(BASE_URL + "/api/cron/designs?count=1", { headers: { authorization: "Bearer test-cron" } }).then((r) => r.json());
+    const after = (await db.execute({ sql: `SELECT imageUrl, prompt FROM "NailDesign" WHERE id = ?`, args: [target.id] })).rows[0];
+    R.check("A11", "Ảnh AI cũ của mẫu đang hiện → lượt cron sau thay bằng ảnh máy PawNail vẽ; link ảnh cũ giữ trong [ai:…] (khôi phục được)",
+      c2.rerendered >= 1 && after.imageUrl !== IMG && String(after.prompt).includes(`[ai:${IMG}]`) && String(after.prompt).includes("[pr:"), JSON.stringify({ rer: c2.rerendered, url: String(after.imageUrl).slice(0, 40), tail: String(after.prompt).slice(-90) }));
+    // tắt công tắc → mẫu mới quay về đường AI (không vẽ bằng máy)
+    const off = await a.client.req("/api/admin/designs", { method: "PATCH", json: { render: false } });
+    const cfg2 = (await a.client.req("/api/admin/designs")).data;
+    await a.client.req("/api/admin/designs", { method: "PATCH", json: { render: true } });
+    R.check("A12", "Admin tắt / bật lại được ảnh máy PawNail tự vẽ (không cần sửa code)", off.status === 200 && cfg2.render === false);
+  } else R.check("A11", "Có mẫu hoạ tiết bộ máy vẽ được để thử thay ảnh", false, JSON.stringify(made.map((r) => r.pattern)));
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);
 } finally {

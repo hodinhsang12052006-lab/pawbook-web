@@ -30,6 +30,8 @@ export interface Design {
   materials: { vi: string; en: string; qty: string }[];
   steps: { vi: string; en: string }[];
   imageUrl: string | null;
+  /** ảnh do máy PawNail vẽ trên tay mẫu (lib/designRender) — nhãn "Minh hoạ PawNail", không phải "ảnh AI" */
+  rendered?: boolean;
   videoUrl: string | null;
   palette?: string[];
   shape?: string;
@@ -62,9 +64,11 @@ export const qtyEn = (q: string) =>
 
 /** Nhãn bắt buộc, nói đúng nguồn — không để ai hiểu nhầm là ảnh tay nghề thật:
  *  ảnh do AI vẽ · mẫu của máy PawNail · ý tưởng AI + minh hoạ màu · mẫu gợi ý + minh hoạ màu. */
-export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "provider">; className?: string }) {
+export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "provider"> & { rendered?: boolean }; className?: string }) {
   useTr(); // render lại khi đổi VI/EN
-  const label = !d || d.imageUrl
+  const label = d?.imageUrl && d.rendered
+    ? tr(" Minh hoạ PawNail · thử trên tay mẫu", " PawNail try-on illustration")
+    : !d || d.imageUrl
     ? tr(" Ảnh minh hoạ AI", " AI illustration")
     : d.provider === "pawnail"
       ? tr(" Mẫu PawNail · hình minh hoạ", " PawNail design · illustration")

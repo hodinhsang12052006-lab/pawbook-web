@@ -15,6 +15,12 @@ const today = new Date().toISOString().slice(0, 10);
 await db.execute(`DELETE FROM "NailDesignSave"`);
 await db.execute(`DELETE FROM "NailDesign"`);
 await db.execute({ sql: `DELETE FROM "AppSetting" WHERE key = ?`, args: [`img_cand:${today}`] });
+// Bài này kiểm AI vẽ + AI chấm (vẫn dùng cho hoạ tiết hình) → tắt máy PawNail tự vẽ qua công tắc admin; cuối bài bật lại
+const renderAdmin = await registerUser({ name: "QA Render Switch" });
+await db.execute({ sql: `UPDATE "User" SET role = 'ADMIN' WHERE email = ?`, args: [renderAdmin.body.email] });
+await renderAdmin.client.login(renderAdmin.body.email, renderAdmin.body.password);
+const offR = await renderAdmin.client.req("/api/admin/designs", { method: "PATCH", json: { render: false } });
+if (offR.status !== 200) throw new Error("Không tắt được máy PawNail tự vẽ: " + offR.status);
 
 // ---------- Cloudflare giả: FLUX trả ảnh "IMGn", Llama 4 Scout chấm theo kịch bản ----------
 let n = 0;
@@ -172,5 +178,6 @@ try {
   cf.close();
   gem.close();
 }
+await renderAdmin.client.req("/api/admin/designs", { method: "PATCH", json: { render: true } });
 const s = R.summary();
 process.exit(s.failed ? 1 : 0);

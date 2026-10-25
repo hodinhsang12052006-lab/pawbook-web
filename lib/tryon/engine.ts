@@ -21,6 +21,7 @@ export type Finish = "glossy" | "matte" | "chrome" | "cateye" | "glitter";
 export type Shape = "almond" | "coffin" | "square" | "oval" | "stiletto";
 
 import { ALL_NAIL_PATTERNS, PROCEDURAL } from "./patterns";
+import { applyBeadOpts, expandSet, nailOrder } from "./sets";
 
 // ---------------------------------------------------------------- màu
 const srgbToLin = (c: number) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
@@ -617,11 +618,21 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
 
 // ---------------------------------------------------------------- tô màu theo ánh sáng thật
 /** Ghi đè cho 1 móng trong bộ (bộ móng phối: móng trơn + móng hoạ tiết + móng nhấn — mỗi móng 1 vai, cùng tông). */
-export interface NailOverride { pattern?: string; colors?: string[]; finish?: Finish; art?: boolean }
+export interface NailOverride {
+  pattern?: string; colors?: string[]; finish?: Finish; art?: boolean;
+  /** vai trong bộ (lib/tryon/sets): hero = hoạ tiết chính đủ cỡ · echo = chi tiết nhỏ KHÁC cùng chủ đề · thread = kỹ
+   *  thuật nối bộ (French / gương / nhũ loang) · quiet = trơn 1 màu của bảng màu */
+  role?: "hero" | "echo" | "thread" | "quiet";
+  /** biến đổi bộ hạt của móng: cỡ (×), lật ngang, dời dọc (u) / ngang (t); `pick` = lấy hạt nào (xem applyBeadOpts) */
+  scale?: number; mirror?: boolean; uShift?: number; tShift?: number;
+  pick?: "all" | "rest" | "first" | "second" | "twin";
+}
 export interface LookColors {
   colors: string[]; finish: Finish; pattern: string; seed: number;
-  /** ghi đè theo từng móng (theo thứ tự móng) — không có thì mọi móng theo mẫu chung */
+  /** ghi đè theo từng móng (theo thứ tự móng) — không có thì expandSet tự ghép bộ theo vai (lib/tryon/sets) */
   nails?: (NailOverride | null | undefined)[];
+  /** chỉ số móng HERO (áp út) / ECHO (trỏ) — kho mẫu truyền theo ảnh tay; không có thì đoán theo vị trí móng */
+  hero?: number; echo?: number;
   /** độ phủ lớp sơn (1 = sơn đặc; thạch / negative space ~0.5 — thấy móng thật bên dưới) */
   opacity?: number;
 }
@@ -1284,6 +1295,7 @@ function segMaps(img: Img, seg: NailSeg) {
  * loại, ngọc trai / đá 3D → bóng gương trên cùng.
  */
 export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: Img | null, crop?: { x: number; y: number; w: number; h: number }): Img {
+  look = expandSet(look, segs.length, nailOrder(segs)); // bộ phối: mỗi móng 1 vai (hero / echo / thread / quiet)
   const cx = crop ? Math.max(0, Math.round(crop.x)) : 0, cy = crop ? Math.max(0, Math.round(crop.y)) : 0;
   const cw = crop ? Math.max(1, Math.min(img.w - cx, Math.round(crop.w))) : img.w, ch = crop ? Math.max(1, Math.min(img.h - cy, Math.round(crop.h))) : img.h;
   let out: Uint8ClampedArray;
@@ -1304,7 +1316,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const ovCols = ov?.colors?.length ? ov.colors.map(hexToRgb).map((c) => c.map((x) => LIN[x]) as RGB) : null;
     const c1 = ovCols ? ovCols[0] : c1L, c2 = ovCols ? ovCols[1] ?? ovCols[0] : c2L, metal = ovCols ? ovCols[2] ?? metalL : metalL;
     const fin: Finish = ov?.finish ?? look.finish;
-    const accent = seg.accent ?? (i === 2 || i === 3);
+    // móng nhấn: móng HERO của bộ (viền chỉ kim loại đồi mồi chỉ 1 móng); bộ không chia vai (mix màu…) theo vị trí như cũ
+    const accent = ov?.role ? ov.role === "hero" : seg.accent ?? (i === 2 || i === 3);
     const onNail = ov?.art ?? (ALL_NAIL_PATTERNS.has(pat) || accent || segs.length < 3); // hoạ tiết có vẽ trên móng này không
     const base0 = pat === "mixmatch" && accent ? c2 : c1;
     const { lm, under, eDist } = segMaps(img, seg);
@@ -1334,7 +1347,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const aaU = 1.2 / Math.max(8, seg.L * sEnd); // khử răng cưa đường french (~1px)
     const lineW = 1 / Math.max(4, seg.hw); // 1px theo bề ngang (đơn vị t)
     const seedN = look.seed + i * 13;
-    const beads = onNail ? beadsFor(pat, seedN) : [];
+    const beads = onNail ? applyBeadOpts(beadsFor(pat, seedN), ov) : [];
     const jit = hash2(seedN, 11, 3) - 0.5, jit2 = hash2(seedN, 12, 3) - 0.5; // vệt phản chiếu tổng hợp hơi khác nhau mỗi móng
     // nét kim loại: 1 đường cong mềm dọc móng (mỗi móng lệch pha khác nhau)
     const ph = hash2(seedN, 3, 5) * 6.28, amp = 0.32 + 0.18 * hash2(seedN, 4, 5);

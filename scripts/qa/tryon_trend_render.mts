@@ -54,6 +54,7 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "Đầu lâu nền đen", colors: ["#111111", "#ffffff", "#c0c0c0"], finish: "matte", pattern: "skull", seed: 48 },
   { name: "Mắt quỷ 3D nền đen", colors: ["#111111", "#16a34a", "#c0c0c0"], finish: "glossy", pattern: "eyeball", seed: 49 },
   { name: "Đường khâu nền xanh rêu", colors: ["#84a98c", "#ffffff", "#c0c0c0"], finish: "matte", pattern: "stitches", seed: 50 },
+  { name: "Đường khâu chỉ trắng nền đen", colors: ["#111111", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "stitches", seed: 57 },
   { name: "Xác ướp nền đen", colors: ["#111111", "#ffffff", "#c0c0c0"], finish: "matte", pattern: "mummy", seed: 51 },
   { name: "Lá phong vàng nền nâu", colors: ["#7c2d12", "#ffffff", "#d4af37"], finish: "glossy", pattern: "leaf", seed: 52 },
   { name: "Sóng biển nền xanh", colors: ["#38bdf8", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "waves", seed: 53 },

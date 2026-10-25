@@ -438,27 +438,49 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
   // dáng móng ĐẮP = BAO LỒI của móng thật (cả đầu móng bo tròn) + dáng đầu móng mới: 2 cạnh thon THẲNG tiếp tuyến từ
   // thành móng tới đỉnh — như thợ dũa thật. (Chỉ lấy hợp "móng thật ∪ dáng" thì đầu móng thật tròn vẫn nguyên, đầu
   // nhọn mọc ra thành cái GAI — móng nhọn / hạnh nhân nhìn như gai hoa hồng.)
+  // Ảnh chụp nghiêng → đầu móng thật XIÊN (1 bên dài hơn): bao lồi tính RIÊNG từng bên, mỗi cạnh thon từ chính thành
+  // móng bên đó tới đỉnh (bao chung 2 bên đối xứng thì bên xiên lòi vai ra → móng nhọn lệch như đầu bút chì).
+  // trục phần đắp: đi THẲNG tiếp theo trục móng thật (dây cung chân → đầu móng); không ngoại suy độ cong bậc 2 của
+  // khuôn (đầu móng dài bị bẻ lệch sang 1 bên)
+  const chord = (fitCenter(fit, fit.s1, L) - fitCenter(fit, fit.s0, L)) / Math.max(1, natL);
+  const cExt = (s: number) => (s <= fit.s1 ? fitCenter(fit, s, L) : fitCenter(fit, fit.s1, L) + chord * (s - fit.s1));
   const ES = 0.25, eA = fit.s0 + 0.5 * natL, eN = ext ? Math.max(2, Math.ceil((Ltot - eA) / ES) + 1) : 0;
-  const extTab = new Float32Array(eN);
+  const extTabs = [new Float32Array(eN), new Float32Array(eN)]; // [bên t dương, bên t âm]
   if (ext) {
     const W2 = 2 * fit.hw, rT = shape === "stiletto" ? 0.03 * W2 : shape === "almond" ? 0.2 * W2 : shape === "oval" ? 0.42 * W2 : 0;
-    const hx: number[] = [], hy: number[] = [];
-    for (let i = 0; i < eN; i++) {
-      const sx = Math.min(Ltot, eA + i * ES), body = fitBody(fit, Math.min(sx, fit.s1), L);
-      let v = Math.max(fitHalf(fit, sx, L), halfWidthAt(shape, sx - fit.s0, Ltot - fit.s0, body));
-      if (rT > 0) { const dq = sx - (Ltot - rT); v = dq <= 0 ? Math.max(v, Math.min(body, rT)) : Math.max(Math.min(v, rT * Math.sqrt(Math.max(0, 1 - (dq / rT) ** 2))), 0); }
-      // bao lồi trên (monotone chain): bỏ điểm làm đường biên lõm vào
-      while (hx.length >= 2 && (hx[hx.length - 1] - hx[hx.length - 2]) * (v - hy[hy.length - 2]) - (hy[hy.length - 1] - hy[hy.length - 2]) * (sx - hx[hx.length - 2]) >= 0) { hx.pop(); hy.pop(); }
-      hx.push(sx); hy.push(v);
-    }
-    for (let i = 0, j = 0; i < eN; i++) {
-      const sx = Math.min(Ltot, eA + i * ES);
-      while (j < hx.length - 2 && hx[j + 1] < sx) j++;
-      const q = hx[j + 1] > hx[j] ? Math.min(1, Math.max(0, (sx - hx[j]) / (hx[j + 1] - hx[j]))) : 0;
-      extTab[i] = hy[j] + (hy[j + 1] - hy[j]) * q;
-    }
+    const natSide = (sx: number, d: number, body: number) => {
+      const c = cExt(sx);
+      // dò từ ngoài vào (đầu móng xiên: giữa móng có thể đã ra ngoài mà 1 bên vẫn còn móng), rồi chia đôi cho mịn
+      const st = (body + 1) / 24;
+      let k = 24;
+      while (k >= 0 && !fitInside(fit, sx, c + d * k * st, L)) k--;
+      if (k < 0) return 0;
+      let lo = k * st, hi = lo + st;
+      for (let it = 0; it < 8; it++) { const mid = (lo + hi) / 2; if (fitInside(fit, sx, c + d * mid, L)) lo = mid; else hi = mid; }
+      return lo;
+    };
+    [1, -1].forEach((d, side) => {
+      const hx: number[] = [], hy: number[] = [], tab = extTabs[side];
+      for (let i = 0; i < eN; i++) {
+        const sx = Math.min(Ltot, eA + i * ES), body = fitBody(fit, Math.min(sx, fit.s1), L);
+        let v = Math.max(natSide(sx, d, body), halfWidthAt(shape, sx - fit.s0, Ltot - fit.s0, body));
+        if (rT > 0) { const dq = sx - (Ltot - rT); v = dq <= 0 ? Math.max(v, Math.min(body, rT)) : Math.max(Math.min(v, rT * Math.sqrt(Math.max(0, 1 - (dq / rT) ** 2))), 0); }
+        // bao lồi trên (monotone chain): bỏ điểm làm đường biên lõm vào
+        while (hx.length >= 2 && (hx[hx.length - 1] - hx[hx.length - 2]) * (v - hy[hy.length - 2]) - (hy[hy.length - 1] - hy[hy.length - 2]) * (sx - hx[hx.length - 2]) >= 0) { hx.pop(); hy.pop(); }
+        hx.push(sx); hy.push(v);
+      }
+      for (let i = 0, j = 0; i < eN; i++) {
+        const sx = Math.min(Ltot, eA + i * ES);
+        while (j < hx.length - 2 && hx[j + 1] < sx) j++;
+        const q = hx[j + 1] > hx[j] ? Math.min(1, Math.max(0, (sx - hx[j]) / (hx[j + 1] - hx[j]))) : 0;
+        tab[i] = hy[j] + (hy[j + 1] - hy[j]) * q;
+      }
+    });
   }
-  const extHalf = (s: number) => { if (!ext || s < eA || s > Ltot) return 0; const f = (s - eA) / ES, i = Math.floor(f), q = f - i; return i + 1 < eN ? extTab[i] + (extTab[i + 1] - extTab[i]) * q : extTab[eN - 1]; };
+  /** nửa bề ngang phần đắp tại s, phía d (+1 / −1 theo t) */
+  const extHalfD = (s: number, d: number) => { if (!ext || s < eA || s > Ltot) return 0; const tab = extTabs[d > 0 ? 0 : 1], f = (s - eA) / ES, i = Math.floor(f), q = f - i; return i + 1 < eN ? tab[i] + (tab[i + 1] - tab[i]) * q : tab[eN - 1]; };
+  const extHalf = (s: number) => Math.max(extHalfD(s, 1), extHalfD(s, -1));
+  const inExt = (s: number, t: number) => { const dt = t - cExt(s); return Math.abs(dt) <= extHalfD(s, dt); };
   const halfU = (s: number) => Math.max(fitBody(fg, Math.min(Math.max(s, fit.s0), fit.s1), L), extHalf(s));
   const sLo = fg.s0 - Math.abs(fit.bs) * fg.hw * 1.4, sHi = Math.max(fg.s1 + (Math.abs(fit.ts) + Math.max(0, fit.tc)) * fg.hw * 1.4, ext ? Ltot : 0);
   let maxHalf = 0;
@@ -472,7 +494,7 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
   const inside = (x: number, y: number) => {
     const { s, t } = local(x, y);
     if (s <= sLo || s >= sHi) return false;
-    return fitInside(fg, s, t, L) || Math.abs(t - fitCenter(fit, s, L)) <= extHalf(s);
+    return fitInside(fg, s, t, L) || inExt(s, t);
   };
   // khử răng cưa: góc điểm ảnh cùng trong / cùng ngoài → 1 / 0; điểm nằm trên mép → lấy mẫu 4×4
   const corner = new Uint8Array((w + 1) * (h + 1));
@@ -490,7 +512,7 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
     }
     const { s, t } = local(x0 + xx, y0 + yy);
     alpha[k] = a;
-    const c = fitCenter(fit, s, L);
+    const c = cExt(s);
     if (fitInside(fg, s, t, L)) nat[k] = 1;
     along[k] = (s - fit.s0) / Math.max(1, natL);
     across[k] = (t - c) / Math.max(1, Math.max(fitBody(fit, Math.min(Math.max(s, fit.s0), fit.s1), L), halfU(s)));
@@ -581,7 +603,7 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
   const cB = fitCenter(fit, fit.s0, L), cT = fitCenter(fit, fit.s1, L);
   // đường viền: 96 tia từ tâm móng, dò mép bằng chia đôi (khuôn lồi quanh tâm)
   const sC = (fit.s0 + Math.max(fit.s1, ext ? Ltot : fit.s1)) / 2, C = atFit(sC, fitCenter(fit, sC, L));
-  const inShape = (x: number, y: number) => { const { s, t } = local(x, y); return fitInside(fit, s, t, L) || Math.abs(t - fitCenter(fit, s, L)) <= extHalf(s); };
+  const inShape = (x: number, y: number) => { const { s, t } = local(x, y); return fitInside(fit, s, t, L) || inExt(s, t); };
   const outline: P[] = [];
   const rMax = Math.hypot(w, h);
   for (let k = 0; k < 96; k++) {
@@ -1410,7 +1432,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             const main2 = 1 - smooth(lineW * 0.7, lineW * 1.4, Math.abs(t - tcS));
             const fr2 = ((u * 9) % 1 + 1) % 1;
             const cross = (1 - smooth(0.06, 0.12, Math.abs(fr2 - 0.5))) * (1 - smooth(0.18, 0.22, Math.abs(t - tcS))) * smooth(0.12, 0.2, u) * (1 - smooth(0.85, 0.92, u));
-            base = mix3(base, [0.01, 0.01, 0.01], Math.max(main2 * smooth(0.08, 0.15, u) * (1 - smooth(0.9, 0.96, u)), cross));
+            // chỉ khâu đen trên nền sáng / màu; nền đen → chỉ trắng ngà (chỉ đen trên nền đen thì không thấy gì)
+            const thread: RGB = lum(base0) < 0.06 ? [0.78, 0.77, 0.74] : [0.01, 0.01, 0.01];
+            base = mix3(base, thread, Math.max(main2 * smooth(0.08, 0.15, u) * (1 - smooth(0.9, 0.96, u)), cross));
             break;
           }
           case "mummy": {

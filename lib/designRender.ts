@@ -52,7 +52,9 @@ const isExt = (d: RenderableDesign) => d.skills.some((s) => /gel-?x|bột|acryli
 function lengthFor(d: RenderableDesign): { lengthFactor: number; shape?: Shape } {
   if (!isExt(d)) return { lengthFactor: 1 };
   const shape = (["almond", "coffin", "square", "oval", "stiletto"].includes(d.shape) ? d.shape : "almond") as Shape;
-  return { lengthFactor: shape === "stiletto" ? 1.25 : 1.14, shape };
+  // móng nhọn / hạnh nhân cần đủ dài so với bề ngang (tay mẫu móng rộng): ngắn quá thì thành cái chóp tam giác cụt
+  // trên móng vuông — không ai dũa móng nhọn như vậy
+  return { lengthFactor: shape === "stiletto" ? 1.5 : shape === "almond" ? 1.26 : 1.14, shape };
 }
 
 /**

@@ -487,19 +487,22 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
 // ---------------- 7c. dáng móng ĐẮP nhọn + sơn THẠCH trong
 {
   // độ "gai": bề ngang theo dọc móng (mỗi 0.04), sau chỗ rộng nhất — chỗ gãy khúc lồi lớn nhất / bề ngang lớn nhất.
-  // Bản cũ: đầu móng thật tròn giữ nguyên + mũi nhọn mọc ra = gai hoa hồng (TB 0.17, 16/20 móng > 0.09)
+  // Đo ở phần đắp NGẮN (×1.25 — dễ ra gai nhất). Bản cũ: đầu móng thật tròn giữ nguyên + mũi nhọn mọc ra = gai hoa
+  // hồng (TB 0.06, 6/20 móng > 0.09)
   const thorn = (seg: NailSeg) => {
     const B = 0.04, bins = new Map<number, number>();
     for (let k = 0; k < seg.alpha.length; k++) if (seg.alpha[k] >= 0.5) { const b = Math.floor(seg.along[k] / B); bins.set(b, (bins.get(b) ?? 0) + 1); }
-    const ks = [...bins.keys()].sort((a, b) => a - b), w = ks.map((k) => bins.get(k)!), mx = Math.max(...w), im = w.indexOf(mx);
+    const ks = [...bins.keys()].sort((a, b) => a - b), w0 = ks.map((k) => bins.get(k)!);
+    // làm mượt 3 ô (số hàng điểm ảnh rơi vào mỗi ô lệch nhau → răng cưa giả)
+    const w = w0.map((v, i) => (w0[Math.max(0, i - 1)] + v + w0[Math.min(w0.length - 1, i + 1)]) / 3), mx = Math.max(...w), im = w.indexOf(mx);
     let worst = 0;
-    for (let i = Math.max(im, 1); i < w.length - 1; i++) if (ks[i] * B > 0.6) worst = Math.max(worst, (w[i - 1] + w[i + 1] - 2 * w[i]) / mx);
+    for (let i = Math.max(im, 2); i < w.length - 2; i++) if (ks[i] * B > 0.85) worst = Math.max(worst, (w[i - 1] + w[i + 1] - 2 * w[i]) / mx);
     return worst;
   };
   const th = FIXTURES.flatMap((fx) => fx.marks.map((m) => thorn(segmentNail(imgs[fx.file], mark(m), { lengthFactor: 1.25, shape: "stiletto" }))));
   const spiky = th.filter((v) => v > 0.09).length;
-  ok("E26", `Móng đắp nhọn (stiletto): 2 cạnh thon đều từ thành móng tới đỉnh như thợ dũa — không phải đầu móng tròn + gai nhọn mọc ra (độ gãy khúc TB ${r2(avg(th))} ≤ 0.08 · ${spiky}/20 móng > 0.09, ≤ 4)`,
-    avg(th) <= 0.08 && spiky <= 4, th.map(r2).join(" "));
+  ok("E26", `Móng đắp nhọn (stiletto): 2 cạnh thon đều từ thành móng tới đỉnh như thợ dũa — không phải đầu móng tròn + gai nhọn mọc ra (độ gãy khúc TB ${Math.round(avg(th) * 1000) / 1000} ≤ 0.035 · ${spiky}/20 móng > 0.09, ≤ 3)`,
+    avg(th) <= 0.035 && spiky <= 3, th.map(r2).join(" "));
 
   // THẠCH: gel trong → thấy móng thật (đầu móng trắng đục sáng hơn hẳn sơn đặc), móng cũ sơn đen KHÔNG lộ qua
   const jBad: string[] = [];

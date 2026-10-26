@@ -56,7 +56,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   blossom: [{ pick: "second", scale: 0.95 }],
   leaf: [{ pick: "twin", scale: 0.6, mirror: true }],
   snow: [{ pick: "rest", scale: 1, mirror: true }],
-  stars: [{ pick: "rest", scale: 1, mirror: true }],
+  // sao lấp lánh: echo = 1 sao cắt mặt nhỏ + tia ✦ + bụi sao (bố cục "stars:echo")
+  stars: [{ pattern: "stars:echo", pick: "all" }],
   moonstars: [{ pick: "rest", scale: 1.1, mirror: true }],
   gems: [{ pick: "first" }],
   gemcluster: [{ pick: "first" }],
@@ -307,9 +308,9 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
 type BeadLike = { u: number; t: number; r: number; kind: string; rot?: number };
 /** khối 3D GẮN (đá, ngọc trai, chấm, charm nơ): 1 viên lẻ đặt ở CHÂN móng; không được cắt ngang bởi mép móng */
 const STONE = new Set(["gem", "pearl", "dot", "bow"]);
-const SOLID3D = new Set(["gem", "pearl", "dot", "bow", "drop", "mdrop", "star", "eye"]);
+const SOLID3D = new Set(["gem", "pearl", "dot", "bow", "drop", "mdrop", "star", "fstar", "blob", "eye"]);
 /** cỡ tối thiểu (đơn vị nửa bề ngang móng) để chi tiết nhỏ vẫn đọc được ở ảnh kho mẫu (móng hw 31–56px) */
-const FLOOR: Record<string, number> = { gem: 0.11, pearl: 0.11, dot: 0.1, drop: 0.12, mdrop: 0.12, star: 0.16, heart: 0.16, bow: 0.4, eye: 0.3 };
+const FLOOR: Record<string, number> = { gem: 0.11, pearl: 0.11, dot: 0.1, drop: 0.12, mdrop: 0.12, star: 0.16, fstar: 0.16, blob: 0.12, heart: 0.16, bow: 0.4, eye: 0.3, pdot: 0.07, ditsy: 0.15, sparkle: 0.1, mleaf: 0.28 };
 const LU = 2.8; // chiều dài móng ≈ 2.8 lần nửa bề ngang → đổi bán kính sang đơn vị dọc móng
 
 /**

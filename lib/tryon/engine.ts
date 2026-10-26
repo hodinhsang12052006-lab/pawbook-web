@@ -625,11 +625,11 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
   // hand.jpg, p025) — không mang màu sơn cũ nên bộ chấm điểm màu bỏ sót; sơn sáng mới (nude, trắng sữa) thì dải xám đó
   // thành VÀNH NÂU XÁM quanh chân móng như sticker (soi #43). Thợ sơn sát da, chừa khe 1–1.5px → SƠN PHỦ dải đó
   // (`paint`, mặt nạ móng `alpha` giữ nguyên — đo / kiểm thử khuôn không đổi); khe sạch 1–1.5px màu móng trần + gờ gel
-  // do renderLook vẽ ở mép trong của phần sơn (4b). Bề rộng dải: từ mỗi điểm mép CHÂN MÓNG dò ra ngoài theo pháp
-  // tuyến, còn XÁM hơn hẳn da (độ đậm màu kém da đo ngoài khe ≥ 5) và chưa gặp vành SÁNG mép da (chi tiết da thật →
-  // dừng); tối đa 0.15·hw; lấy TRUNG VỊ cả chân móng (đo từng điểm thì nhiễu ảnh làm mép sơn méo, đáy bẹt có vai —
-  // soi hand.jpg). Nở theo khoảng cách tới mặt nạ, nhỏ dần về 2 bên theo hướng pháp tuyến (2 bên khe không đều: bên có
-  // bên không) → mép sơn mới là đường cong chân móng thật dời ra, trơn.
+  // do renderLook vẽ ở mép trong của phần sơn (4b). Bề rộng dải: từ mỗi điểm mép dò ra ngoài theo pháp tuyến, còn XÁM
+  // hơn hẳn da (độ đậm màu kém da đo ngoài khe ≥ 5) và chưa gặp vành SÁNG mép da (chi tiết da thật → dừng); tối đa
+  // 0.15·hw ở chân, 0.09·hw ở 2 bên; lấy 1 bề rộng chung cho chân móng và cho TỪNG bên (2 bên khe không đều: bên có
+  // bên không; đo từng điểm thì nhiễu ảnh làm mép sơn méo, đáy bẹt có vai — soi hand.jpg). Nở theo khoảng cách tới mặt
+  // nạ, chuyển dần chân → bên theo hướng pháp tuyến, nhỏ dần về đầu móng → mép sơn mới là đường viền thật dời ra, trơn.
   let paint: Float32Array | undefined;
   {
     const gMax = Math.max(3.2, Math.min(8, 0.15 * fit.hw));
@@ -643,7 +643,7 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
     const cls = byColor ? model.classify : null;
     const ul = Math.hypot(FU.x, FU.y) || 1, aUx = FU.x / ul, aUy = FU.y / ul;
     const S = new Float32Array(w * h), Cn = new Float32Array(w * h);
-    const wC: number[] = []; // bề rộng khe đo ở chân móng
+    const wC: number[] = [], wS: [number[], number[]] = [[], []]; // bề rộng khe đo ở chân móng / bên t dương, t âm
     for (let yy = 1; yy < h - 1; yy++) for (let xx = 1; xx < w - 1; xx++) {
       const k = yy * w + xx, d = dOut[k], prox = 1 - smooth(0.62, 0.8, along[k]); // prox: chân móng + 2 bên (tới trước đầu móng)
       if (d <= 0 || d > 3.2 || along[k] < -0.3 || along[k] > (ext ? 0.9 : 1.15)) continue;
@@ -670,19 +670,24 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
       if (prox < 1 || d > 1.5) continue;
       // dò khe từ điểm mép này
       const back = -(nx * aUx + ny * aUy); // pháp tuyến quay về phía chân móng
-      if (back < 0.6) continue;
+      const sideM = back < 0.3 && along[k] > 0.12 && along[k] < 0.6;
+      if (back < 0.6 && !sideM) continue;
+      const gL = sideM ? 0.6 * gMax : gMax;
       const q1 = labAt(X + nx * (gMax + 1.5 - d), Y + ny * (gMax + 1.5 - d)), q2 = labAt(X + nx * (gMax + 3 - d), Y + ny * (gMax + 3 - d));
       if (!q1 || !q2) continue;
       const skL = 0.5 * (q1[0] + q2[0]), skC = 0.5 * (chromaOf(q1) + chromaOf(q2));
       let wd = 0, L1 = -1;
-      for (let j = 1; j <= gMax && skC >= 12; j++) { // skC < 12: da / nền gần như xám — không phân biệt được móng trần
-        const q = labAt(X + nx * (j - d), Y + ny * (j - d));
+      for (let j = 1; j <= gL; j++) {
+        const Xq = X + nx * (j - d), Yq = Y + ny * (j - d), q = labAt(Xq, Yq);
         if (!q) break;
         if (L1 < 0) L1 = q[0];
-        if (chromaOf(q) > skC - 5 || q[0] > Math.max(L1, skL) + 5) break;
+        // móng trần xám (skC < 12: da / nền gần như xám — không phân biệt được) hoặc mép SƠN CŨ còn sót dưới nếp da
+        // (p067: dải cam 4–5px dưới chân móng — bộ chấm điểm màu móng nhận ra)
+        const bare = skC >= 12 && chromaOf(q) <= skC - 5 && q[0] <= Math.max(L1, skL) + 5;
+        if (!bare && !(cls && cls(local(Xq, Yq).s)(q) >= 0.55)) break;
         wd = j;
       }
-      wC.push(wd);
+      (sideM ? wS[across[k] > 0 ? 0 : 1] : wC).push(wd);
     }
     // chỉ phần LIỀN với mặt nạ (đi từ mép ra, qua các điểm cũng đạt): bóng nếp da tối xa hơn sau 1 dải da sáng là chi
     // tiết thật của da, không phải viền sơn cũ
@@ -707,18 +712,21 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
       const v = dOut[k] <= 1.2 ? 0.45 * st : 0.04 * st; // < 0.05: renderLook thay nền theo tỉ lệ (không bật / tắt)
       if (v > alpha[k]) alpha[k] = v;
     }
-    // ít điểm đo / khe hẹp (< 1.5px) → không nở
-    const Dc = wC.length >= 8 ? median(wC) : 0;
+    // ít điểm đo / khe hẹp (< 1.5px) → không nở. Bách phân vị 70 (không phải trung vị): khe hẹp dần về 2 góc chân móng
+    // và có chỗ dò hụt (= 0) — trung vị thì giữa chân móng còn sót 1–2px dải xám
+    const p70 = (a: number[]) => { if (a.length < 8) return 0; a.sort((x, y) => x - y); const v = a[Math.floor(0.7 * a.length)]; return v >= 1.5 ? v : 0; };
+    const Dc = p70(wC), Ds = [p70(wS[0]), p70(wS[1])];
     // pháp tuyến cho cả điểm xa mép tới gMax: gradient độ phủ làm mờ rộng
-    const Aw = Dc >= 1.5 ? boxBlur(alpha, w, h, Math.ceil(gMax) + 1) : null;
+    const Aw = Dc || Ds[0] || Ds[1] ? boxBlur(alpha, w, h, Math.ceil(gMax) + 1) : null;
     for (let k = 0; Aw && k < w * h; k++) {
       const d = dOut[k]; // d = 0: điểm mép TRONG mặt nạ (0.5 ≤ alpha < 1) — phải phủ kín, không thì lộ 1 hàng chấm nền
-      if (alpha[k] >= 1 || d > gMax + 1 || along[k] < -0.4 || along[k] > 0.6) continue;
+      if (alpha[k] >= 1 || d > gMax + 1 || along[k] < -0.4 || along[k] > 0.72) continue;
       const xx = k % w, yy = (k - xx) / w;
       if (xx < 1 || yy < 1 || xx >= w - 1 || yy >= h - 1) continue;
       const gx = Aw[k - 1] - Aw[k + 1], gy = Aw[k - w] - Aw[k + w], gl = Math.hypot(gx, gy);
       if (gl < 1e-4) continue;
-      const D = Dc * smooth(0.25, 0.9, -(gx * aUx + gy * aUy) / gl);
+      const wb = smooth(0.25, 0.9, -(gx * aUx + gy * aUy) / gl);
+      const D = Dc * wb + Ds[across[k] > 0 ? 0 : 1] * (1 - wb) * (1 - smooth(0.45, 0.7, along[k]));
       if (D < 0.6) continue;
       const pc = Math.max(0, Math.min(1, D - d + 0.5));
       if (pc <= alpha[k]) continue;

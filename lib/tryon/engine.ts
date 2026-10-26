@@ -2078,7 +2078,8 @@ function packCluster(seed: number, items: [number, Bead["kind"]][], au: number, 
   return out;
 }
 
-function beadsFor(pattern: string, seed: number): Bead[] {
+/** bố cục hạt / hoạ tiết của 1 móng (export cho kiểm thử bố cục — scripts/qa/tryon_engine_unit E29) */
+export function beadsFor(pattern: string, seed: number): Bead[] {
   const j = (k: number) => (hash2(seed, k, 31) - 0.5);
   switch (pattern) {
     // ngọc trai viền chân móng: hạt giữa to nhất, nhỏ dần ra 2 bên (như thợ gắn thật), ôm theo vòng cung chân móng
@@ -2121,12 +2122,16 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     case "dots": {
       const sd = j(6) > 0 ? 1 : -1, v = Math.floor(hash2(seed, 7, 31) * 3);
       if (v === 0) {
-        const R = [0.2, 0.12, 0.17, 0.09, 0.14, 0.1, 0.12, 0.08];
+        // chuỗi chéo 9 chấm xen 2 bên đường chéo; chấm chạm chấm trước thì thử lệch sang bên kia / về giữa, rồi thu nhỏ
+        // (bỏ thẳng chấm chạm nhau thì chuỗi hụt còn 4–5 chấm thưa)
+        const R = [0.2, 0.12, 0.17, 0.09, 0.14, 0.1, 0.12, 0.08, 0.1];
         const out: Bead[] = [];
-        for (let k = 0; k < 8; k++) {
-          const q = k / 7, off = (k % 2 ? 1 : -1) * (0.1 + 0.06 * j(20 + k));
-          const b: Bead = { u: 0.2 + 0.64 * q + 0.03 * j(30 + k), t: sd * (-0.52 + 1.0 * q) + off * 0.7, r: R[k] * (1 - 0.25 * q), kind: "pdot", whole: true };
-          if (out.every((o) => Math.hypot(o.t - b.t, (o.u - b.u) * 2.8) > o.r + b.r + 0.07)) out.push(b);
+        for (let k = 0; k < R.length; k++) {
+          const q = k / (R.length - 1), side = k % 2 ? 1 : -1, mag = 0.1 + 0.06 * j(20 + k), u = 0.18 + 0.68 * q + 0.03 * j(30 + k);
+          for (const [f, kr] of [[1, 1], [-1, 1], [0, 1], [1.6, 0.8], [-1.6, 0.8]]) {
+            const b: Bead = { u, t: sd * (-0.56 + 1.08 * q) + f * side * mag * 0.7, r: R[k] * (1 - 0.25 * q) * kr, kind: "pdot", whole: true };
+            if (out.every((o) => Math.hypot(o.t - b.t, (o.u - b.u) * 2.8) > o.r + b.r + 0.06)) { out.push(b); break; }
+          }
         }
         return out;
       }

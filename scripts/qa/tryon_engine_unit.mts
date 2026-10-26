@@ -6,7 +6,7 @@
 // + tự dò móng (chỉ chụp ảnh), chạm 1 lần, soi tay (tông da / dáng móng), 10 mẫu gợi ý, hoạ tiết bộ máy tự vẽ.
 import path from "node:path";
 import { createRequire } from "node:module";
-import { segmentNail, renderLook, rasterNail, fitNail, lab, type Img, type LookColors, type NailSeg } from "../../lib/tryon/engine";
+import { segmentNail, renderLook, rasterNail, fitNail, lab, beadsFor, type Img, type LookColors, type NailSeg } from "../../lib/tryon/engine";
 import { TryOnSession, autoNails, tapFit } from "../../lib/tryon/session";
 import { profileFromModels } from "../../lib/tryon/profile";
 import { adviceLooks } from "../../lib/tryon/advice";
@@ -641,6 +641,32 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     if (tipGain < 8 || lift < 1.15) jBad.push(`${fx.file}: đầu móng +${r2(tipGain)} · sáng ×${r2(lift)}`);
   }
   ok("E27", "Sơn thạch (jelly) trong thật: đầu móng (mép tự do) sáng hơn sơn đặc ≥ 8, cả móng sáng hơn ≥ 1.15× (thấy giường móng hồng bên dưới) — cả trên tay đang sơn ĐEN (màu cũ không lộ)", !jBad.length, jBad.join(" | "));
+}
+
+// ---------------- 7b. vòng 2 — hoạ tiết đọc ra đúng TÊN mẫu (40 hạt giống mỗi mẫu): chấm bi = 6–12 chấm VẼ phẳng 2+ cỡ
+//      (không phải 3 đinh tán 3D) · đính đá = 9–13 viên sát nhau 3+ cỡ có ngọc trai / caviar, không viên nào chồng / lòi
+//      khỏi móng · giọt chrome = 5–8 giọt hữu cơ dẹt (không phải bi tròn), không chồng · hoa nhí ≥ 5 bông · sao lấp lánh
+//      có sao cắt mặt + tia ✦ · ren = móng hero là mảng ren vẽ (lưới + hoa + viền vỏ sò), không phải lưới chấm in
+{
+  const bad: string[] = [];
+  const over = (bs: { u: number; t: number; r: number }[], gap: number) => bs.some((a, i) => bs.some((b, k) => k > i && Math.hypot(a.t - b.t, (a.u - b.u) * 2.8) < a.r + b.r + gap - 1e-3));
+  const inside = (b: { u: number; t: number; r: number }) => Math.abs(b.t) <= 0.84 - b.r + 1e-6 && b.u - b.r / 2.8 >= 0.09 + 0.1 * b.t * b.t - 1e-6 && b.u + b.r / 2.8 <= 0.86 - 0.12 * b.t * b.t + 1e-6;
+  for (let seed = 100; seed < 140; seed++) {
+    const d = beadsFor("dots", seed);
+    if (d.length < 6 || d.length > 12 || d.some((b) => b.kind !== "pdot") || new Set(d.map((b) => b.r.toFixed(2))).size < 2) bad.push(`dots/${seed}: ${d.length} ${[...new Set(d.map((b) => b.kind))]}`);
+    const g = beadsFor("gems", seed);
+    if (g.length < 9 || g.length > 13 || !g.some((b) => b.kind === "pearl") || new Set(g.map((b) => b.r.toFixed(2))).size < 3 || over(g, 0.015) || !g.every(inside)) bad.push(`gems/${seed}: ${g.length} viên`);
+    const c = beadsFor("chromedrops", seed);
+    if (c.length < 5 || c.length > 8 || c.some((b) => b.kind !== "blob") || over(c, 0.035) || !c.every(inside)) bad.push(`chromedrops/${seed}: ${c.length} ${[...new Set(c.map((b) => b.kind))]}`);
+    if (beadsFor("floral", seed).filter((b) => b.kind === "ditsy").length < 5) bad.push(`floral/${seed}: < 5 bông nhí`);
+    const st = beadsFor("stars", seed);
+    if (!st.some((b) => b.kind === "fstar") || st.filter((b) => b.kind === "sparkle").length < 3) bad.push(`stars/${seed}: ${st.map((b) => b.kind)}`);
+    const lh = (expandSet(LOOK(["#e8c4a8", "#f2ede6", "#f5f0e8"], "glossy", { pattern: "lace", seed }), 4).nails ?? []).find((o) => o?.role === "hero");
+    if (lh?.pattern !== "lace:art" || beadsFor("lace:art", seed)[0]?.kind !== "lacework") bad.push(`lace/${seed}: hero ${lh?.pattern}`);
+  }
+  // echo nhỏ hơn hero: đính đá / giọt chrome echo ít hạt hơn hẳn
+  if (beadsFor("gems:echo", 7).length >= beadsFor("gems", 7).length || beadsFor("chromedrops:echo", 7).length >= beadsFor("chromedrops", 7).length) bad.push("echo không nhỏ hơn hero");
+  ok("E29", "Vòng 2 — hoạ tiết đúng tên mẫu: chấm bi vẽ 6–12 chấm 2+ cỡ · đính đá cụm 9–13 viên 3+ cỡ có ngọc trai, không chồng / lòi mép · giọt chrome 5–8 giọt hữu cơ không chồng · hoa nhí ≥ 5 bông · sao cắt mặt + ≥ 3 tia ✦ · ren hero = mảng ren vẽ", !bad.length, bad.slice(0, 6).join(" | "));
 }
 
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)

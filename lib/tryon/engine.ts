@@ -2895,16 +2895,29 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "plaid": {
-            // CARO (tartan): dải ngang + dọc màu c2 chồng nhau (chỗ giao đậm hơn) + kẻ chỉ mảnh màu kim loại / trắng
-            const X = t * seg.hw, Yp = s * seg.L, P = 0.9 * seg.hw;
-            const band = (v: number) => { const f = ((v / P) % 1 + 1) % 1; return 1 - smooth(0.32, 0.36, Math.abs(f - 0.5)); };
-            const thin = (v: number) => { const f = ((v / P + 0.5) % 1 + 1) % 1; return 1 - smooth(0.018, 0.035, Math.abs(f - 0.5)); };
-            const hb = band(Yp), vb = band(X);
-            base = mix3(c1, c2, 0.55 * hb + 0.55 * vb - 0.15 * hb * vb);
-            base = mix3(base, mix3(metal, [1, 1, 1], 0.4), Math.max(thin(X), thin(Yp)) * 0.85);
-            // vân chéo của vải dệt (rất nhẹ)
-            const tw = 0.03 * Math.sin((X + Yp) * 1.6);
-            base = [base[0] * (1 + tw), base[1] * (1 + tw), base[2] * (1 + tw)];
+            // TARTAN như thợ vẽ: NỀN c1 (đỏ nhung) chiếm phần lớn + dải RỘNG c2 ngang & dọc (~28% chu kỳ, gel màu phủ 0.86) —
+            // chỗ 2 dải giao nhau SẪM hẳn (gel chồng 2 lớp) · 1 kẻ tối mảnh giữa dải · 1 chỉ kem ánh vàng ~2px nằm giữa ô nền
+            // (lệch khỏi tâm dải) · vân chéo vải (twill) rất nhẹ. ~2.2 chu kỳ / bề ngang, theo MẶT móng cong (dồn hẹp về 2 mép),
+            // móng kề nhau lệch pha → ảnh nhỏ vẫn đọc ra caro. Bản cũ: dải c2 phủ ~64% chu kỳ → nền xanh + chỉ kem như giấy kẻ ô
+            // / khăn trải bàn, đỏ nhung chỉ còn chấm nhỏ ở chỗ giao.
+            const p1 = 1 / Math.max(8, seg.hw), Yh = s * tipP.kL, P = 0.92, mir = pN % 2 ? -1 : 1;
+            const ts = Math.asin(0.95 * Math.max(-1, Math.min(1, t))) / 1.2532;
+            const fx = ((((mir * ts + 0.31 * P) / P) % 1) + 1) % 1, fy = ((((Yh + P * hash2(look.seed, 31, 9)) / P) % 1) + 1) % 1;
+            const aP = (0.7 * p1) / P, wB = 0.14, dx = Math.abs(fx - 0.5), dy = Math.abs(fy - 0.5);
+            const vb = 1 - smooth(wB - aP, wB + aP, dx), hb = 1 - smooth(wB - aP, wB + aP, dy);
+            // dải không sáng hơn hẳn nền (xanh thông trên đỏ nhung, navy trên cherry) → chỗ giao sẫm như 2 lớp gel màu; dải
+            // sáng hẳn hơn nền → chỗ giao chỉ đặc màu dải hơn
+            const ovC: RGB = lum(c2) < 2 * lum(c1) ? sc3(c2, 0.42) : c2;
+            base = mix3(c1, c2, 0.86 * Math.max(vb, hb));
+            base = mix3(base, ovC, 0.9 * vb * hb);
+            const wD = Math.max(0.7 * p1, 0.016) / P, wP = Math.max(1.05 * p1, 0.024) / P;
+            const dk = Math.max(1 - smooth(wD - aP, wD + aP, dx), 1 - smooth(wD - aP, wD + aP, dy));
+            base = mix3(base, sc3(c2, 0.22), 0.75 * dk);
+            const ex = Math.min(fx, 1 - fx), ey = Math.min(fy, 1 - fy); // khoảng tới tâm ô nền
+            const pin = Math.max(1 - smooth(wP - aP, wP + aP, ex), 1 - smooth(wP - aP, wP + aP, ey));
+            base = mix3(base, mix3(metal, [0.92, 0.86, 0.7], 0.5), 0.78 * pin);
+            const tw = 0.035 * Math.sin((t + Yh) * seg.hw * 1.5); // vân chéo vải dệt (rất nhẹ)
+            base = sc3(base, 1 + tw);
             break;
           }
           case "candy": {

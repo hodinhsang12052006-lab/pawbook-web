@@ -148,6 +148,27 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "Quả châu đỏ nền navy", colors: ["#1f2a44", "#c8102e", "#d4af37"], finish: "glossy", pattern: "ornament", seed: 87 },
   { name: "Hoa gel 3D nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#f5f0e8"], finish: "glossy", pattern: "gelflower", seed: 88 },
   { name: "Hoa gel 3D hồng nền trắng sữa", colors: ["#f2ede6", "#f4c7cf", "#f5f0e8"], finish: "glossy", pattern: "gelflower", seed: 89 },
+  // vòng 2 (motifs): chấm bi vẽ, chấm bi mắt mèo thưa, hoa nhí, lá phong kim loại, sao lấp lánh, đá pha lê, nơ 3D, giọt
+  // chrome hữu cơ, ren — soi: ONLY="^R2"
+  { name: "R2 Chấm bi hồng – chuỗi chéo", colors: ["#f6d5d0", "#e0457b", "#d4af37"], finish: "glossy", pattern: "dots", seed: 201 },
+  { name: "R2 Chấm bi đen nền trắng sữa", colors: ["#f2ede6", "#151314", "#c0c0c0"], finish: "glossy", pattern: "dots", seed: 202 },
+  { name: "R2 Chấm bi trắng nền navy", colors: ["#1f2a44", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "dots", seed: 203 },
+  { name: "R2 Mắt mèo chấm bi tím mận", colors: ["#3e1530", "#f2ede6", "#c0c0c0"], finish: "cateye", pattern: "polka", seed: 204 },
+  { name: "R2 Mắt mèo chấm bi đen", colors: ["#151314", "#f2ede6", "#c0c0c0"], finish: "cateye", pattern: "polka", seed: 205 },
+  { name: "R2 Hoa nhí trắng nền navy", colors: ["#1f2a44", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "floral", seed: 206 },
+  { name: "R2 Hoa nhí hồng nền trắng sữa", colors: ["#f2ede6", "#e75480", "#d4af37"], finish: "glossy", pattern: "floral", seed: 207 },
+  { name: "R2 Lá phong vàng nền espresso", colors: ["#3b2418", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "leaf", seed: 208 },
+  { name: "R2 Lá phong vàng nền đỏ rượu", colors: ["#5a1a2a", "#e9e1d3", "#d4af37"], finish: "glossy", pattern: "leaf", seed: 209 },
+  { name: "R2 Sao lấp lánh bạc nền navy", colors: ["#1f2a44", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "stars", seed: 210 },
+  { name: "R2 Sao lấp lánh vàng nền đen", colors: ["#151314", "#f3e5ab", "#d4af37"], finish: "glossy", pattern: "stars", seed: 211 },
+  { name: "R2 Tím mận đính đá", colors: ["#3e1530", "#e9d7b4", "#d4af37"], finish: "glossy", pattern: "gems", seed: 212 },
+  { name: "R2 Nude đính đá", colors: ["#e8c4a8", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "gems", seed: 213 },
+  { name: "R2 Charm nơ vàng nền mocha", colors: ["#8b6b5a", "#f2c4c4", "#d4af37"], finish: "glossy", pattern: "charm3d", seed: 214 },
+  { name: "R2 Charm nơ bạc nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "charm3d", seed: 215 },
+  { name: "R2 Giọt chrome vàng nền mocha", colors: ["#8b6b5a", "#f2c4c4", "#d4af37"], finish: "glossy", pattern: "chromedrops", seed: 216 },
+  { name: "R2 Giọt chrome bạc nền đen", colors: ["#151314", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 217 },
+  { name: "R2 Ren trắng nền nude", colors: ["#e8c4a8", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 218 },
+  { name: "R2 Ren trắng nền hồng sữa", colors: ["#f2c9c4", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 219 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

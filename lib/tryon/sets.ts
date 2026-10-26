@@ -67,6 +67,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   gelflower: [{ pick: "first", scale: 0.55, mirror: true }],
   tortoise: [{ pattern: ["fr-tortoise", "tortoise"] }],
   candy: [{ pattern: ["fr-candycane", "french"] }],
+  // chấm bi vẽ: echo = vài chấm nhỏ ở góc đầu móng / hàng chấm tí hon ôm chân móng (bố cục riêng "dots:echo" của beadsFor)
+  dots: [{ pattern: "dots:echo", pick: "all" }],
 };
 /** hoạ tiết in lặp: chỉ hero + echo (không kề nhau), móng còn lại trơn — chấm bi / sọc kín 4 móng nhìn như giấy dán tường */
 const PRINTS = new Set(["leopard", "checker", "plaid", "polka", "stripes", "tortoise", "fawn", "marble", "foil", "lines", "chromeline", "candy"]);

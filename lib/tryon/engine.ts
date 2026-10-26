@@ -1397,13 +1397,15 @@ const mix3 = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1]
  * rộng đúng ~60% móng (bản cũ hình chỉ lấp ~½ r: ma r 0.82 chỉ rộng ~45% móng, đầu lâu ~30% — sticker tí hon).
  * flip: lật ngang hình (móng "vọng" đối xứng với móng chính).
  */
-type PaintedKind = "ghost" | "pumpkin" | "bat" | "moon" | "flake" | "cherry" | "flower" | "cat" | "skull" | "leaf" | "pflower" | "heart" | "holly" | "ornament" | "gelflower" | "bud" | "gleaf" | "pdot";
-interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "bow" | "eye" | PaintedKind; rot?: number; tint?: number; flip?: boolean }
-const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "cherry", "flower", "cat", "skull", "leaf", "pflower", "heart", "holly", "ornament", "gelflower", "bud", "gleaf", "pdot"]);
+type PaintedKind = "ghost" | "pumpkin" | "bat" | "moon" | "flake" | "cherry" | "flower" | "cat" | "skull" | "leaf" | "pflower" | "heart" | "holly" | "ornament" | "gelflower" | "bud" | "gleaf" | "pdot" | "ditsy" | "sparkle" | "mleaf";
+/** whole: chấm vẽ bằng cây chấm bi — thợ không chấm đè lên mép móng: mép cắt vào thì dời / thu nhỏ 1 lần, vẫn cắt thì bỏ
+ *  hẳn chấm đó (chấm bị cắt đôi ở mép = giấy in cắt bằng kéo) · tint: biến thể màu (lá thu, hoa nhí 2 tông) */
+interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "bow" | "eye" | "blob" | PaintedKind; rot?: number; tint?: number; flip?: boolean; whole?: boolean; asp?: number }
+const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "cherry", "flower", "cat", "skull", "leaf", "pflower", "heart", "holly", "ornament", "gelflower", "bud", "gleaf", "pdot", "ditsy", "sparkle", "mleaf"]);
 /** Hoạ tiết HỮU CƠ (lá, hoa, nụ, bông tuyết, chấm): xoay theo trục móng và được mép móng cắt bớt (thợ vẽ tràn mép). Còn
  *  lại là NHÂN VẬT / ĐỒ VẬT (ma, mèo, đầu lâu, bí ngô, quả châu, hoa gel 3D…): luôn đứng thẳng trong ảnh, KHÔNG bao giờ bị
  *  mép móng cắt (bị cắt nhìn như decal dán lệch). */
-const ORGANIC = new Set<string>(["leaf", "flower", "bud", "gleaf", "flake", "pflower", "pdot"]);
+const ORGANIC = new Set<string>(["leaf", "flower", "bud", "gleaf", "flake", "pflower", "pdot", "ditsy", "sparkle", "mleaf"]);
 
 /** Ngôi sao 5 cánh (cánh hướng về đầu móng): khoảng cách có dấu tới mép (âm = trong), đơn vị = bán kính ngoài. */
 function starSD(x: number, y: number): number {
@@ -1760,7 +1762,7 @@ interface POp { L: number; c?: RGB; a?: number; line?: boolean; ins?: number; me
 /** Bề ngang THẬT (px) theo từng đoạn dọc móng + vành điểm sát mép. `across` chuẩn hoá theo bề ngang TẠI CHỖ (móng thon
  *  về chân / đầu, nhọn ở móng đắp) → nhân seg.hw cố định thì hoạ tiết bị bóp méo ở 2 đầu móng. */
 interface PGeo { s0: number; ds: number; hw: Float32Array; ring: Int32Array }
-interface PFit { seg: NailSeg; geo: PGeo; s0: number; sx: number; R: number; cr: number; sr: number; fl: number; bound2: number; Lx: number; Ly: number; mLx: number; mLy: number; v: number; jit: number; lw: number; bev: number; hiD: number; hiW: number; ops: POp[]; pc: RGB }
+interface PFit { seg: NailSeg; geo: PGeo; s0: number; sx: number; R: number; cr: number; sr: number; fl: number; bound2: number; Lx: number; Ly: number; mLx: number; mLy: number; v: number; jit: number; lw: number; bev: number; hiD: number; hiW: number; ops: POp[]; pc: RGB; off: boolean }
 const geoCache = new WeakMap<NailSeg, PGeo>(), pfits = new WeakMap<Bead, PFit>();
 const PO = new Float64Array(8), PX = new Float64Array(8), PY = new Float64Array(8), PQ = new Float64Array(8);
 const DP = new Float64Array(5), NX = new Float64Array(5), NY = new Float64Array(5);
@@ -1847,7 +1849,7 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   const rotA = (ORGANIC.has(kind) ? 0 : upRot) + (bd.rot ?? 0), cr = Math.cos(rotA), sr = Math.sin(rotA);
   const ln = Math.hypot(L3[0], L3[1]) || 1, R0 = bd.r * seg.hw;
   const v = kind === "skull" ? (Lst(base) > 55 ? 1 : 0) : kind === "flower" ? (pat === "blossom" ? 1 : 0) : kind === "ornament" ? (upS > 0 ? 1 : 0) : 0;
-  const F: PFit = { seg, geo, s0: 0, sx: 0, R: R0, cr, sr, fl: bd.flip ? -1 : 1, bound2: 0, Lx: L3[0] / ln, Ly: L3[1] / ln, mLx: 0, mLy: 0, v, jit: 0, lw: 0, bev: 0, hiD: 0, hiW: 0, ops: [], pc: base };
+  const F: PFit = { seg, geo, s0: 0, sx: 0, R: R0, cr, sr, fl: bd.flip ? -1 : 1, bound2: 0, Lx: L3[0] / ln, Ly: L3[1] / ln, mLx: 0, mLy: 0, v, jit: 0, lw: 0, bev: 0, hiD: 0, hiW: 0, ops: [], pc: base, off: false };
   let u0 = bd.u, t0 = bd.t, sc = 1;
   const place = () => {
     F.s0 = u0 * sEnd; F.sx = hwAt(geo, F.s0) * warpT(t0); F.R = Math.max(1.5, R0 * sc);
@@ -1858,6 +1860,22 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   };
   place();
   if (kind === "moon" && F.fl * -F.sx * cr < 0) { F.fl = -F.fl; place(); }
+  // chấm / hoa nhí chấm bằng cây chấm bi (whole): cách mép móng ≥ ~1.5–2px (+ vành sát mép 2px); chạm mép → dời vào +
+  // thu nhỏ 1 lần, vẫn chạm thì bỏ hẳn chấm (không bao giờ ra chấm bị mép cắt đôi)
+  if (bd.whole) {
+    const mg = Math.max(1.5, 0.045 * seg.hw);
+    const cuts = () => {
+      for (let q = 0; q < geo.ring.length; q++) {
+        const k = geo.ring[q], s = seg.along[k], ax = hwAt(geo, s) * warpT(seg.across[k]) - F.sx, ay = (s - F.s0) * seg.L;
+        if (ax * ax + ay * ay > (F.R * 1.6 + mg + 2) ** 2) continue;
+        const lx = ax / F.R, ly = ay / F.R;
+        paintedSD(kind, F.fl * (lx * cr + ly * sr), -lx * sr + ly * cr, PO);
+        if (PO[5] * F.R < mg) return true;
+      }
+      return false;
+    };
+    if (cuts()) { sc = 0.85; t0 *= 0.86; u0 += (0.52 - u0) * 0.12; place(); F.off = cuts(); }
+  }
   if (!ORGANIC.has(kind)) {
     for (let it = 0; it < 12; it++) {
       let hit = false;
@@ -1880,6 +1898,8 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   F.hiD = Math.max(1.8, Math.min(5, 0.14 * F.R)); F.hiW = Math.max(0.9, Math.min(2.2, 0.045 * F.R));
   // liner tối không được sáng hơn nền tối (viền xám quanh ma trên nền đen)
   F.ops = paintOps(kind, bd.tint ?? 0, base, c2, metal, pat, v).map((op) => (op.line && op.c && Lst(op.c) < 30 && Lst(op.c) > Lst(base) ? { ...op, c: base } : op));
+  // chấm gel hơi gồ dưới lớp top → 1 vệt bóng mảnh phía đèn (chỉ chấm ≥ 6px; chấm nhỏ hơn vệt bóng thành vòng trắng)
+  if (kind === "pdot" && F.R >= 6) F.ops = F.ops.map((op) => (op.L === 0 && !op.line ? { ...op, hi: 0.4 } : op));
   F.pc = Lst(c2) > 62 && !sameC(c2, base) ? c2 : PK.milk;
   pfits.set(bd, F);
   return F;
@@ -1899,6 +1919,22 @@ function bowShape(x: number, y: number): { h: number; cov: number } {
   part(0, 0.04, 0.19, 0.21, 0, 1);
   return { h, cov };
 }
+/**
+ * Rải `n` hạt không chồng nhau (khoảng cách đo theo nửa bề ngang móng; dọc móng ≈ 2.8 hw) trong khung u0…u1 × |t| ≤ tm:
+ * thử vị trí ngẫu nhiên theo hạt giống, giữ chỗ hợp `want(u, t)` (0…1: mật độ mong muốn — dày ở đầu móng, cụm ở 1 góc…)
+ * và cách các hạt đã đặt ≥ gap. `rs(k)` = bán kính hạt thứ k. Tay thợ chấm: chấm to đặt trước, chấm nhỏ lấp khe.
+ */
+function scatterBeads(seed: number, n: number, rs: (k: number) => number, kind: Bead["kind"], u0: number, u1: number, tm: number, gap: number, want?: (u: number, t: number) => number, salt = 0): Bead[] {
+  const out: Bead[] = [];
+  for (let k = 0, tries = 0; out.length < n && tries < 400; tries++) {
+    const r = rs(out.length), u = u0 + (u1 - u0) * hash2(seed, 101 + tries, 41 + salt), t = (2 * hash2(seed, 503 + tries, 43 + salt) - 1) * tm;
+    if (want && hash2(seed, 907 + tries, 47 + salt) > want(u, t)) continue;
+    if (out.some((o) => Math.hypot(o.t - t, (o.u - u) * 2.8) < o.r + r + gap)) continue;
+    out.push({ u, t, r, kind, whole: true, rot: 6.28 * hash2(seed, 1301 + tries, 49 + salt), tint: k++ });
+  }
+  return out;
+}
+
 function beadsFor(pattern: string, seed: number): Bead[] {
   const j = (k: number) => (hash2(seed, k, 31) - 0.5);
   switch (pattern) {
@@ -1906,7 +1942,31 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     case "pearls": return [{ u: 0.2, t: 0, r: 0.27, kind: "pearl" }, { u: 0.24, t: -0.42, r: 0.2, kind: "pearl" }, { u: 0.24, t: 0.42, r: 0.2, kind: "pearl" }, { u: 0.33, t: -0.7, r: 0.13, kind: "pearl" }, { u: 0.33, t: 0.7, r: 0.13, kind: "pearl" }];
     case "gems": return [{ u: 0.24 + 0.03 * j(1), t: 0.04 * j(2), r: 0.34, kind: "gem" }, { u: 0.44, t: -0.3, r: 0.14, kind: "gem" }, { u: 0.47, t: 0.24, r: 0.12, kind: "gem" }, { u: 0.6, t: -0.02, r: 0.09, kind: "gem" }];
     case "gemcluster": return [{ u: 0.3, t: 0.02, r: 0.33, kind: "gem" }, { u: 0.2, t: -0.5, r: 0.17, kind: "gem" }, { u: 0.2, t: 0.52, r: 0.15, kind: "pearl" }, { u: 0.5, t: -0.38, r: 0.14, kind: "pearl" }, { u: 0.52, t: 0.36, r: 0.16, kind: "gem" }, { u: 0.66, t: -0.05, r: 0.1, kind: "gem" }, { u: 0.42, t: 0.66, r: 0.08, kind: "gem" }];
-    case "dots": return [0.3, 0.5, 0.7].map((u, k) => ({ u, t: 0.18 * (k % 2 ? 1 : -1), r: 0.13, kind: "dot" as const }));
+    // CHẤM BI VẼ (cây chấm bi, phẳng dưới lớp top — không phải đinh tán 3D): 2–3 cỡ chấm, 3 bố cục thợ hay làm — chuỗi
+    // chéo to → nhỏ từ 1 góc chân móng lên góc đầu móng đối diện · chấm bi rải (polka thưa, 2 cỡ) · cụm chấm ở 1 góc chân
+    // móng thưa dần lên đầu móng. Chấm không bao giờ bị mép cắt (whole)
+    case "dots": {
+      const sd = j(6) > 0 ? 1 : -1, v = Math.floor(hash2(seed, 7, 31) * 3);
+      if (v === 0) {
+        const R = [0.2, 0.12, 0.17, 0.09, 0.14, 0.1, 0.12, 0.08];
+        const out: Bead[] = [];
+        for (let k = 0; k < 8; k++) {
+          const q = k / 7, off = (k % 2 ? 1 : -1) * (0.1 + 0.06 * j(20 + k));
+          const b: Bead = { u: 0.2 + 0.64 * q + 0.03 * j(30 + k), t: sd * (-0.52 + 1.0 * q) + off * 0.7, r: R[k] * (1 - 0.25 * q), kind: "pdot", whole: true };
+          if (out.every((o) => Math.hypot(o.t - b.t, (o.u - b.u) * 2.8) > o.r + b.r + 0.07)) out.push(b);
+        }
+        return out;
+      }
+      if (v === 1) return scatterBeads(seed, 9 + Math.floor(3 * hash2(seed, 8, 31)), (k) => (k % 3 === 0 ? 0.16 : k % 3 === 1 ? 0.1 : 0.12), "pdot", 0.14, 0.9, 0.8, 0.13);
+      return scatterBeads(seed, 9, (k) => [0.2, 0.15, 0.12, 0.13, 0.1, 0.09, 0.1, 0.08, 0.08][k], "pdot", 0.13, 0.86, 0.82, 0.07,
+        (u, t) => Math.exp(-(((u - 0.2) * 2.8) ** 2 + (t - 0.4 * sd) ** 2) / 0.9));
+    }
+    // ECHO của chấm bi: chuỗi 4–5 chấm nhỏ dần ở góc đầu móng, hoặc 1 hàng chấm tí hon ôm vòng chân móng (dotted cuticle)
+    case "dots:echo": {
+      const sd = j(6) > 0 ? 1 : -1;
+      if (hash2(seed, 9, 31) < 0.5) return [{ u: 0.62, t: 0.42 * sd, r: 0.15 }, { u: 0.72, t: 0.1 * sd, r: 0.1 }, { u: 0.83, t: 0.38 * sd, r: 0.12 }, { u: 0.8, t: -0.16 * sd, r: 0.075 }, { u: 0.5, t: 0.2 * sd, r: 0.075 }].map((b) => ({ ...b, kind: "pdot" as const, whole: true }));
+      return [-0.6, -0.3, 0, 0.3, 0.6].map((t) => ({ u: 0.21 + 0.06 * t * t, t, r: 0.085, kind: "pdot" as const, whole: true }));
+    }
     // CLEAN GIRL: 1 điểm nhấn kim loại siêu nhỏ ở chân móng trên 3/4 móng — seed móng i = seed + 13i nên seed % 4 khác nhau
     // trên 4 móng liền nhau → đúng 1 móng để trơn; 3 móng còn lại: đinh tán vàng · 3 đinh tán · 2 đinh tán lệch (đều ≥ 3px)
     case "cleanmilky": {
@@ -3043,6 +3103,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           // mỗi lớp nhận ánh sáng như lớp sơn nền
           let F = pfits.get(bd);
           if (!F || F.seg !== seg) F = fitPainted(bd, seg, eDist, sEnd, uprightRot, upS, L3, base0, c2, metal, pat);
+          if (F.off) continue;
           const tq = t < -1 ? -1 : t > 1 ? 1 : t, Wd = 1 / Math.sqrt(1 - WK * WK * tq * tq);
           const ax = hwAt(F.geo, s) * warpT(tq) - F.sx, ay = (s - F.s0) * seg.L;
           if (ax * ax + ay * ay > F.bound2) continue;

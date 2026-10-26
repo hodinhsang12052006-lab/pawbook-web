@@ -65,6 +65,17 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "Milk bath hoa hồng", colors: ["#f8fafc", "#f9a8d4", "#d4af37"], finish: "glossy", pattern: "milkbath", seed: 55 },
   { name: "Phù thuỷ tím viền vàng", colors: ["#3b1f3a", "#ffffff", "#d4af37"], finish: "cateye", pattern: "witchy", seed: 56 },
   { name: "Ren trắng nền hồng", colors: ["#f2c4c4", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "lace", seed: 57 },
+  // bộ phối theo chủ đề (lib/tryon/sets): hero / echo / thread / quiet cùng 1 bảng màu — seed chọn biến thể hero
+  { name: "Bộ Halloween: ma", colors: ["#151314", "#c4541f", "#c0c0c0"], finish: "glossy", pattern: "mix-halloween", seed: 64 },
+  { name: "Bộ Halloween: dơi", colors: ["#151314", "#c4541f", "#c0c0c0"], finish: "glossy", pattern: "mix-halloween", seed: 61 },
+  { name: "Bộ Halloween: bí ngô", colors: ["#151314", "#c4541f", "#c0c0c0"], finish: "glossy", pattern: "mix-halloween", seed: 63 },
+  { name: "Bộ Halloween: mèo đen", colors: ["#151314", "#c4541f", "#c0c0c0"], finish: "glossy", pattern: "mix-halloween", seed: 60 },
+  { name: "Bộ Giáng sinh: lá holly", colors: ["#7a0f1f", "#f2ede6", "#d4af37"], finish: "glossy", pattern: "mix-christmas", seed: 61 },
+  { name: "Bộ Giáng sinh: quả châu", colors: ["#7a0f1f", "#f2ede6", "#d4af37"], finish: "glossy", pattern: "mix-christmas", seed: 60 },
+  { name: "Bộ Valentine", colors: ["#f6d5d0", "#b3122e", "#d4af37"], finish: "glossy", pattern: "mix-valentine", seed: 62 },
+  { name: "Bộ thu lá phong", colors: ["#3b2418", "#b45309", "#d4af37"], finish: "glossy", pattern: "mix-fall", seed: 63 },
+  { name: "Bộ năm mới: sao", colors: ["#151314", "#f3e5ab", "#d4af37"], finish: "glossy", pattern: "mix-newyear", seed: 61 },
+  { name: "Bộ năm mới: cụm đá", colors: ["#151314", "#f3e5ab", "#d4af37"], finish: "glossy", pattern: "mix-newyear", seed: 60 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

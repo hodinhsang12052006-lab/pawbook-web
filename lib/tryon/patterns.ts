@@ -5,5 +5,8 @@ export const PROCEDURAL = new Set(["solid", "mixmatch", "jelly", "french", "chro
   // nhóm mẫu mới (French biến tấu, nail Hàn trong, chrome màu, nhũ loang, hoạ tiết Noel, hoa gel 3D, bộ phối theo dịp)
   "fr-micro", "fr-deep", "fr-v", "fr-side", "fr-pinkwhite", "fr-halfmoon", "fr-skittle", "fr-glitter", "fr-santa", "fr-candycane", "fr-tortoise", "syrup", "blush", "cleanmilky",
   "colorchrome", "glitterfade", "holly", "ornament", "gelflower", "mix-halloween", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"]);
-/** Hoạ tiết phủ MỌI móng (còn lại chỉ vẽ trên móng điểm nhấn) — như NailArt. */
-export const ALL_NAIL_PATTERNS = new Set(["jelly", "french", "ombre", "aura", "tortoise", "lines", "babyboomer", "chromefrench", "chromeline", "doublefrench", "swirl", "milkbath", "negative", "velvet", "candycorn", "droplets", "chromedrops", "polka", "stripes", "chocodip", "auroracat"]);
+/** Hoạ tiết phủ MỌI móng (kỹ thuật cả bộ: French, ombre, thạch, chrome màu, nhũ loang…). Còn lại lib/tryon/sets chia vai
+ *  hero / echo / thread / quiet — hoạ tiết in lặp (chấm bi, sọc, đồi mồi, line…) và giọt 3D chỉ ≤ 2 móng không kề nhau
+ *  (kín 4 móng nhìn như giấy dán tường); chấm bi + mắt mèo vẫn đủ 4 móng (sets tự giữ). */
+export const ALL_NAIL_PATTERNS = new Set(["jelly", "french", "ombre", "aura", "babyboomer", "chromefrench", "doublefrench", "swirl", "milkbath", "negative", "velvet", "candycorn", "chocodip", "auroracat",
+  "fr-micro", "fr-deep", "fr-v", "fr-side", "fr-pinkwhite", "fr-halfmoon", "fr-skittle", "fr-glitter", "fr-santa", "fr-candycane", "fr-tortoise", "syrup", "blush", "cleanmilky", "colorchrome", "glitterfade"]);

@@ -4,6 +4,7 @@
 import { activeThemes, THEMES } from "../../lib/contentEngine";
 import { buildDesign, COLORS, finishOk, generateEngineDesigns, generateOccasionBatch, liveOccasions, paletteOk, PATTERN_IDS, PATTERNS, patternShapes, RETIRED_PATTERNS, runIssues, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
 import { activeTrends } from "../../lib/trendRadar";
+import { renderLook, segmentNail, type Img } from "../../lib/tryon/engine";
 
 let fail = 0, total = 0;
 const check = (id: string, desc: string, ok: boolean, detail = "") => {
@@ -184,6 +185,32 @@ const honest = all.filter((x) => {
 });
 check("DE44", "Tên mẫu không nêu màu không có trong bảng màu của mẫu", honest.length === 0, honest.slice(0, 3).map((x) => `${x.d.title.en} [${x.d.spec.colors}]`).join(" | "));
 void hexKey;
+
+// Half-moon: tên / các bước / mô tả ảnh nói ĐÚNG màu trăng + màu thân mà bộ vẽ thật (renderLook) vẽ ra — bộ vẽ không bao
+// giờ vẽ trăng tối hơn thân (c2 tối → c2 phủ thân, chừa trăng c1). Đo trên 1 móng tổng hợp (da + móng chữ nhật bo góc):
+// màu điểm ảnh sát chân móng = màu trăng, giữa móng = màu thân.
+{
+  const W = 240, H = 300, data = new Uint8ClampedArray(W * H * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4, sh = 0.9 + 0.1 * Math.sin(x / 40), inNail = Math.hypot(Math.max(0, Math.abs(x - 120) - 30), Math.max(0, Math.abs(y - 135) - 55)) < 12;
+    data[i] = inNail ? 196 : 224 * sh; data[i + 1] = inNail ? 128 : 172 * sh; data[i + 2] = inNail ? 130 : 150 * sh; data[i + 3] = 255;
+  }
+  const img: Img = { w: W, h: H, data }, seg = segmentNail(img, { base: { x: 120, y: 200 }, tip: { x: 120, y: 72 } });
+  const rgbOf = (hex: string) => [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16));
+  const near = (p: number[], a: string, b: string) => { const d = (h: string) => rgbOf(h).reduce((s, v, k) => s + (v - p[k]) ** 2, 0); return d(a) <= d(b) ? a : b; };
+  const hmBad: string[] = [];
+  for (const k of [["nude", "burgundy", "gold"], ["milky", "black", "gold"], ["sheer", "espresso", "gold"], ["sheer", "mocha", "gold"], ["nude", "white", "gold"], ["pinkNude", "milky", "silver"]] as [keyof typeof COLORS, keyof typeof COLORS, keyof typeof COLORS][]) {
+    const d = buildDesign({ occasion: null, system: "gel", shape: "square", finish: "glossy", pattern: "fr-halfmoon", colors: k });
+    const out = renderLook(img, [seg], { colors: d.palette, finish: "glossy", pattern: "fr-halfmoon", seed: 1, opacity: 1 });
+    const med3 = (y: number) => [0, 1, 2].map((c) => { const v: number[] = []; for (let x = 100; x <= 140; x += 2) v.push(out.data[(y * W + x) * 4 + c]); return v.sort((a, b) => a - b)[v.length >> 1]; });
+    const [c1, c2] = [COLORS[k[0]], COLORS[k[1]]], hx2 = [c1.hex, c2.hex];
+    const moon = near(med3(190), hx2[0], hx2[1]) === c1.hex ? c1 : c2, body = near(med3(125), hx2[0], hx2[1]) === c1.hex ? c1 : c2;
+    const okT = moon !== body && (d.title.vi.includes(`trăng ${moon.vi}`) || d.title.vi.startsWith(`Half-moon ${moon.vi}`)) && (d.title.vi.startsWith(`Móng ${body.vi}`) || d.title.vi.includes(`nền ${body.vi}`))
+      && d.steps.some((x) => x.vi.includes(`trăng ${moon.vi}`)) && d.imagePrompt.includes(`${moon.en} half-moon`) && (d.title.en.includes(`${moon.en} half-moon`) || d.title.en.startsWith(`${moon.en[0].toUpperCase()}${moon.en.slice(1)} half-moon`));
+    if (!okT) hmBad.push(`${k.join("/")}: ảnh trăng ${moon.vi}, thân ${body.vi} — tên "${d.title.vi}"`);
+  }
+  check("DE45", "Half-moon: tên, các bước, mô tả ảnh nói đúng màu TRĂNG / màu THÂN như bộ vẽ thật vẽ (c2 tối hơn → móng c2 chừa trăng c1)", !hmBad.length, hmBad.join(" | "));
+}
 
 // Mọi tổ hợp hợp lệ đều ghép được (không lỗi, đủ bước).
 let combos = 0, comboErr = "";

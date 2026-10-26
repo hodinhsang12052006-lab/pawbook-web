@@ -247,6 +247,8 @@ const ACC = s("ngón áp út và ngón trỏ", "ring and index fingers");
 // trai kiểu glazed) — ghi rõ vào tên, không để tên "French micro" mà ảnh ra móng tráng gương.
 const gz = (t: Bi, { finish, c1 }: PCtx): Bi => finish !== "chrome" ? t
   : Lof(c1.hex) > 70 ? s(`${t.vi} tráng ngọc trai`, `${t.en} with a pearl glaze`) : s(`${t.vi} tráng gương`, `${t.en} with a chrome glaze`);
+/** Half-moon ÂM: c2 tối hơn c1 → bộ vẽ cho c2 phủ thân, chừa trăng c1 (cùng phép so với bộ vẽ: độ sáng Y ↔ L* đồng biến). */
+export const hmNeg = (c1: Color, c2: Color) => Lof(c2.hex) < Lof(c1.hex);
 // Bộ phối theo dịp (mix-*): bộ máy (lib/tryon/sets) tự chia vai từng móng; ở đây chỉ là tên + công thức cho thợ.
 const MIX_NAME: Record<"halloween" | "christmas" | "valentine" | "fall" | "newyear", { vi: string; en: string; motifVi: string; motifEn: string; heroVi: string; heroEn: string }> = {
   halloween: { vi: "Halloween", en: "Halloween", motifVi: "ma, dơi, mạng nhện + móng trơn", motifEn: "ghost, bats, web plus a solid nail", heroVi: "ma / dơi / bí ngô", heroEn: "ghost, bat or pumpkin" },
@@ -770,11 +772,20 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "fr-halfmoon", occasions: ["trend", "fall", "korean"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
-    title: ({ c1, c2 }) => s(`Half-moon ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} half-moon on ${c1.en}`),
+    // Bộ vẽ (lib/tryon/engine, fr-halfmoon) KHÔNG BAO GIỜ vẽ trăng tối hơn thân (trăng nâu / đỏ dưới thân hồng sữa = chân
+    // móng bẩn, bầm): c2 tối hơn c1 (mọi bảng màu mặc định) → c2 phủ THÂN móng, chừa trăng c1 ở chân móng (half-moon ÂM).
+    // Tên / vật tư / các bước / mô tả ảnh phải nói đúng cái ảnh vẽ — ghi "half-moon nâu mocha nền hồng sữa" mà ảnh ra
+    // móng mocha trăng hồng thì thợ làm theo các bước ra đúng móng NGƯỢC lại. Viền chỉ kim loại dọc vòm trăng: cả 2 kiểu.
+    title: ({ c1, c2, metal }) => hmNeg(c1, c2) ? s(`Móng ${c2.vi} chừa trăng ${c1.vi} viền ${metal.vi}`, `${cap(c2.en)} nails with a ${c1.en} half-moon and ${metal.en} rim`) : s(`Half-moon ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} half-moon on ${c1.en}`),
     why: s("half-moon (vầng trăng ở chân móng) là French ngược kiểu retro đang quay lại — tinh tế, móng mọc ra không lộ", "the half-moon (a crescent at the cuticle) is the retro reverse French making a comeback — subtle and grows out gracefully"),
-    materials: ({ c2 }) => [m(`Gel ${c2.vi} (vầng trăng)`, `${cap(c2.en)} gel (half-moon)`), LINER_BRUSH],
-    steps: ({ c2 }) => [s(`Kẻ vầng trăng ${c2.vi} theo đường cong chân móng (chừa khe nhỏ sát da), tô kín, hơ đèn`, `Paint a ${c2.en} crescent following the cuticle curve (leave a tiny gap at the skin), fill, cure`)],
-    image: ({ c1, c2 }) => `sheer ${c1.en} nails with a ${c2.en} half-moon crescent at the cuticle`,
+    materials: ({ c1, c2, metal }) => [hmNeg(c1, c2) ? m(`Gel ${c2.vi} (thân móng)`, `${cap(c2.en)} gel (nail body)`) : m(`Gel ${c2.vi} (vầng trăng)`, `${cap(c2.en)} gel (half-moon)`), LINER(metal), LINER_BRUSH],
+    steps: ({ c1, c2, metal }) => [
+      hmNeg(c1, c2)
+        ? s(`Kẻ vòm trăng ở chân móng (~1/5 móng), sơn ${c2.vi} kín phần còn lại của móng, CHỪA vầng trăng ${c1.vi} (chừa khe nhỏ sát da), hơ đèn; lặp lại lớp 2`, `Outline a half-moon at the cuticle (~1/5 of the nail), paint ${c2.en} over the rest of the nail and LEAVE the ${c1.en} half-moon bare (tiny gap at the skin), cure; repeat for coat two`)
+        : s(`Kẻ vầng trăng ${c2.vi} theo đường cong chân móng (chừa khe nhỏ sát da), tô kín, hơ đèn`, `Paint a ${c2.en} crescent following the cuticle curve (leave a tiny gap at the skin), fill, cure`),
+      s(`Kẻ viền chỉ ${metal.vi} thật mảnh dọc vòm trăng, hơ đèn`, `Line the half-moon arc with a fine ${metal.en} line, cure`),
+    ],
+    image: ({ c1, c2, metal }) => hmNeg(c1, c2) ? `${c2.en} nails with a negative-space ${c1.en} half-moon left at the cuticle, outlined by a thin ${metal.en} line` : `sheer ${c1.en} nails with a ${c2.en} half-moon crescent at the cuticle outlined by a thin ${metal.en} line`,
   },
   {
     id: "fr-skittle", occasions: ["trend", "fall", "spring", "summer"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true,
@@ -960,7 +971,9 @@ const ROLES: Record<string, Role> = {
   waves: { g: "line", on: W },
   jelly: { g: "tone", pal: [["raspberry", "milky", "gold"], ["hotPink", "milky", "silver"], ["persimmon", "milky", "gold"]] },
   babyboomer: { g: "tone", shapes: SH4 },
-  chromefrench: { g: "tone", pal: [["sheer", "silver", "silver"], ["milky", "pearl", "pearl"], ["nude", "gold", "gold"]] },
+  // chrome French: nền TRONG / sữa (đầu gương trên nền sơn đặc nâu cà phê, mận… = 1 cái đai kim loại bọc đầu móng như
+  // đầu bịt ống — soi vòng 2); bảng màu nền đặc bị loại → máy lấy bảng mặc định dưới đây
+  chromefrench: { g: "tone", ok: ([a]) => SHEER.includes(a), pal: [["sheer", "silver", "silver"], ["milky", "pearl", "pearl"], ["nude", "gold", "gold"]] },
   charm3d: { g: "relief", on: "metal", pal: [["babyPink", "milky", "silver"], ["redVelvet", "milky", "gold"], ["milky", "pearl", "gold"]] },
   polka: { g: "motif", pal: [["plumNoir", "milky", "silver"], ["black", "milky", "silver"], ["nude", "chocolate", "gold"]] },
   auroracat: { g: "tone", base: "dark", shapes: SH5, pal: [["black", "milky", "silver"], ["navy", "milky", "silver"], ["plumNoir", "milky", "silver"]] },

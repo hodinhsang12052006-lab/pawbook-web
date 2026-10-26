@@ -227,7 +227,8 @@ const THEMES: Record<string, Theme> = {
     quiet: { pattern: "solid", colors: [dark, light, m] },
   }),
   "mix-fall": ({ dark, light, m }) => ({
-    hero: { pattern: "leaf", colors: [dark, light, m] },
+    // lá THU vẽ tay nhiều màu (mẫu "leaf" riêng giờ là lá phong KIM LOẠI theo tên mẫu)
+    hero: { pattern: "leaf:autumn", colors: [dark, light, m] },
     echo: { pattern: avail(["fr-tortoise", "tortoise"]), colors: [light, dark, m] },
     thread: has("colorchrome") ? { pattern: "colorchrome", colors: [light, light, m], finish: "chrome" } : { pattern: "solid", colors: [light, light, m], finish: "chrome" },
     quiet: { pattern: "solid", colors: [dark, light, m] },

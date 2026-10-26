@@ -1407,7 +1407,7 @@ const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "ch
 /** Hoạ tiết HỮU CƠ (lá, hoa, nụ, bông tuyết, chấm): xoay theo trục móng và được mép móng cắt bớt (thợ vẽ tràn mép). Còn
  *  lại là NHÂN VẬT / ĐỒ VẬT (ma, mèo, đầu lâu, bí ngô, quả châu, hoa gel 3D…): luôn đứng thẳng trong ảnh, KHÔNG bao giờ bị
  *  mép móng cắt (bị cắt nhìn như decal dán lệch). */
-const ORGANIC = new Set<string>(["leaf", "flower", "bud", "gleaf", "flake", "pflower", "pdot", "ditsy", "sparkle", "mleaf"]);
+const ORGANIC = new Set<string>(["leaf", "flower", "bud", "gleaf", "flake", "pflower", "pdot", "ditsy", "sparkle"]);
 
 /** Ngôi sao 5 cánh (cánh hướng về đầu móng): khoảng cách có dấu tới mép (âm = trong), đơn vị = bán kính ngoài. */
 function starSD(x: number, y: number): number {
@@ -1467,6 +1467,8 @@ const glint = (x: number, y: number, cx: number, cy: number, rr: number) => {
 };
 /** lá phong: [góc thuỳ (0 = lên), dài, nửa bề rộng góc] — thuỳ nhọn ĐẦY ĐẶN, khe giữa thuỳ nông vừa */
 const MAPLE: [number, number, number][] = [[0, 1, 0.62], [1.08, 0.93, 0.6], [-1.08, 0.93, 0.6], [2.2, 0.6, 0.5], [-2.2, 0.6, 0.5]];
+/** lá phong kim loại: thuỳ HẸP hơn (thuỳ chính nhọn + 2 răng bên, khe sâu) — [góc, dài, nửa bề rộng góc] */
+const MAPLE7: [number, number, number][] = [[0, 0.98, 0.56], [1.2, 0.92, 0.56], [-1.2, 0.92, 0.56], [2.25, 0.62, 0.46], [-2.25, 0.62, 0.46]];
 /** ô rô: 2 lá xoè chữ V từ gốc (0, −0.14): [tâm x, tâm y, góc trục lá] + 3 quả chụm ở gốc */
 const HOLLY: [number, number, number][] = [[-0.45, 0.17, 2.53], [0.5, 0.13, 0.5]];
 const BERRY: [number, number][] = [[-0.15, -0.22], [0.15, -0.2], [0.0, -0.45]];
@@ -1632,6 +1634,25 @@ function paintedSD(kind: string, x: number, y: number, o: Float64Array): void {
       break;
     }
     case "gleaf": { const lf = vesica(y, x, 1, 0.34); o[0] = o[5] = lf; o[1] = Math.max(lf, PS.lx > 0 ? x : -x); break; }
+    case "mleaf": {
+      // LÁ PHONG KIM LOẠI (sticker / lá foil vàng — đúng tên mẫu "lá phong vàng ánh kim"): 5 thuỳ chính nhọn, MỖI thuỳ có
+      // 2 răng nhọn 2 bên (thiếu răng thì lá đọc ra ngôi sao / bông tuyết), khe giữa thuỳ sâu tới gần tâm; gân giữa + 4
+      // gân thuỳ dập chìm; cuống cong. Thân lá đặt cao hơn tâm khung một chút để chừa chỗ cuống
+      const yc = y - 0.12, a = Math.atan2(x, yc), rho = Math.hypot(x, yc), R0 = 0.4;
+      let rm = R0;
+      for (const [ai, li, wi] of MAPLE7) {
+        let da = Math.abs(a - ai); if (da > Math.PI) da = 2 * Math.PI - da;
+        rm = Math.max(rm, R0 + (li - R0) * Math.max(0, 1 - da / wi));
+        for (let sg = -1; sg <= 1; sg += 2) { let db = Math.abs(a - ai - sg * 0.56 * wi); if (db > Math.PI) db = 2 * Math.PI - db; rm = Math.max(rm, R0 + (0.8 * li - R0) * Math.max(0, 1 - db / (0.24 * wi))); }
+      }
+      const leaf = (rho - rm) * 0.5, vw = Math.max(0.022, 0.9 * px);
+      let vein = 9;
+      for (const [ai, li] of MAPLE7) if (li > 0.6) vein = Math.min(vein, segDist(x, yc, 0, -0.05, 0.8 * li * Math.sin(ai), 0.8 * li * Math.cos(ai)));
+      o[0] = leaf; o[1] = Math.max(vein - vw, leaf + 0.04);
+      o[2] = qStroke(x, y, 0, -0.04, 0.04, -0.5, 0.16, -0.92, Math.max(0.05, 1.1 * px), Math.max(0.035, 0.85 * px), 4);
+      o[5] = Math.min(leaf, o[2]);
+      break;
+    }
     case "flower": {
       // hoa 5 cánh tròn vẽ 1 nét cọ: cánh đậm dần vào nhuỵ, sáng ở đầu cánh · nét ngăn mảnh giữa 2 cánh · nhuỵ có chấm.
       // v = hoa đào (Tết): đầu cánh có khía, nhuỵ sẫm + tua nhị mảnh chấm vàng
@@ -1833,6 +1854,8 @@ function paintOps(kind: string, tint: number, base: RGB, c2: RGB, metal: RGB, pa
     case "skull": return v ? [{ L: 0, c: K, hi: 0.14 }] : [{ L: 0, c: K, line: true }, { L: 0, c: PK.bone, sh: 0.14, ins: 0 }, { L: 1, c: K }];
     case "leaf": { const c = leafCol(tint, base); return [{ L: 3, c: sc3(c, 0.45) }, { L: 0, c: sc3(c, 0.3), line: true }, { L: 0, c, tone: true, ins: 0 }, { L: 1, c: sc3(c, 0.62), ins: 0 }, { L: 2, c: mix3(c, PK.vein, 0.5), a: 0.55, ins: 0 }]; }
     case "gleaf": return [{ L: 0, c: sc3(PK.fleaf, 0.4), line: true }, { L: 0, c: PK.fleaf, ins: 0 }, { L: 1, c: sc3(PK.fleaf, 0.62), ins: 0 }];
+    // lá phong foil kim loại: cuống + thân ánh kim theo độ cong móng, gân dập chìm tối hơn (màu kim loại đậm)
+    case "mleaf": return [{ L: 2, metal: true }, { L: 0, metal: true }, { L: 1, c: sc3(metal, 0.42), a: 0.75, ins: 0 }];
     case "flower": case "bud": {
       // cánh hoa: màu mẫu nếu tách khỏi nền (ΔE ≥ 18 — có viền liner đậm đỡ), không thì đổi sang màu sơn khác trong bảng
       const p = pat === "blossom" ? pickPaint(PK.blossoms, base, 18) : pickPaint(sameC(c2, base) ? PK.petals : [c2, ...PK.petals], base, 18);
@@ -2036,7 +2059,15 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     case "eyeball": return [{ u: 0.48 + 0.03 * j(1), t: 0.03 * j(2), r: 0.6, kind: "eye" }];
     // lá thu vẽ tay: 3 lá nhỏ dần "rơi" chéo từ 1 góc đầu móng, lá to bị mép cắt, mỗi lá xoay / màu khác nhau
     // (lá phong thuỳ nhọn nhìn nhỏ hơn khung ~25% → r lớn hơn cỡ nhìn thấy 0.45 / 0.3 / 0.18 của kế hoạch)
-    case "leaf": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.8, t: 0.5 * sd, r: 0.72, kind: "leaf", rot: -0.6 * sd + 0.4 * j(1), tint: 0 }, { u: 0.44, t: -0.14 * sd, r: 0.46, kind: "leaf", rot: 0.5 * sd + 0.5 * j(2), tint: 1 }, { u: 0.19, t: 0.3 * sd, r: 0.28, kind: "leaf", rot: 1.2 * sd + 0.5 * j(3), tint: 2 }]; }
+    // LÁ PHONG KIM LOẠI (mẫu "lá phong vàng / bạc ánh kim" = sticker / foil kim loại): 1 lá to ~60% bề ngang móng nghiêng
+    // nhẹ + 1–2 lá nhỏ "rơi" chéo — đúng màu kim loại của tên mẫu (lá gỉ sắt / cam nhỏ kiểu cũ không phải vàng)
+    case "leaf": {
+      const sd = j(6) > 0 ? 1 : -1;
+      return [{ u: 0.54 + 0.03 * j(1), t: 0.06 * sd, r: 0.74, kind: "mleaf", rot: -0.3 * sd + 0.2 * j(2) }, { u: 0.2, t: -0.46 * sd, r: 0.32, kind: "mleaf", rot: 0.7 * sd + 0.3 * j(3) },
+        ...(j(4) > -0.2 ? [{ u: 0.86, t: 0.42 * sd, r: 0.24, kind: "mleaf" as const, rot: -0.9 * sd + 0.3 * j(5) }] : [])];
+    }
+    // lá THU vẽ tay nhiều màu (bộ mix-fall "lá thu"): 3 lá nhỏ dần rơi chéo, mỗi lá 1 tông gỉ sắt / nghệ / cam cháy
+    case "leaf:autumn": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.8, t: 0.5 * sd, r: 0.72, kind: "leaf", rot: -0.6 * sd + 0.4 * j(1), tint: 0 }, { u: 0.44, t: -0.14 * sd, r: 0.46, kind: "leaf", rot: 0.5 * sd + 0.5 * j(2), tint: 1 }, { u: 0.19, t: 0.3 * sd, r: 0.28, kind: "leaf", rot: 1.2 * sd + 0.5 * j(3), tint: 2 }]; }
     case "witchy": return [{ u: 0.18, t: 0.02, r: 0.24, kind: "star", rot: 0.4 * j(1) }];
     case "milkbath": return [{ u: 0.3, t: -0.3, r: 0.3, kind: "pflower", rot: 6.28 * j(1) }, { u: 0.55, t: 0.28, r: 0.26, kind: "pflower", rot: 6.28 * j(2) }, { u: 0.78, t: -0.2, r: 0.2, kind: "pflower", rot: 6.28 * j(3) }, { u: 0.2, t: 0.4, r: 0.16, kind: "pflower", rot: 6.28 * j(4) }];
     // HOA NHÍ (ditsy florals — tên mẫu "hoa nhí"): 6–9 bông 5 cánh chấm bi tí hon (0.12–0.2 hw) 2 tông + 3–4 lá nhỏ nép

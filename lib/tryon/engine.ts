@@ -3160,18 +3160,19 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "leopard": {
-            // DA BÁO như thợ vẽ: HOA ĐỐM (rosette) dày ~60–70% mặt móng, ~3 hoa / bề ngang, to nhỏ khác nhau (bán kính ~0.24–0.35
-            // hw, méo + xoay ngẫu nhiên): lõi c2 loang (đậm hơn nền) + 2–4 NÉT PHẨY đen hình chữ C đứt quãng ôm quanh (dày ở
-            // 1 đầu, thon đuôi), vài hoa bị mép móng cắt dở, CHẤM ĐEN nhỏ méo lấp khe giữa các hoa. Bản cũ: ô 0.82 hw, đốm 0.2–
-            // 0.34 ô thưa với 1 vành C mảnh → hạt / bọ / dấu chân rải rác.
-            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), cell = 0.7, gx = t / cell, gy = Yh / cell;
+            // DA BÁO như thợ vẽ: HOA ĐỐM (rosette) ~3 hoa / bề ngang móng (ô 0.86 hw, còn khe nền giữa các hoa — 4–5 hoa / bề
+            // ngang thì rối, ảnh nhỏ nhìn như rằn ri), to nhỏ khác nhau (bán kính ~0.25–0.34 hw, méo + xoay ngẫu nhiên): lõi
+            // màu CARAMEL / BE NÂU ẤM tính trong OKLab, gần đặc (lõi c2 TRONG pha lên nền xám / hồng ra vết xám bẩn như rằn ri)
+            // + 2–4 NÉT PHẨY đen hình chữ C đứt quãng ôm quanh (dày ở 1 đầu, thon đuôi), vài hoa bị mép móng cắt dở, CHẤM ĐEN
+            // nhỏ méo thưa lấp khe giữa các hoa.
+            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), cell = 0.86, gx = t / cell, gy = Yh / cell;
             const ix = Math.floor(gx), iy = Math.floor(gy);
             let best = 9, bi = 0, bj = 0, bang = 0, bR = 1;
             for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
               const ci = ix + i2, cj = iy + j2;
-              if (hash2(ci, cj, seedN + 4) < 0.1) continue; // vài ô trống → khe cho chấm đen
+              if (hash2(ci, cj, seedN + 4) < 0.14) continue; // vài ô trống → khe cho chấm đen
               const px = ci + 0.22 + 0.56 * hash2(ci, cj, seedN), py = cj + 0.22 + 0.56 * hash2(ci, cj, seedN + 1);
-              const R = (0.24 + 0.11 * hash2(ci, cj, seedN + 2)) / cell, ra = 6.28 * hash2(ci, cj, seedN + 6), el = 1.1 + 0.2 * hash2(ci, cj, seedN + 7);
+              const R = (0.25 + 0.09 * hash2(ci, cj, seedN + 2)) / cell, ra = 6.28 * hash2(ci, cj, seedN + 6), el = 1.1 + 0.2 * hash2(ci, cj, seedN + 7);
               const dx0 = gx - px, dy0 = gy - py, dx = (dx0 * Math.cos(ra) + dy0 * Math.sin(ra)) / el, dy = -dx0 * Math.sin(ra) + dy0 * Math.cos(ra);
               const an = Math.atan2(dy, dx), wob = 1 + 0.13 * Math.sin(3 * an + 6.28 * hash2(ci, cj, seedN + 3)) + 0.07 * Math.sin(5 * an + 1.7);
               const d = Math.hypot(dx, dy) / (R * wob);
@@ -3179,8 +3180,17 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             }
             const aD = (0.7 * p1) / bR; // khử răng cưa ~0.7px theo đơn vị bán kính hoa
             const K: RGB = [0.012, 0.008, 0.006];
-            // lõi loang: c2 pha nền, mép lõi mềm, hơi đậm dần vào giữa
-            base = mix3(c1, mix3(c1, c2, 0.62 + 0.18 * (1 - smooth(0, 0.7, best))), 1 - smooth(0.76, 0.87, best));
+            // lõi caramel (memo theo móng): nền ấm có sắc → cùng sắc nền, đậm hơn ~0.1 L, sắc ≥ 0.09; nền xám / hồng / sáng →
+            // caramel be nâu (hue ~62°). Phủ 0.9, hơi sáng dần vào giữa
+            let lc = tipP.memo.leo as RGB[] | undefined;
+            if (!lc) {
+              const o = okOf(c1), C = Math.hypot(o[1], o[2]), hu = Math.atan2(o[2], o[1]);
+              const warm = C > 0.05 && hu > 0.26 && hu < 1.66, h2 = warm ? hu : 1.08, C2 = Math.max(0.095, Math.min(0.14, 0.9 * C));
+              const L2 = o[0] > 0.7 ? 0.66 : Math.max(0.42, Math.min(0.64, o[0] - 0.1));
+              const cc = fromOk([L2, C2 * Math.cos(h2), C2 * Math.sin(h2)]);
+              lc = tipP.memo.leo = [cc, okShift(cc, 0.04)];
+            }
+            base = mix3(c1, mix3(lc[0], lc[1], 1 - smooth(0, 0.7, best)), 0.9 * (1 - smooth(0.76, 0.87, best)));
             // vành = 2–4 nét phẩy: chia vòng theo góc, mỗi đoạn phủ 55–85% cung, bề dày dồn về 1 đầu (đầu chấm cọ → đuôi thon)
             const nA = 2 + Math.floor(3 * hash2(bi, bj, seedN + 5)), seg2 = 6.2832 / nA;
             const rel = ((((bang - 6.28 * hash2(bi, bj, seedN + 8)) % 6.2832) + 6.2832) % 6.2832) / seg2, kA = Math.floor(rel);
@@ -3196,7 +3206,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               let spk = 0;
               for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
                 const ci = qx + i2, cj = qy + j2;
-                if (hash2(ci, cj, seedN + 11) > 0.45) continue;
+                if (hash2(ci, cj, seedN + 11) > 0.3) continue;
                 const dx = (sx - ci - 0.5 - 0.6 * (hash2(ci, cj, seedN + 12) - 0.5)) * cs, dy = (sy - cj - 0.5 - 0.6 * (hash2(ci, cj, seedN + 13) - 0.5)) * cs;
                 const r = Math.max(1.5 * p1, 0.04 + 0.035 * hash2(ci, cj, seedN + 14)), an = Math.atan2(dy, dx);
                 const dd = Math.hypot(dx * 1.25, dy) - r * (1 + 0.25 * Math.sin(2 * an + 6.28 * hash2(ci, cj, seedN + 15)));

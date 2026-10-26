@@ -406,7 +406,9 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const hi = imgs["hand.jpg"], hs = segsOf["hand.jpg"];
   const cf = renderLook(hi, hs, LOOK(["#f6d5d0", "#ffffff", "#c0c0c0"], "glossy", { pattern: "chromefrench" }));
   const tipL: number[] = [];
-  for (const sg of hs) px(sg, (x, y, k) => { if (sg.along[k] > 0.94 && Math.abs(sg.across[k]) < 0.8) tipL.push(lumaAt(cf, x, y)); });
+  // cả bộ chrome French: đầu gương sâu ~1/5 móng (≈ 0.39 hw ≈ 14% dài móng ở hand.jpg — vòng 2, trước là viền micro 0.22 hw)
+  // → lấy mẫu trên 10% đầu móng (along > 0.9) cho trọn dải sáng + mảng tối "chân trời"; 6% đầu chỉ còn vành Fresnel + dải sáng
+  for (const sg of hs) px(sg, (x, y, k) => { if (sg.along[k] > 0.9 && Math.abs(sg.across[k]) < 0.8) tipL.push(lumaAt(cf, x, y)); });
   const tipOk = sd(tipL) >= 30 && Math.max(...tipL) >= 215 && Math.min(...tipL) <= 120;
   // b) velvet đỏ rượu: giữ độ đậm màu (không bạc thành nâu bụi), giữa móng sáng hơn mép (quầng từ tính)
   const pi = imgs["pink.jpg"], ps = segsOf["pink.jpg"];

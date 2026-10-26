@@ -1,6 +1,6 @@
 // Công cụ soi (không phải test): 1 mẫu THẬT cho MỖI hoạ tiết của máy tạo mẫu (lấy từ generateEngineDesigns qua nhiều
 // ngày / dịp), vẽ bằng đúng đường cron (renderDesignImage) → các tờ 12 ô + catalog_index.json. Dùng để soi trước / sau
-// khi sửa hoạ tiết.   npx tsx scripts/qa/design_catalog.mts <thư-mục-ra> [lọc-regex-hoạ-tiết]
+// khi sửa hoạ tiết.   npx tsx scripts/qa/design_catalog.mts <thư-mục-ra> [lọc-regex-hoạ-tiết]   (TILE_W=1024: ô cỡ thật để soi)
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -19,7 +19,7 @@ for (let s = 0; s < 40 && byPat.size < PATTERN_IDS.length; s++) for (const date 
 }
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 const label = (W: number, a: string, b: string) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="40"><rect width="${W}" height="40" fill="rgba(0,0,0,.72)"/><text x="6" y="16" font-size="14" fill="#ff0" font-family="sans-serif">${esc(a)}</text><text x="6" y="33" font-size="13" fill="#fff" font-family="sans-serif">${esc(b).slice(0, 52)}</text></svg>`);
-const W = 400, tiles: Buffer[] = [], index: any[] = [];
+const W = Number(process.env.TILE_W) || 400, tiles: Buffer[] = [], index: any[] = [];
 const pats = PATTERN_IDS.filter((p) => byPat.has(p) && canRenderPattern(p) && (!ONLY || ONLY.test(p)));
 for (const [i, p] of pats.entries()) {
   const d = byPat.get(p);

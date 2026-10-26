@@ -1544,6 +1544,16 @@ function paintedSD(kind: string, x: number, y: number, o: Float64Array): void {
       break;
     }
     case "pdot": o[0] = o[5] = Math.hypot(x, y) - 1; break;
+    case "ditsy": {
+      // HOA NHÍ chấm bi: 5 chấm cánh tròn gần chạm nhau quanh 1 tâm (cây chấm bi chấm 5 lần — khe nhỏ giữa 2 cánh đọc ra
+      // từng cánh) + 1 chấm nhuỵ màu khác. Phẳng, không viền liner (hoa nhí vẽ bằng cây chấm, không phải hình dán)
+      let pet = 9;
+      for (let q = 0; q < 5; q++) { const an = q * 1.2566; pet = Math.min(pet, Math.hypot(x - 0.6 * Math.sin(an), y - 0.6 * Math.cos(an)) - 0.37); }
+      const rho = Math.hypot(x, y);
+      o[0] = o[5] = Math.min(pet, rho - 0.42); o[1] = rho - Math.max(0.25, 1.15 * px);
+      o[6] = -0.12 * (1 - smooth(0.3, 0.7, rho)); // gốc cánh đậm hơn chút (gel dày ở chỗ chấm đè nhau)
+      break;
+    }
     case "cherry": {
       // cặp cherry: 2 quả đỏ (đổ bóng tròn phía khuất đèn + vệt bóng trắng cong theo mép) · 2 cuống cong chụm 1 gốc · lá
       // nhọn 2 tông (gân giữa là ranh 2 tông)
@@ -1830,6 +1840,14 @@ function paintOps(kind: string, tint: number, base: RGB, c2: RGB, metal: RGB, pa
       const ctr = v ? PK.blossomC : PK.floralC;
       return [{ L: 0, c: sc3(p, 0.52), line: true }, { L: 0, c: p, tone: true, ins: 0 }, { L: 1, c: sc3(p, 0.68), a: 0.75, ins: 0 }, { L: 2, c: sc3(ctr, 0.55), line: true }, { L: 2, c: ctr, ins: 2 }, { L: 3, c: v ? PK.blossomS : sc3(PK.floralC, 0.5) }, { L: 4, c: PK.floralC }];
     }
+    case "ditsy": {
+      // hoa nhí 2 tông: cánh màu mẫu (c2) xen hoa màu thứ 2 (trắng kem / hồng phấn / oải hương — màu tách nền, khác c2);
+      // nhuỵ vàng nghệ (trên nền vàng thì nhuỵ nâu đỏ)
+      const p0 = pickPaint(sameC(c2, base) ? PK.petals : [c2, ...PK.petals], base, 22);
+      const alt = PK.petals.filter((c) => dE(c, p0) > 25), p1 = pickPaint(alt.length ? alt : PK.petals, base, 22);
+      const p = tint % 3 === 2 ? p1 : p0, ctr = dE(PK.floralC, p) > 30 && dE(PK.floralC, base) > 25 ? PK.floralC : PK.blossomC;
+      return [{ L: 0, c: p, tone: true }, { L: 1, c: ctr }];
+    }
     case "heart": { const h = contrastOn(sameC(c2, base) ? PK.cherry : c2, base, 28); return [{ L: 0, c: sc3(h, 0.42), line: true }, { L: 0, c: h, hi: 0.85, sh: 0.25, ins: 0 }]; }
     case "holly": return [{ L: 0, c: sc3(PK.holly, 0.3), line: true }, { L: 0, c: PK.holly, ins: 0 }, { L: 1, c: sc3(PK.holly, 0.55), ins: 0 }, { L: 2, c: PK.hollyRib, a: 0.6, ins: 0 }, { L: 3, c: sc3(PK.berry, 0.35), line: true }, { L: 3, c: PK.berry, sh: 0.35, ins: 3 }, { L: 4, c: W, a: 0.92 }];
     case "ornament": {
@@ -1968,7 +1986,7 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     // 4 cột kín móng cũ nhìn như vải in cắt bằng kéo. Mỗi móng hạt giống riêng → bố cục khác nhau
     case "polka:cat": {
       const n = 7 + Math.floor(4 * hash2(seed, 8, 31));
-      return scatterBeads(seed, n, (k) => [0.15, 0.1, 0.12, 0.08, 0.13, 0.09, 0.11, 0.07, 0.1, 0.08][k], "pdot", 0.14, 0.9, 0.8, 0.14, (u) => 0.22 + 0.78 * smooth(0.15, 0.85, u));
+      return scatterBeads(seed, n, (k) => [0.17, 0.12, 0.14, 0.1, 0.15, 0.1, 0.13, 0.09, 0.12, 0.1][k], "pdot", 0.14, 0.9, 0.8, 0.14, (u) => 0.22 + 0.78 * smooth(0.15, 0.85, u));
     }
     // ECHO của chấm bi: chuỗi 4–5 chấm nhỏ dần ở góc đầu móng, hoặc 1 hàng chấm tí hon ôm vòng cung chân móng (dotted
     // cuticle — cong theo chân móng, 2 đầu hàng chạy lên phía đầu móng)
@@ -2021,8 +2039,28 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     case "leaf": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.8, t: 0.5 * sd, r: 0.72, kind: "leaf", rot: -0.6 * sd + 0.4 * j(1), tint: 0 }, { u: 0.44, t: -0.14 * sd, r: 0.46, kind: "leaf", rot: 0.5 * sd + 0.5 * j(2), tint: 1 }, { u: 0.19, t: 0.3 * sd, r: 0.28, kind: "leaf", rot: 1.2 * sd + 0.5 * j(3), tint: 2 }]; }
     case "witchy": return [{ u: 0.18, t: 0.02, r: 0.24, kind: "star", rot: 0.4 * j(1) }];
     case "milkbath": return [{ u: 0.3, t: -0.3, r: 0.3, kind: "pflower", rot: 6.28 * j(1) }, { u: 0.55, t: 0.28, r: 0.26, kind: "pflower", rot: 6.28 * j(2) }, { u: 0.78, t: -0.2, r: 0.2, kind: "pflower", rot: 6.28 * j(3) }, { u: 0.2, t: 0.4, r: 0.16, kind: "pflower", rot: 6.28 * j(4) }];
-    // hoa vẽ tay: 1 bông to ở góc đầu móng (mép cắt bớt) + 2 lá xanh lấp ló dưới bông + 1–2 nụ; mỗi móng lật bên khác nhau
-    case "floral": case "blossom": {
+    // HOA NHÍ (ditsy florals — tên mẫu "hoa nhí"): 6–9 bông 5 cánh chấm bi tí hon (0.12–0.2 hw) 2 tông + 3–4 lá nhỏ nép
+    // cạnh hoa; 3 bố cục: rải đều cả móng · dồn về 1 góc đầu móng thưa dần · vòng hoa ôm chân móng. 1 bông to + 1 nụ cũ
+    // đọc ra 1 sticker, không phải hoa nhí
+    case "floral": case "floral:echo": {
+      const sd = j(6) > 0 ? 1 : -1, echo = pattern === "floral:echo", v = echo ? 3 : Math.floor(hash2(seed, 7, 31) * 3);
+      // cỡ thật trên ảnh kho mẫu (hw 31–56px): bông 0.18–0.26 hw ≈ 6–14px bán kính — nhỏ hơn thì 5 cánh nhoè thành 1 chấm
+      const RF = [0.26, 0.21, 0.23, 0.19, 0.22, 0.2, 0.18, 0.21, 0.19];
+      let fl: Bead[];
+      if (v === 0) fl = scatterBeads(seed, 6 + Math.floor(3 * hash2(seed, 8, 31)), (k) => RF[k], "ditsy", 0.14, 0.88, 0.76, 0.08);
+      else if (v === 1) fl = scatterBeads(seed, 7, (k) => RF[k], "ditsy", 0.16, 0.9, 0.8, 0.05, (u, t) => Math.exp(-(((u - 0.82) * 2.8) ** 2 + (t - 0.5 * sd) ** 2) / 2.6));
+      else if (v === 2) fl = [-0.64, -0.32, 0, 0.32, 0.64].map((t, k) => ({ u: 0.26 + 0.16 * t * t + 0.02 * j(40 + k), t: t + 0.03 * j(50 + k), r: [0.16, 0.2, 0.18, 0.21, 0.16][k], kind: "ditsy" as const, whole: true, rot: 6.28 * j(60 + k), tint: k }));
+      else fl = [{ u: 0.68, t: 0.34 * sd, r: 0.22 }, { u: 0.82, t: -0.04 * sd, r: 0.17 }, { u: 0.53, t: -0.04 * sd, r: 0.16 }].map((b, k) => ({ ...b, kind: "ditsy" as const, whole: true, rot: 6.28 * j(60 + k), tint: k === 1 ? 2 : 0 }));
+      // lá nhỏ nép cạnh 3–4 bông (chĩa ra ngoài bông), vẽ TRƯỚC để cánh hoa đè lên gốc lá
+      const leaves: Bead[] = [];
+      for (let k = 0; k < fl.length && leaves.length < (echo ? 1 : 4); k += 2) {
+        const f = fl[k], an = 6.28 * hash2(seed, 70 + k, 31), dt = Math.sin(an), du = Math.cos(an) / 2.8, lr = Math.max(0.16, 0.8 * f.r);
+        leaves.push({ u: f.u + du * (f.r + 0.55 * lr), t: f.t + dt * (f.r + 0.55 * lr), r: lr, kind: "gleaf", rot: Math.atan2(-dt, du * 2.8) });
+      }
+      return [...leaves, ...fl];
+    }
+    // hoa đào (Tết) vẽ tay: 1 bông to ở góc đầu móng (mép cắt bớt) + 2 lá xanh lấp ló dưới bông + 1–2 nụ; mỗi móng lật bên
+    case "blossom": {
       // bông chính r 0.72 (mặt móng cong làm bông lệch mép co lại → nhìn ≈ 55% bề ngang, mép cắt 1 bên), lá 0.4 / 0.34, nụ
       // 0.26 / 0.2 — nụ / lá nhỏ hơn thì chỉ còn chấm
       const sd = j(6) > 0 ? 1 : -1, fu = 0.72 + 0.04 * j(1), ft = 0.42 * sd;

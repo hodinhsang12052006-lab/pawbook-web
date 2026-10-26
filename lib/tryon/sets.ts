@@ -51,7 +51,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   slimedrip: [{ pattern: "french", colors: (p) => [p.c1, SLIME, p.m] }],
   // hero 1 tim to vẽ tay → echo 2 tim NHỎ xếp chéo (bản cỡ gần bằng hero nhìn như dán nhầm 2 sticker)
   hearts: [{ pick: "twin", scale: 0.5, mirror: true }],
-  floral: [{ pick: "second", scale: 0.95 }],
+  // hoa nhí: echo = 2–3 bông nhí + 1 lá ở góc đầu móng (1 chiếc lá lẻ trơ trọi nhìn như hạt bụi xanh)
+  floral: [{ pattern: "floral:echo", pick: "all" }],
   blossom: [{ pick: "second", scale: 0.95 }],
   leaf: [{ pick: "twin", scale: 0.6, mirror: true }],
   snow: [{ pick: "rest", scale: 1, mirror: true }],

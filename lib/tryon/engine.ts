@@ -103,7 +103,13 @@ function halfWidthAt(shape: Shape, s: number, Ltot: number, hw: number): number 
     case "oval": { const r = 0.5 * W; if (rem < r) w = hw * Math.sqrt(Math.max(0, 1 - ((r - rem) / r) ** 2)); break; }
     case "almond": { const r = 1.0 * W; if (rem < r) w = hw * Math.pow(Math.max(0, 1 - ((r - rem) / r) ** 2), 0.62); break; }
     case "stiletto": { const r = 1.45 * W; if (rem < r) w = hw * Math.pow(rem / r, 0.9); break; }
-    case "coffin": { const r = 0.9 * W; if (rem < r) w = hw * (0.58 + 0.42 * (rem / r)); break; }
+    case "coffin": {
+      // 2 góc mép tự do BO TRÒN r 0.12·hw như thợ dũa (góc nhọn 90° thành mảnh giấy cắt bằng kéo)
+      const r = 0.9 * W, rc = 0.12 * hw;
+      if (rem < r) w = hw * (0.58 + 0.42 * (rem / r));
+      if (rem < rc) w -= rc - Math.sqrt(Math.max(0, rc * rc - (rc - rem) ** 2));
+      break;
+    }
   }
   return w;
 }
@@ -128,6 +134,10 @@ export interface NailSeg {
   outline: P[];
   /** móng điểm nhấn (mix màu: màu phụ) — phiên Thử mẫu đặt theo vị trí trên bàn tay */
   accent?: boolean;
+  /** móng ĐẮP: vị trí ngang theo bề ngang THẬT của phần đắp tại chỗ (−1…1; đầu nhọn / coffin thon vẫn tới ±1) */
+  acrossExt?: Float32Array;
+  /** độ phủ SƠN (≥ alpha) khi sơn phủ cả khe chân móng trần của ảnh — không có thì = alpha (mặt nạ móng) */
+  paint?: Float32Array;
 }
 
 /** Kết quả KHỚP KHUÔN 1 móng (bước tốn thời gian) — đổi dáng / độ dài đắp chỉ cần vẽ lại mặt nạ (rasterNail). */
@@ -502,6 +512,9 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
   for (let yy = 0; yy <= h; yy++) for (let xx = 0; xx <= w; xx++) corner[yy * (w + 1) + xx] = inside(x0 + xx - 0.5, y0 + yy - 0.5) ? 1 : 0;
   const alpha = new Float32Array(w * h), nat = new Uint8Array(w * h);
   const along = new Float32Array(w * h), across = new Float32Array(w * h);
+  // phần đắp: ngang theo nửa bề ngang THẬT của dáng đắp ở đúng chỗ đó (bảng trơn extTabs) — `across` chia theo bề ngang
+  // thân móng nên đầu thon không tới ±1 (mất độ cong C → tấm phẳng như giấy dán)
+  const acrossExt = ext ? new Float32Array(w * h) : undefined;
   for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
     const k = yy * w + xx, c0 = yy * (w + 1) + xx;
     const n = corner[c0] + corner[c0 + 1] + corner[c0 + w + 1] + corner[c0 + w + 2];
@@ -517,6 +530,7 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
     if (fitInside(fg, s, t, L)) nat[k] = 1;
     along[k] = (s - fit.s0) / Math.max(1, natL);
     across[k] = (t - c) / Math.max(1, Math.max(fitBody(fit, Math.min(Math.max(s, fit.s0), fit.s1), L), halfU(s)));
+    if (acrossExt) acrossExt[k] = s >= eA ? Math.max(-1.3, Math.min(1.3, (t - c) / Math.max(1, extHalfD(Math.min(s, Ltot), t - c)))) : across[k];
   }
   // BÁM MÉP: khuôn trơn có thể hụt 1–3px ở góc / mép so với móng thật (màu cũ lộ thành viền / góc nhọn — rõ nhất
   // khi đổi móng đen sang màu sáng). Nở thêm tối đa 3 lượt × 1px vào các điểm CHẮC LÀ MÓNG (p ≥ 0.6) liền kề.
@@ -601,6 +615,128 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
       }
     }
   }
+  // VIỀN quanh móng: ngay ngoài khuôn thường còn 1–3px MÉP SƠN CŨ (khuôn hụt 1–2px; đầu ombre nâu, mép sơn đen). Sơn
+  // mới dừng đúng mép khuôn thì vệt đó còn nguyên → móng như sticker có viền nâu (soi #7 #11 #42 #43 #47). Điểm ngoài
+  // khuôn ≤ 3px mà GIỐNG MÀU MÓNG CŨ (bộ chấm điểm màu móng, kể cả viền tối ngả màu móng) và KHÁC nền xa hơn 3.5–5px
+  // cùng hướng ra ngoài → độ phủ nhỏ < 0.5 (hình mặt nạ ≥ 0.5 giữ nguyên, phép đo / kiểm thử khuôn không đổi): vành 1 =
+  // sơn lấn ra 1px, vành 2–3 = chỉ thay nền bằng màu da / nền sạch (edgeUnder lấy từ điểm xa hơn). KHÔNG xoá bóng rãnh
+  // da tối tự nhiên (chỉ tối hơn, màu da) — thay bằng da sáng thì thành viền SÁNG mảnh phía khuất đèn (soi pink.jpg).
+  // Nền tối đều (so tại chỗ) thì không đụng; phần đắp: ngoài mép là nền thật.
+  // KHE CHÂN MÓNG của ảnh: giữa mép sơn cũ và vành sáng mép da thường có 2–6px móng TRẦN xám / tím nhạt (olive.jpg,
+  // hand.jpg, p025) — không mang màu sơn cũ nên bộ chấm điểm màu bỏ sót; sơn sáng mới (nude, trắng sữa) thì dải xám đó
+  // thành VÀNH NÂU XÁM quanh chân móng như sticker (soi #43). Thợ sơn sát da, chừa khe 1–1.5px → SƠN PHỦ dải đó
+  // (`paint`, mặt nạ móng `alpha` giữ nguyên — đo / kiểm thử khuôn không đổi); khe sạch 1–1.5px màu móng trần + gờ gel
+  // do renderLook vẽ ở mép trong của phần sơn (4b). Bề rộng dải: từ mỗi điểm mép dò ra ngoài theo pháp tuyến, còn XÁM
+  // hơn hẳn da (độ đậm màu kém da đo ngoài khe ≥ 5) và chưa gặp vành SÁNG mép da (chi tiết da thật → dừng); tối đa
+  // 0.15·hw ở chân, 0.09·hw ở 2 bên; lấy 1 bề rộng chung cho chân móng và cho TỪNG bên (2 bên khe không đều: bên có
+  // bên không; đo từng điểm thì nhiễu ảnh làm mép sơn méo, đáy bẹt có vai — soi hand.jpg). Nở theo khoảng cách tới mặt
+  // nạ, chuyển dần chân → bên theo hướng pháp tuyến, nhỏ dần về đầu móng → mép sơn mới là đường viền thật dời ra, trơn.
+  let paint: Float32Array | undefined;
+  {
+    const gMax = Math.max(3.2, Math.min(8, 0.15 * fit.hw));
+    const dOut = new Float32Array(w * h), D2 = Math.SQRT2;
+    for (let k = 0; k < w * h; k++) dOut[k] = alpha[k] >= 0.5 ? 0 : 1e6;
+    const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 1e6 : dOut[y * w + x]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = y * w + x; if (dOut[k]) dOut[k] = Math.min(dOut[k], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + D2, at(x + 1, y - 1) + D2); }
+    for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) { const k = y * w + x; if (dOut[k]) dOut[k] = Math.min(dOut[k], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + D2, at(x - 1, y + 1) + D2); }
+    const Ab = boxBlur(alpha, w, h, 2);
+    const labAt = (X: number, Y: number) => { const xi = Math.round(X), yi = Math.round(Y); if (xi < 0 || yi < 0 || xi >= img.w || yi >= img.h) return null; const i = (yi * img.w + xi) * 4; return lab(img.data[i], img.data[i + 1], img.data[i + 2]); };
+    const cls = byColor ? model.classify : null;
+    const ul = Math.hypot(FU.x, FU.y) || 1, aUx = FU.x / ul, aUy = FU.y / ul;
+    const S = new Float32Array(w * h), Cn = new Float32Array(w * h);
+    const wC: number[] = [], wS: [number[], number[]] = [[], []]; // bề rộng khe đo ở chân móng / bên t dương, t âm
+    for (let yy = 1; yy < h - 1; yy++) for (let xx = 1; xx < w - 1; xx++) {
+      const k = yy * w + xx, d = dOut[k], prox = 1 - smooth(0.62, 0.8, along[k]); // prox: chân móng + 2 bên (tới trước đầu móng)
+      if (d <= 0 || d > 3.2 || along[k] < -0.3 || along[k] > (ext ? 0.9 : 1.15)) continue;
+      let nx = Ab[k - 1] - Ab[k + 1], ny = Ab[k - w] - Ab[k + w]; // hướng RA NGOÀI móng
+      const nl = Math.hypot(nx, ny); if (nl < 1e-3) continue;
+      nx /= nl; ny /= nl;
+      const X = x0 + xx, Y = y0 + yy, c = labAt(X, Y)!;
+      const r1 = labAt(X + nx * 3.5, Y + ny * 3.5), r2 = labAt(X + nx * 5, Y + ny * 5);
+      if (r1 && r2) {
+        const ref = [0.5 * (r1[0] + r2[0]), 0.5 * (r1[1] + r2[1]), 0.5 * (r1[2] + r2[2])], dr = dEw(c, ref);
+        S[k] = cls ? smooth(0.3, 0.55, cls(local(X, Y).s)(c)) * smooth(4, 12, dr) : 0; Cn[k] = 1;
+        // ĐẦU MÓNG thật giáp NỀN: ảnh mờ làm màu móng cũ loang 2–4px ra nền (p067: viền cam quanh đầu móng sơn trắng).
+        // Điểm nằm trên đoạn màu NỀN → MÓNG CŨ (pha ≥ 10% màu móng, lệch khỏi đoạn đó ít) = viền loang. Chỉ ở đầu móng —
+        // quanh chân / 2 bên là da, bóng rãnh da tối cũng nằm gần đoạn da → móng tối (không phân biệt được).
+        if (byColor && !ext && along[k] > 0.8) {
+          const nl = model.nail, vx = nl[0] - ref[0], vy = nl[1] - ref[1], vz = nl[2] - ref[2], vv = vx * vx + vy * vy + vz * vz;
+          if (vv > 100) {
+            const f = ((c[0] - ref[0]) * vx + (c[1] - ref[1]) * vy + (c[2] - ref[2]) * vz) / vv;
+            const res = Math.hypot(c[0] - ref[0] - f * vx, c[1] - ref[1] - f * vy, c[2] - ref[2] - f * vz);
+            S[k] = Math.max(S[k], smooth(0.08, 0.3, f) * smooth(4, 10, dr) * (1 - smooth(6, 12, res)));
+          }
+        }
+      }
+      if (prox < 1 || d > 1.5) continue;
+      // dò khe từ điểm mép này
+      const back = -(nx * aUx + ny * aUy); // pháp tuyến quay về phía chân móng
+      const sideM = back < 0.3 && along[k] > 0.12 && along[k] < 0.6;
+      if (back < 0.6 && !sideM) continue;
+      const gL = sideM ? 0.6 * gMax : gMax;
+      const q1 = labAt(X + nx * (gMax + 1.5 - d), Y + ny * (gMax + 1.5 - d)), q2 = labAt(X + nx * (gMax + 3 - d), Y + ny * (gMax + 3 - d));
+      if (!q1 || !q2) continue;
+      const skL = 0.5 * (q1[0] + q2[0]), skC = 0.5 * (chromaOf(q1) + chromaOf(q2));
+      let wd = 0, L1 = -1;
+      for (let j = 1; j <= gL; j++) {
+        const Xq = X + nx * (j - d), Yq = Y + ny * (j - d), q = labAt(Xq, Yq);
+        if (!q) break;
+        if (L1 < 0) L1 = q[0];
+        // móng trần xám (skC < 12: da / nền gần như xám — không phân biệt được) hoặc mép SƠN CŨ còn sót dưới nếp da
+        // (p067: dải cam 4–5px dưới chân móng — bộ chấm điểm màu móng nhận ra)
+        const bare = skC >= 12 && chromaOf(q) <= skC - 5 && q[0] <= Math.max(L1, skL) + 5;
+        if (!bare && !(cls && cls(local(Xq, Yq).s)(q) >= 0.55)) break;
+        wd = j;
+      }
+      (sideM ? wS[across[k] > 0 ? 0 : 1] : wC).push(wd);
+    }
+    // chỉ phần LIỀN với mặt nạ (đi từ mép ra, qua các điểm cũng đạt): bóng nếp da tối xa hơn sau 1 dải da sáng là chi
+    // tiết thật của da, không phải viền sơn cũ
+    const con = new Uint8Array(w * h), NB8 = [-1, 1, -w, w, -w - 1, -w + 1, w - 1, w + 1];
+    for (let it = 0; it < 4; it++) {
+      let ch = 0;
+      for (let yy = 1; yy < h - 1; yy++) for (let xx = 1; xx < w - 1; xx++) {
+        const k = yy * w + xx;
+        if (con[k] || S[k] < 0.15) continue;
+        for (let q = 0; q < 8; q++) { const kn = k + NB8[q]; if (dOut[kn] < dOut[k] && (dOut[kn] === 0 || con[kn])) { con[k] = 1; ch++; break; } }
+      }
+      if (!ch) break;
+    }
+    for (let k = 0; k < w * h; k++) if (!con[k]) S[k] = 0;
+    // làm mượt theo đường viền (trung bình 5×5 trên các điểm ứng viên): xét từng điểm riêng thì chỗ phủ chỗ không →
+    // viền LỐM ĐỐM chấm tối (tệ hơn 1 nét liền)
+    const Sb = boxBlur(S, w, h, 2), Cb = boxBlur(Cn, w, h, 2);
+    for (let k = 0; k < w * h; k++) {
+      if (!Cn[k] || Cb[k] <= 0) continue;
+      const st = Sb[k] / Cb[k];
+      if (st < 0.1) continue;
+      const v = dOut[k] <= 1.2 ? 0.45 * st : 0.04 * st; // < 0.05: renderLook thay nền theo tỉ lệ (không bật / tắt)
+      if (v > alpha[k]) alpha[k] = v;
+    }
+    // ít điểm đo / khe hẹp (< 1.5px) → không nở. Bách phân vị 70 (không phải trung vị): khe hẹp dần về 2 góc chân móng
+    // và có chỗ dò hụt (= 0) — trung vị thì giữa chân móng còn sót 1–2px dải xám
+    const p70 = (a: number[]) => { if (a.length < 8) return 0; a.sort((x, y) => x - y); const v = a[Math.floor(0.7 * a.length)]; return v >= 1.5 ? v : 0; };
+    const Dc = p70(wC), Ds = [p70(wS[0]), p70(wS[1])];
+    // pháp tuyến cho cả điểm xa mép tới gMax: gradient độ phủ làm mờ rộng
+    const Aw = Dc || Ds[0] || Ds[1] ? boxBlur(alpha, w, h, Math.ceil(gMax) + 1) : null;
+    for (let k = 0; Aw && k < w * h; k++) {
+      const d = dOut[k]; // d = 0: điểm mép TRONG mặt nạ (0.5 ≤ alpha < 1) — phải phủ kín, không thì lộ 1 hàng chấm nền
+      if (alpha[k] >= 1 || d > gMax + 1 || along[k] < -0.4 || along[k] > 0.72) continue;
+      const xx = k % w, yy = (k - xx) / w;
+      if (xx < 1 || yy < 1 || xx >= w - 1 || yy >= h - 1) continue;
+      const gx = Aw[k - 1] - Aw[k + 1], gy = Aw[k - w] - Aw[k + w], gl = Math.hypot(gx, gy);
+      if (gl < 1e-4) continue;
+      const wb = smooth(0.25, 0.9, -(gx * aUx + gy * aUy) / gl);
+      const D = Dc * wb + Ds[across[k] > 0 ? 0 : 1] * (1 - wb) * (1 - smooth(0.45, 0.7, along[k]));
+      if (D < 0.6) continue;
+      const pc = Math.max(0, Math.min(1, D - d + 0.5));
+      if (pc <= alpha[k]) continue;
+      if (!paint) paint = Float32Array.from(alpha);
+      paint[k] = pc;
+      if (alpha[k] <= 0) alpha[k] = 1e-3; // dấu "thuộc móng này" (ngoài mặt nạ vẫn chỉ đổi điểm có alpha > 0)
+    }
+    if (paint) for (let k = 0; k < w * h; k++) if (alpha[k] > paint[k]) paint[k] = alpha[k];
+  }
   const cB = fitCenter(fit, fit.s0, L), cT = fitCenter(fit, fit.s1, L);
   // đường viền: 96 tia từ tâm móng, dò mép bằng chia đôi (khuôn lồi quanh tâm)
   const sC = (fit.s0 + Math.max(fit.s1, ext ? Ltot : fit.s1)) / 2, C = atFit(sC, fitCenter(fit, sC, L));
@@ -613,7 +749,7 @@ export function rasterNail(img: Img, model: NailModel, opts: { lengthFactor?: nu
     for (let it = 0; it < 18; it++) { const mid = (lo + hi) / 2; if (inShape(C.x + dx * mid, C.y + dy * mid)) lo = mid; else hi = mid; }
     outline.push({ x: Math.round((C.x + dx * lo) * 10) / 10, y: Math.round((C.y + dy * lo) * 10) / 10 });
   }
-  return { x0, y0, w, h, alpha, natural: nat, ext, along, across, base: atFit(fit.s0, cB), tip: atFit(fit.s1, cT), L: natL, hw: fit.hw, offset: fit.c0, byColor, fit, quality, outline };
+  return { x0, y0, w, h, alpha, natural: nat, ext, along, across, base: atFit(fit.s0, cB), tip: atFit(fit.s1, cT), L: natL, hw: fit.hw, offset: fit.c0, byColor, fit, quality, outline, acrossExt, paint };
 }
 
 // ---------------------------------------------------------------- tô màu theo ánh sáng thật
@@ -1066,40 +1202,74 @@ function metalShade(tint: RGB, q: number, v: number, shade: number, side: number
   return [o[0] + (1 - o[0]) * hot, o[1] + (1 - o[1]) * hot, o[2] + (1 - o[2]) * hot];
 }
 
-/** Màu DA ngay ngoài mép móng cho từng điểm mép (0 < độ phủ < 1): trung bình các điểm ngoài khuôn trong bán kính 2px. */
-function edgeUnder(img: Img, seg: NailSeg): Map<number, [number, number, number]> {
+/** Độ phủ SƠN của móng (mặt nạ + phần sơn phủ khe chân móng) — mọi bước tô / mép gel theo đây, không theo mặt nạ. */
+const paintOf = (seg: NailSeg) => seg.paint ?? seg.alpha;
+
+/**
+ * Màu DA ngay ngoài mép móng cho từng điểm mép (0 < độ phủ < 1): trung bình các điểm ngoài khuôn trong bán kính 3px
+ * (thiếu thì 5px) — điểm sẫm hơn da (rãnh da, mép sơn cũ) gần như không tính, không thì viền tối lại lọt vào phần pha.
+ * + `skin`: màu da quanh móng (tuyến tính, trung vị vành 3–6px) — dựng lại móng trần ở khe chân móng.
+ */
+function edgeUnder(img: Img, seg: NailSeg): { map: Map<number, [number, number, number]>; skin: RGB } {
   const m = new Map<number, [number, number, number]>();
   const { w, h } = seg;
   // độ sáng da quanh móng (trung vị vành 3–6px ngoài mép) — điểm sẫm hơn hẳn là viền móng sẫm cũ còn sót, không lấy làm "da"
-  const ringL: number[] = [];
+  const ringL: number[] = [], ringI: number[] = [];
   for (let k = 0; k < w * h; k += 2) {
     if (seg.alpha[k] > 0) continue;
     const xx = k % w, yy = (k - xx) / w;
     let near = false;
     for (let dy = -6; dy <= 6 && !near; dy += 3) for (let dx = -6; dx <= 6; dx += 3) { const X = xx + dx, Y = yy + dy; if (X >= 0 && Y >= 0 && X < w && Y < h && seg.alpha[Y * w + X] >= 0.5) { near = true; break; } }
-    if (near) ringL.push(luma(img.data, ((seg.y0 + yy) * img.w + seg.x0 + xx) * 4));
+    if (near) { const i = ((seg.y0 + yy) * img.w + seg.x0 + xx) * 4; ringL.push(luma(img.data, i)); ringI.push(i); }
   }
   const skinL = ringL.length ? median(ringL) : 0;
+  // màu da cho móng trần ở khe chân móng: chỉ vành quanh CHÂN + nửa dưới 2 bên (quanh đầu móng là nền — vải kem, mặt
+  // bàn — lấy vào thì "móng trần" thành viền trắng)
+  const sk = ringI.filter((i, q) => { const p = i / 4, xx = (p % img.w) - seg.x0, yy = Math.floor(p / img.w) - seg.y0; return seg.along[yy * w + xx] < 0.5 && Math.abs(ringL[q] - skinL) < 30; });
+  const skin: RGB = sk.length ? [0, 1, 2].map((c) => LIN[median(sk.map((i) => img.data[i + c]))]) as RGB : [0.72, 0.45, 0.38];
+  const P = paintOf(seg);
   for (let k = 0; k < w * h; k++) {
-    const a = seg.alpha[k];
+    const a = P[k];
     if (a <= 0 || a >= 1) continue;
     const xx = k % w, yy = (k - xx) / w;
-    let r = 0, g = 0, b = 0, n = 0;
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
-      const X = xx + dx, Y = yy + dy;
-      if (X < 0 || Y < 0 || X >= w || Y >= h || seg.alpha[Y * w + X] > 0) continue;
-      const i = ((seg.y0 + Y) * img.w + seg.x0 + X) * 4;
-      if (skinL && luma(img.data, i) < skinL - 35) continue;
-      r += img.data[i]; g += img.data[i + 1]; b += img.data[i + 2]; n++;
+    for (const R of [3, 5]) {
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+        const X = xx + dx, Y = yy + dy;
+        if (X < 0 || Y < 0 || X >= w || Y >= h || seg.alpha[Y * w + X] > 0) continue;
+        const i = ((seg.y0 + Y) * img.w + seg.x0 + X) * 4, l = luma(img.data, i);
+        const wt = !skinL || l >= skinL - 35 ? 1 : 0;
+        r += wt * img.data[i]; g += wt * img.data[i + 1]; b += wt * img.data[i + 2]; n += wt;
+      }
+      if (n >= 1.5) { m.set(k, [r / n, g / n, b / n]); break; }
     }
-    if (n >= 2) m.set(k, [r / n, g / n, b / n]);
   }
-  return m;
+  return { map: m, skin };
+}
+
+/** Hướng RA NGOÀI mép móng (vector đơn vị, toạ độ ảnh, xen kẽ x/y) cho điểm cách mép ≤ ~3px — từ độ phủ làm mờ 5×5;
+ *  xa mép = (0, 0). Để biết mép nào quay về phía đèn (gờ gel sáng) / khuất đèn (mặt dưới mép tự do tối). */
+function edgeNormals(seg: NailSeg): Float32Array {
+  const { w, h } = seg, A = boxBlur(paintOf(seg), w, h, 2), out = new Float32Array(2 * w * h);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const k = y * w + x, gx = A[k - 1] - A[k + 1], gy = A[k - w] - A[k + w], g = Math.hypot(gx, gy);
+    if (g > 1e-3) { out[2 * k] = gx / g; out[2 * k + 1] = gy / g; }
+  }
+  return out;
+}
+
+/** Khoảng cách CÓ DẤU, dưới 1px, tới đường mép (độ phủ 0.5) — dương trong móng: trung bình 7×7 độ phủ của 1 mép thẳng
+ *  tăng tuyến tính theo khoảng cách (±3.5px). Khoảng cách chamfer (bước 1 / 1.41px) làm khe chân móng / gờ gel 1–2px
+ *  thành răng cưa bậc thang. Sâu trong móng: dùng chamfer. */
+function edgeSubDist(seg: NailSeg, eDist: Float32Array): Float32Array {
+  const { w, h } = seg, A = boxBlur(paintOf(seg), w, h, 3), out = new Float32Array(w * h);
+  for (let k = 0; k < w * h; k++) { const a = A[k] / 49; out[k] = a >= 0.999 ? Math.max(3.5, eDist[k]) : (a - 0.5) * 7; }
+  return out;
 }
 
 /** Khoảng cách (px, xấp xỉ Euclid — chamfer 2 lượt) từ mỗi điểm trong móng tới mép mặt nạ gần nhất. */
 function edgeDistance(seg: NailSeg): Float32Array {
-  const { w, h, alpha } = seg, d = new Float32Array(w * h), D2 = Math.SQRT2;
+  const { w, h } = seg, alpha = paintOf(seg), d = new Float32Array(w * h), D2 = Math.SQRT2;
   for (let k = 0; k < w * h; k++) d[k] = alpha[k] >= 0.5 ? 1e6 : 0;
   const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : d[y * w + x]);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -1804,11 +1974,12 @@ function beadsFor(pattern: string, seed: number): Bead[] {
 
 /** Bản đồ ánh sáng / màu da mép / khoảng cách tới mép chỉ phụ thuộc ẢNH + MÓNG (không phụ thuộc mẫu) → tính 1 lần,
  *  dùng lại cho cả 10 mẫu (trước đây tính lại mỗi mẫu). eDist: viền chỉ kim loại (đồi mồi), độ dày gel ở chân / mép. */
-const mapCache = new WeakMap<NailSeg, { img: Img; lm: LightMap; under: Map<number, [number, number, number]>; eDist: Float32Array }>();
+const mapCache = new WeakMap<NailSeg, { img: Img; lm: LightMap; under: Map<number, [number, number, number]>; skin: RGB; eDist: Float32Array; eSub: Float32Array; nrm: Float32Array }>();
 function segMaps(img: Img, seg: NailSeg) {
   const hit = mapCache.get(seg);
   if (hit && hit.img === img) return hit;
-  const v = { img, lm: lightMap(img, seg), under: edgeUnder(img, seg), eDist: edgeDistance(seg) };
+  const eu = edgeUnder(img, seg), eDist = edgeDistance(seg);
+  const v = { img, lm: lightMap(img, seg), under: eu.map, skin: eu.skin, eDist, eSub: edgeSubDist(seg, eDist), nrm: edgeNormals(seg) };
   mapCache.set(seg, v);
   return v;
 }
@@ -2059,6 +2230,27 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
   const c1L = cols[0], c2L = cols[1] ?? cols[0], metalL = cols[2] ?? (cols.length > 1 ? cols[cols.length - 1] : [0.69, 0.55, 0.2] as RGB);
   const patL = look.pattern;
   const lum = (c: RGB) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  // trục móng trong ảnh: u = gốc → đầu móng, v = hướng t dương. Móng chúc xuống (tay úp, ảnh white / olive) thì
+  // "phía trên ảnh" là phía CHÂN móng → hoạ tiết vẽ tay (mèo, ma, bí ngô…) phải xoay để luôn ĐỨNG THẲNG trong ảnh
+  const axes = segs.map((seg) => {
+    const axL = Math.hypot(seg.tip.x - seg.base.x, seg.tip.y - seg.base.y) || 1;
+    const axUx = (seg.tip.x - seg.base.x) / axL, axUy = (seg.tip.y - seg.base.y) / axL;
+    let axVx = -axUy, axVy = axUx;
+    { let sg2 = 0; for (let k = 0; k < seg.w * seg.h; k += 5) if (seg.alpha[k] > 0.5) sg2 += seg.across[k] * (((k % seg.w) + seg.x0 - seg.base.x) * axVx + (Math.floor(k / seg.w) + seg.y0 - seg.base.y) * axVy); if (sg2 < 0) { axVx = -axVx; axVy = -axVy; } }
+    return { axUx, axUy, axVx, axVy };
+  });
+  // ĐÈN CHUNG cả bàn tay: mỗi móng tự đoán phía đèn (lm.side); móng KHÔNG có vệt bóng thật đoán theo độ sáng, có khi
+  // ngược các móng khác (p067 móng 2) → vệt phản chiếu tổng hợp nhảy sang phía kia như 1 móng dán lệch. Hướng đèn trong
+  // ẢNH theo đa số (móng có vệt bóng thật nặng ký gấp đôi); móng không có vệt bóng thật theo hướng chung.
+  let lgx = 0, lgy = 0, umx = 0, umy = 0;
+  segs.forEach((seg, i) => {
+    const lm = segMaps(img, seg).lm, a = axes[i], up = -a.axUy >= 0 ? 1 : -1, wt = lm.streak ? 2 : 1;
+    lgx += wt * (lm.side * 0.55 * a.axVx + 0.42 * up * a.axUx); lgy += wt * (lm.side * 0.55 * a.axVy + 0.42 * up * a.axUy);
+    umx += a.axUx; umy += a.axUy;
+  });
+  { const n = Math.hypot(lgx, lgy) || 1; lgx /= n; lgy /= n; }
+  const thMean = Math.atan2(umy, umx);
+  const casts: { seg: NailSeg; lx: number; ly: number }[] = []; // bóng đổ phần đắp — vẽ SAU khi đủ mọi móng
   segs.forEach((seg, i) => {
     // mỗi móng có thể có hoạ tiết / màu / hiệu ứng riêng (bộ móng phối: móng trơn + móng hoạ tiết + móng nhấn)
     const ov = look.nails?.[i] ?? undefined;
@@ -2070,16 +2262,26 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const accent = ov?.role ? ov.role === "hero" : seg.accent ?? (i === 2 || i === 3);
     const onNail = ov?.art ?? (ALL_NAIL_PATTERNS.has(pat) || accent || segs.length < 3); // hoạ tiết có vẽ trên móng này không
     const base0 = pat === "mixmatch" && accent ? c2 : c1;
-    const { lm, under, eDist } = segMaps(img, seg);
-    const side = lm.side;
-    // trục móng trong ảnh: u = gốc → đầu móng, v = hướng t dương. Móng chúc xuống (tay úp, ảnh white / olive) thì
-    // "phía trên ảnh" là phía CHÂN móng → hoạ tiết vẽ tay (mèo, ma, bí ngô…) phải xoay để luôn ĐỨNG THẲNG trong ảnh
-    const axL = Math.hypot(seg.tip.x - seg.base.x, seg.tip.y - seg.base.y) || 1;
-    const axUx = (seg.tip.x - seg.base.x) / axL, axUy = (seg.tip.y - seg.base.y) / axL;
-    let axVx = -axUy, axVy = axUx;
-    { let sg2 = 0; for (let k = 0; k < seg.w * seg.h; k += 5) if (seg.alpha[k] > 0.5) sg2 += seg.across[k] * (((k % seg.w) + seg.x0 - seg.base.x) * axVx + (Math.floor(k / seg.w) + seg.y0 - seg.base.y) * axVy); if (sg2 < 0) { axVx = -axVx; axVy = -axVy; } }
+    const { lm, under, skin, eDist, eSub, nrm } = segMaps(img, seg);
+    const extT = seg.ext ? seg.acrossExt : undefined;
+    const { axUx, axUy, axVx, axVy } = axes[i];
+    const pV = lgx * axVx + lgy * axVy; // đèn chung chiếu về phía t dương bao nhiêu
+    const side = lm.streak || Math.abs(pV) < 0.05 ? lm.side : pV > 0 ? 1 : -1;
     const uprightRot = Math.atan2(axVy, -axUy); // góc xoay để trục "lên" của hoạ tiết trùng phía trên ảnh
     const upS = -axUy >= 0 ? 1 : -1; // đèn chụp ảnh thường từ phía trên ảnh
+    // hướng đèn trong MẶT ẢNH (đơn vị) cho mép gel / bề dày mép tự do / bóng đổ phần đắp
+    let lix = side * 0.55 * axVx + 0.42 * upS * axUx, liy = side * 0.55 * axVy + 0.42 * upS * axUy;
+    { const n = Math.hypot(lix, liy) || 1; lix /= n; liy /= n; }
+    // VỆT PHẢN CHIẾU tổng hợp mỗi ngón 1 khác (4 vệt y hệt = bộ móng dán): ngón nghiêng khác trục trung bình → cửa sổ
+    // phản chiếu dời ngang (theo đúng hình học: phần đèn chiếu ngang móng đổi theo góc, khuếch đại cho thấy, ±0.15),
+    // dài ±20%, rộng ±25%; 1–2 ngón có thanh khung cửa sổ cắt ngang vệt. Phía đèn vẫn chung cả bàn tay.
+    const dTh = Math.atan2(Math.sin(Math.atan2(axUy, axUx) - thMean), Math.cos(Math.atan2(axUy, axUx) - thMean));
+    const mvx = axVx * Math.cos(dTh) + axVy * Math.sin(dTh), mvy = -axVx * Math.sin(dTh) + axVy * Math.cos(dTh); // trục ngang của ngón "trung bình"
+    const tcOff = Math.max(-0.15, Math.min(0.15, 2.5 * (Math.abs(pV) - Math.abs(lgx * mvx + lgy * mvy))));
+    const lenK = 0.8 + 0.4 * hash2(look.seed + i * 13, 14, 3), widK = 0.75 + 0.5 * hash2(look.seed + i * 13, 15, 3);
+    const sd0 = Math.abs(Math.round(look.seed));
+    const barOn = segs.length >= 3 && (i === sd0 % segs.length || (hash2(sd0, 7, 9) < 0.4 && i === (sd0 + 2) % segs.length));
+    const barU = 0.44 + 0.12 * (hash2(look.seed + i, 8, 9) - 0.5);
     // hướng đèn trong toạ độ khối 3D trên móng (x: ngang móng về phía có đèn, y: về phía đầu móng ≈ phía trên ảnh)
     const LxB = side * 0.55, LyB = 0.42 * upS, LzB = 0.72, Ln = Math.hypot(LxB, LyB, LzB);
     const L3 = [LxB / Ln, LyB / Ln, LzB / Ln], H3n = Math.hypot(L3[0], L3[1], L3[2] + 1), H3 = [L3[0] / H3n, L3[1] / H3n, (L3[2] + 1) / H3n];
@@ -2136,8 +2338,33 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const jit = hash2(seedN, 11, 3) - 0.5, jit2 = hash2(seedN, 12, 3) - 0.5; // vệt phản chiếu tổng hợp hơi khác nhau mỗi móng
     // nét kim loại: 1 đường cong mềm dọc móng (mỗi móng lệch pha khác nhau)
     const ph = hash2(seedN, 3, 5) * 6.28, amp = 0.32 + 0.18 * hash2(seedN, 4, 5);
+    // PHẦN ĐẮP nối tiếp móng thật: mượn PROFILE ánh sáng ngang (lm.shade theo t) của móng thật ngay trước đầu móng
+    // (s 0.7–0.92) và vị trí vệt bóng THẬT, đặt theo bề ngang thật của phần đắp (tq) — độ cong C + ánh đèn liền mạch qua
+    // chỗ nối. (Đa thức ánh sáng ngoại suy ra ngoài móng thật lệch dần; đèn Lambert tự tính thì phía khuất tối hơn hẳn
+    // móng thật ngay cạnh → 1 nấc sáng / tối ở chỗ nối như ghép 2 mảnh.)
+    const NBP = 23, prof = seg.ext ? new Float32Array(NBP) : null;
+    let streakT = NaN;
+    if (prof) {
+      const sum = new Float32Array(NBP), cnt = new Float32Array(NBP);
+      let sw = 0, st = 0, n = 0;
+      for (let k = 0; k < seg.alpha.length; k++) {
+        if (seg.alpha[k] < 0.99 || !seg.natural[k] || seg.along[k] < 0.7 || seg.along[k] > 0.92) continue;
+        const b = Math.round(((Math.max(-1.1, Math.min(1.1, seg.across[k])) + 1.1) / 2.2) * (NBP - 1));
+        sum[b] += lm.shade[k]; cnt[b]++; n++;
+        if (seg.along[k] > 0.55 && lm.spec[k] > 0.1) { sw += lm.spec[k]; st += lm.spec[k] * seg.across[k]; }
+      }
+      for (let b = 0; b < NBP; b++) {
+        let q = b;
+        for (let d = 1; !cnt[q] && d < NBP; d++) q = b - d >= 0 && cnt[b - d] ? b - d : b + d < NBP && cnt[b + d] ? b + d : q;
+        prof[b] = cnt[q] ? sum[q] / cnt[q] : 0;
+      }
+      if (n < 30) prof.fill(0);
+      if (lm.streak && sw > 2) streakT = st / sw;
+    }
+    const profAt = (tv: number) => { const f = ((Math.max(-1.1, Math.min(1.1, tv)) + 1.1) / 2.2) * (NBP - 1), b = Math.min(NBP - 2, Math.floor(f)); return prof![b] + (prof![b + 1] - prof![b]) * (f - b); };
+    const PA = paintOf(seg);
     for (let k = 0; k < seg.alpha.length; k++) {
-      const a = seg.alpha[k] * op; if (a <= 0) continue;
+      const a = PA[k] * op; if (a <= 0) continue;
       const xx = k % seg.w, yy = (k - xx) / seg.w;
       const X = seg.x0 + xx, Y = seg.y0 + yy;
       if (X < cx || Y < cy || X >= cx + cw || Y >= cy + ch) continue;
@@ -2146,10 +2373,26 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       const at = Math.abs(t);
       // phần ĐẮP DÀI (ngoài móng thật): tiếp tục độ cong của móng thật (mặt ánh sáng khớp được), tối dần nhẹ về đầu —
       // không phải mặt phẳng (từng nhìn như giấy cắt dán)
-      const shade = lm.weight[k] * lm.shade[k] + (1 - lm.weight[k]) * (0.85 * lm.shade[k] - 0.1 * Math.max(0, s - 1) - 0.03 - 0.12 * t * t);
+      let shade = lm.weight[k] * lm.shade[k] + (1 - lm.weight[k]) * (0.85 * lm.shade[k] - 0.1 * Math.max(0, s - 1) - 0.03 - 0.12 * t * t);
       const extW = seg.ext ? smooth(0.97, 1.08, s) : 0; // độ "thuộc phần đắp" của điểm (chỉ móng đắp dài thật)
-      const edge = 1 - 0.28 * Math.pow(Math.max(0, (at - 0.62) / 0.38), 2); // 2 mép móng cong → tối dần
-      const cut = 1 - 0.12 * (1 - smooth(0, 0.1, s)); // chân móng hơi tối
+      // 2 mép móng cong → tối dần; mép phía đèn tối ít hơn (gel bóng phản chiếu phòng sáng) — tối đều 2 bên + mép chân
+      // móng tối thì cộng lại thành viền sẫm quanh móng như sticker
+      let edge = 1 - (t * side > 0 ? 0.17 : 0.28) * Math.pow(Math.max(0, (at - 0.62) / 0.38), 2);
+      // phần đắp: ĐỘ CONG C nối tiếp móng thật theo bề ngang THẬT tại chỗ (tl, đầu thon vẫn tới ±1): ánh sáng = profile
+      // ngang của móng thật (prof) tối dần nhẹ về đầu; mép theo PHÁP TUYẾN TRỤ (nx = 0.93·t): 2 mép |t| > 0.8 tối ~25%,
+      // phía đèn tối ít hơn phía khuất. Chuyển dần trong s 0.97–1.25 (không nấc ở chỗ nối).
+      const tl = extT && extW > 0 ? extT[k] : t;
+      // vị trí ngang dùng cho ánh sáng / vệt phản chiếu / chrome: chuyển DẦN sang bề ngang thật của phần đắp (2 bên phần
+      // đắp thon không đều → chuyển gấp thì vệt bóng gãy ngang 2–3px ở chỗ nối)
+      const tq = t + (tl - t) * (seg.ext ? smooth(0.97, 1.3, s) : 0);
+      if (extW > 0) {
+        const nx = Math.max(-1, Math.min(1, tq)) * 0.93, nz = Math.sqrt(1 - nx * nx);
+        const cyl = 1 - 0.4 * (1 - nz) + 0.12 * nx * side;
+        const eW = smooth(0.97, 1.25, s);
+        shade += ((prof ? profAt(tq) : 0.85 * lm.shade[k] - 0.03 - 0.12 * tq * tq) - 0.1 * Math.max(0, s - 1) - shade) * extW;
+        edge += (cyl * (1 - 0.05 * smooth(1, 1.5, s)) - edge) * eW;
+      }
+      const cut = 1 - 0.06 * (1 - smooth(0, 0.1, s)); // chân móng hơi tối (nhẹ — khe + gờ gel ở 4b mới là chi tiết chân móng)
       // ---- 1) màu nền theo hoạ tiết (toạ độ móng thật)
       let base: RGB = base0;
       let tipChrome = 0; // phần đầu móng tráng gương (chrome French)
@@ -2638,7 +2881,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       // ---- 2) hiệu ứng + ánh sáng thật
       if (chromeF && !glazed) {
         // gương kim loại / chrome màu: pháp tuyến 2D (ngang t + dọc móng) → dải sáng thon + uốn về chân / đầu móng
-        [r, g, b] = metalShade(base, t, u, shade, side, 1.6 * (u - 0.55), pat === "colorchrome");
+        // (tq: phần đắp thon vẫn đủ dải phản chiếu theo độ cong C)
+        [r, g, b] = metalShade(base, tq, u, shade, side, 1.6 * (u - 0.55), pat === "colorchrome");
         const endK = cut * (0.84 + 0.16 * (1 - smooth(0.84, 1.02, u))); // đầu móng cong xuống → phản chiếu nền tối hơn
         r *= endK; g *= endK; b *= endK;
       }
@@ -3007,83 +3251,131 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         }
         r += (br[0] - r) * cov; g += (br[1] - g) * cov; b += (br[2] - b) * cov;
       }
-      // ---- 4b) ĐỘ DÀY GEL ở mép (như móng làm thật): chân móng + 2 bên — lớp gel lẩn dưới nếp da, có viền bóng mờ mảnh;
-      //      mép tự do (đầu móng) — ánh sáng xuyên qua mép gel thành 1 đường sáng mảnh
+      // ---- 4b) MÉP GEL như móng làm thật. Bản cũ tối đều quanh chân + 2 bên (16%) → cộng viền tối còn sót của ảnh thành
+      //      đường viền nâu quanh móng như sticker. Giờ:
+      //  · CHÂN MÓNG: khe sạch ~1–2px lộ móng TRẦN (hồng, sáng hơn da 1 chút — dựng từ màu da của chính tay) rồi GỜ GEL
+      //    tròn: 1px sáng ở đoạn mép quay về phía đèn, đoạn khuất đèn chỉ hơi tối;
+      //  · 2 BÊN: nếp da hắt bóng rất nhẹ lên mép sơn phía khuất đèn, gờ gel sáng mảnh phía đèn;
+      //  · MÉP TỰ DO móng thật: ánh sáng xuyên mép gel thành 1 đường sáng mảnh;
+      //  · MÉP TỰ DO móng ĐẮP: thấy BỀ DÀY — 1px sáng ở đoạn mép quay về đèn, 1px mặt dưới tối ở đoạn khuất đèn.
       const dE = eDist[k];
       if (op >= 0.99 && dE < 5) {
         const tipZone = smooth(0.82, 0.96, u);
-        // rõ nhất ở CHÂN móng (gel lẩn dưới da), 2 bên rất nhẹ — đều khắp mép thì thành nét viền như vẽ
-        const shE = (0.06 + 0.1 * (1 - smooth(0.12, 0.35, u))) * Math.exp(-dE / 1.2) * (1 - tipZone);
+        const eS = eSub[k]; // khoảng cách dưới 1px tới mép (mép trơn, không bậc thang)
+        const facing = nrm[2 * k] * lix + nrm[2 * k + 1] * liy; // mép quay về đèn (+) / khuất đèn (−)
+        const lit = Math.max(0, facing), away = Math.max(0, -facing);
+        const glossK = fin === "matte" ? 0.3 : 1;
+        const cutZ = (1 - smooth(0.06, 0.24, s)) * (1 - extW); // đoạn mép chân móng (khe + gờ gel)
+        const gw = Math.max(1, Math.min(1.8, 0.033 * seg.hw)); // bề rộng khe chân móng (px)
+        const gap = cutZ * (1 - smooth(gw - 0.5, gw + 0.5, eS));
+        const sideZ = (1 - cutZ) * (1 - tipZone) * (1 - extW);
+        // gờ gel: ngay sau khe ở chân móng, sát mép ở 2 bên — chỉ đoạn quay hẳn về đèn (cộng sáng đều cả 2 bên thì trên
+        // sơn tối thành 1 viền xám quanh móng như sticker — soi p067 đen)
+        const men = cutZ * 0.16 * lit * Math.exp(-(((eS - gw - 0.6) / 0.5) ** 2)) + sideZ * 0.06 * lit * lit * Math.exp(-(((eS - 0.9) / 0.5) ** 2));
+        const hi = men * glossK;
+        r += (1 - r) * hi; g += (1 - g) * hi; b += (1 - b) * hi;
+        const shE = (cutZ * 0.07 + sideZ * 0.06) * away * Math.exp(-Math.max(0, eS - cutZ * gw) / 1.1);
         r *= 1 - shE; g *= 1 - shE; b *= 1 - shE;
-        if (fin !== "matte") {
+        if (gap > 0) {
+          // móng trần: màu da của chính tay, sáng hơn chút + hồng nhẹ (sáng quá thành viền trắng như vẽ thêm)
+          const bl = 1 + 0.2 * Math.max(-1, Math.min(1, shade));
+          const bare: RGB = [(skin[0] + (1 - skin[0]) * 0.07) * bl, (skin[1] + (1 - skin[1]) * 0.045) * bl, (skin[2] + (1 - skin[2]) * 0.055) * bl];
+          r += (bare[0] - r) * gap; g += (bare[1] - g) * gap; b += (bare[2] - b) * gap;
+        }
+        if (fin !== "matte" && !extW) {
           const ge = 0.08 * Math.exp(-(((dE - 1.6) / 1.3) ** 2)) * smooth(0.9, 1.0, u);
           r += (1 - r) * ge; g += (1 - g) * ge; b += (1 - b) * ge;
         }
         if (extW > 0) {
-          // mép tự do của móng đắp: thấy bề dày gel / bột — 1 viền tối mảnh sát mép
-          const shT = 0.16 * Math.exp(-dE / 0.9) * smooth(0.88, 0.98, u) * extW;
-          r *= 1 - shT; g *= 1 - shT; b *= 1 - shT;
+          // rõ nhất ở mép CẮT đầu móng (pháp tuyến dọc trục), 2 cạnh thon của phần đắp nhẹ hơn (không thành nét viền)
+          const cap = Math.max(0, nrm[2 * k] * axUx + nrm[2 * k + 1] * axUy);
+          const fe = extW * Math.exp(-(((eS - 0.6) / 0.6) ** 2)) * (0.25 + 0.75 * cap);
+          // nét sáng cộng thêm: trên sơn tối cùng mức cộng thành nét trắng gắt → theo độ sáng nền
+          const up = 0.3 * Math.pow(lit, 0.8) * fe * (fin === "matte" ? 0.55 : 1) * (0.4 + 0.6 * Math.min(1, 2 * lum(base))), dn = 0.32 * Math.pow(away, 0.7) * fe;
+          r += (1 - r) * up; g += (1 - g) * up; b += (1 - b) * up;
+          r *= 1 - dn; g *= 1 - dn; b *= 1 - dn;
         }
       }
       // ---- 5) bóng gương: vệt bóng THẬT (dọc móng, không sát mép) hoặc vệt phản chiếu tổng hợp
-      const inner = (1 - smooth(0.78, 0.98, at)) * smooth(0.02, 0.1, s) * (1 - smooth(0.94, 1.02, s));
+      // móng đắp: đầu móng THẬT trong ảnh (s ≈ 1) không còn là mép — ánh đèn / phản chiếu của ảnh ở đó (mép tự do cũ
+      // loá sáng) thành 1 vạch ngang cắt qua móng như chỗ nối 2 mảnh → tắt dần trước đó, phần đắp nhận tiếp vệt bóng
+      const realK = seg.ext ? 1 - smooth(0.86, 0.97, s) : 1 - smooth(0.94, 1.02, s);
+      const inner = (1 - smooth(0.78, 0.98, at)) * smooth(0.02, 0.1, s) * realK;
       let spec = lm.spec[k] * inner;
       if (synth) {
         // ảnh không có ánh đèn để mượn → vẽ PHẢN CHIẾU CỬA SỔ MỀM như ảnh chụp thật: mép mờ (gauss, không phải thanh
         // trắng cứng), rộng ở giữa thon 2 đầu, cong theo móng, quầng sáng nhẹ quanh; mỗi móng lệch chút vị trí / độ dài;
         // vệt phụ phía đối diện rất mờ (vệt cứng + vệt phụ đậm từng làm móng nhìn như vẽ máy tính)
-        const tc = side * (0.4 + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5));
-        const wB = 0.075 + 0.035 * Math.sin(Math.PI * Math.min(1, Math.max(0, (u - 0.12) / 0.7)));
-        const alongK = smooth(0.1 + 0.06 * jit2, 0.34, u) * (1 - smooth(0.66, 0.88 + 0.05 * jit, u));
-        const core = Math.exp(-(((t - tc) / wB) ** 2)) * alongK;
-        const halo = 0.07 * Math.exp(-(((t - tc) / (wB * 2.2)) ** 2)) * alongK;
-        const rim = 0.12 * Math.exp(-(((t + side * 0.66) / 0.07) ** 2)) * smooth(0.3, 0.45, u) * (1 - smooth(0.6, 0.78, u));
+        // (mỗi ngón: dời ngang theo góc ngón tcOff, dài lenK, rộng widK, có thể có thanh khung cửa sổ — xem trên vòng lặp)
+        const tc = side * (0.4 + tcOff + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5));
+        const wB = (0.075 + 0.035 * Math.sin(Math.PI * Math.min(1, Math.max(0, (u - 0.12) / 0.7)))) * widK;
+        const uS = 0.5 + (u - 0.5) / lenK;
+        const alongK = smooth(0.1 + 0.06 * jit2, 0.34, uS) * (1 - smooth(0.66, 0.88 + 0.05 * jit, uS));
+        // thanh khung cửa sổ: dải tối mềm (~3–5px) cắt ngang vệt sáng, không cắt hẳn (vạch 1px sắc thành vết xước)
+        const bar = barOn ? 1 - 0.5 * Math.exp(-((((u - (0.5 + (barU - 0.5) * lenK)) * seg.L * sEnd) / Math.max(1.8, 0.022 * seg.L * sEnd)) ** 2)) : 1;
+        const core = Math.exp(-(((tq - tc) / wB) ** 2)) * alongK * bar;
+        const halo = 0.07 * Math.exp(-(((tq - tc) / (wB * 2.2)) ** 2)) * alongK;
+        const rim = 0.12 * Math.exp(-(((tq + side * 0.66) / 0.07) ** 2)) * smooth(0.3, 0.45, u) * (1 - smooth(0.6, 0.78, u));
         spec = Math.max(spec, synth * (0.82 * core + halo + rim));
       }
-      if (extW > 0 && fin !== "matte") {
-        // ánh đèn thật của ảnh dừng ở mép móng thật → phần đắp vẽ tiếp vệt phản chiếu mềm (cùng phía đèn), không thì
-        // nửa móng bóng nửa móng lì như dán giấy
-        const tcE = side * (0.4 + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5));
-        const coreE = Math.exp(-(((t - tcE) / 0.09) ** 2)), haloE = 0.08 * Math.exp(-(((t - tcE) / 0.2) ** 2));
-        spec = Math.max(spec, 0.7 * extW * (1 - smooth(0.86, 0.98, u)) * (0.82 * coreE + haloE));
+      if (seg.ext && fin !== "matte") {
+        // ánh đèn thật của ảnh dừng ở mép móng thật → phần đắp vẽ tiếp vệt phản chiếu mềm ĐÚNG CHỖ vệt bóng thật (streakT,
+        // không có thì như vệt tổng hợp), theo bề ngang thật của phần đắp (đầu nhọn: vệt thon dần theo độ cong C); nhận
+        // tiếp đúng đoạn vệt thật mờ đi (realK) — không thì vệt đứt 1 khúc / gãy ngang ở chỗ nối
+        const tcE = Number.isFinite(streakT) ? streakT : side * (0.4 + tcOff + 0.07 * jit - 0.1 * (u - 0.5) * (u - 0.5)), wE = 0.09 * widK;
+        const coreE = Math.exp(-(((tq - tcE) / wE) ** 2)), haloE = 0.08 * Math.exp(-(((tq - tcE) / (2.2 * wE)) ** 2));
+        spec = Math.max(spec, 0.62 * (1 - realK) * (1 - smooth(0.86, 0.98, u)) * (0.82 * coreE + haloE));
       }
       spec = Math.min(1, spec * gloss);
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : chromeF && !glazed ? 0.45 : 0.92);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen
       // mảnh quanh móng khi đổi móng đen sang màu sáng); sơn trong (thạch) thì vẫn thấy móng thật bên dưới
-      const uu = op >= 1 && seg.alpha[k] < 1 ? under.get(k) : undefined;
-      const R0 = uu ? uu[0] : img.data[idx], G0 = uu ? uu[1] : img.data[idx + 1], B0 = uu ? uu[2] : img.data[idx + 2];
+      // (điểm ngoài khuôn được nở thêm để xoá viền sơn cũ có độ phủ < 0.05 → thay nền THEO TỈ LỆ, không bật / tắt từng điểm)
+      const uu = op >= 1 && PA[k] < 1 ? under.get(k) : undefined, rep = Math.min(1, seg.alpha[k] / 0.04);
+      const R0 = uu ? img.data[idx] + (uu[0] - img.data[idx]) * rep : img.data[idx], G0 = uu ? img.data[idx + 1] + (uu[1] - img.data[idx + 1]) * rep : img.data[idx + 1], B0 = uu ? img.data[idx + 2] + (uu[2] - img.data[idx + 2]) * rep : img.data[idx + 2];
       out[o] = R0 * (1 - a) + linToSrgb(r) * a;
       out[o + 1] = G0 * (1 - a) + linToSrgb(g) * a;
       out[o + 2] = B0 * (1 - a) + linToSrgb(b) * a;
     }
-    // ---- 6) BÓNG ĐỔ của phần đắp dài lên da / nền phía khuất đèn (móng đắp nổi khỏi đầu ngón) — không có thì
-    //      móng như lơ lửng / dán lên ảnh
-    if (seg.ext && op >= 0.99) {
-      const { w, h } = seg;
-      const ux = axUx, uy = axUy, vx = axVx, vy = axVy;
-      let lx2 = side * 0.55 * vx + 0.42 * upS * ux, ly2 = side * 0.55 * vy + 0.42 * upS * uy;
-      const ln = Math.hypot(lx2, ly2) || 1; lx2 /= ln; ly2 /= ln;
-      const shift = Math.max(2, 0.1 * seg.hw);
-      const A = boxBlur(seg.alpha, w, h, 2);
-      for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
-        const k = yy * w + xx;
-        if (seg.alpha[k] >= 0.99 || seg.along[k] < 0.92) continue;
-        const X = seg.x0 + xx, Y = seg.y0 + yy;
-        if (X < cx || Y < cy || X >= cx + cw || Y >= cy + ch) continue;
-        const sx = Math.round(xx + lx2 * shift), sy = Math.round(yy + ly2 * shift);
-        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
-        const sh = 0.32 * (A[sy * w + sx] / 25) * (1 - seg.alpha[k]) * smooth(0.95, 1.1, seg.along[k]);
-        if (sh <= 0.003) continue;
-        const o = ((Y - cy) * cw + (X - cx)) * 4;
-        out[o] *= 1 - sh; out[o + 1] *= 1 - sh; out[o + 2] *= 1 - sh;
-      }
-    }
+    if (seg.ext && op >= 0.99) casts.push({ seg, lx: lix, ly: liy });
   });
+  // ---- 6) BÓNG ĐỔ của phần đắp dài lên da / nền phía khuất đèn (móng đắp nổi khỏi đầu ngón) — không có thì móng như
+  //      lơ lửng / dán lên ảnh. Bóng MỀM: lệch ~0.12·hw ra xa đèn (sát đầu ngón ít hơn — phần đắp còn gần da), nhoè
+  //      ~0.15·hw, đậm 0.26 (không gian tuyến tính), ấm nhẹ như bóng trên da; vẽ SAU mọi móng, không đè lên móng khác.
+  //      Khung tính rộng hơn khung móng (bóng lọt ra ngoài đầu móng từng bị cắt cụt thành vệt thẳng).
+  const covered = (X: number, Y: number, self: NailSeg) => segs.some((o) => o !== self && X >= o.x0 && Y >= o.y0 && X < o.x0 + o.w && Y < o.y0 + o.h && o.alpha[(Y - o.y0) * o.w + X - o.x0] > 0);
+  for (const { seg, lx, ly } of casts) {
+    const P = Math.ceil(0.45 * seg.hw) + 3, W2 = seg.w + 2 * P, H2 = seg.h + 2 * P;
+    const src = new Float32Array(W2 * H2);
+    for (let k = 0; k < seg.alpha.length; k++) {
+      const wgt = seg.alpha[k] * smooth(0.97, 1.08, seg.along[k]);
+      if (wgt <= 0) continue;
+      const off = seg.hw * (0.06 + 0.08 * smooth(1, 1.35, seg.along[k]));
+      const fx = (k % seg.w) + P - lx * off, fy = Math.floor(k / seg.w) + P - ly * off;
+      const x0 = Math.floor(fx), y0 = Math.floor(fy), qx = fx - x0, qy = fy - y0;
+      if (x0 < 0 || y0 < 0 || x0 + 1 >= W2 || y0 + 1 >= H2) continue;
+      const q = y0 * W2 + x0;
+      src[q] += wgt * (1 - qx) * (1 - qy); src[q + 1] += wgt * qx * (1 - qy); src[q + W2] += wgt * (1 - qx) * qy; src[q + W2 + 1] += wgt * qx * qy;
+    }
+    const rb = Math.max(1, Math.round(0.1 * seg.hw)), nrm2 = (2 * rb + 1) ** 4;
+    const F = boxBlur(boxBlur(src, W2, H2, rb), W2, H2, rb);
+    for (let yy = 0; yy < H2; yy++) for (let xx = 0; xx < W2; xx++) {
+      const q = yy * W2 + xx, f = F[q] / nrm2;
+      if (f <= 0.004) continue;
+      const X = seg.x0 + xx - P, Y = seg.y0 + yy - P;
+      if (X < cx || Y < cy || X >= cx + cw || Y >= cy + ch) continue;
+      const lx0 = xx - P, ly0 = yy - P;
+      const own = lx0 >= 0 && ly0 >= 0 && lx0 < seg.w && ly0 < seg.h ? seg.alpha[ly0 * seg.w + lx0] : 0;
+      if (own >= 0.99 || covered(X, Y, seg)) continue;
+      const sh = 0.42 * Math.min(1, f) * (1 - own);
+      const o = ((Y - cy) * cw + (X - cx)) * 4;
+      out[o] = linToSrgb(LIN[out[o]] * (1 - 0.9 * sh)); out[o + 1] = linToSrgb(LIN[out[o + 1]] * (1 - sh)); out[o + 2] = linToSrgb(LIN[out[o + 2]] * (1 - 1.04 * sh));
+    }
+  }
   return { w: cw, h: ch, data: out };
 }
 

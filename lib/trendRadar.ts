@@ -89,7 +89,7 @@ export const TREND_RADAR: Trend[] = [
   { id: "fall-chocolate", occasion: "fall", hemi: true, name: { vi: "Nâu sô-cô-la thu 2026", en: "Fall 2026 chocolate" }, source: { vi: "Trend thu 2026: \"sô-cô-la là màu đen mới\"", en: "Fall 2026: \"chocolate is the new black\"" }, months: FALL, weight: 3,
     looks: [{ pattern: "velvet", finish: "cateye", colors: [["chocolate", "milky", "gold"]] }, { pattern: "solid", finish: "glossy", colors: [["chocolate", "milky", "gold"]] }, { pattern: "fr-micro", finish: "glossy", colors: [["sheer", "chocolate", "gold"]] }] },
   { id: "fall-micro-french", occasion: "fall", hemi: true, name: { vi: "French micro màu thu", en: "Fall micro French" }, source: { vi: "Trend thu 2026: micro French đầu nâu, đỏ rượu, xanh rêu", en: "Fall 2026: micro French tips in brown, burgundy and olive" }, months: FALL, weight: 3,
-    looks: [{ pattern: "fr-micro", finish: "glossy", colors: [["sheer", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["sheer", "olive", "gold"], ["milky", "mulledWine", "gold"]] }, { pattern: "fr-skittle", finish: "glossy", colors: [["sheer", "coffee", "gold"]] }] },
+    looks: [{ pattern: "fr-micro", finish: "glossy", colors: [["sheer", "espresso", "gold"], ["sheer", "burgundy", "gold"], ["sheer", "olive", "gold"], ["milky", "mulledWine", "gold"]] }, { pattern: "fr-skittle", finish: "glossy", colors: [["sheer", "burgundy", "gold"]] }] },
   { id: "fall-brown-chrome", occasion: "fall", hemi: true, name: { vi: "Chrome nâu & xám thiếc", en: "Brown & pewter chrome" }, source: { vi: "Trend thu 2026: chrome nâu, caramel, xám thiếc", en: "Fall 2026: brown, caramel and pewter chrome" }, months: FALL, weight: 2,
     looks: [{ pattern: "colorchrome", finish: "chrome", colors: [["espresso", "espresso", "gold"], ["coffee", "coffee", "gold"], ["caramel", "caramel", "gold"], ["pewter", "pewter", "silver"]] }] },
   { id: "fall-plum-velvet", occasion: "fall", hemi: true, name: { vi: "Velvet tông tím mận", en: "Plum-tone velvet" }, source: { vi: "Trend thu 2026: tông tím vào mùa thu, velvet là hiệu ứng hot", en: "Fall 2026: purple tones move into fall, velvet is the hot finish" }, months: FALL, weight: 2,
@@ -122,7 +122,7 @@ export const TREND_RADAR: Trend[] = [
 
   // ---- Giáng sinh / năm mới 2026 (nhung, caro, tuyết chỉ ở Mỹ — Giáng sinh ở Úc là mùa hè) ----
   { id: "xmas-tartan", occasion: "christmas", markets: ["US"], name: { vi: "Caro tartan", en: "Tartan" }, source: { vi: "Giáng sinh 2026: caro tartan / bàn cờ là trend phải thử", en: "Christmas 2026: tartan and checkerboard are must-tries" }, months: XMAS, weight: 2,
-    looks: [{ pattern: "plaid", finish: "glossy", colors: [["redVelvet", "pine", "gold"], ["cherry", "pine", "gold"]] }, { pattern: "checker", finish: "glossy", colors: [["milky", "cherry", "gold"]] }] },
+    looks: [{ pattern: "plaid", finish: "glossy", colors: [["cherry", "pine", "gold"], ["cherry", "navy", "gold"]] }, { pattern: "checker", finish: "glossy", colors: [["milky", "cherry", "gold"]] }] },
   { id: "xmas-candy", occasion: "christmas", name: { vi: "Sọc kẹo gậy", en: "Candy cane" }, source: { vi: "Giáng sinh 2026: French kẹo gậy", en: "Christmas 2026: candy-cane accents" }, months: XMAS, weight: 1,
     looks: [{ pattern: "fr-candycane", finish: "glossy", colors: [["milky", "cherry", "gold"], ["sheer", "redVelvet", "gold"]] }] },
   { id: "xmas-snow", occasion: "christmas", markets: ["US"], name: { vi: "Bông tuyết", en: "Snowflakes" }, source: { vi: "Giáng sinh 2026: bông tuyết tinh tế", en: "Christmas 2026: delicate snowflakes" }, months: XMAS, weight: 2,
@@ -138,7 +138,7 @@ export const TREND_RADAR: Trend[] = [
       { pattern: "glitterfade", finish: "glitter", colors: [["frangipani", "gold", "gold"]] }, { pattern: "fr-santa", finish: "glossy", colors: [["sheer", "cherry", "gold"]] }] },
   { id: "nye-sparkle", occasion: "newyear", name: { vi: "Lấp lánh đêm giao thừa", en: "New Year's Eve sparkle" }, source: { vi: "Năm mới: bạc / vàng tráng gương, sao, foil, nhũ loang", en: "New Year: silver and gold chrome, stars, foil, glitter fade" }, months: NYE, weight: 2,
     looks: [{ pattern: "stars", finish: "glossy", colors: [["black", "milky", "gold"], ["navy", "milky", "silver"]] }, { pattern: "foil", finish: "glossy", colors: [["black", "milky", "gold"]] },
-      { pattern: "glitterfade", finish: "glitter", colors: [["black", "silver", "silver"], ["champagne", "gold", "gold"]] }, { pattern: "fr-glitter", finish: "glitter", colors: [["sheer", "gold", "gold"]] }, { pattern: "colorchrome", finish: "chrome", colors: [["champagne", "champagne", "gold"]] }] },
+      { pattern: "glitterfade", finish: "glitter", colors: [["black", "silver", "silver"], ["champagne", "gold", "gold"]] }, { pattern: "fr-glitter", finish: "glossy", colors: [["sheer", "gold", "gold"]] }, { pattern: "colorchrome", finish: "chrome", colors: [["champagne", "champagne", "gold"]] }] },
 ];
 
 /** Trend đang trong mùa của ngày đó ở thị trường đó: trend theo mùa (hemi) ở Úc lệch 6 tháng (thu Mỹ tháng 9–11 = thu Úc

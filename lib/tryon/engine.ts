@@ -2257,15 +2257,16 @@ function polkaAt(t: number, Y: number, P: number, occ: number, r0: number, r1: n
 function shellAt(x: number, y: number, seed: number): RGB {
   const ca = 0.83, sa = 0.56; // vân chéo ~34°
   const X = x * ca + y * sa, Y = -x * sa + y * ca;
-  const wx = X + 0.55 * fbm(X * 0.7 + 3, Y * 0.7, seed + 5), wy = Y + 0.55 * fbm(X * 0.7, Y * 0.7 + 7, seed + 6);
-  const n1 = vnoise(wx * 1.05 + 11, wy * 1.9, seed); // mảng lớn
-  const n2 = 0.62 * vnoise(wx * 2.3 + 4, wy * 3.4, seed + 1) + 0.38 * n1; // đốm vừa (bám mảng lớn → đốm thành cụm)
-  const n3 = vnoise(wx * 4.4 + 9, wy * 5.8, seed + 3); // lõi nhỏ
-  let c = mix3([0.7, 0.34, 0.055], [0.5, 0.18, 0.02], smooth(0.25, 0.85, vnoise(X * 0.6 + 2, Y * 0.6, seed + 8)));
-  c = mix3(c, [0.3, 0.1, 0.014], 0.6 * smooth(0.5, 0.7, n1)); // nâu trong lớn
-  c = mix3(c, [0.78, 0.42, 0.08], 0.3 * smooth(0.44, 0.53, n2) * (1 - smooth(0.55, 0.6, n2))); // quầng hổ phách
-  c = mix3(c, [0.085, 0.028, 0.006], 0.88 * smooth(0.57, 0.66, n2)); // đốm nâu sẫm
-  return mix3(c, [0.016, 0.007, 0.003], 0.85 * smooth(0.64, 0.7, n2) * smooth(0.42, 0.62, n3)); // lõi gần đen
+  const wx = X + 0.5 * fbm(X * 0.9 + 3, Y * 0.9, seed + 5), wy = Y + 0.5 * fbm(X * 0.9, Y * 0.9 + 7, seed + 6);
+  const n1 = vnoise(wx * 1.5 + 11, wy * 2.5, seed); // mảng lớn (~0.4–0.6 hw)
+  const n2 = 0.6 * vnoise(wx * 3.1 + 4, wy * 4.4, seed + 1) + 0.4 * n1; // đốm vừa (bám mảng lớn → đốm thành cụm)
+  const n3 = vnoise(wx * 6 + 9, wy * 7.5, seed + 3); // lõi nhỏ
+  // mật ong → hổ phách đậm (không vàng mù tạt), đổi sắc chậm
+  let c = mix3([0.52, 0.17, 0.011], [0.33, 0.085, 0.005], smooth(0.25, 0.85, vnoise(X * 0.7 + 2, Y * 0.7, seed + 8)));
+  c = mix3(c, [0.15, 0.04, 0.005], 0.55 * smooth(0.5, 0.72, n1)); // nâu trong lớn
+  c = mix3(c, [0.62, 0.24, 0.02], 0.35 * smooth(0.42, 0.52, n2) * (1 - smooth(0.54, 0.6, n2))); // quầng hổ phách sáng
+  c = mix3(c, [0.05, 0.016, 0.004], 0.9 * smooth(0.55, 0.66, n2)); // đốm nâu sẫm
+  return mix3(c, [0.012, 0.006, 0.003], 0.85 * smooth(0.63, 0.69, n2) * smooth(0.4, 0.6, n3)); // lõi gần đen
 }
 /** Bố cục hoa khô MILK BATH của 1 móng (hw, y tính từ chân móng): 2–3 hoa ép 0.26–0.42 hw (cho phép lẹm mép), 2 lá, 2–4
  *  vụn vàng. kind 0 hoa · 1 lá · 2 vụn vàng; col: 0 = màu c2 · 1… = bảng màu hoa khô thật. */
@@ -2409,7 +2410,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const chromeF = fin === "chrome" || pat === "colorchrome";
     // chrome trên nền trắng / ngọc trai / champagne = glazed donut (bạc xám vẫn là gương kim loại); thạch + chrome = thạch
     // tráng ngọc trai (bột chrome mờ trên gel trong) — không phải gương kim loại (từng ra sọc tím xám như inox)
-    const glazed = chromeF && (lum(base0) > 0.62 || pat === "jelly");
+    // aura + chrome = lớp bột ngọc trai mỏng trên quầng phun (không phải gương kim loại — nền nude từng ra ống inox xám)
+    const glazed = chromeF && (lum(base0) > 0.62 || pat === "jelly" || pat === "aura");
     const velvet = pat === "velvet" || (fin === "cateye" && pat === "velvet");
     const gloss = fin === "matte" ? 0.06 : chromeF ? 1.0 : 0.9;
     const contrast = fin === "matte" ? 0.3 : 0.5;
@@ -2484,6 +2486,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       let base: RGB = base0;
       let tipChrome = 0; // phần đầu móng tráng gương (chrome French)
       let metalMix = 0, metalQ = 0, metalMirror = false; // metalMirror: mảnh foil phẳng → phản chiếu gương; còn lại: sợi / dải KIM LOẠI mảnh (viền vàng French đôi, gân vàng vân đá): vị trí ngang trên sợi, tô sau bước ánh sáng
+      let auraM = 0, metalFloor = 0; // auraM: độ phủ lõi aura (ánh ngọc trai né lõi) · metalFloor: sàn độ sáng kim loại gương (foil vàng không ra ô liu)
       if (onNail) {
         switch (pat) {
           case "ombre": base = mix3(c1, c2, smooth(0.25, 0.92, u)); break;
@@ -2498,18 +2501,21 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             const und = nailBed(tipP, seg, s, t, s * tipP.kL, extW, img.data, idx, true);
             const dens = 0.55 + 0.3 * smooth(0.55, 1, at) + 0.15 * smooth(0.82, 1, u);
             base = gelTint(und, c1, dens, 1 - 0.14 * smooth(0.6, 1, at));
+            // móng trơn của bộ ĐỒI MỒI (thạch hổ phách): gel hổ phách đặc hơn + kéo về đúng sắc caramel trong OKLab — giường
+            // móng hồng lọc qua caramel 55% ra hồng cam cá hồi, lạc khỏi bộ nâu – hổ phách
+            if (patL === "tortoise") base = okMix(gelTint(und, c1, 0.92, 1 - 0.18 * smooth(0.55, 1, at)), c1, 0.55);
             break;
           }
           case "aura": {
-            // aura: quầng màu phun mềm (airbrush) giữa móng, màu dịu, lan rộng ~60% mặt móng
-            // quầng ngả hồng một chút cho ấm, không xanh lạnh như vệt đèn
-            // màu quầng ấm (hồng / cam / tím) mới ngả hồng thêm; quầng xanh / lục giữ nguyên sắc. Quầng gọn hơn trên nền
-            // sáng (nền trắng sữa + quầng xanh nhạt từng loang khắp móng, nhìn như sơn xanh trơn)
-            const warmG = c2[0] >= c2[2];
-            const glowC = mix3(warmG ? mix3(c2, [0.92, 0.45, 0.62], 0.25) : c2, [1, 1, 1], warmG ? 0.15 : 0.04);
-            const light = lum(c1) > 0.55;
-            const d = Math.hypot((u - 0.5) / (light ? 0.32 : 0.4), t / (light ? 0.5 : 0.66));
-            base = mix3(mix3(c1, [1, 1, 1], 0.08), glowC, 0.95 * Math.exp(-d * d * (light ? 1.3 : 0.95)));
+            // AURA phun airbrush: LÕI = đúng màu c2 (giữ sắc + độ đậm, chỉ sáng lên ≤ 0.03 OKLab) đặc ~95% rồi loang mềm 2
+            // tầng (lõi đặc → quầng) phủ ~55–65% mặt móng, trộn trong OKLab (trắng sữa → hồng → đỏ đều theo mắt nhìn). Bản cũ
+            // pha c2 25% hồng + 15% trắng trong không gian tuyến tính, quầng thu nhỏ trên nền sáng → "Aura đỏ cherry" chỉ còn
+            // 1 vệt hồng phấn như vết bầm. auraM: lớp ánh ngọc trai (chrome) không được phủ bạc lõi màu
+            let gc = tipP.memo.aura as RGB | undefined;
+            if (!gc) { const o = okOf(c2); gc = fromOk([Math.min(0.9, o[0] + 0.03), o[1], o[2]]); tipP.memo.aura = gc; }
+            const d = Math.hypot((u - 0.48) / 0.3, t / 0.74);
+            auraM = 0.97 * Math.exp(-Math.pow(d / 0.95, 2.4));
+            base = okMix(c1, gc, auraM);
             break;
           }
           case "colorchrome": {
@@ -2636,14 +2642,31 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "tortoise": {
-            // đồi mồi: nền HỔ PHÁCH trong (mật ong → hổ phách), đốm nâu nhiều cỡ loang mềm, lõi đốm gần đen. Đốm tính theo
-            // đơn vị NỬA BỀ NGANG móng (như đầu fr-tortoise): theo chiều dài móng (u) thì móng dài chỉ còn 2 vệt nâu to nhoè
-            base = tortoiseAt(1.15 * t, 1.15 * u * Math.max(1.6, tipP.len), seedN);
+            // ĐỒI MỒI: nền mật ong → hổ phách, 3 lớp đốm chồng (mảng nâu trong + quầng hổ phách, đốm nâu sẫm, lõi gần đen nhỏ)
+            // theo đơn vị nửa bề ngang móng (hw). Móng HERO: điểm vàng như thợ làm — viền French micro VÀNG GƯƠNG ≥ 2.8px bám
+            // mép tự do thật + vài mảnh foil vàng nhỏ chìm trong lớp hổ phách. (Viền chỉ vàng chạy quanh cả móng cũ nhìn như
+            // khung chọn của phần mềm / sticker.)
+            const Yh = s * tipP.kL;
+            base = shellAt(t, Yh, seedN);
             if (accent) {
-              // đúng bước thợ làm: viền chỉ kim loại mảnh quanh 2 ngón nhấn (sợi nổi, cách mép ~2px)
-              const n = (eDist[k] - 2.4) / 1.15;
-              const mm = 1 - smooth(0.6, 1.2, Math.abs(n));
-              if (mm > 0) { metalMix = mm; metalQ = Math.max(-1, Math.min(1, n)); }
+              const aa = 0.6 / Math.max(8, seg.hw), wG = Math.max(2.8 / Math.max(8, seg.hw), 0.07), g = tipE(tipP, t) - Yh;
+              const m = 1 - smooth(wG - aa, wG + aa, g);
+              if (m > 0) {
+                const mc = tipMirror(metal, Math.max(0, g), wG, t, eDist[k], side), lit = Math.max(0.3, (1 + contrast * shade) * edge * cut);
+                base = mix3(base, [mc[0] / lit, mc[1] / lit, mc[2] / lit], m);
+              }
+              // mảnh foil vàng li ti (0.05–0.1 hw, ≥ 2.5px) rải thưa, dày hơn ở 1 góc chân móng — mép rách theo nhiễu
+              const P = 0.42, gx = t / P, gy = Yh / P, ix = Math.floor(gx), iy = Math.floor(gy), cs = hash2(look.seed, 5, 93) > 0.5 ? 1 : -1;
+              for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
+                const ci = ix + i2, cj = iy + j2;
+                const fx = (ci + 0.2 + 0.6 * hash2(ci, cj, seedN + 94)) * P, fy = (cj + 0.2 + 0.6 * hash2(ci, cj, seedN + 95)) * P;
+                const want = 0.12 + 0.3 * Math.exp(-(((fx - 0.6 * cs) / 0.6) ** 2 + ((fy - 0.5) / 0.9) ** 2));
+                if (hash2(ci, cj, seedN + 96) > want || Math.abs(fx) > 0.8 || fy < 0.15 || fy > tipE(tipP, fx) - 0.2) continue;
+                const r = Math.max(1.6 / Math.max(8, seg.hw), 0.05 + 0.05 * hash2(ci, cj, seedN + 97));
+                const dd = Math.hypot(t - fx, Yh - fy) / r - 0.7 * (vnoise((t - fx) / r * 1.6 + ci, (Yh - fy) / r * 1.6, seedN + 98) - 0.5);
+                const cv = 1 - smooth(0.85, 1.05, dd);
+                if (cv > metalMix) { metalMix = 0.95 * cv; metalMirror = true; metalQ = side * (0.05 + 0.18 * hash2(ci, cj, seedN + 99)) + 0.25 * (vnoise((t - fx) / r * 2.5, (Yh - fy) / r * 2.5, seedN + 100) - 0.5); metalFloor = 0.5; }
+              }
             }
             break;
           }
@@ -3069,13 +3092,16 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         // thấy rõ ánh đổi sắc, không thì chỉ là móng trắng trơn (upcoming "Trắng sữa tráng gương")
         const k2 = (0.86 + 0.24 * smooth(-1, 1, shade)) * edge * cut;
         const th = 4.2 * t + 2.6 * u + 1.6 * shade;
-        r = r * k2 * (1 + 0.1 * Math.sin(th)); g = g * k2 * (1 + 0.07 * Math.sin(th + 2.3)); b = b * k2 * (1 + 0.12 * Math.sin(th + 4.4));
+        // aura: đổi sắc nhẹ hơn (ánh vàng – xanh lục ở 2 mép trên nền trắng sữa nhìn như bệnh, lấn sắc quầng màu)
+        const ir = pat === "aura" ? 0.45 : 1;
+        r = r * k2 * (1 + 0.1 * ir * Math.sin(th)); g = g * k2 * (1 + 0.07 * ir * Math.sin(th + 2.3)); b = b * k2 * (1 + 0.12 * ir * Math.sin(th + 4.4));
         const ph2 = 2.6 * t * side + 2 * u + 0.8 * shade;
         const wa = Math.max(0, Math.cos(ph2)), wb = Math.max(0, Math.cos(ph2 - 2.094)), wc = Math.max(0, Math.cos(ph2 + 2.094)), ws = wa + wb + wc || 1;
         // colorchrome glazed: ánh theo màu c2 (ngọc trai / champagne); còn lại: hồng · tím nhạt · vàng kim
-        const pearl: RGB = pat === "colorchrome" ? mix3(c2, [1, 1, 1], 0.25)
+        const pearl: RGB = pat === "colorchrome" ? mix3(c2, [1, 1, 1], 0.25) : pat === "aura" ? [1, 0.86, 0.93] // aura: ngọc trai hồng
           : [(wa * 1 + wb * 0.84 + wc * 1) / ws, (wa * 0.76 + wb * 0.79 + wc * 0.88) / ws, (wa * 0.86 + wb * 1 + wc * 0.6) / ws];
-        const sheen = 0.38 * Math.exp(-(((t + 0.1) / 0.45) ** 2)) * smooth(0.06, 0.32, u) * (1 - smooth(0.8, 1, u));
+        // aura: ánh ngọc trai chỉ là lớp tráng mỏng trên nền sáng — né lõi màu (phủ lên lõi đỏ thì đỏ cherry bạc thành hồng)
+        const sheen = 0.38 * Math.exp(-(((t + 0.1) / 0.45) ** 2)) * smooth(0.06, 0.32, u) * (1 - smooth(0.8, 1, u)) * (1 - 0.85 * auraM);
         // nền sáng (trắng sữa, hồng phấn): ánh ngọc trai đổi sắc phủ lên; nền đậm (thạch hồng đậm): chỉ sáng lên — phủ màu
         // ngọc trai nhạt lên màu đậm thành màu bụi
         const wL = smooth(0.35, 0.7, lum(base));
@@ -3091,7 +3117,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         r += (tc[0] - r) * tipChrome; g += (tc[1] - g) * tipChrome; b += (tc[2] - b) * tipChrome;
       }
       if (metalMix > 0) {
-        const mc = metalMirror ? metalShade(metal, metalQ, u * 3 + metalQ * 2, shade, side) : wireShade(metal, metalQ, shade, side);
+        let mc = metalMirror ? metalShade(metal, metalQ, u * 3 + metalQ * 2, shade, side) : wireShade(metal, metalQ, shade, side);
+        if (metalFloor > 0) {
+          // sàn độ sáng: lá vàng mỏng luôn hắt ánh vàng ấm (nếp nhăn tán sáng) — phản chiếu "phòng tối" của gương phẳng ra ô
+          // liu / kaki như mảnh gạch vỡ
+          const f0 = metalF0(metal), Ym = lum(mc), Yf = metalFloor * lum(f0);
+          if (Ym < Yf) { const kf = (Yf - Ym) / Math.max(1e-3, Yf); mc = mix3(mc, sc3(f0, metalFloor), kf); }
+        }
         r += (mc[0] - r) * metalMix; g += (mc[1] - g) * metalMix; b += (mc[2] - b) * metalMix;
       }
       if (velvet || fin === "cateye") {

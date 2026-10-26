@@ -172,6 +172,14 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "R2 Giọt chrome bạc nền đen", colors: ["#151314", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 217 },
   { name: "R2 Giọt chrome vàng nền nude", colors: ["#e8c4a8", "#f2ede6", "#d4af37"], finish: "glossy", pattern: "chromedrops", seed: 223 },
   { name: "R2 Giọt chrome bạc nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 224 },
+  // bảng màu thật của máy tạo mẫu (designEngine): giọt bạc trên trắng sữa, giọt vàng trên hồng sữa, nơ vàng trên đỏ nhung /
+  // trắng sữa, nơ bạc trên hồng phấn, ren trên hồng sữa
+  { name: "R2 Giọt chrome bạc nền trắng sữa", colors: ["#f2ede6", "#c0c0c0", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 225 },
+  { name: "R2 Giọt chrome vàng nền hồng sữa", colors: ["#f6d5d0", "#d4af37", "#d4af37"], finish: "glossy", pattern: "chromedrops", seed: 226 },
+  { name: "R2 Charm nơ vàng nền đỏ nhung", colors: ["#7a0f1f", "#f2ede6", "#d4af37"], finish: "glossy", pattern: "charm3d", seed: 227 },
+  { name: "R2 Charm nơ vàng nền trắng sữa", colors: ["#f2ede6", "#f5f0e8", "#d4af37"], finish: "glossy", pattern: "charm3d", seed: 228 },
+  { name: "R2 Charm nơ bạc nền hồng phấn", colors: ["#f4c7cf", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "charm3d", seed: 229 },
+  { name: "R2 Ren trắng nền hồng sữa trong", colors: ["#f6d5d0", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 230 },
   { name: "R2 Ren trắng nền nude", colors: ["#e8c4a8", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 218 },
   { name: "R2 Ren trắng nền hồng sữa", colors: ["#f2c9c4", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 219 },
 ];

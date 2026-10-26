@@ -114,7 +114,9 @@ const PALETTES: Record<string, [CK, CK, CK][]> = {
     ["sage", "bone", "gold"], ["periwinkle", "milky", "silver"], ["lavender", "milky", "silver"], ["butter", "cobalt", "gold"]],
   prom: [["plum", "silver", "silver"], ["hotPink", "silver", "silver"], ["navy", "silver", "silver"], ["emerald", "gold", "gold"], ["black", "silver", "silver"], ["cobalt", "silver", "silver"]],
   mothersday: [["pinkNude", "milky", "gold"], ["nude", "babyPink", "gold"], ["coral", "milky", "pearl"], ["sheer", "raspberry", "gold"]],
-  wedding: [["milky", "pearl", "pearl"], ["nude", "milky", "pearl"], ["pinkNude", "milky", "silver"], ["sheer", "champagne", "gold"], ["bone", "pearl", "gold"]],
+  // cưới: trắng sữa / nude / ngọc trai là chính + "something blue" (xanh dừa cạn) và tím oải hương nhạt — bảng toàn trung
+  // tính thì lượt đã đủ 2 mẫu nude là ô cưới bí, phải nới luật mới ra mẫu
+  wedding: [["milky", "pearl", "pearl"], ["nude", "milky", "pearl"], ["pinkNude", "milky", "silver"], ["sheer", "champagne", "gold"], ["bone", "pearl", "gold"], ["periwinkle", "milky", "silver"], ["lavender", "milky", "pearl"]],
   summer: [["coral", "bone", "gold"], ["teal", "milky", "silver"], ["aqua", "sheer", "gold"], ["hotPink", "persimmon", "gold"], ["lemon", "cobalt", "gold"], ["sheer", "coral", "gold"],
     ["cobalt", "milky", "silver"], ["sheer", "cobalt", "silver"], ["persimmon", "milky", "gold"]],
   backtoschool: [["navy", "milky", "silver"], ["cherry", "navy", "gold"], ["olive", "butter", "gold"], ["nude", "chocolate", "gold"]],
@@ -336,9 +338,11 @@ export const PATTERNS: Pattern[] = [
     // đồi mồi + thạch hổ phách (móng trơn của bộ là thạch caramel) — tên nói đúng cái đó
     title: () => s("Đồi mồi caramel phối thạch hổ phách", "Caramel tortoiseshell with amber jelly"),
     why: s("đồi mồi là mẫu mùa thu bán chạy, sang mà dễ phối đồ", "tortoiseshell is a fall best-seller — chic and easy to wear"),
-    materials: ({ metal }) => [m("Gel nâu caramel trong (jelly)", "Caramel jelly gel"), m("Gel nâu đậm", "Dark brown gel"), LINER(metal), DOT],
-    steps: ({ metal }) => [s("Phủ 1 lớp jelly caramel mỏng, hơ đèn", "Apply a thin caramel jelly layer, cure"), s("Chấm loang nâu đậm, chưa hơ đèn để màu tự tan vào nhau", "Dot dark brown and let it bleed before curing"), s("Phủ thêm lớp jelly, hơ đèn để tạo chiều sâu", "Seal with more jelly and cure for depth"), s(`Viền chỉ ${metal.vi} mảnh quanh 2 ngón nhấn`, `Outline two accent nails with a fine ${metal.en} line`)],
-    image: ({ metal }) => `glossy caramel and dark brown tortoiseshell pattern with thin ${metal.en} outlines on two accent nails`,
+    // (bộ vẽ lượt 2: móng nhấn có viền French micro kim loại tráng gương ở mép đầu móng + vài mảnh foil chìm trong lớp
+    // hổ phách — không còn viền chỉ chạy quanh cả móng)
+    materials: ({ metal }) => [m("Gel nâu caramel trong (jelly)", "Caramel jelly gel"), m("Gel nâu đậm", "Dark brown gel"), LINER(metal), m(`Foil ${metal.vi} vụn`, `${cap(metal.en)} foil flakes`, "1 hũ"), DOT],
+    steps: ({ metal }) => [s("Phủ 1 lớp jelly caramel mỏng, hơ đèn", "Apply a thin caramel jelly layer, cure"), s("Chấm loang nâu đậm, chưa hơ đèn để màu tự tan vào nhau", "Dot dark brown and let it bleed before curing"), s("Phủ thêm lớp jelly, hơ đèn để tạo chiều sâu", "Seal with more jelly and cure for depth"), s(`Ngón áp út: kẻ viền French micro ${metal.vi} sát mép đầu móng, rắc vài mảnh foil ${metal.vi} trước lớp jelly cuối`, `Ring finger: line a micro French in ${metal.en} right at the free edge and tuck a few ${metal.en} foil flakes under the last jelly layer`)],
+    image: ({ metal }) => `glossy caramel and dark brown tortoiseshell nails, the ring finger with a thin mirror ${metal.en} micro French edge and tiny ${metal.en} foil flakes`,
   },
   {
     id: "marble", occasions: ["any", "newyear", "wedding", "christmas"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true,
@@ -357,13 +361,14 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `${c1.en} nails with clearly visible thin metallic ${metal.en} curved line art painted on every nail`,
   },
   {
-    // bộ máy vẽ 3 chấm nhỏ so le giữa móng (không phải chấm bi kín móng — đó là "polka") → tên nói "điểm chấm", không "chấm bi"
+    // bộ vẽ (lib/tryon, lượt 2): chấm bi cây chấm 2–3 cỡ, 3 bố cục — chuỗi chéo nhỏ dần, rải thưa, cụm ở 1 góc chân móng →
+    // "chấm bi" đúng ảnh; tiếng Anh nói "dots" (chuỗi / cụm không phải "polka" rải đều)
     id: "dots", occasions: ["spring", "summer", "backtoschool", "any"], finishes: ["glossy", "matte"], minutes: 10, price: 5, difficulty: 1, design: true,
-    title: ({ c1, c2 }) => s(`${capVi(c1.vi)} điểm chấm nhỏ ${c2.vi}`, `${cap(c1.en)} with tiny ${c2.en} dot accents`),
-    why: s("3 chấm nhỏ so le là điểm nhấn tối giản dễ thương, thợ mới làm đẹp được ngay", "a trio of tiny dots is a cute minimal accent newer techs can nail on day one"),
-    materials: ({ c2 }) => [m(`Gel ${c2.vi} (chấm)`, `${cap(c2.en)} gel (dots)`), DOT],
-    steps: ({ c2 }) => [s(`Chấm 3 chấm ${c2.vi} nhỏ so le dọc giữa móng trên ${ACC.vi}, hơ đèn`, `Dot three small ${c2.en} dots in a staggered line down the centre of the ${ACC.en}, cure`)],
-    image: ({ c1, c2 }) => `${c1.en} nails with three tiny neat ${c2.en} dots in a staggered line on the accent nails`,
+    title: ({ c1, c2 }) => s(`${capVi(c1.vi)} chấm bi ${c2.vi}`, `${cap(c1.en)} with ${c2.en} dots`),
+    why: s("chấm bi vẽ bằng cây chấm 2–3 cỡ — dễ thương, thợ mới làm đẹp được ngay", "dotting-tool dots in two or three sizes — cute, and newer techs can nail them on day one"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (chấm bi)`, `${cap(c2.en)} gel (dots)`), DOT],
+    steps: ({ c2 }) => [s(`Dùng cây chấm 2–3 cỡ chấm bi ${c2.vi} trên ${ACC.vi}: chuỗi chéo to → nhỏ dần, rải thưa, hoặc cụm ở 1 góc chân móng thưa dần lên đầu móng — chấm không chạm mép móng, hơ đèn`, `Use a dotting tool in two or three sizes to place ${c2.en} dots on the ${ACC.en}: a diagonal trail from big to small, a loose scatter, or a cluster at one cuticle corner thinning towards the tip — keep dots off the edges, cure`)],
+    image: ({ c1, c2 }) => `${c1.en} nails with hand-dotted ${c2.en} dots in two or three sizes on the accent nails`,
   },
   {
     id: "hearts", occasions: ["valentine"], finishes: ["glossy", "matte"], minutes: 12, price: 6, difficulty: 1, design: true,
@@ -375,12 +380,13 @@ export const PATTERNS: Pattern[] = [
   },
   {
     id: "floral", occasions: ["spring", "mothersday", "wedding", "summer"], finishes: ["glossy", "matte"], minutes: 20, price: 10, difficulty: 2, design: true,
-    // bộ máy vẽ 1 bông 5 cánh to ở góc đầu móng + lá + nụ (không phải hoa nhí rải kín móng) → tên không hứa "hoa nhí"
-    title: ({ c1, c2 }) => s(`Hoa ${c2.vi} vẽ tay nền ${c1.vi}`, `Hand-painted ${c2.en} flower on ${c1.en}`),
-    why: s("1 bông hoa vẽ tay kèm lá, nụ ở góc móng — nhẹ nhàng, khách tặng mẹ và cô dâu rất chuộng", "one hand-painted bloom with leaves and buds in the corner — soft, a favorite for moms and brides"),
-    materials: ({ c2 }) => [m(`Gel ${c2.vi} (cánh hoa)`, `${cap(c2.en)} gel (petals)`), m("Gel vàng (nhuỵ hoa)", "Yellow gel (flower centers)"), m("Gel xanh lá (lá, nụ)", "Green gel (leaves, buds)"), DOT],
-    steps: ({ c2 }) => [s(`Chấm 5 cánh hoa ${c2.vi} quanh 1 tâm ở góc đầu móng ${ACC.vi}, hơ đèn`, `Dot five ${c2.en} petals around a centre at the tip corner of the ${ACC.en}, cure`), s("Chấm nhuỵ vàng, kẻ 2 lá xanh nhỏ + 1–2 nụ dưới bông hoa, hơ đèn", "Add a yellow centre, two small green leaves and one or two buds below the bloom, cure")],
-    image: ({ c1, c2 }) => `${c1.en} nails with one hand-painted five-petal ${c2.en} flower with small green leaves and buds at the tip corner of accent nails`,
+    // bộ vẽ (lib/tryon, lượt 2): HOA NHÍ thật — 6–9 bông 5 cánh chấm bi tí hon 2 tông (c2 + trắng kem / hồng phấn), nhuỵ
+    // vàng, lá nhỏ nép cạnh hoa; rải cả móng / dồn 1 góc đầu móng / vòng hoa ôm chân móng
+    title: ({ c1, c2 }) => s(`Hoa nhí ${c2.vi} nền ${c1.vi}`, `${cap(c2.en)} ditsy florals on ${c1.en}`),
+    why: s("hoa nhí chấm bi vẽ tay nhẹ nhàng, khách tặng mẹ và cô dâu rất chuộng", "hand-dotted ditsy florals are a favorite for moms and brides"),
+    materials: ({ c2 }) => [m(`Gel ${c2.vi} (cánh hoa)`, `${cap(c2.en)} gel (petals)`), m("Gel trắng kem hoặc hồng phấn (bông xen)", "Cream or blush gel (accent flowers)"), m("Gel vàng (nhuỵ hoa)", "Yellow gel (flower centers)"), m("Gel xanh lá (lá nhỏ)", "Green gel (tiny leaves)"), DOT],
+    steps: ({ c2 }) => [s(`Dùng cây chấm bi chấm 5 cánh ${c2.vi} quanh 1 tâm, rải 6–9 bông nhỏ trên ${ACC.vi} (xen vài bông trắng kem / hồng phấn), hơ đèn`, `With a dotting tool, dot five ${c2.en} petals around a center and scatter six to nine tiny flowers on the ${ACC.en} (mix in a few cream or blush ones), cure`), s("Chấm nhuỵ vàng, kéo vài lá xanh nhỏ nép cạnh hoa, hơ đèn", "Add yellow centers and a few tiny green leaves tucked beside the flowers, cure")],
+    image: ({ c1, c2 }) => `${c1.en} nails with scattered tiny hand-dotted five-petal ${c2.en} ditsy flowers with yellow centers and tiny green leaves on accent nails`,
   },
   {
     id: "web", occasions: ["halloween"], finishes: ["matte", "glossy"], minutes: 15, price: 8, difficulty: 2, design: true,
@@ -431,14 +437,14 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1 }) => `${c1.en} nails with tiny white pearls at the cuticle of accent nails`,
   },
   {
-    // bộ máy vẽ 3 lá thu tông cam cháy / đỏ gạch / vàng nghệ rơi chéo móng (không phải sticker kim loại) → tên không hứa
-    // "lá phong vàng ánh kim" (soi lượt 2: tên vàng ánh kim, ảnh lá cam)
-    id: "leaf", occasions: ["fall", "thanksgiving"], finishes: ["glossy", "matte"], minutes: 15, price: 8, difficulty: 1, design: true,
-    title: ({ c1 }) => s(`Lá thu vẽ tay nền ${c1.vi}`, `Hand-painted autumn leaves on ${c1.en}`),
-    why: s("3 chiếc lá thu cam cháy, đỏ gạch, vàng nghệ rơi chéo móng — mẫu mùa thu, Lễ Tạ Ơn dễ bán", "three falling autumn leaves in burnt orange, rust and ochre — an easy fall and Thanksgiving seller"),
-    materials: () => [m("Gel cam cháy, đỏ gạch, vàng nghệ (lá thu)", "Burnt orange, rust and ochre gels (leaves)", "3 lọ"), LINER_BRUSH],
-    steps: () => [s(`Vẽ 3 lá thu nhỏ dần rơi chéo từ góc đầu móng ${ACC.vi}, mỗi lá 1 tông, kẻ gân lá mảnh, hơ đèn`, `Paint three autumn leaves getting smaller as they fall diagonally from the tip corner of the ${ACC.en}, one tone each, add fine veins, cure`)],
-    image: ({ c1 }) => `${c1.en} nails with three small hand-painted autumn leaves in burnt orange, rust and ochre falling diagonally on accent nails`,
+    // bộ vẽ (lib/tryon, lượt 2): LÁ PHONG KIM LOẠI (sticker / foil đúng màu kim loại của bảng) — 1 lá to + 1–2 lá nhỏ rơi
+    // chéo → tên "lá phong vàng / bạc ánh kim" đúng ảnh (bảng kim loại ngọc trai bị loại: lá ngọc trai không phải foil)
+    id: "leaf", occasions: ["fall", "thanksgiving"], finishes: ["glossy", "matte"], minutes: 12, price: 6, difficulty: 1, design: true,
+    title: ({ c1, metal }) => s(`Lá phong ${metal.vi} nền ${c1.vi}`, `${cap(metal.en)} maple leaves on ${c1.en}`),
+    why: s("lá phong kim loại trên ngón áp út — mẫu mùa thu, Lễ Tạ Ơn dễ bán, sang mà nhanh", "metallic maple leaves on the ring finger — a quick, chic fall and Thanksgiving seller"),
+    materials: ({ metal }) => [m(`Sticker / foil lá phong ${metal.vi}`, `${cap(metal.en)} maple leaf decals or foil`, "1 tấm")],
+    steps: ({ metal }) => [s(`Dán 1 lá phong ${metal.vi} to giữa móng + 1–2 lá nhỏ rơi chéo lên ${ACC.vi} trước lớp top, miết sát mép lá`, `Place one large ${metal.en} maple leaf mid-nail plus one or two small ones falling diagonally on the ${ACC.en} before top coat, press the edges down`)],
+    image: ({ c1, metal }) => `${c1.en} nails with one large and one or two small ${metal.en} metallic maple leaves on accent nails`,
   },
   {
     id: "blossom", occasions: ["tet"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 10, difficulty: 2, design: true,
@@ -998,7 +1004,7 @@ const ROLES: Record<string, Role> = {
   stars: { g: "relief", on: "metal", shapes: SH5, pal: [["black", "milky", "gold"], ["navy", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
   gems: { g: "relief", on: "#f4f4f6", pal: [["plum", "silver", "silver"], ["black", "silver", "silver"], ["pinkNude", "milky", "silver"], ["navy", "silver", "silver"]] },
   pearls: { g: "relief", on: "#efe6d6", pal: [["pinkNude", "milky", "pearl"], ["nude", "milky", "pearl"], ["lavender", "milky", "pearl"]] },
-  leaf: { g: "glow", on: "#c8892b", pal: [["burgundy", "bone", "gold"], ["espresso", "nude", "gold"], ["olive", "bone", "gold"]] },
+  leaf: { g: "motif", on: "metal", ok: ([, , mt]) => mt !== "pearl", pal: [["burgundy", "bone", "gold"], ["espresso", "nude", "gold"], ["olive", "bone", "gold"], ["cobalt", "bone", "silver"]] },
   blossom: { g: "motif", pal: [["cherry", "lemon", "gold"], ["sheer", "hotPink", "gold"]] },
   // caro: đỏ / xanh thông cùng độ sáng vẫn đọc ra nhờ khác hẳn sắc + chỉ kẻ trắng / vàng
   plaid: { g: "tone", shapes: SHORT, ok: ([a, b]) => hueFamily(hx(a)) !== hueFamily(hx(b)) && Math.hypot(...lab(hx(a)).map((v, i) => v - lab(hx(b))[i])) >= 30 && Math.max(Lof(hx(a)), Lof(hx(b))) >= 35, pal: [["cherry", "pine", "gold"], ["caramel", "espresso", "gold"], ["cherry", "navy", "gold"]] },
@@ -1184,6 +1190,12 @@ export function toneFam(hex: string): string {
 }
 // "Họ hoạ tiết" để không ra 2 mẫu cùng kiểu + cùng tông trong 1 ngày (2 French nền sữa đầu nâu, 2 móng trơn đỏ rượu…)
 const SHEER_FAM = new Set(["ombre", "babyboomer", "aura", "blush", "syrup", "jelly", "cleanmilky"]);
+// nền / màu phụ trung tính đổi được cho nhau khi 1 màu đã đủ trần cả ngày (xem compose)
+const NEUTRAL_ALT: CK[] = ["sheer", "pinkNude", "nude", "babyPink", "bone", "milky"];
+// (nền mới không cùng tông với màu kia — đầu French trắng trên nền trắng ngà, hồng sữa trên hồng nude là tàng hình)
+const neutralSwaps = (k: [CK, CK, CK]): [CK, CK, CK][] => [0, 1].filter((i) => NEUTRAL_ALT.includes(k[i])).flatMap((i) =>
+  NEUTRAL_ALT.filter((b) => b !== k[0] && b !== k[1] && (i === 0 ? toneFam(hx(b)) !== toneFam(hx(k[1])) : toneFam(hx(b)) === toneFam(hx(k[i]))))
+    .map((b): [CK, CK, CK] => (i ? [k[0], b, k[2]] : [b, k[1], k[2]])));
 const patFam = (p: string) => (FRENCH_FAMILY.has(p) ? "french" : SHEER_FAM.has(p) ? "sheer" : PLAIN.has(p) ? "plain" : p);
 const lookKey = (p: string, pal: readonly string[]) => `${patFam(ALIAS[p] ?? p)}|${tonesOf(pal).map(toneFam).join("+")}`;
 // đầu móng nâu đậm / mận / rượu sẫm trên móng NGẮN (oval, vuông) nhìn như đầu móng ố bẩn (soi lượt 2: ombre nude → nâu
@@ -1452,6 +1464,8 @@ interface ComposeOpts {
   hero?: CK[];
   /** bảng màu (hex nền + phụ) còn trong trần màu cả ngày không (xem generateEngineDesigns) — ưu tiên bảng còn trần */
   capOk?: (pal: string[]) => boolean;
+  /** đã nới luật (accept bỏ trần màu): trần màu chỉ còn là ưu tiên CUỐI, sau nền có màu / khác họ màu mẫu liền trước */
+  capSoft?: boolean;
 }
 /** Ghép 1 mẫu cho hoạ tiết `pat`: chọn bảng màu hợp vai (bảng của dịp → bảng mặc định của hoạ tiết), hệ móng, hiệu ứng
  *  (theo tỉ lệ + luật nền), dáng (theo danh sách được phép). null nếu không ghép được. */
@@ -1469,6 +1483,8 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   // (từng ra "Bộ Halloween xanh cobalt")
   const good = (k: [CK, CK, CK]) => wants(k) && (!o.avoidFam || tr(k).fam !== o.avoidFam);
   if (o.need.length && !o.strict && !cands.some(good)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...(o.occ ? [] : PALETTES.trend)]).filter(good); if (ext.length) cands = ext; }
+  // lượt đã đủ nude mà bảng của ô toàn nền trung tính (cưới, nail Hàn…) → mượn bảng mặc định có nền màu của hoạ tiết
+  if (o.avoidNude && !o.strict && !cands.some((k) => !tr(k).nude)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...(o.occ ? [] : PALETTES.trend)]).filter((k) => !tr(k).nude); if (ext.length) cands = ext; }
   // màu nhấn theo mùa: nửa số lần ô quanh năm lấy bảng có màu hero (bảng sẵn không có → "nền trung tính + hero") — chỉ khi
   // màu hero còn trong trần màu cả ngày (không để 1 màu hero chiếm 1/3 ngày)
   const pal2 = (k: [CK, CK, CK]) => forcedKeys(pat.id, k).slice(0, 2).map(hx);
@@ -1478,16 +1494,27 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
     if (!w.length) w = fits(o.hero.flatMap(heroPals)).filter(withHero);
     if (w.length) cands = w;
   }
-  // mẫu nền trong (French, nail Hàn) mà màu nền đã đủ trần cả ngày → đổi sang nền trung tính khác (hồng nude, nude be,
-  // trắng ngà…) như thợ chọn nền theo màu da khách — không cả ngày 1 nền hồng sữa / trắng sữa
-  if (o.capOk && !o.strict && ROLES[pat.id]?.base === "sheer" && !cands.some((k) => o.capOk!(pal2(k)))) {
-    const alt = cands.flatMap((k) => (["sheer", "pinkNude", "nude", "bone", "milky", "babyPink"] as CK[]).filter((b) => b !== k[0]).map((b): [CK, CK, CK] => [b, k[1], k[2]])).filter((k) => paletteOk(pat.id, k) && o.capOk!(pal2(k)));
+  // màu trung tính (nền hồng sữa / trắng sữa / nude…) đã đủ trần cả ngày → đổi sang trung tính khác như thợ chọn nền theo
+  // màu da khách: NỀN đổi sang mọi nền trung tính (hồng nude, nude be, hồng baby, trắng ngà…), màu PHỤ trung tính chỉ đổi
+  // trong cùng tông (trắng sữa ↔ trắng ngà, hồng sữa ↔ hồng nude) để hoạ tiết vẫn y như bảng gốc. Không đổi sang "trắng
+  // mây" (cùng màu trắng sữa, chỉ né trần cho có) và không đổi đầu French trắng ("white")
+  // (ô quanh năm còn bí thì mượn bảng mặc định của hoạ tiết / bảng trend; ô dịp lễ thì không — giữ đúng màu của dịp)
+  const capK = (k: [CK, CK, CK]) => !o.capOk || o.capOk(pal2(k));
+  if (o.capOk && !o.capSoft && !o.strict && !cands.some(capK)) {
+    const more = (l: [CK, CK, CK][]) => l.flatMap((k) => [k, ...neutralSwaps(k)]).filter((k) => paletteOk(pat.id, k) && capK(k));
+    let alt = more(cands);
+    if (!alt.length && !o.occ) alt = more(fits([...(ROLES[pat.id]?.pal ?? []), ...PALETTES.trend]));
     if (alt.length) cands = alt;
   }
-  for (const f of [o.need.length ? wants : null, o.capOk ? (k: [CK, CK, CK]) => o.capOk!(pal2(k)) : null, o.avoidNude ? (k: [CK, CK, CK]) => !tr(k).nude : null, o.avoidWhite ? (k: [CK, CK, CK]) => !tr(k).white : null, o.avoidFam ? (k: [CK, CK, CK]) => tr(k).fam !== o.avoidFam : null]) {
+  // lọc lần lượt (bảng lấp chỉ tiêu → còn trần màu → nền có màu → không trắng → khác họ màu mẫu liền trước); bước nào
+  // không bảng nào đạt thì thử đổi nền / màu phụ trung tính (French sau 1 mẫu nền hồng sữa → nền trắng sữa / trắng ngà)
+  const done: ((k: [CK, CK, CK]) => boolean)[] = [];
+  const capF = o.capOk ? capK : null;
+  for (const f of [o.need.length ? wants : null, o.capSoft ? null : capF, o.avoidNude ? (k: [CK, CK, CK]) => !tr(k).nude : null, o.avoidWhite ? (k: [CK, CK, CK]) => !tr(k).white : null, o.avoidFam ? (k: [CK, CK, CK]) => tr(k).fam !== o.avoidFam : null, o.capSoft ? capF : null]) {
     if (!f) continue;
-    const w = cands.filter(f);
-    if (w.length) cands = w;
+    let w = cands.filter(f);
+    if (!w.length && !o.strict) w = cands.flatMap(neutralSwaps).filter((k) => f(k) && paletteOk(pat.id, k) && done.every((g) => g(k)));
+    if (w.length) { cands = w; done.push(f); }
   }
   const colors = pick(r, cands);
   const c1hex = hx(forcedKeys(pat.id, colors)[0]);
@@ -1547,7 +1574,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   // mix: ô dịp lễ lần này thử bộ phối mỗi móng một kiểu (3/4 số lần → ~60% ô dịp lễ ra bộ phối: đủ ≥ 50% mà 3 lượt/ngày
   // không lượt nào cũng 1 tên "Bộ … mỗi móng một kiểu")
   type Steer = { need: Need[]; avoidNude: boolean; avoidWhite: boolean; avoidFam?: string; mix?: boolean };
-  // fresh: chưa nới luật (bậc < 2) → bỏ luôn hoạ tiết của 3 lượt trước khỏi danh sách chọn (không trông vào loại dần)
+  // fresh: chưa nới luật (bậc < 2) → bỏ luôn hoạ tiết của 3 lượt trước khỏi danh sách chọn (không trông vào loại dần).
+  // Trần màu cả ngày: fresh thì lái bảng màu trước các luật khác; bậc nới rồi (accept cũng bỏ trần) thì chỉ còn là ưu
+  // tiên cuối (capSoft) — bảng màu lo trước các luật còn lại (khác họ màu mẫu liền trước, nền có màu…)
   const radarCand = (st: Steer, fresh: boolean): { d: EngineDesign; id: string } | null => {
     const motifs = dayMotifs();
     const okLook = (l: Trend["looks"][number]) => { const p = PATTERNS.find((x) => x.id === (ALIAS[l.pattern] ?? l.pattern)); return !!p && live(p) && !usedPatterns.has(p.id) && !(fresh && recent.has(p.id)) && !motifsOf(p.id).some((x) => motifs.has(x)); };
@@ -1561,7 +1590,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     const look = pick(r, tr.looks.filter(okLook));
     const pat = PATTERNS.find((x) => x.id === (ALIAS[look.pattern] ?? look.pattern))!;
     const occ = tr.occasion ? occs.find((o) => o.id === tr.occasion) ?? null : null;
-    const d = compose(r, pat, look.colors, { market: input.market, occ, style: "trend", ...st, finish: look.finish, shapes: look.shapes, strict: true, radar: { name: tr.name, source: tr.source }, capOk });
+    const d = compose(r, pat, look.colors, { market: input.market, occ, style: "trend", ...st, finish: look.finish, shapes: look.shapes, strict: true, radar: { name: tr.name, source: tr.source }, capOk, capSoft: !fresh });
     return d && { d, id: tr.id };
   };
 
@@ -1608,7 +1637,11 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     // milk bath… — hay bảng toàn nền sữa khi trắng sữa đã đủ trần thì để lượt khác) — không phí lượt thử rồi bị loại
     if (fresh) {
       const pals = PALETTES[palKey(occId, input.market)] ?? PALETTES.any;
-      const f = pool.filter((p) => [...pals, ...(ROLES[p.id]?.pal ?? [])].some((k) => { const c = fitRoles(p.id, k as [CK, CK, CK]); return paletteOk(p.id, c) && capOk(forcedKeys(p.id, c).slice(0, 2).map(hx)); }));
+      // (đúng như compose ghép: bảng của ô → bảng mặc định nếu bảng của ô không hợp; ô quanh năm mượn thêm bảng trend;
+      // tính cả bản đổi nền trung tính)
+      const fit = (p: Pattern, l: readonly (readonly string[])[]) => l.map((k) => fitRoles(p.id, k as [CK, CK, CK])).filter((c) => paletteOk(p.id, c));
+      const capFit = (p: Pattern, l: [CK, CK, CK][]) => l.some((c) => [c, ...neutralSwaps(c)].some((x) => paletteOk(p.id, x) && capOk(forcedKeys(p.id, x).slice(0, 2).map(hx))));
+      const f = pool.filter((p) => { const own = fit(p, pals); return capFit(p, own.length ? own : fit(p, ROLES[p.id]?.pal ?? [])) || (!occ && capFit(p, fit(p, [...(ROLES[p.id]?.pal ?? []), ...PALETTES.trend]))); });
       if (f.length) pool = f;
     }
     if (!pool.length) return null;
@@ -1620,7 +1653,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
       if (p2 && live(p2) && (p2.occasions === "any" || tagged(p2)) && (kind !== "easy" || p2.difficulty === 1)) pat = p2;
       tag = hit[0];
     }
-    return compose(r, pat, PALETTES[palKey(occId, input.market)] ?? PALETTES.any, { market: input.market, occ, style, easy: kind === "easy", ...st, tag, hero, capOk });
+    return compose(r, pat, PALETTES[palKey(occId, input.market)] ?? PALETTES.any, { market: input.market, occ, style, easy: kind === "easy", ...st, tag, hero, capOk, capSoft: !fresh });
   };
 
   // Nới luật theo bậc khi bí (mỗi bậc 60 lần thử): 0 đủ luật · 1 bỏ "≤ 2 mẫu / họ màu" · 2 bỏ né 3 lượt trước + trần
@@ -1668,7 +1701,6 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
       let d: EngineDesign | null = null, rid: string | null = null;
       if (kind === "radar") { const c = radarCand(st, lvl < 2); if (c) { d = c.d; rid = c.id; } }
       else d = poolCand(kind, tries, st, lvl < 2);
-      if (process.env.DBG_ACC && lvl < 3) console.error("DBG", p6, tries, kind, JSON.stringify(st.need), d ? `${d.pattern}/${d.finish}/${d.palette.join(",")}/rec=${recent.has(d.pattern)}/key=${dayKeys().has(lookKey(d.pattern, d.palette))}/cap=${capOk(d.palette)}/mot=${motifsOf(d.pattern).some((x) => dayMotifs().has(x))}/used=${usedPatterns.has(d.pattern)}` : "null");
       if (d && accept(d, lvl)) { made = d; if (rid) usedRadar.add(rid); }
     }
     if (!made) continue;

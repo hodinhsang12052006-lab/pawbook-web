@@ -190,12 +190,14 @@ const mud = (hex: string, pid: string) => { const f = toneFam(hex), [L, a, b] = 
 const MUDDY = ["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"];
 const lie = all.filter(({ d }) =>
   (d.pattern === "fr-glitter" && d.finish !== "glossy") || (d.pattern === "aura" && d.finish === "chrome") ||
-  (d.pattern === "floral" && /hoa nhí|ditsy/i.test(d.title.vi + d.title.en)) || (d.pattern === "dots" && /chấm bi|polka/i.test(d.title.vi + d.title.en)) ||
-  (d.pattern === "leaf" && /ánh kim|gold|silver|bạc/i.test(d.title.vi + d.title.en)) || (d.pattern === "tortoise" && /viền|accent/i.test(d.title.vi + d.title.en)) ||
+  // (bộ vẽ lượt 2 vẽ đúng hoa nhí chấm bi, chấm bi cây chấm 3 bố cục, lá phong foil kim loại — tên nói đúng những cái đó;
+  // tiếng Anh "dots" không "polka" vì chuỗi chéo / cụm góc không phải chấm bi rải đều; lá phong không nền ngọc trai)
+  (d.pattern === "floral" && !/^Hoa nhí/.test(d.title.vi)) || (d.pattern === "dots" && /polka/i.test(d.title.en)) ||
+  (d.pattern === "leaf" && (d.palette[2] === COLORS.pearl.hex || !/maple leaves/.test(d.title.en))) || (d.pattern === "tortoise" && /viền|accent|outline/i.test(d.title.vi + d.title.en + d.steps.map((x) => x.en).join(" "))) ||
   (d.pattern === "fr-skittle" && (Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 30 || lab(d.palette[1])[0] > 70)) ||
   (d.pattern === "plaid" && Math.max(lab(d.palette[0])[0], lab(d.palette[1])[0]) < 35) ||
   (MUDDY.includes(d.pattern) && ["oval", "square"].includes(d.shape) && mud(d.palette[1], d.pattern)) || (d.pattern === "syrup" && Math.hypot(lab(d.palette[0])[1], lab(d.palette[0])[2]) < 30));
-check("DE45", "Tên nói đúng cái ảnh vẽ ra: French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, không 'hoa nhí' / 'chấm bi' / 'lá phong vàng ánh kim' / 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup có sắc rõ (không thạch nâu đục); đầu móng nâu / mận đậm (micro French: mọi màu gần đen) không trên móng oval / vuông ngắn",
+check("DE45", "Tên nói đúng cái ảnh vẽ ra: French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup có sắc rõ (không thạch nâu đục); đầu móng nâu / mận đậm (micro French: mọi màu gần đen) không trên móng oval / vuông ngắn",
   lie.length === 0 && !paletteOk("fr-skittle", ["sheer", "milky", "gold"]) && !paletteOk("fr-skittle", ["sheer", "coffee", "gold"]) && paletteOk("fr-skittle", ["sheer", "cobalt", "silver"]) &&
   !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter"),
   lie.slice(0, 3).map((x) => `${x.d.title.vi} [${x.d.pattern}/${x.d.finish}/${x.d.shape}]`).join(" | "));

@@ -111,10 +111,18 @@ const DRIP = new Set(["slimedrip", "blooddrip", "chocodip"]);
 /** Sơn trong / thạch: lộ mờ hoạ tiết cũ của móng gốc → né tay `deco`. */
 const SHEER = new Set(["jelly", "milkbath", "syrup", "blush", "cleanmilky"]);
 
+/** Dáng đắp THON (hạnh nhân / oval / nhọn) trên tay móng thật vuông, rộng (olive / white / p063): phần đắp ngắn hợp với
+ *  góc vuông của móng thật ra đầu móng vát cụt 2 cạnh / mũi khiên lệch — như móng gãy, giũa hỏng (soi lượt 2, 4 phiếu).
+ *  Tới khi bộ vẽ giũa lại mép móng thật theo dáng mới, dáng thon chỉ vẽ trên tay móng đã thon sẵn (pink, p067). */
+const SQUARE_PLATE = new Set(["olive.jpg", "white.jpg", "p063.jpg"]);
+const TAPER = new Set(["almond", "oval", "stiletto"]);
+/** Dáng đắp này có vẽ trên tay này không (dáng thon không vẽ trên tay móng thật vuông — xem SQUARE_PLATE). */
+export const extShapeOn = (file: string, shape: string) => !(TAPER.has(shape) && SQUARE_PLATE.has(file));
+
 /** Tay mẫu cho 1 mẫu + biến thể (ổn định: cùng mẫu, cùng biến thể → cùng tay). Bộ đắp chỉ trên tay móng dài. */
 export function pickHand(d: RenderableDesign, variant = 0): Hand {
-  const sheer = SHEER.has(d.pattern), drip = DRIP.has(d.pattern);
-  const pool = HANDS.filter((x) => (!isExt(d) || x.long) && !(sheer && x.deco) && (!drip || x.up));
+  const sheer = SHEER.has(d.pattern), drip = DRIP.has(d.pattern), ext = isExt(d);
+  const pool = HANDS.filter((x) => (!ext || (x.long && extShapeOn(x.file, d.shape))) && !(sheer && x.deco) && (!drip || x.up));
   return pool[hashOf(`${d.id}:${variant}`) % pool.length];
 }
 

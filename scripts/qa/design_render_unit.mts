@@ -4,7 +4,7 @@
 // 1024 (không phóng sau khi vẽ), khung chặt (móng ≥ 50% bề ngang ô, không cắt đầu móng đắp); vai trò ngón (áp út / trỏ).
 //   npx tsx scripts/qa/design_render_unit.mts
 import { createRequire } from "node:module";
-import { renderDesignImage, prepareDesign, canRenderPattern, HANDS, OUT_SIZE, pickHand, spreadVariant } from "../../lib/designRender";
+import { renderDesignImage, prepareDesign, canRenderPattern, HANDS, OUT_SIZE, pickHand, spreadVariant, extShapeOn } from "../../lib/designRender";
 import { renderLook } from "../../lib/tryon/engine";
 import { PROCEDURAL } from "../../lib/tryon/patterns";
 import { PATTERN_IDS } from "../../lib/designEngine";
@@ -54,14 +54,21 @@ ok("R6", `Kho mẫu không lặp bàn tay: ${HANDS.length} tay mẫu (≥ 10, ${
 const sheerHands = new Set(Array.from({ length: 60 }, (_, i) => pickHand(D(`sheer-${i}`, "jelly", { palette: ["#e75480", "#ffffff", "#c0c0c0"] })).file));
 ok("R7", "Sơn thạch trong chỉ vẽ trên tay mẫu có móng gốc trơn (không lộ hoạ tiết cũ)", [...sheerHands].every((f) => !HANDS.find((h) => h.file === f)!.deco), [...sheerHands].join(","));
 
-// bộ đắp móng nhọn vẽ được trên MỌI tay móng dài (tay mới thêm vào có khuôn móng khớp, không lỗi)
+// bộ đắp vẽ được trên MỌI tay móng dài (tay mới thêm vào có khuôn móng khớp, không lỗi) — dáng coffin (vẽ trên mọi tay
+// móng dài); dáng thon (hạnh nhân / oval / nhọn) chỉ trên tay móng thật đã thon (lượt 2: trên tay móng vuông rộng olive /
+// white / p063 đầu móng đắp ra vát cụt như móng gãy) và vẫn vẽ được trên các tay đó
 const longFiles = HANDS.filter((h) => h.long).map((h) => h.file), extOk: string[] = [];
-for (const file of longFiles) {
+for (const file of longFiles) for (const shape of ["coffin", "stiletto"]) {
+  if (!extShapeOn(file, shape)) continue;
   let id = "";
-  for (let k = 0; k < 800 && !id; k++) { const d = D(`len-${k}`, "solid", { skills: ["Gel-X"], shape: "stiletto" }); if (pickHand(d).file === file) id = d.id; }
-  if (id) { const r = await renderDesignImage(D(id, "solid", { skills: ["Gel-X"], shape: "stiletto" })); if (r.hand === file) extOk.push(file); }
+  for (let k = 0; k < 800 && !id; k++) { const d = D(`len-${k}`, "solid", { skills: ["Gel-X"], shape }); if (pickHand(d).file === file) id = d.id; }
+  if (id) { const r = await renderDesignImage(D(id, "solid", { skills: ["Gel-X"], shape })); if (r.hand === file) extOk.push(`${file}/${shape}`); }
 }
-ok("R8", `Bộ đắp móng nhọn vẽ được trên mọi tay móng dài (${extOk.length}/${longFiles.length})`, extOk.length === longFiles.length, longFiles.filter((f) => !extOk.includes(f)).join(","));
+const extWant = longFiles.flatMap((f) => ["coffin", "stiletto"].filter((sh) => extShapeOn(f, sh)).map((sh) => `${f}/${sh}`));
+const taperOn = new Set(["almond", "oval", "stiletto"].flatMap((shape) => Array.from({ length: 80 }, (_, i) => pickHand(D(`taper-${shape}-${i}`, "french", { skills: ["Gel-X"], shape })).file)));
+ok("R8", `Bộ đắp vẽ được trên mọi tay móng dài (${extOk.length}/${extWant.length}); dáng thon chỉ trên tay móng thật thon (${[...taperOn].join(", ")})`,
+  extOk.length === extWant.length && [...taperOn].every((f) => extShapeOn(f, "almond")) && taperOn.size >= 2 && ["olive.jpg", "white.jpg", "p063.jpg"].every((f) => !extShapeOn(f, "almond") && extShapeOn(f, "coffin")),
+  `${extWant.filter((f) => !extOk.includes(f)).join(",")} | ${[...taperOn].join(",")}`);
 
 // 1 mã mẫu rơi đúng vào tay `file`
 const idFor = (file: string, mk: (id: string) => ReturnType<typeof D>) => { for (let k = 0; k < 4000; k++) if (pickHand(mk(`f-${k}`)).file === file) return `f-${k}`; return ""; };
@@ -71,7 +78,7 @@ const idFor = (file: string, mk: (id: string) => ReturnType<typeof D>) => { for 
 // ngang ô, và đầu móng (kể cả phần đắp dài nhất) KHÔNG BAO GIỜ bị cắt / chạm mép ô (cách mép ≥ 2%).
 const frameBad: string[] = [];
 let minFill = 1, minPad = OUT_SIZE, minHw = Infinity, maxLf = 0, minLf = 9;
-for (const h of HANDS) for (const shape of h.long ? ["gel", "almond", "coffin", "square", "oval", "stiletto"] : ["gel"]) {
+for (const h of HANDS) for (const shape of h.long ? ["gel", "almond", "coffin", "square", "oval", "stiletto"].filter((sh) => sh === "gel" || extShapeOn(h.file, sh)) : ["gel"]) {
   const mk = (id: string) => D(id, "solid", shape === "gel" ? {} : { skills: ["Gel-X"], shape });
   const id = idFor(h.file, mk);
   if (!id) { frameBad.push(`${h.file}/${shape}: không có mã`); continue; }

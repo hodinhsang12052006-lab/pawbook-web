@@ -2004,6 +2004,8 @@ export interface TipProfile {
   bed: RGB; lun: RGB;
   /** tính 1 lần / móng: kiểu đường French, bố cục hoa khô, màu skittle… */
   memo: Record<string, unknown>;
+  /** khoảng t của các cột có móng thật (ngoài đó E(t) chỉ là giá trị chép từ cột mép) */
+  tr: [number, number];
 }
 const TIP_N = 64, TIP_T0 = -1.12, TIP_DT = 2.24 / TIP_N;
 function tipProfile(seg: NailSeg, under?: Map<number, [number, number, number]>): TipProfile {
@@ -2021,7 +2023,7 @@ function tipProfile(seg: NailSeg, under?: Map<number, [number, number, number]>)
   for (let it = 0; it < 2; it++) { const c = Float32Array.from(E); for (let b = 1; b < TIP_N - 1; b++) E[b] = (c[b - 1] + 2 * c[b] + c[b + 1]) / 4; }
   const kL = seg.L / Math.max(1, seg.hw);
   for (let b = 0; b < TIP_N; b++) E[b] *= kL;
-  const tp: TipProfile = { E, kL, hw: seg.hw, len: 0, extLen: 0, bed: [0.6, 0.34, 0.31], lun: [0.86, 0.74, 0.7], memo: {} };
+  const tp: TipProfile = { E, kL, hw: seg.hw, len: 0, extLen: 0, bed: [0.6, 0.34, 0.31], lun: [0.86, 0.74, 0.7], memo: {}, tr: [TIP_T0 + (first + 0.5) * TIP_DT, TIP_T0 + (last + 0.5) * TIP_DT] };
   tp.len = tipE(tp, 0); tp.extLen = Math.max(0, tp.len - kL);
   // giường móng: màu da quanh chân / 2 bên móng (không lấy mép đầu móng — ngoài đó là nền ảnh), ngả hồng + hơi trong
   if (under?.size) {
@@ -2157,7 +2159,7 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
 /** Khoảng cách có dấu (hw, > 0 = trong đầu French; vuông góc với đường French) + v: 0 ở mép tự do → 1 ở đường French
  *  + g: cách mép tự do (hw) + dep: bề sâu đầu móng tại cột này (hw). */
 const FRL = { d: 0, v: 0, g: 0, dep: 0 };
-function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number): typeof FRL {
+function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number, md = 0): typeof FRL {
   const tc = Math.max(-1, Math.min(1, t)), at = Math.abs(tc), sgn = tc < 0 ? -1 : 1;
   let yl: number, sl: number;
   if (st.kind === 2) { const q = (1 + st.sg * tc) / 2; yl = st.ysL + q * (st.ysR - st.ysL) + st.bow * (1 - tc * tc); sl = 0.5 * st.sg * (st.ysR - st.ysL) - 2 * st.bow * tc; }
@@ -2167,18 +2169,56 @@ function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number): typeof FRL 
     yl = tipE(tp, tc) - dep * (1 + 0.5 * tc * tc) - amp * Math.sin(k * tc + ph);
     sl = de - dep * tc - amp * k * Math.cos(k * tc + ph);
   } else if (st.kind === 4) {
-    // dải song song: lùi vào trong 1 khoảng yc theo PHÁP TUYẾN mép (×√(1+E'²) theo dọc móng) → bề dày đều cả quanh chóp
-    // móng hạnh nhân / nhọn; 2 bên dày thêm chút (gợi đường cười); chặn ×2.6 ở thành móng dốc đứng — dải không chạy
-    // dọc xuống thân móng
-    const de = (tipE(tp, tc + 0.03) - tipE(tp, tc - 0.03)) / 0.06;
-    yl = tipE(tp, tc) - st.yc * (1 + 0.25 * tc * tc) * Math.min(2.6, Math.sqrt(1 + de * de));
-    sl = de;
+    // dải đều quanh mép tự do: md = khoảng cách có dấu tới dải (microDist, hw)
+    FRL.d = md; FRL.dep = st.yc; FRL.g = Math.max(0, st.yc - md); FRL.v = Math.max(0, Math.min(1, FRL.g / st.yc));
+    return FRL;
   } else { const ys = sgn < 0 ? st.ysL : st.ysR, w = Math.pow(at, st.p); yl = st.yc + w * (ys - st.yc); sl = st.p * Math.pow(at, st.p - 1) * sgn * (ys - st.yc); }
   const e = tipE(tp, t);
   FRL.d = (Yh - yl) / Math.sqrt(1 + sl * sl);
   FRL.g = e - Yh; FRL.dep = Math.max(1e-3, e - yl);
   FRL.v = Math.max(0, Math.min(1, FRL.g / FRL.dep));
   return FRL;
+}
+/**
+ * French MICRO: khoảng cách Euclid (px) từ mỗi điểm tới MÉP MẶT NẠ THẬT (đường độ phủ 0.5, dời theo pháp tuyến dưới
+ * 1px) + "phạt" = phần bề dày bị vuốt mất ở điểm mép đó → dải = điểm có giá trị < wPx: bề dày đều VUÔNG GÓC mép thật
+ * trên mọi dáng (góc móng vuông, chóp hạnh nhân, 2 cạnh móng nhọn). Mép tự do mỗi bên kết thúc ở ye = chỗ đường mép
+ * đã ra tới 90% bề ngang (E(±0.9), 0.12–1.2 hw dưới chóp): dưới đó dải vuốt mảnh về 0 trong 0.3 hw (đầu dải nhọn như
+ * đầu đường cười; móng vuông chỉ ôm qua góc rồi tắt). Phạt đổi chậm theo dọc mép (≤ ~1 px / px) nên đường trong của dải
+ * trơn. (Đã thử: lùi đường E(t) theo cột — E đã làm mượt cắt vào trong ở thành móng dốc → 2 đầu dải cuộn vào trong
+ * thành cái móc; phạt theo góc pháp tuyến → góc móng vuông đổi hướng gấp, cũng ra móc tròn.) Truyền điểm mép gần nhất 2
+ * lượt (8 hướng) — chamfer thì mép trong dải răng cưa.
+ */
+function microField(seg: NailSeg, tp: TipProfile, nrm: Float32Array, eSub: Float32Array, wPx: number): Float32Array {
+  const { w, h } = seg, PA = paintOf(seg), n = w * h;
+  const F = new Float32Array(n).fill(1e6), sx = new Float32Array(n), sy = new Float32Array(n), so = new Float32Array(n);
+  const E0 = tipE(tp, 0), endY = (sg: number) => Math.min(E0 - 0.12, Math.max(E0 - 1.2, tipE(tp, 0.9 * sg) - 0.08)), yL = endY(-1), yR = endY(1);
+  for (let k = 0; k < n; k++) {
+    if (PA[k] <= 0 || eSub[k] > 1) continue;
+    const nx = nrm[2 * k], ny = nrm[2 * k + 1], Yh = seg.along[k] * tp.kL, ye = seg.across[k] < 0 ? yL : yR;
+    if ((!nx && !ny) || Yh < ye - 0.4) continue;
+    const x = k % w, y = (k - x) / w;
+    so[k] = wPx * (1 - smooth(ye - 0.3, ye, Yh));
+    sx[k] = x + nx * eSub[k]; sy[k] = y + ny * eSub[k]; F[k] = Math.abs(eSub[k]) + so[k];
+  }
+  if (process.env.FRDBG === "2") { let c = 0, ymin = 9, ymax = -9; for (let k = 0; k < n; k++) if (F[k] < 1e6) { c++; const Yh = seg.along[k] * tp.kL; ymin = Math.min(ymin, Yh); ymax = Math.max(ymax, Yh); } console.log("MF", { E0, yL, yR, kL: tp.kL, len: tp.len, c, ymin, ymax, wPx, hw: tp.hw, eL: tipE(tp, -0.9), eR: tipE(tp, 0.9) }); }
+  const relax = (k: number, x: number, y: number, j: number) => {
+    if (F[j] >= 1e6) return;
+    const dd = Math.hypot(x - sx[j], y - sy[j]) + so[j];
+    if (dd < F[k]) { F[k] = dd; sx[k] = sx[j]; sy[k] = sy[j]; so[k] = so[j]; }
+  };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = y * w + x; if (PA[k] <= 0) continue;
+    if (x > 0) relax(k, x, y, k - 1);
+    if (y > 0) { relax(k, x, y, k - w); if (x > 0) relax(k, x, y, k - w - 1); if (x < w - 1) relax(k, x, y, k - w + 1); }
+  }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+    const k = y * w + x; if (PA[k] <= 0) continue;
+    if (x < w - 1) relax(k, x, y, k + 1);
+    if (y < h - 1) { relax(k, x, y, k + w); if (x < w - 1) relax(k, x, y, k + w + 1); if (x > 0) relax(k, x, y, k + w - 1); }
+  }
+  if (process.env.FRDBG === "2") { const hist = [0, 0, 0, 0, 0, 0]; for (let k = 0; k < n; k++) if (PA[k] > 0 && seg.along[k] * tp.kL < 3.6 && seg.along[k] * tp.kL > 3.2) hist[Math.min(5, Math.floor(F[k] / wPx))]++; console.log("HIST", hist); }
+  return F;
 }
 /**
  * Đầu French TRÁNG GƯƠNG: phản chiếu đặt NGANG đầu móng theo v (0 = mép tự do, 1 = đường French) — 1 dải sáng gắt cong
@@ -2492,7 +2532,10 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // trên cùng lớp sơn đặc với các móng kia (nền gel trong trên giường móng hồng thì đen ra nâu, navy ra tím xám:
             // 2/4 móng thành 1 màu sơn khác, đục hơn). Nền gel trong chỉ khi CẢ BỘ là French.
             const inSet = ov?.role === "echo" || ov?.role === "thread";
-            const fl = frLine(tipP, frStyle(tipP, pat, look.seed, i, inSet, lum(c2) < 0.062), t, Yh), d = fl.d, m = smooth(-aa, aa, d);
+            const fst = frStyle(tipP, pat, look.seed, i, inSet, lum(c2) < 0.062);
+            const mF = fst.kind === 4 ? (tipP.memo.mf as Float32Array | undefined) ?? (tipP.memo.mf = microField(seg, tipP, nrm, eSub, fst.yc * seg.hw)) : null;
+            const fl = frLine(tipP, fst, t, Yh, mF ? fst.yc - mF[k] / Math.max(4, seg.hw) : 0), d = fl.d, m = smooth(-aa, aa, d);
+            if (mF && process.env.FRDBG) { const q = mF[k] / (fst.yc * seg.hw); base = q > 4 ? [0.5, 0.5, 0.5] : [Math.min(1, q / 4), (Math.floor(q * 2) % 2) * 0.5, 1 - Math.min(1, q / 4)]; break; }
             // pink & white (bột): nền hồng GẦN ĐẶC — bảng màu không có hồng nhạt thì dùng hồng #f2c9c4 của thợ
             const pw = pat === "fr-pinkwhite", bc: RGB = pw && !(c1[0] > 0.55 && c1[0] > 1.15 * c1[2]) ? [0.888, 0.584, 0.552] : c1;
             // French micro / French nhũ: nền LÀ thiết kế → trắng sữa đặc như sữa (sheerDens milky)

@@ -2200,7 +2200,7 @@ function okMix(a: RGB, b: RGB, k: number): RGB {
  * không méo theo tỉ lệ móng. prof: 0 = nét liner (đều, 2 đầu thon tròn) · 1 = nét CỌ (đặt cọ dày → bụng → đuôi mảnh dài)
  * · 2 = khối chrome hữu cơ (bề dày phồng / thắt dọc nét). w = nửa bề dày lớn nhất, wt = nửa bề dày tối thiểu ở đuôi.
  */
-interface Stroke { o: 0 | 1; a0: number; a1: number; c: number; amp: number; k: number; ph: number; dr: number; w: number; wt: number; prof: 0 | 1 | 2 }
+interface Stroke { o: 0 | 1; a0: number; a1: number; c: number; amp: number; k: number; ph: number; dr: number; w: number; wt: number; prof: 0 | 1 | 2; qd?: number }
 /** kết quả strokeAt: d khoảng cách có dấu tới tâm nét (hw, vuông góc nét) · q vị trí dọc nét 0…1 · w nửa bề dày tại đó ·
  *  px, py pháp tuyến nét trong mặt móng (t, Y) — cho bóng khối 3D của nét nổi */
 const STK = { d: 0, q: 0, w: 0, px: 1, py: 0 };
@@ -2208,14 +2208,15 @@ function strokeAt(st: Stroke, t: number, Y: number): typeof STK {
   const x = st.o ? Y : t, v = st.o ? t : Y;
   const q = (v - st.a0) / (st.a1 - st.a0), vc = v < st.a0 ? st.a0 : v > st.a1 ? st.a1 : v;
   const ar = st.k * (vc - st.a0) + st.ph;
-  const f = st.c + st.amp * Math.sin(ar) + st.dr * (vc - st.a0), fp = st.amp * st.k * Math.cos(ar) + st.dr;
+  const vm = vc - (st.a0 + st.a1) / 2, qd = st.qd ?? 0; // qd: cong parabol (vòm ôm chân móng)
+  const f = st.c + st.amp * Math.sin(ar) + st.dr * (vc - st.a0) + qd * vm * vm, fp = st.amp * st.k * Math.cos(ar) + st.dr + 2 * qd * vm;
   const nl = Math.sqrt(1 + fp * fp);
   // ngoài 2 đầu nét: khoảng cách tới điểm đầu / cuối → đầu nét TRÒN (không cụt vuông)
   const d = v === vc ? (x - f) / nl : (x >= f ? 1 : -1) * Math.hypot(x - f, v - vc);
   const qc = q < 0 ? 0 : q > 1 ? 1 : q;
   let wq: number;
   if (st.prof === 1) wq = Math.pow(Math.sin(Math.PI * Math.pow(qc, 0.72)), 0.7);
-  else if (st.prof === 2) wq = (0.6 + 0.4 * Math.sin(5.3 * qc + st.ph * 1.7)) * Math.pow(Math.sin(Math.PI * Math.min(1, 0.04 + 0.92 * qc)), 0.35);
+  else if (st.prof === 2) wq = (0.8 + 0.2 * Math.sin(5.3 * qc + st.ph * 1.7)) * Math.pow(Math.sin(Math.PI * Math.min(1, 0.04 + 0.92 * qc)), 0.25);
   else wq = 0.5 + 0.5 * smooth(0, 0.14, qc) * (1 - smooth(0.86, 1, qc));
   STK.d = d; STK.q = q; STK.w = Math.max(st.wt, st.w * wq);
   // pháp tuyến nét (về phía d dương) trong hệ (t, Y)
@@ -2225,6 +2226,48 @@ function strokeAt(st: Stroke, t: number, Y: number): typeof STK {
 }
 /** Độ phủ nét (mép khử răng cưa ~aa hw). */
 const strokeCov = (k: typeof STK, aa: number) => 1 - smooth(k.w - aa, k.w + aa, Math.abs(k.d));
+/**
+ * LINE ART của 1 móng (thợ vẽ bằng cọ liner, 2–3 chi tiết có chủ ý — không phải 1 sợi chỉ mảnh dọc móng): bố cục theo vai
+ * + hạt giống. Nét phẳng (line vàng) nửa bề dày ≥ 1.5px (~0.036 hw); line CHROME NỔI là khối kim loại hữu cơ dày ~0.07–0.1 hw
+ * phồng / thắt dọc nét + giọt tròn. Trả về các nét + chấm [t, Y, r] + độ sâu đường viền French (0 = không có).
+ */
+function lineArt(role: string | undefined, Ln: number, seed: number, raised: boolean, lw: number): { st: Stroke[]; dots: number[][]; fr: number } {
+  const h = (q: number) => hash2(seed, q, 97), sg = h(0) > 0.5 ? 1 : -1;
+  const st: Stroke[] = [], dots: number[][] = [];
+  let fr = 0;
+  if (raised) {
+    const W = Math.max(lw * 2.6, 0.115 + 0.025 * h(1));
+    if (role !== "echo") {
+      // hero: 1 dòng chrome lượn chữ S từ góc chân móng chéo lên đầu móng + 1 giọt chrome tròn cạnh đuôi
+      st.push({ o: 0, a0: 0.3, a1: Ln - 0.3, c: -0.45 * sg, amp: 0.22, k: 7.2 / Ln, ph: 6.28 * h(2), dr: (0.85 * sg) / Ln, w: W, wt: W * 0.45, prof: 2 });
+      dots.push([0.42 * sg, Ln * (0.3 + 0.1 * h(3)), W * 1.15]);
+    } else {
+      // echo: 2 nét phẩy chrome ngắn song song, cong ôm 1 bên móng
+      for (let q = 0; q < 2; q++) st.push({ o: 0, a0: 0.45 + 0.35 * q, a1: Ln * (0.62 + 0.15 * q), c: sg * (0.42 - 0.3 * q), amp: 0.12, k: 4 / Ln, ph: 6.28 * h(4), dr: (-0.25 * sg) / Ln, w: W * (1 - 0.2 * q), wt: W * 0.35, prof: 2 });
+    }
+    return { st, dots, fr };
+  }
+  const kind = role === "echo" ? (h(5) > 0.5 ? 1 : 2) : [0, 1, 3][Math.floor(h(6) * 3)];
+  if (kind === 0) {
+    // vòm ôm chân móng + vòm thứ 2 mảnh hơn song song + 1 chấm lệch phía đầu móng
+    st.push({ o: 1, a0: -0.78, a1: 0.78, c: 0.5, amp: 0, k: 0, ph: 0, dr: 0, w: lw, wt: lw * 0.5, prof: 0, qd: 0.55 });
+    st.push({ o: 1, a0: -0.55, a1: 0.55, c: 0.72, amp: 0, k: 0, ph: 0, dr: 0, w: lw * 0.72, wt: lw * 0.4, prof: 0, qd: 0.45 });
+    dots.push([0.38 * sg, Ln * 0.68, Math.max(lw * 1.7, 0.075)]);
+  } else if (kind === 1) {
+    // nét vuốt chữ S chéo móng (cọ liner) + 1 nét song song ngắn hơn
+    st.push({ o: 0, a0: 0.3, a1: Ln - 0.25, c: -0.5 * sg, amp: 0.16, k: 6.5 / Ln, ph: 6.28 * h(7), dr: (0.95 * sg) / Ln, w: lw, wt: lw * 0.35, prof: 0 });
+    st.push({ o: 0, a0: 0.55, a1: Ln * 0.7, c: -0.5 * sg + 0.19, amp: 0.16, k: 6.5 / Ln, ph: 6.28 * h(7), dr: (0.95 * sg) / Ln, w: lw * 0.75, wt: lw * 0.3, prof: 0 });
+  } else if (kind === 2) {
+    // sóng ngang móng 1.5 chu kỳ + 1 chấm gần chân móng
+    st.push({ o: 1, a0: -1.1, a1: 1.1, c: Ln * (0.5 + 0.08 * h(8)), amp: 0.13, k: 4.4, ph: 6.28 * h(9), dr: 0.08 * sg, w: lw, wt: lw * 0.5, prof: 0 });
+    dots.push([-0.3 * sg, Ln * 0.25, Math.max(lw * 1.7, 0.075)]);
+  } else {
+    // viền French (đường cười song song mép tự do) + 1 nét dọc ngắn lệch 1 bên
+    fr = 0.36;
+    st.push({ o: 0, a0: 0.45, a1: Ln * 0.62, c: 0.42 * sg, amp: 0.05, k: 3 / Ln, ph: 6.28 * h(10), dr: 0, w: lw * 0.85, wt: lw * 0.4, prof: 0 });
+  }
+  return { st, dots, fr };
+}
 
 /**
  * CHẤM BI rải thưa như chấm tay bằng que chấm: lưới ô BĂM (ô có / không có chấm), tâm lệch ±0.22 ô, 2 cỡ chấm; chỉ giữ
@@ -3220,22 +3263,54 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       }
       // nhám: vân mịn THEO TỈ LỆ độ sáng (±2.5%) — cộng cố định ±0.0125 từng thành hạt cát lốm đốm trên màu tối
       if (fin === "matte") { const nz = 1 + (hash2(X, Y, 7) - 0.5) * 0.05; r *= nz; g *= nz; b *= nz; }
-      // ---- 3) nét kim loại (line / chrome line): đường cong mềm dọc móng, ánh kim theo ánh sáng
+      // ---- 3) LINE ART (line vàng phẳng / line CHROME NỔI): 2–3 chi tiết có chủ ý mỗi móng (vòm chân móng, nét vuốt chữ S,
+      //      sóng ngang, viền French, chấm) — nét ≥ 3px (bản cũ 1 sợi 1.35px dọc móng, ảnh 400px mất hẳn / lẫn vào vệt bóng).
+      //      Chrome nổi: khối kim loại hữu cơ dày, mặt cắt vòm → phản chiếu gương 3D (sphereMetal) + bóng đổ mềm lên sơn nền.
       if (onNail && (pat === "lines" || pat === "chromeline")) {
-        const tc = amp * Math.sin(2.4 * u + ph) - 0.05;
-        const wdt = (pat === "chromeline" ? 2.3 : 1.35) * lineW;
-        const span = smooth(0.12, 0.2, u) * (1 - smooth(0.88, 0.97, u));
-        // nét NỔI: bóng đổ mềm lên lớp sơn nền phía khuất đèn
-        const sd = Math.abs(t - (tc - side * 1.1 * wdt)) / Math.max(1e-3, wdt * 1.4);
-        const shd = 0.3 * (1 - smooth(0.4, 1.3, sd)) * span;
-        r *= 1 - shd; g *= 1 - shd; b *= 1 - shd;
-        const nl = (t - tc) / Math.max(1e-3, wdt);
-        const m = (1 - smooth(0.6, 1.2, Math.abs(nl))) * span;
-        if (m > 0) {
-          // sợi kim loại tròn chỉ rộng vài px: dùng bóng TRƠN của 1 sợi trụ (dải sáng rộng ~1px lệch về phía đèn, 2 mép
-          // tối) — phản chiếu gắt kiểu metalShade hẹp hơn 1 điểm ảnh sẽ răng cưa thành "dây xích" dọc nét (vòng trước)
-          const mc = wireShade(metal, Math.max(-1, Math.min(1, nl)), shade, side);
-          r += (mc[0] - r) * m; g += (mc[1] - g) * m; b += (mc[2] - b) * m;
+        const Yh = s * tipP.kL, aa = 0.7 / Math.max(8, seg.hw), raised = pat === "chromeline";
+        let la = tipP.memo.lines as ReturnType<typeof lineArt> | undefined;
+        if (!la) { la = lineArt(roleN, Math.max(1.6, tipP.len), seedN, raised, Math.max(1.8 / Math.max(8, seg.hw), 0.045)); tipP.memo.lines = la; }
+        let best = 0, bq = 0, bpx = 1, bpy = 0;
+        for (const st of la.st) {
+          const S = strokeAt(st, t, Yh), cv = strokeCov(S, aa);
+          if (cv > best) { best = cv; bq = Math.max(-1, Math.min(1, S.d / S.w)); bpx = S.px; bpy = S.py; }
+        }
+        for (const d of la.dots) {
+          const dx = t - d[0], dy = Yh - d[1], dd = Math.hypot(dx, dy), cv = 1 - smooth(d[2] - aa, d[2] + aa, dd);
+          if (cv > best) { best = cv; bq = Math.min(1, dd / d[2]); bpx = dx / Math.max(1e-4, dd); bpy = dy / Math.max(1e-4, dd); }
+        }
+        if (la.fr > 0 && at < 0.97) {
+          const lw = Math.max(1.8 / Math.max(8, seg.hw), 0.045), yF = tipE(tipP, t) - la.fr * (1 + 0.5 * t * t), dF = Yh - yF;
+          const cv = (1 - smooth(lw - aa, lw + aa, Math.abs(dF))) * (1 - smooth(0.9, 0.97, at));
+          if (cv > best) { best = cv; bq = Math.max(-1, Math.min(1, dF / lw)); bpx = 0; bpy = 1; }
+        }
+        if (raised) {
+          // bóng đổ mềm của khối chrome lên sơn nền (lệch ~0.05 hw ra xa đèn, nhoè ~0.06 hw)
+          const ox = -L3[0] * 0.06, oy = -L3[1] * 0.06;
+          let sh = 0;
+          for (const st of la.st) { const S = strokeAt(st, t - ox, Yh - oy); sh = Math.max(sh, 1 - smooth(S.w - 0.02, S.w + 0.07, Math.abs(S.d))); }
+          for (const d of la.dots) sh = Math.max(sh, 1 - smooth(d[2] - 0.02, d[2] + 0.07, Math.hypot(t - ox - d[0], Yh - oy - d[1])));
+          const k3 = 1 - 0.34 * sh * (1 - best);
+          r *= k3; g *= k3; b *= k3;
+        }
+        if (best > 0) {
+          let mc: RGB;
+          if (raised) {
+            // mặt cắt VÒM của khối chrome nổi (gel builder phủ bột chrome): mặt đỉnh gần phẳng soi "trần" sáng → phần lớn bề
+            // dày là kim loại SÁNG, tối dần về 2 chân khối (vẫn là vàng / bạc sẫm, không lẫn vào nền), 1 điểm loé sắc trên
+            // sống khối phía đèn + 1 dải phản chiếu phụ phía đối diện. (metalShade / sphereMetal cho nét dài: 2/3 bề dày phản
+            // chiếu "phòng tối" ra nâu sẫm trùng màu nền mocha → chỉ còn 1 sợi vàng mảnh.)
+            const q = bq, nz = Math.sqrt(Math.max(0.05, 1 - 0.85 * q * q)), nx = 0.92 * q * bpx, ny = 0.92 * q * bpy;
+            const f0 = metalF0(metal), nn = Math.hypot(nx, ny, nz), ndh = Math.max(0, (nx * H3[0] + ny * H3[1] + nz * H3[2]) / nn);
+            // vòng phản chiếu ngang khối: nền 0.42 · dải tối "chân trời" ngay cạnh softbox · softbox sáng gắt phía đèn · dải phụ
+            // phía đối diện · 2 chân khối tối dần — tương phản TRONG khối mới ra chất gương (đều sáng thì thành sơn vàng nhạt)
+            const qs = (nx * L3[0] + ny * L3[1]) / Math.max(0.1, 0.92 * Math.hypot(L3[0], L3[1])); // pháp tuyến chiếu lên hướng đèn trong mặt móng
+            const env = (0.42 - 0.26 * Math.exp(-(((qs + 0.1) / 0.14) ** 2)) + 1.15 * Math.exp(-(((qs - 0.36) / 0.16) ** 2)) + 0.32 * Math.exp(-(((qs + 0.62) / 0.13) ** 2))) * (1 - 0.45 * smooth(0.8, 1, Math.abs(q))) * (0.88 + 0.12 * smooth(-1, 1, shade));
+            const sp = 0.95 * Math.pow(ndh, 60) + 0.15 * Math.pow(ndh, 8);
+            const o = shoulder([f0[0] * env, f0[1] * env, f0[2] * env], 0.4);
+            mc = [o[0] + (1 - o[0]) * sp, o[1] + (1 - o[1]) * sp, o[2] + (1 - o[2]) * sp];
+          } else mc = wireShade(metal, bq * 0.5, shade, side); // line vàng PHẲNG (gel kim tuyến dưới top): dải giữa sáng, không viền tối 2 mép
+          r += (mc[0] - r) * best; g += (mc[1] - g) * best; b += (mc[2] - b) * best;
         }
       }
       // ---- 4) khối 3D trên móng: ngọc trai, đá pha lê, chấm, GIỌT NƯỚC — khối cầu thật (đèn theo hướng ảnh), bóng tiếp

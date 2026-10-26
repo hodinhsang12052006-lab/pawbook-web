@@ -2058,8 +2058,17 @@ function nailBed(tp: TipProfile, seg: NailSeg, s: number, t: number, Yh: number,
   if (extW > 0 && clear) und = mix3(und, mix3([LIN[px[idx]], LIN[px[idx + 1]], LIN[px[idx + 2]]], [0.8, 0.78, 0.75], 0.45), 0.45 * extW);
   return und;
 }
-/** Gel màu nhạt (sữa, nude, hồng) TÁN XẠ → trộn thẳng với giường móng theo độ đặc; màu càng đậm càng ít trong. */
-const sheerDens = (c: RGB) => { const Ls = 116 * Math.cbrt(0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) - 16; return Math.min(0.94, Math.max(0.6, 0.62 + 0.011 * (84 - Ls))); };
+/** Gel màu nhạt (sữa, nude, hồng) TÁN XẠ → trộn thẳng với giường móng theo độ đặc; màu càng đậm càng ít trong.
+ *  Màu ĐẬM (L* < 60: đen, navy, rượu vang, ngọc bích…) là sơn ĐẶC như thợ sơn: 6% giường móng hồng cộng vào màu tối
+ *  trong không gian tuyến tính nhân ~3 lần kênh đỏ → đen ra nâu sô-cô-la, navy ra tím xám, ngọc bích ra xô thơm (móng
+ *  French của bộ thành 1 màu sơn khác, đục bẩn cạnh móng trơn). L* 60–75 chuyển dần sang đặc. `milky`: trắng sữa
+ *  (L* > 86) đặc ≥ 0.85 cho mẫu mà NỀN là chính (French micro, French nhũ) — 0.6 thì ra xám be tím nhạt. */
+const sheerDens = (c: RGB, milky = false) => {
+  const Ls = 116 * Math.cbrt(0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) - 16;
+  let d = Math.min(0.94, Math.max(0.6, 0.62 + 0.011 * (84 - Ls)));
+  if (milky) d = Math.max(d, 0.86 * smooth(86, 91, Ls));
+  return d + (1 - d) * (1 - smooth(60, 75, Ls));
+};
 /** Gel màu TRONG (thạch, syrup): lọc màu như kính màu (giường móng nhuộm theo) + 1 phần tán xạ. */
 function gelTint(und: RGB, c: RGB, dens: number, deep: number): RGB {
   const mx = Math.max(c[0], c[1], c[2], 1e-3);
@@ -2077,11 +2086,34 @@ const fromOk = (o: RGB): RGB => {
 };
 /** Cùng sắc độ, đổi độ sáng OKLab (skittle, má hồng) — chroma giảm dần khi quá sáng để không bệt. */
 const okShift = (c: RGB, dL: number, kC = 1): RGB => { const o = okOf(c), L = Math.min(0.93, Math.max(0.28, o[0] + dL)), cs = kC * (1 - 0.6 * smooth(0.82, 0.95, L)); return fromOk([L, o[1] * cs, o[2] * cs]); };
+/** Họ màu SKITTLE tuyển sẵn (OKLab) cho màu đầu TRUNG TÍNH — thang độ sáng của trắng sữa ra 4 tông XÁM (xám nhạt → xám
+ *  chì: "móng bẩn"), của đen ra xám tro. Trắng: tuyết · ngà · hồng ngọc trai · kem vani · sữa lạnh (cùng sáng, khác độ
+ *  ấm / ửng hồng như bộ "milky skittle" thật). Đen: than chì → mận đen → espresso → đen tuyền (+ mực navy). */
+const SKIT_WHITE: RGB[] = [[0.985, 0, 0.006], [0.955, 0.004, 0.034], [0.935, 0.034, 0.012], [0.915, 0.012, 0.042], [0.95, -0.006, -0.01]];
+const SKIT_BLACK: RGB[] = [[0.37, -0.004, -0.012], [0.3, 0.05, -0.012], [0.28, 0.024, 0.03], [0.2, 0, 0], [0.27, -0.008, -0.045]];
+/** SKITTLE French: đầu mỗi ngón 1 tông khác nhau của CÙNG 1 họ màu theo thứ tự ngón (pos 0 = trỏ / cái → út), mọi đầu
+ *  cách nền ≥ 0.11 OKLab L (~12–15 L*). Màu có sắc: thang độ sáng cùng sắc (sáng nhất 0.72, mỗi ngón −0.1), sắc độ
+ *  ≥ 0.075 (espresso nhạt dần mà giữ sắc độ thấp thì ra xám nâu bẩn — phải ra latte / caramel / mocha). Trung tính:
+ *  trắng / đen theo họ tuyển sẵn ở trên; xám giữa (greige, xám thiếc): thang ấm taupe → mocha → cacao. */
+function skittleTip(c2: RGB, baseL: number, pos: number, n: number): RGB {
+  const o = okOf(c2), C = Math.hypot(o[1], o[2]);
+  if (C >= 0.04) {
+    const top = Math.max(0.3 + 0.1 * (n - 1), Math.min(o[0] + 0.05 * (n - 1), 0.72));
+    return okShift(c2, top - 0.1 * pos - o[0], Math.max(1.1, 0.075 / C));
+  }
+  if (o[0] > 0.8) { const w = SKIT_WHITE[pos % 5]; return fromOk([Math.max(w[0], Math.min(0.985, baseL + 0.11)), w[1], w[2]]); }
+  if (o[0] < 0.42) { const k = SKIT_BLACK[pos % 5]; return fromOk([Math.min(k[0], Math.max(0.16, baseL - 0.3)), k[1], k[2]]); }
+  const L = Math.min(o[0] + 0.08, 0.72, baseL - 0.12) - 0.1 * pos;
+  return fromOk([Math.max(0.24, L), 0.014, 0.034]);
+}
 
 /** Kiểu đường French của 1 móng: 0 = đường cười (giữa mảnh, 2 bên ôm sâu xuống — "smile"), 1 = chữ V, 2 = lệch 1 bên,
- *  3 = sóng (wv: sâu, biên độ, tần số, pha — song song mép tự do thật, gợn sóng NỐI TIẾP qua các móng như 1 con sóng). */
-interface FrStyle { kind: 0 | 1 | 2 | 3; yc: number; ysL: number; ysR: number; p: number; sg: number; bow: number; wv?: [number, number, number, number] }
-function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0): FrStyle {
+ *  3 = sóng (wv: sâu, biên độ, tần số, pha — song song mép tự do thật, gợn sóng NỐI TIẾP qua các móng như 1 con sóng),
+ *  4 = dải SONG SONG mép tự do (yc = bề dày vuông góc, đều nhau cả vòng mép — French micro). */
+interface FrStyle { kind: 0 | 1 | 2 | 3 | 4; yc: number; ysL: number; ysR: number; p: number; sg: number; bow: number; wv?: [number, number, number, number] }
+/** `inSet`: móng nối (echo / thread) của 1 bộ phối — chrome French ở đó chỉ là viền micro; cả bộ chrome French thì đầu
+ *  gương đủ sâu (~1/5 móng) như thợ làm. `dark`: đầu màu rất tối (L* < 30). */
+function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSet = false, dark = false): FrStyle {
   const key = "fr:" + pat, hit = tp.memo[key] as FrStyle | undefined;
   if (hit) return hit;
   const E0 = tipE(tp, 0), EL = tipE(tp, -0.97), ER = tipE(tp, 0.97), len = tp.len, px = 1 / Math.max(8, tp.hw);
@@ -2096,8 +2128,11 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0): FrS
   };
   let st: FrStyle;
   switch (pat) {
-    case "fr-micro": st = smile(Math.max(0.17, 3.2 * px), 1.25); break; // ≥ 3px — mảnh hơn nữa thì ảnh 400px mất nét
-    case "chromefrench": st = smile(Math.max(0.22, 3.6 * px, 0.07 * len), 1.3); break;
+    // micro thật = 1–2mm ≈ 7.5% dài móng (≥ 5.5px ở ảnh 1024), DẢI ĐỀU song song mép tự do: đường cười cũ mảnh 3px chỉ
+    // còn 1 vệt tối dưới mép (ảnh nhỏ đọc thành ghét bẩn dưới móng) và trên móng hạnh nhân co lại thành 1 tam giác ở
+    // chóp. Đầu màu rất tối dày thêm 15% (vệt tối mảnh sát mép tự do = bóng / ghét móng)
+    case "fr-micro": st = { kind: 4, yc: Math.max(0.2, 5.5 * px, 0.075 * len) * (dark ? 1.15 : 1), ysL: 0, ysR: 0, p: 1, sg: 1, bow: 0 }; break;
+    case "chromefrench": st = inSet ? smile(Math.max(0.22, 3.6 * px, 0.07 * len), 1.3) : smile(Math.max(0.36, 0.14 * len), 1.35); break;
     case "fr-deep": case "fr-santa": case "fr-candycane": st = smile(Math.max(0.5, 0.2 * len), 1.4); break;
     case "fr-tortoise": st = smile(Math.max(0.42, 0.15 * len), 1.4); break; // đủ sâu để thấy 2–3 đốm
     // pink & white bột: trắng phủ hết phần đắp (đường cười nằm ở mép móng thật), 2 bên ôm sâu
@@ -2131,6 +2166,13 @@ function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number): typeof FRL 
     const [dep, amp, k, ph] = st.wv, de = (tipE(tp, tc + 0.03) - tipE(tp, tc - 0.03)) / 0.06;
     yl = tipE(tp, tc) - dep * (1 + 0.5 * tc * tc) - amp * Math.sin(k * tc + ph);
     sl = de - dep * tc - amp * k * Math.cos(k * tc + ph);
+  } else if (st.kind === 4) {
+    // dải song song: lùi vào trong 1 khoảng yc theo PHÁP TUYẾN mép (×√(1+E'²) theo dọc móng) → bề dày đều cả quanh chóp
+    // móng hạnh nhân / nhọn; 2 bên dày thêm chút (gợi đường cười); chặn ×2.6 ở thành móng dốc đứng — dải không chạy
+    // dọc xuống thân móng
+    const de = (tipE(tp, tc + 0.03) - tipE(tp, tc - 0.03)) / 0.06;
+    yl = tipE(tp, tc) - st.yc * (1 + 0.25 * tc * tc) * Math.min(2.6, Math.sqrt(1 + de * de));
+    sl = de;
   } else { const ys = sgn < 0 ? st.ysL : st.ysR, w = Math.pow(at, st.p); yl = st.yc + w * (ys - st.yc); sl = st.p * Math.pow(at, st.p - 1) * sgn * (ys - st.yc); }
   const e = tipE(tp, t);
   FRL.d = (Yh - yl) / Math.sqrt(1 + sl * sl);
@@ -2161,10 +2203,10 @@ function tipMirror(tint: RGB, g: number, dep: number, t: number, ePx: number, si
   return [ch(f0[0]), ch(f0[1]), ch(f0[2])];
 }
 /** Nhũ đầu móng: hạt LỤC GIÁC xếp dày (ô ≥ 2.6px), mỗi hạt 1 mặt nghiêng → sáng / tối riêng, ~8% hạt loé, ~8% hạt ánh cầu vồng. b: độ sáng hạt. */
-const FLK = { b: 0, cov: 0, hue: -1 };
+const FLK = { b: 0, cov: 0, hue: -1, id: 0 };
 function flakeAt(X: number, Y: number, cs: number, seed: number): typeof FLK {
   const gx = X / cs, gy = Y / cs, ix = Math.floor(gx), iy = Math.floor(gy), aa = 0.6 / cs;
-  let bz = -1; FLK.b = 0; FLK.cov = 0; FLK.hue = -1;
+  let bz = -1; FLK.b = 0; FLK.cov = 0; FLK.hue = -1; FLK.id = 0;
   for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
     const ci = ix + di, cj = iy + dj;
     const px = ci + 0.5 + 0.5 * (hash2(ci, cj, seed) - 0.5), py = cj + 0.5 + 0.5 * (hash2(ci, cj, seed + 1) - 0.5);
@@ -2175,6 +2217,7 @@ function flakeAt(X: number, Y: number, cs: number, seed: number): typeof FLK {
     bz = h3 + c * 0.5;
     const hb = hash2(ci, cj, seed + 4);
     FLK.cov = c; FLK.b = hb > 0.92 ? 2.2 : 0.32 + 0.95 * Math.pow(hb, 1.6); FLK.hue = hash2(ci, cj, seed + 5) > 0.92 ? hash2(ci, cj, seed + 6) * 6.28 : -1;
+    FLK.id = hash2(ci, cj, seed + 8);
   }
   return FLK;
 }
@@ -2294,7 +2337,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     // nhũ phủ cả móng: ~75% hạt mịn cùng màu nền (nhũ đỏ / nhũ hồng…) + hạt mịn còn lại và hạt to màu kim loại; nhũ loang /
     // baby boomer: toàn hạt kim loại
     const gAll = pat !== "glitterfade" && pat !== "babyboomer";
-    const glit = (pat === "glitterfade" ? onNail : fin === "glitter") ? glitterLayer(seg, look.seed + i * 17, H3, gDens, pat === "glitterfade" ? 0.7 : 0, gAll ? 0.75 : 0) : null;
+    // French nhũ (fr-glitter): nhũ CHỈ trong đầu móng (vẽ ở họ French) — hiệu ứng "nhũ" của đơn không rắc thêm cả móng
+    const glit = (pat === "glitterfade" ? onNail : fin === "glitter" && pat !== "fr-glitter") ? glitterLayer(seg, look.seed + i * 17, H3, gDens, pat === "glitterfade" ? 0.7 : 0, gAll ? 0.75 : 0) : null;
     const gCol = pat === "glitterfade" && Math.abs(c2[0] - c1[0]) + Math.abs(c2[1] - c1[1]) + Math.abs(c2[2] - c1[2]) > 0.03 ? c2 : metal;
     // hạt nhũ đậm sắc hơn mặt gương lớn (F0 kim loại có sàn 0.25 → nhũ vàng nhạt ra màu kaki)
     const gMx = Math.max(gCol[0], gCol[1], gCol[2], 1e-3), gF0m = metalF0(gCol);
@@ -2396,6 +2440,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       // ---- 1) màu nền theo hoạ tiết (toạ độ móng thật)
       let base: RGB = base0;
       let tipChrome = 0; // phần đầu móng tráng gương (chrome French)
+      let frTip = 0; // phần đầu French KHÔNG nhận hiệu ứng chrome / ngọc trai của nền (bóng gel thường)
       let metalMix = 0, metalQ = 0, metalMirror = false; // metalMirror: mảnh foil phẳng → phản chiếu gương; còn lại: sợi / dải KIM LOẠI mảnh (viền vàng French đôi, gân vàng vân đá): vị trí ngang trên sợi, tô sau bước ánh sáng
       if (onNail) {
         switch (pat) {
@@ -2443,25 +2488,32 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // (tipProfile): micro / cổ điển / sâu / chữ V / lệch / sóng. Đầu móng: màu c2 · tráng gương · nhũ · skittle (mỗi
             // móng 1 nấc đậm nhạt cùng sắc) · Santa (đỏ + viền lông trắng) · kẹo gậy · đồi mồi. Mép đường French sắc (~0.6px).
             const Yh = s * tipP.kL, aa = 0.6 / Math.max(8, seg.hw);
-            const fl = frLine(tipP, frStyle(tipP, pat, look.seed, i), t, Yh), d = fl.d, m = smooth(-aa, aa, d);
+            // móng NỐI của bộ (echo / thread): nền ĐẶC đúng c1 như móng hero / móng trơn cạnh bên — thợ vẽ French của bộ
+            // trên cùng lớp sơn đặc với các móng kia (nền gel trong trên giường móng hồng thì đen ra nâu, navy ra tím xám:
+            // 2/4 móng thành 1 màu sơn khác, đục hơn). Nền gel trong chỉ khi CẢ BỘ là French.
+            const inSet = ov?.role === "echo" || ov?.role === "thread";
+            const fl = frLine(tipP, frStyle(tipP, pat, look.seed, i, inSet, lum(c2) < 0.062), t, Yh), d = fl.d, m = smooth(-aa, aa, d);
             // pink & white (bột): nền hồng GẦN ĐẶC — bảng màu không có hồng nhạt thì dùng hồng #f2c9c4 của thợ
             const pw = pat === "fr-pinkwhite", bc: RGB = pw && !(c1[0] > 0.55 && c1[0] > 1.15 * c1[2]) ? [0.888, 0.584, 0.552] : c1;
-            base = mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), bc, pw ? 0.9 : sheerDens(bc));
+            // French micro / French nhũ: nền LÀ thiết kế → trắng sữa đặc như sữa (sheerDens milky)
+            const dens = inSet ? 1 : pw ? 0.9 : sheerDens(bc, pat === "fr-micro" || pat === "fr-glitter");
+            base = dens >= 1 ? bc : mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), bc, dens);
             if (m > 0) {
               let tip: RGB = c2;
               const ownFill = pat === "fr-skittle" || pat === "fr-glitter" || pat === "fr-candycane" || pat === "fr-tortoise" || pat === "fr-santa";
-              if (pat === "chromefrench" || (!ownFill && c2[0] === metal[0] && c2[1] === metal[1] && c2[2] === metal[2])) {
+              const metalTip = pat === "chromefrench" || (!ownFill && c2[0] === metal[0] && c2[1] === metal[1] && c2[2] === metal[2]);
+              if (metalTip) {
                 // đầu móng KIM LOẠI: phản chiếu gương theo bề sâu đầu móng — tô thẳng màu cuối (chia trước hệ số ánh sáng
                 // bước 2, phản chiếu đã gồm ánh sáng)
                 const mc = tipMirror(metal, fl.g, fl.dep, t, eDist[k], side), lit = Math.max(0.3, (1 + contrast * shade) * edge * cut);
                 tip = [mc[0] / lit, mc[1] / lit, mc[2] / lit];
               } else if (pat === "fr-skittle") {
-                // SKITTLE: cùng sắc c2, ngón trỏ sáng nhất → ngón út đậm nhất, mỗi móng 1 nấc OKLab 0.1 (~12 L*) — đọc như
-                // dải màu có chủ ý qua 4 ngón. Nấc sáng nhất vẫn đậm hơn nền hồng trong ≥ 0.15 (nấc nhạt sát nền thì mất đầu)
+                // SKITTLE: mỗi ngón 1 tông của cùng họ màu theo THỨ TỰ NGÓN (chỉ số móng trong ảnh không phải thứ tự ngón —
+                // p067 có ngón út ở đầu 0) — xem skittleTip
                 let sk = tipP.memo.skit as RGB | undefined;
                 if (!sk) {
-                  const L0 = okOf(c2)[0], n = Math.max(1, segs.length - 1), top = Math.max(0.3 + 0.1 * n, Math.min(L0 + 0.05 * n, 0.72));
-                  sk = tipP.memo.skit = okShift(c2, top - 0.1 * i - L0, 1.1);
+                  const pos = Math.max(0, nailOrder(segs).indexOf(i)), baseL = okOf(mix3(tipP.bed, bc, dens))[0];
+                  sk = tipP.memo.skit = skittleTip(c2, baseL, pos, segs.length);
                 }
                 tip = sk;
               } else if (pat === "fr-wave") {
@@ -2481,6 +2533,20 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
                 tip = mix3([0.9, 0.885, 0.86], c2, smooth(0.5 - aS, 0.5 + aS, tri));
               } else if (pat === "fr-tortoise") tip = tortoiseAt(1.3 * t, 1.3 * Yh, seedN); // đốm ~0.2–0.4 hw: đầu móng ngắn vẫn thấy 2–3 đốm
               base = mix3(base, tip, m);
+              // đầu French nằm NGOÀI hiệu ứng chrome / ngọc trai của nền: bột ngọc trai xoa cả móng làm đầu đen tuyền thành
+              // dải xám kim loại (= ruột bút chì, upcoming "French chữ V đen tuyền tráng ngọc trai"); đầu sáng (trắng, ngọc
+              // trai) thì vẫn ăn ánh ngọc trai như glazed French thật. Đầu kim loại luôn là gương riêng của nó.
+              frTip = m * (metalTip || !glazed ? 1 : 1 - smooth(0.25, 0.5, lum(tip)));
+            }
+            if (pat === "fr-glitter" && d < 0 && d > -0.2) {
+              // vài hạt nhũ rơi ngay dưới đường French (cọ quét nhũ thật để lại vài hạt), mờ dần trong ~0.15 hw — không rắc
+              // khắp nền (nhũ cả móng = mặt giấy nhám)
+              const fk = flakeAt(X, Y, Math.max(2.6, 0.075 * seg.hw), seedN + 7);
+              const sa = fk.id < 0.3 ? fk.cov * (1 - smooth(-0.15, -0.01, -d)) : 0;
+              if (sa > 0) {
+                const mx2 = Math.max(c2[0], c2[1], c2[2], 1e-3), bb = Math.max(0.8, fk.b);
+                base = mix3(base, [bb * (0.5 * c2[0] + 0.5 * (0.25 + (0.75 * c2[0]) / mx2)), bb * (0.5 * c2[1] + 0.5 * (0.25 + (0.75 * c2[1]) / mx2)), bb * (0.5 * c2[2] + 0.5 * (0.25 + (0.75 * c2[2]) / mx2))], sa);
+              }
             }
             if (pat === "fr-santa") {
               // viền LÔNG TRẮNG nổi dọc đường French (gel trắng chấm bông): 2 mép gợn thành búi to cỡ bề dày dải (~0.2 hw —
@@ -2510,12 +2576,17 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "fr-halfmoon": {
-            // HALF-MOON: nền gel hồng trong + nửa trăng c2 ôm chân móng, viền chỉ kim loại ≥ 2.4px dọc vòm trăng
-            const Yh = s * tipP.kL, aa = 0.6 / Math.max(8, seg.hw);
-            base = mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), c1, sheerDens(c1));
-            const ra = 1.12, rb = Math.max(0.66, Math.min(1.05, 0.3 * tipP.len)), qx = t / ra, qy = Yh / rb, q = Math.hypot(qx, qy);
+            // HALF-MOON (kiểu thật 2026): trăng ÂM / SÁNG ôm chân móng + viền chỉ kim loại ≥ 2.4px dọc vòm trăng. Trăng
+            // KHÔNG BAO GIỜ tối hơn thân: trăng nâu mocha / đỏ dưới thân hồng sữa đọc thành chân móng bẩn, bầm máu, gel cũ
+            // mọc dài. c2 tối hơn c1 → c2 phủ THÂN móng (đặc), trăng là nền trong c1 (giường móng + liềm thật lộ qua; móng
+            // nối của bộ: đúng c1 đặc như móng bên cạnh); c2 sáng hơn (trăng trắng sữa trên đen / ngọc bích) → giữ thân c1.
+            // Trăng ~20% dài móng (≤ 0.8 hw) — trăng 1/3 móng nhìn như 1 cái chụp ở chân móng.
+            const Yh = s * tipP.kL, aa = 0.6 / Math.max(8, seg.hw), inSet = ov?.role === "echo" || ov?.role === "thread";
+            const sheer1 = inSet ? c1 : mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), c1, sheerDens(c1));
+            const neg = lum(c2) < lum(c1), body = neg ? c2 : sheer1, moon = neg ? sheer1 : c2;
+            const ra = 1.12, rb = Math.max(0.55, Math.min(0.8, 0.21 * tipP.len)), qx = t / ra, qy = Yh / rb, q = Math.hypot(qx, qy);
             const d = (1 - q) / Math.max(0.3, Math.hypot(qx / ra, qy / rb) / Math.max(1e-3, q)); // > 0 trong trăng (hw)
-            base = mix3(base, c2, smooth(-aa, aa, d));
+            base = mix3(body, moon, smooth(-aa, aa, d));
             const w = Math.max(0.075, 2.4 / seg.hw), n = d / (w / 2), mm = 1 - smooth(1 - (2 * aa) / w, 1 + (2 * aa) / w, Math.abs(n));
             if (mm > 0) { metalMix = mm; metalQ = Math.max(-1, Math.min(1, n)); }
             break;
@@ -2906,6 +2977,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       } else {
         const lit = (1 + contrast * shade) * edge * cut;
         r *= lit; g *= lit; b *= lit;
+      }
+      if (frTip > 0 && chromeF) {
+        // đầu French dưới lớp chrome / ngọc trai của nền: bóng gel thường (đen vẫn đen tuyền, chỉ vệt top coat ở bước 5)
+        const lit = (1 + contrast * shade) * edge * cut;
+        r += (base[0] * lit - r) * frTip; g += (base[1] * lit - g) * frTip; b += (base[2] * lit - b) * frTip;
       }
       if (tipChrome > 0) {
         // đầu French tráng gương: kim loại phản chiếu thật (dải sáng gắt + mảng tối) theo độ cong móng; đầu móng cong

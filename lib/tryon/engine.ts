@@ -2472,7 +2472,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const velvet = pat === "velvet" || (fin === "cateye" && pat === "velvet");
     const gloss = fin === "matte" ? 0.06 : chromeF ? 1.0 : 0.9;
     // nhám vẫn giữ khối cong (0.42): 0.3 cũ + tắt bóng → móng phẳng như giấy cắt dán lên ngón
-    const contrast = fin === "matte" ? 0.42 : 0.5;
+    // velvet: nhung phủ ánh nhũ đều cả mặt — ít theo vệt sáng / tối gắt của ảnh (0.5 → 1 bên đen đặc như vỏ đạn trên p063)
+    const contrast = fin === "matte" ? 0.42 : velvet ? 0.32 : 0.5;
     const synth = fin !== "matte" && !lm.streak ? (chromeF && !glazed ? 0.5 : 0.75) : 0;
     // chiều dài thật của mặt nạ (kể cả phần đắp) để hoạ tiết đầu móng (french…) bám đúng đầu móng
     let sEnd = 1;
@@ -3315,7 +3316,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const px = t * seg.hw, py = s * seg.L;
         const grain = 0.6 * vnoise(px / gCell + 5.1, py / gCell, seedN + 32) + 0.4 * vnoise(px / (2.1 * gCell), py / (2.1 * gCell) + 3.3, seedN + 34);
         const shim = (grain - 0.5) * 2; // -1…1
-        const lightK = 0.55 + 0.45 * smooth(-0.8, 1, shade);
+        const lightK = velvet ? 0.72 + 0.28 * smooth(-0.8, 1, shade) : 0.55 + 0.45 * smooth(-0.8, 1, shade);
         if (velvet) {
           // VELVET (nhung từ tính): nam châm phẳng kéo nhũ siêu mịn thành 1 QUẦNG SÁNG RỘNG (~60% bề ngang, phẳng giữa
           // rồi mới tắt dần) ôm theo độ cong móng, 2 mép chìm TỐI như vải nhung; ánh nhung = CHÍNH màu nền sáng rực lên

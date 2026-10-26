@@ -2139,7 +2139,9 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
     case "fr-tortoise": st = smile(Math.max(0.42, 0.15 * len), 1.4); break; // đủ sâu để thấy 2–3 đốm
     // pink & white bột: trắng phủ hết phần đắp (đường cười nằm ở mép móng thật), 2 bên ôm sâu
     case "fr-pinkwhite": st = smile(Math.max(0.42, 0.16 * len, tp.extLen + 0.12), 1.9); break;
-    case "fr-v": { const ysL = EL - 0.12, ysR = ER - 0.12; st = { kind: 1, yc: Math.min(E0 - Math.max(0.72, 0.26 * len), Math.min(ysL, ysR) - 0.42), ysL, ysR, p: 1, sg: 1, bow: 0 }; break; }
+    // chữ V: 2 cạnh gặp nhau ở ~36% dài móng (V nông 1/4 trên móng đầu bằng / hạnh nhân vát — p063 — thành 1 cái chụp
+    // ngũ giác như đầu tẩy bút chì); móng hạnh nhân dài đã sâu sẵn theo 2 thành móng (−0.42 dưới chỗ chạm thành)
+    case "fr-v": { const ysL = EL - 0.12, ysR = ER - 0.12; st = { kind: 1, yc: Math.min(E0 - Math.max(0.72, 0.36 * len), Math.min(ysL, ysR) - 0.42), ysL, ysR, p: 1, sg: 1, bow: 0 }; break; }
     case "fr-side": {
       // French LỆCH: đầu màu quét chéo — sâu ở 1 bên thành móng, vuốt mảnh dần tới góc đối diện (cả bộ cùng 1 chiều)
       const sg = hash2(designSeed, 5, 77) > 0.5 ? 1 : -1, Ed = sg > 0 ? EL : ER, Et = sg > 0 ? ER : EL;

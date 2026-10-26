@@ -3059,18 +3059,32 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "fawn": {
-            // DA HƯƠU (fawn): đốm sáng mềm thuôn dài, mép loang — không viền (khác da báo)
-            const cell = 0.62 * seg.hw, gx = (t * seg.hw) / cell, gy = (s * seg.L) / (cell * 1.25);
-            const ix = Math.floor(gx), iy = Math.floor(gy);
-            let best = 9;
-            for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
-              const ci = ix + i2, cj = iy + j2;
-              if (hash2(ci, cj, seedN + 21) < 0.25) continue;
-              const px = ci + 0.25 + 0.5 * hash2(ci, cj, seedN + 22), py = cj + 0.25 + 0.5 * hash2(ci, cj, seedN + 23);
-              const sz = 0.22 + 0.12 * hash2(ci, cj, seedN + 24);
-              best = Math.min(best, Math.hypot((gx - px) * 1.3, gy - py) / sz);
+            // DA HƯƠU (fawn / Bambi print) như lưng hươu con: nền nâu ấm SẪM dần vào đường sống giữa móng, sáng / ấm hơn về 2
+            // mép · đốm kem MỀM (mép loang ~1.7px) THUÔN DÀI ~1.5–1.9× dọc móng, xếp 2 hàng lỏng 2 bên đường sống + hàng ngoài
+            // đốm nhỏ sát mép (bị mép cắt dở), to nhỏ / nghiêng khác nhau, vài đốm liền nhau thành mảng (smin). Bản cũ: đốm tròn
+            // đều cỡ rải ngẫu nhiên, mép sắc → chấm bi / bánh quy chip sô-cô-la.
+            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), Ln = Math.max(1.6, tipP.len), mir = pN % 2 ? -1 : 1;
+            const ts = (mir * Math.asin(0.95 * Math.max(-1, Math.min(1, t)))) / 1.2532; // theo mặt móng cong
+            let fw = tipP.memo.fawn as RGB[] | undefined;
+            if (!fw) { fw = [okShift(c1, 0.1, 1.05), okShift(c1, -0.06)]; tipP.memo.fawn = fw; }
+            base = mix3(fw[0], fw[1], 0.1 + 0.9 * Math.exp(-((ts / 0.4) ** 2)));
+            let dS = 9;
+            for (let rw = 0; rw < 4; rw++) {
+              const outer = rw >= 2, sd2 = rw % 2 ? 1 : -1, tr = sd2 * (outer ? 0.84 : 0.4), sp = outer ? 0.42 : 0.58;
+              const off = (rw * 0.37 + hash2(look.seed, rw, 23)) % 1, kq = Math.floor(Yh / sp - off);
+              for (let q = kq - 1; q <= kq + 1; q++) {
+                if (hash2(q, rw, seedN + 21) < (outer ? 0.5 : 0.1)) continue;
+                const cy = (q + off + 0.5 + 0.4 * (hash2(q, rw, seedN + 22) - 0.5)) * sp;
+                if (cy < 0.1 || cy > Ln + 0.2) continue;
+                const cx = tr + 0.18 * (hash2(q, rw, seedN + 23) - 0.5), rx = Math.max(2.2 * p1, (outer ? 0.055 : 0.1) + (outer ? 0.035 : 0.065) * hash2(q, rw, seedN + 24));
+                const ry = rx * (1.4 + 0.45 * hash2(q, rw, seedN + 25)), ra = 0.4 * (hash2(q, rw, seedN + 26) - 0.5) + 0.12 * sd2;
+                const dx0 = ts - cx, dy0 = Yh - cy, ca = Math.cos(ra), sa = Math.sin(ra), dx = dx0 * ca + dy0 * sa, dy = -dx0 * sa + dy0 * ca;
+                const an = Math.atan2(dy / ry, dx / rx), ph3 = 6.28 * hash2(q, rw, seedN + 27), wob = 1 + 0.08 * Math.sin(2 * an + 1.7 * ph3) + 0.07 * Math.sin(3 * an + ph3) + 0.04 * Math.sin(5 * an + 1.3);
+                dS = smin(dS, (Math.hypot(dx / rx, dy / ry) / wob - 1) * rx, 0.022);
+              }
             }
-            base = mix3(c1, c2, 0.85 * (1 - smooth(0.65, 1.15, best)));
+            const fe = Math.max(1.7 * p1, 0.035);
+            base = mix3(base, mix3(c2, fw[0], 0.12), 0.95 * (1 - smooth(-fe, fe, dS)));
             break;
           }
           case "leopard": {

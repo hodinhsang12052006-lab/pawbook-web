@@ -3318,10 +3318,12 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           // (đỏ rượu → đỏ ánh, navy → xanh lam ánh, không pha trắng — pha trắng ra màu bụi); mặt quầng là ánh nhũ mịn
           // (thấy rõ vân nhũ như nhung nhàu, nhỏ dần ra mép) + hạt loé thưa cùng sắc nền (hạt trắng nhìn như bụi bám).
           // Bóng top coat (vệt cửa sổ) tính riêng ở bước 5 → vẫn thấy lớp bóng phủ trên nhung
-          const tcV = side * 0.16 + 0.07 * Math.sin(2.2 * u + look.seed) - 0.14 * side * (u - 0.5) * (u - 0.5);
-          const field = (1 - smooth(0.15, 0.72, Math.abs(t - tcV))) * (0.4 + 0.6 * smooth(0.04, 0.45, u)) * (1 - 0.3 * smooth(0.85, 1.05, u));
+          // quầng GIỮA móng (lệch ≤ 0.04 về phía đèn), rộng ~70% bề ngang, 2 mép tối DẦN đều cả 2 bên (sàn 0.42). Quầng lệch
+          // 0.16 + sàn tối 0.3 cũ → 1 bên đen đặc, 1 bên vệt sáng: móng nhung cà phê nhìn như vỏ đạn đồng / ống satin
+          const tcV = side * 0.04 + 0.04 * Math.sin(2.2 * u + look.seed);
+          const field = (1 - smooth(0.12, 0.84, Math.abs(t - tcV))) * (0.45 + 0.55 * smooth(0.04, 0.45, u)) * (1 - 0.28 * smooth(0.85, 1.05, u));
           const plush = (vnoise(t / 0.09 + 3.7, (s * seg.L) / Math.max(4, seg.hw) / 0.09, seedN + 33) - 0.5) * 0.24; // vân nhung mềm
-          const dim = 0.3 + 0.7 * field; // mép chìm như nhung
+          const dim = 0.42 + 0.58 * field; // mép chìm như nhung
           r *= dim; g *= dim; b *= dim;
           const amt = 1.15 * field * (1 + plush + 0.26 * shim * field) * lightK * edge;
           r += vGlow[0] * amt; g += vGlow[1] * amt; b += vGlow[2] * amt;
@@ -3745,7 +3747,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const coreE = Math.exp(-(((tq - tcE) / wE) ** 2)), haloE = 0.08 * Math.exp(-(((tq - tcE) / (2.2 * wE)) ** 2));
         spec = Math.max(spec, 0.62 * (1 - realK) * (1 - smooth(0.86, 0.98, u)) * (0.82 * coreE + haloE));
       }
-      spec = Math.min(1, spec * gloss);
+      // velvet: lớp top phủ trên nhung — vệt cửa sổ dịu hơn (vệt gắt + quầng nhung = ống kim loại satin)
+      spec = Math.min(1, spec * gloss * (velvet ? 0.65 : 1));
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
       const shn = lm.sheen[k] * (fin === "matte" ? 0.12 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);

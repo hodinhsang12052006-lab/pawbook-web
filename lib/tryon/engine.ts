@@ -2457,7 +2457,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const glazed = chromeF && (lum(base0) > 0.62 || pat === "jelly" || pat === "aura");
     const velvet = pat === "velvet" || (fin === "cateye" && pat === "velvet");
     const gloss = fin === "matte" ? 0.06 : chromeF ? 1.0 : 0.9;
-    const contrast = fin === "matte" ? 0.3 : 0.5;
+    // nhám vẫn giữ khối cong (0.42): 0.3 cũ + tắt bóng → móng phẳng như giấy cắt dán lên ngón
+    const contrast = fin === "matte" ? 0.42 : 0.5;
     const synth = fin !== "matte" && !lm.streak ? (chromeF && !glazed ? 0.5 : 0.75) : 0;
     // chiều dài thật của mặt nạ (kể cả phần đắp) để hoạ tiết đầu móng (french…) bám đúng đầu móng
     let sEnd = 1;
@@ -3156,6 +3157,14 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       } else {
         const lit = (1 + contrast * shade) * edge * cut;
         r *= lit; g *= lit; b *= lit;
+        if (fin === "matte") {
+          // NHÁM thật: không có vệt cửa sổ nhưng vẫn có 1 quầng sáng KHUẾCH TÁN rất rộng, mềm trên đỉnh móng (sáng hơn
+          // ~10%, lệch về phía đèn, như da lộn / nhung) + đầu móng cong xuống tối dần — mặt nhám phẳng lì từng nhìn như
+          // hình vẽ vector dán lên ngón
+          const mS = Math.exp(-(((tq - side * 0.22) / 0.55) ** 2)) * smooth(0.06, 0.35, u) * (1 - smooth(0.72, 1, u));
+          const kM = (1 + 0.1 * mS) * (1 - 0.09 * smooth(0.8, 1.02, u));
+          r = r * kM + 0.022 * mS * (1 - r); g = g * kM + 0.022 * mS * (1 - g); b = b * kM + 0.024 * mS * (1 - b);
+        }
       }
       if (tipChrome > 0) {
         // đầu French tráng gương: kim loại phản chiếu thật (dải sáng gắt + mảng tối) theo độ cong móng; đầu móng cong
@@ -3617,7 +3626,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       spec = Math.min(1, spec * gloss);
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.05 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.12 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

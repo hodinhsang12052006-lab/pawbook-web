@@ -21,7 +21,7 @@ export type Finish = "glossy" | "matte" | "chrome" | "cateye" | "glitter";
 export type Shape = "almond" | "coffin" | "square" | "oval" | "stiletto";
 
 import { ALL_NAIL_PATTERNS, PROCEDURAL } from "./patterns";
-import { applyBeadOpts, expandSet, nailOrder } from "./sets";
+import { applyBeadOpts, expandSet, nailOrder, setRoles } from "./sets";
 
 // ---------------------------------------------------------------- màu
 const srgbToLin = (c: number) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
@@ -2186,6 +2186,87 @@ function tortoiseAt(x: number, y: number, seed: number): RGB {
   c = mix3(c, [0.05, 0.016, 0.006], smooth(0.5, 0.66, n) * 0.9);
   return mix3(c, [0.014, 0.006, 0.003], smooth(0.62, 0.76, n) * 0.8);
 }
+
+// ---------------------------------------------------------------- HIỆU ỨNG NỀN CẢ MÓNG (swirl, line art, chấm bi, đồi mồi…)
+/** Trộn 2 màu trong OKLab — chuyển màu đều theo cảm nhận (aura, má hồng): trộn tuyến tính đỏ với trắng sữa thì mới nửa
+ *  đường đã ra hồng phấn bạc, lõi đỏ cherry chỉ còn vệt hồng nhạt. */
+function okMix(a: RGB, b: RGB, k: number): RGB {
+  const p = okOf(a), q = okOf(b);
+  return fromOk([p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k]);
+}
+/**
+ * NÉT CONG vẽ tay (swirl, line art, line chrome nổi): tâm nét là 1 đường sin + trôi theo 1 biến — o = 0: t = f(Y) chạy DỌC
+ * móng, o = 1: Y = f(t) chạy NGANG (vòm chân móng, sóng ngang). Toạ độ theo nửa bề ngang móng (hw) cả 2 trục → nét
+ * không méo theo tỉ lệ móng. prof: 0 = nét liner (đều, 2 đầu thon tròn) · 1 = nét CỌ (đặt cọ dày → bụng → đuôi mảnh dài)
+ * · 2 = khối chrome hữu cơ (bề dày phồng / thắt dọc nét). w = nửa bề dày lớn nhất, wt = nửa bề dày tối thiểu ở đuôi.
+ */
+interface Stroke { o: 0 | 1; a0: number; a1: number; c: number; amp: number; k: number; ph: number; dr: number; w: number; wt: number; prof: 0 | 1 | 2 }
+/** kết quả strokeAt: d khoảng cách có dấu tới tâm nét (hw, vuông góc nét) · q vị trí dọc nét 0…1 · w nửa bề dày tại đó ·
+ *  px, py pháp tuyến nét trong mặt móng (t, Y) — cho bóng khối 3D của nét nổi */
+const STK = { d: 0, q: 0, w: 0, px: 1, py: 0 };
+function strokeAt(st: Stroke, t: number, Y: number): typeof STK {
+  const x = st.o ? Y : t, v = st.o ? t : Y;
+  const q = (v - st.a0) / (st.a1 - st.a0), vc = v < st.a0 ? st.a0 : v > st.a1 ? st.a1 : v;
+  const ar = st.k * (vc - st.a0) + st.ph;
+  const f = st.c + st.amp * Math.sin(ar) + st.dr * (vc - st.a0), fp = st.amp * st.k * Math.cos(ar) + st.dr;
+  const nl = Math.sqrt(1 + fp * fp);
+  // ngoài 2 đầu nét: khoảng cách tới điểm đầu / cuối → đầu nét TRÒN (không cụt vuông)
+  const d = v === vc ? (x - f) / nl : (x >= f ? 1 : -1) * Math.hypot(x - f, v - vc);
+  const qc = q < 0 ? 0 : q > 1 ? 1 : q;
+  let wq: number;
+  if (st.prof === 1) wq = Math.pow(Math.sin(Math.PI * Math.pow(qc, 0.72)), 0.7);
+  else if (st.prof === 2) wq = (0.6 + 0.4 * Math.sin(5.3 * qc + st.ph * 1.7)) * Math.pow(Math.sin(Math.PI * Math.min(1, 0.04 + 0.92 * qc)), 0.35);
+  else wq = 0.5 + 0.5 * smooth(0, 0.14, qc) * (1 - smooth(0.86, 1, qc));
+  STK.d = d; STK.q = q; STK.w = Math.max(st.wt, st.w * wq);
+  // pháp tuyến nét (về phía d dương) trong hệ (t, Y)
+  const nx = 1 / nl, ny = -fp / nl;
+  if (st.o) { STK.px = ny; STK.py = nx; } else { STK.px = nx; STK.py = ny; }
+  return STK;
+}
+/** Độ phủ nét (mép khử răng cưa ~aa hw). */
+const strokeCov = (k: typeof STK, aa: number) => 1 - smooth(k.w - aa, k.w + aa, Math.abs(k.d));
+
+/**
+ * CHẤM BI rải thưa như chấm tay bằng que chấm: lưới ô BĂM (ô có / không có chấm), tâm lệch ±0.22 ô, 2 cỡ chấm; chỉ giữ
+ * chấm NGUYÊN — tâm cách mép móng (2 bên, chân móng, mép tự do thật) ≥ bán kính, chấm bị mép cắt dở nhìn như giấy in cắt
+ * ra. `dens(tc, Yc)` (0…1) = mật độ theo vị trí (dồn về 1 góc). Trả về độ phủ 0…1.
+ */
+function polkaAt(t: number, Y: number, P: number, occ: number, r0: number, r1: number, seed: number, tp: TipProfile, aa: number, corner: number): number {
+  const gx = t / P, gy = Y / P, ix = Math.floor(gx), iy = Math.floor(gy);
+  let cov = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const ci = ix + i, cj = iy + j, h = hash2(ci, cj, seed);
+    const tc = (ci + 0.5 + 0.44 * (hash2(ci, cj, seed + 1) - 0.5)) * P, Yc = (cj + 0.5 + 0.44 * (hash2(ci, cj, seed + 2) - 0.5)) * P;
+    // dồn về 1 góc (mắt mèo chấm thưa): mật độ giảm dần theo khoảng cách tới góc chọn (corner ≠ 0: ±1 = góc trái / phải đầu móng)
+    const dn = corner ? 0.3 + 0.7 * Math.exp(-(((tc - 0.75 * corner) / 0.9) ** 2 + ((Yc - 0.75 * tp.len) / (0.6 * tp.len)) ** 2)) : 1;
+    if (h > occ * dn) continue;
+    const r = hash2(ci, cj, seed + 3) < 0.4 ? r1 : r0;
+    const lim = 0.94 - r;
+    if (Math.abs(tc) > lim || Yc < r + 0.14 || Yc > Math.min(tipE(tp, tc - r), tipE(tp, tc + r), tipE(tp, tc)) - r - 0.08) continue;
+    const dd = Math.hypot(t - tc, Y - Yc);
+    if (dd < r + aa) cov = Math.max(cov, 1 - smooth(r - aa, r + aa, dd));
+  }
+  return cov;
+}
+
+/**
+ * ĐỒI MỒI CẢ MÓNG: nền mật ong → hổ phách (đổi sắc chậm), 3 lớp đốm chồng như đổ gel thật — mảng nâu TRONG lớn có quầng
+ * hổ phách sáng quanh mép, đốm nâu sẫm vừa (~0.25–0.4 hw), lõi gần đen NHỎ trong đốm sẫm; đốm kéo dài chéo theo vân mai
+ * rùa. (tortoiseAt cũ: 1 lớp nhiễu → mảng nhoè to như rằn ri.) x, y theo hw.
+ */
+function shellAt(x: number, y: number, seed: number): RGB {
+  const ca = 0.83, sa = 0.56; // vân chéo ~34°
+  const X = x * ca + y * sa, Y = -x * sa + y * ca;
+  const wx = X + 0.55 * fbm(X * 0.7 + 3, Y * 0.7, seed + 5), wy = Y + 0.55 * fbm(X * 0.7, Y * 0.7 + 7, seed + 6);
+  const n1 = vnoise(wx * 1.05 + 11, wy * 1.9, seed); // mảng lớn
+  const n2 = 0.62 * vnoise(wx * 2.3 + 4, wy * 3.4, seed + 1) + 0.38 * n1; // đốm vừa (bám mảng lớn → đốm thành cụm)
+  const n3 = vnoise(wx * 4.4 + 9, wy * 5.8, seed + 3); // lõi nhỏ
+  let c = mix3([0.7, 0.34, 0.055], [0.5, 0.18, 0.02], smooth(0.25, 0.85, vnoise(X * 0.6 + 2, Y * 0.6, seed + 8)));
+  c = mix3(c, [0.3, 0.1, 0.014], 0.6 * smooth(0.5, 0.7, n1)); // nâu trong lớn
+  c = mix3(c, [0.78, 0.42, 0.08], 0.3 * smooth(0.44, 0.53, n2) * (1 - smooth(0.55, 0.6, n2))); // quầng hổ phách
+  c = mix3(c, [0.085, 0.028, 0.006], 0.88 * smooth(0.57, 0.66, n2)); // đốm nâu sẫm
+  return mix3(c, [0.016, 0.007, 0.003], 0.85 * smooth(0.64, 0.7, n2) * smooth(0.42, 0.62, n3)); // lõi gần đen
+}
 /** Bố cục hoa khô MILK BATH của 1 móng (hw, y tính từ chân móng): 2–3 hoa ép 0.26–0.42 hw (cho phép lẹm mép), 2 lá, 2–4
  *  vụn vàng. kind 0 hoa · 1 lá · 2 vụn vàng; col: 0 = màu c2 · 1… = bảng màu hoa khô thật. */
 interface Pressed { t: number; y: number; r: number; rot: number; kind: 0 | 1 | 2; col: number; n: number }
@@ -2216,7 +2297,12 @@ const PRESSED_COLS: RGB[] = [[0.65, 0.09, 0.19], [0.27, 0.15, 0.52], [0.72, 0.25
  * loại, ngọc trai / đá 3D → bóng gương trên cùng.
  */
 export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: Img | null, crop?: { x: number; y: number; w: number; h: number }): Img {
-  look = expandSet(look, segs.length, nailOrder(segs)); // bộ phối: mỗi móng 1 vai (hero / echo / thread / quiet)
+  const ordN = nailOrder(segs);
+  look = expandSet(look, segs.length, ordN); // bộ phối: mỗi móng 1 vai (hero / echo / thread / quiet)
+  // vị trí ngón (trỏ → út) + vai của từng móng cho hoạ tiết PHỦ CẢ BỘ (swirl, dâu nhúng sô-cô-la…): expandSet để nguyên
+  // look.nails → hoạ tiết tự chia bố cục theo vai / nối pha từ ngón này sang ngón kia
+  const posN = new Array<number>(segs.length); ordN.forEach((idx, p) => { posN[idx] = p; });
+  const rolesN = setRoles(segs.length, look, ordN).roles;
   const cx = crop ? Math.max(0, Math.round(crop.x)) : 0, cy = crop ? Math.max(0, Math.round(crop.y)) : 0;
   const cw = crop ? Math.max(1, Math.min(img.w - cx, Math.round(crop.w))) : img.w, ch = crop ? Math.max(1, Math.min(img.h - cy, Math.round(crop.h))) : img.h;
   let out: Uint8ClampedArray;
@@ -2260,6 +2346,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const fin: Finish = ov?.finish ?? look.finish;
     // móng nhấn: móng HERO của bộ (viền chỉ kim loại đồi mồi chỉ 1 móng); bộ không chia vai (mix màu…) theo vị trí như cũ
     const accent = ov?.role ? ov.role === "hero" : seg.accent ?? (i === 2 || i === 3);
+    const roleN = ov?.role ?? rolesN[i], pN = posN[i]; // vai + vị trí ngón (hoạ tiết phủ cả bộ tự chia bố cục)
     const onNail = ov?.art ?? (ALL_NAIL_PATTERNS.has(pat) || accent || segs.length < 3); // hoạ tiết có vẽ trên móng này không
     const base0 = pat === "mixmatch" && accent ? c2 : c1;
     const { lm, under, skin, eDist, eSub, nrm } = segMaps(img, seg);
@@ -2761,13 +2848,39 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "swirl": {
-            // SWIRL: 2 dải lượn mềm c2 + 1 nét kim loại mảnh chạy theo (vẽ tay bằng cọ)
-            const tc1 = 0.42 * Math.sin(3.1 * u + ph) - 0.1, tc2 = 0.4 * Math.sin(3.1 * u + ph + 2.2) + 0.25;
-            const w1 = 0.13 + 0.05 * Math.sin(5 * u + ph), w2 = 0.09;
-            const m1 = 1 - smooth(w1 - 0.03, w1 + 0.03, Math.abs(t - tc1)), m2 = 1 - smooth(w2 - 0.03, w2 + 0.03, Math.abs(t - tc2));
-            base = mix3(base, c2, Math.max(m1, m2 * 0.9));
-            const ml = 1 - smooth(lineW * 0.6, lineW * 1.3, Math.abs(t - tc1 - w1 - 0.02));
-            if (ml > 0) { metalMix = ml; metalQ = 0; }
+            // SWIRL vẽ tay: 2 dải lượn chữ S SONG SONG (không cắt nhau) chạy dọc móng, ~1–1.4 chu kỳ / móng, nét CỌ (đặt cọ
+            // dày → bụng → đuôi mảnh); dải chính c2, dải phụ 1 sắc độ khác (c2 rất sáng: tông đậm của nền / giữa nền–c2; c2
+            // đậm: tông nhạt của c2) + 1 chỉ kim loại ≥ 2.6px chạy sát 1 mép dải chính, thon theo dải. Pha nối tiếp từ ngón
+            // này sang ngón kia, chiều trôi đổi từng ngón → mỗi móng 1 bố cục, cả bộ như 1 dòng chảy. (sin 3.1u cũ chưa tới
+            // nửa chu kỳ → 2 băng gần thẳng bắt chéo chữ X như ruy băng gói quà)
+            const Yh = s * tipP.kL, aa = 0.7 / Math.max(8, seg.hw);
+            let sw = tipP.memo.swirl as { st: Stroke[]; col: RGB[]; e: number; lw: number } | undefined;
+            if (!sw) {
+              const Ln = Math.max(1.6, tipP.len), h = (q: number) => hash2(look.seed, q + 10 * pN, 61);
+              const sg = (pN + (hash2(look.seed, 1, 61) > 0.5 ? 1 : 0)) % 2 ? 1 : -1;
+              const k = (6.4 + 2.2 * h(1)) / Ln, ph0 = 6.28 * hash2(look.seed, 3, 61) + 2.3 * pN, amp = 0.24 + 0.08 * h(2);
+              const dr = (sg * (0.3 + 0.25 * h(3))) / Ln, c0 = -sg * (0.12 + 0.1 * h(4)) - 0.5 * dr * Ln;
+              const o2 = sg * (0.4 + 0.06 * h(5)), oc = okOf(c2), oc1 = okOf(c1);
+              const col1 = oc[0] > 0.8 ? (oc1[0] < 0.5 ? okMix(c1, c2, 0.45) : okShift(c1, -0.15, 1.25)) : okShift(c2, 0.16, 0.8);
+              const lw = Math.max(1.35, 0.03 * seg.hw) / Math.max(8, seg.hw);
+              const st: Stroke[] = [
+                { o: 0, a0: 0.12, a1: Ln + 0.5, c: c0, amp, k, ph: ph0, dr, w: 0.15 + 0.035 * h(6), wt: 0.02, prof: 1 },
+                { o: 0, a0: 0.35 + 0.35 * h(7), a1: Ln * (0.8 + 0.15 * h(8)), c: c0 + o2, amp: amp * 0.92, k, ph: ph0 - 0.25 * sg, dr, w: 0.085 + 0.03 * h(9), wt: 0.015, prof: 1 },
+                // nét liner mảnh thứ 3 (~2.6px) phía bên kia dải chính, ngắn hơn — 2/3 số móng
+                { o: 0, a0: 0.5 + 0.5 * h(10), a1: Ln * (0.7 + 0.2 * h(11)), c: c0 - o2 * 1.02, amp: amp * 1.04, k, ph: ph0 + 0.15 * sg, dr, w: h(12) < 0.67 ? lw * 1.15 : 0, wt: lw * 0.4, prof: 0 },
+              ];
+              sw = { st, col: [c2, col1], e: -Math.sign(o2), lw };
+              tipP.memo.swirl = sw;
+            }
+            const S1 = strokeAt(sw.st[1], t, Yh);
+            base = mix3(base, sw.col[1], strokeCov(S1, aa));
+            if (sw.st[2].w > 0) { const S2 = strokeAt(sw.st[2], t, Yh); base = mix3(base, sw.col[0], strokeCov(S2, aa)); }
+            const S0 = strokeAt(sw.st[0], t, Yh), d0 = S0.d, w0 = S0.w, q0 = S0.q;
+            base = mix3(base, sw.col[0], strokeCov(S0, aa));
+            // chỉ kim loại bám mép dải chính phía KHÔNG có dải phụ, tắt dần theo đuôi dải
+            const lw = sw.lw, n = (d0 * sw.e - w0 - 0.8 * lw) / lw;
+            const mm = (1 - smooth(1 - (2 * aa) / lw, 1 + (2 * aa) / lw, Math.abs(n))) * smooth(0.035, 0.07, w0) * smooth(0, 0.08, q0) * (1 - smooth(0.85, 1, q0));
+            if (mm > 0) { metalMix = mm; metalQ = Math.max(-1, Math.min(1, n)); }
             break;
           }
           case "polka": {
@@ -2788,13 +2901,77 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "chocodip": {
-            // DÂU NHÚNG SÔ-CÔ-LA: đầu móng phủ sô-cô-la mép lượn + giọt chảy, vài sợi sô-cô-la trắng rưới chéo
-            const edge = 0.68 + 0.04 * Math.sin(7 * t + ph) + 0.09 * Math.max(0, Math.cos(2.6 * t + ph)) ** 6;
-            const choc = smooth(edge - aaU * 2, edge + aaU * 2, u);
-            base = mix3(c1, c2, choc);
-            const dz = Math.abs(Math.sin(9 * (u * 0.9 + t * 0.6) + ph));
-            const driz = (1 - smooth(0.05, 0.11, dz)) * smooth(edge + 0.04, edge + 0.1, u) * (0.6 + 0.4 * Math.sin(3 * t));
-            base = mix3(base, [0.9, 0.85, 0.8], Math.max(0, driz) * 0.9);
+            // DÂU NHÚNG SÔ-CÔ-LA như thợ vẽ: nền đỏ dâu bóng có HẠT DÂU (giọt vàng nhạt nằm trong lõm đỏ sẫm, so le), đầu
+            // móng nhúng sô-cô-la BÓNG — mép lượn + 2–4 giọt chảy dài ngắn khác nhau đầu giọt TRÒN (nối mềm vào lớp sô-cô-la),
+            // viền sẫm + gờ sáng như sô-cô-la còn ướt, bóng đổ nhẹ lên phần dâu; sô-cô-la trắng rưới 1–2 nét ZIGZAG ~2.6px.
+            // Bố cục theo vai: hero nhúng sâu + rưới · echo nhúng nông (giọt lật bên) · thread dâu hạt trơn · quiet sô-cô-la
+            // trơn. (Bản cũ: mép sin đều + sọc chéo song song như thanh sô-cô-la kẻ sọc, không hạt, 4 móng y hệt.)
+            const Yh = s * tipP.kL, aa = 0.7 / Math.max(8, seg.hw), pxh = 1 / Math.max(8, seg.hw);
+            type Drip = { t: number; hy: number; rH: number; rN: number };
+            let cd = tipP.memo.choc as { kind: number; ye: number; dr: Drip[]; zz: number[][] } | undefined;
+            if (!cd) {
+              const Ln = Math.max(1.6, tipP.len), h = (q: number) => hash2(look.seed + 7 * pN, q, 83), mir = pN % 2 ? -1 : 1;
+              const kind = roleN === "hero" ? 0 : roleN === "echo" ? 1 : roleN === "thread" ? 2 : roleN === "quiet" ? 3 : 0;
+              const ye = Ln * (kind === 0 ? 0.56 + 0.05 * h(1) : 0.7 + 0.05 * h(1));
+              const dr: Drip[] = [];
+              if (kind < 2) {
+                const n = kind === 0 ? 3 : 2, lens = kind === 0 ? [1, 0.5, 0.78] : [0.66, 0.38];
+                for (let q = 0; q < n; q++) {
+                  const tq = mir * (-0.6 + (1.2 * (q + 0.5)) / n + 0.1 * (h(10 + q) - 0.5)), rH = 0.17 + 0.05 * h(20 + q);
+                  dr.push({ t: tq, hy: ye - Ln * 0.3 * lens[q] * (0.85 + 0.3 * h(30 + q)), rH, rN: rH * (0.68 + 0.1 * h(40 + q)) });
+                }
+              }
+              // sô-cô-la trắng rưới: [tâm Y, biên độ, chu kỳ ngang, pha, cửa sổ ngang] — nét 1 ngang lớp sô-cô-la, nét 2 ngắn nửa
+              // móng nằm đúng mép nhúng (tràn nhẹ sang phần dâu)
+              const zz = kind === 0 ? [[ye + (Ln - ye) * 0.42, 0.15, 0.36, h(5), 0], [ye + 0.02, 0.1, 0.3, h(6), mir]] : [];
+              cd = { kind, ye, dr, zz };
+              tipP.memo.choc = cd;
+            }
+            // khoảng cách có dấu tới mép sô-cô-la (hw, < 0 = trong sô-cô-la): lớp nhúng (mép lượn 2 tần số) ∪ giọt (cổ + đầu
+            // tròn, nối mềm vào lớp nhúng)
+            const pe = 6.28 * hash2(look.seed, pN, 84);
+            let dC = cd.kind === 3 ? -9 : cd.kind === 2 ? 9 : cd.ye + 0.04 * Math.sin(4.1 * t + pe) + 0.022 * Math.sin(9.7 * t + 2 * pe) - Yh;
+            for (const q of cd.dr) {
+              const rr = q.rN + (q.rH - q.rN) * smooth(cd.ye, q.hy, Yh);
+              const dN = Yh >= q.hy && Yh <= cd.ye + 0.2 ? Math.abs(t - q.t) - rr : 9;
+              dC = smin(dC, Math.min(Math.hypot(t - q.t, Yh - q.hy) - q.rH, dN), 0.12);
+            }
+            const choc = 1 - smooth(-aa, aa, dC);
+            // phần DÂU: đỏ bóng + hạt (bỏ hạt sát mép sô-cô-la, bỏ ngẫu nhiên ~12% cho khỏi thành lưới)
+            let red: RGB = c1;
+            if (choc < 1) {
+              const P = 0.36, row = Math.floor(Yh / P), off = (row & 1) * 0.5;
+              const ci = Math.round(t / P - off), sx = (ci + off) * P + 0.1 * (hash2(ci, row, 85) - 0.5), sy = (row + 0.5) * P + 0.1 * (hash2(ci, row, 86) - 0.5);
+              const ls = Math.max(2.6 * pxh, 0.072), dx = (t - sx) / (0.55 * ls), dy = (Yh - sy) / ls;
+              const okS = hash2(ci, row, 89) > 0.12 && Math.abs(sx) < 0.86 && sy > 0.2 && sy < tipE(tipP, sx) - 0.1 && (cd.kind > 1 || sy < cd.ye - 0.14);
+              if (okS) {
+                // lõm quanh hạt (đỏ sẫm) → hạt hình giọt (đầu nhọn quay về đầu móng) vàng nhạt + 1 chấm sáng
+                const dimple = Math.exp(-(dx * dx * 0.3 + dy * dy * 0.45) / 1.2);
+                red = [red[0] * (1 - 0.32 * dimple), red[1] * (1 - 0.4 * dimple), red[2] * (1 - 0.4 * dimple)];
+                const egg = Math.hypot(dx / (1 - 0.35 * Math.max(-1, Math.min(1, dy))), dy) - 1;
+                red = mix3(red, mix3([0.9, 0.72, 0.28], [0.98, 0.93, 0.75], 0.5 * Math.exp(-((dx + 0.3) ** 2 + (dy + 0.35) ** 2) / 0.12)), 1 - smooth(-aa / ls, aa / ls, egg));
+              }
+            }
+            // sô-cô-la: viền sẫm sát mép + gờ sáng ướt bên trong (lệch về phía đèn), bóng đổ lên phần dâu ngay ngoài mép
+            const inC = -dC;
+            let ch: RGB = mix3(c2, sc3(c2, 0.7), 1 - smooth(0.0, 0.035, inC));
+            const ridge = 0.36 * Math.exp(-(((inC - 0.055) / 0.025) ** 2)) * (0.5 + 0.5 * smooth(-0.6, 0.6, t * side)) * (0.7 + 0.6 * vnoise(t * 4, Yh * 4, look.seed + 87));
+            ch = [ch[0] + (0.55 - ch[0]) * ridge, ch[1] + (0.4 - ch[1]) * ridge, ch[2] + (0.3 - ch[2]) * ridge];
+            const cast = cd.kind < 2 ? 0.34 * (1 - smooth(0, 0.08, dC)) * smooth(-0.02, 0.0, dC) : 0;
+            red = sc3(red, 1 - cast);
+            base = mix3(red, ch, choc);
+            // sô-cô-la trắng rưới: zigzag ĐỈNH TRÒN (asin(sin) — tam giác nhọn đều tăm tắp nhìn như viền ren), chu kỳ / biên độ
+            // xê dịch theo nhiễu như rưới bằng tay; nổi (bóng đổ mảnh phía khuất đèn)
+            for (const z of cd.zz) {
+              const win = z[4] ? smooth(-0.98, -0.78, t * z[4]) * (1 - smooth(-0.05, 0.2, t * z[4])) : 1;
+              if (win <= 0) continue;
+              const f = t / z[2] + z[3] + 0.32 * vnoise(t * 3.3, z[0], look.seed + 90), A = z[1] * (0.5 + 0.95 * vnoise(t * 4.1 + 5, z[0], look.seed + 91));
+              const zy = z[0] + 0.1 * t * (z[4] || (pN % 2 ? -1 : 1)) + A * 0.6366 * Math.asin(0.96 * Math.sin(6.2832 * f)), sl = Math.sqrt(1 + ((3.9 * A) / z[2]) ** 2);
+              const dz = Math.abs(Yh - zy) / sl, hw2 = Math.max(1.3 * pxh, 0.03) * (0.85 + 0.3 * vnoise(t * 3, 1, look.seed + 92)), spill = (1 - smooth(0.06, 0.16, dC)) * win;
+              const shz = 0.3 * (1 - smooth(hw2, hw2 + 2.5 * pxh, Math.abs(Yh - zy + 1.5 * pxh * upS) / sl)) * spill;
+              base = sc3(base, 1 - shz);
+              base = mix3(base, [0.88, 0.8, 0.64], (1 - smooth(hw2 - aa, hw2 + aa, dz)) * spill);
+            }
             break;
           }
           case "fawn": {

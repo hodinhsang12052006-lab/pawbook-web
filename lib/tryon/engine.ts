@@ -2293,23 +2293,31 @@ function polkaAt(t: number, Y: number, P: number, occ: number, r0: number, r1: n
 }
 
 /**
- * ĐỒI MỒI CẢ MÓNG: nền mật ong → hổ phách (đổi sắc chậm), 3 lớp đốm chồng như đổ gel thật — mảng nâu TRONG lớn có quầng
- * hổ phách sáng quanh mép, đốm nâu sẫm vừa (~0.25–0.4 hw), lõi gần đen NHỎ trong đốm sẫm; đốm kéo dài chéo theo vân mai
- * rùa. (tortoiseAt cũ: 1 lớp nhiễu → mảng nhoè to như rằn ri.) x, y theo hw.
+ * ĐỒI MỒI CẢ MÓNG như đổ gel thạch thật dưới lớp top: các LỚP MÀU TRONG PHẲNG chồng lên nhau — nền mật ong ấm → hổ phách
+ * (đổi sắc chậm) · mảng nâu vừa trong suốt (lớp thứ 2, lệch khỏi đốm sẫm) · quầng hổ phách ĐẬM hơn nền quanh đốm · đốm
+ * nâu espresso (~40% mặt móng, cỡ ~0.25–0.35 hw, mép mềm ~2px) · lõi gần đen. Bậc màu chỉ TỐI DẦN vào đốm (không có viền
+ * sáng quanh mép đốm) + uốn tần thấp: bản trước có quầng hổ phách SÁNG ôm mỗi đốm + uốn nhiễu tần cao → mỗi mép đốm như
+ * gờ nổi bắt sáng, móng to nhìn như kim loại gò / caramel chảy / mặt nước gợn. x, y theo hw.
  */
+const SH_HONEY: RGB = [0.44, 0.125, 0.012], SH_AMBER: RGB = [0.33, 0.078, 0.007], SH_DEEP: RGB = [0.19, 0.038, 0.005];
+const SH_ESP: RGB = [0.028, 0.008, 0.0028], SH_CORE: RGB = [0.008, 0.003, 0.0014];
 function shellAt(x: number, y: number, seed: number): RGB {
   const ca = 0.83, sa = 0.56; // vân chéo ~34°
   const X = x * ca + y * sa, Y = -x * sa + y * ca;
-  const wx = X + 0.5 * fbm(X * 0.9 + 3, Y * 0.9, seed + 5), wy = Y + 0.5 * fbm(X * 0.9, Y * 0.9 + 7, seed + 6);
-  const n1 = vnoise(wx * 1.5 + 11, wy * 2.5, seed); // mảng lớn (~0.4–0.6 hw)
-  const n2 = 0.6 * vnoise(wx * 3.1 + 4, wy * 4.4, seed + 1) + 0.4 * n1; // đốm vừa (bám mảng lớn → đốm thành cụm)
-  const n3 = vnoise(wx * 6 + 9, wy * 7.5, seed + 3); // lõi nhỏ
-  // mật ong → hổ phách đậm (không vàng mù tạt), đổi sắc chậm
-  let c = mix3([0.52, 0.17, 0.011], [0.33, 0.085, 0.005], smooth(0.25, 0.85, vnoise(X * 0.7 + 2, Y * 0.7, seed + 8)));
-  c = mix3(c, [0.15, 0.04, 0.005], 0.55 * smooth(0.5, 0.72, n1)); // nâu trong lớn
-  c = mix3(c, [0.62, 0.24, 0.02], 0.35 * smooth(0.42, 0.52, n2) * (1 - smooth(0.54, 0.6, n2))); // quầng hổ phách sáng
-  c = mix3(c, [0.05, 0.016, 0.004], 0.9 * smooth(0.55, 0.66, n2)); // đốm nâu sẫm
-  return mix3(c, [0.012, 0.006, 0.003], 0.85 * smooth(0.63, 0.69, n2) * smooth(0.4, 0.6, n3)); // lõi gần đen
+  // uốn TẦN THẤP biên độ nhỏ: đốm méo mềm như gel loang, không gợn sóng
+  const wx = X + 0.3 * (vnoise(X * 0.55 + 3, Y * 0.55, seed + 5) - 0.5), wy = Y + 0.3 * (vnoise(X * 0.55, Y * 0.55 + 7, seed + 6) - 0.5);
+  // 2 tầng: đốm ~0.25–0.35 hw (hơi dài theo vân chéo; tầng lớn = 2 lưới nhiễu lệch góc 60° cộng lại → đốm tròn méo hữu
+  // cơ, 1 lưới đơn ra mảng vuông vức) + tầng nhỏ làm mép đốm không tròn trơn
+  const F = 0.36 * vnoise(wx * 2 + 11, wy * 2.4, seed) + 0.36 * vnoise(1.1 * wx - 1.9 * wy + 3, 1.9 * wx + 1.1 * wy, seed + 2) + 0.28 * vnoise(wx * 4.4 + 4, wy * 4.8, seed + 1);
+  // 1 dải màu DUY NHẤT theo F (mật ong → hổ phách → nâu đậm → espresso → lõi), quầng rộng + mềm, chỉ mép đốm espresso
+  // gọn (~2px): nhiều bậc chuyển cùng độ gắt chồng nhau thì thành các đường đồng mức như gờ nổi / gợn nước
+  let c = mix3(SH_HONEY, SH_AMBER, 0.1 + 0.55 * smooth(0.2, 0.85, vnoise(X * 0.6 + 2, Y * 0.6, seed + 8)));
+  c = mix3(c, SH_DEEP, 0.6 * smooth(0.4, 0.535, F)); // quầng hổ phách đậm, loang rộng
+  c = mix3(c, SH_ESP, 0.9 * smooth(0.515, 0.555, F)); // đốm espresso (F ≥ ~0.535 ≈ 38% mặt móng)
+  c = mix3(c, SH_CORE, 0.8 * smooth(0.6, 0.68, F)); // lõi gần đen
+  // vài chấm espresso nhỏ rời (tầng nhỏ) trong vùng mật ong — đồi mồi thật có đốm lấm tấm quanh mảng lớn
+  const sp = vnoise(wx * 6 + 9, wy * 6.5, seed + 3);
+  return mix3(c, SH_ESP, 0.75 * smooth(0.8, 0.88, sp) * (1 - smooth(0.4, 0.48, F)));
 }
 /**
  * LÁ KIM LOẠI NHĂN (foil vàng, chỉ vàng vân đá): độ cao nếp nhăn 3 tầng (nếp to → vụn li ti) → pháp tuyến nghiêng khác

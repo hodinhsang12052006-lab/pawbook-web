@@ -555,6 +555,25 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     const clone = !e || (e.pattern === p && (!e.pick || e.pick === "all") && (e.scale ?? 1) >= 1);
     if (clone || !ns.some((o) => o?.role === "hero" && o.pattern === p) || th.some((o) => !o?.art || (o.pattern === "solid" && o.finish !== "chrome")) || ns.some((o) => o?.role !== "quiet" && !o?.art)) bad.push(`${p}/${seed}: ${JSON.stringify(ns)}`);
   }
+  // vòng 2 — bộ phối KHÔNG theo 1 công thức: qua 40 hạt giống × 10 hoạ tiết × nền tối / sáng: có bộ "accent" (2 móng hoạ
+  // tiết + trơn, không móng nối) 15–45%; nhũ loang ≤ 30% móng nối, nhũ ở CHÂN móng ≤ 10% và chỉ trên nền tối; họ French
+  // (dựng gel trong trên giường móng) không bao giờ là móng nối trên nền tối; micro French màu c2 chỉ khi hoạ tiết vẽ bằng c2
+  {
+    const FR = new Set(["french", "chromefrench", "fr-micro", "fr-halfmoon"]), C2P = new Set(["dots", "hearts", "floral", "leopard"]);
+    let sets = 0, accent = 0, th = 0, glit = 0, cut = 0;
+    for (const p of ["ghost", "floral", "stars", "gems", "charm3d", "leopard", "dots", "hearts", "chromedrops", "bats"]) for (const dark of [true, false]) for (let seed = 100; seed < 140; seed++) {
+      const ns = expandSet(LOOK(dark ? ["#1f2a44", "#f2ede6", "#c0c0c0"] : ["#f6d5d0", "#8b3a62", "#d4af37"], "glossy", { pattern: p, seed }), 4).nails ?? [];
+      const tr = ns.filter((o) => o?.role === "thread");
+      sets++; if (!tr.length) accent++;
+      for (const o of tr) {
+        th++;
+        if (o?.pattern === "glitterfade") { glit++; if (o.fade === "cuticle") { cut++; if (!dark) bad.push(`${p}/${seed}: nhũ chân móng trên nền sáng`); } }
+        if (dark && FR.has(o?.pattern ?? "")) bad.push(`${p}/${seed}: French nối bộ trên nền tối`);
+        if (!C2P.has(p) && (o?.pattern === "fr-micro" || o?.pattern === "french")) bad.push(`${p}/${seed}: đầu French c2 không có trên hero`);
+      }
+    }
+    if (accent / sets < 0.15 || accent / sets > 0.45 || glit / th > 0.3 || cut / th > 0.1) bad.push(`tỉ lệ bộ: accent ${r2(accent / sets)} · nhũ ${r2(glit / th)} · nhũ chân ${r2(cut / th)}`);
+  }
   // cherry: đầu French echo lấy màu ĐỎ của bảng màu (đỏ son #b91c1c), bảng màu không có đỏ thì đỏ cherry
   const chE = (cols: string[]) => (expandSet(LOOK(cols, "glossy", { pattern: "cherry" }), 4).nails ?? []).find((o) => o?.role === "echo")?.colors?.[1];
   if (chE(["#f9a8d4", "#b91c1c", "#d4af37"]) !== "#b91c1c" || chE(["#f8f4ee", "#ffffff", "#d4af37"]) !== "#b3122e") bad.push(`cherry echo đỏ: ${chE(["#f9a8d4", "#b91c1c", "#d4af37"])} / ${chE(["#f8f4ee", "#ffffff", "#d4af37"])}`);

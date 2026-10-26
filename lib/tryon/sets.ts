@@ -134,10 +134,17 @@ const C2_SHOWN = new Set(["polka", "dots", "stripes", "checker", "leopard", "pla
  *  đinh tán kim loại / chrome cả móng; đá: 1 viên đá lẻ; in lặp (da báo, đồi mồi…): micro French gương vàng / chrome màu */
 type Conn = "chromeTip" | "microTip" | "glitter" | "colorChrome" | "metalChrome" | "stud" | "gemStud" | "pearlStud";
 const FAM_CHAR = new Set(["ghost", "bats", "jackolantern", "skull", "blackcat", "mummy", "eyeball", "web", "slimedrip"]);
-const FAM_FLORAL = new Set(["floral", "blossom", "cherry", "hearts", "holly", "ornament", "leaf", "snow", "gelflower", "lace", "milkbath"]);
-const FAM_METAL = new Set(["stars", "moonstars", "charm3d", "chromedrops", "droplets", "droplet"]);
+const FAM_FLORAL = new Set(["floral", "blossom", "cherry", "hearts", "holly", "ornament", "snow", "gelflower", "lace", "milkbath"]);
+const FAM_METAL = new Set(["stars", "moonstars", "charm3d", "chromedrops"]);
 const FAM_GEM = new Set(["gems", "gemcluster", "pearls"]);
+/** bộ "tone": 1 móng trơn màu hoạ tiết — chỉ hoạ tiết mà c2 là màu CHÍNH của hình vẽ (chấm hồng → móng hồng; vân đá /
+ *  đồi mồi c2 chỉ là gân / đốm phụ → móng trơn c2 nhìn lạc bộ) */
+const TONE_OK = new Set(["dots", "hearts", "floral", "blossom", "snow", "ornament", "swirl", "candy"]);
 function connWeights(pat: string): Partial<Record<Conn, number>> {
+  // lá phong vàng: chrome màu nền / nhũ vàng đầu móng / đinh tán vàng; giọt nước (trong suốt): chrome tráng ngọc trai,
+  // đầu gương, 1 hạt ngọc trai — không chrome vàng cả móng (giọt nước không có kim loại nào)
+  if (pat === "leaf") return { colorChrome: 2, glitter: 2, stud: 1, chromeTip: 1 };
+  if (pat === "droplets" || pat === "droplet") return { colorChrome: 2, chromeTip: 2, pearlStud: 1 };
   if (FAM_CHAR.has(pat)) return { chromeTip: 3, glitter: 2, colorChrome: 2, stud: 1 };
   if (FAM_FLORAL.has(pat)) return { microTip: 3, chromeTip: 2, pearlStud: 2, colorChrome: 1, glitter: 1 };
   if (FAM_METAL.has(pat)) return { stud: 3, chromeTip: 2, metalChrome: 1, colorChrome: 1, glitter: 1 };
@@ -161,7 +168,7 @@ function threadFor(pal: Pal, seed: number, k: number, avoidFrench: boolean, pat 
   const frOk = light && !avoidFrench;
   add("chromeTip", frOk && Math.abs(L1 - Lm) >= 10 ? { pattern: "chromefrench", colors: [pal.c1, pal.c2, pal.m] } : null);
   add("microTip", frOk && c2ok ? { pattern: avail(["fr-micro", "french"]), colors: [pal.c1, pal.c2, pal.m] } : null);
-  add("glitter", has("glitterfade") ? { pattern: "glitterfade", colors: [pal.c1, pal.m, pal.m], finish: "glitter", fade: !light && h32(seed, 73) < 0.25 ? "cuticle" : "tip" } : null);
+  add("glitter", has("glitterfade") ? { pattern: "glitterfade", colors: [pal.c1, pal.m, pal.m], finish: "glitter", fade: !light && h32(seed, 73) < 0.15 ? "cuticle" : "tip" } : null);
   add("colorChrome", has("colorchrome") ? { pattern: "colorchrome", colors: [pal.c1, pal.c1, pal.m], finish: "chrome" } : null);
   add("metalChrome", { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" });
   add("stud", { pattern: "stud:metal", colors: [pal.c1, pal.c2, pal.m] });
@@ -274,7 +281,7 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
   // KIỂU BỘ theo hạt giống (không phải bộ nào cũng "hero + echo + 1 móng lạ + 1 móng trơn" — 4 kỹ thuật trên 4 móng nhìn
   // như bảng mẫu màu, không phải bộ Pinterest): accent = 2 móng hoạ tiết + còn lại trơn màu nền (bộ tiệm làm nhiều nhất) ·
   // tone = 1 móng trơn màu hoạ tiết (chấm hồng → 1 móng hồng đậm) + còn lại màu nền · thread = có 1 móng kỹ thuật nối bộ
-  const rT = h32(seed, 9), c2Tone = C2_SHOWN.has(pat) && !QUIET_C2.has(pat) && Math.abs(lstar(pal.c1) - lstar(pal.c2)) >= 20;
+  const rT = h32(seed, 9), c2Tone = TONE_OK.has(pat) && Math.abs(lstar(pal.c1) - lstar(pal.c2)) >= 20;
   const tmpl = rT < 0.28 ? "accent" : rT < 0.45 && c2Tone ? "tone" : "thread";
   for (let i = 0; i < n; i++) {
     const role = roles[i];
@@ -285,8 +292,9 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
       // móng trơn: màu nền (hoạ tiết vẽ) / màu phụ (bộ in lặp, xen kẽ); đồi mồi: thạch hổ phách như thợ làm. q = thứ tự
       // móng trơn tính từ móng gần hero (bộ không có móng nối: cả móng thread cũng thành móng trơn)
       const q = tmpl === "thread" ? variant[i] : role === "thread" ? 2 * variant[i] : 2 * variant[i] + 1;
+      // bộ in lặp: xen kẽ c2 / c1; hoạ tiết vẽ: màu nền (móng trơn thứ 2 của bộ 5 móng lấy c2 chỉ khi hoạ tiết vẽ bằng c2)
       const c2First = QUIET_C2.has(pat), alt = q % 2 === 1;
-      const qc = tmpl === "tone" ? (q === 0 ? pal.c2 : pal.c1) : (c2First !== alt) ? pal.c2 : pal.c1;
+      const qc = tmpl === "tone" ? (q === 0 ? pal.c2 : pal.c1) : c2First ? (alt ? pal.c1 : pal.c2) : alt && C2_SHOWN.has(pat) ? pal.c2 : pal.c1;
       nails[i] = pat === "tortoise" && !alt ? { role: "quiet", pattern: "jelly", colors: [pal.c1, pal.c2, pal.m], art: true } : { role: "quiet", pattern: "solid", colors: [qc, pal.c2, pal.m], art: false };
     }
   }

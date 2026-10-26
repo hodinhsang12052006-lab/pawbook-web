@@ -1989,7 +1989,7 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     // đá (kèm 2 hạt tí hon 2 bên) · 1 hạt ngọc trai — cùng kim loại / đá với móng hero, nhỏ, sạch
     case "stud:metal": return hash2(seed, 5, 31) < 0.6 ? [{ u: 0.2, t: 0, r: 0.14, kind: "mdrop" }] : [{ u: 0.19, t: 0, r: 0.13, kind: "mdrop" }, { u: 0.31, t: 0, r: 0.1, kind: "mdrop" }, { u: 0.41, t: 0, r: 0.075, kind: "mdrop" }];
     case "stud:gem": return hash2(seed, 5, 31) < 0.5 ? [{ u: 0.22, t: 0, r: 0.21, kind: "gem" }] : [{ u: 0.22, t: 0, r: 0.19, kind: "gem" }, { u: 0.21, t: -0.36, r: 0.1, kind: "gem" }, { u: 0.21, t: 0.36, r: 0.1, kind: "gem" }];
-    case "stud:pearl": return [{ u: 0.21, t: 0, r: 0.18, kind: "pearl" }];
+    case "stud:pearl": return hash2(seed, 5, 31) < 0.45 ? [{ u: 0.22, t: 0, r: 0.21, kind: "pearl" }] : [{ u: 0.21, t: 0, r: 0.17, kind: "pearl" }, { u: 0.25, t: -0.36, r: 0.12, kind: "pearl" }, { u: 0.25, t: 0.36, r: 0.12, kind: "pearl" }];
     // charm sao kim loại: 1 sao to sát chân móng lệch 1 bên + 2 sao nhỏ dần chạy chéo về đầu móng, mỗi sao xoay khác nhau
     case "stars": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.3 + 0.03 * j(1), t: 0.34 * sd, r: 0.44, kind: "star", rot: 0.5 * j(3) }, { u: 0.56, t: -0.02 * sd, r: 0.28, kind: "star", rot: 0.8 * j(4) }, { u: 0.76, t: -0.32 * sd, r: 0.18, kind: "star", rot: 0.8 * j(5) }]; }
     // charm nơ kim loại 3D giữa móng, gần chân móng

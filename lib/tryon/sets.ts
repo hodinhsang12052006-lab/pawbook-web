@@ -219,7 +219,8 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
   if (n <= 0 || look.nails?.some(Boolean)) return look;
   const pat = look.pattern, theme = THEMES[pat];
   if (!theme) {
-    if (pat === "polka" && look.finish === "cateye") return { ...look, nails: Array.from({ length: n }, () => ({ art: true })) };
+    // chấm bi mắt mèo: chấm cây chấm bi THƯA, 3 cỡ, không bị mép cắt (bố cục "polka:cat" của beadsFor) trên nền mắt mèo
+    if (pat === "polka" && look.finish === "cateye") return { ...look, nails: Array.from({ length: n }, () => ({ art: true, pattern: "polka:cat" })) };
     // họ French (fr-*) luôn phủ cả bộ, kể cả biến thể mới chưa kịp ghi vào ALL_NAIL_PATTERNS
     if (SKIP.has(pat) || ALL_NAIL_PATTERNS.has(pat) || pat.startsWith("fr-") || !(PROCEDURAL.has(pat) || ECHO[pat] || PRINTS.has(pat))) return look;
   }

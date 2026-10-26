@@ -564,7 +564,8 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     if (on.length > 2 || (on.length === 2 && Math.abs(on[0] - on[1]) < 2) || ALL_NAIL_PATTERNS.has(p)) bad.push(`${p} in lặp: ${on}`);
   }
   const pc = expandSet(LOOK(["#3e1530", "#f8fafc", "#c0c0c0"], "cateye", { pattern: "polka" }), 4);
-  if (!pc.nails || pc.nails.some((o) => !o?.art || o.pattern)) bad.push("chấm bi mắt mèo phải đủ 4 móng");
+  // (vòng 2: chấm thưa 3 cỡ không bị mép cắt — bố cục "polka:cat" của beadsFor thay lưới chấm đều kín móng)
+  if (!pc.nails || pc.nails.length !== 4 || pc.nails.some((o) => !o?.art || o.pattern !== "polka:cat")) bad.push("chấm bi mắt mèo phải đủ 4 móng");
   // không đụng hoạ tiết phủ mọi móng / sơn trơn / mix màu / đã có nails
   for (const p of ["french", "ombre", "solid", "mixmatch", "jelly"]) if (expandSet(LOOK(["#111111"], "glossy", { pattern: p }), 4).nails) bad.push(`${p} bị chia vai`);
   const own = LOOK(["#111111"], "glossy", { pattern: "ghost", nails: [{ pattern: "solid" }] });

@@ -1957,15 +1957,23 @@ function beadsFor(pattern: string, seed: number): Bead[] {
         }
         return out;
       }
-      if (v === 1) return scatterBeads(seed, 9 + Math.floor(3 * hash2(seed, 8, 31)), (k) => (k % 3 === 0 ? 0.16 : k % 3 === 1 ? 0.1 : 0.12), "pdot", 0.14, 0.9, 0.8, 0.13);
-      return scatterBeads(seed, 9, (k) => [0.2, 0.15, 0.12, 0.13, 0.1, 0.09, 0.1, 0.08, 0.08][k], "pdot", 0.13, 0.86, 0.82, 0.07,
+      if (v === 1) return scatterBeads(seed, 9 + Math.floor(3 * hash2(seed, 8, 31)), (k) => (k % 3 === 0 ? 0.18 : k % 3 === 1 ? 0.11 : 0.14), "pdot", 0.14, 0.9, 0.8, 0.13);
+      return scatterBeads(seed, 9, (k) => [0.22, 0.16, 0.13, 0.14, 0.11, 0.1, 0.11, 0.09, 0.08][k], "pdot", 0.13, 0.86, 0.82, 0.07,
         (u, t) => Math.exp(-(((u - 0.2) * 2.8) ** 2 + (t - 0.4 * sd) ** 2) / 0.9));
     }
-    // ECHO của chấm bi: chuỗi 4–5 chấm nhỏ dần ở góc đầu móng, hoặc 1 hàng chấm tí hon ôm vòng chân móng (dotted cuticle)
+    // CHẤM BI TRÊN MẮT MÈO (trend Pinterest "polka dot cat eye"): chấm cây chấm bi THƯA trên nền mắt mèo — 7–10 chấm / móng,
+    // 3 cỡ (0.07–0.15 hw), lệch tự nhiên, dày dần về đầu móng / thưa về chân móng, không chấm nào bị mép cắt. Lưới chấm đều
+    // 4 cột kín móng cũ nhìn như vải in cắt bằng kéo. Mỗi móng hạt giống riêng → bố cục khác nhau
+    case "polka:cat": {
+      const n = 7 + Math.floor(4 * hash2(seed, 8, 31));
+      return scatterBeads(seed, n, (k) => [0.15, 0.1, 0.12, 0.08, 0.13, 0.09, 0.11, 0.07, 0.1, 0.08][k], "pdot", 0.14, 0.9, 0.8, 0.14, (u) => 0.22 + 0.78 * smooth(0.15, 0.85, u));
+    }
+    // ECHO của chấm bi: chuỗi 4–5 chấm nhỏ dần ở góc đầu móng, hoặc 1 hàng chấm tí hon ôm vòng cung chân móng (dotted
+    // cuticle — cong theo chân móng, 2 đầu hàng chạy lên phía đầu móng)
     case "dots:echo": {
       const sd = j(6) > 0 ? 1 : -1;
-      if (hash2(seed, 9, 31) < 0.5) return [{ u: 0.62, t: 0.42 * sd, r: 0.15 }, { u: 0.72, t: 0.1 * sd, r: 0.1 }, { u: 0.83, t: 0.38 * sd, r: 0.12 }, { u: 0.8, t: -0.16 * sd, r: 0.075 }, { u: 0.5, t: 0.2 * sd, r: 0.075 }].map((b) => ({ ...b, kind: "pdot" as const, whole: true }));
-      return [-0.6, -0.3, 0, 0.3, 0.6].map((t) => ({ u: 0.21 + 0.06 * t * t, t, r: 0.085, kind: "pdot" as const, whole: true }));
+      if (hash2(seed, 9, 31) < 0.5) return [{ u: 0.62, t: 0.42 * sd, r: 0.16 }, { u: 0.72, t: 0.1 * sd, r: 0.11 }, { u: 0.83, t: 0.38 * sd, r: 0.13 }, { u: 0.8, t: -0.16 * sd, r: 0.085 }, { u: 0.5, t: 0.2 * sd, r: 0.085 }].map((b) => ({ ...b, kind: "pdot" as const, whole: true }));
+      return [-0.62, -0.32, 0, 0.32, 0.62].map((t) => ({ u: 0.2 + 0.16 * t * t, t, r: 0.1, kind: "pdot" as const, whole: true }));
     }
     // CLEAN GIRL: 1 điểm nhấn kim loại siêu nhỏ ở chân móng trên 3/4 móng — seed móng i = seed + 13i nên seed % 4 khác nhau
     // trên 4 móng liền nhau → đúng 1 móng để trơn; 3 móng còn lại: đinh tán vàng · 3 đinh tán · 2 đinh tán lệch (đều ≥ 3px)

@@ -3109,32 +3109,54 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "fawn": {
-            // DA HƯƠU (fawn / Bambi print) như lưng hươu con: nền nâu ấm SẪM dần vào đường sống giữa móng, sáng / ấm hơn về 2
-            // mép · đốm kem MỀM (mép loang ~1.7px) THUÔN DÀI ~1.5–1.9× dọc móng, xếp 2 hàng lỏng 2 bên đường sống + hàng ngoài
-            // đốm nhỏ sát mép (bị mép cắt dở), to nhỏ / nghiêng khác nhau, vài đốm liền nhau thành mảng (smin). Bản cũ: đốm tròn
-            // đều cỡ rải ngẫu nhiên, mép sắc → chấm bi / bánh quy chip sô-cô-la.
+            // DA HƯƠU (fawn / Bambi print) như lưng hươu con: nền nâu ấm SẪM rõ vào đường sống giữa móng (≥ 0.1 L OKLab so
+            // với 2 mép sáng / ấm hơn) · đốm MỀM mép loang ~3.5px, viền HỮU CƠ (ellipse uốn nhiễu tần thấp, không gợn góc),
+            // THUÔN DÀI ~1.4–1.9× dọc móng, xếp 2 hàng lỏng 2 bên đường sống + hàng ngoài đốm nhỏ sát mép, to nhỏ / nghiêng /
+            // ĐẬM NHẠT (0.6–1) khác nhau, vài chấm vệ tinh nhỏ cạnh đốm lớn. Nền SÁNG (nude, hồng): đốm màu BE NÂU (tan) —
+            // đốm nâu đen đặc trên nền hồng nhìn như da bò sữa / đốm dalmatian. Bản trước: đốm 1 màu kem phẳng, viền sóng
+            // hài bậc 5 + mép ~1.5px → "viên sỏi / đá lát", sống giữa trên nền espresso bị kẹp sàn L nên không thấy.
             const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), Ln = Math.max(1.6, tipP.len), mir = pN % 2 ? -1 : 1;
             const ts = (mir * Math.asin(0.95 * Math.max(-1, Math.min(1, t)))) / 1.2532; // theo mặt móng cong
             let fw = tipP.memo.fawn as RGB[] | undefined;
-            if (!fw) { fw = [okShift(c1, 0.1, 1.05), okShift(c1, -0.06)]; tipP.memo.fawn = fw; }
-            base = mix3(fw[0], fw[1], 0.1 + 0.9 * Math.exp(-((ts / 0.4) ** 2)));
-            let dS = 9;
+            if (!fw) {
+              const o = okOf(c1), lightB = o[0] > 0.68;
+              const eC = fromOk([Math.min(0.93, o[0] + 0.06), o[1] * 1.12, o[2] * 1.18]), sC = fromOk([Math.max(0.1, o[0] - 0.09), o[1] * 0.95, o[2] * 0.95]);
+              // đốm: nền tối → màu kem c2 hơi ngả nền; nền sáng → be nâu ấm (L thấp hơn nền ~0.17, sắc nâu vàng ấm)
+              const sp = lightB ? fromOk([Math.max(0.5, o[0] - 0.17), 0.038, 0.078]) : okMix(c2, eC, 0.1);
+              fw = [eC, sC, sp, okShift(sp, lightB ? -0.05 : 0.03)];
+              tipP.memo.fawn = fw;
+            }
+            base = mix3(fw[0], fw[1], Math.exp(-((ts / 0.34) ** 2))); // sống lưng sẫm giữa 2 hàng đốm
+            let cov = 0;
+            const fe = Math.max(1.8 * p1, 0.036); // mép loang ±1.8px
             for (let rw = 0; rw < 4; rw++) {
-              const outer = rw >= 2, sd2 = rw % 2 ? 1 : -1, tr = sd2 * (outer ? 0.84 : 0.4), sp = outer ? 0.42 : 0.58;
+              const outer = rw >= 2, sd2 = rw % 2 ? 1 : -1, tr = sd2 * (outer ? 0.86 : 0.44), sp = outer ? 0.44 : 0.54;
               const off = (rw * 0.37 + hash2(look.seed, rw, 23)) % 1, kq = Math.floor(Yh / sp - off);
               for (let q = kq - 1; q <= kq + 1; q++) {
                 if (hash2(q, rw, seedN + 21) < (outer ? 0.5 : 0.1)) continue;
                 const cy = (q + off + 0.5 + 0.4 * (hash2(q, rw, seedN + 22) - 0.5)) * sp;
                 if (cy < 0.1 || cy > Ln + 0.2) continue;
-                const cx = tr + 0.18 * (hash2(q, rw, seedN + 23) - 0.5), rx = Math.max(2.2 * p1, (outer ? 0.055 : 0.1) + (outer ? 0.035 : 0.065) * hash2(q, rw, seedN + 24));
-                const ry = rx * (1.4 + 0.45 * hash2(q, rw, seedN + 25)), ra = 0.4 * (hash2(q, rw, seedN + 26) - 0.5) + 0.12 * sd2;
-                const dx0 = ts - cx, dy0 = Yh - cy, ca = Math.cos(ra), sa = Math.sin(ra), dx = dx0 * ca + dy0 * sa, dy = -dx0 * sa + dy0 * ca;
-                const an = Math.atan2(dy / ry, dx / rx), ph3 = 6.28 * hash2(q, rw, seedN + 27), wob = 1 + 0.08 * Math.sin(2 * an + 1.7 * ph3) + 0.07 * Math.sin(3 * an + ph3) + 0.04 * Math.sin(5 * an + 1.3);
-                dS = smin(dS, (Math.hypot(dx / rx, dy / ry) / wob - 1) * rx, 0.022);
+                const cx = tr + 0.18 * (hash2(q, rw, seedN + 23) - 0.5), rx = Math.max(2.4 * p1, ((outer ? 0.06 : 0.1) + (outer ? 0.035 : 0.06) * hash2(q, rw, seedN + 24)) * (hash2(q, rw, seedN + 36) < 0.25 ? 1.45 : 1)); // ~1/4 đốm to hẳn (đốm hươu không đều cỡ như chuỗi hạt)
+                const ry = rx * (1.4 + 0.5 * hash2(q, rw, seedN + 25)), ra = 0.4 * (hash2(q, rw, seedN + 26) - 0.5) + 0.12 * sd2;
+                const op = 0.6 + 0.4 * hash2(q, rw, seedN + 28); // đậm nhạt khác nhau từng đốm
+                // uốn TẦN THẤP (≤ ±18% bán kính) → viền đốm hữu cơ mềm như vết lông, không gợn góc
+                const wq = 7 * hash2(q, rw, seedN + 27);
+                const dx0 = ts - cx + 0.18 * rx * (vnoise((ts - cx) / rx * 0.9 + wq, (Yh - cy) / ry * 0.9, seedN + 29) - 0.5) * 2;
+                const dy0 = Yh - cy + 0.18 * ry * (vnoise((ts - cx) / rx * 0.9, (Yh - cy) / ry * 0.9 + wq, seedN + 30) - 0.5) * 2;
+                const ca = Math.cos(ra), sa = Math.sin(ra), dx = dx0 * ca + dy0 * sa, dy = -dx0 * sa + dy0 * ca;
+                const dS = (Math.hypot(dx / rx, dy / ry) - 1) * rx;
+                if (dS < fe) cov = Math.max(cov, op * (1 - smooth(-fe, fe, dS)));
+                // 0–2 chấm vệ tinh nhỏ (≥ 2.6px) cạnh đốm lớn hàng trong
+                if (!outer) for (let m = 0; m < 2; m++) {
+                  if (hash2(q, rw * 7 + m, seedN + 31) < 0.7) continue;
+                  const an = 6.28 * hash2(q, rw * 7 + m, seedN + 32), dd = 1.6 + 0.5 * hash2(q, rw * 7 + m, seedN + 33);
+                  const sx = cx + Math.cos(an) * rx * dd, sy = cy + Math.sin(an) * ry * dd, sr = Math.max(1.3 * p1, 0.03 + 0.02 * hash2(q, rw * 7 + m, seedN + 34));
+                  const dq = Math.hypot(ts - sx, (Yh - sy) / 1.25) - sr;
+                  if (dq < fe) cov = Math.max(cov, op * 0.9 * (1 - smooth(-0.8 * fe, 0.8 * fe, dq)));
+                }
               }
             }
-            const fe = Math.max(1.7 * p1, 0.035);
-            base = mix3(base, mix3(c2, fw[0], 0.12), 0.95 * (1 - smooth(-fe, fe, dS)));
+            if (cov > 0) base = mix3(base, mix3(fw[2], fw[3], hash2(Math.round(Yh * 3), Math.round(ts * 3), seedN + 35) * 0.6), cov);
             break;
           }
           case "leopard": {

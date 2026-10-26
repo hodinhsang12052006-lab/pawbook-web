@@ -2,7 +2,7 @@
 // Sinh hàng trăm mẫu cho mọi dịp lễ rồi soát luật NGHỀ: đúng kỹ thuật, đủ vật
 // tư, song ngữ sạch, không nói sai về xu hướng, không trùng tên.
 import { activeThemes, THEMES } from "../../lib/contentEngine";
-import { buildDesign, COLORS, finishOk, generateEngineDesigns, generateOccasionBatch, liveOccasions, paletteOk, PATTERN_IDS, PATTERNS, patternShapes, RETIRED_PATTERNS, runIssues, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
+import { buildDesign, COLORS, finishOk, generateEngineDesigns, generateOccasionBatch, heroColors, lab, liveOccasions, paletteOk, PATTERN_IDS, PATTERNS, patternShapes, RETIRED_PATTERNS, runIssues, toneFam, tonesOf, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
 import { activeTrends } from "../../lib/trendRadar";
 
 let fail = 0, total = 0;
@@ -184,6 +184,51 @@ const honest = all.filter((x) => {
 });
 check("DE44", "Tên mẫu không nêu màu không có trong bảng màu của mẫu", honest.length === 0, honest.slice(0, 3).map((x) => `${x.d.title.en} [${x.d.spec.colors}]`).join(" | "));
 void hexKey;
+
+// ---------------- Lượt 2 (26/10): tên nói đúng ảnh, đơn điệu màu, lặp chủ đề trong ngày ----------------
+const mud = (hex: string, pid: string) => { const f = toneFam(hex), [L, a, b] = lab(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && Math.hypot(a, b) < 45) || (pid === "fr-micro" && L < 25); };
+const MUDDY = ["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"];
+const lie = all.filter(({ d }) =>
+  (d.pattern === "fr-glitter" && d.finish !== "glossy") || (d.pattern === "aura" && d.finish === "chrome") ||
+  (d.pattern === "floral" && /hoa nhí|ditsy/i.test(d.title.vi + d.title.en)) || (d.pattern === "dots" && /chấm bi|polka/i.test(d.title.vi + d.title.en)) ||
+  (d.pattern === "leaf" && /ánh kim|gold|silver|bạc/i.test(d.title.vi + d.title.en)) || (d.pattern === "tortoise" && /viền|accent/i.test(d.title.vi + d.title.en)) ||
+  (d.pattern === "fr-skittle" && (Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 30 || lab(d.palette[1])[0] > 70)) ||
+  (d.pattern === "plaid" && Math.max(lab(d.palette[0])[0], lab(d.palette[1])[0]) < 35) ||
+  (MUDDY.includes(d.pattern) && ["oval", "square"].includes(d.shape) && mud(d.palette[1], d.pattern)) || (d.pattern === "syrup" && Math.hypot(lab(d.palette[0])[1], lab(d.palette[0])[2]) < 30));
+check("DE45", "Tên nói đúng cái ảnh vẽ ra: French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, không 'hoa nhí' / 'chấm bi' / 'lá phong vàng ánh kim' / 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup có sắc rõ (không thạch nâu đục); đầu móng nâu / mận đậm (micro French: mọi màu gần đen) không trên móng oval / vuông ngắn",
+  lie.length === 0 && !paletteOk("fr-skittle", ["sheer", "milky", "gold"]) && !paletteOk("fr-skittle", ["sheer", "coffee", "gold"]) && paletteOk("fr-skittle", ["sheer", "cobalt", "silver"]) &&
+  !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter"),
+  lie.slice(0, 3).map((x) => `${x.d.title.vi} [${x.d.pattern}/${x.d.finish}/${x.d.shape}]`).join(" | "));
+
+// Mô phỏng đúng cron: 3 lượt × 6 mẫu / ngày, mỗi lượt nhận hoạ tiết + bảng màu của 18 mẫu gần nhất
+const MIXES = ["mix-halloween", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];
+const CHAR: Record<string, string[]> = { ghost: ["ghost", "web"], mummy: ["ghost", "web"], skull: ["web"], web: ["web", "bats"], bats: ["bats"], "mix-halloween": ["ghost", "bats"] };
+let dayN = 0, mixDup = 0, charDup = 0, hexOver = 0, famOver = 0, milkyN = 0, nAll = 0;
+const dupDays: string[] = [];
+for (const [mk, y, mo, d0, occId] of [["US", 2026, 9, 18, "halloween"], ["US", 2026, 11, 1, "christmas"], ["US", 2027, 1, 30, "valentine"], ["US", 2026, 9, 1, "fall"], ["AU", 2026, 11, 5, "christmas"], ["US", 2027, 3, 10, null], ["US", 2027, 6, 10, null]] as const) {
+  let hist: string[] = [], pals: string[][] = [];
+  for (let k = 0; k < 14; k++) {
+    const date = new Date(Date.UTC(y, mo, d0 + k)).toISOString().slice(0, 10);
+    const day: EngineDesign[] = [];
+    for (const salt of ["0", "6", "12"]) {
+      const b = generateEngineDesigns(6, { market: mk, date, salt, occasions: occId ? [{ id: occId, title: occId, startsIn: 0 }] : [], risingTags: [], usedTitles: new Set(), recentPatterns: hist.slice(-18), recentPalettes: pals.slice(-18) });
+      hist = [...hist, ...b.map((x) => x.pattern)]; pals = [...pals, ...b.map((x) => x.palette)]; day.push(...b);
+    }
+    dayN++; nAll += day.length;
+    const mixes = day.map((x) => x.pattern).filter((p) => MIXES.includes(p)), chars = day.flatMap((x) => CHAR[x.pattern] ?? []);
+    if (new Set(mixes).size < mixes.length) { mixDup++; dupDays.push(`${date} ${mixes.join(",")}`); }
+    if (new Set(chars).size < chars.length) { charDup++; dupDays.push(`${date} ${day.map((x) => x.pattern).filter((p) => CHAR[p]).join(",")}`); }
+    const hc = new Map<string, number>(), fc = new Map<string, number>();
+    for (const x of day) { const T = tonesOf(x.palette); if (T.includes(COLORS.milky.hex)) milkyN++; T.forEach((h) => hc.set(h, (hc.get(h) ?? 0) + 1)); new Set(T.map(toneFam)).forEach((f) => fc.set(f, (fc.get(f) ?? 0) + 1)); }
+    if (Math.max(...hc.values()) > 0.3 * day.length) hexOver++;
+    if (Math.max(...fc.values()) > 0.45 * day.length) famOver++;
+  }
+}
+check("DE46", `Cả ngày 18 mẫu (cron 3 lượt, ${dayN} ngày): mỗi bộ phối theo dịp ≤ 1 / ngày, ma / dơi / mạng nhện ≤ 1 lần / ngày (tính cả móng echo); trắng sữa ≤ 25% số mẫu (${Math.round((100 * milkyN) / nAll)}%), ngày có 1 màu > 30% ≤ 10% (${hexOver}), ngày có 1 họ màu > 45% ≤ 10% (${famOver})`,
+  mixDup === 0 && charDup === 0 && milkyN <= 0.25 * nAll && hexOver <= 0.1 * dayN && famOver <= 0.1 * dayN, dupDays.slice(0, 3).join(" | "));
+const heroUS = heroColors("2026-10-26", "US"), heroAU = heroColors("2026-10-26", "AU"), hero2 = heroColors("2026-10-27", "US");
+check("DE47", `Màu nhấn theo mùa xoay theo ngày (Mỹ 26/10: ${heroUS.join(", ")} · Úc: ${heroAU.join(", ")}), Úc ngược mùa, mỗi ngày 2 màu khác nhau`,
+  heroUS.length === 2 && heroUS[0] !== heroUS[1] && heroUS.join() !== hero2.join() && heroAU.join() !== heroUS.join() && heroUS.every((k) => k in COLORS));
 
 // Mọi tổ hợp hợp lệ đều ghép được (không lỗi, đủ bước).
 let combos = 0, comboErr = "";

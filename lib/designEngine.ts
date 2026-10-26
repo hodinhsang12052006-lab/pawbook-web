@@ -1061,7 +1061,9 @@ const ROLES: Record<string, Role> = {
   "fr-candycane": { g: "tip", base: "sheer", pal: [["milky", "cherry", "gold"], ["sheer", "redVelvet", "gold"]] },
   "fr-tortoise": { g: "tone", base: "sheer", pal: [["sheer", "caramel", "gold"], ["nude", "caramel", "gold"]] },
   // nail Hàn
-  syrup: { g: "tone", ok: ([a]) => chroma(hx(a)) >= 20 && Lof(hx(a)) < 72, pal: [["raspberry", "sheer", "pearl"], ["persimmon", "sheer", "gold"], ["coffee", "nude", "gold"], ["cherry", "sheer", "gold"]] },
+  // syrup cần màu có sắc rõ (C* ≥ 30): thạch nâu socola / cà phê / mocha (C* ~20) loang trong veo ra móng nâu đục như
+  // vết ố (soi lượt 2: "Syrup nâu socola trong veo") — caramel, mâm xôi, cherry, cam quả hồng, cobalt mới ra siro
+  syrup: { g: "tone", ok: ([a]) => chroma(hx(a)) >= 30 && Lof(hx(a)) < 72, pal: [["raspberry", "sheer", "pearl"], ["persimmon", "sheer", "gold"], ["caramel", "nude", "gold"], ["cherry", "sheer", "gold"]] },
   blush: { g: "glow", base: "sheer", pal: [["sheer", "hotPink", "pearl"], ["sheer", "raspberry", "pearl"], ["nude", "persimmon", "gold"]] },
   cleanmilky: { g: "tone", base: "sheer", pal: [["milky", "pearl", "gold"], ["sheer", "milky", "gold"], ["pinkNude", "milky", "pearl"]] },
   // chrome màu / nhũ loang
@@ -1187,7 +1189,9 @@ const lookKey = (p: string, pal: readonly string[]) => `${patFam(ALIAS[p] ?? p)}
 // đầu móng nâu đậm / mận / rượu sẫm trên móng NGẮN (oval, vuông) nhìn như đầu móng ố bẩn (soi lượt 2: ombre nude → nâu
 // cà phê, French micro mận đậm trên móng oval ngắn) → các mẫu dồn màu đậm ở đầu móng chỉ ra dáng dài (hạnh nhân, coffin)
 const MUDDY_TIP = new Set(["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"]);
-const muddy = (hex: string) => { const f = toneFam(hex), L = Lof(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && chroma(hex) < 45); };
+// (French micro: đường đầu móng chỉ 1–2mm → màu gần đen nào — đen, navy, espresso — trên móng ngắn cũng đọc thành "đất
+// dưới móng", đen tuyền micro chỉ đẹp trên móng dài)
+const muddy = (hex: string, pid = "") => { const f = toneFam(hex), L = Lof(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && chroma(hex) < 45) || (pid === "fr-micro" && L < 25); };
 const JEWEL_HEX = new Set((["emerald", "cherry", "redVelvet", "raspberry", "hotPink", "persimmon", "strawberry", "cobalt", "burgundy", "teal", "plum", "cherryCola", "pumpkin"] as CK[]).map(hx));
 export const RETIRED_PATTERNS = () => PATTERNS.filter((p) => p.retired).map((p) => p.id);
 
@@ -1465,14 +1469,21 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   // (từng ra "Bộ Halloween xanh cobalt")
   const good = (k: [CK, CK, CK]) => wants(k) && (!o.avoidFam || tr(k).fam !== o.avoidFam);
   if (o.need.length && !o.strict && !cands.some(good)) { const ext = fits([...(ROLES[pat.id]?.pal ?? []), ...(o.occ ? [] : PALETTES.trend)]).filter(good); if (ext.length) cands = ext; }
-  // màu nhấn theo mùa: nửa số lần ô quanh năm lấy bảng có màu hero (bảng sẵn không có → "nền trung tính + hero")
+  // màu nhấn theo mùa: nửa số lần ô quanh năm lấy bảng có màu hero (bảng sẵn không có → "nền trung tính + hero") — chỉ khi
+  // màu hero còn trong trần màu cả ngày (không để 1 màu hero chiếm 1/3 ngày)
+  const pal2 = (k: [CK, CK, CK]) => forcedKeys(pat.id, k).slice(0, 2).map(hx);
   if (o.hero?.length && !o.strict && !o.occ && r() < 0.5) {
-    const withHero = (k: [CK, CK, CK]) => o.hero!.includes(k[0]) || o.hero!.includes(k[1]);
+    const withHero = (k: [CK, CK, CK]) => (o.hero!.includes(k[0]) || o.hero!.includes(k[1])) && (!o.capOk || o.capOk(pal2(k)));
     let w = cands.filter(withHero);
     if (!w.length) w = fits(o.hero.flatMap(heroPals)).filter(withHero);
     if (w.length) cands = w;
   }
-  const pal2 = (k: [CK, CK, CK]) => forcedKeys(pat.id, k).slice(0, 2).map(hx);
+  // mẫu nền trong (French, nail Hàn) mà màu nền đã đủ trần cả ngày → đổi sang nền trung tính khác (hồng nude, nude be,
+  // trắng ngà…) như thợ chọn nền theo màu da khách — không cả ngày 1 nền hồng sữa / trắng sữa
+  if (o.capOk && !o.strict && ROLES[pat.id]?.base === "sheer" && !cands.some((k) => o.capOk!(pal2(k)))) {
+    const alt = cands.flatMap((k) => (["sheer", "pinkNude", "nude", "bone", "milky", "babyPink"] as CK[]).filter((b) => b !== k[0]).map((b): [CK, CK, CK] => [b, k[1], k[2]])).filter((k) => paletteOk(pat.id, k) && o.capOk!(pal2(k)));
+    if (alt.length) cands = alt;
+  }
   for (const f of [o.need.length ? wants : null, o.capOk ? (k: [CK, CK, CK]) => o.capOk!(pal2(k)) : null, o.avoidNude ? (k: [CK, CK, CK]) => !tr(k).nude : null, o.avoidWhite ? (k: [CK, CK, CK]) => !tr(k).white : null, o.avoidFam ? (k: [CK, CK, CK]) => tr(k).fam !== o.avoidFam : null]) {
     if (!f) continue;
     const w = cands.filter(f);
@@ -1482,7 +1493,7 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   const c1hex = hx(forcedKeys(pat.id, colors)[0]);
   let allowed = (o.shapes ?? patternShapes(pat.id)).filter((sh) => patternShapes(pat.id).includes(sh));
   // đầu móng đậm màu bùn (nâu đậm / mận / rượu sẫm) → chỉ dáng dài, không oval / vuông ngắn (xem MUDDY_TIP)
-  if (MUDDY_TIP.has(pat.id) && muddy(hx(forcedKeys(pat.id, colors)[1]))) allowed = allowed.filter((sh) => sh !== "oval" && sh !== "square");
+  if (MUDDY_TIP.has(pat.id) && muddy(hx(forcedKeys(pat.id, colors)[1]), pat.id)) allowed = allowed.filter((sh) => sh !== "oval" && sh !== "square");
   const finsOf = (x: Sys) => (o.finish ? [o.finish] : pat.finishes).filter((f) => x.finishes.includes(f) && finishOk(pat.id, c1hex, f) && !(o.easy && (f === "chrome" || f === "cateye")));
   const sysPool = SYSTEMS.filter((x) => (!pat.systems || pat.systems.includes(x.id)) && (x.id !== "dip" || DIP_POWDER_PATTERNS.includes(pat.id)) && x.shapes.some((sh) => allowed.includes(sh)) && finsOf(x).length);
   if (!sysPool.length) return null;
@@ -1593,6 +1604,13 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     if (st.avoidNude) { const f = pool.filter((p) => ROLES[p.id]?.base !== "sheer"); if (f.length) pool = f; }
     if (fresh) { const f = pool.filter((p) => !recent.has(p.id)); if (f.length) pool = f; }
     { const f = pool.filter((p) => !clash(p)); if (f.length) pool = f; }
+    // chỉ lấy hoạ tiết còn ít nhất 1 bảng màu trong trần màu cả ngày (hoạ tiết ép màu — baby boomer, French hồng – trắng,
+    // milk bath… — hay bảng toàn nền sữa khi trắng sữa đã đủ trần thì để lượt khác) — không phí lượt thử rồi bị loại
+    if (fresh) {
+      const pals = PALETTES[palKey(occId, input.market)] ?? PALETTES.any;
+      const f = pool.filter((p) => [...pals, ...(ROLES[p.id]?.pal ?? [])].some((k) => { const c = fitRoles(p.id, k as [CK, CK, CK]); return paletteOk(p.id, c) && capOk(forcedKeys(p.id, c).slice(0, 2).map(hx)); }));
+      if (f.length) pool = f;
+    }
     if (!pool.length) return null;
     let pat = pick(r, pool);
     // Hashtag đang lên khớp hoạ tiết → ưu tiên (1/3 số lần), nếu hoạ tiết đó hợp ô này.
@@ -1605,8 +1623,8 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     return compose(r, pat, PALETTES[palKey(occId, input.market)] ?? PALETTES.any, { market: input.market, occ, style, easy: kind === "easy", ...st, tag, hero, capOk });
   };
 
-  // Nới luật theo bậc khi bí (mỗi bậc 60 lần thử): 0 đủ luật · 1 bỏ "≤ 2 mẫu / họ màu" + trần màu cả ngày · 2 bỏ né 3
-  // lượt trước + kiểu & tông trùng trong ngày · 3 bỏ chỉ tiêu mềm (nude / trắng / trơn / 2 ô liền nhau cùng họ màu) ·
+  // Nới luật theo bậc khi bí (mỗi bậc 60 lần thử): 0 đủ luật · 1 bỏ "≤ 2 mẫu / họ màu" · 2 bỏ né 3 lượt trước + trần
+  // màu cả ngày + kiểu & tông trùng trong ngày · 3 bỏ chỉ tiêu mềm (nude / trắng / trơn / 2 ô liền nhau cùng họ màu) ·
   // 4 cuối cùng mới cho trùng hoạ tiết trong lượt. Trần hoạ tiết dịp lễ (≤ 2 / 6) và nhân vật / bộ phối 1 lần mỗi ngày
   // giữ tới bậc 4 — lượt nào cũng không ngập sticker, ngày nào cũng không 2 bộ Halloween.
   const accept = (d: EngineDesign, lvl: number): boolean => {
@@ -1615,16 +1633,19 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     if (lvl < 4 && (usedPatterns.has(d.pattern) || motifsOf(d.pattern).some((x) => dayMotifs().has(x)))) return false;
     if (lvl < 2 && recent.has(d.pattern)) return false;
     const T = designTraits(d), bt = block.map(designTraits);
+    // suất nền nude / trong cuối cùng của lượt để dành cho French (French gần như luôn nền trong): mẫu nền nude không phải
+    // French mà lượt đã có 1 nude, chưa có French → thôi (không thì ô sau chỉ còn French tráng gương nền màu → lặp lượt trước)
+    if (lvl < 2 && full && T.nude && !T.french && !bt.some((x) => x.french) && bt.filter((x) => x.nude).length >= 1) return false;
     if (lvl < 4 && T.motif && bt.filter((x) => x.motif).length >= 2) return false;
     if (lvl < 3) {
       if (full && QUOTA.filter((q) => !T[q] && !bt.some((x) => x[q])).length > 5 - p6) return false;
       if ((T.nude && bt.filter((x) => x.nude).length >= 2) || (T.white && bt.some((x) => x.white)) || (T.plain && bt.some((x) => x.plain))) return false;
       if (k > 0 && designTraits(out[k - 1]).fam === T.fam) return false;
     }
-    // kiểu + tông đã có trong ngày (2 French nền sữa đầu nâu…) → bậc 2 mới cho; trần màu cả ngày chỉ giữ ở bậc 0 (bảng màu
-    // đã được ưu tiên còn trần ngay từ lúc ghép — xem compose) để không đẩy máy sang lặp hoạ tiết của lượt trước
-    if (lvl < 2 && dayKeys().has(lookKey(d.pattern, d.palette))) return false;
-    if (lvl < 1 && (!capOk(d.palette) || bt.filter((x) => x.fam === T.fam).length >= 2)) return false;
+    // trần màu cả ngày + kiểu & tông đã có trong ngày (2 French nền sữa đầu nâu…): giữ tới bậc 1 (bảng màu đã được ưu tiên
+    // còn trần ngay từ lúc ghép — xem compose); bí thì nới cùng lúc với né lượt trước
+    if (lvl < 2 && (!capOk(d.palette) || dayKeys().has(lookKey(d.pattern, d.palette)))) return false;
+    if (lvl < 1 && bt.filter((x) => x.fam === T.fam).length >= 2) return false;
     return true;
   };
 
@@ -1647,6 +1668,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
       let d: EngineDesign | null = null, rid: string | null = null;
       if (kind === "radar") { const c = radarCand(st, lvl < 2); if (c) { d = c.d; rid = c.id; } }
       else d = poolCand(kind, tries, st, lvl < 2);
+      if (process.env.DBG_ACC && lvl < 3) console.error("DBG", p6, tries, kind, JSON.stringify(st.need), d ? `${d.pattern}/${d.finish}/${d.palette.join(",")}/rec=${recent.has(d.pattern)}/key=${dayKeys().has(lookKey(d.pattern, d.palette))}/cap=${capOk(d.palette)}/mot=${motifsOf(d.pattern).some((x) => dayMotifs().has(x))}/used=${usedPatterns.has(d.pattern)}` : "null");
       if (d && accept(d, lvl)) { made = d; if (rid) usedRadar.add(rid); }
     }
     if (!made) continue;

@@ -59,7 +59,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   // sao lấp lánh: echo = 1 sao cắt mặt nhỏ + tia ✦ + bụi sao (bố cục "stars:echo")
   stars: [{ pattern: "stars:echo", pick: "all" }],
   moonstars: [{ pick: "rest", scale: 1.1, mirror: true }],
-  gems: [{ pick: "first" }],
+  // đính đá: echo = cụm 4–5 viên nhỏ ở chân móng / hàng đá tí hon ôm vòng cung chân móng (1 viên lẻ trông như hạt bụi)
+  gems: [{ pattern: "gems:echo", pick: "all" }],
   gemcluster: [{ pick: "first" }],
   pearls: [{ pick: "first" }],
   charm3d: [{ pattern: "pearls", pick: "all", scale: 0.62, uShift: -0.02 }],

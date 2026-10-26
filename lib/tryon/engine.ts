@@ -1995,13 +1995,69 @@ function scatterBeads(seed: number, n: number, rs: (k: number) => number, kind: 
   }
   return out;
 }
+/** khối 3D nằm TRỌN trong móng (đá / giọt bị mép cắt đôi = dán lệch): chừa 2 mép, vòng cung chân móng, đầu móng bo */
+const insideNail = (u: number, t: number, r: number) => Math.abs(t) <= 0.84 - r && u - r / 2.8 >= 0.09 + 0.1 * t * t && u + r / 2.8 <= 0.86 - 0.12 * t * t;
+/**
+ * XẾP CỤM SÁT NHAU kiểu thợ đính đá: viên to nhất đặt ở neo (au, at), mỗi viên sau thử ~60 chỗ TIẾP XÚC với 1 viên đã
+ * đặt (khe `gap`), giữ chỗ gần neo nhất theo thước dãn dọc hướng (dt, du) — `lead` > 1: cụm kéo dài thành vệt theo hướng
+ * đó, `back` = độ dãn về phía ngược lại (bằng lead: cụm dãn đều 2 phía, nhỏ: cụm có đuôi 1 phía). Rải ngẫu nhiên (scatterBeads) thì đá cách nhau như bụi; cụm thật các
+ * viên chạm nhau, viên nhỏ lấp khe viên to.
+ */
+function packCluster(seed: number, items: [number, Bead["kind"]][], au: number, at: number, dir: [number, number], lead: number, back: number, gap = 0.025, salt = 0): Bead[] {
+  const out: Bead[] = [{ u: au, t: at, r: items[0][0], kind: items[0][1] }];
+  const dl = Math.hypot(dir[0], dir[1]) || 1, dx = dir[0] / dl, dy = dir[1] / dl;
+  for (let k = 1; k < items.length; k++) {
+    const [r, kind] = items[k];
+    let best: Bead | null = null, bc = 1e9;
+    for (let c = 0; c < 60; c++) {
+      const o = out[Math.floor(hash2(seed, 31 + 61 * k + c, 5 + salt) * out.length)], an = 6.2832 * hash2(seed, 97 + 61 * k + c, 7 + salt), d = o.r + r + gap;
+      const t = o.t + d * Math.cos(an), u = o.u + (d * Math.sin(an)) / 2.8;
+      if (!insideNail(u, t, r) || out.some((q) => Math.hypot(q.t - t, (q.u - u) * 2.8) < q.r + r + gap - 1e-4)) continue;
+      const pt = t - at, pu = (u - au) * 2.8, al = pt * dx + pu * dy, pp = -pt * dy + pu * dx;
+      const cost = Math.hypot(1.3 * pp, al > 0 ? al / lead : al / back) + 0.12 * hash2(seed, 211 + 61 * k + c, 9 + salt);
+      if (cost < bc) { bc = cost; best = { u, t, r, kind }; }
+    }
+    if (best) out.push(best);
+  }
+  return out;
+}
 
 function beadsFor(pattern: string, seed: number): Bead[] {
   const j = (k: number) => (hash2(seed, k, 31) - 0.5);
   switch (pattern) {
     // ngọc trai viền chân móng: hạt giữa to nhất, nhỏ dần ra 2 bên (như thợ gắn thật), ôm theo vòng cung chân móng
     case "pearls": return [{ u: 0.2, t: 0, r: 0.27, kind: "pearl" }, { u: 0.24, t: -0.42, r: 0.2, kind: "pearl" }, { u: 0.24, t: 0.42, r: 0.2, kind: "pearl" }, { u: 0.33, t: -0.7, r: 0.13, kind: "pearl" }, { u: 0.33, t: 0.7, r: 0.13, kind: "pearl" }];
-    case "gems": return [{ u: 0.24 + 0.03 * j(1), t: 0.04 * j(2), r: 0.34, kind: "gem" }, { u: 0.44, t: -0.3, r: 0.14, kind: "gem" }, { u: 0.47, t: 0.24, r: 0.12, kind: "gem" }, { u: 0.6, t: -0.02, r: 0.09, kind: "gem" }];
+    // ĐÍNH ĐÁ kiểu khách đặt ở tiệm (1 viên to + 3 hạt bụi cũ nhìn như móng dính bụi): 10–13 viên SÁT NHAU 4 cỡ (SS3–SS12
+    // ≈ 0.08–0.28 hw) xen 1–2 ngọc trai + 1 hạt caviar kim loại. 3 bố cục: cụm ôm vòng cung CHÂN móng · dải đá dọc giữa
+    // móng to → nhỏ (crystal line) · cụm ở 1 góc chân móng kéo vệt chéo lên giữa móng
+    case "gems": {
+      const sd = j(6) > 0 ? 1 : -1, v = Math.floor(hash2(seed, 7, 31) * 3);
+      if (v === 1) {
+        // dải đá dọc: viên chạm viên từ chân móng lên ~75% móng, nhỏ dần; chân dải nở thành tam giác — 2 viên vừa nép giữa
+        // viên 1 và 2 + 2 viên tí hon sát 2 bên viên đầu (dáng giọt đá "drip", không phải que thẳng trơ)
+        const R = [0.24, 0.19, 0.16, 0.14, 0.125, 0.11, 0.1, 0.09], out: Bead[] = [];
+        let u = 0.14 + R[0] / 2.8;
+        for (let k = 0; k < R.length && u + R[k] / 2.8 <= 0.8; k++) {
+          if (k) u += (R[k - 1] + R[k] + 0.02) / 2.8;
+          out.push({ u, t: 0.03 * sd * Math.sin(2.2 * k), r: R[k], kind: k === 4 && hash2(seed, 8, 31) < 0.5 ? "pearl" : "gem" });
+        }
+        const f = out[0], df = f.r + 0.11 + 0.02;
+        for (const s of [-1, 1]) {
+          out.push({ u: f.u + 0.16 / 2.8, t: s * Math.sqrt(df * df - 0.16 * 0.16), r: 0.11, kind: s === sd ? "pearl" : "gem" });
+          out.push({ u: f.u - 0.07 / 2.8, t: s * (f.r + 0.075 + 0.03), r: 0.075, kind: "gem" });
+        }
+        return out.filter((b) => insideNail(b.u, b.t, b.r));
+      }
+      const items: [number, Bead["kind"]][] = [[0.28, "gem"], [0.2, "gem"], [0.17, "pearl"], [0.16, "gem"], [0.13, "gem"], [0.12, "gem"], [0.1, "mdrop"], [0.11, "gem"], [0.12, "pearl"], [0.09, "gem"], [0.09, "gem"], [0.08, "gem"], [0.08, "gem"]];
+      // v0: cụm chân móng dàn theo vòng cung (dãn ngang); v2: góc chân móng, vệt kéo chéo về phía đầu móng bên kia
+      return v === 0 ? packCluster(seed, items, 0.21 + 0.02 * j(1), 0.08 * j(2), [1, 0.12 * sd], 2.4, 2.4, 0.025, 1)
+        : packCluster(seed, items.slice(0, 11), 0.23, 0.42 * sd, [-0.55 * sd, 1], 2.4, 0.6, 0.025, 2);
+    }
+    // echo của đính đá: cụm nhỏ 4 viên ở chân móng · hoặc 1 hàng đá tí hon ôm vòng cung chân móng (crystal cuticle line)
+    case "gems:echo": {
+      if (hash2(seed, 9, 31) < 0.5) return packCluster(seed, [[0.18, "gem"], [0.12, "gem"], [0.11, "pearl"], [0.09, "gem"], [0.08, "gem"]], 0.21, 0.04 * j(2), [1, 0], 1.6, 1.6, 0.025, 3);
+      return [-0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6].map((t, k) => ({ u: 0.17 + 0.11 * t * t + 0.035, t, r: [0.08, 0.09, 0.1, 0.12, 0.1, 0.09, 0.08][k], kind: "gem" as const }));
+    }
     case "gemcluster": return [{ u: 0.3, t: 0.02, r: 0.33, kind: "gem" }, { u: 0.2, t: -0.5, r: 0.17, kind: "gem" }, { u: 0.2, t: 0.52, r: 0.15, kind: "pearl" }, { u: 0.5, t: -0.38, r: 0.14, kind: "pearl" }, { u: 0.52, t: 0.36, r: 0.16, kind: "gem" }, { u: 0.66, t: -0.05, r: 0.1, kind: "gem" }, { u: 0.42, t: 0.66, r: 0.08, kind: "gem" }];
     // CHẤM BI VẼ (cây chấm bi, phẳng dưới lớp top — không phải đinh tán 3D): 2–3 cỡ chấm, 3 bố cục thợ hay làm — chuỗi
     // chéo to → nhỏ từ 1 góc chân móng lên góc đầu móng đối diện · chấm bi rải (polka thưa, 2 cỡ) · cụm chấm ở 1 góc chân

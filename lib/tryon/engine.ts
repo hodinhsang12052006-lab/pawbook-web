@@ -2133,7 +2133,7 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
     // micro thật = 1–2mm ≈ 7.5% dài móng (≥ 5.5px ở ảnh 1024), DẢI ĐỀU song song mép tự do: đường cười cũ mảnh 3px chỉ
     // còn 1 vệt tối dưới mép (ảnh nhỏ đọc thành ghét bẩn dưới móng) và trên móng hạnh nhân co lại thành 1 tam giác ở
     // chóp. Đầu màu rất tối dày thêm 15% (vệt tối mảnh sát mép tự do = bóng / ghét móng)
-    case "fr-micro": st = { kind: 4, yc: Math.max(0.2, 5.5 * px, 0.075 * len) * (dark ? 1.15 : 1), ysL: 0, ysR: 0, p: 1, sg: 1, bow: 0 }; break;
+    case "fr-micro": st = { kind: 4, yc: Math.max(0.15, 6 * px, 0.055 * len) * (dark ? 1.08 : 1), ysL: 0, ysR: 0, p: 1, sg: 1, bow: 0 }; break;
     case "chromefrench": st = inSet ? smile(Math.max(0.22, 3.6 * px, 0.07 * len), 1.3) : smile(Math.max(0.36, 0.14 * len), 1.35); break;
     case "fr-deep": case "fr-santa": case "fr-candycane": st = smile(Math.max(0.5, 0.2 * len), 1.4); break;
     case "fr-tortoise": st = smile(Math.max(0.42, 0.15 * len), 1.4); break; // đủ sâu để thấy 2–3 đốm
@@ -2159,7 +2159,7 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
 /** Khoảng cách có dấu (hw, > 0 = trong đầu French; vuông góc với đường French) + v: 0 ở mép tự do → 1 ở đường French
  *  + g: cách mép tự do (hw) + dep: bề sâu đầu móng tại cột này (hw). */
 const FRL = { d: 0, v: 0, g: 0, dep: 0 };
-function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number, md = 0): typeof FRL {
+function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number, mp?: MicroProf): typeof FRL {
   const tc = Math.max(-1, Math.min(1, t)), at = Math.abs(tc), sgn = tc < 0 ? -1 : 1;
   let yl: number, sl: number;
   if (st.kind === 2) { const q = (1 + st.sg * tc) / 2; yl = st.ysL + q * (st.ysR - st.ysL) + st.bow * (1 - tc * tc); sl = 0.5 * st.sg * (st.ysR - st.ysL) - 2 * st.bow * tc; }
@@ -2168,9 +2168,13 @@ function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number, md = 0): typ
     const [dep, amp, k, ph] = st.wv, de = (tipE(tp, tc + 0.03) - tipE(tp, tc - 0.03)) / 0.06;
     yl = tipE(tp, tc) - dep * (1 + 0.5 * tc * tc) - amp * Math.sin(k * tc + ph);
     sl = de - dep * tc - amp * k * Math.cos(k * tc + ph);
-  } else if (st.kind === 4) {
-    // dải đều quanh mép tự do: md = khoảng cách có dấu tới dải (microDist, hw)
-    FRL.d = md; FRL.dep = st.yc; FRL.g = Math.max(0, st.yc - md); FRL.v = Math.max(0, Math.min(1, FRL.g / st.yc));
+  } else if (st.kind === 4 && mp) {
+    // dải micro (microProfile): khoảng cách theo tia tới đường trong / mép, đổi ra vuông góc mép
+    const dy = Yh - mp.yc, th = Math.atan2(t, dy), r = Math.hypot(t, dy), f = (th - MP_T0) / MP_DT - 0.5;
+    const b = Math.max(0, Math.min(MP_N - 2, Math.floor(f))), q = Math.max(0, Math.min(1, f - b)), at = (a: Float32Array) => a[b] + (a[b + 1] - a[b]) * q;
+    const kE = at(mp.kE), w = at(mp.w);
+    FRL.d = dy < -0.3 || w <= 0 ? -9 : (r - at(mp.rI)) * kE; FRL.g = Math.max(0, (at(mp.rE) - r) * kE); FRL.dep = Math.max(1e-3, w);
+    FRL.v = Math.max(0, Math.min(1, FRL.g / FRL.dep));
     return FRL;
   } else { const ys = sgn < 0 ? st.ysL : st.ysR, w = Math.pow(at, st.p); yl = st.yc + w * (ys - st.yc); sl = st.p * Math.pow(at, st.p - 1) * sgn * (ys - st.yc); }
   const e = tipE(tp, t);
@@ -2180,45 +2184,57 @@ function frLine(tp: TipProfile, st: FrStyle, t: number, Yh: number, md = 0): typ
   return FRL;
 }
 /**
- * French MICRO: khoảng cách Euclid (px) từ mỗi điểm tới MÉP MẶT NẠ THẬT (đường độ phủ 0.5, dời theo pháp tuyến dưới
- * 1px) + "phạt" = phần bề dày bị vuốt mất ở điểm mép đó → dải = điểm có giá trị < wPx: bề dày đều VUÔNG GÓC mép thật
- * trên mọi dáng (góc móng vuông, chóp hạnh nhân, 2 cạnh móng nhọn). Mép tự do mỗi bên kết thúc ở ye = chỗ đường mép
- * đã ra tới 90% bề ngang (E(±0.9), 0.12–1.2 hw dưới chóp): dưới đó dải vuốt mảnh về 0 trong 0.3 hw (đầu dải nhọn như
- * đầu đường cười; móng vuông chỉ ôm qua góc rồi tắt). Phạt đổi chậm theo dọc mép (≤ ~1 px / px) nên đường trong của dải
- * trơn. (Đã thử: lùi đường E(t) theo cột — E đã làm mượt cắt vào trong ở thành móng dốc → 2 đầu dải cuộn vào trong
- * thành cái móc; phạt theo góc pháp tuyến → góc móng vuông đổi hướng gấp, cũng ra móc tròn.) Truyền điểm mép gần nhất 2
- * lượt (8 hướng) — chamfer thì mép trong dải răng cưa.
+ * French MICRO: dải màu ôm MÉP TỰ DO THẬT, tính trong toạ độ CỰC quanh tâm C (giữa móng, dưới chóp ≥ 1 hw — dưới
+ * cả 2 đầu dải): rE(θ) = mép thật theo từng tia (điểm xa nhất còn phủ ≥ 50%, như E(t) nhưng theo góc nên ôm được cả
+ * chóp hạnh nhân / nhọn lẫn 2 thành móng dốc — E(t) theo cột thì thành dốc cắt vào trong, 2 đầu dải cuộn thành móc).
+ * Bề dày dải (vuông góc mép) đủ ở chóp, VUỐT MẢNH DẦN về 0 khi mép tụt xuống tới ye = chỗ mép đã ra 90% bề ngang
+ * (E(±0.9), 0.12–1.2 hw dưới chóp) — đầu dải nhọn như 2 đầu đường cười thật: móng vuông thẳng ngang rồi tắt ở góc,
+ * tròn / hạnh nhân ôm chóp rồi thon dần xuống 2 bên. Đường trong của dải làm mượt riêng (~8 px): nét cọ vẽ tay luôn
+ * trơn dù viền mặt nạ có chỗ gãy góc (vai móng, hạnh nhân vát) — offset đúng từng px thì đường trong gãy theo, dải
+ * phình ở vai. (Đã thử: trường khoảng cách Euclid tới mép + bề dày theo điểm mép gần nhất → bề dày nhảy bậc ở trục
+ * giữa, đường trong răng cưa, đầu dải cụt ngang / bàn chân quặp vào.)
  */
-function microField(seg: NailSeg, tp: TipProfile, nrm: Float32Array, eSub: Float32Array, wPx: number): Float32Array {
-  const { w, h } = seg, PA = paintOf(seg), n = w * h;
-  const F = new Float32Array(n).fill(1e6), sx = new Float32Array(n), sy = new Float32Array(n), so = new Float32Array(n);
+interface MicroProf { yc: number; rE: Float32Array; rI: Float32Array; w: Float32Array; kE: Float32Array }
+const MP_N = 160, MP_T0 = -2, MP_DT = 4 / MP_N;
+function microProfile(seg: NailSeg, tp: TipProfile, wHw: number): MicroProf {
   const E0 = tipE(tp, 0), endY = (sg: number) => Math.min(E0 - 0.12, Math.max(E0 - 1.2, tipE(tp, 0.9 * sg) - 0.08)), yL = endY(-1), yR = endY(1);
-  for (let k = 0; k < n; k++) {
-    if (PA[k] <= 0 || eSub[k] > 1) continue;
-    const nx = nrm[2 * k], ny = nrm[2 * k + 1], Yh = seg.along[k] * tp.kL, ye = seg.across[k] < 0 ? yL : yR;
-    if ((!nx && !ny) || Yh < ye - 0.4) continue;
-    const x = k % w, y = (k - x) / w;
-    so[k] = wPx * (1 - smooth(ye - 0.3, ye, Yh));
-    sx[k] = x + nx * eSub[k]; sy[k] = y + ny * eSub[k]; F[k] = Math.abs(eSub[k]) + so[k];
+  const yc = E0 - Math.max(1, E0 - Math.min(yL, yR) + 0.35);
+  const rE = new Float32Array(MP_N).fill(-1);
+  for (let k = 0; k < seg.alpha.length; k++) {
+    if (seg.alpha[k] < 0.5) continue;
+    const t = seg.across[k], dy = seg.along[k] * tp.kL - yc;
+    if (dy < -0.3) continue;
+    const b = Math.floor((Math.atan2(t, dy) - MP_T0) / MP_DT);
+    if (b >= 0 && b < MP_N) rE[b] = Math.max(rE[b], Math.hypot(t, dy));
   }
-  if (process.env.FRDBG === "2") { let c = 0, ymin = 9, ymax = -9; for (let k = 0; k < n; k++) if (F[k] < 1e6) { c++; const Yh = seg.along[k] * tp.kL; ymin = Math.min(ymin, Yh); ymax = Math.max(ymax, Yh); } console.log("MF", { E0, yL, yR, kL: tp.kL, len: tp.len, c, ymin, ymax, wPx, hw: tp.hw, eL: tipE(tp, -0.9), eR: tipE(tp, 0.9) }); }
-  const relax = (k: number, x: number, y: number, j: number) => {
-    if (F[j] >= 1e6) return;
-    const dd = Math.hypot(x - sx[j], y - sy[j]) + so[j];
-    if (dd < F[k]) { F[k] = dd; sx[k] = sx[j]; sy[k] = sy[j]; so[k] = so[j]; }
-  };
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const k = y * w + x; if (PA[k] <= 0) continue;
-    if (x > 0) relax(k, x, y, k - 1);
-    if (y > 0) { relax(k, x, y, k - w); if (x > 0) relax(k, x, y, k - w - 1); if (x < w - 1) relax(k, x, y, k - w + 1); }
+  // tia không trúng điểm nào (ngoài 2 bên) lấy theo tia gần nhất; mượt 2 lượt [1 2 1] (mép mặt nạ bậc thang theo px)
+  let f = rE.findIndex((v) => v > 0), l = MP_N - 1;
+  while (l >= 0 && rE[l] <= 0) l--;
+  if (f < 0) { rE.fill(1); f = 0; l = MP_N - 1; }
+  for (let b = 0; b < MP_N; b++) if (rE[b] <= 0) { let q = 1; while (!(rE[b - q] > 0) && !(rE[b + q] > 0)) q++; rE[b] = b < f ? rE[f] : b > l ? rE[l] : Math.max(rE[b - q] ?? 0, rE[b + q] ?? 0); }
+  const sm = (a: Float32Array, n: number) => { for (let it = 0; it < n; it++) { const c = Float32Array.from(a); for (let b = 1; b < MP_N - 1; b++) a[b] = (c[b - 1] + 2 * c[b] + c[b + 1]) / 4; } };
+  sm(rE, 2);
+  const w = new Float32Array(MP_N), kE = new Float32Array(MP_N), rI = new Float32Array(MP_N), wr = new Float32Array(MP_N), tap = new Float32Array(MP_N);
+  for (let b = 0; b < MP_N; b++) {
+    const th = MP_T0 + (b + 0.5) * MP_DT, ye = th < 0 ? yL : yR, Ye = yc + rE[b] * Math.cos(th);
+    // vuốt dải trên CẢ đoạn mép tự do: dày ở chóp, mảnh dần về 2 bên thành vầng trăng khuyết (đường cười micro thật —
+    // vuốt ngắn thì đầu dải cụt xiên như bị cắt); móng vuông cạnh đầu phẳng (mép ngang ~E0) vẫn đủ dày, chỉ vuốt qua góc
+    const sp = 0.95 * (E0 - ye);
+    tap[b] = Math.abs(th) < 1.55 ? smooth(ye, ye + sp, Ye) : 0;
+    const dr = (rE[Math.min(MP_N - 1, b + 1)] - rE[Math.max(0, b - 1)]) / (2 * MP_DT);
+    kE[b] = 1 / Math.sqrt(1 + (dr / Math.max(0.05, rE[b])) ** 2); // bề dày vuông góc mép → bề dày theo tia
+    wr[b] = wHw / kE[b]; rI[b] = rE[b] - wr[b];
   }
-  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
-    const k = y * w + x; if (PA[k] <= 0) continue;
-    if (x < w - 1) relax(k, x, y, k + 1);
-    if (y < h - 1) { relax(k, x, y, k + w); if (x < w - 1) relax(k, x, y, k + w + 1); if (x > 0) relax(k, x, y, k + w - 1); }
+  // đường trong của dải ĐỦ DÀY làm mượt riêng (Gauss σ ≈ 10°): bề dày theo tia sau mượt giữ trong 0.55–1.5 bề dày gốc
+  // (góc nhô của mặt nạ → dải dày hơn chút, như nét cọ thật), rồi mới nhân hệ số vuốt (2 đầu nhọn, tiếp tuyến với mép)
+  const sg = 0.17 / MP_DT, R = Math.ceil(3 * sg), src = Float32Array.from(rI);
+  for (let b = 0; b < MP_N; b++) {
+    let a = 0, z = 0;
+    for (let j = -R; j <= R; j++) { const q = Math.max(0, Math.min(MP_N - 1, b + j)), g = Math.exp(-(j * j) / (2 * sg * sg)); a += g * src[q]; z += g; }
+    const th = Math.min(1.5 * wr[b], Math.max(0.55 * wr[b], rE[b] - a / z)) * tap[b];
+    rI[b] = rE[b] - th; w[b] = th * kE[b];
   }
-  if (process.env.FRDBG === "2") { const hist = [0, 0, 0, 0, 0, 0]; for (let k = 0; k < n; k++) if (PA[k] > 0 && seg.along[k] * tp.kL < 3.6 && seg.along[k] * tp.kL > 3.2) hist[Math.min(5, Math.floor(F[k] / wPx))]++; console.log("HIST", hist); }
-  return F;
+  return { yc, rE, rI, w, kE };
 }
 /**
  * Đầu French TRÁNG GƯƠNG: phản chiếu đặt NGANG đầu móng theo v (0 = mép tự do, 1 = đường French) — 1 dải sáng gắt cong
@@ -2533,9 +2549,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // 2/4 móng thành 1 màu sơn khác, đục hơn). Nền gel trong chỉ khi CẢ BỘ là French.
             const inSet = ov?.role === "echo" || ov?.role === "thread";
             const fst = frStyle(tipP, pat, look.seed, i, inSet, lum(c2) < 0.062);
-            const mF = fst.kind === 4 ? (tipP.memo.mf as Float32Array | undefined) ?? (tipP.memo.mf = microField(seg, tipP, nrm, eSub, fst.yc * seg.hw)) : null;
-            const fl = frLine(tipP, fst, t, Yh, mF ? fst.yc - mF[k] / Math.max(4, seg.hw) : 0), d = fl.d, m = smooth(-aa, aa, d);
-            if (mF && process.env.FRDBG) { const q = mF[k] / (fst.yc * seg.hw); base = q > 4 ? [0.5, 0.5, 0.5] : [Math.min(1, q / 4), (Math.floor(q * 2) % 2) * 0.5, 1 - Math.min(1, q / 4)]; break; }
+            const mP = fst.kind === 4 ? (tipP.memo.mp as MicroProf | undefined) ?? (tipP.memo.mp = microProfile(seg, tipP, fst.yc)) : undefined;
+            const fl = frLine(tipP, fst, t, Yh, mP), d = fl.d, m = smooth(-aa, aa, d);
             // pink & white (bột): nền hồng GẦN ĐẶC — bảng màu không có hồng nhạt thì dùng hồng #f2c9c4 của thợ
             const pw = pat === "fr-pinkwhite", bc: RGB = pw && !(c1[0] > 0.55 && c1[0] > 1.15 * c1[2]) ? [0.888, 0.584, 0.552] : c1;
             // French micro / French nhũ: nền LÀ thiết kế → trắng sữa đặc như sữa (sheerDens milky)

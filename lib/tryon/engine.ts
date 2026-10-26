@@ -2992,11 +2992,22 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "stripes": {
-            // SỌC MẢNH dọc móng (pinstripe): xen kẽ c2 và kim loại, theo độ cong móng
-            const P = 0.38, k = (t + 1) / P, f = k - Math.floor(k), id = Math.floor(k);
-            const w = (id % 2 ? 1.3 : 1.8) * lineW / P;
-            const m = 1 - smooth(w * 0.6, w * 1.2, Math.abs(f - 0.5));
-            if (id % 2) { metalMix = m; metalQ = (f - 0.5) / Math.max(1e-3, w); } else base = mix3(base, c2, m);
+            // SỌC MẢNH như thợ kẻ (cọ liner kéo 1 lần từ chân lên đầu móng): 1–3 nét CÓ CHỦ Ý — không phải 5 sọc đều kín móng
+            // (vải sọc / nhung tăm). Hero: 1 sọc kim loại ~4px LỆCH TÂM + 1 sọc c2 ~2.6px song song cách 1 khe nền (đôi khi
+            // thêm 1 sọc c2 mảnh phía xa); echo: 1 sọc kim loại CHÉO từ góc chân móng sang phía đối diện + 1 sọc c2 song song.
+            // Vị trí theo MẶT móng cong (asin), bề dày theo px ảnh; sọc kim loại là sợi tròn (wireShade), sọc màu phẳng.
+            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), aa = 0.7 * p1, Ln = Math.max(1.6, tipP.len);
+            const sg = (pN + (hash2(look.seed, 2, 51) > 0.5 ? 1 : 0)) % 2 ? 1 : -1, h3 = hash2(look.seed, pN, 52);
+            const tc = Math.max(-0.999, Math.min(0.999, t)), ts = Math.asin(0.95 * tc) / 1.2532, J = 0.758 / Math.sqrt(1 - 0.9025 * tc * tc);
+            const wM = Math.max(2 * p1, 0.042), wC = Math.max(1.3 * p1, 0.028), gp = Math.max(2.4 * p1, 0.055);
+            const diag = roleN === "echo", sl = diag ? (1.35 * sg) / Ln : 0, x0 = diag ? -0.62 * sg : (-0.2 - 0.1 * h3) * sg;
+            const dM = (ts - x0 - sl * Yh) / Math.sqrt(1 + sl * sl) / J; // khoảng cách tới tâm sọc kim loại (hw ảnh)
+            const dC = dM - sg * (wM + gp + wC);
+            let cv = 1 - smooth(wC - aa, wC + aa, Math.abs(dC));
+            if (!diag && h3 > 0.45) cv = Math.max(cv, 1 - smooth(0.85 * wC - aa, 0.85 * wC + aa, Math.abs((ts - 0.5 * sg) / J)));
+            base = mix3(base, c2, cv);
+            const mm = 1 - smooth(wM - aa, wM + aa, Math.abs(dM));
+            if (mm > 0) { metalMix = mm; metalQ = Math.max(-1, Math.min(1, dM / wM)); }
             break;
           }
           case "chocodip": {

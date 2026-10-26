@@ -3214,8 +3214,12 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // uốn mềm (nhiễu tần thấp — tần cao làm gân gãy khúc như tia sét)
             const wx = t + 0.34 * (vnoise(t * 0.9 + 3, Yh * 0.9, seedN + 1) - 0.5) + 0.1 * (vnoise(t * 2.1, Yh * 2.1 + 2, seedN + 11) - 0.5);
             const wy = Yh + 0.34 * (vnoise(t * 0.9, Yh * 0.9 + 5, seedN + 2) - 0.5) + 0.1 * (vnoise(t * 2.1 + 4, Yh * 2.1, seedN + 12) - 0.5);
-            const cl = smooth(0.42, 0.78, fbm(wx * 0.9 + 7, wy * 0.9, seedN + 3)), dp = smooth(0.48, 0.8, fbm(wx * 1.1 + 1, wy * 1.1 + 9, seedN + 4));
-            base = mix3(sc3(c1, 1 - (lightB ? 0.05 : 0.2) * dp), c2, (lightB ? 0.26 : 0.34) * cl * (1 - 0.5 * dp));
+            // mây xoay chéo ~35° theo hướng gân (nhiễu giá trị theo lưới thẳng trục trên nền đen lộ ô vuông như rằn ri); nền
+            // gần đen phủ mây nhẹ hơn (đen tuyền thành xám khói nếu phủ như ngọc bích)
+            const rx = 0.82 * wx + 0.57 * wy, ry = -0.57 * wx + 0.82 * wy;
+            const cl = smooth(0.42, 0.8, 0.62 * vnoise(rx * 0.85 + 7, ry * 1.5, seedN + 3) + 0.38 * vnoise(rx * 1.9 + 1, ry * 3.2, seedN + 14));
+            const dp = smooth(0.48, 0.8, fbm(wx * 1.1 + 1, wy * 1.1 + 9, seedN + 4));
+            base = mix3(sc3(c1, 1 - (lightB ? 0.05 : 0.2) * dp), c2, (lightB ? 0.26 : lum(c1) < 0.02 ? 0.22 : 0.34) * cl * (1 - 0.5 * dp));
             // gân chính: đường chéo qua giữa móng, uốn sin nhẹ + nhiễu warp
             const ang = mir * (0.55 + 0.35 * hash2(look.seed, pN, 71)), sa = Math.sin(ang), ca = Math.cos(ang);
             const cx0 = 0.2 * (hash2(look.seed, pN, 72) - 0.5), cy0 = Ln * (0.45 + 0.15 * hash2(look.seed, pN, 73));

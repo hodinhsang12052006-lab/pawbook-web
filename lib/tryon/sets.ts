@@ -64,7 +64,9 @@ const ECHO: Record<string, EchoSpec[]> = {
   gemcluster: [{ pick: "first" }],
   pearls: [{ pick: "first" }],
   charm3d: [{ pattern: "pearls", pick: "all", scale: 0.62, uShift: -0.02 }],
-  droplets: [{ pick: "rest" }], chromedrops: [{ pick: "rest" }], droplet: [{ pick: "rest" }],
+  droplets: [{ pick: "rest" }], droplet: [{ pick: "rest" }],
+  // giọt chrome hữu cơ: echo = 3 giọt nhỏ dòng ngắn ở nửa đầu móng (bỏ giọt to của vệt chảy 6 giọt vẫn còn 5 giọt — gần bằng hero)
+  chromedrops: [{ pattern: "chromedrops:echo", pick: "all" }],
   holly: [{ pattern: ["fr-candycane", "holly"], pick: "twin", scale: 0.58, colors: (p) => [p.c1, redOf(p), p.m] }],
   ornament: [{ pick: "first", scale: 0.55, mirror: true }],
   gelflower: [{ pick: "first", scale: 0.55, mirror: true }],

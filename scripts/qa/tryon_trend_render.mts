@@ -170,6 +170,8 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "R2 Charm nơ bạc nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "charm3d", seed: 215 },
   { name: "R2 Giọt chrome vàng nền mocha", colors: ["#8b6b5a", "#f2c4c4", "#d4af37"], finish: "glossy", pattern: "chromedrops", seed: 216 },
   { name: "R2 Giọt chrome bạc nền đen", colors: ["#151314", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 217 },
+  { name: "R2 Giọt chrome vàng nền nude", colors: ["#e8c4a8", "#f2ede6", "#d4af37"], finish: "glossy", pattern: "chromedrops", seed: 223 },
+  { name: "R2 Giọt chrome bạc nền hồng sữa", colors: ["#f6d5d0", "#ffffff", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 224 },
   { name: "R2 Ren trắng nền nude", colors: ["#e8c4a8", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 218 },
   { name: "R2 Ren trắng nền hồng sữa", colors: ["#f2c9c4", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 219 },
 ];

@@ -2464,8 +2464,20 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     // velvet: ánh nhung = màu nền nhân sáng (giữ tỉ lệ kênh, đậm sắc thêm chút), đỉnh sáng ≤ ~6× nền: navy → xanh lam
     // ánh (chuẩn hoá về kênh lớn nhất từng đẩy navy thành xanh dừa cạn nhạt, mất chất navy)
     const vMx = Math.max(c1[0], c1[1], c1[2], 1e-3), vPk = Math.min(0.42, 6 * vMx);
-    const vGlow: RGB = [vPk * (c1[0] / vMx) ** 1.4, vPk * (c1[1] / vMx) ** 1.4, vPk * (c1[2] / vMx) ** 1.4];
-    const vSpk: RGB = [0.75 * (c1[0] / vMx) ** 1.4 + 0.25, 0.75 * (c1[1] / vMx) ** 1.4 + 0.25, 0.75 * (c1[2] / vMx) ** 1.4 + 0.25];
+    let vGlow: RGB = [vPk * (c1[0] / vMx) ** 1.4, vPk * (c1[1] / vMx) ** 1.4, vPk * (c1[2] / vMx) ** 1.4];
+    let vSpk: RGB = [0.75 * (c1[0] / vMx) ** 1.4 + 0.25, 0.75 * (c1[1] / vMx) ** 1.4 + 0.25, 0.75 * (c1[2] / vMx) ** 1.4 + 0.25];
+    // hạt nhũ mịn trên nền gần đen: dịu bớt (hạt bạc rõ từng chấm trên nền đen nhìn như bụi / tuyết rơi)
+    const vSpkD = 1 - 0.45 * (1 - smooth(0.015, 0.06, vMx));
+    {
+      // nền GẦN ĐEN (đen tuyền, nâu đen): 6× nền vẫn gần đen → nhung đen chỉ còn vài hạt bạc lốm đốm. Bột velvet thật trên
+      // nền đen ánh lên màu nhũ (bạc / champagne) → pha ~30% màu c2 + kim loại (chuẩn hoá) vào ánh nhung, hạt loé cũng vậy
+      const kD = 1 - smooth(0.015, 0.06, vMx);
+      if (kD > 0) {
+        const mF = metalF0(metal), mM = Math.max(mF[0], mF[1], mF[2], 1e-3), c2M = Math.max(c2[0], c2[1], c2[2], 1e-3);
+        const tn: RGB = [0.5 * (mF[0] / mM + c2[0] / c2M), 0.5 * (mF[1] / mM + c2[1] / c2M), 0.5 * (mF[2] / mM + c2[2] / c2M)];
+        vGlow = mix3(vGlow, sc3(tn, 0.4), 0.28 * kD); vSpk = mix3(vSpk, tn, 0.5 * kD);
+      }
+    }
     // mắt mèo: lõi = màu kim loại chuẩn hoá (vàng ra vàng, bạc ra bạc); quầng = màu nền sáng lên + chút ánh kim loại
     const cF = metalF0(metal), cFx = Math.max(cF[0], cF[1], cF[2], 1e-3), bMx0 = Math.max(base0[0], base0[1], base0[2], 1e-3);
     const catCore: RGB = [cF[0] / cFx, cF[1] / cFx, cF[2] / cFx];
@@ -2480,8 +2492,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const velvet = pat === "velvet" || (fin === "cateye" && pat === "velvet");
     const gloss = fin === "matte" ? 0.06 : chromeF ? 1.0 : 0.9;
     // nhám vẫn giữ khối cong (0.42): 0.3 cũ + tắt bóng → móng phẳng như giấy cắt dán lên ngón
-    // velvet: nhung phủ ánh nhũ đều cả mặt — ít theo vệt sáng / tối gắt của ảnh (0.5 → 1 bên đen đặc như vỏ đạn trên p063)
-    const contrast = fin === "matte" ? 0.42 : velvet ? 0.32 : 0.5;
+    // velvet: nhung phủ ánh nhũ đều cả mặt — rất ít theo vệt sáng / tối gắt của ảnh (0.5 / 0.32 → 1 bên vẫn tối gần đen
+    // như vỏ đạn / ống satin trên p063 đèn chiếu ngang)
+    const contrast = fin === "matte" ? 0.42 : velvet ? 0.18 : 0.5;
     const synth = fin !== "matte" && !lm.streak ? (chromeF && !glazed ? 0.5 : 0.75) : 0;
     // chiều dài thật của mặt nạ (kể cả phần đắp) để hoạ tiết đầu móng (french…) bám đúng đầu móng
     let sEnd = 1;
@@ -3290,7 +3303,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const wL = smooth(0.35, 0.7, lum(base));
         r += ((pearl[0] - r) * wL + (1 - r) * 0.8 * (1 - wL)) * sheen; g += ((pearl[1] - g) * wL + (1 - g) * 0.8 * (1 - wL)) * sheen; b += ((pearl[2] - b) * wL + (1 - b) * 0.8 * (1 - wL)) * sheen;
       } else {
-        const lit = (1 + contrast * shade) * edge * cut;
+        // velvet: mép tối của khối cong do chính lớp nhung lo (quầng nhung bước 2) — tối mép 2 lần thì mép đen đặc
+        const lit = (1 + contrast * shade) * (velvet ? 1 - 0.5 * (1 - edge) : edge) * cut;
         r *= lit; g *= lit; b *= lit;
         if (fin === "matte") {
           // NHÁM thật: không có vệt cửa sổ nhưng vẫn có 1 quầng sáng KHUẾCH TÁN rất rộng, mềm trên đỉnh móng (sáng hơn
@@ -3324,27 +3338,29 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const px = t * seg.hw, py = s * seg.L;
         const grain = 0.6 * vnoise(px / gCell + 5.1, py / gCell, seedN + 32) + 0.4 * vnoise(px / (2.1 * gCell), py / (2.1 * gCell) + 3.3, seedN + 34);
         const shim = (grain - 0.5) * 2; // -1…1
-        const lightK = velvet ? 0.72 + 0.28 * smooth(-0.8, 1, shade) : 0.55 + 0.45 * smooth(-0.8, 1, shade);
+        const lightK = velvet ? 0.82 + 0.18 * smooth(-0.8, 1, shade) : 0.55 + 0.45 * smooth(-0.8, 1, shade);
         if (velvet) {
           // VELVET (nhung từ tính): nam châm phẳng kéo nhũ siêu mịn thành 1 QUẦNG SÁNG RỘNG (~60% bề ngang, phẳng giữa
           // rồi mới tắt dần) ôm theo độ cong móng, 2 mép chìm TỐI như vải nhung; ánh nhung = CHÍNH màu nền sáng rực lên
           // (đỏ rượu → đỏ ánh, navy → xanh lam ánh, không pha trắng — pha trắng ra màu bụi); mặt quầng là ánh nhũ mịn
           // (thấy rõ vân nhũ như nhung nhàu, nhỏ dần ra mép) + hạt loé thưa cùng sắc nền (hạt trắng nhìn như bụi bám).
           // Bóng top coat (vệt cửa sổ) tính riêng ở bước 5 → vẫn thấy lớp bóng phủ trên nhung
-          // quầng GIỮA móng (lệch ≤ 0.04 về phía đèn), rộng ~70% bề ngang, 2 mép tối DẦN đều cả 2 bên (sàn 0.42). Quầng lệch
-          // 0.16 + sàn tối 0.3 cũ → 1 bên đen đặc, 1 bên vệt sáng: móng nhung cà phê nhìn như vỏ đạn đồng / ống satin
+          // quầng GIỮA móng (lệch ≤ 0.04 về phía đèn), RỘNG ~90% bề ngang, tắt dần rất mềm, 2 mép chỉ chìm còn ~0.55 (không
+          // đen). Quầng hẹp + sàn tối 0.3–0.42 cũ → 1 dải sáng giữa 2 dải tối: móng nhung cà phê nhìn như vỏ đạn / ống satin
           const tcV = side * 0.04 + 0.04 * Math.sin(2.2 * u + look.seed);
-          const field = (1 - smooth(0.12, 0.84, Math.abs(t - tcV))) * (0.45 + 0.55 * smooth(0.04, 0.45, u)) * (1 - 0.28 * smooth(0.85, 1.05, u));
+          const field = (1 - smooth(0.05, 1.05, Math.abs(t - tcV))) * (0.55 + 0.45 * smooth(0.02, 0.4, u)) * (1 - 0.22 * smooth(0.85, 1.05, u));
           const plush = (vnoise(t / 0.09 + 3.7, (s * seg.L) / Math.max(4, seg.hw) / 0.09, seedN + 33) - 0.5) * 0.24; // vân nhung mềm
-          const dim = 0.42 + 0.58 * field; // mép chìm như nhung
+          const dim = 0.55 + 0.45 * field; // mép chìm như nhung (quầng rộng → tối dần đều, không thành dải đen)
           r *= dim; g *= dim; b *= dim;
-          const amt = 1.15 * field * (1 + plush + 0.26 * shim * field) * lightK * edge;
+          // ánh nhung dồn về giữa (field^1.7) trên nền tối dần RỘNG → khối nhung mềm có chiều sâu; ánh phủ đều cả mặt thì
+          // móng phẳng như giấy nhám màu
+          const fG = field ** 1.7, amt = 1.15 * fG * (1 + plush + 0.3 * shim) * lightK * (0.6 + 0.4 * edge);
           r += vGlow[0] * amt; g += vGlow[1] * amt; b += vGlow[2] * amt;
-          const spw = field * field * 0.5 * lightK * edge;
-          if (spw > 0.01) {
-            const sp = sparkleAt(px, py, gCell * 1.5, 0.93, seedN + 35, Math.max(1, gRad * 1.4)) * spw;
-            r += vSpk[0] * sp; g += vSpk[1] * sp; b += vSpk[2] * sp;
-          }
+          // ÁNH NHŨ MỊN khắp mặt móng (velvet = bột nhũ siêu mịn, nhìn gần thấy hạt li ti ở mọi chỗ, dày + sáng hơn trong
+          // quầng) + vài hạt loé to hơn giữa quầng. Chỉ hạt thưa trong quầng cũ → mặt satin trơn có lấm tấm, không ra nhung
+          const sp = sparkleAt(px, py, gCell, 0.84, seedN + 35, Math.max(0.55, 0.85 * gRad)) * (0.12 + 0.3 * fG) * lightK * vSpkD
+            + sparkleAt(px, py, gCell * 1.7, 0.93, seedN + 36, Math.max(0.9, gRad * 1.4)) * fG * 0.45 * lightK * vSpkD;
+          r += vSpk[0] * sp; g += vSpk[1] * sp; b += vSpk[2] * sp;
         } else {
           // MẮT MÈO: nam châm kéo nhũ từ tính thành 1 dải CONG theo độ cong móng (vòng cung quanh đỉnh móng), mỗi móng
           // lệch góc / vị trí nhẹ khác nhau. Dải = LÕI mảnh màu KIM LOẠI (bạc / vàng, sáng trắng ở chỗ nhũ dày) + QUẦNG
@@ -3760,11 +3776,12 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         const coreE = Math.exp(-(((tq - tcE) / wE) ** 2)), haloE = 0.08 * Math.exp(-(((tq - tcE) / (2.2 * wE)) ** 2));
         spec = Math.max(spec, 0.62 * (1 - realK) * (1 - smooth(0.86, 0.98, u)) * (0.82 * coreE + haloE));
       }
-      // velvet: lớp top phủ trên nhung — vệt cửa sổ dịu hơn (vệt gắt + quầng nhung = ống kim loại satin)
-      spec = Math.min(1, spec * gloss * (velvet ? 0.65 : 1));
+      // velvet: lớp top phủ trên nhung — vệt cửa sổ chỉ còn ~0.3 (vệt chéo rõ + quầng nhung = vỏ đạn / ống satin); ánh
+      // sáng của nhung là quầng mềm rộng ở bước 2
+      spec = Math.min(1, spec * gloss * (velvet ? 0.3 : 1));
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.12 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.12 : velvet ? 0.4 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

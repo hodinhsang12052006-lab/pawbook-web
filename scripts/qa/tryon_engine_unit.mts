@@ -352,13 +352,14 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const bright = (out: Img, s2: NailSeg) => { let n = 0, b = 0; for (let k = 0; k < s2.alpha.length; k++) { if (s2.alpha[k] < 1 || s2.along[k] > 0.7) continue; n++; const x = s2.x0 + (k % s2.w), y = s2.y0 + Math.floor(k / s2.w); if (Math.abs(lumaAt(out, x, y) - lumaAt(plainG, x, y)) > 30) b++; } return b / n; }; // khác hẳn bản không đá
   const gR = roleIdx(segs, LOOK(["#e8c4a8", "#ffffff", "#c0c0c0"], "glossy", { pattern: "gemcluster" })), tR = roleIdx(segs, LOOK(["#b45309", "#5b3a29", "#d4af37"], "glossy", { pattern: "tortoise" }));
   const gemH = bright(gm, segs[gR.hero]), gemE = bright(gm, segs[gR.echo]);
-  let dark = 0, nT = 0;
-  // đốm đo trên cả 2 móng đồi mồi của bộ (hero + echo) — mỗi móng hạt giống khác nên 1 móng lẻ có thể thưa / dày
-  for (const i of [tR.hero, tR.echo]) core(segs[i], (x, y) => { nT++; if (lumaAt(tt, x, y) < 60) dark++; });
+  // đốm đo trên móng HERO (đồi mồi cả móng); echo của bộ là đầu French đồi mồi (fr-tortoise) → đốm chỉ ở đầu móng
+  let dark = 0, nT = 0, eDark = 0, eN = 0;
+  core(segs[tR.hero], (x, y) => { nT++; if (lumaAt(tt, x, y) < 60) dark++; });
+  { const sE = segs[tR.echo]; for (let k = 0; k < sE.alpha.length; k++) { if (sE.alpha[k] < 1 || sE.along[k] < 0.75) continue; eN++; if (lumaAt(tt, sE.x0 + (k % sE.w), sE.y0 + Math.floor(k / sE.w)) < 60) eDark++; } }
   ok("E21", "Hoạ tiết tự vẽ bám móng thật: French đen ở ĐẦU móng (chân móng vẫn hồng) · ombre trắng → đỏ rượu đậm dần về đầu móng · aura hồng ở giữa, nude ở mép · cụm đá đủ trên móng hero, móng echo 1 viên lẻ nhỏ hơn · đồi mồi có đốm nâu 10–65% mặt móng hero",
     frTip[0] < 25 && frBase[0] > 70 && omL[0] > omL[1] && omL[1] > omL[2] + 10 && auMid[1] > auEdge[1] + 8
-    && gemH > 0.02 && gemE > 0.002 && gemE < 0.6 * gemH && dark / nT > 0.1 && dark / nT < 0.65,
-    JSON.stringify({ frTip: frTip.map(Math.round), frBase: frBase.map(Math.round), omL: omL.map(Math.round), auMid: auMid.map(Math.round), auEdge: auEdge.map(Math.round), gemHero: r2(gemH), gemEcho: r2(gemE), tort: r2(dark / nT) }));
+    && gemH > 0.02 && gemE > 0.002 && gemE < 0.6 * gemH && dark / nT > 0.1 && dark / nT < 0.65 && eDark / (eN || 1) > 0.03,
+    JSON.stringify({ frTip: frTip.map(Math.round), frBase: frBase.map(Math.round), omL: omL.map(Math.round), auMid: auMid.map(Math.round), auEdge: auEdge.map(Math.round), gemHero: r2(gemH), gemEcho: r2(gemE), tort: r2(dark / nT), tortEchoTip: r2(eDark / (eN || 1)) }));
   ok("E22", "Hoạ tiết bộ máy tự vẽ không cần lớp SVG (french, ombre, aura, velvet, đồi mồi, vân đá, line, ngọc trai, đá); hoạ tiết mới chưa tự vẽ vẫn có lớp SVG trên móng điểm nhấn",
     ["french", "ombre", "aura", "velvet", "tortoise", "marble", "lines", "pearls", "gemcluster", "droplets", "chromefrench", "leopard", "checker", "foil", "stars", "hearts", "charm3d", "chromedrops", "solid"].every((p) => !hasMotif(p, true, 4)) && hasMotif("custom-svg", true, 4) && !hasMotif("custom-svg", false, 4));
 }

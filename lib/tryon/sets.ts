@@ -49,7 +49,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   lace: [{ pattern: "french" }],
   // slime chảy → đầu French xanh slime (đúng màu slime bộ máy vẽ) thay vì 2 móng chảy slime giống hệt nhau
   slimedrip: [{ pattern: "french", colors: (p) => [p.c1, SLIME, p.m] }],
-  hearts: [{ pick: "rest", scale: 0.9, mirror: true }],
+  // hero 1 tim to vẽ tay → echo 2 tim NHỎ xếp chéo (bản cỡ gần bằng hero nhìn như dán nhầm 2 sticker)
+  hearts: [{ pick: "twin", scale: 0.5, mirror: true }],
   floral: [{ pick: "second", scale: 0.95 }],
   blossom: [{ pick: "second", scale: 0.95 }],
   leaf: [{ pick: "twin", scale: 0.6, mirror: true }],

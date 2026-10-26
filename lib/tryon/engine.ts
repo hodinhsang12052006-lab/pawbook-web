@@ -2306,14 +2306,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "tortoise": {
-            // đồi mồi: nền HỔ PHÁCH trong (mật ong → hổ phách), đốm nâu nhiều cỡ loang mềm, lõi đốm gần đen
-            const wx = u * 2.8 + 0.7 * fbm(u * 1.6 + 3, t * 1.6, seedN + 5), wy = t * 2.1 + 0.7 * fbm(u * 1.6, t * 1.6 + 7, seedN + 6);
-            // nhiễu MƯỢT (2 tầng, không hạt nhỏ) — đồi mồi thật loang khối lớn, mép mềm
-            const n = 0.65 * vnoise(wx + seedN * 0.37, wy, seedN) + 0.35 * vnoise(wx * 1.9 + 4, wy * 1.9, seedN + 1), n2 = vnoise(wx * 2.2, wy * 2.2, seedN + 3);
-            const honey: RGB = [0.5, 0.17, 0.02], amber: RGB = [0.27, 0.075, 0.009], brown: RGB = [0.05, 0.016, 0.006], core: RGB = [0.014, 0.006, 0.003];
-            base = mix3(honey, amber, smooth(0.3, 0.62, n * 0.8 + n2 * 0.2));
-            base = mix3(base, brown, smooth(0.5, 0.66, n) * 0.9);
-            base = mix3(base, core, smooth(0.62, 0.76, n) * 0.8);
+            // đồi mồi: nền HỔ PHÁCH trong (mật ong → hổ phách), đốm nâu nhiều cỡ loang mềm, lõi đốm gần đen. Đốm tính theo
+            // đơn vị NỬA BỀ NGANG móng (như đầu fr-tortoise): theo chiều dài móng (u) thì móng dài chỉ còn 2 vệt nâu to nhoè
+            base = tortoiseAt(1.15 * t, 1.15 * u * Math.max(1.6, tipP.len), seedN);
             if (accent) {
               // đúng bước thợ làm: viền chỉ kim loại mảnh quanh 2 ngón nhấn (sợi nổi, cách mép ~2px)
               const n = (eDist[k] - 2.4) / 1.15;

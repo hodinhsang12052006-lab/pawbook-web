@@ -2529,7 +2529,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       let base: RGB = base0;
       let tipChrome = 0; // phần đầu móng tráng gương (chrome French)
       let metalMix = 0, metalQ = 0, metalMirror = false; // metalMirror: mảnh foil phẳng → phản chiếu gương; còn lại: sợi / dải KIM LOẠI mảnh (viền vàng French đôi, gân vàng vân đá): vị trí ngang trên sợi, tô sau bước ánh sáng
-      let auraM = 0, metalFloor = 0; // auraM: độ phủ lõi aura (ánh ngọc trai né lõi) · metalFloor: sàn độ sáng kim loại gương (foil vàng không ra ô liu)
+      let auraM = 0, metalFloor = 0, topArt = 0; // topArt: hoạ tiết vẽ ĐÈ lên lớp mắt mèo / velvet (không nhận ánh nhũ) · auraM: độ phủ lõi aura (ánh ngọc trai né lõi) · metalFloor: sàn độ sáng kim loại gương (foil vàng không ra ô liu)
       if (onNail) {
         switch (pat) {
           case "ombre": base = mix3(c1, c2, smooth(0.25, 0.92, u)); break;
@@ -2950,12 +2950,16 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "polka": {
-            // CHẤM BI đều (hàng so le) — chấm tròn mép mịn, hơi nổi; trên nền mắt mèo thì dải sáng vẫn chạy dưới chấm
-            const P = 0.5 * seg.hw, X = t * seg.hw, Yp = s * seg.L;
-            const row = Math.floor(Yp / P), off = (row % 2) * 0.5;
-            const fx = X / P + off, dx = (fx - Math.round(fx)) * P, dy = (Yp / P - row - 0.5) * P;
-            const dd = Math.hypot(dx, dy), rr = 0.15 * seg.hw;
-            base = mix3(base, c2, 1 - smooth(rr - 0.7, rr + 0.7, dd));
+            // CHẤM BI chấm tay THƯA: ô băm + tâm lệch (không thẳng hàng như giấy dán tường), 2 cỡ chấm, chấm luôn NGUYÊN (không
+            // bị mép móng cắt dở). Mắt mèo chấm bi (trend Pinterest): chấm MICRO 6–10 hạt / móng, nửa số móng dồn về 1 góc đầu
+            // móng; chấm vẽ SAU lớp mắt mèo → không nhận ánh nhũ từ tính (topArt). Bản cũ: lưới so le P 0.5 hw ~40–60 chấm /
+            // móng trên cả 4 móng → vải in / giấy dán tường.
+            const Yh = s * tipP.kL, aa = 0.7 / Math.max(8, seg.hw), p1 = 1 / Math.max(8, seg.hw);
+            const cov = fin === "cateye"
+              ? polkaAt(t, Yh, 0.68, 0.62, Math.max(2.6 * p1, 0.085), Math.max(3.4 * p1, 0.12), seedN + 41, tipP, aa, pN % 2 ? 0 : hash2(look.seed, pN, 42) > 0.5 ? 1 : -1)
+              : polkaAt(t, Yh, 0.8, 0.85, Math.max(3 * p1, 0.11), Math.max(3.8 * p1, 0.155), seedN + 41, tipP, aa, 0);
+            base = mix3(base, c2, cov);
+            topArt = cov;
             break;
           }
           case "stripes": {
@@ -3215,7 +3219,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             const hq = 2.2 * t + 1.4 * s + ph;
             const glow: RGB = [0.55 + 0.4 * Math.sin(hq), 0.5 + 0.4 * Math.sin(hq + 2.1), 0.62 + 0.38 * Math.sin(hq + 4.2)];
             const band = 0.62 * core + 0.38 * halo;
-            const amt = (band * (1 + 0.22 * shim) + 0.008 * (1 + shim) * (1 - band)) * lf * 1.25;
+            const amt = (band * (1 + 0.22 * shim) + 0.008 * (1 + shim) * (1 - band)) * lf * 1.25 * (1 - topArt);
             r += glow[0] * amt; g += glow[1] * amt; b += glow[2] * amt;
           } else {
             let cC = catCore, hC = catHalo;
@@ -3223,11 +3227,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               const hq = 3 * t + 2 * s + ph, rb: RGB = [0.6 + 0.4 * Math.sin(hq), 0.6 + 0.4 * Math.sin(hq + 2.1), 0.6 + 0.4 * Math.sin(hq + 4.2)];
               cC = mix3(cC, rb, 0.35); hC = mix3(hC, rb, 0.35);
             }
-            const cAmt = core * (0.55 + 0.35 * shim) * lf, hAmt = (0.24 * halo * (1 + 0.15 * shim) + 0.012 * (1 + shim) * (1 - halo)) * lf;
+            const cAmt = core * (0.55 + 0.35 * shim) * lf * (1 - topArt), hAmt = (0.24 * halo * (1 + 0.15 * shim) + 0.012 * (1 + shim) * (1 - halo)) * lf * (1 - topArt);
             r += cC[0] * cAmt + hC[0] * hAmt; g += cC[1] * cAmt + hC[1] * hAmt; b += cC[2] * cAmt + hC[2] * hAmt;
           }
           // hạt loé rời (σ ~0.6px theo cỡ móng), chỉ hạt rất sáng của cụm: dày trong lõi, thưa trong quầng; 9D rải thưa khắp móng
-          const spw = (nine ? 0.25 + 0.75 * Math.max(core, halo) : core + 0.3 * halo) * 0.7 * lf;
+          const spw = (nine ? 0.25 + 0.75 * Math.max(core, halo) : core + 0.3 * halo) * 0.7 * lf * (1 - topArt);
           if (spw > 0.01) {
             const sp = Math.min(1, sparkleAt(px, py, gCell * 1.6, 0.93 - 0.12 * core - (nine ? 0.015 : 0), seedN + 31, gRad) * spw);
             r += (1 - r) * sp; g += (1 - g) * sp; b += (1 - b) * sp;

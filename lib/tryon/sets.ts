@@ -80,6 +80,9 @@ const PRINTS = new Set(["leopard", "checker", "plaid", "polka", "stripes", "tort
 /** móng trơn của bộ in lặp lấy màu PHỤ (màu chấm / đốm / ô) — như thợ làm: chấm bi trắng thì móng trơn trắng */
 const QUIET_C2 = new Set(["polka", "stripes", "checker", "leopard", "plaid"]);
 const SKIP = new Set(["solid", "mixmatch"]);
+/** móng hero vẽ bằng hoạ tiết vẽ tay riêng thay cho lớp nền in lặp: ren trắng = mảng ren in stamping (lưới lục giác +
+ *  hoa 5 cánh + viền vỏ sò, beadsFor "lace:art") — dải lưới chấm đều của lớp nền đọc ra vải lưới / giấy in lỗi */
+const HERO_ART: Record<string, string> = { lace: "lace:art" };
 
 /**
  * Thứ tự móng theo vị trí trên bàn tay (trỏ → út; đủ 5 móng: cái → út): xếp theo hình chiếu tâm móng lên phương
@@ -291,7 +294,7 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
   const tmpl = rT < 0.28 ? "accent" : rT < 0.45 && c2Tone ? "tone" : "thread";
   for (let i = 0; i < n; i++) {
     const role = roles[i];
-    if (role === "hero") nails[i] = { role, pattern: pat, art: true };
+    if (role === "hero") nails[i] = { role, pattern: HERO_ART[pat] ?? pat, art: true };
     else if (role === "echo") nails[i] = { ...echoOv, role, art: true };
     else if (role === "thread" && tmpl === "thread") nails[i] = { ...threadFor(pal, seed, variant[i], isFrench(echoOv.pattern), pat), role, art: true };
     else {

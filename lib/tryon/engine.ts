@@ -1399,15 +1399,15 @@ const mix3 = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1]
  * rộng đúng ~60% móng (bản cũ hình chỉ lấp ~½ r: ma r 0.82 chỉ rộng ~45% móng, đầu lâu ~30% — sticker tí hon).
  * flip: lật ngang hình (móng "vọng" đối xứng với móng chính).
  */
-type PaintedKind = "ghost" | "pumpkin" | "bat" | "moon" | "flake" | "cherry" | "flower" | "cat" | "skull" | "leaf" | "pflower" | "heart" | "holly" | "ornament" | "gelflower" | "bud" | "gleaf" | "pdot" | "ditsy" | "sparkle" | "mleaf";
+type PaintedKind = "ghost" | "pumpkin" | "bat" | "moon" | "flake" | "cherry" | "flower" | "cat" | "skull" | "leaf" | "pflower" | "heart" | "holly" | "ornament" | "gelflower" | "bud" | "gleaf" | "pdot" | "ditsy" | "sparkle" | "mleaf" | "lacework";
 /** whole: chấm vẽ bằng cây chấm bi — thợ không chấm đè lên mép móng: mép cắt vào thì dời / thu nhỏ 1 lần, vẫn cắt thì bỏ
  *  hẳn chấm đó (chấm bị cắt đôi ở mép = giấy in cắt bằng kéo) · tint: biến thể màu (lá thu, hoa nhí 2 tông) */
 interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "fstar" | "bow" | "eye" | "blob" | PaintedKind; rot?: number; tint?: number; flip?: boolean; whole?: boolean; asp?: number }
-const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "cherry", "flower", "cat", "skull", "leaf", "pflower", "heart", "holly", "ornament", "gelflower", "bud", "gleaf", "pdot", "ditsy", "sparkle", "mleaf"]);
+const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "cherry", "flower", "cat", "skull", "leaf", "pflower", "heart", "holly", "ornament", "gelflower", "bud", "gleaf", "pdot", "ditsy", "sparkle", "mleaf", "lacework"]);
 /** Hoạ tiết HỮU CƠ (lá, hoa, nụ, bông tuyết, chấm): xoay theo trục móng và được mép móng cắt bớt (thợ vẽ tràn mép). Còn
  *  lại là NHÂN VẬT / ĐỒ VẬT (ma, mèo, đầu lâu, bí ngô, quả châu, hoa gel 3D…): luôn đứng thẳng trong ảnh, KHÔNG bao giờ bị
  *  mép móng cắt (bị cắt nhìn như decal dán lệch). */
-const ORGANIC = new Set<string>(["leaf", "flower", "bud", "gleaf", "flake", "pflower", "pdot", "ditsy", "sparkle"]);
+const ORGANIC = new Set<string>(["leaf", "flower", "bud", "gleaf", "flake", "pflower", "pdot", "ditsy", "sparkle", "lacework"]);
 
 /** Ngôi sao 5 cánh (cánh hướng về đầu móng): khoảng cách có dấu tới mép (âm = trong), đơn vị = bán kính ngoài. */
 function starSD(x: number, y: number): number {
@@ -1552,6 +1552,41 @@ function paintedSD(kind: string, x: number, y: number, o: Float64Array): void {
       if (PS.v) { o[0] = o[5] = Math.hypot(x, y) - 1; break; }
       const w = Math.max(0.2, 1.4 * px);
       o[0] = o[5] = smin(vesica(y, x, 1, w), vesica(x, y, 0.72, w * 0.9), 0.12);
+      break;
+    }
+    case "lacework": {
+      // REN IN STAMPING (khuôn ren cô dâu): mảng ren phủ 1 phần móng tới tận mép (mép móng cắt — đúng như con dấu in) —
+      //  · VIỀN ren: dải đặc + mép VỎ SÒ lồi ra ngoài, mỗi vỏ sò 1 lỗ xỏ (eyelet)
+      //  · trong mảng: LƯỚI LỤC GIÁC mảnh (vải tuyn nền ren) + HOA 5 cánh đặc có gân cánh / vòng nhuỵ khoét rỗng xếp so le,
+      //    giữa 2 hoa 1 cặp lá nhỏ (cuộn lá) — lưới chấm đều kiểu cũ đọc ra giấy in lỗi / vải lưới, không ra ren
+      // Thiết kế theo nửa bề ngang móng (hw): bead r = LR hw. v = 0: mảng chéo từ 1 góc (bead xoay) · 1: dải ren đầu móng
+      const LR = 2, X = x * LR, Y = y * LR, pw = PS.px * LR, yb = PS.v ? 0.55 : -0.12;
+      const w = Math.max(0.024, 1.05 * pw); // nét lưới / gân ≥ ~1px
+      // viền: dải đặc yb…yb+0.07 + đĩa vỏ sò tâm trên đường yb (nửa lồi ra ngoài), lỗ xỏ giữa mỗi vỏ sò
+      const P = 0.24, cx = Math.round(X / P) * P;
+      let border = Math.min(Math.max(yb - Y, Y - (yb + 0.07)), Math.hypot(X - cx, Y - yb) - 0.12);
+      border = Math.max(border, -(Math.hypot(X - cx, Y - (yb - 0.035)) - Math.max(0.034, 1.3 * pw)));
+      // lưới lục giác (2 lưới chữ nhật lệch nửa ô — tâm ô gần nhất), bán kính ô s
+      const hs = 0.1, rx = 1.7320508 * hs, ry = 3 * hs, md = (a: number, m: number) => a - m * Math.floor(a / m);
+      const ax1 = md(X, rx) - rx / 2, ay1 = md(Y, ry) - ry / 2, bx1 = md(X - rx / 2, rx) - rx / 2, by1 = md(Y - 1.5 * hs, ry) - ry / 2;
+      const nb = ax1 * ax1 + ay1 * ay1 < bx1 * bx1 + by1 * by1, gx = Math.abs(nb ? ax1 : bx1), gy = Math.abs(nb ? ay1 : by1);
+      const mesh = 0.8660254 * hs - Math.max(gx, 0.5 * gx + 0.8660254 * gy) - 0.5 * w;
+      // hoa 5 cánh xếp so le theo hàng (hàng 0 sát viền), cặp lá giữa 2 hoa cùng hàng
+      const Pf = 0.62, Ry = 0.42, y0 = yb + 0.3, jr = Math.max(0, Math.round((Y - y0) / Ry)), off = jr % 2 ? Pf / 2 : 0;
+      const fyc = y0 + jr * Ry, fi = Math.round((X - off) / Pf), fxc = fi * Pf + off, rf = jr % 2 ? 0.13 : 0.17;
+      const fx = X - fxc, fy = Y - fyc, rho = Math.hypot(fx, fy), th = Math.atan2(fy, fx) + 0.7 * (fi % 3) + 0.4 * jr;
+      let flower = (rho - rf * (0.62 + 0.38 * Math.abs(Math.cos(2.5 * th)))) * 0.8;
+      const ak = Math.round(th / 1.2566371) * 1.2566371, pa = rho * Math.cos(th - ak), pb = rho * Math.sin(th - ak);
+      const vein = Math.max(Math.abs(pb) - 0.45 * w, 0.42 * rf - pa, pa - 0.8 * rf), ring = Math.abs(rho - 0.3 * rf) - 0.4 * w;
+      flower = Math.max(flower, -vein, -ring);
+      // cặp lá xoè chữ V hai bên điểm giữa 2 hoa gần nhất (đối xứng gương; lấy điểm giữa GẦN NHẤT, không thì lá phải của
+      // mỗi cặp rơi sang ô hoa bên cạnh và mất)
+      const mx = Math.round((X - off - Pf / 2) / Pf) * Pf + off + Pf / 2, lax = Math.abs(X - mx) - 0.13, lay = Y - fyc + 0.02, lc = 0.9, ls = 0.44;
+      const leaf = vesica(lax * lc + lay * ls, -lax * ls + lay * lc, 0.12, 0.05);
+      const inner = yb + 0.08 - Y;
+      o[0] = Math.min(border, Math.max(Math.min(flower, leaf), inner)) / LR;
+      o[1] = Math.max(mesh, yb + 0.04 - Y) / LR;
+      o[5] = (yb - 0.12 - Y) / LR;
       break;
     }
     case "ditsy": {
@@ -1887,6 +1922,8 @@ function paintOps(kind: string, tint: number, base: RGB, c2: RGB, metal: RGB, pa
       return [{ L: 3, metal: true }, { L: 0, metal: true, line: true }, { L: 0, c: b, tone: true, hi: 0.35, ins: 0 }, { L: 1, metal: true, ins: 0 }, { L: 2, metal: true }, { L: 4, c: W, a: 0.88 }];
     }
     case "pflower": return [{ L: 0, c: sc3(c2, 0.95), a: 0.7 }, { L: 1, c: PK.pfC, a: 0.7 }];
+    // ren trắng in: lưới tuyn mờ (≈ 60%) dưới, hoa / lá / viền vỏ sò đặc trên — màu ren tách khỏi nền (trắng trên nền sáng)
+    case "lacework": { const c = pickPaint(sameC(c2, base) ? [W, PK.milk] : [c2, W], base, 8); return [{ L: 1, c, a: 0.62 }, { L: 0, c, a: 0.95 }]; }
     default: return [{ L: 0, c: c2 }];
   }
 }
@@ -1900,7 +1937,7 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   const geo = paintGeo(seg, eDist), kind = bd.kind;
   const rotA = (ORGANIC.has(kind) ? 0 : upRot) + (bd.rot ?? 0), cr = Math.cos(rotA), sr = Math.sin(rotA);
   const ln = Math.hypot(L3[0], L3[1]) || 1, R0 = bd.r * seg.hw;
-  const v = kind === "skull" ? (Lst(base) > 55 ? 1 : 0) : kind === "flower" ? (pat === "blossom" ? 1 : 0) : kind === "ornament" ? (upS > 0 ? 1 : 0) : kind === "sparkle" ? (bd.tint ?? 0) : 0;
+  const v = kind === "skull" ? (Lst(base) > 55 ? 1 : 0) : kind === "flower" ? (pat === "blossom" ? 1 : 0) : kind === "ornament" ? (upS > 0 ? 1 : 0) : kind === "sparkle" || kind === "lacework" ? (bd.tint ?? 0) : 0;
   const F: PFit = { seg, geo, s0: 0, sx: 0, R: R0, cr, sr, fl: bd.flip ? -1 : 1, bound2: 0, Lx: L3[0] / ln, Ly: L3[1] / ln, mLx: 0, mLy: 0, v, jit: 0, lw: 0, bev: 0, hiD: 0, hiW: 0, ops: [], pc: base, off: false };
   let u0 = bd.u, t0 = bd.t, sc = 1;
   const place = () => {
@@ -2173,6 +2210,9 @@ function beadsFor(pattern: string, seed: number): Bead[] {
     // lá THU vẽ tay nhiều màu (bộ mix-fall "lá thu"): 3 lá nhỏ dần rơi chéo, mỗi lá 1 tông gỉ sắt / nghệ / cam cháy
     case "leaf:autumn": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.8, t: 0.5 * sd, r: 0.72, kind: "leaf", rot: -0.6 * sd + 0.4 * j(1), tint: 0 }, { u: 0.44, t: -0.14 * sd, r: 0.46, kind: "leaf", rot: 0.5 * sd + 0.5 * j(2), tint: 1 }, { u: 0.19, t: 0.3 * sd, r: 0.28, kind: "leaf", rot: 1.2 * sd + 0.5 * j(3), tint: 2 }]; }
     case "witchy": return [{ u: 0.18, t: 0.02, r: 0.24, kind: "star", rot: 0.4 * j(1) }];
+    // REN TRẮNG (móng hero của bộ "lace" — lib/tryon/sets dùng tên "lace:art"): 1 mảng ren in phủ móng, mép móng cắt.
+    // 60% mảng CHÉO từ 1 góc đầu móng (nghiêng 0.5–0.7 rad, lật bên theo hạt giống), 40% dải ren ĐẦU móng
+    case "lace:art": { const tip = hash2(seed, 7, 31) < 0.4; return [{ u: 0.5, t: 0, r: 2, kind: "lacework", rot: tip ? 0 : (j(6) > 0 ? 1 : -1) * (0.6 + 0.2 * j(1)), tint: tip ? 1 : 0, flip: j(2) > 0 }]; }
     case "milkbath": return [{ u: 0.3, t: -0.3, r: 0.3, kind: "pflower", rot: 6.28 * j(1) }, { u: 0.55, t: 0.28, r: 0.26, kind: "pflower", rot: 6.28 * j(2) }, { u: 0.78, t: -0.2, r: 0.2, kind: "pflower", rot: 6.28 * j(3) }, { u: 0.2, t: 0.4, r: 0.16, kind: "pflower", rot: 6.28 * j(4) }];
     // HOA NHÍ (ditsy florals — tên mẫu "hoa nhí"): 6–9 bông 5 cánh chấm bi tí hon (0.12–0.2 hw) 2 tông + 3–4 lá nhỏ nép
     // cạnh hoa; 3 bố cục: rải đều cả móng · dồn về 1 góc đầu móng thưa dần · vòng hoa ôm chân móng. 1 bông to + 1 nụ cũ

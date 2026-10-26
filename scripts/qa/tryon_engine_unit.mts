@@ -438,22 +438,25 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const plainD = renderLook(pi, ps, LOOK(["#f2c4c4"], "glossy"));
   const dropN = ps.map((sg) => { let up = 0, dn = 0; px(sg, (x, y) => { const d = lumaAt(drp, x, y) - lumaAt(plainD, x, y); if (d >= 25) up++; if (d <= -25) dn++; }); return { up, dn }; });
   const dropNails = [dR.hero, dR.echo].map((i) => dropN[i].up >= 5 && dropN[i].dn >= 15).concat(dR.thread.map((i) => dropN[i].up + dropN[i].dn >= 30));
-  // e) đồi mồi "viền bạc / vàng": viền chỉ kim loại sáng sát mép CHỈ trên móng hero (echo đồi mồi không viền)
+  // e) đồi mồi: điểm vàng như thợ làm — viền French micro VÀNG GƯƠNG bám mép tự do + vụn foil CHỈ trên móng hero; KHÔNG còn
+  //    viền chỉ kim loại chạy quanh 2 thành móng (đọc như khung chọn của phần mềm / sticker — vòng 2 bỏ theo soát ảnh thật)
   const oi = imgs["olive.jpg"], os = segsOf["olive.jpg"];
-  const tR = roleIdx(os, LOOK(["#b45309", "#5b3a29", "#c0c0c0"], "glossy", { pattern: "tortoise" }));
-  const tor = renderLook(oi, os, LOOK(["#b45309", "#5b3a29", "#c0c0c0"], "glossy", { pattern: "tortoise" }));
-  const rimBright = (sg: NailSeg) => {
+  const torL = LOOK(["#b45309", "#5b3a29", "#d4af37"], "glossy", { pattern: "tortoise" }), tR = roleIdx(os, torL);
+  const tor = renderLook(oi, os, torL);
+  // vàng ánh kim: sáng (luma > 140) + ấm (R − B ≥ 50) — đốm hổ phách tối, nền caramel không đạt
+  const goldAt = (x: number, y: number) => { const i = (y * tor.w + x) * 4; return lumaAt(tor, x, y) > 140 && tor.data[i] - tor.data[i + 2] >= 50; };
+  const rimBright = (sg: NailSeg, tip: boolean) => {
     let n = 0, b = 0;
     px(sg, (x, y, k) => {
       const xx = k % sg.w, yy = Math.floor(k / sg.w);
       let edgeNear = false;
       for (let dy = -4; dy <= 4 && !edgeNear; dy++) for (let dx = -4; dx <= 4; dx++) { const X = xx + dx, Y = yy + dy; if (X < 0 || Y < 0 || X >= sg.w || Y >= sg.h || sg.alpha[Y * sg.w + X] < 0.5) { edgeNear = true; break; } }
-      if (!edgeNear || sg.along[k] < 0.15 || sg.along[k] > 0.85) return;
-      n++; if (lumaAt(tor, x, y) > 150) b++;
+      if (!edgeNear || (tip ? sg.along[k] < 0.9 : sg.along[k] < 0.15 || sg.along[k] > 0.7)) return;
+      n++; if (goldAt(x, y)) b++;
     });
     return n ? b / n : 0;
   };
-  const rimAcc = rimBright(os[tR.hero]), rimPlain = rimBright(os[tR.echo]);
+  const rimAcc = rimBright(os[tR.hero], true), rimSide = rimBright(os[tR.hero], false), rimPlain = rimBright(os[tR.echo], true);
   // f) bộ 10 mẫu: luôn 1 mẫu chi tiết kim loại + 1 mẫu 3D; "Bộ khác" xoay nhiều kiểu 3D
   const prof = profileFromModels(FIXTURES.find((f) => f.file === "pink.jpg")!.marks.map((m) => fitNail(pi, mark(m))))!;
   const METALS = new Set(["chromeline", "lines", "chromefrench", "marble", "tortoise", "foil", "leopard", "checker", "stripes", "polka", "fawn"]), THREE_D = new Set(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts", "ghost", "bats", "jackolantern", "web", "moonstars", "snow", "candy", "plaid", "floral", "cherry"]);
@@ -461,9 +464,9 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   // (chấm bi cũng có trong ô họ mắt mèo — khi đó là hiệu ứng mắt mèo, không tính là mẫu "chi tiết")
   const wowOk = sets.every((st) => st.filter((l) => METALS.has(l.pattern) && l.finish !== "cateye").length === 1 && st.filter((l) => THREE_D.has(l.pattern)).length === 1);
   const kinds3d = new Set(sets.flatMap((st) => st.filter((l) => THREE_D.has(l.pattern)).map((l) => l.pattern)));
-  ok("E23", `Trend bắt mắt ra chất thật: French gương bạc (độ lệch sáng đầu móng ${Math.round(sd(tipL))} ≥ 30, có dải sáng + mảng tối) · velvet giữ màu (độ đậm ${Math.round(chroma(vel))} / sơn thường ${Math.round(chroma(sol))}) + giữa sáng hơn mép · ngọc trai: móng hero điểm bóng + bóng tiếp xúc, echo 1 hạt nhỏ, quiet trơn · giọt nước 3D hero + echo (giọt nhỏ), thread không trơn (${dropNails.filter(Boolean).length}/${dropNails.length}) · đồi mồi viền kim loại móng hero ${Math.round(rimAcc * 100)}% (echo ${Math.round(rimPlain * 100)}%) · mỗi bộ 10 mẫu có 1 mẫu kim loại + 1 mẫu 3D (${[...kinds3d].join(", ")})`,
-    tipOk && velOk && pearlOk && dropNails.length >= 3 && dropNails.every(Boolean) && dropN[dR.echo].up + dropN[dR.echo].dn < dropN[dR.hero].up + dropN[dR.hero].dn && rimAcc >= 0.2 && rimPlain < 0.08 && wowOk && kinds3d.size >= 2,
-    JSON.stringify({ tip: [Math.round(sd(tipL)), Math.max(...tipL), Math.min(...tipL)], vel: [Math.round(chroma(vel)), Math.round(chroma(sol)), Math.round(med(mid)), Math.round(med(rim))], pearl: [pHiN, pChN, pSh, pOff, pR.hero, pR.echo], drops: [dropNails, dropN], rim: [r2(rimAcc), r2(rimPlain)], wowOk, kinds3d: [...kinds3d] }));
+  ok("E23", `Trend bắt mắt ra chất thật: French gương bạc (độ lệch sáng đầu móng ${Math.round(sd(tipL))} ≥ 30, có dải sáng + mảng tối) · velvet giữ màu (độ đậm ${Math.round(chroma(vel))} / sơn thường ${Math.round(chroma(sol))}) + giữa sáng hơn mép · ngọc trai: móng hero điểm bóng + bóng tiếp xúc, echo 1 hạt nhỏ, quiet trơn · giọt nước 3D hero + echo (giọt nhỏ), thread không trơn (${dropNails.filter(Boolean).length}/${dropNails.length}) · đồi mồi French micro vàng mép tự do móng hero ${Math.round(rimAcc * 100)}% (echo ${Math.round(rimPlain * 100)}%), không viền quanh thành móng (${Math.round(rimSide * 100)}%) · mỗi bộ 10 mẫu có 1 mẫu kim loại + 1 mẫu 3D (${[...kinds3d].join(", ")})`,
+    tipOk && velOk && pearlOk && dropNails.length >= 3 && dropNails.every(Boolean) && dropN[dR.echo].up + dropN[dR.echo].dn < dropN[dR.hero].up + dropN[dR.hero].dn && rimAcc >= 0.2 && rimPlain < 0.08 && rimSide < 0.06 && wowOk && kinds3d.size >= 2,
+    JSON.stringify({ tip: [Math.round(sd(tipL)), Math.max(...tipL), Math.min(...tipL)], vel: [Math.round(chroma(vel)), Math.round(chroma(sol)), Math.round(med(mid)), Math.round(med(rim))], pearl: [pHiN, pChN, pSh, pOff, pR.hero, pR.echo], drops: [dropNails, dropN], rim: [r2(rimAcc), r2(rimPlain), r2(rimSide)], wowOk, kinds3d: [...kinds3d] }));
 }
 
 {

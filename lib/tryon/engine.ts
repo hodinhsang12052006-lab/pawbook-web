@@ -3074,24 +3074,49 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "leopard": {
-            // DA BÁO đúng bước thợ làm: đốm màu c2 to nhỏ không đều + viền đen ĐỨT QUÃNG hình chữ C quanh mỗi đốm
-            const cell = 0.82 * seg.hw, gx = (t * seg.hw) / cell, gy = (s * seg.L) / cell;
+            // DA BÁO như thợ vẽ: HOA ĐỐM (rosette) dày ~60–70% mặt móng, ~3 hoa / bề ngang, to nhỏ khác nhau (bán kính ~0.24–0.35
+            // hw, méo + xoay ngẫu nhiên): lõi c2 loang (đậm hơn nền) + 2–4 NÉT PHẨY đen hình chữ C đứt quãng ôm quanh (dày ở
+            // 1 đầu, thon đuôi), vài hoa bị mép móng cắt dở, CHẤM ĐEN nhỏ méo lấp khe giữa các hoa. Bản cũ: ô 0.82 hw, đốm 0.2–
+            // 0.34 ô thưa với 1 vành C mảnh → hạt / bọ / dấu chân rải rác.
+            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), cell = 0.7, gx = t / cell, gy = Yh / cell;
             const ix = Math.floor(gx), iy = Math.floor(gy);
-            let best = 9, bi = 0, bj = 0, bang = 0;
+            let best = 9, bi = 0, bj = 0, bang = 0, bR = 1;
             for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
               const ci = ix + i2, cj = iy + j2;
-              const px = ci + 0.2 + 0.6 * hash2(ci, cj, seedN), py = cj + 0.2 + 0.6 * hash2(ci, cj, seedN + 1);
-              const sz = 0.2 + 0.14 * hash2(ci, cj, seedN + 2), dx = gx - px, dy = gy - py, an = Math.atan2(dy, dx);
-              const wob = 1 + 0.2 * Math.sin(3 * an + 6.28 * hash2(ci, cj, seedN + 3)) + 0.1 * Math.sin(5 * an + 1.7);
-              const d = Math.hypot(dx * 1.1, dy) / (sz * wob);
-              if (d < best) { best = d; bi = ci; bj = cj; bang = an; }
+              if (hash2(ci, cj, seedN + 4) < 0.1) continue; // vài ô trống → khe cho chấm đen
+              const px = ci + 0.22 + 0.56 * hash2(ci, cj, seedN), py = cj + 0.22 + 0.56 * hash2(ci, cj, seedN + 1);
+              const R = (0.24 + 0.11 * hash2(ci, cj, seedN + 2)) / cell, ra = 6.28 * hash2(ci, cj, seedN + 6), el = 1.1 + 0.2 * hash2(ci, cj, seedN + 7);
+              const dx0 = gx - px, dy0 = gy - py, dx = (dx0 * Math.cos(ra) + dy0 * Math.sin(ra)) / el, dy = -dx0 * Math.sin(ra) + dy0 * Math.cos(ra);
+              const an = Math.atan2(dy, dx), wob = 1 + 0.13 * Math.sin(3 * an + 6.28 * hash2(ci, cj, seedN + 3)) + 0.07 * Math.sin(5 * an + 1.7);
+              const d = Math.hypot(dx, dy) / (R * wob);
+              if (d < best) { best = d; bi = ci; bj = cj; bang = an; bR = R * wob * cell; }
             }
-            if (hash2(bi, bj, seedN + 4) > 0.15) {
-              const g1 = 6.28 * hash2(bi, bj, seedN + 5);
-              const gap = Math.cos(bang - g1) > 0.5 || Math.cos(bang - g1 - 2.4) > 0.86;
-              base = mix3(c1, mix3(c1, c2, 0.88), 1 - smooth(0.6, 0.68, best));
-              const ring = smooth(0.62, 0.7, best) * (1 - smooth(1.0, 1.08, best)) * (gap ? 0 : 1);
-              base = mix3(base, [0.012, 0.008, 0.006], ring);
+            const aD = (0.7 * p1) / bR; // khử răng cưa ~0.7px theo đơn vị bán kính hoa
+            const K: RGB = [0.012, 0.008, 0.006];
+            // lõi loang: c2 pha nền, mép lõi mềm, hơi đậm dần vào giữa
+            base = mix3(c1, mix3(c1, c2, 0.62 + 0.18 * (1 - smooth(0, 0.7, best))), 1 - smooth(0.76, 0.87, best));
+            // vành = 2–4 nét phẩy: chia vòng theo góc, mỗi đoạn phủ 55–85% cung, bề dày dồn về 1 đầu (đầu chấm cọ → đuôi thon)
+            const nA = 2 + Math.floor(3 * hash2(bi, bj, seedN + 5)), seg2 = 6.2832 / nA;
+            const rel = ((((bang - 6.28 * hash2(bi, bj, seedN + 8)) % 6.2832) + 6.2832) % 6.2832) / seg2, kA = Math.floor(rel);
+            const fA = (rel - kA) / (0.55 + 0.3 * hash2(bi + kA, bj, seedN + 9));
+            if (fA < 1) {
+              const wq = Math.pow(Math.sin(Math.PI * Math.pow(fA, 0.62)), 0.75), rIn = 1.0 - 0.34 * wq - 0.04, rOut = 1.0 + 0.05 * wq;
+              const ring = smooth(rIn - aD, rIn + aD, best) * (1 - smooth(rOut - aD, rOut + aD, best)) * smooth(0.02, 0.12, wq);
+              base = mix3(base, K, ring);
+            }
+            // chấm đen lấp khe: ô 0.3 hw, ~45% ô có chấm, chỉ ngoài các hoa
+            if (best > 1.1) {
+              const cs = 0.3, sx = t / cs, sy = Yh / cs, qx = Math.floor(sx), qy = Math.floor(sy);
+              let spk = 0;
+              for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
+                const ci = qx + i2, cj = qy + j2;
+                if (hash2(ci, cj, seedN + 11) > 0.45) continue;
+                const dx = (sx - ci - 0.5 - 0.6 * (hash2(ci, cj, seedN + 12) - 0.5)) * cs, dy = (sy - cj - 0.5 - 0.6 * (hash2(ci, cj, seedN + 13) - 0.5)) * cs;
+                const r = Math.max(1.5 * p1, 0.04 + 0.035 * hash2(ci, cj, seedN + 14)), an = Math.atan2(dy, dx);
+                const dd = Math.hypot(dx * 1.25, dy) - r * (1 + 0.25 * Math.sin(2 * an + 6.28 * hash2(ci, cj, seedN + 15)));
+                spk = Math.max(spk, 1 - smooth(-0.7 * p1, 0.7 * p1, dd));
+              }
+              base = mix3(base, K, spk * smooth(1.1, 1.3, best));
             }
             break;
           }

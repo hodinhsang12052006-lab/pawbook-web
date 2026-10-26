@@ -2004,8 +2004,6 @@ export interface TipProfile {
   bed: RGB; lun: RGB;
   /** tính 1 lần / móng: kiểu đường French, bố cục hoa khô, màu skittle… */
   memo: Record<string, unknown>;
-  /** khoảng t của các cột có móng thật (ngoài đó E(t) chỉ là giá trị chép từ cột mép) */
-  tr: [number, number];
 }
 const TIP_N = 64, TIP_T0 = -1.12, TIP_DT = 2.24 / TIP_N;
 function tipProfile(seg: NailSeg, under?: Map<number, [number, number, number]>): TipProfile {
@@ -2023,7 +2021,7 @@ function tipProfile(seg: NailSeg, under?: Map<number, [number, number, number]>)
   for (let it = 0; it < 2; it++) { const c = Float32Array.from(E); for (let b = 1; b < TIP_N - 1; b++) E[b] = (c[b - 1] + 2 * c[b] + c[b + 1]) / 4; }
   const kL = seg.L / Math.max(1, seg.hw);
   for (let b = 0; b < TIP_N; b++) E[b] *= kL;
-  const tp: TipProfile = { E, kL, hw: seg.hw, len: 0, extLen: 0, bed: [0.6, 0.34, 0.31], lun: [0.86, 0.74, 0.7], memo: {}, tr: [TIP_T0 + (first + 0.5) * TIP_DT, TIP_T0 + (last + 0.5) * TIP_DT] };
+  const tp: TipProfile = { E, kL, hw: seg.hw, len: 0, extLen: 0, bed: [0.6, 0.34, 0.31], lun: [0.86, 0.74, 0.7], memo: {} };
   tp.len = tipE(tp, 0); tp.extLen = Math.max(0, tp.len - kL);
   // giường móng: màu da quanh chân / 2 bên móng (không lấy mép đầu móng — ngoài đó là nền ảnh), ngả hồng + hơi trong
   if (under?.size) {
@@ -2111,7 +2109,7 @@ function skittleTip(c2: RGB, baseL: number, pos: number, n: number): RGB {
 
 /** Kiểu đường French của 1 móng: 0 = đường cười (giữa mảnh, 2 bên ôm sâu xuống — "smile"), 1 = chữ V, 2 = lệch 1 bên,
  *  3 = sóng (wv: sâu, biên độ, tần số, pha — song song mép tự do thật, gợn sóng NỐI TIẾP qua các móng như 1 con sóng),
- *  4 = dải SONG SONG mép tự do (yc = bề dày vuông góc, đều nhau cả vòng mép — French micro). */
+ *  4 = dải micro ôm mép tự do thật (yc = bề dày vuông góc ở chóp, vuốt mảnh về 2 bên — xem microProfile). */
 interface FrStyle { kind: 0 | 1 | 2 | 3 | 4; yc: number; ysL: number; ysR: number; p: number; sg: number; bow: number; wv?: [number, number, number, number] }
 /** `inSet`: móng nối (echo / thread) của 1 bộ phối — chrome French ở đó chỉ là viền micro; cả bộ chrome French thì đầu
  *  gương đủ sâu (~1/5 móng) như thợ làm. `dark`: đầu màu rất tối (L* < 30). */
@@ -2130,9 +2128,9 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
   };
   let st: FrStyle;
   switch (pat) {
-    // micro thật = 1–2mm ≈ 7.5% dài móng (≥ 5.5px ở ảnh 1024), DẢI ĐỀU song song mép tự do: đường cười cũ mảnh 3px chỉ
-    // còn 1 vệt tối dưới mép (ảnh nhỏ đọc thành ghét bẩn dưới móng) và trên móng hạnh nhân co lại thành 1 tam giác ở
-    // chóp. Đầu màu rất tối dày thêm 15% (vệt tối mảnh sát mép tự do = bóng / ghét móng)
+    // micro thật = 1–1.5mm ≈ 5.5% dài móng (≥ 6px ở ảnh 1024, ≥ 0.15 hw) ở chóp, ôm mép tự do thật rồi vuốt nhọn về 2
+    // bên (microProfile): đường cười cũ mảnh 3px chỉ còn 1 vệt tối dưới mép (ảnh nhỏ đọc thành ghét bẩn dưới móng) và trên
+    // móng hạnh nhân co lại thành 1 tam giác ở chóp. Đầu màu rất tối dày thêm 8% (vệt tối mảnh sát mép = bóng / ghét móng)
     case "fr-micro": st = { kind: 4, yc: Math.max(0.15, 6 * px, 0.055 * len) * (dark ? 1.08 : 1), ysL: 0, ysR: 0, p: 1, sg: 1, bow: 0 }; break;
     case "chromefrench": st = inSet ? smile(Math.max(0.22, 3.6 * px, 0.07 * len), 1.3) : smile(Math.max(0.36, 0.14 * len), 1.35); break;
     case "fr-deep": case "fr-santa": case "fr-candycane": st = smile(Math.max(0.5, 0.2 * len), 1.4); break;

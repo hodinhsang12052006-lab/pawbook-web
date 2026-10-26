@@ -1959,19 +1959,24 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
 
 /**
  * NƠ 3D kiểu coquette (charm nơ kim loại): 2 QUAI nơ hình giọt tam giác bo tròn (hẹp ở nút, phồng ra ngoài, hếch nhẹ lên)
- * có NẾP GẤP dọc giữa quai (đọc ra dải ruy băng gập, không phải cánh quạt / con chuồn chuồn) · NÚT giữa hình chữ nhật bo
- * góc cao nhất · 2 ĐUÔI thon loe dần chạy xuống 2 bên, đầu đuôi cắt khía chữ V (đuôi cá). Trả độ cao 0…1 + độ phủ khử răng
- * cưa (aa = 1 điểm ảnh theo đơn vị hình). Hình rộng ~2 (x −1…1).
+ * PHỒNG như gối (lát cắt elip, không mặt phẳng) với LÒNG QUAI lõm hình giọt nhọn về phía nút — thấy mặt trong dải ruy
+ * băng gập, đọc ra quai nơ (quai đặc + 1 khe giữa từng đọc ra hạt cà phê / con mắt) · NÚT giữa chữ nhật bo góc phồng cao
+ * nhất có 2 nếp quấn dọc · 2 ĐUÔI thon loe dần chạy xuống 2 bên, đầu đuôi cắt khía chữ V (đuôi cá). Trả độ cao 0…1 + độ
+ * phủ khử răng cưa (aa = 1 điểm ảnh theo đơn vị hình). Hình rộng ~2 (x −1…1).
  */
 function bowShape(x: number, y: number, aa = 0.03): { h: number; cov: number } {
   const ax = Math.abs(x), X = ax / 0.94, Y = y / 0.94;
   // quai: trục từ nút (0.07, 0.07) hếch lên 0.22 rad; giọt = đầu tròn bầu dục + cổ thon về nút
   const ca = Math.cos(0.22), sa = Math.sin(0.22), p = (X - 0.07) * ca + (Y - 0.07) * sa, q = -(X - 0.07) * sa + (Y - 0.07) * ca;
   const loop = smin(ellSD(p, q, 0.6, 0.02, 0.42, 0.37), segDist(p, q, 0, 0, 0.6, 0) - 0.08, 0.24);
-  let hL = loop < 0 ? 0.82 * Math.sqrt(Math.min(1, -loop / 0.3)) : 0;
-  hL *= 1 - 0.45 * Math.exp(-((q / 0.055) ** 2)) * smooth(0.12, 0.3, p) * (1 - smooth(0.62, 0.9, p)); // nếp gấp giữa quai
-  // nút: chữ nhật bo góc
-  const knot = Math.max(X - 0.13, Math.abs(Y - 0.05) - 0.17) - 0.045, hK = knot < 0 ? Math.sqrt(Math.min(1, -knot / 0.09)) : 0;
+  const mL = Math.min(1, Math.max(0, -loop) / 0.24);
+  let hL = loop < 0 ? 0.78 * Math.sqrt(mL * (2 - mL)) : 0;
+  // lòng quai: hốc giọt lệch về phía ngoài quai, đuôi nhọn chạy về nút; vách hốc dốc vừa (thấy vành sáng / tối)
+  const hole = smin(ellSD(p, q, 0.6, 0.03, 0.2, 0.13), segDist(p, q, 0.24, 0.0, 0.6, 0.03) - 0.02, 0.14);
+  if (hole < 0.07) hL *= 0.3 + 0.7 * smooth(-0.05, 0.07, hole);
+  // nút: chữ nhật bo góc phồng (cao nhất) + 2 nếp quấn dọc mờ
+  const knot = Math.max(X - 0.13, Math.abs(Y - 0.05) - 0.17) - 0.045, mK = Math.min(1, Math.max(0, -knot) / 0.16);
+  const hK = knot < 0 ? Math.sqrt(mK * (2 - mK)) * (1 - 0.08 * Math.exp(-(((X - 0.09) / 0.035) ** 2))) : 0;
   // đuôi: từ dưới nút chéo xuống, loe dần, đầu khía chữ V
   const tx = 0.38, ty = -0.95, tl = Math.hypot(tx - 0.04, ty + 0.06), vx = (tx - 0.04) / tl, vy = (ty + 0.06) / tl;
   const s = ((X - 0.04) * vx + (Y + 0.06) * vy) / tl, tq = -(X - 0.04) * vy + (Y + 0.06) * vx, w = 0.1 + 0.08 * Math.max(0, s);
@@ -3434,10 +3439,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             r *= 1 - sh; g *= 1 - sh; b *= 1 - sh;
           }
           if (here.cov <= 0) continue;
-          const kN = facet ? 0.3 : 0.55; // mặt cắt nghiêng ~40° (dốc hơn thì mặt khuất đèn đen kịt)
+          const kN = facet ? 0.3 : bd.kind === "bow" ? 0.36 : 0.55; // mặt cắt nghiêng ~40° (dốc hơn thì mặt khuất đèn đen kịt); nơ phồng thoải hơn → thân quai soi trần sáng (vàng bóng), không soi phòng tối
           // sao cắt mặt: sống cánh là ranh SẮC giữa mặt sáng / mặt tối → lấy trung bình 4 điểm dưới-điểm-ảnh (±0.3px), không
           // thì sống cánh răng cưa thành viền lởm chởm
           const ns = facet || bd.kind === "bow" ? 4 : 1, so = 0.3 / Math.max(1, R);
+          // nơ: thêm 1 thuỳ bóng RỘNG màu kim loại trên mặt phồng quay về đèn — quai nơ vàng bóng cao (chỉ điểm bóng gắt thì
+          // thân quai phồng soi phòng tối thành vàng ô liu xỉn)
+          const f0b = bd.kind === "bow" ? metalF0(metal) : null;
           let mr = 0, mg = 0, mb = 0;
           for (let q = 0; q < ns; q++) {
             const sx = ns > 1 ? (q & 1 ? so : -so) : 0, sy = ns > 1 ? (q & 2 ? so : -so) : 0, e = 0.03;
@@ -3445,8 +3453,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             let nx = -hx * kN, ny = -hy * kN, nz2 = 1;
             const nn = Math.hypot(nx, ny, nz2); nx /= nn; ny /= nn; nz2 /= nn;
             const ndh2 = Math.max(0, nx * H3[0] + ny * H3[1] + nz2 * H3[2]);
-            const mc = sphereMetal(metal, nx, ny, nz2, L3, side), sp = 1.2 * Math.pow(ndh2, 120);
-            mr += (mc[0] + sp) / ns; mg += (mc[1] + sp) / ns; mb += (mc[2] + sp) / ns;
+            const mc = sphereMetal(metal, nx, ny, nz2, L3, side), sp = 1.2 * Math.pow(ndh2, 120), sw = f0b ? 0.42 * Math.pow(ndh2, 14) : 0;
+            mr += (mc[0] + sp + (f0b ? sw * f0b[0] : 0)) / ns; mg += (mc[1] + sp + (f0b ? sw * f0b[1] : 0)) / ns; mb += (mc[2] + sp + (f0b ? sw * f0b[2] : 0)) / ns;
           }
           r += (mr - r) * here.cov; g += (mg - g) * here.cov; b += (mb - b) * here.cov;
           c3d = Math.max(c3d, here.cov);

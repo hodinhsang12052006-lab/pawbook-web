@@ -2311,6 +2311,20 @@ function shellAt(x: number, y: number, seed: number): RGB {
   c = mix3(c, [0.05, 0.016, 0.004], 0.9 * smooth(0.55, 0.66, n2)); // đốm nâu sẫm
   return mix3(c, [0.012, 0.006, 0.003], 0.85 * smooth(0.63, 0.69, n2) * smooth(0.4, 0.6, n3)); // lõi gần đen
 }
+/**
+ * LÁ KIM LOẠI NHĂN (foil vàng, chỉ vàng vân đá): độ cao nếp nhăn 3 tầng (nếp to → vụn li ti) → pháp tuyến nghiêng khác
+ * nhau từng mảng nhỏ (+ độ cong ngang của móng) → soi bằng sphereMetal: chỗ loá trắng ấm, chỗ vàng sẫm như giấy foil ấn
+ * tay. Mảnh foil PHẲNG soi gương 1 hướng (metalShade) từng ra cả mảng ô liu / trắng bệch như gạch vỡ. x, y theo hw.
+ */
+const LEAF = { x: 0, y: 0, z: 1 };
+const crinkH = (x: number, y: number, sd: number) => 0.55 * vnoise(x * 5, y * 5, sd) + 0.3 * vnoise(x * 11 + 3, y * 11, sd + 1) + 0.15 * vnoise(x * 23, y * 23 + 7, sd + 2);
+function leafN(x: number, y: number, seed: number, k: number, curve: number): typeof LEAF {
+  const e = 0.012, h0 = crinkH(x, y, seed);
+  const nx = (-(crinkH(x + e, y, seed) - h0) / e) * k + 0.8 * curve, ny = (-(crinkH(x, y + e, seed) - h0) / e) * k;
+  const n = Math.hypot(nx, ny, 1);
+  LEAF.x = nx / n; LEAF.y = ny / n; LEAF.z = 1 / n;
+  return LEAF;
+}
 /** Bố cục hoa khô MILK BATH của 1 móng (hw, y tính từ chân móng): 2–3 hoa ép 0.26–0.42 hw (cho phép lẹm mép), 2 lá, 2–4
  *  vụn vàng. kind 0 hoa · 1 lá · 2 vụn vàng; col: 0 = màu c2 · 1… = bảng màu hoa khô thật. */
 interface Pressed { t: number; y: number; r: number; rot: number; kind: 0 | 1 | 2; col: number; n: number }
@@ -2531,6 +2545,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       let tipChrome = 0; // phần đầu móng tráng gương (chrome French)
       let metalMix = 0, metalQ = 0, metalMirror = false; // metalMirror: mảnh foil phẳng → phản chiếu gương; còn lại: sợi / dải KIM LOẠI mảnh (viền vàng French đôi, gân vàng vân đá): vị trí ngang trên sợi, tô sau bước ánh sáng
       let auraM = 0, metalFloor = 0, topArt = 0; // topArt: hoạ tiết vẽ ĐÈ lên lớp mắt mèo / velvet (không nhận ánh nhũ) · auraM: độ phủ lõi aura (ánh ngọc trai né lõi) · metalFloor: sàn độ sáng kim loại gương (foil vàng không ra ô liu)
+      let metalSph = false, mNx = 0, mNy = 0, mNz = 1; // lá kim loại NHĂN (foil, chỉ vàng vân đá): soi theo pháp tuyến nếp nhăn (leafN)
       if (onNail) {
         switch (pat) {
           case "ombre": base = mix3(c1, c2, smooth(0.25, 0.92, u)); break;
@@ -3144,35 +3159,77 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "foil": {
-            // GIẤY FOIL: mảnh kim loại nhăn rải theo 1 vệt chéo, khe hở mảnh giữa các mảnh, MỖI MẢNH nghiêng khác
-            // nhau → bắt sáng khác nhau (tô sau bước ánh sáng, chế độ gương)
-            const cell = 0.26 * seg.hw, gx = (t * seg.hw) / cell, gy = (s * seg.L) / cell;
-            const ix = Math.floor(gx), iy = Math.floor(gy);
-            let f1 = 9, f2 = 9, ci1 = 0, cj1 = 0;
-            for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
-              const ci = ix + i2, cj = iy + j2;
-              const d = Math.hypot(gx - (ci + hash2(ci, cj, seedN + 7)), gy - (cj + hash2(ci, cj, seedN + 8)));
-              if (d < f1) { f2 = f1; f1 = d; ci1 = ci; cj1 = cj; } else if (d < f2) f2 = d;
+            // LÁ VÀNG (foil) như ấn vụn foil thật: mảng lá NHĂN, mép RÁCH không đều (ngưỡng nhiễu warp + nhiễu tần cao ở mép —
+            // không phải ô Voronoi có khe đều như gạch vỡ / sỏi), mảng to + mảnh nhỏ + vụn li ti (≥ 2.8px) dồn thành 1 vệt chéo
+            // đặc ở góc chân móng, thưa dần về phía đầu móng; mặt lá nhăn (leafN) → chỗ loá trắng ấm, chỗ vàng sẫm, có sàn
+            // vàng ấm (không ra ô liu / kaki, không mảnh trắng bệch). Hero: vệt dài · echo: cụm nhỏ quanh góc đầu móng.
+            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), Ln = Math.max(1.6, tipP.len), cs = (pN + (hash2(look.seed, 4, 57) > 0.5 ? 1 : 0)) % 2 ? 1 : -1;
+            const ec = roleN === "echo";
+            const x0 = ec ? 0.5 * cs : -0.8 * cs, y0 = ec ? Ln * 0.85 : 0.2, x1 = ec ? -0.15 * cs : 0.5 * cs, y1 = ec ? Ln * 0.45 : Ln * 0.95;
+            const vx = x1 - x0, vy = y1 - y0, vl2 = vx * vx + vy * vy, qd = ((t - x0) * vx + (Yh - y0) * vy) / vl2;
+            const dd = Math.abs((t - x0) * vy - (Yh - y0) * vx) / Math.sqrt(vl2), wD = (ec ? 0.34 : 0.5) * (1 - 0.45 * smooth(0, 1, qd));
+            const rng = smooth(-0.3, 0.02, qd) * (1 - smooth(0.82, 1.2, qd)), dens = Math.exp(-((dd / wD) ** 2)) * rng;
+            const wx = t * 2.4 + 0.9 * fbm(t * 1.5 + 2, Yh * 1.5, seedN + 51), wy = Yh * 2.4 + 0.9 * fbm(t * 1.5, Yh * 1.5 + 4, seedN + 52);
+            const n = fbm(wx, wy, seedN + 53) + 0.08 * (vnoise(t * 19, Yh * 19, seedN + 54) - 0.5) + 0.62 * dens, eN = 1.8 * p1;
+            let lf = smooth(0.95 - eN, 0.95 + eN, n) * smooth(0.08, 0.22, dens);
+            if (lf < 1) {
+              // vụn lá li ti rải quanh vệt (rộng hơn vệt ~1.8×): mảnh méo 0.02–0.05 hw, tối thiểu ~1.4px bán kính
+              const d2 = Math.exp(-((dd / (1.8 * wD)) ** 2)) * rng, cl = 0.15, gx = t / cl, gy = Yh / cl, ix = Math.floor(gx), iy = Math.floor(gy);
+              for (let j2 = -1; j2 <= 1; j2++) for (let i2 = -1; i2 <= 1; i2++) {
+                const ci = ix + i2, cj = iy + j2;
+                if (hash2(ci, cj, seedN + 56) > 0.5 * d2) continue;
+                const dx = (gx - ci - 0.5 - 0.7 * (hash2(ci, cj, seedN + 57) - 0.5)) * cl, dy = (gy - cj - 0.5 - 0.7 * (hash2(ci, cj, seedN + 58) - 0.5)) * cl;
+                const r = Math.max(1.4 * p1, 0.02 + 0.03 * hash2(ci, cj, seedN + 59)), an = Math.atan2(dy, dx);
+                const dq = Math.hypot(dx, dy) - r * (1 + 0.3 * Math.sin(3 * an + 6.28 * hash2(ci, cj, seedN + 60)) + 0.12 * Math.sin(5 * an));
+                lf = Math.max(lf, 1 - smooth(-0.7 * p1, 0.7 * p1, dq));
+              }
             }
-            const band = Math.exp(-((((u - 0.4) + 0.45 * t) / 0.2) ** 2));
-            if (hash2(ci1, cj1, seedN + 9) < 0.03 + 0.72 * band) {
-              const gapM = smooth(0.04, 0.1, f2 - f1); // khe giữa 2 mảnh
-              metalMix = 0.96 * gapM; metalMirror = true;
-              metalQ = (hash2(ci1, cj1, seedN + 10) - 0.5) * 1.7 + 0.25 * (f2 - f1);
+            if (lf > 0) {
+              const L = leafN(t, Yh, seedN + 61, 0.05, Math.max(-1, Math.min(1, tq)));
+              metalMix = 0.97 * lf; metalSph = true; mNx = L.x; mNy = L.y; mNz = L.z; metalFloor = 0.48;
             }
             break;
           }
           case "marble": {
-            // vân đá: nền trắng sữa, gân xám mảnh uốn lượn + 1 gân kim loại
-            // vân đá: gân xám MỀM như khói (đậm nhạt theo nhiễu), thêm 1 gân kim loại mảnh
-            const v = fbm(u * 2.2 + seedN, t * 1.8, seedN + 9), v2 = fbm(u * 5 + 2, t * 4, seedN + 4);
-            const ln = Math.abs(Math.sin(5.5 * (u * 0.8 + t * 0.55) + 6 * v));
-            const vein = Math.exp(-((ln / 0.16) ** 2)) * (0.45 + 0.55 * v2) * smooth(0.3, 0.55, v + 0.15);
-            const smoke = smooth(0.55, 0.85, fbm(u * 1.6 + 5, t * 1.4, seedN + 2)) * 0.25;
-            const ln2 = Math.abs(Math.sin(4.5 * (u * 0.6 - t * 0.7) + 5 * v + 1.7));
-            base = mix3(c1, [c2[0] * 0.75, c2[1] * 0.76, c2[2] * 0.8], Math.min(1, vein * 0.75 + smoke));
-            metalMix = Math.exp(-((ln2 / 0.03) ** 2)) * 0.95 * smooth(0.5, 0.68, v);
-            metalQ = 0.6 * (v - 0.5);
+            // VÂN ĐÁ như thợ làm (gel loang / blooming): nền c1 có CHIỀU SÂU — mây c2 mờ trong suốt (fbm rộng, phủ ≤ ~0.36) +
+            // vùng sâu tối nhẹ; 1 GÂN CHÍNH chéo móng uốn mềm, bề dày đổi dọc gân (lõi mảnh sắc + quầng loang mờ như gel nở),
+            // có đoạn nhạt chìm vào nền; 1 gân nhánh mảnh nhạt dần rồi tắt; 1 CHỈ VÀNG lá ~2.5–4px bám sát 1 bên gân chính, đứt
+            // quãng, mặt lá nhăn bắt sáng (leafN + sàn vàng ấm). Bản cũ: gân trắng đều nét như tia sét / kính nứt, chỉ vàng ~1px
+            // nhạt, ảnh 1024 cũng không thấy.
+            const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), Ln = Math.max(1.6, tipP.len), mir = pN % 2 ? -1 : 1, aa = 0.7 * p1;
+            const lightB = lum(c1) > 0.35;
+            // uốn mềm (nhiễu tần thấp — tần cao làm gân gãy khúc như tia sét)
+            const wx = t + 0.34 * (vnoise(t * 0.9 + 3, Yh * 0.9, seedN + 1) - 0.5) + 0.1 * (vnoise(t * 2.1, Yh * 2.1 + 2, seedN + 11) - 0.5);
+            const wy = Yh + 0.34 * (vnoise(t * 0.9, Yh * 0.9 + 5, seedN + 2) - 0.5) + 0.1 * (vnoise(t * 2.1 + 4, Yh * 2.1, seedN + 12) - 0.5);
+            const cl = smooth(0.42, 0.78, fbm(wx * 0.9 + 7, wy * 0.9, seedN + 3)), dp = smooth(0.48, 0.8, fbm(wx * 1.1 + 1, wy * 1.1 + 9, seedN + 4));
+            base = mix3(sc3(c1, 1 - (lightB ? 0.05 : 0.2) * dp), c2, (lightB ? 0.26 : 0.34) * cl * (1 - 0.5 * dp));
+            // gân chính: đường chéo qua giữa móng, uốn sin nhẹ + nhiễu warp
+            const ang = mir * (0.55 + 0.35 * hash2(look.seed, pN, 71)), sa = Math.sin(ang), ca = Math.cos(ang);
+            const cx0 = 0.2 * (hash2(look.seed, pN, 72) - 0.5), cy0 = Ln * (0.45 + 0.15 * hash2(look.seed, pN, 73));
+            const al = (wx - cx0) * sa + (wy - cy0) * ca, dv = (wx - cx0) * ca - (wy - cy0) * sa + 0.1 * Math.sin(3.1 * al + 6.28 * hash2(look.seed, pN, 74));
+            const wv = Math.max(0.65 * p1, 0.01 + 0.03 * vnoise(al * 2.2, 1, seedN + 5)), fv = 0.3 + 0.7 * smooth(0.22, 0.55, vnoise(al * 1.3 + 3, 2, seedN + 6));
+            const core = (1 - smooth(wv - aa, wv + aa, Math.abs(dv))) * fv, bloom = 0.45 * Math.exp(-((dv / (0.06 + 0.09 * vnoise(al * 1.7, 4, seedN + 7))) ** 2)) * (0.4 + 0.6 * fv);
+            // gân nhánh: tách từ gân chính về 1 phía, mảnh dần rồi tắt
+            const ang2 = ang + mir * 0.75, s2 = Math.sin(ang2), c2a = Math.cos(ang2), bx = cx0 + sa * 0.35, by = cy0 + ca * 0.35;
+            const al2 = (wx - bx) * s2 + (wy - by) * c2a, dv2 = (wx - bx) * c2a - (wy - by) * s2 + 0.06 * Math.sin(4.3 * al2 + 1.1);
+            const f2 = smooth(-0.02, 0.08, al2) * (1 - smooth(0.25, 0.8, al2)), wv2 = Math.max(0.55 * p1, 0.6 * wv);
+            const br = (1 - smooth(wv2 - aa, wv2 + aa, Math.abs(dv2))) * f2 * 0.85 + 0.2 * Math.exp(-((dv2 / 0.05) ** 2)) * f2;
+            // gân phụ mảnh phía bên kia móng, mờ (gân đá thật là 1 mạng, không phải 1 nét đơn)
+            const og3 = -mir * (0.45 + 0.15 * hash2(look.seed, pN, 75)), dv3 = dv - og3 + 0.07 * Math.sin(5.2 * al + 2.3);
+            const f3 = smooth(-0.5 * Ln, -0.1 * Ln, al) * (1 - smooth(0.15 * Ln, 0.45 * Ln, al)) * smooth(0.3, 0.6, vnoise(al * 2 + 7, 8, seedN + 13));
+            const hr = (1 - smooth(0.55 * p1 - aa, 0.55 * p1 + aa + 0.004, Math.abs(dv3))) * f3 * 0.55 + 0.16 * Math.exp(-((dv3 / 0.05) ** 2)) * f3;
+            // nền sáng (trắng sữa / trắng mây): gân xám pha nền (xám đặc sậm nét như vết nứt); nền tối: gân trắng sữa
+            const vc: RGB = lightB ? mix3(c2, c1, 0.28) : c2;
+            base = mix3(base, vc, Math.min(1, bloom * (lightB ? 0.95 : 1) + hr * 0.4));
+            base = mix3(base, vc, Math.min(1, Math.max(core, br, hr)));
+            // chỉ vàng lá: song song gân chính, lệch 1 bên, đứt quãng; bề dày ~2.5–4px
+            const og = mir * (wv + Math.max(1.6 * p1, 0.045)), wg = Math.max(1.3 * p1, 0.034) * (0.75 + 0.35 * vnoise(al * 2.6 + 9, 5, seedN + 8));
+            const gate = smooth(0.32, 0.42, vnoise(al * 1.15 + 5, 6, seedN + 9)) * (1 - smooth(0.55 * Ln, 0.75 * Ln, Math.abs(al)));
+            const gm = (1 - smooth(wg - aa, wg + aa, Math.abs(dv - og))) * gate;
+            if (gm > 0) {
+              const L = leafN(t, Yh, seedN + 10, 0.035, Math.max(-1, Math.min(1, tq)));
+              metalMix = 0.97 * gm; metalSph = true; mNx = L.x; mNy = L.y; mNz = L.z; metalFloor = 0.5;
+            }
             break;
           }
         }
@@ -3225,7 +3282,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         r += (tc[0] - r) * tipChrome; g += (tc[1] - g) * tipChrome; b += (tc[2] - b) * tipChrome;
       }
       if (metalMix > 0) {
-        let mc = metalMirror ? metalShade(metal, metalQ, u * 3 + metalQ * 2, shade, side) : wireShade(metal, metalQ, shade, side);
+        let mc = metalSph ? sphereMetal(metal, mNx, mNy, mNz, L3, side) : metalMirror ? metalShade(metal, metalQ, u * 3 + metalQ * 2, shade, side) : wireShade(metal, metalQ, shade, side);
         if (metalFloor > 0) {
           // sàn độ sáng: lá vàng mỏng luôn hắt ánh vàng ấm (nếp nhăn tán sáng) — phản chiếu "phòng tối" của gương phẳng ra ô
           // liu / kaki như mảnh gạch vỡ

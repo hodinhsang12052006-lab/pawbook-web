@@ -2680,18 +2680,20 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "blush": {
-            // MÁ HỒNG (blush nails): nude trong + 1 quầng má hồng c2 loang mềm giữa móng (tán bằng mút) — màu quầng ép đậm
-            // hơn nền ≥ 0.15 OKLab (hồng nhạt trên hồng sữa thì không thấy quầng). Hồng nhạt ép đậm trong OKLab ngả TÍM cà
-            // (b < 0) → quầng nhìn như vết bầm: nắn sắc về hồng ấm / san hô (b ≥ 0.2a)
-            base = mix3(nailBed(tipP, seg, s, t, s * tipP.kL, extW, img.data, idx), c1, 0.6);
+            // MÁ HỒNG (blush nails kiểu Hàn): nền sữa TRONG (~50% — thấy giường móng hồng + mép tự do qua lớp sữa, không phải
+            // trắng phấn đặc) + 1 quầng ửng RỘNG rất mềm (σ ~0.52 ngang × 0.32 dọc, phủ ~60% mặt móng, lệch nhẹ về đầu móng),
+            // đỉnh ≤ 0.6, không có lõi — trộn trong OKLab, hồng lạnh nắn ấm nhẹ (b ≥ 0.12a — ấm hơn nữa thì hồng cánh sen ra san hô). Hồng ép đậm + quầng nhỏ cũ
+            // (σ 0.36 × 0.2, đỉnh 0.7 trên nền trắng đặc) nhìn như vết bầm / máu bầm dưới lớp bút xoá.
+            base = mix3(nailBed(tipP, seg, s, t, s * tipP.kL, extW, img.data, idx), c1, 0.5);
             let fc = tipP.memo.blush as RGB | undefined;
             if (!fc) {
-              const o2 = okOf(c2), kC = Math.min(1.6, Math.max(1, 0.09 / Math.max(0.01, Math.hypot(o2[1], o2[2]))));
-              const L = Math.min(o2[0], okOf(mix3(tipP.bed, c1, 0.6))[0] - 0.15), a = o2[1] * kC;
-              fc = tipP.memo.blush = fromOk([L, a, a > 0 ? Math.max(o2[2] * kC, 0.2 * a) : o2[2] * kC]);
+              const o2 = okOf(c2), kC = Math.min(1.4, Math.max(1, 0.09 / Math.max(0.01, Math.hypot(o2[1], o2[2])))), a = o2[1] * kC;
+              fc = tipP.memo.blush = fromOk([Math.min(0.8, o2[0] + 0.02), a, a > 0 ? Math.max(o2[2] * kC, 0.12 * a) : o2[2] * kC]);
             }
-            const cu = 0.5 + 0.06 * (hash2(seedN, 7, 9) - 0.5), ct = 0.1 * (hash2(seedN, 8, 9) - 0.5);
-            base = mix3(base, fc, 0.7 * Math.exp(-0.5 * (((t - ct) / 0.36) ** 2 + ((u - cu) / 0.2) ** 2)));
+            const cu = 0.55 + 0.06 * (hash2(seedN, 7, 9) - 0.5), ct = 0.1 * (hash2(seedN, 8, 9) - 0.5);
+            const gB = Math.exp(-0.5 * (((t - ct) / 0.52) ** 2 + ((u - cu) / 0.32) ** 2));
+            base = okMix(base, fc, 0.6 * gB);
+            auraM = 0.8 * gB; // chrome = lớp ngọc trai mỏng né quầng (như aura)
             break;
           }
           case "cleanmilky": {
@@ -3260,13 +3262,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         // thấy rõ ánh đổi sắc, không thì chỉ là móng trắng trơn (upcoming "Trắng sữa tráng gương")
         const k2 = (0.86 + 0.24 * smooth(-1, 1, shade)) * edge * cut;
         const th = 4.2 * t + 2.6 * u + 1.6 * shade;
-        // aura: đổi sắc nhẹ hơn (ánh vàng – xanh lục ở 2 mép trên nền trắng sữa nhìn như bệnh, lấn sắc quầng màu)
-        const ir = pat === "aura" ? 0.45 : 1;
+        // aura / má hồng: đổi sắc nhẹ hơn (ánh vàng – xanh lục ở 2 mép trên nền trắng sữa nhìn như bệnh, lấn sắc quầng màu)
+        const ir = pat === "aura" || pat === "blush" ? 0.45 : 1;
         r = r * k2 * (1 + 0.1 * ir * Math.sin(th)); g = g * k2 * (1 + 0.07 * ir * Math.sin(th + 2.3)); b = b * k2 * (1 + 0.12 * ir * Math.sin(th + 4.4));
         const ph2 = 2.6 * t * side + 2 * u + 0.8 * shade;
         const wa = Math.max(0, Math.cos(ph2)), wb = Math.max(0, Math.cos(ph2 - 2.094)), wc = Math.max(0, Math.cos(ph2 + 2.094)), ws = wa + wb + wc || 1;
         // colorchrome glazed: ánh theo màu c2 (ngọc trai / champagne); còn lại: hồng · tím nhạt · vàng kim
-        const pearl: RGB = pat === "colorchrome" ? mix3(c2, [1, 1, 1], 0.25) : pat === "aura" ? [1, 0.86, 0.93] // aura: ngọc trai hồng
+        const pearl: RGB = pat === "colorchrome" ? mix3(c2, [1, 1, 1], 0.25) : pat === "aura" || pat === "blush" ? [1, 0.86, 0.93] // aura / má hồng: ngọc trai hồng
           : [(wa * 1 + wb * 0.84 + wc * 1) / ws, (wa * 0.76 + wb * 0.79 + wc * 0.88) / ws, (wa * 0.86 + wb * 1 + wc * 0.6) / ws];
         // aura: ánh ngọc trai chỉ là lớp tráng mỏng trên nền sáng — né lõi màu (phủ lên lõi đỏ thì đỏ cherry bạc thành hồng)
         const sheen = 0.38 * Math.exp(-(((t + 0.1) / 0.45) ** 2)) * smooth(0.06, 0.32, u) * (1 - smooth(0.8, 1, u)) * (1 - 0.85 * auraM);

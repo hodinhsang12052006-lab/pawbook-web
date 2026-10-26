@@ -2214,28 +2214,32 @@ function microProfile(seg: NailSeg, tp: TipProfile, wHw: number): MicroProf {
   while (l >= 0 && rE[l] <= 0) l--;
   if (f < 0) { rE.fill(1); f = 0; l = MP_N - 1; }
   for (let b = 0; b < MP_N; b++) if (rE[b] <= 0) { let q = 1; while (!(rE[b - q] > 0) && !(rE[b + q] > 0)) q++; rE[b] = b < f ? rE[f] : b > l ? rE[l] : Math.max(rE[b - q] ?? 0, rE[b + q] ?? 0); }
-  const sm = (a: Float32Array, n: number) => { for (let it = 0; it < n; it++) { const c = Float32Array.from(a); for (let b = 1; b < MP_N - 1; b++) a[b] = (c[b - 1] + 2 * c[b] + c[b + 1]) / 4; } };
-  sm(rE, 2);
-  const w = new Float32Array(MP_N), kE = new Float32Array(MP_N), rI = new Float32Array(MP_N), wr = new Float32Array(MP_N), tap = new Float32Array(MP_N);
+  // Gauss theo tia (σ tính bằng số tia, ô ngoài 2 đầu lấy ô cuối)
+  const gs = (a: Float32Array, sg: number) => {
+    const R = Math.ceil(3 * sg), o = new Float32Array(MP_N);
+    for (let b = 0; b < MP_N; b++) { let s = 0, z = 0; for (let j = -R; j <= R; j++) { const g = Math.exp(-(j * j) / (2 * sg * sg)); s += g * a[Math.max(0, Math.min(MP_N - 1, b + j))]; z += g; } o[b] = s / z; }
+    return o;
+  };
+  const rEs = gs(rE, 1);
+  // hướng mép (đổi bề dày vuông góc → theo tia) + chỗ vuốt lấy theo mép mượt hơn (σ ≈ 4°): góc móng vuông là 1 chỗ gãy
+  // gắt trên đường cực — đạo hàm từng tia nhảy bậc → bề dày dải giật thành nấc / móc nhỏ ở 2 góc
+  const rEd = gs(rE, 2.5), w = new Float32Array(MP_N), kE = new Float32Array(MP_N), rI = new Float32Array(MP_N), wr = new Float32Array(MP_N), tap = new Float32Array(MP_N);
   for (let b = 0; b < MP_N; b++) {
-    const th = MP_T0 + (b + 0.5) * MP_DT, ye = th < 0 ? yL : yR, Ye = yc + rE[b] * Math.cos(th);
+    const th = MP_T0 + (b + 0.5) * MP_DT, ye = th < 0 ? yL : yR, Ye = yc + rEd[b] * Math.cos(th);
     // vuốt dải trên CẢ đoạn mép tự do: dày ở chóp, mảnh dần về 2 bên thành vầng trăng khuyết (đường cười micro thật —
     // vuốt ngắn thì đầu dải cụt xiên như bị cắt); móng vuông cạnh đầu phẳng (mép ngang ~E0) vẫn đủ dày, chỉ vuốt qua góc
-    const sp = 0.95 * (E0 - ye);
-    tap[b] = Math.abs(th) < 1.55 ? smooth(ye, ye + sp, Ye) : 0;
-    const dr = (rE[Math.min(MP_N - 1, b + 1)] - rE[Math.max(0, b - 1)]) / (2 * MP_DT);
-    kE[b] = 1 / Math.sqrt(1 + (dr / Math.max(0.05, rE[b])) ** 2); // bề dày vuông góc mép → bề dày theo tia
-    wr[b] = wHw / kE[b]; rI[b] = rE[b] - wr[b];
+    tap[b] = Math.abs(th) < 1.55 ? smooth(ye, ye + 0.95 * (E0 - ye), Ye) : 0;
+    const dr = (rEd[Math.min(MP_N - 1, b + 1)] - rEd[Math.max(0, b - 1)]) / (2 * MP_DT);
+    kE[b] = 1 / Math.sqrt(1 + (dr / Math.max(0.05, rEd[b])) ** 2);
+    wr[b] = wHw / kE[b]; rI[b] = rEs[b] - wr[b]; rE[b] = rEs[b];
   }
-  // đường trong của dải ĐỦ DÀY làm mượt riêng (Gauss σ ≈ 10°): bề dày theo tia sau mượt giữ trong 0.55–1.5 bề dày gốc
-  // (góc nhô của mặt nạ → dải dày hơn chút, như nét cọ thật), rồi mới nhân hệ số vuốt (2 đầu nhọn, tiếp tuyến với mép)
-  const sg = 0.17 / MP_DT, R = Math.ceil(3 * sg), src = Float32Array.from(rI);
-  for (let b = 0; b < MP_N; b++) {
-    let a = 0, z = 0;
-    for (let j = -R; j <= R; j++) { const q = Math.max(0, Math.min(MP_N - 1, b + j)), g = Math.exp(-(j * j) / (2 * sg * sg)); a += g * src[q]; z += g; }
-    const th = Math.min(1.5 * wr[b], Math.max(0.55 * wr[b], rE[b] - a / z)) * tap[b];
-    rI[b] = rE[b] - th; w[b] = th * kE[b];
-  }
+  // đường trong của dải ĐỦ DÀY làm mượt riêng (Gauss σ ≈ 8°): bề dày theo tia sau mượt giữ trong 0.6–1.25 bề dày gốc
+  // (góc nhô của mặt nạ → dải dày hơn chút như nét cọ thật, nhưng không phình thành cục ở 2 góc móng coffin / vuông), rồi
+  // mới nhân hệ số vuốt (2 đầu nhọn, tiếp tuyến với mép)
+  const rIs = gs(rI, 0.14 / MP_DT), thk = new Float32Array(MP_N);
+  for (let b = 0; b < MP_N; b++) thk[b] = Math.min(1.25 * wr[b], Math.max(0.6 * wr[b], rE[b] - rIs[b])) * tap[b];
+  const thS = gs(thk, 1.5);
+  for (let b = 0; b < MP_N; b++) { rI[b] = rE[b] - thS[b]; w[b] = thS[b] * kE[b]; }
   return { yc, rE, rI, w, kE };
 }
 /**
@@ -2642,7 +2646,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // nối của bộ: đúng c1 đặc như móng bên cạnh); c2 sáng hơn (trăng trắng sữa trên đen / ngọc bích) → giữ thân c1.
             // Trăng ~20% dài móng (≤ 0.8 hw) — trăng 1/3 móng nhìn như 1 cái chụp ở chân móng.
             const Yh = s * tipP.kL, aa = 0.6 / Math.max(8, seg.hw), inSet = ov?.role === "echo" || ov?.role === "thread";
-            const sheer1 = inSet ? c1 : mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), c1, sheerDens(c1));
+            // trăng nền trắng sữa ("half-moon … nền trắng sữa"): sữa đặc ≥ 0.86 — 0.6 thì trăng ra hồng da, đọc như móng trần
+            const sheer1 = inSet ? c1 : mix3(nailBed(tipP, seg, s, t, Yh, extW, img.data, idx), c1, sheerDens(c1, true));
             const neg = lum(c2) < lum(c1), body = neg ? c2 : sheer1, moon = neg ? sheer1 : c2;
             const ra = 1.12, rb = Math.max(0.55, Math.min(0.8, 0.21 * tipP.len)), qx = t / ra, qy = Yh / rb, q = Math.hypot(qx, qy);
             const d = (1 - q) / Math.max(0.3, Math.hypot(qx / ra, qy / rb) / Math.max(1e-3, q)); // > 0 trong trăng (hw)

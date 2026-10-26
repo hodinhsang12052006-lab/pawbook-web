@@ -462,7 +462,8 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const wowOk = sets.every((st) => st.filter((l) => METALS.has(l.pattern) && l.finish !== "cateye").length === 1 && st.filter((l) => THREE_D.has(l.pattern)).length === 1);
   const kinds3d = new Set(sets.flatMap((st) => st.filter((l) => THREE_D.has(l.pattern)).map((l) => l.pattern)));
   ok("E23", `Trend bắt mắt ra chất thật: French gương bạc (độ lệch sáng đầu móng ${Math.round(sd(tipL))} ≥ 30, có dải sáng + mảng tối) · velvet giữ màu (độ đậm ${Math.round(chroma(vel))} / sơn thường ${Math.round(chroma(sol))}) + giữa sáng hơn mép · ngọc trai: móng hero điểm bóng + bóng tiếp xúc, echo 1 hạt nhỏ, quiet trơn · giọt nước 3D hero + echo (giọt nhỏ), thread không trơn (${dropNails.filter(Boolean).length}/${dropNails.length}) · đồi mồi viền kim loại móng hero ${Math.round(rimAcc * 100)}% (echo ${Math.round(rimPlain * 100)}%) · mỗi bộ 10 mẫu có 1 mẫu kim loại + 1 mẫu 3D (${[...kinds3d].join(", ")})`,
-    tipOk && velOk && pearlOk && dropNails.length >= 3 && dropNails.every(Boolean) && dropN[dR.echo].up + dropN[dR.echo].dn < dropN[dR.hero].up + dropN[dR.hero].dn && rimAcc >= 0.2 && rimPlain < 0.08 && wowOk && kinds3d.size >= 2,
+    // (vòng 2: bộ "accent" — 2 móng giọt nước + 2 móng trơn, không có móng nối — là kiểu bộ hợp lệ → ≥ 2 móng, thread nếu có)
+    tipOk && velOk && pearlOk && dropNails.length >= 2 && dropNails.every(Boolean) && dropN[dR.echo].up + dropN[dR.echo].dn < dropN[dR.hero].up + dropN[dR.hero].dn && rimAcc >= 0.2 && rimPlain < 0.08 && wowOk && kinds3d.size >= 2,
     JSON.stringify({ tip: [Math.round(sd(tipL)), Math.max(...tipL), Math.min(...tipL)], vel: [Math.round(chroma(vel)), Math.round(chroma(sol)), Math.round(med(mid)), Math.round(med(rim))], pearl: [pHiN, pChN, pSh, pOff, pR.hero, pR.echo], drops: [dropNails, dropN], rim: [r2(rimAcc), r2(rimPlain)], wowOk, kinds3d: [...kinds3d] }));
 }
 
@@ -482,7 +483,8 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     const ch = ps.map((sg) => changed(out, ref, sg)), H = ch[R.hero], E = ch[R.echo];
     const blank = ch.filter((v) => v < 0.004).length;
     const echoOk = print ? E >= 0.5 * min && Math.abs(posOf(R.hero) - posOf(R.echo)) >= 2 : E > 0.004 && E < H;
-    if (H < min || !echoOk || R.thread.some((i) => ch[i] < 0.004) || blank > 1) bad.push(`${pat}: hero ${r2(H)} (≥ ${min}) · echo ${r2(E)} · ${ch.map(r2).join("/")}`);
+    // ≤ 1 móng trơn màu nền; bộ "accent" (vòng 2: không có móng nối — 2 móng hoạ tiết + móng trơn) được 2
+    if (H < min || !echoOk || R.thread.some((i) => ch[i] < 0.004) || blank > (R.thread.length ? 1 : 2)) bad.push(`${pat}: hero ${r2(H)} (≥ ${min}) · echo ${r2(E)} · ${ch.map(r2).join("/")}`);
   }
   ok("E24", "Trend mới tự vẽ (bộ phối): da báo · bàn cờ · foil · charm sao · charm nơ 3D · tim · giọt chrome — móng hero đổi rõ; echo nhỏ hơn hero (hoạ tiết in lặp: lặp ở móng không kề hero); thread không trơn; ≤ 1 móng trơn", !bad.length, bad.join(" | "));
 }
@@ -502,7 +504,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     const out = renderLook(pi, ps, lk), ref = renderLook(pi, ps, LOOK([cols[0]], "glossy"));
     const ch = ps.map((sg) => diff(out, ref, sg)), eo = R.nails[R.echo];
     const notClone = !!eo && (eo.pattern !== pat || (!!eo.pick && eo.pick !== "all") || (eo.scale ?? 1) < 1 || SEEDED.has(pat));
-    if (ch[R.hero] < 0.015 || ch[R.echo] < 0.004 || !notClone || R.thread.some((i) => ch[i] < 0.004) || ch.filter((v) => v < 0.004).length > 1)
+    if (ch[R.hero] < 0.015 || ch[R.echo] < 0.004 || !notClone || R.thread.some((i) => ch[i] < 0.004) || ch.filter((v) => v < 0.004).length > (R.thread.length ? 1 : 2))
       bad.push(`${pat}: hero ${r2(ch[R.hero])} · echo ${r2(ch[R.echo])} ${JSON.stringify(eo)} · ${ch.map(r2).join("/")}`);
   }
   for (const [pat, cols, fin] of allNails) {

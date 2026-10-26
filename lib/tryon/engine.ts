@@ -762,6 +762,8 @@ export interface NailOverride {
   /** biến đổi bộ hạt của móng: cỡ (×), lật ngang, dời dọc (u) / ngang (t); `pick` = lấy hạt nào (xem applyBeadOpts) */
   scale?: number; mirror?: boolean; uShift?: number; tShift?: number;
   pick?: "all" | "rest" | "first" | "second" | "twin";
+  /** nhũ loang của móng nối bộ: dày ở ĐẦU móng (mặc định của bộ phối) / ở CHÂN móng — không có thì theo hạt giống mẫu */
+  fade?: "tip" | "cuticle";
 }
 export interface LookColors {
   colors: string[]; finish: Finish; pattern: string; seed: number;
@@ -1983,6 +1985,11 @@ function beadsFor(pattern: string, seed: number): Bead[] {
         : v === 2 ? [{ u: 0.2, t: -0.25, r: 0.085, kind: "mdrop" }, { u: 0.17, t: 0, r: 0.1, kind: "mdrop" }, { u: 0.2, t: 0.25, r: 0.085, kind: "mdrop" }]
         : [{ u: 0.18, t: -0.1 + 0.04 * j(2), r: 0.12, kind: "mdrop" }, { u: 0.27, t: 0.12, r: 0.075, kind: "mdrop" }];
     }
+    // MÓNG NỐI BỘ "1 hạt" (lib/tryon/sets): 1 đinh tán kim loại giữa chân móng (hoặc 3 đinh tán nhỏ dần dọc móng) · 1 viên
+    // đá (kèm 2 hạt tí hon 2 bên) · 1 hạt ngọc trai — cùng kim loại / đá với móng hero, nhỏ, sạch
+    case "stud:metal": return hash2(seed, 5, 31) < 0.6 ? [{ u: 0.2, t: 0, r: 0.14, kind: "mdrop" }] : [{ u: 0.19, t: 0, r: 0.13, kind: "mdrop" }, { u: 0.31, t: 0, r: 0.1, kind: "mdrop" }, { u: 0.41, t: 0, r: 0.075, kind: "mdrop" }];
+    case "stud:gem": return hash2(seed, 5, 31) < 0.5 ? [{ u: 0.22, t: 0, r: 0.21, kind: "gem" }] : [{ u: 0.22, t: 0, r: 0.19, kind: "gem" }, { u: 0.21, t: -0.36, r: 0.1, kind: "gem" }, { u: 0.21, t: 0.36, r: 0.1, kind: "gem" }];
+    case "stud:pearl": return [{ u: 0.21, t: 0, r: 0.18, kind: "pearl" }];
     // charm sao kim loại: 1 sao to sát chân móng lệch 1 bên + 2 sao nhỏ dần chạy chéo về đầu móng, mỗi sao xoay khác nhau
     case "stars": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.3 + 0.03 * j(1), t: 0.34 * sd, r: 0.44, kind: "star", rot: 0.5 * j(3) }, { u: 0.56, t: -0.02 * sd, r: 0.28, kind: "star", rot: 0.8 * j(4) }, { u: 0.76, t: -0.32 * sd, r: 0.18, kind: "star", rot: 0.8 * j(5) }]; }
     // charm nơ kim loại 3D giữa móng, gần chân móng
@@ -2356,7 +2363,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     // NHŨ: phủ cả móng (hiệu ứng nhũ) · nhũ loang — dày ở đầu móng (đôi khi ở chân móng) thưa dần, hạt to ở gốc loang ·
     // baby boomer — chỉ ánh nhũ mịn thưa ở dải chuyển màu (rải khắp móng nhìn như gàu, #21). Màu hạt = màu kim loại
     // (nhũ loang: c2); kim loại trung tính (bạc / trắng) = nhũ holo đổi sắc cầu vồng
-    const gfTip = hash2(look.seed, 41, 3) >= 0.35;
+    const gfTip = ov?.fade ? ov.fade === "tip" : hash2(look.seed, 41, 3) >= 0.35;
     const gDens = pat === "glitterfade" ? (uu: number) => (gfTip ? smooth(0.3, 0.95, uu) ** 1.3 : 1 - smooth(0.05, 0.62, uu))
       : pat === "babyboomer" ? (uu: number) => 0.42 * smooth(0.3, 0.52, uu) * (1 - smooth(0.62, 0.86, uu)) : undefined;
     // nhũ phủ cả móng: ~75% hạt mịn cùng màu nền (nhũ đỏ / nhũ hồng…) + hạt mịn còn lại và hạt to màu kim loại; nhũ loang /

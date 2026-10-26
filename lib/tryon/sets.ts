@@ -126,26 +126,52 @@ export function setRoles(n: number, look: Pick<LookColors, "hero" | "echo">, ord
 }
 
 const isFrench = (p?: string) => !!p && (p === "french" || p === "chromefrench" || p === "doublefrench" || p.startsWith("fr-"));
+/** hoạ tiết mà móng hero VẼ BẰNG màu phụ c2 (chấm, hoa, tim, sọc, đốm…) — chỉ những bộ này móng nối mới được lấy c2
+ *  (đầu French hồng baby trên bộ nâu mocha charm nơ vàng: màu hồng không có ở đâu trên móng hero → nhìn như nhầm bộ) */
+const C2_SHOWN = new Set(["polka", "dots", "stripes", "checker", "leopard", "plaid", "candy", "swirl", "fawn", "marble", "tortoise", "floral", "blossom", "hearts", "snow", "ornament", "milkbath", "chocodip"]);
+/** họ hoạ tiết → các kỹ thuật NỐI BỘ (móng thread) thợ hay dùng cho họ đó, kèm trọng số. Nhân vật Halloween: đầu gương
+ *  kim loại / nhũ; hoa, tim, cherry: micro French màu hoạ tiết / 1 hạt ngọc trai; charm kim loại, giọt chrome, sao: 1
+ *  đinh tán kim loại / chrome cả móng; đá: 1 viên đá lẻ; in lặp (da báo, đồi mồi…): micro French gương vàng / chrome màu */
+type Conn = "chromeTip" | "microTip" | "glitter" | "colorChrome" | "metalChrome" | "stud" | "gemStud" | "pearlStud";
+const FAM_CHAR = new Set(["ghost", "bats", "jackolantern", "skull", "blackcat", "mummy", "eyeball", "web", "slimedrip"]);
+const FAM_FLORAL = new Set(["floral", "blossom", "cherry", "hearts", "holly", "ornament", "leaf", "snow", "gelflower", "lace", "milkbath"]);
+const FAM_METAL = new Set(["stars", "moonstars", "charm3d", "chromedrops", "droplets", "droplet"]);
+const FAM_GEM = new Set(["gems", "gemcluster", "pearls"]);
+function connWeights(pat: string): Partial<Record<Conn, number>> {
+  if (FAM_CHAR.has(pat)) return { chromeTip: 3, glitter: 2, colorChrome: 2, stud: 1 };
+  if (FAM_FLORAL.has(pat)) return { microTip: 3, chromeTip: 2, pearlStud: 2, colorChrome: 1, glitter: 1 };
+  if (FAM_METAL.has(pat)) return { stud: 3, chromeTip: 2, metalChrome: 1, colorChrome: 1, glitter: 1 };
+  if (FAM_GEM.has(pat)) return pat === "pearls" ? { pearlStud: 3, chromeTip: 2, colorChrome: 1, glitter: 1 } : { gemStud: 3, chromeTip: 2, colorChrome: 1, glitter: 1 };
+  if (pat === "dots") return { microTip: 3, pearlStud: 1, chromeTip: 1, colorChrome: 1 };
+  if (PRINTS.has(pat)) return { chromeTip: 3, colorChrome: 2, microTip: 1, glitter: 1 };
+  return { chromeTip: 2, colorChrome: 2, glitter: 1, stud: 1 };
+}
 /**
- * Móng THREAD: kỹ thuật nối bộ, nhìn rõ ở ảnh nhỏ — nhũ loang (nếu bộ máy có), French đủ sâu màu phụ (chỉ khi màu phụ
- * tương phản ≥ 25 L* với nền), French gương kim loại. Echo đã là French thì thread KHÔNG French nữa (2 móng cùng
- * kiểu) → nhũ loang / chrome kim loại cả móng. Biến thể k: móng thread thứ 2 (bộ 5 móng) khác móng thứ nhất.
+ * Móng THREAD: 1 kỹ thuật nối bộ theo HỌ hoạ tiết (connWeights), chỉ dùng màu đã có trên móng hero (nền c1 / kim loại;
+ * c2 chỉ khi hoạ tiết vẽ bằng c2). Họ French (đầu gương, micro French) dựng nền gel hồng TRONG → chỉ trên nền SÁNG
+ * (L* ≥ 62): navy / đen qua lớp gel trong ra tím xám như móng bẩn. Nhũ loang nằm ở ĐẦU móng (nhũ ở chân móng ở ảnh nhỏ
+ * nhìn như móng mọc dài / bụi bẩn) — chân móng chỉ ~1/4 lần nhũ trên nền tối. Echo đã là French thì thread không French.
+ * Biến thể k: móng thread thứ 2 (bộ 5 móng) lấy kỹ thuật khác móng thứ nhất.
  */
-function threadFor(pal: Pal, seed: number, k: number, avoidFrench: boolean): NailOverride {
-  const opts: NailOverride[] = [];
-  const contrast = Math.abs(lstar(pal.c1) - lstar(pal.c2)) >= 25 && pal.c2.toLowerCase() !== pal.m.toLowerCase();
-  if (has("glitterfade")) opts.push({ pattern: "glitterfade", colors: [pal.c1, pal.m, pal.m], finish: "glitter" });
-  // half-moon (liềm ngược ở CHÂN móng, viền kim loại) khác hẳn đầu French của echo → vẫn dùng được khi echo là French
-  if (contrast && has("fr-halfmoon")) opts.push({ pattern: "fr-halfmoon", colors: [pal.c1, pal.c2, pal.m] });
-  if (!avoidFrench) {
-    if (contrast) opts.push({ pattern: "french", colors: [pal.c1, pal.c2, pal.m] });
-    // đầu gương bạc trên nền bạc thì chìm mất → chỉ khi kim loại khác hẳn nền
-    if (Math.abs(lstar(pal.c1) - lstar(pal.m)) >= 10) opts.push({ pattern: "chromefrench", colors: [pal.c1, pal.c2, pal.m] });
-  }
-  opts.push({ pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" });
-  // chrome kim loại cả móng chỉ là dự phòng khi không còn kiểu nào khác (bộ nào cũng có 1 móng gương thì nhàm)
-  const pool = opts.length > 1 ? opts.slice(0, -1) : opts;
-  return pool[(Math.floor(h32(seed, 71) * pool.length) + k) % pool.length];
+function threadFor(pal: Pal, seed: number, k: number, avoidFrench: boolean, pat = ""): NailOverride {
+  const L1 = lstar(pal.c1), Lm = lstar(pal.m), light = L1 >= 62;
+  const c2ok = C2_SHOWN.has(pat) && Math.abs(L1 - lstar(pal.c2)) >= 25 && pal.c2.toLowerCase() !== pal.m.toLowerCase();
+  const w = connWeights(pat), opts: [NailOverride, number][] = [];
+  const add = (c: Conn, o: NailOverride | null) => { if (o && w[c]) opts.push([o, w[c]!]); };
+  const frOk = light && !avoidFrench;
+  add("chromeTip", frOk && Math.abs(L1 - Lm) >= 10 ? { pattern: "chromefrench", colors: [pal.c1, pal.c2, pal.m] } : null);
+  add("microTip", frOk && c2ok ? { pattern: avail(["fr-micro", "french"]), colors: [pal.c1, pal.c2, pal.m] } : null);
+  add("glitter", has("glitterfade") ? { pattern: "glitterfade", colors: [pal.c1, pal.m, pal.m], finish: "glitter", fade: !light && h32(seed, 73) < 0.25 ? "cuticle" : "tip" } : null);
+  add("colorChrome", has("colorchrome") ? { pattern: "colorchrome", colors: [pal.c1, pal.c1, pal.m], finish: "chrome" } : null);
+  add("metalChrome", { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" });
+  add("stud", { pattern: "stud:metal", colors: [pal.c1, pal.c2, pal.m] });
+  add("gemStud", { pattern: "stud:gem", colors: [pal.c1, pal.c2, pal.m] });
+  add("pearlStud", { pattern: "stud:pearl", colors: [pal.c1, pal.c2, pal.m] });
+  if (!opts.length) return { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" };
+  // chọn theo trọng số; móng thread thứ 2 (k) bỏ kỹ thuật móng thứ nhất đã dùng
+  const pickW = (r: number, skip = -1) => { const tot = opts.reduce((a, [, x], i) => a + (i === skip ? 0 : x), 0); let acc = 0; for (let i = 0; i < opts.length; i++) { if (i === skip) continue; acc += opts[i][1] / tot; if (r < acc) return i; } return opts.length - 1 === skip ? 0 : opts.length - 1; };
+  const first = pickW(h32(seed, 71));
+  return opts[k && opts.length > 1 ? pickW(h32(seed, 72 + k), first) : first][0];
 }
 
 /** BỘ THEO CHỦ ĐỀ (mix-*): mỗi móng 1 chi tiết khác nhau cùng 1 bảng màu (3 màu + 1 kim loại) — như bộ thợ vẽ thật */
@@ -245,16 +271,23 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
   const specs = ECHO[pat];
   const es = specs?.length ? specs[Math.floor(h32(seed, 5) * specs.length)] : undefined;
   const echoOv: NailOverride = { pattern: es?.pattern ? avail(es.pattern) : pat, pick: es?.pick, scale: es?.scale, mirror: es?.mirror ?? true, uShift: es?.uShift, tShift: es?.tShift, colors: es?.colors?.(pal) };
+  // KIỂU BỘ theo hạt giống (không phải bộ nào cũng "hero + echo + 1 móng lạ + 1 móng trơn" — 4 kỹ thuật trên 4 móng nhìn
+  // như bảng mẫu màu, không phải bộ Pinterest): accent = 2 móng hoạ tiết + còn lại trơn màu nền (bộ tiệm làm nhiều nhất) ·
+  // tone = 1 móng trơn màu hoạ tiết (chấm hồng → 1 móng hồng đậm) + còn lại màu nền · thread = có 1 móng kỹ thuật nối bộ
+  const rT = h32(seed, 9), c2Tone = C2_SHOWN.has(pat) && !QUIET_C2.has(pat) && Math.abs(lstar(pal.c1) - lstar(pal.c2)) >= 20;
+  const tmpl = rT < 0.28 ? "accent" : rT < 0.45 && c2Tone ? "tone" : "thread";
   for (let i = 0; i < n; i++) {
     const role = roles[i];
     if (role === "hero") nails[i] = { role, pattern: pat, art: true };
     else if (role === "echo") nails[i] = { ...echoOv, role, art: true };
-    else if (role === "thread") nails[i] = { ...threadFor(pal, seed, variant[i], isFrench(echoOv.pattern)), role, art: true };
+    else if (role === "thread" && tmpl === "thread") nails[i] = { ...threadFor(pal, seed, variant[i], isFrench(echoOv.pattern), pat), role, art: true };
     else {
-      // móng trơn: màu nền (hoạ tiết vẽ) / màu phụ (bộ in lặp); đồi mồi: thạch hổ phách như thợ làm
-      const c2First = QUIET_C2.has(pat), alt = variant[i] % 2 === 1;
-      const qc = (c2First !== alt) ? pal.c2 : pal.c1;
-      nails[i] = pat === "tortoise" && !alt ? { role, pattern: "jelly", colors: [pal.c1, pal.c2, pal.m], art: true } : { role, pattern: "solid", colors: [qc, pal.c2, pal.m], art: false };
+      // móng trơn: màu nền (hoạ tiết vẽ) / màu phụ (bộ in lặp, xen kẽ); đồi mồi: thạch hổ phách như thợ làm. q = thứ tự
+      // móng trơn tính từ móng gần hero (bộ không có móng nối: cả móng thread cũng thành móng trơn)
+      const q = tmpl === "thread" ? variant[i] : role === "thread" ? 2 * variant[i] : 2 * variant[i] + 1;
+      const c2First = QUIET_C2.has(pat), alt = q % 2 === 1;
+      const qc = tmpl === "tone" ? (q === 0 ? pal.c2 : pal.c1) : (c2First !== alt) ? pal.c2 : pal.c1;
+      nails[i] = pat === "tortoise" && !alt ? { role: "quiet", pattern: "jelly", colors: [pal.c1, pal.c2, pal.m], art: true } : { role: "quiet", pattern: "solid", colors: [qc, pal.c2, pal.m], art: false };
     }
   }
   return { ...look, nails, hero, echo: echo >= 0 ? echo : undefined };

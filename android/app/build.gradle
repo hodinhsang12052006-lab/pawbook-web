@@ -16,8 +16,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    signingConfigs {
+        release {
+            storeFile file('pawos-release.keystore')
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "bitpawos2026"
+            keyAlias System.getenv("KEY_ALIAS") ?: "pawos"
+            keyPassword System.getenv("KEY_PASSWORD") ?: "bitpawos2026"
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -70,12 +70,18 @@
 	     (không chỉ bị reject) khi code gọi API camera/mic/thư viện ảnh tương
 	     ứng, vì iOS chặn cứng ở tầng hệ điều hành, không phải chỉ ở review. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Cho phép chụp ảnh để tải lên portfolio tay nghề, và dùng camera khi gọi video với chủ tiệm/thợ khác.</string>
+	<string>PawNail Jobs needs access to your camera to take photos of nail salons and nail work showcases, try on nail designs, and make video calls with salon owners and technicians.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Cho phép dùng micro để gọi thoại/video và ghi âm tin nhắn thoại gửi cho chủ tiệm, thợ khác trên PawNail Jobs.</string>
+	<string>PawNail Jobs needs access to your microphone for voice and video calls and to record voice messages in chat with salon owners and technicians.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cho phép chọn ảnh/video từ thư viện để tải lên portfolio tay nghề.</string>
+	<string>PawNail Jobs needs access to your photo library so you can upload nail design samples, portfolio work showcases, and salon photos or videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Cho phép lưu ảnh vào thư viện của bạn.</string>
+	<string>PawNail Jobs needs permission to save nail design photos and portfolio cards to your photo library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PawNail Jobs uses your location while using the app to help you search for nearby nail salons, technicians, and job opportunities around you.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PawNail Jobs uses your location while using the app to help you search for nearby nail salons, technicians, and job opportunities around you.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

@@ -1,0 +1,78 @@
+name: Deploy iOS to TestFlight
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-ios:
+    name: Build & Upload iOS (.ipa) to TestFlight
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'file:./dev.db' }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-build-placeholder-secret' }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'https://www.bitpawos.com' }}
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Set up Ruby for Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+
+      - name: Cache Fastlane Ruby gems
+        uses: actions/cache@v4
+        with:
+          path: ios/App/vendor/bundle
+          key: ${{ runner.os }}-fastlane-gems-${{ hashFiles('ios/App/Gemfile') }}
+          restore-keys: |
+            ${{ runner.os }}-fastlane-gems-
+
+      - name: Install Fastlane via Bundler
+        working-directory: ios/App
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: Build signed .ipa & upload to TestFlight via Fastlane Pilot
+        working-directory: ios/App
+        env:
+          APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
+          APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
+          APP_STORE_PRIVATE_KEY: ${{ secrets.APP_STORE_PRIVATE_KEY }}
+        run: bundle exec fastlane deploy
+
+      - name: Upload .ipa artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PawNailJobs-ipa-${{ github.run_number }}
+          path: ios/App/build/*.ipa
+          if-no-files-found: ignore
+          retention-days: 7

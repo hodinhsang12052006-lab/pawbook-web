@@ -1,0 +1,116 @@
+require "base64"
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build signed .ipa and upload to TestFlight / App Store Connect via fastlane pilot"
+  lane :deploy do
+    app_identifier = "com.bitpawos.app"
+    ios_app_dir = File.expand_path("..", __dir__)
+    xcodeproj_path = File.join(ios_app_dir, "App.xcodeproj")
+    output_dir = File.join(ios_app_dir, "build")
+    ipa_path = File.join(output_dir, "PawNailJobs.ipa")
+
+    # 1. Create and unlock a temporary keychain on CI runners so codesign never blocks on GUI prompts
+    setup_ci if ENV["CI"]
+
+    # 2. Validate and authenticate with App Store Connect API using GitHub Secrets
+    key_id = ENV["APP_STORE_KEY_ID"].to_s.strip
+    issuer_id = ENV["APP_STORE_ISSUER_ID"].to_s.strip
+    raw_key = ENV["APP_STORE_PRIVATE_KEY"].to_s.strip
+
+    UI.user_error!("Missing APP_STORE_KEY_ID secret") if key_id.empty?
+    UI.user_error!("Missing APP_STORE_ISSUER_ID secret") if issuer_id.empty?
+    UI.user_error!("Missing APP_STORE_PRIVATE_KEY secret") if raw_key.empty?
+
+    is_base64 = !raw_key.include?("BEGIN PRIVATE KEY")
+    key_content = is_base64 ? raw_key : raw_key.gsub("\\n", "\n")
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_content: key_content,
+      is_key_content_base64: is_base64,
+      duration: 1200,
+      in_house: false
+    )
+
+    # 3. Fetch or generate Apple Distribution certificate and App Store provisioning profile
+    cert(
+      api_key: api_key,
+      development: false
+    )
+
+    sigh(
+      api_key: api_key,
+      app_identifier: app_identifier,
+      cert_id: lane_context[SharedValues::CERT_CERTIFICATE_ID],
+      force: true
+    )
+
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+    profile_path = lane_context[SharedValues::SIGH_PROFILE_PATH]
+    team_id = ENV["sigh_#{app_identifier}_appstore_team-id"] ||
+              FastlaneCore::ProvisioningProfile.parse(profile_path)["TeamIdentifier"]&.first
+
+    UI.user_error!("Could not resolve Apple Developer Team ID from provisioning profile") if team_id.to_s.strip.empty?
+
+    # 4. Determine monotonically increasing build number so TestFlight never rejects duplicate builds
+    next_build = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
+    begin
+      latest_tf = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: app_identifier,
+        initial_build_number: 0
+      )
+      next_build = [latest_tf + 1, next_build].max
+    rescue => ex
+      UI.important("Could not query latest TestFlight build number (#{ex.message}); using build #{next_build}")
+    end
+
+    # 5. Ensure shared Xcode scheme exists (Capacitor projects created outside Xcode may lack .xcscheme)
+    recreate_schemes(project: xcodeproj_path)
+
+    # 6. Apply manual App Store signing settings onto App.xcodeproj
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: xcodeproj_path,
+      team_id: team_id,
+      targets: ["App"],
+      bundle_identifier: app_identifier,
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile_name
+    )
+
+    # 7. Archive and export signed .ipa (Capacitor 8 uses Swift Package Manager via App.xcodeproj)
+    build_app(
+      project: xcodeproj_path,
+      scheme: "App",
+      configuration: "Release",
+      clean: true,
+      export_method: "app-store",
+      xcargs: "CURRENT_PROJECT_VERSION=#{next_build}",
+      output_directory: output_dir,
+      output_name: "PawNailJobs.ipa",
+      export_options: {
+        signingStyle: "manual",
+        teamID: team_id,
+        provisioningProfiles: {
+          app_identifier => profile_name
+        }
+      }
+    )
+
+    # 8. Upload .ipa to TestFlight / App Store Connect via fastlane pilot
+    pilot(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Alias for deploy lane"
+  lane :beta do
+    deploy
+  end
+end

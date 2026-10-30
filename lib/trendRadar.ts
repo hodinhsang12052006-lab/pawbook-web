@@ -56,7 +56,9 @@ export const TREND_RADAR: Trend[] = [
   { id: "dark-red-cat-eye", name: { vi: "Mắt mèo đỏ sẫm", en: "Dark red cat eye" }, source: PP("\"dark red cat eye nails design\" +735%", "\"dark red cat eye nails design\" +735%"), weight: 2,
     looks: [{ pattern: "solid", finish: "cateye", colors: [["burgundy", "gold", "gold"], ["mulledWine", "gold", "gold"], ["cherry", "silver", "silver"]] }] },
   { id: "cat-eye-chrome", name: { vi: "Mắt mèo + đầu tráng gương", en: "Cat eye & chrome" }, source: PP("\"cat eye and chrome nails\" +732%", "\"cat eye and chrome nails\" +732%"), weight: 2,
-    looks: [{ pattern: "chromefrench", finish: "cateye", colors: [["plumNoir", "silver", "silver"], ["navy", "silver", "silver"], ["burgundy", "gold", "gold"]] }] },
+    // mắt mèo aurora (dải sáng ánh đa sắc như tráng gương) — không còn "French tráng gương trên nền mắt mèo tối": đầu gương
+    // trên nền sơn đặc tối ra 1 cái đai kim loại bịt đầu móng (soi lượt 2), chrome French giờ chỉ trên nền trong
+    looks: [{ pattern: "auroracat", finish: "cateye", colors: [["plumNoir", "milky", "silver"], ["navy", "milky", "silver"], ["black", "milky", "silver"]] }] },
   { id: "almond-stripes", name: { vi: "Móng hạnh nhân kẻ sọc", en: "Almond stripes" }, source: PP("\"almond nails stripes\" +694%", "\"almond nails stripes\" +694%"), weight: 2,
     looks: [{ pattern: "stripes", finish: "glossy", colors: [["pinkNude", "espresso", "gold"], ["cloudDancer", "coffee", "gold"], ["nude", "black", "gold"]], shapes: ["almond"] }] },
   { id: "two-tone-cat-eye", name: { vi: "Mắt mèo 2 tông", en: "Two-tone cat eye" }, source: PP("\"two tone cat eye nails\" +515%", "\"two tone cat eye nails\" +515%"), weight: 2,

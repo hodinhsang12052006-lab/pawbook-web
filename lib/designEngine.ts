@@ -997,9 +997,12 @@ const ROLES: Record<string, Role> = {
   ombre: { g: "glow", ok: ([a, b]) => Lof(hx(a)) - Lof(hx(b)) >= 20 && Lof(hx(a)) - Lof(hx(b)) <= 66 && Lof(hx(b)) < 90 && sameTemp(a, b), pal: [["sheer", "raspberry", "gold"], ["sheer", "burgundy", "gold"], ["nude", "espresso", "gold"], ["pinkNude", "hotPink", "gold"]] },
   // aura: nền trong / sữa với lõi màu rực đậm hơn ≥ 20 L* (aura nude trên cherry cola = vết bẩn). Nền đen + lõi rực là kiểu
   // đúng nhưng bộ vẽ aura hiện pha quầng về hồng / trắng → trên nền đen ra vệt xám tím đục (soi 25/10) — mở lại khi vẽ lại aura
-  // lõi aura phải là màu RỰC SÁNG VỪA (L* ≥ 35: cherry, mâm xôi, hồng cánh sen, cam quả hồng, dừa cạn): lõi cobalt / lục
-  // bảo / mận (L* ~30) trên nền trắng loang ra 1 vệt xanh tím giữa móng như vết bầm (soi lượt 2: "Aura xanh cobalt")
-  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && Lof(hx(b)) >= 35 && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20, pal:[["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["sheer", "persimmon", "gold"], ["milky", "periwinkle", "silver"]] },
+  // lõi aura phải là màu RỰC SÁNG VỪA (L* ≥ 35: mâm xôi, hồng cánh sen, dừa cạn): lõi cobalt / lục bảo / mận (L* ~30) trên
+  // nền trắng loang ra 1 vệt xanh tím giữa móng như vết bầm (soi lượt 2: "Aura xanh cobalt"). Và chỉ HỒNG (góc sắc ≤ 15°) hoặc
+  // TÍM XANH (≥ 270°): bộ vẽ tan vầng aura thành quầng mềm ngả hồng — lõi đỏ cherry / đỏ dâu / san hô / cam quả hồng đều ra
+  // quầng hồng phấn ("Aura đỏ cherry" mà ảnh hồng nhạt — soi lượt 2, cả bản vẽ lại aura lượt 2)
+  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && Lof(hx(b)) >= 35 && (hueAng(hx(b)) <= 15 || hueAng(hx(b)) >= 270) && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20,
+    pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["sheer", "hotPink", "gold"], ["milky", "periwinkle", "silver"]] },
   tortoise: { g: "tone", pal: [["caramel", "chocolate", "gold"]] },
   marble: { g: "glow", ok: marbleOk, pal: [["milky", "smoke", "gold"], ["cloudDancer", "pewter", "gold"], ["black", "milky", "gold"], ["emerald", "milky", "gold"], ["jade", "milky", "gold"]] },
   lines: { g: "line", on: "metal", pal: [["black", "milky", "gold"], ["navy", "milky", "silver"], ["espresso", "nude", "gold"]] },
@@ -1096,7 +1099,9 @@ const ROLES: Record<string, Role> = {
   // má hồng = vệt ửng ẤM (hồng cánh sen, mâm xôi, cherry, san hô, cam quả hồng): bảng mượn màu nhấn mùa (cobalt, lục bảo,
   // xám thiếc, mận) thành "má hồng tông xanh cobalt" — vết bầm xanh giữa móng
   blush: { g: "glow", base: "sheer", ok: ([, b]) => ["red", "pink", "orange"].includes(toneFam(hx(b))) && chroma(hx(b)) >= 35 && Lof(hx(b)) >= 35, pal: [["sheer", "hotPink", "pearl"], ["sheer", "raspberry", "pearl"], ["nude", "persimmon", "gold"]] },
-  cleanmilky: { g: "tone", base: "sheer", pal: [["milky", "pearl", "gold"], ["sheer", "milky", "gold"], ["pinkNude", "milky", "pearl"]] },
+  // hạt đính clean girl là ĐINH TÁN kim loại tráng gương (bộ vẽ "mdrop"): kim loại ngọc trai ra viên bi bạc xám — tên "đính
+  // hạt ngọc trai" mà ảnh là đinh tán bạc (soi lượt 2) → chỉ vàng / bạc / vàng hồng
+  cleanmilky: { g: "tone", base: "sheer", ok: ([, , mt]) => mt !== "pearl", pal: [["milky", "pearl", "gold"], ["sheer", "milky", "gold"], ["pinkNude", "milky", "silver"]] },
   // chrome màu / nhũ loang
   // chrome màu cần nền có sắc (trung–đậm, hoặc màu rực như aqua / san hô) — nude / pastel nhạt tráng gương ra bạc be
   // nhạt, không còn "giữ màu" (soi lượt 25/10: "Chrome nude be" ra sọc bạc); xám thiếc / champagne là màu kim loại sẵn

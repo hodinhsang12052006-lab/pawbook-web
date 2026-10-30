@@ -199,7 +199,7 @@ const lie = all.filter(({ d }) =>
   (d.pattern === "plaid" && Math.max(lab(d.palette[0])[0], lab(d.palette[1])[0]) < 35) ||
   (MUDDY.includes(d.pattern) && mud(d.palette[1], d.pattern) && (["oval", "square"].includes(d.shape) || !["gelx", "acrylic"].includes(d.spec.system))) ||
   (d.pattern === "syrup" && (Math.hypot(lab(d.palette[0])[1], lab(d.palette[0])[2]) < 30 || !["red", "pink", "orange"].includes(toneFam(d.palette[0])))) ||
-  (d.pattern === "aura" && lab(d.palette[1])[0] < 35) || (d.pattern === "fawn" && hAng(d.palette[0]) < 52) || (d.pattern === "cleanmilky" && tonesOf(d.palette).length > 1) ||
+  (d.pattern === "aura" && (lab(d.palette[1])[0] < 35 || (hAng(d.palette[1]) > 15 && hAng(d.palette[1]) < 270))) || (d.pattern === "fawn" && hAng(d.palette[0]) < 52) || (d.pattern === "cleanmilky" && tonesOf(d.palette).length > 1) ||
   // màu bộ vẽ đổi đi (tên nói 1 màu, ảnh ra màu khác): hoa gel 3D cánh đậm → trắng sữa; thạch xanh / vàng trên giường móng
   // hồng → tím xám / kaki / be cam; má hồng tông lạnh = vết bầm; hoa khô nhạt sắc → hồng đậm; chrome French nền đặc = đai kim
   // loại bịt đầu móng; da hươu nền trắng = chấm bi
@@ -208,12 +208,12 @@ const lie = all.filter(({ d }) =>
   (d.pattern === "blush" && !["red", "pink", "orange"].includes(toneFam(d.palette[1]))) || (d.pattern === "fawn" && toneFam(d.palette[0]) === "white") ||
   (d.pattern === "milkbath" && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 25 && d.palette[1] !== COLORS.babyPink.hex) ||
   // negative space: khối c2 đậm (bộ vẽ cần lệch móng trần ≥ 25 L*); French: đầu pastel sáng có sắc (vàng bơ) trên nền trong = tàng hình
-  (d.pattern === "negative" && lab(d.palette[1])[0] > 48) ||
+  (d.pattern === "negative" && lab(d.palette[1])[0] > 48) || (d.pattern === "cleanmilky" && /đính hạt ngọc trai|pearl micro studs/i.test(d.title.vi + d.title.en)) ||
   (["french", "fr-micro", "fr-deep", "fr-v", "fr-side", "fr-halfmoon", "doublefrench"].includes(d.pattern) && lab(d.palette[1])[0] > 88 && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) >= 12));
 check("DE48", "Tên nói đúng cái ảnh vẽ ra (màu bộ vẽ thật vẽ: hoa gel 3D cánh sáng, thạch tông ấm / tím pastel, má hồng tông ấm, hoa khô có sắc, chrome French nền trong, da hươu nền nâu vàng): French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup tông ấm có sắc rõ (không thạch nâu đục / cobalt tím tro), lõi aura sáng vừa (không vết bầm cobalt), da hươu nền nâu vàng (không cam), clean girl không ghi màu phụ không lên móng; đầu móng nâu / mận đậm (micro French: mọi màu gần đen) chỉ trên bộ đắp dài (không móng thật ngắn, không oval / vuông)",
   lie.length === 0 && !paletteOk("fr-skittle", ["sheer", "milky", "gold"]) && !paletteOk("fr-skittle", ["sheer", "coffee", "gold"]) && paletteOk("fr-skittle", ["sheer", "cobalt", "silver"]) &&
   !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter") &&
-  !paletteOk("syrup", ["cobalt", "sheer", "silver"]) && paletteOk("syrup", ["raspberry", "sheer", "pearl"]) && !paletteOk("aura", ["milky", "cobalt", "silver"]) && paletteOk("aura", ["milky", "cherry", "gold"]) &&
+  !paletteOk("syrup", ["cobalt", "sheer", "silver"]) && paletteOk("syrup", ["raspberry", "sheer", "pearl"]) && !paletteOk("aura", ["milky", "cobalt", "silver"]) && paletteOk("aura", ["milky", "hotPink", "gold"]) && !paletteOk("aura", ["milky", "cherry", "gold"]) && !paletteOk("aura", ["sheer", "persimmon", "gold"]) &&
   !paletteOk("fawn", ["persimmon", "bone", "gold"]) && paletteOk("fawn", ["caramel", "cloudDancer", "gold"]) && !paletteOk("fawn", ["milky", "persimmon", "gold"]) &&
   !paletteOk("gelflower", ["sheer", "raspberry", "pearl"]) && paletteOk("gelflower", ["sheer", "lavender", "pearl"]) && !paletteOk("chromefrench", ["chocolate", "gold", "gold"]) && paletteOk("chromefrench", ["nude", "gold", "gold"]) &&
   !paletteOk("jelly", ["cobalt", "milky", "silver"]) && !paletteOk("jelly", ["sage", "milky", "gold"]) && paletteOk("jelly", ["lavender", "milky", "silver"]) && paletteOk("jelly", ["raspberry", "milky", "gold"]) &&

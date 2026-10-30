@@ -3141,7 +3141,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               }
               // sô-cô-la trắng rưới: [tâm Y, biên độ, chu kỳ ngang, pha, cửa sổ ngang] — nét 1 ngang lớp sô-cô-la, nét 2 ngắn nửa
               // móng nằm đúng mép nhúng (tràn nhẹ sang phần dâu)
-              const zz = kind === 0 ? [[ye + (Ln - ye) * 0.42, 0.15, 0.36, h(5), 0], [ye + 0.02, 0.1, 0.3, h(6), mir]] : [];
+              const zz = kind === 0 ? [[ye + (Ln - ye) * 0.45, 0.16, 0.52, h(5), 0], [ye + 0.03, 0.1, 0.38, h(6), mir]] : [];
               cd = { kind, ye, dr, zz };
               tipP.memo.choc = cd;
             }
@@ -3170,25 +3170,35 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
                 red = mix3(red, mix3([0.9, 0.72, 0.28], [0.98, 0.93, 0.75], 0.5 * Math.exp(-((dx + 0.3) ** 2 + (dy + 0.35) ** 2) / 0.12)), 1 - smooth(-aa / ls, aa / ls, egg));
               }
             }
-            // sô-cô-la: viền sẫm sát mép + gờ sáng ướt bên trong (lệch về phía đèn), bóng đổ lên phần dâu ngay ngoài mép
+            // sô-cô-la: lớp DÀY phồng — mép tiếp xúc sẫm dần vào trong ~0.09 hw (không có gờ sáng: gờ sáng ~2px trong mép từng
+            // thành viền xám nhạt quanh giọt như sticker cắt viền), giữa giọt / lớp nhúng sáng nhẹ như mặt cong; độ bóng ướt do
+            // lớp top coat (vệt cửa sổ) lo. Bóng đổ lên phần dâu ngay ngoài mép
             const inC = -dC;
-            let ch: RGB = mix3(c2, sc3(c2, 0.7), 1 - smooth(0.0, 0.035, inC));
-            const ridge = 0.36 * Math.exp(-(((inC - 0.055) / 0.025) ** 2)) * (0.5 + 0.5 * smooth(-0.6, 0.6, t * side)) * (0.7 + 0.6 * vnoise(t * 4, Yh * 4, look.seed + 87));
-            ch = [ch[0] + (0.55 - ch[0]) * ridge, ch[1] + (0.4 - ch[1]) * ridge, ch[2] + (0.3 - ch[2]) * ridge];
+            const ch: RGB = sc3(c2, 0.66 + 0.34 * smooth(0.0, 0.09, inC) + 0.08 * smooth(0.1, 0.3, inC));
             const cast = cd.kind < 2 ? 0.34 * (1 - smooth(0, 0.08, dC)) * smooth(-0.02, 0.0, dC) : 0;
             red = sc3(red, 1 - cast);
             base = mix3(red, ch, choc);
-            // sô-cô-la trắng rưới: zigzag ĐỈNH TRÒN (asin(sin) — tam giác nhọn đều tăm tắp nhìn như viền ren), chu kỳ / biên độ
-            // xê dịch theo nhiễu như rưới bằng tay; nổi (bóng đổ mảnh phía khuất đèn)
-            for (const z of cd.zz) {
-              const win = z[4] ? smooth(-0.98, -0.78, t * z[4]) * (1 - smooth(-0.05, 0.2, t * z[4])) : 1;
+            // sô-cô-la trắng rưới bằng tay: đường LƯỢN đỉnh TRÒN (sin, điều tần CHẬM ±0.45 vòng → chu kỳ dãn / co dần theo đoạn),
+            // biên độ 0.35–1.45× đổi chậm, 2 nét nghiêng NGƯỢC nhau nên cắt chéo nhau như rưới 2 lượt, nét dày mỏng 0.65–1.35×
+            // (chỗ dừng tay đọng dày). Răng cưa đều (asin(sin) cũ) = điện tâm đồ / mép giấy xé; điều tần nhanh = tia sét. Nổi
+            // (bóng đổ mảnh phía khuất đèn); tràn nhẹ ra ngoài mép nhúng
+            const spill = 1 - smooth(0.06, 0.16, dC);
+            if (spill > 0) for (let zi = 0; zi < cd.zz.length; zi++) {
+              const z = cd.zz[zi], win = z[4] ? smooth(-0.98, -0.78, t * z[4]) * (1 - smooth(-0.05, 0.2, t * z[4])) : 1;
               if (win <= 0) continue;
-              const f = t / z[2] + z[3] + 0.32 * vnoise(t * 3.3, z[0], look.seed + 90), A = z[1] * (0.5 + 0.95 * vnoise(t * 4.1 + 5, z[0], look.seed + 91));
-              const zy = z[0] + 0.1 * t * (z[4] || (pN % 2 ? -1 : 1)) + A * 0.6366 * Math.asin(0.96 * Math.sin(6.2832 * f)), sl = Math.sqrt(1 + ((3.9 * A) / z[2]) ** 2);
-              const dz = Math.abs(Yh - zy) / sl, hw2 = Math.max(1.3 * pxh, 0.03) * (0.85 + 0.3 * vnoise(t * 3, 1, look.seed + 92)), spill = (1 - smooth(0.06, 0.16, dC)) * win;
-              const shz = 0.3 * (1 - smooth(hw2, hw2 + 2.5 * pxh, Math.abs(Yh - zy + 1.5 * pxh * upS) / sl)) * spill;
+              const sd = look.seed + 90 + 7 * zi, tl = (zi ? -0.12 : 0.16) * (z[4] || (pN % 2 ? -1 : 1));
+              let zy = 0, zp = 0;
+              for (let e = -1; e <= 1; e += 2) {
+                const tt = t + e * 0.01, f = tt / z[2] + z[3] + 0.9 * (vnoise(tt * 1.2, 1.3 * zi, sd) - 0.5);
+                const A = z[1] * (0.35 + 1.1 * vnoise(tt * 1.9 + 5, 2.1 * zi, sd + 1));
+                const y = z[0] + tl * tt + A * Math.sin(6.2832 * f);
+                if (e < 0) zy = y; else { zp = (y - zy) / 0.02; zy = (zy + y) / 2; }
+              }
+              const sl = Math.sqrt(1 + zp * zp), dz = Math.abs(Yh - zy) / sl, dsh = Math.abs(Yh - zy + 1.5 * pxh * upS) / sl;
+              const hw2 = Math.max(1.3 * pxh, 0.03) * (zi ? 0.8 : 1) * (0.65 + 0.7 * vnoise(t * 2.6, z[0] * 5 + 1, look.seed + 92));
+              const shz = 0.3 * (1 - smooth(hw2, hw2 + 2.5 * pxh, dsh)) * spill * win;
               base = sc3(base, 1 - shz);
-              base = mix3(base, [0.88, 0.8, 0.64], (1 - smooth(hw2 - aa, hw2 + aa, dz)) * spill);
+              base = mix3(base, [0.88, 0.8, 0.64], (1 - smooth(hw2 - aa, hw2 + aa, dz)) * spill * win);
             }
             break;
           }

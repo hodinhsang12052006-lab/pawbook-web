@@ -3,8 +3,9 @@
 Ảnh: chạy `node scripts/store/make_screenshots.mjs` → thư mục `store-assets/`
 (iPhone 1290×2796 ×6, Android 1080×1920 ×6, ảnh bìa Play 1024×500, icon 512×512).
 
-App: **PawNail Jobs** · Bundle/Application ID: `com.bitpawos.app` · Phiên bản 1.0 (build 1)
-App native mở thẳng https://www.bitpawos.com (hosted mode) — sửa web là app cập nhật, chỉ build lại khi đổi icon/quyền/plugin.
+App: **PawNail Jobs** · Bundle/Application ID: `com.bitpawos.app`
+Bản native kế tiếp: **1.1.0** — Android `versionCode 2` (hoặc số lớn nhất từng tải lên Play + 1, xem App bundle explorer; KHÔNG dùng lại số cũ), iOS build = build TestFlight mới nhất + 1 (CI tự tính). Bản 1.0 (versionCode 1 / build 1) đã dùng.
+App native mở thẳng https://www.bitpawos.com (hosted mode) — sửa web là app cập nhật, chỉ build lại khi đổi icon/quyền/plugin/`native-shell/` (màn mất mạng) hoặc `capacitor.config.ts`. Trước MỌI lần build native: `npm install` rồi `npx cap sync`.
 
 ---
 
@@ -93,7 +94,7 @@ Vietnamese and English.
 `nail,việc làm nail,thợ nail,tiệm nail,tuyển thợ,nail salon,nail tech,manicure,viec lam,vietnamese`
 
 **Danh mục:** App Store: **Business** (phụ: Lifestyle) · Google Play: **Business**
-**URL hỗ trợ:** https://www.bitpawos.com/profile/cmv261cbf0000kz06racm3k1t (hoặc mailto:support@bitpawos.com)
+**URL hỗ trợ:** https://www.bitpawos.com/support (trang song ngữ có email support@bitpawos.com + câu hỏi thường gặp; Apple 1.5 cần cách liên hệ thật, không dùng trang hồ sơ cá nhân)
 **URL marketing:** https://www.bitpawos.com
 **Chính sách bảo mật:** https://www.bitpawos.com/privacy
 **Xoá dữ liệu / tài khoản (Google Play bắt buộc):** https://www.bitpawos.com/data-deletion
@@ -131,8 +132,9 @@ PawNail Jobs is a job marketplace for nail technicians and nail salon owners in 
 Demo account (technician):  email: <TẠO TRÊN WEB rồi điền>   password: <…>
 Demo account (salon owner): email: <…>   password: <…>
 
-Native features: push notifications for new jobs & messages, camera/photo library for portfolio photos,
-microphone/camera for in-app voice & video calls between users.
+Native features: camera / photo library capture for PawNail Try-On (paint nail looks on a photo of your hand)
+and portfolio photos, microphone/camera for in-app voice & video calls between users, Android back-button
+navigation, an offline screen when there is no connection, and job/salon/design links that open in the app.
 User-generated content is moderated: users can report and block other users (chat screen menu → Report / Block,
 or the ••• menu on any post); reports are reviewed by our team within 24 hours.
 Account deletion: Profile → Account → Delete my account (deletes immediately).
@@ -141,46 +143,54 @@ but are hidden in the native app), so Sign in with Apple is not required (guidel
 ```
 
 > ⚠️ Người duyệt PHẢI đăng nhập được. Tạo 2 tài khoản demo trên bitpawos.com (1 thợ, 1 chủ tiệm), điền đủ hồ sơ + vài ảnh, rồi dán vào ô trên. Đừng dùng tài khoản thật/admin.
+> Chỉ ghi tính năng đã chạy thật trên máy. Thêm "push notifications for new jobs & messages" vào dòng Native features CHỈ KHI mục 4 đã xong và đã thử nhận thông báo trên bản build đó. "Links open in the app" chỉ đúng khi mục 4 (App Links / Universal Links) đã cấu hình.
 
 ---
 
 ## 4. ⚠️ BẮT BUỘC trước khi nộp: thông báo đẩy cho app native
 
 Hiện production CHƯA có khoá Firebase/APNs → app CH Play/App Store không nhận thông báo (web vẫn nhận).
-Code đã viết sẵn (lib/push.ts, lib/nativePush.ts) — chỉ cần khoá:
+Code đã viết sẵn (lib/push.ts, lib/nativePush.ts). Bản app cũ / thiếu cấu hình tự báo "chưa hỗ trợ" thay vì crash:
+Android kiểm tra bản build có Firebase (plugin `PawNailNative` trong MainActivity), iOS kiểm tra số build (mặc định ≥ 2).
 
 **Android (Firebase, miễn phí):**
 1. console.firebase.google.com → Tạo dự án "PawNail Jobs" → Thêm app **Android**, package `com.bitpawos.app`.
-2. Tải `google-services.json` → đặt vào `android/app/google-services.json` (gửi file cho Claude để thêm vào repo).
-3. Project settings → Service accounts → **Generate new private key** → gửi nội dung file JSON cho Claude → cài vào Vercel `FIREBASE_SERVICE_ACCOUNT`.
+2. Tải `google-services.json` → đặt vào `android/app/google-services.json` → build bản Android mới (bản không có file này không bao giờ bật push, kể cả khi máy chủ đã bật).
+3. Project settings → Service accounts → **Generate new private key** → cài vào Vercel `FIREBASE_SERVICE_ACCOUNT` (đặt SAU khi bản có google-services.json đã lên store).
 
 **iOS (APNs):**
-1. developer.apple.com → Certificates, IDs & Profiles → **Keys** → tạo key bật **Apple Push Notifications service (APNs)** → tải file `.p8` (chỉ tải được 1 lần).
-2. Gửi Claude: nội dung file `.p8`, **Key ID**, **Team ID** → cài vào Vercel `APNS_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=com.bitpawos.app`.
+1. developer.apple.com → Identifiers → `com.bitpawos.app` → bật **Push Notifications** và **Associated Domains** (app đã có `ios/App/App/App.entitlements`).
+2. **Keys** → tạo key bật **Apple Push Notifications service (APNs)** → tải file `.p8` (chỉ tải được 1 lần).
+3. Cài vào Vercel `APNS_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=com.bitpawos.app`.
+4. Nếu số build TestFlight đầu tiên có entitlement lớn hơn 2: đặt Vercel `NATIVE_PUSH_MIN_BUILD_IOS` = số build đó (bản cũ hơn sẽ không hiện nút bật thông báo).
+
+**Link mở thẳng trong app (App Links / Universal Links):**
+- Android: Vercel `ANDROID_APP_LINK_SHA256` = SHA-256 của **App signing key** (Play Console → Test and release → App integrity). Kiểm tra: https://www.bitpawos.com/.well-known/assetlinks.json
+- iOS: Vercel `APPLE_TEAM_ID` (hoặc dùng `APNS_TEAM_ID` ở trên). Kiểm tra: https://www.bitpawos.com/.well-known/apple-app-site-association (trả 404 khi chưa có Team ID).
 
 ---
 
 ## 5. Checklist sáng mai
 
 **Google Play (Android Studio trên Windows):**
-1. Mở thư mục `android/` bằng Android Studio → chờ Gradle đồng bộ.
-2. **Build → Generate Signed App Bundle → Android App Bundle** → **Create new…** để tạo khoá (upload key).
-   - Lưu file `.jks` + mật khẩu ở nơi an toàn (Google Drive riêng / trình quản lý mật khẩu). **Mất khoá = không cập nhật app được.** Không gửi khoá này cho ai.
-3. Chọn **release** → ra file `android/app/release/app-release.aab`.
-4. Play Console → Tạo ứng dụng → điền mục 1, 2 → **Internal testing** tải `.aab` lên trước, thử trên máy thật → rồi **Production**.
-   - Quyền app: chỉ INTERNET, CAMERA, RECORD_AUDIO (gọi video), POST_NOTIFICATIONS. Đã bỏ READ_MEDIA_IMAGES/VIDEO (12/10/2026) → không phải nộp tờ khai "Photo and video permissions".
+1. `npm install` → `npx cap sync android` → mở thư mục `android/` bằng Android Studio → chờ Gradle đồng bộ.
+2. Ký bằng **upload key ĐÃ ĐĂNG KÝ** với Play — KHÔNG "Create new…" (khoá mới sẽ bị Play từ chối). So SHA-1 của khoá với Play Console → Test and release → **App integrity** → *Upload key certificate*. Khoá hiện có trên máy: `android/app/pawos-release.keystore` (SHA-1 `1D:53:83:4C:CE:4E:16:51:12:C2:1F:16:1B:A6:FE:09:2E:E0:29:34`). Khác nhau → tìm khoá gốc, mất thì dùng *Request upload key reset*.
+   - Chép `android/keystore.properties.example` thành `android/keystore.properties` (đã gitignore), điền mật khẩu → `cd android && ./gradlew bundleRelease` ra `android/app/build/outputs/bundle/release/app-release.aab`. (Hoặc Android Studio → Build → Generate Signed App Bundle → **Choose existing…**.)
+   - Sao lưu file `.keystore` + mật khẩu ra ngoài máy này (Drive riêng / trình quản lý mật khẩu). **Mất khoá = phải xin Google reset.** Không gửi khoá cho ai, không commit.
+3. Play Console → **Closed testing** (hoặc Internal) tải `.aab` → thử trên máy Android 14–16 thật: chọn ảnh (Try-On, portfolio, đính kèm chat), chụp ảnh Try-On, gọi thoại + gọi video, bật chế độ máy bay (phải hiện màn "Không có kết nối mạng"), mở 1 link việc làm → rồi mới xin **Production**.
+   - Quyền app (manifest sau khi gộp): INTERNET, ACCESS_NETWORK_STATE, CAMERA, RECORD_AUDIO + MODIFY_AUDIO_SETTINGS (gọi thoại/video), POST_NOTIFICATIONS, WAKE_LOCK + com.google.android.c2dm.permission.RECEIVE (thông báo đẩy), READ_EXTERNAL_STORAGE (chỉ Android ≤ 12). Không có READ_MEDIA_IMAGES/VIDEO, không có vị trí → không phải nộp tờ khai "Photo and video permissions" hay vị trí.
    - Quốc gia phát hành: Hoa Kỳ + Úc (có thể thêm Việt Nam cho người nhà test).
 5. Tài khoản Play cá nhân mới: Google bắt **chạy thử kín với ≥12 người trong 14 ngày** trước khi được lên Production. (Tài khoản tổ chức/doanh nghiệp thì không.)
 
 **App Store (cần máy Mac + Xcode + tài khoản Apple Developer $99/năm):**
-1. `npm install` → `npx cap sync ios` → mở `ios/App/App.xcworkspace` bằng Xcode.
-2. Signing & Capabilities: chọn Team, bật **Push Notifications** (APNs đã cấu hình phía máy chủ).
-3. Product → **Archive** → Distribute App → App Store Connect → Upload.
+1. `npm install` → `npx cap sync ios` → mở `ios/App/App.xcodeproj` bằng **Xcode 26+** (Capacitor 8 dùng Swift Package Manager, không có `.xcworkspace`; Apple chỉ nhận bản build bằng Xcode 26 / iOS 26 SDK).
+2. Signing & Capabilities: chọn Team; **Push Notifications** và **Associated Domains** đã khai trong `App.entitlements` — App ID trên developer.apple.com phải bật cả 2.
+3. Phiên bản 1.1.0 đã đặt sẵn (MARKETING_VERSION). Build tự tăng: chạy GitHub Actions **Deploy iOS to TestFlight** (ô `app_version` = 1.1.0; cần secrets `IOS_DIST_P12_BASE64` + `IOS_DIST_P12_PASSWORD` = chứng chỉ Apple Distribution hiện có, xuất .p12). Archive tay trong Xcode thì tự tăng CURRENT_PROJECT_VERSION lên hơn build TestFlight mới nhất.
 4. App Store Connect: điền mục 1, 2, 3, tải 6 ảnh `store-assets/ios_*.png` → Submit for Review.
 5. App chỉ chạy iPhone (đã tắt iPad cho lần đầu — iPad vẫn cài được ở chế độ iPhone).
 
 **Rủi ro bị từ chối & cách đã xử lý:**
-- 4.2 "chỉ là web bọc lại": app có thông báo đẩy native, camera/thư viện ảnh, gọi thoại/video → nêu rõ trong Review Notes.
+- 4.2 "chỉ là web bọc lại": camera/thư viện ảnh (Try-On, portfolio), gọi thoại/video trong app, nút Back Android, màn mất mạng riêng, link mở thẳng trong app; thông báo đẩy native khi mục 4 xong → chỉ nêu trong Review Notes những gì đã chạy thật.
 - 4.8 Sign in with Apple: trong app native chỉ có email + mật khẩu (Google/Facebook/SĐT ẩn — components/auth/SocialLogin.tsx) → không bắt buộc Sign in with Apple.
 - Đăng nhập SĐT ẩn trong app vì Twilio còn bản dùng thử (người duyệt không nhận được mã). Nâng cấp Twilio xong → đặt `NEXT_PUBLIC_NATIVE_PHONE_LOGIN=1` trên Vercel để bật lại.
 - 5.1.1(v) Xoá tài khoản: có trong app.

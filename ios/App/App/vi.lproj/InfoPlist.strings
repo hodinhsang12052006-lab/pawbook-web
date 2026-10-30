@@ -1,0 +1,5 @@
+/* Lời xin quyền tiếng Việt (máy đặt ngôn ngữ Tiếng Việt). Bản tiếng Anh nằm trong Info.plist. */
+"NSCameraUsageDescription" = "PawNail Jobs cần dùng camera để chụp ảnh tiệm và tác phẩm nail, thử mẫu nail trên tay bạn và gọi video với chủ tiệm, thợ nail.";
+"NSMicrophoneUsageDescription" = "PawNail Jobs cần dùng micro cho cuộc gọi thoại, gọi video và tin nhắn thoại khi trò chuyện với chủ tiệm, thợ nail.";
+"NSPhotoLibraryUsageDescription" = "PawNail Jobs cần truy cập thư viện ảnh để bạn tải lên mẫu nail, ảnh tác phẩm cho portfolio và ảnh hoặc video của tiệm.";
+"NSPhotoLibraryAddUsageDescription" = "PawNail Jobs cần quyền lưu ảnh mẫu nail và thẻ portfolio vào thư viện ảnh của bạn.";

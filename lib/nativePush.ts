@@ -1,22 +1,46 @@
 "use client";
 
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { App } from "@capacitor/app";
 import type { PushState } from "@/lib/pushClient";
 
 // Thông báo đẩy trong APP NATIVE (Android/iOS) qua Firebase — lib/pushClient.ts
 // tự chuyển sang đây khi đang chạy trong app, nên lời mời bật thông báo, công
 // tắc trong Cài đặt và "Báo việc" đều dùng chung một cách.
 // Chỉ hoạt động khi: app build có plugin @capacitor/push-notifications
-// (+ google-services.json / APNs) VÀ máy chủ đã bật FIREBASE_SERVICE_ACCOUNT.
+// (+ google-services.json / APNs) VÀ máy chủ đã bật FIREBASE_SERVICE_ACCOUNT
+// (iOS: APNS_*) VÀ bản app đủ mới (shellSupportsPush bên dưới).
 const TOKEN_KEY = "pn_native_push_token";
 
 export const isNativeApp = () => typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("PushNotifications");
+
+// Plugin native nhỏ trong MainActivity (android/.../PawNailNativePlugin.java):
+// cho biết bản Android này có google-services.json (Firebase) hay không.
+const PawNailNative = registerPlugin<{ getInfo(): Promise<{ firebase?: boolean }> }>("PawNailNative");
+
+// Bản iOS đầu tiên có entitlement aps-environment (ios/App/App/App.entitlements).
+// Máy chủ nâng được mốc này mà không cần build lại: NATIVE_PUSH_MIN_BUILD_IOS.
+const DEFAULT_IOS_MIN_BUILD = 2;
+
+type PushServerInfo = { nativeEnabled?: boolean; iosEnabled?: boolean; androidMinBuild?: number | null; iosMinBuild?: number | null };
+
+// Bản app CŨ không được gọi register(): trên Android thiếu Firebase thì
+// FirebaseMessaging.getInstance() ném lỗi và app CRASH ngay khi người dùng bấm
+// "Bật thông báo" (xảy ra ngay khi máy chủ đặt FIREBASE_SERVICE_ACCOUNT). Bản cũ
+// / thiếu cấu hình → "unsupported", không crash.
+async function shellSupportsPush(d: PushServerInfo): Promise<boolean> {
+  const build = Number((await App.getInfo()).build) || 0;
+  if (Capacitor.getPlatform() === "ios") return build >= (Number(d.iosMinBuild) || DEFAULT_IOS_MIN_BUILD);
+  if (!Capacitor.isPluginAvailable("PawNailNative")) return false; // bản Android trước versionCode 2
+  if (build < (Number(d.androidMinBuild) || 0)) return false;
+  return !!(await PawNailNative.getInfo()).firebase;
+}
 
 let serverOn: Promise<boolean> | null = null;
 const nativeServerOn = () =>
   (serverOn ??= fetch("/api/push/subscribe")
     .then((r) => r.json())
-    .then((d) => (Capacitor.getPlatform() === "ios" ? !!d.iosEnabled : !!d.nativeEnabled))
+    .then(async (d: PushServerInfo) => (Capacitor.getPlatform() === "ios" ? !!d.iosEnabled : !!d.nativeEnabled) && (await shellSupportsPush(d)))
     .catch(() => false));
 
 const plugin = async () => (await import("@capacitor/push-notifications")).PushNotifications;

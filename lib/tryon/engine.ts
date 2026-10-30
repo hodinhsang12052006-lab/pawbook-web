@@ -2132,7 +2132,13 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
     // bên (microProfile): đường cười cũ mảnh 3px chỉ còn 1 vệt tối dưới mép (ảnh nhỏ đọc thành ghét bẩn dưới móng) và trên
     // móng hạnh nhân co lại thành 1 tam giác ở chóp. Đầu màu rất tối dày thêm 8% (vệt tối mảnh sát mép = bóng / ghét móng)
     case "fr-micro": st = { kind: 4, yc: Math.max(0.15, 6 * px, 0.055 * len) * (dark ? 1.08 : 1), ysL: 0, ysR: 0, p: 1, sg: 1, bow: 0 }; break;
-    case "chromefrench": st = inSet ? smile(Math.max(0.22, 3.6 * px, 0.07 * len), 1.3) : smile(Math.max(0.36, 0.14 * len), 1.35); break;
+    // chrome French cả bộ: đầu gương ~1/5 móng; đường cười CONG nhẹ đều (2 bên sâu hơn giữa ~0.3 hw, p 1.8) — móng đầu
+    // vuông với horn 1.35 / p 2.2 thì đường gần như thẳng ngang, đầu gương thành 1 cái đai kim loại bọc đầu móng
+    case "chromefrench": {
+      if (inSet) { st = smile(Math.max(0.22, 3.6 * px, 0.07 * len), 1.3); break; }
+      const s0 = smile(Math.max(0.36, 0.14 * len), 1.7);
+      st = { ...s0, p: Math.min(s0.p, 1.8) }; break;
+    }
     case "fr-deep": case "fr-santa": case "fr-candycane": st = smile(Math.max(0.5, 0.2 * len), 1.4); break;
     case "fr-tortoise": st = smile(Math.max(0.42, 0.15 * len), 1.4); break; // đủ sâu để thấy 2–3 đốm
     // pink & white bột: trắng phủ hết phần đắp (đường cười nằm ở mép móng thật), 2 bên ôm sâu
@@ -2253,14 +2259,14 @@ function microProfile(seg: NailSeg, tp: TipProfile, wHw: number): MicroProf {
   return { yc, rE, rI, w, kE };
 }
 /**
- * Đầu French TRÁNG GƯƠNG: phản chiếu đặt NGANG đầu móng theo v (0 = mép tự do, 1 = đường French) — 1 dải sáng gắt cong
- * theo đầu móng, dải tối "chân trời" sát dưới, vành Fresnel sáng mảnh ở mép tự do (≤ 1.5px), sáng hơn phía có đèn.
- * metalShade đặt dải theo bề ngang móng → trong đầu micro chỉ ra vài vệt dọc ngắn trên nền xám phẳng (#22).
- * Dải ngang chỉ trải trên ≤ 0.5 hw sát mép tự do (phần đầu móng cong xuống soi trần nhà): đầu móng sâu (coffin, 2 thành
- * móng ôm dài) mà trải dải theo cả bề sâu thì ra cái KHUNG viền xám — phần xa mép soi như chrome trơn: vệt DỌC sáng phía
- * có đèn, vệt tối phía kia (theo độ cong ngang của móng).
+ * Đầu French TRÁNG GƯƠNG mảnh (viền micro của móng nối trong bộ, ≤ ~0.26 hw): phản chiếu đặt NGANG đầu móng theo v (0 =
+ * mép tự do, 1 = đường French) — 1 dải sáng gắt cong theo đầu móng, dải tối "chân trời" sát dưới, vành Fresnel sáng mảnh
+ * ở mép tự do (≤ 1.5px), sáng hơn phía có đèn. metalShade đặt dải theo bề ngang móng → trong đầu micro chỉ ra vài vệt dọc
+ * ngắn trên nền xám phẳng (#22). Dải ngang chỉ trải trên ≤ 0.5 hw sát mép tự do (phần đầu móng cong xuống soi trần nhà):
+ * đầu móng sâu (coffin, 2 thành móng ôm dài) mà trải dải theo cả bề sâu thì ra cái KHUNG viền xám — phần xa mép soi như
+ * chrome trơn: vệt DỌC sáng phía có đèn, vệt tối phía kia (theo độ cong ngang của móng).
  */
-function tipMirror(tint: RGB, g: number, dep: number, t: number, ePx: number, side: number): RGB {
+function tipBand(tint: RGB, g: number, dep: number, t: number, ePx: number, side: number): RGB {
   const mx = Math.max(tint[0], tint[1], tint[2], 1e-3);
   const f0: RGB = [0.25 + (0.75 * tint[0]) / mx, 0.25 + (0.75 * tint[1]) / mx, 0.25 + (0.75 * tint[2]) / mx];
   const span = Math.min(dep, 0.5), w = Math.min(1, g / span), far = smooth(0.75, 1.1, g / span) * smooth(0.3, 0.6, dep);
@@ -2273,6 +2279,24 @@ function tipMirror(tint: RGB, g: number, dep: number, t: number, ePx: number, si
   const hot = smooth(0.85, 1.45, env) * 0.7;
   const ch = (f: number) => { const c = Math.min(1, f * env); return c + (1 - c) * hot; };
   return [ch(f0[0]), ch(f0[1]), ch(f0[2])];
+}
+/**
+ * Đầu French TRÁNG GƯƠNG. Đầu SÂU (cả bộ chrome French ~1/5 móng) trên móng đầu BẰNG / tròn (vuông, squoval, oval, móng
+ * thật): mặt đầu móng gần phẳng theo dọc, cong theo NGANG (độ cong C) → soi như móng chrome trơn cắt theo đường cười
+ * (metalShade): khối softbox DỌC sáng gắt phía có đèn, đường chân trời tối cạnh nó, nền phòng xám, 2 thành sáng Fresnel;
+ * chỉ ~3px sát mép tự do cong xuống (tối nhẹ) + vành Fresnel ≤ 1.2px. Dải ngang (tipBand) trên đầu sâu móng vuông ra các
+ * sọc ngang đều song song mép — viền trắng dày bo góc, dải tối, dải xám: đọc như cái đai / đầu bịt kim loại (soi vòng 2,
+ * catalog #2 pink.jpg vuông). Đầu mảnh (viền micro) / móng hạnh nhân dài nhọn (đầu màu là hình lưỡi liềm hẹp ôm 2 bên —
+ * dải sáng chạy theo mép cong mới đúng, p067 vàng) giữ tipBand. `flat`: 1 = đầu bằng / tròn, 0 = hạnh nhân nhọn.
+ */
+function tipMirror(tint: RGB, g: number, dep: number, t: number, ePx: number, side: number, shade: number, hw: number, flat: number): RGB {
+  const band = tipBand(tint, g, dep, t, ePx, side), kc = smooth(0.26, 0.4, dep) * flat;
+  if (kc <= 0) return band;
+  const wD = Math.min(1, g / Math.max(0.05, dep)), gp = g * hw;
+  const c = metalShade(tint, t * 0.94, 1.5 + 2 * wD, shade, side, 0.6 * (wD - 0.5));
+  const cu = 1 - 0.22 * Math.exp(-(((gp - 2.6) / 1.6) ** 2)), rim = 0.8 * Math.exp(-((gp / 1.1) ** 2));
+  const f = (v: number) => v * cu + (1 - v * cu) * rim;
+  return mix3(band, [f(c[0]), f(c[1]), f(c[2])], kc);
 }
 /** Nhũ đầu móng: hạt LỤC GIÁC xếp dày (ô ≥ 2.6px), mỗi hạt 1 mặt nghiêng → sáng / tối riêng, ~8% hạt loé, ~8% hạt ánh cầu vồng. b: độ sáng hạt. */
 const FLK = { b: 0, cov: 0, hue: -1, id: 0 };
@@ -2578,8 +2602,10 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               const metalTip = pat === "chromefrench" || (!ownFill && c2[0] === metal[0] && c2[1] === metal[1] && c2[2] === metal[2]);
               if (metalTip) {
                 // đầu móng KIM LOẠI: phản chiếu gương theo bề sâu đầu móng — tô thẳng màu cuối (chia trước hệ số ánh sáng
-                // bước 2, phản chiếu đã gồm ánh sáng)
-                const mc = tipMirror(metal, fl.g, fl.dep, t, eDist[k], side), lit = Math.max(0.3, (1 + contrast * shade) * edge * cut);
+                // bước 2, phản chiếu đã gồm ánh sáng). Độ bằng đầu móng (mép ở ±0.6 hw tụt < 0.3 hw so với chóp = vuông /
+                // squoval / oval / tròn; ≥ 0.45 = hạnh nhân / nhọn) chọn kiểu phản chiếu (tipMirror)
+                const flatT = (tipP.memo.cfFlat as number | undefined) ?? (tipP.memo.cfFlat = 1 - smooth(0.3, 0.45, tipE(tipP, 0) - (tipE(tipP, -0.6) + tipE(tipP, 0.6)) / 2));
+                const mc = tipMirror(metal, fl.g, fl.dep, tq, eDist[k], side, shade, seg.hw, flatT), lit = Math.max(0.3, (1 + contrast * shade) * edge * cut);
                 tip = [mc[0] / lit, mc[1] / lit, mc[2] / lit];
               } else if (pat === "fr-skittle") {
                 // SKITTLE: mỗi ngón 1 tông của cùng họ màu theo THỨ TỰ NGÓN (chỉ số móng trong ảnh không phải thứ tự ngón —
@@ -3108,7 +3134,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             core = Math.max(core, 0.75 * gauss(d - 0.21, 0.04), 0.65 * gauss(d + 0.23, 0.04));
             halo = Math.max(halo, 0.7 * gauss(d - 0.21, 0.11), 0.6 * gauss(d + 0.23, 0.11));
           }
-          const lf = edge * (1 + 0.3 * shade);
+          // đầu French (gương / sơn màu) phủ LÊN lớp mắt mèo → dải từ tính + hạt lấp lánh không chạy xuyên qua đầu móng
+          // (trend "Cat eye & chrome": dải mắt mèo cắt ngang đầu gương bạc thành 1 vệt hồng mờ, đầu gương nhạt bệt)
+          const lf = edge * (1 + 0.3 * shade) * (1 - frTip);
           if (pat === "auroracat") {
             // AURORA: dải từ tính đổi sắc hồng → tím → xanh băng → xanh ngọc theo bề ngang (như cực quang)
             const hq = 2.2 * t + 1.4 * s + ph;

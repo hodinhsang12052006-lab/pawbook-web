@@ -1001,7 +1001,9 @@ const ROLES: Record<string, Role> = {
   // nền trắng loang ra 1 vệt xanh tím giữa móng như vết bầm (soi lượt 2: "Aura xanh cobalt"). Và chỉ HỒNG (góc sắc ≤ 15°) hoặc
   // TÍM XANH (≥ 270°): bộ vẽ tan vầng aura thành quầng mềm ngả hồng — lõi đỏ cherry / đỏ dâu / san hô / cam quả hồng đều ra
   // quầng hồng phấn ("Aura đỏ cherry" mà ảnh hồng nhạt — soi lượt 2, cả bản vẽ lại aura lượt 2)
-  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && Lof(hx(b)) >= 35 && (hueAng(hx(b)) <= 15 || hueAng(hx(b)) >= 270) && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20,
+  // (nền aura: trắng / hồng sữa sáng L* ≥ 80 — quầng hồng trên nền nude be / champagne ngả vàng nhìn như vết ố)
+  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && Lof(hx(b)) >= 35 && (hueAng(hx(b)) <= 15 || hueAng(hx(b)) >= 270) && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20 &&
+    Lof(hx(a)) >= 80 && (hueAng(hx(a)) < 50 || chroma(hx(a)) < 10),
     pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["sheer", "hotPink", "gold"], ["milky", "periwinkle", "silver"]] },
   tortoise: { g: "tone", pal: [["caramel", "chocolate", "gold"]] },
   marble: { g: "glow", ok: marbleOk, pal: [["milky", "smoke", "gold"], ["cloudDancer", "pewter", "gold"], ["black", "milky", "gold"], ["emerald", "milky", "gold"], ["jade", "milky", "gold"]] },
@@ -1246,6 +1248,10 @@ const neutralSwaps = (k: [CK, CK, CK]): [CK, CK, CK][] => [0, 1].filter((i) => N
     .map((b): [CK, CK, CK] => (i ? [k[0], b, k[2]] : [b, k[1], k[2]])));
 const patFam = (p: string) => (FRENCH_FAMILY.has(p) ? "french" : SHEER_FAM.has(p) ? "sheer" : PLAIN.has(p) ? "plain" : p);
 const lookKey = (p: string, pal: readonly string[]) => `${patFam(ALIAS[p] ?? p)}|${visTones(p, pal).map(toneFam).join("+")}`;
+/** Hiệu ứng mắt mèo / tráng gương là "chữ ký" nhìn thấy đầu tiên ở ảnh nhỏ: 2 mẫu mắt mèo nền đỏ rượu (1 trơn, 1 chấm bi)
+ *  trong 1 ngày nhìn như 1 mẫu đăng 2 lần (soi lượt 2) → 1 hiệu ứng × 1 họ màu nền / ngày. Chỉ mắt mèo và gương THẬT (nền
+ *  L* < 70); nền sáng tráng chrome chỉ là lớp ngọc trai mờ, hoạ tiết vẫn là chính */
+const fxKey = (pal: readonly string[], finish?: string) => (finish === "cateye" ? `fx|${finish}|${toneFam(pal[0])}` : "");
 // đầu móng nâu đậm / mận / rượu sẫm trên móng NGẮN (oval, vuông) nhìn như đầu móng ố bẩn (soi lượt 2: ombre nude → nâu
 // cà phê, French micro mận đậm trên móng oval ngắn) → các mẫu dồn màu đậm ở đầu móng chỉ ra dáng dài (hạnh nhân, coffin)
 const MUDDY_TIP = new Set(["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"]);
@@ -1467,6 +1473,8 @@ export interface EngineInput {
   recentPatterns?: string[];
   /** bảng màu (mã hex) của chính các mẫu đó, CÙNG THỨ TỰ với recentPatterns — chia màu cả ngày (1 màu ≤ 20%, 1 họ màu ≤ 30%) */
   recentPalettes?: string[][];
+  /** hiệu ứng (glossy / cateye / chrome…) của chính các mẫu đó, cùng thứ tự — không 2 mẫu mắt mèo / tráng gương cùng họ màu nền / ngày */
+  recentFinishes?: string[];
 }
 
 const wpick = <T,>(r: () => number, arr: readonly T[], w: (x: T) => number): T => {
@@ -1611,7 +1619,8 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   // CẢ NGÀY = 18 mẫu gần nhất (3 lượt cron) + lượt này: nhân vật / bộ phối theo dịp, màu, "kiểu + tông" không lặp
   const recentPals = (input.recentPalettes ?? []).slice(0, recentList.length || undefined);
   const dayMotifs = () => new Set([...recentList, ...out.map((d) => d.pattern)].flatMap(motifsOf));
-  const dayKeys = () => new Set([...recentList.map((p, i) => (recentPals[i] ? lookKey(p, recentPals[i]) : "")), ...out.map((d) => lookKey(d.pattern, d.palette))].filter(Boolean));
+  const recentFin = input.recentFinishes ?? [];
+  const dayKeys = () => new Set([...recentList.flatMap((p, i) => (recentPals[i] ? [lookKey(p, recentPals[i]), fxKey(recentPals[i], recentFin[i])] : [])), ...out.flatMap((d) => [lookKey(d.pattern, d.palette), fxKey(d.palette, d.finish)])].filter(Boolean));
   // TRẦN MÀU CẢ NGÀY: 1 màu (nền / phụ) ≤ 20%, 1 họ màu ≤ 30% số mẫu (tối thiểu 2) — soi lượt 2: trắng sữa trong 35/72
   // mẫu, nâu mocha / espresso 18/72, 18 mẫu sắp ra lại nghiêng cà phê, mocha, đen
   // Cửa sổ TRƯỢT đúng 1 ngày cron: 17 mẫu gần nhất + mẫu đang ghép = 18 (3 lượt × 6) → mọi 18 mẫu liền nhau (nên cả 1 ngày
@@ -1736,7 +1745,9 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
     }
     // trần màu cả ngày + kiểu & tông đã có trong ngày (2 French nền sữa đầu nâu…): giữ tới bậc 1 (bảng màu đã được ưu tiên
     // còn trần ngay từ lúc ghép — xem compose); bí thì nới cùng lúc với né lượt trước
-    if (lvl < 2 && (!capOk(d.palette, d.pattern) || dayKeys().has(lookKey(d.pattern, d.palette)))) return false;
+    // (mắt mèo / tráng gương cùng họ màu nền: chỉ ở bậc 0 — bí thì nhường cho luật né hoạ tiết 3 lượt trước, lặp hoạ tiết
+    // khó chịu hơn 2 mẫu mắt mèo đỏ trong ngày Noel)
+    if (lvl < 2) { const dk = dayKeys(), fk = fxKey(d.palette, d.finish); if (!capOk(d.palette, d.pattern) || dk.has(lookKey(d.pattern, d.palette)) || (lvl < 1 && fk && dk.has(fk))) return false; }
     if (lvl < 1 && bt.filter((x) => x.fam === T.fam).length >= 2) return false;
     return true;
   };

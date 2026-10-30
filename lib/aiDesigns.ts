@@ -254,9 +254,9 @@ export async function generateEngine(market: "US" | "AU", count: number, deadlin
   const [signals, recent, lastRuns] = await Promise.all([
     getSignals(market).catch(() => null),
     prisma.nailDesign.findMany({ where: { createdAt: { gte: new Date(now.getTime() - 60 * DAY_MS) } }, select: { title: true }, take: 400 }),
-    // hoạ tiết + bảng màu của 18 mẫu PawNail gần nhất (3 lượt cron) — lượt mới né hoạ tiết, nhân vật (ma / dơi…), bộ phối
+    // hoạ tiết + bảng màu + hiệu ứng của 18 mẫu PawNail gần nhất (3 lượt cron) — lượt mới né hoạ tiết, nhân vật (ma / dơi…), bộ phối
     // theo dịp đã ra trong ngày, và chia màu cả ngày (1 màu ≤ 20%, 1 họ màu ≤ 30%) — không cả ngày trắng sữa + nâu
-    prisma.nailDesign.findMany({ where: { provider: "pawnail", status: { in: ["draft", "published"] } }, orderBy: { createdAt: "desc" }, select: { pattern: true, palette: true }, take: 18 }),
+    prisma.nailDesign.findMany({ where: { provider: "pawnail", status: { in: ["draft", "published"] } }, orderBy: { createdAt: "desc" }, select: { pattern: true, palette: true, finish: true }, take: 18 }),
   ]);
   const list = generateEngineDesigns(n, {
     market,
@@ -267,6 +267,7 @@ export async function generateEngine(market: "US" | "AU", count: number, deadlin
     usedTitles: new Set(recent.map((r) => r.title)),
     recentPatterns: lastRuns.map((r) => r.pattern),
     recentPalettes: lastRuns.map((r) => parse(r.palette, [] as string[])),
+    recentFinishes: lastRuns.map((r) => r.finish ?? ""),
   });
   const errors: string[] = list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [];
   const { created, jobs } = await saveEngineDesigns(list, market);

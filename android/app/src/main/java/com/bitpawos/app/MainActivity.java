@@ -1,89 +1,43 @@
 package com.bitpawos.app;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.webkit.PermissionRequest;
-import android.webkit.WebChromeClient;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
-import java.util.ArrayList;
-import java.util.List;
+import com.getcapacitor.BridgeWebViewClient;
 
+// KHÔNG gọi webView.setWebChromeClient(...) ở đây. Capacitor đã gắn sẵn
+// BridgeWebChromeClient (Bridge.java), lo cả <input type=file> (ảnh Try-On,
+// portfolio, đính kèm chat), video toàn màn hình, hộp thoại JS và quyền
+// camera/micro cho getUserMedia (VIDEO_CAPTURE → CAMERA, AUDIO_CAPTURE →
+// RECORD_AUDIO + MODIFY_AUDIO_SETTINGS). Bản cũ thay nó bằng một
+// WebChromeClient trần, làm mọi nút chọn ảnh trên Android im lặng không mở.
 public class MainActivity extends BridgeActivity {
 
-    private static final int MEDIA_PERMISSION_REQUEST_CODE = 7001;
-    private PermissionRequest pendingWebPermissionRequest;
-
-    // Cấp quyền Camera/Micro cho WebView khi trang web gọi
-    // navigator.mediaDevices.getUserMedia() (cuộc gọi thoại/video WebRTC
-    // trong CallManager.tsx). Mặc định BridgeActivity của Capacitor KHÔNG tự
-    // xử lý PermissionRequest này — dù AndroidManifest đã khai báo CAMERA +
-    // RECORD_AUDIO, WebView vẫn tự động DENY mọi yêu cầu capture media nếu
-    // không có đoạn override này, khiến mọi cuộc gọi trong app native trên
-    // Android câm lặng thất bại (không nghe/không thấy hình, không crash,
-    // không log lỗi rõ ràng).
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Plugin cục bộ phải đăng ký TRƯỚC super.onCreate (lúc đó Bridge được tạo).
+        registerPlugin(PawNailNativePlugin.class);
         super.onCreate(savedInstanceState);
 
-        this.bridge.getWebView().setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(() -> {
-                    List<String> resourcesNeeded = new ArrayList<>();
-                    for (String resource : request.getResources()) {
-                        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
-                            resourcesNeeded.add(Manifest.permission.CAMERA);
-                        } else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
-                            resourcesNeeded.add(Manifest.permission.RECORD_AUDIO);
-                        }
+        // server.errorPath (offline.html) chỉ nên hiện khi KHÔNG tải được trang
+        // (mất mạng, DNS, SSL): onReceivedError của Capacitor vẫn lo việc đó.
+        // BridgeWebViewClient mặc định còn nạp offline.html cho cả lỗi HTTP của
+        // trang chính (404 tin đã gỡ, 5xx), nên mở link một tin đã hết hạn sẽ
+        // báo "mất mạng". Vẫn dùng BridgeWebViewClient của Capacitor, chỉ bỏ qua
+        // lỗi HTTP của trang chính để trang 404/lỗi của website tự hiển thị.
+        // (Lỗi HTTP của tài nguyên con vẫn đi qua super như cũ. Không plugin nào
+        // đang cài nghe onReceivedHttpError của trang chính.)
+        this.bridge.setWebViewClient(
+            new BridgeWebViewClient(this.bridge) {
+                @Override
+                public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+                    if (!request.isForMainFrame()) {
+                        super.onReceivedHttpError(view, request, errorResponse);
                     }
-
-                    List<String> missingRuntimePermissions = new ArrayList<>();
-                    for (String permission : resourcesNeeded) {
-                        if (ContextCompat.checkSelfPermission(MainActivity.this, permission)
-                                != PackageManager.PERMISSION_GRANTED) {
-                            missingRuntimePermissions.add(permission);
-                        }
-                    }
-
-                    if (missingRuntimePermissions.isEmpty()) {
-                        request.grant(request.getResources());
-                    } else {
-                        pendingWebPermissionRequest = request;
-                        ActivityCompat.requestPermissions(
-                            MainActivity.this,
-                            missingRuntimePermissions.toArray(new String[0]),
-                            MEDIA_PERMISSION_REQUEST_CODE
-                        );
-                    }
-                });
+                }
             }
-        });
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode != MEDIA_PERMISSION_REQUEST_CODE || pendingWebPermissionRequest == null) {
-            return;
-        }
-
-        boolean allGranted = grantResults.length > 0;
-        for (int result : grantResults) {
-            if (result != PackageManager.PERMISSION_GRANTED) {
-                allGranted = false;
-                break;
-            }
-        }
-
-        if (allGranted) {
-            pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
-        } else {
-            pendingWebPermissionRequest.deny();
-        }
-        pendingWebPermissionRequest = null;
+        );
     }
 }

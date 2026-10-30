@@ -6,6 +6,11 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>vi</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>PawNail Jobs</string>
 	<key>CFBundleExecutable</key>
@@ -77,10 +82,8 @@
 	<string>PawNail Jobs needs access to your photo library so you can upload nail design samples, portfolio work showcases, and salon photos or videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>PawNail Jobs needs permission to save nail design photos and portfolio cards to your photo library.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>PawNail Jobs uses your location while using the app to help you search for nearby nail salons, technicians, and job opportunities around you.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>PawNail Jobs uses your location while using the app to help you search for nearby nail salons, technicians, and job opportunities around you.</string>
+	<!-- KHÔNG khai NSLocation*: app không dùng GPS (người dùng tự nhập thành phố/bang),
+	     khớp nhãn App Privacy và bản Android (không có quyền vị trí). -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

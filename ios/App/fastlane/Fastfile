@@ -1,4 +1,5 @@
 require "base64"
+require "tmpdir"
 
 default_platform(:ios)
 
@@ -35,17 +36,35 @@ platform :ios do
       in_house: false
     )
 
-    # 3. Fetch or generate Apple Distribution certificate and App Store provisioning profile
-    cert(
-      api_key: api_key,
-      development: false
-    )
+    # 3. Import the ONE persistent Apple Distribution certificate into the CI keychain.
+    #    `cert` used to run here: on a fresh CI keychain it never finds a certificate with a
+    #    local private key, so it created a NEW Apple Distribution certificate on every run
+    #    until Apple's per-team limit made the lane fail. Export the existing certificate
+    #    (Keychain Access > My Certificates > Apple Distribution > Export .p12), then set the
+    #    GitHub secrets IOS_DIST_P12_BASE64 (base64 of the .p12) and IOS_DIST_P12_PASSWORD.
+    #    Local runs (no CI) use the certificate already in the login keychain.
+    if ENV["CI"]
+      p12_base64 = ENV["IOS_DIST_P12_BASE64"].to_s.strip
+      UI.user_error!("Missing IOS_DIST_P12_BASE64 secret (Apple Distribution certificate .p12, base64)") if p12_base64.empty?
+      p12_path = File.join(Dir.tmpdir, "pawnail_distribution.p12")
+      begin
+        File.binwrite(p12_path, Base64.decode64(p12_base64))
+        import_certificate(
+          certificate_path: p12_path,
+          certificate_password: ENV["IOS_DIST_P12_PASSWORD"].to_s,
+          keychain_name: "fastlane_tmp_keychain",
+          keychain_password: ""
+        )
+      ensure
+        File.delete(p12_path) if File.exist?(p12_path)
+      end
+    end
 
+    # App Store provisioning profile: reuse the existing one when it still matches the
+    # installed certificate, create it only when missing/expired (no `force`).
     sigh(
       api_key: api_key,
-      app_identifier: app_identifier,
-      cert_id: lane_context[SharedValues::CERT_CERTIFICATE_ID],
-      force: true
+      app_identifier: app_identifier
     )
 
     profile_name = lane_context[SharedValues::SIGH_NAME]
@@ -68,6 +87,17 @@ platform :ios do
       UI.important("Could not query latest TestFlight build number (#{ex.message}); using build #{next_build}")
     end
 
+    # 4b. Marketing version (CFBundleShortVersionString). Once a version is approved its
+    #     train closes, so each store release needs a new one: run the workflow with the
+    #     app_version input (APP_VERSION), e.g. 1.2.0. Empty = MARKETING_VERSION from the project.
+    app_version = ENV["APP_VERSION"].to_s.strip
+    unless app_version.empty? || app_version.match?(/\A\d+\.\d+(\.\d+)?\z/)
+      UI.user_error!("APP_VERSION must look like 1.1.0 (got '#{app_version}')")
+    end
+    version_xcargs = "CURRENT_PROJECT_VERSION=#{next_build}"
+    version_xcargs += " MARKETING_VERSION=#{app_version}" unless app_version.empty?
+    UI.message("Building version #{app_version.empty? ? '(MARKETING_VERSION from project)' : app_version} (#{next_build})")
+
     # 5. Ensure shared Xcode scheme exists (Capacitor projects created outside Xcode may lack .xcscheme)
     recreate_schemes(project: xcodeproj_path)
 
@@ -89,7 +119,7 @@ platform :ios do
       configuration: "Release",
       clean: true,
       export_method: "app-store",
-      xcargs: "CURRENT_PROJECT_VERSION=#{next_build}",
+      xcargs: version_xcargs,
       output_directory: output_dir,
       output_name: "PawNailJobs.ipa",
       export_options: {

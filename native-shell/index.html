@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>PawNail</title>
+  <!--
+    Vỏ cục bộ của app native (capacitor.config.ts webDir = "native-shell").
+    Ở hosted mode Capacitor mở thẳng server.url, nên trang này gần như không bao
+    giờ hiện; nó chỉ là đường lùi: chuyển ngay sang website.
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #020617; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .spin {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.12); border-top-color: #e879f9;
+      animation: s 0.9s linear infinite;
+    }
+    @keyframes s { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  </style>
+</head>
+<body>
+  <div class="spin" role="status" aria-label="Đang tải · Loading"></div>
+  <script>
+    location.replace("https://www.bitpawos.com/");
+  </script>
+</body>
+</html>

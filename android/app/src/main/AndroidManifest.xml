@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -17,6 +17,27 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Android App Links: link bitpawos.com (email báo việc, link chia sẻ tin/tiệm/mẫu)
+                 mở thẳng trong app. Chỉ host www (domain trần 308 sang www, làm hỏng xác minh).
+                 KHÔNG thêm /api hay /auth: callback đăng nhập OAuth phải ở lại trình duyệt.
+                 Cần https://www.bitpawos.com/.well-known/assetlinks.json chứa SHA-256 của
+                 khoá ký app (Play Console > App integrity). JS xử lý link ở
+                 components/NativeAppBridge.tsx (hosted mode không tự điều hướng). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.bitpawos.com" />
+                <data android:pathPrefix="/jobs" />
+                <data android:pathPrefix="/salons" />
+                <data android:pathPrefix="/designs" />
+                <data android:pathPrefix="/profile" />
+                <data android:pathPrefix="/messages" />
+                <data android:pathPrefix="/tryon" />
+                <data android:pathPrefix="/trends" />
+                <data android:pathPrefix="/r/" />
             </intent-filter>
         </activity>
 
@@ -45,6 +66,10 @@
          chối truy cập mic, cuộc gọi thoại câm lặng thất bại (không crash,
          không log lỗi rõ ràng, chỉ đơn giản là không nghe được gì). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- BridgeWebChromeClient của Capacitor xin MODIFY_AUDIO_SETTINGS cùng lúc với
+         RECORD_AUDIO khi trang gọi getUserMedia({audio}); thiếu khai báo thì nó từ chối
+         mic. Quyền "normal": không hiện hộp thoại, không cần tờ khai Play. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Android 13+ KHÔNG cần READ_MEDIA_IMAGES/VIDEO: chọn ảnh qua bộ chọn file/Photo Picker
          của hệ thống (input type=file) không cần quyền. Khai 2 quyền đó thì Google Play bắt
          nộp tờ khai "Photo and video permissions" và hay từ chối app chỉ thỉnh thoảng tải ảnh. -->

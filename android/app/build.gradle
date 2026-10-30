@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+// Khoá ký bản phát hành đọc từ android/keystore.properties (gitignored, chỉ có trên máy
+// build). Mẫu: android/keystore.properties.example. KHÔNG ghi mật khẩu vào file này:
+// repo đang public. Không có file đó thì bản release ra chưa ký (Android Studio >
+// Generate Signed App Bundle vẫn tự ký được).
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+def hasReleaseKeystore = keystoreProperties['storeFile'] ? true : false
+
 android {
     namespace = "com.bitpawos.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +18,11 @@ android {
         applicationId "com.bitpawos.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // versionCode phải lớn hơn MỌI bản đã tải lên Play (mọi track) — xem App bundle
+        // explorer. Bản 1 / "1.0" đã nằm trong AAB 28/10/2026. Giữ versionName khớp
+        // MARKETING_VERSION bên iOS (ios/App/App.xcodeproj).
+        versionCode 2
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -22,15 +36,18 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file('pawos-release.keystore')
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "bitpawos2026"
-            keyAlias System.getenv("KEY_ALIAS") ?: "pawos"
-            keyPassword System.getenv("KEY_PASSWORD") ?: "bitpawos2026"
+            if (hasReleaseKeystore) {
+                // Đường dẫn storeFile tính từ thư mục android/app/.
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
         }
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            signingConfig hasReleaseKeystore ? signingConfigs.release : null
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -31,8 +31,22 @@ function validEndpoint(v: unknown): v is string {
 }
 const validKey = (v: unknown) => typeof v === "string" && /^[A-Za-z0-9_-]{10,200}={0,2}$/.test(v);
 
+// Mốc build tối thiểu của app native được bật thông báo đẩy (lib/nativePush.ts).
+// Đặt trên Vercel khi cần chặn các bản cũ mà không phải build lại app, vd
+// NATIVE_PUSH_MIN_BUILD_IOS = số build TestFlight đầu tiên có entitlement APNs.
+const minBuild = (v: string | undefined) => {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+
 export async function GET() {
-  return NextResponse.json({ enabled: pushEnabled(), nativeEnabled: fcmEnabled(), iosEnabled: apnsEnabled() });
+  return NextResponse.json({
+    enabled: pushEnabled(),
+    nativeEnabled: fcmEnabled(),
+    iosEnabled: apnsEnabled(),
+    androidMinBuild: minBuild(process.env.NATIVE_PUSH_MIN_BUILD_ANDROID),
+    iosMinBuild: minBuild(process.env.NATIVE_PUSH_MIN_BUILD_IOS),
+  });
 }
 
 export async function POST(req: Request) {

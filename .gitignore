@@ -59,6 +59,8 @@ android/*.iml
 android/capacitor-cordova-android-plugins/build
 *.keystore
 *.jks
+# Mật khẩu khoá ký Android (mẫu: android/keystore.properties.example)
+android/keystore.properties
 ios/App/Pods
 ios/App/build
 ios/App/*.xcworkspace/xcuserdata

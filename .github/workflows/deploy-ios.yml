@@ -76,3 +76,4 @@ jobs:
           path: ios/App/build/*.ipa
           if-no-files-found: ignore
           retention-days: 7
+

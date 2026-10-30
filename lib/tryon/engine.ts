@@ -2272,7 +2272,7 @@ function lineArt(role: string | undefined, Ln: number, seed: number, raised: boo
       // hơn phía trong, đầu nét ngắn nối tiếp 3 chấm nhỏ dần chạy cùng hướng
       const k = 5.5 / Ln, ph = 6.28 * h(7), dr = (1.12 * sg) / span, amp = 0.09;
       const main: Stroke = { o: 0, a0: L0, a1: L1, c: -0.62 * sg, amp, k, ph, dr, w: lw, wt: lw * 0.4, prof: 0 };
-      const b0 = L0 + 0.22 * span, b1 = L0 + 0.62 * span, off = 0.2 * sg;
+      const b0 = L0 + 0.22 * span, b1 = L0 + 0.62 * span, off = 0.28 * sg; // cách ~0.22 hw vuông góc (0.2 cũ: 2 nét dính thành 1 ở ảnh nhỏ)
       const comp: Stroke = { o: 0, a0: b0, a1: b1, c: main.c + dr * (b0 - L0) - off, amp, k, ph: ph + k * (b0 - L0), dr, w: lw * 0.72, wt: lw * 0.35, prof: 0 };
       st.push(main, comp);
       dotTrail(comp, dots, lw);

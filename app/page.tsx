@@ -208,9 +208,9 @@ export default function HomePage() {
             </span>
 
             <h1 className="hero-title-glow text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight [text-wrap:balance]">
-              {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE #1 NAIL JOBS MARKETPLACE ")}<br className="hidden sm:block" />
+              {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE NAIL JOBS MARKETPLACE ")}<br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
-                {tr("HẢI NGOẠI #1", "FOR VIETNAMESE PROS")}
+                {tr("CỦA NGƯỜI VIỆT", "FOR VIETNAMESE PROS")}
               </span>{tr(" TẠI MỸ & ÚC", " IN THE US & AUSTRALIA")}
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto">

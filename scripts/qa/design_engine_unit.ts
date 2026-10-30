@@ -2,7 +2,7 @@
 // Sinh hàng trăm mẫu cho mọi dịp lễ rồi soát luật NGHỀ: đúng kỹ thuật, đủ vật
 // tư, song ngữ sạch, không nói sai về xu hướng, không trùng tên.
 import { activeThemes, THEMES } from "../../lib/contentEngine";
-import { buildDesign, COLORS, finishOk, generateEngineDesigns, generateOccasionBatch, heroColors, lab, liveOccasions, paletteOk, PATTERN_IDS, PATTERNS, patternShapes, RETIRED_PATTERNS, runIssues, toneFam, tonesOf, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
+import { buildDesign, COLORS, finishOk, generateEngineDesigns, generateOccasionBatch, heroColors, lab, liveOccasions, paletteOk, PATTERN_IDS, PATTERNS, patternShapes, RETIRED_PATTERNS, runIssues, toneFam, tonesOf, visTones, type EngineDesign, type Finish, type Shape, type SystemId } from "../../lib/designEngine";
 import { activeTrends } from "../../lib/trendRadar";
 
 let fail = 0, total = 0;
@@ -199,15 +199,26 @@ const lie = all.filter(({ d }) =>
   (d.pattern === "plaid" && Math.max(lab(d.palette[0])[0], lab(d.palette[1])[0]) < 35) ||
   (MUDDY.includes(d.pattern) && mud(d.palette[1], d.pattern) && (["oval", "square"].includes(d.shape) || !["gelx", "acrylic"].includes(d.spec.system))) ||
   (d.pattern === "syrup" && (Math.hypot(lab(d.palette[0])[1], lab(d.palette[0])[2]) < 30 || !["red", "pink", "orange"].includes(toneFam(d.palette[0])))) ||
-  (d.pattern === "aura" && lab(d.palette[1])[0] < 35) || (d.pattern === "fawn" && hAng(d.palette[0]) < 52) || (d.pattern === "cleanmilky" && tonesOf(d.palette).length > 1));
-check("DE48", "Tên nói đúng cái ảnh vẽ ra: French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup tông ấm có sắc rõ (không thạch nâu đục / cobalt tím tro), lõi aura sáng vừa (không vết bầm cobalt), da hươu nền nâu vàng (không cam), clean girl không ghi màu phụ không lên móng; đầu móng nâu / mận đậm (micro French: mọi màu gần đen) chỉ trên bộ đắp dài (không móng thật ngắn, không oval / vuông)",
+  (d.pattern === "aura" && lab(d.palette[1])[0] < 35) || (d.pattern === "fawn" && hAng(d.palette[0]) < 52) || (d.pattern === "cleanmilky" && tonesOf(d.palette).length > 1) ||
+  // màu bộ vẽ đổi đi (tên nói 1 màu, ảnh ra màu khác): hoa gel 3D cánh đậm → trắng sữa; thạch xanh / vàng trên giường móng
+  // hồng → tím xám / kaki / be cam; má hồng tông lạnh = vết bầm; hoa khô nhạt sắc → hồng đậm; chrome French nền đặc = đai kim
+  // loại bịt đầu móng; da hươu nền trắng = chấm bi
+  (d.pattern === "gelflower" && lab(d.palette[1])[0] < 62) || (d.pattern === "chromefrench" && lab(d.palette[0])[0] < 70) ||
+  (d.pattern === "jelly" && !(lab(d.palette[0])[0] >= 30 && (["red", "pink", "orange", "nude"].includes(toneFam(d.palette[0])) || (lab(d.palette[0])[0] >= 55 && hAng(d.palette[0]) >= 270 && hAng(d.palette[0]) <= 340)))) ||
+  (d.pattern === "blush" && !["red", "pink", "orange"].includes(toneFam(d.palette[1]))) || (d.pattern === "fawn" && toneFam(d.palette[0]) === "white") ||
+  (d.pattern === "milkbath" && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 25 && d.palette[1] !== COLORS.babyPink.hex));
+check("DE48", "Tên nói đúng cái ảnh vẽ ra (màu bộ vẽ thật vẽ: hoa gel 3D cánh sáng, thạch tông ấm / tím pastel, má hồng tông ấm, hoa khô có sắc, chrome French nền trong, da hươu nền nâu vàng): French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup tông ấm có sắc rõ (không thạch nâu đục / cobalt tím tro), lõi aura sáng vừa (không vết bầm cobalt), da hươu nền nâu vàng (không cam), clean girl không ghi màu phụ không lên móng; đầu móng nâu / mận đậm (micro French: mọi màu gần đen) chỉ trên bộ đắp dài (không móng thật ngắn, không oval / vuông)",
   lie.length === 0 && !paletteOk("fr-skittle", ["sheer", "milky", "gold"]) && !paletteOk("fr-skittle", ["sheer", "coffee", "gold"]) && paletteOk("fr-skittle", ["sheer", "cobalt", "silver"]) &&
   !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter") &&
   !paletteOk("syrup", ["cobalt", "sheer", "silver"]) && paletteOk("syrup", ["raspberry", "sheer", "pearl"]) && !paletteOk("aura", ["milky", "cobalt", "silver"]) && paletteOk("aura", ["milky", "cherry", "gold"]) &&
-  !paletteOk("fawn", ["persimmon", "bone", "gold"]) && paletteOk("fawn", ["caramel", "cloudDancer", "gold"]),
+  !paletteOk("fawn", ["persimmon", "bone", "gold"]) && paletteOk("fawn", ["caramel", "cloudDancer", "gold"]) && !paletteOk("fawn", ["milky", "persimmon", "gold"]) &&
+  !paletteOk("gelflower", ["sheer", "raspberry", "pearl"]) && paletteOk("gelflower", ["sheer", "lavender", "pearl"]) && !paletteOk("chromefrench", ["chocolate", "gold", "gold"]) && paletteOk("chromefrench", ["nude", "gold", "gold"]) &&
+  !paletteOk("jelly", ["cobalt", "milky", "silver"]) && !paletteOk("jelly", ["sage", "milky", "gold"]) && paletteOk("jelly", ["lavender", "milky", "silver"]) && paletteOk("jelly", ["raspberry", "milky", "gold"]) &&
+  !paletteOk("blush", ["sheer", "cobalt", "silver"]) && paletteOk("blush", ["sheer", "hotPink", "pearl"]) && !paletteOk("milkbath", ["milky", "pewter", "silver"]) && paletteOk("milkbath", ["milky", "cobalt", "silver"]),
   lie.slice(0, 3).map((x) => `${x.d.title.vi} [${x.d.pattern}/${x.d.finish}/${x.d.shape}/${x.d.spec.system}]`).join(" | "));
 
-// Mô phỏng đúng cron: 3 lượt × 6 mẫu / ngày, mỗi lượt nhận hoạ tiết + bảng màu của 18 mẫu gần nhất
+// Mô phỏng đúng cron: 3 lượt × 6 mẫu / ngày, mỗi lượt nhận hoạ tiết + bảng màu của 18 mẫu gần nhất. Đếm màu KHÁCH THẤY
+// (visTones: nền + màu phụ khi hoạ tiết vẽ bằng màu phụ — "trắng sữa" ghi kèm sao bạc nền navy không lên móng)
 const MIXES = ["mix-halloween", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];
 const CHAR: Record<string, string[]> = { ghost: ["ghost", "web"], mummy: ["ghost", "web"], skull: ["web"], web: ["web", "bats"], bats: ["bats"], "mix-halloween": ["ghost", "bats"] };
 let dayN = 0, mixDup = 0, charDup = 0, hexOver = 0, famOver = 0, milkyN = 0, nAll = 0;
@@ -226,13 +237,13 @@ for (const [mk, y, mo, d0, occId] of [["US", 2026, 9, 18, "halloween"], ["US", 2
     if (new Set(mixes).size < mixes.length) { mixDup++; dupDays.push(`${date} ${mixes.join(",")}`); }
     if (new Set(chars).size < chars.length) { charDup++; dupDays.push(`${date} ${day.map((x) => x.pattern).filter((p) => CHAR[p]).join(",")}`); }
     const hc = new Map<string, number>(), fc = new Map<string, number>();
-    for (const x of day) { const T = tonesOf(x.palette); if (T.includes(COLORS.milky.hex)) milkyN++; T.forEach((h) => hc.set(h, (hc.get(h) ?? 0) + 1)); new Set(T.map(toneFam)).forEach((f) => fc.set(f, (fc.get(f) ?? 0) + 1)); }
-    if (Math.max(...hc.values()) > 0.3 * day.length) hexOver++;
-    if (Math.max(...fc.values()) > 0.45 * day.length) famOver++;
+    for (const x of day) { const T = visTones(x.pattern, x.palette); if (T.includes(COLORS.milky.hex)) milkyN++; T.forEach((h) => hc.set(h, (hc.get(h) ?? 0) + 1)); new Set(T.map(toneFam)).forEach((f) => fc.set(f, (fc.get(f) ?? 0) + 1)); }
+    if (Math.max(...hc.values()) > 0.23 * day.length) hexOver++;
+    if (Math.max(...fc.values()) > 0.34 * day.length) famOver++;
   }
 }
-check("DE49", `Cả ngày 18 mẫu (cron 3 lượt, ${dayN} ngày): mỗi bộ phối theo dịp ≤ 1 / ngày, ma / dơi / mạng nhện ≤ 1 lần / ngày (tính cả móng echo); trắng sữa ≤ 25% số mẫu (${Math.round((100 * milkyN) / nAll)}%), ngày có 1 màu > 30% ≤ 10% (${hexOver}), ngày có 1 họ màu > 45% ≤ 10% (${famOver})`,
-  mixDup === 0 && charDup === 0 && milkyN <= 0.25 * nAll && hexOver <= 0.1 * dayN && famOver <= 0.1 * dayN, dupDays.slice(0, 3).join(" | "));
+check("DE49", `Cả ngày 18 mẫu (cron 3 lượt, ${dayN} ngày): mỗi bộ phối theo dịp ≤ 1 / ngày, ma / dơi / mạng nhện ≤ 1 lần / ngày (tính cả móng echo); trắng sữa lên móng ≤ 25% số mẫu (${Math.round((100 * milkyN) / nAll)}%), ngày có 1 màu > 4/18 (22%) ≤ 10% số ngày (${hexOver}), ngày có 1 họ màu > 6/18 (33%) ≤ 5% (${famOver})`,
+  mixDup === 0 && charDup === 0 && milkyN <= 0.25 * nAll && hexOver <= 0.1 * dayN && famOver <= 0.05 * dayN, dupDays.slice(0, 3).join(" | "));
 const heroUS = heroColors("2026-10-26", "US"), heroAU = heroColors("2026-10-26", "AU"), hero2 = heroColors("2026-10-27", "US");
 check("DE50", `Màu nhấn theo mùa xoay theo ngày (Mỹ 26/10: ${heroUS.join(", ")} · Úc: ${heroAU.join(", ")}), Úc ngược mùa, mỗi ngày 2 màu khác nhau`,
   heroUS.length === 2 && heroUS[0] !== heroUS[1] && heroUS.join() !== hero2.join() && heroAU.join() !== heroUS.join() && heroUS.every((k) => k in COLORS));

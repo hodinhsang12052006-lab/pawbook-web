@@ -2470,12 +2470,16 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     // nền GẦN ĐEN (đen tuyền, nâu đen): 6× nền vẫn gần đen → bột velvet thật trên nền đen ánh lên màu nhũ bạc / champagne.
     // Màu ánh ấy (c2 + kim loại chuẩn hoá, rất tối) chỉ pha vào TRONG quầng (≤ 0.28 × quầng^1.7, tính mỗi điểm) — pha vào
     // ánh cả móng thì nhung đen thành xám giấy ráp / bê tông (#5e5b5a, không còn quầng)
+    // vKD theo kênh lớn nhất TUYẾN TÍNH: #151314 = 0.0075 → 1 (ngưỡng cũ 0.015–0.06 vẫn đúng; lỗi cũ là ánh chỉ 0.28·quầng
+    // ≈ #50 ở đỉnh + hạt nhũ sàn 0.015 khắp móng → xám than đều như giấy ráp / đá granite, không thấy quầng)
     const vKD = 1 - smooth(0.015, 0.06, vMx);
     let vTint: RGB = vGlow;
     if (vKD > 0) {
       const mF = metalF0(metal), mM = Math.max(mF[0], mF[1], mF[2], 1e-3), c2M = Math.max(c2[0], c2[1], c2[2], 1e-3);
-      const tn: RGB = [0.5 * (mF[0] / mM + c2[0] / c2M), 0.5 * (mF[1] / mM + c2[1] / c2M), 0.5 * (mF[2] / mM + c2[2] / c2M)];
-      vTint = sc3(tn, 0.16); vSpk = mix3(vSpk, tn, 0.45 * vKD);
+      // sắc ánh: nghiêng về kim loại (bạc → bạc lạnh; c2 kem ấm chỉ pha 35%, 50/50 thì ánh ngả be như bụi)
+      const tn: RGB = [0.65 * mF[0] / mM + 0.35 * c2[0] / c2M, 0.65 * mF[1] / mM + 0.35 * c2[1] / c2M, 0.65 * mF[2] / mM + 0.35 * c2[2] / c2M];
+      // nhung ĐEN thật: quầng giữa là ánh BẠC XÁM (đỉnh ~#55555c, tuyến tính ~0.09) mờ dần → 2 mép đen sâu (≤ #161616)
+      vTint = sc3(tn, 0.085); vSpk = mix3(vSpk, tn, 0.45 * vKD);
     }
     // mắt mèo: lõi = màu kim loại chuẩn hoá (vàng ra vàng, bạc ra bạc); quầng = màu nền sáng lên + chút ánh kim loại
     const cF = metalF0(metal), cFx = Math.max(cF[0], cF[1], cF[2], 1e-3), bMx0 = Math.max(base0[0], base0[1], base0[2], 1e-3);
@@ -2705,16 +2709,22 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             // trắng phấn đặc) + 1 quầng ửng RỘNG rất mềm (σ ~0.52 ngang × 0.32 dọc, phủ ~60% mặt móng, lệch nhẹ về đầu móng),
             // đỉnh ≤ 0.6, không có lõi — trộn trong OKLab, hồng lạnh nắn ấm nhẹ (b ≥ 0.12a — ấm hơn nữa thì hồng cánh sen ra san hô). Hồng ép đậm + quầng nhỏ cũ
             // (σ 0.36 × 0.2, đỉnh 0.7 trên nền trắng đặc) nhìn như vết bầm / máu bầm dưới lớp bút xoá.
-            base = mix3(nailBed(tipP, seg, s, t, s * tipP.kL, extW, img.data, idx), c1, 0.5);
-            let fc = tipP.memo.blush as RGB | undefined;
-            if (!fc) {
+            // lớp sữa 60% (50% cũ: giường móng ấm của tay p067 / hand nhuộm cả móng thành thạch cá hồi / đào)
+            base = mix3(nailBed(tipP, seg, s, t, s * tipP.kL, extW, img.data, idx), c1, 0.6);
+            let fc = tipP.memo.blush as RGB | undefined, pk = tipP.memo.blushPk as number | undefined;
+            if (!fc || pk === undefined) {
               const o2 = okOf(c2), kC = Math.min(1.4, Math.max(1, 0.09 / Math.max(0.01, Math.hypot(o2[1], o2[2])))), a = o2[1] * kC;
               fc = tipP.memo.blush = fromOk([Math.min(0.8, o2[0] + 0.02), a, a > 0 ? Math.max(o2[2] * kC, 0.12 * a) : o2[2] * kC]);
+              // c2 ĐẬM (đỏ cherry, rượu vang: OKLab L < 0.55): đỉnh quầng ~0.8 — 0.6 trên nền sữa sáng chỉ ra hồng san hô
+              // nhạt, tên "má hồng đỏ cherry" mà móng không thấy đỏ. c2 sáng (hồng cánh sen, hồng phấn) giữ 0.6
+              pk = tipP.memo.blushPk = 0.6 + 0.25 * smooth(0.62, 0.5, o2[0]);
             }
             const cu = 0.55 + 0.06 * (hash2(seedN, 7, 9) - 0.5), ct = 0.1 * (hash2(seedN, 8, 9) - 0.5);
-            const gB = Math.exp(-0.5 * (((t - ct) / 0.52) ** 2 + ((u - cu) / 0.32) ** 2));
-            base = okMix(base, fc, 0.6 * gB);
-            auraM = 0.8 * gB; // chrome = lớp ngọc trai mỏng né quầng (như aura)
+            // c2 đậm: quầng GỌN hơn (σ 0.42 × 0.27) + đỉnh hơi phẳng (gB^0.8) → lõi đỏ cherry rõ giữa móng, viền sữa sáng
+            // còn rộng quanh — quầng rộng như má hồng nhạt thì đỏ loang kín móng thành móng san hô trơn
+            const dp = (pk - 0.6) / 0.25, gB = Math.exp(-0.5 * (((t - ct) / (0.52 - 0.1 * dp)) ** 2 + ((u - cu) / (0.32 - 0.05 * dp)) ** 2));
+            base = okMix(base, fc, pk * gB ** (1 - 0.2 * dp));
+            auraM = (0.8 + 0.2 * dp) * gB; // chrome = lớp ngọc trai mỏng né quầng (như aura)
             break;
           }
           case "cleanmilky": {
@@ -3120,51 +3130,65 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "fawn": {
-            // DA HƯƠU (fawn / Bambi print) như lưng hươu con: nền nâu ấm SẪM rõ vào đường sống giữa móng (≥ 0.1 L OKLab so
-            // với 2 mép sáng / ấm hơn) · đốm MỀM mép loang ~3.5px, viền HỮU CƠ (ellipse uốn nhiễu tần thấp, không gợn góc),
-            // THUÔN DÀI ~1.4–1.9× dọc móng, xếp 2 hàng lỏng 2 bên đường sống + hàng ngoài đốm nhỏ sát mép, to nhỏ / nghiêng /
-            // ĐẬM NHẠT (0.6–1) khác nhau, vài chấm vệ tinh nhỏ cạnh đốm lớn. Nền SÁNG (nude, hồng): đốm màu BE NÂU (tan) —
-            // đốm nâu đen đặc trên nền hồng nhìn như da bò sữa / đốm dalmatian. Bản trước: đốm 1 màu kem phẳng, viền sóng
-            // hài bậc 5 + mép ~1.5px → "viên sỏi / đá lát", sống giữa trên nền espresso bị kẹp sàn L nên không thấy.
+            // DA HƯƠU (fawn / Bambi print) như lưng hươu con: nền nâu ấm SẪM dần vào đường sống giữa móng · đốm kem MỀM (mép
+            // loang ~1.8px, viền hữu cơ uốn tần thấp), THUÔN ~1.35–1.9× dọc móng, cỡ ~0.17–0.32 hw (đốm nhỏ đều = chấm bi), xếp 2 hàng LỎNG so le 2 bên sống lưng + 2 hàng
+            // ngoài đốm nhỏ sát mép (mép móng cắt dở cũng được). KHE giữa 2 đốm liền nhau ≥ 0.6 × đường kính đốm: bán kính dọc
+            // mỗi đốm ≤ 0.3 × khoảng cách tới tâm đốm kề → 2 đốm cộng lại ≤ 0.6 khoảng cách. Bỏ ngẫu nhiên ~22% đốm hàng trong,
+            // ~45% hàng ngoài (chỗ trống đôi khi là 1 chấm lẻ nhỏ) → hàng đứt quãng, to nhỏ khác nhau. Bản trước: đốm dọc to hơn
+            // khoảng cách hàng → 2 cột hạt sát nhau như chuỗi hạt / đốt sống; nền hồng nude + đốm be nâu nhìn như vết bẩn.
+            // NỀN SÁNG (nude, hồng): ĐỔI VAI như thợ làm — móng da hươu là nền NÂU (c2 đậm, hoặc be nâu nếu c2 cũng sáng) +
+            // đốm kem lấy từ c1; các móng trơn còn lại vẫn là c1 → cả bộ hồng nude + nhấn da hươu nâu.
             const Yh = s * tipP.kL, p1 = 1 / Math.max(8, seg.hw), Ln = Math.max(1.6, tipP.len), mir = pN % 2 ? -1 : 1;
             const ts = (mir * Math.asin(0.95 * Math.max(-1, Math.min(1, t)))) / 1.2532; // theo mặt móng cong
             let fw = tipP.memo.fawn as RGB[] | undefined;
             if (!fw) {
-              const o = okOf(c1), lightB = o[0] > 0.68;
-              const eC = fromOk([Math.min(0.93, o[0] + 0.06), o[1] * 1.12, o[2] * 1.18]), sC = fromOk([Math.max(0.1, o[0] - 0.09), o[1] * 0.95, o[2] * 0.95]);
-              // đốm: nền tối → màu kem c2 hơi ngả nền; nền sáng → be nâu ấm (L thấp hơn nền ~0.17, sắc nâu vàng ấm)
-              const sp = lightB ? fromOk([Math.max(0.5, o[0] - 0.17), 0.038, 0.078]) : okMix(c2, eC, 0.1);
-              fw = [eC, sC, sp, okShift(sp, lightB ? -0.05 : 0.03)];
+              const o = okOf(c1), o2 = okOf(c2), lightB = o[0] > 0.68;
+              let fo: RGB, sp: RGB;
+              if (!lightB) { fo = o; sp = okMix(c2, c1, 0.1); }
+              else {
+                // nền nâu: c2 đậm (espresso, cà phê) nâng tối thiểu L 0.36; c2 cũng sáng → be nâu (tan) cùng hướng sắc ấm
+                const ch = Math.hypot(o2[1], o2[2]), dA = ch > 0.02 ? o2[1] / ch : 0.42, dB = ch > 0.02 ? Math.max(0.35, o2[2] / ch) : 0.9;
+                fo = o2[0] < 0.5 ? [Math.max(0.36, o2[0]), o2[1], o2[2]] : [0.6, 0.075 * dA, 0.075 * dB];
+                const cr = fromOk([0.95, 0.008, 0.032]), lc = o2[0] > o[0] ? c2 : c1;
+                sp = okMix(lc, cr, 0.35);
+              }
+              const eC = fromOk([Math.min(0.93, fo[0] + 0.06), fo[1] * 1.12, fo[2] * 1.18]), sC = fromOk([Math.max(0.1, fo[0] - 0.09), fo[1] * 0.95, fo[2] * 0.95]);
+              fw = [eC, sC, sp, okShift(sp, 0.03)];
               tipP.memo.fawn = fw;
             }
             base = mix3(fw[0], fw[1], Math.exp(-((ts / 0.34) ** 2))); // sống lưng sẫm giữa 2 hàng đốm
             let cov = 0;
             const fe = Math.max(1.8 * p1, 0.036); // mép loang ±1.8px
             for (let rw = 0; rw < 4; rw++) {
-              const outer = rw >= 2, sd2 = rw % 2 ? 1 : -1, tr = sd2 * (outer ? 0.86 : 0.44), sp = outer ? 0.44 : 0.54;
-              const off = (rw * 0.37 + hash2(look.seed, rw, 23)) % 1, kq = Math.floor(Yh / sp - off);
+              const outer = rw >= 2, sd2 = rw % 2 ? 1 : -1, tr = sd2 * (outer ? 0.88 : 0.36), sp = outer ? 0.62 : 0.8;
+              // 2 hàng trong lệch nửa chu kỳ (so le, không đối xứng như đốt sống); hàng ngoài pha ngẫu nhiên
+              const off = (outer ? hash2(look.seed + pN, rw, 23) : 0.5 * (rw % 2) + 0.25 * hash2(look.seed + pN, 0, 23)) % 1;
+              const cyAt = (q: number) => (q + off + 0.5 + 0.2 * (hash2(q, rw, seedN + 22) - 0.5)) * sp;
+              const kq = Math.floor(Yh / sp - off);
               for (let q = kq - 1; q <= kq + 1; q++) {
-                if (hash2(q, rw, seedN + 21) < (outer ? 0.5 : 0.1)) continue;
-                const cy = (q + off + 0.5 + 0.4 * (hash2(q, rw, seedN + 22) - 0.5)) * sp;
-                if (cy < 0.1 || cy > Ln + 0.2) continue;
-                const cx = tr + 0.18 * (hash2(q, rw, seedN + 23) - 0.5), rx = Math.max(2.4 * p1, ((outer ? 0.06 : 0.1) + (outer ? 0.035 : 0.06) * hash2(q, rw, seedN + 24)) * (hash2(q, rw, seedN + 36) < 0.25 ? 1.45 : 1)); // ~1/4 đốm to hẳn (đốm hươu không đều cỡ như chuỗi hạt)
-                const ry = rx * (1.4 + 0.5 * hash2(q, rw, seedN + 25)), ra = 0.4 * (hash2(q, rw, seedN + 26) - 0.5) + 0.12 * sd2;
-                const op = 0.6 + 0.4 * hash2(q, rw, seedN + 28); // đậm nhạt khác nhau từng đốm
-                // uốn TẦN THẤP (≤ ±18% bán kính) → viền đốm hữu cơ mềm như vết lông, không gợn góc
+                const cy = cyAt(q);
+                if (cy < 0.12 || cy > Ln + 0.15) continue;
+                const cx = tr + 0.08 * (hash2(q, rw, seedN + 23) - 0.5);
+                if (hash2(q, rw, seedN + 21) < (outer ? 0.45 : 0.22)) {
+                  // ô bỏ trống: hàng ngoài đôi khi còn 1 chấm lẻ nhỏ (≥ 2.6px)
+                  if (!outer || hash2(q, rw, seedN + 31) < 0.5) continue;
+                  const sr = Math.max(1.3 * p1, 0.035 + 0.015 * hash2(q, rw, seedN + 34));
+                  const dq = Math.hypot(ts - cx, (Yh - cy) / 1.2) - sr;
+                  if (dq < fe) cov = Math.max(cov, 0.92 * (1 - smooth(-0.8 * fe, 0.8 * fe, dq)));
+                  continue;
+                }
+                // cỡ: phân bố lệch về đốm vừa, vài đốm to; bán kính dọc ≤ 0.3 × khoảng cách tới tâm đốm kề (khe ≥ 0.6 đường kính)
+                const dmin = Math.min(cyAt(q + 1) - cy, cy - cyAt(q - 1)), el = 1.35 + 0.55 * hash2(q, rw, seedN + 25);
+                const ry = Math.min(0.3 * dmin, el * (outer ? 0.055 + 0.035 * hash2(q, rw, seedN + 24) : 0.085 + 0.08 * hash2(q, rw, seedN + 24) ** 1.2));
+                const rx = Math.max(1.3 * p1, Math.min(outer ? 0.09 : 0.16, ry / el)), ra = 0.35 * (hash2(q, rw, seedN + 26) - 0.5) + 0.1 * sd2;
+                const op = 0.82 + 0.18 * hash2(q, rw, seedN + 28); // đậm nhạt nhẹ khác nhau (0.6 cũ: đốm nhạt như vết ố)
+                // uốn TẦN THẤP (≤ ±20% bán kính) → viền đốm hữu cơ mềm như vết lông, không gợn góc
                 const wq = 7 * hash2(q, rw, seedN + 27);
-                const dx0 = ts - cx + 0.18 * rx * (vnoise((ts - cx) / rx * 0.9 + wq, (Yh - cy) / ry * 0.9, seedN + 29) - 0.5) * 2;
-                const dy0 = Yh - cy + 0.18 * ry * (vnoise((ts - cx) / rx * 0.9, (Yh - cy) / ry * 0.9 + wq, seedN + 30) - 0.5) * 2;
+                const dx0 = ts - cx + 0.2 * rx * (vnoise((ts - cx) / rx * 0.9 + wq, (Yh - cy) / ry * 0.9, seedN + 29) - 0.5) * 2;
+                const dy0 = Yh - cy + 0.2 * ry * (vnoise((ts - cx) / rx * 0.9, (Yh - cy) / ry * 0.9 + wq, seedN + 30) - 0.5) * 2;
                 const ca = Math.cos(ra), sa = Math.sin(ra), dx = dx0 * ca + dy0 * sa, dy = -dx0 * sa + dy0 * ca;
                 const dS = (Math.hypot(dx / rx, dy / ry) - 1) * rx;
                 if (dS < fe) cov = Math.max(cov, op * (1 - smooth(-fe, fe, dS)));
-                // 0–2 chấm vệ tinh nhỏ (≥ 2.6px) cạnh đốm lớn hàng trong
-                if (!outer) for (let m = 0; m < 2; m++) {
-                  if (hash2(q, rw * 7 + m, seedN + 31) < 0.7) continue;
-                  const an = 6.28 * hash2(q, rw * 7 + m, seedN + 32), dd = 1.6 + 0.5 * hash2(q, rw * 7 + m, seedN + 33);
-                  const sx = cx + Math.cos(an) * rx * dd, sy = cy + Math.sin(an) * ry * dd, sr = Math.max(1.3 * p1, 0.03 + 0.02 * hash2(q, rw * 7 + m, seedN + 34));
-                  const dq = Math.hypot(ts - sx, (Yh - sy) / 1.25) - sr;
-                  if (dq < fe) cov = Math.max(cov, op * 0.9 * (1 - smooth(-0.8 * fe, 0.8 * fe, dq)));
-                }
               }
             }
             if (cov > 0) base = mix3(base, mix3(fw[2], fw[3], hash2(Math.round(Yh * 3), Math.round(ts * 3), seedN + 35) * 0.6), cov);
@@ -3397,13 +3421,14 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           const plush = (vnoise(t / 0.09 + 3.7, (s * seg.L) / Math.max(4, seg.hw) / 0.09, seedN + 33) - 0.5) * 0.24; // vân nhung mềm
           const dim = 0.45 + 0.55 * field;
           r *= dim; g *= dim; b *= dim;
-          const fG = Math.exp(-((dT / 0.46) ** 2)) * alongV, amt = 1.15 * fG * (1 + plush + 0.3 * shim) * lightK * (0.6 + 0.4 * edge);
-          // nền gần đen: ánh = màu nhũ bạc / champagne pha ≤ 0.28 theo quầng (mép vẫn đen ~#1a1a1a, giữa ánh bạc mờ)
-          const kT = 0.28 * fG * vKD;
+          // nền gần đen: quầng hẹp hơn (σ ~0.35 hw) để 2 mép giữ đen sâu; ánh = màu nhũ bạc / champagne (cả quầng, không
+          // chỉ ≤ 0.28 — pha ít thì đỉnh chỉ ~#50 xám than, nhìn như đen nhám bụi)
+          const fG = Math.exp(-((dT / (0.46 - 0.04 * vKD)) ** 2)) * alongV, amt = 1.15 * fG * (1 + plush + 0.3 * shim) * lightK * (0.6 + 0.4 * edge);
+          const kT = vKD;
           r += (vGlow[0] + (vTint[0] - vGlow[0]) * kT) * amt; g += (vGlow[1] + (vTint[1] - vGlow[1]) * kT) * amt; b += (vGlow[2] + (vTint[2] - vGlow[2]) * kT) * amt;
-          // ÁNH NHŨ MỊN: hạt li ti cùng sắc ánh nhung, dày + sáng trong quầng, rất mờ ở mép (chấm sáng dày đều khắp móng =
-          // giấy ráp / vải bò) + vài hạt loé to hơn giữa quầng
-          const sp = sparkleAt(px, py, gCell, 0.86, seedN + 35, Math.max(0.55, 0.85 * gRad)) * (0.015 + 0.17 * fG) * lightK * (1 - 0.6 * vKD)
+          // ÁNH NHŨ MỊN: hạt li ti cùng sắc ánh nhung, CHỈ trong quầng (sàn hạt ngoài quầng = bụi rải đều khắp móng → giấy
+          // ráp / vải bò, rõ nhất trên nền đen) + vài hạt loé to hơn giữa quầng
+          const sp = sparkleAt(px, py, gCell, 0.86, seedN + 35, Math.max(0.55, 0.85 * gRad)) * (0.015 * (1 - vKD) + 0.17 * fG) * lightK * (1 - 0.75 * vKD)
             + sparkleAt(px, py, gCell * 1.7, 0.94, seedN + 36, Math.max(0.9, gRad * 1.4)) * fG * 0.36 * lightK * (1 - 0.65 * vKD);
           r += vSpk[0] * sp; g += vSpk[1] * sp; b += vSpk[2] * sp;
         } else {

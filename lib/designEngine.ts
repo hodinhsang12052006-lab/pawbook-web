@@ -1015,7 +1015,9 @@ const ROLES: Record<string, Role> = {
   waves: { g: "line", on: W },
   jelly: { g: "tone", pal: [["raspberry", "milky", "gold"], ["hotPink", "milky", "silver"], ["persimmon", "milky", "gold"]] },
   babyboomer: { g: "tone", shapes: SH4 },
-  chromefrench: { g: "tone", pal: [["sheer", "silver", "silver"], ["milky", "pearl", "pearl"], ["nude", "gold", "gold"]] },
+  // chrome French: nền TRONG / sữa (đầu gương trên nền sơn đặc nâu cà phê, mận… = 1 cái đai kim loại bọc đầu móng như
+  // đầu bịt ống — soi vòng 2); bảng màu nền đặc bị loại → máy lấy bảng mặc định dưới đây
+  chromefrench: { g: "tone", ok: ([a]) => SHEER.includes(a), pal: [["sheer", "silver", "silver"], ["milky", "pearl", "pearl"], ["nude", "gold", "gold"]] },
   charm3d: { g: "relief", on: "metal", pal: [["babyPink", "milky", "silver"], ["redVelvet", "milky", "gold"], ["lavender", "milky", "silver"], ["milky", "pearl", "gold"]] },
   polka: { g: "motif", pal: [["plumNoir", "milky", "silver"], ["black", "milky", "silver"], ["nude", "chocolate", "gold"]] },
   auroracat: { g: "tone", base: "dark", shapes: SH5, pal: [["black", "milky", "silver"], ["navy", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
@@ -1088,7 +1090,10 @@ const ROLES: Record<string, Role> = {
   // hoạ tiết vẽ tay mới
   holly: { g: "motif", on: "#1f5a32", pal: [["milky", "redVelvet", "gold"], ["bone", "cherry", "gold"], ["sheer", "redVelvet", "gold"]] },
   ornament: { g: "motif", pal: [["milky", "redVelvet", "gold"], ["sheer", "emerald", "gold"], ["redVelvet", "milky", "gold"]] },
-  gelflower: { g: "relief", base: "sheer", pal: [["sheer", "milky", "pearl"], ["milky", "babyPink", "pearl"], ["nude", "milky", "gold"], ["sheer", "lavender", "pearl"]] },
+  // hoa gel 3D: bộ vẽ chỉ đắp cánh bằng c2 khi c2 SÁNG (L* > 62 — gel đặc 3D pha trắng mới đục, đứng cánh); c2 đậm (mâm
+  // xôi, hồng cánh sen) bộ vẽ đổi cánh sang trắng sữa → "Hoa gel 3D hồng mâm xôi" mà ảnh ra hoa trắng (soi lượt 2) → chỉ
+  // nhận màu cánh sáng (trắng sữa, hồng phấn, lavender, vàng bơ…)
+  gelflower: { g: "relief", base: "sheer", ok: ([, b]) => Lof(hx(b)) >= 66, pal: [["sheer", "milky", "pearl"], ["milky", "babyPink", "pearl"], ["nude", "milky", "gold"], ["sheer", "lavender", "pearl"]] },
   // bộ phối theo dịp: 2 màu chính phải tách nhau (móng chính / móng nối)
   // Halloween "moody luxe": nền tối, hoặc trắng ngà / trắng sữa + đen — không nền cam bí ngô dưới ma / đầu lâu
   "mix-halloween": { g: "glow", shapes: SH5, ok: ([a]) => (Lof(hx(a)) < 30 && chroma(hx(a)) < 35) || a === "bone" || a === "milky", pal: [["black", "pumpkin", "silver"], ["milky", "black", "silver"], ["plumNoir", "bone", "silver"]] },
@@ -1586,7 +1591,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   // 5–6 mẫu trắng sữa, 7 mẫu họ trắng / nude (39%)
   const capOk = (pal: string[]): boolean => {
     const win = [...recentPals, ...out.map((d) => d.palette)].slice(-17).map(tonesOf), W = win.length + 1, T = tonesOf(pal);
-    const hc = Math.max(2, Math.round(0.2 * W)), fc = Math.max(2, Math.round((Number(process.env.FC_K) || 0.3) * W));
+    const hc = Math.max(2, Math.round(0.2 * W)), fc = Math.max(2, Math.round(0.3 * W));
     if (T.some((h) => win.filter((x) => x.includes(h)).length + 1 > hc)) return false;
     return ![...new Set(T.map(toneFam))].some((f) => win.filter((x) => x.some((h) => toneFam(h) === f)).length + 1 > fc);
   };

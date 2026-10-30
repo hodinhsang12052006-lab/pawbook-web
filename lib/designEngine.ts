@@ -971,6 +971,8 @@ interface Role {
 }
 const hx = (k: CK) => COLORS[k].hex;
 const chroma = (hex: string) => { const [, a, b] = lab(hex); return Math.hypot(a, b); };
+/** góc sắc màu h° (CIELAB): 0 đỏ tím · 45 cam đỏ · 60 nâu vàng · 90 vàng */
+const hueAng = (hex: string) => { const [, a, b] = lab(hex); return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360; };
 /** cùng nhiệt độ màu (ấm: đỏ / hồng / cam / nâu / nude / vàng · lạnh: xanh / tím · trắng / xám / đen đi được cả hai) */
 const tempOf = (k: CK) => { const f = hueFamily(hx(k)); return ["white", "grey", "black"].includes(f) ? "n" : ["red", "pink", "orange", "brown", "nude", "yellow"].includes(f) ? "w" : "c"; };
 const sameTemp = (a: CK, b: CK) => tempOf(a) === "n" || tempOf(b) === "n" || tempOf(a) === tempOf(b);
@@ -991,7 +993,9 @@ const ROLES: Record<string, Role> = {
   ombre: { g: "glow", ok: ([a, b]) => Lof(hx(a)) - Lof(hx(b)) >= 20 && Lof(hx(a)) - Lof(hx(b)) <= 66 && Lof(hx(b)) < 90 && sameTemp(a, b), pal: [["sheer", "raspberry", "gold"], ["sheer", "burgundy", "gold"], ["nude", "espresso", "gold"], ["pinkNude", "hotPink", "gold"]] },
   // aura: nền trong / sữa với lõi màu rực đậm hơn ≥ 20 L* (aura nude trên cherry cola = vết bẩn). Nền đen + lõi rực là kiểu
   // đúng nhưng bộ vẽ aura hiện pha quầng về hồng / trắng → trên nền đen ra vệt xám tím đục (soi 25/10) — mở lại khi vẽ lại aura
-  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20, pal: [["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["sheer", "persimmon", "gold"], ["milky", "periwinkle", "silver"]] },
+  // lõi aura phải là màu RỰC SÁNG VỪA (L* ≥ 35: cherry, mâm xôi, hồng cánh sen, cam quả hồng, dừa cạn): lõi cobalt / lục
+  // bảo / mận (L* ~30) trên nền trắng loang ra 1 vệt xanh tím giữa móng như vết bầm (soi lượt 2: "Aura xanh cobalt")
+  aura: { g: "glow", ok: ([a, b]) => chroma(hx(b)) >= 35 && Lof(hx(b)) >= 35 && SHEER.includes(a) && Lof(hx(a)) - Lof(hx(b)) >= 20, pal:[["sheer", "raspberry", "gold"], ["milky", "hotPink", "silver"], ["sheer", "persimmon", "gold"], ["milky", "periwinkle", "silver"]] },
   tortoise: { g: "tone", pal: [["caramel", "chocolate", "gold"]] },
   marble: { g: "glow", ok: marbleOk, pal: [["milky", "smoke", "gold"], ["cloudDancer", "pewter", "gold"], ["black", "milky", "gold"], ["emerald", "milky", "gold"], ["jade", "milky", "gold"]] },
   lines: { g: "line", on: "metal", pal: [["black", "milky", "gold"], ["navy", "milky", "silver"], ["espresso", "nude", "gold"]] },
@@ -1018,7 +1022,9 @@ const ROLES: Record<string, Role> = {
   stripes: { g: "line", pal: [["nude", "black", "gold"], ["cloudDancer", "cobalt", "silver"], ["milky", "navy", "silver"], ["butter", "coffee", "gold"]] },
   chocodip: { g: "tone", shapes: ["almond", "oval"], pal: [["strawberry", "chocolate", "gold"]] },
   // da hươu: tông ấm (caramel, nâu, nude, kem) — đốm kem trên nền lục bảo nhìn thành chấm bi, không ra da hươu
-  fawn: { g: "glow", ok: ([a, b]) => [a, b].every((c) => ["brown", "orange", "nude", "white"].includes(hueFamily(hx(c)))), pal: [["caramel", "cloudDancer", "gold"], ["coffee", "nude", "gold"]] },
+  // (nền da hươu là nâu vàng: caramel, cà phê, mocha, nude — góc sắc h ≥ 52°. Cam quả hồng / bí ngô / cam cháy / quế
+  // ngả đỏ: đốm kem trên nền cam đọc thành chấm bi trên quả cam, không ra da hươu — soi lượt 2)
+  fawn: { g: "glow", ok: ([a, b]) => [a, b].every((c) => ["brown", "orange", "nude", "white"].includes(hueFamily(hx(c)))) && hueAng(hx(a)) >= 52, pal:[["caramel", "cloudDancer", "gold"], ["coffee", "nude", "gold"]] },
   chromedrops: { g: "relief", on: "metal", pal: [["milky", "silver", "silver"], ["sheer", "gold", "gold"], ["black", "silver", "silver"], ["cobalt", "silver", "silver"]] },
   // giọt nước 3D chỉ đọc ra trên nền tối bóng (trên nền trắng / pastel đặc nhìn như vòng đệm xám #30)
   droplets: { g: "tone", base: "dark", pal: [["black", "milky", "silver"], ["emerald", "milky", "gold"], ["plumNoir", "milky", "silver"]] },
@@ -1069,7 +1075,9 @@ const ROLES: Record<string, Role> = {
   // nail Hàn
   // syrup cần màu có sắc rõ (C* ≥ 30): thạch nâu socola / cà phê / mocha (C* ~20) loang trong veo ra móng nâu đục như
   // vết ố (soi lượt 2: "Syrup nâu socola trong veo") — caramel, mâm xôi, cherry, cam quả hồng, cobalt mới ra siro
-  syrup: { g: "tone", ok: ([a]) => chroma(hx(a)) >= 30 && Lof(hx(a)) < 72, pal: [["raspberry", "sheer", "pearl"], ["persimmon", "sheer", "gold"], ["caramel", "nude", "gold"], ["cherry", "sheer", "gold"]] },
+  // Thạch syrup phủ lên giường móng HỒNG: chỉ màu ấm (đỏ, mâm xôi, hồng, cam, caramel) ra siro trong veo; cobalt / xanh
+  // lá loang trên nền hồng thành tím xám đục (soi lượt 2: "Syrup xanh cobalt" ra móng tím tro) — và không quá tối (L* ≥ 30)
+  syrup: { g: "tone", ok: ([a]) => chroma(hx(a)) >= 30 && Lof(hx(a)) >= 30 && Lof(hx(a)) < 72 && ["red", "pink", "orange"].includes(toneFam(hx(a))), pal:[["raspberry", "sheer", "pearl"], ["persimmon", "sheer", "gold"], ["caramel", "nude", "gold"], ["cherry", "sheer", "gold"]] },
   blush: { g: "glow", base: "sheer", pal: [["sheer", "hotPink", "pearl"], ["sheer", "raspberry", "pearl"], ["nude", "persimmon", "gold"]] },
   cleanmilky: { g: "tone", base: "sheer", pal: [["milky", "pearl", "gold"], ["sheer", "milky", "gold"], ["pinkNude", "milky", "pearl"]] },
   // chrome màu / nhũ loang
@@ -1105,10 +1113,18 @@ function forcedKeys(pid: string, k: [CK, CK, CK]): [CK, CK, CK] {
     // màu (ô màu dưới ảnh mẫu phải đúng màu khách thấy); đầu French đồi mồi luôn tông caramel
     case "fr-glitter": case "glitterfade": return [k[0], k[2], k[2]];
     case "colorchrome": return [k[0], k[0], k[2]];
+    // clean girl: cả 4 móng 1 lớp nền trong + hạt kim loại — màu phụ không lên móng nào (bảng "hồng sữa + lavender" mà
+    // ảnh toàn hồng sữa) → chỉ ghi màu nền
+    case "cleanmilky": return [k[0], k[0], k[2]];
     case "fr-tortoise": return [k[0], "caramel", k[2]];
     default: return k;
   }
 }
+/** Màu phụ (c2) có lên móng rõ không: hoạ tiết vẽ BẰNG c2 (đầu French, chấm / hoa / tim, sọc, loang, aura, hoa gel) và
+ *  caro / mix 2 màu → có. Hoạ tiết vẽ bằng kim loại / màu cố định (sao, đá, foil, line chrome, lá phong, ma trắng…) hay
+ *  móng 1 màu (trơn, thạch, velvet, mắt mèo): c2 chỉ còn ở 1 đầu micro French móng phụ, có khi không có. */
+const C2_TONE = new Set(["plaid", "mixmatch"]);
+const c2Seen = (pid: string) => { const ro = ROLES[pid]; return !!ro && (!ro.on || ro.on === "c2") && (ro.g !== "tone" || C2_TONE.has(pid)); };
 /** Đưa bảng màu về đúng vai: hoạ tiết nền TRONG (French, má hồng…) mà màu chính đậm → màu đậm lên ĐẦU móng / thành
  *  hoạ tiết, nền đổi sang hồng sữa (nền tối hẳn → trắng sữa) — không bao giờ để màu đậm nằm dưới đầu French trắng. */
 function fitRoles(pid: string, k: [CK, CK, CK]): [CK, CK, CK] {
@@ -1489,7 +1505,9 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   // màu hero còn trong trần màu cả ngày (không để 1 màu hero chiếm 1/3 ngày)
   const pal2 = (k: [CK, CK, CK]) => forcedKeys(pat.id, k).slice(0, 2).map(hx);
   if (o.hero?.length && !o.strict && !o.occ && r() < 0.5) {
-    const withHero = (k: [CK, CK, CK]) => (o.hero!.includes(k[0]) || o.hero!.includes(k[1])) && (!o.capOk || o.capOk(pal2(k)));
+    // màu hero phải LÊN MÓNG: làm nền, hoặc làm màu phụ ở hoạ tiết vẽ bằng màu phụ (xem c2Seen) — không thì bảng có
+    // "đen + mâm xôi" mà ảnh toàn đen đính đá
+    const withHero = (k: [CK, CK, CK]) => { const f = forcedKeys(pat.id, k); return (o.hero!.includes(f[0]) || (c2Seen(pat.id) && o.hero!.includes(f[1]))) && (!o.capOk || o.capOk(pal2(k))); };
     let w = cands.filter(withHero);
     if (!w.length) w = fits(o.hero.flatMap(heroPals)).filter(withHero);
     if (w.length) cands = w;
@@ -1520,9 +1538,13 @@ function compose(r: () => number, pat: Pattern, palettes: readonly (readonly str
   const c1hex = hx(forcedKeys(pat.id, colors)[0]);
   let allowed = (o.shapes ?? patternShapes(pat.id)).filter((sh) => patternShapes(pat.id).includes(sh));
   // đầu móng đậm màu bùn (nâu đậm / mận / rượu sẫm) → chỉ dáng dài, không oval / vuông ngắn (xem MUDDY_TIP)
-  if (MUDDY_TIP.has(pat.id) && muddy(hx(forcedKeys(pat.id, colors)[1]), pat.id)) allowed = allowed.filter((sh) => sh !== "oval" && sh !== "square");
+  // (và chỉ hệ ĐẮP — Gel-X / bột: sơn gel / dip là móng thật của khách, ảnh mẫu vẽ trên tay móng thật ngắn tròn → đầu
+  // micro French mận / nâu đậm trên móng ngắn vẫn ra "đất dưới móng" dù dáng ghi hạnh nhân — soi lượt 2 #8, #13)
+  const longOnly = MUDDY_TIP.has(pat.id) && muddy(hx(forcedKeys(pat.id, colors)[1]), pat.id);
+  if (longOnly) allowed = allowed.filter((sh) => sh !== "oval" && sh !== "square");
   const finsOf = (x: Sys) => (o.finish ? [o.finish] : pat.finishes).filter((f) => x.finishes.includes(f) && finishOk(pat.id, c1hex, f) && !(o.easy && (f === "chrome" || f === "cateye")));
-  const sysPool = SYSTEMS.filter((x) => (!pat.systems || pat.systems.includes(x.id)) && (x.id !== "dip" || DIP_POWDER_PATTERNS.includes(pat.id)) && x.shapes.some((sh) => allowed.includes(sh)) && finsOf(x).length);
+  const sysPool = SYSTEMS.filter((x) => (!pat.systems || pat.systems.includes(x.id)) && (x.id !== "dip" || DIP_POWDER_PATTERNS.includes(pat.id)) && (!longOnly || x.id === "gelx" || x.id === "acrylic") &&
+    x.shapes.some((sh) => allowed.includes(sh)) && finsOf(x).length);
   if (!sysPool.length) return null;
   // mẫu dễ: ưu tiên sơn gel móng thật / dip (thợ mới làm được)
   const sys = o.easy ? (sysPool.find((x) => x.id === "gel") ?? sysPool.find((x) => x.difficulty === 1) ?? sysPool[0]) : pick(r, sysPool);
@@ -1559,9 +1581,12 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
   const dayKeys = () => new Set([...recentList.map((p, i) => (recentPals[i] ? lookKey(p, recentPals[i]) : "")), ...out.map((d) => lookKey(d.pattern, d.palette))].filter(Boolean));
   // TRẦN MÀU CẢ NGÀY: 1 màu (nền / phụ) ≤ 20%, 1 họ màu ≤ 30% số mẫu (tối thiểu 2) — soi lượt 2: trắng sữa trong 35/72
   // mẫu, nâu mocha / espresso 18/72, 18 mẫu sắp ra lại nghiêng cà phê, mocha, đen
+  // Cửa sổ TRƯỢT đúng 1 ngày cron: 17 mẫu gần nhất + mẫu đang ghép = 18 (3 lượt × 6) → mọi 18 mẫu liền nhau (nên cả 1 ngày
+  // lịch) giữ trần: 1 màu ≤ 4 (22%), 1 họ màu ≤ 5 (28%). Cửa sổ cũ 18 + cả lượt này (tới 24 mẫu, trần 4 / 7) để lọt ngày
+  // 5–6 mẫu trắng sữa, 7 mẫu họ trắng / nude (39%)
   const capOk = (pal: string[]): boolean => {
-    const win = [...recentPals, ...out.map((d) => d.palette)].map(tonesOf), W = win.length + 1, T = tonesOf(pal);
-    const hc = Math.max(2, Math.floor(0.2 * W)), fc = Math.max(2, Math.floor(0.3 * W));
+    const win = [...recentPals, ...out.map((d) => d.palette)].slice(-17).map(tonesOf), W = win.length + 1, T = tonesOf(pal);
+    const hc = Math.max(2, Math.round(0.2 * W)), fc = Math.max(2, Math.round((Number(process.env.FC_K) || 0.3) * W));
     if (T.some((h) => win.filter((x) => x.includes(h)).length + 1 > hc)) return false;
     return ![...new Set(T.map(toneFam))].some((f) => win.filter((x) => x.some((h) => toneFam(h) === f)).length + 1 > fc);
   };

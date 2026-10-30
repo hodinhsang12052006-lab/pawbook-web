@@ -186,6 +186,7 @@ check("DE44", "Tên mẫu không nêu màu không có trong bảng màu của m�
 void hexKey;
 
 // ---------------- Lượt 2 (26/10): tên nói đúng ảnh, đơn điệu màu, lặp chủ đề trong ngày ----------------
+const hAng = (hex: string) => { const [, a, b] = lab(hex); return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360; };
 const mud = (hex: string, pid: string) => { const f = toneFam(hex), [L, a, b] = lab(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && Math.hypot(a, b) < 45) || (pid === "fr-micro" && L < 25); };
 const MUDDY = ["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"];
 const lie = all.filter(({ d }) =>
@@ -196,11 +197,15 @@ const lie = all.filter(({ d }) =>
   (d.pattern === "leaf" && (d.palette[2] === COLORS.pearl.hex || !/maple leaves/.test(d.title.en))) || (d.pattern === "tortoise" && /viền|accent|outline/i.test(d.title.vi + d.title.en + d.steps.map((x) => x.en).join(" "))) ||
   (d.pattern === "fr-skittle" && (Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 30 || lab(d.palette[1])[0] > 70)) ||
   (d.pattern === "plaid" && Math.max(lab(d.palette[0])[0], lab(d.palette[1])[0]) < 35) ||
-  (MUDDY.includes(d.pattern) && ["oval", "square"].includes(d.shape) && mud(d.palette[1], d.pattern)) || (d.pattern === "syrup" && Math.hypot(lab(d.palette[0])[1], lab(d.palette[0])[2]) < 30));
-check("DE45", "Tên nói đúng cái ảnh vẽ ra: French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup có sắc rõ (không thạch nâu đục); đầu móng nâu / mận đậm (micro French: mọi màu gần đen) không trên móng oval / vuông ngắn",
+  (MUDDY.includes(d.pattern) && mud(d.palette[1], d.pattern) && (["oval", "square"].includes(d.shape) || !["gelx", "acrylic"].includes(d.spec.system))) ||
+  (d.pattern === "syrup" && (Math.hypot(lab(d.palette[0])[1], lab(d.palette[0])[2]) < 30 || !["red", "pink", "orange"].includes(toneFam(d.palette[0])))) ||
+  (d.pattern === "aura" && lab(d.palette[1])[0] < 35) || (d.pattern === "fawn" && hAng(d.palette[0]) < 52) || (d.pattern === "cleanmilky" && d.palette[1] !== d.palette[0]));
+check("DE45", "Tên nói đúng cái ảnh vẽ ra: French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup tông ấm có sắc rõ (không thạch nâu đục / cobalt tím tro), lõi aura sáng vừa (không vết bầm cobalt), da hươu nền nâu vàng (không cam), clean girl không ghi màu phụ không lên móng; đầu móng nâu / mận đậm (micro French: mọi màu gần đen) chỉ trên bộ đắp dài (không móng thật ngắn, không oval / vuông)",
   lie.length === 0 && !paletteOk("fr-skittle", ["sheer", "milky", "gold"]) && !paletteOk("fr-skittle", ["sheer", "coffee", "gold"]) && paletteOk("fr-skittle", ["sheer", "cobalt", "silver"]) &&
-  !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter"),
-  lie.slice(0, 3).map((x) => `${x.d.title.vi} [${x.d.pattern}/${x.d.finish}/${x.d.shape}]`).join(" | "));
+  !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter") &&
+  !paletteOk("syrup", ["cobalt", "sheer", "silver"]) && paletteOk("syrup", ["raspberry", "sheer", "pearl"]) && !paletteOk("aura", ["milky", "cobalt", "silver"]) && paletteOk("aura", ["milky", "cherry", "gold"]) &&
+  !paletteOk("fawn", ["persimmon", "bone", "gold"]) && paletteOk("fawn", ["caramel", "cloudDancer", "gold"]),
+  lie.slice(0, 3).map((x) => `${x.d.title.vi} [${x.d.pattern}/${x.d.finish}/${x.d.shape}/${x.d.spec.system}]`).join(" | "));
 
 // Mô phỏng đúng cron: 3 lượt × 6 mẫu / ngày, mỗi lượt nhận hoạ tiết + bảng màu của 18 mẫu gần nhất
 const MIXES = ["mix-halloween", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];

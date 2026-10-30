@@ -155,8 +155,8 @@ const TONE_OK = new Set(["dots", "hearts", "floral", "blossom", "snow", "ornamen
 /** MINI MOTIF nối bộ theo họ hoạ tiết (lib/tryon/engine beadsFor "mini:*"): 1 sao cắt mặt nhỏ (đêm Halloween, sao, Giáng
  *  sinh) · 1 lá phong kim loại nhỏ (lá) · cụm 3 chấm nhỏ dần màu c2 (chấm bi, hoa, tim — chỉ khi c2 có trên hero) · nơ
  *  nhỏ (charm nơ: bộ coquette 2 cỡ nơ — sao vàng cạnh nơ hồng là lạc đề) · cherry / ren / giọt chrome (đinh tán kim loại
- *  đã là "giọt" lẻ): không có mini hợp chủ đề */
-const MINI: Record<string, string | null> = { leaf: "mini:leaf", dots: "mini:dots", floral: "mini:dots", hearts: "mini:dots", blossom: "mini:dots", milkbath: "mini:dots", charm3d: "mini:bow", cherry: null, lace: null, gelflower: null, chromedrops: null, droplets: null, droplet: null };
+ *  đã là "giọt" lẻ): không có mini hợp chủ đề · sao / trăng sao: echo đã là sao nhỏ → móng mini sao thứ 3 gần như y hệt echo */
+const MINI: Record<string, string | null> = { leaf: "mini:leaf", dots: "mini:dots", floral: "mini:dots", hearts: "mini:dots", blossom: "mini:dots", milkbath: "mini:dots", charm3d: "mini:bow", cherry: null, lace: null, gelflower: null, chromedrops: null, droplets: null, droplet: null, stars: null, moonstars: null };
 const miniFor = (pat: string, c2ok: boolean) => { const m = pat in MINI ? MINI[pat] : "mini:star"; return m === "mini:dots" && !c2ok ? null : m; };
 function connWeights(pat: string): Partial<Record<Conn, number>> {
   // (vòng 2b) chrome màu cả móng từng chiếm 47% móng nối → hạ còn ~15%; rồi đầu micro chrome nền tối + viền chỉ chân móng

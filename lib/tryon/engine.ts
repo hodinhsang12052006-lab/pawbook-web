@@ -2741,9 +2741,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     // cụm XẾP SÁT (pk): bố cục đo khoảng cách dọc theo móng dài 2.8 hw; móng thật dài 2.6–4.8 hw → nén / giãn khoảng cách
     // dọc quanh hạt thấp nhất cho đá chạm đá đúng như bố cục (không nén: dải đá trên móng hạnh nhân dài cách nhau ~1 viên)
     const uK = Math.max(0.55, Math.min(1.1, (2.8 * seg.hw) / Math.max(1, seg.L * sEnd)));
+    // giọt chrome (blob) nối đuôi trên 1 đường chảy: chỉ nén NỬA (√uK) — nén đủ thì dòng giọt trên móng dài 4.4 hw chỉ phủ
+    // nửa chân móng, nửa đầu móng trống trơn; khe giữa các giọt dãn thêm ≤ 25% vẫn đọc ra 1 dòng
     if (beads.some((b) => b.pk)) {
-      const ua = Math.min(...beads.filter((b) => b.pk).map((b) => b.u));
-      beads = beads.map((b) => (b.pk ? { ...b, u: ua + (b.u - ua) * uK } : b));
+      const ua = Math.min(...beads.filter((b) => b.pk).map((b) => b.u)), uB = Math.sqrt(uK);
+      beads = beads.map((b) => (b.pk ? { ...b, u: ua + (b.u - ua) * (b.kind === "blob" ? uB : uK) } : b));
     }
     // kim loại của CHARM / đá / giọt chrome / nét chrome: kim loại sáng thật (vàng hồng #b76e79 L tuyến tính 0.23 → F0 trộn
     // nửa "chrome màu" ra hồng mận xỉn như nhựa) → nâng độ sáng tới ngưỡng kim loại sáng, vàng hồng ngả ấm (đồng hồng)

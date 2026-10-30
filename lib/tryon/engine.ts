@@ -2226,6 +2226,14 @@ function strokeAt(st: Stroke, t: number, Y: number): typeof STK {
 }
 /** Độ phủ nét (mép khử răng cưa ~aa hw). */
 const strokeCov = (k: typeof STK, aa: number) => 1 - smooth(k.w - aa, k.w + aa, Math.abs(k.d));
+/** VỆT 3 CHẤM nhỏ dần nối tiếp ĐẦU CUỐI (a1) của 1 nét, chạy theo hướng tiếp tuyến của nét — chấm bám nét, không lơ lửng. */
+function dotTrail(st: Stroke, dots: number[][], lw: number): void {
+  const v = st.a1, ar = st.k * (v - st.a0) + st.ph, vm = v - (st.a0 + st.a1) / 2, qd = st.qd ?? 0;
+  const f = st.c + st.amp * Math.sin(ar) + st.dr * (v - st.a0) + qd * vm * vm, fp = st.amp * st.k * Math.cos(ar) + st.dr + 2 * qd * vm;
+  const n = Math.hypot(1, fp), dx = st.o ? 1 / n : fp / n, dy = st.o ? fp / n : 1 / n, x0 = st.o ? v : f, y0 = st.o ? f : v;
+  let d = st.wt;
+  for (const k of [1.55, 1.25, 1]) { const r = Math.max(lw * k, 0.06 * k); d += 1.9 * lw + r; dots.push([x0 + dx * d, y0 + dy * d, r]); d += r; }
+}
 /**
  * LINE ART của 1 móng (thợ vẽ bằng cọ liner, 2–3 chi tiết có chủ ý — không phải 1 sợi chỉ mảnh dọc móng): bố cục theo vai
  * + hạt giống. Nét phẳng (line vàng) nửa bề dày ≥ 1.5px (~0.036 hw); line CHROME NỔI là khối kim loại hữu cơ dày ~0.07–0.1 hw
@@ -2247,24 +2255,39 @@ function lineArt(role: string | undefined, Ln: number, seed: number, raised: boo
     }
     return { st, dots, fr };
   }
-  const kind = role === "echo" ? (h(5) > 0.5 ? 1 : 2) : [0, 1, 3][Math.floor(h(6) * 3)];
-  if (kind === 0) {
-    // vòm ôm chân móng + vòm thứ 2 mảnh hơn song song + 1 chấm lệch phía đầu móng
-    st.push({ o: 1, a0: -0.78, a1: 0.78, c: 0.5, amp: 0, k: 0, ph: 0, dr: 0, w: lw, wt: lw * 0.5, prof: 0, qd: 0.55 });
-    st.push({ o: 1, a0: -0.55, a1: 0.55, c: 0.72, amp: 0, k: 0, ph: 0, dr: 0, w: lw * 0.72, wt: lw * 0.4, prof: 0, qd: 0.45 });
-    dots.push([0.38 * sg, Ln * 0.68, Math.max(lw * 1.7, 0.075)]);
-  } else if (kind === 1) {
-    // nét vuốt chữ S chéo móng (cọ liner) + 1 nét song song ngắn hơn
-    st.push({ o: 0, a0: 0.3, a1: Ln - 0.25, c: -0.5 * sg, amp: 0.16, k: 6.5 / Ln, ph: 6.28 * h(7), dr: (0.95 * sg) / Ln, w: lw, wt: lw * 0.35, prof: 0 });
-    st.push({ o: 0, a0: 0.55, a1: Ln * 0.7, c: -0.5 * sg + 0.19, amp: 0.16, k: 6.5 / Ln, ph: 6.28 * h(7), dr: (0.95 * sg) / Ln, w: lw * 0.75, wt: lw * 0.3, prof: 0 });
-  } else if (kind === 2) {
-    // sóng ngang móng 1.5 chu kỳ + 1 chấm gần chân móng
-    st.push({ o: 1, a0: -1.1, a1: 1.1, c: Ln * (0.5 + 0.08 * h(8)), amp: 0.13, k: 4.4, ph: 6.28 * h(9), dr: 0.08 * sg, w: lw, wt: lw * 0.5, prof: 0 });
-    dots.push([-0.3 * sg, Ln * 0.25, Math.max(lw * 1.7, 0.075)]);
+  // Bố cục line art PHẲNG theo vai — mỗi nét quét ≥ 60% bề ngang hoặc gần hết chiều dài móng; chấm KHÔNG đứng lẻ (chấm lẻ
+  // cạnh vòm / sóng từng đọc ra mặt cười, nháy mắt, vết sơn bắn) mà là 1 VỆT 3 CHẤM nhỏ dần nối tiếp đầu 1 nét (gạch – chấm)
+  const L0 = 0.3, L1 = Ln - 0.3, span = L1 - L0;
+  if (role !== "echo") {
+    if (h(6) < 0.55) {
+      // HERO A: 1 nét vuốt dài chéo móng (góc chân móng → góc đầu móng đối diện, quét ~65% bề ngang) + 1 nét song song ngắn
+      // hơn phía trong, đầu nét ngắn nối tiếp 3 chấm nhỏ dần chạy cùng hướng
+      const k = 5.5 / Ln, ph = 6.28 * h(7), dr = (1.12 * sg) / span, amp = 0.09;
+      const main: Stroke = { o: 0, a0: L0, a1: L1, c: -0.62 * sg, amp, k, ph, dr, w: lw, wt: lw * 0.4, prof: 0 };
+      const b0 = L0 + 0.22 * span, b1 = L0 + 0.62 * span, off = 0.2 * sg;
+      const comp: Stroke = { o: 0, a0: b0, a1: b1, c: main.c + dr * (b0 - L0) - off, amp, k, ph: ph + k * (b0 - L0), dr, w: lw * 0.72, wt: lw * 0.35, prof: 0 };
+      st.push(main, comp);
+      dotTrail(comp, dots, lw);
+    } else {
+      // HERO B: viền French mảnh (đường cười song song mép tự do, cả bề ngang) + 1 nét cong ôm 1 bên móng từ gần chân móng
+      // chạy lên chạm đường French (bất đối xứng, không thêm chấm)
+      fr = 0.36;
+      st.push({ o: 0, a0: 0.38, a1: Ln - 0.42, c: 0.6 * sg, amp: 0.07, k: 3.1 / (Ln - 0.8), ph: 0, dr: (-0.12 * sg) / Ln, w: lw * 0.9, wt: lw * 0.4, prof: 0 });
+    }
   } else {
-    // viền French (đường cười song song mép tự do) + 1 nét dọc ngắn lệch 1 bên
-    fr = 0.36;
-    st.push({ o: 0, a0: 0.45, a1: Ln * 0.62, c: 0.42 * sg, amp: 0.05, k: 3 / Ln, ph: 6.28 * h(10), dr: 0, w: lw * 0.85, wt: lw * 0.4, prof: 0 });
+    const e = h(5);
+    if (e < 0.4) {
+      // ECHO A: sóng ngang CẢ bề ngang (~1.5 chu kỳ, hơi chéo) giữa móng — không chấm lẻ
+      st.push({ o: 1, a0: -1.1, a1: 1.1, c: Ln * (0.5 + 0.08 * h(8)), amp: 0.11, k: 4.4, ph: 6.28 * h(9), dr: 0.1 * sg, w: lw, wt: lw * 0.5, prof: 0 });
+    } else if (e < 0.75) {
+      // ECHO B: 1 nét vuốt dài chéo móng (cùng ngôn ngữ nét HERO A), đầu trên nối 3 chấm nhỏ dần
+      const main: Stroke = { o: 0, a0: L0, a1: L0 + 0.72 * span, c: 0.55 * sg, amp: 0.08, k: 5 / Ln, ph: 6.28 * h(7), dr: (-1.05 * sg) / span, w: lw * 0.9, wt: lw * 0.4, prof: 0 };
+      st.push(main);
+      dotTrail(main, dots, lw);
+    } else {
+      // ECHO C: nét cong chữ C ôm dọc 1 bên móng gần hết chiều dài
+      st.push({ o: 0, a0: L0 + 0.05, a1: L1 - 0.05, c: 0.62 * sg, amp: -0.2 * sg, k: Math.PI / (span - 0.1), ph: 0, dr: 0, w: lw, wt: lw * 0.4, prof: 0 });
+    }
   }
   return { st, dots, fr };
 }
@@ -3513,7 +3536,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         }
         for (const d of la.dots) {
           const dx = t - d[0], dy = Yh - d[1], dd = Math.hypot(dx, dy), cv = 1 - smooth(d[2] - aa, d[2] + aa, dd);
-          if (cv > best) { best = cv; bq = Math.min(1, dd / d[2]); bpx = dx / Math.max(1e-4, dd); bpy = dy / Math.max(1e-4, dd); }
+          // chấm phẳng: vị trí NGANG có dấu (dx/r) → nửa chấm phía đèn sáng, nửa kia vàng đậm như hạt gel kim tuyến; |dd|/r
+          // (không dấu) cho cả chấm cháy trắng → chấm vàng trên nền trắng biến mất
+          if (cv > best) { best = cv; bq = raised ? Math.min(1, dd / d[2]) : Math.max(-1, Math.min(1, dx / d[2])); bpx = dx / Math.max(1e-4, dd); bpy = dy / Math.max(1e-4, dd); }
         }
         if (la.fr > 0 && at < 0.97) {
           const lw = Math.max(1.8 / Math.max(8, seg.hw), 0.045), yF = tipE(tipP, t) - la.fr * (1 + 0.5 * t * t), dF = Yh - yF;
@@ -3545,7 +3570,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             const sp = 0.95 * Math.pow(ndh, 60) + 0.15 * Math.pow(ndh, 8);
             const o = shoulder([f0[0] * env, f0[1] * env, f0[2] * env], 0.4);
             mc = [o[0] + (1 - o[0]) * sp, o[1] + (1 - o[1]) * sp, o[2] + (1 - o[2]) * sp];
-          } else mc = wireShade(metal, bq * 0.5, shade, side); // line vàng PHẲNG (gel kim tuyến dưới top): dải giữa sáng, không viền tối 2 mép
+          } else {
+            // line vàng PHẲNG (gel kim tuyến dưới top): dải giữa sáng, không viền tối 2 mép. Nền SÁNG (trắng sữa, nude): vàng
+            // đậm xuống (OKLab, tăng sắc — nhân tối đều ra vàng kaki / ô liu) tới khi cách nền ≥ 18 L* — vàng nhạt cháy sáng
+            // trên nền trắng chỉ còn 1 vệt kem gần như vô hình
+            mc = wireShade(metal, bq * 0.5, shade, side);
+            if (lum([r, g, b]) > 0.3) { const lb = Lst([r, g, b]); for (let q = 0; q < 6 && lb - Lst(mc) < 18; q++) mc = okShift(mc, -0.05, 1.12); }
+          }
           r += (mc[0] - r) * best; g += (mc[1] - g) * best; b += (mc[2] - b) * best;
         }
       }

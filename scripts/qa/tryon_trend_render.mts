@@ -49,6 +49,11 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "FR2 chrome vàng nền cà phê", colors: ["#6f4e37", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "chromefrench", seed: 208 },
   { name: "FR2 bộ bí ngô nền đen (móng French nối)", colors: ["#151314", "#f2ede6", "#d4af37"], finish: "glossy", pattern: "jackolantern", seed: 209 },
   { name: "FR2 bộ sao nền navy (móng French nối)", colors: ["#1f2a44", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "stars", seed: 210 },
+  // vòng 2 sửa lại (repair): V French không thành tam giác / khối, chrome French gương theo bề ngang, mắt mèo + đầu gương
+  { name: "FR2 chữ V đen nền trắng sữa (bóng)", colors: ["#f2ede6", "#151314", "#d4af37"], finish: "glossy", pattern: "fr-v", seed: 211 },
+  { name: "FR2 chrome bạc cả bộ nền xám be", colors: ["#b8ada3", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "chromefrench", seed: 212 },
+  { name: "FR2 mắt mèo mận + đầu gương bạc", colors: ["#3e1530", "#c0c0c0", "#c0c0c0"], finish: "cateye", pattern: "chromefrench", seed: 213 },
+  { name: "FR2 mắt mèo đỏ rượu + đầu gương vàng", colors: ["#6e1a2b", "#d4af37", "#d4af37"], finish: "cateye", pattern: "chromefrench", seed: 214 },
   { name: "Syrup mâm xôi", colors: ["#c2185b", "#f6d5d0", "#f5f0e8"], finish: "glossy", pattern: "syrup", seed: 114 },
   { name: "Syrup cam cháy", colors: ["#e2552b", "#f6d5d0", "#d4af37"], finish: "glossy", pattern: "syrup", seed: 115 },
   { name: "Blush má cam đào", colors: ["#f2d5cc", "#e8786a", "#f5f0e8"], finish: "glossy", pattern: "blush", seed: 116 },

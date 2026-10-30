@@ -2137,9 +2137,16 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
     case "fr-tortoise": st = smile(Math.max(0.42, 0.15 * len), 1.4); break; // đủ sâu để thấy 2–3 đốm
     // pink & white bột: trắng phủ hết phần đắp (đường cười nằm ở mép móng thật), 2 bên ôm sâu
     case "fr-pinkwhite": st = smile(Math.max(0.42, 0.16 * len, tp.extLen + 0.12), 1.9); break;
-    // chữ V: 2 cạnh gặp nhau ở ~36% dài móng (V nông 1/4 trên móng đầu bằng / hạnh nhân vát — p063 — thành 1 cái chụp
-    // ngũ giác như đầu tẩy bút chì); móng hạnh nhân dài đã sâu sẵn theo 2 thành móng (−0.42 dưới chỗ chạm thành)
-    case "fr-v": { const ysL = EL - 0.12, ysR = ER - 0.12; st = { kind: 1, yc: Math.min(E0 - Math.max(0.72, 0.36 * len), Math.min(ysL, ysR) - 0.42), ysL, ysR, p: 1, sg: 1, bow: 0 }; break; }
+    // chữ V: 2 cạnh chạm thành móng ngay dưới chỗ mép tự do bắt đầu thu vào (E(±0.97) — hạnh nhân vát p063: góc vát)
+    // rồi DỐC ≥ ~40° xuống đỉnh V giữa móng (đỉnh thấp hơn chỗ chạm thành ≥ 0.85 hw, sâu ≥ 36% dài móng). Cạnh V thoải
+    // (đỉnh chỉ thấp hơn 2 bên 0.4 hw ≈ 23°) thì trên móng đầu vát đường V gần như thẳng ngang → đầu đen thành 1 cái chụp
+    // lục giác / đầu tẩy bút chì, không đọc ra chữ V. Đầu màu không quá ~nửa móng; móng ngắn đầu tròn (2 bên mép đã tụt
+    // sâu): giữ độ dốc bằng cách nâng 2 điểm chạm lên — cạnh V cắt ra mép tròn trước khi tới thành móng (V thật trên móng
+    // tròn), không hạ đỉnh V xuống quá nửa móng / không để V bẹt thành mái nhà
+    case "fr-v": {
+      const yc = Math.max(E0 - 0.5 * len, Math.min(E0 - Math.max(0.72, 0.36 * len), Math.min(EL, ER) - 1));
+      st = { kind: 1, yc, ysL: Math.max(EL - 0.12, yc + 0.9), ysR: Math.max(ER - 0.12, yc + 0.9), p: 1, sg: 1, bow: 0 }; break;
+    }
     case "fr-side": {
       // French LỆCH: đầu màu quét chéo — sâu ở 1 bên thành móng, vuốt mảnh dần tới góc đối diện (cả bộ cùng 1 chiều)
       const sg = hash2(designSeed, 5, 77) > 0.5 ? 1 : -1, Ed = sg > 0 ? EL : ER, Et = sg > 0 ? ER : EL;

@@ -211,9 +211,9 @@ function threadFor(pal: Pal, seed: number, k: number, avoidFrench: boolean, pat 
   add("gemStud", { pattern: "stud:gem", colors: cs });
   // ngọc trai trắng trên nền trắng sữa / trắng (L* > 85) gần như biến mất → bỏ
   add("pearlStud", L1 > 85 ? null : { pattern: "stud:pearl", colors: cs });
-  // NHUNG mắt mèo cùng màu nền: nền tối (navy, rượu vang, nâu, đen) ánh nhung rõ nhất → ×1.5; nền rất sáng (trắng sữa)
-  // ánh nhung gần như mất → bỏ
-  add("velvet", L1 > 80 ? null : { pattern: "velvet", colors: [pal.c1, pal.c1, pal.m], finish: "cateye" }, light ? 1 : 1.5);
+  // NHUNG mắt mèo cùng màu nền: nền tối (navy, rượu vang, nâu, đen) ánh nhung rõ nhất → ×1.3 (×1.5 thì bộ in lặp nền tối
+  // 1/4 móng nối là nhung); nền rất sáng (trắng sữa) ánh nhung gần như mất → bỏ
+  add("velvet", L1 > 80 ? null : { pattern: "velvet", colors: [pal.c1, pal.c1, pal.m], finish: "cateye" }, light ? 1 : 1.3);
   const mini = miniFor(pat, c2ok);
   add("mini", mini ? { pattern: mini, colors: cs } : null);
   if (!opts.length) return { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" };

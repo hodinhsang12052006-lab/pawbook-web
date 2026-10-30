@@ -1858,7 +1858,7 @@ interface POp { L: number; c?: RGB; a?: number; line?: boolean; ins?: number; me
 /** Bề ngang THẬT (px) theo từng đoạn dọc móng + vành điểm sát mép. `across` chuẩn hoá theo bề ngang TẠI CHỖ (móng thon
  *  về chân / đầu, nhọn ở móng đắp) → nhân seg.hw cố định thì hoạ tiết bị bóp méo ở 2 đầu móng. */
 interface PGeo { s0: number; ds: number; hw: Float32Array; ring: Int32Array }
-interface PFit { seg: NailSeg; geo: PGeo; s0: number; sx: number; R: number; cr: number; sr: number; fl: number; bound2: number; Lx: number; Ly: number; mLx: number; mLy: number; v: number; jit: number; lw: number; bev: number; hiD: number; hiW: number; ops: POp[]; pc: RGB; off: boolean }
+interface PFit { seg: NailSeg; geo: PGeo; s0: number; sx: number; R: number; cr: number; sr: number; fl: number; bound2: number; Lx: number; Ly: number; mLx: number; mLy: number; v: number; jit: number; lw: number; bev: number; hiD: number; hiW: number; ops: POp[]; pc: RGB; off: boolean; nL?: number }
 const geoCache = new WeakMap<NailSeg, PGeo>(), pfits = new WeakMap<Bead, PFit>();
 const PO = new Float64Array(8), PX = new Float64Array(8), PY = new Float64Array(8), PQ = new Float64Array(8);
 const DP = new Float64Array(5), NX = new Float64Array(5), NY = new Float64Array(5);
@@ -1962,7 +1962,8 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   let u0 = bd.u, t0 = bd.t, sc = 1;
   const place = () => {
     F.s0 = u0 * sEnd; F.sx = bd.gx ? t0 * seg.hw : hwAt(geo, F.s0) * warpT(t0); F.R = Math.max(1.5, R0 * sc);
-    const bnd = (kind === "ornament" && v ? 9 : kind === "cat" ? 1.5 : kind === "gelflower" ? 1.25 : 1.12) * F.R + 2.5;
+    // chấm tròn: khung soát sát mép chấm (+2px khử răng cưa) — lưới ~40 chấm / móng, khung rộng 1.12R + 2.5 soát thừa 2×
+    const bnd = kind === "pdot" ? F.R + 2 : (kind === "ornament" && v ? 9 : kind === "cat" ? 1.5 : kind === "gelflower" ? 1.25 : 1.12) * F.R + 2.5;
     F.bound2 = bnd * bnd;
     F.mLx = F.fl * (F.Lx * cr + F.Ly * sr); F.mLy = -F.Lx * sr + F.Ly * cr;
     PS.px = 1 / F.R; PS.lx = F.mLx; PS.ly = F.mLy; PS.v = v;
@@ -2002,7 +2003,8 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
       place();
     }
   }
-  F.jit = kind === "gelflower" ? 0 : Math.min(0.02, 0.6 / F.R);
+  // chấm bi chấm bằng cây chấm bi: tròn đều (run mép ±0.02R chỉ ~0.1px — tốn 3 lần nhiễu / điểm ảnh mà không thấy)
+  F.jit = kind === "gelflower" || kind === "pdot" ? 0 : Math.min(0.02, 0.6 / F.R);
   F.lw = Math.min(Math.max(1.5, Math.min(3, 0.045 * seg.hw)), 0.14 * F.R);
   F.bev = Math.min(0.3 * F.R, 4);
   F.hiD = Math.max(1.8, Math.min(5, 0.14 * F.R)); F.hiW = Math.max(0.9, Math.min(2.2, 0.045 * F.R));
@@ -2011,6 +2013,8 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   // chấm gel hơi gồ dưới lớp top → 1 vệt bóng mảnh phía đèn (chỉ chấm ≥ 6px; chấm nhỏ hơn vệt bóng thành vòng trắng)
   if (kind === "pdot" && F.R >= 6) F.ops = F.ops.map((op) => (op.L === 0 && !op.line ? { ...op, hi: 0.4 } : op));
   F.pc = Lst(c2) > 62 && !sameC(c2, base) ? c2 : PK.milk;
+  // số lớp SDF thật sự dùng (độ dốc / khoảng cách theo điểm ảnh chỉ tính cho các lớp này — chấm bi 1 lớp thay vì 5)
+  F.nL = kind === "gelflower" ? 5 : Math.min(5, 1 + Math.max(0, ...F.ops.map((op) => Math.max(op.L, op.ins ?? 0))));
   pfits.set(bd, F);
   return F;
 }
@@ -2752,6 +2756,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
     const metalJ = jewelTint(metal);
     // viền chỉ chân móng (rim 2 / 3): khoảng cách tới mép làm mượt (chamfer bậc thang → đường chỉ gợn răng cưa)
     const eSm = beads.some((b) => b.kind === "rim" && (b.tint ?? 0) >= 2) ? boxBlur(eDist, seg.w, seg.h, 2) : null;
+    // hoạ tiết vẽ tay: đặt (fitPainted) 1 lần / móng TRƯỚC vòng điểm ảnh rồi BỎ HẲN hoạ tiết bị loại (chấm lưới chạm mép /
+    // nằm ngoài đầu móng): lưới chấm bi đặt sẵn ~50 chấm / móng — mỗi điểm ảnh × mỗi chấm tra WeakMap + hypot từng làm bộ
+    // chấm bi mắt mèo chậm 4–5× (vẽ chậm hơn cả bộ hoa nhí)
+    const fitAll = beads.map((b) => (PAINTED.has(b.kind) ? fitPainted(b, seg, eDist, sEnd, uprightRot, upS, L3, base0, c2, metal, pat) : null));
+    const liveQ = beads.map((_, q) => q).filter((q) => !fitAll[q]?.off), bL = liveQ.map((q) => beads[q]), fL = liveQ.map((q) => fitAll[q]);
     const jit = hash2(seedN, 11, 3) - 0.5, jit2 = hash2(seedN, 12, 3) - 0.5; // vệt phản chiếu tổng hợp hơi khác nhau mỗi móng
     // nét kim loại: 1 đường cong mềm dọc móng (mỗi móng lệch pha khác nhau)
     const ph = hash2(seedN, 3, 5) * 6.28, amp = 0.32 + 0.18 * hash2(seedN, 4, 5);
@@ -3451,7 +3460,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       // c3d: độ phủ của khối 3D GẮN TRÊN lớp top (đá, ngọc trai, charm, giọt chrome) — vệt bóng cửa sổ của MẶT MÓNG không
       // được vẽ đè lên khối đó (charm tự có phản chiếu riêng; vệt trắng chạy ngang qua quai nơ nhìn như nơ nằm dưới kính)
       let flare = 0, c3d = 0;
-      for (const bd of beads) {
+      // toạ độ ngang trên MẶT móng của điểm ảnh này (hoạ tiết vẽ tay) — tính 1 lần / điểm ảnh, dùng chung mọi hoạ tiết vẽ
+      // (lưới chấm bi ~40 chấm / móng: tính asin + bề ngang tại chỗ cho từng chấm từng điểm ảnh làm bộ chậm 4×)
+      let pxSurf = NaN;
+      for (let bi = 0; bi < bL.length; bi++) {
+        const bd = bL[bi], F = fL[bi];
         if (bd.kind === "rim") {
           const tn = bd.tint ?? 0;
           if (tn < 2) {
@@ -3481,33 +3494,27 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           }
           continue;
         }
-        const dxp = (t - bd.t) * seg.hw, dyp = (s - bd.u * sEnd) * seg.L, R = bd.r * seg.hw;
-        const painted = PAINTED.has(bd.kind);
-        // xa khối 3D quá 2.25 bán kính: không bóng đổ / tia loé nào chạm tới → bỏ qua sớm (cụm 13 viên đá tính hypot + bóng
-        // đổ cho MỌI điểm ảnh của móng từng làm bộ đính đá chậm thêm ~35%)
-        if (!painted && dxp * dxp + dyp * dyp > 5.0625 * R * R) continue;
-        const dist = Math.hypot(dxp, dyp) / R;
-        const lx = dxp / R, ly = dyp / R;
-        if (painted) {
+        if (F) {
           // HOẠ TIẾT VẼ TAY: toạ độ theo MẶT móng cong (bề ngang thật từng đoạn + dồn hẹp về 2 mép) · khử răng cưa theo ĐIỂM
           // ẢNH trên khoảng cách đã chuẩn hoá độ dốc (mép to hay nhỏ đều ~1.5px) · mép hơi run tay cọ · viền liner tông đậm ·
           // vệt bóng trắng vẽ theo mép phía đèn thay cho vòm nhựa (gel vẽ PHẲNG dưới lớp top — chỉ hoa gel 3D mới nổi) ·
           // mỗi lớp nhận ánh sáng như lớp sơn nền
-          let F = pfits.get(bd);
-          if (!F || F.seg !== seg) F = fitPainted(bd, seg, eDist, sEnd, uprightRot, upS, L3, base0, c2, metal, pat);
-          if (F.off) continue;
-          const tq = t < -1 ? -1 : t > 1 ? 1 : t, Wd = 1 / Math.sqrt(1 - WK * WK * tq * tq);
-          const ax = hwAt(F.geo, s) * warpT(tq) - F.sx, ay = (s - F.s0) * seg.L;
+          const ay = (s - F.s0) * seg.L;
+          if (ay * ay > F.bound2) continue;
+          const tq = t < -1 ? -1 : t > 1 ? 1 : t;
+          if (pxSurf !== pxSurf) pxSurf = hwAt(F.geo, s) * warpT(tq);
+          const ax = pxSurf - F.sx;
           if (ax * ax + ay * ay > F.bound2) continue;
+          const Wd = 1 / Math.sqrt(1 - WK * WK * tq * tq), nL = F.nL ?? 5;
           const fl = F.fl, crP = F.cr, srP = F.sr, mx0 = ax / F.R, my0 = ay / F.R;
           const X0 = fl * (mx0 * crP + my0 * srP), Y0 = -mx0 * srP + my0 * crP, e = 0.75 / F.R;
           PS.px = 1 / F.R; PS.lx = F.mLx; PS.ly = F.mLy; PS.v = F.v;
           paintedSD(bd.kind, X0, Y0, PO); paintedSD(bd.kind, X0 + e, Y0, PX); paintedSD(bd.kind, X0, Y0 + e, PY);
           if (F.jit > 0) { // mép run nhẹ như nét cọ (nhiễu tần thấp, ≤ ±0.6px)
             const j0 = F.jit * (vnoise(X0 * 2.3, Y0 * 2.3, 71) - 0.5), jx = F.jit * (vnoise((X0 + e) * 2.3, Y0 * 2.3, 71) - 0.5), jy = F.jit * (vnoise(X0 * 2.3, (Y0 + e) * 2.3, 71) - 0.5);
-            for (let q = 0; q < 5; q++) { PO[q] += j0; PX[q] += jx; PY[q] += jy; }
+            for (let q = 0; q < nL; q++) { PO[q] += j0; PX[q] += jx; PY[q] += jy; }
           }
-          for (let q = 0; q < 5; q++) {
+          for (let q = 0; q < nL; q++) {
             // độ dốc của lớp q theo điểm ảnh (ngang móng × độ dồn mép, dọc móng) → khoảng cách tới mép tính bằng px
             const gx = (PX[q] - PO[q]) / e, gy = (PY[q] - PO[q]) / e, gl = (fl * gx * crP - gy * srP) * Wd, gu = fl * gx * srP + gy * crP;
             const gh = Math.hypot(gl, gu) || 1;
@@ -3579,6 +3586,12 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           }
           continue;
         }
+        const dxp = (t - bd.t) * seg.hw, dyp = (s - bd.u * sEnd) * seg.L, R = bd.r * seg.hw;
+        // xa khối 3D quá 2.25 bán kính: không bóng đổ / tia loé nào chạm tới → bỏ qua sớm (cụm 13 viên đá tính hypot + bóng
+        // đổ cho MỌI điểm ảnh của móng từng làm bộ đính đá chậm thêm ~35%)
+        if (dxp * dxp + dyp * dyp > 5.0625 * R * R) continue;
+        const dist = Math.hypot(dxp, dyp) / R;
+        const lx = dxp / R, ly = dyp / R;
         if (bd.kind === "blob") {
           // GIỌT CHROME HỮU CƠ: hình + độ cao theo trục MÓNG (giọt chảy dọc móng, không dựng đứng theo ảnh), pháp tuyến từ
           // độ dốc vòm thấp → gương kim loại phản chiếu phòng chụp (sphereMetal) + điểm bóng gắt; mép dưới hắt chút màu sơn

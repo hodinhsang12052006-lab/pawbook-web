@@ -2259,7 +2259,8 @@ function microProfile(seg: NailSeg, tp: TipProfile, wHw: number): MicroProf {
   return { yc, rE, rI, w, kE };
 }
 /**
- * Đầu French TRÁNG GƯƠNG mảnh (viền micro của móng nối trong bộ, ≤ ~0.26 hw): phản chiếu đặt NGANG đầu móng theo v (0 =
+ * Đầu French TRÁNG GƯƠNG kiểu dải NGANG (viền micro của móng nối trong bộ ≤ ~0.26 hw; móng hạnh nhân / nhọn — xem
+ * tipMirror): phản chiếu đặt NGANG đầu móng theo v (0 =
  * mép tự do, 1 = đường French) — 1 dải sáng gắt cong theo đầu móng, dải tối "chân trời" sát dưới, vành Fresnel sáng mảnh
  * ở mép tự do (≤ 1.5px), sáng hơn phía có đèn. metalShade đặt dải theo bề ngang móng → trong đầu micro chỉ ra vài vệt dọc
  * ngắn trên nền xám phẳng (#22). Dải ngang chỉ trải trên ≤ 0.5 hw sát mép tự do (phần đầu móng cong xuống soi trần nhà):

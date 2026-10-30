@@ -2137,15 +2137,20 @@ function frStyle(tp: TipProfile, pat: string, designSeed: number, nail = 0, inSe
     case "fr-tortoise": st = smile(Math.max(0.42, 0.15 * len), 1.4); break; // đủ sâu để thấy 2–3 đốm
     // pink & white bột: trắng phủ hết phần đắp (đường cười nằm ở mép móng thật), 2 bên ôm sâu
     case "fr-pinkwhite": st = smile(Math.max(0.42, 0.16 * len, tp.extLen + 0.12), 1.9); break;
-    // chữ V: 2 cạnh chạm thành móng ngay dưới chỗ mép tự do bắt đầu thu vào (E(±0.97) — hạnh nhân vát p063: góc vát)
-    // rồi DỐC ≥ ~40° xuống đỉnh V giữa móng (đỉnh thấp hơn chỗ chạm thành ≥ 0.85 hw, sâu ≥ 36% dài móng). Cạnh V thoải
-    // (đỉnh chỉ thấp hơn 2 bên 0.4 hw ≈ 23°) thì trên móng đầu vát đường V gần như thẳng ngang → đầu đen thành 1 cái chụp
-    // lục giác / đầu tẩy bút chì, không đọc ra chữ V. Đầu màu không quá ~nửa móng; móng ngắn đầu tròn (2 bên mép đã tụt
-    // sâu): giữ độ dốc bằng cách nâng 2 điểm chạm lên — cạnh V cắt ra mép tròn trước khi tới thành móng (V thật trên móng
-    // tròn), không hạ đỉnh V xuống quá nửa móng / không để V bẹt thành mái nhà
+    // chữ V: đỉnh V trên trục móng, 2 cạnh thẳng chạm 2 THÀNH móng (ysL/ysR) rồi đầu màu ôm hết mép tự do.
+    //  • Góc mở V ≤ ~80° (cạnh lên dốc ys − yc = 0.42·dài móng, 1.2–1.8 hw), đầu màu ≤ 54% dài móng. V mở ~90° trên móng
+    //    dài đầu vát (hạnh nhân vát p063, ảnh chụp chéo 45°) thì 2 cạnh V nằm ngang / dọc khung ảnh, song song với 2 góc
+    //    vát → đầu đen thành 1 khối lục giác / đầu tẩy bút chì, không đọc ra chữ V; V hẹp, sâu → mũi khiên nhọn rõ chữ V.
+    //  • Đầu BẰNG (vuông: mép chỉ tụt < 0.25 hw tới thành móng): 2 cạnh chạm thành móng THẤP hơn góc ~0.5 hw (2 góc đầu
+    //    móng tô kín như V French thật trên móng vuông) — chạm ngay góc thì 2 cạnh đâm ra mép tự do trước khi tới thành
+    //    móng: đầu đen thành 1 tam giác đứng trên mép, 2 góc trần (white.jpg). Móng vuông ngắn: V mở rộng hơn (≤ ~110°,
+    //    ys − yc ≥ 0.7) thay vì hạ đỉnh quá nửa móng.
+    //  • Đầu TRÒN / nhọn ngắn (2 bên mép đã tụt sâu): giữ cạnh V dốc ≥ 0.9 bằng cách nâng 2 điểm chạm lên — cạnh V cắt ra
+    //    mép tròn trước khi tới thành móng (V thật trên móng tròn / nhọn, không có góc nào để trần)
     case "fr-v": {
-      const yc = Math.max(E0 - 0.5 * len, Math.min(E0 - Math.max(0.72, 0.36 * len), Math.min(EL, ER) - 1));
-      st = { kind: 1, yc, ysL: Math.max(EL - 0.12, yc + 0.9), ysR: Math.max(ER - 0.12, yc + 0.9), p: 1, sg: 1, bow: 0 }; break;
+      const flat = 1 - smooth(0.25, 0.7, E0 - (EL + ER) / 2), mg = 0.12 + 0.4 * flat, sL = EL - mg, sR = ER - mg;
+      const yc = Math.min(Math.max(E0 - 0.54 * len, Math.min(sL, sR) - Math.min(1.8, Math.max(1.2, 0.42 * len))), Math.min(sL, sR) - 0.7 * flat);
+      st = { kind: 1, yc, ysL: Math.max(sL, yc + 0.9 * (1 - flat)), ysR: Math.max(sR, yc + 0.9 * (1 - flat)), p: 1, sg: 1, bow: 0 }; break;
     }
     case "fr-side": {
       // French LỆCH: đầu màu quét chéo — sâu ở 1 bên thành móng, vuốt mảnh dần tới góc đối diện (cả bộ cùng 1 chiều)

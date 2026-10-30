@@ -1036,9 +1036,10 @@ const ROLES: Record<string, Role> = {
   // da hươu: tông ấm (caramel, nâu, nude, kem) — đốm kem trên nền lục bảo nhìn thành chấm bi, không ra da hươu
   // (nền da hươu là nâu vàng: caramel, cà phê, mocha, nude — góc sắc h ≥ 52°. Cam quả hồng / bí ngô / cam cháy / quế
   // ngả đỏ: đốm kem trên nền cam đọc thành chấm bi trên quả cam, không ra da hươu — soi lượt 2)
-  // (và NỀN phải là màu nâu vàng có sắc C* ≥ 15, đốm sáng hơn nền ≥ 15 L*: nền trắng sữa + đốm cam là chấm bi cam, không phải da hươu)
+  // (và NỀN phải là màu nâu vàng có sắc C* ≥ 15, sáng vừa L* ≥ 30 — caramel, cà phê, mocha —, đốm sáng hơn nền ≥ 15 L*: nền
+  // trắng sữa + đốm cam là chấm bi cam; nền espresso gần đen + đốm be là chấm bi trên sô-cô-la, không phải da hươu)
   fawn: { g: "glow", ok: ([a, b]) => [a, b].every((c) => ["brown", "orange", "nude", "white"].includes(hueFamily(hx(c)))) && ["brown", "orange", "nude"].includes(toneFam(hx(a))) &&
-    chroma(hx(a)) >= 15 && hueAng(hx(a)) >= 52 && Lof(hx(b)) >= Lof(hx(a)) + 15, pal:[["caramel", "cloudDancer", "gold"], ["coffee", "nude", "gold"]] },
+    chroma(hx(a)) >= 15 && Lof(hx(a)) >= 30 && hueAng(hx(a)) >= 52 && Lof(hx(b)) >= Lof(hx(a)) + 15, pal:[["caramel", "cloudDancer", "gold"], ["coffee", "nude", "gold"]] },
   chromedrops: { g: "relief", on: "metal", pal: [["milky", "silver", "silver"], ["sheer", "gold", "gold"], ["black", "silver", "silver"], ["cobalt", "silver", "silver"]] },
   // giọt nước 3D chỉ đọc ra trên nền tối bóng (trên nền trắng / pastel đặc nhìn như vòng đệm xám #30)
   droplets: { g: "tone", base: "dark", pal: [["black", "milky", "silver"], ["emerald", "milky", "gold"], ["plumNoir", "milky", "silver"]] },
@@ -1249,8 +1250,9 @@ const lookKey = (p: string, pal: readonly string[]) => `${patFam(ALIAS[p] ?? p)}
 // cà phê, French micro mận đậm trên móng oval ngắn) → các mẫu dồn màu đậm ở đầu móng chỉ ra dáng dài (hạnh nhân, coffin)
 const MUDDY_TIP = new Set(["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"]);
 // (French micro: đường đầu móng chỉ 1–2mm → màu gần đen nào — đen, navy, espresso — trên móng ngắn cũng đọc thành "đất
-// dưới móng", đen tuyền micro chỉ đẹp trên móng dài)
-const muddy = (hex: string, pid = "") => { const f = toneFam(hex), L = Lof(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && chroma(hex) < 45) || (pid === "fr-micro" && L < 25); };
+// dưới móng", đen tuyền micro chỉ đẹp trên móng dài. Ombre loang vào ĐEN trên móng thật ngắn vuông cũng vậy: nửa móng ngoài
+// xám đen như móng bẩn / mốc — soi lượt 2 "Ombre xanh xô thơm – đen tuyền")
+const muddy = (hex: string, pid = "") => { const f = toneFam(hex), L = Lof(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && chroma(hex) < 45) || ((pid === "fr-micro" || pid === "ombre") && L < 25); };
 const JEWEL_HEX = new Set((["emerald", "cherry", "redVelvet", "raspberry", "hotPink", "persimmon", "strawberry", "cobalt", "burgundy", "teal", "plum", "cherryCola", "pumpkin"] as CK[]).map(hx));
 export const RETIRED_PATTERNS = () => PATTERNS.filter((p) => p.retired).map((p) => p.id);
 

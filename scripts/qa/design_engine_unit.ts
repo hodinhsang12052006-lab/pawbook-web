@@ -187,7 +187,7 @@ void hexKey;
 
 // ---------------- Lượt 2 (26/10): tên nói đúng ảnh, đơn điệu màu, lặp chủ đề trong ngày ----------------
 const hAng = (hex: string) => { const [, a, b] = lab(hex); return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360; };
-const mud = (hex: string, pid: string) => { const f = toneFam(hex), [L, a, b] = lab(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && Math.hypot(a, b) < 45) || (pid === "fr-micro" && L < 25); };
+const mud = (hex: string, pid: string) => { const f = toneFam(hex), [L, a, b] = lab(hex); return (f === "brown" && L < 50) || (f === "purple" && L < 30) || (f === "wine" && Math.hypot(a, b) < 45) || ((pid === "fr-micro" || pid === "ombre") && L < 25); };
 const MUDDY = ["fr-micro", "french", "ombre", "doublefrench", "fr-skittle"];
 const lie = all.filter(({ d }) =>
   (d.pattern === "fr-glitter" && d.finish !== "glossy") || (d.pattern === "aura" && d.finish === "chrome") ||
@@ -205,7 +205,7 @@ const lie = all.filter(({ d }) =>
   // loại bịt đầu móng; da hươu nền trắng = chấm bi
   (d.pattern === "gelflower" && lab(d.palette[1])[0] < 62) || (d.pattern === "chromefrench" && lab(d.palette[0])[0] < 70) ||
   (d.pattern === "jelly" && !(lab(d.palette[0])[0] >= 30 && (["red", "pink", "orange", "nude"].includes(toneFam(d.palette[0])) || (lab(d.palette[0])[0] >= 55 && hAng(d.palette[0]) >= 270 && hAng(d.palette[0]) <= 340)))) ||
-  (d.pattern === "blush" && !["red", "pink", "orange"].includes(toneFam(d.palette[1]))) || (d.pattern === "fawn" && toneFam(d.palette[0]) === "white") ||
+  (d.pattern === "blush" && !["red", "pink", "orange"].includes(toneFam(d.palette[1]))) || (d.pattern === "fawn" && (toneFam(d.palette[0]) === "white" || lab(d.palette[0])[0] < 30)) ||
   (d.pattern === "milkbath" && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 25 && d.palette[1] !== COLORS.babyPink.hex) ||
   // negative space: khối c2 đậm (bộ vẽ cần lệch móng trần ≥ 25 L*); French: đầu pastel sáng có sắc (vàng bơ) trên nền trong = tàng hình
   (d.pattern === "negative" && lab(d.palette[1])[0] > 48) || (d.pattern === "cleanmilky" && /đính hạt ngọc trai|pearl micro studs/i.test(d.title.vi + d.title.en)) ||

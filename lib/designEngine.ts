@@ -1057,7 +1057,9 @@ const ROLES: Record<string, Role> = {
   cherry: { g: "motif", on: "#c3101c", shapes: SH4, ok: ([a]) => Lof(hx(a)) >= 60, pal: [["milky", "cherry", "gold"], ["sheer", "cherry", "gold"], ["nude", "cherry", "gold"]] },
   // ren: đặt ở đầu móng / góc, ren trắng trên nền trong (không quấn ngang thân như vớ #42)
   lace: { g: "tip", on: "#f4f4f6", base: "sheer", pal: [["sheer", "milky", "pearl"], ["pinkNude", "milky", "pearl"], ["nude", "milky", "gold"]] },
-  negative: { g: "glow", vs: "#e4bcb2", pal: [["nude", "espresso", "gold"], ["nude", "black", "gold"], ["nude", "burgundy", "gold"]] },
+  // khối màu phải ĐẬM (L* ≤ 48): bộ vẽ chỉ tô khối bằng c2 khi c2 lệch độ sáng móng trần (L* ~75) ≥ 25, không thì lấy c1
+  // (bảng "đen + dừa cạn" → tên "Negative space tím xanh dừa cạn" mà ảnh ra khối đen — soi lượt 2)
+  negative: { g: "glow", vs: "#e4bcb2", ok: ([, b]) => Lof(hx(b)) <= 48, pal: [["nude", "espresso", "gold"], ["nude", "black", "gold"], ["nude", "burgundy", "gold"]] },
   velvet: { g: "tone", base: "dark", shapes: SH5, pal: [["plumNoir", "milky", "gold"], ["redVelvet", "milky", "gold"], ["espresso", "milky", "gold"]] },
   // ma / đầu lâu / xác ướp: chỉ nền tối kiểu "moody luxe" (không ma trắng trên nền cam bí ngô / pastel — nhìn như đồ hoá trang)
   ghost: { g: "motif", on: W, ok: ([a]) => Lof(hx(a)) < 30, pal: [["black", "milky", "silver"], ["mulledWine", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
@@ -1169,7 +1171,9 @@ export function paletteOk(pid: string, colors: [string, string, string]): boolea
   if (pat.badBase?.includes(k[0]) || !metalOk(k[0], k[2]) || (role.ok && !role.ok(k))) return false;
   if (role.g === "tone") return true;
   const fg = role.on === "metal" ? mt : !role.on || role.on === "c2" ? c2 : role.on, bg = role.vs ?? c1;
-  if (role.g === "tip" && Lof(fg) > 88 && Lof(bg) < 92 && SHEER.includes(k[0])) return true; // đầu trắng đặc trên nền trong
+  // đầu TRẮNG đặc trên nền trong (trắng sữa / trắng ngà / trắng hoa sứ — C* < 12). Màu pastel sáng có sắc (vàng bơ L* 90)
+  // không được miễn: đầu micro French vàng bơ trên nền hồng sữa gần như tàng hình, chỉ còn 1 vệt ố vàng ở mép (soi lượt 2)
+  if (role.g === "tip" && Lof(fg) > 88 && chroma(fg) < 12 && Lof(bg) < 92 && SHEER.includes(k[0])) return true;
   return contrastOk(fg, bg, GATE_MIN[role.g]);
 }
 /** Hiệu ứng hợp nền: nhũ chỉ ở French nhũ / nhũ loang / baby boomer; nhám chỉ nền trung–tối (L* < 55, nền sáng nhám

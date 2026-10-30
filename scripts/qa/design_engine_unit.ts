@@ -206,7 +206,10 @@ const lie = all.filter(({ d }) =>
   (d.pattern === "gelflower" && lab(d.palette[1])[0] < 62) || (d.pattern === "chromefrench" && lab(d.palette[0])[0] < 70) ||
   (d.pattern === "jelly" && !(lab(d.palette[0])[0] >= 30 && (["red", "pink", "orange", "nude"].includes(toneFam(d.palette[0])) || (lab(d.palette[0])[0] >= 55 && hAng(d.palette[0]) >= 270 && hAng(d.palette[0]) <= 340)))) ||
   (d.pattern === "blush" && !["red", "pink", "orange"].includes(toneFam(d.palette[1]))) || (d.pattern === "fawn" && toneFam(d.palette[0]) === "white") ||
-  (d.pattern === "milkbath" && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 25 && d.palette[1] !== COLORS.babyPink.hex));
+  (d.pattern === "milkbath" && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) < 25 && d.palette[1] !== COLORS.babyPink.hex) ||
+  // negative space: khối c2 đậm (bộ vẽ cần lệch móng trần ≥ 25 L*); French: đầu pastel sáng có sắc (vàng bơ) trên nền trong = tàng hình
+  (d.pattern === "negative" && lab(d.palette[1])[0] > 48) ||
+  (["french", "fr-micro", "fr-deep", "fr-v", "fr-side", "fr-halfmoon", "doublefrench"].includes(d.pattern) && lab(d.palette[1])[0] > 88 && Math.hypot(lab(d.palette[1])[1], lab(d.palette[1])[2]) >= 12));
 check("DE48", "Tên nói đúng cái ảnh vẽ ra (màu bộ vẽ thật vẽ: hoa gel 3D cánh sáng, thạch tông ấm / tím pastel, má hồng tông ấm, hoa khô có sắc, chrome French nền trong, da hươu nền nâu vàng): French nhũ chỉ bóng (nhũ ở đầu móng), aura không tráng ngọc trai, hoa nhí / chấm bi / lá phong kim loại đúng bộ vẽ, không 'đồi mồi viền vàng', French mỗi ngón 1 tông có màu rõ (không trắng sữa → xám), caro có 1 màu sáng, syrup tông ấm có sắc rõ (không thạch nâu đục / cobalt tím tro), lõi aura sáng vừa (không vết bầm cobalt), da hươu nền nâu vàng (không cam), clean girl không ghi màu phụ không lên móng; đầu móng nâu / mận đậm (micro French: mọi màu gần đen) chỉ trên bộ đắp dài (không móng thật ngắn, không oval / vuông)",
   lie.length === 0 && !paletteOk("fr-skittle", ["sheer", "milky", "gold"]) && !paletteOk("fr-skittle", ["sheer", "coffee", "gold"]) && paletteOk("fr-skittle", ["sheer", "cobalt", "silver"]) &&
   !paletteOk("plaid", ["redVelvet", "pine", "gold"]) && paletteOk("plaid", ["cherry", "pine", "gold"]) && !finishOk("fr-glitter", COLORS.milky.hex, "glitter") &&
@@ -214,7 +217,8 @@ check("DE48", "Tên nói đúng cái ảnh vẽ ra (màu bộ vẽ thật vẽ: 
   !paletteOk("fawn", ["persimmon", "bone", "gold"]) && paletteOk("fawn", ["caramel", "cloudDancer", "gold"]) && !paletteOk("fawn", ["milky", "persimmon", "gold"]) &&
   !paletteOk("gelflower", ["sheer", "raspberry", "pearl"]) && paletteOk("gelflower", ["sheer", "lavender", "pearl"]) && !paletteOk("chromefrench", ["chocolate", "gold", "gold"]) && paletteOk("chromefrench", ["nude", "gold", "gold"]) &&
   !paletteOk("jelly", ["cobalt", "milky", "silver"]) && !paletteOk("jelly", ["sage", "milky", "gold"]) && paletteOk("jelly", ["lavender", "milky", "silver"]) && paletteOk("jelly", ["raspberry", "milky", "gold"]) &&
-  !paletteOk("blush", ["sheer", "cobalt", "silver"]) && paletteOk("blush", ["sheer", "hotPink", "pearl"]) && !paletteOk("milkbath", ["milky", "pewter", "silver"]) && paletteOk("milkbath", ["milky", "cobalt", "silver"]),
+  !paletteOk("blush", ["sheer", "cobalt", "silver"]) && paletteOk("blush", ["sheer", "hotPink", "pearl"]) && !paletteOk("milkbath", ["milky", "pewter", "silver"]) && paletteOk("milkbath", ["milky", "cobalt", "silver"]) &&
+  !paletteOk("negative", ["black", "periwinkle", "silver"]) && paletteOk("negative", ["nude", "black", "gold"]) && !paletteOk("fr-micro", ["sheer", "butter", "gold"]) && paletteOk("french", ["sheer", "white", "gold"]),
   lie.slice(0, 3).map((x) => `${x.d.title.vi} [${x.d.pattern}/${x.d.finish}/${x.d.shape}/${x.d.spec.system}]`).join(" | "));
 
 // Mô phỏng đúng cron: 3 lượt × 6 mẫu / ngày, mỗi lượt nhận hoạ tiết + bảng màu của 18 mẫu gần nhất. Đếm màu KHÁCH THẤY

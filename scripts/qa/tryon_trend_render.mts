@@ -142,6 +142,16 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "R2 Velvet cà phê", colors: ["#6f4e37", "#f2ede6", "#d4af37"], finish: "cateye", pattern: "velvet", seed: 215 },
   { name: "R2 Má hồng cánh sen nền sữa", colors: ["#f2ede6", "#e0457b", "#b76e79"], finish: "glossy", pattern: "blush", seed: 216 },
   { name: "R2 Nhám đỏ rượu", colors: ["#7a0f1f", "#e8c4a8", "#d4af37"], finish: "matte", pattern: "solid", seed: 217 },
+  // vòng 2 sửa lại — các ca người soát bắt lỗi (soi: ONLY="^R2R")
+  { name: "R2R Velvet đen tuyền", colors: ["#151314", "#f2ede6", "#c0c0c0"], finish: "cateye", pattern: "velvet", seed: 230 },
+  { name: "R2R Má hồng đỏ cherry nền hồng sữa", colors: ["#f6d5d0", "#b3122e", "#d4af37"], finish: "glossy", pattern: "blush", seed: 231 },
+  { name: "R2R Má hồng đỏ cherry tráng ngọc trai", colors: ["#f6d5d0", "#b3122e", "#d4af37"], finish: "chrome", pattern: "blush", seed: 232 },
+  { name: "R2R Da hươu espresso nền hồng nude", colors: ["#f2c4c4", "#3b2418", "#d4af37"], finish: "glossy", pattern: "fawn", seed: 233 },
+  { name: "R2R Foil ngọc trai nền mâm xôi", colors: ["#c2185b", "#f6d5d0", "#f5f0e8"], finish: "glossy", pattern: "foil", seed: 234 },
+  { name: "R2R Aura cherry nền nude be", colors: ["#e8c4a8", "#b3122e", "#d4af37"], finish: "glossy", pattern: "aura", seed: 235 },
+  { name: "R2R Nhám trắng sữa", colors: ["#f2ede6", "#c0c0c0"], finish: "matte", pattern: "solid", seed: 236 },
+  { name: "R2R Nhám đen tuyền", colors: ["#151314", "#c0c0c0"], finish: "matte", pattern: "solid", seed: 237 },
+  { name: "R2R Line vàng nền trắng sữa", colors: ["#f2ede6", "#151314", "#d4af37"], finish: "glossy", pattern: "lines", seed: 238 },
   // hoạ tiết vẽ tay (A2): mỗi hoạ tiết trên nền tối + nền sáng — soát cỡ, liner, vệt bóng vẽ, không bị mép cắt
   { name: "Ma trắng nền nude sữa", colors: ["#f6d5d0", "#111111", "#c0c0c0"], finish: "glossy", pattern: "ghost", seed: 70 },
   { name: "Bí ngô nền đen", colors: ["#151314", "#ffffff", "#d4af37"], finish: "glossy", pattern: "jackolantern", seed: 71 },

@@ -3512,7 +3512,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           r *= dim; g *= dim; b *= dim;
           // nền gần đen: quầng hẹp hơn (σ ~0.35 hw) để 2 mép giữ đen sâu; ánh = màu nhũ bạc / champagne (cả quầng, không
           // chỉ ≤ 0.28 — pha ít thì đỉnh chỉ ~#50 xám than, nhìn như đen nhám bụi)
-          const fG = Math.exp(-((dT / (0.46 - 0.04 * vKD)) ** 2)) * alongV, amt = 1.15 * fG * (1 + plush + 0.3 * shim) * lightK * (0.6 + 0.4 * edge);
+          const fG = Math.exp(-((dT / (0.46 - 0.04 * vKD)) ** 2)) * alongV, amt = 1.15 * fG * (1 + plush + 0.3 * shim * (1 - 0.4 * vKD)) * lightK * (0.6 + 0.4 * edge);
           const kT = vKD;
           r += (vGlow[0] + (vTint[0] - vGlow[0]) * kT) * amt; g += (vGlow[1] + (vTint[1] - vGlow[1]) * kT) * amt; b += (vGlow[2] + (vTint[2] - vGlow[2]) * kT) * amt;
           // nền đen: hạt mờ hẳn (≤ ~0.12 ×) — nhũ velvet thật mịn tới mức không thấy từng hạt, chấm sáng rõ trên đen = bụi
@@ -3588,7 +3588,8 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
         if (gx > 0) { r += (1 - r) * gx; g += (1 - g) * gx; b += (1 - b) * gx; }
       }
       // nhám: vân mịn THEO TỈ LỆ độ sáng (±2.5%) — cộng cố định ±0.0125 từng thành hạt cát lốm đốm trên màu tối
-      if (fin === "matte") { const nz = 1 + (hash2(X, Y, 7) - 0.5) * 0.05; r *= nz; g *= nz; b *= nz; }
+      // hạt nhám ±1.5% (±2.5% cũ: móng nhám trắng phóng to trên ảnh thử móng lổn nhổn như giấy nhám)
+      if (fin === "matte") { const nz = 1 + (hash2(X, Y, 7) - 0.5) * 0.03; r *= nz; g *= nz; b *= nz; }
       // ---- 3) LINE ART (line vàng phẳng / line CHROME NỔI): 2–3 chi tiết có chủ ý mỗi móng (vòm chân móng, nét vuốt chữ S,
       //      sóng ngang, viền French, chấm) — nét ≥ 3px (bản cũ 1 sợi 1.35px dọc móng, ảnh 400px mất hẳn / lẫn vào vệt bóng).
       //      Chrome nổi: khối kim loại hữu cơ dày, mặt cắt vòm → phản chiếu gương 3D (sphereMetal) + bóng đổ mềm lên sơn nền.

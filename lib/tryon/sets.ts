@@ -83,15 +83,6 @@ const SKIP = new Set(["solid", "mixmatch"]);
 /** móng hero vẽ bằng hoạ tiết vẽ tay riêng thay cho lớp nền in lặp: ren trắng = mảng ren in stamping (lưới lục giác +
  *  hoa 5 cánh + viền vỏ sò, beadsFor "lace:art") — dải lưới chấm đều của lớp nền đọc ra vải lưới / giấy in lỗi */
 const HERO_ART: Record<string, string> = { lace: "lace:art" };
-/** cùng sắc, tối xuống tới L* `Lt` (nhân đều kênh tuyến tính — hồng sữa → hồng mauve, trắng sữa → be xám, nude → nude đậm) */
-function deepen(hex: string, Lt: number): string {
-  const v = parseInt(hex.replace("#", ""), 16);
-  if (!Number.isFinite(v)) return hex;
-  const lin = [(v >> 16) & 255, (v >> 8) & 255, v & 255].map((c) => { const x = c / 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
-  const Y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2], Yt = Math.pow((Lt + 16) / 116, 3), f = Y > Yt ? Yt / Y : 1;
-  return "#" + lin.map((x) => { const y = Math.min(1, x * f), c = y <= 0.0031308 ? 12.92 * y : 1.055 * Math.pow(y, 1 / 2.4) - 0.055; return Math.round(255 * c).toString(16).padStart(2, "0"); }).join("");
-}
-
 /**
  * Thứ tự móng theo vị trí trên bàn tay (trỏ → út; đủ 5 móng: cái → út): xếp theo hình chiếu tâm móng lên phương
  * vuông góc với hướng móng trung bình, rồi lật để móng ĐẦU MÚT NHỎ NHẤT (ngón út: hẹp + ngắn nhất) nằm cuối. So diện
@@ -286,12 +277,12 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
   if (n <= 0 || look.nails?.some(Boolean)) return look;
   const pat = look.pattern, theme = THEMES[pat];
   if (!theme) {
-    // chấm bi mắt mèo: chấm cây chấm bi THƯA, 3 cỡ, không bị mép cắt (bố cục "polka:cat" của beadsFor) trên nền mắt mèo
-    // (vòng 2b) chấm trên CẢ 4 móng ở ảnh nhỏ đọc ra tuyết rơi / vải in lốm đốm → chấm trên móng hero + echo (+ 40% bộ thêm
-    // móng thread), móng còn lại MẮT MÈO TRƠN — như bộ "polka dot cat eye" thợ làm: mắt mèo là nền, chấm là điểm nhấn
+    // CHẤM BI MẮT MÈO (trend "polka dot cat eye"): đúng 2 móng điểm nhấn hero + echo (không kề nhau) chấm LƯỚI SO LE ĐỀU kín
+    // móng (beadsFor "polka:cat"), các móng còn lại MẮT MÈO TRƠN — mắt mèo là nền, chấm là điểm nhấn. Chấm rải ngẫu nhiên
+    // 3 cỡ trên cả 4 móng đọc ra tuyết rơi / sơn văng; chấm thưa dồn nửa đầu móng đọc ra mặt xúc xắc / chữ nổi
     if (pat === "polka" && look.finish === "cateye") {
-      const { roles, variant, hero, echo } = setRoles(n, look, order), third = h32(look.seed | 0, 11) < 0.4;
-      const nails = roles.map((role, i): NailOverride => (role === "hero" || role === "echo" || (third && role === "thread" && !variant[i]) ? { role, art: true, pattern: "polka:cat" } : { role: "quiet", art: false, pattern: "solid" }));
+      const { roles, hero, echo } = setRoles(n, look, order);
+      const nails = roles.map((role): NailOverride => (role === "hero" || role === "echo" ? { role, art: true, pattern: "polka:cat" } : { role: "quiet", art: false, pattern: "solid" }));
       return { ...look, nails, hero, echo: echo >= 0 ? echo : undefined };
     }
     // họ French (fr-*) luôn phủ cả bộ, kể cả biến thể mới chưa kịp ghi vào ALL_NAIL_PATTERNS
@@ -325,9 +316,9 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
   const tmpl = rT < 0.28 ? "accent" : rT < 0.45 && c2Tone ? "tone" : "thread";
   for (let i = 0; i < n; i++) {
     const role = roles[i];
-    // ren trắng trên nền sữa / hồng sữa / nude rất sáng (L* > 80): ở ảnh kho mẫu ren gần như biến mất (lời chê ban đầu)
-    // → móng ren lấy nền cùng sắc ĐẬM hơn (L* 72: hồng mauve / be xám / nude đậm) như thợ làm móng ren nhấn
-    if (role === "hero") nails[i] = { role, pattern: HERO_ART[pat] ?? pat, art: true, ...(pat === "lace" && lstar(pal.c1) > 80 ? { colors: [deepen(pal.c1, 72), pal.c2, pal.m] } : {}) };
+    // móng hero GIỮ màu nền của bộ (ren trên nền nude đậm hơn 3 móng kia = 2 lọ sơn khác nhau, nhìn lạc bộ) — ren trên nền
+    // rất sáng tự lấy TRẮNG tinh + nét đặc hơn (paintOps "lacework") để vẫn đọc được
+    if (role === "hero") nails[i] = { role, pattern: HERO_ART[pat] ?? pat, art: true };
     else if (role === "echo") nails[i] = { ...echoOv, role, art: true };
     else if (role === "thread" && tmpl === "thread") nails[i] = { ...threadFor(pal, seed, variant[i], isFrench(echoOv.pattern), pat), role, art: true };
     else {

@@ -2654,15 +2654,19 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
             break;
           }
           case "aura": {
-            // AURA phun airbrush: LÕI = đúng màu c2 (giữ sắc + độ đậm, chỉ sáng lên ≤ 0.03 OKLab) đặc ~95% rồi loang mềm 2
-            // tầng (lõi đặc → quầng) phủ ~55–65% mặt móng, trộn trong OKLab (trắng sữa → hồng → đỏ đều theo mắt nhìn). Bản cũ
-            // pha c2 25% hồng + 15% trắng trong không gian tuyến tính, quầng thu nhỏ trên nền sáng → "Aura đỏ cherry" chỉ còn
-            // 1 vệt hồng phấn như vết bầm. auraM: lớp ánh ngọc trai (chrome) không được phủ bạc lõi màu
-            let gc = tipP.memo.aura as RGB | undefined;
-            if (!gc) { const o = okOf(c2); gc = fromOk([Math.min(0.9, o[0] + 0.03), o[1], o[2]]); tipP.memo.aura = gc; }
-            const d = Math.hypot((u - 0.48) / 0.3, t / 0.74);
-            auraM = 0.97 * Math.exp(-Math.pow(d / 0.95, 2.4));
-            base = okMix(c1, gc, auraM);
+            // AURA phun airbrush: LÕI TRÒN (cùng thang hw theo 2 trục, dọc chỉ dãn 1.35× — theo u thì lõi thành vệt dài / chéo
+            // trên móng dài) đúng màu c2 (sáng lên ≤ 0.01 OKLab — ánh sáng + lớp tráng còn nâng thêm ~0.04) đặc ~97% trong bán kính ~0.28 hw rồi loang RỘNG mềm (~0.64 hw;
+            // hẹp hơn thì thành 1 chấm đỏ như vết thương) phủ ~65% mặt móng. Quầng đi QUA 1 màu trung gian cùng SẮC c2 (L giữa c1 và c2, độ rực ~55%): trộn thẳng nude be →
+            // đỏ cherry trong OKLab đi qua cam cá hồi → quầng như vết bỏng / vết bầm. auraM: lớp ánh ngọc trai / vệt bóng né lõi
+            let ac = tipP.memo.aura as RGB[] | undefined;
+            if (!ac) {
+              const o = okOf(c2), o1 = okOf(c1), gc = fromOk([Math.min(0.9, o[0] + 0.01), o[1], o[2]]);
+              const hc = fromOk([o1[0] + (o[0] - o1[0]) * 0.45, o[1] * 0.55, o[2] * 0.55]);
+              ac = tipP.memo.aura = [gc, hc];
+            }
+            const Yh = s * tipP.kL, Ln = Math.max(1.6, tipP.len), d = Math.hypot((Yh - 0.5 * Ln) / 1.35, t);
+            auraM = 0.97 * Math.exp(-((Math.max(0, d - 0.28) / 0.64) ** 2));
+            base = auraM < 0.5 ? okMix(c1, ac[1], auraM / 0.5) : okMix(ac[1], ac[0], Math.min(1, (auraM - 0.5) / 0.47));
             break;
           }
           case "colorchrome": {
@@ -3940,10 +3944,13 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       // velvet: lớp top phủ trên nhung — vệt cửa sổ chỉ còn ~0.3 (vệt chéo rõ + quầng nhung = vỏ đạn / ống satin); ánh
       // sáng của nhung là quầng mềm rộng ở bước 2
       // nhám: KHÔNG có vệt cửa sổ sắc (ánh đèn của móng bóng cũ trong ảnh từng lộ thành vệt trắng trên nhám đỏ p027)
-      spec = fin === "matte" ? 0 : Math.min(1, spec * gloss * (velvet ? 0.5 : 1));
+      // aura: vệt cửa sổ sắc (có khía của ánh đèn thật trong ảnh) chạy qua lõi màu đọc ra VẾT NỨT → mờ đi trên lõi (tráng
+      // ngọc trai 65%, bóng thường 35%)
+      spec = fin === "matte" ? 0 : Math.min(1, spec * gloss * (velvet ? 0.5 : 1) * (pat === "aura" ? 1 - (glazed ? 0.65 : 0.35) * auraM : 1));
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.04 : velvet ? 0.4 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
+      // aura: ánh loang của ảnh phủ trắng mờ lên lõi màu (đỏ cherry thành hồng #c64d56) → né lõi 50%
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.04 : velvet ? 0.4 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1) * (pat === "aura" ? 1 - 0.5 * auraM : 1);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

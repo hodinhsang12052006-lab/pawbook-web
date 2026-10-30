@@ -1419,8 +1419,10 @@ type PaintedKind = "ghost" | "pumpkin" | "bat" | "moon" | "flake" | "cherry" | "
 /** pk: hạt XẾP SÁT (cụm đá, dải đá, giọt chrome, đinh tán dọc trục) — khoảng cách dọc bố cục tính theo móng dài 2.8 hw;
  *  renderLook nén lại theo tỉ lệ dài / ngang THẬT của móng (móng dài 4–4.8 hw: đá cách nhau gần 1 viên thay vì chạm nhau) ·
  *  rim: kỹ thuật nối bộ vẽ theo MÉP móng (tint 0 = đầu móng chrome đặc · 1 = đầu móng sơn c2 đặc · 2 = viền chỉ kim loại
- *  chân móng · 3 = viền chỉ chân móng màu c2) */
-interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "fstar" | "bow" | "eye" | "blob" | "rim" | PaintedKind; rot?: number; tint?: number; flip?: boolean; whole?: boolean; asp?: number; pk?: boolean }
+ *  chân móng · 3 = viền chỉ chân móng màu c2) · gx: chấm LƯỚI (chấm bi đều): t đo theo bề ngang MẶT móng cố định (đơn vị
+ *  seg.hw, không co theo bề ngang tại chỗ) → cột chấm thẳng hàng, cách đều từ chân tới đầu móng (t co theo bề ngang tại
+ *  chỗ thì các cột chụm lại ở đầu móng thon); chạm mép thì BỎ hẳn (không dời — dời 1 chấm làm lệch cả lưới) */
+interface Bead { u: number; t: number; r: number; kind: "pearl" | "gem" | "dot" | "drop" | "mdrop" | "star" | "fstar" | "bow" | "eye" | "blob" | "rim" | PaintedKind; rot?: number; tint?: number; flip?: boolean; whole?: boolean; asp?: number; pk?: boolean; gx?: boolean }
 const PAINTED = new Set<string>(["ghost", "pumpkin", "bat", "moon", "flake", "cherry", "flower", "cat", "skull", "leaf", "pflower", "heart", "holly", "ornament", "gelflower", "bud", "gleaf", "pdot", "ditsy", "sparkle", "mleaf", "lacework"]);
 /** Hoạ tiết HỮU CƠ (lá, hoa, nụ, bông tuyết, chấm): xoay theo trục móng và được mép móng cắt bớt (thợ vẽ tràn mép). Còn
  *  lại là NHÂN VẬT / ĐỒ VẬT (ma, mèo, đầu lâu, bí ngô, quả châu, hoa gel 3D…): luôn đứng thẳng trong ảnh, KHÔNG bao giờ bị
@@ -1959,7 +1961,7 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   const F: PFit = { seg, geo, s0: 0, sx: 0, R: R0, cr, sr, fl: bd.flip ? -1 : 1, bound2: 0, Lx: L3[0] / ln, Ly: L3[1] / ln, mLx: 0, mLy: 0, v, jit: 0, lw: 0, bev: 0, hiD: 0, hiW: 0, ops: [], pc: base, off: false };
   let u0 = bd.u, t0 = bd.t, sc = 1;
   const place = () => {
-    F.s0 = u0 * sEnd; F.sx = hwAt(geo, F.s0) * warpT(t0); F.R = Math.max(1.5, R0 * sc);
+    F.s0 = u0 * sEnd; F.sx = bd.gx ? t0 * seg.hw : hwAt(geo, F.s0) * warpT(t0); F.R = Math.max(1.5, R0 * sc);
     const bnd = (kind === "ornament" && v ? 9 : kind === "cat" ? 1.5 : kind === "gelflower" ? 1.25 : 1.12) * F.R + 2.5;
     F.bound2 = bnd * bnd;
     F.mLx = F.fl * (F.Lx * cr + F.Ly * sr); F.mLy = -F.Lx * sr + F.Ly * cr;
@@ -1970,7 +1972,8 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
   // chấm / hoa nhí chấm bằng cây chấm bi (whole): cách mép móng ≥ ~1.5–2px (+ vành sát mép 2px); chạm mép → dời vào +
   // thu nhỏ 1 lần, vẫn chạm thì bỏ hẳn chấm (không bao giờ ra chấm bị mép cắt đôi)
   if (bd.whole) {
-    const mg = Math.max(1.5, 0.045 * seg.hw);
+    // chấm lưới: chừa mép ≥ nửa chấm (chấm bi đều sát mép bị dồn dẹt theo độ cong móng đọc ra chấm bị cắt)
+    const mg = Math.max(1.5, 0.045 * seg.hw, bd.gx ? 0.5 * F.R : 0);
     const cuts = () => {
       for (let q = 0; q < geo.ring.length; q++) {
         const k = geo.ring[q], s = seg.along[k], ax = hwAt(geo, s) * warpT(seg.across[k]) - F.sx, ay = (s - F.s0) * seg.L;
@@ -1981,7 +1984,7 @@ function fitPainted(bd: Bead, seg: NailSeg, eDist: Float32Array, sEnd: number, u
       }
       return false;
     };
-    if (cuts()) { sc = 0.85; t0 *= 0.86; u0 += (0.52 - u0) * 0.12; place(); F.off = cuts(); }
+    if (cuts()) { if (bd.gx) F.off = true; else { sc = 0.85; t0 *= 0.86; u0 += (0.52 - u0) * 0.12; place(); F.off = cuts(); } }
   }
   if (!ORGANIC.has(kind)) {
     for (let it = 0; it < 12; it++) {
@@ -2134,7 +2137,16 @@ export function beadsFor(pattern: string, seed: number): Bead[] {
       if (hash2(seed, 9, 31) < 0.5) return packCluster(seed, [[0.18, "gem"], [0.12, "gem"], [0.11, "pearl"], [0.09, "gem"], [0.08, "gem"]], 0.21, 0.04 * j(2), [1, 0], 1.6, 1.6, 0.018, 3);
       return [-0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6].map((t, k) => ({ u: 0.17 + 0.11 * t * t + 0.035, t, r: [0.08, 0.09, 0.1, 0.12, 0.1, 0.09, 0.08][k], kind: "gem" as const, pk: true }));
     }
-    case "gemcluster": return [{ u: 0.3, t: 0.02, r: 0.33, kind: "gem" }, { u: 0.2, t: -0.5, r: 0.17, kind: "gem" }, { u: 0.2, t: 0.52, r: 0.15, kind: "pearl" }, { u: 0.5, t: -0.38, r: 0.14, kind: "pearl" }, { u: 0.52, t: 0.36, r: 0.16, kind: "gem" }, { u: 0.66, t: -0.05, r: 0.1, kind: "gem" }, { u: 0.42, t: 0.66, r: 0.08, kind: "gem" }];
+    // CỤM ĐÁ & CHARM (brooch): 1 viên đá to + đá / ngọc trai / hạt caviar vàng nhỏ dần XẾP SÁT quanh nó thành 1 khối tròn
+    // hơi lệch về 1 phía đầu móng, ở 1/3 dưới móng — khác "gems" (vòng cung chân móng / dải dọc / góc chéo). Bản cũ rải 7
+    // viên cách nhau ~1 viên khắp móng = hạt bụi lấp lánh, không ra cụm
+    case "gemcluster": {
+      const sd = j(6) > 0 ? 1 : -1;
+      // nhiều viên cỡ GẦN nhau (0.08–0.24, không 1 viên trội hẳn) chất đống — 1 viên to giữa + vòng viên nhỏ quanh nó đọc ra
+      // dấu chân thú / bông hoa
+      const items: [number, Bead["kind"]][] = [[0.24, "gem"], [0.2, "gem"], [0.18, "pearl"], [0.17, "gem"], [0.15, "gem"], [0.13, "gem"], [0.12, "pearl"], [0.11, "gem"], [0.1, "gem"], [0.09, "mdrop"], [0.09, "gem"], [0.08, "gem"], [0.08, "gem"]];
+      return packCluster(seed, items, 0.3 + 0.02 * j(1), 0.14 * sd, [0.4 * sd, 1], 1.7, 1.0, 0.018, 5);
+    }
     // CHẤM BI VẼ (cây chấm bi, phẳng dưới lớp top — không phải đinh tán 3D): 2–3 cỡ chấm, 3 bố cục thợ hay làm — chuỗi
     // chéo to → nhỏ từ 1 góc chân móng lên góc đầu móng đối diện · chấm bi rải (polka thưa, 2 cỡ) · cụm chấm ở 1 góc chân
     // móng thưa dần lên đầu móng. Chấm không bao giờ bị mép cắt (whole)
@@ -2158,23 +2170,18 @@ export function beadsFor(pattern: string, seed: number): Bead[] {
       return scatterBeads(seed, 9, (k) => [0.22, 0.16, 0.13, 0.14, 0.11, 0.1, 0.11, 0.09, 0.08][k], "pdot", 0.13, 0.86, 0.82, 0.07,
         (u, t) => Math.exp(-(((u - 0.2) * 2.8) ** 2 + (t - 0.4 * sd) ** 2) / 0.9));
     }
-    // CHẤM BI TRÊN MẮT MÈO (trend Pinterest "polka dot cat eye"): chấm cây chấm bi THƯA trên nền mắt mèo — 7–10 chấm / móng,
-    // 3 cỡ (0.07–0.15 hw), lệch tự nhiên, dày dần về đầu móng / thưa về chân móng, không chấm nào bị mép cắt. Lưới chấm đều
-    // 4 cột kín móng cũ nhìn như vải in cắt bằng kéo. Mỗi móng hạt giống riêng → bố cục khác nhau
-    // (vòng 2b) chấm rải ngẫu nhiên 0.09–0.17 hw trên cả 4 móng ở ảnh nhỏ đọc ra tuyết rơi / vải in lốm đốm → LƯỚI SO LE
-    // THƯA như thợ chấm (hàng cách ~0.42 hw, cột 0.5 hw, lệch tay ±0.03) · chấm gần ĐỀU cỡ (0.145–0.17, vài chấm 0.115)
-    // · giữ chấm theo mật độ dày rõ về ĐẦU móng (hàng chân móng 0–1 chấm, hàng đầu móng đủ chấm) — lib/tryon/sets chỉ chấm
-    // trên 2–3 móng, móng còn lại mắt mèo trơn
+    // CHẤM BI TRÊN MẮT MÈO (trend Pinterest "polka dot cat eye"): LƯỚI SO LE ĐỀU kín móng như thợ chấm bằng cây chấm bi —
+    // hàng cách 0.42 hw, cột cách 0.5 hw (hàng lẻ lệch nửa cột), 1 cỡ chấm 0.12–0.14 hw (hàng sát chân móng 0.1: chấm nhỏ
+    // dần vào da), lệch tay ±0.015. Chỉ bỏ chấm chạm mép (gx: không dời). Bản cũ: chấm rải ngẫu nhiên 3 cỡ = tuyết rơi /
+    // sơn văng; lưới rồi bỏ ngẫu nhiên theo mật độ = 5–9 chấm dồn nửa đầu móng như mặt xúc xắc / chữ nổi. Hàng đặt tới u
+    // 1.55 (pk: renderLook nén theo móng dài thật → móng 4.5 hw vẫn kín chấm tới đầu móng; chấm ngoài móng không vẽ)
     case "polka:cat": {
-      const out: Bead[] = [], ph = 0.5 * hash2(seed, 3, 31);
-      for (let row = 0; row < 5; row++) {
-        const u = 0.2 + 0.15 * row + 0.012 * j(40 + row), want = 0.12 + 0.88 * smooth(0.22, 0.72, u);
-        for (let c = -2; c <= 2; c++) {
-          const t = c * 0.5 + ph - 0.25 + (row % 2 ? 0.25 : 0) + 0.06 * j(60 + 7 * row + c);
-          const r = hash2(seed, 80 + 7 * row + c, 31) < 0.25 ? 0.115 : 0.145 + 0.025 * hash2(seed, 90 + 7 * row + c, 31);
-          if (Math.abs(t) > 0.8 - r || hash2(seed, 120 + 7 * row + c, 31) > want) continue;
-          out.push({ u, t, r, kind: "pdot", whole: true });
-        }
+      const out: Bead[] = [], ph = hash2(seed, 3, 31) < 0.5 ? 0 : 1;
+      for (let row = 0; row < 10; row++) for (let c = -2; c <= 2; c++) {
+        const t = 0.5 * c + ((row + ph) % 2 ? 0.25 : 0);
+        if (Math.abs(t) > 1.05) continue;
+        const r = row === 0 ? 0.1 : 0.13 + 0.02 * j(80 + 7 * row + c);
+        out.push({ u: 0.17 + 0.15 * row + 0.008 * j(40 + 7 * row + c), t: t + 0.03 * j(60 + 7 * row + c), r, kind: "pdot", whole: true, pk: true, gx: true });
       }
       return out;
     }
@@ -2219,6 +2226,8 @@ export function beadsFor(pattern: string, seed: number): Bead[] {
       return hash2(seed, 7, 31) < 0.5 ? [{ u: 0.27, t: 0.06 * sd, r: 0.34, kind: "fstar", rot: 0.5 * j(3) }, sp(0.44, -0.3, 0.2, 4), sp(0.18, 0.4, 0.065, 9, 1)]
         : [{ u: 0.68, t: 0.3 * sd, r: 0.32, kind: "fstar", rot: 0.6 * j(3) }, sp(0.84, -0.06, 0.2, 4), sp(0.52, 0.46, 0.065, 9, 1)];
     }
+    // nơ nhỏ (bộ charm nơ coquette): 1 nơ ~55% cỡ nơ hero ở 1/3 dưới móng, nghiêng nhẹ
+    case "mini:bow": return [{ u: 0.32 + 0.02 * j(1), t: 0.06 * j(2), r: 0.52, kind: "bow", rot: 0.3 * j(3) }];
     case "mini:leaf": { const sd = j(6) > 0 ? 1 : -1; return [{ u: 0.34, t: 0.12 * sd, r: 0.46, kind: "mleaf", rot: -0.4 * sd + 0.2 * j(2) }, { u: 0.62, t: -0.3 * sd, r: 0.24, kind: "mleaf", rot: 0.8 * sd + 0.3 * j(3) }]; }
     case "mini:dots": return [0.155, 0.125, 0.1].map((r, k, R) => ({ u: 0.21 + R.slice(0, k).reduce((a, x, q) => a + (x + R[q + 1] + 0.07) / 2.8, 0), t: 0, r, kind: "pdot" as const, whole: true, pk: true }));
     // charm sao kim loại: 1 sao to sát chân móng lệch 1 bên + 2 sao nhỏ dần chạy chéo về đầu móng, mỗi sao xoay khác nhau
@@ -2302,18 +2311,51 @@ export function beadsFor(pattern: string, seed: number): Bead[] {
       const lf = (du: number, dt: number, r: number, k: number): Bead => ({ u: fu + du, t: ft + dt, r, kind: "gleaf", rot: Math.atan2(-dt, du * 2.7) + 0.25 * j(k) });
       return [lf(-0.22, -0.4 * sd, 0.4, 2), lf(0.08, -0.7 * sd, 0.34, 3), { u: fu, t: ft, r: 0.72, kind: "flower", rot: 6.28 * j(4) }, { u: 0.34, t: -0.3 * sd, r: 0.26, kind: "bud", rot: -0.5 * sd + 0.3 * j(5) }, ...(j(8) > 0 ? [{ u: 0.15, t: 0.24 * sd, r: 0.2, kind: "bud" as const, rot: 0.4 * sd + 0.3 * j(9) }] : [])];
     }
-    // GIỌT CHROME 3D (chromedrops): KHÔNG phải bi tròn / đinh tán — 6–8 giọt hữu cơ dẹt (tỉ lệ 1.15–1.75, giọt xen kẽ
-    // thon đuôi kiểu đang chảy) XẾP SÁT thành 1 vệt chảy (packCluster theo hướng dòng): dọc 1 mép móng từ chân móng
-    // xuống · dàn ngang ôm chân móng · chéo từ góc chân móng ra giữa móng. Giọt to ở đầu dòng, giọt nhỏ lấp khe / văng ra
-    // cuối dòng. Echo = 3 giọt nhỏ ở nửa đầu móng
+    // GIỌT CHROME 3D (chromedrops): KHÔNG phải bi tròn / đinh tán — 6–7 giọt hữu cơ dẹt NỐI ĐUÔI nhau trên 1 ĐƯỜNG CHẢY
+    // cong mềm, nhỏ dần đều dọc đường (0.27 → 0.085 hw), trục dài mỗi giọt xuôi theo hướng chảy, giọt xen kẽ thon đuôi ngược
+    // về giọt to (vệt kim loại loang / văng ra) + có khi 1 giọt văng tí hon. 3 đường: chéo từ góc chân móng sang phía đầu
+    // móng bên kia (uốn S nhẹ) · men 1 thành móng rồi cong vào giữa · ôm chân móng từ 1 góc rồi vòng lên thành móng bên kia
+    // (chữ J). Bản cũ xếp cụm quanh 1 giọt to
+    // (packCluster) = 1 giọt to giữa + 4–6 giọt nhỏ xoè quanh → đọc ra DẤU CHÂN thú; echo 1 to + 2 nhỏ tam giác = mặt Mickey.
+    // Echo = 2–3 giọt nhỏ thẳng hàng men 1 thành móng (không bao giờ tam giác)
     case "chromedrops": case "chromedrops:echo": {
-      const sd = j(6) > 0 ? 1 : -1, echo = pattern === "chromedrops:echo", v = echo ? 3 : Math.floor(hash2(seed, 7, 31) * 3);
-      const it = (rs: number[]): [number, Bead["kind"]][] => rs.map((r) => [r, "blob"]);
-      const [au, at, dir, lead, back] = ([[0.27, 0.36 * sd, [0.12 * -sd, 1], 3, 0.5], [0.25, 0.1 * sd, [1, 0.25 * sd], 2, 2], [0.26, 0.34 * sd, [-0.6 * sd, 1], 2.6, 0.5], [0.62, -0.3 * sd, [0.3 * sd, 1], 2, 0.8]] as [number, number, [number, number], number, number][])[v];
-      const pk = packCluster(seed, it(echo ? [0.28, 0.19, 0.13] : [0.42, 0.26, 0.34, 0.2, 0.24, 0.14, 0.12, 0.1]), au, at, dir, lead, back, 0.04, 4);
-      // trục dài theo hướng dòng chảy (lệch ±0.3 rad), giọt thứ 2, 4… thon đuôi về phía hạ lưu
-      const a0 = Math.atan2(dir[0], dir[1]);
-      return pk.map((b, k) => ({ ...b, rot: a0 + 0.6 * j(30 + k), asp: b.r < 0.15 ? 1.1 : 1.15 + 0.6 * hash2(seed, 40 + k, 31), flip: k % 2 === 1, tint: Math.floor(hash2(seed, 50 + k, 31) * 1e6) }));
+      const sd = j(6) > 0 ? 1 : -1, echo = pattern === "chromedrops:echo", v = Math.floor(hash2(seed, 7, 31) * 3);
+      // điểm đầu (t, U = u·2.8 — cùng đơn vị hw), hướng đầu (góc so với trục móng, + = về phía t+), độ cong / 1 hw đi được
+      const [t0, U0, a0, kap] = echo ? [0.52 * sd, 1.05 + 0.15 * j(1), 0.06 * sd, -0.1 * sd]
+        : v === 0 ? [0.5 * sd, 0.6, -0.5 * sd, 0.22 * sd] : v === 1 ? [0.52 * sd, 0.6, -0.08 * sd, -0.42 * sd] : [0.5 * sd, 0.72, -1.2 * sd, 0.62 * sd];
+      const R0 = echo ? (hash2(seed, 8, 31) < 0.4 ? [0.2, 0.14] : [0.2, 0.15, 0.11]) : [0.31, 0.25, 0.2, 0.165, 0.135, 0.11, 0.09];
+      // đường chảy ra khỏi móng sớm (móng ngắn / góc chéo) → vẽ lại cả dòng nhỏ hơn 12% / 22% cho đủ ≥ 5 giọt (hero)
+      let out: Bead[] = [];
+      for (const sc of [1, 0.88, 0.78]) {
+        out = [];
+        let t = t0, U = U0, a = a0;
+        for (let k = 0; k < R0.length; k++) {
+          // nhỏ dần THẬT dọc dòng (giọt trước bị thu nhỏ cho vừa móng thì giọt sau không được to hơn nó)
+          let r = sc * R0[k] * (1 + 0.06 * j(20 + k));
+          if (k) r = Math.min(r, 0.95 * out[out.length - 1].r);
+          if (k) {
+            // bước = 2 bán kính + khe 0.04–0.07 hw (giọt gần chạm nhau như vệt loang, không dính thành 1 khối)
+            const prev = out[out.length - 1], step = prev.r + r + 0.04 + 0.03 * hash2(seed, 30 + k, 31);
+            a += kap * step;
+            t = prev.t + step * Math.sin(a); U = prev.u * 2.8 + step * Math.cos(a);
+          }
+          // lệch nhẹ vuông góc đường chảy (±0.025 hw) cho khỏi thẳng hàng như thước kẻ
+          const w = 0.05 * j(40 + k), tt = t + w * Math.cos(a), uu = (U - w * Math.sin(a)) / 2.8;
+          if (!insideNail(uu, tt, r)) { r *= 0.8; if (!insideNail(uu, tt, r)) break; }
+          // trục dài xuôi hướng chảy; giọt lẻ thon đuôi NGƯỢC về giọt to phía trước (rot + π)
+          out.push({ u: uu, t: tt, r, kind: "blob", rot: a + (k % 2 ? Math.PI : 0), asp: r < 0.12 ? 1.12 + 0.15 * hash2(seed, 50 + k, 31) : 1.25 + 0.3 * hash2(seed, 50 + k, 31), flip: k % 2 === 1, tint: Math.floor(hash2(seed, 60 + k, 31) * 1e6), pk: true });
+        }
+        if (echo || out.length >= 5) break;
+      }
+      // 1 giọt văng tí hon cạnh giọt thứ 3–4 phía ngoài khúc cong (xa giọt to — không bao giờ quây quanh giọt to)
+      if (!echo && out.length >= 4 && hash2(seed, 9, 31) < 0.65) {
+        const q = out[2 + (hash2(seed, 10, 31) < 0.5 ? 1 : 0)], nb = out[out.indexOf(q) + 1] ?? out[out.indexOf(q) - 1];
+        // pháp tuyến của đoạn q → nb, về phía NGOÀI khúc cong
+        const dT = nb.t - q.t, dU = (nb.u - q.u) * 2.8, dl = Math.hypot(dT, dU) || 1, sg = kap * sd >= 0 ? -sd : sd, d = q.r + 0.13;
+        const sat: Bead = { u: q.u + (sg * (-dT / dl) * d) / 2.8, t: q.t + sg * (dU / dl) * d, r: 0.08, kind: "blob", rot: Math.atan2(dT, dU), asp: 1.15, tint: Math.floor(hash2(seed, 70, 31) * 1e6), pk: true };
+        if (insideNail(sat.u, sat.t, sat.r) && out.every((o) => Math.hypot(o.t - sat.t, (o.u - sat.u) * 2.8) > o.r + sat.r + 0.04)) out.push(sat);
+      }
+      return out;
     }
     case "droplets": case "droplet": {
       // giọt nước 3D (trend "water drop / bubble nails"): 1 giọt to + 2–3 giọt nhỏ rải tự nhiên, không chồng nhau

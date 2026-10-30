@@ -524,7 +524,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
 {
   // BỘ PHỐI (lib/tryon/sets): vai theo vị trí ngón khi không biết ngón (Thử mẫu) · theo look.hero / echo khi biết (kho mẫu)
   // · ngón út (móng đầu mút hẹp nhất) luôn cuối · echo lấy chi tiết nhỏ khác · hoạ tiết in lặp ≤ 2 móng không kề · chấm
-  // bi mắt mèo đủ 4 móng · bộ chủ đề mix-* mỗi móng 1 kiểu, cùng bảng màu · ổn định theo hạt giống
+  // bi mắt mèo hero + echo (còn lại mắt mèo trơn) · bộ chủ đề mix-* mỗi móng 1 kiểu, cùng bảng màu · ổn định theo hạt giống
   const bad: string[] = [];
   const r4 = setRoles(4, {}), r5 = setRoles(5, {}), r3 = setRoles(3, {}), rx = setRoles(4, { hero: 1, echo: 3 });
   if (r4.roles.join() !== "echo,quiet,hero,thread") bad.push(`4 móng: ${r4.roles}`);
@@ -558,8 +558,11 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   // vòng 2 — bộ phối KHÔNG theo 1 công thức: qua 40 hạt giống × 10 hoạ tiết × nền tối / sáng: có bộ "accent" (2 móng hoạ
   // tiết + trơn, không móng nối) 15–45%; nhũ loang ≤ 30% móng nối, nhũ ở CHÂN móng ≤ 10% và chỉ trên nền tối; họ French
   // (dựng gel trong trên giường móng) không bao giờ là móng nối trên nền tối; micro French màu c2 chỉ khi hoạ tiết vẽ bằng c2
+  // (vòng 2 sửa) không kỹ thuật nối nào > 25% móng nối; "nét kim loại mảnh" (French gương + đầu micro chrome + viền chỉ
+  // chân móng — ở ảnh nhỏ đều là 1 viền vàng / bạc mảnh) cộng lại ≤ 20%; bộ nơ coquette không có sao vàng
   {
     const FR = new Set(["french", "chromefrench", "fr-micro", "fr-halfmoon"]), C2P = new Set(["dots", "hearts", "floral", "leopard"]);
+    const LINE = new Set(["chromefrench", "tip:metal", "cuticle:line"]), tech: Record<string, number> = {};
     let sets = 0, accent = 0, th = 0, glit = 0, cut = 0;
     for (const p of ["ghost", "floral", "stars", "gems", "charm3d", "leopard", "dots", "hearts", "chromedrops", "bats"]) for (const dark of [true, false]) for (let seed = 100; seed < 140; seed++) {
       const ns = expandSet(LOOK(dark ? ["#1f2a44", "#f2ede6", "#c0c0c0"] : ["#f6d5d0", "#8b3a62", "#d4af37"], "glossy", { pattern: p, seed }), 4).nails ?? [];
@@ -567,26 +570,38 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
       sets++; if (!tr.length) accent++;
       for (const o of tr) {
         th++;
+        const key = `${o?.pattern}${o?.finish ? "/" + o.finish : ""}`;
+        tech[key] = (tech[key] ?? 0) + 1;
+        if (p === "charm3d" && o?.pattern === "mini:star") bad.push(`${p}/${seed}: sao vàng cạnh nơ coquette`);
         if (o?.pattern === "glitterfade") { glit++; if (o.fade === "cuticle") { cut++; if (!dark) bad.push(`${p}/${seed}: nhũ chân móng trên nền sáng`); } }
         if (dark && FR.has(o?.pattern ?? "")) bad.push(`${p}/${seed}: French nối bộ trên nền tối`);
         if (!C2P.has(p) && (o?.pattern === "fr-micro" || o?.pattern === "french")) bad.push(`${p}/${seed}: đầu French c2 không có trên hero`);
       }
     }
     if (accent / sets < 0.15 || accent / sets > 0.45 || glit / th > 0.3 || cut / th > 0.1) bad.push(`tỉ lệ bộ: accent ${r2(accent / sets)} · nhũ ${r2(glit / th)} · nhũ chân ${r2(cut / th)}`);
+    const top = Object.entries(tech).sort((a, b) => b[1] - a[1])[0], line = Object.entries(tech).filter(([k]) => LINE.has(k)).reduce((a, [, v]) => a + v, 0);
+    if (top[1] / th > 0.25 || line / th > 0.2) bad.push(`kỹ thuật nối lặp: ${top[0]} ${r2(top[1] / th)} · nét kim loại mảnh ${r2(line / th)}`);
+    // giọt nước (trong suốt): móng nối không có kim loại nào (đầu gương / viền chỉ / đinh tán / chrome kim loại)
+    for (const dark of [true, false]) for (let seed = 100; seed < 140; seed++) {
+      const tr = (expandSet(LOOK(dark ? ["#6f4e37", "#e8c4a8", "#d4af37"] : ["#f2c4c4", "#ffffff", "#c0c0c0"], "glossy", { pattern: "droplets", seed }), 4).nails ?? []).filter((o) => o?.role === "thread");
+      for (const o of tr) if (LINE.has(o?.pattern ?? "") || o?.pattern === "stud:metal" || (o?.pattern === "solid" && o.finish === "chrome")) bad.push(`droplets/${seed}: móng nối kim loại ${o?.pattern}`);
+    }
   }
   // cherry: đầu French echo lấy màu ĐỎ của bảng màu (đỏ son #b91c1c), bảng màu không có đỏ thì đỏ cherry
   const chE = (cols: string[]) => (expandSet(LOOK(cols, "glossy", { pattern: "cherry" }), 4).nails ?? []).find((o) => o?.role === "echo")?.colors?.[1];
   if (chE(["#f9a8d4", "#b91c1c", "#d4af37"]) !== "#b91c1c" || chE(["#f8f4ee", "#ffffff", "#d4af37"]) !== "#b3122e") bad.push(`cherry echo đỏ: ${chE(["#f9a8d4", "#b91c1c", "#d4af37"])} / ${chE(["#f8f4ee", "#ffffff", "#d4af37"])}`);
   // thu ×0.5 quanh tâm nhóm (u 0.533, t 0.267) rồi lật + dời 0.05; trăng 0.5 → 0.25 nhưng không nhỏ hơn sàn 0.3 (vẽ tay)
   if (Math.abs(mv[0].r - 0.3) > 1e-6 || Math.abs(mv[1].r - 0.16) > 1e-6 || Math.abs(mv[0].u - 0.5667) > 0.005 || Math.abs(mv[0].t + 0.1333) > 0.005 || mv[1].t >= 0) bad.push(`cỡ / lật / dời: ${JSON.stringify(mv)}`);
-  // hoạ tiết in lặp: ≤ 2 móng, không kề; không còn trong ALL_NAIL_PATTERNS; chấm bi mắt mèo đủ 4 móng
+  // hoạ tiết in lặp: ≤ 2 móng, không kề; không còn trong ALL_NAIL_PATTERNS; chấm bi mắt mèo 2 móng
   for (const p of ["polka", "stripes", "chromedrops", "tortoise", "leopard", "checker"]) {
     const ex = expandSet(LOOK(["#3e1530", "#f8fafc", "#c0c0c0"], "glossy", { pattern: p, seed: 3 }), 4), on = (ex.nails ?? []).map((o, i) => (o?.pattern === p ? i : -1)).filter((i) => i >= 0);
     if (on.length > 2 || (on.length === 2 && Math.abs(on[0] - on[1]) < 2) || ALL_NAIL_PATTERNS.has(p)) bad.push(`${p} in lặp: ${on}`);
   }
   const pc = expandSet(LOOK(["#3e1530", "#f8fafc", "#c0c0c0"], "cateye", { pattern: "polka" }), 4);
-  // (vòng 2: chấm thưa 3 cỡ không bị mép cắt — bố cục "polka:cat" của beadsFor thay lưới chấm đều kín móng)
-  if (!pc.nails || pc.nails.length !== 4 || pc.nails.some((o) => !o?.art || o.pattern !== "polka:cat")) bad.push("chấm bi mắt mèo phải đủ 4 móng");
+  // (vòng 2 sửa — đổi hành vi có chủ đích: chấm bi mắt mèo = đúng 2 móng hero + echo KHÔNG kề nhau chấm lưới so le đều
+  // "polka:cat" giữ nguyên lưới, 2 móng còn lại MẮT MÈO TRƠN; chấm kín cả 4 móng = giấy dán tường)
+  const pcArt = (pc.nails ?? []).map((o, i) => (o?.art && o.pattern === "polka:cat" && o.pick === "all" && (o.role === "hero" || o.role === "echo") ? i : -1)).filter((i) => i >= 0);
+  if (!pc.nails || pc.nails.length !== 4 || pcArt.length !== 2 || Math.abs(pcArt[0] - pcArt[1]) < 2 || pc.nails.some((o, i) => !pcArt.includes(i) && (o?.art || o?.pattern !== "solid"))) bad.push(`chấm bi mắt mèo: hero + echo chấm, còn lại trơn — ${JSON.stringify(pc.nails)}`);
   // không đụng hoạ tiết phủ mọi móng / sơn trơn / mix màu / đã có nails
   for (const p of ["french", "ombre", "solid", "mixmatch", "jelly"]) if (expandSet(LOOK(["#111111"], "glossy", { pattern: p }), 4).nails) bad.push(`${p} bị chia vai`);
   const own = LOOK(["#111111"], "glossy", { pattern: "ghost", nails: [{ pattern: "solid" }] });
@@ -608,7 +623,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     const each = ps.map((sg) => lumD(out, ref, sg));
     if (each.filter((v) => v < 0.004).length > 1) bad.push(`${th} vẽ: ${each.map(r2).join("/")}`);
   }
-  ok("E28", `Bộ phối hero / echo / thread / quiet: 4 móng (trỏ echo · áp út hero · út thread), 5 móng (hero 3 · echo 1), ≤ 3 móng hero giữa; kho mẫu chỉ định ngón; ngón út (nhỏ nhất hw × L) luôn cuối; echo bỏ hạt to / 2 bản nhỏ / 1 viên lẻ đọc được; 25 hoạ tiết vẽ / charm × 6 hạt giống: echo không phải bản sao hero, thread không trơn; cherry echo French đỏ theo bảng màu; in lặp ≤ 2 móng không kề; chấm bi mắt mèo đủ 4 móng; ${THEME_SETS.length} bộ chủ đề mỗi móng 1 kiểu cùng bảng màu`, !bad.length, bad.join(" | "));
+  ok("E28", `Bộ phối hero / echo / thread / quiet: 4 móng (trỏ echo · áp út hero · út thread), 5 móng (hero 3 · echo 1), ≤ 3 móng hero giữa; kho mẫu chỉ định ngón; ngón út (nhỏ nhất hw × L) luôn cuối; echo bỏ hạt to / 2 bản nhỏ / 1 viên lẻ đọc được; 25 hoạ tiết vẽ / charm × 6 hạt giống: echo không phải bản sao hero, thread không trơn; cherry echo French đỏ theo bảng màu; in lặp ≤ 2 móng không kề; chấm bi mắt mèo hero + echo, còn lại mắt mèo trơn; không kỹ thuật nối nào > 25%, nét kim loại mảnh ≤ 20%, giọt nước không kim loại, nơ không sao; ${THEME_SETS.length} bộ chủ đề mỗi móng 1 kiểu cùng bảng màu`, !bad.length, bad.join(" | "));
 }
 
 // ---------------- 7c. dáng móng ĐẮP nhọn + sơn THẠCH trong
@@ -658,6 +673,23 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
     if (g.length < 9 || g.length > 13 || !g.some((b) => b.kind === "pearl") || new Set(g.map((b) => b.r.toFixed(2))).size < 3 || over(g, 0.015) || !g.every(inside)) bad.push(`gems/${seed}: ${g.length} viên`);
     const c = beadsFor("chromedrops", seed);
     if (c.length < 5 || c.length > 8 || c.some((b) => b.kind !== "blob") || over(c, 0.035) || !c.every(inside)) bad.push(`chromedrops/${seed}: ${c.length} ${[...new Set(c.map((b) => b.kind))]}`);
+    // (vòng 2 sửa) giọt chrome nối đuôi trên 1 đường chảy, KHÔNG quây quanh giọt to (dấu chân thú): ≤ 1 giọt trong 2.5 R
+    // của giọt to nhất; trên đường chảy giọt nhỏ dần
+    const big = c.reduce((a, b) => (b.r > a.r ? b : a), c[0]), near = c.filter((b) => b !== big && Math.hypot(b.t - big.t, (b.u - big.u) * 2.8) < 2.5 * big.r).length;
+    const trail = c.filter((b) => b.r > 0.081);
+    if (near > 1 || trail.some((b, k) => k && b.r > trail[k - 1].r + 1e-6)) bad.push(`chromedrops/${seed}: ${near} giọt quanh giọt to / không nhỏ dần`);
+    // echo: 2–3 giọt THẲNG HÀNG (không tam giác 1 to + 2 nhỏ = mặt Mickey)
+    const ce = beadsFor("chromedrops:echo", seed);
+    const tri = ce.length === 3 ? Math.abs((ce[1].t - ce[0].t) * (ce[2].u - ce[0].u) * 2.8 - (ce[2].t - ce[0].t) * (ce[1].u - ce[0].u) * 2.8) / Math.max(1e-6, Math.hypot(ce[2].t - ce[0].t, (ce[2].u - ce[0].u) * 2.8)) : 0;
+    if (ce.length < 2 || ce.length > 3 || tri > 0.08) bad.push(`chromedrops:echo/${seed}: ${ce.length} giọt lệch hàng ${r2(tri)}`);
+    // chấm bi mắt mèo: lưới so le đều (≥ 30 chấm đặt sẵn, cột cách 0.5 hw, hàng cách 0.15 u), 1 cỡ 0.12–0.14 (hàng chân
+    // móng 0.1), chấm lưới (gx) không bao giờ bị mép cắt
+    const pg = beadsFor("polka:cat", seed);
+    if (pg.length < 30 || pg.some((b) => b.kind !== "pdot" || !b.gx || !b.whole || b.r < 0.099 || b.r > 0.141)) bad.push(`polka:cat/${seed}: ${pg.length} chấm`);
+    // cụm đá & charm: ≥ 9 viên XẾP SÁT (mỗi viên chạm ≥ 1 viên khác, khe ≤ 0.05 hw), không chồng / lòi mép
+    const gc = beadsFor("gemcluster", seed);
+    const loose = gc.filter((a) => !gc.some((b) => b !== a && Math.hypot(a.t - b.t, (a.u - b.u) * 2.8) < a.r + b.r + 0.05)).length;
+    if (gc.length < 9 || loose || over(gc, 0.015) || !gc.every(inside)) bad.push(`gemcluster/${seed}: ${gc.length} viên, ${loose} viên rời`);
     if (beadsFor("floral", seed).filter((b) => b.kind === "ditsy").length < 5) bad.push(`floral/${seed}: < 5 bông nhí`);
     const st = beadsFor("stars", seed);
     if (!st.some((b) => b.kind === "fstar") || st.filter((b) => b.kind === "sparkle").length < 3) bad.push(`stars/${seed}: ${st.map((b) => b.kind)}`);
@@ -666,7 +698,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   }
   // echo nhỏ hơn hero: đính đá / giọt chrome echo ít hạt hơn hẳn
   if (beadsFor("gems:echo", 7).length >= beadsFor("gems", 7).length || beadsFor("chromedrops:echo", 7).length >= beadsFor("chromedrops", 7).length) bad.push("echo không nhỏ hơn hero");
-  ok("E29", "Vòng 2 — hoạ tiết đúng tên mẫu: chấm bi vẽ 6–12 chấm 2+ cỡ · đính đá cụm 9–13 viên 3+ cỡ có ngọc trai, không chồng / lòi mép · giọt chrome 5–8 giọt hữu cơ không chồng · hoa nhí ≥ 5 bông · sao cắt mặt + ≥ 3 tia ✦ · ren hero = mảng ren vẽ", !bad.length, bad.slice(0, 6).join(" | "));
+  ok("E29", "Vòng 2 — hoạ tiết đúng tên mẫu: chấm bi vẽ 6–12 chấm 2+ cỡ · đính đá cụm 9–13 viên 3+ cỡ có ngọc trai, không chồng / lòi mép · giọt chrome 5–8 giọt hữu cơ không chồng, nối đuôi nhỏ dần (≤ 1 giọt sát giọt to), echo 2–3 giọt thẳng hàng · chấm bi mắt mèo lưới so le đều 1 cỡ · cụm đá & charm ≥ 9 viên xếp sát · hoa nhí ≥ 5 bông · sao cắt mặt + ≥ 3 tia ✦ · ren hero = mảng ren vẽ", !bad.length, bad.slice(0, 6).join(" | "));
 }
 
 // ---------------- 8. tốc độ (máy tính; điện thoại chậm hơn ~3–4× → vẫn < 1.5 giây / móng, chạy nền)

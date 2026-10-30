@@ -139,63 +139,76 @@ const C2_SHOWN = new Set(["polka", "dots", "stripes", "checker", "leopard", "pla
 /** họ hoạ tiết → các kỹ thuật NỐI BỘ (móng thread) thợ hay dùng cho họ đó, kèm trọng số. Nhân vật Halloween: đầu gương
  *  kim loại / nhũ; hoa, tim, cherry: micro French màu hoạ tiết / 1 hạt ngọc trai; charm kim loại, giọt chrome, sao: 1
  *  đinh tán kim loại / chrome cả móng; đá: 1 viên đá lẻ; in lặp (da báo, đồi mồi…): micro French gương vàng / chrome màu */
-type Conn = "chromeTip" | "microTip" | "glitter" | "colorChrome" | "metalChrome" | "stud" | "gemStud" | "pearlStud" | "cuticleLine" | "mini";
+/** line = NGÂN SÁCH "NÉT KIM LOẠI MẢNH" chung: đầu móng gương (chromefrench nền sáng / tip:metal nền tối) HOẶC viền chỉ
+ *  chân móng (cuticle:line) — 3 kỹ thuật này ở ảnh nhỏ đều đọc ra cùng 1 "viền vàng mảnh trên ngón út" (lời chê gốc của
+ *  chủ tiệm), nên chung 1 trọng số chứ không cộng dồn · velvet = 1 móng nhung mắt mèo cùng màu nền (connector Pinterest
+ *  hay dùng, nhất là bộ nền tối) */
+type Conn = "line" | "microTip" | "glitter" | "colorChrome" | "metalChrome" | "stud" | "gemStud" | "pearlStud" | "mini" | "velvet";
 const FAM_CHAR = new Set(["ghost", "bats", "jackolantern", "skull", "blackcat", "mummy", "eyeball", "web", "slimedrip"]);
 const FAM_FLORAL = new Set(["floral", "blossom", "cherry", "hearts", "holly", "ornament", "snow", "gelflower", "lace", "milkbath"]);
-const FAM_METAL = new Set(["stars", "moonstars", "charm3d", "chromedrops"]);
+const FAM_METAL = new Set(["stars", "moonstars", "chromedrops"]);
 const FAM_GEM = new Set(["gems", "gemcluster", "pearls"]);
 /** bộ "tone": 1 móng trơn màu hoạ tiết — chỉ hoạ tiết mà c2 là màu CHÍNH của hình vẽ (chấm hồng → móng hồng; vân đá /
  *  đồi mồi c2 chỉ là gân / đốm phụ → móng trơn c2 nhìn lạc bộ) */
 const TONE_OK = new Set(["dots", "hearts", "floral", "blossom", "snow", "ornament", "swirl", "candy"]);
-/** MINI MOTIF nối bộ theo họ hoạ tiết (lib/tryon/engine beadsFor "mini:*"): 1 sao cắt mặt nhỏ (đêm Halloween, charm kim
- *  loại, sao, Giáng sinh) · 1 lá phong kim loại nhỏ (lá) · cụm 3 chấm nhỏ dần màu c2 (chấm bi, hoa, tim — chỉ khi c2 có
- *  trên hero) · cherry / ren: không có mini hợp chủ đề */
-const MINI: Record<string, string | null> = { leaf: "mini:leaf", dots: "mini:dots", floral: "mini:dots", hearts: "mini:dots", blossom: "mini:dots", milkbath: "mini:dots", cherry: null, lace: null, gelflower: null };
+/** MINI MOTIF nối bộ theo họ hoạ tiết (lib/tryon/engine beadsFor "mini:*"): 1 sao cắt mặt nhỏ (đêm Halloween, sao, Giáng
+ *  sinh) · 1 lá phong kim loại nhỏ (lá) · cụm 3 chấm nhỏ dần màu c2 (chấm bi, hoa, tim — chỉ khi c2 có trên hero) · nơ
+ *  nhỏ (charm nơ: bộ coquette 2 cỡ nơ — sao vàng cạnh nơ hồng là lạc đề) · cherry / ren / giọt chrome (đinh tán kim loại
+ *  đã là "giọt" lẻ): không có mini hợp chủ đề */
+const MINI: Record<string, string | null> = { leaf: "mini:leaf", dots: "mini:dots", floral: "mini:dots", hearts: "mini:dots", blossom: "mini:dots", milkbath: "mini:dots", charm3d: "mini:bow", cherry: null, lace: null, gelflower: null, chromedrops: null, droplets: null, droplet: null };
 const miniFor = (pat: string, c2ok: boolean) => { const m = pat in MINI ? MINI[pat] : "mini:star"; return m === "mini:dots" && !c2ok ? null : m; };
 function connWeights(pat: string): Partial<Record<Conn, number>> {
-  // (vòng 2b) chrome màu cả móng từng chiếm 47% móng nối (55% trên nền tối, kèm nhũ loang = 81%) — 1 công thức lặp lại.
-  // Trọng số chrome màu còn 1 ở mọi họ; nền tối có thêm đầu micro chrome / sơn ĐẶC (chromeTip / microTip tự đổi kỹ thuật
-  // theo nền ở threadFor), viền chỉ chân móng, mini motif → không kỹ thuật nào quá ~30%.
-  // lá phong vàng: nhũ vàng đầu móng / lá phong nhỏ / đầu chrome; giọt nước (trong suốt): đầu gương, 1 hạt ngọc trai,
-  // chrome tráng ngọc trai — không chrome vàng cả móng (giọt nước không có kim loại nào)
-  if (pat === "leaf") return { glitter: 2, mini: 2, chromeTip: 2, colorChrome: 1, stud: 1, cuticleLine: 1 };
-  if (pat === "droplets" || pat === "droplet") return { chromeTip: 2, colorChrome: 1, pearlStud: 1, cuticleLine: 1 };
-  if (FAM_CHAR.has(pat)) return { chromeTip: 3, glitter: 2, mini: 2, colorChrome: 1, cuticleLine: 1, stud: 1 };
-  if (FAM_FLORAL.has(pat)) return { microTip: 3, chromeTip: 2, pearlStud: 2, mini: 1, cuticleLine: 1, colorChrome: 1, glitter: 1 };
-  if (FAM_METAL.has(pat)) return { stud: 2, chromeTip: 2, mini: 2, cuticleLine: 1, metalChrome: 1, colorChrome: 1, glitter: 1 };
-  if (FAM_GEM.has(pat)) return pat === "pearls" ? { pearlStud: 3, chromeTip: 2, cuticleLine: 1, colorChrome: 1, glitter: 1 } : { gemStud: 3, chromeTip: 2, cuticleLine: 1, colorChrome: 1, glitter: 1 };
-  if (pat === "dots") return { microTip: 3, mini: 2, pearlStud: 1, chromeTip: 1, colorChrome: 1 };
-  if (PRINTS.has(pat)) return { chromeTip: 3, microTip: 1, colorChrome: 1, glitter: 1, cuticleLine: 1 };
-  return { chromeTip: 2, colorChrome: 1, glitter: 1, stud: 1, cuticleLine: 1, mini: 1 };
+  // (vòng 2b) chrome màu cả móng từng chiếm 47% móng nối → hạ còn ~15%; rồi đầu micro chrome nền tối + viền chỉ chân móng
+  // lại thành 34% (41% kể cả French gương) — vẫn 1 công thức "viền kim loại mảnh". Giờ mỗi họ ~10 điểm trọng số, nét kim
+  // loại mảnh (line) 1–2 điểm (≤ ~20%), nền tối còn ×0.6 (threadFor) → không kỹ thuật nào quá ~25%.
+  // lá phong vàng: nhũ vàng đầu móng / lá phong nhỏ / nhung; giọt nước (trong suốt): chrome tráng ngọc trai, 1 hạt ngọc
+  // trai, nhũ — KHÔNG kim loại nào (đầu gương / viền vàng trên bộ giọt nước là lạc đề)
+  if (pat === "leaf") return { glitter: 2, mini: 2, line: 1.5, colorChrome: 1.5, velvet: 1.5, stud: 1 };
+  if (pat === "droplets" || pat === "droplet") return { colorChrome: 2.5, pearlStud: 1.5, glitter: 1.5 };
+  // charm nơ (coquette): chrome ngọc trai (glazed) · nơ nhỏ · ngọc trai · đầu gương — không sao / đinh tán
+  if (pat === "charm3d") return { colorChrome: 2.5, mini: 2, pearlStud: 1.5, line: 1.5, glitter: 1.5, velvet: 1 };
+  if (FAM_CHAR.has(pat)) return { glitter: 2, velvet: 2, mini: 2, line: 1.5, colorChrome: 1.5, stud: 1 };
+  if (FAM_FLORAL.has(pat)) return { microTip: 2.5, pearlStud: 2, line: 1.5, colorChrome: 1.5, mini: 1, glitter: 1, velvet: 0.5 };
+  if (FAM_METAL.has(pat)) return { stud: 2, mini: 1.5, line: 1.5, metalChrome: 1.5, colorChrome: 1.5, glitter: 1.5, velvet: 1 };
+  if (FAM_GEM.has(pat)) return pat === "pearls" ? { pearlStud: 2.5, colorChrome: 2, glitter: 2, line: 1.5, velvet: 1.5 } : { gemStud: 2.5, colorChrome: 2, glitter: 2, line: 1.5, velvet: 1.5, metalChrome: 0.5 };
+  if (pat === "dots") return { microTip: 3, mini: 2, colorChrome: 1.5, pearlStud: 1, line: 1, glitter: 1, velvet: 0.5 };
+  if (PRINTS.has(pat)) return { line: 2, colorChrome: 2, microTip: 1.5, glitter: 1.5, velvet: 1.5, stud: 1, metalChrome: 0.5 };
+  return { colorChrome: 2, glitter: 2, line: 1.5, velvet: 1.5, stud: 1, mini: 1 };
 }
 /**
  * Móng THREAD: 1 kỹ thuật nối bộ theo HỌ hoạ tiết (connWeights), chỉ dùng màu đã có trên móng hero (nền c1 / kim loại;
  * c2 chỉ khi hoạ tiết vẽ bằng c2). Họ French (đầu gương, micro French) dựng nền gel hồng TRONG → chỉ trên nền SÁNG
  * (L* ≥ 62): navy / đen qua lớp gel trong ra tím xám như móng bẩn. Nhũ loang nằm ở ĐẦU móng (nhũ ở chân móng ở ảnh nhỏ
  * nhìn như móng mọc dài / bụi bẩn) — chân móng chỉ ~1/4 lần nhũ trên nền tối. Echo đã là French thì thread không French.
+ * Đầu gương / đầu micro chrome / viền chỉ chân móng chung 1 ngân sách "nét kim loại mảnh" (≤ ~20% móng nối).
  * Biến thể k: móng thread thứ 2 (bộ 5 móng) lấy kỹ thuật khác móng thứ nhất.
  */
 function threadFor(pal: Pal, seed: number, k: number, avoidFrench: boolean, pat = ""): NailOverride {
   const L1 = lstar(pal.c1), Lm = lstar(pal.m), light = L1 >= 62;
   const c2ok = C2_SHOWN.has(pat) && Math.abs(L1 - lstar(pal.c2)) >= 25 && pal.c2.toLowerCase() !== pal.m.toLowerCase();
   const w = connWeights(pat), opts: [NailOverride, number][] = [];
-  const add = (c: Conn, o: NailOverride | null) => { if (o && w[c]) opts.push([o, w[c]!]); };
-  // đầu móng: nền SÁNG = họ French gel trong (đầu gương / micro French); nền TỐI = đầu micro chrome / sơn ĐẶC phủ lên sơn
-  // nền (navy + đầu chrome vàng, đen + đầu trắng) — không dựng gel hồng trong. Echo đã là French thì không lặp đầu móng
+  const add = (c: Conn, o: NailOverride | null, k = 1) => { if (o && w[c]) opts.push([o, w[c]! * k]); };
   const cs = [pal.c1, pal.c2, pal.m];
-  if (!avoidFrench) {
-    add("chromeTip", Math.abs(L1 - Lm) < 10 ? null : light ? { pattern: "chromefrench", colors: cs } : { pattern: "tip:metal", colors: cs });
-    add("microTip", !c2ok ? null : light ? { pattern: avail(["fr-micro", "french"]), colors: cs } : { pattern: "tip:paint", colors: cs });
-  }
+  // NÉT KIM LOẠI MẢNH (1 ngân sách): đầu móng gương — nền SÁNG = French gương gel trong, nền TỐI = đầu micro chrome ĐẶC phủ
+  // lên sơn nền (không dựng gel hồng trong) — hoặc viền chỉ kim loại chân móng (~1/3). Nền tối ×0.6: navy / nâu + viền vàng
+  // từng là 35% móng nối nền tối. Echo đã là French thì không lặp đầu móng; kim loại sát độ sáng nền thì nét không đọc được
+  const tipOk = !avoidFrench && Math.abs(L1 - Lm) >= 10, cutOk = Math.abs(L1 - Lm) >= 12;
+  const lineO: NailOverride | null = tipOk && (!cutOk || h32(seed, 74) < 0.65) ? { pattern: light ? "chromefrench" : "tip:metal", colors: cs } : cutOk ? { pattern: "cuticle:line", colors: cs } : null;
+  add("line", lineO, light ? 1 : 0.6);
+  // đầu micro màu c2 (chỉ khi hoạ tiết vẽ bằng c2): nền sáng = micro French, nền tối = đầu micro sơn ĐẶC · kim loại không
+  // đọc được trên nền thì viền chỉ chân móng màu c2 thay chỗ
+  if (c2ok) add("microTip", !avoidFrench ? (light ? { pattern: avail(["fr-micro", "french"]), colors: cs } : { pattern: "tip:paint", colors: cs }) : { pattern: "cuticle:paint", colors: cs });
   add("glitter", has("glitterfade") ? { pattern: "glitterfade", colors: [pal.c1, pal.m, pal.m], finish: "glitter", fade: !light && h32(seed, 73) < 0.15 ? "cuticle" : "tip" } : null);
-  add("colorChrome", has("colorchrome") ? { pattern: "colorchrome", colors: [pal.c1, pal.c1, pal.m], finish: "chrome" } : null);
+  // chrome màu: nền sáng = glazed ngọc trai — đẹp nhưng dễ thành 30% móng nối của bộ nền sáng → ×0.8
+  add("colorChrome", has("colorchrome") ? { pattern: "colorchrome", colors: [pal.c1, pal.c1, pal.m], finish: "chrome" } : null, light ? 0.8 : 1);
   add("metalChrome", { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" });
   add("stud", { pattern: "stud:metal", colors: cs });
   add("gemStud", { pattern: "stud:gem", colors: cs });
   // ngọc trai trắng trên nền trắng sữa / trắng (L* > 85) gần như biến mất → bỏ
   add("pearlStud", L1 > 85 ? null : { pattern: "stud:pearl", colors: cs });
-  // viền chỉ chân móng: kim loại (sợi nổi) — kim loại sát độ sáng nền (vàng trên nude) thì dùng màu c2 của hoạ tiết
-  add("cuticleLine", Math.abs(L1 - Lm) >= 12 ? { pattern: "cuticle:line", colors: cs } : c2ok ? { pattern: "cuticle:paint", colors: cs } : null);
+  // NHUNG mắt mèo cùng màu nền: nền tối (navy, rượu vang, nâu, đen) ánh nhung rõ nhất → ×1.5; nền rất sáng (trắng sữa)
+  // ánh nhung gần như mất → bỏ
+  add("velvet", L1 > 80 ? null : { pattern: "velvet", colors: [pal.c1, pal.c1, pal.m], finish: "cateye" }, light ? 1 : 1.5);
   const mini = miniFor(pat, c2ok);
   add("mini", mini ? { pattern: mini, colors: cs } : null);
   if (!opts.length) return { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" };
@@ -270,8 +283,8 @@ export const THEME_SETS = Object.keys(THEMES);
 
 /**
  * Mẫu chung → bộ móng phối (look.nails theo vai). Giữ nguyên khi: đã có nails do nơi gọi tự ghép, hoạ tiết phủ mọi móng
- * (French, ombre, thạch…), sơn trơn / mix màu, hoạ tiết SVG ngoài bộ máy. Chấm bi + mắt mèo: trend thật là chấm bi thưa
- * trên CẢ 4 móng mắt mèo → giữ đủ 4 móng.
+ * (French, ombre, thạch…), sơn trơn / mix màu, hoạ tiết SVG ngoài bộ máy. Chấm bi + mắt mèo: 2 móng hero + echo chấm
+ * lưới đều, còn lại mắt mèo trơn.
  */
 export function expandSet(look: LookColors, n: number, order?: number[]): LookColors {
   if (n <= 0 || look.nails?.some(Boolean)) return look;
@@ -282,7 +295,8 @@ export function expandSet(look: LookColors, n: number, order?: number[]): LookCo
     // 3 cỡ trên cả 4 móng đọc ra tuyết rơi / sơn văng; chấm thưa dồn nửa đầu móng đọc ra mặt xúc xắc / chữ nổi
     if (pat === "polka" && look.finish === "cateye") {
       const { roles, hero, echo } = setRoles(n, look, order);
-      const nails = roles.map((role): NailOverride => (role === "hero" || role === "echo" ? { role, art: true, pattern: "polka:cat" } : { role: "quiet", art: false, pattern: "solid" }));
+      // pick "all": echo giữ NGUYÊN lưới (mặc định của echo bỏ chấm to nhất + kẹp hàng ngoài u 0.92 → chấm chồng ở đầu móng)
+      const nails = roles.map((role): NailOverride => (role === "hero" || role === "echo" ? { role, art: true, pattern: "polka:cat", pick: "all" } : { role: "quiet", art: false, pattern: "solid" }));
       return { ...look, nails, hero, echo: echo >= 0 ? echo : undefined };
     }
     // họ French (fr-*) luôn phủ cả bộ, kể cả biến thể mới chưa kịp ghi vào ALL_NAIL_PATTERNS

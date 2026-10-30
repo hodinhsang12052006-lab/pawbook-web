@@ -182,6 +182,21 @@ const EXTRA: (LookColors & { name: string })[] = [
   { name: "R2 Ren trắng nền hồng sữa trong", colors: ["#f6d5d0", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 230 },
   { name: "R2 Ren trắng nền nude", colors: ["#e8c4a8", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 218 },
   { name: "R2 Ren trắng nền hồng sữa", colors: ["#f2c9c4", "#f2ede6", "#f5f0e8"], finish: "glossy", pattern: "lace", seed: 219 },
+  // vòng 2 sửa (motifs repair): chấm bi mắt mèo lưới đều trên 2 móng, giọt chrome nối đuôi trên 1 đường chảy (3 đường), cụm
+  // đá & charm xếp sát, nơ coquette + nơ nhỏ, giọt nước không viền kim loại — soi: ONLY="^R3"
+  { name: "R3 Mắt mèo chấm bi navy", colors: ["#1f2a44", "#f2ede6", "#c0c0c0"], finish: "cateye", pattern: "polka", seed: 301 },
+  { name: "R3 Mắt mèo chấm bi nâu socola", colors: ["#3b2418", "#f2ede6", "#d4af37"], finish: "cateye", pattern: "polka", seed: 302 },
+  { name: "R3 Giọt chrome bạc nền navy", colors: ["#1f2a44", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 303 },
+  { name: "R3 Giọt chrome vàng nền socola", colors: ["#5b3a29", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "chromedrops", seed: 304 },
+  { name: "R3 Giọt chrome bạc nền xám be", colors: ["#b8ada3", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 305 },
+  { name: "R3 Giọt chrome bạc nền hồng nude", colors: ["#f2c4c4", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "chromedrops", seed: 306 },
+  { name: "R3 Cụm đá nền đen", colors: ["#151314", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "gemcluster", seed: 307 },
+  { name: "R3 Cụm đá nền hồng sữa", colors: ["#f6d5d0", "#f4c7cf", "#f5f0e8"], finish: "glossy", pattern: "gemcluster", seed: 308 },
+  { name: "R3 Cụm đá nền nâu cà phê", colors: ["#6f4e37", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "gemcluster", seed: 309 },
+  { name: "R3 Charm nơ vàng hồng nền hồng nude", colors: ["#f2c4c4", "#c2185b", "#b76e79"], finish: "glossy", pattern: "charm3d", seed: 310 },
+  { name: "R3 Charm nơ vàng nền nâu cà phê", colors: ["#6f4e37", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "charm3d", seed: 311 },
+  { name: "R3 Giọt nước nền nâu cà phê", colors: ["#6f4e37", "#e8c4a8", "#d4af37"], finish: "glossy", pattern: "droplets", seed: 312 },
+  { name: "R3 Giọt nước nền đen", colors: ["#151314", "#f2ede6", "#c0c0c0"], finish: "glossy", pattern: "droplets", seed: 313 },
 ];
 const label = (txt: string, w: number) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="34"><rect width="${w}" height="34" fill="rgba(0,0,0,.62)"/><text x="10" y="23" font-size="17" font-family="sans-serif" fill="#fff">${txt.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`);
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null, FXF = process.env.FX ? new RegExp(process.env.FX, "i") : null;

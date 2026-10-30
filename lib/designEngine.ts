@@ -971,9 +971,11 @@ const ROLES: Record<string, Role> = {
   waves: { g: "line", on: W },
   jelly: { g: "tone", pal: [["raspberry", "milky", "gold"], ["hotPink", "milky", "silver"], ["persimmon", "milky", "gold"]] },
   babyboomer: { g: "tone", shapes: SH4 },
-  // chrome French: nền TRONG / sữa (đầu gương trên nền sơn đặc nâu cà phê, mận… = 1 cái đai kim loại bọc đầu móng như
-  // đầu bịt ống — soi vòng 2); bảng màu nền đặc bị loại → máy lấy bảng mặc định dưới đây
-  chromefrench: { g: "tone", ok: ([a]) => SHEER.includes(a), pal: [["sheer", "silver", "silver"], ["milky", "pearl", "pearl"], ["nude", "gold", "gold"]] },
+  // chrome French: nền TRONG / sữa (đầu gương bóng trên nền sơn đặc nâu cà phê, mận… = 1 cái đai kim loại bọc đầu móng
+  // như đầu bịt ống — soi vòng 2), HOẶC nền tối L* < 45 làm MẮT MÈO (trend radar "Cat eye & chrome": mắt mèo mận / navy /
+  // đỏ rượu + đầu gương — chính là mẫu). Nền đặc chỉ đi với hiệu ứng mắt mèo: luật hiệu ứng ở finishOk; bảng màu nền đặc
+  // không làm mắt mèo được thì máy lấy bảng mặc định dưới đây
+  chromefrench: { g: "tone", ok: ([a]) => SHEER.includes(a) || Lof(hx(a)) < 45, pal: [["sheer", "silver", "silver"], ["milky", "pearl", "pearl"], ["nude", "gold", "gold"]] },
   charm3d: { g: "relief", on: "metal", pal: [["babyPink", "milky", "silver"], ["redVelvet", "milky", "gold"], ["milky", "pearl", "gold"]] },
   polka: { g: "motif", pal: [["plumNoir", "milky", "silver"], ["black", "milky", "silver"], ["nude", "chocolate", "gold"]] },
   auroracat: { g: "tone", base: "dark", shapes: SH5, pal: [["black", "milky", "silver"], ["navy", "milky", "silver"], ["plumNoir", "milky", "silver"]] },
@@ -1104,6 +1106,8 @@ const GLITTER_OK = new Set(["glitterfade", "fr-glitter", "babyboomer"]);
 const CHROME_ANY = new Set(["solid", "colorchrome", "jelly"]); // chrome là chính mẫu (trơn / chrome màu) hoặc thạch tráng ngọc trai
 export function finishOk(pid: string, c1hex: string, f: Finish): boolean {
   if (f === "glitter") return GLITTER_OK.has(pid);
+  // chrome French trên nền ĐẶC (không phải nền trong / sữa): chỉ mắt mèo (xem ROLES.chromefrench)
+  if (pid === "chromefrench" && !SHEER.some((k) => hx(k) === c1hex) && f !== "cateye") return false;
   if (f === "matte") return Lof(c1hex) < 55;
   if (f === "cateye") return Lof(c1hex) < 45;
   // chrome trên mẫu có hoạ tiết / French: chỉ nền thật sáng (L* ≥ 84) — bộ vẽ ra lớp glazed ngọc trai, vẫn thấy màu + hoạ tiết.
@@ -1385,7 +1389,10 @@ interface ComposeOpts {
 /** Ghép 1 mẫu cho hoạ tiết `pat`: chọn bảng màu hợp vai (bảng của dịp → bảng mặc định của hoạ tiết), hệ móng, hiệu ứng
  *  (theo tỉ lệ + luật nền), dáng (theo danh sách được phép). null nếu không ghép được. */
 function compose(r: () => number, pat: Pattern, palettes: readonly (readonly string[])[], o: ComposeOpts): EngineDesign | null {
-  const fits = (list: readonly (readonly string[])[]) => list.filter((k) => k.length === 3 && k.every((c) => c in COLORS)).map((k) => fitRoles(pat.id, k as [CK, CK, CK])).filter((k) => paletteOk(pat.id, k));
+  // bảng màu phải còn ≥ 1 hiệu ứng hợp nền (chrome French nền đặc chỉ mắt mèo: ô thường không ép mắt mèo → bỏ bảng đó,
+  // lấy bảng khác / bảng mặc định, không bỏ cả hoạ tiết)
+  const finOk = (k: [CK, CK, CK]) => (o.finish ? [o.finish] : pat.finishes).some((f) => finishOk(pat.id, hx(forcedKeys(pat.id, k)[0]), f));
+  const fits = (list: readonly (readonly string[])[]) => list.filter((k) => k.length === 3 && k.every((c) => c in COLORS)).map((k) => fitRoles(pat.id, k as [CK, CK, CK])).filter((k) => paletteOk(pat.id, k) && finOk(k));
   let cands = fits(palettes);
   if (!cands.length && !o.strict) cands = fits(ROLES[pat.id]?.pal ?? []);
   if (!cands.length) return null;

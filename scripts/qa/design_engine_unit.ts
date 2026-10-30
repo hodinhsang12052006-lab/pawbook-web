@@ -211,6 +211,16 @@ void hexKey;
   }
   check("DE45", "Half-moon: tên, các bước, mô tả ảnh nói đúng màu TRĂNG / màu THÂN như bộ vẽ thật vẽ (c2 tối hơn → móng c2 chừa trăng c1)", !hmBad.length, hmBad.join(" | "));
 }
+// Chrome French: nền đặc (nâu cà phê, mận…) chỉ đi MẮT MÈO (trend radar "Cat eye & chrome" — mắt mèo + đầu gương); đầu
+// gương bóng trên nền đặc = đai kim loại bọc đầu móng → máy chỉ ra chrome French bóng trên nền trong / sữa
+{
+  const cf = all.filter((x) => x.d.pattern === "chromefrench"), sheerHex = ["sheer", "pinkNude", "nude", "milky", "white", "cloudDancer", "bone", "greige", "babyPink", "frangipani"].map((k) => COLORS[k as keyof typeof COLORS].hex);
+  const cfBad = cf.filter((x) => x.d.finish !== "cateye" && !sheerHex.includes(x.d.palette[0]));
+  check("DE46", `Chrome French nền đặc chỉ mắt mèo: bóng chỉ nền trong / sữa (${cf.length} mẫu), mắt mèo mận / navy / đỏ rượu + đầu gương vẫn ghép được`,
+    !finishOk("chromefrench", COLORS.coffee.hex, "glossy") && !finishOk("chromefrench", COLORS.plumNoir.hex, "glossy") && finishOk("chromefrench", COLORS.plumNoir.hex, "cateye") && finishOk("chromefrench", COLORS.milky.hex, "glossy")
+      && (["plumNoir", "navy", "burgundy"] as const).every((k) => paletteOk("chromefrench", [k, "silver", "silver"])) && !cfBad.length,
+    cfBad.slice(0, 3).map((x) => `${x.d.title.vi} ${x.d.finish} ${x.d.palette[0]}`).join(" | "));
+}
 
 // Mọi tổ hợp hợp lệ đều ghép được (không lỗi, đủ bước).
 let combos = 0, comboErr = "";

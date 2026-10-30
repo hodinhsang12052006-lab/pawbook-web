@@ -61,7 +61,8 @@ const ECHO: Record<string, EchoSpec[]> = {
   moonstars: [{ pick: "rest", scale: 1.1, mirror: true }],
   // đính đá: echo = cụm 4–5 viên nhỏ ở chân móng / hàng đá tí hon ôm vòng cung chân móng (1 viên lẻ trông như hạt bụi)
   gems: [{ pattern: "gems:echo", pick: "all" }],
-  gemcluster: [{ pick: "first" }],
+  // cụm đá & charm: echo = cụm mini 4–5 viên / hàng đá tí hon ôm chân móng (1 viên lẻ 0.19 hw ở ảnh kho mẫu = hạt bụi)
+  gemcluster: [{ pattern: "gems:echo", pick: "all" }],
   pearls: [{ pick: "first" }],
   charm3d: [{ pattern: "pearls", pick: "all", scale: 0.62, uShift: -0.02 }],
   droplets: [{ pick: "rest" }], droplet: [{ pick: "rest" }],
@@ -143,7 +144,7 @@ const C2_SHOWN = new Set(["polka", "dots", "stripes", "checker", "leopard", "pla
  *  chân móng (cuticle:line) — 3 kỹ thuật này ở ảnh nhỏ đều đọc ra cùng 1 "viền vàng mảnh trên ngón út" (lời chê gốc của
  *  chủ tiệm), nên chung 1 trọng số chứ không cộng dồn · velvet = 1 móng nhung mắt mèo cùng màu nền (connector Pinterest
  *  hay dùng, nhất là bộ nền tối) */
-type Conn = "line" | "microTip" | "glitter" | "colorChrome" | "metalChrome" | "stud" | "gemStud" | "pearlStud" | "mini" | "velvet";
+type Conn = "line" | "microTip" | "glitter" | "colorChrome" | "metalChrome" | "stud" | "gemStud" | "pearlStud" | "mini" | "velvet" | "jelly";
 const FAM_CHAR = new Set(["ghost", "bats", "jackolantern", "skull", "blackcat", "mummy", "eyeball", "web", "slimedrip"]);
 const FAM_FLORAL = new Set(["floral", "blossom", "cherry", "hearts", "holly", "ornament", "snow", "gelflower", "lace", "milkbath"]);
 const FAM_METAL = new Set(["stars", "moonstars", "chromedrops"]);
@@ -164,7 +165,7 @@ function connWeights(pat: string): Partial<Record<Conn, number>> {
   // lá phong vàng: nhũ vàng đầu móng / lá phong nhỏ / nhung; giọt nước (trong suốt): chrome tráng ngọc trai, 1 hạt ngọc
   // trai, nhũ — KHÔNG kim loại nào (đầu gương / viền vàng trên bộ giọt nước là lạc đề)
   if (pat === "leaf") return { glitter: 2, mini: 2, line: 1.5, colorChrome: 1.5, velvet: 1.5, stud: 1 };
-  if (pat === "droplets" || pat === "droplet") return { colorChrome: 2.5, pearlStud: 1.5, glitter: 1.5 };
+  if (pat === "droplets" || pat === "droplet") return { colorChrome: 2, jelly: 2, pearlStud: 1.5, glitter: 1.5 };
   // charm nơ (coquette): chrome ngọc trai (glazed) · nơ nhỏ · ngọc trai · đầu gương — không sao / đinh tán
   if (pat === "charm3d") return { colorChrome: 2.5, mini: 2, pearlStud: 1.5, line: 1.5, glitter: 1.5, velvet: 1 };
   if (FAM_CHAR.has(pat)) return { glitter: 2, velvet: 2, mini: 2, line: 1.5, colorChrome: 1.5, stud: 1 };
@@ -200,7 +201,11 @@ function threadFor(pal: Pal, seed: number, k: number, avoidFrench: boolean, pat 
   if (c2ok) add("microTip", !avoidFrench ? (light ? { pattern: avail(["fr-micro", "french"]), colors: cs } : { pattern: "tip:paint", colors: cs }) : { pattern: "cuticle:paint", colors: cs });
   add("glitter", has("glitterfade") ? { pattern: "glitterfade", colors: [pal.c1, pal.m, pal.m], finish: "glitter", fade: !light && h32(seed, 73) < 0.15 ? "cuticle" : "tip" } : null);
   // chrome màu: nền sáng = glazed ngọc trai — đẹp nhưng dễ thành 30% móng nối của bộ nền sáng → ×0.8
-  add("colorChrome", has("colorchrome") ? { pattern: "colorchrome", colors: [pal.c1, pal.c1, pal.m], finish: "chrome" } : null, light ? 0.8 : 1);
+  // giọt nước trên nền tối: chrome màu ra gương đồng / thép — kim loại, lạc đề giọt nước trong → chỉ nền sáng (glazed)
+  const drop = pat === "droplets" || pat === "droplet";
+  add("colorChrome", has("colorchrome") && !(drop && !light) ? { pattern: "colorchrome", colors: [pal.c1, pal.c1, pal.m], finish: "chrome" } : null, light ? 0.8 : 1);
+  // THẠCH trong cùng màu nền (glass / jelly nails) — cùng chất "kính trong" với giọt nước
+  add("jelly", { pattern: "jelly", colors: [pal.c1, pal.c2, pal.m] });
   add("metalChrome", { pattern: "solid", colors: [pal.m, pal.m, pal.m], finish: "chrome" });
   add("stud", { pattern: "stud:metal", colors: cs });
   add("gemStud", { pattern: "stud:gem", colors: cs });

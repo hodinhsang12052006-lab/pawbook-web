@@ -2232,6 +2232,8 @@ function strokeAt(st: Stroke, t: number, Y: number): typeof STK {
 }
 /** Độ phủ nét (mép khử răng cưa ~aa hw). */
 const strokeCov = (k: typeof STK, aa: number) => 1 - smooth(k.w - aa, k.w + aa, Math.abs(k.d));
+/** Đường cười French của line art: song song mép tự do thật, sâu `dp` hw ở giữa, cong lên 2 bên (1 + 0.5t²). */
+const frSmile = (tp: TipProfile, t: number, dp: number) => tipE(tp, t) - dp * (1 + 0.5 * t * t);
 /** VỆT 3 CHẤM nhỏ dần nối tiếp ĐẦU CUỐI (a1) của 1 nét, chạy theo hướng tiếp tuyến của nét — chấm bám nét, không lơ lửng. */
 function dotTrail(st: Stroke, dots: number[][], lw: number): void {
   const v = st.a1, ar = st.k * (v - st.a0) + st.ph, vm = v - (st.a0 + st.a1) / 2, qd = st.qd ?? 0;
@@ -2245,10 +2247,10 @@ function dotTrail(st: Stroke, dots: number[][], lw: number): void {
  * + hạt giống. Nét phẳng (line vàng) nửa bề dày ≥ 1.5px (~0.036 hw); line CHROME NỔI là khối kim loại hữu cơ dày ~0.07–0.1 hw
  * phồng / thắt dọc nét + giọt tròn. Trả về các nét + chấm [t, Y, r] + độ sâu đường viền French (0 = không có).
  */
-function lineArt(role: string | undefined, Ln: number, seed: number, raised: boolean, lw: number): { st: Stroke[]; dots: number[][]; fr: number } {
+function lineArt(role: string | undefined, Ln: number, seed: number, raised: boolean, lw: number): { st: Stroke[]; dots: number[][]; fr: number; fr2?: number[] } {
   const h = (q: number) => hash2(seed, q, 97), sg = h(0) > 0.5 ? 1 : -1;
   const st: Stroke[] = [], dots: number[][] = [];
-  let fr = 0;
+  let fr = 0, fr2: number[] | undefined;
   if (raised) {
     const W = Math.max(lw * 2.6, 0.115 + 0.025 * h(1));
     if (role !== "echo") {
@@ -2275,10 +2277,9 @@ function lineArt(role: string | undefined, Ln: number, seed: number, raised: boo
       st.push(main, comp);
       dotTrail(comp, dots, lw);
     } else {
-      // HERO B: viền French mảnh (đường cười song song mép tự do, cả bề ngang) + 1 nét cong ôm 1 bên móng từ gần chân móng
-      // chạy lên chạm đường French (bất đối xứng, không thêm chấm)
-      fr = 0.36;
-      st.push({ o: 0, a0: 0.38, a1: Ln - 0.42, c: 0.6 * sg, amp: 0.07, k: 3.1 / (Ln - 0.8), ph: 0, dr: (-0.12 * sg) / Ln, w: lw * 0.9, wt: lw * 0.4, prof: 0 });
+      // HERO B: French viền KÉP — đường cười mảnh song song mép tự do cả bề ngang + đường thứ 2 mảnh hơn phía trong chạy từ 1
+      // mép tới quá giữa móng rồi tan thành 3 chấm nhỏ dần nối tiếp trên cùng đường cong (nét dọc chạm French cũ đọc ra chữ T)
+      fr = 0.36; fr2 = [0.58, sg, 0.05 + 0.25 * h(11)];
     }
   } else {
     const e = h(5);
@@ -2295,7 +2296,7 @@ function lineArt(role: string | undefined, Ln: number, seed: number, raised: boo
       st.push({ o: 0, a0: L0 + 0.05, a1: L1 - 0.05, c: 0.62 * sg, amp: -0.2 * sg, k: Math.PI / (span - 0.1), ph: 0, dr: 0, w: lw, wt: lw * 0.4, prof: 0 });
     }
   }
-  return { st, dots, fr };
+  return { st, dots, fr, fr2 };
 }
 
 /**
@@ -2321,6 +2322,8 @@ function polkaAt(t: number, Y: number, P: number, occ: number, r0: number, r1: n
   return cov;
 }
 
+/** Tâm dọc (hw) đốm thứ q của hàng rw trong hoạ tiết da hươu (lệch ±0.1 chu kỳ) — hàm ngoài vòng lặp điểm ảnh. */
+const fawnCy = (q: number, rw: number, off: number, sp: number, sd: number) => (q + off + 0.5 + 0.2 * (hash2(q, rw, sd + 22) - 0.5)) * sp;
 /**
  * ĐỒI MỒI CẢ MÓNG như đổ gel thạch thật dưới lớp top: các LỚP MÀU TRONG PHẲNG chồng lên nhau — nền mật ong ấm → hổ phách
  * (đổi sắc chậm) · mảng nâu vừa trong suốt (lớp thứ 2, lệch khỏi đốm sẫm) · quầng hổ phách ĐẬM hơn nền quanh đốm · đốm
@@ -3240,10 +3243,9 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
               const outer = rw >= 2, sd2 = rw % 2 ? 1 : -1, tr = sd2 * (outer ? 0.88 : 0.36), sp = outer ? 0.62 : 0.8;
               // 2 hàng trong lệch nửa chu kỳ (so le, không đối xứng như đốt sống); hàng ngoài pha ngẫu nhiên
               const off = (outer ? hash2(look.seed + pN, rw, 23) : 0.5 * (rw % 2) + 0.25 * hash2(look.seed + pN, 0, 23)) % 1;
-              const cyAt = (q: number) => (q + off + 0.5 + 0.2 * (hash2(q, rw, seedN + 22) - 0.5)) * sp;
               const kq = Math.floor(Yh / sp - off);
               for (let q = kq - 1; q <= kq + 1; q++) {
-                const cy = cyAt(q);
+                const cy = fawnCy(q, rw, off, sp, seedN);
                 if (cy < 0.12 || cy > Ln + 0.15) continue;
                 const cx = tr + 0.08 * (hash2(q, rw, seedN + 23) - 0.5);
                 if (hash2(q, rw, seedN + 21) < (outer ? 0.45 : 0.22)) {
@@ -3255,7 +3257,7 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
                   continue;
                 }
                 // cỡ: phân bố lệch về đốm vừa, vài đốm to; bán kính dọc ≤ 0.3 × khoảng cách tới tâm đốm kề (khe ≥ 0.6 đường kính)
-                const dmin = Math.min(cyAt(q + 1) - cy, cy - cyAt(q - 1)), el = 1.35 + 0.55 * hash2(q, rw, seedN + 25);
+                const dmin = Math.min(fawnCy(q + 1, rw, off, sp, seedN) - cy, cy - fawnCy(q - 1, rw, off, sp, seedN)), el = 1.35 + 0.55 * hash2(q, rw, seedN + 25);
                 const ry = Math.min(0.3 * dmin, el * (outer ? 0.055 + 0.035 * hash2(q, rw, seedN + 24) : 0.085 + 0.08 * hash2(q, rw, seedN + 24) ** 1.2));
                 const rx = Math.max(1.3 * p1, Math.min(outer ? 0.09 : 0.16, ry / el)), ra = 0.35 * (hash2(q, rw, seedN + 26) - 0.5) + 0.1 * sd2;
                 const op = 0.82 + 0.18 * hash2(q, rw, seedN + 28); // đậm nhạt nhẹ khác nhau (0.6 cũ: đốm nhạt như vết ố)
@@ -3513,10 +3515,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           const fG = Math.exp(-((dT / (0.46 - 0.04 * vKD)) ** 2)) * alongV, amt = 1.15 * fG * (1 + plush + 0.3 * shim) * lightK * (0.6 + 0.4 * edge);
           const kT = vKD;
           r += (vGlow[0] + (vTint[0] - vGlow[0]) * kT) * amt; g += (vGlow[1] + (vTint[1] - vGlow[1]) * kT) * amt; b += (vGlow[2] + (vTint[2] - vGlow[2]) * kT) * amt;
+          // nền đen: hạt mờ hẳn (≤ ~0.12 ×) — nhũ velvet thật mịn tới mức không thấy từng hạt, chấm sáng rõ trên đen = bụi
           // ÁNH NHŨ MỊN: hạt li ti cùng sắc ánh nhung, CHỈ trong quầng (sàn hạt ngoài quầng = bụi rải đều khắp móng → giấy
           // ráp / vải bò, rõ nhất trên nền đen) + vài hạt loé to hơn giữa quầng
-          const sp = sparkleAt(px, py, gCell, 0.86, seedN + 35, Math.max(0.55, 0.85 * gRad)) * (0.015 * (1 - vKD) + 0.17 * fG) * lightK * (1 - 0.75 * vKD)
-            + sparkleAt(px, py, gCell * 1.7, 0.94, seedN + 36, Math.max(0.9, gRad * 1.4)) * fG * 0.36 * lightK * (1 - 0.65 * vKD);
+          const sp = sparkleAt(px, py, gCell, 0.86, seedN + 35, Math.max(0.55, 0.85 * gRad)) * (0.015 * (1 - vKD) + 0.17 * fG) * lightK * (1 - 0.88 * vKD)
+            + sparkleAt(px, py, gCell * 1.7, 0.94, seedN + 36, Math.max(0.9, gRad * 1.4)) * fG * 0.36 * lightK * (1 - 0.78 * vKD);
           r += vSpk[0] * sp; g += vSpk[1] * sp; b += vSpk[2] * sp;
         } else {
           // MẮT MÈO: nam châm kéo nhũ từ tính thành 1 dải CONG theo độ cong móng (vòng cung quanh đỉnh móng), mỗi móng
@@ -3608,6 +3611,20 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
           const lw = Math.max(1.8 / Math.max(8, seg.hw), 0.045), yF = tipE(tipP, t) - la.fr * (1 + 0.5 * t * t), dF = Yh - yF;
           const cv = (1 - smooth(lw - aa, lw + aa, Math.abs(dF))) * (1 - smooth(0.9, 0.97, at));
           if (cv > best) { best = cv; bq = Math.max(-1, Math.min(1, dF / lw)); bpx = 0; bpy = 1; }
+          if (la.fr2) {
+            // đường French thứ 2 (mảnh 0.72×) từ mép phía −sg tới te, đầu nét TRÒN, rồi 3 chấm nhỏ dần trên cùng đường cong
+            const [dp, sg2, te] = la.fr2, w2 = 0.72 * lw, q = t * sg2, yT = frSmile(tipP, t, dp);
+            const ex = te * sg2, d2 = q <= te ? Math.abs(Yh - yT) : Math.hypot(t - ex, Yh - frSmile(tipP, ex, dp));
+            const c2v = (1 - smooth(w2 - aa, w2 + aa, d2)) * (1 - smooth(0.9, 0.97, at));
+            if (c2v > best) { best = c2v; bq = Math.max(-1, Math.min(1, (Yh - yT) / w2)); bpx = 0; bpy = 1; }
+            let dd = te + 0.5 * w2;
+            for (const kq of [1.55, 1.25, 1]) {
+              const r = Math.max(lw * kq, 0.06 * kq); dd += 1.9 * lw + r;
+              const tx = dd * sg2, dx = t - tx, dy = Yh - frSmile(tipP, tx, dp), dr = Math.hypot(dx, dy), cv3 = 1 - smooth(r - aa, r + aa, dr);
+              if (cv3 > best) { best = cv3; bq = Math.max(-1, Math.min(1, dx / r)); bpx = dx / Math.max(1e-4, dr); bpy = dy / Math.max(1e-4, dr); }
+              dd += r;
+            }
+          }
         }
         if (raised) {
           // bóng đổ mềm của khối chrome lên sơn nền (lệch ~0.05 hw ra xa đèn, nhoè ~0.06 hw)

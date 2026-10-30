@@ -1122,6 +1122,12 @@ function shoulder(v: RGB, k = 0.75): RGB {
   const r = Math.min(1, v[0]), g = Math.min(1, v[1]), b = Math.min(1, v[2]);
   return [r + (1 - r) * bleed, g + (1 - g) * bleed, b + (1 - b) * bleed];
 }
+/** 1 kênh màu NHÁM sau ánh sáng: phần sáng lên (up) co theo (1 − c) (nền trắng không cháy), quầng đỉnh nhân 1.5× cho nền
+ *  tối (dk) + nâng nhẹ theo c(1 − c) + lớp mờ nhám 0.015, đầu móng tối dần (tipD). Hàm ngoài vòng lặp (không closure). */
+function matteCh(c: number, dn: number, up: number, mS: number, dk: number, tipD: number): number {
+  const v = c * dn * (1 + up * Math.min(1, 1.2 * (1 - c)));
+  return (v * (1 + 0.5 * mS * dk) + 0.1 * mS * v * (1 - v) + 0.015 * mS * (1 - v)) * tipD;
+}
 /** Gauss chưa chuẩn hoá (dải mắt mèo) — hàm ngoài vòng lặp điểm ảnh. */
 const gauss = (x: number, sg: number) => Math.exp(-(x * x) / (2 * sg * sg));
 
@@ -3395,15 +3401,17 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       } else {
         // velvet: mép tối của khối cong do chính lớp nhung lo (quầng nhung bước 2) — tối mép 2 lần thì mép đen đặc
         const lit = (1 + contrast * shade) * (velvet ? 1 - 0.5 * (1 - edge) : edge) * cut;
-        r *= lit; g *= lit; b *= lit;
         if (fin === "matte") {
-          // NHÁM thật: không có vệt cửa sổ nhưng vẫn có 1 quầng sáng KHUẾCH TÁN rất rộng, mềm trên đỉnh móng (sáng hơn
-          // ~10%, lệch về phía đèn, như da lộn / nhung) + đầu móng cong xuống tối dần — mặt nhám phẳng lì từng nhìn như
-          // hình vẽ vector dán lên ngón
+          // NHÁM thật: không có vệt cửa sổ nhưng vẫn có 1 quầng sáng KHUẾCH TÁN rất rộng, mềm trên đỉnh móng (lệch về phía
+          // đèn, như da lộn / nhung) + đầu móng cong xuống tối dần — mặt nhám phẳng lì từng nhìn như hình vẽ vector dán lên
+          // ngón. Phần SÁNG LÊN co theo (1 − màu): nền trắng nhân thẳng 1.2× + quầng ×1.1 từng cháy 252–255 cả đỉnh móng
+          // (phẳng như giấy hơn cả bản cũ); nền tối được nâng rõ hơn (đỉnh ~+15% L, nhân 1.5× tuyến tính + lớp mờ nhám
+          // ~0.015 — nhám đen thật nhìn xám than ở đỉnh, đen sâu ở 2 mép).
           const mS = Math.exp(-(((tq - side * 0.22) / 0.55) ** 2)) * smooth(0.06, 0.35, u) * (1 - smooth(0.72, 1, u));
-          const kM = (1 + 0.1 * mS) * (1 - 0.09 * smooth(0.8, 1.02, u));
-          r = r * kM + 0.022 * mS * (1 - r); g = g * kM + 0.022 * mS * (1 - g); b = b * kM + 0.024 * mS * (1 - b);
-        }
+          const tipD = 1 - 0.09 * smooth(0.8, 1.02, u), dk = 1 - smooth(0.05, 0.3, lum([r, g, b]));
+          const up = Math.max(0, lit - 1), dn = Math.min(1, lit);
+          r = matteCh(r, dn, up, mS, dk, tipD); g = matteCh(g, dn, up, mS, dk, tipD); b = matteCh(b, dn, up, mS, dk, tipD);
+        } else { r *= lit; g *= lit; b *= lit; }
       }
       if (tipChrome > 0) {
         // đầu French tráng gương: kim loại phản chiếu thật (dải sáng gắt + mảng tối) theo độ cong móng; đầu móng cong
@@ -3879,10 +3887,11 @@ export function renderLook(img: Img, segs: NailSeg[], look: LookColors, motif?: 
       }
       // velvet: lớp top phủ trên nhung — vệt cửa sổ chỉ còn ~0.3 (vệt chéo rõ + quầng nhung = vỏ đạn / ống satin); ánh
       // sáng của nhung là quầng mềm rộng ở bước 2
-      spec = Math.min(1, spec * gloss * (velvet ? 0.5 : 1));
+      // nhám: KHÔNG có vệt cửa sổ sắc (ánh đèn của móng bóng cũ trong ảnh từng lộ thành vệt trắng trên nhám đỏ p027)
+      spec = fin === "matte" ? 0 : Math.min(1, spec * gloss * (velvet ? 0.5 : 1));
       r = r + (1 - r) * spec; g = g + (1 - g) * spec; b = b + (1 - b) * spec;
       // phản chiếu mềm THẬT của ảnh (ánh đèn loang trên mặt móng) cộng lên màu mới — y như móng mới trong cùng tấm ảnh
-      const shn = lm.sheen[k] * (fin === "matte" ? 0.12 : velvet ? 0.4 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
+      const shn = lm.sheen[k] * (fin === "matte" ? 0.04 : velvet ? 0.4 : chromeF && !glazed ? 0.45 : 0.92) * (seg.ext ? realK : 1);
       r += shn; g += shn; b += shn;
       if (flare > 0) { const f = Math.min(1, flare * 0.85); r += (1 - r) * f; g += (1 - g) * f; b += (1 - b) * f; }
       // mép móng: phần "nền" của điểm pha là màu DA ngay ngoài mép (không phải màu sơn cũ — từng lộ viền đen

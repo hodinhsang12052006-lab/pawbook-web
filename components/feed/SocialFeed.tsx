@@ -1,17 +1,16 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ChevronRight, Flame, Loader2, Newspaper, Sparkles } from "lucide-react";
+import { AlertCircle, Briefcase, ChevronRight, Loader2, Newspaper, Sparkles } from "lucide-react";
 import Link from "next/link";
 import FeedPostCard, { FeedPost } from "./FeedPostCard";
 import SupplyProductCard, { SupplyProductType } from "./SupplyProductCard";
 import CreatePostComposer from "./CreatePostComposer";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import { useStudio, ThemeCard, ThemeSlot, rememberTheme, TipCard, RecapCard } from "./StudioCards";
 import PulseCard from "./PulseCard";
 import RadarPostCard, { type RadarPost } from "./RadarPostCard";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { DesignsStrip } from "@/components/designs/DesignViews";
 import JobFeedCard from "./JobFeedCard";
@@ -30,8 +29,8 @@ const FEED_JOBS = 15;
 // Mốc "lần trước bạn ghé" — đặt khi mở tab Việc gấp (JobBoard) để đếm việc mới kể từ đó.
 export const JOBS_SEEN_KEY = "pn_jobs_seen_at";
 
-/** Dải đầu bảng tin: "🔥 N việc mới kể từ lần trước bạn ghé" — lý do để mở app mỗi ngày. */
-function NewJobsBanner({ jobs, total, urgent, market, state }: { jobs: JobType[]; total: number; urgent: number; market: "US" | "AU"; state: string }) {
+/** Dải đầu bảng tin: "N việc mới kể từ lần trước bạn ghé" / "N việc đang tuyển tại …" — số thật, không đếm "việc gấp". */
+function NewJobsBanner({ jobs, total, market, state }: { jobs: JobType[]; total: number; market: "US" | "AU"; state: string }) {
   useTr();
   const [seenAt, setSeenAt] = useState<number | null | undefined>(undefined);
   useEffect(() => {
@@ -42,14 +41,14 @@ function NewJobsBanner({ jobs, total, urgent, market, state }: { jobs: JobType[]
   const fresh = seenAt ? jobs.filter((j) => new Date(j.createdAt).getTime() > seenAt).length : 0;
   const text = seenAt && fresh
     ? tr(`${fresh} việc mới kể từ lần trước bạn ghé`, `${fresh} new job${fresh > 1 ? "s" : ""} since your last visit`)
-    : tr(`${total} việc đang tuyển tại ${scope}${urgent ? ` · ${urgent} việc gấp` : ""}`, `${total} open job${total > 1 ? "s" : ""} in ${scope}${urgent ? ` · ${urgent} urgent` : ""}`);
+    : tr(`${total} việc đang tuyển tại ${scope}`, `${total} open job${total > 1 ? "s" : ""} in ${scope}`);
   return (
     <Link href="/?tab=jobs" className="flex items-center gap-3 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/15 via-pink-500/10 to-slate-900/30 px-4 py-3 transition-colors hover:border-orange-400/60">
       <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-pink-600">
-        <Flame className="h-5 w-5 text-white" />
+        <Briefcase className="h-5 w-5 text-white" />
       </span>
       <span className="min-w-0 flex-1 text-sm font-bold text-white">{text}</span>
-      <span className="inline-flex flex-shrink-0 items-center text-xs font-black text-orange-300">{tr("Xem ngay", "View")}<ChevronRight className="h-4 w-4" /></span>
+      <span className="inline-flex flex-shrink-0 items-center text-xs font-black text-orange-300">{tr("Xem", "View")}<ChevronRight className="h-4 w-4" /></span>
     </Link>
   );
 }
@@ -144,7 +143,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       try {
         setLoading(true);
         setError(null);
-        const params = new URLSearchParams({ market });
+        // lang: bài chính thức trả đúng ngôn ngữ trang (bản EN / ẩn bài chỉ có tiếng Việt với người xem EN).
+        const params = new URLSearchParams({ market, lang: currentLocale() });
         if (state) params.set("state", state);
         if (city) params.set("city", city);
         const res = await fetch(`/api/posts?${params.toString()}`);
@@ -182,7 +182,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     return () => { cancelled = true; };
   }, [market, state]);
 
-  // Kho hàng supply tải riêng 1 lần (không phụ thuộc vùng — hàng sỉ thường
+  // Chợ vật tư tải riêng 1 lần (không phụ thuộc vùng — vật tư thường
   // giao được nhiều nơi), dùng để chen vào giữa newsfeed.
   useEffect(() => {
     let cancelled = false;
@@ -202,7 +202,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
-      const params = new URLSearchParams({ market, cursor: nextCursor });
+      const params = new URLSearchParams({ market, cursor: nextCursor, lang: currentLocale() });
       if (state) params.set("state", state);
       if (city) params.set("city", city);
       const res = await fetch(`/api/posts?${params.toString()}`);
@@ -278,21 +278,19 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
 
   return (
     <div className="space-y-4">
-      {/* Chỉ THỢ mới thấy — số liệu thật (xem lib/nailRadarData.ts) cho thấy
-          tỉ lệ "chủ tìm thợ" áp đảo "thợ tìm việc" trên thị trường, nên đây
-          chính là lúc đúng nhất để nhắc thợ đăng bài — họ đang là bên được
-          săn đón, chỉ cần xuất hiện là dễ được chủ để ý ngay. */}
+      {/* Chỉ THỢ mới thấy, khi tuần này chưa có chủ đề Studio: nhắc nhẹ đăng ảnh tay nghề. Giữ đúng chỗ
+          của thẻ chủ đề (không xô bố cục). Số khảo sát 9/2026 chỉ nằm trong Nail Radar, kèm nguồn. */}
       {studio === undefined && <ThemeSlot />}
       {studio?.theme && <ThemeCard studio={studio} isOwner={user?.role === "OWNER"} onJoin={joinChallenge} />}
       {isTech && studio !== undefined && !studio?.theme && (
         <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
           <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />
           <p className="text-xs sm:text-sm text-slate-200">
-            <span className="font-black text-pink-400">{TOTAL_DEMAND_COUNT[market]}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span>{tr(" tại ", " in ")}{market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia")}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — đăng ảnh tay nghề để chủ tiệm dễ tìm thấy bạn hơn.", " in one survey of nail groups (Sep 2026) — post your work so salons can find you.")}
+            <span className="font-bold text-pink-300">{tr("Đăng tác phẩm mới nhất của bạn", "Share your latest set")}</span>{tr(" để tiệm xem được tay nghề trước khi nhắn tin.", " so salons can see your work before they message you.")}
           </p>
         </div>
       )}
-      <NewJobsBanner jobs={feedJobs} total={jobTotals.total} urgent={jobTotals.urgent} market={market} state={state} />
+      <NewJobsBanner jobs={feedJobs} total={jobTotals.total} market={market} state={state} />
       <CreatePostComposer onPosted={handlePosted} suggestedTags={suggestedTags} />
 
       {loading ? (
@@ -305,8 +303,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       ) : feedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
           <Newspaper className="h-10 w-10 text-slate-700" />
-          <p className="text-base font-bold text-slate-300">{tr("Chưa có bài đăng nào ở khu vực này", "No posts in this area yet")}</p>
-          <p className="text-sm text-slate-500">{tr("Hãy là người đầu tiên chia sẻ!", "Be the first to share!")}</p>
+          <p className="text-base font-bold text-slate-300">{tr("Chưa có bài đăng.", "Nothing here yet.")}</p>
+          <p className="text-sm text-slate-500">{tr("Chia sẻ tác phẩm mới nhất của bạn để bắt đầu.", "Share your latest set to start the conversation.")}</p>
         </div>
       ) : (
         <div className="space-y-4">

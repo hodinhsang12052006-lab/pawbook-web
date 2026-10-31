@@ -55,7 +55,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "tet", title: "Tết Nguyên Đán", emoji: "🧧", hashtag: "TetRucRo", priority: 3,
-    blurb: "Đỏ may mắn, vàng sang, hoa mai — hoa đào: khách Việt và khách Á Đông rất chuộng.",
+    blurb: "Đỏ may mắn, vàng sang, hoa mai — hoa đào: mẫu được yêu thích dịp Tết Nguyên đán.",
     ideas: ["Đỏ son + nhũ vàng", "Hoa mai vẽ tay", "Hoa đào hồng phấn", "Bao lì xì mini"],
     ownerTip: "Lì xì nhỏ (voucher $5) cho khách quen dịp Tết — rẻ mà khách nhớ tiệm cả năm.",
     colors: ["#dc2626", "#eab308"], from: [1, 12], to: [2, 20],

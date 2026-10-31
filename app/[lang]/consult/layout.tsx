@@ -3,10 +3,10 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/consult", {
-    title: ["Soi tay tư vấn", "Hand consult"],
+    title: ["Soi tay tư vấn", "Hand consult for nail pros"],
     description: [
-      "Chụp tay khách → tình trạng móng & da, quy trình nên làm và những mẫu nail hợp nhất. Công cụ cho thợ nail và chủ tiệm.",
-      "Photograph a client's hand to see nail and skin condition, the recommended service steps and the designs that suit them best. A tool for nail techs and salon owners.",
+      "Chụp tay khách (khi khách đồng ý) để có tóm tắt tình trạng móng, dịch vụ nên làm và mẫu phù hợp.",
+      "Photograph a client's hands, with their consent, for a nail-condition summary, a suggested service and matching designs.",
     ],
     noindex: true,
   });

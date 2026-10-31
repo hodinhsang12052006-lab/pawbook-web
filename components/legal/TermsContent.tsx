@@ -9,7 +9,7 @@ import { useTr } from "@/lib/i18n/useTr";
 const S = "space-y-2";
 const H2 = "text-lg font-bold text-white";
 const B = "text-slate-100";
-const MAIL = <a href="mailto:support@bitpawos.com" className="text-pink-400 underline underline-offset-2">support@bitpawos.com</a>;
+const MAIL = <a href="mailto:support@bitpawsoftware.com" className="text-pink-400 underline underline-offset-2">support@bitpawsoftware.com</a>;
 
 function TermsVi() {
   return (
@@ -29,6 +29,7 @@ function TermsVi() {
           <li>Bạn phải từ 18 tuổi trở lên để tạo tài khoản.</li>
           <li>Thông tin bạn cung cấp (hồ sơ, tin tuyển dụng, portfolio, số điện thoại) phải chính xác, không mạo danh người khác.</li>
           <li>Không đăng nội dung vi phạm pháp luật, quấy rối, phân biệt đối xử, hoặc lừa đảo.</li>
+          <li>Tin tuyển dụng không được yêu cầu giới tính, tuổi, chủng tộc, tôn giáo hay quốc tịch của ứng viên; PawNail có thể sửa hoặc gỡ tin vi phạm.</li>
           <li>Không sử dụng nền tảng để gửi tin nhắn rác, quảng cáo trái phép, hoặc thu thập thông tin người dùng khác trái mục đích.</li>
         </ul>
       </section>
@@ -75,6 +76,7 @@ function TermsEn() {
           <li>You must be at least 18 years old to create an account.</li>
           <li>Information you provide (profile, job posts, portfolio, phone number) must be accurate, and you may not impersonate anyone.</li>
           <li>Do not post illegal, harassing, discriminatory or fraudulent content.</li>
+          <li>Job posts may not require a particular gender, age, race, religion or national origin; PawNail may edit or remove posts that do.</li>
           <li>Do not use the platform to send spam, run unauthorized advertising, or collect other users&apos; information for unrelated purposes.</li>
         </ul>
       </section>

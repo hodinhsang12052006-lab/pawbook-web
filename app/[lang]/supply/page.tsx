@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import { dtEn } from "@/lib/i18n/dataEn";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
@@ -83,7 +83,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
       <div className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-slate-800 bg-slate-900 p-6 space-y-4 animate-scaleUp">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black text-white flex items-center gap-2">
-            <Package className="h-5 w-5 text-amber-400" />{tr(" Đăng bán sỉ vật tư", " List wholesale supplies")}
+            <Package className="h-5 w-5 text-amber-400" />{tr(" Đăng bán vật tư", " List supplies")}
           </h3>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 cursor-pointer">
             <X className="h-4.5 w-4.5" />
@@ -243,9 +243,9 @@ export default function SupplyPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              <Package className="h-6 w-6 text-amber-400" />{tr(" Kho vật tư nail", " Nail supply market")}
+              <Package className="h-6 w-6 text-amber-400" />{tr(" Chợ vật tư nail", " Nail supply exchange")}
             </h1>
-            <p className="text-sm text-slate-400 mt-1">{tr("Hàng sỉ vật tư nail giữa các tiệm — không qua thanh toán trong app, liên hệ trực tiếp để chốt đơn.", "Wholesale nail supplies between salons — no in-app payment, contact the seller directly.")}</p>
+            <p className="text-sm text-slate-400 mt-1">{tr("Tiệm đăng bán vật tư dư. Không thanh toán trong app — nhắn tin cho người bán để thỏa thuận.", "Salons list surplus supplies. No in-app payment — message the seller to arrange the sale.")}</p>
           </div>
           {user?.role === "OWNER" && (
             <button
@@ -272,7 +272,7 @@ export default function SupplyPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
             <Package className="h-10 w-10 text-amber-300/70" />
             <p className="text-base font-bold text-slate-200">{tr("Tiệm dư vật tư? Bán lại cho tiệm khác", "Got extra supplies? Sell them to other salons")}</p>
-            <p className="max-w-sm text-sm text-slate-400">{tr("Bột, gel, ghế pedi, máy hơ… đăng miễn phí — tiệm cần mua nhắn thẳng cho bạn, không qua trung gian, không phí.", "Powder, gel, pedi chairs, lamps… list for free — buyers message you directly, no middleman, no fees.")}</p>
+            <p className="max-w-sm text-sm text-slate-400">{tr("Bột, gel, ghế pedi, máy hơ… Tiệm đăng bán không mất phí, người mua nhắn tin trực tiếp cho người bán.", "Powder, gel, pedi chairs, lamps… Salons can list them at no cost, and buyers message the seller directly.")}</p>
           </div>
         ) : (
           <>

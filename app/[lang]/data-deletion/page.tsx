@@ -5,7 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/data-deletion", {
-    title: ["Xoá dữ liệu", "Data deletion"],
+    title: ["Xoá dữ liệu", "Delete your data"],
     description: [
       "Cách xoá tài khoản và dữ liệu PawNail, kể cả khi đăng nhập bằng Facebook, Google hoặc số điện thoại.",
       "How to delete your PawNail account and data, including if you signed in with Facebook, Google or your phone number.",
@@ -13,14 +13,14 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   });
 }
 
-const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawos.com";
+const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
 
 // Trang "Data deletion instructions URL" cho Facebook Login (Meta bắt buộc trước khi app được Live).
 // Song ngữ hiện CÙNG LÚC (người duyệt của Meta đọc tiếng Anh, không phụ thuộc nút đổi ngôn ngữ).
 const VI = (
   <section className="space-y-3" lang="vi">
     <h1 className="text-2xl font-black text-white">Xoá dữ liệu của bạn</h1>
-    <p>Bạn có thể xoá tài khoản PawNail Jobs và toàn bộ dữ liệu bất cứ lúc nào — kể cả khi bạn đăng nhập bằng Facebook, Google hoặc số điện thoại.</p>
+    <p>Bạn có thể xoá tài khoản PawNail và toàn bộ dữ liệu bất cứ lúc nào — kể cả khi bạn đăng nhập bằng Facebook, Google hoặc số điện thoại.</p>
     <h2 className="pt-2 font-bold text-white">Cách 1 — Tự xoá ngay trong ứng dụng (nhanh nhất)</h2>
     <ol className="list-decimal space-y-1 pl-5">
       <li>Đăng nhập tại <Link href="/auth/login" className="text-pink-300 underline">bitpawos.com/auth/login</Link> (bằng cách bạn đã dùng: Facebook, Google, SĐT hoặc email).</li>
@@ -38,7 +38,7 @@ const VI = (
 const EN = (
   <section className="space-y-3" lang="en">
     <h1 className="text-2xl font-black text-white">Delete your data</h1>
-    <p>You can delete your PawNail Jobs account and all of its data at any time — including if you signed in with Facebook, Google or your phone number.</p>
+    <p>You can delete your PawNail account and all of its data at any time — including if you signed in with Facebook, Google or your phone number.</p>
     <h2 className="pt-2 font-bold text-white">Option 1 — Delete it yourself in the app (fastest)</h2>
     <ol className="list-decimal space-y-1 pl-5">
       <li>Sign in at <Link href="/auth/login" className="text-pink-300 underline">bitpawos.com/auth/login</Link> (with the method you used: Facebook, Google, phone or email).</li>

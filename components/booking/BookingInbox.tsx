@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, Check, Loader2, MessageSquare, Phone, Trash2, X } from "lucide-react";
@@ -82,7 +82,7 @@ export default function BookingInbox() {
         lead={tr("Khách xem menu của bạn rồi đặt lịch ngay trên điện thoại — không cần app, không cần gọi.", "Clients browse your menu and book right from their phone — no app, no calls.")}
         points={[
           tr("Link menu + QR riêng để dán ở tiệm, gửi qua tin nhắn, đăng Facebook", "Your own menu link + QR to post in the salon, text or share on Facebook"),
-          tr("Lịch mới báo ngay về máy — xác nhận giờ bằng 1 chạm, nhắn khách bằng SMS soạn sẵn", "Instant alerts for new requests — confirm a time in one tap, text the client with a ready-made SMS"),
+          tr("Lịch mới báo ngay về máy — xác nhận giờ bằng 1 chạm, nhắn khách bằng SMS soạn sẵn", "Get notified about new requests — confirm a time in one tap, text the client with a ready-made SMS"),
           tr("Làm xong gửi link đánh giá — khách khen thật hiện ngay trên menu của bạn", "Send a review link after the visit — real client praise shows on your menu"),
         ]}
       />
@@ -110,10 +110,10 @@ export default function BookingInbox() {
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pink-400" /></div>
       ) : list.length === 0 ? (
         <div className="rounded-3xl bg-white/[0.03] p-8 text-center ring-1 ring-white/10">
-          <p className="text-sm font-bold text-slate-200">{tab === "new" ? tr("Chưa có yêu cầu mới", "No new requests") : tr("Trống", "Nothing here")}</p>
+          <p className="text-sm font-bold text-slate-200">{tab === "new" ? tr("Chưa có yêu cầu đặt lịch.", "No booking requests yet.") : tr("Chưa có lịch hẹn ở mục này.", "Nothing in this list yet.")}</p>
           {tab === "new" && (
             <p className="mt-1.5 text-xs text-slate-400">
-              {tr("Chia sẻ link menu hoặc in mã QR dán ở quầy để khách đặt lịch. ", "Share your menu link or print the QR code so clients can book. ")}
+              {tr("Chia sẻ link menu hoặc mã QR để khách gửi yêu cầu đặt lịch. ", "Share your menu link or QR code so clients can request a time. ")}
               <Link href={`/profile/${user.id}?tab=menu`} className="font-bold text-pink-300 hover:underline">{tr("Mở menu của tôi", "Open my menu")}</Link>
             </p>
           )}

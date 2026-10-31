@@ -1,8 +1,8 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 // Đăng ký KHÁCH đi làm nail — 1 màn, ~30 giây: tên, khu vực, email + mật khẩu (SĐT không bắt buộc).
 // Không hỏi kỹ năng / lương / tiệm — khách vào thẳng trang chủ riêng (mẫu, tiệm quanh bạn, đặt lịch).
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useContext, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Heart, Loader2 } from "lucide-react";
@@ -60,7 +60,7 @@ export default function ClientRegisterForm() {
     <form onSubmit={submit} className="mx-auto w-full max-w-md space-y-4">
       <div className="space-y-1 text-center lg:text-left">
         <h2 className={`flex items-center justify-center gap-2 text-2xl font-extrabold lg:justify-start ${isDark ? "text-white" : "text-slate-900"}`}><Heart className="h-6 w-6 text-pink-500" />{tr("Tài khoản khách làm nail", "Nail client account")}</h2>
-        <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{tr("Lưu mẫu yêu thích, tìm tiệm gần bạn, đặt lịch không cần gọi — miễn phí.", "Save looks, find salons near you, book without calling — free.")}</p>
+        <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{tr("Lưu mẫu yêu thích, tìm tiệm gần bạn và gửi yêu cầu đặt lịch không cần gọi điện.", "Save designs, find salons near you and request bookings without calling.")}</p>
       </div>
       <SocialLogin dark={isDark} divider heading={tr("Nhanh nhất: dùng tài khoản có sẵn", "Fastest: use an existing account")} />
       <div>

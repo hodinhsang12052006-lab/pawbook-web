@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useMemo, useState } from "react";
 import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -10,7 +10,9 @@ import { uploadMedia } from "@/lib/mediaUpload";
 import { CATEGORY_LABEL, MAX_MENU_IMAGES, MENU_CATEGORIES, TECHNIQUES, materialCost, priceLabel, type MenuCategory, type MenuMaterial, type PublicMenuItem } from "@/lib/menu";
 
 // Thêm / sửa 1 mẫu trong menu. Phần "Vật tư" chỉ chủ menu thấy: nhập giá mua → tự tính chi phí + lời.
-const COMMON_MATERIALS = ["Base gel", "Top gel", "Gel màu", "Bột acrylic", "Dung dịch (monomer)", "Bột dip", "Activator", "Tips Gel-X", "Bột chrome", "Đá / charm", "Sticker / foil", "Dầu dưỡng da", "Giũa + buffer", "Bông + giấy lau"];
+// Gợi ý vật tư theo ngôn ngữ của thợ — hàm để đọc đúng VI/EN lúc render.
+const COMMON_MATERIALS = (): string[] =>
+  ([["Base gel", "Base gel"], ["Top gel", "Top gel"], ["Gel màu", "Color gel"], ["Bột acrylic", "Acrylic powder"], ["Dung dịch (monomer)", "Monomer liquid"], ["Bột dip", "Dip powder"], ["Activator", "Activator"], ["Tips Gel-X", "Gel-X tips"], ["Bột chrome", "Chrome powder"], ["Đá / charm", "Gems / charms"], ["Sticker / foil", "Stickers / foil"], ["Dầu dưỡng da", "Cuticle oil"], ["Giũa + buffer", "File + buffer"], ["Bông + giấy lau", "Cotton + lint-free wipes"]] as const).map(([vi, en]) => tr(vi, en));
 
 export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved, onDeleted }: {
   item: PublicMenuItem | null; // null = thêm mới
@@ -38,7 +40,7 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
   const cost = useMemo(() => materialCost(materials.filter((m) => m.name.trim())), [materials]);
   const pf = Number(priceFrom) || 0;
   const pt = Number(priceTo) || 0;
-  const suggestions = useMemo(() => Array.from(new Set([...knownMaterials, ...COMMON_MATERIALS])), [knownMaterials]);
+  const suggestions = useMemo(() => Array.from(new Set([...knownMaterials, ...COMMON_MATERIALS()])), [knownMaterials]);
 
   const addPhoto = () => {
     if (images.length >= MAX_MENU_IMAGES) return;

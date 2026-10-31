@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { ArrowLeft, ArrowRight, Loader2, Save, Flame, ImagePlus, X, Play, MapPin, DollarSign, Images, Sparkles } from "lucide-react";
@@ -155,8 +155,8 @@ export default function CreateJobPage() {
 
         <div className="glass-card space-y-6 rounded-2xl p-5 sm:p-6">
           <div>
-            <h1 className="text-lg font-black text-white">📢 {tr("Đăng tin tuyển thợ", "Post a job")}</h1>
-            <p className="mt-1 text-xs text-slate-400">{tr("Chỉ mất chưa đến 2 phút. Tin có ảnh tiệm được thợ bấm xem nhiều hơn.", "Takes under 2 minutes. Jobs with salon photos get more views.")}</p>
+            <h1 className="text-lg font-black text-white">{tr("Đăng tin tuyển thợ", "Post a nail tech job")}</h1>
+            <p className="mt-1 text-xs text-slate-400">{tr("Điền thông tin tiệm, mức lương và ảnh. Thợ có thể gọi hoặc nhắn tin trực tiếp cho bạn.", "Add your salon's details, pay and photos. Techs can call or message you directly.")}</p>
           </div>
 
           {/* Thanh bước */}
@@ -208,7 +208,7 @@ export default function CreateJobPage() {
             <div className="space-y-4 text-sm">
               <div>
                 <label htmlFor="job-title" className="field-label">{tr("Tiêu đề tin tuyển dụng *", "Job title *")}</label>
-                <input id="job-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr("VD: Cần thợ Bột/Dip gấp", "e.g. Urgently hiring acrylic/dip tech")} className="input-field" />
+                <input id="job-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr("VD: Tuyển thợ bột & dip, toàn thời gian", "e.g. Acrylic & dip technician, full time")} className="input-field" />
               </div>
               <div>
                 <span className="field-label">{tr("Hình thức trả lương *", "Pay type *")}</span>
@@ -301,7 +301,7 @@ export default function CreateJobPage() {
               </div>
               <button type="button" role="switch" aria-checked={isUrgent} onClick={() => setIsUrgent(!isUrgent)} className={`flex w-full items-center gap-3 rounded-xl p-4 ring-2 transition-all ${isUrgent ? "bg-red-500/10 ring-red-500" : "bg-slate-950 ring-white/10"}`}>
                 <Flame className={`h-5 w-5 ${isUrgent ? "text-red-400" : "text-slate-500"}`} />
-                <span className={`text-left font-bold ${isUrgent ? "text-red-200" : "text-slate-400"}`}>{tr('Đánh dấu "Cần gấp" — ưu tiên hiển thị & báo ngay cho thợ cùng bang', 'Mark as "Urgent" — shown first & techs in your state are notified')}</span>
+                <span className={`text-left font-bold ${isUrgent ? "text-red-200" : "text-slate-400"}`}>{tr("Gắn nhãn cần gấp — hiện trước và báo cho thợ cùng bang", "Label as urgent — shown first, and techs in your state are notified")}</span>
               </button>
               {media.filter((m) => m.url).length > 0 && (
                 <p className="flex items-center gap-2 text-xs text-slate-400"><Images className="h-4 w-4 text-pink-300" /> {tr(`Kèm ${media.filter((m) => m.url).length} ảnh/video tiệm`, `${media.filter((m) => m.url).length} salon photo(s)/video(s) attached`)}</p>
@@ -309,7 +309,7 @@ export default function CreateJobPage() {
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setStep(3)} aria-label={tr("Quay lại", "Back")} className={back}><ArrowLeft className="h-4 w-4" /></button>
                 <button type="button" disabled={submitting || uploading} onClick={handleSubmit} className={next}>
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> {tr("Đăng tin ngay", "Publish job")}</>}
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> {tr("Đăng tin tuyển", "Post job")}</>}
                 </button>
               </div>
             </div>

@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   recordAttempt(ipKey, HOUR);
   const userId = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id ?? null;
   await prisma.jobRequest.create({ data: { jobId: job.id, kind, name, contact, note: note || null, userId } });
-  const to = process.env.SUPPORT_INBOX || "support@bitpawos.com";
+  const to = process.env.SUPPORT_INBOX || "support@bitpawsoftware.com";
   if (emailEnabled()) {
     const what = kind === "remove" ? "GỠ TIN" : "NHẬN TIN";
     await sendEmail(

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
-  Loader2, AlertCircle, MessageCircle, Flame, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone, BookOpen,
+  Loader2, AlertCircle, MessageCircle, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone, BookOpen,
   CalendarCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -358,11 +358,11 @@ export default function PublicProfilePage({ params }: PageProps) {
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${isOwnerProfile ? "bg-amber-500/10 text-amber-200 ring-amber-500/25" : "bg-pink-500/10 text-pink-200 ring-pink-500/25"}`}>
                 {isOwnerProfile ? <Store className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {isOwnerProfile ? tr("Chủ tiệm", "Salon owner") : tr("Thợ Nail", "Nail tech")}
+                {isOwnerProfile ? tr("Chủ tiệm", "Salon owner") : tr("Thợ nail", "Nail tech")}
               </span>
               {isTech && !viewerIsClient && (tech.status === "URGENT" ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-300 ring-1 ring-red-500/25">
-                  <Flame className="h-3.5 w-3.5" />{tr(" Đang tìm việc gấp", " Needs work now")}
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{tr(" Sẵn sàng nhận việc ngay", " Available now")}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">

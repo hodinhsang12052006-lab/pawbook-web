@@ -41,7 +41,7 @@ export function renderContentWithHashtags(text: string): React.ReactNode[] {
 }
 
 export function roleBadgeLabel(role: string): string {
-  if (role === "OWNER") return tr("🏪 Chủ tiệm", "🏪 Salon owner");
-  if (role === "TECHNICIAN") return tr("💅 Thợ Nail", "💅 Nail tech");
-  return "👤";
+  if (role === "OWNER") return tr("Chủ tiệm", "Salon owner");
+  if (role === "TECHNICIAN") return tr("Thợ nail", "Nail tech");
+  return tr("Thành viên", "Member");
 }

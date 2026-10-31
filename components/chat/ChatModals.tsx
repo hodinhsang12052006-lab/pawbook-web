@@ -76,7 +76,7 @@ export function CreateGroupModal({
 
         <div className="space-y-3 text-xs">
           <div>
-            <label htmlFor="group-name" className="block text-4xs font-bold text-slate-400 mb-1">{tr("TÊN NHÓM", "GROUP NAME")}</label>
+            <label htmlFor="group-name" className="block text-4xs font-bold uppercase tracking-wider text-slate-400 mb-1">{tr("Tên nhóm", "Group name")}</label>
             <input
               id="group-name"
               type="text"

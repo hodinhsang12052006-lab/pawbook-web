@@ -14,23 +14,22 @@ import { dt } from "@/lib/i18n/dataEn";
 // dựng bằng CSS để cho chủ tiệm hình dung giao diện thật trông thế nào mà
 // không cần tải ảnh/video nặng.
 const DEMO_TURN_ROWS = [
-  { name: "Chị Linda", tip: 52 },
-  { name: "Anh Tony", tip: 44 },
-  { name: "Chị Kim", tip: 38 },
+  { name: "Linda", tip: 52 },
+  { name: "Tony", tip: 44 },
+  { name: "Kim", tip: 38 },
 ];
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 
 // Hàm (không phải hằng) để chữ đổi theo VI/EN.
+// Chỉ tóm tắt câu trả lời (không có "phân tích" nào khác) — nói đúng việc đang làm, không kéo dài giả.
 const SCAN_STEPS = () => [
-  tr("Đang tổng hợp câu trả lời của bạn...", "Summarizing your answers..."),
-  tr("Đang chọn công cụ phù hợp với tiệm...", "Matching tools to your salon..."),
-  tr("Xong!", "Done!"),
+  tr("Đang tóm tắt câu trả lời…", "Summarizing your answers…"),
+  tr("Xong", "Done"),
 ];
 
-// Tổng thời lượng hiệu ứng quét — đủ lâu để tạo cảm giác "đang tính toán",
-// không quá lâu tới mức gây sốt ruột (khớp yêu cầu ~3 giây đầu).
-const SCAN_DURATION_MS = 2600;
+// Chuyển cảnh ngắn giữa khảo sát và bản tóm tắt.
+const SCAN_DURATION_MS = 900;
 
 interface SalonDiagnosticModalProps {
   salonName: string;
@@ -140,10 +139,10 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
           <div className="flex-1 px-5 pt-8 pb-4 space-y-6 max-w-xl mx-auto w-full">
             <div className="text-center space-y-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-300 uppercase tracking-wider">
-                <CheckCircle2 className="h-3.5 w-3.5" />{tr(" Phân tích hoàn tất", " Analysis complete")}
+                <CheckCircle2 className="h-3.5 w-3.5" />{tr(" Đã lưu câu trả lời", " Answers saved")}
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                {tr("Tóm tắt khảo sát vận hành", "Your operations survey")}
+                {tr("Tóm tắt khảo sát", "Your survey summary")}
               </h1>
               <p className="text-sm text-slate-400">
                 {painCards.length > 0
@@ -244,7 +243,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                 </button>
 
                 <div className="space-y-1">
-                  <h3 className="text-lg font-extrabold text-white">{tr("Xem trước: Bảng Chia Turn Công Bằng", "Preview: Fair Turn Board")}</h3>
+                  <h3 className="text-lg font-extrabold text-white">{tr("Xem trước: bảng chia turn công bằng", "Preview: fair turn board")}</h3>
                   <p className="text-sm text-slate-400">
                     {tr("Bản xem trước (sắp ra mắt): màn hình iPad tại quầy — thợ tự xem lượt và tip của mình, không ai tị nạnh ai.", "Preview (coming soon): an iPad screen at the front desk — techs see their own turns and tips, so no one feels shortchanged.")}
                   </p>

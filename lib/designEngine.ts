@@ -401,7 +401,7 @@ export const PATTERNS: Pattern[] = [
   {
     id: "blossom", occasions: ["tet"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 10, difficulty: 2, design: true,
     title: ({ c1, c2 }) => (isMai(c1, c2) ? s(`Hoa mai vẽ tay nền ${c1.vi}`, `Apricot blossoms on ${c1.en}`) : s(`Hoa đào vẽ tay nền ${c1.vi}`, `Peach blossoms on ${c1.en}`)),
-    why: s("hoa mai, hoa đào vẽ tay là mẫu Tết khách Việt và khách Á Đông hỏi nhiều nhất", "hand-painted blossoms are the Lunar New Year look Vietnamese and Asian clients ask for most"),
+    why: s("hoa mai, hoa đào vẽ tay là mẫu được yêu thích dịp Tết Nguyên đán", "hand-painted plum and peach blossoms are a Lunar New Year favorite"),
     materials: ({ c1, c2 }) => [m(`Gel ${isMai(c1, c2) ? "vàng mai" : "hồng đào"} (cánh hoa)`, `${isMai(c1, c2) ? "Apricot yellow" : "Peach pink"} gel (petals)`), m("Gel nâu (cành)", "Brown gel (branches)"), LINER_BRUSH, DOT],
     steps: () => [s(`Kẻ cành nâu mảnh chéo móng trên ${ACC.vi}`, `Draw a thin brown branch diagonally on the ${ACC.en}`), s("Chấm 5 cánh hoa dọc cành, chấm nhuỵ, hơ đèn", "Dot five-petal blossoms along the branch, add centers, cure")],
     image: ({ c1, c2 }) => `${c1.en} nails with hand-painted ${isMai(c1, c2) ? "yellow apricot" : "pink peach"} blossoms on a thin brown branch on accent nails`,

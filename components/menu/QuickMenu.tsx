@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import { Check, ChevronLeft, ImageOff, Loader2, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -13,7 +13,9 @@ import type { MenuCategory, PublicMenuItem } from "@/lib/menu";
 // tên + giá → lưu 1 lần. Thợ có sẵn ảnh thì lên menu trong ~2 phút, không phải nhập từng mẫu.
 interface Photo { url: string; caption: string | null }
 interface Row { url: string; name: string; price: string; category: MenuCategory }
-const NAME_CHIPS = ["Sơn gel trơn", "French", "Mắt mèo", "Tráng gương", "Ombre", "Đính đá", "Vẽ hoạ tiết", "Bột", "Gel-X", "Chân gel"];
+// Gợi ý tên mẫu theo ngôn ngữ của thợ (tên này hiện trên menu cho khách) — hàm để đọc đúng VI/EN lúc render.
+const NAME_CHIPS = (): string[] =>
+  ([["Sơn gel trơn", "Solid gel"], ["French", "French"], ["Mắt mèo", "Cat eye"], ["Tráng gương", "Chrome"], ["Ombre", "Ombre"], ["Đính đá", "Gems"], ["Vẽ hoạ tiết", "Nail art"], ["Bột", "Acrylic"], ["Gel-X", "Gel-X"], ["Chân gel", "Gel pedicure"]] as const).map(([vi, en]) => tr(vi, en));
 const MAX = 12;
 
 export default function QuickMenu({ onClose, onDone }: { onClose: () => void; onDone: (items: PublicMenuItem[]) => void }) {
@@ -67,7 +69,7 @@ export default function QuickMenu({ onClose, onDone }: { onClose: () => void; on
           {rows && <button type="button" onClick={() => setRows(null)} disabled={saving !== null} aria-label={tr("Chọn lại ảnh", "Back to photos")} className="-ml-2 rounded-full p-2 text-slate-400 hover:bg-white/10 hover:text-white"><ChevronLeft className="h-5 w-5" /></button>}
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-black text-white">{rows ? tr("Điền tên & giá", "Add names & prices") : tr("Tạo menu nhanh từ ảnh của bạn", "Quick menu from your photos")}</h2>
-            <p className="text-xs text-slate-400">{rows ? tr("Giá tham khảo — có thể sửa chi tiết, vật tư sau", "Guide price — refine details and materials later") : tr("Chọn những mẫu đẹp nhất bạn đã làm", "Pick the best sets you've done")}</p>
+            <p className="text-xs text-slate-400">{rows ? tr("Giá tham khảo — có thể sửa chi tiết, vật tư sau", "Guide price — refine details and materials later") : tr("Chọn những mẫu đẹp nhất bạn đã làm", "Pick the sets you're proudest of")}</p>
           </div>
           <button type="button" onClick={onClose} disabled={saving !== null} aria-label={tr("Đóng", "Close")} className="rounded-full p-2 text-slate-400 hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
         </div>
@@ -113,7 +115,7 @@ export default function QuickMenu({ onClose, onDone }: { onClose: () => void; on
                         <button key={c} type="button" onClick={() => setRow(i, { category: c })} aria-pressed={r.category === c} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${r.category === c ? "bg-white text-slate-900" : "bg-white/[0.05] text-slate-300"}`}>{c === "HAND" ? tr("Tay", "Hands") : tr("Chân", "Feet")}</button>
                       ))}
                       <span className="mx-1 w-px self-stretch bg-white/10" />
-                      {NAME_CHIPS.slice(0, 6).map((n) => (
+                      {NAME_CHIPS().slice(0, 6).map((n) => (
                         <button key={n} type="button" onClick={() => setRow(i, { name: r.name.trim() ? `${r.name.trim()} ${n.toLowerCase()}` : n })} className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:bg-white/10">+ {n}</button>
                       ))}
                     </div>

@@ -6,6 +6,7 @@ import { BellRing, Camera, CheckCircle2, MessageCircle, Megaphone, Store, X, Roc
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { playSound } from "@/lib/sounds";
+import { useSessionUser } from "@/lib/SessionUserContext";
 
 interface Step { key: string; done: boolean }
 const HIDE_KEY = "pn_onboarding_hide";
@@ -17,13 +18,13 @@ function meta(key: string): { title: string; hint: string; href: string; icon: t
     case "job_alert":
       return { title: tr("Bật báo việc gần bạn", "Turn on job alerts"), hint: tr("Có tin khớp là điện thoại báo ngay", "Get pinged when a matching job is posted"), href: "/?tab=jobs", icon: BellRing };
     case "portfolio":
-      return { title: tr("Thêm 3 ảnh mẫu móng", "Add 3 work photos"), hint: tr("Hồ sơ có ảnh được tiệm nhắn nhiều hơn hẳn", "Profiles with photos get far more messages"), href: "/profile", icon: Camera };
+      return { title: tr("Thêm 3 ảnh mẫu móng", "Add 3 work photos"), hint: tr("Tiệm xem được tay nghề của bạn trước khi nhắn tin", "Salons see your work before they message you"), href: "/profile", icon: Camera };
     case "message_salon":
       return { title: tr("Nhắn tiệm đầu tiên", "Message your first salon"), hint: tr("Bấm “Nhắn tin” trên 1 tin bạn thích", "Tap “Message” on a job you like"), href: "/?tab=jobs", icon: MessageCircle };
     case "post_job":
-      return { title: tr("Đăng tin tuyển thợ", "Post a job"), hint: tr("Tin có ảnh tiệm được thợ bấm xem nhiều hơn", "Jobs with salon photos get more views"), href: "/jobs/create", icon: Megaphone };
+      return { title: tr("Đăng tin tuyển thợ", "Post a job"), hint: tr("Thêm ảnh tiệm để thợ thấy nơi mình sẽ làm", "Add salon photos so techs can see where they'd work"), href: "/jobs/create", icon: Megaphone };
     case "message_tech":
-      return { title: tr("Nhắn thợ đầu tiên", "Message your first tech"), hint: tr("Xem portfolio thợ đang rảnh và nhắn ngay", "Browse available techs and message one"), href: "/?tab=portfolio", icon: MessageCircle };
+      return { title: tr("Nhắn thợ đầu tiên", "Message your first tech"), hint: tr("Xem tay nghề thợ sẵn sàng nhận việc và nhắn tin", "Browse available techs and message one"), href: "/?tab=portfolio", icon: MessageCircle };
     default:
       return { title: tr("Hoàn thiện hồ sơ tiệm", "Complete your salon profile"), hint: tr("Logo + chính sách chia turn để thợ tin tưởng", "Logo + commission policy so techs trust you"), href: "/profile", icon: Store };
   }
@@ -32,6 +33,7 @@ function meta(key: string): { title: string; hint: string; href: string; icon: t
 /** "3 bước đầu tiên" cho người mới (14 ngày đầu) — tự ẩn khi xong hoặc khi bấm ✕. */
 export default function GettingStarted({ compact = false }: { compact?: boolean }) {
   useTr(); // render lại khi đổi VI/EN
+  const { user } = useSessionUser();
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [hidden, setHidden] = useState(true);
   const [checked, setChecked] = useState(false);
@@ -117,7 +119,7 @@ export default function GettingStarted({ compact = false }: { compact?: boolean 
         <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-fuchsia-500 transition-all duration-700" style={{ width: `${(done / steps.length) * 100}%` }} />
       </div>
       {allDone ? (
-        <p className="mt-3 text-xs leading-relaxed text-slate-300">{tr("3 việc đầu tiên đã xong — hồ sơ của bạn giờ nổi bật hơn hầu hết người mới. Chúc bạn sớm có kết quả!", "First 3 steps done — your profile now stands out from most newcomers. Good luck!")}</p>
+        <p className="mt-3 text-xs leading-relaxed text-slate-300">{user?.role === "OWNER" ? tr("Đã xong 3 bước đầu. Tiệm của bạn đã sẵn sàng để thợ tìm đến.", "First 3 steps done. Your salon is ready for techs to find.") : tr("Đã xong 3 bước đầu. Hồ sơ của bạn đã sẵn sàng để tiệm tìm đến.", "First 3 steps done. Your profile is ready for salons to find.")}</p>
       ) : (
         <ol className="mt-3 space-y-1.5">
           {steps.map((s) => {

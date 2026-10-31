@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useRef, useState } from "react";
 import ClientAccount from "@/components/client/ClientAccount";
 import Navbar from "@/components/layout/Navbar";
@@ -27,7 +27,11 @@ import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 
-const DELETE_CONFIRM_PHRASE = "XÓA TÀI KHOẢN";
+// Cụm xác nhận xoá tài khoản theo ngôn ngữ trang (bàn phím Mỹ/Úc không gõ được dấu tiếng Việt):
+// EN gõ DELETE, VI gõ XÓA TÀI KHOẢN — chấp nhận cả 2, không phân biệt hoa thường / dấu.
+const deletePhrase = () => tr("XÓA TÀI KHOẢN", "DELETE");
+const foldPhrase = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").replace(/\s+/g, " ").trim().toUpperCase();
+const deleteConfirmed = (s: string) => ["XOA TAI KHOAN", "DELETE"].includes(foldPhrase(s));
 
 // Khung 1 nhóm trường trong form — tiêu đề có icon + mô tả ngắn, thống nhất mọi mục.
 function FormSection({ icon: Icon, title, hint, action, children }: { icon: typeof Store; title: string; hint?: string; action?: React.ReactNode; children: React.ReactNode }) {
@@ -258,7 +262,7 @@ export default function ProfilePage() {
   // Gõ đúng cụm xác nhận (thay vì chỉ 1 nút bấm) để tránh xóa nhầm — đây là
   // hành động không thể hoàn tác.
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText.trim() !== DELETE_CONFIRM_PHRASE) return;
+    if (!deleteConfirmed(deleteConfirmText)) return;
     setDeletingAccount(true);
     try {
       const res = await fetch("/api/profile", { method: "DELETE" });
@@ -710,13 +714,13 @@ export default function ProfilePage() {
               <h3 className="text-lg font-extrabold text-white">{tr("Xóa tài khoản vĩnh viễn?", "Delete account permanently?")}</h3>
               <p className="text-sm text-slate-400 leading-relaxed">
                 {tr("Toàn bộ hồ sơ, tin tuyển dụng/portfolio và tin nhắn của bạn sẽ bị xóa hoàn toàn, không thể khôi phục.", "Your entire profile, job posts/portfolio and messages will be permanently deleted and can't be recovered.")}
-                {tr(" Gõ ", " Type ")}<span className="font-mono font-bold text-red-300">{DELETE_CONFIRM_PHRASE}</span>{tr(" để xác nhận.", " to confirm.")}
+                {tr(" Gõ ", " Type ")}<span className="font-mono font-bold text-red-300">{deletePhrase()}</span>{tr(" để xác nhận.", " to confirm.")}
               </p>
             </div>
             <input
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder={DELETE_CONFIRM_PHRASE}
+              placeholder={deletePhrase()}
               disabled={deletingAccount}
               className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500"
             />
@@ -730,7 +734,7 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmText.trim() !== DELETE_CONFIRM_PHRASE || deletingAccount}
+                disabled={!deleteConfirmed(deleteConfirmText) || deletingAccount}
                 className="flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {deletingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : tr("Xóa vĩnh viễn", "Delete forever")}

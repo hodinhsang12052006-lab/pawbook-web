@@ -1,12 +1,12 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
+import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag, TrendingUp } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 import ArticleText, { parseArticle } from "./ArticleText";
@@ -15,6 +15,7 @@ import { trackPostView } from "@/lib/viewTracker";
 import Avatar from "@/components/ui/Avatar";
 import { playSound } from "@/lib/sounds";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
+import VietnameseChip from "@/components/common/LangChip";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -53,8 +54,8 @@ const PRESS = "active:scale-95 transition-transform duration-100";
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
 const POST_TYPE_BADGE = (): Record<string, { label: string; classes: string }> => ({
-  SHOWCASE: { label: tr("✨ Khoe tay nghề", "✨ Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
-  JOB: { label: tr("🔥 Tuyển thợ", "🔥 Hiring"), classes: "bg-red-500/10 border-red-500/25 text-red-300" },
+  SHOWCASE: { label: tr("Khoe tay nghề", "Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
+  JOB: { label: tr("Tuyển thợ", "Hiring"), classes: "bg-red-500/10 border-red-500/25 text-red-300" },
   GENERAL: { label: "", classes: "" },
 });
 
@@ -160,11 +161,11 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   };
   // Bài tin ngành (📰) và bài ảnh mẫu (✨ 4 mẫu nail) của tài khoản chính thức có nhãn riêng.
   const badge = post.content?.startsWith("📰")
-    ? { label: tr("📰 Tin ngành", "📰 Industry news"), classes: "bg-sky-500/10 border-sky-500/25 text-sky-300" }
+    ? { label: tr("Tin ngành", "Industry news"), classes: "bg-sky-500/10 border-sky-500/25 text-sky-300" }
     : post.content?.startsWith("💬") && post.poll
-    ? { label: tr("💬 Thảo luận", "💬 Discussion"), classes: "bg-amber-500/10 border-amber-500/25 text-amber-200" }
+    ? { label: tr("Thảo luận", "Discussion"), classes: "bg-amber-500/10 border-amber-500/25 text-amber-200" }
     : post.content?.startsWith("✨ 4 mẫu nail")
-    ? { label: tr("💅 Mẫu hôm nay", "💅 Today's designs"), classes: "bg-pink-500/10 border-pink-500/25 text-pink-300" }
+    ? { label: tr("Mẫu hôm nay", "Today's designs"), classes: "bg-pink-500/10 border-pink-500/25 text-pink-300" }
     : POST_TYPE_BADGE()[post.postType];
 
   const handleToggleLike = async () => {
@@ -267,7 +268,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             {anon ? (
-              <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
+              <span className="truncate text-sm font-bold text-slate-100">{post.author.role === "OWNER" ? tr("Chủ tiệm ẩn danh", "Anonymous salon owner") : tr("Thợ ẩn danh", "Anonymous nail tech")}</span>
             ) : (
               <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
                 {post.author.name}
@@ -289,7 +290,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <span>{timeAgo(post.createdAt)}</span>
             {post.isHot && (
               <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
-                {tr("🔥 Đang hot", "🔥 Trending")}
+                <TrendingUp className="h-3 w-3" aria-hidden />{tr("Được quan tâm", "Trending")}
               </span>
             )}
           </div>
@@ -343,6 +344,8 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
 
       {/* NỘI DUNG */}
       {post.content && (article ? <ArticleText article={article} /> : <PostText content={post.content} />)}
+      {/* Người xem tiếng Anh: bài viết bằng tiếng Việt được hiện nguyên văn, kèm nhãn nhỏ để họ hiểu vì sao. */}
+      <VietnameseChip text={[post.content]} className="mx-4 mb-3" />
       {post.poll && <PollCard postId={post.id} poll={post.poll} />}
 
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,

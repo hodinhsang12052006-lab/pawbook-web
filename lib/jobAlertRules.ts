@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { sendPush } from "@/lib/push";
+import { dtEn } from "@/lib/i18n/dtEn";
 
 // "Báo việc theo tiêu chí" — thợ lưu tối đa 3 bộ lọc (thị trường + bang +
 // kỹ năng, bang/kỹ năng bỏ trống = mọi). Có tin mới khớp → thông báo đẩy.

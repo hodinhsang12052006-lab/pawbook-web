@@ -19,19 +19,6 @@ export const POPULAR_EMOJIS = [
   "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "🔥", "✨",
 ];
 
-export const MOCK_STICKERS = [
-  { emoji: "🐶", label: "Cún Cười" },
-  { emoji: "🐱", label: "Mèo Wow" },
-  { emoji: "🚀", label: "Thăng Tiến" },
-  { emoji: "💎", label: "VIP Deal" },
-  { emoji: "💼", label: "Duyệt Công" },
-  { emoji: "🚗", label: "Vận Chuyển" },
-  { emoji: "🛠️", label: "Đang Tới" },
-  { emoji: "🔥", label: "Hot Deal" },
-  { emoji: "🎉", label: "Chốt Deal" },
-  { emoji: "👍", label: "Cực Tốt" },
-];
-
 export interface UserType {
   id: string;
   name: string;

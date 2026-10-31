@@ -5,7 +5,7 @@ import TermsContent from "@/components/legal/TermsContent";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/terms", {
-    title: ["Điều khoản dịch vụ", "Terms of Service"],
+    title: ["Điều khoản dịch vụ", "Terms of service"],
     description: [
       "Điều khoản dịch vụ của PawNail — nền tảng cho tiệm nail, thợ nail và khách tại Mỹ và Úc.",
       "PawNail's Terms of Service — the platform for nail salons, nail techs and their clients in the US & Australia.",

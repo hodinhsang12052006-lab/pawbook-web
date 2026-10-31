@@ -4,10 +4,10 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 // Tiêu đề tab + bản xem trước theo ngôn ngữ (page.tsx là client component).
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/tryon", {
-    title: ["PawNail Try-On — Thử mẫu nail trên tay bạn", "PawNail Try-On — See nail looks on your hand"],
+    title: ["Thử mẫu nail trên tay — PawNail Try-On", "PawNail Try-On — try nail looks on your hand"],
     description: [
-      "Chụp ảnh bàn tay và xem trước mẫu nail ngay trên tay bạn trước khi đến tiệm.",
-      "Take a photo of your hand and preview nail looks on it before you visit the salon.",
+      "Chụp ảnh bàn tay, xem 10 mẫu gợi ý trên chính móng của bạn. Xử lý ngay trên điện thoại.",
+      "Take a photo of your hand and see 10 suggested looks on your own nails. It runs on your phone.",
     ],
   });
 }

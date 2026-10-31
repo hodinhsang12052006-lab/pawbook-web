@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Image as ImageIcon, X, Loader2, Sparkles } from "lucide-react";
@@ -16,8 +16,8 @@ const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
 const POST_TYPE_OPTIONS = (): { value: "GENERAL" | "SHOWCASE"; label: string }[] => [
-  { value: "GENERAL", label: tr("💬 Chia sẻ", "💬 Share") },
-  { value: "SHOWCASE", label: tr("✨ Khoe tay nghề / tiệm", "✨ Show off work / salon") },
+  { value: "GENERAL", label: tr("Chia sẻ", "Share") },
+  { value: "SHOWCASE", label: tr("Khoe tay nghề / tiệm", "Showcase work / salon") },
 ];
 
 export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { onPosted: (post: FeedPost) => void; suggestedTags?: string[] }) {

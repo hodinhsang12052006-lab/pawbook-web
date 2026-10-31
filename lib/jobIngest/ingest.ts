@@ -9,7 +9,7 @@ import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
 import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
-import { cleanCity, cleanSalonName, findPhone, isAdPost, isJobSeeking, isSalonSale, parseJobPost, safeToolSalary, type ParsedJob } from "@/lib/jobIngest/parse";
+import { cleanCity, cleanSalonName, findPhone, isAdPost, isJobSeeking, isSalonSale, parseJobPost, safeToolSalary, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
 
 export const INGEST_SOURCE = "ingest";
 export const INGEST_OWNER_EMAIL = "tonghop@feed.pawnail.invalid";
@@ -124,7 +124,8 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>): Promi
     // Tiêu đề PawNail tự tạo (đồng nhất, gọn) — tiêu đề tool gửi kèm thường lẫn chữ thừa.
     title: `Cần thợ ${skills.length ? skills.slice(0, 2).join("/") : "Nail"}${p.isUrgent ? " gấp" : ""}`,
     salonName: cleanSalonName(salonName, city, state),
-    description: text || [salonName, input.address, salary].filter(Boolean).join(" · "),
+    // Nội dung gốc, đã gỡ yêu cầu giới tính / tuổi (luật chống phân biệt đối xử khi tuyển dụng ở Mỹ và Úc).
+    description: stripDiscriminatoryRequirements(text) || [salonName, input.address, salary].filter(Boolean).join(" · "),
     market, state, city,
     salaryType: p.salaryType,
     salaryAmount: salary || p.salaryAmount,

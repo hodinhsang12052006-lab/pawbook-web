@@ -33,7 +33,7 @@ export default function SalonsPage() {
         <header className="space-y-2">
           <p className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 px-3 py-1 text-xs font-bold text-pink-300 ring-1 ring-pink-500/25"><Store className="h-3.5 w-3.5" />{tr("Dành cho khách làm nail", "For nail clients")}</p>
           <h1 className="text-2xl font-black tracking-tight text-white [text-wrap:balance]">{tr("Tiệm & thợ nail quanh bạn", "Nail salons & techs near you")}</h1>
-          <p className="text-sm text-slate-400 [text-wrap:pretty]">{tr("Xem ảnh tác phẩm thật, bảng giá và đánh giá của khách trước khi đặt lịch — nhắn hỏi mẫu trực tiếp, miễn phí.", "See real work, prices and client reviews before you book — message salons directly, free.")}</p>
+          <p className="text-sm text-slate-400 [text-wrap:pretty]">{tr("Xem tác phẩm thật, menu và giá, rồi gửi yêu cầu đặt lịch — hoặc nhắn tin hỏi mẫu trực tiếp cho tiệm.", "Browse real work, menus and prices, then request a booking — or message the salon about a look.")}</p>
           {look && <p className="rounded-2xl bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-200 ring-1 ring-white/10">{tr("Mẫu bạn muốn: ", "Look you want: ")}<b className="text-pink-200">{look}</b>{tr(" — gửi ảnh mẫu khi nhắn tiệm để báo giá chính xác.", " — send the photo when you message for an exact quote.")}</p>}
         </header>
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">

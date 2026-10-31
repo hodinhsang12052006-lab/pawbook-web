@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2, Smartphone } from "lucide-react";

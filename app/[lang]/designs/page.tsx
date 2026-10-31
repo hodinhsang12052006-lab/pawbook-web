@@ -78,9 +78,8 @@ export default function DesignsPage() {
           </div>
         ) : list.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 py-14 text-center">
-            <p className="text-3xl">💅</p>
-            <p className="mt-2 text-sm font-bold text-slate-300">{all.length ? tr("Không có mẫu khớp bộ lọc", "No designs match these filters") : tr("Mẫu mới đang được chuẩn bị", "New designs are on the way")}</p>
-            <p className="mt-1 text-xs text-slate-500">{tr("Mỗi sáng PawNail ra thêm mẫu mới — quay lại sau nhé.", "PawNail adds new designs every morning — check back soon.")}</p>
+            <p className="text-sm font-bold text-slate-300">{all.length ? tr("Không có mẫu khớp bộ lọc.", "No designs match these filters.") : tr("Mẫu mới đang được chuẩn bị.", "New designs are on the way.")}</p>
+            <p className="mt-1 text-xs text-slate-500">{all.length ? tr("Thử bỏ bớt bộ lọc.", "Try removing a filter.") : tr("Hãy quay lại vào ngày mai.", "Check back tomorrow.")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

@@ -5,10 +5,10 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 // không khai báo metadata được ở đó).
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/auth/login", {
-    title: ["Đăng nhập", "Sign in"],
+    title: ["Đăng nhập", "Log in"],
     description: [
-      "Đăng nhập PawNail — thử mẫu nail, tìm tiệm và việc làm nail tại Mỹ và Úc.",
-      "Sign in to PawNail — nail try-on, salons and nail tech jobs in the US & Australia.",
+      "Đăng nhập để nhắn tin với tiệm, thợ và quản lý lịch hẹn, tin tuyển.",
+      "Log in to message salons and techs and manage bookings and jobs.",
     ],
   });
 }

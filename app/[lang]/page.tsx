@@ -474,7 +474,7 @@ export default function HomePage() {
                     key={t.id}
                     role="tab"
                     aria-selected={tab === t.id}
-                    onClick={() => changeTab(t.id)}
+                    onClick={() => changeTab(t.id as HomeTab)}
                     className={`relative z-10 flex items-center justify-center gap-1.5 rounded-lg py-3 text-xs font-bold transition-colors duration-200 active:scale-95 sm:text-sm ${
                       tab === t.id ? "text-white" : "text-slate-400 hover:text-slate-200"
                     }`}

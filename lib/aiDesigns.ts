@@ -166,7 +166,9 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
   ]);
   const tags = (signals?.risingTags ?? []).slice(0, 6).map((t) => "#" + t.tag);
   const prompt = [
-    `Bạn là giám đốc sáng tạo của một tiệm nail cao cấp người Việt tại ${market === "US" ? "Mỹ" : "Úc"}.`,
+    market === "US"
+      ? "You are the creative director of a premium nail studio in Los Angeles and New York, designing for American clients."
+      : "You are the creative director of a premium nail studio in Sydney and Melbourne, designing for Australian clients.",
     `Hôm nay là ${now.toISOString().slice(0, 10)}. Hãy đề xuất ĐÚNG ${n} mẫu nail mới, đang hợp xu hướng, khách sẽ muốn làm NGAY tuần này.`,
     themes.length
       ? `Dịp lễ/mùa đang hoặc sắp diễn ra (ưu tiên, ghi id vào trường occasion): ${themes.map((t) => `${t.id} = ${t.title}${t.startsIn ? ` (bắt đầu sau ~${t.startsIn} ngày)` : " (đang diễn ra)"}; gợi ý: ${t.ideas.join(", ")}`).join(" | ")}.`
@@ -174,7 +176,7 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
     tags.length ? `Hashtag đang lên trên app: ${tags.join(" ")}.` : "",
     recent.length ? `KHÔNG lặp lại các mẫu đã ra gần đây: ${recent.map((r) => r.title).join("; ")}.` : "",
     "Đa dạng: ít nhất 1 mẫu dễ (thợ mới làm được, ≤45 phút), 1 mẫu nghệ thuật khó; trộn kỹ năng Gel-X, Dip, Acrylic, vẽ tay.",
-    "Mỗi mẫu: title & description có cả tiếng Việt (vi, giọng thợ nail Việt, tự nhiên) và tiếng Anh (en). description 1–2 câu: vì sao đang hot, hợp khách nào.",
+    "Mỗi mẫu: title & description có tiếng Anh (en) — viết trước, tự nhiên như tạp chí làm đẹp Mỹ/Úc, sentence case, không emoji, không \"best\"/\"#1\" — và tiếng Việt (vi) tự nhiên, dùng đúng từ nghề (bột, dip, Gel-X, chrome…). description 1–2 câu: vì sao mẫu đang được ưa chuộng, hợp khách nào.",
     "skills: chọn từ danh sách cho sẵn. difficulty: 1 dễ, 2 vừa, 3 khó. minutes: thời gian làm thực tế. priceHint: khoảng giá tiệm nên báo khách, đơn vị USD (Mỹ) hoặc AUD (Úc), VD \"$45–60\".",
     "materials: 4–8 vật tư CỤ THỂ cần chuẩn bị (màu gel/bột tên gọi phổ biến, top/base, charm, cọ, foil…), mỗi món có qty (VD \"1 lọ\", \"1 bộ\").",
     "steps: 4–6 bước làm ngắn gọn, đúng kỹ thuật.",

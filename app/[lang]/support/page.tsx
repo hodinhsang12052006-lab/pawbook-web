@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   });
 }
 
-const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawos.com";
+const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
 
 const link = "text-pink-300 underline";
 
@@ -22,7 +22,7 @@ const link = "text-pink-300 underline";
 // phụ thuộc nút đổi ngôn ngữ. Chỉ ghi những gì app thật sự có.
 const VI = (
   <section className="space-y-3" lang="vi">
-    <h1 className="text-2xl font-black text-white">Hỗ trợ PawNail Jobs</h1>
+    <h1 className="text-2xl font-black text-white">Hỗ trợ PawNail</h1>
     <p>
       Cần giúp đỡ, muốn báo lỗi hay góp ý? Gửi email tới{" "}
       <a href={`mailto:${SUPPORT}?subject=Ho%20tro%20PawNail`} className={link}>{SUPPORT}</a>. Ghi kèm email hoặc số điện thoại bạn dùng để đăng nhập, mô tả
@@ -52,7 +52,7 @@ const VI = (
 
 const EN = (
   <section className="space-y-3" lang="en">
-    <h1 className="text-2xl font-black text-white">PawNail Jobs Support</h1>
+    <h1 className="text-2xl font-black text-white">PawNail support</h1>
     <p>
       Need help, found a bug or have feedback? Email{" "}
       <a href={`mailto:${SUPPORT}?subject=PawNail%20support`} className={link}>{SUPPORT}</a>. Include the email or phone number you sign in with, what

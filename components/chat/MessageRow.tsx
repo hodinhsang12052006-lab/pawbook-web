@@ -257,11 +257,10 @@ function MessageRowImpl({
               <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-2 min-w-[260px] text-emerald-300 font-sans shadow-lg text-left">
                 <p className="font-extrabold text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                   <span className="text-emerald-500">⏱️</span>
-                  {tr(" GPS Chấm Công Thành Công", " GPS check-in successful")}
+                  {tr(" Chấm công qua GPS", " GPS check-in")}
                 </p>
                 <div className="text-3xs space-y-1 mt-1 text-emerald-300/90 leading-relaxed font-semibold">
-                  <p>{tr("✅ Đã chấm công thành công lúc 08:00 AM.", "✅ Checked in at 08:00 AM.")}</p>
-                  <p>{tr("📍 Vị trí: Trùng khớp với tọa độ Radar.", "📍 Location: matches Radar coordinates.")}</p>
+                  <p>{tr("Đã chấm công.", "Checked in.")}</p>
                 </div>
               </div>
             ) : (

@@ -11,6 +11,7 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { dt } from "@/lib/i18n/dataEn";
 import { THEMES } from "@/lib/studioThemes";
 import { tr } from "@/lib/i18n/tr";
+import { apiError } from "@/lib/i18n/apiError";
 import { useTr } from "@/lib/i18n/useTr";
 import { playSound } from "@/lib/sounds";
 import NailArt from "@/components/designs/NailArt";
@@ -179,7 +180,7 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
       const res = await fetch("/api/menu/from-design", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ designId: d.id }) });
       const r = await res.json().catch(() => ({}));
       if (res.status === 409) return toast(tr("Mẫu này đã có trong menu của bạn.", "Already in your menu."));
-      if (!res.ok) throw new Error(r.error);
+      if (!res.ok) throw new Error(apiError(r, "Không thêm được, thử lại.", "Couldn't add, try again."));
       toast.success(tr("Đã thêm vào menu — vào hồ sơ để chỉnh giá, ảnh thật.", "Added to your menu — open your profile to set price & real photos."));
     } catch (e) {
       toast.error((e as Error).message || tr("Không thêm được, thử lại.", "Couldn't add, try again."));
@@ -340,7 +341,7 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
           </Link>
         )}
       </div>
-      {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
+      {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh thật kèm ", "Done? Post a real photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
     </div>
   );
 }

@@ -78,7 +78,7 @@ export const SAMPLE_DESIGNS: SampleDesign[] = [
   {
     occasion: "tet",
     title: { vi: "Đỏ son hoa mai vẽ tay", en: "Lacquer red with apricot blossoms" },
-    description: { vi: "Đỏ son may mắn, hoa mai vàng vẽ tay trên ngón áp út — khách Việt rất chuộng dịp Tết.", en: "Lucky lacquer red with hand-painted yellow apricot blossoms — a Lunar New Year favorite." },
+    description: { vi: "Đỏ son may mắn, hoa mai vàng vẽ tay trên ngón áp út — mẫu được yêu thích dịp Tết.", en: "Lucky lacquer red with hand-painted yellow apricot blossoms — a Lunar New Year favorite." },
     skills: ["Design"], difficulty: 3, minutes: 80, priceHint: "$60–80",
     palette: ["#b91c1c", "#facc15", "#78350f"], shape: "almond", finish: "glossy",
     materials: [BASE_TOP, { vi: "Gel đỏ son", en: "Lacquer red gel", qty: "1 lọ" }, { vi: "Gel vẽ vàng", en: "Yellow art gel", qty: "1 lọ" }, { vi: "Gel vẽ nâu (cành)", en: "Brown art gel (branches)", qty: "1 lọ" }, { vi: "Cọ vẽ bản 4mm", en: "4mm flat art brush", qty: "1 cây" }],

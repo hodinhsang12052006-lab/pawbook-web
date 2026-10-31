@@ -1,8 +1,8 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 // Các khối dùng trên trang hồ sơ công khai (app/profile/[uid]/page.tsx) — tách
 // ra cho trang chính gọn, dễ đọc và dễ sửa.
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -398,7 +398,7 @@ export function GallerySection({ ownerId }: { ownerId: string }) {
   }
   const media = posts.flatMap((p) => p.mediaUrls);
   if (media.length === 0) {
-    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint='Ảnh/video đăng mục "Khoe tiệm" trên bảng tin sẽ hiện ở đây.' />;
+    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint={tr('Ảnh và video bạn đăng mục "Khoe tiệm" trên bảng tin sẽ hiện tại đây.', 'Photos and videos you post as "Salon showcase" in the feed appear here.')} />;
   }
   return <MediaGrid urls={media} />;
 }

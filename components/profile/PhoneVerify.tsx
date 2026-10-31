@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useRef, useState } from "react";
 import { BadgeCheck, Loader2, ShieldCheck, X } from "lucide-react";
 import toast from "react-hot-toast";

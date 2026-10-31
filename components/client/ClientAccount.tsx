@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import Avatar from "@/components/ui/Avatar";
 import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
+import { apiError } from "@/lib/i18n/apiError";
 import { useTr } from "@/lib/i18n/useTr";
 
 interface P { id: string; name: string; avatarUrl: string | null; market: "US" | "AU"; state: string | null; city: string | null; phone: string | null }
@@ -30,7 +31,7 @@ export default function ClientAccount({ profile }: { profile: P }) {
     try {
       const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), state, city: city.trim(), phone: phone.trim() }) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error);
+      if (!res.ok) throw new Error(apiError(d, "Không lưu được.", "Couldn't save."));
       toast.success(tr("Đã lưu.", "Saved."));
       window.dispatchEvent(new Event("profile-updated"));
     } catch (e) {

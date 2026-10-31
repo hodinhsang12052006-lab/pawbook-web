@@ -12,7 +12,7 @@ import { useTr } from "@/lib/i18n/useTr";
 const S = "space-y-2";
 const H2 = "text-lg font-bold text-white";
 const B = "text-slate-100";
-const MAIL = <a href="mailto:support@bitpawos.com" className="text-pink-400 underline underline-offset-2">support@bitpawos.com</a>;
+const MAIL = <a href="mailto:support@bitpawsoftware.com" className="text-pink-400 underline underline-offset-2">support@bitpawsoftware.com</a>;
 
 function PrivacyVi() {
   return (

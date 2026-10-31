@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { ClipboardPaste, Loader2, Store } from "lucide-react";
 
-interface Preview { isHiring: boolean; phoneDisplay: string | null; salonName: string | null; address: string | null; city: string | null; state: string | null; zip: string | null; salaryAmount: string; salaryType: string; skills: string[]; benefits: string[]; isUrgent: boolean; title: string; market: string | null }
+interface Preview { isHiring: boolean; discriminatory?: boolean; phoneDisplay: string | null; salonName: string | null; address: string | null; city: string | null; state: string | null; zip: string | null; salaryAmount: string; salaryType: string; skills: string[]; benefits: string[]; isUrgent: boolean; title: string; market: string | null }
 interface Req { id: string; kind: string; name: string; contact: string; note: string | null; userId: string | null; createdAt: string; job: { id: string; salonName: string; city: string; state: string; phone: string } }
 
 // Admin → Studio: "Đăng hộ tiệm" (dán bài → xem trước → đăng) + yêu cầu Nhận tin / Gỡ tin.
@@ -57,6 +57,7 @@ export default function PostForSalons() {
       {pv && (
         <div className="space-y-1 rounded-xl bg-slate-950/60 p-3 ring-1 ring-white/10" data-testid="ingest-preview">
           {!pv.isHiring && <p className="pb-1 text-xs font-bold text-amber-300">⚠ Có vẻ không phải bài tuyển thợ</p>}
+          {pv.discriminatory && <p className="pb-1 text-xs font-bold text-red-300">⚠ Có yêu cầu giới tính/tuổi — sửa trước khi đăng (khi đăng, PawNail tự gỡ cụm này khỏi nội dung).</p>}
           {field("Tiêu đề", pv.title)}
           {field("SĐT", pv.phoneDisplay)}
           {field("Tên tiệm", pv.salonName)}

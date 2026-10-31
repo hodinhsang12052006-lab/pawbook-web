@@ -5,7 +5,11 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 // khai báo metadata được).
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/supply", {
-    title: ["Vật tư cho tiệm", "Salon supplies"],
+    title: ["Chợ vật tư nail", "Nail supply exchange"],
+    description: [
+      "Tiệm đăng bán vật tư dư; người mua nhắn tin trực tiếp cho người bán.",
+      "Salons list surplus nail supplies; buyers message the seller directly.",
+    ],
   });
 }
 

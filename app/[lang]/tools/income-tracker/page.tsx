@@ -275,7 +275,7 @@ export default function IncomeTrackerPage() {
         <div className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold text-slate-300">{tr("Bạn ăn chia bao nhiêu % dịch vụ?", "What % of service do you keep?")}</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">{tr("Tip mặc định tính 100% về bạn.", "Tips count 100% to you by default.")}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{tr("Tip mặc định tính đủ về bạn.", "Tips count in full to you by default.")}</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <input
@@ -367,9 +367,9 @@ export default function IncomeTrackerPage() {
           }
           className="w-full text-left rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 p-4 text-xs text-slate-400 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all cursor-pointer"
         >
-          {tr("💡 Tiệm bạn chưa chia turn tự động?", "💡 Salon not splitting turns automatically yet?")}{" "}
-          <span className="text-purple-300 font-bold">{tr("Giới thiệu chủ tiệm dùng thử Bảng Chia Turn PawNail POS", "Refer your owner to try the PawNail POS turn board")}</span>{" "}
-          {tr("để không bao giờ sợ tính lộn tip!", "so tips are never miscounted!")}
+          {tr("Tiệm bạn chưa chia turn tự động?", "Salon not splitting turns automatically yet?")}{" "}
+          <span className="text-purple-300 font-bold">{tr("Giới thiệu chủ tiệm bảng chia turn PawNail (sắp ra mắt)", "Tell your owner about the PawNail turn board (coming soon)")}</span>{" "}
+          {tr("để tip được ghi rõ ràng.", "so tips are recorded clearly.")}
         </button>
       </main>
 

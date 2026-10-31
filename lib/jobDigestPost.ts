@@ -1,4 +1,4 @@
-// "📍 Texas: 5 tiệm đang cần thợ tuần này" — mỗi ngày 1 bài từ tài khoản chính thức, lấy từ tin
+// "📍 Texas: 5 tiệm đang tuyển thợ tuần này" — mỗi ngày 1 bài từ tài khoản chính thức, lấy từ tin
 // tuyển THẬT đang mở (kể cả tin tool đăng hộ tiệm). Xoay vòng các bang có ≥ 2 tin mới trong 7 ngày,
 // bang đã điểm tin trong 5 ngày gần nhất để sau. Chỉ dùng thông tin vốn công khai trên bảng việc
 // (tên tiệm, thành phố, kỹ năng, lương) — không đưa số điện thoại vào bài.
@@ -9,6 +9,9 @@ import { getSetting, setSetting } from "@/lib/settings";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { stateName } from "@/lib/stateNames";
 import { SITE_URL } from "@/lib/siteUrl";
+import { savePostEn } from "@/lib/postEn";
+import { dtEn } from "@/lib/i18n/dtEn";
+import { valueEn } from "@/lib/i18n/valueLabel";
 
 export const DIGEST_PREFIX = "📍 ";
 const KEY = "job_digest_last";
@@ -47,24 +50,38 @@ export async function publishJobDigest(now = new Date()): Promise<{ posted: bool
   const name = stateName(market, state);
   const urgent = list.filter((j) => j.isUrgent).length;
 
-  const lines = list.slice(0, 5).map((j) => {
-    const skills = (j.skills || "").split(",").filter(Boolean).slice(0, 2).join(", ");
-    return `• ${j.salonName}${j.city ? ` — ${j.city}` : ""}${skills ? `: cần ${skills}` : ""} · ${j.salaryAmount}${j.isUrgent ? " · 🔥 gấp" : ""}`;
-  });
+  const top = list.slice(0, 5).map((j) => ({ ...j, skillList: (j.skills || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 2) }));
+  const lines = top.map((j) => `• ${j.salonName}${j.city ? ` — ${j.city}` : ""}${j.skillList.length ? `: cần ${j.skillList.join(", ")}` : ""} · ${j.salaryAmount}${j.isUrgent ? " · cần gấp" : ""}`);
+  const linesEn = top.map((j) => `• ${j.salonName}${j.city ? ` — ${j.city}` : ""}${j.skillList.length ? `: ${j.skillList.map(valueEn).join(", ")}` : ""} · ${dtEn(j.salaryAmount ?? "")}${j.isUrgent ? " · urgent" : ""}`);
+  const tag = name.replace(/\s+/g, "");
   const content = [
-    `${DIGEST_PREFIX}${name}: ${list.length} tiệm đang cần thợ tuần này${urgent ? ` (${urgent} tin gấp)` : ""}`,
+    `${DIGEST_PREFIX}${name}: ${list.length} tiệm đang tuyển thợ tuần này${urgent ? ` (${urgent} tin cần gấp)` : ""}`,
     "",
     ...lines,
     ...(list.length > 5 ? [`• …và ${list.length - 5} tiệm khác`] : []),
     "",
-    `👉 Gọi thẳng cho tiệm, không qua trung gian: ${SITE_URL}/?tab=jobs`,
-    "🔔 Bật thông báo việc gấp để không lỡ tiệm gần bạn.",
+    `Gọi hoặc nhắn tin trực tiếp cho tiệm: ${SITE_URL}/?tab=jobs`,
+    "Bật báo việc để nhận tin tuyển mới gần bạn.",
     "",
-    `#ViecLamNail #ThoNail #${name.replace(/\s+/g, "")}`,
+    `#ViecLamNail #ThoNail #${tag}`,
   ].join("\n");
+  // Bản tiếng Anh (người xem tiếng Anh thấy bản này) — tên tiệm, thành phố, lương giữ nguyên như tin gốc.
+  const contentEn = [
+    `${DIGEST_PREFIX}${name}: ${list.length} ${list.length === 1 ? "salon" : "salons"} hiring this week${urgent ? ` (${urgent} urgent)` : ""}`,
+    "",
+    ...linesEn,
+    ...(list.length > 5 ? [`• …and ${list.length - 5} more`] : []),
+    "",
+    `Call or message the salon directly: ${SITE_URL}/?tab=jobs`,
+    "Turn on job alerts to hear about new jobs near you.",
+    "",
+    `#NailJobs #NailTech #${tag}`,
+  ].join("\n");
+  const id = "c" + crypto.randomBytes(12).toString("hex");
   await prisma.post.create({
-    data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content, postType: "GENERAL", mediaUrls: "[]", market, state, createdAt: now },
+    data: { id, authorId: officialId, content, postType: "GENERAL", mediaUrls: "[]", market, state, createdAt: now },
   });
+  await savePostEn(id, contentEn);
   last[key] = now.getTime();
   await setSetting(KEY, JSON.stringify(last));
   return { posted: true, state: key };

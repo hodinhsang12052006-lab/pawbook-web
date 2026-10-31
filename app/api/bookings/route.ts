@@ -51,11 +51,13 @@ export async function POST(req: Request) {
     select: { id: true },
   });
   const when = [dateLabel(v.preferredDate, "vi"), v.preferredTime ? TIME_LABEL[v.preferredTime as BookingTime][0].toLowerCase() : ""].filter(Boolean).join(" ");
+  const whenEn = [dateLabel(v.preferredDate, "en"), v.preferredTime ? TIME_LABEL[v.preferredTime as BookingTime][1].toLowerCase() : ""].filter(Boolean).join(" ");
   await sendPush(tech.id, {
-    title: "📅 Khách đặt lịch mới",
-    body: `${v.clientName}${itemName ? ` · ${itemName}` : ""}${when ? ` · ${when}` : ""} — bấm để gọi / nhắn xác nhận`,
+    title: "Yêu cầu đặt lịch mới",
+    body: `${v.clientName}${itemName ? ` · ${itemName}` : ""}${when ? ` · ${when}` : ""} — bấm để gọi hoặc nhắn tin xác nhận`,
     url: "/bookings",
     tag: "pn-booking",
+    en: { title: "New booking request", body: `${v.clientName}${itemName ? ` · ${itemName}` : ""}${whenEn ? ` · ${whenEn}` : ""} — tap to call or message to confirm` },
   }).catch(() => 0);
   return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
 }

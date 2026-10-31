@@ -40,3 +40,6 @@ export function valueLabel(v: string): string {
   const en = EN[v];
   return en ? tr(v, en) : v;
 }
+
+/** Nhãn tiếng Anh, không phụ thuộc ngôn ngữ đang chọn (máy chủ soạn bản EN của bài chính thức). */
+export const valueEn = (v: string): string => EN[v] ?? v;

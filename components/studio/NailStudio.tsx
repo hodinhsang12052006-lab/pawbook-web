@@ -298,8 +298,8 @@ export default function NailStudio({ photos = [], market = "US", onSend, sendLab
                 ? tr("Đang tìm móng trên ảnh…", "Finding the nails…")
                 : manual
                   ? pending
-                    ? tr("Giờ chạm vào ĐẦU móng đó (mép móng phía ngoài).", "Now tap the TIP of that nail (free edge).")
-                    : tr("Chạm GỐC móng (sát da) rồi chạm ĐẦU móng.", "Tap the nail BASE (at the cuticle), then its TIP.")
+                    ? tr("Giờ chạm vào đầu móng đó (mép móng phía ngoài).", "Now tap the tip of that nail (the free edge).")
+                    : tr("Chạm gốc móng (sát da) rồi chạm đầu móng.", "Tap the base of the nail (at the cuticle), then its tip.")
                   : nails.length
                     ? tr(`Đã nhận ${nails.length} móng. Móng nào còn thiếu: chạm 1 lần vào giữa móng · nhận nhầm: chạm vào viền để bỏ.`, `${nails.length} nails found. Missing one? Tap its centre once · wrong one? Tap its outline to remove.`)
                     : tr("Chưa tự nhận được móng — chạm 1 lần vào giữa từng móng.", "Couldn't find nails automatically — tap the centre of each nail.")}

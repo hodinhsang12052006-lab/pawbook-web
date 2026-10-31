@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, BookOpen, CalendarCheck, Clock, Eye, EyeOff, Images, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
+import { apiError } from "@/lib/i18n/apiError";
 import { useTr } from "@/lib/i18n/useTr";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { cdnImage } from "@/lib/cdnImage";
@@ -45,7 +46,7 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
     try {
       const res = await fetch(`/api/menu?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
+      if (!res.ok) throw new Error(apiError(d, "Không tải được menu.", "Couldn't load the menu."));
       setItems(d.items);
       setOwner(d.owner);
       setIsOwner(Boolean(d.isOwner));

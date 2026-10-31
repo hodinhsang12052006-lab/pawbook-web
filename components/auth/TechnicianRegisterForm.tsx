@@ -130,7 +130,7 @@ export default function TechnicianRegisterForm() {
             toast.error(apiError(data, `Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
           }
         } catch (err) {
-          toast.error(err instanceof FileTooLargeError ? err.message : `Lỗi mạng khi tải "${rawFile.name}" lên.`);
+          toast.error(err instanceof FileTooLargeError ? err.message : tr(`Lỗi mạng khi tải "${rawFile.name}" lên.`, `Network error uploading "${rawFile.name}".`));
         }
       }
     } finally {

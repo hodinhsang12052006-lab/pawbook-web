@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2, Loader2, X } from "lucide-react";
 import { tr, currentLocale } from "@/lib/i18n/tr";
@@ -9,7 +9,8 @@ import { TIMES, TIME_LABEL, dateLabel, type BookingTime } from "@/lib/booking";
 
 // Khách đặt lịch KHÔNG cần tài khoản: tên + SĐT + ngày / buổi → gửi cho đúng thợ / tiệm này.
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const DRAFT = "pn_booking_contact"; // nhớ tên + SĐT trên máy khách cho lần sau (chỉ trên máy này)
+// nhớ tên + SĐT trên máy khách cho lần sau (chỉ trên máy này)
+const DRAFT = "pn_booking_contact";
 
 export default function BookingForm({ techId, techName, item, onClose }: {
   techId: string;

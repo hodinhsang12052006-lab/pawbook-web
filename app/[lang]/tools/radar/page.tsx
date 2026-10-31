@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Radar, Loader2, DollarSign, Users, Package, Lightbulb, ClipboardList, AlertCircle, Info, TrendingUp } from "lucide-react";
@@ -9,6 +9,7 @@ import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt } from "@/lib/i18n/dataEn";
+import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 
 type MarketKey = "US" | "AU";
 type SkillKey = "BOT" | "DIP" | "TAY_NUOC";
@@ -20,7 +21,7 @@ const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 const SKILL_OPTIONS = (): { key: SkillKey; label: string; emoji: string }[] => [
   { key: "BOT", label: tr("Thợ Bột/Acrylic", "Acrylic tech"), emoji: "💅" },
   { key: "DIP", label: tr("Thợ Dip/SNS", "Dip/SNS tech"), emoji: "✨" },
-  { key: "TAY_NUOC", label: tr("Thợ Chân Tay Nước", "Mani-pedi tech"), emoji: "🦶" },
+  { key: "TAY_NUOC", label: tr("Thợ chân tay nước", "Mani-pedi tech"), emoji: "🦶" },
 ];
 
 interface DemandSignal {
@@ -43,7 +44,7 @@ interface RadarResult {
 const TREND_SKILL_LABEL = (): Record<string, string> => ({
   BOT: tr("Bột/Acrylic", "Acrylic"),
   DIP: "Dip/SNS",
-  TAY_NUOC: tr("Chân Tay Nước", "Mani-pedi"),
+  TAY_NUOC: tr("Chân tay nước", "Mani-pedi"),
   GEL_X: "Gel-X/Builder Gel",
 });
 
@@ -103,7 +104,7 @@ export default function NailRadarPage() {
             <h1 className="text-xl font-extrabold text-white">Nail Radar</h1>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            {tr("Chỉ số bao lương & chia turn tham khảo theo tiểu bang — đối chiếu trước khi quyết định bay đến tiệm mới.", "Reference guaranteed pay & commission splits by state — compare before flying to a new salon.")}
+            {tr("Mức bao lương và chia turn tham khảo theo bang — đối chiếu trước khi nhận việc hoặc chuyển bang.", "Reference weekly pay and commission splits by state — compare before you accept a job or relocate.")}
           </p>
         </div>
 
@@ -185,7 +186,7 @@ export default function NailRadarPage() {
             {/* Demand signal — số tin tuyển thợ thật ghi nhận từ cộng đồng */}
             <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-2.5">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />{tr(" Cầu thợ thực tế từ cộng đồng", " Real demand from the community")}
+                <TrendingUp className="h-4 w-4 text-emerald-400" />{tr(" Nhu cầu tuyển thợ (khảo sát 9/2026)", " Hiring demand (September 2026 snapshot)")}
               </p>
               {result.demandSignal ? (
                 <>
@@ -193,7 +194,7 @@ export default function NailRadarPage() {
                     {result.demandSignal.demandCount}{tr(" tin tuyển thợ", " hiring posts")}
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    {tr("ghi nhận tại ", "recorded in ")}{stateName(market, state)}{tr(" qua các nhóm cộng đồng ngành nail", " across nail community groups")}
+                    {tr("tại ", "in ")}{stateName(market, state)}{tr(" trong các nhóm ngành nail công khai", " in public nail-industry groups")}
                     {result.demandSignal.wageMentions > 0 && (
                       <> · {result.demandSignal.wageMentions}{tr(" tin có nhắc mức lương cụ thể", " posts mention specific pay")}</>
                     )}
@@ -209,8 +210,14 @@ export default function NailRadarPage() {
                   )}
                 </>
               ) : (
-                <p className="text-xs text-slate-500">{tr("Chưa đủ dữ liệu cộng đồng cho bang này trong đợt quét gần nhất.", "Not enough community data for this state in the latest scan.")}</p>
+                <p className="text-xs text-slate-500">{tr("Chưa đủ dữ liệu cho bang này trong đợt khảo sát.", "Not enough data for this state in the snapshot.")}</p>
               )}
+              <p className="border-t border-white/5 pt-2 text-[10px] leading-relaxed text-slate-500">
+                {tr(
+                  `Nguồn: PawNail phân tích ${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("vi-VN")} tin tuyển thợ nail công khai tại Mỹ & Úc, tháng 9/2026. Số liệu tại một thời điểm, không phải dữ liệu trực tiếp.`,
+                  `Source: PawNail analysis of ${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")} public hiring posts for nail techs, US & Australia, September 2026. A one-time snapshot, not live data.`
+                )}
+              </p>
             </div>
 
             {/* Turn split */}
@@ -230,7 +237,7 @@ export default function NailRadarPage() {
             {/* Supply policy */}
             <div className="glass-card rounded-2xl p-4 space-y-2">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <Package className="h-4 w-4 text-indigo-400" /> Ai bao supply?
+                <Package className="h-4 w-4 text-indigo-400" />{tr(" Ai trả tiền vật tư?", " Who pays for supplies?")}
               </p>
               <p className="text-xs text-slate-400 leading-relaxed">{dt(result.supplyPolicy)}</p>
             </div>
@@ -238,7 +245,7 @@ export default function NailRadarPage() {
             {/* Negotiation tips */}
             <div className="glass-card rounded-2xl p-4 space-y-2.5">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <Lightbulb className="h-4 w-4 text-amber-400" />{tr(" Mẹo thỏa thuận trước khi bay", " Negotiation tips before you fly")}
+                <Lightbulb className="h-4 w-4 text-amber-400" />{tr(" Những điều cần thỏa thuận trước khi chuyển bang", " Questions to agree on before you relocate")}
               </p>
               <ul className="space-y-1.5">
                 {result.negotiationTips.map((tip, i) => (
@@ -267,7 +274,7 @@ export default function NailRadarPage() {
             <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-slate-900/40 border border-slate-850">
               <Info className="h-4 w-4 text-slate-500 flex-shrink-0 mt-0.5" />
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                {tr("Đây là mức tham khảo tổng hợp theo kinh nghiệm phổ biến của cộng đồng ngành nail, KHÔNG phải số liệu thống kê chính thức hay cam kết từ PawNail Jobs. Mức thực tế luôn phụ thuộc vào từng tiệm cụ thể — hãy dùng con số này làm mốc đối chiếu, không phải căn cứ duy nhất khi quyết định.", "These are reference figures based on common experience in the nail community — NOT official statistics or a promise from PawNail Jobs. Actual pay always depends on the salon — use this as a benchmark, not the only basis for your decision.")}
+                {tr("Đây là mức tham khảo tổng hợp theo kinh nghiệm phổ biến trong ngành nail, không phải số liệu thống kê chính thức hay cam kết từ PawNail. Mức thực tế luôn phụ thuộc vào từng tiệm — hãy dùng con số này làm mốc đối chiếu, không phải căn cứ duy nhất khi quyết định.", "These are reference figures based on common experience in the nail industry — not official statistics or a promise from PawNail. Actual pay always depends on the salon, so use this as a benchmark, not the only basis for your decision.")}
               </p>
             </div>
           </div>

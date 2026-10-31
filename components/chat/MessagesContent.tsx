@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import Link from "next/link";
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import {
@@ -1812,12 +1812,12 @@ export default function MessagesContent({
               <section className="grid grid-cols-2 gap-3">
                 {(currentUser?.role === "OWNER"
                   ? [
-                      { href: "/?tab=portfolio", title: tr("Tìm thợ đang rảnh", "Find available techs"), desc: tr("Xem portfolio & nhắn tin ngay", "See portfolios & message now"), icon: "💅" },
-                      { href: "/jobs/create", title: tr("Đăng tin tuyển thợ", "Post a job"), desc: tr("Thợ phù hợp sẽ chủ động nhắn", "Matching techs will reach out"), icon: "📢" },
+                      { href: "/?tab=portfolio", title: tr("Tìm thợ sẵn sàng", "Find available techs"), desc: tr("Xem tay nghề và nhắn tin", "See portfolios and message"), icon: "💅" },
+                      { href: "/jobs/create", title: tr("Đăng tin tuyển thợ", "Post a job"), desc: tr("Thợ có thể gọi hoặc nhắn tin trực tiếp cho bạn", "Techs can call or message you directly"), icon: "📢" },
                     ]
                   : [
-                      { href: "/?tab=jobs", title: tr("Tìm việc gấp", "Find work fast"), desc: tr("Nhắn tiệm đang tuyển quanh bạn", "Message salons hiring near you"), icon: "🔥" },
-                      { href: "/profile", title: tr("Cập nhật portfolio", "Update portfolio"), desc: tr("Ảnh đẹp được tiệm nhắn nhiều hơn", "Great photos get more salon messages"), icon: "📸" },
+                      { href: "/?tab=jobs", title: tr("Xem việc làm", "Explore jobs"), desc: tr("Nhắn tin cho tiệm đang tuyển quanh bạn", "Message salons hiring near you"), icon: "💼" },
+                      { href: "/profile", title: tr("Cập nhật ảnh tay nghề", "Update your portfolio"), desc: tr("Tiệm xem được tay nghề của bạn trước khi nhắn tin", "Salons see your work before they message you"), icon: "📸" },
                     ]
                 ).map((a) => (
                   <Link key={a.href} href={a.href} className="glass-card rounded-2xl p-4 transition hover:border-pink-500/40">

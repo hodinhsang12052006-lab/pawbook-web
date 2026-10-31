@@ -41,7 +41,7 @@ const EN: Record<string, string> = {
   "Đen + đá nhỏ": "Black + tiny gems",
   "Đăng ảnh mẫu đếm ngược mỗi ngày trên bảng tin — khách lưu ảnh mang tới tiệm.": "Post a countdown design every day on the feed — clients save the photo and bring it in.",
   "Tết Nguyên Đán": "Lunar New Year",
-  "Đỏ may mắn, vàng sang, hoa mai — hoa đào: khách Việt và khách Á Đông rất chuộng.": "Lucky red, rich gold, apricot and peach blossoms — loved by Vietnamese and East Asian clients.",
+  "Đỏ may mắn, vàng sang, hoa mai — hoa đào: mẫu được yêu thích dịp Tết Nguyên đán.": "Lucky red, rich gold, apricot and peach blossoms — a Lunar New Year favorite.",
   "Đỏ son + nhũ vàng": "Lacquer red + gold shimmer",
   "Hoa mai vẽ tay": "Hand-painted apricot blossoms",
   "Hoa đào hồng phấn": "Blush peach blossoms",
@@ -266,7 +266,7 @@ const EN: Record<string, string> = {
   "Tham gia PawNail trước 01/01/2027": "Joined PawNail before Jan 1, 2027",
   "Phản hồi nhanh": "Fast replies",
   "Hồ sơ đầy đủ": "Complete profile",
-  "Đã hoàn thiện 100% thông tin hồ sơ": "Profile 100% complete",
+  "Đã điền đầy đủ thông tin hồ sơ": "All profile details filled in",
   "Được yêu thích": "Community favorite",
 
   // ---- Nhãn vai trò, tin mồi khi đăng ký chủ tiệm ----

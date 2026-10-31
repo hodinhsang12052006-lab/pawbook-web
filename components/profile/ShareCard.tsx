@@ -111,10 +111,10 @@ export async function renderShareCard(d: ShareCardData, profileUrl: string): Pro
   ctx.fillStyle = "#f9a8d4";
   ctx.font = `900 34px ${FONT}`;
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("PawNail Jobs", 64, 92);
+  ctx.fillText("PawNail", 64, 92);
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = `600 26px ${FONT}`;
-  const tag = isOwner ? tr("TIỆM ĐANG TUYỂN THỢ", "SALON NOW HIRING") : tr("PORTFOLIO THỢ NAIL", "NAIL TECH PORTFOLIO");
+  const tag = isOwner ? tr("Đang tuyển thợ", "Now hiring") : tr("Hồ sơ tay nghề", "Nail tech portfolio");
   ctx.textAlign = "right";
   ctx.fillText(tag, W - 64, 92);
   ctx.textAlign = "left";
@@ -185,11 +185,11 @@ export async function renderShareCard(d: ShareCardData, profileUrl: string): Pro
   // Huy hiệu trạng thái cạnh avatar
   const badge = isOwner
     ? d.openJobs
-      ? tr(`🔥 ${d.openJobs} vị trí đang tuyển`, `🔥 ${d.openJobs} open ${d.openJobs === 1 ? "position" : "positions"}`)
-      : tr("🔥 Đang tuyển thợ", "🔥 Now hiring")
+      ? tr(`${d.openJobs} vị trí đang tuyển`, `${d.openJobs} open ${d.openJobs === 1 ? "position" : "positions"}`)
+      : tr("Đang tuyển thợ", "Now hiring")
     : d.urgent
-      ? tr("⚡ Sẵn sàng nhận việc ngay", "⚡ Available now")
-      : tr("✨ Đang mở nhận việc", "✨ Open to work");
+      ? tr("Sẵn sàng nhận việc", "Available now")
+      : tr("Đang mở nhận việc", "Open to work");
   ctx.font = `800 30px ${FONT}`;
   const bw = ctx.measureText(badge).width + 48;
   roundRect(ctx, ax + ar + 36, ay - 6, bw, 60, 30);
@@ -218,7 +218,7 @@ export async function renderShareCard(d: ShareCardData, profileUrl: string): Pro
   let x = 64;
   ctx.font = `700 28px ${FONT}`;
   // Số năm kinh nghiệm là chip đầu tiên (để dòng khu vực không bị cắt chữ).
-  const chips = [...(!isOwner && d.years ? [tr(`⭐ ${d.years} năm KN`, `⭐ ${d.years} yrs exp`)] : []), ...(d.skills || []).map(valueLabel)];
+  const chips = [...(!isOwner && d.years ? [tr(`${d.years} năm kinh nghiệm`, `${d.years} yrs experience`)] : []), ...(d.skills || []).map(valueLabel)];
   for (const label of chips.slice(0, 5)) {
     const w = ctx.measureText(label).width + 40;
     if (x + w > W - 64 - 280) break;
@@ -248,13 +248,13 @@ export async function renderShareCard(d: ShareCardData, profileUrl: string): Pro
   // Lời kêu gọi + link
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 36px ${FONT}`;
-  ctx.fillText(isOwner ? tr("Thợ giỏi ơi, nhắn tiệm mình nhé!", "Great techs — message us!") : tr("Tiệm cần thợ? Nhắn mình nhé!", "Salon hiring? Message me!"), 64, H - 160);
+  ctx.fillText(isOwner ? tr("Nhắn tin cho tiệm trên PawNail", "Message the salon on PawNail") : tr("Tiệm đang tuyển? Nhắn tin cho tôi", "Hiring? Message me on PawNail"), 64, H - 160);
   ctx.fillStyle = "rgba(249,168,212,0.95)";
   ctx.font = `700 28px ${FONT}`;
   ctx.fillText(fitText(ctx, profileUrl.replace(/^https?:\/\//, ""), W - 128 - qrSize - 40), 64, H - 112);
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.font = `600 22px ${FONT}`;
-  ctx.fillText(tr("Kết nối thợ & tiệm nail Việt tại Mỹ, Úc — miễn phí", "Connecting Vietnamese nail techs & salons in the US & AU — free"), 64, H - 72);
+  ctx.fillText(tr("PawNail · Nền tảng cho ngành nail · Mỹ & Úc", "PawNail · The platform for the nail industry · US & Australia"), 64, H - 72);
 
   return new Promise((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error("canvas"))), "image/png"));
 }

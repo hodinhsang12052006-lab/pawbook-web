@@ -27,7 +27,7 @@ function ready(): boolean {
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return (configured = false);
   try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:support@bitpawos.com", pub, priv);
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:support@bitpawsoftware.com", pub, priv);
     configured = true;
   } catch (err) {
     console.error("VAPID config error:", err);

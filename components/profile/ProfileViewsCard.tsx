@@ -76,8 +76,8 @@ export default function ProfileViewsCard({ compact = false, role }: { compact?: 
           ) : (
             <p className="mt-0.5 text-sm leading-snug text-slate-300">
               {isTech
-                ? tr("Chưa có ai xem tuần này. Hồ sơ có 3+ ảnh mẫu móng đẹp được tiệm xem nhiều hơn hẳn.", "No views this week yet. Profiles with 3+ great work photos get far more salon views.")
-                : tr("Chưa có ai xem tuần này. Thêm ảnh tiệm và chính sách chia turn để thợ chú ý hơn.", "No views this week yet. Add salon photos and your commission policy to get noticed.")}
+                ? tr("Chưa có ai xem tuần này. Thêm 3–5 ảnh tay nghề để tiệm thấy được việc bạn làm.", "No views this week yet. Add 3–5 photos of your work so salons can see what you do.")
+                : tr("Chưa có ai xem tuần này. Thêm ảnh tiệm và chính sách chia turn để thợ biết rõ nơi làm.", "No views this week yet. Add salon photos and your commission policy so techs know what to expect.")}
             </p>
           )}
         </div>

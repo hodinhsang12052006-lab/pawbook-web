@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Clock, Loader2, MapPin, Store, X } from "lucide-react";
@@ -50,7 +50,7 @@ export function SalonRequestLinks({ jobId }: { jobId: string }) {
       const r = await fetch(`/api/jobs/${jobId}/request`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, name, contact, note }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { toast.error(apiError(j, "Gửi chưa được, thử lại sau.", "Couldn't send, try again.")); return; }
-      toast.success(kind === "remove" ? tr("Đã gửi yêu cầu gỡ tin — PawNail xử lý trong 24 giờ.", "Removal request sent — handled within 24 hours.") : tr("Đã gửi — PawNail sẽ liên hệ để chuyển tin cho bạn quản lý.", "Sent — we'll contact you to hand the listing over."));
+      toast.success(kind === "remove" ? tr("Đã gửi yêu cầu gỡ tin — đội ngũ PawNail sẽ xử lý.", "Removal request sent — the PawNail team will take care of it.") : tr("Đã gửi — PawNail sẽ liên hệ để chuyển tin cho bạn quản lý.", "Sent — we'll contact you to hand the listing over."));
       setKind(null); setName(""); setContact(""); setNote("");
     } finally { setBusy(false); }
   };
@@ -66,7 +66,7 @@ export function SalonRequestLinks({ jobId }: { jobId: string }) {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-bold text-white">{kind === "claim" ? tr("Nhận lại tin này", "Claim this listing") : tr("Gỡ tin này", "Remove this listing")}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{kind === "claim" ? tr("PawNail xác minh rồi chuyển tin sang tài khoản của bạn — tự sửa, nhận tin nhắn của thợ.", "We verify you, then move the listing to your account so you can edit it and get messages.") : tr("PawNail gỡ tin trong 24 giờ và không đăng lại số này.", "We remove it within 24 hours and won't repost this number.")}</p>
+                <p className="mt-0.5 text-xs text-slate-400">{kind === "claim" ? tr("PawNail xác minh rồi chuyển tin sang tài khoản của bạn — tự sửa, nhận tin nhắn của thợ.", "We verify you, then move the listing to your account so you can edit it and get messages.") : tr("Đội ngũ PawNail sẽ gỡ tin và không đăng lại số này.", "The PawNail team will remove it and won't repost this number.")}</p>
               </div>
               <button type="button" onClick={() => setKind(null)} aria-label={tr("Đóng", "Close")} className="-m-1 rounded-full p-2 text-slate-400 hover:bg-white/10"><X className="h-4 w-4" /></button>
             </div>

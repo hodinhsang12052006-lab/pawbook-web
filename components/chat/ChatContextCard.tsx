@@ -65,8 +65,8 @@ export default function ChatContextCard({ meRole, meId, partner, onStudio, onSen
   if (proToClient) {
     const menuUrl = typeof window !== "undefined" ? `${window.location.origin}/menu/${meId}` : `/menu/${meId}`;
     return (
-      <section className="mx-auto mb-3 w-full max-w-md rounded-3xl bg-gradient-to-br from-pink-500/15 to-violet-500/10 p-3.5 ring-1 ring-pink-400/25" aria-label={tr("Gợi ý bán hàng", "Sales tips")}>
-        <p className="text-xs font-black text-pink-100">{tr("💅 Đây là khách làm nail — chốt đơn nhanh:", "💅 This is a nail client — close faster:")}</p>
+      <section className="mx-auto mb-3 w-full max-w-md rounded-3xl bg-gradient-to-br from-pink-500/15 to-violet-500/10 p-3.5 ring-1 ring-pink-400/25" aria-label={tr("Gợi ý trả lời khách", "Suggested replies")}>
+        <p className="text-xs font-black text-pink-100">{tr("Đây là khách làm nail — gợi ý trả lời:", "This is a nail client — suggested replies:")}</p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           <button type="button" onClick={onStudio} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-[13px] font-black text-white"><Sparkles className="h-4 w-4" />{tr("Tạo mẫu trên tay", "Try-on looks")}</button>
           <button type="button" onClick={() => onSendText(tr(`Menu & bảng giá bên em đây ạ, chị/anh xem và đặt lịch luôn nhé: ${menuUrl}`, `Here's our menu & prices — you can book right there: ${menuUrl}`))} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.08] text-[13px] font-bold text-white ring-1 ring-white/15"><BookOpen className="h-4 w-4" />{tr("Gửi menu", "Send menu")}</button>

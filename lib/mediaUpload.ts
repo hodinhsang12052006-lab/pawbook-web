@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import { prepareFileForUpload } from "@/lib/compressImage";
 import { tr } from "@/lib/i18n/tr";
 

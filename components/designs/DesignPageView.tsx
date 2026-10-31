@@ -46,7 +46,7 @@ export default function DesignPageView({ d: d0, related }: { d: Design; related:
               <p className="text-sm text-slate-300">{tr("Mỗi ngày có mẫu mới theo xu hướng, kèm vật tư và các bước. Khách xem menu của bạn rồi đặt lịch.", "New trend designs every day with materials and steps. Clients browse your menu and book.")}</p>
             </div>
             <Link href="/auth/register" className="inline-flex min-h-[48px] flex-shrink-0 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-black text-slate-900">
-              <UserPlus className="h-4 w-4" /> {tr("Đăng ký miễn phí", "Sign up free")}
+              <UserPlus className="h-4 w-4" /> {tr("Tạo tài khoản", "Create account")}
             </Link>
           </section>
         )}

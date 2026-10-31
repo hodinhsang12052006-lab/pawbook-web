@@ -5,7 +5,7 @@ import PrivacyContent from "@/components/legal/PrivacyContent";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/privacy", {
-    title: ["Chính sách bảo mật", "Privacy Policy"],
+    title: ["Chính sách bảo mật", "Privacy policy"],
     description: [
       "Chính sách bảo mật của PawNail — nền tảng cho tiệm nail, thợ nail và khách tại Mỹ và Úc.",
       "PawNail's Privacy Policy — the platform for nail salons, nail techs and their clients in the US & Australia.",

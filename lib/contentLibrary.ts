@@ -1,5 +1,5 @@
 // KHO BÀI DÙNG QUANH NĂM cho tài khoản chính thức — bổ sung cho lib/contentBot.ts (bài thuế/
-// an toàn/theo mùa). Viết cho thợ nail & chủ tiệm người Việt ở Mỹ/Úc: tiếng Anh đứng quầy, sửa lỗi
+// an toàn/theo mùa). Viết cho thợ nail & chủ tiệm đọc tiếng Việt tại Mỹ/Úc: tiếng Anh đứng quầy, sửa lỗi
 // tay nghề, sức khoẻ, vệ sinh, nghề nghiệp, quản lý tiệm.
 //
 // Nguyên tắc: lời khuyên chung, dùng được ngay; KHÔNG đưa con số luật/thuế (phần đó ở contentBot
@@ -157,7 +157,7 @@ export const LIBRARY_TOPICS: Topic[] = [
       "Phòng quá lạnh làm bột khô chậm và đục — giữ phòng ấm vừa phải.",
       "Dung dịch (liquid) để mở nắp lâu bị bẩn: dùng chén nhỏ, đổ lượng vừa đủ cho mỗi khách.",
     ],
-    cta: "💬 Bạn dùng tỉ lệ nước:bột thế nào cho mùa lạnh? Chia sẻ bí quyết cho anh chị em nha.",
+    cta: "💬 Bạn dùng tỉ lệ nước:bột thế nào cho mùa lạnh? Chia sẻ bí quyết cho mọi người nhé.",
     tags: "#TayNghe #BotAcrylic #ThoNail",
   }),
   t({

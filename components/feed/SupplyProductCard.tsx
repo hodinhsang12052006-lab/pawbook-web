@@ -44,7 +44,7 @@ export default function SupplyProductCard({ product, compact = false }: { produc
         </Link>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-400">
-            <Package className="h-3 w-3" />{tr(" Hàng sỉ tiệm nail", " Salon wholesale")}
+            <Package className="h-3 w-3" />{tr(" Chợ vật tư", " Supply exchange")}
           </p>
           <Link href="/supply" className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-white hover:text-amber-100">{dt(product.title)}</Link>
           <p className="mt-0.5 flex items-baseline gap-1.5">
@@ -78,7 +78,7 @@ export default function SupplyProductCard({ product, compact = false }: { produc
           className="object-cover"
         />
         <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-black text-amber-950 shadow">
-          <Package className="h-3 w-3" />{tr(" Hàng Sỉ Tiệm Nail", " Salon wholesale")}
+          <Package className="h-3 w-3" />{tr(" Chợ vật tư", " Supply exchange")}
         </span>
         {product.discountPercent && (
           <span className="absolute top-2.5 right-2.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-black text-white shadow">

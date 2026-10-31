@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Star } from "lucide-react";
@@ -27,7 +27,7 @@ export default function ClientReviewPage({ params }: { params: Promise<{ token: 
 
   useEffect(() => {
     fetch(`/api/client-reviews?token=${encodeURIComponent(token)}`, { cache: "no-store" })
-      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d; })
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(apiError(d, "Không mở được link đánh giá.", "Couldn't open this review link.")); return d; })
       .then((d: Info) => { setInfo(d); setName(d.suggestedName); })
       .catch((e) => setErr((e as Error).message || tr("Không mở được link đánh giá.", "Couldn't open this review link.")));
   }, [token]);

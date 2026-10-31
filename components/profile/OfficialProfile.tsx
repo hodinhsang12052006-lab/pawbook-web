@@ -6,7 +6,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   MessageCircle, Share2, PenSquare, Radar, ShieldCheck, Mail, Copy, FileText, Lock, HeartHandshake, BadgeCheck, Users, Newspaper,
-  Briefcase, Palette, Receipt, TrendingUp, Clock, Globe2, CalendarDays, ChevronRight, Bot, Flame, MapPin, LayoutGrid,
+  Briefcase, Palette, Receipt, TrendingUp, Clock, Globe2, CalendarDays, ChevronRight, Bot, MapPin, LayoutGrid,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
@@ -15,7 +15,7 @@ import FeedPostCard, { type FeedPost } from "@/components/feed/FeedPostCard";
 import { DesignsStrip } from "@/components/designs/DesignViews";
 import { EmptyState, SectionTitle } from "@/components/profile/ProfileSections";
 import { valueLabel } from "@/lib/i18n/valueLabel";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
 interface OfficialStats { members: number; availableTechs: number; jobs30d: number; posts: number }
@@ -50,7 +50,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
   const s = profile.official;
 
   useEffect(() => {
-    fetch(`/api/posts?authorId=${profile.id}`)
+    fetch(`/api/posts?authorId=${profile.id}&lang=${currentLocale()}`)
       .then((r) => (r.ok ? r.json() : { posts: [] }))
       // Bài ghim (mở đầu bằng 📌) luôn nằm trên cùng, còn lại mới nhất trước.
       .then((d) => setPosts([...(d.posts || [])].sort((a: FeedPost, b: FeedPost) => Number(String(b.content ?? "").startsWith("📌")) - Number(String(a.content ?? "").startsWith("📌")))))
@@ -90,7 +90,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
 
   const stats = [
     { v: fmt(s?.members), l: tr("Thành viên", "Members") },
-    { v: fmt(s?.availableTechs), l: tr("Thợ đang rảnh", "Techs available") },
+    { v: fmt(s?.availableTechs), l: tr("Thợ sẵn sàng", "Available techs") },
     { v: fmt(s?.jobs30d), l: tr("Tin 30 ngày", "Jobs · 30d") },
     { v: fmt(s?.posts), l: tr("Bài cộng đồng", "Community posts") },
   ];
@@ -114,7 +114,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
           <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cho1.jpg" alt="" aria-hidden className="absolute -right-6 -top-6 h-48 w-48 rotate-12 rounded-[2.5rem] object-cover opacity-25 sm:h-64 sm:w-64 lg:right-10 lg:h-72 lg:w-72" />
-          <div className="absolute bottom-3 right-4 rounded-full bg-black/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/90 backdrop-blur sm:right-6 sm:text-[11px]">PawNail Jobs · Official</div>
+          <div className="absolute bottom-3 right-4 rounded-full bg-black/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/90 backdrop-blur sm:right-6 sm:text-[11px]">{tr("PawNail · Chính thức", "PawNail · Official")}</div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/80" />
         </div>
 
@@ -135,7 +135,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
               <h1 className="flex items-center gap-2 text-[26px] font-black tracking-tight text-white sm:text-[30px]">
                 {profile.name} <VerifiedBadge className="h-6 w-6" />
               </h1>
-              <p className="mt-0.5 text-sm font-semibold text-sky-300">{tr("Tài khoản chính thức của PawNail Jobs", "Official PawNail Jobs account")}</p>
+              <p className="mt-0.5 text-sm font-semibold text-sky-300">{tr("Tài khoản chính thức của PawNail", "Official PawNail account")}</p>
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-200 ring-1 ring-sky-500/30"><BadgeCheck className="h-3.5 w-3.5" />{tr(" Đã xác minh", " Verified")}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-1 text-[11px] font-bold text-pink-200 ring-1 ring-pink-500/25"><ShieldCheck className="h-3.5 w-3.5" />{tr(" Kênh hỗ trợ & an toàn", " Support & safety")}</span>
@@ -232,7 +232,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
                     <button onClick={copyEmail} aria-label={tr("Sao chép email", "Copy email")} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"><Copy className="h-4 w-4" /></button>
                   </div>
                   <p className="text-sm text-slate-300">{tr("Nhắn tin cho chúng tôi bất cứ lúc nào — đội ngũ PawNail sẽ phản hồi. Báo lừa đảo: bấm ⋮ → Báo cáo trên tin nhắn, bài đăng hoặc hồ sơ.", "Message us anytime — the PawNail team will get back to you. To report a scam, tap ⋮ → Report on the message, post or profile.")}</p>
-                  {!isSelf && <Link href={`/messages?to=${profile.id}`} className="flex items-center gap-2 text-sm font-bold text-sky-300 hover:text-sky-200"><MessageCircle className="h-4 w-4" />{tr(" Nhắn tin cho PawNail Jobs", " Message PawNail Jobs")}</Link>}
+                  {!isSelf && <Link href={`/messages?to=${profile.id}`} className="flex items-center gap-2 text-sm font-bold text-sky-300 hover:text-sky-200"><MessageCircle className="h-4 w-4" />{tr(" Nhắn tin cho PawNail", " Message PawNail")}</Link>}
                 </div>
                 <div className={`${card} space-y-1`}>
                   <SectionTitle icon={FileText}>{tr("Chính sách", "Policies")}</SectionTitle>
@@ -271,7 +271,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
 
           <div className={card}>
             <div className="flex items-center justify-between">
-              <SectionTitle icon={Flame}>{tr("Việc gấp mới nhất", "Latest urgent jobs")}</SectionTitle>
+              <SectionTitle icon={Briefcase}>{tr("Việc làm mới nhất", "Latest jobs")}</SectionTitle>
               <Link href="/?tab=jobs" className="text-xs font-bold text-sky-300 hover:text-sky-200">{tr("Xem tất cả", "See all")}</Link>
             </div>
             {jobs === null ? (

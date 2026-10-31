@@ -2,6 +2,7 @@ import { getPusherServer } from "@/lib/pusherServer";
 import { jobAlertChannelName } from "@/lib/pusherChannel";
 import prisma from "@/lib/prisma";
 import { sendPush } from "@/lib/push";
+import { dtEn } from "@/lib/i18n/dtEn";
 
 interface UrgentJob {
   id: string;

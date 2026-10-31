@@ -5,10 +5,10 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 // Trang con /designs/[id] tự khai metadata riêng và ghi đè phần này.
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/designs", {
-    title: ["Mẫu nail mỗi ngày", "Daily nail design ideas"],
+    title: ["Mẫu nail mới mỗi ngày", "Nail design ideas, updated daily"],
     description: [
-      "Mẫu nail mới mỗi ngày kèm vật tư, các bước, thời gian làm và giá gợi ý — lưu mẫu, thử trên tay bạn hoặc gửi cho tiệm.",
-      "New nail design ideas every day with materials, steps, timing and a suggested price — save a look, try it on your hand or send it to your salon.",
+      "Ý tưởng mẫu nail mới mỗi ngày, kèm vật tư, các bước làm và giá gợi ý. Thử mẫu trên chính tay bạn.",
+      "New nail designs every day with materials, steps and a suggested price. Try any look on your own hand.",
     ],
   });
 }

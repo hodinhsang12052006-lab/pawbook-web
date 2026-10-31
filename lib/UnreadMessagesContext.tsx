@@ -7,6 +7,7 @@ import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel"
 import { playSound } from "@/lib/sounds";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { joinOwnPresence } from "@/lib/presence";
+import { tr } from "@/lib/i18n/tr";
 
 interface UnreadMessagesContextValue {
   unreadCount: number;
@@ -80,13 +81,13 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
 
       setUnreadCount((c) => c + 1);
       playSound("message");
-      const who = message.sender?.name || "ai đó";
+      const who = message.sender?.name || tr("ai đó", "someone");
       if (message.type === "CALL") {
         // Nhật ký cuộc gọi — không hiện chuỗi thô "missed:audio".
-        if (/^(missed|declined)/.test(message.content || "")) toast(`Cuộc gọi nhỡ từ ${who}`, { icon: "📞", position: "top-right" });
+        if (/^(missed|declined)/.test(message.content || "")) toast(tr(`Cuộc gọi nhỡ từ ${who}`, `Missed call from ${who}`), { icon: "📞", position: "top-right" });
       } else {
-        const preview = message.type === "IMAGE" ? "📷 Ảnh" : (message.content || "").substring(0, 40);
-        toast.success(`Tin nhắn mới từ ${who}: ${preview}`, { icon: "💬", position: "top-right" });
+        const preview = message.type === "IMAGE" ? tr("Ảnh", "Photo") : (message.content || "").substring(0, 40);
+        toast.success(tr(`Tin nhắn mới từ ${who}: ${preview}`, `New message from ${who}: ${preview}`), { icon: "💬", position: "top-right" });
       }
     };
 

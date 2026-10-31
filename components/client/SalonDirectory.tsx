@@ -76,7 +76,7 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
   // Mời tiệm quen: điện thoại → bảng chia sẻ (Zalo, Messenger, iMessage…); máy không hỗ trợ → chép lời mời để dán
   const invite = async () => {
     const url = `${window.location.origin}/auth/register?role=owner`;
-    const text = tr("Tiệm mình lên PawNail đi — khách xem menu, thử mẫu trên tay rồi đặt lịch ngay trên app, miễn phí cho tiệm:", "Join PawNail — clients see your menu, try looks on their hand and book right in the app. Free for salons:");
+    const text = tr("Tiệm mình lên PawNail nhé — khách xem menu, thử mẫu trên tay rồi gửi yêu cầu đặt lịch ngay trong app. PawNail không thu phí tiệm:", "Join PawNail — clients can see your menu, try looks on their hand and request a booking in the app. PawNail doesn't charge salons:");
     if (typeof navigator.share === "function") {
       try { await navigator.share({ title: "PawNail", text, url }); return; } catch (e) { if ((e as Error).name === "AbortError") return; }
     }

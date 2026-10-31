@@ -7,8 +7,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return pageMetadata(await langFrom(params), "/auth/register", {
     title: ["Tạo tài khoản", "Create your account"],
     description: [
-      "Tạo tài khoản PawNail — thử mẫu nail, gửi yêu cầu đặt lịch, giới thiệu tay nghề và tìm việc nail tại Mỹ và Úc.",
-      "Create a PawNail account — try on nail looks, request salon bookings, show your work and find nail tech jobs in the US & Australia.",
+      "Tham gia PawNail với vai trò khách, thợ nail hoặc chủ tiệm. Không thu phí thợ và tiệm.",
+      "Join PawNail as a nail client, technician or salon owner. No fees for techs or salons.",
     ],
   });
 }

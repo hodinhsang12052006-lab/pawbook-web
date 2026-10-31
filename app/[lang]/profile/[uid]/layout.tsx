@@ -23,11 +23,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     const role = trL(lang, ...(ROLE[u.role] ?? ROLE.TECHNICIAN));
     const showCity = u.city && (u.role === "OWNER" || u.role === "TECHNICIAN");
     const title = `${u.name} · ${role}${showCity ? trL(lang, ` tại ${u.city}`, ` in ${u.city}`) : ""}`;
-    const description = trL(
-      lang,
-      `Xem tay nghề, đánh giá và nhắn tin trực tiếp với ${u.name} trên PawNail.`,
-      `See ${u.name}'s work and reviews, and message them directly on PawNail.`
-    );
+    const description =
+      u.role === "OWNER"
+        ? trL(lang, "Ảnh tiệm, tin tuyển, menu và đánh giá trên PawNail.", "Salon photos, open jobs, menu and reviews on PawNail.")
+        : u.role === "TECHNICIAN"
+          ? trL(lang, `Ảnh tay nghề, kỹ năng và đánh giá. Nhắn tin cho ${u.name} trên PawNail.`, `Portfolio, skills and reviews. Message ${u.name} on PawNail.`)
+          : trL(lang, `Hồ sơ của ${u.name} trên PawNail.`, `${u.name} on PawNail.`);
     return { title, description, alternates: alternates(`/profile/${uid}`, lang), openGraph: openGraph(lang, { title, description }) };
   } catch {
     return fallback;

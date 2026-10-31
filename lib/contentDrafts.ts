@@ -66,7 +66,7 @@ export function buildDrafts(s: Signals, news: NewsItem[]): Draft[] {
       title: `📈 #${t.tag} đang lên: ${t.now} bài tuần này`,
       body: `Hashtag #${t.tag} có ${t.now} bài trong 7 ngày qua${t.before ? ` (tuần trước ${t.before})` : ""}. Đăng mẫu của bạn kèm #${t.tag} để lên bảng Xu hướng.`,
       href: "/trends",
-      caption: `#${t.tag} đang hot trong cộng đồng thợ nail Việt! Khoe mẫu của bạn trên PawNail nhé ✨ ${BASE_TAGS} #${t.tag}`,
+      caption: `#${t.tag} đang được nhiều thợ nail chia sẻ. Đăng mẫu của bạn trên PawNail. ${BASE_TAGS} #${t.tag}`,
       evidence: `Bài đăng 14 ngày qua`,
     });
   }

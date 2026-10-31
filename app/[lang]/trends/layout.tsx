@@ -5,10 +5,10 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 // khai báo metadata được).
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/trends", {
-    title: ["Xu hướng nail tuần này", "This week's nail trends"],
+    title: ["Xu hướng nail tuần này", "Nail trends this week"],
     description: [
-      "Mẫu nail, màu và kỹ thuật đang lên trong tuần — cập nhật mỗi ngày.",
-      "The nail designs, colors and techniques trending this week — updated daily.",
+      "Mẫu được yêu thích, hashtag đang lên và lương theo bang, từ hoạt động trên PawNail.",
+      "Most-loved designs, rising hashtags and pay by state, from activity on PawNail.",
     ],
   });
 }

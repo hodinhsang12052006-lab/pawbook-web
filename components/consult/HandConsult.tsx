@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BookOpen, Camera, CheckCircle2, Clock, Hand, ImagePlus, Loader2, Pencil, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
@@ -99,7 +99,7 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
       return;
     }
     if (r.d.code === "AI_UNAVAILABLE") {
-      toast(r.d.error);
+      toast(apiError(r.d, "AI đang bận — bạn có thể tự chọn tình trạng bên dưới.", "The AI is busy right now. You can pick the condition below."));
       await manual();
       return;
     }
@@ -184,7 +184,7 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
     <div className="space-y-5" ref={topRef}>
       <header className={embedded ? "hidden" : "space-y-1"}>
         <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Hand className="h-6 w-6 text-pink-300" />{tr("Soi tay tư vấn", "Hand consultation")}</h1>
-        <p className="text-sm text-slate-400">{tr("Chụp tay khách → xem tình trạng, quy trình nên làm và những mẫu hợp nhất. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand → see its condition, the right service plan and the best-matching designs. Show the client your screen.")}</p>
+        <p className="text-sm text-slate-400">{tr("Chụp tay khách → xem tình trạng, quy trình nên làm và những mẫu hợp nhất. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand → see its condition, the right service plan and the designs that suit it. Show the client your screen.")}</p>
       </header>
 
       {phase === "start" && (
@@ -415,7 +415,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
       </Section>
 
       {/* Hợp với khách */}
-      <Section title={tr("Hợp với khách", "Best for this client")} icon={<Sparkles className="h-4 w-4 text-pink-300" />}>
+      <Section title={tr("Hợp với khách", "Suits this client")} icon={<Sparkles className="h-4 w-4 text-pink-300" />}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{tr("Dáng móng", "Nail shape")}</p>
@@ -423,7 +423,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
               <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-2.5 ring-1 ring-white/10">
                 <ShapeIcon id={s.id} className={`h-10 w-7 flex-shrink-0 ${i === 0 ? "text-pink-300" : "text-slate-300"}`} />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-white">{t(LABELS.shape[s.id])}{i === 0 && <span className="ml-1.5 rounded-full bg-pink-500/20 px-1.5 py-0.5 text-[10px] font-black text-pink-200">{tr("Hợp nhất", "Best")}</span>}</p>
+                  <p className="text-sm font-bold text-white">{t(LABELS.shape[s.id])}{i === 0 && <span className="ml-1.5 rounded-full bg-pink-500/20 px-1.5 py-0.5 text-[10px] font-black text-pink-200">{tr("Hợp nhất", "Recommended")}</span>}</p>
                   <p className="text-xs text-slate-400">{t(s.why)}</p>
                 </div>
               </div>
@@ -496,7 +496,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
       {r.menuTotal === 0 && (
         <Link href={`/profile/${userId}?tab=menu`} className="flex items-center gap-3 rounded-3xl bg-amber-500/[0.07] p-4 ring-1 ring-amber-400/20 hover:bg-amber-500/10">
           <BookOpen className="h-5 w-5 flex-shrink-0 text-amber-300" />
-          <span className="text-sm text-amber-50">{tr("Tạo menu mẫu có giá — lần sau app gợi ý luôn mẫu CỦA BẠN hợp với tay khách.", "Build your priced menu — next time the app suggests YOUR designs that suit the client.")}</span>
+          <span className="text-sm text-amber-50">{tr("Tạo menu mẫu có giá — lần sau app gợi ý luôn những mẫu của bạn hợp với tay khách.", "Build your priced menu — next time the app suggests your own designs that suit the client.")}</span>
         </Link>
       )}
 

@@ -52,7 +52,7 @@ export async function getBadges(userId: string): Promise<Badge[]> {
     badges.push({ key: "top_rated", label: `Uy tín ${avg.toFixed(1)}★`, hint: `Trung bình ${avg.toFixed(1)}★ từ ${reviewAgg._count._all} đánh giá thật` });
   }
   if (getProfileCompleteness(user)?.percent === 100) {
-    badges.push({ key: "complete", label: "Hồ sơ đầy đủ", hint: "Đã hoàn thiện 100% thông tin hồ sơ" });
+    badges.push({ key: "complete", label: "Hồ sơ đầy đủ", hint: "Đã điền đầy đủ thông tin hồ sơ" });
   }
   if (likes >= LOVED_MIN_LIKES) {
     badges.push({ key: "loved", label: "Được yêu thích", hint: `${likes} lượt thích bài đăng trong 30 ngày` });

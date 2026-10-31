@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WifiOff, MessageCircle, RefreshCw } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";

@@ -1,6 +1,6 @@
-import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import { Sparkles, Store, Loader2, Phone, MapPin, Heart } from "lucide-react";
 import toast from "react-hot-toast";
@@ -34,8 +34,8 @@ export default function CompleteProfilePage() {
       .then((s) => {
         if (!s?.user?.id) return window.location.replace("/auth/login");
         if (!s.user.needsOnboarding) return window.location.replace("/");
-        // Đăng ký bằng SĐT: chưa có tên thật (tên tạm "Thành viên PawNail") → để trống cho tự nhập.
-        setName(s.user.name && s.user.name !== "Thành viên PawNail" ? s.user.name : "");
+        // Đăng ký bằng SĐT: chưa có tên thật (tên tạm "PawNail member"; tài khoản cũ: "Thành viên PawNail") → để trống cho tự nhập.
+        setName(s.user.name && s.user.name !== "PawNail member" && s.user.name !== "Thành viên PawNail" ? s.user.name : "");
         // Đã xác minh SĐT (đăng nhập bằng mã SMS) → điền sẵn số + quốc gia.
         fetch("/api/phone/verify")
           .then((r) => (r.ok ? r.json() : null))
@@ -89,7 +89,7 @@ export default function CompleteProfilePage() {
   return (
     <div className="mx-auto w-full max-w-md space-y-5">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-extrabold text-white">{tr("Chào mừng bạn! 👋", "Welcome! 👋")}</h1>
+        <h1 className="text-2xl font-extrabold text-white">{tr("Chào mừng bạn đến với PawNail", "Welcome to PawNail")}</h1>
         <p className="text-sm text-slate-400">{tr("Còn 1 bước — cho PawNail biết bạn là ai và ở đâu.", "One last step — tell PawNail who you are and where you work.")}</p>
       </div>
 

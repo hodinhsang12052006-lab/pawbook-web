@@ -5,7 +5,7 @@ import { langFrom, pageMetadata } from "@/lib/i18n/server";
 // khai báo metadata được).
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/jobs/create", {
-    title: ["Đăng tin tuyển thợ", "Post a job"],
+    title: ["Đăng tin tuyển thợ", "Post a nail tech job"],
   });
 }
 

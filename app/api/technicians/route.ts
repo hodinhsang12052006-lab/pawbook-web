@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Fetch technicians API error:", error);
     return NextResponse.json(
-      { error: "Không thể tải danh sách thợ." },
+      { error: "Không thể tải danh sách thợ.", errorEn: "Couldn't load technicians." },
       { status: 500 }
     );
   }

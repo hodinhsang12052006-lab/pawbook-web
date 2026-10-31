@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để thực hiện cập nhật ảnh đại diện." },
+        { error: "Vui lòng đăng nhập để thực hiện cập nhật ảnh đại diện.", errorEn: "Log in to update your profile photo." },
         { status: 401 }
       );
     }
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     if (!image || typeof image !== "string") {
       return NextResponse.json(
-        { error: "Vui lòng cung cấp chuỗi dữ liệu ảnh đại diện mới." },
+        { error: "Vui lòng cung cấp chuỗi dữ liệu ảnh đại diện mới.", errorEn: "Please choose a new profile photo." },
         { status: 400 }
       );
     }
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // cho phép 1 user "phình" mọi response đó bằng 1 chuỗi khổng lồ.
     if (image.length > 500_000) {
       return NextResponse.json(
-        { error: "Dữ liệu ảnh đại diện quá lớn." },
+        { error: "Dữ liệu ảnh đại diện quá lớn.", errorEn: "The profile photo is too large." },
         { status: 400 }
       );
     }
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("Update avatar API error:", err);
     return NextResponse.json(
-      { error: "Lỗi hệ thống khi cập nhật ảnh đại diện." },
+      { error: "Lỗi hệ thống khi cập nhật ảnh đại diện.", errorEn: "Couldn't update your profile photo. Please try again." },
       { status: 500 }
     );
   }

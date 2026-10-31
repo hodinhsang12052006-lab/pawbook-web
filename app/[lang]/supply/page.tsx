@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import { dtEn } from "@/lib/i18n/dataEn";
@@ -36,7 +37,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.url) setImageUrl(data.url);
-      else toast.error(data.error || tr("Không thể tải ảnh lên.", "Couldn't upload the image."));
+      else toast.error(apiError(data, "Không thể tải ảnh lên.", "Couldn't upload the image."));
     } catch (err) {
       toast.error(err instanceof FileTooLargeError ? err.message : tr("Lỗi mạng khi tải ảnh.", "Network error while uploading."));
     } finally {
@@ -64,7 +65,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể đăng sản phẩm.", "Couldn't list the product."));
+        toast.error(apiError(data, "Không thể đăng sản phẩm.", "Couldn't list the product."));
         return;
       }
       toast.success(tr("Đã đăng bán sản phẩm! 📦", "Product listed! 📦"));

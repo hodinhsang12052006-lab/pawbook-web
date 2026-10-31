@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập để thả tim." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập để thả tim.", errorEn: "Log in to like posts." }, { status: 401 });
     }
     const { id: postId } = await params;
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         });
         await notifyUser(like.post.authorId, session.user.id, `${session.user.name || "Ai đó"} đã thích bài viết của bạn`, "/?tab=feed", `${session.user.name || "Someone"} liked your post`);
       } catch {
-        return NextResponse.json({ error: "Bài viết không còn tồn tại." }, { status: 404 });
+        return NextResponse.json({ error: "Bài viết không còn tồn tại.", errorEn: "This post no longer exists." }, { status: 404 });
       }
     }
 
@@ -39,6 +39,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ liked: !existing, likeCount });
   } catch (error) {
     console.error("POST /api/posts/[id]/like error:", error);
-    return NextResponse.json({ error: "Không thể cập nhật lượt thích." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể cập nhật lượt thích.", errorEn: "Couldn't update the like." }, { status: 500 });
   }
 }

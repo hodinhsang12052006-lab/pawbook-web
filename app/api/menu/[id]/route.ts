@@ -3,14 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { parseMenuItem, toPublicMenuItem } from "@/lib/menu";
+import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // PATCH /api/menu/:id — sửa mẫu (cả bản đầy đủ, hoặc chỉ { active } để ẩn/hiện) · DELETE — xoá. Chỉ chủ menu.
 async function mine(id: string) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!me) return { error: NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 }) };
+  if (!me) return { error: NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 }) };
   const row = await prisma.menuItem.findUnique({ where: { id } });
-  if (!row) return { error: NextResponse.json({ error: "Không tìm thấy mẫu." }, { status: 404 }) };
-  if (row.ownerId !== me) return { error: NextResponse.json({ error: "Không phải menu của bạn." }, { status: 403 }) };
+  if (!row) return { error: NextResponse.json({ error: "Không tìm thấy mẫu.", errorEn: "Couldn't find this design." }, { status: 404 }) };
+  if (row.ownerId !== me) return { error: NextResponse.json({ error: "Không phải menu của bạn.", errorEn: "This isn't your menu." }, { status: 403 }) };
   return { row };
 }
 
@@ -25,7 +26,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ item: toPublicMenuItem(row, true) });
   }
   const parsed = parseMenuItem(body);
-  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorEn: errorEn(parsed.error) }, { status: 400 });
   const v = parsed.value;
   const row = await prisma.menuItem.update({ where: { id }, data: { ...v, images: JSON.stringify(v.images), materials: JSON.stringify(v.materials) } });
   return NextResponse.json({ item: toPublicMenuItem(row, true) });

@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -49,7 +50,7 @@ export default function QuickMenu({ onClose, onDone }: { onClose: () => void; on
       const r = rows[i];
       const res = await fetch("/api/menu", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: r.name, priceFrom: r.price, category: r.category, images: [r.url] }) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(`${tr("Ảnh", "Photo")} ${i + 1}: ${d.error || tr("không lưu được", "couldn't save")}`); break; }
+      if (!res.ok) { toast.error(`${tr("Ảnh", "Photo")} ${i + 1}: ${apiError(d, "không lưu được", "couldn't save")}`); break; }
       done.push(d.item);
     }
     setSaving(null);

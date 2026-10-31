@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import Link from "next/link";
@@ -393,7 +394,7 @@ export default function MessagesContent({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || tr("Không thể cập nhật trạng thái chặn.", "Couldn't update block status."));
+        toast.error(apiError(data, "Không thể cập nhật trạng thái chặn.", "Couldn't update block status."));
         return;
       }
       setBlockedUserIds((prev) => {
@@ -425,7 +426,7 @@ export default function MessagesContent({
         setReportReason("");
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || tr("Không thể gửi báo cáo.", "Couldn't send the report."));
+        toast.error(apiError(data, "Không thể gửi báo cáo.", "Couldn't send the report."));
       }
     } catch {
       toast.error(tr("Lỗi mạng.", "Network error."));
@@ -904,7 +905,7 @@ export default function MessagesContent({
         });
       } else {
         const errData = await res.json().catch(() => ({}));
-        toast.error(errData.error || tr("Gửi tin nhắn thất bại.", "Message failed to send."));
+        toast.error(apiError(errData, "Gửi tin nhắn thất bại.", "Message failed to send."));
         patchBucket(sendKey, (bucket) => ({
           ...bucket,
           messages: bucket.messages.map((m) => (m.id === tempId ? { ...m, sendError: true } : m)),
@@ -980,7 +981,7 @@ export default function MessagesContent({
         setSelectedUserIds([]);
         loadData(true);
       } else {
-        toast.error(data.error || tr("Tạo nhóm thất bại.", "Couldn't create the group."), { id: toastId });
+        toast.error(apiError(data, "Tạo nhóm thất bại.", "Couldn't create the group."), { id: toastId });
       }
     } catch (err) {
       toast.error(tr("Lỗi kết nối mạng.", "Network connection error."), { id: toastId });

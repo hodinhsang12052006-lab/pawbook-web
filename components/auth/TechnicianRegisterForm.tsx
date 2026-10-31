@@ -14,9 +14,10 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { stateName } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { apiError } from "@/lib/i18n/apiError";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -85,13 +86,13 @@ export default function TechnicianRegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name, email, password, role: "TECHNICIAN", market, state, city,
+          name, email, password, role: "TECHNICIAN", locale: currentLocale(), market, state, city,
           phone: `${countryCode} ${phone.trim()}`,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t("auth.owner.registerFailed"));
+        setError(apiError(data, t("auth.owner.registerFailed"), t("auth.owner.registerFailed")));
         setLoading(false);
         return;
       }
@@ -126,7 +127,7 @@ export default function TechnicianRegisterForm() {
           if (res.ok && data.url) {
             setPortfolioImages((prev) => [...prev, data.url]);
           } else {
-            toast.error(data.error || `Không thể tải "${rawFile.name}" lên.`);
+            toast.error(apiError(data, `Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
           }
         } catch (err) {
           toast.error(err instanceof FileTooLargeError ? err.message : `Lỗi mạng khi tải "${rawFile.name}" lên.`);
@@ -160,7 +161,7 @@ export default function TechnicianRegisterForm() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || t("auth.technician.saveFailed"));
+        setError(apiError(data, t("auth.technician.saveFailed"), t("auth.technician.saveFailed")));
         setLoading(false);
         return;
       }

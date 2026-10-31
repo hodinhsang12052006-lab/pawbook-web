@@ -10,7 +10,7 @@ const parse = (s: string | null | undefined): string[] => { try { const v = JSON
 
 export async function GET() {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const [tech, posts, menu] = await Promise.all([
     prisma.technicianProfile.findUnique({ where: { userId: me }, select: { portfolioImages: true } }),
     prisma.post.findMany({ where: { authorId: me, status: "published", anonymous: false, mediaUrls: { not: "[]" } }, orderBy: { createdAt: "desc" }, take: 60, select: { mediaUrls: true, content: true } }),

@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import { useState } from "react";
@@ -48,7 +49,7 @@ export function SalonRequestLinks({ jobId }: { jobId: string }) {
     try {
       const r = await fetch(`/api/jobs/${jobId}/request`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, name, contact, note }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { toast.error(j.error || tr("Gửi chưa được, thử lại sau.", "Couldn't send, try again.")); return; }
+      if (!r.ok) { toast.error(apiError(j, "Gửi chưa được, thử lại sau.", "Couldn't send, try again.")); return; }
       toast.success(kind === "remove" ? tr("Đã gửi yêu cầu gỡ tin — PawNail xử lý trong 24 giờ.", "Removal request sent — handled within 24 hours.") : tr("Đã gửi — PawNail sẽ liên hệ để chuyển tin cho bạn quản lý.", "Sent — we'll contact you to hand the listing over."));
       setKind(null); setName(""); setContact(""); setNote("");
     } finally { setBusy(false); }

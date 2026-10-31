@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   // Duyệt → lên đầu bảng tin (giờ đăng = lúc duyệt)
   await prisma.post.update({ where: { id: postId }, data: decision === "published" ? { status: decision, createdAt: new Date() } : { status: decision } });
   await sendPush(post.authorId, decision === "published"
-    ? { title: "🤫 Tâm sự của bạn đã lên bảng tin", body: "Mọi người đang đọc — vào xem bình luận nhé.", url: "/?tab=feed", tag: "pn-anon-ok" }
-    : { title: "Tâm sự chưa được đăng", body: "Bài có nêu tên tiệm/người hoặc thông tin riêng — bạn sửa lại rồi gửi lại nhé.", url: "/?tab=feed", tag: "pn-anon-no" }).catch(() => 0);
+    ? { title: "Bài ẩn danh của bạn đã lên bảng tin", body: "Bài đã được đăng — vào xem bình luận.", url: "/?tab=feed", tag: "pn-anon-ok", en: { title: "Your anonymous post is live", body: "It's on the feed now. Tap to see the comments." } }
+    : { title: "Bài ẩn danh chưa được đăng", body: "Bài có nêu tên tiệm/người hoặc thông tin riêng — bạn sửa lại rồi gửi lại.", url: "/?tab=feed", tag: "pn-anon-no", en: { title: "Your anonymous post wasn't published", body: "It names a salon or person, or includes private details. Edit it and send it again." } }).catch(() => 0);
   return NextResponse.json({ ok: true, status: decision });
 }

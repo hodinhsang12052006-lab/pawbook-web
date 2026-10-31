@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -73,7 +74,7 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
     try {
       const res = await fetch(item ? `/api/menu/${item.id}` : "/api/menu", { method: item ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Lưu thất bại.", "Couldn't save."));
+      if (!res.ok) throw new Error(apiError(d, "Lưu thất bại.", "Couldn't save."));
       toast.success(item ? tr("Đã lưu mẫu", "Saved") : tr("Đã thêm vào menu", "Added to your menu"));
       onSaved(d.item);
     } catch (e) {

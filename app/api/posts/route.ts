@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("GET /api/posts error:", error);
-    return NextResponse.json({ error: "Không thể tải bảng tin." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể tải bảng tin.", errorEn: "Couldn't load the feed." }, { status: 500 });
   }
 }
 
@@ -164,12 +164,12 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bài." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bài.", errorEn: "Log in to post." }, { status: 401 });
     }
 
     // Bảng tin là cộng đồng NGHỀ (thợ / chủ tiệm) — khách đi làm nail không đăng ở đây.
     if ((session.user as { role?: string }).role === "CLIENT") {
-      return NextResponse.json({ error: "Bảng tin dành cho thợ và chủ tiệm. Bạn có thể nhắn tiệm hoặc để lại đánh giá sau khi làm móng." }, { status: 403 });
+      return NextResponse.json({ error: "Bảng tin dành cho thợ và chủ tiệm. Bạn có thể nhắn tiệm hoặc để lại đánh giá sau khi làm móng.", errorEn: "The feed is for nail techs and salon owners. You can message a salon or leave a review after your appointment." }, { status: 403 });
     }
 
     const body = await req.json();
@@ -178,10 +178,10 @@ export async function POST(req: NextRequest) {
     const anonymous = body?.anonymous === true;
 
     if (!content || typeof content !== "string" || !content.trim()) {
-      return NextResponse.json({ error: "Nội dung bài đăng không được để trống." }, { status: 400 });
+      return NextResponse.json({ error: "Nội dung bài đăng không được để trống.", errorEn: "Write something before you post." }, { status: 400 });
     }
     if (content.length > 2000) {
-      return NextResponse.json({ error: "Nội dung bài đăng quá dài (tối đa 2000 ký tự)." }, { status: 400 });
+      return NextResponse.json({ error: "Nội dung bài đăng quá dài (tối đa 2000 ký tự).", errorEn: "Posts can be up to 2,000 characters." }, { status: 400 });
     }
     const safePostType: PostType = VALID_POST_TYPES.includes(postType) ? postType : "GENERAL";
     const safeMediaUrls = Array.isArray(mediaUrls)
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     // Mỗi trang feed kéo 12 bài kèm toàn bộ mediaUrls — giới hạn số ảnh và
     // tổng dung lượng để 1 bài không làm nặng feed của mọi người.
     if (safeMediaUrls.length > 10 || JSON.stringify(safeMediaUrls).length > 8_000_000) {
-      return NextResponse.json({ error: "Tối đa 10 ảnh mỗi bài đăng." }, { status: 400 });
+      return NextResponse.json({ error: "Tối đa 10 ảnh mỗi bài đăng.", errorEn: "Up to 10 photos per post." }, { status: 400 });
     }
 
     const author = await prisma.user.findUnique({
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
     });
     if (anonymous) {
       const today = await prisma.post.count({ where: { authorId: session.user.id, anonymous: true, createdAt: { gte: new Date(Date.now() - 86_400_000) } } });
-      if (today >= 3) return NextResponse.json({ error: "Mỗi ngày tối đa 3 tâm sự ẩn danh — mai bạn gửi tiếp nhé." }, { status: 429 });
+      if (today >= 3) return NextResponse.json({ error: "Mỗi ngày tối đa 3 tâm sự ẩn danh — mai bạn gửi tiếp nhé.", errorEn: "You can send up to 3 anonymous posts a day. Please try again tomorrow." }, { status: 429 });
     }
 
     const post = await prisma.post.create({
@@ -226,6 +226,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...mapPost(post, session.user.id), pending: anonymous }, { status: 201 });
   } catch (error) {
     console.error("POST /api/posts error:", error);
-    return NextResponse.json({ error: "Không thể đăng bài. Vui lòng thử lại." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể đăng bài. Vui lòng thử lại.", errorEn: "Couldn't publish the post. Please try again." }, { status: 500 });
   }
 }

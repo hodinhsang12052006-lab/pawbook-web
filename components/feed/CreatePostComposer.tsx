@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -79,7 +80,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
           if (res.ok && data.url) {
             setMediaUrls((prev) => [...prev, data.url]);
           } else {
-            toast.error(data.error || tr(`Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
+            toast.error(apiError(data, `Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
           }
         } catch (err) {
           toast.error(err instanceof FileTooLargeError ? err.message : tr(`Lỗi mạng khi tải "${rawFile.name}" lên.`, `Network error uploading "${rawFile.name}".`));
@@ -107,7 +108,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể đăng bài.", "Couldn't publish the post."));
+        toast.error(apiError(data, "Không thể đăng bài.", "Couldn't publish the post."));
         return;
       }
       if (!data.pending) onPosted(data);

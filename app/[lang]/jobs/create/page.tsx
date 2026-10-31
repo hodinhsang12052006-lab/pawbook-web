@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -115,7 +116,7 @@ export default function CreateJobPage() {
         playSound("success");
         router.push(`/jobs/${data.id}`);
       } else {
-        toast.error(data.error || tr("Không thể đăng tin.", "Couldn't post the job."), { id: toastId });
+        toast.error(apiError(data, "Không thể đăng tin.", "Couldn't post the job."), { id: toastId });
       }
     } catch {
       toast.error(tr("Lỗi mạng khi đăng bài.", "Network error while posting."), { id: toastId });

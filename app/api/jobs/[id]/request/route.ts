@@ -14,15 +14,15 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ipKey = `job-req:${getClientIp(req)}`;
-  if (isRateLimited(ipKey, 5, HOUR)) return NextResponse.json({ error: "Bạn đã gửi nhiều yêu cầu — thử lại sau 1 giờ." }, { status: 429 });
+  if (isRateLimited(ipKey, 5, HOUR)) return NextResponse.json({ error: "Bạn đã gửi nhiều yêu cầu — thử lại sau 1 giờ.", errorEn: "Too many requests. Please try again in an hour." }, { status: 429 });
   const b = (await req.json().catch(() => null)) as { kind?: unknown; name?: unknown; contact?: unknown; note?: unknown } | null;
   const kind = b?.kind === "claim" || b?.kind === "remove" ? b.kind : null;
   const name = typeof b?.name === "string" ? b.name.trim().slice(0, 80) : "";
   const contact = typeof b?.contact === "string" ? b.contact.trim().slice(0, 120) : "";
   const note = typeof b?.note === "string" ? b.note.trim().slice(0, 500) : "";
-  if (!kind || !name || contact.length < 6) return NextResponse.json({ error: "Nhập tên và SĐT/email để PawNail liên hệ lại." }, { status: 400 });
+  if (!kind || !name || contact.length < 6) return NextResponse.json({ error: "Nhập tên và SĐT/email để PawNail liên hệ lại.", errorEn: "Enter your name and a phone number or email so PawNail can get back to you." }, { status: 400 });
   const job = await prisma.job.findUnique({ where: { id }, select: { id: true, source: true, salonName: true, city: true, state: true, phone: true } });
-  if (!job || !job.source) return NextResponse.json({ error: "Không tìm thấy tin." }, { status: 404 });
+  if (!job || !job.source) return NextResponse.json({ error: "Không tìm thấy tin.", errorEn: "Couldn't find this job post." }, { status: 404 });
   recordAttempt(ipKey, HOUR);
   const userId = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id ?? null;
   await prisma.jobRequest.create({ data: { jobId: job.id, kind, name, contact, note: note || null, userId } });

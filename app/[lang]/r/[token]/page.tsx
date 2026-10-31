@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { use, useEffect, useState } from "react";
@@ -38,7 +39,7 @@ export default function ClientReviewPage({ params }: { params: Promise<{ token: 
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok || res.status === 409) setDone(true);
-    else setErr(d.error || tr("Chưa gửi được, thử lại.", "Couldn't send, try again."));
+    else setErr(apiError(d, "Chưa gửi được, thử lại.", "Couldn't send, try again."));
   };
 
   const shown = hover || rating;

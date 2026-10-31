@@ -181,6 +181,6 @@ export async function GET() {
     return NextResponse.json({ items });
   } catch (error) {
     console.error("GET /api/notifications error:", error);
-    return NextResponse.json({ error: "Không tải được thông báo." }, { status: 500 });
+    return NextResponse.json({ error: "Không tải được thông báo.", errorEn: "Couldn't load notifications." }, { status: 500 });
   }
 }

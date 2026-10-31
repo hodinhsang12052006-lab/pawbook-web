@@ -29,7 +29,7 @@ export async function attachReferral(newUserId: string, newUserName: string, ref
     try {
       await getPusherServer()?.trigger(chatChannelName(inviter.id), "notification", { text, textEn: `${newUserName} just joined PawNail from your invite` });
     } catch {}
-    await sendPush(inviter.id, { title: "🎉 Bạn bè đã tham gia", body: text, url: "/profile#moi-ban-be", tag: "referral" });
+    await sendPush(inviter.id, { title: "Bạn bè đã tham gia", body: text, url: "/profile#moi-ban-be", tag: "referral", en: { title: "Your invite was accepted", body: `${newUserName} just joined PawNail from your invite` } });
   } catch (e) {
     console.error("attachReferral error:", e);
   }

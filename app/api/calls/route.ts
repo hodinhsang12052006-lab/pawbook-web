@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       },
     });
     if (blockExists) {
-      return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn." }, { status: 403 });
+      return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn.", errorEn: "You can't call this person." }, { status: 403 });
     }
 
     // fromId do SERVER gắn từ session (không phải client khai) — client dùng
@@ -93,10 +93,11 @@ export async function POST(req: Request) {
     await getPusherServer()?.trigger(chatChannelName(String(targetId).trim()), eventName, payload);
     if (action === "offer") {
       sendPush(String(targetId).trim(), {
-        title: `${payload.callType === "video" ? "📹 Cuộc gọi video" : "📞 Cuộc gọi thoại"} đến`,
+        title: payload.callType === "video" ? "Cuộc gọi video đến" : "Cuộc gọi thoại đến",
         body: `${payload.callerName} đang gọi cho bạn — mở PawNail để trả lời`,
         url: `/messages?to=${userId}`,
         tag: "pn-call",
+        en: { title: payload.callType === "video" ? "Incoming video call" : "Incoming call", body: `${payload.callerName} is calling you. Open PawNail to answer.` },
       }).catch(() => {});
     }
 

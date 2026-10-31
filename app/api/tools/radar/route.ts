@@ -13,18 +13,18 @@ export async function GET(req: NextRequest) {
   const skill = req.nextUrl.searchParams.get("skill") as SkillKey | null;
 
   if (!market || !VALID_MARKETS.includes(market)) {
-    return NextResponse.json({ error: "Thiếu hoặc sai tham số market (US/AU)." }, { status: 400 });
+    return NextResponse.json({ error: "Thiếu hoặc sai tham số market (US/AU).", errorEn: "Missing or invalid market (US/AU)." }, { status: 400 });
   }
   if (!state) {
-    return NextResponse.json({ error: "Thiếu tham số state." }, { status: 400 });
+    return NextResponse.json({ error: "Thiếu tham số state.", errorEn: "Missing state." }, { status: 400 });
   }
   if (!skill || !VALID_SKILLS.includes(skill)) {
-    return NextResponse.json({ error: "Thiếu hoặc sai tham số skill (BOT/DIP/TAY_NUOC)." }, { status: 400 });
+    return NextResponse.json({ error: "Thiếu hoặc sai tham số skill (BOT/DIP/TAY_NUOC).", errorEn: "Missing or invalid skill." }, { status: 400 });
   }
 
   const result = getRadarEstimate(market, state, skill);
   if (!result) {
-    return NextResponse.json({ error: `Chưa có dữ liệu tham khảo cho bang "${state}".` }, { status: 404 });
+    return NextResponse.json({ error: `Chưa có dữ liệu tham khảo cho bang "${state}".`, errorEn: `No reference data for "${state}" yet.` }, { status: 404 });
   }
 
   return NextResponse.json(result);

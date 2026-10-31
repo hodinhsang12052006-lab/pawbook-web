@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -70,7 +71,7 @@ export default function NailRadarPage() {
       try {
         const res = await fetch(`/api/tools/radar?market=${market}&state=${state}&skill=${skill}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || tr("Không thể tải dữ liệu.", "Couldn't load data."));
+        if (!res.ok) throw new Error(apiError(data, "Không thể tải dữ liệu.", "Couldn't load data."));
         if (!cancelled) setResult(data);
       } catch (err: any) {
         if (!cancelled) {

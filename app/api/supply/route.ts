@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ products: products.map(mapProduct), nextCursor });
   } catch (error) {
     console.error("GET /api/supply error:", error);
-    return NextResponse.json({ error: "Không thể tải kho hàng." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể tải kho hàng.", errorEn: "Couldn't load supplies." }, { status: 500 });
   }
 }
 
@@ -61,38 +61,38 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bán sản phẩm." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bán sản phẩm.", errorEn: "Log in to list a product." }, { status: 401 });
     }
     if (session.user.role !== Role.OWNER) {
-      return NextResponse.json({ error: "Chỉ tài khoản Chủ tiệm mới có thể đăng bán sỉ vật tư." }, { status: 403 });
+      return NextResponse.json({ error: "Chỉ tài khoản Chủ tiệm mới có thể đăng bán sỉ vật tư.", errorEn: "Only salon owner accounts can list supplies." }, { status: 403 });
     }
 
     const body = await req.json();
     const { title, description, imageUrl, price, originalPrice } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json({ error: "Vui lòng nhập tên sản phẩm." }, { status: 400 });
+      return NextResponse.json({ error: "Vui lòng nhập tên sản phẩm.", errorEn: "Enter a product name." }, { status: 400 });
     }
     if (!imageUrl || typeof imageUrl !== "string") {
-      return NextResponse.json({ error: "Vui lòng tải ảnh sản phẩm." }, { status: 400 });
+      return NextResponse.json({ error: "Vui lòng tải ảnh sản phẩm.", errorEn: "Please add a product photo." }, { status: 400 });
     }
     // Ảnh chỉ đến từ /api/upload (URL https Cloudinary hoặc data URL ảnh khi
     // chưa cấu hình Cloudinary) — chặn scheme lạ và chuỗi khổng lồ.
     if (imageUrl.length > 2_000_000 || !/^(https:\/\/|data:image\/)/.test(imageUrl)) {
-      return NextResponse.json({ error: "Ảnh sản phẩm không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Ảnh sản phẩm không hợp lệ.", errorEn: "Invalid product photo." }, { status: 400 });
     }
     if (title.length > 200 || (description !== undefined && description !== null && (typeof description !== "string" || description.length > 5000))) {
-      return NextResponse.json({ error: "Tên hoặc mô tả sản phẩm quá dài." }, { status: 400 });
+      return NextResponse.json({ error: "Tên hoặc mô tả sản phẩm quá dài.", errorEn: "The product name or description is too long." }, { status: 400 });
     }
     const safePrice = Number(price);
     if (!Number.isFinite(safePrice) || safePrice <= 0) {
-      return NextResponse.json({ error: "Giá bán không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Giá bán không hợp lệ.", errorEn: "Invalid price." }, { status: 400 });
     }
     const safeOriginalPrice = originalPrice !== undefined && originalPrice !== null && originalPrice !== ""
       ? Number(originalPrice)
       : null;
     if (safeOriginalPrice !== null && (!Number.isFinite(safeOriginalPrice) || safeOriginalPrice <= 0)) {
-      return NextResponse.json({ error: "Giá gốc không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Giá gốc không hợp lệ.", errorEn: "Invalid original price." }, { status: 400 });
     }
 
     const product = await prisma.supplyProduct.create({
@@ -112,6 +112,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mapProduct(product), { status: 201 });
   } catch (error) {
     console.error("POST /api/supply error:", error);
-    return NextResponse.json({ error: "Không thể đăng bán sản phẩm." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể đăng bán sản phẩm.", errorEn: "Couldn't list the product." }, { status: 500 });
   }
 }

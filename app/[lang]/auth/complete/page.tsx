@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -5,7 +6,7 @@ import { Sparkles, Store, Loader2, Phone, MapPin, Heart } from "lucide-react";
 import toast from "react-hot-toast";
 import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
 // Người đăng nhập Google/Apple lần đầu: chọn vai trò + khu vực + SĐT (1 màn,
@@ -61,10 +62,10 @@ export default function CompleteProfilePage() {
       const res = await fetch("/api/profile/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, market, state, city, name, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
+        body: JSON.stringify({ role, locale: currentLocale(), market, state, city, name, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Không lưu được, thử lại.", "Couldn't save, try again."));
+      if (!res.ok) throw new Error(apiError(d, "Không lưu được, thử lại.", "Couldn't save, try again."));
       await fetch("/api/auth/session"); // làm mới phiên với vai trò vừa chọn
       try { localStorage.removeItem("pn_role_hint"); } catch {}
       window.location.href = role === "OWNER" ? "/jobs/create" : role === "CLIENT" ? "/" : "/?tab=jobs";

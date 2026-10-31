@@ -40,9 +40,10 @@ export async function notifyUrgentJob(job: UrgentJob): Promise<string[]> {
     if (techs.length) {
       pushed = techs.map((t) => t.id);
       await sendPush(techs.map((t) => t.id), {
-        title: "🔥 Việc gấp gần bạn",
+        title: "Việc cần gấp gần bạn",
         body: `${job.salonName} tại ${job.city} cần thợ: ${job.title} — ${job.salaryAmount}`,
         url: `/jobs/${job.id}`,
+        en: { title: "Urgent job near you", body: `${job.salonName} in ${job.city} is hiring: ${dtEn(job.title)} — ${dtEn(job.salaryAmount)}` },
         tag: `pn-job-${job.id}`,
       });
     }

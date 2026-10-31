@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   try {
     const targetUserId = req.nextUrl.searchParams.get("targetUserId");
     if (!targetUserId) {
-      return NextResponse.json({ error: "Thiếu targetUserId." }, { status: 400 });
+      return NextResponse.json({ error: "Thiếu targetUserId.", errorEn: "Missing user." }, { status: 400 });
     }
 
     const reviews = await prisma.review.findMany({
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("GET /api/reviews error:", error);
-    return NextResponse.json({ error: "Không thể tải đánh giá." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể tải đánh giá.", errorEn: "Couldn't load reviews." }, { status: 500 });
   }
 }
 
@@ -84,27 +84,27 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập để gửi đánh giá." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập để gửi đánh giá.", errorEn: "Log in to leave a review." }, { status: 401 });
     }
 
     const authorRole = session.user.role as Role;
     if (authorRole !== Role.OWNER && authorRole !== Role.TECHNICIAN) {
-      return NextResponse.json({ error: "Tài khoản của bạn không thể gửi đánh giá." }, { status: 403 });
+      return NextResponse.json({ error: "Tài khoản của bạn không thể gửi đánh giá.", errorEn: "Your account can't submit reviews." }, { status: 403 });
     }
 
     const body = await req.json();
     const { targetUserId, overall, comment } = body;
 
     if (!targetUserId) {
-      return NextResponse.json({ error: "Thiếu targetUserId." }, { status: 400 });
+      return NextResponse.json({ error: "Thiếu targetUserId.", errorEn: "Missing user." }, { status: 400 });
     }
     if (targetUserId === session.user.id) {
-      return NextResponse.json({ error: "Không thể tự đánh giá chính mình." }, { status: 400 });
+      return NextResponse.json({ error: "Không thể tự đánh giá chính mình.", errorEn: "You can't review yourself." }, { status: 400 });
     }
 
     const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, role: true } });
     if (!target) {
-      return NextResponse.json({ error: "Không tìm thấy tài khoản này." }, { status: 404 });
+      return NextResponse.json({ error: "Không tìm thấy tài khoản này.", errorEn: "Couldn't find this account." }, { status: 404 });
     }
 
     // Chủ tiệm chỉ được review Thợ, Thợ chỉ được review Chủ tiệm.
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     for (const key of criteriaKeys) {
       const val = body[key];
       if (!Number.isInteger(val) || val < 1 || val > 5) {
-        return NextResponse.json({ error: `Điểm "${key}" phải là số nguyên từ 1 đến 5.` }, { status: 400 });
+        return NextResponse.json({ error: `Điểm "${key}" phải là số nguyên từ 1 đến 5.`, errorEn: `The "${key}" score must be a whole number from 1 to 5.` }, { status: 400 });
       }
       criteriaValues[key] = val;
     }
@@ -135,10 +135,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Điểm "overall" phải là số nguyên từ 1 đến 5.' }, { status: 400 });
     }
     if (!comment || typeof comment !== "string" || !comment.trim()) {
-      return NextResponse.json({ error: "Vui lòng viết nhận xét." }, { status: 400 });
+      return NextResponse.json({ error: "Vui lòng viết nhận xét.", errorEn: "Please write a review." }, { status: 400 });
     }
     if (comment.length > 1000) {
-      return NextResponse.json({ error: "Nhận xét quá dài (tối đa 1000 ký tự)." }, { status: 400 });
+      return NextResponse.json({ error: "Nhận xét quá dài (tối đa 1000 ký tự).", errorEn: "Reviews can be up to 1,000 characters." }, { status: 400 });
     }
 
     // "Verified Connection" — 2 người đã từng nhắn tin (có ít nhất 1 tin
@@ -214,6 +214,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("POST /api/reviews error:", error);
-    return NextResponse.json({ error: "Không thể gửi đánh giá." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể gửi đánh giá.", errorEn: "Couldn't submit the review." }, { status: 500 });
   }
 }

@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     );
   } catch (error) {
     console.error("GET /api/posts/[id]/comments error:", error);
-    return NextResponse.json({ error: "Không thể tải bình luận." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể tải bình luận.", errorEn: "Couldn't load comments." }, { status: 500 });
   }
 }
 
@@ -40,22 +40,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập để bình luận." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập để bình luận.", errorEn: "Log in to comment." }, { status: 401 });
     }
     const { id: postId } = await params;
     const body = await req.json();
     const content = typeof body.content === "string" ? body.content.trim() : "";
 
     if (!content) {
-      return NextResponse.json({ error: "Bình luận không được để trống." }, { status: 400 });
+      return NextResponse.json({ error: "Bình luận không được để trống.", errorEn: "Write a comment first." }, { status: 400 });
     }
     if (content.length > 500) {
-      return NextResponse.json({ error: "Bình luận quá dài (tối đa 500 ký tự)." }, { status: 400 });
+      return NextResponse.json({ error: "Bình luận quá dài (tối đa 500 ký tự).", errorEn: "Comments can be up to 500 characters." }, { status: 400 });
     }
 
     const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true, authorId: true, anonymous: true } });
     if (!post) {
-      return NextResponse.json({ error: "Bài viết không còn tồn tại." }, { status: 404 });
+      return NextResponse.json({ error: "Bài viết không còn tồn tại.", errorEn: "This post no longer exists." }, { status: 404 });
     }
 
     const comment = await prisma.postComment.create({
@@ -78,6 +78,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   } catch (error) {
     console.error("POST /api/posts/[id]/comments error:", error);
-    return NextResponse.json({ error: "Không thể gửi bình luận." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể gửi bình luận.", errorEn: "Couldn't post the comment." }, { status: 500 });
   }
 }

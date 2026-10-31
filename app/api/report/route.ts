@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
 
     const body = await req.json();
@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
       userId = (await prisma.post.findUnique({ where: { id: body.postId }, select: { authorId: true } }))?.authorId ?? null;
     }
     if (!userId || !reason || !String(reason).trim()) {
-      return NextResponse.json({ error: "Vui lòng nhập lý do báo cáo." }, { status: 400 });
+      return NextResponse.json({ error: "Vui lòng nhập lý do báo cáo.", errorEn: "Please tell us why you're reporting this." }, { status: 400 });
     }
     if (userId === session.user.id) {
-      return NextResponse.json({ error: "Không thể tự báo cáo chính mình." }, { status: 400 });
+      return NextResponse.json({ error: "Không thể tự báo cáo chính mình.", errorEn: "You can't report yourself." }, { status: 400 });
     }
 
     await prisma.userReport.create({
@@ -38,6 +38,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reported: true }, { status: 201 });
   } catch (err) {
     console.error("POST /api/report error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống khi gửi báo cáo." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống khi gửi báo cáo.", errorEn: "Couldn't send the report. Please try again." }, { status: 500 });
   }
 }

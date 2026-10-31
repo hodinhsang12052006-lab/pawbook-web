@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 // Các khối dùng trên trang hồ sơ công khai (app/profile/[uid]/page.tsx) — tách
@@ -198,7 +199,7 @@ export function ReviewsSection({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể gửi đánh giá.", "Couldn't submit the review."));
+        toast.error(apiError(data, "Không thể gửi đánh giá.", "Couldn't submit the review."));
         return;
       }
       toast.success(tr("Đã gửi đánh giá — cảm ơn bạn! 🙏", "Review submitted — thank you! 🙏"));

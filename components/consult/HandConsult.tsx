@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -102,7 +103,7 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
       await manual();
       return;
     }
-    toast.error(r.d.error || tr("Không soi được, thử lại.", "Couldn't analyse, try again."));
+    toast.error(apiError(r.d, "Không soi được, thử lại.", "Couldn't analyse, try again."));
     setPhase("start");
   };
 
@@ -111,7 +112,7 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
     const perception = p ?? DEFAULT_PERCEPTION(part);
     setPhase("loading");
     const r = await post({ perception, part, prefs });
-    if (!r.ok) { toast.error(r.d.error || tr("Có lỗi, thử lại.", "Something went wrong.")); setPhase("start"); return; }
+    if (!r.ok) { toast.error(apiError(r.d, "Có lỗi, thử lại.", "Something went wrong.")); setPhase("start"); return; }
     setResult({ ...r.d, provider: "manual" });
     setEditing(true);
     setPhase("result");

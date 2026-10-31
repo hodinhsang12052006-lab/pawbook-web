@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
     const userId = session.user.id;
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     // roomId (roomId có thể đoán được vì id 2 phía lộ công khai qua
     // /profile/<id>, /api/jobs, /api/technicians).
     if (!roomId.startsWith("call-")) {
-      return NextResponse.json({ error: "roomId không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "roomId không hợp lệ.", errorEn: "Invalid room." }, { status: 400 });
     }
     // "call-<idA>-<idB>" hoặc "call-<idA>-<idB>-<callId>" (mỗi cuộc gọi 1 phòng
     // riêng — xem CallManager). callId chỉ là chữ thường/số.
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       participantIds[0] === participantIds[1] ||
       !participantIds.includes(userId)
     ) {
-      return NextResponse.json({ error: "Bạn không có quyền tham gia phòng gọi này." }, { status: 403 });
+      return NextResponse.json({ error: "Bạn không có quyền tham gia phòng gọi này.", errorEn: "You don't have access to this call." }, { status: 403 });
     }
     const otherId = participantIds.find((id: string) => id !== userId)!;
 
@@ -60,14 +60,14 @@ export async function POST(req: NextRequest) {
       },
     });
     if (blockExists) {
-      return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn." }, { status: 403 });
+      return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn.", errorEn: "You can't call this person." }, { status: 403 });
     }
 
     const appId = Number(process.env.ZEGO_APP_ID || process.env.NEXT_PUBLIC_ZEGO_APP_ID);
     const secret = process.env.ZEGO_SERVER_SECRET || "";
     if (!appId || !secret) {
       console.error("ZEGO_APP_ID / ZEGO_SERVER_SECRET chưa cấu hình trên server.");
-      return NextResponse.json({ error: "Dịch vụ gọi video chưa được cấu hình." }, { status: 503 });
+      return NextResponse.json({ error: "Dịch vụ gọi video chưa được cấu hình.", errorEn: "Video calling isn't set up yet." }, { status: 503 });
     }
 
     // 1 giờ là đủ cho 1 phiên gọi; token chỉ dùng để join phòng, không phải
@@ -96,6 +96,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ token: kitToken, userId: zegoUserId, userName });
   } catch (err) {
     console.error("POST /api/zego/token error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống khi tạo token cuộc gọi." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống khi tạo token cuộc gọi.", errorEn: "Couldn't start the call. Please try again." }, { status: 500 });
   }
 }

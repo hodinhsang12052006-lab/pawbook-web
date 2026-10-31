@@ -31,7 +31,7 @@ export async function GET(
 
     if (!job) {
       return NextResponse.json(
-        { error: "Tin tuyển dụng không tồn tại." },
+        { error: "Tin tuyển dụng không tồn tại.", errorEn: "This job post doesn't exist." },
         { status: 404 }
       );
     }
@@ -72,7 +72,7 @@ export async function GET(
   } catch (error: any) {
     console.error("Fetch job detail API error:", error);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi khi lấy chi tiết tin tuyển dụng." },
+      { error: "Đã xảy ra lỗi khi lấy chi tiết tin tuyển dụng.", errorEn: "Couldn't load this job post." },
       { status: 500 }
     );
   }
@@ -87,7 +87,7 @@ export async function DELETE(
     const { id } = await params;
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
 
     const job = await prisma.job.findUnique({ where: { id }, select: { ownerId: true } });
@@ -95,10 +95,10 @@ export async function DELETE(
     const isAdmin = (session.user as any).role === "ADMIN";
 
     if (!job) {
-      return NextResponse.json({ error: "Tin tuyển dụng không tồn tại." }, { status: 404 });
+      return NextResponse.json({ error: "Tin tuyển dụng không tồn tại.", errorEn: "This job post doesn't exist." }, { status: 404 });
     }
     if (!isOwner && !isAdmin) {
-      return NextResponse.json({ error: "Bạn không có quyền xóa tin này." }, { status: 403 });
+      return NextResponse.json({ error: "Bạn không có quyền xóa tin này.", errorEn: "You can't delete this job post." }, { status: 403 });
     }
 
     await prisma.job.delete({ where: { id } });
@@ -107,7 +107,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error("Delete job API error:", error);
     return NextResponse.json(
-      { error: "Không thể xóa tin. Vui lòng thử lại." },
+      { error: "Không thể xóa tin. Vui lòng thử lại.", errorEn: "Couldn't delete the job post. Please try again." },
       { status: 500 }
     );
   }

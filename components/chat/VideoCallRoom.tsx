@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -83,7 +84,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         if (cancelled) return;
         if (!tokenRes.ok) {
           const err = await tokenRes.json().catch(() => ({}));
-          throw new Error(err.error || tr("Không lấy được token cuộc gọi.", "Couldn't get a call token."));
+          throw new Error(apiError(err, "Không lấy được token cuộc gọi.", "Couldn't get a call token."));
         }
         const { token: kitToken } = await tokenRes.json();
 

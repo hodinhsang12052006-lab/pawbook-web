@@ -7,6 +7,7 @@ import { sendPush } from "@/lib/push";
 import { STATUSES, dateLabel, formatPhone, parseBooking, TIME_LABEL, type BookingTime } from "@/lib/booking";
 import { priceLabel } from "@/lib/menu";
 import { withReviewUrl } from "@/lib/bookingServer";
+import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // POST /api/bookings — KHÁCH (không cần tài khoản) gửi yêu cầu đặt lịch cho 1 thợ / tiệm.
 //   Chống spam: ô bẫy "website" (bot điền → giả vờ thành công), 5 lần / giờ / IP, 40 lần / ngày / thợ,
@@ -18,21 +19,21 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   if (typeof body.website === "string" && body.website.trim()) return NextResponse.json({ ok: true }, { status: 201 }); // bot
   const parsed = parseBooking(body);
-  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorEn: errorEn(parsed.error) }, { status: 400 });
   const v = parsed.value;
   const ipKey = `book-ip:${getClientIp(req)}`;
   const techKey = `book-tech:${v.techId}`;
-  if (isRateLimited(ipKey, 5, HOUR) || isRateLimited(techKey, 40, 24 * HOUR)) return NextResponse.json({ error: "Bạn gửi hơi nhiều, thử lại sau ít phút nhé." }, { status: 429 });
+  if (isRateLimited(ipKey, 5, HOUR) || isRateLimited(techKey, 40, 24 * HOUR)) return NextResponse.json({ error: "Bạn gửi hơi nhiều, thử lại sau ít phút nhé.", errorEn: "Too many requests. Please try again in a few minutes." }, { status: 429 });
 
   const tech = await prisma.user.findUnique({ where: { id: v.techId }, select: { id: true, name: true, role: true } });
-  if (!tech || (tech.role !== "TECHNICIAN" && tech.role !== "OWNER")) return NextResponse.json({ error: "Không tìm thấy thợ / tiệm." }, { status: 404 });
+  if (!tech || (tech.role !== "TECHNICIAN" && tech.role !== "OWNER")) return NextResponse.json({ error: "Không tìm thấy thợ / tiệm.", errorEn: "Couldn't find this technician or salon." }, { status: 404 });
 
   // Tên + giá mẫu lấy từ DB (không tin dữ liệu khách gửi lên)
   let itemName: string | null = null;
   let itemPrice: string | null = null;
   if (v.menuItemId) {
     const it = await prisma.menuItem.findFirst({ where: { id: v.menuItemId, ownerId: tech.id, active: true }, select: { name: true, priceFrom: true, priceTo: true } });
-    if (!it) return NextResponse.json({ error: "Mẫu này không còn trong menu." }, { status: 404 });
+    if (!it) return NextResponse.json({ error: "Mẫu này không còn trong menu.", errorEn: "This design is no longer on the menu." }, { status: 404 });
     itemName = it.name;
     itemPrice = priceLabel(it.priceFrom, it.priceTo);
   }
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const sp = new URL(req.url).searchParams;
   const status = (STATUSES as readonly string[]).includes(String(sp.get("status"))) ? String(sp.get("status")) : null;
   const [rows, grouped] = await Promise.all([

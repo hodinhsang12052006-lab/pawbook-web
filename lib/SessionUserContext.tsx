@@ -67,6 +67,27 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
     } catch {}
   }, [user, loading]);
 
+  // Nhớ ngôn ngữ trang cho tài khoản (thông báo đẩy / email gửi khi họ không mở app). Chỉ gọi máy chủ
+  // khi giá trị khác lần đã gửi trên thiết bị này — đổi VI/EN tải lại trang nên lần sau tự đồng bộ.
+  useEffect(() => {
+    const uid = user?.id as string | undefined;
+    if (!uid) return;
+    const lang = document.documentElement.lang === "vi" ? "vi" : "en";
+    const flag = `pn_locale_saved:${uid}`;
+    try {
+      if (localStorage.getItem(flag) === lang) return;
+    } catch {}
+    fetch("/api/me/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale: lang }) })
+      .then((r) => {
+        if (r.ok) {
+          try {
+            localStorage.setItem(flag, lang);
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [user?.id]);
+
   useEffect(() => {
     load();
     window.addEventListener("profile-updated", load);

@@ -19,7 +19,7 @@ const safeCount = async (fn: () => Promise<number>) => {
 export async function GET() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

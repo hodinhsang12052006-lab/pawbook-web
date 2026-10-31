@@ -8,16 +8,16 @@ import { MAX_MENU_ITEMS, toPublicMenuItem } from "@/lib/menu";
 // chép tên, mô tả, kỹ thuật, độ khó, thời gian, giá gợi ý, vật tư, ảnh → thợ chỉ cần sửa giá / thay ảnh thật.
 export async function POST(req: Request) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { id: me }, select: { role: true } });
-  if (!user || !["TECHNICIAN", "OWNER", "ADMIN"].includes(user.role)) return NextResponse.json({ error: "Chỉ thợ và chủ tiệm có menu." }, { status: 403 });
+  if (!user || !["TECHNICIAN", "OWNER", "ADMIN"].includes(user.role)) return NextResponse.json({ error: "Chỉ thợ và chủ tiệm có menu.", errorEn: "Only nail techs and salons have a menu." }, { status: 403 });
   const { designId } = (await req.json().catch(() => ({}))) as { designId?: string };
   const d = designId ? await prisma.nailDesign.findUnique({ where: { id: String(designId) } }) : null;
-  if (!d || d.status !== "published") return NextResponse.json({ error: "Không tìm thấy mẫu." }, { status: 404 });
+  if (!d || d.status !== "published") return NextResponse.json({ error: "Không tìm thấy mẫu.", errorEn: "Couldn't find this design." }, { status: 404 });
   const count = await prisma.menuItem.count({ where: { ownerId: me } });
-  if (count >= MAX_MENU_ITEMS) return NextResponse.json({ error: `Menu tối đa ${MAX_MENU_ITEMS} mẫu.` }, { status: 400 });
+  if (count >= MAX_MENU_ITEMS) return NextResponse.json({ error: `Menu tối đa ${MAX_MENU_ITEMS} mẫu.`, errorEn: `A menu can have up to ${MAX_MENU_ITEMS} items.` }, { status: 400 });
   const dup = await prisma.menuItem.findFirst({ where: { ownerId: me, sourceDesignId: d.id }, select: { id: true } });
-  if (dup) return NextResponse.json({ error: "Mẫu này đã có trong menu của bạn.", itemId: dup.id }, { status: 409 });
+  if (dup) return NextResponse.json({ error: "Mẫu này đã có trong menu của bạn.", errorEn: "This design is already on your menu.", itemId: dup.id }, { status: 409 });
 
   // "$60–75" / "$45-60" → 60, 75
   const nums = (d.priceHint || "").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];

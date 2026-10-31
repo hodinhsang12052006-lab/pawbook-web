@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -122,7 +123,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     try {
       const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || tr("Không thể xóa bài viết.", "Couldn't delete the post."));
+      if (!res.ok) throw new Error(apiError(data, "Không thể xóa bài viết.", "Couldn't delete the post."));
       toast.success(tr("Đã xóa bài viết.", "Post deleted."));
       onDeleted?.(post.id);
     } catch (err) {
@@ -239,7 +240,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể gửi bình luận.", "Couldn't post the comment."));
+        toast.error(apiError(data, "Không thể gửi bình luận.", "Couldn't post the comment."));
         return;
       }
       setComments((prev) => [...(prev || []), data]);

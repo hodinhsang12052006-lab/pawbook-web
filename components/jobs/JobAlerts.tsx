@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
@@ -47,7 +48,7 @@ export function JobAlertButton({ market, state }: { market: "US" | "AU"; state: 
     try {
       const res = await fetch("/api/job-alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ market, state: state || null, skill }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || tr("Không lưu được.", "Couldn't save."));
+      if (!res.ok) throw new Error(apiError(data, "Không lưu được.", "Couldn't save."));
       playSound("success");
       toast.success(
         pushOn

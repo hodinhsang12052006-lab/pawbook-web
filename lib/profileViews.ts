@@ -49,9 +49,10 @@ export async function recordProfileView(viewerId: string, profileId: string): Pr
           await getPusherServer()?.trigger(chatChannelName(profileId), "notification", { text: "Có tiệm vừa xem hồ sơ bạn", textEn: "A salon just viewed your profile" });
         } catch {}
         await sendPush(profileId, {
-          title: "👀 Có tiệm vừa xem hồ sơ bạn",
-          body: where ? `Một tiệm ở ${where} vừa xem portfolio của bạn — mở app xem là tiệm nào.` : "Một tiệm vừa xem portfolio của bạn — mở app xem là tiệm nào.",
+          title: "Có tiệm vừa xem hồ sơ của bạn",
+          body: where ? `Một tiệm ở ${where} vừa xem hồ sơ tay nghề của bạn — mở app để xem là tiệm nào.` : "Một tiệm vừa xem hồ sơ tay nghề của bạn — mở app để xem là tiệm nào.",
           url: "/profile#ai-da-xem",
+          en: { title: "A salon viewed your profile", body: where ? `A salon in ${where} viewed your portfolio. Open PawNail to see which one.` : "A salon viewed your portfolio. Open PawNail to see which one." },
           tag: "pn-profile-views",
         });
       }

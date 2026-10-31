@@ -35,9 +35,9 @@ async function see(part: Part, image: { mimeType: string; base64: string }): Pro
 
 export async function POST(req: Request) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { id: me }, select: { role: true } });
-  if (!user || !["TECHNICIAN", "OWNER", "ADMIN"].includes(user.role)) return NextResponse.json({ error: "Tính năng dành cho thợ và chủ tiệm." }, { status: 403 });
+  if (!user || !["TECHNICIAN", "OWNER", "ADMIN"].includes(user.role)) return NextResponse.json({ error: "Tính năng dành cho thợ và chủ tiệm.", errorEn: "This feature is for nail techs and salon owners." }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as { image?: unknown; part?: unknown; prefs?: unknown; perception?: unknown };
   const part: Part = body.part === "FOOT" ? "FOOT" : "HAND";
@@ -49,25 +49,25 @@ export async function POST(req: Request) {
 
   if (typeof body.image === "string") {
     const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(body.image);
-    if (!m) return NextResponse.json({ error: "Ảnh không hợp lệ (JPG / PNG / WebP)." }, { status: 400 });
-    if (m[2].length > MAX_B64) return NextResponse.json({ error: "Ảnh quá lớn." }, { status: 413 });
+    if (!m) return NextResponse.json({ error: "Ảnh không hợp lệ (JPG / PNG / WebP).", errorEn: "Invalid image (JPG, PNG or WebP)." }, { status: 400 });
+    if (m[2].length > MAX_B64) return NextResponse.json({ error: "Ảnh quá lớn.", errorEn: "The image is too large." }, { status: 413 });
     const key = `consult:${me}`;
-    if (isRateLimited(key, SCANS_PER_DAY, DAY)) return NextResponse.json({ error: `Bạn đã soi ${SCANS_PER_DAY} lần hôm nay — mai dùng tiếp nhé.` }, { status: 429 });
+    if (isRateLimited(key, SCANS_PER_DAY, DAY)) return NextResponse.json({ error: `Bạn đã soi ${SCANS_PER_DAY} lần hôm nay — mai dùng tiếp nhé.`, errorEn: `You've used all ${SCANS_PER_DAY} consults for today. Try again tomorrow.` }, { status: 429 });
     recordAttempt(key, DAY);
     try {
       const r = await see(part, { mimeType: m[1], base64: m[2] });
       if (r.out?.isTarget === false) {
-        return NextResponse.json({ error: part === "FOOT" ? "Chưa thấy rõ bàn chân / móng chân — chụp gần hơn, đủ sáng nhé." : "Chưa thấy rõ bàn tay / móng — chụp mu bàn tay, 5 ngón, đủ sáng nhé.", code: "NOT_TARGET" }, { status: 422 });
+        return NextResponse.json({ error: part === "FOOT" ? "Chưa thấy rõ bàn chân / móng chân — chụp gần hơn, đủ sáng nhé." : "Chưa thấy rõ bàn tay / móng — chụp mu bàn tay, 5 ngón, đủ sáng nhé.", errorEn: part === "FOOT" ? "We can't see the feet or toenails clearly. Move closer and use good light." : "We can't see the hand or nails clearly. Photograph the back of the hand with all 5 fingers in good light.", code: "NOT_TARGET" }, { status: 422 });
       }
       raw = r.out;
       provider = r.provider;
       note = typeof r.out?.note === "string" ? r.out.note.slice(0, 200) : "";
       noteEn = typeof r.out?.noteEn === "string" ? r.out.noteEn.slice(0, 200) : "";
     } catch {
-      return NextResponse.json({ error: "AI đang bận — bạn có thể tự chọn tình trạng bên dưới để xem gợi ý.", code: "AI_UNAVAILABLE" }, { status: 503 });
+      return NextResponse.json({ error: "AI đang bận — bạn có thể tự chọn tình trạng bên dưới để xem gợi ý.", errorEn: "The AI is busy right now. You can pick the condition below to see suggestions.", code: "AI_UNAVAILABLE" }, { status: 503 });
     }
   } else if (!raw || typeof raw !== "object") {
-    return NextResponse.json({ error: "Thiếu ảnh." }, { status: 400 });
+    return NextResponse.json({ error: "Thiếu ảnh.", errorEn: "Add a photo first." }, { status: 400 });
   }
 
   const perception = sanitizePerception(raw, part);

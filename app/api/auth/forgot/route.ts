@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { isPhoneOnlyEmail } from "@/lib/phoneLogin";
 import { emailEnabled, resetPasswordEmail, sendEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/siteUrl";
+import { localeFromRequest } from "@/lib/i18n/server";
+import { localePath } from "@/lib/i18n/config";
 
 // POST { email } — gửi link đặt lại mật khẩu.
 // • Luôn trả CÙNG một câu trả lời dù email có tài khoản hay không (không để kẻ xấu
@@ -18,12 +20,12 @@ const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex"
 
 export async function POST(req: Request) {
   if (!emailEnabled()) {
-    return NextResponse.json({ error: "Tính năng gửi email chưa được bật.", fallback: true }, { status: 503 });
+    return NextResponse.json({ error: "Tính năng gửi email chưa được bật.", errorEn: "Email isn't available right now.", fallback: true }, { status: 503 });
   }
   const body = (await req.json().catch(() => ({}))) as { email?: unknown };
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
-    return NextResponse.json({ error: "Email không hợp lệ." }, { status: 400 });
+    return NextResponse.json({ error: "Email không hợp lệ.", errorEn: "Enter a valid email address." }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true } });
@@ -34,9 +36,11 @@ export async function POST(req: Request) {
 
   const token = crypto.randomBytes(32).toString("base64url");
   await prisma.passwordReset.create({ data: { userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + TTL_MS) } });
-  const link = `${SITE_URL}/auth/reset?token=${token}`;
+  // Email + trang đặt lại mật khẩu theo ngôn ngữ của người đang yêu cầu (cookie / trình duyệt).
+  const locale = localeFromRequest(req);
+  const link = `${SITE_URL}${localePath("/auth/reset", locale)}?token=${token}`;
   try {
-    const m = resetPasswordEmail(user.name, link);
+    const m = resetPasswordEmail(user.name, link, locale);
     await sendEmail(email, m.subject, m.html, m.text);
   } catch (err) {
     console.error("forgot-password email error:", (err as Error).message);

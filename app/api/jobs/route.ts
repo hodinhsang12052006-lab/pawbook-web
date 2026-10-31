@@ -11,6 +11,7 @@ import { getJobHeat, isHot } from "@/lib/jobStats";
 import { notifyUrgentJob } from "@/lib/jobAlerts";
 import { notifyJobAlerts } from "@/lib/jobAlertRules";
 import { cleanJobMedia, getJobMedia, setJobMedia } from "@/lib/jobMedia";
+import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // GET /api/jobs?market=US&state=CA&city=...&q=...  — danh sách tin tuyển thợ
 //   q: tìm trong tiêu đề, tên tiệm, thành phố, kỹ năng, nội dung. Mới nhất / vừa được tiệm đăng lại lên đầu.
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Fetch jobs API error:", error);
     return NextResponse.json(
-      { error: "Không thể tải danh sách tin tuyển dụng." },
+      { error: "Không thể tải danh sách tin tuyển dụng.", errorEn: "Couldn't load jobs." },
       { status: 500 }
     );
   }
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để đăng tin tuyển dụng." },
+        { error: "Vui lòng đăng nhập để đăng tin tuyển dụng.", errorEn: "Log in to post a job." },
         { status: 401 }
       );
     }
@@ -111,14 +112,14 @@ export async function POST(req: Request) {
 
     if (userRole !== Role.OWNER) {
       return NextResponse.json(
-        { error: "Chỉ tài khoản Chủ tiệm mới có thể đăng tin tuyển thợ." },
+        { error: "Chỉ tài khoản Chủ tiệm mới có thể đăng tin tuyển thợ.", errorEn: "Only salon owner accounts can post jobs." },
         { status: 403 }
       );
     }
 
     // Chống tin rác / lừa đảo hàng loạt: tối đa vài tin / tiệm / ngày (lib/abuseGuard).
     const capped = await jobPostBlocked(userId);
-    if (capped) return NextResponse.json({ error: capped, code: "JOB_LIMIT" }, { status: 429 });
+    if (capped) return NextResponse.json({ error: capped, errorEn: errorEn(capped), code: "JOB_LIMIT" }, { status: 429 });
 
     const body = await req.json();
     const {
@@ -129,7 +130,7 @@ export async function POST(req: Request) {
 
     if (!title || !salonName || !market || !state || !city || !salaryType || !salaryAmount || !phone) {
       return NextResponse.json(
-        { error: "Vui lòng nhập đầy đủ thông tin bắt buộc." },
+        { error: "Vui lòng nhập đầy đủ thông tin bắt buộc.", errorEn: "Please fill in all required fields." },
         { status: 400 }
       );
     }
@@ -139,11 +140,11 @@ export async function POST(req: Request) {
     const shortFields = { title, salonName, state, city, salaryType, salaryAmount, phone };
     for (const [key, value] of Object.entries(shortFields)) {
       if (typeof value !== "string" || value.length > 200) {
-        return NextResponse.json({ error: `Trường "${key}" không hợp lệ.` }, { status: 400 });
+        return NextResponse.json({ error: `Trường "${key}" không hợp lệ.`, errorEn: `The "${key}" field is invalid.` }, { status: 400 });
       }
     }
     if (description !== undefined && (typeof description !== "string" || description.length > 5000)) {
-      return NextResponse.json({ error: "Mô tả quá dài (tối đa 5000 ký tự)." }, { status: 400 });
+      return NextResponse.json({ error: "Mô tả quá dài (tối đa 5000 ký tự).", errorEn: "The description can be up to 5,000 characters." }, { status: 400 });
     }
 
     const newJob = await prisma.job.create({
@@ -179,7 +180,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Create job API error:", error);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi hệ thống khi đăng tin tuyển dụng." },
+      { error: "Đã xảy ra lỗi hệ thống khi đăng tin tuyển dụng.", errorEn: "Couldn't post the job. Please try again." },
       { status: 500 }
     );
   }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { buildDigest, unsubUrl, type DigestUser } from "@/lib/digest";
+import { getUserLocales } from "@/lib/userLocale";
 import { isDemoEmail } from "@/lib/demo";
 import { isPhoneOnlyEmail } from "@/lib/phoneLogin";
 
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
     take: DIGEST_CAP,
     select: { id: true, name: true, email: true, role: true, market: true, state: true, city: true },
   });
+  const locales = await getUserLocales(users.map((u) => u.id));
   let sent = 0, skipped = 0;
   const errors: string[] = [];
   for (const u of users) {
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
     const email = (u.email || "").toLowerCase();
     const fake = !email.includes("@") || email.endsWith(".test") || isDemoEmail(email) || isPhoneOnlyEmail(email);
     try {
-      const d = fake ? null : await buildDigest(u as DigestUser);
+      const d = fake ? null : await buildDigest({ ...u, locale: locales.get(u.id) } as DigestUser);
       if (d) {
         await sendEmail(u.email, d.subject, d.html, d.text, {
           "List-Unsubscribe": `<${unsubUrl(u.id)}>`,

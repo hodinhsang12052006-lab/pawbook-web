@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
@@ -55,7 +56,7 @@ export default function BookingInbox() {
   const setStatus = async (b: Booking, status: BookingStatus, scheduledFor?: string) => {
     const res = await fetch(`/api/bookings/${b.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, scheduledFor }) });
     const d = await res.json().catch(() => ({}));
-    if (!res.ok) { toast.error(d.error || tr("Không cập nhật được.", "Couldn't update.")); return; }
+    if (!res.ok) { toast.error(apiError(d, "Không cập nhật được.", "Couldn't update.")); return; }
     toast.success(status === "confirmed" ? tr("Đã xác nhận lịch", "Booking confirmed") : status === "done" ? tr("Đã đánh dấu làm xong", "Marked as done") : tr("Đã từ chối", "Declined"));
     setList((l) => (l ?? []).filter((x) => x.id !== b.id));
     setCounts((c) => ({ ...c, [b.status]: Math.max(0, (c[b.status] ?? 1) - 1), [status]: (c[status] ?? 0) + 1 }));

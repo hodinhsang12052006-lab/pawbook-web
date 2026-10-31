@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -50,7 +51,7 @@ export default function BookingForm({ techId, techName, item, onClose }: {
         body: JSON.stringify({ techId, menuItemId: item?.id ?? null, name, phone, date, time, note, website, locale }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Chưa gửi được, thử lại.", "Couldn't send, please try again."));
+      if (!res.ok) throw new Error(apiError(d, "Chưa gửi được, thử lại.", "Couldn't send, please try again."));
       try { localStorage.setItem(DRAFT, JSON.stringify({ name, phone })); } catch {}
       setSent(true);
     } catch (e2) {

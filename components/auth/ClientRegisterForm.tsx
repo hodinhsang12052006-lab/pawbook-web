@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 // Đăng ký KHÁCH đi làm nail — 1 màn, ~30 giây: tên, khu vực, email + mật khẩu (SĐT không bắt buộc).
@@ -10,7 +11,7 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
 import SocialLogin from "@/components/auth/SocialLogin";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
 export default function ClientRegisterForm() {
@@ -42,10 +43,10 @@ export default function ClientRegisterForm() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "CLIENT", market, state, city, name: name.trim(), email: email.trim(), password, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
+        body: JSON.stringify({ role: "CLIENT", locale: currentLocale(), market, state, city, name: name.trim(), email: email.trim(), password, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Không đăng ký được, thử lại.", "Couldn't sign up, try again."));
+      if (!res.ok) throw new Error(apiError(d, "Không đăng ký được, thử lại.", "Couldn't sign up, try again."));
       const r = await signIn("credentials", { redirect: false, email: email.trim(), password });
       if (!r?.ok) throw new Error(tr("Đã tạo tài khoản — hãy đăng nhập.", "Account created — please log in."));
       window.location.href = "/";

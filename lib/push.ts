@@ -2,6 +2,7 @@ import webpush from "web-push";
 import prisma from "@/lib/prisma";
 import { fcmEnabled, sendFcm } from "@/lib/fcm";
 import { apnsEnabled, sendApns } from "@/lib/apns";
+import { getUserLocales } from "@/lib/userLocale";
 
 // Thông báo đẩy (Web Push chuẩn VAPID) — tới được người dùng KỂ CẢ khi đã
 // đóng tab/app: Chrome/Edge máy tính, Android, iPhone (iOS 16.4+, khi đã
@@ -15,6 +16,8 @@ export interface PushPayload {
   url: string; // mở trang này khi bấm vào thông báo
   tag?: string; // cùng tag → thay thế thông báo cũ thay vì chồng thêm
   icon?: string;
+  /** Bản tiếng Anh — người nhận dùng EN (mặc định) thấy bản này; người dùng VI thấy title/body. */
+  en?: { title?: string; body?: string };
 }
 
 let configured: boolean | null = null;
@@ -47,7 +50,29 @@ export async function sendPush(userIds: string | string[], payload: PushPayload)
   const ios = apnsEnabled();
   if ((!web && !android && !ios) || ids.length === 0) return 0;
   try {
-    const all = await prisma.pushSubscription.findMany({ where: { userId: { in: ids } }, take: 2000 });
+    const subsAll = await prisma.pushSubscription.findMany({ where: { userId: { in: ids } }, take: 2000 });
+    if (!subsAll.length) return 0;
+    // Mỗi người nhận đọc thông báo bằng ngôn ngữ của họ: chia thiết bị theo ngôn ngữ đã lưu.
+    const { en, ...vi } = payload;
+    if (!en) return await sendToSubs(subsAll, vi, web, android, ios);
+    const locales = await getUserLocales([...new Set(subsAll.map((s) => s.userId))]);
+    const enPayload: PushPayload = { ...vi, title: en.title ?? vi.title, body: en.body ?? vi.body };
+    const enSubs = subsAll.filter((s) => locales.get(s.userId) !== "vi");
+    const viSubs = subsAll.filter((s) => locales.get(s.userId) === "vi");
+    let sent = 0;
+    if (enSubs.length) sent += await sendToSubs(enSubs, enPayload, web, android, ios);
+    if (viSubs.length) sent += await sendToSubs(viSubs, vi, web, android, ios);
+    return sent;
+  } catch (err) {
+    if (!isMissingTable(err)) console.error("sendPush error:", err);
+    return 0;
+  }
+}
+
+type Sub = { id: string; userId: string; endpoint: string; p256dh: string; auth: string };
+
+async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boolean, android: boolean, ios: boolean): Promise<number> {
+  try {
     // App native lưu endpoint "fcm:<token>" (Android) / "apns:<token>" (iPhone) — xem app/api/push/native.
     const isNative = (e: string) => e.startsWith("fcm:") || e.startsWith("apns:");
     const fcmSubs = all.filter((s) => s.endpoint.startsWith("fcm:"));

@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useContext, useEffect, useState } from "react";
@@ -45,7 +46,7 @@ export function ForgotPasswordForm() {
       const r = await res.json().catch(() => ({}));
       if (res.status === 503 && r.fallback) setDisabled(true);
       else if (res.status === 429) setError(tr("Bạn thử quá nhiều lần. Vui lòng đợi 15 phút rồi thử lại.", "Too many attempts. Please wait 15 minutes and try again."));
-      else if (!res.ok) setError(r.error || tr("Không gửi được, vui lòng thử lại.", "Couldn't send, please try again."));
+      else if (!res.ok) setError(apiError(r, "Không gửi được, vui lòng thử lại.", "Couldn't send, please try again."));
       else setSent(true);
     } catch {
       setError(tr("Lỗi kết nối, vui lòng thử lại.", "Network error, please try again."));
@@ -122,7 +123,7 @@ export function ResetPasswordForm() {
     try {
       const res = await fetch("/api/auth/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, password: pw }) });
       const r = await res.json().catch(() => ({}));
-      if (!res.ok) setError(res.status === 410 ? tr("Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.", "This link has expired or was already used. Please request a new one.") : r.error || tr("Không đặt lại được, vui lòng thử lại.", "Couldn't reset, please try again."));
+      if (!res.ok) setError(res.status === 410 ? tr("Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.", "This link has expired or was already used. Please request a new one.") : apiError(r, "Không đặt lại được, vui lòng thử lại.", "Couldn't reset, please try again."));
       else {
         setDone(true);
         setTimeout(() => router.push("/auth/login"), 2500);

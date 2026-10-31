@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -140,14 +141,14 @@ export default function ProfilePage() {
       formData.append("file", file);
       const up = await fetch("/api/upload", { method: "POST", body: formData });
       const upData = await up.json();
-      if (!up.ok || !upData.url) throw new Error(upData.error || tr("Tải ảnh thất bại.", "Upload failed."));
+      if (!up.ok || !upData.url) throw new Error(apiError(upData, "Tải ảnh thất bại.", "Upload failed."));
       const res = await fetch("/api/user/update-avatar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: upData.url }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || tr("Không cập nhật được ảnh đại diện.", "Couldn't update profile photo."));
+      if (!res.ok) throw new Error(apiError(data, "Không cập nhật được ảnh đại diện.", "Couldn't update profile photo."));
       setProfile((prev: any) => ({ ...prev, avatarUrl: data.avatarUrl }));
       window.dispatchEvent(new Event("profile-updated"));
       toast.success(tr("Đã đổi ảnh đại diện!", "Profile photo updated!"), { id: toastId });
@@ -192,7 +193,7 @@ export default function ProfilePage() {
         setPortfolioImages((prev) => [...prev, data.url]);
         toast.success(tr("Tải ảnh thành công! ☁️", "Uploaded! ☁️"), { id: toastId });
       } else {
-        toast.error(data.error || tr("Tải ảnh thất bại.", "Upload failed."), { id: toastId });
+        toast.error(apiError(data, "Tải ảnh thất bại.", "Upload failed."), { id: toastId });
       }
     } catch (err) {
       toast.error(err instanceof FileTooLargeError ? err.message : tr("Lỗi mạng khi tải ảnh.", "Network error while uploading."), { id: toastId });
@@ -243,7 +244,7 @@ export default function ProfilePage() {
         setPhoneCheckKey((k) => k + 1);
         window.dispatchEvent(new Event("profile-updated"));
       } else {
-        toast.error(data.error || tr("Không thể lưu hồ sơ.", "Couldn't save profile."), { id: toastId });
+        toast.error(apiError(data, "Không thể lưu hồ sơ.", "Couldn't save profile."), { id: toastId });
       }
     } catch {
       toast.error(tr("Lỗi mạng khi lưu hồ sơ.", "Network error while saving."), { id: toastId });
@@ -268,7 +269,7 @@ export default function ProfilePage() {
         window.location.href = "/auth/register";
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || tr("Không thể xóa tài khoản.", "Couldn't delete the account."));
+        toast.error(apiError(data, "Không thể xóa tài khoản.", "Couldn't delete the account."));
         setDeletingAccount(false);
       }
     } catch {

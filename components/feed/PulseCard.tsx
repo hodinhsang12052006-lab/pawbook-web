@@ -1,3 +1,4 @@
+import { apiError } from "@/lib/i18n/apiError";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -38,7 +39,7 @@ export default function PulseCard() {
     try {
       const res = await fetch("/api/pulse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ option }) });
       const next = await res.json();
-      if (!res.ok) throw new Error(next.error || tr("Không ghi nhận được.", "Couldn't record your answer."));
+      if (!res.ok) throw new Error(apiError(next, "Không ghi nhận được.", "Couldn't record your answer."));
       setData(next);
       playSound("success");
     } catch (err) {

@@ -52,9 +52,10 @@ export async function notifyJobAlerts(job: NewJob, skip: Set<string> = new Set()
     const ids = [...new Set(alerts.map((a) => a.userId))].filter((id) => !skip.has(id));
     if (ids.length) {
       await sendPush(ids, {
-        title: "🔔 Việc mới đúng tiêu chí của bạn",
+        title: "Việc mới đúng tiêu chí của bạn",
         body: `${job.salonName} tại ${job.city}: ${job.title} — ${job.salaryAmount}`,
         url: `/jobs/${job.id}`,
+        en: { title: "New job matching your alert", body: `${job.salonName} in ${job.city}: ${dtEn(job.title)} — ${dtEn(job.salaryAmount)}` },
         tag: `pn-job-${job.id}`, // trùng tag tin gấp → không bao giờ hiện 2 lần
       });
     }

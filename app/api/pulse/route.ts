@@ -48,10 +48,10 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const week = weekKey();
   const q = questionFor(user.role, week);
-  if (!q) return NextResponse.json({ error: "Không có câu hỏi cho tài khoản này." }, { status: 400 });
+  if (!q) return NextResponse.json({ error: "Không có câu hỏi cho tài khoản này.", errorEn: "There's no question for this account." }, { status: 400 });
   const { option } = await req.json().catch(() => ({}));
   if (typeof option !== "string" || !q.options.some((o) => o.id === option)) {
-    return NextResponse.json({ error: "Lựa chọn không hợp lệ." }, { status: 400 });
+    return NextResponse.json({ error: "Lựa chọn không hợp lệ.", errorEn: "Invalid choice." }, { status: 400 });
   }
   try {
     await prisma.pulseVote.create({
@@ -59,10 +59,10 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const msg = String((err as Error).message);
-    if (/Unique constraint|P2002/.test(msg)) return NextResponse.json({ error: "Bạn đã trả lời câu hỏi tuần này rồi." }, { status: 409 });
-    if (/no such table|P2021/.test(msg)) return NextResponse.json({ error: "Tính năng đang được bật, thử lại sau." }, { status: 503 });
+    if (/Unique constraint|P2002/.test(msg)) return NextResponse.json({ error: "Bạn đã trả lời câu hỏi tuần này rồi.", errorEn: "You've already answered this week's question." }, { status: 409 });
+    if (/no such table|P2021/.test(msg)) return NextResponse.json({ error: "Tính năng đang được bật, thử lại sau.", errorEn: "This feature is being turned on. Please try again later." }, { status: 503 });
     console.error("pulse vote error:", err);
-    return NextResponse.json({ error: "Không ghi nhận được." }, { status: 500 });
+    return NextResponse.json({ error: "Không ghi nhận được.", errorEn: "Couldn't save your answer." }, { status: 500 });
   }
   return NextResponse.json(await payload(user));
 }

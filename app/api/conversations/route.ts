@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { groupCreateBlocked } from "@/lib/abuseGuard";
+import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập." },
+        { error: "Vui lòng đăng nhập.", errorEn: "Please log in." },
         { status: 401 }
       );
     }
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
 
     if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0 || participantIds.some((id: unknown) => typeof id !== "string")) {
       return NextResponse.json(
-        { error: "Danh sách người tham gia không hợp lệ." },
+        { error: "Danh sách người tham gia không hợp lệ.", errorEn: "Invalid list of participants." },
         { status: 400 }
       );
     }
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       });
       if (blockExists) {
         return NextResponse.json(
-          { error: "Không thể tạo cuộc trò chuyện — một trong hai người đã chặn." },
+          { error: "Không thể tạo cuộc trò chuyện — một trong hai người đã chặn.", errorEn: "You can't start a conversation with this person." },
           { status: 403 }
         );
       }
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     // Chống spam: nhóm chat kéo hàng trăm người vào rồi rải tin (lib/abuseGuard).
     if (isGroup || uniqueIds.length > 2) {
       const capped = await groupCreateBlocked(currentUserId, uniqueIds.length);
-      if (capped) return NextResponse.json({ error: capped }, { status: 429 });
+      if (capped) return NextResponse.json({ error: capped, errorEn: errorEn(capped) }, { status: 429 });
     }
 
     // Create new conversation (Group or 1-to-1)
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Create conversation error:", error);
     return NextResponse.json(
-      { error: "Không thể tạo cuộc hội thoại." },
+      { error: "Không thể tạo cuộc hội thoại.", errorEn: "Couldn't start the conversation." },
       { status: 500 }
     );
   }

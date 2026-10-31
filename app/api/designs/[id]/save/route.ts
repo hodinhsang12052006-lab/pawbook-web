@@ -7,10 +7,10 @@ import prisma from "@/lib/prisma";
 // là tín hiệu xếp "mẫu hot" và chọn mẫu làm video.
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const { id } = await params;
   const design = await prisma.nailDesign.findFirst({ where: { id, status: "published" }, select: { id: true } });
-  if (!design) return NextResponse.json({ error: "Không tìm thấy mẫu." }, { status: 404 });
+  if (!design) return NextResponse.json({ error: "Không tìm thấy mẫu.", errorEn: "Couldn't find this design." }, { status: 404 });
   const key = { userId_designId: { userId, designId: id } };
   const existing = await prisma.nailDesignSave.findUnique({ where: key });
   if (existing) await prisma.nailDesignSave.delete({ where: key });

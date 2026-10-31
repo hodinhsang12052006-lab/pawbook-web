@@ -20,6 +20,9 @@ export function GET() {
             components: [
               { "/": "/api/*", exclude: true },
               { "/": "/auth/*", exclude: true },
+              // Bản tiếng Việt của cùng các đường dẫn (app/[lang], xem lib/i18n/config.ts).
+              { "/": "/vi/api/*", exclude: true },
+              { "/": "/vi/auth/*", exclude: true },
               { "/": "/*" },
             ],
           },

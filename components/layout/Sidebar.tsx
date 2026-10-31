@@ -4,7 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Briefcase, Store, Newspaper } from "lucide-react";
 import ToolsPanel from "@/components/layout/ToolsPanel";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
@@ -22,7 +23,7 @@ interface SidebarProps {
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const { user: effectiveUser, loading: sessionLoading } = useSessionUser();
 
   const userName = effectiveUser?.name || tr("Thành viên", "Member");

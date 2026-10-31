@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { Capacitor } from "@capacitor/core";
 import { Download, PlusSquare, Share, X } from "lucide-react";
@@ -29,7 +29,7 @@ function writeState(s: InstallState) {
 }
 
 export default function InstallPrompt() {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const { user } = useSessionUser();
   const loggedIn = !!user;
   const [mode, setMode] = useState<Mode | null>(null);

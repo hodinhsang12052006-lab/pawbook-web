@@ -29,6 +29,8 @@ const isData = (s) => [...data].some((d) => d && (d === s || (d.length > 12 && (
 const browser = await chromium.launch();
 async function ctx(locale) {
   const c = await browser.newContext({ ...devices["Pixel 7"], locale: locale === "en" ? "en-US" : "vi-VN" });
+  // Ngôn ngữ do máy chủ chọn (cookie bitpaw_locale → Accept-Language → en); localStorage chỉ còn để tương thích bản cũ.
+  await c.addCookies([{ name: "bitpaw_locale", value: locale, url: BASE_URL }]);
   await c.addInitScript((m) => {
     try {
       localStorage.setItem("bitpaw_locale", m);

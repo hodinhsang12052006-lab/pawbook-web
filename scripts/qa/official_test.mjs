@@ -183,6 +183,8 @@ try {
 
   // ---- Giao diện tiếng Anh ----
   const enCtx = await browser.newContext({ ...devices["Pixel 7"], locale: "en-US" });
+  // Ngôn ngữ do máy chủ chọn (cookie bitpaw_locale → Accept-Language → en); localStorage chỉ còn để tương thích bản cũ.
+  await enCtx.addCookies([{ name: "bitpaw_locale", value: "en", url: BASE_URL }]);
   await enCtx.addInitScript(() => { try { localStorage.setItem("bitpaw_locale", "en"); } catch {} });
   const ep = await login(enCtx, SEED_TECH);
   const VN = /[ạảấầậắằặẹẻếềệịọỏốồộớờợụủứừựỳỵỷỹđĐ]/g;
@@ -210,6 +212,7 @@ try {
     await ep.screenshot({ path: `${OUT}/of_en_${path.replace(/[^a-z]/gi, "_")}.png` });
   }
   const ownerEn = await browser.newContext({ ...devices["Pixel 7"], locale: "en-US" });
+  await ownerEn.addCookies([{ name: "bitpaw_locale", value: "en", url: BASE_URL }]);
   await ownerEn.addInitScript(() => { try { localStorage.setItem("bitpaw_locale", "en"); } catch {} });
   const oe = await login(ownerEn, SEED_OWNER);
   await oe.goto(BASE_URL + "/jobs/create");

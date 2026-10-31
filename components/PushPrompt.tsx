@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { BellRing, X } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { enablePush, getPushState } from "@/lib/pushClient";
@@ -20,7 +20,7 @@ const QUIET = [/^\/auth/, /^\/messages/, /^\/jobs\/create/, /^\/admin/];
 export default function PushPrompt() {
   useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
 

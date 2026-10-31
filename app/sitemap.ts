@@ -2,9 +2,22 @@ import { MetadataRoute } from "next";
 import prisma from "@/lib/prisma";
 import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
+import { localePath } from "@/lib/i18n/config";
 
 // Tạo mỗi lần Google đọc (không đóng băng lúc deploy): tin tuyển + mẫu nail mới mỗi ngày phải có mặt ngay
 export const dynamic = "force-dynamic";
+
+// Mỗi trang có 2 bản: tiếng Anh ở URL không tiền tố (x-default) và tiếng Việt ở /vi/… —
+// khai cả 2 kèm hreflang qua lại (Google cần mỗi bản liệt kê đủ các bản còn lại).
+function bilingual(path: string, entry: Omit<MetadataRoute.Sitemap[number], "url" | "alternates">): MetadataRoute.Sitemap {
+  const en = `${SITE_URL}${localePath(path, "en")}`;
+  const vi = `${SITE_URL}${localePath(path, "vi")}`;
+  const alternates = { languages: { en, vi, "x-default": en } };
+  return [
+    { ...entry, url: en, alternates },
+    { ...entry, url: vi, alternates },
+  ];
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SITE_URL;
@@ -18,8 +31,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy: { createdAt: "desc" },
       take: 5000,
     });
+    // Nội dung tin do tiệm viết bằng tiếng Việt → bản chuẩn (canonical) là /vi/jobs/… (xem app/[lang]/jobs/[id]/layout.tsx).
     jobUrls = jobs.map((job) => ({
-      url: `${baseUrl}/jobs/${job.id}`,
+      url: `${baseUrl}${localePath(`/jobs/${job.id}`, "vi")}`,
       lastModified: job.createdAt,
       changeFrequency: "daily" as const,
       priority: 0.8,
@@ -37,36 +51,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy: { publishedAt: "desc" },
       take: 3000,
     });
-    designUrls = designs.map((d) => ({ url: `${baseUrl}/designs/${d.id}`, lastModified: d.publishedAt ?? undefined, changeFrequency: "weekly" as const, priority: 0.6 }));
+    designUrls = designs.flatMap((d) => bilingual(`/designs/${d.id}`, { lastModified: d.publishedAt ?? undefined, changeFrequency: "weekly" as const, priority: 0.6 }));
   } catch (e) {
     console.error("Sitemap designs query failed:", e);
   }
 
+  const now = new Date();
   const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/auth/login`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.3,
-    },
-    { url: `${baseUrl}/designs`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
-    { url: `${baseUrl}/trends`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.6 },
-    { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: "yearly" as const, priority: 0.1 },
-    { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: "yearly" as const, priority: 0.1 },
-    { url: `${baseUrl}/data-deletion`, lastModified: new Date(), changeFrequency: "yearly" as const, priority: 0.1 },
-    { url: `${baseUrl}/support`, lastModified: new Date(), changeFrequency: "yearly" as const, priority: 0.1 },
-    {
-      url: `${baseUrl}/auth/register`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
-    },
+    ...bilingual("/", { lastModified: now, changeFrequency: "daily" as const, priority: 1.0 }),
+    ...bilingual("/auth/login", { lastModified: now, changeFrequency: "monthly" as const, priority: 0.3 }),
+    ...bilingual("/designs", { lastModified: now, changeFrequency: "daily" as const, priority: 0.8 }),
+    ...bilingual("/trends", { lastModified: now, changeFrequency: "weekly" as const, priority: 0.6 }),
+    ...bilingual("/terms", { lastModified: now, changeFrequency: "yearly" as const, priority: 0.1 }),
+    ...bilingual("/privacy", { lastModified: now, changeFrequency: "yearly" as const, priority: 0.1 }),
+    ...bilingual("/data-deletion", { lastModified: now, changeFrequency: "yearly" as const, priority: 0.1 }),
+    ...bilingual("/support", { lastModified: now, changeFrequency: "yearly" as const, priority: 0.1 }),
+    ...bilingual("/auth/register", { lastModified: now, changeFrequency: "monthly" as const, priority: 0.5 }),
   ];
 
   return [...staticPages, ...jobUrls, ...designUrls];

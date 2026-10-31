@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from "react";
+import { stripLocalePrefix } from "@/lib/i18n/config";
 
 interface SessionUserContextValue {
   user: any;
@@ -32,7 +33,7 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
       if (res.ok) {
         const session = await res.json();
         // Đăng nhập Google/Apple lần đầu: phải chọn vai trò + khu vực trước khi dùng app.
-        if (session?.user?.needsOnboarding && !window.location.pathname.startsWith("/auth/complete")) {
+        if (session?.user?.needsOnboarding && !stripLocalePrefix(window.location.pathname).startsWith("/auth/complete")) {
           window.location.replace("/auth/complete");
           return;
         }

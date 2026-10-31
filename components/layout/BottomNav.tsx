@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Newspaper, Briefcase, Users, MessageCircle, Plus, Home, Sparkles, Store, type LucideIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import Avatar from "@/components/ui/Avatar";
@@ -27,7 +28,7 @@ interface NavItem {
 // để nhường chỗ cho nội dung, hiện lại ngay khi cuộn lên.
 export default function BottomNav() {
   useTr(); // render lại khi đổi VI/EN
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const router = useRouter();
   const { user: sessionUser, loading } = useSessionUser();
   const { unreadCount } = useUnreadMessages();

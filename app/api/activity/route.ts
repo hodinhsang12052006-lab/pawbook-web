@@ -4,7 +4,7 @@ import { realOnly } from "@/lib/demo";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { placeLabel } from "@/lib/stateNames";
-import { dtEn } from "@/lib/i18n/dataEn";
+import { dtEn } from "@/lib/i18n/dtEn";
 
 // GET /api/activity — hoạt động THẬT gần đây cho thông báo "đám đông"
 // (FomoToast): tin tuyển mới, thợ vừa cập nhật portfolio, bài đăng được

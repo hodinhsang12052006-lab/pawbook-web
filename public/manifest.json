@@ -1,7 +1,9 @@
 {
   "name": "PawNail Jobs",
   "short_name": "PawNail",
-  "description": "Sàn kết nối chủ tiệm nail và thợ nail tại Mỹ & Úc — đăng tin tuyển thợ gấp, đăng portfolio tìm việc, nhắn tin và gọi trực tiếp.",
+  "description": "Try on nail looks on your own hand, find a salon and request a booking. Nail techs showcase their work and find jobs; salons hire. US & Australia.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#111018",

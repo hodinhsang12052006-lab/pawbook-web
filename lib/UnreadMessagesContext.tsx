@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playSound } from "@/lib/sounds";
@@ -25,7 +25,7 @@ const UnreadMessagesContext = createContext<UnreadMessagesContextValue>({
 // `pathname`, resubscribed on every single route change for no reason).
 export function UnreadMessagesProvider({ children }: { children: React.ReactNode }) {
   const { user: sessionUser } = useSessionUser();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const pathnameRef = useRef(pathname);

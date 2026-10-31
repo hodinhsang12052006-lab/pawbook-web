@@ -20,14 +20,21 @@ try {
     list = (await fetch(BASE_URL + "/api/designs?limit=12").then((r) => r.json())).designs;
   }
   const d = list[0];
-  const res = await fetch(`${BASE_URL}/designs/${d.id}`);
+  // Máy chủ render theo ngôn ngữ (app/[lang]): URL không tiền tố = tiếng Anh (H1 = titleEn), /vi/… = tiếng Việt.
+  // Trước đây HTML máy chủ luôn là tiếng Việt nên P1 so H1 với d.title — nay kiểm tra CẢ 2 bản.
+  const res = await fetch(`${BASE_URL}/designs/${d.id}`, { headers: { "accept-language": "en-US" } });
+  const resVi = await fetch(`${BASE_URL}/vi/designs/${d.id}`, { headers: { "accept-language": "en-US" } });
+  const htmlVi = await resVi.text();
+  const canonVi = htmlVi.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? "";
+  const h1Vi = /<html[^>]* lang="vi"/.test(htmlVi) && htmlVi.includes(d.title.replace(/&/g, "&amp;").slice(0, 12));
   const html = await res.text();
   const ld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => { try { return JSON.parse(m[1]); } catch { return null; } }).find((x) => x?.["@type"] === "HowTo");
   const og = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? "";
   const canon = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? "";
-  const h1 = /<h1[^>]*>[^<]*<\/h1>/.test(html) && html.includes(d.title.replace(/&/g, "&amp;").slice(0, 12));
+  const h1 = /<h1[^>]*>[^<]*<\/h1>/.test(html) && /<html[^>]* lang="en"/.test(html) && html.includes((d.titleEn || d.title).replace(/&/g, "&amp;").slice(0, 12));
   R.check("P1", "Trang mẫu dựng sẵn phía máy chủ: 200, tiêu đề H1 tên mẫu, ảnh xem trước khi chia sẻ (og:image), link chuẩn (canonical)",
-    res.status === 200 && h1 && (/cloudinary/.test(og) || og.startsWith("data:image/")) && canon.endsWith(`/designs/${d.id}`), JSON.stringify({ status: res.status, h1, og: og.slice(0, 60), canon }));
+    res.status === 200 && h1 && (/cloudinary/.test(og) || og.startsWith("data:image/")) && canon.endsWith(`/designs/${d.id}`) && !canon.includes("/vi/") &&
+      resVi.status === 200 && h1Vi && canonVi.endsWith(`/vi/designs/${d.id}`), JSON.stringify({ status: res.status, h1, og: og.slice(0, 60), canon, vi: resVi.status, h1Vi, canonVi }));
   R.check("P2", `Google đọc được cách làm (HowTo): ${ld?.step?.length ?? 0} bước, ${ld?.supply?.length ?? 0} vật tư, thời gian ${ld?.totalTime}, bản tiếng Anh`,
     !!ld && ld.step.length === d.steps.length && ld.supply.length === d.materials.length && ld.totalTime === `PT${d.minutes}M` && ld.name === (d.titleEn || d.title), JSON.stringify(ld ?? {}).slice(0, 200));
 

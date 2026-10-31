@@ -46,7 +46,50 @@ const withPWA = withPWAInit({
   },
 });
 
+// ---- Ngôn ngữ: tiếng Anh mặc định, tiếng Việt khi được chọn ----
+// Mọi trang nằm dưới app/[lang] và được prerender cho /en/… và /vi/…. URL công
+// khai không có tiền tố; router của Vercel (không gọi function) chọn bản đúng:
+//   cookie bitpaw_locale=vi                      → /vi/…
+//   chưa có cookie + tiếng Việt ĐỨNG ĐẦU Accept-Language → /vi/…
+//   còn lại (en, es, zh, ko…, Googlebot, link preview) → /en/…
+// /vi/… là URL tiếng Việt tường minh (Google lập chỉ mục được); /en/… → 308 về URL
+// không tiền tố. KHÔNG thêm "Vary: Cookie" — cache của Vercel đã tách theo đường
+// dẫn sau rewrite, Vary theo cookie phiên chỉ làm vỡ cache. Quy tắc dùng chung:
+// lib/i18n/config.ts (negotiateLocale), kiểm tra: scripts/qa/ssr_locale_check.mjs.
+const VI_COOKIE = { type: "cookie" as const, key: "bitpaw_locale", value: "vi" };
+const ANY_LOCALE_COOKIE = { type: "cookie" as const, key: "bitpaw_locale" };
+// Next/Vercel bọc giá trị thành ^…$ — chỉ khớp khi "vi" là thẻ ĐẦU TIÊN.
+const VI_FIRST = { type: "header" as const, key: "accept-language", value: "\\s*[vV][iI](?:[-_;,].*)?" };
+// Đường dẫn trang (không phải API, asset của Next/Vercel/Cloudflare, .well-known,
+// tệp có đuôi trong /public, hay URL đã có tiền tố ngôn ngữ).
+const PAGE_PATH = "/:path((?!(?:api|_next|_vercel|cdn-cgi|vi|en|\\.well-known)(?:/|$))(?!__next)(?!.*\\.[A-Za-z0-9]{1,6}$).+)";
+
 const nextConfig: NextConfig = {
+  experimental: {
+    // Layout gốc nằm dưới app/[lang] → 404 cho URL không khớp route nào do
+    // app/global-not-found.tsx render (HTML tĩnh, song ngữ EN trước).
+    globalNotFound: true,
+  },
+  async redirects() {
+    return [
+      { source: "/en", destination: "/", permanent: true },
+      { source: "/en/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: "/", has: [VI_COOKIE], destination: "/vi" },
+        { source: "/", has: [VI_FIRST], missing: [ANY_LOCALE_COOKIE], destination: "/vi" },
+        { source: "/", destination: "/en" },
+        { source: PAGE_PATH, has: [VI_COOKIE], destination: "/vi/:path" },
+        { source: PAGE_PATH, has: [VI_FIRST], missing: [ANY_LOCALE_COOKIE], destination: "/vi/:path" },
+        { source: PAGE_PATH, destination: "/en/:path" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   // Next.js was misdetecting the monorepo root because a stray
   // package-lock.json sits one directory up (in the user's home folder),
   // outside this project entirely — pin it explicitly instead of letting
@@ -75,6 +118,12 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // URL không tiền tố trả EN hoặc VI tuỳ cookie / Accept-Language. Cache của
+      // Vercel tách theo đường dẫn sau rewrite nên an toàn; header này chặn
+      // Cloudflare (đứng trước Vercel) lỡ cache 1 bản cho mọi người nếu sau này
+      // zone bật "Cache Everything". Chỉ Cloudflare đọc header này.
+      { source: "/", headers: [{ key: "Cloudflare-CDN-Cache-Control", value: "no-store" }] },
+      { source: PAGE_PATH, headers: [{ key: "Cloudflare-CDN-Cache-Control", value: "no-store" }] },
       {
         source: "/(.*)",
         headers: [

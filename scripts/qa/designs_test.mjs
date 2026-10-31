@@ -177,6 +177,8 @@ try {
   browser = await chromium.launch();
   const page = async (locale = "vi-VN") => {
     const ctx = await browser.newContext({ ...devices["Pixel 7"], locale });
+    // Ngôn ngữ do máy chủ chọn (cookie bitpaw_locale → Accept-Language → en); localStorage chỉ còn để tương thích bản cũ.
+    await ctx.addCookies([{ name: "bitpaw_locale", value: locale === "en-US" ? "en" : "vi", url: BASE_URL }]);
     if (locale === "en-US") await ctx.addInitScript(() => { try { localStorage.setItem("bitpaw_locale", "en"); } catch {} });
     const ip = fakeIp();
     await ctx.route(BASE_URL + "/**", (route) => route.continue({ headers: { ...route.request().headers(), "cf-connecting-ip": ip } }));

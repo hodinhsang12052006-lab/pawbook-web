@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { X, ArrowRight, Flame, Sparkles, Heart, BarChart3 } from "lucide-react";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { timeAgo } from "@/lib/feedFormat";
@@ -92,7 +93,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function FomoToast() {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const router = useRouter();
   const [current, setCurrent] = useState<FomoMessage | null>(null);
   const { locale } = useLanguage();

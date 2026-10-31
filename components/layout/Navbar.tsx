@@ -27,10 +27,10 @@ export default function Navbar() {
         {/* Left: Logo & Brand */}
         <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">
           <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-pink-500/20">
-            <Image src="/cho1.jpg" alt="PawNail Jobs" fill sizes="40px" className="object-cover" />
+            <Image src="/cho1.jpg" alt="PawNail" fill sizes="40px" className="object-cover" />
           </div>
           <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-lg font-extrabold tracking-wide text-transparent hidden sm:inline">
-            PawNail Jobs
+            PawNail
           </span>
         </div>
 
@@ -64,19 +64,19 @@ export default function Navbar() {
                 <button
                   onClick={() => router.push("/jobs/create")}
                   className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
-                  title={tr("Đăng tin tuyển thợ", "Post a job")}
+                  title={tr("Đăng tin tuyển", "Post a job")}
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">{tr("Đăng tin", "Post job")}</span>
+                  <span className="hidden md:inline">{tr("Đăng tin tuyển", "Post a job")}</span>
                 </button>
               ) : (
                 <button
                   onClick={() => router.push(sessionUser.role === "CLIENT" ? "/salons" : "/profile")}
                   className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
-                  title={sessionUser.role === "CLIENT" ? tr("Tìm tiệm & đặt lịch", "Find a salon") : tr("Đăng ảnh portfolio", "Post portfolio photos")}
+                  title={sessionUser.role === "CLIENT" ? tr("Tìm tiệm", "Find a salon") : tr("Đăng tác phẩm", "Share your work")}
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="hidden md:inline">{sessionUser.role === "CLIENT" ? tr("Tìm tiệm", "Find salon") : tr("Đăng ảnh", "Post photos")}</span>
+                  <span className="hidden md:inline">{sessionUser.role === "CLIENT" ? tr("Tìm tiệm", "Find a salon") : tr("Đăng tác phẩm", "Share your work")}</span>
                 </button>
               )}
 

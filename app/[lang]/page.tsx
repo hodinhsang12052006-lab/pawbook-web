@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import HeroPulse from "@/components/home/HeroPulse";
+import GuestDiscover from "@/components/home/GuestDiscover";
 import ClientHome from "@/components/client/ClientHome";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
@@ -19,7 +20,7 @@ import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
 import GettingStarted from "@/components/onboarding/GettingStarted";
 import MenuNudge from "@/components/menu/MenuNudge";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
-import { Sparkles, Search, Flame, Newspaper, X, Briefcase, Store } from "lucide-react";
+import { Sparkles, Search, Newspaper, X, Briefcase, Store, Hand, ArrowRight, Compass, Users } from "lucide-react";
 import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -35,10 +36,13 @@ function greeting(date = new Date()) {
 
 // Hàm (không phải hằng số) để đọc đúng ngôn ngữ hiện tại mỗi lần render.
 const tabSubtitle = (): Record<"feed" | "jobs" | "portfolio", { owner: string; tech: string; admin?: string }> => ({
-  feed: { admin: tr("Theo dõi cộng đồng, duyệt nội dung và hỗ trợ thành viên.", "Keep an eye on the community, review content and support members."), owner: tr("Cập nhật mới nhất từ cộng đồng nail quanh bạn.", "The latest from the nail community around you."), tech: tr("Khoe tay nghề và xem tiệm nào đang tuyển quanh bạn.", "Show off your work and see which salons are hiring near you.") },
-  jobs: { owner: tr("Xem các tiệm khác đang tuyển để đặt mức lương cạnh tranh.", "See what other salons offer to set a competitive wage."), tech: tr("Tin tuyển gấp mới nhất — gọi hoặc nhắn tin ngay cho tiệm.", "Latest urgent jobs — call or message the salon right away.") },
-  portfolio: { owner: tr("Thợ đang sẵn sàng nhận việc — xem portfolio và nhắn tin trực tiếp.", "Techs ready to work — view portfolios and message directly."), tech: tr("Xem portfolio thợ khác để lấy cảm hứng mẫu mới.", "Browse other techs’ portfolios for new design ideas.") },
+  feed: { admin: tr("Theo dõi bảng tin, duyệt nội dung và hỗ trợ thành viên.", "Keep an eye on the feed, review content and support members."), owner: tr("Cập nhật mới từ thợ và tiệm nail quanh bạn.", "Updates from nail techs and salons near you."), tech: tr("Chia sẻ tác phẩm và xem tiệm nào đang tuyển quanh bạn.", "Share your work and see which salons are hiring near you.") },
+  jobs: { owner: tr("Xem các tiệm khác đang tuyển để đặt mức lương cạnh tranh.", "See what other salons offer to set a competitive rate."), tech: tr("Việc làm mới gần bạn — gọi hoặc nhắn tin trực tiếp cho tiệm.", "New jobs near you — call or message the salon directly.") },
+  portfolio: { owner: tr("Thợ sẵn sàng nhận việc — xem tay nghề và nhắn tin trực tiếp.", "Techs open to work — view portfolios and message directly."), tech: tr("Xem tay nghề của thợ khác để lấy cảm hứng mẫu mới.", "Browse other techs’ portfolios for new design ideas.") },
 });
+
+const noopSubscribe = () => () => {};
+const readAuthedHint = () => document.documentElement.hasAttribute("data-authed");
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -176,6 +180,11 @@ export default function HomePage() {
   // Khách: hero có sẵn ngay trong HTML đầu tiên (trước đây chờ tải phiên ~1s rồi mới chen vào,
   // đẩy cả trang xuống — CLS 0.8). Máy từng đăng nhập → CSS ẩn ngay từ đầu (html[data-authed]).
   const showHero = !sessionUser;
+  // Trang chủ cho khách chưa đăng nhập = "Khám phá" (mẫu nail, thử mẫu, tìm tiệm) thay cho bảng tin.
+  // HTML đầu tiên luôn là bản cho khách; máy từng đăng nhập (html[data-authed], script đầu trang) chuyển
+  // sang bảng tin ngay sau khi hydrate — server snapshot = false nên không lệch hydrate.
+  const authedHint = useSyncExternalStore(noopSubscribe, readAuthedHint, () => false);
+  const guestView = !sessionUser && !(sessionLoading && authedHint);
 
   // Khách đi làm nail: trang chủ riêng (mẫu, tiệm quanh bạn, đặt lịch) — không lẫn việc làm / tuyển thợ.
   if (sessionUser?.role === "CLIENT") {
@@ -202,47 +211,64 @@ export default function HomePage() {
           <div aria-hidden className="hero-spot pointer-events-none absolute inset-0" />
           <div aria-hidden className="hero-grid pointer-events-none absolute inset-0" />
 
-          <div className="relative mx-auto max-w-4xl px-4 py-10 sm:py-14 text-center space-y-6">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 px-3 py-1 text-xs font-bold text-pink-300 uppercase tracking-wider">
-              <Sparkles className="h-3.5 w-3.5" />{tr(" 100% miễn phí kết nối", " 100% free to connect")}
+          <div className="relative mx-auto max-w-5xl px-4 py-10 sm:py-14 text-center space-y-6">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 px-3 py-1 text-xs font-semibold text-pink-200">
+              <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />{tr("Dành cho khách, thợ nail và chủ tiệm · Mỹ & Úc", "For nail clients, technicians and salons · US & Australia")}
             </span>
 
-            <h1 className="hero-title-glow text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight [text-wrap:balance]">
-              {tr("SÀN KẾT NỐI NGHỀ NAIL ", "THE NAIL JOBS MARKETPLACE ")}<br className="hidden sm:block" />
+            <h1 data-hero-title className="hero-title-glow text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight [text-wrap:balance]">
+              {tr("Nền tảng chuyên nghiệp", "The platform for")}<br />
               <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
-                {tr("CỦA NGƯỜI VIỆT", "FOR VIETNAMESE PROS")}
-              </span>{tr(" TẠI MỸ & ÚC", " IN THE US & AUSTRALIA")}
+                {tr("cho ngành nail", "the nail industry")}
+              </span>
             </h1>
-            <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto">
-              {tr("Nơi thợ nail tìm việc gấp, chủ tiệm tìm thợ giỏi — miễn phí, nhắn tin trực tiếp, chỉ trong vài phút.", "Where nail techs find jobs fast and salons find great techs — free, direct messaging, in minutes.")}
+            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              {tr("Thử mẫu và đặt lịch. Tìm nơi làm phù hợp. Tuyển thợ cho tiệm. PawNail kết nối khách, thợ nail và chủ tiệm trên khắp nước Mỹ và Úc.", "Try on a look and book it. Find your next chair. Hire your next tech. PawNail brings nail clients, technicians and salons together across the US and Australia.")}
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <button
-                onClick={() => router.push("/auth/register?role=technician")}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-500 hover:to-fuchsia-500 px-8 py-4 text-base font-extrabold text-white shadow-xl shadow-pink-600/30 transition-all active:scale-95"
-              >
-                <Briefcase className="h-5 w-5" />{tr(" TÌM VIỆC LÀM NAIL", " FIND NAIL JOBS")}
-              </button>
-              <button
-                onClick={() => router.push("/auth/register?role=owner")}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 px-8 py-4 text-base font-extrabold text-emerald-300 shadow-lg transition-all active:scale-95"
-              >
-                <Store className="h-5 w-5" />{tr(" ĐĂNG TIN TUYỂN THỢ GẤP", " POST AN URGENT JOB")}
-              </button>
+            {/* Ba lối vào ngang hàng: khách · thợ · chủ tiệm (khách không còn là đường link phụ) */}
+            <div className="grid gap-3 pt-2 text-left sm:grid-cols-3">
+              {([
+                { key: "client", icon: Hand, title: tr("Bạn là khách làm nail", "Getting your nails done"), desc: tr("Thử mẫu, tìm tiệm, gửi yêu cầu đặt lịch", "Try on looks, find a salon, request a booking"), cta: tr("Thử mẫu trên tay", "Try on nail looks"), href: "/tryon", tone: "from-pink-600 to-fuchsia-600 shadow-pink-600/30", ring: "ring-pink-500/30 hover:ring-pink-400/60" },
+                { key: "tech", icon: Briefcase, title: tr("Thợ nail", "Nail technicians"), desc: tr("Giới thiệu tay nghề và tìm nơi làm phù hợp", "Showcase your work and find your next chair"), cta: tr("Xem việc làm nail", "Explore nail jobs"), href: "/?tab=jobs", tone: "from-fuchsia-600 to-violet-600 shadow-fuchsia-600/30", ring: "ring-fuchsia-500/30 hover:ring-fuchsia-400/60" },
+                { key: "owner", icon: Store, title: tr("Chủ tiệm", "Salon owners"), desc: tr("Tuyển thợ, chia sẻ menu, nhận đặt lịch", "Hire techs, share your menu, take bookings"), cta: tr("Tuyển thợ nail", "Hire nail techs"), href: "/auth/register?role=owner", tone: "from-violet-600 to-purple-600 shadow-violet-600/30", ring: "ring-violet-500/30 hover:ring-violet-400/60" },
+              ] as const).map((p) => (
+                <a
+                  key={p.key}
+                  href={p.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (p.key === "tech") {
+                      changeTab("jobs");
+                      document.querySelector("[data-home-tabs]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    } else router.push(p.href);
+                  }}
+                  className={`group flex flex-col rounded-2xl bg-slate-950/50 p-4 ring-1 backdrop-blur transition-all active:scale-[0.98] sm:p-5 ${p.ring}`}
+                >
+                  <span className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-3">
+                    <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ${p.tone}`}>
+                      <p.icon className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold text-white">{p.title}</span>
+                      <span className="mt-0.5 block text-sm leading-snug text-slate-400">{p.desc}</span>
+                    </span>
+                  </span>
+                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-pink-300 group-hover:text-pink-200 sm:mt-auto sm:pt-4">
+                    {p.cta}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </a>
+              ))}
             </div>
+            <p className="text-xs text-slate-400">{tr("Không thu phí thợ và tiệm · Có tiếng Anh và tiếng Việt", "No fees for techs or salons · Available in English and Tiếng Việt")}</p>
             <HeroPulse />
-            {/* Khách đi làm nail có lối riêng — không phải đọc chuyện việc làm / tuyển thợ */}
-            <a href="/salons" className="mx-auto inline-flex items-center gap-1.5 text-sm font-semibold text-pink-200/90 underline-offset-4 hover:underline">
-              💅 {tr("Bạn đi làm nail? Xem mẫu & tìm tiệm gần bạn", "Getting your nails done? Browse looks & find a salon")} →
-            </a>
           </div>
         </section>
       )}
 
       <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-28 md:pb-8">
         <div className="flex flex-col md:flex-row gap-6">
-          <Sidebar activeTab={tab} setActiveTab={(t) => changeTab(t as HomeTab)} />
+          <Sidebar activeTab={tab} setActiveTab={(t) => changeTab(t as HomeTab)} guest={guestView} />
 
           <div className="flex-1 min-w-0 space-y-5">
             {/* Đang tải phiên trên máy từng đăng nhập: giữ sẵn chỗ cho lời chào + lối tắt + thẻ "Bắt đầu"
@@ -259,7 +285,7 @@ export default function HomePage() {
             {sessionUser && (
               <div className="px-1">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                  {greeting()}{displayName ? `, ${displayName}` : ""} 👋
+                  {greeting()}{displayName ? `, ${displayName}` : ""}
                 </h1>
                 <p className="mt-0.5 text-sm text-slate-400">{(sessionUser.role === "ADMIN" && tabSubtitle()[tab].admin) || tabSubtitle()[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
               </div>
@@ -429,7 +455,7 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             {/* Điện thoại: lớp nền phủ tràn hết chiều ngang (không còn tấm nền vuông thò ra 2 bên thanh tab) */}
-            <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)]">
+            <div data-home-tabs className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)]">
               <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
                 {/* Viên chọn trượt mượt sang tab đang mở */}
                 <span
@@ -438,9 +464,11 @@ export default function HomePage() {
                   style={{ transform: `translateX(${TAB_ORDER.indexOf(tab) * 100}%)` }}
                 />
                 {([
-                  { id: "feed", icon: Newspaper, short: tr("Bảng tin", "Feed"), long: tr("Bảng tin", "Feed") },
-                  { id: "jobs", icon: Flame, short: tr("Việc gấp", "Jobs"), long: tr("Cần thợ gấp", "Urgent jobs") },
-                  { id: "portfolio", icon: Sparkles, short: tr("Thợ rảnh", "Techs"), long: tr("Thợ đang rảnh", "Available techs") },
+                  guestView
+                    ? { id: "feed", icon: Compass, short: tr("Khám phá", "Discover"), long: tr("Khám phá", "Discover") }
+                    : { id: "feed", icon: Newspaper, short: tr("Bảng tin", "Feed"), long: tr("Bảng tin", "Feed") },
+                  { id: "jobs", icon: Briefcase, short: tr("Việc làm", "Jobs"), long: tr("Việc làm", "Jobs") },
+                  { id: "portfolio", icon: Users, short: tr("Thợ", "Techs"), long: tr("Thợ sẵn sàng", "Available techs") },
                 ] as const).map((t) => (
                   <button
                     key={t.id}
@@ -461,10 +489,24 @@ export default function HomePage() {
             {/* Vuốt trái/phải trên điện thoại để chuyển tab; nội dung trượt vào theo hướng vuốt. */}
             <div ref={contentRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="min-h-[50vh]">
               <div key={tab} className={slideDir === "right" ? "tab-in-right" : slideDir === "left" ? "tab-in-left" : ""}>
-            {tab === "feed" ? (
+            {tab === "feed" && guestView ? (
+              <>
+                {/* Khách chưa đăng nhập: mẫu nail, thử mẫu, tìm tiệm — bảng tin cộng đồng chỉ cho thành viên.
+                    Máy từng đăng nhập (html[data-authed]) không bao giờ thấy khối này: CSS ẩn ngay từ HTML đầu. */}
+                <div className={sessionLoading ? "[html[data-authed]_&]:hidden" : ""}>
+                  <GuestDiscover market={market} state={state} />
+                </div>
+                {sessionLoading && (
+                  <div aria-hidden className="hidden space-y-4 [html[data-authed]_&]:block">
+                    <div className="h-[132px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5" />
+                    <div className="h-[320px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5" />
+                  </div>
+                )}
+              </>
+            ) : tab === "feed" ? (
               <SocialFeed market={market} state={state} city={city} />
             ) : tab === "jobs" ? (
-              <JobBoard market={market} state={state} city={city} />
+              <JobBoard market={market} state={state} city={city} onShowAllStates={() => setState("")} />
             ) : (
               <TechnicianGrid market={market} state={state} city={city} />
             )}
@@ -477,7 +519,7 @@ export default function HomePage() {
       </main>
 
       <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500">
-        <p>{tr("© 2026 PawNail Jobs. Nền tảng việc làm & tay nghề Nail cho thị trường Mỹ & Úc.", "© 2026 PawNail Jobs. Nail jobs & talent platform for the US & Australia.")}</p>
+        <p>{tr("© 2026 PawNail. Nền tảng cho ngành nail tại Mỹ và Úc.", "© 2026 PawNail. The platform for the nail industry in the US and Australia.")}</p>
       </footer>
     </div>
   );

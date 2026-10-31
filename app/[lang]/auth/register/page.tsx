@@ -3,7 +3,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { Sparkles, Store, ArrowRight, UserPlus, SlidersHorizontal, MessageCircle, ChevronDown, Heart } from "lucide-react";
-import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
@@ -22,6 +21,16 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
   const isDark = theme === "dark";
   const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
   const labelClass = isDark ? "text-slate-400" : "text-slate-500";
+  // Số tin đang tuyển, trực tiếp từ /api/jobs (header X-Total-Count) — không dùng số khảo sát.
+  const [openJobs, setOpenJobs] = useState<number | null>(null);
+  useEffect(() => {
+    let off = false;
+    fetch("/api/jobs?page=1&pageSize=5")
+      .then((r) => (r.ok ? Number(r.headers.get("X-Total-Count")) || 0 : null))
+      .then((n) => { if (!off) setOpenJobs(n); })
+      .catch(() => {});
+    return () => { off = true; };
+  }, []);
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
@@ -65,16 +74,17 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
 
-      {/* Khách đi làm nail: thế giới riêng (mẫu, tiệm quanh bạn, đặt lịch) — tách khỏi 2 thẻ nghề ở trên */}
+      {/* Khách làm nail: thẻ ngang hàng với thợ và chủ tiệm (thế giới riêng: thử mẫu, tiệm quanh bạn, đặt lịch) */}
       <button
         type="button"
         onClick={() => onPick("client")}
-        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border border-dashed p-4 text-left transition-all ${PRESS} ${isDark ? "border-pink-500/30 bg-pink-500/[0.04]" : "border-pink-300 bg-pink-50"} hover:border-pink-500/60`}
+        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition-all ${PRESS} ${cardClass} hover:border-pink-500/50`}
       >
-        <Heart className="h-7 w-7 text-pink-400 flex-shrink-0" />
+        <Heart className="h-8 w-8 text-pink-500 flex-shrink-0" />
         <div className="flex-1">
-          <p className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{tr("Bạn đi làm nail? (khách)", "Getting your nails done?")}</p>
-          <p className={`text-xs ${labelClass}`}>{tr("Xem mẫu trend, tìm tiệm gần bạn, đặt lịch — không có việc làm / tuyển thợ", "Browse looks, find salons, book — no jobs or hiring")}</p>
+          <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.clientTitle")}</p>
+          <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.clientDesc")}</p>
+          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.clientPerks")}</p>
         </div>
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
@@ -86,13 +96,13 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <Link href="/auth/login" className="font-bold text-pink-500 hover:underline">{t("auth.rolePicker.login")}</Link>
       </p>
 
-      {/* Số liệu thật (lấy từ nailRadarData, cùng nguồn với badge bên trái) —
-          không bịa số người dùng. */}
-      <div className={`grid grid-cols-3 divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
+      {/* Số liệu thật, trực tiếp: số tin đang tuyển (cùng nguồn với bảng việc làm, chỉ hiện khi ≥ 10) +
+          2 sự thật cố định. Hàng luôn cao bằng nhau (2 hay 3 ô) nên không xô bố cục khi tải xong. */}
+      <div className={`grid ${openJobs !== null && openJobs >= 10 ? "grid-cols-3" : "grid-cols-2"} divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
         {[
-          { value: `${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")}+`, label: t("auth.rolePicker.statJobs") },
-          { value: "2", label: t("auth.rolePicker.statMarkets") },
-          { value: "100%", label: t("auth.rolePicker.statFree") },
+          ...(openJobs !== null && openJobs >= 10 ? [{ value: openJobs.toLocaleString("en-US"), label: t("auth.rolePicker.statJobs") }] : []),
+          { value: "US · AU", label: t("auth.rolePicker.statMarkets") },
+          { value: "EN · VI", label: t("auth.rolePicker.statLanguages") },
         ].map((stat) => (
           <div key={stat.label} className="px-2 py-3 text-center">
             <p className={`text-lg font-black ${isDark ? "text-white" : "text-slate-900"}`}>{stat.value}</p>

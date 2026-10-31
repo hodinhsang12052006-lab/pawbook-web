@@ -24,7 +24,8 @@ const missingEn = [...vi.keys()].filter((k) => !en.has(k));
 const missingVi = [...en.keys()].filter((k) => !vi.has(k));
 const emptyEn = [...en.entries()].filter(([, v]) => typeof v === "string" && !v.trim()).map(([k]) => k);
 const VN = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
-const viInEn = [...en.entries()].filter(([, v]) => typeof v === "string" && VN.test(v)).map(([k]) => k);
+// "Tiếng Việt" là tên ngôn ngữ viết bằng chính ngôn ngữ đó (chuẩn của bộ chọn ngôn ngữ) — được phép trong en.json.
+const viInEn = [...en.entries()].filter(([, v]) => typeof v === "string" && VN.test(v.replace(/Tiếng Việt/g, ""))).map(([k]) => k);
 
 const report = (label, list) => {
   console.log(`${list.length ? "❌" : "✅"} ${label}: ${list.length}`);

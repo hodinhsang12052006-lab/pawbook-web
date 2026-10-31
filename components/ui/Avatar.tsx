@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { tr } from "@/lib/i18n/tr";
 import { avatarGradient, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
 
 interface AvatarProps {
@@ -43,7 +44,7 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
     <svg
       viewBox="0 0 40 40"
       // alt="" = ảnh trang trí (tên đã hiện bên cạnh) → ẩn khỏi trình đọc màn hình.
-      {...(alt === "" ? { "aria-hidden": true } : { role: "img", "aria-label": alt ?? name ?? "Ảnh đại diện" })}
+      {...(alt === "" ? { "aria-hidden": true } : { role: "img", "aria-label": alt ?? name ?? tr("Ảnh đại diện", "Profile photo") })}
       className={`flex-shrink-0 rounded-full ${className}`}
     >
       <defs>

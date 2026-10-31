@@ -53,7 +53,7 @@ export default function PushPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Bật thông báo"
+      aria-label={tr("Bật thông báo", "Turn on notifications")}
       className="fixed inset-x-3 bottom-[calc(max(10px,env(safe-area-inset-bottom))+84px)] z-[45] animate-fadeIn sm:inset-x-auto sm:left-5 sm:w-[380px] md:bottom-6"
     >
       <div className="relative overflow-hidden rounded-2xl border border-pink-500/30 bg-slate-950/95 p-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.9)] backdrop-blur-xl">
@@ -69,14 +69,14 @@ export default function PushPrompt() {
             <p className="text-sm font-black text-white">{tr("Bật thông báo trên điện thoại", "Turn on phone notifications")}</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
               {isTech
-                ? tr("Biết ngay khi tiệm gần bạn cần thợ gấp, có tin nhắn hay cuộc gọi — kể cả khi đã tắt app.", "Know instantly when a nearby salon needs a tech, or you get a message or call — even with the app closed.")
-                : tr("Biết ngay khi thợ nhắn tin, gọi điện hay lưu tin tuyển của bạn — kể cả khi đã tắt app.", "Know instantly when a tech messages, calls or saves your job — even with the app closed.")}
+                ? tr("Nhận báo khi tiệm gần bạn đăng tin tuyển, khi có tin nhắn hoặc cuộc gọi — kể cả khi đã đóng app.", "Get notified when a salon near you posts a job, or when you get a message or call — even with the app closed.")
+                : tr("Nhận báo khi thợ nhắn tin, gọi điện hoặc lưu tin tuyển của bạn — kể cả khi đã đóng app.", "Get notified when a tech messages you, calls or saves your job — even with the app closed.")}
             </p>
           </div>
         </div>
         <div className="relative mt-3 grid grid-cols-2 gap-2">
           <button onClick={later} className="min-h-[40px] rounded-xl bg-white/5 text-xs font-bold text-slate-300 ring-1 ring-white/10 hover:bg-white/10">
-            {tr("Để sau", "Later")}
+            {tr("Để sau", "Not now")}
           </button>
           <button
             disabled={busy}
@@ -88,7 +88,7 @@ export default function PushPrompt() {
             }}
             className="min-h-[40px] rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-xs font-black text-white shadow-lg shadow-pink-600/25 disabled:opacity-60"
           >
-            {busy ? tr("Đang bật…", "Turning on…") : "Bật thông báo"}
+            {busy ? tr("Đang bật…", "Turning on…") : tr("Bật thông báo", "Turn on notifications")}
           </button>
         </div>
       </div>

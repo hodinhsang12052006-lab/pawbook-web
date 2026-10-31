@@ -1,11 +1,13 @@
 // Cờ Mỹ / Úc vẽ bằng SVG — emoji cờ 🇺🇸🇦🇺 KHÔNG hiển thị trên Windows (chỉ ra
 // chữ "US"/"AU"), nên dùng hình vẽ để mọi máy nhìn giống nhau.
 // (Ô chọn <select>/<option> vẫn phải dùng emoji vì không chứa được SVG.)
+import { tr } from "@/lib/i18n/tr";
+
 export default function Flag({ code, className = "h-3.5 w-5" }: { code: "US" | "AU" | string; className?: string }) {
   const cls = `inline-block flex-shrink-0 rounded-[2px] ring-1 ring-black/20 align-[-0.15em] ${className}`;
   if (code === "AU") {
     return (
-      <svg viewBox="0 0 30 20" className={cls} role="img" aria-label="Úc">
+      <svg viewBox="0 0 30 20" className={cls} role="img" aria-label={tr("Úc", "Australia")}>
         <rect width="30" height="20" fill="#012169" />
         {/* Union Jack thu gọn ở góc trái trên */}
         <path d="M0 0L15 10M15 0L0 10" stroke="#fff" strokeWidth="2" />
@@ -23,7 +25,7 @@ export default function Flag({ code, className = "h-3.5 w-5" }: { code: "US" | "
     );
   }
   return (
-    <svg viewBox="0 0 30 20" className={cls} role="img" aria-label="Mỹ">
+    <svg viewBox="0 0 30 20" className={cls} role="img" aria-label={tr("Mỹ", "United States")}>
       <rect width="30" height="20" fill="#B22234" />
       {[1, 3, 5, 7, 9, 11].map((i) => (
         <rect key={i} y={(i * 20) / 13} width="30" height={20 / 13} fill="#fff" />

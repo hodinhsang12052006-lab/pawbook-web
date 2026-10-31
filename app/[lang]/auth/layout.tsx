@@ -6,14 +6,11 @@ import { Sun, Moon, Globe } from "lucide-react";
 import { SPARKLE_DOTS } from "@/lib/sparkleDots";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
 import Flag from "@/components/ui/Flag";
+import { tr } from "@/lib/i18n/tr";
 
-// Trang đăng nhập/đăng ký này chính là "trang chủ" thật sự với khách vãng
-// lai — mọi lượt vào "/" khi chưa đăng nhập đều redirect thẳng về đây, nên
-// con số FOMO đầu tiên khách thấy PHẢI là số thật (không còn "2.500+ Thợ &
-// Chủ" bịa) để nhất quán với Nail Radar/JobBoard/FomoToast đã dùng data thật.
-const TOTAL_DEMAND_ALL_MARKETS = TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU;
+// Bảng thương hiệu bên trái chỉ nói điều kiểm chứng được (thử mẫu chạy trên máy, không thu phí thợ/tiệm,
+// hai ngôn ngữ). Số liệu khảo sát 9/2026 chỉ nằm trong Nail Radar, kèm nguồn — không dùng làm "bằng chứng" ở đây.
 
 export default function CustomAuthLayout({
   children,
@@ -40,7 +37,7 @@ export default function CustomAuthLayout({
           <div className="relative flex items-center gap-1.5 rounded-xl border border-slate-200/20 bg-white/10 px-3 py-1.5 backdrop-blur-md">
             <Globe className={`h-4 w-4 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`} />
             <select
-              aria-label="Language / Ngôn ngữ"
+              aria-label={tr("Ngôn ngữ", "Language")}
               value={locale}
               onChange={(e) => setLocale(e.target.value as "vi" | "en")}
               className={`bg-transparent text-xs font-bold focus:outline-none cursor-pointer border-none p-0 ${
@@ -119,12 +116,12 @@ export default function CustomAuthLayout({
                   <div className="h-14 w-14 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-0.5 shadow-xl shadow-pink-950/30">
                     <img
                       src="/cho1.jpg"
-                      alt="PawNail Jobs Logo"
+                      alt="PawNail"
                       className="h-full w-full object-cover rounded-lg"
                     />
                   </div>
-                  <span className="text-white text-3xl font-black tracking-widest uppercase select-none">
-                    PawNail Jobs
+                  <span className="text-white text-3xl font-black tracking-wide select-none">
+                    PawNail
                   </span>
                 </Link>
 
@@ -142,7 +139,7 @@ export default function CustomAuthLayout({
 
               {/* Trust badges */}
               <div className="flex flex-wrap gap-2.5 animate-fadeIn" style={{ animationDelay: "0.15s" }}>
-                {[t("auth.brand.trustBadge1", { count: TOTAL_DEMAND_ALL_MARKETS }), t("auth.brand.trustBadge2"), t("auth.brand.trustBadge3")].map((badge) => (
+                {[t("auth.brand.trustBadge1"), t("auth.brand.trustBadge2"), t("auth.brand.trustBadge3")].map((badge) => (
                   <span
                     key={badge}
                     className="rounded-full border border-white/10 bg-white/[0.05] backdrop-blur-md px-4 py-2 text-xs font-semibold text-slate-200 shadow-lg"
@@ -188,12 +185,12 @@ export default function CustomAuthLayout({
               <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-2">
                 <Link href="/" className="flex items-center gap-2.5">
                   <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-[22%] border border-white/20 bg-white/10 p-0.5 shadow-lg shadow-pink-950/30">
-                    <img src="/cho1.jpg" alt="PawNail Jobs" className="h-full w-full object-cover rounded-[20%]" />
+                    <img src="/cho1.jpg" alt="PawNail" className="h-full w-full object-cover rounded-[20%]" />
                   </div>
-                  <span className="text-white text-base font-black tracking-widest uppercase leading-none whitespace-nowrap">PawNail Jobs</span>
+                  <span className="text-white text-lg font-black tracking-wide leading-none whitespace-nowrap">PawNail</span>
                 </Link>
                 <span className="rounded-full border border-white/15 bg-white/[0.06] backdrop-blur-md px-3 py-1.5 text-[10px] font-bold text-slate-200 shadow-[0_0_12px_rgba(217,70,239,0.35)] whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1"><Flag code="US" className="h-2.5 w-3.5" /> US &amp; <Flag code="AU" className="h-2.5 w-3.5" /> AU Nail Network</span>
+                  <span className="inline-flex items-center gap-1"><Flag code="US" className="h-2.5 w-3.5" /><Flag code="AU" className="h-2.5 w-3.5" /> {t("auth.brand.mobileBadge")}</span>
                 </span>
               </div>
               <p className="relative z-10 mt-2.5 text-[11px] text-slate-400">

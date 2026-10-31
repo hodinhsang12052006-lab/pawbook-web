@@ -86,18 +86,18 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
 
         <section className="glass-card rounded-2xl p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-300">
-            <ShieldCheck className="h-4 w-4" />{tr(" Cộng đồng an toàn", " Stay safe")}
+            <ShieldCheck className="h-4 w-4" />{tr(" An toàn khi tuyển dụng", " Stay safe")}
           </h3>
           <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-400">
             <li>{tr("• Không chuyển tiền đặt cọc cho người lạ.", "• Never send deposits to strangers.")}</li>
             <li>{tr("• Thoả thuận lương, chỗ ở qua tin nhắn trong app.", "• Agree on pay and housing in in-app messages.")}</li>
-            <li>{tr("• Gặp nội dung lừa đảo? Bấm ", "• See a scam? Tap ")}<span className="text-slate-200">{tr("⋮ → Báo cáo", "⋮ → Report")}</span> trong chat.</li>
+            <li>{tr("• Gặp nội dung lừa đảo? Bấm ", "• See a scam? Tap ")}<span className="text-slate-200">{tr("⋮ → Báo cáo", "⋮ → Report")}</span>{tr(" trong khung chat.", " in the chat.")}</li>
           </ul>
         </section>
 
         <p className="px-1 text-[11px] text-slate-600">
           <Link href="/terms" className="hover:text-slate-400">{tr("Điều khoản", "Terms")}</Link> ·{" "}
-          <Link href="/privacy" className="hover:text-slate-400">{tr("Bảo mật", "Privacy")}</Link> · © 2026 PawNail Jobs
+          <Link href="/privacy" className="hover:text-slate-400">{tr("Bảo mật", "Privacy")}</Link> · © 2026 PawNail
         </p>
       </div>
     </aside>

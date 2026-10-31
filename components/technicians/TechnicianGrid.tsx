@@ -70,21 +70,20 @@ function EmptyTechs({ market, state, role }: { market: "US" | "AU"; state: strin
   const tech = role === "TECHNICIAN";
   return (
     <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-gradient-to-br from-pink-500/10 via-fuchsia-500/5 to-transparent p-6 text-center ring-1 ring-white/10">
-      <p className="text-4xl">💅</p>
-      <h3 className="text-lg font-black text-white">{tr(`Thợ đang tìm việc ở ${where} sẽ hiện ở đây`, `Techs looking for work in ${where} show up here`)}</h3>
+      <h3 className="text-lg font-black text-white">{tr(`Chưa có thợ sẵn sàng tại ${where}.`, `No available techs in ${where} yet.`)}</h3>
       {owner ? (
         <>
-          <p className="text-sm leading-relaxed text-slate-300">{tr("Đăng tin tuyển — thợ trong khu vực bật báo việc sẽ nhận thông báo ngay khi tin lên, nhắn thẳng cho bạn.", "Post a job — techs nearby with job alerts get notified instantly and message you directly.")}</p>
-          <a href="/jobs/create" className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tr("Đăng tin tuyển thợ", "Post a job")}</a>
+          <p className="text-sm leading-relaxed text-slate-300">{tr("Đăng tin tuyển để thợ gần tiệm tìm đến bạn.", "Post a job so techs nearby can find you.")}</p>
+          <a href="/jobs/create" className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tr("Đăng tin tuyển", "Post a job")}</a>
         </>
       ) : (
         <>
           <p className="text-sm leading-relaxed text-slate-300">
-            {jobs ? tr(`Đang có ${jobs} tiệm tuyển thợ ở ${where}. `, `${jobs} salons are hiring in ${where}. `) : ""}
-            {tr("Đăng hồ sơ + vài ảnh móng đẹp nhất để tiệm tìm thấy bạn trước — miễn phí.", "Add your profile and best nail photos so salons find you first — free.")}
+            {jobs ? tr(`Hiện có ${jobs} việc đang tuyển tại ${where}. `, `There are ${jobs} open jobs in ${where}. `) : ""}
+            {tr("Tạo hồ sơ và thêm vài ảnh tay nghề để tiệm tìm đến bạn.", "Create your profile and add a few photos of your work so salons can find you.")}
           </p>
-          <a href={tech ? "/profile" : "/auth/register?role=technician"} className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tech ? tr("Thêm ảnh portfolio", "Add portfolio photos") : tr("Tạo hồ sơ thợ miễn phí", "Create a free tech profile")}</a>
-          {!!jobs && <a href="/?tab=jobs" className="block text-xs font-bold text-pink-300 hover:underline">{tr(`Xem ${jobs} việc đang tuyển →`, `See ${jobs} open jobs →`)}</a>}
+          <a href={tech ? "/profile" : "/auth/register?role=technician"} className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tech ? tr("Thêm ảnh tay nghề", "Add photos of your work") : tr("Tạo hồ sơ thợ nail", "Create your tech profile")}</a>
+          {!!jobs && <a href="/?tab=jobs" className="block text-xs font-bold text-pink-300 hover:underline">{tr(`Xem ${jobs} việc đang tuyển`, `See ${jobs} open jobs`)} →</a>}
         </>
       )}
     </div>

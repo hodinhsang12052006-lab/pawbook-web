@@ -22,6 +22,7 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt, responseEn } from "@/lib/i18n/dataEn";
 import { formatPhone, telHref } from "@/lib/phoneFormat";
+import VietnameseChip from "@/components/common/LangChip";
 import { PostedForSalonBanner, SalonRequestLinks } from "@/components/jobs/PostedForSalon";
 
 interface PageProps {
@@ -209,7 +210,7 @@ export default function JobDetailPage({ params }: PageProps) {
             <div className="flex flex-wrap items-center gap-2">
               {job.heat?.hot && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2.5 py-1 text-xs font-black text-white shadow-lg shadow-orange-500/30">
-                  <Zap className="h-3.5 w-3.5 fill-white" />{tr(" Đang hot", " Hot")}
+                  <Zap className="h-3.5 w-3.5 fill-white" />{tr(" Được quan tâm", " Popular")}
                 </span>
               )}
               {job.isUrgent && (
@@ -239,6 +240,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <Building className="h-4 w-4 text-pink-400" />
               <span className="font-semibold">{job.salonName}</span>
             </p>
+            <VietnameseChip text={[dt(job.title), job.description]} />
           </header>
 
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -282,7 +284,7 @@ export default function JobDetailPage({ params }: PageProps) {
           })()}
 
           {job.mediaUrls && job.mediaUrls.length > 0 && (
-            <section aria-label="Ảnh và video tiệm" className="space-y-2">
+            <section aria-label={tr("Ảnh và video tiệm", "Salon photos and videos")} className="space-y-2">
               <h2 className="text-sm font-bold text-slate-200">{tr("Ảnh & video tiệm", "Salon photos & videos")}</h2>
               <div className={`grid gap-1.5 overflow-hidden rounded-2xl ${job.mediaUrls.length === 1 ? "grid-cols-1" : job.mediaUrls.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
                 {job.mediaUrls.map((u, i) => (
@@ -290,7 +292,7 @@ export default function JobDetailPage({ params }: PageProps) {
                     key={u}
                     type="button"
                     onClick={() => setViewer(i)}
-                    aria-label={`Xem ${isVideoUrl(u) ? "video" : "ảnh"} ${i + 1}`}
+                    aria-label={isVideoUrl(u) ? tr(`Xem video ${i + 1}`, `View video ${i + 1}`) : tr(`Xem ảnh ${i + 1}`, `View photo ${i + 1}`)}
                     className={`group relative overflow-hidden bg-slate-900 ${job.mediaUrls!.length === 1 ? "aspect-[16/9]" : "aspect-square"} ${i === 0 && job.mediaUrls!.length >= 3 ? "col-span-2 row-span-2 !aspect-auto" : ""}`}
                   >
                     {isVideoUrl(u) ? (
@@ -346,7 +348,7 @@ export default function JobDetailPage({ params }: PageProps) {
                 onClick={() => trackJobContact(job.id)}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-700/25 transition-all"
               >
-                <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
+                <Phone className="h-5 w-5" />{tr(" Gọi cho tiệm ", " Call the salon ")}{formatPhone(job.phone, job.market)}
               </a>
               {!postedForSalon && <button
                 onClick={() => {
@@ -355,7 +357,7 @@ export default function JobDetailPage({ params }: PageProps) {
                 }}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 py-3.5 text-base font-bold text-slate-100 transition-all"
               >
-                <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin qua App", " Message in app")}
+                <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin trong app", " Message in the app")}
               </button>}
             </div>
           )}

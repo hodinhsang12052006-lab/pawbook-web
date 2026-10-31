@@ -63,8 +63,8 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
         )}
       </Link>
       <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-        <Link href={`/menu/${s.id}`} className="flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">{tr("Xem menu & đặt lịch", "Menu & book")}</Link>
-        <Link href={`/messages?to=${s.id}`} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn hỏi mẫu", "Message")}</Link>
+        <Link href={`/menu/${s.id}`} className="flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">{tr("Xem menu & đặt lịch", "Menu & booking")}</Link>
+        <Link href={`/messages?to=${s.id}`} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin", "Message")}</Link>
       </div>
     </article>
   );
@@ -98,8 +98,8 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
     return (
       <div className="rounded-3xl bg-white/[0.03] p-5 text-center ring-1 ring-white/10" data-testid="salons-empty">
         <Store className="mx-auto h-8 w-8 text-pink-300/70" />
-        <p className="mt-2 text-sm font-bold text-white">{state ? tr(`Chưa có tiệm ở ${stateName(market, state)} lên menu trên PawNail`, `No salons in ${stateName(market, state)} have a menu on PawNail yet`) : tr("Các tiệm đang lên menu", "Salons are still setting up their menus")}</p>
-        <p className="mt-1 text-xs text-slate-400">{tr("Trong lúc chờ: thử mẫu trên tay bạn, lưu mẫu thích — và mời tiệm quen của bạn vào PawNail (miễn phí cho tiệm).", "Meanwhile: try looks on your hand, save the ones you love — and invite your usual salon to PawNail (free for salons).")}</p>
+        <p className="mt-2 text-sm font-bold text-white">{state ? tr(`Chưa có tiệm tại ${stateName(market, state)} đăng menu trên PawNail.`, `No salons in ${stateName(market, state)} have a menu on PawNail yet.`) : tr("Các tiệm đang thiết lập menu dịch vụ.", "Salons are still setting up their menus.")}</p>
+        <p className="mt-1 text-xs text-slate-400">{tr("Trong lúc chờ, bạn có thể thử mẫu, lưu mẫu yêu thích hoặc mời tiệm quen tham gia.", "In the meantime, try on looks and save your favorites, or invite your salon.")}</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Link href="/tryon" className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-xs font-black text-white"><Wand2 className="h-4 w-4" />{tr("Thử mẫu trên tay", "Try on my hand")}</Link>
           <button type="button" onClick={invite} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] text-xs font-bold text-slate-200 ring-1 ring-white/10"><Share2 className="h-4 w-4" />{tr("Mời tiệm quen", "Invite my salon")}</button>
@@ -110,7 +110,7 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
   const hasLocal = items.some((i) => i.local);
   return (
     <div className="space-y-3">
-      {state && !hasLocal && <p className="text-xs text-slate-400">{tr(`Chưa có tiệm ở ${stateName(market, state)} lên menu — xem tiệm nơi khác:`, `No salons in ${stateName(market, state)} yet — elsewhere:`)}</p>}
+      {state && !hasLocal && <p className="text-xs text-slate-400">{tr(`Chưa có tiệm tại ${stateName(market, state)} đăng menu — tiệm ở nơi khác:`, `No salons in ${stateName(market, state)} yet. Salons elsewhere:`)}</p>}
       <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>
         {items.map((s) => <SalonCard key={s.id} s={s} market={market} />)}
       </div>

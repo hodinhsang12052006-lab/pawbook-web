@@ -62,6 +62,7 @@ async function harvest(p) {
     while ((n = w.nextNode())) {
       const el = n.parentElement;
       if (!el || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(el.tagName)) continue;
+      if (el.closest('[lang="vi"]') && document.documentElement.lang !== "vi") continue;
       const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden") continue;
       const t = n.textContent.replace(/\s+/g, " ").trim();
@@ -83,7 +84,8 @@ function record(page, strings) {
   for (const raw of strings) {
     const s = raw.replace(/^\[(placeholder|aria-label|title|alt)\] /, "");
     if (MODE === "en") {
-      if (!VN.test(s) || isData(s)) continue;
+      // "Tiếng Việt" = tên ngôn ngữ (bộ chọn ngôn ngữ / dòng "Có tiếng Anh và tiếng Việt") — cố ý, không phải chữ sót.
+      if (!VN.test(s.replace(/Tiếng Việt/g, "")) || isData(s)) continue;
     } else {
       // VI: cụm tiếng Anh thuần (không dấu, ≥2 từ hoặc từ UI phổ biến) — bỏ thương hiệu/tên riêng.
       if (VN.test(s) || isData(s) || !EN_WORDS.test(s) || /PawNail|Nail Radar|Gel-X|Dip\/SNS|Acrylic|Design|Wax|Studio|Portfolio|GIF|POS|Supply|Halloween|TikTok|Facebook|Instagram|iPhone|Android|Google|Apple|App Store|Zalo|Live|Demo|OK|US|AU/.test(s)) continue;

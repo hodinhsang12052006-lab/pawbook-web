@@ -11,17 +11,24 @@ import { US_STATES, AU_STATES } from "@/lib/nailRadarData";
 import { stateName } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 
 export default function SalonsPage() {
   useTr();
   const { user } = useSessionUser();
-  const [market, setMarket] = useState<"US" | "AU">("US");
+  // Thị trường theo người xem (tài khoản → lựa chọn đã nhớ → IP / ngôn ngữ / múi giờ).
+  const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
+  const [market, setMarketState] = useState<"US" | "AU">("US");
+  const pinned = React.useRef(false);
+  const setMarket = (m: "US" | "AU") => { pinned.current = true; setMarketState(m); rememberMarket(m); };
   const [state, setState] = useState("");
   const [look, setLook] = useState("");
   useEffect(() => {
-    if (user?.market === "AU" || user?.market === "US") setMarket(user.market);
+    if (!pinned.current) setMarketState(viewerMarket);
+  }, [viewerMarket]);
+  useEffect(() => {
     if (user?.state) setState(user.state);
-  }, [user?.market, user?.state]);
+  }, [user?.state]);
   useEffect(() => { try { setLook(new URL(window.location.href).searchParams.get("look") || ""); } catch {} }, []);
   const states = market === "US" ? US_STATES : AU_STATES;
   const chip = (on: boolean) => `min-h-[36px] flex-shrink-0 whitespace-nowrap rounded-full px-3.5 text-sm font-bold transition ${on ? "bg-pink-600 text-white" : "bg-white/[0.05] text-slate-300 ring-1 ring-white/10"}`;

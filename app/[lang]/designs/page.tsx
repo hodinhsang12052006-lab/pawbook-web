@@ -8,6 +8,8 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import CommunityDesigns from "@/components/designs/CommunityDesigns";
+import { useSessionUser } from "@/lib/SessionUserContext";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 import MenuShowcase from "@/components/designs/MenuShowcase";
 
 const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước"];
@@ -16,6 +18,11 @@ const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nướ
 // tư cần chuẩn bị và các bước làm. Chỉ hiện mẫu admin ĐÃ DUYỆT.
 export default function DesignsPage() {
   useTr(); // render lại khi đổi VI/EN
+  const { user } = useSessionUser();
+  // Khách (và người chưa đăng nhập): trang cảm hứng làm móng — không phải lời mời thợ "đăng tác phẩm".
+  const isPro = user?.role === "TECHNICIAN" || user?.role === "OWNER" || user?.role === "ADMIN";
+  // Mẫu hợp với thị trường người xem (Lễ Tạ Ơn chỉ ở Mỹ; mùa theo bán cầu).
+  const { market } = useViewerMarket();
   const [all, setAll] = useState<Design[] | null>(null);
   const [occasion, setOccasion] = useState<string | null>(null);
   const [skill, setSkill] = useState<string | null>(null);
@@ -28,15 +35,17 @@ export default function DesignsPage() {
   const PAGE = 48;
 
   useEffect(() => {
-    fetch(`/api/designs?limit=${PAGE}`)
+    setAll(null);
+    setOccasion(null);
+    fetch(`/api/designs?limit=${PAGE}&market=${market}`)
       .then((r) => (r.ok ? r.json() : { designs: [] }))
       .then((d) => { setAll(d.designs || []); setHasMore(!!d.hasMore); })
       .catch(() => setAll([]));
-  }, []);
+  }, [market]);
   // Bộ mẫu lễ có thể cả trăm mẫu → tải thêm từng trang thay vì tải hết một lần.
   const loadMore = () => {
     setLoadingMore(true);
-    fetch(`/api/designs?limit=${PAGE}&offset=${all?.length ?? 0}`)
+    fetch(`/api/designs?limit=${PAGE}&market=${market}&offset=${all?.length ?? 0}`)
       .then((r) => (r.ok ? r.json() : { designs: [] }))
       .then((d) => { setAll((l) => [...(l ?? []), ...((d.designs || []) as Design[]).filter((x) => !(l ?? []).some((y) => y.id === x.id))]); setHasMore(!!d.hasMore); })
       .finally(() => setLoadingMore(false));
@@ -56,11 +65,20 @@ export default function DesignsPage() {
       <main className="mx-auto w-full max-w-5xl flex-1 space-y-5 px-4 pb-28 pt-6 md:pb-12">
         <header className="space-y-1">
           <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-pink-300"><Sparkles className="h-4 w-4" />{tr(" PawNail Studio · cập nhật mỗi ngày", " PawNail Studio · updated daily")}</p>
-          <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Mẫu nail mới", "Fresh nail designs")}</h1>
-          <p className="max-w-2xl text-sm text-slate-400">{tr("Ý tưởng theo dịp lễ và xu hướng đang lên, kèm vật tư cần chuẩn bị và các bước làm. Hình là minh hoạ (có ghi nhãn nguồn), không phải ảnh tay nghề thật — làm xong nhớ đăng ảnh thật nhé.", "Ideas for upcoming holidays and rising trends, with the materials to prepare and the steps. Pictures are labeled illustrations, not real work — post a real photo when you've made it.")}</p>
+          {isPro ? (
+            <>
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Mẫu nail mới", "Fresh nail designs")}</h1>
+              <p className="max-w-2xl text-sm text-slate-400">{tr("Ý tưởng theo dịp lễ và xu hướng đang lên, kèm vật tư cần chuẩn bị và các bước làm. Hình là minh hoạ (có ghi nhãn nguồn), không phải ảnh tay nghề thật — làm xong nhớ đăng ảnh thật nhé.", "Ideas for upcoming holidays and rising trends, with the materials to prepare and the steps. Pictures are labeled illustrations, not real work — post a real photo when you've made it.")}</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Cảm hứng làm móng, cập nhật mỗi ngày", "Nail inspiration, updated daily")}</h1>
+              <p className="max-w-2xl text-sm text-slate-400">{tr("Thử bất kỳ mẫu nào trên tay bạn, rồi đặt lịch với tiệm gần bạn. Lưu mẫu thích để đưa thợ xem.", "Try any look on your hand, then book it with a salon near you. Save the ones you love to show your tech.")}</p>
+            </>
+          )}
         </header>
 
-        <CommunityDesigns />
+        <CommunityDesigns pro={isPro} />
         <MenuShowcase />
 
         <h2 className="flex items-center gap-2 pt-2 text-base font-black text-white"><Sparkles className="h-4 w-4 text-pink-300" />{tr("Ý tưởng mẫu PawNail", "PawNail design ideas")}</h2>

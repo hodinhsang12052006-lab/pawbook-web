@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { judgeImage, type Verdict } from "@/lib/imageJudge";
 import { activeThemes, THEMES } from "@/lib/contentEngine";
+import { themeWindow } from "@/lib/studioThemes";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 import { SAMPLE_DESIGNS } from "@/lib/designSamples";
@@ -308,7 +309,8 @@ export const OCCASION_BATCH_MAX = 150;
 
 function daysUntil(theme: (typeof THEMES)[number], market: "US" | "AU", now: Date) {
   if (activeThemes(now, market).some((t) => t.id === theme.id)) return 0;
-  const d = new Date(Date.UTC(now.getUTCFullYear(), theme.from[0] - 1, theme.from[1]));
+  const from = themeWindow(theme, market).from; // Úc: khung Nam bán cầu
+  const d = new Date(Date.UTC(now.getUTCFullYear(), from[0] - 1, from[1]));
   if (d.getTime() < now.getTime()) d.setUTCFullYear(d.getUTCFullYear() + 1);
   return Math.ceil((d.getTime() - now.getTime()) / DAY_MS);
 }

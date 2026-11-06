@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -17,6 +17,7 @@ import { tr, currentLocale } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { dt } from "@/lib/i18n/dataEn";
 import { useTr } from "@/lib/i18n/useTr";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 import NailTrendRadar from "@/components/designs/NailTrendRadar";
 
 interface RadarPublic {
@@ -60,7 +61,10 @@ function Skeleton() {
 export default function TrendsPage() {
   useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
-  const [market, setMarket] = useState<"US" | "AU">("US");
+  const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
+  const [market, setMarketState] = useState<"US" | "AU">("US");
+  const pinned = useRef(false);
+  const setMarket = (m: "US" | "AU") => { pinned.current = true; setMarketState(m); rememberMarket(m); };
   const [data, setData] = useState<TrendsData | null>(null);
   const [error, setError] = useState(false);
   const studio = useStudio(market, user?.role);
@@ -73,9 +77,10 @@ export default function TrendsPage() {
     };
   }, [market]);
 
+  // Thị trường theo người xem (tài khoản → lựa chọn đã nhớ → IP / ngôn ngữ / múi giờ).
   useEffect(() => {
-    if (user?.market === "AU") setMarket("AU");
-  }, [user?.market]);
+    if (!pinned.current) setMarketState(viewerMarket);
+  }, [viewerMarket]);
 
   useEffect(() => {
     let cancelled = false;

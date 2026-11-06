@@ -11,6 +11,7 @@ import JobBoard from "@/components/jobs/JobBoard";
 import TechnicianGrid from "@/components/technicians/TechnicianGrid";
 import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 import { stateName } from "@/lib/stateNames";
 import RightRail from "@/components/layout/RightRail";
 import ToolsPanel from "@/components/layout/ToolsPanel";
@@ -104,7 +105,19 @@ export default function HomePage() {
     const next = TAB_ORDER[dx < 0 ? Math.min(i + 1, 2) : Math.max(i - 1, 0)];
     changeTab(next);
   };
-  const [market, setMarket] = useState<"US" | "AU">("US");
+  // Thị trường mặc định theo NGƯỜI XEM (tài khoản → cookie → IP / ngôn ngữ / múi giờ): khách ở Sydney thấy tiệm
+  // ở Úc, không phải "Dallas, Texas". ?market= trên URL hoặc bấm 🇺🇸 / 🇦🇺 thì giữ lựa chọn đó (và nhớ lại).
+  const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
+  const [market, setMarketState] = useState<"US" | "AU">("US");
+  const marketPinned = useRef(false);
+  useEffect(() => {
+    if (!marketPinned.current) setMarketState(viewerMarket);
+  }, [viewerMarket]);
+  const setMarket = (m: "US" | "AU") => {
+    marketPinned.current = true;
+    setMarketState(m);
+    rememberMarket(m);
+  };
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [showCitySearch, setShowCitySearch] = useState(false);
@@ -119,7 +132,10 @@ export default function HomePage() {
     const urlTab = params.get("tab");
     if (urlTab === "jobs" || urlTab === "portfolio" || urlTab === "feed") setTab(urlTab);
     const urlMarket = params.get("market");
-    if (urlMarket === "US" || urlMarket === "AU") setMarket(urlMarket);
+    if (urlMarket === "US" || urlMarket === "AU") {
+      marketPinned.current = true;
+      setMarketState(urlMarket);
+    }
     const urlState = params.get("state");
     if (urlState) setState(urlState);
   }, []);
@@ -261,7 +277,7 @@ export default function HomePage() {
               ))}
             </div>
             <p className="text-xs text-slate-400">{tr("Không thu phí thợ và tiệm · Có tiếng Anh và tiếng Việt", "No fees for techs or salons · Available in English and Tiếng Việt")}</p>
-            <HeroPulse />
+            <HeroPulse market={market} />
           </div>
         </section>
       )}

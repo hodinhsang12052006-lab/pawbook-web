@@ -184,9 +184,12 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
 
   // Chợ vật tư tải riêng 1 lần (không phụ thuộc vùng — vật tư thường
   // giao được nhiều nơi), dùng để chen vào giữa newsfeed.
+  // Khách làm nail không thấy chợ vật tư (công cụ của tiệm); chỉ hàng cùng thị trường (giá US$ / A$).
+  const isClientViewer = user?.role === "CLIENT";
   useEffect(() => {
+    if (isClientViewer) { setSupplyProducts([]); return; }
     let cancelled = false;
-    fetch("/api/supply")
+    fetch(`/api/supply?market=${market === "AU" ? "AU" : "US"}`)
       .then((res) => (res.ok ? res.json() : { products: [] }))
       .then((data) => {
         if (!cancelled) setSupplyProducts(data.products || []);
@@ -195,7 +198,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [market, isClientViewer]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMoreRef.current) return;

@@ -14,7 +14,7 @@ interface Item {
 }
 
 // Ảnh THẬT thợ & tiệm đăng (bài "Khoe tay nghề" có ảnh) — hiện ngay ở trang Mẫu nail, không cần duyệt.
-export default function CommunityDesigns() {
+export default function CommunityDesigns({ pro = true }: { pro?: boolean }) {
   const router = useRouter();
   const { user } = useSessionUser();
   const [items, setItems] = useState<Item[] | null>(null);
@@ -39,16 +39,18 @@ export default function CommunityDesigns() {
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 id="community-designs" className="flex items-center gap-2 text-base font-black text-white"><Camera className="h-4 w-4 text-pink-300" />{tr("Ảnh thật từ thợ & tiệm", "Real work from techs & salons")}</h2>
-          <p className="text-xs text-slate-400">{tr("Bài “Chia sẻ tác phẩm” có ảnh tự hiện ở đây — tiệm đang tìm thợ cũng xem mục này.", "Showcase posts with photos appear here. Salons that are hiring browse this page too.")}</p>
+          <p className="text-xs text-slate-400">{pro ? tr("Bài “Chia sẻ tác phẩm” có ảnh tự hiện ở đây — tiệm đang tìm thợ cũng xem mục này.", "Showcase posts with photos appear here. Salons that are hiring browse this page too.") : tr("Bộ móng thật do thợ và tiệm trên PawNail làm.", "Real sets done by techs and salons on PawNail.")}</p>
         </div>
-        <button type="button" onClick={post} className="flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 text-xs font-bold text-white shadow-lg shadow-pink-600/20">
-          <Plus className="h-4 w-4" />{tr("Đăng mẫu của bạn", "Post your work")}
-        </button>
+        {pro && (
+          <button type="button" onClick={post} className="flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 text-xs font-bold text-white shadow-lg shadow-pink-600/20">
+            <Plus className="h-4 w-4" />{tr("Đăng mẫu của bạn", "Post your work")}
+          </button>
+        )}
       </div>
 
       {items === null ? (
         <div className="flex gap-3 overflow-hidden">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="aspect-square w-40 shrink-0 animate-pulse rounded-2xl bg-white/[0.04]" />)}</div>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && !pro ? null : items.length === 0 ? (
         <button type="button" onClick={post} className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-white/15 p-4 text-left hover:border-pink-400/40">
           <Images className="h-8 w-8 shrink-0 text-pink-300" />
           <span>

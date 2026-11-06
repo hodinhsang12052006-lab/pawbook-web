@@ -21,16 +21,6 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
   const isDark = theme === "dark";
   const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
   const labelClass = isDark ? "text-slate-400" : "text-slate-500";
-  // Số tin đang tuyển, trực tiếp từ /api/jobs (header X-Total-Count) — không dùng số khảo sát.
-  const [openJobs, setOpenJobs] = useState<number | null>(null);
-  useEffect(() => {
-    let off = false;
-    fetch("/api/jobs?page=1&pageSize=5")
-      .then((r) => (r.ok ? Number(r.headers.get("X-Total-Count")) || 0 : null))
-      .then((n) => { if (!off) setOpenJobs(n); })
-      .catch(() => {});
-    return () => { off = true; };
-  }, []);
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
@@ -39,12 +29,21 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.subtitle")}</p>
       </div>
 
-      {/* Khan hiếm THẬT: hạn chót công khai, trùng với FOUNDING_UNTIL ở lib/badges.ts */}
-      {Date.now() < new Date("2027-01-01T00:00:00Z").getTime() && (
-        <p className={`rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs font-semibold leading-relaxed ${isDark ? "text-amber-200" : "text-amber-700"}`}>
-          {t("auth.rolePicker.foundingNote")}
-        </p>
-      )}
+      {/* Khách làm nail ĐẦU TIÊN — khớp trang chủ (hero dành cho khách). Không hiện số tin tuyển / lời mời "huy hiệu
+          sáng lập" ở màn chọn vai trò: khách cũng thấy màn này. */}
+      <button
+        type="button"
+        onClick={() => onPick("client")}
+        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition-all ${PRESS} ${cardClass} hover:border-pink-500/50`}
+      >
+        <Heart className="h-8 w-8 text-pink-500 flex-shrink-0" />
+        <div className="flex-1">
+          <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.clientTitle")}</p>
+          <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.clientDesc")}</p>
+          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.clientPerks")}</p>
+        </div>
+        <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
+      </button>
 
       <button
         type="button"
@@ -74,21 +73,6 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
         <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
       </button>
 
-      {/* Khách làm nail: thẻ ngang hàng với thợ và chủ tiệm (thế giới riêng: thử mẫu, tiệm quanh bạn, đặt lịch) */}
-      <button
-        type="button"
-        onClick={() => onPick("client")}
-        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition-all ${PRESS} ${cardClass} hover:border-pink-500/50`}
-      >
-        <Heart className="h-8 w-8 text-pink-500 flex-shrink-0" />
-        <div className="flex-1">
-          <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.clientTitle")}</p>
-          <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.clientDesc")}</p>
-          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.clientPerks")}</p>
-        </div>
-        <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
-      </button>
-
       <SocialLogin dark={isDark} divider={false} heading={tr("Hoặc đăng ký nhanh bằng", "Or sign up faster with")} />
 
       <p className={`text-center text-sm ${labelClass}`}>
@@ -98,9 +82,8 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
 
       {/* Số liệu thật, trực tiếp: số tin đang tuyển (cùng nguồn với bảng việc làm, chỉ hiện khi ≥ 10) +
           2 sự thật cố định. Hàng luôn cao bằng nhau (2 hay 3 ô) nên không xô bố cục khi tải xong. */}
-      <div className={`grid ${openJobs !== null && openJobs >= 10 ? "grid-cols-3" : "grid-cols-2"} divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
+      <div className={`grid grid-cols-2 divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
         {[
-          ...(openJobs !== null && openJobs >= 10 ? [{ value: openJobs.toLocaleString("en-US"), label: t("auth.rolePicker.statJobs") }] : []),
           { value: "US · AU", label: t("auth.rolePicker.statMarkets") },
           { value: "EN · VI", label: t("auth.rolePicker.statLanguages") },
         ].map((stat) => (

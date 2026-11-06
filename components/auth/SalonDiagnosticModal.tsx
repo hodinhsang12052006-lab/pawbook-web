@@ -273,7 +273,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                   {painCards.slice(0, 3).map((meta) => (
                     <li key={meta.tag} className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
-                      <span>{meta.shortLabel}: {dt(meta.solution)}</span>
+                      <span>{dt(meta.shortLabel)}: {dt(meta.solution)}</span>
                     </li>
                   ))}
                 </ul>

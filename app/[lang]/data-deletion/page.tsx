@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
 
 // Trang "Data deletion instructions URL" cho Facebook Login (Meta bắt buộc trước khi app được Live).
-// Song ngữ hiện CÙNG LÚC (người duyệt của Meta đọc tiếng Anh, không phụ thuộc nút đổi ngôn ngữ).
+// Mỗi trang 1 ngôn ngữ: /data-deletion (tiếng Anh — người duyệt của Meta đọc bản này) và /vi/data-deletion.
 const VI = (
   <section className="space-y-3" lang="vi">
     <h1 className="text-2xl font-black text-white">Xoá dữ liệu của bạn</h1>
@@ -55,18 +55,20 @@ const EN = (
 
 export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
   const lang = await langFrom(params);
-  // Ngôn ngữ đang chọn hiện TRƯỚC, ngôn ngữ còn lại bên dưới (người duyệt store /
-  // Meta đọc tiếng Anh — trang EN mở ra là tiếng Anh ngay).
-  const [first, second] = lang === "vi" ? [VI, EN] : [EN, VI];
+  // CHỈ ngôn ngữ đang chọn. Người duyệt của Meta / store mở URL không tiền tố → tiếng Anh; link nhỏ sang bản
+  // còn lại (/vi/data-deletion ↔ /data-deletion).
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
       <Navbar />
-      <main className="mx-auto w-full max-w-3xl space-y-8 px-4 py-10 pb-24 text-sm leading-relaxed text-slate-300 md:pb-10">
-        {first}
-
-        <hr className="border-white/10" />
-
-        {second}
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-10 pb-24 text-sm leading-relaxed text-slate-300 md:pb-10">
+        {lang === "vi" ? VI : EN}
+        <p className="text-xs text-slate-500">
+          {lang === "vi" ? (
+            <a href="/data-deletion" hrefLang="en" lang="en" className="text-pink-300 underline">English</a>
+          ) : (
+            <a href="/vi/data-deletion" hrefLang="vi" lang="vi" className="text-pink-300 underline">Tiếng Việt</a>
+          )}
+        </p>
       </main>
     </div>
   );

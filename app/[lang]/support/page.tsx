@@ -18,8 +18,8 @@ const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware
 const link = "text-pink-300 underline";
 
 // "Support URL" của App Store Connect / Google Play (Apple 1.5: phải có cách liên hệ thật).
-// Song ngữ hiện CÙNG LÚC như /data-deletion: người duyệt store đọc tiếng Anh, không
-// phụ thuộc nút đổi ngôn ngữ. Chỉ ghi những gì app thật sự có.
+// Mỗi trang 1 ngôn ngữ: /support (tiếng Anh — người duyệt store đọc bản này) và /vi/support.
+// Chỉ ghi những gì app thật sự có.
 const VI = (
   <section className="space-y-3" lang="vi">
     <h1 className="text-2xl font-black text-white">Hỗ trợ PawNail</h1>
@@ -82,18 +82,20 @@ const EN = (
 
 export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
   const lang = await langFrom(params);
-  // Ngôn ngữ đang chọn hiện TRƯỚC, ngôn ngữ còn lại bên dưới (người duyệt store /
-  // Meta đọc tiếng Anh — trang EN mở ra là tiếng Anh ngay).
-  const [first, second] = lang === "vi" ? [VI, EN] : [EN, VI];
+  // CHỈ ngôn ngữ đang chọn (trước đây in cả bản tiếng Việt dưới bản tiếng Anh, không nhãn). Người duyệt store
+  // mở URL không tiền tố → tiếng Anh; người dùng tiếng Việt có link nhỏ sang /vi/support và ngược lại.
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
       <Navbar />
-      <main className="mx-auto w-full max-w-3xl space-y-8 px-4 py-10 pb-24 text-sm leading-relaxed text-slate-300 md:pb-10">
-        {first}
-
-        <hr className="border-white/10" />
-
-        {second}
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-10 pb-24 text-sm leading-relaxed text-slate-300 md:pb-10">
+        {lang === "vi" ? VI : EN}
+        <p className="text-xs text-slate-500">
+          {lang === "vi" ? (
+            <a href="/support" hrefLang="en" lang="en" className={link}>English</a>
+          ) : (
+            <a href="/vi/support" hrefLang="vi" lang="vi" className={link}>Tiếng Việt</a>
+          )}
+        </p>
       </main>
     </div>
   );

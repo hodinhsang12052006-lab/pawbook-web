@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { realOnly } from "@/lib/demo";
 import { toPublicMenuItem } from "@/lib/menu";
 
 // GET /api/menu/showcase — mẫu có ẢNH THẬT trong menu của thợ / tiệm (trang Mẫu nail).
@@ -8,7 +9,7 @@ export async function GET(req: Request) {
   const limit = Math.min(24, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 12));
   try {
     const rows = await prisma.menuItem.findMany({
-      where: { active: true, images: { not: "[]" }, NOT: { images: { contains: "/pawbook/designs/" } }, owner: { role: { in: ["TECHNICIAN", "OWNER"] } } },
+      where: { active: true, images: { not: "[]" }, NOT: { images: { contains: "/pawbook/designs/" } }, owner: { role: { in: ["TECHNICIAN", "OWNER"] }, ...realOnly() } }, // không khoe menu của tài khoản mẫu
       orderBy: { updatedAt: "desc" },
       take: limit,
       include: { owner: { select: { id: true, name: true, avatarUrl: true, city: true } } },

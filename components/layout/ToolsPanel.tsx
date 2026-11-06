@@ -13,6 +13,8 @@ import { useTr } from "@/lib/i18n/useTr";
 interface Tool {
   href: string;
   label: string;
+  /** Nhãn ngắn cho ô lối tắt ~76px trên trang chủ (variant "row", tối đa 2 dòng); danh sách /tools + Sidebar giữ `label` đầy đủ. */
+  short?: string;
   stat: string;
   icon: LucideIcon;
   tone: string; // màu nền icon
@@ -95,7 +97,7 @@ function useTools(): Tool[] {
     ...(user?.role === "TECHNICIAN" || user?.role === "OWNER"
       ? [{ href: "/bookings", label: tr("Lịch hẹn", "Bookings"), stat: newBookings > 0 ? tr(`${newBookings} khách mới đặt lịch`, `${newBookings} new requests`) : tr("Khách đặt từ menu / mã QR", "Requests from your menu / QR"), icon: CalendarCheck, tone: "bg-pink-500/15 text-pink-300", badge: newBookings } as Tool,
         { href: "/tryon", label: tr("Thử mẫu", "Try-On"), stat: tr("Vẽ 10 mẫu gợi ý lên tay khách + giá", "Paint 10 suggested looks on a client's hand"), icon: Sparkles, tone: "bg-fuchsia-500/15 text-fuchsia-300" } as Tool,
-        { href: "/consult", label: tr("Phân tích tay & móng", "Hand & nail analysis"), stat: tr("Chụp tay khách để xem tình trạng móng và mẫu phù hợp", "Snap a client's hand to see nail condition and designs that suit it"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
+        { href: "/consult", label: tr("Phân tích tay & móng", "Hand & nail analysis"), short: tr("Phân tích móng", "Nail analysis"), stat: tr("Chụp tay khách để xem tình trạng móng và mẫu phù hợp", "Snap a client's hand to see nail condition and designs that suit it"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
       : []),
     { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
     { href: "/trends", label: tr("Xu hướng", "Trends"), stat: tr("Mẫu được yêu thích · thợ nổi bật · lương", "Most-loved designs · standout techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
@@ -121,7 +123,7 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
       : all;
     return (
       <nav aria-label={tr("Công cụ", "Tools")} className="-mx-4 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
-        {row.map(({ href, label, stat, icon: Icon, badge, primary }) => (
+        {row.map(({ href, label, short, stat, icon: Icon, badge, primary }) => (
           <Link key={href} href={href} title={stat} className="pn-qa relative flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 rounded-2xl px-0.5 py-1 text-center transition-transform duration-[120ms] active:scale-[.97] min-[360px]:w-auto">
             <span className={`pn-qa-tile relative flex h-[52px] w-[52px] items-center justify-center rounded-2xl ${primary ? "pn-qa-primary" : ""}`}>
               <Icon className="h-[22px] w-[22px]" />
@@ -129,7 +131,7 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
                 <span className="pn-micro absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-pn-brand px-1 leading-[20px] text-white ring-2 ring-pn-canvas tabular-nums">{badge > 9 ? "9+" : badge}</span>
               )}
             </span>
-            <span className="line-clamp-2 text-[13px] font-normal leading-4 text-pn-text-2">{label}</span>
+            <span className="line-clamp-2 text-[13px] font-normal leading-4 text-pn-text-2">{short ?? label}</span>
           </Link>
         ))}
       </nav>

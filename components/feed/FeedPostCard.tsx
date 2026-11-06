@@ -354,7 +354,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
                   <time dateTime={post.createdAt} className="flex-shrink-0 whitespace-nowrap">{timeAgo(post.createdAt)}</time>
                   {/* nhãn loại bài (Khoe tay nghề / Tin ngành / Mẫu hôm nay…) nằm cuối dòng meta — tên người đăng không bị cắt */}
                   {badge?.label && (
-                    <span className={`pn-post-tag ml-1 flex-shrink-0 rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
+                    <span className={`pn-post-tag ml-1 min-w-0 shrink-[3] truncate rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
                       {badge.label}
                     </span>
                   )}

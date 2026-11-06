@@ -6,8 +6,8 @@
 //     Nguồn ghi rõ: nhãn "Từ nhóm cộng đồng PawNail" + link "Xem bài gốc" khi có link https (display.publicJob);
 //     tin không có link bài gốc VẪN hiện.
 //   - Tách SĐT / tên tiệm / địa chỉ / bang / lương… (parse.ts); trường tool đã tách sẵn được ưu tiên.
-//   - Chống trùng: cùng SĐT + nội dung (sourceKey) hoặc cùng SĐT còn hạn → CẬP NHẬT tin cũ. Tin từ nhóm KHÔNG BAO GIỜ
-//     ghi đè tin đăng hộ theo yêu cầu (giữ nguồn gốc mạnh hơn).
+//   - Chống trùng: cùng SĐT + nội dung (sourceKey) hoặc cùng SĐT → CẬP NHẬT / đẩy tin cũ. Tin từ nhóm không ghi đè tin
+//     đăng hộ theo yêu cầu khi tin đó CÒN HẠN; đăng hộ đã hết hạn thì bài mới từ nhóm của tiệm lại lên bảng như thường.
 //   - Tự hết hạn sau INGEST_TTL_DAYS (mặc định 14) kể từ ngày bài gốc đăng.
 //   - Số đã yêu cầu "Gỡ tin" (admin duyệt) → không bao giờ đăng lại; dữ liệu công khai của tin bị xoá (removeJobPublicData).
 //   - Nhịp tim: mỗi lô bot gửi được ghi lại; quá 24 giờ không có tin mới → trang admin cảnh báo kèm cách xử lý.
@@ -35,6 +35,8 @@ export const aggregatedIngestOn = () => String(process.env.INGEST_AGGREGATED ?? 
 export const INGEST_LAST_AT_KEY = "ingest_last_at";
 /** Lần cuối tool gửi 1 lô đúng khoá, KỂ CẢ khi mọi bài bị loại → phân biệt "tool ngừng gửi" với "tool gửi nhưng bị loại hết". */
 export const INGEST_LAST_BATCH_AT_KEY = "ingest_last_batch_at";
+/** Lần đầu trang admin đọc nhịp tim khi CHƯA có ingest_last_at → mốc bắt đầu đếm 24 giờ (không báo động giả sau triển khai). */
+export const INGEST_WATCH_SINCE_KEY = "ingest_watch_since";
 /** Quá N giờ không nhận được tin mới nào → trang admin cảnh báo (kèm cách xử lý: bot có thể cần cookie Facebook mới). */
 export const INGEST_STALE_HOURS = 24;
 const DAY = 86_400_000;
@@ -229,21 +231,28 @@ export async function commitIngest(prep: Extract<PreparedIngest, { status: "ok" 
   // Cùng tiệm (cùng SĐT, hoặc cùng Facebook người đăng) đã có tin → KHÔNG tạo bản mới:
   //   - tool gửi lại ĐÚNG bài cũ (cùng link bài / cùng nội dung) → chỉ cập nhật
   //   - tiệm ĐĂNG LẠI bài mới → đẩy lên đầu, repostCount + 1, lastRepostedAt = bây giờ, nội dung mới nhất
+  // Bài từ nhóm chỉ nhường tin ĐĂNG HỘ khi tin đó CÒN HẠN. Tin đăng hộ đã hết hạn bị bỏ qua khi dò trùng → bài mới của
+  // tiệm tạo / đẩy tin "ingest" như bình thường (trước đây 1 lần đăng hộ chặn bot đăng tiệm đó mãi mãi). Tin đăng hộ
+  // cũ giữ nguyên làm lịch sử (JobRequest "assist" vẫn trỏ đúng tin admin đã đăng).
+  const now = new Date();
+  const sourceWhere = data.source === ASSISTED_SOURCE
+    ? { source: { in: [INGEST_SOURCE, ASSISTED_SOURCE] } }
+    : { OR: [{ source: INGEST_SOURCE }, { source: ASSISTED_SOURCE, expiresAt: { gt: now } }] };
   const same = await prisma.job.findFirst({
-    where: { source: { in: [INGEST_SOURCE, ASSISTED_SOURCE] }, OR: [{ sourceKey: data.sourceKey }, { phone: data.phone }, ...(fbHash ? [{ sourceFbHash: fbHash }] : [])] },
+    where: { AND: [sourceWhere, { OR: [{ sourceKey: data.sourceKey }, { phone: data.phone }, ...(fbHash ? [{ sourceFbHash: fbHash }] : [])] }] },
     orderBy: { createdAt: "desc" },
     select: { id: true, source: true, sourceUrl: true, sourceKey: true, repostCount: true },
   });
   if (same) {
-    // Tin ĐĂNG HỘ theo yêu cầu tiệm (có người yêu cầu) không bao giờ bị tin tổng hợp ghi đè / đổi nhãn thành "tổng hợp"
-    if (same.source === ASSISTED_SOURCE && data.source !== ASSISTED_SOURCE) return { status: "skipped", reason: "tiệm đã nhờ PawNail đăng tin này (đăng hộ) — không ghi đè", jobId: same.id };
+    // Tin ĐĂNG HỘ theo yêu cầu tiệm (có người yêu cầu) CÒN HẠN không bị tin từ nhóm ghi đè / đổi nhãn (tiệm vẫn hiện
+    // trên bảng việc với SĐT qua tin đăng hộ đó); hết hạn thì đã bị loại khỏi `same` ở trên.
+    if (same.source === ASSISTED_SOURCE && data.source !== ASSISTED_SOURCE) return { status: "skipped", reason: "tiệm đã nhờ PawNail đăng tin này (đăng hộ, còn hạn) — không ghi đè", jobId: same.id };
     const samePost = data.sourceUrl ? same.sourceUrl === data.sourceUrl : same.sourceKey === data.sourceKey;
     if (samePost) {
       if (!opts.dryRun) await prisma.job.update({ where: { id: same.id }, data: { ...data, ...(fbHash ? { sourceFbHash: fbHash } : {}) } });
       return { status: "updated", jobId: same.id, repostCount: same.repostCount };
     }
     if (opts.dryRun) return { status: "bumped", jobId: same.id, repostCount: same.repostCount + 1 };
-    const now = new Date();
     const j = await prisma.job.update({
       where: { id: same.id },
       data: { ...data, ...(fbHash ? { sourceFbHash: fbHash } : {}), createdAt: posted, lastRepostedAt: now, repostCount: { increment: 1 } },
@@ -287,13 +296,45 @@ export async function recordIngestHeartbeat(results: { status: string }[], now =
 /** Cho trang admin: có đang nhận tin từ nhóm không (công tắc khẩn cấp), lần cuối nhận tin / nhận lô, và đã quá
  *  INGEST_STALE_HOURS giờ chưa có tin mới (→ cảnh báo: bot ngừng gửi, thường do cookie Facebook hết hạn). */
 export async function ingestHeartbeat(now = new Date()) {
-  const [lastAt, lastBatchAt] = await Promise.all([getSetting(INGEST_LAST_AT_KEY).catch(() => null), getSetting(INGEST_LAST_BATCH_AT_KEY).catch(() => null)]);
+  const [recorded, lastBatchAt] = await Promise.all([getSetting(INGEST_LAST_AT_KEY).catch(() => null), getSetting(INGEST_LAST_BATCH_AT_KEY).catch(() => null)]);
+  let lastAt = recorded && Number.isFinite(Date.parse(recorded)) ? recorded : null;
+  // Chưa có ingest_last_at (bản cũ chưa ghi nhịp tim → ngay sau triển khai, bot chưa gửi lô nào qua bản mới):
+  // KHÔNG báo động giả — lấy tin từ nhóm mới nhất trong DB (ngày tạo / ngày đăng lại) làm "lần cuối nhận" ước tính.
+  const estimated = !lastAt;
+  if (!lastAt) {
+    const ms = await latestIngestJobMs();
+    lastAt = ms ? new Date(ms).toISOString() : null;
+  }
   const t = lastAt ? Date.parse(lastAt) : NaN;
-  const stale = !Number.isFinite(t) || now.getTime() - t > INGEST_STALE_HOURS * 3_600_000;
+  const staleMs = INGEST_STALE_HOURS * 3_600_000;
+  let stale = !Number.isFinite(t) || now.getTime() - t > staleMs;
+  // Vẫn chưa từng ghi nhận lần nhận nào → chỉ cảnh báo sau khi đã THEO DÕI đủ 24 giờ (mốc lưu ở lần đọc đầu tiên).
+  if (stale && estimated) {
+    let since = Date.parse((await getSetting(INGEST_WATCH_SINCE_KEY).catch(() => null)) || "");
+    if (!Number.isFinite(since)) {
+      since = now.getTime();
+      await setSetting(INGEST_WATCH_SINCE_KEY, now.toISOString()).catch(() => {});
+    }
+    if (now.getTime() - since <= staleMs) stale = false;
+  }
   // Bot vẫn gửi lô (đúng khoá) SAU lần cuối có tin được nhận → bài bị loại hết (định dạng / bộ lọc), không phải bot ngừng gửi
   const b = lastBatchAt ? Date.parse(lastBatchAt) : NaN;
   const rejectedOnly = Number.isFinite(b) && (!Number.isFinite(t) || b > t + 60_000);
-  return { accepting: aggregatedIngestOn(), lastAt, lastBatchAt, stale, rejectedOnly, staleHours: INGEST_STALE_HOURS };
+  return { accepting: aggregatedIngestOn(), lastAt, lastAtEstimated: estimated && !!lastAt, lastBatchAt, stale, rejectedOnly, staleHours: INGEST_STALE_HOURS };
+}
+
+/** Thời điểm tin từ nhóm mới nhất trong DB (max ngày tạo / ngày tiệm đăng lại) — dùng khi chưa có ingest_last_at. */
+async function latestIngestJobMs(): Promise<number | null> {
+  try {
+    const [created, reposted] = await Promise.all([
+      prisma.job.findFirst({ where: { source: INGEST_SOURCE }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
+      prisma.job.findFirst({ where: { source: INGEST_SOURCE, lastRepostedAt: { not: null } }, orderBy: { lastRepostedAt: "desc" }, select: { lastRepostedAt: true } }),
+    ]);
+    const ms = Math.max(created?.createdAt.getTime() ?? 0, reposted?.lastRepostedAt?.getTime() ?? 0);
+    return ms > 0 ? ms : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Admin duyệt "Gỡ tin": giữ dòng tin (để lịch sử JobRequest còn tham chiếu) nhưng XOÁ mọi dữ liệu công khai của tiệm

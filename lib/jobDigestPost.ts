@@ -1,7 +1,8 @@
-// "📍 Texas: 5 tiệm đang cần thợ tuần này" — mỗi ngày 1 bài từ tài khoản chính thức, CHỈ lấy tin
-// TIỆM TỰ ĐĂNG trên PawNail đang mở, từ tài khoản THẬT: không tin mẫu (@pawnailjobs.demo), không tin tổng hợp /
-// đăng hộ (source ≠ null), không tin đối tác (bảng ExternalJob — điều khoản không cho đóng gói lại thành bài
-// mạng xã hội). Xoay vòng các bang có ≥ 2 tin mới trong 7 ngày,
+// "📍 Texas: 5 tiệm đang cần thợ tuần này" — mỗi ngày 1 bài từ tài khoản chính thức, lấy từ tin tuyển THẬT đang mở
+// trên bảng việc PawNail: tin tiệm tự đăng, tin từ nhóm cộng đồng PawNail (bot của chủ chia sẻ bài tiệm nhờ đăng)
+// và tin đăng hộ. KHÔNG lấy tin mẫu (@pawnailjobs.demo — tài khoản hệ thống của tin từ nhóm không phải email mẫu nên
+// vẫn được tính), không tin đã gỡ (activeJobWhere: hết hạn lúc gỡ), không tin đối tác (bảng ExternalJob — điều khoản
+// không cho đóng gói lại thành bài mạng xã hội). Xoay vòng các bang có ≥ 2 tin mới trong 7 ngày,
 // bang đã điểm tin trong 5 ngày gần nhất để sau. Chỉ dùng thông tin vốn công khai trên bảng việc
 // (tên tiệm, thành phố, kỹ năng, lương) — không đưa số điện thoại vào bài.
 import crypto from "node:crypto";
@@ -24,7 +25,7 @@ export async function publishJobDigest(now = new Date()): Promise<{ posted: bool
   if (await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart }, content: { startsWith: DIGEST_PREFIX } } })) return { posted: false, reason: "hôm nay đã có" };
 
   const jobs = (await prisma.job.findMany({
-    where: { AND: [activeJobWhere(), { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }, { owner: realUserWhere }, { source: null }] }, // luôn bỏ tin mẫu, kể cả khi SHOW_DEMO_DATA=1 (bài đăng ở lại mãi)
+    where: { AND: [activeJobWhere(), { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }, { owner: realUserWhere }] }, // luôn bỏ tin mẫu, kể cả khi SHOW_DEMO_DATA=1 (bài đăng ở lại mãi); tin từ nhóm được tính
     orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
     select: { market: true, state: true, city: true, salonName: true, skills: true, salaryAmount: true, isUrgent: true, source: true, description: true },
     take: 500,

@@ -44,7 +44,7 @@ export async function GET() {
     externalJobsStatus().catch(() => null),
   ]);
   return NextResponse.json(
-    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, ingestAccepting: hb.accepting, lastIngestAt: hb.lastAt, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, ingestRejectedOnly: hb.rejectedOnly, staleHours: hb.staleHours, external },
+    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, ingestAccepting: hb.accepting, lastIngestAt: hb.lastAt, lastIngestEstimated: hb.lastAtEstimated, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, ingestRejectedOnly: hb.rejectedOnly, staleHours: hb.staleHours, external },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

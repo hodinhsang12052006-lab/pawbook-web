@@ -87,11 +87,18 @@ Xem thống kê: `GET https://www.bitpawos.com/api/ingest/jobs` (cùng header) �
 - Tiệm bấm **“Tôi là chủ tiệm này”** → admin chuyển tin sang tài khoản chủ tiệm (thành người dùng thật).
 - Tiệm bấm **“Gỡ tin này”** → admin duyệt ở Studio → SĐT / mô tả / địa chỉ / link bị xoá, trang tin trả 410 và
   **số đó không bao giờ được đăng lại**.
-- Đăng tay từng bài: Admin → Studio → **Đăng hộ tiệm** (dán bài → Xem trước → Đăng hộ).
+- Đăng tay từng bài: Admin → Studio → **Đăng hộ tiệm** (dán bài → Xem trước → Đăng hộ). Bắt buộc ghi **tên + SĐT/email
+  người của tiệm đã nhờ đăng** (lưu làm lịch sử yêu cầu); tối đa 50 bài mỗi lần.
+- Tin đăng hộ CÒN HẠN không bị bài từ nhóm cùng tiệm ghi đè (tiệm vẫn hiện qua tin đăng hộ). Tin đăng hộ hết hạn thì bài
+  mới của tiệm từ nhóm lại lên bảng như thường.
+- Bài điểm tin hằng ngày của tài khoản chính thức ("📍 Texas: N tiệm đang cần thợ tuần này") tính cả tin từ nhóm (không
+  ghi SĐT trong bài; không lấy tin mẫu / tin đã gỡ).
 
 ## Nhịp tim + công tắc khẩn cấp
 - Mỗi lô bot gửi đúng khoá được ghi lại. **Quá 24 giờ không có tin mới** → trang Admin (Sức khoẻ tăng trưởng + Studio →
   Đăng hộ tiệm) báo đỏ kèm cách xử lý: thường là bot cần **đăng nhập lại Facebook / cookie mới**. Nếu bot vẫn gửi mà
   bài nào cũng bị loại, trang admin ghi rõ như vậy (xem `reason` trong phản hồi).
+- Ngay sau khi cập nhật bản mới (chưa có lần nhận nào được ghi): trang admin lấy tin từ nhóm mới nhất trên bảng làm
+  “lần cuối nhận” (ghi “theo tin mới nhất trên bảng”) và chỉ báo đỏ sau khi đã theo dõi đủ 24 giờ — không báo động giả.
 - Cần dừng gấp (VD bot gửi nhầm hàng loạt): đặt `INGEST_AGGREGATED=off` trên Vercel → hai địa chỉ trên trả
   `410 {"code":"INGEST_OFF"}`. Xoá biến đó rồi Redeploy để nhận lại. Không đặt biến = luôn nhận.

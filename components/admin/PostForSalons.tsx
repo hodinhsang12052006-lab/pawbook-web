@@ -14,7 +14,7 @@ interface External {
   last: { at: string; adzuna: ProviderRun } | null;
   live: { active: Record<string, number>; hidden: Record<string, number>; expired: number } | null;
 }
-interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; ingestAccepting?: boolean; lastIngestAt: string | null; lastBatchAt: string | null; ingestStale: boolean; ingestRejectedOnly?: boolean; staleHours: number; external: External | null }
+interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; ingestAccepting?: boolean; lastIngestAt: string | null; lastIngestEstimated?: boolean; lastBatchAt: string | null; ingestStale: boolean; ingestRejectedOnly?: boolean; staleHours: number; external: External | null }
 
 const DECISION: Record<string, string> = { created: "Sẽ tạo tin mới", bumped: "Tiệm đã có tin → sẽ đẩy tin lên đầu (đăng lại)", updated: "Trùng đúng bài cũ → sẽ cập nhật", skipped: "Sẽ BỎ QUA" };
 
@@ -82,7 +82,7 @@ export default function PostForSalons() {
             Đang hiện công khai: <b>{data.active}</b> tin (đăng hộ + từ nhóm){data.hiddenByFilter ? ` · bộ lọc chữ ẩn ${data.hiddenByFilter}` : ""} · hết hạn: {data.expired} ·{" "}
             {/* Nhịp tim bot đọc nhóm cộng đồng: quá 24 giờ không có tin mới → cảnh báo đỏ + cách xử lý bằng lời thường */}
             <span className={data.ingestAccepting === false ? "font-bold text-amber-300" : stale ? "font-bold text-red-300" : "text-emerald-300"} data-testid="ingest-heartbeat">
-              tin từ nhóm nhận lần cuối: {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}
+              tin từ nhóm nhận lần cuối: {data.lastIngestAt ? `${timeAgo(data.lastIngestAt)}${data.lastIngestEstimated ? " (theo tin mới nhất trên bảng)" : ""}` : "chưa ghi nhận"}
               {data.ingestAccepting === false
                 ? " ⏸ đang tạm ngừng nhận (INGEST_AGGREGATED=off trên Vercel — xoá biến đó rồi Redeploy để nhận lại)"
                 : stale

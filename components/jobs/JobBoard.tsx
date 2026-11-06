@@ -95,8 +95,8 @@ function timeAgo(iso: string): string {
 }
 
 // Banner "nhịp thị trường": CHỈ số LIVE từ chính các tin đang mở trên app (đủ ≥3 tin mới hiện).
-// Ít hơn 3 tin → không hiện gì (11/2026: bỏ số khảo sát nhóm Facebook 9/2026 — cũ và từ cách thu thập
-// PawNail không dùng nữa; đặt cạnh dòng "chưa có tin" là gây hiểu nhầm).
+// Ít hơn 3 tin → không hiện gì (11/2026: bỏ số của đợt đếm tin nhóm Facebook một lần 9/2026 — số cũ, không cập nhật;
+// đặt cạnh dòng "chưa có tin" là gây hiểu nhầm. Tin từ nhóm cộng đồng PawNail vẫn vào bảng việc qua bot của chủ).
 export interface JobTotals { total: number; new7d: number; urgent: number }
 
 function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; state: string; totals: JobTotals }) {

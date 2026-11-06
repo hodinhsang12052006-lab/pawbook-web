@@ -51,7 +51,7 @@ export async function GET() {
       install: { installed },
       demo: { users: demoUsers, jobs: demoJobs, posts: demoPosts },
       designs: { drafts, published, noImage },
-      ingest: { active: ingestActive, pendingRequests: ingestRequests, accepting: hb?.accepting ?? aggregatedIngestOn(), lastAt: hb?.lastAt ?? null, lastBatchAt: hb?.lastBatchAt ?? null, rejectedOnly: hb?.rejectedOnly ?? false, stale: hb?.stale ?? true, staleHours: hb?.staleHours ?? 24 },
+      ingest: { active: ingestActive, pendingRequests: ingestRequests, accepting: hb?.accepting ?? aggregatedIngestOn(), lastAt: hb?.lastAt ?? null, lastAtEstimated: hb?.lastAtEstimated ?? false, lastBatchAt: hb?.lastBatchAt ?? null, rejectedOnly: hb?.rejectedOnly ?? false, stale: hb?.stale ?? false, staleHours: hb?.staleHours ?? 24 },
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

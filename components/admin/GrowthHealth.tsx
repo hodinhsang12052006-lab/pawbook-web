@@ -11,7 +11,7 @@ interface Growth {
   install: { installed: number };
   demo: { users: number; jobs: number; posts: number };
   designs: { drafts: number; published: number; noImage: number };
-  ingest?: { active: number; pendingRequests: number; accepting?: boolean; lastAt?: string | null; lastBatchAt?: string | null; rejectedOnly?: boolean; stale?: boolean; staleHours?: number };
+  ingest?: { active: number; pendingRequests: number; accepting?: boolean; lastAt?: string | null; lastAtEstimated?: boolean; lastBatchAt?: string | null; rejectedOnly?: boolean; stale?: boolean; staleHours?: number };
 }
 
 // "Sức khoẻ tăng trưởng" — số THẬT (đã loại tài khoản mẫu), để biết tính năng nào giữ chân người dùng.
@@ -59,7 +59,7 @@ export default function GrowthHealth() {
         </p>
       ) : g.ingest?.stale ? (
         <p className="rounded-xl bg-red-500/10 p-3 text-xs leading-relaxed text-red-200 ring-1 ring-red-500/25" data-testid="ingest-stale">
-          ⚠ Quá {g.ingest.staleHours ?? 24} giờ chưa có tin mới từ nhóm ({g.ingest.lastAt ? `lần cuối nhận ${new Date(g.ingest.lastAt).toLocaleString("vi-VN")}` : "chưa nhận tin nào"}).{" "}
+          ⚠ Quá {g.ingest.staleHours ?? 24} giờ chưa có tin mới từ nhóm ({g.ingest.lastAt ? `${g.ingest.lastAtEstimated ? "tin từ nhóm mới nhất trên bảng" : "lần cuối nhận"} ${new Date(g.ingest.lastAt).toLocaleString("vi-VN")}` : "chưa nhận tin nào"}).{" "}
           {g.ingest.rejectedOnly
             ? "Bot vẫn gửi bài nhưng bài nào cũng bị loại — xem lý do trong phản hồi của bot (Studio → Đăng hộ tiệm để thử 1 bài)."
             : "Bot đọc nhóm có thể đã dừng — thường do cookie Facebook hết hạn: mở bot, đăng nhập lại Facebook (hoặc dán cookie mới) rồi chạy lại."}{" "}

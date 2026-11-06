@@ -116,7 +116,8 @@ export interface DemandSignal {
 // Tổng số tin "chủ tìm thợ" ghi nhận được trên toàn bộ đợt quét (kể cả các
 // bang mẫu quá nhỏ không liệt kê riêng ở dưới) — dùng cho các câu FOMO tổng
 // quát kiểu "hơn 1,000 tiệm đang cần thợ" (xem components/FomoToast.tsx).
-/** Ngày quét nhóm (một lần, 9/2026). Cách thu thập này PawNail không dùng nữa → số chỉ được hiện trong
+/** Ngày đợt ĐẾM tin trong nhóm (một lần, 9/2026 — không lặp lại; tin từ nhóm cộng đồng vẫn vào bảng việc qua bot của
+ *  chủ, xem lib/jobIngest/ingest.ts). Số của đợt đếm này chỉ được hiện trong
  *  30 ngày sau ngày quét; quá hạn thì mọi banner / toast / huy hiệu "N+ tin tìm thợ" tự ẩn (không quét lại). */
 export const DEMAND_SNAPSHOT_DATE = "2026-09-23";
 export const DEMAND_SNAPSHOT_MAX_AGE_DAYS = 30;
@@ -163,7 +164,7 @@ export interface RadarResult {
   negotiationTips: string[];
   ownerChecklist: string[];
   /** Số tin tuyển từ ĐỢT QUÉT NHÓM MỘT LẦN (9/2026). null khi đợt quét đã quá DEMAND_SNAPSHOT_MAX_AGE_DAYS
-   *  (cách thu thập này PawNail không dùng nữa → không trình bày như số hiện tại). */
+   *  (đợt đếm một lần, không cập nhật → không trình bày như số hiện tại). */
   demandSignal: DemandSignal | null;
   /** Ngày đợt quét (để ghi "đợt quét một lần, 9/2026") — null khi demandSignal null. */
   demandSnapshotDate: string | null;

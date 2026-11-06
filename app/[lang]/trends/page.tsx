@@ -18,6 +18,8 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { dt } from "@/lib/i18n/dataEn";
 import { useTr } from "@/lib/i18n/useTr";
 import { useViewerMarket } from "@/lib/useViewerMarket";
+import { tagsForLocale } from "@/lib/hashtags";
+import SalonDirectory from "@/components/client/SalonDirectory";
 import NailTrendRadar from "@/components/designs/NailTrendRadar";
 
 interface RadarPublic {
@@ -95,7 +97,13 @@ export default function TrendsPage() {
     };
   }, [market]);
 
-  const empty = data && !studio?.challenge && !data.pulse.length && !data.hotPosts.length && !data.hashtags.length && !data.salaries.length && !data.risingTechs.length;
+  // KHÁCH làm nail: xu hướng MẪU + tiệm — không tuyển dụng, không lương, không bảng thợ theo điểm chủ tiệm,
+  // không thử thách đăng bài (dành cho thợ).
+  const clientView = user?.role === "CLIENT";
+  const tags = data ? tagsForLocale(data.hashtags, currentLocale()) : [];
+  const empty = data && (clientView
+    ? !data.hotPosts.length && !tags.length
+    : !studio?.challenge && !data.pulse.length && !data.hotPosts.length && !tags.length && !data.salaries.length && !data.risingTechs.length);
 
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
@@ -111,7 +119,11 @@ export default function TrendsPage() {
                 <Activity className="h-3.5 w-3.5" />{tr(" Dựa trên hoạt động trên PawNail", " Based on activity on PawNail")}
               </p>
               <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Xu hướng tuần này", "This week's trends")}</h1>
-              <p className="mt-1 max-w-md text-sm text-slate-400">{tr("Mẫu được yêu thích nhất, thợ nổi bật, lương theo bang và nơi tiệm đang tuyển nhiều.", "Most-loved designs, standout techs, pay by state and where salons are hiring.")}</p>
+              <p className="mt-1 max-w-md text-sm text-slate-400">
+                {clientView
+                  ? tr("Mẫu được yêu thích nhất tuần này, hashtag đang lên và tiệm gần bạn.", "This week's most-loved looks, rising hashtags and salons near you.")
+                  : tr("Mẫu được yêu thích nhất, thợ nổi bật, lương theo bang và nơi tiệm đang tuyển nhiều.", "Most-loved designs, standout techs, pay by state and where salons are hiring.")}
+              </p>
             </div>
             <div className="flex rounded-xl bg-slate-950/60 p-1 ring-1 ring-white/10" role="tablist" aria-label={tr("Thị trường", "Market")}>
               {(["US", "AU"] as const).map((m) => (
@@ -129,7 +141,7 @@ export default function TrendsPage() {
           </div>
         </header>
 
-        {studio?.challenge && <ChallengeBoard studio={studio} />}
+        {studio?.challenge && !clientView && <ChallengeBoard studio={studio} />}
 
         <NailTrendRadar />
 
@@ -140,14 +152,22 @@ export default function TrendsPage() {
           <div className="rounded-3xl border border-dashed border-white/10 px-6 py-14 text-center">
             <Sparkles className="mx-auto h-8 w-8 text-pink-300" />
             <p className="mt-3 text-base font-bold text-white">{tr("Tuần này chưa đủ hoạt động để xếp hạng.", "Not enough activity to rank this week yet.")}</p>
-            <p className="mt-1 text-sm text-slate-500">{tr("Đăng tác phẩm kèm hashtag để được tính.", "Share your work with a hashtag to be included.")}</p>
-            <Link href="/?tab=feed" className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white">
-              {tr("Đăng tác phẩm ", "Share your work ")}<ArrowRight className="h-4 w-4" />
-            </Link>
+            {clientView ? (
+              <Link href="/designs" className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white">
+                {tr("Xem mẫu nail mới ", "Browse new nail designs ")}<ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <>
+                <p className="mt-1 text-sm text-slate-500">{tr("Đăng tác phẩm kèm hashtag để được tính.", "Share your work with a hashtag to be included.")}</p>
+                <Link href="/?tab=feed" className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white">
+                  {tr("Đăng tác phẩm ", "Share your work ")}<ArrowRight className="h-4 w-4" />
+                </Link>
+              </>
+            )}
           </div>
         )}
 
-        {data && data.pulse.length > 0 && (
+        {data && !clientView && data.pulse.length > 0 && (
           <Section icon={MapPin} title={tr("Nơi tiệm đang tuyển nhiều", "Where salons are hiring")} hint={tr("Tin tuyển mới trong 7 ngày qua", "New job posts in the last 7 days")} tone="bg-orange-500/15 text-orange-300">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {data.pulse.map((p, i) => (
@@ -199,22 +219,28 @@ export default function TrendsPage() {
           </Section>
         )}
 
-        {data && data.hashtags.length > 0 && (
+        {data && tags.length > 0 && (
           <Section icon={Hash} title={tr("Hashtag đang lên", "Rising hashtags")} hint={tr("Số bài đăng có hashtag trong 14 ngày", "Posts using the hashtag in 14 days")} tone="bg-sky-500/15 text-sky-300">
             <div className="flex flex-wrap gap-2">
-              {data.hashtags.map((t, i) => (
+              {tags.map((t, i) => (
                 <span
                   key={t.tag}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold ring-1 ${i < 3 ? "bg-sky-500/15 text-sky-100 ring-sky-400/30" : "bg-white/[0.04] text-slate-300 ring-white/10"}`}
                 >
-                  #{t.tag} <span className="text-[11px] font-semibold text-slate-400">{t.count}{tr(" bài", " posts")}</span>
+                  #{t.tag} <span className="text-[11px] font-semibold text-slate-400">{t.count}{tr(" bài", t.count === 1 ? " post" : " posts")}</span>
                 </span>
               ))}
             </div>
           </Section>
         )}
 
-        {data && data.risingTechs.length > 0 && (
+        {clientView && (
+          <Section icon={MapPin} title={tr("Tiệm & thợ gần bạn", "Salons & techs near you")} hint={tr("Ảnh tác phẩm thật, menu và giá", "Real work, menus and prices")} tone="bg-pink-500/15 text-pink-300">
+            <SalonDirectory market={market} state={user?.state || ""} limit={4} compact />
+          </Section>
+        )}
+
+        {data && !clientView && data.risingTechs.length > 0 && (
           <Section icon={Star} title={tr("Thợ nổi bật", "Standout techs")} hint={tr("Theo lượt thích 30 ngày và đánh giá thật từ chủ tiệm", "By 30-day likes and real salon-owner reviews")} tone="bg-amber-500/15 text-amber-300">
             <div className="glass-card divide-y divide-white/5 overflow-hidden rounded-2xl">
               {data.risingTechs.map((t, i) => (
@@ -235,7 +261,7 @@ export default function TrendsPage() {
           </Section>
         )}
 
-        {data && data.salaries.length > 0 && (
+        {data && !clientView && data.salaries.length > 0 && (
           <Section icon={DollarSign} title={tr("Lương tuần theo bang", "Weekly pay by state")} hint={tr("Từ tin tuyển thật có ghi lương tuần (cần ≥3 tin/bang)", "From real job posts listing weekly pay (needs ≥3 posts/state)")} tone="bg-emerald-500/15 text-emerald-300">
             <div className="glass-card overflow-hidden rounded-2xl">
               {data.salaries.map((s) => {
@@ -244,7 +270,7 @@ export default function TrendsPage() {
                   <div key={s.state} className="grid grid-cols-[minmax(90px,1fr)_2fr_auto] items-center gap-3 border-b border-white/5 px-4 py-3 last:border-0">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-100">{s.label}</p>
-                      <p className="text-[10px] text-slate-500">{s.jobs} tin</p>
+                      <p className="text-[10px] text-slate-500">{s.jobs}{tr(" tin", s.jobs === 1 ? " post" : " posts")}</p>
                     </div>
                     <div className="relative h-2 rounded-full bg-white/[0.05]">
                       <span
@@ -263,8 +289,8 @@ export default function TrendsPage() {
           </Section>
         )}
 
-        {radar && radar.pulse.length > 0 && (
-          <Section icon={Activity} title={tr("Nhịp đau ngành", "Industry pain pulse")} hint={tr("Thợ & chủ tiệm tự trả lời mỗi tuần trên PawNail — ẩn danh", "Techs & owners answer weekly on PawNail — anonymous")} tone="bg-sky-500/15 text-sky-300">
+        {radar && !clientView && radar.pulse.length > 0 && (
+          <Section icon={Activity} title={tr("Khảo sát nhanh trong ngành", "Industry quick polls")} hint={tr("Thợ & chủ tiệm tự trả lời mỗi tuần trên PawNail — ẩn danh", "Techs & owners answer weekly on PawNail — anonymous")} tone="bg-sky-500/15 text-sky-300">
             <div className="grid gap-3 sm:grid-cols-2">
               {radar.pulse.map((p) => {
                 const sorted = [...p.options].sort((a, b) => b.votes - a.votes).filter((o) => o.votes > 0);
@@ -290,14 +316,14 @@ export default function TrendsPage() {
           </Section>
         )}
 
-        {radar && radar.news.some((n) => currentLocale() === "vi" || n.lang !== "vi") && (
+        {radar && !clientView && radar.news.some((n) => currentLocale() === "vi" || n.lang !== "vi") && (
           <Section icon={Newspaper} title={tr("Tin ngành nail", "Nail industry news")} hint={tr("Tiêu đề từ báo chí & tạp chí ngành — bấm để đọc bài gốc", "Headlines from press & trade magazines — tap to read the original")} tone="bg-slate-400/15 text-slate-200">
             <div className="glass-card divide-y divide-white/5 overflow-hidden rounded-2xl">
               {radar.news.filter((n) => currentLocale() === "vi" || n.lang !== "vi").map((n) => (
                 <a key={n.link} href={n.link} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 p-3.5 transition-colors hover:bg-white/[0.03]">
                   <span className="mt-0.5 flex-shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-slate-300">{NEWS_TOPIC()[n.topic] ?? tr("Tin ngành", "Industry news")}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold leading-snug text-slate-100">{n.title}</span>
+                    <span className="block text-sm font-semibold leading-snug text-slate-100" lang={n.lang === "vi" ? "vi" : "en"}>{n.title}{currentLocale() === "vi" && n.lang !== "vi" && <span className="ml-1 text-[11px] font-normal text-slate-500">(tiếng Anh)</span>}</span>
                     <span className="mt-0.5 block text-[11px] text-slate-500">{n.source}{n.publishedAt ? ` · ${timeAgo(n.publishedAt)}` : ""}</span>
                   </span>
                   <ExternalLink className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-slate-500" />
@@ -307,7 +333,7 @@ export default function TrendsPage() {
           </Section>
         )}
 
-        {data && !empty && (
+        {data && !empty && !clientView && (
           <Link
             href="/?tab=feed"
             className="flex items-center gap-4 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-600/15 via-fuchsia-600/10 to-transparent p-4 transition-colors hover:border-pink-500/50"

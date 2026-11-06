@@ -103,7 +103,14 @@ const jobId = (await db.execute(`SELECT id FROM "Job" LIMIT 1`)).rows[0].id;
 {
   const c = await ctx(MODE);
   const p = await c.newPage();
-  for (const path of ["/auth/register", "/auth/register?role=technician", "/auth/register?role=owner", "/auth/login", "/terms", "/privacy", "/offline", "/khong-ton-tai-404"]) {
+  // Trang khách chưa đăng nhập thấy đầu tiên (trang chủ, mẫu, thử mẫu, tiệm, menu quét QR, hỗ trợ).
+  const designId = (await db.execute(`SELECT id FROM "NailDesign" LIMIT 1`)).rows[0]?.id;
+  const guestPaths = [
+    "/", "/?tab=jobs", "/?tab=portfolio", "/designs", ...(designId ? [`/designs/${designId}`] : []), "/tryon", "/salons",
+    `/menu/${techId}`, `/profile/${techId}`, `/profile/${ownerId}`, `/jobs/${jobId}`, "/trends", "/tools/radar", "/supply",
+    "/support", "/data-deletion", "/auth/forgot",
+  ];
+  for (const path of [...guestPaths, "/auth/register", "/auth/register?role=technician", "/auth/register?role=owner", "/auth/register?role=client", "/auth/login", "/terms", "/privacy", "/offline", "/khong-ton-tai-404"]) {
     await p.goto(BASE_URL + path).catch(() => {});
     record("khách " + path, await harvest(p));
   }
@@ -143,6 +150,27 @@ const jobId = (await db.execute(`SELECT id FROM "Job" LIMIT 1`)).rows[0].id;
   record("chủ tiệm mới: xem trước demo", await harvest(q));
   await c.close();
   await c2.close();
+}
+
+// ----- Khách làm nail (đăng ký qua form thật, rồi xem các màn hình của khách) -----
+{
+  const c = await ctx(MODE);
+  const p = await c.newPage();
+  await p.goto(BASE_URL + "/auth/register?role=client");
+  await p.locator("#cl-name").fill("Audit Client").catch(() => {});
+  await p.locator("#cl-city").fill("Houston").catch(() => {});
+  await p.locator("#cl-state").selectOption("TX").catch(() => {});
+  await p.locator("#cl-email").fill(`audit.c.${Date.now()}@qa.test`).catch(() => {});
+  await p.locator("#cl-pass").fill("QaPass#2026").catch(() => {});
+  await p.locator('button[type="submit"]').last().click().catch(() => {});
+  const ok = await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 }).then(() => true, () => false);
+  if (ok) {
+    for (const path of ["/", "/designs", "/salons", "/tryon", "/messages", "/profile", "/bookings"]) {
+      await p.goto(BASE_URL + path).catch(() => {});
+      record("khách làm nail " + path, await harvest(p));
+    }
+  } else console.error("⚠️ khách làm nail: đăng ký không thành công — bỏ qua phần này");
+  await c.close();
 }
 
 // ----- Thợ -----

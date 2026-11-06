@@ -53,7 +53,8 @@ export function pageMetadata(
   const title = trL(lang, ...m.title);
   const description = m.description ? trL(lang, ...m.description) : undefined;
   return {
-    title,
+    // Tiêu đề đã có chữ "PawNail" (vd. "PawNail Try-On — …") → bỏ đuôi " · PawNail" của template cho khỏi lặp.
+    title: /PawNail/.test(title) ? { absolute: title } : title,
     ...(description ? { description } : {}),
     alternates: alternates(path, lang),
     openGraph: openGraph(lang, { title, ...(description ? { description } : {}) }),

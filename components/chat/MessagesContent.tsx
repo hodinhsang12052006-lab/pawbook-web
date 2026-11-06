@@ -1160,7 +1160,7 @@ export default function MessagesContent({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowGroupModal(true)}
-              className="p-2 rounded-xl bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-pink-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold shadow-sm shadow-pink-500/5 uppercase tracking-wide"
+              className="p-2 rounded-xl bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-pink-300 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold shadow-sm shadow-pink-500/5"
               title={tr("Tạo nhóm chat mới", "New group chat")}
             >
               <Plus className="h-4 w-4" /> {t("messenger.newGroup")}
@@ -1519,7 +1519,8 @@ export default function MessagesContent({
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 animate-fadeIn">
                   <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/20 to-fuchsia-500/20 ring-1 ring-pink-500/30 text-2xl">👋</span>
                   <p className="text-sm font-bold text-slate-200">{t("messenger.noMessagesYet")}</p>
-                  <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{t("messenger.noMessagesHint")}</p>
+                  {/* Có khách làm nail trong cuộc trò chuyện → nói về giá / lịch trống, không nói "chia turn" (chuyện giữa thợ và tiệm). */}
+                  <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{currentUser?.role === "CLIENT" || activeChat.role === "CLIENT" ? tr("Gửi lời chào, hoặc hỏi về giá và lịch còn trống.", "Say hi, or ask about prices and openings.") : t("messenger.noMessagesHint")}</p>
                   {/* Gợi ý câu mở đầu theo vai trò — bấm để điền sẵn vào ô nhập. */}
                   <div className="mt-1 flex max-w-md flex-wrap justify-center gap-2">
                     {/* đúng cặp vai trò: khách hỏi tiệm (lịch, giá) khác hẳn thợ hỏi việc — trước đây khách cũng thấy "tiệm còn tuyển thợ không" */}

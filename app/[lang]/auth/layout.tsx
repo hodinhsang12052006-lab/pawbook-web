@@ -182,7 +182,9 @@ export default function CustomAuthLayout({
                   <span key={i} className="absolute h-1 w-1 rounded-full bg-white animate-twinkle" style={{ top: dot.top, left: dot.left, animationDelay: dot.delay }} />
                 ))}
               </div>
-              <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-2">
+              {/* pr-[12.5rem]: chừa chỗ cho nút ngôn ngữ ("English" / "Tiếng Việt") + nút giao diện nổi ở góc phải
+                  → huy hiệu "Mỹ · Úc" xuống dòng thay vì nằm chồng dưới hai nút đó trên điện thoại. */}
+              <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-2 pr-[12.5rem]">
                 <Link href="/" className="flex items-center gap-2.5">
                   <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-[22%] border border-white/20 bg-white/10 p-0.5 shadow-lg shadow-pink-950/30">
                     <img src="/cho1.jpg" alt="PawNail" className="h-full w-full object-cover rounded-[20%]" />

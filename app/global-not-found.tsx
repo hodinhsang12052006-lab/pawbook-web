@@ -31,7 +31,7 @@ export default function GlobalNotFound() {
               href="/"
               className="flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-6 text-sm font-bold text-white shadow-lg shadow-purple-600/25 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
             >
-              Back to home
+              Back to home<span lang="vi" className="font-semibold text-white/70">&nbsp;· Về trang chủ</span>
             </a>
           </div>
         </main>

@@ -81,7 +81,7 @@ export function ForgotPasswordForm() {
             <label htmlFor="forgot-email" className={c.label}>{tr("Địa chỉ email", "Email address")}</label>
             <div className="relative mt-1">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5"><Mail className="h-4 w-4 text-slate-400" /></div>
-              <input id="forgot-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ban@email.com" className={c.input} />
+              <input id="forgot-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tr("ban@email.com", "you@email.com")} className={c.input} />
             </div>
           </div>
           <button type="submit" disabled={busy} className={c.btn}>

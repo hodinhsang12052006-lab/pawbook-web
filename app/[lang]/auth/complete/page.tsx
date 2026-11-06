@@ -93,26 +93,26 @@ export default function CompleteProfilePage() {
         <p className="text-sm text-slate-400">{tr("Còn 1 bước — cho PawNail biết bạn là ai và ở đâu.", "One last step — tell PawNail who you are and where you work.")}</p>
       </div>
 
-      <div className="space-y-2.5" role="radiogroup" aria-label={tr("Bạn là ai?", "Who are you?")}>
+      <div className="space-y-2.5" role="radiogroup" aria-label={tr("Bạn sử dụng PawNail với vai trò nào?", "How will you use PawNail?")}>
         <button type="button" role="radio" aria-checked={role === "CLIENT"} onClick={() => setRole("CLIENT")} className={card(role === "CLIENT")}>
           <Heart className="h-7 w-7 flex-shrink-0 text-pink-400" />
           <span>
-            <span className="block font-bold text-white">{tr("Tôi đi làm nail (khách)", "I get my nails done")}</span>
-            <span className="block text-xs text-slate-400">{tr("Xem mẫu trend, tìm tiệm gần bạn, đặt lịch", "Browse looks, find salons near you, book")}</span>
+            <span className="block font-bold text-white">{tr("Tôi là khách làm nail", "I'm a nail client")}</span>
+            <span className="block text-xs text-slate-400">{tr("Thử mẫu trên tay, tìm tiệm và gửi yêu cầu đặt lịch", "Try on looks, discover salons and request a booking")}</span>
           </span>
         </button>
         <button type="button" role="radio" aria-checked={role === "TECHNICIAN"} onClick={() => setRole("TECHNICIAN")} className={card(role === "TECHNICIAN")}>
           <Sparkles className="h-7 w-7 flex-shrink-0 text-pink-400" />
           <span>
-            <span className="block font-bold text-white">{tr("Tôi là Thợ Nail", "I'm a nail tech")}</span>
-            <span className="block text-xs text-slate-400">{tr("Tìm việc gấp, đăng portfolio", "Find work, show your portfolio")}</span>
+            <span className="block font-bold text-white">{tr("Tôi là thợ nail", "I'm a nail technician")}</span>
+            <span className="block text-xs text-slate-400">{tr("Giới thiệu tay nghề, để tiệm tìm đến và xem việc làm", "Showcase your work, get found by salons and browse jobs")}</span>
           </span>
         </button>
         <button type="button" role="radio" aria-checked={role === "OWNER"} onClick={() => setRole("OWNER")} className={card(role === "OWNER")}>
           <Store className="h-7 w-7 flex-shrink-0 text-pink-400" />
           <span>
-            <span className="block font-bold text-white">{tr("Tôi là Chủ Tiệm", "I own a salon")}</span>
-            <span className="block text-xs text-slate-400">{tr("Đăng tin tuyển thợ, xem portfolio thợ", "Post jobs, browse tech portfolios")}</span>
+            <span className="block font-bold text-white">{tr("Tôi là chủ tiệm hoặc quản lý", "I own or manage a salon")}</span>
+            <span className="block text-xs text-slate-400">{tr("Tuyển thợ, chia sẻ menu dịch vụ và nhận yêu cầu đặt lịch", "Hire technicians, share your menu and take booking requests")}</span>
           </span>
         </button>
       </div>

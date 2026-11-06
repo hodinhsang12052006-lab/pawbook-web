@@ -57,7 +57,7 @@ export default function LanguageHints() {
           onClick={() => setLocale(toEn ? "en" : "vi")}
           className="min-h-[32px] shrink-0 rounded-full bg-gradient-to-r from-fuchsia-600 to-violet-600 px-3 font-bold text-white transition hover:brightness-110 active:scale-[0.97]"
         >
-          {toEn ? "View in English" : "Dùng Tiếng Việt"}
+          {toEn ? "View in English" : "Dùng tiếng Việt"}
         </button>
         <button
           type="button"

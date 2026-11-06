@@ -369,7 +369,7 @@ export default function ProfilePage() {
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-400">
               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ${isOwner ? "bg-amber-500/10 text-amber-200 ring-amber-500/25" : "bg-pink-500/10 text-pink-200 ring-pink-500/25"}`}>
                 {isOwner ? <Store className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                {isOwner ? tr("Chủ tiệm", "Salon owner") : tr("Thợ Nail", "Nail tech")}
+                {isOwner ? tr("Chủ tiệm", "Salon owner") : tr("Thợ nail", "Nail tech")}
               </span>
               <span className="truncate">{profile?.email}</span>
             </div>
@@ -454,16 +454,16 @@ export default function ProfilePage() {
             </div>
             <div>
               <label className="field-label" htmlFor="pf-phone">{tr("Số điện thoại", "Phone number")}</label>
-              <input id="pf-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="VD: (713) 555-0123" className="input-field" />
+              <input id="pf-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={tr("VD: (713) 555-0123", "e.g. (713) 555-0123")} className="input-field" />
               <PhoneVerify dirty={phone.trim() !== savedPhone.trim()} refreshKey={phoneCheckKey} />
             </div>
             <div>
               <label className="field-label" htmlFor="pf-state">Bang</label>
-              <input id="pf-state" value={state} onChange={(e) => setState(e.target.value)} placeholder="VD: TX" className="input-field" />
+              <input id="pf-state" value={state} onChange={(e) => setState(e.target.value)} placeholder={tr("VD: TX", "e.g. TX")} className="input-field" />
             </div>
             <div>
               <label className="field-label" htmlFor="pf-city">{tr("Thành phố", "City")}</label>
-              <input id="pf-city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="VD: Houston" className="input-field" />
+              <input id="pf-city" value={city} onChange={(e) => setCity(e.target.value)} placeholder={tr("VD: Houston", "e.g. Houston")} className="input-field" />
             </div>
           </div>
         </FormSection>
@@ -488,7 +488,7 @@ export default function ProfilePage() {
                   aria-pressed={status === "URGENT"}
                   className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold ring-1 transition-all ${status === "URGENT" ? "bg-red-500/10 text-red-200 ring-red-500/60" : "text-slate-400 ring-white/10 hover:ring-white/20"}`}
                 >
-                  <Flame className="h-4 w-4" />{tr(" Tìm việc gấp", " Need work now")}
+                  <Flame className="h-4 w-4" />{tr(" Sẵn sàng nhận việc ngay", " Available now")}
                 </button>
               </div>
             </div>
@@ -500,7 +500,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="field-label" htmlFor="pf-tenure">{tr("Gắn bó TB (tháng/tiệm)", "Avg. tenure (months/salon)")}</label>
-                <input id="pf-tenure" type="number" min={0} value={avgTenureMonths} onChange={(e) => setAvgTenureMonths(e.target.value)} placeholder="VD: 8" className="input-field" />
+                <input id="pf-tenure" type="number" min={0} value={avgTenureMonths} onChange={(e) => setAvgTenureMonths(e.target.value)} placeholder={tr("VD: 8", "e.g. 8")} className="input-field" />
               </div>
             </div>
 

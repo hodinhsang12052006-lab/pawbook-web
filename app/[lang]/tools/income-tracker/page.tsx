@@ -183,7 +183,7 @@ export default function IncomeTrackerPage() {
       <main className="mx-auto w-full max-w-2xl px-4 py-8 pb-28 md:pb-10 space-y-6">
         <div className="space-y-1.5">
           <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-purple-400" />{tr(" Bảng Tính Thu Nhập & Tip", " Income & Tip Tracker")}
+            <Wallet className="h-6 w-6 text-purple-400" />{tr(" Thu nhập & tip", " Income & tips")}
           </h1>
           <p className="text-sm text-slate-400">
             {tr("Ghi turn + tip mỗi tối, tự cộng dồn theo tuần — đối chiếu phiếu lương cuối tuần cho chuẩn.", "Log turns + tips each night, auto-totaled by week — check your weekly paycheck with confidence.")}

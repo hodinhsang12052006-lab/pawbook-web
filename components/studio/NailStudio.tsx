@@ -271,7 +271,7 @@ export default function NailStudio({ photos = [], market = "US", onSend, sendLab
 
       {step === "photo" && (
         <section className="space-y-3">
-          <p className="text-sm text-slate-300">{tr("Chụp mu bàn tay (thấy rõ móng, đủ sáng) — máy tự nhận móng và gợi ý mẫu hợp tay:", "Snap the back of the hand (nails clearly visible, good light) — we find the nails and suggest looks that suit the hand:")}</p>
+          <p className="text-sm text-slate-300">{tr("Chọn ảnh mu bàn tay, thấy rõ móng và đủ sáng:", "Use a photo of the back of the hand, with the nails in clear view and good light:")}</p>
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {photos.slice(0, 6).map((u) => (

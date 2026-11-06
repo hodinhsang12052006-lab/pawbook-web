@@ -89,7 +89,7 @@ export default function ClientRegisterForm() {
       </div>
       <div>
         <label htmlFor="cl-email" className={label}>Email</label>
-        <input id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="ban@email.com" className={field} />
+        <input id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={tr("ban@email.com", "you@email.com")} className={field} />
       </div>
       <div>
         <label htmlFor="cl-pass" className={label}>{tr("Mật khẩu", "Password")}</label>

@@ -21,7 +21,7 @@ function PrivacyVi() {
         <h1 className="text-2xl font-black text-white mb-2">Chính sách bảo mật</h1>
         <p className="text-xs text-slate-500">Cập nhật lần cuối: 30/10/2026</p>
       </div>
-      <p>PawNail Jobs (&quot;chúng tôi&quot;) vận hành nền tảng kết nối chủ tiệm nail, thợ nail và khách làm nail tại Mỹ &amp; Úc, truy cập qua website <strong className="text-white">bitpawos.com</strong> và ứng dụng di động PawNail Jobs trên App Store / CH Play. Chính sách này giải thích chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn như thế nào.</p>
+      <p>PawNail (ứng dụng &quot;PawNail Jobs&quot;; &quot;chúng tôi&quot;) vận hành nền tảng kết nối chủ tiệm nail, thợ nail và khách làm nail tại Mỹ &amp; Úc, truy cập qua website <strong className="text-white">bitpawos.com</strong> và ứng dụng di động PawNail Jobs trên App Store / CH Play. Chính sách này giải thích chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn như thế nào.</p>
       <section className={S}>
         <h2 className={H2}>1. Thông tin chúng tôi thu thập</h2>
         <ul className="list-disc pl-5 space-y-1.5">
@@ -77,7 +77,7 @@ function PrivacyVi() {
       </section>
       <section className={S}>
         <h2 className={H2}>6. Trẻ em</h2>
-        <p>PawNail Jobs dành cho người từ 18 tuổi trở lên. Chúng tôi không cố ý thu thập thông tin từ trẻ em dưới 18 tuổi.</p>
+        <p>PawNail dành cho người từ 18 tuổi trở lên. Chúng tôi không cố ý thu thập thông tin từ trẻ em dưới 18 tuổi.</p>
       </section>
       <section className={S}>
         <h2 className={H2}>7. Liên hệ</h2>
@@ -96,7 +96,7 @@ function PrivacyEn() {
         <h1 className="text-2xl font-black text-white mb-2">Privacy Policy</h1>
         <p className="text-xs text-slate-500">Last updated: October 30, 2026</p>
       </div>
-      <p>PawNail Jobs (&quot;we&quot;) runs a platform connecting nail salon owners, nail technicians and nail clients in the US &amp; Australia, available at <strong className="text-white">bitpawos.com</strong> and in the PawNail Jobs mobile app on the App Store / Google Play. This policy explains what personal information we collect, how we use it and how we protect it.</p>
+      <p>PawNail (the &quot;PawNail Jobs&quot; app; &quot;we&quot;) runs a platform connecting nail salon owners, nail technicians and nail clients in the US &amp; Australia, available at <strong className="text-white">bitpawos.com</strong> and in the PawNail Jobs mobile app on the App Store / Google Play. This policy explains what personal information we collect, how we use it and how we protect it.</p>
       <section className={S}>
         <h2 className={H2}>1. Information we collect</h2>
         <ul className="list-disc pl-5 space-y-1.5">
@@ -152,7 +152,7 @@ function PrivacyEn() {
       </section>
       <section className={S}>
         <h2 className={H2}>6. Children</h2>
-        <p>PawNail Jobs is for people 18 and older. We do not knowingly collect information from children under 18.</p>
+        <p>PawNail is for people 18 and older. We do not knowingly collect information from children under 18.</p>
       </section>
       <section className={S}>
         <h2 className={H2}>7. Contact</h2>

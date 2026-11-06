@@ -14,11 +14,23 @@ import { stateName } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
+// Tên để chào: "Nguyễn Văn An" → "An" (họ đứng trước), "Emma Clark" → "Emma" (tên đứng trước),
+// "Ngọc Anh" → "Ngọc Anh". Trước đây luôn lấy từ cuối → khách tiếng Anh bị chào bằng họ ("Hi Clark").
+const VN_SURNAMES = new Set(["nguyen", "tran", "le", "pham", "hoang", "huynh", "phan", "vu", "vo", "dang", "bui", "do", "ho", "ngo", "duong", "ly", "dinh", "truong", "trinh", "doan", "luong"]);
+function givenName(full: string): string {
+  const w = full.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  if (w.length <= 1) return w[0] || "";
+  const fold = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/gi, "d").toLowerCase();
+  if (VN_SURNAMES.has(fold(w[0]))) return w[w.length - 1];
+  if (/[ăâđêôơưạảấầậắằặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i.test(full)) return w.length === 2 ? w.join(" ") : w[w.length - 1];
+  return w[0];
+}
+
 export default function ClientHome({ user }: { user: { id: string; name?: string | null; market?: "US" | "AU"; state?: string | null } }) {
   useTr();
   const market = user.market === "AU" ? "AU" : "US";
   const state = user.state || "";
-  const first = (user.name || "").trim().split(/\s+/).pop() || "";
+  const first = givenName(user.name || "");
   const tip = clientTipOfDay();
   const tiles = [
     { href: "/designs", icon: Sparkles, title: tr("Mẫu nail", "Designs"), sub: tr("Ý tưởng mới mỗi ngày", "New ideas every day"), tone: "from-pink-500/25 to-fuchsia-500/10 text-pink-200" },

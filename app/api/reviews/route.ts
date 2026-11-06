@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       criteriaValues[key] = val;
     }
     if (!Number.isInteger(overall) || overall < 1 || overall > 5) {
-      return NextResponse.json({ error: 'Điểm "overall" phải là số nguyên từ 1 đến 5.' }, { status: 400 });
+      return NextResponse.json({ error: "Vui lòng chọn số sao tổng thể (1–5).", errorEn: "Please choose an overall rating from 1 to 5." }, { status: 400 });
     }
     if (!comment || typeof comment !== "string" || !comment.trim()) {
       return NextResponse.json({ error: "Vui lòng viết nhận xét.", errorEn: "Please write a review." }, { status: 400 });

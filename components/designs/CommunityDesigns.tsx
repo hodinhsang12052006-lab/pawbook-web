@@ -39,7 +39,7 @@ export default function CommunityDesigns() {
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 id="community-designs" className="flex items-center gap-2 text-base font-black text-white"><Camera className="h-4 w-4 text-pink-300" />{tr("Ảnh thật từ thợ & tiệm", "Real work from techs & salons")}</h2>
-          <p className="text-xs text-slate-400">{tr("Bài “Khoe tay nghề” có ảnh tự hiện ở đây — tiệm đang tìm thợ cũng xem mục này.", "Showcase posts with photos appear here — salons hiring browse this too.")}</p>
+          <p className="text-xs text-slate-400">{tr("Bài “Khoe tay nghề” có ảnh tự hiện ở đây — tiệm đang tìm thợ cũng xem mục này.", "Showcase posts with photos appear here. Salons that are hiring browse this page too.")}</p>
         </div>
         <button type="button" onClick={post} className="flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-3.5 text-xs font-bold text-white shadow-lg shadow-pink-600/20">
           <Plus className="h-4 w-4" />{tr("Đăng mẫu của bạn", "Post your work")}
@@ -53,7 +53,7 @@ export default function CommunityDesigns() {
           <Images className="h-8 w-8 shrink-0 text-pink-300" />
           <span>
             <span className="block text-sm font-bold text-white">{tr("Khoe ảnh thật tay nghề của bạn", "Show off your real work")}</span>
-            <span className="block text-xs text-slate-400">{tr("Tiệm đang tìm thợ lướt mục này mỗi ngày — ảnh đẹp là lời mời việc nhanh nhất.", "Salons hiring browse this every day — great photos get you offers fastest.")}</span>
+            <span className="block text-xs text-slate-400">{tr("Đăng ảnh một bộ móng bạn đã làm — ảnh rõ nét thể hiện tay nghề tốt nhất.", "Post a photo of a set you've done. Clear photos show your skill best.")}</span>
           </span>
         </button>
       ) : (

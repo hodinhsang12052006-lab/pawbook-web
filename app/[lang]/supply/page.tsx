@@ -114,7 +114,7 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={tr("VD: Set Cọ Đắp Bột Cao Cấp", "e.g. Premium acrylic brush set")}
+            placeholder={tr("VD: Bộ cọ đắp bột cao cấp", "e.g. Premium acrylic brush set")}
             className="w-full min-h-[48px] rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
           />
         </div>

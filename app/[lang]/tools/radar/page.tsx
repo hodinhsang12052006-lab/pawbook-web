@@ -38,7 +38,8 @@ interface RadarResult {
   supplyPolicy: string;
   negotiationTips: string[];
   ownerChecklist: string[];
-  demandSignal: DemandSignal | null;
+  demandSignal: DemandSignal | null; // null khi đợt quét 9/2026 đã cũ (không còn hiện)
+  demandSnapshotDate?: string | null;
 }
 
 const TREND_SKILL_LABEL = (): Record<string, string> => ({
@@ -183,42 +184,39 @@ export default function NailRadarPage() {
               <p className="text-[10px] text-slate-500">{result.currency}{tr(" / tuần · ", " / week · ")}{stateName(market, state)}</p>
             </div>
 
-            {/* Demand signal — số tin tuyển thợ thật ghi nhận từ cộng đồng */}
-            <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-2.5">
-              <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />{tr(" Nhu cầu tuyển thợ (khảo sát 9/2026)", " Hiring demand (September 2026 snapshot)")}
-              </p>
-              {result.demandSignal ? (
-                <>
-                  <p className="text-2xl font-black text-emerald-400">
-                    {result.demandSignal.demandCount}{tr(" tin tuyển thợ", " hiring posts")}
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    {tr("tại ", "in ")}{stateName(market, state)}{tr(" trong các nhóm ngành nail công khai", " in public nail-industry groups")}
-                    {result.demandSignal.wageMentions > 0 && (
-                      <> · {result.demandSignal.wageMentions}{tr(" tin có nhắc mức lương cụ thể", " posts mention specific pay")}</>
-                    )}
-                  </p>
-                  {result.demandSignal.topSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {result.demandSignal.topSkills.map((sk) => (
-                        <span key={sk} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                          {TREND_SKILL_LABEL()[sk] || sk}
-                        </span>
-                      ))}
-                    </div>
+            {/* Số tin tuyển từ ĐỢT KHẢO SÁT MỘT LẦN (9/2026): chỉ hiện khi đợt khảo sát còn trong 30 ngày (máy chủ trả
+                demandSignal = null khi đã cũ) và luôn ghi rõ nguồn + thời điểm — không trình bày như số hiện tại. */}
+            {result.demandSignal && (
+              <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-2.5" data-testid="radar-demand">
+                <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />{tr(" Nhu cầu tuyển thợ (khảo sát 9/2026)", " Hiring demand (September 2026 snapshot)")}
+                </p>
+                <p className="text-2xl font-black text-emerald-400">
+                  {result.demandSignal.demandCount}{tr(" tin tuyển thợ", " hiring posts")}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  {tr("tại ", "in ")}{stateName(market, state)}{tr(" trong các nhóm ngành nail công khai", " in public nail-industry groups")}
+                  {result.demandSignal.wageMentions > 0 && (
+                    <> · {result.demandSignal.wageMentions}{tr(" tin có nhắc mức lương cụ thể", " posts mention specific pay")}</>
                   )}
-                </>
-              ) : (
-                <p className="text-xs text-slate-500">{tr("Chưa đủ dữ liệu cho bang này trong đợt khảo sát.", "Not enough data for this state in the snapshot.")}</p>
-              )}
-              <p className="border-t border-white/5 pt-2 text-[10px] leading-relaxed text-slate-500">
-                {tr(
-                  `Nguồn: PawNail phân tích ${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("vi-VN")} tin tuyển thợ nail công khai tại Mỹ & Úc, tháng 9/2026. Số liệu tại một thời điểm, không phải dữ liệu trực tiếp.`,
-                  `Source: PawNail analysis of ${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")} public hiring posts for nail techs, US & Australia, September 2026. A one-time snapshot, not live data.`
+                </p>
+                {result.demandSignal.topSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {result.demandSignal.topSkills.map((sk) => (
+                      <span key={sk} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                        {TREND_SKILL_LABEL()[sk] || sk}
+                      </span>
+                    ))}
+                  </div>
                 )}
-              </p>
-            </div>
+                <p className="border-t border-white/5 pt-2 text-[10px] leading-relaxed text-slate-500">
+                  {tr(
+                    `Nguồn: PawNail phân tích ${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("vi-VN")} tin tuyển thợ nail công khai tại Mỹ & Úc, tháng 9/2026. Số liệu tại một thời điểm, không phải dữ liệu trực tiếp.`,
+                    `Source: PawNail analysis of ${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")} public hiring posts for nail techs, US & Australia, September 2026. A one-time snapshot, not live data.`
+                  )}
+                </p>
+              </div>
+            )}
 
             {/* Turn split */}
             <div className="glass-card rounded-2xl p-4 space-y-2.5">

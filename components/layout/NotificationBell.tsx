@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift, CalendarCheck } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift, CalendarCheck, Clock } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
@@ -17,7 +17,7 @@ import { useTr } from "@/lib/i18n/useTr";
 
 interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite" | "booking";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite" | "booking" | "renew";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn?: string;
@@ -35,6 +35,7 @@ const KIND_STYLE: Record<NotificationItem["kind"], { icon: typeof Heart; cls: st
   view: { icon: Eye, cls: "bg-sky-500 text-white" },
   invite: { icon: Gift, cls: "bg-fuchsia-500 text-white" },
   booking: { icon: CalendarCheck, cls: "bg-emerald-500 text-white" },
+  renew: { icon: Clock, cls: "bg-amber-500 text-slate-950" }, // chủ tiệm: tin tự đăng sắp tự ẩn → gia hạn
 };
 
 // Mốc "đã xem thông báo" lưu theo user trên thiết bị (không cần bảng DB mới).

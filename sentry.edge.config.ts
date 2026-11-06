@@ -13,6 +13,9 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
 
   dataCollection: {
+    // Không gửi IP / trình duyệt của người xem mà route tìm việc chuyển cho Careerjet, và khoá Adzuna, trong url.full của
+    // span gọi ra ngoài (Sentry tự lọc "key"/"token", nhưng user_ip / user_agent thì không).
+    urlQueryParams: { deny: ["user_ip", "user_agent", "app_id", "app_key"] },
     // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
     // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#dataCollection
     // userInfo: false,

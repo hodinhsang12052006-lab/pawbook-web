@@ -57,6 +57,10 @@ const CITY_STATE: [string, string, "US" | "AU"][] = [
   ["newcastle", "NSW", "AU"], ["wollongong", "NSW", "AU"], ["melbourne", "VIC", "AU"], ["footscray", "VIC", "AU"], ["springvale", "VIC", "AU"], ["sunshine", "VIC", "AU"],
   ["st albans", "VIC", "AU"], ["geelong", "VIC", "AU"], ["brisbane", "QLD", "AU"], ["gold coast", "QLD", "AU"], ["inala", "QLD", "AU"], ["perth", "WA", "AU"],
   ["adelaide", "SA", "AU"], ["canberra", "ACT", "AU"], ["hobart", "TAS", "AU"], ["darwin", "NT", "AU"],
+  // Khu nhiều tiệm nail người Việt ở Úc (11/2026: bài "Blacktown NSW", "Box Hill VIC" từng bị bỏ vì không ra bang).
+  // "richmond" Úc nằm SAU Richmond VA → chỉ thắng khi SĐT là số Úc (findPlace bỏ thành phố khác thị trường).
+  ["blacktown", "NSW", "AU"], ["penrith", "NSW", "AU"], ["mt druitt", "NSW", "AU"], ["mount druitt", "NSW", "AU"], ["campsie", "NSW", "AU"],
+  ["marrickville", "NSW", "AU"], ["box hill", "VIC", "AU"], ["dandenong", "VIC", "AU"], ["richmond", "VIC", "AU"], ["sunnybank", "QLD", "AU"],
 ];
 
 // ZIP Mỹ (3 số đầu) → bang. Gọn theo khoảng.
@@ -95,7 +99,7 @@ const titleCase = (s: string) => s.replace(/\s+/g, " ").trim().replace(/\b([a-z]
 
 /** Tìm SĐT Mỹ/Úc đầu tiên trong bài. */
 export function findPhone(text: string): { e164: string; display: string; market: "US" | "AU" } | null {
-  const t = text.replace(/[‐-―]/g, "-");
+  const t = String(text || "").normalize("NFKC").replace(/\(0([2378])\)\s?/g, "0$1 ").replace(/[‐-―]/g, "-");
   // Úc: +61 4xx / 04xx xxx xxx (di động) hoặc 02/03/07/08 xxxx xxxx (bàn)
   const au = t.match(/(?:\+?61[\s.-]?|\b0)([2-478](?:[\s.-]?\d){8})\b/);
   // Mỹ: (713) 555-0123 · 713-555-0123 · 713.555.0123 · 7135550123 · +1 713 555 0123
@@ -116,6 +120,12 @@ export function findPhone(text: string): { e164: string; display: string; market
     return { e164: `+61${d}`, display, market: "AU" };
   }
   return null;
+}
+
+/** Số bàn Úc → bang theo mã vùng: 02 → NSW, 03 → VIC, 07 → QLD (08 = WA/SA/NT, không chắc → null). Di động → null. */
+export function stateFromAuPhone(e164: string | null | undefined): string | null {
+  const m = String(e164 || "").match(/^\+61([2378])\d{8}$/);
+  return m ? ({ "2": "NSW", "3": "VIC", "7": "QLD" } as Record<string, string>)[m[1]] ?? null : null;
 }
 
 const SALON_WORD = /\b(nails?|spa|salon|beauty|lounge|bar|studio)\b/i;
@@ -194,11 +204,19 @@ export function cityFromText(text: string): string | null {
 }
 
 /** Bang + thành phố khi không có địa chỉ đầy đủ. */
-export function findPlace(text: string): { state: string | null; city: string | null; market: "US" | "AU" | null } {
+export function findPlace(text: string, phoneMarket: "US" | "AU" | null = null): { state: string | null; city: string | null; market: "US" | "AU" | null } {
   const s = ` ${strip(text)} `;
-  for (const [city, st, mk] of CITY_STATE) if (s.includes(` ${city} `) || s.includes(` ${city},`) || s.includes(` ${city}.`)) return { city: titleCase(city), state: st, market: mk };
-  for (const [name, code] of Object.entries(AU_STATE_NAMES)) if (s.includes(` ${name} `)) return { city: null, state: code, market: "AU" };
-  for (const [name, code] of Object.entries(US_STATE_NAMES).sort((a, b) => b[0].length - a[0].length)) if (new RegExp(`\\b${name}\\b`).test(s)) return { city: null, state: code, market: "US" };
+  const okMk = (mk: "US" | "AU") => !phoneMarket || mk === phoneMarket;
+  let best: { i: number; city: string; st: string; mk: "US" | "AU" } | null = null;
+  for (const [city, st, mk] of CITY_STATE) {
+    if (!okMk(mk)) continue;
+    const m = new RegExp(`\\s${city}(?=[\\s,.])(?!\\s+(?:nails?|spa|salon|beauty|lounge)\\b)`).exec(s);
+    if (m && (!best || m.index < best.i)) best = { i: m.index, city, st, mk };
+  }
+  if (best) return { city: titleCase(best.city), state: best.st, market: best.mk };
+  if (okMk("AU")) for (const [name, code] of Object.entries(AU_STATE_NAMES)) if (s.includes(` ${name} `)) return { city: null, state: code, market: "AU" };
+  if (okMk("AU")) { const au = text.match(phoneMarket === "AU" ? /\b(NSW|VIC|QLD|TAS|ACT|WA|SA|NT)\b/ : /\b(NSW|VIC|QLD|TAS|ACT)\b/); if (au) return { city: null, state: au[1], market: "AU" }; }
+  if (okMk("US")) for (const [name, code] of Object.entries(US_STATE_NAMES).sort((a, b) => b[0].length - a[0].length)) if (new RegExp(`\\b${name}\\b`).test(s)) return { city: null, state: code, market: "US" };
   const code = text.match(/\b(?:bang|state|khu|tại|tai)\s+([A-Z]{2,3})\b/);
   if (code && US_CODES.has(code[1])) return { city: null, state: code[1], market: "US" };
   if (code && AU_CODES.has(code[1])) return { city: null, state: code[1], market: "AU" };
@@ -209,10 +227,12 @@ const SKILLS: [RegExp, string][] = [
   [/\b(b[ộo]t|acrylic|powder)\b/i, "Bột/Acrylic"], [/\b(dip|sns)\b/i, "Dip/SNS"], [/\bgel[\s-]?x\b/i, "Gel-X"],
   [/\b(design|v[ẽe] m[óo]ng|nail art|v[ẽe])\b/i, "Design"], [/\b(ch[âa]n tay n[ưu][ớo]c|pedi(?:cure)?|mani(?:cure)?|tay ch[âa]n n[ưu][ớo]c)\b/i, "Chân tay nước"],
   [/\bwax(?:ing)?\b/i, "Wax"], [/\b(eyelash|lash|n[ốo]i mi)\b/i, "Nối mi"], [/\b(facial|ch[ăa]m s[óo]c da)\b/i, "Facial"],
+  // "thợ everything" / "all around" = làm được hết — cùng nhãn "All-around" mà form chủ tiệm tự đăng dùng
+  [/\b(everything|all[\s-]?around)\b/i, "All-around"],
 ];
 const BENEFITS: [RegExp, string][] = [
-  [/(bao [ăa]n [ởo]|c[óo] ch[ỗo] [ởo]|bao ch[ỗo] [ởo]|ở free|housing|c[óo] nh[àa] [ởo])/i, "Có chỗ ở"],
-  [/(bao l[ươu]ơ?ng|bao l[ưu][ơo]ng|guarantee)/i, "Bao lương"], [/(tip cao|tip t[ốo]t|good tips?)/i, "Tip cao"], [/(cash|tr[ảa] cash|ti[ềe]n m[ặa]t)/i, "Trả cash"],
+  [/(bao [ăa]n [ởo]|ch[ỗo] [ăa]n [ởo]|lo ch[ỗo] [ởo]|ch[ỗo] (cho [^.\n]{0,25})?[ởo] xa|c[óo] ch[ỗo] [ởo]|bao ch[ỗo] [ởo]|ở free|housing|c[óo] nh[àa] [ởo])/i, "Có chỗ ở"],
+  [/(bao l[ươu]ơ?ng|bao l[ưu][ơo]ng|guarantee)/i, "Bao lương"], [/(tip cao|tip t[ốo]t|tip h[ậa]u|tip [ổo]n|good tips?)/i, "Tip cao"], [/(cash|tr[ảa] cash|ti[ềe]n m[ặa]t)/i, "Trả cash"],
   [/(b[ảa]o hi[ểe]m|insurance)/i, "Bảo hiểm"], [/(ngh[ỉi] ch[ủu] nh[ậa]t|off ch[ủu] nh[ậa]t)/i, "Nghỉ Chủ nhật"],
 ];
 
@@ -315,18 +335,18 @@ export function cleanCity(c: string | null | undefined): string {
   return v;
 }
 
-const HIRING = /(c[ầa]n (g[ấa]p )?(th[ợo]|ng[ườu][ờo]i)|tuy[ểe]n (g[ấa]p )?th[ợo]|ki[ếe]m th[ợo]|t[ìi]m th[ợo]|need(ed|ing)? (nail )?tech|hiring|now hiring|looking for (nail )?tech|nail tech wanted|c[ầa]n g[ấa]p)/i;
+const HIRING = /(c[ầa]n (g[ấa]p |th[êe]m |tuy[ểe]n )?(g[ấa]p )?(\d+ |m[ộo]t |nhi[ềe]u |v[àa]i |th[êe]m )?(th[ợo]|ng[ườu][ờo]i|nail tech)|tuy[ểe]n (g[ấa]p )?(\d+ |th[êe]m )?(th[ợo]|nail tech)|nail tech(nician)?s? (needed|wanted)|(seeking|looking for|need) (an? )?((experienced|licensed|full[- ]time|part[- ]time|skilled) )*(nail )?(tech|technician|manicurist|pedicurist)s?\b|job opening|we('re| are) hiring|ki[ếe]m th[ợo]|t[ìi]m th[ợo]|need(ed|ing)? (nail )?tech|hiring|now hiring|looking for (nail )?tech|nail tech wanted|c[ầa]n g[ấa]p)/i;
 // (bài sang / bán tiệm do isSalonSale lo — có ngoại lệ cho bài ghi rõ "cần thợ")
-const SEEKING = /(?<!(?:ai|n[àa]o|th[ợo]|b[ạa]n|c[ầa]u|ch[ịi]|anh)\s)(t[ìi]m vi[ệe]c|c[ầa]n vi[ệe]c|ki[ếe]m vi[ệe]c|xin vi[ệe]c|looking for (a )?job|need (a )?job)/i;
+const SEEKING = /(?<!(?:ai|n[àa]o|th[ợo]|b[ạa]n|c[ầa]u|ch[ịi]|anh|em)\s(?:(?:đang|dang|muốn|muon|có nhu cầu)\s)?)(t[ìi]m vi[ệe]c|c[ầa]n vi[ệe]c|ki[ếe]m vi[ệe]c|xin vi[ệe]c|looking for (a )?job|need (a )?job)/i;
 // Bài THỢ TÌM VIỆC (không phải tiệm tuyển) — tool hay gửi kèm vì có chữ "cần thợ" ("chủ shop nào cần thợ để lại sđt"):
 // "Góc tìm việc · Em nam phụ cứng… tìm nơi để nâng cao tay nghề" từng hiện thành tin "Cần thợ Nail" (17/10/2026).
-const SEEKING_STRONG = /(g[óo]c t[ìi]m vi[ệe]c|(?:^|[\s,.(])(em|m[ìi]nh|t[ôo]i)\s(?:(?:(?!anh ch|ch[ịi] n|n[àa]o |\bai |b[ạa]n n)[^.\n]){0,60}\s)?(?<!(?:ai|n[àa]o|th[ợo]|ti[ệe]m|c[ầa]u)\s)(t[ìi]m|c[ầa]n|ki[ếe]m)\s+(n[ơo]i|ch[ỗo] l[àa]m|vi[ệe]c)(?![\p{L}])|(ch[ủu] (shop|ti[ệe]m)|ti[ệe]m|anh ch[ịi]|c[ôo] ch[úu]) n[àa]o c[ầa]n th[ợo][^.\n]{0,60}(đ[ểe] l[ạa]i|li[êe]n l[ạa]c|\bib\b|inbox|g[ọo]i (cho )?e))/iu;
+const SEEKING_STRONG = /(g[óo]c t[ìi]m vi[ệe]c|(?:^|[\s,.(])(?<!ch[ịi]\s)(em|m[ìi]nh|t[ôo]i)\s(?:(?:(?!anh ch|ch[ịi] n|n[àa]o |\bai |b[ạa]n n)[^.\n]){0,60}\s)?(?<!(?:ai|n[àa]o|th[ợo]|ti[ệe]m|c[ầa]u)\s)(t[ìi]m|c[ầa]n|ki[ếe]m)\s+(n[ơo]i|ch[ỗo] l[àa]m|vi[ệe]c)(?![\p{L}])|(ch[ủu] (shop|ti[ệe]m)|ti[ệe]m|anh ch[ịi]|c[ôo] ch[úu]) n[àa]o c[ầa]n th[ợo][^.\n]{0,60}(đ[ểe] l[ạa]i|li[êe]n l[ạa]c|\bib\b|inbox|g[ọo]i (cho )?e))/iu;
 // QUẢNG CÁO dịch vụ đăng tin / web tuyển thợ khác ("đăng tin cần thợ renew tại Vietnailshelper… muốn trải nghiệm
 // dịch vụ, call Annie") — không phải tiệm tuyển thợ (17/10/2026 lọt lên mục Việc làm thành "Cần thợ Nail gấp").
 const AD_POST = /(d[ịi]ch v[ụu] [đd][ăa]ng tin|[đd][ăa]ng tin (c[ầa]n th[ợo] )?(renew )?t[ạa]i [A-Z]|tr[ảa]i nghi[ệe]m d[ịi]ch v[ụu]|vietnails?helper|kh[óo]a tin khi)/i;
-export const isAdPost = (text: string) => AD_POST.test(String(text || ""));
+export const isAdPost = (text: string) => AD_POST.test(String(text || "").normalize("NFKC"));
 /** Bài thợ đi tìm việc — không đưa vào mục Việc làm dù có chữ "cần thợ". */
-export const isJobSeeking = (text: string) => SEEKING_STRONG.test(String(text || "").slice(0, 400)) || SEEKING.test(String(text || "").slice(0, 160));
+export const isJobSeeking = (raw: string) => { const text = String(raw || "").normalize("NFKC"); return SEEKING_STRONG.test(text.slice(0, 400)) || SEEKING.test(text.slice(0, 160)); };
 
 // YÊU CẦU GIỚI TÍNH / TUỔI trong tin tuyển ("cần 1 thợ nữ trẻ", "dưới 30 tuổi", "female only") — trái luật chống phân
 // biệt đối xử khi tuyển dụng (Mỹ: Title VII, ADEA; Úc: Sex / Age Discrimination Act). Tin PawNail đăng hộ tiệm được
@@ -373,11 +393,11 @@ export function stripDiscriminatoryRequirements(text: string): string {
 }
 
 export function parseJobPost(raw: string): ParsedJob {
-  const text = String(raw || "").slice(0, 6000);
+  const text = String(raw || "").normalize("NFKC").slice(0, 6000);
   const sale = isSalonSale(text);
   const ph = findPhone(text);
   const addr = findAddress(text);
-  const place = addr ? { state: addr.state, city: addr.city, market: addr.market } : findPlace(text);
+  const place = addr ? { state: addr.state, city: addr.city, market: addr.market } : findPlace(text, ph?.market ?? null);
   const market = addr?.market ?? ph?.market ?? place.market ?? null;
   let state = place.state;
   if (!state && addr?.zip) state = market === "AU" ? auStateFromPostcode(addr.zip) : usStateFromZip(addr.zip);

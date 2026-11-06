@@ -13,6 +13,7 @@ import { hasVietnamese } from "@/lib/i18n/viText";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
+import { OriginalPostLink, sourceLabel } from "@/components/jobs/PostedForSalon";
 
 const PRESS = "active:scale-95 transition-transform duration-100";
 const NEW_MS = 24 * 3600_000;
@@ -70,18 +71,22 @@ export default function JobFeedCard({ job }: { job: JobType }) {
           ))}
         </div>
         {desc && <p className="line-clamp-2 text-sm leading-relaxed text-slate-300" lang={hasVietnamese(dt(desc)) ? "vi" : undefined}>{dt(desc)}</p>}
-        {job.source === "ingest" && <p className="text-[11px] text-slate-500">{tr("PawNail đăng hộ tiệm — gọi thẳng cho tiệm", "Posted by PawNail for the salon — call the salon directly")}</p>}
+        {job.source && <p className="text-[11px] text-slate-500">{sourceLabel(job.source).hint}</p>}
       </Link>
+      {/* Tin từ nhóm cộng đồng PawNail có link bài gốc → "Xem bài gốc" (ngoài thẻ Link: không lồng thẻ <a>) */}
+      {job.sourceLink && <div className="-mt-1 px-4 pb-3"><OriginalPostLink link={job.sourceLink} className="text-[11px]" /></div>}
 
       <div className="flex items-center gap-2 border-t border-white/5 px-4 py-3">
-        <a
-          href={`tel:${job.phone}`}
-          onClick={() => trackJobContact(job.id)}
-          className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 ${PRESS}`}
-        >
-          <Phone className="h-4 w-4" />{tr("Gọi ngay", "Call now")}
-        </a>
-        {job.source === "ingest" ? (
+        {job.phone && (
+          <a
+            href={`tel:${job.phone}`}
+            onClick={() => trackJobContact(job.id)}
+            className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 ${PRESS}`}
+          >
+            <Phone className="h-4 w-4" />{tr("Gọi ngay", "Call now")}
+          </a>
+        )}
+        {job.source ? (
           <Link href={`/jobs/${job.id}`} className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}>
             <MapPin className="h-4 w-4" />{tr("Chi tiết", "Details")}
           </Link>

@@ -5,8 +5,8 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { jobPostBlocked } from "@/lib/abuseGuard";
 import { realOnly } from "@/lib/demo";
-import { tidyIngestJob } from "@/lib/jobIngest/display";
-import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { publicJob } from "@/lib/jobIngest/display";
+import { activeJobWhere, jobTtlDays } from "@/lib/jobIngest/ingest";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { notifyUrgentJob } from "@/lib/jobAlerts";
@@ -65,11 +65,11 @@ export async function GET(req: NextRequest) {
       : null;
 
     const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const safeJobs = jobs.map(({ _count, sourceUrl, sourceKey, sourceFbHash, ...job }) => {
+    // publicJob: bỏ khoá nội bộ + link thô; tin từ nhóm giữ SĐT + mô tả đầy đủ, kèm link "Xem bài gốc" (nếu có)
+    const safeJobs = jobs.map(({ _count, ...job }) => {
       const h = heat.get(job.id);
       return {
-      ...tidyIngestJob(job),
+      ...publicJob(job),
       saveCount: _count.savedBy,
       mediaUrls: media.get(job.id) ?? [],
       // Số liệu "nóng" thật — UI tự ẩn khi dưới ngưỡng (lib/jobStats HEAT_MIN).
@@ -163,6 +163,8 @@ export async function POST(req: Request) {
         benefits: Array.isArray(benefits) ? benefits.join(",") : (benefits || ""),
         phone,
         isUrgent: isUrgent !== undefined ? !!isUrgent : true,
+        // Tin tự đăng tự ẩn sau JOB_TTL_DAYS (mặc định 30) — chủ tiệm bấm "Vẫn đang tuyển? Gia hạn" để giữ tin.
+        expiresAt: new Date(Date.now() + jobTtlDays() * 86_400_000),
       },
     });
 

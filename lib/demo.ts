@@ -12,3 +12,6 @@ export const realUserWhere = { NOT: { email: { endsWith: DEMO_EMAIL_SUFFIX } } }
 export const showDemoData = () => process.env.SHOW_DEMO_DATA === "1";
 /** Điều kiện Prisma cho quan hệ tới User: chỉ người thật (trừ khi SHOW_DEMO_DATA=1). */
 export const realOnly = () => (showDemoData() ? {} : realUserWhere);
+/** Như realOnly() nhưng bỏ cả tài khoản ADMIN (tài khoản chính thức / bot nội dung): dùng cho số liệu "của cộng đồng"
+ *  (hashtag nổi, bài hot, toast hoạt động, thử thách) — bài của PawNail không được tính là hoạt động của thành viên. */
+export const memberOnly = () => ({ ...realOnly(), role: { not: "ADMIN" as const } });

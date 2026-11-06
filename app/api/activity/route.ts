@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { realOnly } from "@/lib/demo";
+import { memberOnly, realOnly } from "@/lib/demo";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { placeLabel } from "@/lib/stateNames";
@@ -48,7 +48,7 @@ export async function GET() {
         select: { city: true, specialties: true, updatedAt: true, user: { select: { id: true, name: true, avatarUrl: true } } },
       }),
       prisma.post.findMany({
-        where: { anonymous: false, status: "published", createdAt: { gte: since }, likes: { some: {} }, author: realOnly() }, // không lộ bài ẩn danh / chưa duyệt
+        where: { anonymous: false, status: "published", createdAt: { gte: since }, likes: { some: {} }, author: memberOnly() }, // không lộ bài ẩn danh / chưa duyệt; bài của PawNail không phải "hoạt động" cộng đồng
         orderBy: { createdAt: "desc" },
         take: 4,
         select: { id: true, city: true, createdAt: true, _count: { select: { likes: true, comments: true } }, author: { select: { id: true, name: true, avatarUrl: true } } },
@@ -59,14 +59,15 @@ export async function GET() {
     const verb = (d: Date, fresh: string, old: string) => (now - d.getTime() < FRESH_MS ? fresh : old);
 
     const events: ActivityEvent[] = [
+      // Tin từ nhóm cộng đồng / đăng hộ (source ≠ null): tiệm KHÔNG tự đăng trên PawNail → không nói "vừa đăng"; ghi đúng nhãn nguồn.
       ...jobs.map(tidyIngestJob).map((j) => ({
         kind: "job" as const,
-        title: "Việc mới",
-        text: `${j.salonName} tại ${placeLabel(j.city, j.market, j.state)} ${verb(j.createdAt, "vừa đăng", "đang tuyển")}: “${j.title}”`,
+        title: j.source === "assisted" ? "Đăng hộ tiệm" : j.source ? "Từ nhóm cộng đồng PawNail" : "Việc mới",
+        text: `${j.salonName} tại ${placeLabel(j.city, j.market, j.state)} ${j.source ? "đang tuyển" : verb(j.createdAt, "vừa đăng", "đang tuyển")}: “${j.title}”`,
         chip: j.salaryAmount,
         en: {
-          title: "New job",
-          text: `${j.salonName} in ${placeLabel(j.city, j.market, j.state)} ${now - j.createdAt.getTime() < FRESH_MS ? "just posted" : "is hiring"}: “${dtEn(j.title)}”`,
+          title: j.source === "assisted" ? "Posted for salon" : j.source ? "Shared from PawNail community groups" : "New job",
+          text: `${j.salonName} in ${placeLabel(j.city, j.market, j.state)} ${!j.source && now - j.createdAt.getTime() < FRESH_MS ? "just posted" : "is hiring"}: “${dtEn(j.title)}”`,
           chip: dtEn(j.salaryAmount),
         },
         href: `/jobs/${j.id}`,

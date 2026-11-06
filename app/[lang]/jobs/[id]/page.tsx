@@ -21,6 +21,7 @@ import { currentLocale, tr } from "@/lib/i18n/tr";
 import { hasVietnamese } from "@/lib/i18n/viText";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
+import { apiError } from "@/lib/i18n/apiError";
 import { dt, responseEn } from "@/lib/i18n/dataEn";
 import { formatPhone, telHref } from "@/lib/phoneFormat";
 import VietnameseChip from "@/components/common/LangChip";
@@ -51,15 +52,20 @@ interface JobDetail {
   heat?: { viewsToday: number; contacts7d: number; hot: boolean; firstViewers: number | null };
   mediaUrls?: string[];
   ownerResponse?: { label: string; fast: boolean; samples: number } | null;
-  // Tin PawNail đăng hộ tiệm (tiệm nhờ đăng)
+  // null = chủ tiệm tự đăng · "assisted" = đăng hộ theo yêu cầu · "ingest" = tiệm đăng trong nhóm cộng đồng PawNail
   source?: string | null;
+  expiresAt?: string | null;
   sourcePostedAt?: string | null;
   address?: string | null;
   expired?: boolean;
+  /** Số ngày còn lại tới lúc tin tự ẩn (máy chủ tính) — null nếu không có hạn. */
+  daysLeft?: number | null;
   repostCount?: number;
   /** Mô tả đã dịch (máy chủ lưu đệm), theo ngôn ngữ đích */
   descriptionTx?: Partial<Record<"en" | "vi", string>>;
   descriptionTxOrigin?: "mt" | "owner" | "design" | null;
+  /** Tin từ nhóm: link "Xem bài gốc" (chỉ khi bài có link https). SĐT của tiệm vẫn ở `phone` (nút Gọi ngay). */
+  sourceLink?: { href: string; name: string } | null;
 }
 
 export default function JobDetailPage({ params }: PageProps) {
@@ -88,6 +94,7 @@ export default function JobDetailPage({ params }: PageProps) {
         setLoading(true);
         setError(null);
         const res = await fetch(`/api/jobs/${jobId}`);
+        if (res.status === 410) throw new Error(tr("Tin này đã được gỡ.", "This listing has been removed."));
         if (!res.ok) throw new Error(tr("Tin tuyển dụng không tồn tại hoặc đã bị gỡ bỏ.", "This job doesn't exist or has been removed."));
         const data: JobDetail = await res.json();
         if (cancelled) return;
@@ -139,6 +146,18 @@ export default function JobDetailPage({ params }: PageProps) {
     } else {
       toast.success(next ? tr("Đã lưu tin — xem lại trong mục \"Đã lưu\".", "Job saved — find it under \"Saved\".") : tr("Đã bỏ lưu tin.", "Job unsaved."));
     }
+  };
+
+  // Chủ tiệm: "Vẫn đang tuyển? Gia hạn 30 ngày" — tin tự đăng tự ẩn sau 30 ngày nếu không gia hạn.
+  const [renewing, setRenewing] = useState(false);
+  const renew = async () => {
+    setRenewing(true);
+    const res = await fetch(`/api/jobs/${jobId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "renew" }) }).catch(() => null);
+    const j = await res?.json().catch(() => ({}));
+    setRenewing(false);
+    if (!res?.ok) { toast.error(apiError(j, "Chưa gia hạn được, thử lại sau.", "Couldn't renew the listing. Please try again.")); return; }
+    setJob((prev) => (prev ? { ...prev, expiresAt: j.expiresAt, daysLeft: typeof j.daysLeft === "number" ? j.daysLeft : null, expired: false } : prev));
+    toast.success(tr("Đã gia hạn tin thêm 30 ngày.", "Listing renewed for 30 more days."));
   };
 
   const share = async () => {
@@ -211,7 +230,8 @@ export default function JobDetailPage({ params }: PageProps) {
     machine: !!txText && job.descriptionTxOrigin !== "owner",
     canToggle: !!translatedText,
   };
-  const postedForSalon = job.source === "ingest";
+  const postedForSalon = !!job.source;
+  const daysLeft = typeof job.daysLeft === "number" ? job.daysLeft : null; // máy chủ tính (không gọi Date.now() lúc render)
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -368,17 +388,32 @@ export default function JobDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {postedForSalon && <PostedForSalonBanner postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} />}
+          {postedForSalon && <PostedForSalonBanner source={job.source} postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} sourceLink={job.sourceLink} />}
+          {!postedForSalon && job.expired && !isOwnJob && (
+            <p className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-500/25">{tr("Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", "This listing has expired — the salon may be fully staffed. Call first.")}</p>
+          )}
+          {isOwnJob && !postedForSalon && daysLeft !== null && daysLeft <= 7 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 ring-1 ring-amber-500/25" data-testid="renew-job">
+              <p className="text-sm font-semibold text-amber-200">
+                {job.expired || daysLeft <= 0 ? tr("Tin đã hết hạn và không còn hiện trên bảng việc.", "This listing has expired and is hidden from the board.") : tr(`Tin sẽ tự ẩn sau ${daysLeft} ngày.`, `This listing hides in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`)}
+              </p>
+              <button type="button" onClick={renew} disabled={renewing} className="min-h-[40px] rounded-xl bg-amber-400 px-4 text-sm font-bold text-slate-950 disabled:opacity-50">
+                {tr("Vẫn đang tuyển? Gia hạn 30 ngày", "Still hiring? Renew for 30 days")}
+              </button>
+            </div>
+          )}
 
           {!isOwnJob && (
             <div className="pn-job-cta flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
-              <a
-                href={telHref(job.phone, job.market)}
-                onClick={() => trackJobContact(job.id)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press py-3.5 text-base font-bold text-white transition-colors"
-              >
-                <Phone className="h-5 w-5" />{tr(" Gọi cho tiệm ", " Call the salon ")}<span className="pn-cta-num">{formatPhone(job.phone, job.market)}</span>
-              </a>
+              {job.phone && (
+                <a
+                  href={telHref(job.phone, job.market)}
+                  onClick={() => trackJobContact(job.id)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press py-3.5 text-base font-bold text-white transition-colors"
+                >
+                  <Phone className="h-5 w-5" />{tr(" Gọi cho tiệm ", " Call the salon ")}<span className="pn-cta-num">{formatPhone(job.phone, job.market)}</span>
+                </a>
+              )}
               {!postedForSalon && <button
                 onClick={() => {
                   if (user?.id) trackJobContact(job.id);

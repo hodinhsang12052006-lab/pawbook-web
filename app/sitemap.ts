@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
 import { localePath } from "@/lib/i18n/config";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 
 // Tạo mỗi lần Google đọc (không đóng băng lúc deploy): tin tuyển + mẫu nail mới mỗi ngày phải có mặt ngay
 export const dynamic = "force-dynamic";
@@ -24,9 +25,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let jobUrls: MetadataRoute.Sitemap = [];
   try {
-    // Tin còn hiệu lực (90 ngày gần nhất) — tin cũ để trong sitemap chỉ làm loãng.
+    // Chỉ tin CÒN HIỆN trên bảng việc (khớp hạn thật / bộ lọc — activeJobWhere), chủ tiệm tự đăng, tài khoản thật.
+    // Tin hết hạn / bị ẩn / tin mẫu / tin tổng hợp / đăng hộ / đã gỡ không khai cho Google.
     const jobs = await prisma.job.findMany({
-      where: { createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) }, owner: realUserWhere, source: null }, // tin mẫu / tin tổng hợp không khai cho Google
+      where: { AND: [activeJobWhere(), { owner: realUserWhere }, { source: null }] },
       select: { id: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 5000,

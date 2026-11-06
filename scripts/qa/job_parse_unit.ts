@@ -1,7 +1,7 @@
 // Kiểm thử bộ tách tin tuyển thợ (lib/jobIngest/parse.ts) bằng các kiểu bài hay gặp trong nhóm.
 // Bài & số điện thoại dưới đây là HƯ CẤU (đầu số 555-01xx dành cho ví dụ).   npx tsx scripts/qa/job_parse_unit.ts
 import { stateFromUsPhone } from "../../lib/jobIngest/areaCodes";
-import { parseJobPost, findPhone, parseLocation, isSalonSale, safeToolSalary, cleanSalonName, cleanCity, findSalary, isJobSeeking, isAdPost, findSalonName, cityFromText } from "../../lib/jobIngest/parse";
+import { parseJobPost, findPhone, parseLocation, isSalonSale, safeToolSalary, cleanSalonName, cleanCity, findSalary, isJobSeeking, isAdPost, findSalonName, cityFromText, stateFromAuPhone } from "../../lib/jobIngest/parse";
 import { tidyIngestJob } from "../../lib/jobIngest/display";
 import { placeLabel } from "../../lib/stateNames";
 
@@ -144,6 +144,66 @@ const h2 = tidyIngestJob({ source: "ingest", salonName: "Tiệm Nail Tại Hilo"
 ok("S19", "ZIP trong bài thắng bang tool gửi sai (\"HILO, HAWAII 96720\" mà tool ghi IN → HI); thành phố trước tên bang (\"tại Hilo, Hawaii\" → Hilo); tên tiệm kiểu câu (\"Tiệm Hỗ Trợ Khách\", \"Tiệm Nail Tại Hilo\") → \"Tiệm nail Hilo\"",
   h1.state === "HI" && h1.city === "Hilo" && h1.salonName === "Tiệm nail Hilo" && h2.state === "HI" && h2.city === "Hilo" && h2.salonName === "Tiệm nail Hilo",
   JSON.stringify([h1.state, h1.city, h1.salonName, h2.state, h2.city, h2.salonName]));
+
+// ===== 11/2026: bài tuyển THẬT hay gặp từng bị bỏ / xếp nhầm bang (soi lại toàn bộ đường ống) =====
+// [id, bài, bang mong đợi (kể cả đoán từ mã vùng SĐT như lúc nhận tin)]
+const GOOD: [string, string, string][] = [
+  ["vi-digit", "Tiệm cần 2 thợ bột ở Frisco, lương $1,200/tuần. LH 469-555-0101", "TX"],
+  ["vi-them", "Tiệm mình cần thêm thợ chân tay nước, khu Plano. Gọi 972-555-0102", "TX"],
+  ["vi-tuyen-nailtech", "Cần tuyển nail tech biết làm dip, Houston. 713-555-0103", "TX"],
+  ["vi-cantuyen", "Cần tuyển 1 thợ bột nam/nữ. Tiệm ở Ohio. LH 614-555-0104", "OH"],
+  ["en-needed", "Nail tech needed at Rose Nails, Columbus OH. Call 614-555-0105", "OH"],
+  ["en-technician-wanted", "Nail technician wanted, full time. Glam Nails, Marietta GA. Text 770-555-0106", "GA"],
+  ["en-looking-experienced", "We are looking for experienced nail technicians. Top pay. 404-555-0107", "GA"],
+  ["en-seeking", "Seeking licensed nail tech for busy salon in Tampa. 813-555-0108", "FL"],
+  ["en-opening", "Job opening: nail tech / pedicurist. Happy Nails, Reno NV. 775-555-0109", "NV"],
+  ["vi-cta-dang-tim-viec", "Tiệm cần thợ bột gấp. Bạn nào đang tìm việc gọi em 469-555-0110", "TX"],
+  ["vi-cta-ai-dang-kiem", "Cần thợ chân tay nước. Ai đang kiếm việc ở Dallas gọi 214-555-0111", "TX"],
+  ["vi-cta-thomuon", "Tuyển thợ nail. Anh chị em thợ muốn tìm việc ổn định LH 832-555-0112", "TX"],
+  ["vi-nhan-coc-mention", "Cần gấp thợ bột. Tiệm cần bán bớt 2 ghế pedicure cũ. Houston 281-555-0113", "TX"],
+  ["us-sunshine", "Sunshine Nails cần thợ bột gấp, khu Frisco. LH 469-555-0114", "TX"],
+  ["us-phoenix-name", "Phoenix Nails & Spa ở Charlotte cần thợ. 704-555-0115", "NC"],
+  ["us-melbourne-fl", "Cần thợ nail ở Melbourne, Florida. 321-555-0116", "FL"],
+  ["us-victoria-person", "Cần thợ bột, tiệm ở Katy. Gọi chị Victoria 281-555-0117", "TX"],
+  ["us-washington-ave", "Cần thợ chân tay nước, tiệm trên Washington Ave, Houston. 713-555-0118", "TX"],
+  ["au-blacktown", "Cần thợ nail tiệm ở Blacktown NSW, $30/h cash. LH 0412 555 019", "NSW"],
+  ["au-melb-suburb", "Tiệm ở Box Hill VIC cần thợ bột, $1200/tuần. 0413 555 020", "VIC"],
+  ["au-bris-suburb", "Cần gấp thợ dip ở Sunnybank, Brisbane. 0414 555 021", "QLD"],
+  ["au-penrith", "Cần thợ, tiệm ở Penrith. 0415 555 022", "NSW"],
+  ["au-landline", "Cần thợ nail, khu Cabramatta. Gọi (02) 5550 1234", "NSW"],
+  ["au-landline-only", "Cần thợ bột gấp, bao lương. Gọi (03) 5550 1234", "VIC"],
+  ["au-richmond", "Cần thợ chân tay nước ở Richmond, lương tốt. 0416 555 023", "VIC"],
+  ["nfd", "Tiệm cần thợ bột ở Houston. LH 713-555-0123".normalize("NFD"), "TX"],
+  ["nfd-upper", "CẦN THỢ BỘT GẤP, tiệm ở Garden Grove. 714-555-0124".normalize("NFD"), "CA"],
+  ["bold", "𝗖𝗔̂̀𝗡 𝗧𝗛𝗢̛̣ 𝗕𝗢̣̂𝗧 ở Houston. LH 𝟕𝟏𝟑-𝟓𝟓𝟓-𝟎𝟏𝟐𝟒", "TX"],
+];
+for (const [id, t, want] of GOOD) {
+  const p = parseJobPost(t);
+  const st = p.state || (p.market === "AU" ? stateFromAuPhone(p.phone) : stateFromUsPhone(p.phone));
+  ok(`G-${id}`, `bài tuyển thật được nhận + đúng bang ${want}`, p.isHiring && !!p.phone && st === want, JSON.stringify({ hiring: p.isHiring, phone: p.phone, state: p.state, st, mk: p.market }));
+}
+const SEEKERS = [
+  "Mình đang tìm việc ở Houston, biết làm bột. Tiệm nào cần thợ inbox 713-555-0150",
+  "Em nữ cần tìm chỗ làm ở Dallas, biết chân tay nước. 214-555-0151",
+  "Looking for a job as nail tech in Houston, 5 years exp. 713-555-0152",
+  "Thợ nữ tìm việc khu Garden Grove, ai cần liên hệ 714-555-0153",
+  "Góc tìm việc: em nam phụ cứng, cần tìm nơi nâng cao tay nghề. Chủ shop nào cần thợ để lại sđt 832-555-0154",
+  "Em đang cần việc gấp ở Atlanta, làm được bột dip. 404-555-0155",
+  "Tôi muốn tìm việc nail ở Sydney, có bằng. 0412 555 156",
+  "Đăng tin cần thợ renew tại Vietnailshelper, muốn trải nghiệm dịch vụ call Annie 713-555-0157",
+];
+ok("G-seekers", "8 bài thợ tìm việc / quảng cáo vẫn bị loại", SEEKERS.every((t) => !parseJobPost(t).isHiring && (isJobSeeking(t) || isAdPost(t))), JSON.stringify(SEEKERS.map((t) => parseJobPost(t).isHiring)));
+const b1 = parseJobPost("Cần thợ bột ở Houston, có chỗ ăn ở cho thợ ở xa. 713-555-0133");
+const b2 = parseJobPost("Cần thợ, tiệm lo chỗ ở, tip hậu. Atlanta 404-555-0134");
+const b3 = parseJobPost("Cần thợ, có chỗ cho anh chị ở xa. Atlanta 404-555-0135");
+const b4 = parseJobPost("Cần thợ làm everything ở Atlanta. 404-555-0136");
+ok("G-benefits", "\"chỗ ăn ở / lo chỗ ở / chỗ cho anh chị ở xa\" → Có chỗ ở; \"tip hậu\" → Tip cao; \"everything\" → All-around",
+  b1.benefits.includes("Có chỗ ở") && b2.benefits.includes("Có chỗ ở") && b2.benefits.includes("Tip cao") && b3.benefits.includes("Có chỗ ở") && b4.skills.includes("All-around"),
+  JSON.stringify([b1.benefits, b2.benefits, b3.benefits, b4.skills]));
+ok("G-hire-sale-words", "Bài tuyển có chữ \"sang tiệm / cần bán ghế / nhận cọc\" vẫn là tin tuyển (không bị coi là bài bán tiệm)",
+  ["Tiệm mới sang tiệm, cần thợ bột gấp ở Houston. 713-555-0130", "Cần thợ chân tay nước. Tiệm cần bán bớt 2 ghế pedi cũ. Dallas 214-555-0131", "Tuyển thợ bột, bao lương $1,200/tuần, nhận cọc giữ chỗ ở cho thợ ở xa. Katy 281-555-0132"].every((t) => parseJobPost(t).isHiring && !isSalonSale(t)));
+ok("G-au-landline", "Số bàn Úc (02)/(03)/(07) được nhận; 02 → NSW, 03 → VIC, 07 → QLD, 08 / di động → không đoán",
+  findPhone("Gọi (02) 5550 1234")?.e164 === "+61255501234" && stateFromAuPhone("+61255501234") === "NSW" && stateFromAuPhone("+61355501234") === "VIC" && stateFromAuPhone("+61755501234") === "QLD" && stateFromAuPhone("+61855501234") === null && stateFromAuPhone("+61412555019") === null);
 
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

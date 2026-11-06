@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
-import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { activeJobWhere, effectiveExpiry, RENEW_REMINDER_DAYS } from "@/lib/jobIngest/ingest";
 import { clientBookings } from "@/lib/bookingClients";
 import { scheduledLabel } from "@/lib/i18n/format";
 
@@ -16,7 +16,7 @@ const PER_KIND = 15;
 
 export interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite" | "booking";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite" | "booking" | "renew";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn: string;
@@ -42,6 +42,15 @@ export async function GET() {
 
     // Thợ: chủ tiệm nào đã xem hồ sơ mình (7 ngày) — tiệm là doanh nghiệp nên hiện tên.
     const wantsViews = meRow?.role === "TECHNICIAN";
+    // Chủ tiệm: tin TỰ ĐĂNG sắp tự ẩn (≤ 7 ngày) hoặc vừa ẩn (≤ 7 ngày) → nhắc "Vẫn đang tuyển? Gia hạn".
+    const ownJobs = meRow?.role === "OWNER"
+      ? await prisma.job.findMany({ where: { ownerId: me, source: null }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, title: true, createdAt: true, expiresAt: true, source: true } }).catch(() => [])
+      : [];
+    const nowMs = Date.now();
+    const remind = RENEW_REMINDER_DAYS * 86_400_000;
+    const expiring = ownJobs
+      .map((j) => ({ j, exp: effectiveExpiry(j)?.getTime() ?? null }))
+      .filter((x): x is { j: (typeof ownJobs)[number]; exp: number } => x.exp !== null && x.exp - nowMs <= remind && nowMs - x.exp <= remind);
     const [likes, comments, reviews, saves, unlocks, urgentJobs, salonViews, invitees] = await Promise.all([
       prisma.postLike.findMany({
         where: { post: { authorId: me }, userId: { not: me }, createdAt: { gte: since } },
@@ -180,6 +189,20 @@ export async function GET() {
         href: "/bookings",
         createdAt: b.updatedAt,
       })),
+      ...expiring.map(({ j, exp }) => {
+        const days = Math.ceil((exp - nowMs) / 86_400_000);
+        const gone = days <= 0;
+        return {
+          id: `renew-${j.id}-${new Date(exp).toISOString().slice(0, 10)}`,
+          kind: "renew" as const,
+          actor: { id: null, name: "PawNail", avatarUrl: null },
+          text: gone ? `nhắc: tin "${snippet(j.title)}" đã tự ẩn khỏi bảng việc — vẫn đang tuyển thì mở tin để gia hạn` : `nhắc: tin "${snippet(j.title)}" sẽ tự ẩn sau ${days} ngày — vẫn đang tuyển thì mở tin để gia hạn`,
+          textEn: gone ? `reminder: your job "${snippet(j.title)}" is now hidden from the board — still hiring? open it to renew` : `reminder: your job "${snippet(j.title)}" hides in ${days} day${days === 1 ? "" : "s"} — still hiring? open it to renew`,
+          href: `/jobs/${j.id}`,
+          // Sắp xếp theo lúc bắt đầu nhắc (hạn − 7 ngày), không bao giờ ở tương lai
+          createdAt: new Date(Math.min(nowMs, exp - remind)).toISOString(),
+        };
+      }),
       ...urgentJobs.map((j) => ({
         id: `job-${j.id}`,
         kind: "job" as const,

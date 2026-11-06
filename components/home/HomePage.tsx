@@ -12,7 +12,7 @@ import TechnicianGrid from "@/components/technicians/TechnicianGrid";
 import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useViewerMarket } from "@/lib/useViewerMarket";
-import { stateName } from "@/lib/stateNames";
+import { AU_ALL_CODES, stateName, US_ALL_CODES } from "@/lib/stateNames";
 import RightRail from "@/components/layout/RightRail";
 import ToolsPanel from "@/components/layout/ToolsPanel";
 import WelcomeBack from "@/components/layout/WelcomeBack";
@@ -52,8 +52,10 @@ const tabSubtitle = (): Record<"feed" | "jobs" | "portfolio", { owner: string; t
 const noopSubscribe = () => () => {};
 const readAuthedHint = () => document.documentElement.hasAttribute("data-authed");
 
-const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
-const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Chip bang: 10 bang đông thợ (Mỹ) / 6 bang lớn (Úc) — bang đang chọn hoặc bang trong hồ sơ người xem được thêm vào
+// nếu nằm ngoài danh sách (VD tiệm ở OH / TAS), để tin ở bang nhỏ không chỉ thấy được ở "Tất cả bang".
+const US_STATES = US_ALL_CODES.slice(0, 10);
+const AU_STATES = AU_ALL_CODES.slice(0, 6);
 
 type HomeTab = "feed" | "jobs" | "portfolio";
 const TAB_ORDER: HomeTab[] = ["feed", "jobs", "portfolio"];
@@ -192,7 +194,14 @@ export default function HomePage() {
   // tách chung 1 quy tắc được.
   const displayName = (sessionUser?.name || "").trim();
 
-  const states = market === "US" ? US_STATES : AU_STATES;
+  // Người xem ở Úc mở trang chủ → bảng việc mở đúng thị trường Úc: useViewerMarket (tài khoản → cookie → IP) ở trên lo.
+  const states = (() => {
+    const base: string[] = market === "US" ? US_STATES : AU_STATES;
+    const all: readonly string[] = market === "US" ? US_ALL_CODES : AU_ALL_CODES;
+    const mine = sessionUser?.market === market ? String(sessionUser?.state || "").toUpperCase() : "";
+    const extra = [state, mine].filter((s, i, a) => !!s && all.includes(s) && !base.includes(s) && a.indexOf(s) === i);
+    return [...base, ...extra];
+  })();
   // Khách: hero có sẵn ngay trong HTML đầu tiên (trước đây chờ tải phiên ~1s rồi mới chen vào,
   // đẩy cả trang xuống — CLS 0.8). Máy từng đăng nhập → CSS ẩn ngay từ đầu (html[data-authed]).
   const showHero = !sessionUser;

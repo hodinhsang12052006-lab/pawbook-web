@@ -5,7 +5,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Client, Results, registerUser } from "./lib.mjs";
 
 const R = new Results("Đăng hộ tiệm");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const KEY = "test-ingest-key-0123456789abcdef";
 const ingest = (posts, key = KEY) => fetch(BASE_URL + "/api/ingest/jobs", { method: "POST", headers: { "Content-Type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify({ posts }) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const tag = String(Date.now()).slice(-4);

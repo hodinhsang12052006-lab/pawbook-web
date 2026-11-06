@@ -30,7 +30,7 @@ async function swipe(page, cdp, fromX, toX, y) {
 }
 
 const selectedTab = (p) => p.locator('[role="tab"][aria-selected="true"]').innerText();
-// Vị trí tab đang chọn (0 = Việc làm, 1 = Thợ, 2 = Bảng tin) — không phụ thuộc chữ trên tab.
+// Vị trí tab đang chọn (TAB_ORDER của trang chủ: 0 = Bảng tin, 1 = Việc làm, 2 = Thợ) — không phụ thuộc chữ trên tab.
 const selectedIndex = (p) => p.locator('[role="tab"]').evaluateAll((els) => els.findIndex((e) => e.getAttribute("aria-selected") === "true"));
 
 try {
@@ -51,7 +51,7 @@ try {
 
   await nav.getByRole("button", { name: "Việc làm" }).click();
   await tp.waitForTimeout(600);
-  R.check("M2", "Bấm 'Việc làm' → tab Việc gấp, URL ?tab=jobs, nút sáng đúng", (await selectedIndex(tp)) === 0 && tp.url().includes("tab=jobs") && (await nav.getByRole("button", { name: "Việc làm" }).getAttribute("aria-current")) === "page", tp.url());
+  R.check("M2", "Bấm 'Việc làm' → tab Việc gấp, URL ?tab=jobs, nút sáng đúng", (await selectedIndex(tp)) === 1 && tp.url().includes("tab=jobs") && (await nav.getByRole("button", { name: "Việc làm" }).getAttribute("aria-current")) === "page", tp.url());
 
   // Cuộn để thanh tab lên gần đầu màn hình, rồi vuốt ngay trên vùng nội dung.
   await tp.evaluate(() => {
@@ -65,14 +65,14 @@ try {
   const afterLeft = await selectedIndex(tp);
   await swipe(tp, cdp, 60, 330, y);
   const afterRight = await selectedIndex(tp);
-  R.check("M3", "Vuốt trái → tab Thợ (vị trí 1), vuốt phải → quay lại tab Việc làm (vị trí 0)", afterLeft === 1 && afterRight === 0, `${afterLeft} / ${afterRight}`);
+  R.check("M3", "Vuốt trái → tab Thợ (vị trí 2), vuốt phải → quay lại tab Việc làm (vị trí 1)", afterLeft === 2 && afterRight === 1, `${afterLeft} / ${afterRight}`);
 
   // Vuốt trên hàng chip bang (cuộn ngang) KHÔNG được đổi tab
   await tp.evaluate(() => window.scrollTo(0, 0));
   await tp.waitForTimeout(300);
   const chip = await tp.getByRole("button", { name: "Tất cả bang" }).boundingBox();
   await swipe(tp, cdp, 330, 60, chip.y + chip.height / 2);
-  R.check("M4", "Vuốt trên hàng chip bang chỉ cuộn, không đổi tab", (await selectedIndex(tp)) === 0, await selectedTab(tp));
+  R.check("M4", "Vuốt trên hàng chip bang chỉ cuộn, không đổi tab", (await selectedIndex(tp)) === 1, await selectedTab(tp));
 
   // Viên chọn trượt đúng vị trí
   const tx = await tp.locator('[role="tablist"] > span[aria-hidden]').evaluate((el) => el.style.transform);
@@ -110,7 +110,7 @@ try {
   const toast = tp.locator('[role="status"]').filter({ has: tp.getByRole("button", { name: "Ẩn thông báo" }) });
   const appeared = await toast.waitFor({ timeout: 34000 }).then(() => true).catch(() => false);
   const label = appeared ? await toast.locator("p").first().innerText() : "";
-  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG/i.test(label), label);
+  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /VIỆC MỚI|TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG/i.test(label), label);
   await tp.screenshot({ path: `${OUT}/m_fomo.png` });
   if (appeared) {
     await toast.getByRole("button", { name: "Ẩn thông báo" }).click();

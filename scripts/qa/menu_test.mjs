@@ -31,7 +31,7 @@ const api = (who, method, path, data) => who.ctx.request.fetch(BASE_URL + path, 
 const created = [];
 
 // 1 mẫu PawNail đã duyệt trong DB LOCAL (để thử "Thêm từ kho mẫu") — xoá khi xong
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000");
 const QA_DESIGN = "qa-menu-design";
 const QA_IMG = "https://res.cloudinary.com/demo/image/upload/sample.jpg";

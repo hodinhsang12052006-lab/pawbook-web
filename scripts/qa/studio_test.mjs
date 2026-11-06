@@ -58,7 +58,7 @@ try {
     if (await jobsChip.count()) {
       await jobsChip.click();
       await p.waitForTimeout(600);
-      R.check("ST9", "Bấm 'N tin tuyển mới' → chuyển sang tab Việc gấp", (await p.locator('[role="tab"]').evaluateAll((els) => els.findIndex((e) => e.getAttribute("aria-selected") === "true"))) === 0);
+      R.check("ST9", "Bấm 'N tin tuyển mới' → chuyển sang tab Việc gấp", (await p.locator('[role="tab"]').evaluateAll((els) => els.findIndex((e) => e.getAttribute("aria-selected") === "true"))) === 1 /* 0 Bảng tin · 1 Việc làm · 2 Thợ */);
     } else R.check("ST9", "Chip tin tuyển mới", true, "không có tin mới trong 2 ngày — bỏ qua");
   } else R.check("ST9", "Chip tin tuyển mới", false, "thẻ không hiện");
   await p.reload();

@@ -7,7 +7,7 @@ import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_TECH, registerUser, fake
 
 const R = new Results("Mẫu nail AI mỗi ngày");
 const TMP = process.env.TEMP || ".";
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000");
 await db.execute(`DELETE FROM "NailDesignSave"`);
 await db.execute(`DELETE FROM "NailDesign"`);

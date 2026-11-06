@@ -8,7 +8,7 @@ import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_TECH, regist
 
 const R = new Results("Tài khoản chính thức, ảnh tin tuyển & tiếng Anh");
 const OUT = process.env.TEMP || ".";
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000"); // server cũng đang ghi vào dev.db
 // PNG 1×1 hợp lệ
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -124,12 +124,12 @@ try {
 
   // ---- Hồ sơ chính thức ----
   await tp.goto(BASE_URL + `/profile/${officialId}`);
-  const offHead = await tp.getByText("Tài khoản chính thức của PawNail", { exact: true }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  const offHead = await tp.getByText("Tài khoản chính thức của PawNail", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
   R.check("OF12", "Hồ sơ chính thức: tiêu đề + tick xanh", offHead && (await tp.getByRole("img", { name: /Tài khoản chính thức/ }).count()) > 0);
   await tp.screenshot({ path: `${OUT}/of_profile.png`, fullPage: true });
   await tp.getByRole("tab", { name: "Giới thiệu" }).or(tp.getByRole("button", { name: "Giới thiệu" })).first().click();
   const about = await tp.getByText("Cam kết của PawNail").waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-  R.check("OF13", "Tab Giới thiệu có cam kết + email hỗ trợ", about && (await tp.getByText("support@bitpawos.com").count()) > 0);
+  R.check("OF13", "Tab Giới thiệu có cam kết + email hỗ trợ", about && (await tp.getByText(/support@bitpaw(os|software)\.com/).count()) > 0);
   await tp.getByRole("link", { name: /Nhắn tin hỗ trợ/ }).first().click();
   const toChat = await tp.waitForURL(/\/messages/, { timeout: 15000 }).then(() => true).catch(() => false);
   R.check("OF14", "Nút 'Nhắn tin hỗ trợ' mở khung chat", toChat);
@@ -204,7 +204,7 @@ try {
   ];
   for (const [path, re] of pages) {
     await ep.goto(BASE_URL + path);
-    const ok = await ep.getByText(re).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const ok = await ep.getByText(re).filter({ visible: true }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
     await ep.waitForTimeout(500);
     const r = await viRatio();
     // Nội dung do NGƯỜI DÙNG viết (tên, bài đăng, tin tuyển) vẫn là tiếng Việt — chỉ đo khung giao diện.
@@ -216,7 +216,7 @@ try {
   await ownerEn.addInitScript(() => { try { localStorage.setItem("bitpaw_locale", "en"); } catch {} });
   const oe = await login(ownerEn, SEED_OWNER);
   await oe.goto(BASE_URL + "/jobs/create");
-  const enCreate = await oe.getByText("Post a job").first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  const enCreate = await oe.getByText(/Post a (nail tech )?job/).filter({ visible: true }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
   R.check("OF-EN create", "EN: trang đăng tin hiển thị tiếng Anh", enCreate);
   await oe.screenshot({ path: `${OUT}/of_en_jobs_create.png` });
 

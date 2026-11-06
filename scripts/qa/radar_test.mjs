@@ -6,7 +6,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, registerUser } from "./lib.mjs";
 
 const R = new Results("Radar xu hướng & nỗi đau");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 
 // ---- Nhịp đau tuần ----
 R.check("RA1", "/api/pulse bắt buộc đăng nhập", (await new Client().req("/api/pulse")).status === 401);

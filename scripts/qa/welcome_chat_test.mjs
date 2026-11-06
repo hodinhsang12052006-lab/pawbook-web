@@ -6,7 +6,7 @@ import { chromium, devices } from "playwright";
 import { BASE_URL, Client, DEMO_PASSWORD, Results, fakeIp, registerUser } from "./lib.mjs";
 
 const R = new Results("Tin chào mừng & thông tin đăng ký");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const stamp = Date.now().toString().slice(-7);
 // DB local có thể chưa có admin (production luôn có tài khoản chính thức) → tạo 1 admin, chờ hết
 // bộ nhớ tạm "chưa có admin" 30 giây của getOfficialAccount.

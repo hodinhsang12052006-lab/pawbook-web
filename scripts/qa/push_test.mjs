@@ -117,7 +117,7 @@ try {
   goneDevices.add(old.name);
   await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: `QA 410 ${Date.now()}` } });
   await new Promise((r) => setTimeout(r, 2500));
-  const db = createClient({ url: "file:prisma/dev.db" });
+  const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
   const left = await db.execute({ sql: `SELECT COUNT(*) AS n FROM "PushSubscription" WHERE endpoint = ?`, args: [old.sub.endpoint] });
   R.check("PU11", "Thiết bị trả 410 (đã huỷ) → tự xoá khỏi DB", Number(left.rows[0].n) === 0, JSON.stringify(left.rows));
 

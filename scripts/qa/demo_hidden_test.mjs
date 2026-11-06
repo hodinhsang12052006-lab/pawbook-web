@@ -10,7 +10,7 @@ import { DEMO_PASSWORD, SEED_TECH, Results, registerUser } from "./lib.mjs";
 const ON = "http://localhost:3000";
 const OFF = "http://localhost:3001";
 const R = new Results("Ẩn dữ liệu mẫu");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const demoIds = new Set((await db.execute(`SELECT id FROM "User" WHERE email LIKE '%pawnailjobs.demo'`)).rows.map((r) => String(r.id)));
 const get = (base, path) => fetch(base + path, { headers: { "cf-connecting-ip": `10.77.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` } }).then((r) => r.json());
 const ids = (list, pick) => (Array.isArray(list) ? list : []).map(pick).filter(Boolean).map(String);

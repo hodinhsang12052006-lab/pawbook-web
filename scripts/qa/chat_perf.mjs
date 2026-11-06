@@ -9,7 +9,7 @@ import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, SEED_OWNER_2, SEED_TECH, Results, 
 const R = new Results("Chat mượt");
 const CPU = Number(process.env.CPU || 4);
 const HISTORY = 150;
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const browser = await chromium.launch();
 
 async function login(email, device = devices["Pixel 7"]) {

@@ -5,7 +5,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Client, Results, registerUser } from "./lib.mjs";
 
 const R = new Results("Cộng đồng: chủ đề nóng · thăm dò · ẩn danh");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const KEY = "test-ingest-key-0123456789abcdef";
 const errors = [];
 let browser;

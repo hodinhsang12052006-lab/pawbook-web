@@ -13,8 +13,7 @@ export interface ExternalJobInput {
   locationLabel: string;
   state: string | null;
   city: string | null;
-  lat: number | null;
-  lng: number | null;
+  // (Không lưu toạ độ: chưa có tính năng nào cần — tối thiểu hoá dữ liệu đối tác.)
   salaryMin: number | null;
   salaryMax: number | null;
   salaryCurrency: string | null;
@@ -23,7 +22,8 @@ export interface ExternalJobInput {
   contractType: string | null;
   snippet: string | null;
   redirectUrl: string;
-  providerCreatedAt: Date;
+  /** Ngày đăng gốc của đối tác. null = đối tác không ghi / ghi sai → hiện "không ghi ngày", KHÔNG tự đặt là "vừa đăng". */
+  providerCreatedAt: Date | null;
   dedupeKey: string;
   notNail: boolean; // không phải việc nail (thợ đóng đinh / lợp mái…) → lưu ẩn để khỏi coi là tin mới lần sau
 }
@@ -47,7 +47,7 @@ export interface PublicExternalJob {
   contractTime: string | null;
   snippet: string | null;
   url: string;
-  postedAt: string;
+  postedAt: string | null; // null = đối tác không ghi ngày đăng
   attribution: Attribution;
 }
 

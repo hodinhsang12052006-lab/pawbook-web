@@ -15,6 +15,9 @@ export const ADZUNA_QUERY = {
 } as const;
 
 export type AdzunaStatus = "ok" | "rate_limited" | "auth_error" | "error" | "deadline";
+/** Timeout tối đa mỗi lượt gọi; không bắt đầu lượt gọi mới khi còn < MIN_CALL_MS tới hạn. */
+export const FETCH_TIMEOUT_MS = 15_000;
+export const MIN_CALL_MS = 1_500;
 export interface AdzunaFetch { results: AdzunaResult[]; calls: number; status: AdzunaStatus; httpStatus: number | null; count: number | null }
 
 export async function fetchAdzunaMarket(
@@ -25,7 +28,9 @@ export async function fetchAdzunaMarket(
   const maxPages = opts.maxPages ?? adzunaMaxPages();
   const out: AdzunaFetch = { results: [], calls: 0, status: "ok", httpStatus: null, count: null };
   for (let page = 1; page <= maxPages; page++) {
-    if (opts.deadline && Date.now() > opts.deadline) { out.status = "deadline"; break; }
+    // Timeout mỗi lượt gọi = min(15 s, thời gian còn lại tới hạn) → lượt gọi bắt đầu sát hạn không kéo dài quá hạn.
+    const left = opts.deadline ? opts.deadline - Date.now() : FETCH_TIMEOUT_MS;
+    if (left < MIN_CALL_MS) { out.status = "deadline"; break; }
     const url = new URL(`https://api.adzuna.com/v1/api/jobs/${COUNTRY[market]}/search/${page}`);
     url.searchParams.set("app_id", opts.keys.appId);
     url.searchParams.set("app_key", opts.keys.appKey);
@@ -33,20 +38,21 @@ export async function fetchAdzunaMarket(
     for (const [k, v] of Object.entries(ADZUNA_QUERY)) url.searchParams.set(k, v);
     url.searchParams.set("content-type", "application/json");
     let res: Response;
+    type Body = { count?: number; results?: AdzunaResult[] } | null;
+    let body = null as Body;
     try {
       out.calls++;
-      res = await fetchImpl(url.toString(), { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15_000), cache: "no-store" });
+      res = await fetchImpl(url.toString(), { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(Math.min(FETCH_TIMEOUT_MS, left)), cache: "no-store" });
+      if (res.ok) body = (await res.json()) as Body; // đọc thân cũng nằm trong cùng timeout
     } catch {
-      out.status = "error"; // lỗi mạng / quá giờ — không ghi chi tiết (có thể chứa URL kèm khoá)
+      // lỗi mạng / quá giờ / JSON hỏng — không ghi chi tiết (có thể chứa URL kèm khoá)
+      out.status = opts.deadline && Date.now() >= opts.deadline - 50 ? "deadline" : "error";
       break;
     }
     out.httpStatus = res.status;
     if (res.status === 429) { out.status = "rate_limited"; break; } // hết lượt → lượt sau làm tiếp
     if (res.status === 401 || res.status === 403) { out.status = "auth_error"; break; } // khoá sai / bị thu hồi
     if (!res.ok) { out.status = "error"; break; }
-    type Body = { count?: number; results?: AdzunaResult[] } | null;
-    let body: Body = null;
-    try { body = (await res.json()) as Body; } catch { out.status = "error"; break; }
     const rows: AdzunaResult[] = body && Array.isArray(body.results) ? body.results : [];
     if (body && typeof body.count === "number") out.count = body.count;
     out.results.push(...rows);

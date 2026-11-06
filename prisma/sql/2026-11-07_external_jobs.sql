@@ -34,3 +34,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "ExternalJob_provider_providerJobId_key" ON "E
 CREATE INDEX IF NOT EXISTS "ExternalJob_market_state_idx" ON "ExternalJob"("market", "state");
 CREATE INDEX IF NOT EXISTS "ExternalJob_expiresAt_idx" ON "ExternalJob"("expiresAt");
 CREATE INDEX IF NOT EXISTS "ExternalJob_dedupeKey_idx" ON "ExternalJob"("dedupeKey");
+-- Truy vấn hiển thị /api/jobs/external (provider + thị trường + chưa ẩn + còn hạn). Đã chạy file này trước đây → chạy
+-- lại để thêm index (an toàn, IF NOT EXISTS).
+CREATE INDEX IF NOT EXISTS "ExternalJob_provider_market_hiddenReason_expiresAt_idx" ON "ExternalJob"("provider", "market", "hiddenReason", "expiresAt");

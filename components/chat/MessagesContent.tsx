@@ -1527,7 +1527,7 @@ export default function MessagesContent({
                         key={starter}
                         type="button"
                         onClick={() => setMessageText(starter)}
-                        className="rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1.5 text-xs font-semibold text-pink-200 hover:bg-pink-500/20 transition-colors"
+                        className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-100 ring-1 ring-white/[0.08] hover:bg-white/[0.1] transition-colors"
                       >
                         {starter}
                       </button>
@@ -1542,7 +1542,7 @@ export default function MessagesContent({
                   <div className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
                     <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-full w-full object-cover" />
                   </div>
-                  <div className="rounded-2xl rounded-bl-sm border border-slate-700 bg-slate-800 px-4 py-3 text-slate-300">
+                  <div className="pn-bubble-them rounded-2xl rounded-bl-sm px-4 py-3 text-slate-300">
                     <TypingDots />
                     <span className="sr-only">{tr("Đối phương đang soạn tin", "The other person is typing")}</span>
                   </div>

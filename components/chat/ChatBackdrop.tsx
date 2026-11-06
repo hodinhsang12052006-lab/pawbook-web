@@ -1,20 +1,9 @@
 "use client";
 
-import React from "react";
-import { NAIL_PATTERN, WALLPAPER_ORBS } from "@/lib/chatWallpapers";
-
-// Lớp nền "sống" phía sau tin nhắn: 3 quầng sáng (gradient tròn, không filter) trôi rất chậm + hoạ tiết
-// nail mờ + viền tối dịu. Nằm z-index -1 trong khung chat (khung có `isolate`), không bắt sự kiện chuột.
+// 11/2026: khung chat là 1 mặt phẳng tĩnh, chuyên nghiệp (xem .chat-wallpaper trong globals.css và
+// các hình nền tuỳ chọn ở lib/chatWallpapers.ts) — không còn quầng sáng trôi / hoạ tiết / vignette
+// phía sau tin nhắn. Giữ component để các chỗ gọi không phải đổi.
 export default function ChatBackdrop({ theme }: { theme: string }) {
-  const [a, b, c] = WALLPAPER_ORBS[theme] ?? WALLPAPER_ORBS.default;
-  const orb = (color: string) => ({ background: `radial-gradient(circle at center, ${color} 0%, transparent 62%)` });
-  return (
-    <div aria-hidden className="pn-chat-backdrop">
-      <div className="pn-orb pn-orb-a" style={orb(a)} />
-      <div className="pn-orb pn-orb-b" style={orb(b)} />
-      <div className="pn-orb pn-orb-c" style={orb(c)} />
-      {theme === "default" && <div className="pn-grain" style={{ backgroundImage: NAIL_PATTERN }} />}
-      <div className="pn-vignette" />
-    </div>
-  );
+  void theme;
+  return null;
 }

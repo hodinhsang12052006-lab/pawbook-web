@@ -130,3 +130,35 @@ export const WALLPAPER_ORBS: Record<string, [string, string, string]> = {
   ocean: ["rgba(20,184,166,.45)", "rgba(14,165,233,.45)", "rgba(99,102,241,.25)"],
   champagne: ["rgba(251,191,36,.35)", "rgba(244,114,182,.3)", "rgba(253,186,116,.22)"],
 };
+
+// ---- 11/2026: bộ hình nền "refined" — tĩnh, trung tính, tinh tế ----
+// Giữ nguyên 8 id + tên vi/en ở trên (đã lưu trong localStorage pn_chat_wp); chỉ thay phần hiển thị.
+// Mặc định = mặt phẳng than chì như nền app. Các tông màu chỉ là 1 lớp phủ 8% neo phía trên, mờ hết
+// trước 55% chiều cao → độ tương phản của bong bóng không đổi.
+const NAIL_PATHS =
+  "<path d='M24 18c-6 0-9 6-9 14v16c0 4 3 6 9 6s9-2 9-6V32c0-8-3-14-9-14z'/>" +
+  "<path d='M18 26c3-3 9-3 12 0'/>" +
+  "<circle cx='86' cy='34' r='5'/><circle cx='86' cy='22' r='6'/><circle cx='97' cy='31' r='6'/><circle cx='93' cy='44' r='6'/><circle cx='79' cy='44' r='6'/><circle cx='75' cy='31' r='6'/>" +
+  "<path d='M22 96c8-6 16-6 24 0'/>";
+const NAIL_SOFT = svg(`<g fill='none' stroke='rgba(255,255,255,0.045)' stroke-width='1.2'>${NAIL_PATHS}</g>`);
+const NAIL_SWATCH = svg(`<g fill='none' stroke='rgba(255,255,255,0.16)' stroke-width='1.2'>${NAIL_PATHS}</g>`);
+const GLITTER_SOFT = svg(
+  "<g fill='rgba(253,224,171,0.16)'><circle cx='12' cy='18' r='1'/><circle cx='70' cy='9' r='0.7'/><circle cx='104' cy='40' r='1.1'/><circle cx='40' cy='62' r='0.8'/><circle cx='88' cy='86' r='0.9'/><circle cx='18' cy='104' r='0.7'/></g>",
+  140
+);
+const wash = (rgb: string) => `linear-gradient(180deg, rgba(${rgb},.08), rgba(${rgb},0) 55%)`;
+
+const REFINED: Record<string, Pick<ChatWallpaper, "style" | "swatch" | "pattern">> = {
+  default: { style: { backgroundColor: "#0b0b0c" }, swatch: "linear-gradient(180deg,#1c1c1f,#0b0b0c)" },
+  nails: { style: { backgroundColor: "#0b0b0c", backgroundImage: NAIL_SOFT, backgroundSize: "120px 120px" }, swatch: `${NAIL_SWATCH}, #141416`, pattern: true },
+  rose: { style: { backgroundColor: "#0f0b0d", backgroundImage: wash("219,39,119") }, swatch: "linear-gradient(180deg,#3a1a28,#0f0b0d 75%)" },
+  aurora: { style: { backgroundColor: "#0d0c11", backgroundImage: wash("124,108,196") }, swatch: "linear-gradient(180deg,#26233a,#0d0c11 75%)" },
+  glitter: { style: { backgroundColor: "#0d0c0b", backgroundImage: GLITTER_SOFT, backgroundSize: "140px 140px" }, swatch: `${GLITTER_SOFT}, linear-gradient(180deg,#221d14,#0d0c0b)`, pattern: true },
+  marble: {
+    style: { backgroundColor: "#111112", backgroundImage: "linear-gradient(115deg, transparent 40%, rgba(255,255,255,.035) 42%, transparent 46%), linear-gradient(35deg, transparent 55%, rgba(255,255,255,.025) 57%, transparent 60%)" },
+    swatch: "linear-gradient(115deg,#26262a 40%,#3a3a40 43%,#26262a 47%)",
+  },
+  ocean: { style: { backgroundColor: "#0a0f10", backgroundImage: wash("45,140,150") }, swatch: "linear-gradient(180deg,#123236,#0a0f10 75%)" },
+  champagne: { style: { backgroundColor: "#100e0a", backgroundImage: wash("214,170,90") }, swatch: "linear-gradient(180deg,#33291a,#100e0a 75%)" },
+};
+for (const w of CHAT_WALLPAPERS) if (REFINED[w.id]) Object.assign(w, REFINED[w.id]);

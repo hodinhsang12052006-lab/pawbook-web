@@ -330,7 +330,7 @@ function MessageRowImpl({
 
           {/* Giờ gửi ở tin cuối mỗi cụm; tin cuối của mình kèm Đã gửi/Đã xem. */}
           {(isLastInGroup || isLastSelf) && (
-            <span className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
+            <span className={`mt-1 flex items-center gap-1 px-1 text-[11px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
               {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
               {isLastSelf &&
                 !activeChat.isGroup &&

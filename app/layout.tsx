@@ -21,7 +21,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#020617",
+  themeColor: "#0b0b0c",
 };
 
 export const metadata: Metadata = {
@@ -69,7 +69,7 @@ export default function RootLayout({
         {/* Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app (components/InstallPrompt.tsx) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement;if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
+            __html: `try{var d=document.documentElement,p=location.pathname;if(p.indexOf("/auth")===0)d.setAttribute("data-ui-classic","");if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-ui-classic","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_LD }} />
@@ -100,19 +100,18 @@ export default function RootLayout({
                   containerStyle={{ top: 76 }}
                   toastOptions={{
                     style: {
-                      background: "rgba(15, 23, 42, 0.92)",
+                      background: "#1c1c1f",
                       color: "#f1f5f9",
-                      border: "1px solid rgba(148, 163, 184, 0.18)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       borderRadius: "14px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      boxShadow: "0 10px 30px -12px rgba(0,0,0,0.7)",
-                      backdropFilter: "blur(12px)",
+                      boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
                       maxWidth: "92vw",
                     },
-                    success: { iconTheme: { primary: "#34d399", secondary: "#0f172a" } },
-                    error: { iconTheme: { primary: "#fb7185", secondary: "#0f172a" } },
-                    loading: { iconTheme: { primary: "#f472b6", secondary: "#0f172a" } },
+                    success: { iconTheme: { primary: "#34d399", secondary: "#1c1c1f" } },
+                    error: { iconTheme: { primary: "#fb7185", secondary: "#1c1c1f" } },
+                    loading: { iconTheme: { primary: "#f472b6", secondary: "#1c1c1f" } },
                   }}
                 />
                 <PusherStatusBanner />

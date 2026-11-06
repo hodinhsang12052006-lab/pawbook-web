@@ -136,6 +136,27 @@ console.log("\nSEO tags:");
     const hl = [...r.html.matchAll(/<link rel="alternate" hrefLang="([^"]+)" href="([^"]+)"/gi)].map((m) => `${m[1]}=${m[2].replace(/^https?:\/\/[^/]+/, "")}`);
     check(hl.length === 3, `hreflang on ${r.lang} page: ${hl.join(", ")}`);
   }
+  // Trang KHÔNG tự khai canonical không được thừa hưởng canonical = trang chủ từ layout gốc.
+  for (const path of ["/offline", "/support"]) {
+    const r = await get(path, { al: "en-US" });
+    const home = r.canonical && /^https?:\/\/[^/]+\/?$/.test(r.canonical);
+    check(!home, `${path} canonical is not the homepage (${r.canonical ?? "none"})`);
+  }
+  const off = await get("/offline", { al: "en-US" });
+  check(/<meta name="robots" content="noindex/.test(off.html), "/offline is noindex");
+}
+
+// Cổng trước khi lên production: yêu cầu RSC / prefetch theo segment (Next 16) cũng phải đi đúng nhánh ngôn ngữ
+// theo cookie — router của Vercel áp has/missing cho cả request ?_rsc và next-router-segment-prefetch. Chạy cả
+// với BASE_URL=<preview>.vercel.app để kiểm tra bản preview trước khi promote.
+console.log("\nRSC / segment prefetch by cookie:");
+for (const cookie of ["vi", "en"]) {
+  const headers = { rsc: "1", "next-router-prefetch": "1", "next-router-segment-prefetch": "/_tree", cookie: `bitpaw_locale=${cookie}` };
+  const res = await fetch(`${BASE_URL}/designs?_rsc=qa${cookie}`, { headers, redirect: "manual" });
+  const body = res.status === 200 ? await res.text() : "";
+  // Cây segment chứa giá trị của [lang] ("lang","vi" / "lang","en") — đúng nhánh thì chỉ có ngôn ngữ của cookie.
+  const hasVi = /"lang","vi"|\["lang","vi"|lang\|vi/.test(body), hasEn = /"lang","en"|\["lang","en"|lang\|en/.test(body);
+  check(res.status === 200 && (cookie === "vi" ? hasVi && !hasEn : hasEn && !hasVi), `/designs prefetch with cookie=${cookie} → ${res.status}, tree lang=${hasVi ? "vi" : hasEn ? "en" : "?"}`);
 }
 
 console.log('\nVietnamese text left in English server HTML (scripts + lang="vi" blocks excluded):');

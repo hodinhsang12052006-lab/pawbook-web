@@ -89,13 +89,12 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
       <Navbar />
       <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-10 pb-24 text-sm leading-relaxed text-slate-300 md:pb-10">
         {lang === "vi" ? VI : EN}
-        <p className="text-xs text-slate-500">
-          {lang === "vi" ? (
-            <a href="/support" hrefLang="en" lang="en" className={link}>English</a>
-          ) : (
-            <a href="/vi/support" hrefLang="vi" lang="vi" className={link}>Tiếng Việt</a>
-          )}
-        </p>
+        {/* Bản tiếng Việt cho người dùng tiếng Việt (bản tiếng Anh: URL không tiền tố — nút EN · VI trên thanh trên cùng). */}
+        {lang === "en" && (
+          <p className="text-xs text-slate-500">
+            <Link href="/vi/support" hrefLang="vi" lang="vi" className={link}>Tiếng Việt</Link>
+          </p>
+        )}
       </main>
     </div>
   );

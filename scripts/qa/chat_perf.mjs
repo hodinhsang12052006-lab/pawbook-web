@@ -61,7 +61,7 @@ await page.addInitScript(() => {
 const resetPerf = () => page.evaluate(() => { window.__perf.long = []; window.__perf.events = []; });
 const readPerf = () => page.evaluate(() => window.__perf);
 const pct = (arr, p) => (arr.length ? [...arr].sort((a, b) => a - b)[Math.min(arr.length - 1, Math.floor(arr.length * p))] : 0);
-const box = page.getByPlaceholder(/Viết tin nhắn/);
+const box = page.locator("[data-chat-input]");
 const out = {};
 
 // 1) Mở chat có lịch sử dài (vào thẳng từ hồ sơ/tin tuyển).

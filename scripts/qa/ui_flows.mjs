@@ -80,7 +80,7 @@ await step("F3", "Đăng ký thợ — bước 2 (tay nghề) → bước 3", as
   const skill = tp.getByRole("button", { name: /Bột|Acrylic|Gel|Dip/ }).first();
   if (await skill.count()) await skill.click();
   await tp.getByRole("button", { name: /Tiếp tục/ }).last().click();
-  await tp.getByText("Ảnh mẫu móng của bạn").waitFor({ timeout: 10000 });
+  await tp.getByText(/Ảnh tay nghề của bạn|Ảnh mẫu móng của bạn/).waitFor({ timeout: 10000 });
 });
 
 await step("F4", "Đăng ký thợ — upload ảnh portfolio + Hoàn tất → vào app", async () => {
@@ -90,7 +90,7 @@ await step("F4", "Đăng ký thợ — upload ảnh portfolio + Hoàn tất → 
   await tp.locator('input[type="file"]').setInputFiles({ name: "nail.png", mimeType: "image/png", buffer: png });
   await tp.waitForTimeout(2500);
   await shot(tp, "04_tech_step3");
-  await tp.getByRole("button", { name: /Hoàn Tất/ }).click();
+  await tp.getByRole("button", { name: /Hoàn tất/i }).click();
   await tp.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 });
   await tp.waitForLoadState("networkidle").catch(() => {});
   await shot(tp, "05_tech_home");
@@ -152,14 +152,14 @@ await step("F10", "Chủ tiệm đăng tin tuyển thợ qua form", async () => 
   await op.getByPlaceholder("VD: Los Angeles").fill("San Jose");
   await op.getByPlaceholder("VD: Happy Nails & Spa").fill("QA Nails");
   await op.getByRole("button", { name: /Tiếp tục/ }).click();
-  await op.getByPlaceholder("VD: Cần thợ Bột/Dip gấp").fill(jobTitle);
+  await op.locator("#job-title").fill(jobTitle);
   await op.getByPlaceholder(/VD: \$1,200|VD: \$28/).fill("$1,300/tuần");
   await op.getByPlaceholder("(555) 123-4567").fill("4085550100");
   await op.getByRole("button", { name: /Tiếp tục/ }).click();
   // Bước 3: ảnh & video tiệm (không bắt buộc) → bỏ qua
   await op.getByRole("button", { name: /Bỏ qua/ }).click();
   await shot(op, "08_job_create");
-  await op.getByRole("button", { name: /Đăng tin ngay/ }).click();
+  await op.locator("[data-job-submit]").click();
   await op.waitForURL((u) => !u.pathname.startsWith("/jobs/create"), { timeout: 20000 });
   const jobs = await (await fetch(BASE_URL + "/api/jobs")).json();
   return jobs.some((j) => j.title === jobTitle);
@@ -176,7 +176,7 @@ const ownerId = (await (await ownerCtx.request.get(BASE_URL + "/api/auth/session
 const techId = (await (await techCtx.request.get(BASE_URL + "/api/auth/session")).json()).user.id;
 await step("F12", "Thợ mở chat với chủ tiệm (/messages?to=) và gửi tin", async () => {
   await tp.goto(BASE_URL + `/messages?to=${ownerId}`);
-  const input = tp.getByPlaceholder(/Viết tin nhắn/);
+  const input = tp.locator("[data-chat-input]");
   await input.waitFor({ timeout: 20000 });
   await input.fill("Chào anh, em muốn ứng tuyển ạ");
   await input.press("Enter");
@@ -187,7 +187,7 @@ await step("F12", "Thợ mở chat với chủ tiệm (/messages?to=) và gửi 
 await step("F13", "Chủ tiệm nhận được tin và trả lời", async () => {
   await op.goto(BASE_URL + `/messages?to=${techId}`);
   await op.getByText("Chào anh, em muốn ứng tuyển ạ").last().waitFor({ timeout: 20000 });
-  const input = op.getByPlaceholder(/Viết tin nhắn/);
+  const input = op.locator("[data-chat-input]");
   await input.fill("OK em, mai ghé tiệm nhé");
   await input.press("Enter");
   await op.getByText("OK em, mai ghé tiệm nhé").last().waitFor({ timeout: 10000 });
@@ -290,7 +290,7 @@ await step("F21", "Desktop: Sidebar có Công cụ (Tin nhắn, Đăng tin, Rada
   await tools.getByRole("link", { name: /Tin nhắn/ }).waitFor();
   await tools.getByRole("link", { name: /Nail Radar/ }).waitFor();
   await tools.getByRole("link", { name: /Đăng tin tuyển thợ/ }).waitFor();
-  await p.getByText(/Tin gấp mới nhất/).waitFor();
+  await p.getByText(/Tin gắn nhãn cần gấp|Tin gấp mới nhất/).waitFor();
   await p.locator('aside a[href^="/jobs/"]').first().waitFor({ timeout: 10000 });
   await p.screenshot({ path: fileURLToPath(new URL("16_desktop_home.png", SHOTS)) });
   await ctx.close();
@@ -426,17 +426,17 @@ await step("F29", "Realtime 2 người: online thật, 'Đang soạn tin', badge
 
   // Thợ mở app (vào kênh presence của mình) → chủ tiệm thấy "Đang hoạt động".
   await t2.goto(BASE_URL + `/messages?to=${ownerId}`);
-  await t2.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+  await t2.locator("[data-chat-input]").waitFor({ timeout: 20000 });
   await row.click();
   await op.getByText("Đang hoạt động").filter({ visible: true }).first().waitFor({ timeout: 20000 });
 
   // Thợ gõ → chủ tiệm thấy "Đang soạn tin".
-  await t2.getByPlaceholder(/Viết tin nhắn/).fill("Em đang gõ...");
+  await t2.locator("[data-chat-input]").fill("Em đang gõ...");
   await op.getByText(/Đang soạn tin/).filter({ visible: true }).first().waitFor({ timeout: 15000 });
 
   // Chủ tiệm trả lời → thợ đang mở hội thoại (tự đánh dấu đã đọc) → chủ tiệm thấy "Đã xem".
   const reply = `OK em ${Date.now()}`;
-  const input = op.getByPlaceholder(/Viết tin nhắn/);
+  const input = op.locator("[data-chat-input]");
   await input.fill(reply);
   await input.press("Enter");
   await t2.getByText(reply).last().waitFor({ timeout: 15000 });

@@ -93,7 +93,7 @@ try {
 
   // Mở 1 cuộc trò chuyện có sẵn, quay lại rồi mở lại → hiện tức thì từ cache.
   await pinned.click();
-  const input = tp.getByPlaceholder(/Viết tin nhắn/);
+  const input = tp.locator("[data-chat-input]");
   await input.waitFor({ timeout: 15000 });
   R.check("OF8", "Mở chat chính thức: header có tên + tick xanh", (await tp.getByRole("img", { name: /Tài khoản chính thức/ }).count()) > 0);
   const msg = `QA hỏi hỗ trợ ${Date.now()}`;
@@ -114,7 +114,7 @@ try {
   await tp.getByRole("button", { name: /Hỗ trợ chính thức|PawNail|QA/ }).first().waitFor({ timeout: 15000 });
   const t0 = Date.now();
   await tp.getByText(msg).first().click().catch(() => {});
-  await tp.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 15000 });
+  await tp.locator("[data-chat-input]").waitFor({ timeout: 15000 });
   await tp.getByText(msg).last().waitFor({ timeout: 10000 });
   const reopenMs = Date.now() - t0;
   R.check("OF10", "Mở lại cuộc trò chuyện: tin hiện ngay (< 1.5s)", reopenMs < 1500, `${reopenMs}ms`);
@@ -142,7 +142,7 @@ try {
   await op.getByPlaceholder("VD: Los Angeles").fill("San Jose");
   await op.getByPlaceholder("VD: Happy Nails & Spa").fill("QA Photo Nails");
   await op.getByRole("button", { name: /Tiếp tục/ }).click();
-  await op.getByPlaceholder("VD: Cần thợ Bột/Dip gấp").fill(title);
+  await op.locator("#job-title").fill(title);
   await op.getByPlaceholder(/VD: \$1,200|VD: \$28/).fill("$1,300/tuần");
   await op.getByPlaceholder("(555) 123-4567").fill("4085550100");
   await op.getByRole("button", { name: /Tiếp tục/ }).click();
@@ -155,7 +155,7 @@ try {
   await op.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => /Đang tải lên/.test(b.innerText)), null, { timeout: 20000 });
   await op.screenshot({ path: `${OUT}/of_job_media_step.png` });
   await next.click();
-  await op.getByRole("button", { name: /Đăng tin ngay/ }).click();
+  await op.locator("[data-job-submit]").click();
   await op.waitForURL(/\/jobs\/[a-z0-9]+$/, { timeout: 20000 });
   const gallery = await op.getByText("Ảnh & video tiệm").waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   R.check("OF15", "Đăng tin qua UI kèm 2 ảnh → trang tin có mục 'Ảnh & video tiệm'", gallery);

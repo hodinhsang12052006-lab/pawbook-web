@@ -27,8 +27,8 @@ const B = await login(SEED_TECH);
 await A.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: "Chào em" }, headers: A.h });
 await A.page.goto(BASE_URL + `/messages?to=${B.me.id}`);
 await B.page.goto(BASE_URL + `/messages?to=${A.me.id}`);
-await A.page.getByPlaceholder(/Viết tin nhắn/).first().waitFor({ timeout: 20000 });
-await B.page.getByPlaceholder(/Viết tin nhắn/).first().waitFor({ timeout: 20000 });
+await A.page.locator("[data-chat-input]").first().waitFor({ timeout: 20000 });
+await B.page.locator("[data-chat-input]").first().waitFor({ timeout: 20000 });
 await A.page.waitForTimeout(1500);
 
 // V1: bấm 🎤 → thanh ghi âm (đồng hồ chạy, sóng âm)
@@ -44,7 +44,7 @@ R.check("V1", "Bấm 🎤 → thanh ghi âm: chấm đỏ, đồng hồ chạy (
 // V2: huỷ → không gửi gì
 await A.page.getByRole("button", { name: "Huỷ ghi âm" }).click();
 await A.page.waitForTimeout(800);
-const backToInput = await A.page.getByPlaceholder(/Viết tin nhắn/).first().isVisible();
+const backToInput = await A.page.locator("[data-chat-input]").first().isVisible();
 R.check("V2", "Bấm 🗑 → huỷ, quay về ô nhập, không gửi tin", backToInput && (await B.page.getByRole("button", { name: "Phát tin nhắn thoại" }).count()) === nVoiceBefore);
 
 // V3: ghi 2 giây → gửi → 2 bên thấy bong bóng thoại có nút phát + thời lượng

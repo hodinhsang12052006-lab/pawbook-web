@@ -81,8 +81,8 @@ const stamp = Date.now();
   await step("THO", "Mở 1 tin tuyển", p, async () => { await p.locator('a[href^="/jobs/"]').first().click({ timeout: 10000 }); await p.waitForURL(/\/jobs\//); await settle(p); }, { full: true });
   await step("THO", "Nhắn tin cho tiệm", p, async () => {
     const b = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
-    await b.click({ timeout: 8000 }); await p.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
-    await p.getByPlaceholder(/Viết tin nhắn/).fill("Dạ chào anh chị, tiệm còn tuyển thợ không ạ?"); await p.keyboard.press("Enter"); await p.waitForTimeout(1200);
+    await b.click({ timeout: 8000 }); await p.locator("[data-chat-input]").waitFor({ timeout: 20000 });
+    await p.locator("[data-chat-input]").fill("Dạ chào anh chị, tiệm còn tuyển thợ không ạ?"); await p.keyboard.press("Enter"); await p.waitForTimeout(1200);
   });
   await step("THO", "Hồ sơ của tôi", p, async () => { await p.goto(BASE_URL + "/profile"); await settle(p); }, { full: true });
   await step("THO", "Bật báo việc gần tôi", p, async () => { await p.goto(BASE_URL + "/?tab=jobs"); await settle(p); const b = p.getByRole("button", { name: /Báo tôi khi có việc/ }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(1000); return "có nút báo việc"; } return "KHÔNG thấy nút báo việc"; });
@@ -121,7 +121,7 @@ const stamp = Date.now();
   await step("CHU", "Xem hồ sơ 1 thợ", p, async () => { await p.locator('button:has(img), a[href^="/profile/"]').first().click({ timeout: 10000 }); await p.waitForTimeout(2000); }, { full: true });
   await step("CHU", "Nhắn thợ", p, async () => {
     const b = p.getByRole("button", { name: /Nhắn tin/ }).or(p.getByRole("link", { name: /Nhắn tin/ })).first();
-    await b.click({ timeout: 8000 }); await p.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+    await b.click({ timeout: 8000 }); await p.locator("[data-chat-input]").waitFor({ timeout: 20000 });
   });
   await step("CHU", "Đăng tin tuyển", p, async () => { await p.goto(BASE_URL + "/jobs/create"); await settle(p); }, { full: true });
   await step("CHU", "Hồ sơ tiệm", p, async () => { await p.goto(BASE_URL + "/profile"); await settle(p); }, { full: true });

@@ -126,7 +126,7 @@ try {
   await step("A9 Nhắn tin cho tiệm", p, async () => {
     const b = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
     await b.click({ timeout: 10000 });
-    await p.getByPlaceholder(/Viết tin nhắn/).fill("Dạ em chào anh chị, tiệm còn cần thợ không ạ?");
+    await p.locator("[data-chat-input]").fill("Dạ em chào anh chị, tiệm còn cần thợ không ạ?");
     await p.keyboard.press("Enter"); await p.waitForTimeout(1500);
   });
   await step("A10 Hồ sơ → Xác minh SĐT qua SMS", p, async () => {

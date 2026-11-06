@@ -15,7 +15,7 @@ async function login(email, device) {
 const a = await login(SEED_OWNER, devices["Pixel 7"]); const b = await login(SEED_TECH, devices["iPhone 13"]);
 await a.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: b.me.id, content: "warmup" }, headers: a.h });
 await a.page.goto(BASE_URL + `/messages?to=${b.me.id}`); await b.page.goto(BASE_URL + `/messages?to=${a.me.id}`);
-const box = a.page.getByPlaceholder(/Viết tin nhắn/).first(); await box.waitFor(); await b.page.getByPlaceholder(/Viết tin nhắn/).first().waitFor();
+const box = a.page.locator("[data-chat-input]").first(); await box.waitFor(); await b.page.locator("[data-chat-input]").first().waitFor();
 await a.page.waitForTimeout(2500);
 const recv = [];
 for (let i = 0; i < N; i++) {

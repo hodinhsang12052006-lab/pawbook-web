@@ -312,7 +312,7 @@ export default function CreateJobPage() {
               )}
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setStep(3)} aria-label={tr("Quay lại", "Back")} className={back}><ArrowLeft className="h-4 w-4" /></button>
-                <button type="button" disabled={submitting || uploading} onClick={handleSubmit} className={next}>
+                <button type="button" data-job-submit="" disabled={submitting || uploading} onClick={handleSubmit} className={next}>
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> {tr("Đăng tin tuyển", "Post job")}</>}
                 </button>
               </div>

@@ -62,10 +62,10 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   await shot(p, "A03_reg_step2", true);
   await p.getByRole("button", { name: /Bột|Acrylic/ }).first().click();
   await p.getByRole("button", { name: /Tiếp tục/ }).last().click();
-  await p.getByText("Ảnh mẫu móng của bạn").waitFor({ timeout: 10000 });
+  await p.getByText(/Ảnh tay nghề của bạn|Ảnh mẫu móng của bạn/).waitFor({ timeout: 10000 });
   await shot(p, "A04_reg_step3", true);
   // Người dùng thật hay BỎ QUA ảnh lúc đăng ký → thử hoàn tất không ảnh
-  const finish = p.getByRole("button", { name: /Hoàn Tất/ });
+  const finish = p.getByRole("button", { name: /Hoàn tất/i });
   const canSkip = await finish.isEnabled();
   note("THỢ", "Bước 3: hoàn tất được khi chưa có ảnh?", { canSkip });
   if (!canSkip) {
@@ -101,7 +101,7 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   if (await msgBtn.count()) {
     ms = await timed(p, async () => {
       await msgBtn.click();
-      await p.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+      await p.locator("[data-chat-input]").waitFor({ timeout: 20000 });
     });
     note("THỢ", "Nhắn tiệm từ tin → khung chat sẵn sàng", { ms });
     await shot(p, "A08_chat_first");

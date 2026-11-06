@@ -176,7 +176,7 @@ export default function BottomNav() {
               <button
                 type="button"
                 onClick={createAction}
-                aria-label={isClient ? tr("Tìm tiệm", "Find a salon") : isOwner ? tr("Đăng tin tuyển", "Post a job") : tr("Đăng bài", "New post")}
+                aria-label={isClient ? tr("Tìm tiệm", "Find a salon") : isOwner ? tr("Đăng tin tuyển thợ", "Post a job") : tr("Đăng bài mới", "New post")}
                 className="-mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 via-fuchsia-600 to-purple-600 text-white shadow-[0_10px_24px_-6px_rgba(219,39,119,0.75)] ring-4 ring-slate-950 transition-transform duration-150 active:scale-90"
               >
                 {isClient ? <Store className="h-6 w-6" strokeWidth={2.25} /> : <Plus className="h-6 w-6" strokeWidth={2.75} />}

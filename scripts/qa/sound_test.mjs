@@ -77,7 +77,7 @@ try {
 
   // 5. Trong khung chat đang mở: tin đến → 'messageInChat', gửi → 'sent'
   await p.goto(`${BASE_URL}/messages?to=${owner.userId}`);
-  const box = p.getByPlaceholder("Viết tin nhắn...").filter({ visible: true }).first();
+  const box = p.locator("[data-chat-input]").filter({ visible: true }).first();
   await box.waitFor({ timeout: 15000 });
   await p.waitForTimeout(1500);
   await clear(p);

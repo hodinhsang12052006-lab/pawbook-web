@@ -123,7 +123,7 @@ for (const [path, type] of [
 {
   const r = await get("/khong-co-trang-nay", { al: "en-US" });
   const r2 = await fetch(BASE_URL + "/khong-co-trang-nay", { headers: { "accept-language": "en-US" } });
-  check(r2.status === 404, `/khong-co-trang-nay → ${r2.status} (global 404)`, r.title);
+  check(r2.status === 404, `/khong-co-trang-nay → ${r2.status} (in-app 404 via app/[lang]/[...missing])`, r.title);
 }
 
 console.log("\nSEO tags:");

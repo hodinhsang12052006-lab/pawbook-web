@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { realOnly } from "@/lib/demo";
+import { memberOnly, realOnly } from "@/lib/demo";
 import { getViews } from "@/lib/postStats";
 import { stateName } from "@/lib/stateNames";
 import type { Market } from "@prisma/client";
@@ -63,7 +63,7 @@ export async function getTrends(market: Market): Promise<TrendsData> {
   const now = Date.now();
   const [posts, jobsWeek, allJobs, techs, techLikes, reviewAgg] = await Promise.all([
     prisma.post.findMany({
-      where: { anonymous: false, status: "published", createdAt: { gte: new Date(now - POST_WINDOW) }, OR: [{ market }, { market: null }], author: realOnly() },
+      where: { anonymous: false, status: "published", createdAt: { gte: new Date(now - POST_WINDOW) }, OR: [{ market }, { market: null }], author: memberOnly() }, // bài tài khoản chính thức không tính là hoạt động cộng đồng
       select: {
         id: true, content: true, mediaUrls: true, city: true,
         author: { select: { id: true, name: true, avatarUrl: true } },

@@ -17,7 +17,7 @@ export function sureFit(m: NailModel, strict = false): boolean {
   if (!goodFit(m) || !m.skin) return false;
   const ch = Math.hypot(m.skin[1], m.skin[2]), hue = (Math.atan2(m.skin[2], m.skin[1]) * 180) / Math.PI;
   const natL = m.fit.s1 - m.fit.s0, ratio = natL / Math.max(1, 2 * m.fit.hw);
-  return ch >= 9 && hue > 12 && hue < 72 && m.contrast >= 14 && m.quality.inside >= (strict ? 0.85 : 0.8) && m.quality.ring <= (strict ? 0.18 : 0.3) && ratio > 0.7 && ratio < 2.8;
+  return ch >= 9 && hue > 12 && hue < 72 && m.contrast >= 14 && m.quality.inside >= (strict ? 0.85 : 0.8) && m.quality.ring <= (strict ? (m.contrast >= 30 && m.quality.inside >= 0.9 ? 0.22 : 0.18) : 0.3) && ratio > 0.7 && ratio < 2.8;
 }
 const fitScore = (m: NailModel) => (m.byColor ? 1 : 0) + m.quality.inside - m.quality.ring;
 

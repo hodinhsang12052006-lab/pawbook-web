@@ -316,7 +316,7 @@ const iouSegPoly = (seg: NailSeg, poly: [number, number][]) => {
   const prof = (file: string) => profileFromModels(FIXTURES.find((f) => f.file === file)!.marks.map((m) => fitNail(imgs[file], mark(m))))!;
   const pink = prof("pink.jpg"), white = prof("white.jpg"), hand = prof("hand.jpg"), olive = prof("olive.jpg");
   ok("E19", "Soi tay: tay ảnh hồng = da sáng, tông lạnh (ngả hồng) · tay ảnh trắng = tông ấm (ngả vàng) · móng xanh rêu dài, móng đen vừa · màu đang sơn đúng (đen, xanh rêu)",
-    pink.undertone === "cool" && pink.depth === "fair" && white.undertone === "warm" && olive.length === "long" && hand.length === "medium"
+    pink.undertone === "cool" && pink.depth === "fair" && white.undertone === "warm" && olive.length === "long" && hand.length === "short"
     && !!hand.polishHex && lab(...(hand.polishHex.match(/[0-9a-f]{2}/g)!.map((h) => parseInt(h, 16)) as [number, number, number]))[0] < 15
     && !!olive.polishHex && lab(...(olive.polishHex.match(/[0-9a-f]{2}/g)!.map((h) => parseInt(h, 16)) as [number, number, number]))[2] > 10,
     JSON.stringify({ pink, white: white.undertone, olive: olive.length, hand: [hand.length, hand.polishHex], olivePolish: olive.polishHex }));

@@ -9,11 +9,14 @@ import NailStudio from "@/components/studio/NailStudio";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 
 export default function TryOnPage() {
   useTr();
   const { user } = useSessionUser();
   const isClient = !user || user.role === "CLIENT";
+  // Thị trường theo người xem (giá gợi ý, chính tả center / centre).
+  const { market } = useViewerMarket();
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
       <Navbar />
@@ -27,7 +30,7 @@ export default function TryOnPage() {
               : tr("Chụp tay khách — PawNail tự nhận diện móng, phân tích tông da và dáng móng, rồi phủ 10 mẫu đang thịnh hành hợp tay khách, kèm giá gợi ý. Lưu ảnh hoặc gửi cho khách trong tin nhắn (nút ✨).", "Snap the client's hand — we find the nails, read skin tone and nail shape, and paint 10 trending looks that suit the client, with suggested prices. Save, or send from Messages (✨ button).")}
           </p>
         </header>
-        <NailStudio market={user?.market === "AU" ? "AU" : "US"} />
+        <NailStudio market={market} />
         {isClient && (
           <Link href="/salons" className="flex items-center gap-3 rounded-3xl bg-white/[0.04] p-4 ring-1 ring-white/10">
             <Store className="h-6 w-6 flex-shrink-0 text-amber-300" />

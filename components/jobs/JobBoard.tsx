@@ -216,7 +216,7 @@ function JobCard({
   return (
     <div
       ref={ref}
-      className={`glass-card relative space-y-3 rounded-2xl p-4 transition-colors hover:border-pink-500/40 sm:p-5 ${heat?.hot ? "!border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.15),0_12px_40px_-16px_rgba(249,115,22,0.45)]" : ""}`}
+      className={`glass-card relative space-y-3 rounded-2xl p-4 transition-colors hover:border-pink-500/40 sm:p-5 ${heat?.hot ? "!border-orange-500/30" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
@@ -238,15 +238,15 @@ function JobCard({
         <div className="flex flex-shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-1">
             {heat?.hot && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2 py-1 text-[11px] font-black text-white shadow-lg shadow-orange-500/30" title={tr("Nhiều người xem / liên hệ tin này", "Many people are viewing / contacting this job")}>
-                <Zap className="h-3 w-3 fill-white" />{tr(" Đang hot", " Hot")}
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange-400/15 px-2 py-1 text-[11px] font-bold text-orange-300 ring-1 ring-inset ring-orange-400/25" title={tr("Nhiều người xem / liên hệ tin này", "Many people are viewing / contacting this job")}>
+                <Zap className="h-3 w-3 fill-current" />{tr(" Đang hot", " Hot")}
               </span>
             )}
             {isNew && !heat?.hot && (
               <span className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300">{tr("✨ Mới", "✨ New")}</span>
             )}
             {job.isUrgent && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400">
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-400/10 px-2.5 py-1 text-[11px] font-bold text-red-300 ring-1 ring-inset ring-red-400/25">
                 <Flame className="h-3 w-3" />{tr(" Gấp", " Urgent")}
               </span>
             )}
@@ -276,9 +276,9 @@ function JobCard({
       {/* Con số lương — thứ đầu tiên thợ nhìn vào, phải to/đậm/tương phản nhất card. */}
       <div className="flex flex-wrap items-center gap-2">
         {/\d/.test(job.salaryAmount || "") ? (
-          <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1.5 pl-2.5 pr-3 shadow-lg shadow-emerald-500/20">
-            <DollarSign className="h-5 w-5 text-emerald-950" />
-            <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl">{dt(job.salaryAmount)}</span>
+          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-400/10 py-1 pl-2 pr-2.5 ring-1 ring-inset ring-emerald-400/20">
+            <DollarSign className="h-5 w-5 text-emerald-300" />
+            <span className="text-xl font-black leading-none tracking-tight tabular-nums text-emerald-200 sm:text-2xl">{dt(job.salaryAmount)}</span>
           </span>
         ) : (
           // Chưa ghi con số → nhãn gọn, không khối xanh to có dấu "$" trống
@@ -308,7 +308,7 @@ function JobCard({
       {job.skills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {job.skills.map((skill) => (
-            <span key={skill} className="rounded-full border border-pink-500/25 bg-pink-500/10 px-2.5 py-1 text-[11px] font-semibold text-pink-300">{valueLabel(skill)}</span>
+            <span key={skill} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold text-slate-300 ring-1 ring-inset ring-white/[0.08]">{valueLabel(skill)}</span>
           ))}
         </div>
       )}
@@ -316,7 +316,7 @@ function JobCard({
       {job.benefits.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {job.benefits.filter((b) => !(b === "Bao lương" && /bao l/i.test(job.salaryType || ""))).map((benefit) => (
-            <span key={benefit} className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">
+            <span key={benefit} className="inline-flex items-center gap-1 rounded-full bg-amber-400/[0.08] px-2.5 py-1 text-[11px] font-semibold text-amber-200 ring-1 ring-inset ring-amber-400/20">
               {benefitIcon(benefit)} {valueLabel(benefit)}
             </span>
           ))}

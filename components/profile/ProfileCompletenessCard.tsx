@@ -28,11 +28,11 @@ export default function ProfileCompletenessCard({
       : tr("Hồ sơ đầy đủ được chủ tiệm chú ý và nhắn tin nhiều hơn.", "Complete profiles get noticed and messaged more by salons.");
 
   return (
-    <div className="rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-500/10 via-slate-900/40 to-violet-500/10 p-4">
+    <div className="glass-card rounded-2xl p-4">
       <div className="flex items-center gap-3">
         <div className="relative h-12 w-12 flex-shrink-0" role="img" aria-label={tr(`Hồ sơ hoàn thiện ${percent}%`, `Profile ${percent}% complete`)}>
           <svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90">
-            <circle cx="24" cy="24" r={radius} fill="none" stroke="rgba(148,163,184,0.2)" strokeWidth="4" />
+            <circle cx="24" cy="24" r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
             <circle
               cx="24"
               cy="24"
@@ -47,8 +47,8 @@ export default function ProfileCompletenessCard({
             />
             <defs>
               <linearGradient id="completeGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#ec4899" />
-                <stop offset="100%" stopColor="#a855f7" />
+                <stop offset="0%" stopColor="#db2777" />
+                <stop offset="100%" stopColor="#db2777" />
               </linearGradient>
             </defs>
           </svg>

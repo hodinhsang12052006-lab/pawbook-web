@@ -98,7 +98,7 @@ export default function BookingInbox() {
 
       <nav aria-label={tr("Trạng thái lịch hẹn", "Booking status")} className="grid grid-cols-4 gap-1 rounded-2xl bg-white/[0.03] p-1 ring-1 ring-white/10">
         {TABS.map((t) => (
-          <button key={t.id} type="button" onClick={() => setTab(t.id)} aria-current={tab === t.id ? "page" : undefined} className={`flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-bold transition-colors ${tab === t.id ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"}`}>
+          <button key={t.id} type="button" onClick={() => setTab(t.id)} aria-current={tab === t.id ? "page" : undefined} className={`flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-bold transition-colors ${tab === t.id ? "bg-pn-thumb text-white" : "text-slate-300 hover:text-white"}`}>
             {tr(t.label[0], t.label[1])}
             {(counts[t.id] ?? 0) > 0 && <span className={`rounded-full px-1.5 text-[10px] ${tab === t.id ? "bg-pink-500 text-white" : "bg-white/10"}`}>{counts[t.id]}</span>}
           </button>

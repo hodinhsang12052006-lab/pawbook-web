@@ -28,14 +28,15 @@ export function initialsOf(name?: string | null): string {
 
 // Bảng màu trầm, sang — đủ tương phản với chữ trắng, hợp nền tối của app.
 const GRADIENTS: [string, string][] = [
-  ["#db2777", "#7c3aed"], // hồng → tím (màu thương hiệu)
-  ["#2563eb", "#7c3aed"], // xanh dương → tím
-  ["#0891b2", "#2563eb"], // xanh ngọc → xanh dương
-  ["#059669", "#0d9488"], // lục bảo
-  ["#d97706", "#db2777"], // hổ phách → hồng
-  ["#7c3aed", "#c026d3"], // tím → tím hồng
-  ["#e11d48", "#f97316"], // đỏ hồng → cam
-  ["#4f46e5", "#0ea5e9"], // chàm → xanh trời
+  // 11/2026: cặp gần-đặc, trầm (chữ trắng ≥ 5.4:1) — bỏ gradient 2 màu rực làm "loè" header/danh sách/chat.
+  ["#8a3a5c", "#7a3352"], // hồng trầm
+  ["#3d5a85", "#354f75"], // xanh thép
+  ["#24706e", "#1f6260"], // xanh két
+  ["#33745a", "#2c654e"], // lục
+  ["#86642c", "#765826"], // vàng đất
+  ["#7a4a38", "#6b4131"], // nâu cacao
+  ["#874036", "#77382f"], // đất nung
+  ["#4b4e57", "#41444c"], // than chì
 ];
 
 /**

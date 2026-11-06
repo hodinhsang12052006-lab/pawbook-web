@@ -80,8 +80,8 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
     <section
       ref={ref}
       aria-label={tr(`Chủ đề tuần: ${t.title}`, `Theme of the week: ${dt(t.title)}`)}
-      className="relative overflow-hidden rounded-2xl border border-white/10 p-4 shadow-xl shadow-black/30 sm:p-5"
-      style={{ background: `linear-gradient(135deg, ${t.colors[0]}38, ${t.colors[1]}2e), #0b1020` }}
+      className="relative overflow-hidden rounded-2xl border border-white/[0.07] p-4 sm:p-5"
+      style={{ background: `linear-gradient(135deg, ${t.colors[0]}24, ${t.colors[1]}1a), #141416` }}
     >
       <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 text-[120px] leading-none opacity-[0.12]">{t.emoji}</div>
       <button
@@ -123,7 +123,7 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
                 {c.entries.map((e) => (
-                  <span key={e.id} className="rounded-full ring-2 ring-[#0b1020]">
+                  <span key={e.id} className="rounded-full ring-2 ring-[#141416]">
                     <Avatar src={e.author.avatarUrl} name={e.author.name} seed={e.author.id} className="h-6 w-6" />
                   </span>
                 ))}

@@ -318,10 +318,9 @@ export default function ProfilePage() {
 
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 pb-40 pt-5 md:px-6 md:pb-16 md:pt-6">
         {/* ===== HEADER: bìa + ảnh đại diện (bấm để đổi) ===== */}
-        <section className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60 shadow-2xl shadow-black/40">
-          <div className="relative h-24 sm:h-32" style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}>
-            <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:18px_18px]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-950/80" />
+        <section className="overflow-hidden rounded-3xl border border-white/[0.07] bg-slate-900">
+          <div className="relative h-24 sm:h-32" style={{ background: `linear-gradient(180deg, ${g1}40 0%, ${g2}14 100%), #161618` }}>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900" />
           </div>
           <div className="px-4 pb-5 sm:px-6">
             <div className="-mt-10 flex items-end justify-between gap-3 sm:-mt-12">
@@ -332,11 +331,11 @@ export default function ProfilePage() {
                 aria-label={tr("Đổi ảnh đại diện", "Change profile photo")}
                 className="group relative flex-shrink-0 rounded-full"
               >
-                <Avatar src={profile?.avatarUrl} name={name} seed={profile?.id} loading="eager" className="h-20 w-20 shadow-xl shadow-black/50 ring-4 ring-slate-950 sm:h-24 sm:w-24" />
+                <Avatar src={profile?.avatarUrl} name={name} seed={profile?.id} loading="eager" className="h-20 w-20 shadow-xl shadow-black/50 ring-4 ring-slate-900 sm:h-24 sm:w-24" />
                 <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                   <Camera className="h-5 w-5 text-white" />
                 </span>
-                <span className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-950 bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-lg">
+                <span className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-900 bg-pink-600 text-white">
                   {avatarUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 </span>
               </button>

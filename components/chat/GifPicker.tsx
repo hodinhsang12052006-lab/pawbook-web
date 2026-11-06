@@ -22,7 +22,7 @@ const PERMANENT_GIFS = [
 // reconcile on every unrelated parent render.
 function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void, onClose: () => void }) {
   return (
-    <div className="p-2 h-64 overflow-y-auto grid grid-cols-2 gap-2 bg-[#0b1426] rounded-lg border border-slate-700">
+    <div className="p-2 h-64 overflow-y-auto grid grid-cols-2 gap-2 bg-pn-surface rounded-lg border border-white/[0.08]">
       {PERMANENT_GIFS.map((url, idx) => (
         <div key={idx} className="relative w-full h-24 cursor-pointer hover:opacity-80 active:scale-95 transition-transform rounded overflow-hidden" onClick={() => { onSelect(url); onClose(); }}>
           <img src={url} alt="gif" loading="lazy" decoding="async" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />

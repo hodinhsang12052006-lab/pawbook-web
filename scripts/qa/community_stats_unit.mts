@@ -33,12 +33,12 @@ const act = await import("../../app/api/activity/route");
 const ev1 = (await (await act.GET()).json()) as { kind: string; title: string; text: string; href?: string; actor?: { id: string } }[];
 ok("C2", "Toast hoạt động không có bài của tài khoản chính thức; bài thợ thật vẫn có", !ev1.some((e) => e.kind === "post" && e.actor?.id === admin.id) && ev1.some((e) => e.kind === "post" && e.actor?.id === tech.id), JSON.stringify(ev1.filter((e) => e.kind === "post")));
 
-// Tin tổng hợp (source=ingest) vừa nhận: toast ghi "Tin tổng hợp … đang tuyển", không "vừa đăng"
+// Tin từ nhóm cộng đồng (source=ingest) vừa nhận: toast ghi "Từ nhóm cộng đồng PawNail … đang tuyển", không "vừa đăng"
 const owner = await prisma.user.create({ data: { email: `cs.owner.${t}@qa.test`, name: "Owner", password: "x", role: "OWNER", market: "US" } });
 const ing = await prisma.job.create({ data: { ownerId: owner.id, title: "Cần thợ Bột", salonName: `Agg Nails ${t}`, description: "x", market: "US", state: "TX", city: "Houston", salaryType: "Bao lương tuần", salaryAmount: "$1,200/tuần", skills: "Bột/Acrylic", benefits: "", phone: "(713) 555-0142", source: "ingest", sourcePostedAt: new Date(), expiresAt: new Date(Date.now() + 5 * 86400e3) } as any });
 const ev2 = (await (await act.GET()).json()) as { kind: string; title: string; text: string; href?: string; en?: { title: string; text: string } }[];
 const agg = ev2.find((e) => e.href === `/jobs/${ing.id}`);
-ok("C3", "Toast: tin tổng hợp ghi 'Tin tổng hợp / Aggregated job', không nói tiệm 'vừa đăng / just posted'", !!agg && agg.title === "Tin tổng hợp" && !/vừa đăng/.test(agg.text) && agg.en?.title === "Aggregated job" && !/just posted/.test(agg.en?.text || ""), JSON.stringify(agg));
+ok("C3", "Toast: tin từ nhóm ghi 'Từ nhóm cộng đồng PawNail / Shared from PawNail community groups', không nói tiệm 'vừa đăng / just posted'", !!agg && agg.title === "Từ nhóm cộng đồng PawNail" && !/vừa đăng/.test(agg.text) && agg.en?.title === "Shared from PawNail community groups" && !/just posted/.test(agg.en?.text || ""), JSON.stringify(agg));
 
 await prisma.job.delete({ where: { id: ing.id } });
 await prisma.postLike.deleteMany({ where: { postId: { in: [...adminPosts, ...techPosts].map((p) => p.id) } } });

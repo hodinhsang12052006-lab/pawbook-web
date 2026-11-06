@@ -1,11 +1,13 @@
-// Đăng hộ tiệm: tool → /api/ingest/jobs → tin trên PawNail (nhãn, gọi trực tiếp, hết hạn, nhận/gỡ tin).
+// Tin từ nhóm cộng đồng PawNail: bot → /api/ingest/jobs → tin trên PawNail (nhãn nguồn, SĐT + Gọi ngay, link bài gốc,
+// hết hạn, nhận / gỡ tin) + admin "Đăng hộ tiệm". Biến INGEST_AGGREGATED KHÔNG đặt (mặc định nhận).
 // Bài & SĐT HƯ CẤU (đầu số 555-01xx). CHỈ chạy với server local.   node scripts/qa/ingest_test.mjs
+//   QA_DB_URL=file:<bản sao .db> khi server chạy trên bản sao (mặc định prisma/dev.db).
 import { chromium, devices } from "playwright";
 import { createClient } from "@libsql/client";
 import { BASE_URL, Client, Results, registerUser } from "./lib.mjs";
 
 const R = new Results("Đăng hộ tiệm");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL || "file:prisma/dev.db" });
 const KEY = "test-ingest-key-0123456789abcdef";
 const ingest = (posts, key = KEY) => fetch(BASE_URL + "/api/ingest/jobs", { method: "POST", headers: { "Content-Type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify({ posts }) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const tag = String(Date.now()).slice(-4);
@@ -13,6 +15,8 @@ const n4 = (k) => String(100 + ((Number(tag) + k) % 99)).padStart(4, "0").slice(
 const PH1 = `(832) 555-${n4(1)}`, PH2 = `(469) 555-${n4(2)}`;
 const POST1 = `CẦN GẤP THỢ BỘT + GEL-X ${tag}\nTiệm Sunny Nails & Spa cần 2 thợ, bao lương $1,300 - $1,600/tuần, bao ăn ở.\n8800 Bellaire Blvd Ste 200, Houston, TX 77036\nGọi ${PH1}`;
 const errors = [];
+// Ngày trong SQLite: Prisma thường ghi số ms, adapter libSQL (như production) ghi chuỗi ISO → đọc được cả hai
+const dbMs = (v) => (typeof v === "number" || typeof v === "bigint" || /^\d+$/.test(String(v)) ? Number(v) : Date.parse(String(v)));
 let browser;
 
 try {
@@ -37,7 +41,7 @@ try {
 
   const list = await fetch(`${BASE_URL}/api/jobs?market=US&state=TX`).then((r) => r.json());
   const inList = list.find((j) => j.id === jobId);
-  R.check("I5", "Hiện trong danh sách việc; KHÔNG lộ link bài gốc / khoá chống trùng", !!inList && inList.source === "ingest" && !("sourceUrl" in inList) && !("sourceKey" in inList));
+  R.check("I5", "Hiện trong danh sách việc VỚI SĐT của tiệm + link 'Xem bài gốc' (https); KHÔNG lộ link thô / khoá chống trùng", !!inList && inList.source === "ingest" && inList.phone === PH1 && /^https:\/\/facebook\.com\/groups\/x\/posts\/2/.test(inList.sourceLink?.href || "") && !("sourceUrl" in inList) && !("sourceKey" in inList), JSON.stringify({ phone: inList?.phone, link: inList?.sourceLink }));
 
   // Giao diện
   browser = await chromium.launch();
@@ -45,11 +49,11 @@ try {
   const p = await ctx.newPage();
   p.on("pageerror", (e) => errors.push(e.message.slice(0, 140)));
   await p.goto(`${BASE_URL}/jobs/${jobId}`);
-  await p.getByText("PawNail đăng hộ theo yêu cầu của tiệm").waitFor({ timeout: 15000 });
+  await p.getByText(/Chia sẻ từ nhóm cộng đồng PawNail/).waitFor({ timeout: 15000 });
   const html = await (await fetch(`${BASE_URL}/jobs/${jobId}`)).text();
-  R.check("I6", "Trang tin: nhãn đăng hộ + địa chỉ có link bản đồ + nút Gọi; KHÔNG có 'Nhắn tin qua App'; có 'Tôi là chủ tiệm này'", (await p.getByRole("link", { name: /Bản đồ/ }).count()) > 0 && (await p.getByText(/Gọi ngay/).count()) > 0 && (await p.getByText("Nhắn tin qua App").count()) === 0 && (await p.getByRole("button", { name: "Tôi là chủ tiệm này" }).count()) > 0);
+  R.check("I6", "Trang tin: nhãn 'Chia sẻ từ nhóm cộng đồng PawNail' + link 'Xem bài gốc' + địa chỉ có link bản đồ + nút Gọi ngay (tel:); KHÔNG có 'Nhắn tin qua App'; có 'Tôi là chủ tiệm này'", (await p.getByRole("link", { name: /Xem bài gốc/ }).count()) > 0 && (await p.getByRole("link", { name: /Bản đồ/ }).count()) > 0 && (await p.locator('a[href^="tel:"]', { hasText: /Gọi ngay/ }).count()) > 0 && (await p.getByText("Nhắn tin qua App").count()) === 0 && (await p.getByRole("button", { name: "Tôi là chủ tiệm này" }).count()) > 0);
   await p.screenshot({ path: `${process.env.TEMP || "."}/ingest_detail.png`, fullPage: true }).catch(() => {});
-  R.check("I7", "Không khai tin đăng hộ cho Google (noindex, không JobPosting)", /noindex/.test(html) && !/"@type":"JobPosting"/.test(html));
+  R.check("I7", "Không khai tin từ nhóm cho Google (noindex, không JobPosting)", /noindex/.test(html) && !/"@type":"JobPosting"/.test(html));
 
   // Tiệm xin gỡ tin (khách vãng lai) → admin duyệt → mất tin + không đăng lại số đó
   await p.getByRole("button", { name: "Gỡ tin này" }).click();
@@ -67,9 +71,13 @@ try {
   const pend = await a.client.req("/api/admin/ingest");
   R.check("I9", "Admin thấy yêu cầu đang chờ", pend.data.requests?.some((x) => x.id === reqRow.id));
   const res = await a.client.req("/api/admin/ingest", { method: "POST", json: { action: "resolve", requestId: reqRow.id, decision: "remove" } });
-  const gone = !(await db.execute({ sql: `SELECT id FROM "Job" WHERE id = ?`, args: [jobId] })).rows[0];
+  // Gỡ thật: giữ dòng (lịch sử yêu cầu) nhưng xoá SĐT / mô tả / tên tiệm, source = removed → trang tin 410, không còn trên bảng
+  const gr = (await db.execute({ sql: `SELECT source, phone, description, salonName FROM "Job" WHERE id = ?`, args: [jobId] })).rows[0];
+  const gone = gr?.source === "removed" && gr.phone === "" && gr.description === "" && gr.salonName === "";
+  const gone410 = (await fetch(`${BASE_URL}/api/jobs/${jobId}`)).status === 410;
+  const listAfter = await fetch(`${BASE_URL}/api/jobs?market=US&state=TX&x=${Date.now()}`).then((r) => r.json());
   const again = await ingest([{ text: POST1 }]);
-  R.check("I10", "Admin duyệt gỡ → tin biến mất; tool đẩy lại số đó → bị chặn", res.status === 200 && gone && again.data.results?.[0]?.reason?.includes("gỡ"), JSON.stringify(again.data.results));
+  R.check("I10", "Admin duyệt gỡ → dữ liệu tiệm bị xoá, trang tin 410, hết trên bảng việc; tool đẩy lại số đó → bị chặn", res.status === 200 && gone && gone410 && !listAfter.some((j) => j.id === jobId) && again.data.results?.[0]?.reason?.includes("gỡ"), JSON.stringify({ gr, gone410, again: again.data.results }));
 
   // Nhận tin: chủ tiệm (đã đăng nhập) → admin chuyển tin
   const PH3 = `(713) 555-${n4(3)}`;
@@ -81,7 +89,7 @@ try {
   const cr = (await db.execute({ sql: `SELECT id FROM "JobRequest" WHERE jobId = ? AND kind = 'claim'`, args: [job2] })).rows[0];
   await a.client.req("/api/admin/ingest", { method: "POST", json: { action: "resolve", requestId: cr.id, decision: "claim" } });
   const j2 = (await db.execute({ sql: `SELECT ownerId, source, expiresAt FROM "Job" WHERE id = ?`, args: [job2] })).rows[0];
-  R.check("I11", "Chủ tiệm nhận tin → tin chuyển sang tài khoản của họ, thành tin thường (nhắn tin được, hết nhãn)", j2.ownerId === o.client.userId && j2.source === null && j2.expiresAt === null, JSON.stringify(j2));
+  R.check("I11", "Chủ tiệm nhận tin → tin chuyển sang tài khoản của họ, thành tin tự đăng (hết nhãn, hạn 30 ngày gia hạn được)", j2.ownerId === o.client.userId && j2.source === null && dbMs(j2.expiresAt) > Date.now() + 20 * 86400e3, JSON.stringify(j2));
 
   // Hết hạn → tự ẩn khỏi danh sách
   const PH4 = `(281) 555-${n4(4)}`;
@@ -104,10 +112,16 @@ try {
   const prev = ap1.getByTestId("ingest-preview");
   await prev.waitFor({ timeout: 10000 });
   const ptxt = await prev.innerText();
-  R.check("I13", "Admin dán bài → xem trước tách đúng (Úc: tên tiệm, NSW, giờ AUD) trước khi đăng", new RegExp(`Rose ${tag} Nail Lounge`).test(ptxt) && /NSW/.test(ptxt) && /Theo giờ AUD/.test(ptxt), ptxt.slice(0, 200));
+  // Tên tiệm / bang đã tách nằm sẵn trong ô "Sửa tay" (admin sửa được trước khi đăng)
+  const salonVal = await ap1.getByTestId("ov-salonName").inputValue();
+  const stateVal = await ap1.getByTestId("ov-state").inputValue();
+  R.check("I13", "Admin dán bài → xem trước tách đúng (Úc: tên tiệm, NSW, giờ AUD) trước khi đăng", new RegExp(`Rose ${tag} Nail Lounge`).test(salonVal) && stateVal === "NSW" && /NSW/.test(ptxt) && /Theo giờ AUD/.test(ptxt), JSON.stringify({ salonVal, stateVal, ptxt: ptxt.slice(0, 200) }));
+  // Đăng hộ phải ghi ai của tiệm đã nhờ (bắt buộc) → tin mang nhãn "Đăng hộ tiệm" (source assisted), không phải tin từ nhóm
+  await ap1.getByTestId("req-name").fill("Chủ tiệm Rose");
+  await ap1.getByTestId("req-contact").fill("rose@example.com");
   await ap1.getByRole("button", { name: "Đăng hộ" }).click();
   await ap1.getByText("Đã đăng hộ tiệm").waitFor({ timeout: 10000 }).catch(() => {});
-  R.check("I14", "Bấm Đăng hộ → tin lên sàn", Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "Job" WHERE salonName = ? AND source = 'ingest'`, args: [`Rose ${tag} Nail Lounge`] })).rows[0].n) === 1);
+  R.check("I14", "Bấm Đăng hộ (có ghi người yêu cầu) → tin lên sàn với nhãn đăng hộ (source assisted)", Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "Job" WHERE salonName = ? AND source = 'assisted'`, args: [`Rose ${tag} Nail Lounge`] })).rows[0].n) === 1);
   // Tài khoản hệ thống "Tin tổng hợp" bị xoá giữa chừng → gửi tin tiếp vẫn chạy (không lỗi khoá ngoại)
   await db.execute(`DELETE FROM "User" WHERE email = 'tonghop@feed.pawnail.invalid'`);
   const after = await ingest([{ text: `Cần thợ dip gấp ở Austin TX, gọi (512) 555-${n4(6)}` }]);

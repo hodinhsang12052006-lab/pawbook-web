@@ -211,7 +211,7 @@ const dupItems = ["o1", "o2", "o3"].map((id) => normalizeAdzuna({ ...base, id, t
 const both = await Promise.allSettled([upsertExternalJobs(db, dupItems, T1), upsertExternalJobs(db, dupItems, T1)]);
 ok("O1", "2 lượt cron chạy chồng cùng tin mới → không lỗi P2002 / 500; mỗi tin đúng 1 dòng", both.every((b) => b.status === "fulfilled") && (await db.externalJob.count({ where: { providerJobId: { in: ["o1", "o2", "o3"] } } })) === 3, JSON.stringify(both.map((b) => b.status === "rejected" ? String((b.reason as Error)?.message).slice(0, 120) : "ok")));
 
-// ---- Tin tổng hợp ('ingest') KHÔNG được che tin Adzuna; tin đăng hộ ('assisted') thì có ----
+// ---- Tin của tiệm trên PawNail thắng bản Adzuna trùng: tin từ nhóm cộng đồng ('ingest', có SĐT) và đăng hộ ('assisted') ----
 const ingestOwner = await db.user.create({ data: { email: `ext.ingest.${Date.now()}@qa.test`, name: "QA Feed", password: "x", role: "OWNER", market: "US", state: "TX" } });
 await db.job.create({ data: { title: "Cần thợ", salonName: "Ingest Only Nails", description: "x", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Houston", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(713) 555-0111", source: "ingest", sourceUrl: "https://www.facebook.com/groups/1/posts/2", sourcePostedAt: T1, expiresAt: new Date(Date.now() + 5 * 86400_000) } });
 await db.job.create({ data: { title: "Cần thợ", salonName: "Assisted Glam Nails", description: "x", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Houston", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(713) 555-0112", source: "assisted", sourcePostedAt: T1, expiresAt: new Date(Date.now() + 5 * 86400_000) } });
@@ -220,7 +220,7 @@ const assistMatch = normalizeAdzuna({ ...base, id: "i2", title: "Nail Technician
 await upsertExternalJobs(db, [ingestMatch, assistMatch], T1);
 const { reconcileExternalJobs } = await import("../../lib/jobFeeds/sync");
 await reconcileExternalJobs(db, "adzuna", T1);
-ok("I1", "Adzuna trùng tin TỔNG HỢP → vẫn hiện (bản có giấy phép + ghi nguồn thắng); trùng tin ĐĂNG HỘ theo yêu cầu → ẩn dup_job", (await row("i1"))?.hiddenReason === null && (await row("i2"))?.hiddenReason === "dup_job", JSON.stringify([(await row("i1"))?.hiddenReason, (await row("i2"))?.hiddenReason]));
+ok("I1", "Adzuna trùng tin TỪ NHÓM cộng đồng PawNail (có SĐT + Gọi ngay) → ẩn dup_job; trùng tin ĐĂNG HỘ theo yêu cầu → ẩn dup_job", (await row("i1"))?.hiddenReason === "dup_job" && (await row("i2"))?.hiddenReason === "dup_job", JSON.stringify([(await row("i1"))?.hiddenReason, (await row("i2"))?.hiddenReason]));
 
 // ---- Ngân sách thời gian: fetch chậm không làm cron quá 60 s; đối chiếu + tóm tắt luôn chạy ----
 await db.appSetting.deleteMany({ where: { key: SUMMARY_KEY } });
@@ -257,26 +257,57 @@ ok("K1", "Gỡ tin: SĐT / mô tả / địa chỉ / ZIP / link bài gốc / tê
   !!gone && ing.isRemovedJob(gone) && gone.phone === "" && gone.description === "" && gone.address === null && gone.zip === null && gone.sourceUrl === null && gone.salonName === "" && gone.sourceFbHash === null && !(await db.job.findFirst({ where: { AND: [{ id: toRemove.id }, ing.activeJobWhere()] } })),
   JSON.stringify(gone));
 
-// ---- Tin tổng hợp công khai: không SĐT, đoạn trích không SĐT, có nguồn + link; thiếu link → không hiện ----
-const ingPub = disp.publicJob({ source: "ingest", sourceUrl: "https://m.facebook.com/groups/1/posts/3", sourceKey: "k", sourceFbHash: "h", phone: "(713) 555-0111", salonName: "Ingest Only Nails", city: "Houston", state: "TX", salaryAmount: "$1,200/tuần", description: "Cần thợ bột gấp\nLH: 713-555-0111 hoặc text 7135550112\nemail glow[at]mail.com", market: "US" });
+// ---- Quyết định của chủ (06/11/2026): tin TỪ NHÓM cộng đồng PawNail giữ SĐT + mô tả đầy đủ; có link → "Xem bài gốc";
+//      KHÔNG có link vẫn hiện ----
+const FULL = "Cần thợ bột gấp\nLH: 713-555-0111 hoặc text 7135550112\nemail glow[at]mail.com";
+const ingPub = disp.publicJob({ source: "ingest", sourceUrl: "https://m.facebook.com/groups/1/posts/3/?__cft__[0]=AZWsecret&__tn__=%2CO%2CP-R&mibextid=abc#c", sourceKey: "k", sourceFbHash: "h", phone: "(713) 555-0111", salonName: "Ingest Only Nails", city: "Houston", state: "TX", salaryAmount: "$1,200/tuần", description: FULL, market: "US" });
 const selfPub = disp.publicJob({ source: null, sourceUrl: null, sourceKey: null, sourceFbHash: null, phone: "(718) 555-0100", salonName: "Self Nails", city: "Queens", state: "NY", salaryAmount: "$1,000", description: "Call 718-555-0100", market: "US" });
+const permalink = disp.sourceLinkOf("https://www.facebook.com/permalink.php?story_fbid=123&id=456&__cft__[0]=x&ref=share");
 const noLink = await db.job.create({ data: { title: "Cần thợ", salonName: "No Link Nails", description: "x", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Houston", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(713) 555-0113", source: "ingest", sourcePostedAt: T1, expiresAt: new Date(Date.now() + 5 * 86400_000) } });
-ok("G1", "Tin tổng hợp: phone rỗng, mô tả bỏ mọi SĐT / email, nguồn 'Facebook' + link https bài gốc, không lộ sourceKey; tin tự đăng giữ SĐT; tin tổng hợp không có link → activeJobWhere ẩn",
-  ingPub.phone === "" && !hasContactInfo(ingPub.description || "") && ingPub.description.startsWith("Cần thợ bột gấp") && ingPub.sourceLink?.name === "Facebook" && ingPub.sourceLink.href.startsWith("https://m.facebook.com/") && !("sourceKey" in ingPub) && !("sourceUrl" in ingPub)
-    && selfPub.phone === "(718) 555-0100" && selfPub.sourceLink === null && !(await db.job.findFirst({ where: { AND: [{ id: noLink.id }, ing.activeJobWhere()] } })),
-  JSON.stringify({ ingPub, selfPhone: selfPub.phone }));
+const noLinkPub = disp.publicJob(noLink);
+ok("G1", "Tin từ nhóm: GIỮ SĐT tiệm + mô tả đầy đủ (kể cả SĐT trong bài); nguồn 'Facebook' + link https đã bỏ mã theo dõi (__cft__, __tn__, mibextid, #); không lộ sourceKey / sourceUrl; tin tự đăng giữ nguyên",
+  ingPub.phone === "(713) 555-0111" && ingPub.description === FULL && ingPub.sourceLink?.name === "Facebook" && ingPub.sourceLink.href === "https://m.facebook.com/groups/1/posts/3/" && !("sourceKey" in ingPub) && !("sourceUrl" in ingPub) && !("sourceFbHash" in ingPub)
+    && permalink?.href === "https://www.facebook.com/permalink.php?story_fbid=123&id=456"
+    && selfPub.phone === "(718) 555-0100" && selfPub.description === "Call 718-555-0100" && selfPub.sourceLink === null,
+  JSON.stringify({ ingPub, permalink, selfPhone: selfPub.phone }));
+const badLinks = ["http://www.facebook.com/groups/1/posts/4", "javascript:alert(1)", "https://user:pw@facebook.com/groups/1", "ftp://x.com/a", "not a url", ""].map((u) => disp.sourceLinkOf(u));
+ok("G2", "Tin từ nhóm KHÔNG có link bài gốc → vẫn nằm trong activeJobWhere (vẫn hiện), sourceLink null, SĐT còn; link http / javascript: / có user:pass / rác → không thành link",
+  !!(await db.job.findFirst({ where: { AND: [{ id: noLink.id }, ing.activeJobWhere()] } })) && noLinkPub.sourceLink === null && noLinkPub.phone === "(713) 555-0113" && badLinks.every((x) => x === null),
+  JSON.stringify({ noLinkPub: { link: noLinkPub.sourceLink, phone: noLinkPub.phone }, badLinks }));
 
-// ---- Ngừng nhận tin tổng hợp (mặc định) + tin đăng hộ không bị ghi đè ----
+// ---- Nhận tin từ nhóm: MẶC ĐỊNH NHẬN (biến không đặt); INGEST_AGGREGATED=off = công tắc khẩn cấp; tin đăng hộ không bị ghi đè ----
 delete process.env.INGEST_AGGREGATED;
-const offRes = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp, lương cao. LH 281-555-0144", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/10" }, new Set());
+const unsetOn = ing.aggregatedIngestOn();
+const onRes = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp, lương cao. LH 281-555-0144", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/10" }, new Set());
+const onRow = onRes.jobId ? await db.job.findUnique({ where: { id: onRes.jobId } }) : null;
+const switchVals: Record<string, boolean> = {};
+for (const v of ["off", "OFF", " off ", "on", "", "0", "false", "yes"]) { process.env.INGEST_AGGREGATED = v; switchVals[`[${v}]`] = ing.aggregatedIngestOn(); }
+process.env.INGEST_AGGREGATED = "off";
+const offRes = await ing.ingestOne({ text: "Tiệm cần thợ chân tay nước gấp. LH 281-555-0146", state: "TX", market: "US" }, new Set());
 const assistedRes = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp ở Houston TX, bao lương $1,200/tuần. LH 281-555-0145", salonName: "Requested QA Nails", state: "TX", market: "US" }, new Set(), { assisted: true });
-process.env.INGEST_AGGREGATED = "on";
-const overwrite = await ing.ingestOne({ text: "Cần thợ chân tay nước, tip cao. LH 281-555-0145", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/11" }, new Set());
 delete process.env.INGEST_AGGREGATED;
+const overwrite = await ing.ingestOne({ text: "Cần thợ chân tay nước, tip cao. LH 281-555-0145", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/11" }, new Set());
 const kept = assistedRes.jobId ? await db.job.findUnique({ where: { id: assistedRes.jobId } }) : null;
-ok("A1", "INGEST_AGGREGATED tắt → bài tổng hợp bị bỏ; tin ĐĂNG HỘ vẫn đăng được; bài tổng hợp cùng SĐT KHÔNG ghi đè / đổi nhãn tin đăng hộ",
-  offRes.status === "skipped" && /INGEST_AGGREGATED/.test(offRes.reason || "") && assistedRes.status === "created" && overwrite.status === "skipped" && kept?.source === "assisted" && /bao lương/.test(kept?.description || ""),
+ok("A1", "INGEST_AGGREGATED KHÔNG đặt → bài từ nhóm được NHẬN (created, source ingest, giữ SĐT + nội dung)",
+  unsetOn && onRes.status === "created" && onRow?.source === "ingest" && onRow?.phone === "(281) 555-0144" && /lương cao/.test(onRow?.description || ""),
+  JSON.stringify({ unsetOn, onRes, phone: onRow?.phone }));
+ok("A2", "Chỉ đúng 'off' (không phân biệt hoa thường / khoảng trắng) mới tắt; 'on' / rỗng / '0' / 'false' / 'yes' → vẫn nhận",
+  switchVals["[off]"] === false && switchVals["[OFF]"] === false && switchVals["[ off ]"] === false && ["[on]", "[]", "[0]", "[false]", "[yes]"].every((k) => switchVals[k] === true),
+  JSON.stringify(switchVals));
+ok("A3", "INGEST_AGGREGATED=off → bài từ nhóm bị bỏ (công tắc khẩn cấp) nhưng ĐĂNG HỘ vẫn đăng được; bài từ nhóm cùng SĐT KHÔNG ghi đè / đổi nhãn tin đăng hộ",
+  offRes.status === "skipped" && /INGEST_AGGREGATED=off/.test(offRes.reason || "") && assistedRes.status === "created" && overwrite.status === "skipped" && kept?.source === "assisted" && /bao lương/.test(kept?.description || ""),
   JSON.stringify({ offRes, assistedRes, overwrite, src: kept?.source }));
+
+// ---- Nhịp tim: lô đúng khoá ghi lại; quá 24 giờ không có tin mới → stale; bot gửi mà bị loại hết → rejectedOnly ----
+const tNow = new Date();
+await ing.recordIngestHeartbeat([{ status: "created" }], tNow);
+const hbFresh = await ing.ingestHeartbeat(new Date(tNow.getTime() + 2 * H));
+const hbOld = await ing.ingestHeartbeat(new Date(tNow.getTime() + 25 * H));
+await ing.recordIngestHeartbeat([{ status: "skipped" }], new Date(tNow.getTime() + 3 * H));
+const hbRejected = await ing.ingestHeartbeat(new Date(tNow.getTime() + 26 * H));
+ok("B1", "Nhịp tim: vừa nhận → không cảnh báo; quá 24 giờ → stale (admin cảnh báo); lô sau đó toàn bài bị loại → rejectedOnly; accepting = true khi biến không đặt",
+  hbFresh.stale === false && hbFresh.rejectedOnly === false && hbOld.stale === true && hbRejected.stale === true && hbRejected.rejectedOnly === true && hbFresh.accepting === true && hbFresh.lastAt === tNow.toISOString(),
+  JSON.stringify({ hbFresh, hbOld, hbRejected }));
 
 await db.$disconnect();
 try { fs.rmSync(dbFile, { force: true }); fs.rmSync(dbFile + "-journal", { force: true }); } catch {}

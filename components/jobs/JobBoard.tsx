@@ -100,13 +100,13 @@ function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; stat
 
   if (total >= 3) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface">
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface refined:[&_.text-emerald-300]:font-bold refined:[&_.text-emerald-300]:text-white">
         <span className="relative flex h-2.5 w-2.5 flex-shrink-0 refined:h-2 refined:w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 refined:hidden" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 refined:h-2 refined:w-2" />
         </span>
         <p className="text-xs text-slate-200 sm:text-sm">
-          <span className="font-black text-emerald-300 refined:font-bold refined:text-white">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
+          <span className="font-black text-emerald-300">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
           {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
           {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent}{tr(" tin gấp", " urgent")}</span></>}
         </p>
@@ -292,7 +292,7 @@ function JobCard({
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
         {placeLabel(job.city, job.market, job.state)}
-        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25 refined:bg-white/[0.06] refined:font-semibold refined:text-slate-200 refined:ring-white/10">{tr("📍 Gần bạn", "📍 Near you")}</span>}
+        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("📍 Gần bạn", "📍 Near you")}</span>}
       </span>
 
       {signals.length > 0 && (

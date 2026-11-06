@@ -178,7 +178,7 @@ const REFINED: Record<string, Pick<ChatWallpaper, "style" | "swatch" | "pattern"
   },
   marble: {
     style: { backgroundColor: "#111112", backgroundImage: marbleVeins(0.05), backgroundSize: "240px 240px", ["--chat-bar-bg" as string]: "#111112" } as CSSProperties,
-    swatch: `${marbleVeins(0.16)}, #18181a`,
+    swatch: `${marbleVeins(0.1)}, #141416`,
     pattern: true,
   },
   ocean: tone("#0a0f10", "45,140,150"),

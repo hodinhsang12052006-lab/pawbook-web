@@ -662,7 +662,7 @@ export default function ProfilePage() {
       </main>
 
       {/* Thanh lưu dính đáy: CÓ thay đổi → thanh rộng nhắc lưu; chưa sửa gì → nút nhỏ ở góc. */}
-      <div className={dirty ? "pointer-events-none fixed inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+82px)] z-40 px-4 md:bottom-6 [&>div]:border-white/10 [&>div]:bg-pn-raised [&>div]:shadow-pn-float [&>div]:[backdrop-filter:none] [&_p]:text-slate-200 [&_button]:bg-none [&_button]:bg-pink-600 [&_button]:shadow-none" : "mx-auto w-full max-w-3xl px-4 pb-32 md:px-6 md:pb-16"}>
+      <div className={dirty ? "pn-save-bar pointer-events-none fixed inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+82px)] z-40 px-4 md:bottom-6 [&>div]:border-white/10 [&>div]:bg-pn-raised [&>div]:shadow-pn-float [&>div]:[backdrop-filter:none] [&_p]:text-slate-200 [&_button]:bg-none [&_button]:bg-pink-600 [&_button]:shadow-none" : "mx-auto w-full max-w-3xl px-4 pb-32 md:px-6 md:pb-16"}>
         {dirty ? (
           <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-pink-500/30 bg-slate-950/95 p-2.5 pl-4 shadow-2xl shadow-black/60 backdrop-blur-xl md:px-3">
             <p className="flex-1 text-xs font-semibold text-pink-200">{tr("Bạn có thay đổi chưa lưu", "You have unsaved changes")}</p>

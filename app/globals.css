@@ -681,6 +681,17 @@ html:not([data-ui-classic]) ::-webkit-scrollbar-thumb:hover { background: #3a3a4
    Nhánh copy đang viết lại chữ ở ~230 file → các dòng className dính liền dòng chữ được giữ NGUYÊN như main,
    kiểu "refined" đặt ở đây, khớp theo tổ hợp class / id / thuộc tính đã có. Merge 2 nhánh không đụng nhau. */
 
+/* Chip "Gần bạn" (JobBoard): trung tính — emerald chỉ còn cho con số lương */
+html:not([data-ui-classic]) .ml-1.bg-emerald-500\/15.ring-emerald-500\/25 {
+  background-color: rgb(255 255 255 / 0.06);
+  color: #e4e4e7;
+  font-weight: 600;
+  --tw-ring-color: rgb(255 255 255 / 0.1);
+}
+
+/* Thanh "chưa lưu" của /profile đang hiện → ẩn nút lên-đầu-trang (cùng góc phải, từng đè lên nút Lưu) */
+body:has(.pn-save-bar) .fixed.right-4.bottom-24 { display: none; }
+
 /* Bảng thông báo (NotificationBell): bề mặt nổi + viền rõ + bóng nổi (thẻ trang chỉ có viền) */
 html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"] {
   background: var(--color-pn-raised);

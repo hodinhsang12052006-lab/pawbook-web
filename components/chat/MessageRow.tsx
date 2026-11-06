@@ -295,7 +295,7 @@ function MessageRowImpl({
           {!translatable && spacer}
         </p>
         {translatable && (
-          <p className="m-tx">
+          <p className="m-tx mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px] leading-4">
             {tx?.status === "loading" ? (
               <span>{tr("Đang dịch…", "Translating…")}</span>
             ) : tx?.status === "done" ? (

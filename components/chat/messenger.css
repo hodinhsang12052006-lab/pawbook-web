@@ -185,6 +185,10 @@ html:not([data-ui-classic]) .pn-msgr .m-out .m-meta .m-seen { filter: drop-shado
 @keyframes m-late { to { opacity: 1; } }
 html:not([data-ui-classic]) .pn-msgr .m-pending { opacity: 0; animation: m-late 1ms linear 400ms forwards; }
 html:not([data-ui-classic]) .pn-msgr .m-link { text-decoration: underline; text-underline-offset: 2px; }
+/* Dịch tin (EN-first): dòng 'See translation' / 'Show original' dưới chữ, giờ trong bong bóng vẫn chừa chỗ ở dòng cuối */
+html:not([data-ui-classic]) .pn-msgr .m-tx { margin: 3px 0 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; font-size: 12px; line-height: 16px; color: var(--m-in-meta); white-space: normal; }
+html:not([data-ui-classic]) .pn-msgr .m-tx button { min-height: 24px; font-weight: 600; color: var(--m-accent-ink); }
+html:not([data-ui-classic]) .pn-msgr .m-tx button:hover { text-decoration: underline; text-underline-offset: 2px; }
 html:not([data-ui-classic]) .pn-msgr .m-in .m-link { color: var(--m-accent-ink); }
 html:not([data-ui-classic]) .pn-msgr .m-out .m-link { color: #fff; }
 

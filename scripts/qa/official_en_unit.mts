@@ -1,8 +1,9 @@
 // Bản EN cho bài chính thức (lib/officialEn): bài cũ chỉ tiếng Việt trên production (GET công khai /api/posts?market=US,
 // 06/11/2026) được dựng lại bản EN; bài mới lưu 2 thứ tiếng qua EN_MARK; số liệu dịch phải có trong bản gốc.
-//   npx tsx scripts/qa/official_en_unit.mts   (không dùng DB, không gọi AI)
+//   env -u TURSO_DATABASE_URL npx tsx scripts/qa/official_en_unit.mts   (không dùng DB, không gọi AI)
 import { deriveEn, galleryTitles, joinEn, pollEn, splitEn } from "../../lib/officialEn";
 import { numbersKept } from "../../lib/translateEn";
+import { pickLang } from "../../lib/enMark";
 
 let fail = 0;
 const ok = (c: unknown, m: string) => { if (!c) { fail++; console.log("FAIL", m); } else console.log("ok  ", m); };
@@ -34,5 +35,12 @@ ok(sp.vi === "Xin chào các bạn thợ" && sp.en === "Hello techs", "joinEn/sp
 ok(splitEn("Bài thường").en === null, "plain post: no EN");
 ok(numbersKept("Trừ tới $25,000 tiền tip (2025–2028)", "Deduct up to $25,000 in tips (2025–2028)"), "numbers kept: ok");
 ok(!numbersKept("Trừ tới $25,000 tiền tip", "Deduct up to $35,000 in tips"), "numbers kept: invented number rejected");
+ok(pickLang(both, "en") === "Hello techs" && pickLang(both, "vi") === "Xin chào các bạn thợ" && pickLang("chỉ tiếng Việt", "en") === "chỉ tiếng Việt", "pickLang: chat shows the viewer's language");
+// lib/welcomeChat kéo theo lib/prisma → chỉ nạp sau khi chắc chắn không trỏ Turso (không query gì, chỉ dựng chữ)
+if (process.env.TURSO_DATABASE_URL) throw new Error("TURSO_DATABASE_URL is set — refusing (offline unit test)");
+const { welcomeText, welcomeTextEn, registrationSummary, registrationSummaryEn } = await import("../../lib/welcomeChat");
+const info = { userId: "u", name: "Jamie Lee", role: "CLIENT" as const, market: "US" as const, state: "CA", city: "Irvine", phone: "(949) 555-0190", email: "j@example.com", via: "email" };
+ok(welcomeTextEn(info).startsWith("Welcome to PawNail, Jamie Lee") && !/[ạảấầẩẫậắằẳẵặẹẻẽếềểễệ]/.test(welcomeTextEn(info) + registrationSummaryEn(info)), "welcome DM: English version, no Vietnamese left");
+ok(welcomeText(info).startsWith("Chào mừng") && registrationSummary(info).startsWith("📋"), "welcome DM: Vietnamese version unchanged");
 if (fail) { console.log(`${fail} FAILED`); process.exit(1); }
 console.log("all ok");

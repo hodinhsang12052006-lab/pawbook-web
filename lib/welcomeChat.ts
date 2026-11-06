@@ -9,6 +9,8 @@ import { chatChannelName } from "@/lib/pusherChannel";
 import { SURVEY } from "@/lib/ownerSurvey";
 import { stateName } from "@/lib/stateNames";
 import { getOfficialAccount } from "@/lib/official";
+import { joinEn } from "@/lib/enMark";
+import { dtEn } from "@/lib/i18n/dataEn";
 
 export interface WelcomeInfo {
   userId: string;
@@ -105,6 +107,52 @@ Anh/chị cần hỗ trợ gì — đăng tin, tìm thợ, hay góp ý — cứ 
 Bạn cần hỗ trợ gì — tìm việc, sửa hồ sơ, hay báo tin lạ — cứ nhắn ở đây, đội ngũ PawNail trả lời trong 24 giờ nhé!`;
 }
 
+// ---- Bản tiếng Anh của 2 tin chào (V2.2): người dùng EN (chủ tiệm / thợ / khách Mỹ-Úc) từng nhận tin chào toàn tiếng
+// Việt — điều đầu tiên họ thấy ở Tin nhắn. Lưu cùng tin qua EN_MARK (lib/enMark); app hiện đúng ngôn ngữ người xem.
+const STATUS_EN: Record<string, string> = { AVAILABLE: "Available now", URGENT: "Needs work now", BETTER: "Working, open to better offers" };
+const listEn = (x?: string[]) => (x && x.length ? x.map((v) => dtEn(v)).join(", ") : null);
+
+export function registrationSummaryEn(i: WelcomeInfo): string {
+  const place = [i.city, i.state ? stateName(i.market, i.state) : null].filter(Boolean).join(", ");
+  const rows: [string, string | null | undefined][] = [
+    ["Role", i.role === "OWNER" ? "Salon owner" : i.role === "CLIENT" ? "Nail client" : "Nail tech"],
+    ["Name", i.name],
+    ...(i.role === "OWNER" ? ([["Salon", i.salonName]] as [string, string | null | undefined][]) : []),
+    ["Phone", i.phone],
+    ["Email", i.email && !/\.invalid$/i.test(i.email) ? i.email : null],
+    ["Area", `${place || "not set"} (${i.market === "AU" ? "Australia" : "US"})`],
+    ["Signed up with", i.via === "google" ? "Google" : i.via === "facebook" ? "Facebook" : i.via === "phone" ? "Phone number" : i.via === "social" ? "Google / Facebook / phone" : "Email"],
+  ];
+  if (i.role === "OWNER") {
+    rows.push(["Hiring for", listEn(i.urgentRole)], ["Pay", [i.salaryAmount, i.salaryType].filter(Boolean).map((v) => dtEn(v as string)).join(" · ") || null], ["Housing for techs", i.hasHousing === undefined ? null : i.hasHousing ? "Yes" : "No"]);
+  } else if (i.role !== "CLIENT") {
+    rows.push(
+      ["Skills", listEn(i.specialties)],
+      ["Desired pay", [i.desiredSalaryAmount, i.desiredSalaryType].filter(Boolean).map((v) => dtEn(v as string)).join(" · ") || null],
+      ["Desired benefits", listEn(i.desiredBenefits)],
+      ["Status", i.status ? STATUS_EN[i.status] ?? i.status : null],
+      ["Work photos", i.portfolioCount ? `${i.portfolioCount} photo${i.portfolioCount === 1 ? "" : "s"}` : null],
+    );
+  }
+  const answered = (i.surveyAnswers ?? []).filter((a) => SURVEY.some((q) => q.key === a.key)).length;
+  return ["📋 Your sign-up details", "", ...rows.filter(([, v]) => v).map(([k, v]) => `• ${k}: ${v}`), ...(answered ? ["", `📝 Survey: ${answered}/${SURVEY.length} answered`] : [])].join("\n");
+}
+
+export function welcomeTextEn(i: Pick<WelcomeInfo, "name" | "role">, existing = false): string {
+  const name = i.name.trim();
+  if (existing) {
+    return i.role === "OWNER"
+      ? `Thanks for joining PawNail Jobs, ${name} 🙏\n\nThis is your salon's private support channel with the PawNail team. Need to post a job, find techs or share feedback? Message us here — we reply within 24 hours.`
+      : `Thanks for joining PawNail Jobs, ${name} 🙏\n\nThis is your private support channel with the PawNail team. Looking for work, fixing your profile or reporting something odd? Message us here — we reply within 24 hours.`;
+  }
+  if (i.role === "CLIENT") {
+    return `Welcome to PawNail, ${name} 💅\n\nBrowse trending nail looks every day, find salons and techs near you with real photos and prices, ask about a look and book — no phone call needed.\n\n✨ Try-on: snap one photo of your hand → see 10 trending looks on your own hand → send the one you like to a salon to ask for price + time (tap ✨ in the chat with the salon).\nTip: save the looks you like so you can show your tech next time. Need help? Message us here!`;
+  }
+  return i.role === "OWNER"
+    ? `Welcome to PawNail Jobs, ${name} 🎉\n\nYour salon's job post is on the job board and techs nearby can see it now. Tip: add a priced nail menu — when clients ask about prices, the PawNail Assistant suggests a reply that matches your menu, one tap to send.\n\nNeed help posting a job, finding techs or sharing feedback? Message us here — the PawNail team replies within 24 hours.`
+    : `Welcome to PawNail Jobs, ${name} 🎉\n\nYour profile is live so salons can find you. Tip: add 3–5 photos of your work to get more messages, and add a priced nail menu — when clients ask about prices or send a hand photo, the PawNail Assistant suggests a reply and can paint a look on their hand.\n\nNeed help finding work, fixing your profile or reporting something odd? Message us here — the PawNail team replies within 24 hours.`;
+}
+
 /** Mở (hoặc dùng lại) cuộc trò chuyện chính thức ↔ người mới và gửi 2 tin. Trả về conversationId. */
 export async function openWelcomeChat(i: WelcomeInfo, opts: { existing?: boolean } = {}): Promise<string | null> {
   if (process.env.WELCOME_CHAT === "0") return null;
@@ -124,8 +172,8 @@ export async function openWelcomeChat(i: WelcomeInfo, opts: { existing?: boolean
 
   const now = Date.now();
   const msgs = [
-    { id: "c" + crypto.randomBytes(12).toString("hex"), body: registrationSummary(i), createdAt: new Date(now) },
-    { id: "c" + crypto.randomBytes(12).toString("hex"), body: welcomeText(i, opts.existing), createdAt: new Date(now + 1000) },
+    { id: "c" + crypto.randomBytes(12).toString("hex"), body: joinEn(registrationSummary(i), registrationSummaryEn(i), 4900), createdAt: new Date(now) },
+    { id: "c" + crypto.randomBytes(12).toString("hex"), body: joinEn(welcomeText(i, opts.existing), welcomeTextEn(i, opts.existing), 4900), createdAt: new Date(now + 1000) },
   ];
   for (const m of msgs) {
     await prisma.message.create({ data: { id: m.id, body: m.body, type: "TEXT", senderId: officialId, conversationId: convId, createdAt: m.createdAt } });

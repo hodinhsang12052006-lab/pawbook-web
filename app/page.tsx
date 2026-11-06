@@ -25,6 +25,12 @@ import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import AreaFilter from "@/components/home/AreaFilter";
 
+// Khách (trang "/" classic): KHÔNG bọc — các thẻ nằm thẳng trong cột như cũ (từng pixel; khối bọc rỗng từng cộng
+// thêm 20px khoảng cách). Đã đăng nhập: khối .pn-nudges để điện thoại chỉ hiện 1 ô gợi ý (globals.css).
+function NudgeSlot({ on, children }: { on: boolean; children: React.ReactNode }) {
+  return on ? <div className="pn-nudges space-y-5">{children}</div> : <>{children}</>;
+}
+
 // Lời chào theo giờ địa phương — chi tiết nhỏ giúp app có "hơi người".
 function greeting(date = new Date()) {
   const h = date.getHours();
@@ -274,7 +280,7 @@ export default function HomePage() {
 
             {/* V2.1 — 1 ô gợi ý duy nhất trên điện thoại (trong app): các thẻ gợi ý xếp theo ưu tiên trong .pn-nudges, CSS chỉ
                 hiện thẻ THẬT đầu tiên (globals.css). Đóng thẻ đó thì thẻ kế tiếp hiện. Máy tính vẫn hiện đủ như cũ. */}
-            <div className="pn-nudges space-y-5">
+            <NudgeSlot on={!!sessionUser}>
             {sessionUser && <GettingStarted compact={tab !== "feed"} />}
 
             {/* Render cả khi phiên đang tải: thẻ tự giữ chỗ (html[data-mn]) để không giật bố cục */}
@@ -307,7 +313,7 @@ export default function HomePage() {
                 </button>
               </div>
             )}
-            </div>
+            </NudgeSlot>
 
             {/* Bộ lọc — ĐIỆN THOẠI: gọn 1 hàng (Mỹ/Úc · chip bang vuốt ngang · 🔍),
                 trước đây chiếm ~200px khiến nội dung bị đẩy xuống dưới màn hình đầu. */}

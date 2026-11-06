@@ -13,6 +13,7 @@ import { playSound } from "@/lib/sounds";
 import { useIsOnline, lastActiveLabel } from "@/lib/presence";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { pickLang } from "@/lib/enMark";
 import { useCallManager } from "@/lib/CallManagerContext";
 import { avatarSrc } from "@/lib/avatar";
 import { UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
@@ -1534,7 +1535,7 @@ export default function MessagesContent({
                 const unread = isActive ? 0 : conv.unreadCount || 0;
                 const isTyping = typingByConv[conv.id] !== undefined;
                 const preview = lastMsg
-                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "AUDIO" ? tr("🎤 Tin nhắn thoại", "🎤 Voice message") : lastMsg.type === "STICKER" ? `${lastMsg.body} Sticker` : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : lastMsg.body}`
+                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "AUDIO" ? tr("🎤 Tin nhắn thoại", "🎤 Voice message") : lastMsg.type === "STICKER" ? `${lastMsg.body} Sticker` : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : pickLang(lastMsg.body, locale)}`
                   : isGroup
                   ? tr(`${conv.participants.length} thành viên`, `${conv.participants.length} members`)
                   : tr("Bắt đầu trò chuyện", "Start chatting");

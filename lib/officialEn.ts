@@ -6,22 +6,8 @@
 // chủ đề nóng); còn lại người dùng bấm "Xem bản dịch" (AI, /api/posts/[id]/translate).
 import { dtEn } from "@/lib/i18n/dataEn";
 
-/** Dòng phân cách 2 thứ tiếng. Người dùng thường không gõ được chính xác chuỗi này; chỉ tách ở bài chính thức. */
-export const EN_MARK = "\n\n— EN —\n";
-
-export function splitEn(content: string): { vi: string; en: string | null } {
-  const i = content.indexOf(EN_MARK);
-  if (i < 0) return { vi: content, en: null };
-  return { vi: content.slice(0, i), en: content.slice(i + EN_MARK.length).trim() || null };
-}
-
-/** Ghép bài 2 thứ tiếng; cột content có giới hạn ~4000 ký tự → cắt phần EN nếu quá dài. */
-export function joinEn(vi: string, en: string | null | undefined, max = 3990): string {
-  if (!en) return vi;
-  const room = max - vi.length - EN_MARK.length;
-  if (room < 80) return vi;
-  return vi + EN_MARK + en.slice(0, room);
-}
+import { EN_MARK, joinEn, splitEn } from "@/lib/enMark";
+export { EN_MARK, joinEn, splitEn };
 
 // ---------- Bộ mẫu nail hôm nay (lib/designGallery.ts) ----------
 export const GALLERY_HEAD_EN = {

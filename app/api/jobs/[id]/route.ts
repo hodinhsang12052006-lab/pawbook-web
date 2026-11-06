@@ -6,6 +6,8 @@ import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { getResponseStats, describeResponse } from "@/lib/responseTime";
 import { getJobMedia } from "@/lib/jobMedia";
+import { jobDescriptionTx } from "@/lib/jobI18n";
+import { localeFromRequest } from "@/lib/i18n/server";
 
 const FIRST_VIEWERS = 10;
 const FRESH_MS = 48 * 60 * 60 * 1000;
@@ -48,9 +50,13 @@ export async function GET(
     // Link bài gốc / khoá chống trùng của tin tổng hợp: chỉ admin cần, không trả ra ngoài.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sourceUrl, sourceKey, sourceFbHash, ...pub } = job;
+    // Mô tả theo ngôn ngữ người xem (bản dịch máy lưu đệm; thiếu thì dịch ngay, chờ tối đa 4 giây).
+    const descTx = await jobDescriptionTx(job, localeFromRequest(request)).catch(() => ({ tx: {}, origin: null }));
     return NextResponse.json({
       ...tidyIngestJob(pub),
       expired: !!job.expiresAt && job.expiresAt.getTime() <= Date.now(),
+      descriptionTx: descTx.tx,
+      descriptionTxOrigin: descTx.origin,
       saveCount,
       mediaUrls: mediaMap.get(job.id) ?? [],
       heat: {

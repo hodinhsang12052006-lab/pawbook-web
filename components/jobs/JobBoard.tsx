@@ -310,7 +310,7 @@ function JobCard({
         <div className="flex flex-wrap gap-1.5">
           {job.benefits.filter((b) => !(b === "Bao lương" && /bao l/i.test(job.salaryType || ""))).map((benefit) => (
             <span key={benefit} className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">
-              {benefitIcon(benefit)} {valueLabel(benefit)}
+              {benefitIcon(benefit)} {valueLabel(benefit, job.market)}
             </span>
           ))}
         </div>

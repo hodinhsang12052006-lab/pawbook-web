@@ -379,6 +379,10 @@ export function dtEn(vi: string): string {
   m = vi.match(/^Thường trả lời tin nhắn (.+)$/);
   if (m) return `Usually replies ${responseEnText(m[1])}`;
   // Tiêu đề tin tự sinh: "Cần thợ Bột/Acrylic/Dip/SNS gấp" → "Urgent: Acrylic/Dip/SNS tech needed"
+  // Mô tả tin tự tạo lúc chủ tiệm đăng ký nhanh (mẫu mới + mẫu cũ còn trên production):
+  // "Audit Nails tại Dallas, TX đang tuyển thợ nail." · "… đang cần tuyển thợ nail gấp."
+  m = vi.match(/^(.+?) tại (.+?), ([A-Za-z]{2,3}) đang (?:cần )?tuyển thợ nail( gấp)?\.?$/);
+  if (m) return `${m[1]} in ${m[2]}, ${m[3]} is ${m[4] ? "urgently " : ""}hiring nail technicians.`;
   m = vi.match(/^Cần thợ (.+?)( gấp)?$/);
   if (m) {
     const sk = skillsEn(m[1]);

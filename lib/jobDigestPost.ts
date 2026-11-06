@@ -52,7 +52,7 @@ export async function publishJobDigest(now = new Date()): Promise<{ posted: bool
 
   const top = list.slice(0, 5).map((j) => ({ ...j, skillList: (j.skills || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 2) }));
   const lines = top.map((j) => `• ${j.salonName}${j.city ? ` — ${j.city}` : ""}${j.skillList.length ? `: cần ${j.skillList.join(", ")}` : ""} · ${j.salaryAmount}${j.isUrgent ? " · cần gấp" : ""}`);
-  const linesEn = top.map((j) => `• ${j.salonName}${j.city ? ` — ${j.city}` : ""}${j.skillList.length ? `: ${j.skillList.map(valueEn).join(", ")}` : ""} · ${dtEn(j.salaryAmount ?? "")}${j.isUrgent ? " · urgent" : ""}`);
+  const linesEn = top.map((j) => `• ${j.salonName}${j.city ? ` — ${j.city}` : ""}${j.skillList.length ? `: ${j.skillList.map((v) => valueEn(v)).join(", ")}` : ""} · ${dtEn(j.salaryAmount ?? "")}${j.isUrgent ? " · urgent" : ""}`);
   const tag = name.replace(/\s+/g, "");
   const content = [
     `${DIGEST_PREFIX}${name}: ${list.length} tiệm đang tuyển thợ tuần này${urgent ? ` (${urgent} tin cần gấp)` : ""}`,

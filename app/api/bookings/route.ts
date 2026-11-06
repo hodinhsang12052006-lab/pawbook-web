@@ -9,6 +9,7 @@ import { menuText, priceLabel } from "@/lib/menu";
 import { menuI18nOne } from "@/lib/menuI18n";
 import { withReviewUrl } from "@/lib/bookingServer";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
+import { clientBookings, linkBookingToClient } from "@/lib/bookingClients";
 
 // POST /api/bookings — KHÁCH (không cần tài khoản) gửi yêu cầu đặt lịch cho 1 thợ / tiệm.
 //   Chống spam: ô bẫy "website" (bot điền → giả vờ thành công), 5 lần / giờ / IP, 40 lần / ngày / thợ,
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   const techKey = `book-tech:${v.techId}`;
   if (isRateLimited(ipKey, 5, HOUR) || isRateLimited(techKey, 40, 24 * HOUR)) return NextResponse.json({ error: "Bạn gửi hơi nhiều, thử lại sau ít phút nhé.", errorEn: "Too many requests. Please try again in a few minutes." }, { status: 429 });
 
-  const tech = await prisma.user.findUnique({ where: { id: v.techId }, select: { id: true, name: true, role: true } });
+  const tech = await prisma.user.findUnique({ where: { id: v.techId }, select: { id: true, name: true, role: true, market: true } });
   if (!tech || (tech.role !== "TECHNICIAN" && tech.role !== "OWNER")) return NextResponse.json({ error: "Không tìm thấy thợ / tiệm.", errorEn: "Couldn't find this technician or salon." }, { status: 404 });
 
   // Tên + giá mẫu lấy từ DB (không tin dữ liệu khách gửi lên)
@@ -53,8 +54,11 @@ export async function POST(req: Request) {
     data: { techId: tech.id, menuItemId: v.menuItemId, itemName, itemPrice, clientName: v.clientName, clientPhone: v.clientPhone, preferredDate: v.preferredDate, preferredTime: v.preferredTime, note: v.note, locale: v.locale },
     select: { id: true },
   });
+  // Khách đang đăng nhập → gắn vào tài khoản ("Lịch hẹn của tôi" + thông báo khi thợ xác nhận / từ chối).
+  const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
+  if (me && me !== tech.id) await linkBookingToClient(row.id, me);
   const when = [dateLabel(v.preferredDate, "vi"), v.preferredTime ? TIME_LABEL[v.preferredTime as BookingTime][0].toLowerCase() : ""].filter(Boolean).join(" ");
-  const whenEn = [dateLabel(v.preferredDate, "en"), v.preferredTime ? TIME_LABEL[v.preferredTime as BookingTime][1].toLowerCase() : ""].filter(Boolean).join(" ");
+  const whenEn = [dateLabel(v.preferredDate, "en", tech.market), v.preferredTime ? TIME_LABEL[v.preferredTime as BookingTime][1].toLowerCase() : ""].filter(Boolean).join(" ");
   await sendPush(tech.id, {
     title: "Yêu cầu đặt lịch mới",
     body: `${v.clientName}${itemName ? ` · ${itemName}` : ""}${when ? ` · ${when}` : ""} — bấm để gọi hoặc nhắn tin xác nhận`,
@@ -62,13 +66,17 @@ export async function POST(req: Request) {
     tag: "pn-booking",
     en: { title: "New booking request", body: `${v.clientName}${itemName ? ` · ${itemName}` : ""}${whenEn ? ` · ${whenEn}` : ""} — tap to call or message to confirm` },
   }).catch(() => 0);
-  return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
+  return NextResponse.json({ ok: true, id: row.id, linked: !!me && me !== tech.id }, { status: 201 });
 }
 
 export async function GET(req: Request) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
   if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const sp = new URL(req.url).searchParams;
+  // ?as=client — lịch hẹn KHÁCH đã gửi (khi đăng nhập): trạng thái + giờ đã chốt.
+  if (sp.get("as") === "client") {
+    return NextResponse.json({ bookings: await clientBookings(me) }, { headers: { "Cache-Control": "private, no-store" } });
+  }
   const status = (STATUSES as readonly string[]).includes(String(sp.get("status"))) ? String(sp.get("status")) : null;
   const [rows, grouped] = await Promise.all([
     sp.get("count") === "1"

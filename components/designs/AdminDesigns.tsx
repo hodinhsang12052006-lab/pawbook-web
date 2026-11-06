@@ -201,7 +201,7 @@ export default function AdminDesigns() {
                 <p className="text-[11px] text-slate-500">{d.titleEn}</p>
                 <p className="text-xs text-slate-400">{d.description}</p>
                 <p className="text-[11px] text-slate-500">
-                  {[...d.skills.map(valueLabel), `${d.minutes} phút`, d.priceHint, `${d.materials.length} vật tư`, `${d.steps.length} bước`].filter(Boolean).join(" · ")}
+                  {[...d.skills.map((v) => valueLabel(v)), `${d.minutes} phút`, d.priceHint, `${d.materials.length} vật tư`, `${d.steps.length} bước`].filter(Boolean).join(" · ")}
                 </p>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button type="button" disabled={acting === d.id} onClick={() => setStatus(d, "published")} className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-xs font-black text-white disabled:opacity-50">

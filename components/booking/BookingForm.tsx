@@ -2,6 +2,7 @@
 
 import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CalendarCheck, CheckCircle2, Loader2, X } from "lucide-react";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -12,9 +13,11 @@ const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 // nhớ tên + SĐT trên máy khách cho lần sau (chỉ trên máy này)
 const DRAFT = "pn_booking_contact";
 
-export default function BookingForm({ techId, techName, item, onClose }: {
+export default function BookingForm({ techId, techName, item, onClose, market }: {
   techId: string;
   techName: string;
+  /** thị trường của tiệm (định dạng ngày en-US / en-AU, gợi ý số điện thoại) */
+  market?: string | null;
   item?: { id: string; name: string; price: string } | null;
   onClose: () => void;
 }) {
@@ -28,6 +31,8 @@ export default function BookingForm({ techId, techName, item, onClose }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // Đặt khi đã đăng nhập → yêu cầu nằm trong "Lịch hẹn của tôi"
+  const [linked, setLinked] = useState(false);
 
   useEffect(() => {
     try { const d = JSON.parse(localStorage.getItem(DRAFT) || "{}"); if (d.name) setName(d.name); if (d.phone) setPhone(d.phone); } catch {}
@@ -54,6 +59,7 @@ export default function BookingForm({ techId, techName, item, onClose }: {
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(apiError(d, "Chưa gửi được, thử lại.", "Couldn't send, please try again."));
       try { localStorage.setItem(DRAFT, JSON.stringify({ name, phone })); } catch {}
+      setLinked(!!d.linked);
       setSent(true);
     } catch (e2) {
       setErr((e2 as Error).message);
@@ -82,6 +88,13 @@ export default function BookingForm({ techId, techName, item, onClose }: {
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
             <p className="text-lg font-black text-white">{tr("Đã gửi yêu cầu!", "Request sent!")}</p>
             <p className="text-sm text-slate-300">{tr(`${techName} sẽ gọi hoặc nhắn số ${phone} để chốt giờ với bạn.`, `${techName} will call or text ${phone} to confirm a time.`)}</p>
+            {linked && (
+              <p className="text-sm text-slate-300">
+                {tr("Theo dõi yêu cầu trong ", "Follow this request in ")}
+                <Link href="/bookings" className="font-bold text-pink-300 hover:underline">{tr("Lịch hẹn của tôi", "My bookings")}</Link>
+                {tr(" — bạn sẽ nhận thông báo khi tiệm xác nhận.", " — you'll get a notification when it's confirmed.")}
+              </p>
+            )}
             <button type="button" onClick={onClose} className="mt-2 rounded-xl bg-white px-6 py-2.5 text-sm font-bold text-slate-900">{tr("Xong", "Done")}</button>
           </div>
         ) : (
@@ -93,14 +106,14 @@ export default function BookingForm({ techId, techName, item, onClose }: {
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-400">{tr("Số điện thoại", "Phone number")}</span>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} required type="tel" inputMode="tel" autoComplete="tel" placeholder="(214) 555-0123" className={field} />
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} required type="tel" inputMode="tel" autoComplete="tel" placeholder={market === "AU" ? "0412 345 678" : "(214) 555-0123"} className={field} />
               </label>
               <div>
                 <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-400">{tr("Ngày muốn ghé", "Preferred day")}</span>
                 <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
                   {days.map((d, i) => (
                     <button key={d} type="button" aria-pressed={date === d} onClick={() => setDate(date === d ? null : d)} className={chip(date === d)}>
-                      {i === 0 ? tr("Hôm nay", "Today") : i === 1 ? tr("Ngày mai", "Tomorrow") : dateLabel(d, locale)}
+                      {i === 0 ? tr("Hôm nay", "Today") : i === 1 ? tr("Ngày mai", "Tomorrow") : dateLabel(d, locale, market)}
                     </button>
                   ))}
                 </div>

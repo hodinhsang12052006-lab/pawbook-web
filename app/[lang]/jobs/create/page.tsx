@@ -12,13 +12,16 @@ import { playSound } from "@/lib/sounds";
 import Flag from "@/components/ui/Flag";
 import { useTr } from "@/lib/i18n/useTr";
 import { guessState } from "@/lib/cityState";
+import { valueLabel } from "@/lib/i18n/valueLabel";
+import { SKILLS, jobBenefits } from "@/lib/nailVocab";
 import { uploadMedia, MAX_VIDEO_MB } from "@/lib/mediaUpload";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 // Giá trị lưu xuống DB giữ nguyên tiếng Việt (bộ lọc/tín hiệu dựa vào đó); chỉ nhãn hiển thị đổi theo ngôn ngữ.
-const SKILL_OPTIONS: [string, string][] = [["Bột/Acrylic", "Acrylic"], ["Dip/SNS", "Dip/SNS"], ["Gel-X", "Gel-X"], ["Design", "Nail art"], ["Chân tay nước", "Mani-pedi"], ["Wax", "Wax"], ["Mi/Lông mày", "Lashes/Brows"]];
-const BENEFIT_OPTIONS: [string, string][] = [["Có chỗ ở", "Housing provided"], ["Bao lương", "Guaranteed pay"], ["Hỗ trợ đổi bang", "Relocation help"], ["Hỗ trợ Visa 482/EB3", "Visa 482/EB3 support"], ["Tip cao", "High tips"], ["Xe đưa đón", "Transport provided"]];
+// Bộ từ vựng chung (lib/nailVocab.ts): cùng kỹ năng với hồ sơ thợ / bộ lọc; visa theo đúng thị trường của tin
+// (Mỹ: bảo lãnh EB-3, Úc: visa 482 — trước đây 1 lựa chọn gộp "Visa 482/EB3" hiện cả trên tin ở Texas).
+const SKILL_OPTIONS = SKILLS;
 const SALARY_TYPES_US: [string, string][] = [["Bao lương tuần", "Weekly guaranteed"], ["% Ăn chia", "Commission split"]];
 const SALARY_TYPES_AU: [string, string][] = [["Theo giờ AUD", "Hourly AUD"], ["Theo tuần AUD", "Weekly AUD"]];
 const MAX_MEDIA = 8;
@@ -72,6 +75,7 @@ export default function CreateJobPage() {
 
   const states = market === "US" ? US_STATES : AU_STATES;
   const salaryTypes = market === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU;
+  const BENEFIT_OPTIONS = jobBenefits(market);
   const toggle = (list: string[], set: (v: string[]) => void, v: string) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const uploading = media.some((m) => !m.url && !m.error);
 
@@ -176,7 +180,7 @@ export default function CreateJobPage() {
                   <button
                     key={m}
                     type="button"
-                    onClick={() => { setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0][0]); }}
+                    onClick={() => { setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0][0]); setBenefits((b) => b.filter((x) => jobBenefits(m).includes(x))); }}
                     aria-pressed={market === m}
                     className={`rounded-xl py-3 font-bold ring-2 transition-all ${market === m ? "bg-pink-500/10 text-white ring-pink-500" : "text-slate-400 ring-white/10"}`}
                   >
@@ -290,13 +294,13 @@ export default function CreateJobPage() {
               <div>
                 <span className="field-label">{tr("Kỹ năng cần tuyển", "Skills needed")}</span>
                 <div className="flex flex-wrap gap-2">
-                  {SKILL_OPTIONS.map(([v, en]) => <button key={v} type="button" aria-pressed={skills.includes(v)} onClick={() => toggle(skills, setSkills, v)} className={chip(skills.includes(v))}>{tr(v, en)}</button>)}
+                  {SKILL_OPTIONS.map((v) => <button key={v} type="button" aria-pressed={skills.includes(v)} onClick={() => toggle(skills, setSkills, v)} className={chip(skills.includes(v))}>{valueLabel(v)}</button>)}
                 </div>
               </div>
               <div>
                 <span className="field-label">{tr("Quyền lợi", "Benefits")}</span>
                 <div className="flex flex-wrap gap-2">
-                  {BENEFIT_OPTIONS.map(([v, en]) => <button key={v} type="button" aria-pressed={benefits.includes(v)} onClick={() => toggle(benefits, setBenefits, v)} className={chip(benefits.includes(v), "emerald")}>{tr(v, en)}</button>)}
+                  {BENEFIT_OPTIONS.map((v) => <button key={v} type="button" aria-pressed={benefits.includes(v)} onClick={() => toggle(benefits, setBenefits, v)} className={chip(benefits.includes(v), "emerald")}>{valueLabel(v, market)}</button>)}
                 </div>
               </div>
               <button type="button" role="switch" aria-checked={isUrgent} onClick={() => setIsUrgent(!isUrgent)} className={`flex w-full items-center gap-3 rounded-xl p-4 ring-2 transition-all ${isUrgent ? "bg-red-500/10 ring-red-500" : "bg-slate-950 ring-white/10"}`}>

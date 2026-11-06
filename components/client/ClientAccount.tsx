@@ -5,7 +5,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Bookmark, LogOut, MessageCircle, Store, Trash2, Loader2 } from "lucide-react";
+import { Bookmark, CalendarCheck, LogOut, MessageCircle, Store, Trash2, Loader2 } from "lucide-react";
+import { ClientBookings } from "@/components/booking/BookingInbox";
 import toast from "react-hot-toast";
 import Avatar from "@/components/ui/Avatar";
 import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
@@ -57,8 +58,9 @@ export default function ClientAccount({ profile }: { profile: P }) {
         </div>
       </section>
 
-      <nav className="grid grid-cols-3 gap-2.5">
+      <nav className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {[
+          { href: "/bookings", icon: CalendarCheck, label: tr("Lịch hẹn của tôi", "My bookings") },
           { href: "/designs?saved=1", icon: Bookmark, label: tr("Mẫu đã lưu", "Saved looks") },
           { href: "/salons", icon: Store, label: tr("Tìm tiệm", "Find salons") },
           { href: "/messages", icon: MessageCircle, label: tr("Tin nhắn", "Messages") },
@@ -66,6 +68,11 @@ export default function ClientAccount({ profile }: { profile: P }) {
           <Link key={href} href={href} className="flex min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-100 ring-1 ring-white/10"><Icon className="h-5 w-5 text-pink-300" />{label}</Link>
         ))}
       </nav>
+
+      <section className="space-y-3 rounded-3xl bg-white/[0.03] p-5 ring-1 ring-white/10" aria-label={tr("Lịch hẹn của tôi", "My bookings")}>
+        <h2 className="flex items-center gap-2 text-sm font-black text-white"><CalendarCheck className="h-4 w-4 text-pink-300" />{tr("Lịch hẹn của tôi", "My bookings")}</h2>
+        <ClientBookings compact />
+      </section>
 
       <section className="space-y-3 rounded-3xl bg-white/[0.03] p-5 ring-1 ring-white/10">
         <h2 className="text-sm font-black text-white">{tr("Thông tin của bạn", "Your details")}</h2>

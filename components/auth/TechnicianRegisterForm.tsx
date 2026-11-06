@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -16,6 +16,8 @@ import { guessState } from "@/lib/cityState";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
+import { SIGNUP_SKILLS, techBenefits } from "@/lib/nailVocab";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { apiError } from "@/lib/i18n/apiError";
 
@@ -23,8 +25,9 @@ const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 // Giá trị lưu DB (specialties/desiredSalaryType/desiredBenefits), hiển thị
 // cho MỌI người xem bất kể locale — cố tình giữ tiếng Việt, không qua t().
-const SKILL_OPTIONS = ["Bột (Acrylic/Ombre)", "Dip/SNS", "Chân tay nước", "Design nghệ thuật", "Gel-X/Biab"];
-const BENEFIT_OPTIONS = ["Có chỗ ở (Housing)", "Hỗ trợ dời bang", "Cần bảo lãnh Visa (EB-3/482)"];
+// Bộ từ vựng chung với hồ sơ / bộ lọc / đăng tin (lib/nailVocab.ts) — trước đây form này lưu giá trị riêng
+// ("Bột (Acrylic/Ombre)", "Gel-X/Biab") nên hồ sơ và bộ lọc không nhận ra kỹ năng của thợ.
+const SKILL_OPTIONS = SIGNUP_SKILLS;
 
 // Hiệu ứng bấm nút kiểu app native — dùng chung cho mọi nút chạm-để-chọn
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
@@ -63,6 +66,19 @@ export default function TechnicianRegisterForm() {
   const [status, setStatus] = useState<"URGENT" | "BETTER">("URGENT");
 
   const states = market === "US" ? US_STATES : AU_STATES;
+  // Visa theo đúng thị trường (Mỹ: EB-3, Úc: 482)
+  const BENEFIT_OPTIONS = techBenefits(market);
+  // Thị trường mặc định theo người xem (IP / ngôn ngữ / múi giờ) — tới khi họ tự bấm 🇺🇸 / 🇦🇺.
+  const { market: viewerMarket } = useViewerMarket();
+  const marketTouched = useRef(false);
+  useEffect(() => {
+    if (marketTouched.current || viewerMarket === market) return;
+    setMarket(viewerMarket);
+    setState((viewerMarket === "US" ? US_STATES : AU_STATES)[0]);
+    setCountryCode(viewerMarket === "US" ? "+1" : "+61");
+    setBenefits([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerMarket]);
   const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
   const labelClass = isDark ? "text-slate-300" : "text-slate-700";
   const inputClass = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all ${
@@ -228,14 +244,14 @@ export default function TechnicianRegisterForm() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => { setMarket("US"); setState(US_STATES[0]); setCountryCode("+1"); }}
+              onClick={() => { marketTouched.current = true; setMarket("US"); setState(US_STATES[0]); setCountryCode("+1"); setBenefits([]); }}
               className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "US" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
             >
               {t("auth.common.marketUS")}
             </button>
             <button
               type="button"
-              onClick={() => { setMarket("AU"); setState(AU_STATES[0]); setCountryCode("+61"); }}
+              onClick={() => { marketTouched.current = true; setMarket("AU"); setState(AU_STATES[0]); setCountryCode("+61"); setBenefits([]); }}
               className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "AU" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
             >
               {t("auth.common.marketAU")}
@@ -336,7 +352,7 @@ export default function TechnicianRegisterForm() {
                   onClick={() => toggleBenefit(b)}
                   className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${benefits.includes(b) ? "border-emerald-500 bg-emerald-500/15 text-emerald-400" : `${cardClass} ${labelClass}`}`}
                 >
-                  {valueLabel(b)}
+                  {valueLabel(b, market)}
                 </button>
               ))}
             </div>

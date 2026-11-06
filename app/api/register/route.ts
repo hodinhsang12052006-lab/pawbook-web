@@ -20,6 +20,8 @@ const VALID_MARKETS = ["US", "AU"];
 const REGISTER_LIMIT = 10;
 const REGISTER_WINDOW_MS = 15 * 60 * 1000;
 
+import { POSITION_SKILL, canonicalBenefits, canonicalSkills } from "@/lib/nailVocab";
+
 function toCsv(val: unknown): string {
   if (Array.isArray(val)) return val.filter(Boolean).join(",");
   if (typeof val === "string") return val;
@@ -147,11 +149,12 @@ export async function POST(req: Request) {
       await prisma.technicianProfile.create({
         data: {
           userId: user.id,
-          specialties: toCsv(specialties),
+          // Bộ từ vựng chung (lib/nailVocab): giá trị cũ của form đăng ký → giá trị chuẩn của hồ sơ / bộ lọc.
+          specialties: canonicalSkills(Array.isArray(specialties) ? specialties : []).join(","),
           status: ["AVAILABLE", "URGENT", "BETTER"].includes(status) ? status : "AVAILABLE",
           desiredSalaryType: desiredSalaryType || null,
           desiredSalaryAmount: desiredSalaryAmount || null,
-          desiredBenefits: toCsv(desiredBenefits) || null,
+          desiredBenefits: canonicalBenefits(Array.isArray(desiredBenefits) ? desiredBenefits : []).join(",") || null,
           market: marketEnum,
           state: state || "",
           city: city || "",
@@ -207,15 +210,16 @@ export async function POST(req: Request) {
 
     // Tin tuyển dụng mồi — tạo ngay lúc đăng ký để tiệm có tin đầu tiên hiển thị
     if (state && city && phone) {
+      // Vị trí cần tuyển ("Thợ Bột", "Thợ Dip"…) → kỹ năng chuẩn: tiêu đề "Cần thợ Bột/Acrylic/Dip/SNS" (EN:
+      // "Acrylic/Dip/SNS tech needed") và khớp bộ lọc / báo việc như tin đăng thường.
+      const roleSkills = [...new Set((Array.isArray(urgentRole) ? urgentRole : []).map((r: unknown) => POSITION_SKILL[String(r)]).filter((s): s is string => !!s))];
       const benefits: string[] = [];
       if (hasHousing) benefits.push("Có chỗ ở");
 
       await prisma.job.create({
         data: {
           // Tiêu đề chuẩn "Cần thợ …" (dtEn dịch cho người xem tiếng Anh); nhãn "Cần gấp" do isUrgent hiển thị.
-          title: Array.isArray(urgentRole) && urgentRole.length > 0
-            ? `Cần thợ ${urgentRole.join("/")}`
-            : "Cần thợ Nail",
+          title: roleSkills.length > 0 ? `Cần thợ ${roleSkills.join("/")}` : "Cần thợ Nail",
           salonName: safeSalonName,
           description: locale === "vi"
             ? `${safeSalonName} tại ${city}, ${state} đang tuyển thợ nail.`
@@ -226,7 +230,7 @@ export async function POST(req: Request) {
           city,
           salaryType: salaryType || (market === "AU" ? "Theo giờ AUD" : "Bao lương tuần"),
           salaryAmount: salaryAmount || "Thỏa thuận",
-          skills: toCsv(urgentRole),
+          skills: roleSkills.join(","),
           benefits: benefits.join(","),
           phone,
           isUrgent: true,

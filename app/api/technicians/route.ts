@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
 import { Market } from "@prisma/client";
+import { canonicalSkills } from "@/lib/nailVocab";
 
 // GET /api/technicians?market=US&state=CA&city=... — lưới portfolio thợ đang rảnh
 export async function GET(req: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     const safeProfiles = profiles
       .map((p) => ({
         ...p,
-        specialties: p.specialties ? p.specialties.split(",").filter(Boolean) : [],
+        specialties: canonicalSkills(p.specialties),
         portfolioImages: (() => {
           try {
             return JSON.parse(p.portfolioImages || "[]");

@@ -299,6 +299,7 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
         <BookingForm
           techId={owner.id}
           techName={owner.salonName || owner.name || "PawNail"}
+          market={owner.market}
           item={booking.item ? { id: booking.item.id, name: booking.item.name, price: priceLabel(booking.item.priceFrom, booking.item.priceTo) } : null}
           onClose={() => setBooking(null)}
         />

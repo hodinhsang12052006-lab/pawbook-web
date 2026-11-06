@@ -25,6 +25,7 @@ import { placeLabel } from "@/lib/stateNames";
 import { dt } from "@/lib/i18n/dataEn";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
+import { SKILLS, canonicalSkills } from "@/lib/nailVocab";
 import { useTr } from "@/lib/i18n/useTr";
 
 // Cụm xác nhận xoá tài khoản theo ngôn ngữ trang (bàn phím Mỹ/Úc không gõ được dấu tiếng Việt):
@@ -55,7 +56,8 @@ function FormSection({ icon: Icon, title, hint, action, children }: { icon: type
   );
 }
 
-const SKILL_OPTIONS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước", "Wax", "Mi/Lông mày"];
+// Bộ từ vựng chung với form đăng ký / bộ lọc / đăng tin (lib/nailVocab.ts).
+const SKILL_OPTIONS = SKILLS;
 
 export default function ProfilePage() {
   useTr(); // render lại khi đổi VI/EN
@@ -119,7 +121,8 @@ export default function ProfilePage() {
           if (data.technicianProfile) {
             setBio(data.technicianProfile.bio || "");
             setYears(data.technicianProfile.yearsOfExperience || 0);
-            setSpecialties(data.technicianProfile.specialties ? data.technicianProfile.specialties.split(",").filter(Boolean) : []);
+            // Giá trị cũ của form đăng ký ("Bột (Acrylic/Ombre)", "Gel-X/Biab"…) → giá trị chuẩn, để chip đúng được chọn.
+            setSpecialties(canonicalSkills(data.technicianProfile.specialties));
             setStatus(data.technicianProfile.status || "AVAILABLE");
             setPortfolioImages(data.technicianProfile.portfolioImages || []);
             setAvgTenureMonths(data.technicianProfile.avgTenureMonths ? String(data.technicianProfile.avgTenureMonths) : "");

@@ -17,7 +17,8 @@ import { timeAgo } from "@/lib/feedFormat";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import Avatar from "@/components/ui/Avatar";
 import Flag from "@/components/ui/Flag";
-import { tr } from "@/lib/i18n/tr";
+import { currentLocale, tr } from "@/lib/i18n/tr";
+import { hasVietnamese } from "@/lib/i18n/viText";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt, responseEn } from "@/lib/i18n/dataEn";
@@ -56,6 +57,9 @@ interface JobDetail {
   address?: string | null;
   expired?: boolean;
   repostCount?: number;
+  /** Mô tả đã dịch (máy chủ lưu đệm), theo ngôn ngữ đích */
+  descriptionTx?: Partial<Record<"en" | "vi", string>>;
+  descriptionTxOrigin?: "mt" | "owner" | "design" | null;
 }
 
 export default function JobDetailPage({ params }: PageProps) {
@@ -70,6 +74,7 @@ export default function JobDetailPage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const articleRef = useRef<HTMLElement>(null);
   const [viewer, setViewer] = useState<number | null>(null);
+  const [descOriginal, setDescOriginal] = useState(false);
 
   useEffect(() => {
     params.then((p) => setJobId(p.id));
@@ -190,10 +195,22 @@ export default function JobDetailPage({ params }: PageProps) {
   const facts = [
     { icon: MapPin, label: tr("Khu vực", "Location"), value: [job.city, stateName(job.market, job.state)].filter(Boolean).join(", ") },
     { icon: DollarSign, label: tr("Mức lương", "Pay"), value: dt(job.salaryAmount), accent: true },
-    { icon: Wallet, label: tr("Hình thức", "Pay type"), value: valueLabel(job.salaryType) },
+    { icon: Wallet, label: tr("Hình thức trả lương", "Pay type"), value: valueLabel(job.salaryType, job.market) },
     { icon: Globe2, label: tr("Thị trường", "Market"), value: <span className="inline-flex items-center gap-1.5"><Flag code={job.market} /> {job.market === "US" ? tr("Mỹ", "US") : tr("Úc", "Australia")}</span> },
   ];
   const isOwnJob = user?.id && user.id === job.ownerId;
+  // Mô tả theo ngôn ngữ người xem: mẫu câu do app tạo → dt(); chữ chủ tiệm viết → bản dịch máy (máy chủ lưu đệm),
+  // kèm "Show original (Tiếng Việt)". Chủ tin luôn thấy đúng chữ mình viết.
+  const loc = currentLocale();
+  const txText = !isOwnJob ? job.descriptionTx?.[loc] ?? null : null;
+  const appText = dt(job.description);
+  const translatedText = txText || (appText !== job.description ? appText : null);
+  const showDesc = {
+    text: translatedText && !descOriginal ? translatedText : job.description,
+    translated: !!translatedText && !descOriginal,
+    machine: !!txText && job.descriptionTxOrigin !== "owner",
+    canToggle: !!translatedText,
+  };
   const postedForSalon = job.source === "ingest";
 
   return (
@@ -235,12 +252,12 @@ export default function JobDetailPage({ params }: PageProps) {
                 </button>
               </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">{dt(job.title)}</h1>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight" lang={hasVietnamese(dt(job.title)) ? "vi" : undefined}>{dt(job.title)}</h1>
             <p className="flex items-center gap-2 text-slate-300">
               <Building className="h-4 w-4 text-pink-400" />
               <span className="font-semibold">{job.salonName}</span>
             </p>
-            <VietnameseChip text={[dt(job.title), job.description]} />
+            <VietnameseChip text={[dt(job.title), showDesc.translated ? null : showDesc.text]} />
           </header>
 
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -313,7 +330,15 @@ export default function JobDetailPage({ params }: PageProps) {
           {job.description && (
             <section className="space-y-2">
               <h2 className="text-sm font-bold text-slate-200">{tr("Mô tả công việc", "Job description")}</h2>
-              <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-line">{job.description}</p>
+              <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-line" lang={hasVietnamese(showDesc.text) ? "vi" : undefined}>{showDesc.text}</p>
+              {showDesc.canToggle && (
+                <p className="text-[11px] text-slate-500">
+                  {showDesc.translated && showDesc.machine ? tr("Dịch tự động. ", "Automatically translated. ") : ""}
+                  <button type="button" onClick={() => setDescOriginal((o) => !o)} className="font-semibold text-sky-300 hover:underline">
+                    {showDesc.translated ? (hasVietnamese(job.description) ? tr("Xem bản gốc", "Show original (Tiếng Việt)") : tr("Xem bản gốc (tiếng Anh)", "Show original")) : tr("Xem bản dịch", "Show translation")}
+                  </button>
+                </p>
+              )}
             </section>
           )}
 
@@ -322,7 +347,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <h2 className="text-sm font-bold text-slate-200">{tr("Kỹ năng yêu cầu", "Skills required")}</h2>
               <div className="flex flex-wrap gap-2">
                 {job.skills.map((s) => (
-                  <span key={s} className="rounded-full bg-pink-500/10 border border-pink-500/25 px-3 py-1 text-xs font-semibold text-pink-300">{valueLabel(s)}</span>
+                  <span key={s} className="rounded-full bg-pink-500/10 border border-pink-500/25 px-3 py-1 text-xs font-semibold text-pink-300">{valueLabel(s, job.market)}</span>
                 ))}
               </div>
             </section>
@@ -333,7 +358,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <h2 className="text-sm font-bold text-slate-200">{tr("Quyền lợi", "Benefits")}</h2>
               <div className="flex flex-wrap gap-2">
                 {job.benefits.map((b) => (
-                  <span key={b} className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 text-xs font-semibold text-emerald-300">🎁 {valueLabel(b)}</span>
+                  <span key={b} className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 text-xs font-semibold text-emerald-300">🎁 {valueLabel(b, job.market)}</span>
                 ))}
               </div>
             </section>

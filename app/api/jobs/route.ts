@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { translateJobOnSave } from "@/lib/jobI18n";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
@@ -174,6 +175,8 @@ export async function POST(req: Request) {
     after(async () => {
       const urgentIds = newJob.isUrgent ? await notifyUrgentJob(newJob).catch(() => [] as string[]) : [];
       await notifyJobAlerts(newJob, new Set(urgentIds));
+      // Mô tả chủ tiệm tự viết → bản dịch cho người xem ngôn ngữ còn lại.
+      await translateJobOnSave(newJob);
     });
 
     return NextResponse.json(newJob, { status: 201 });

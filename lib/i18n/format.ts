@@ -87,7 +87,9 @@ export function dayLabel(ymdStr: string | null | undefined, lang: Locale, market
   const d = parseYmd(ymdStr);
   if (!d) return "";
   if (lang === "vi") return `${VI_WEEKDAY[d.getUTCDay()]}, ${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
-  return fmt(intlLocale(lang, market), { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(d);
+  const s = fmt(intlLocale(lang, market), { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(d);
+  // Kiểu Úc viết "Sat 7 Nov" (ICU thêm dấu phẩy sau thứ).
+  return market === "AU" ? s.replace(/^(\p{L}+),\s/u, "$1 ") : s;
 }
 
 /** Giờ hẹn đã chốt dạng ISO "YYYY-MM-DDTHH:mm" (giờ địa phương của tiệm). */

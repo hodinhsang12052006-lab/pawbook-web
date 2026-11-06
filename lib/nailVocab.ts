@@ -108,6 +108,8 @@ const PAY_LABEL: Record<string, Label> = {
   "% Ăn chia": { vi: "% Ăn chia", en: "Commission split" },
   "Bao lương tuần": { vi: "Bao lương tuần", en: "Weekly guaranteed pay" },
   "Bao lương": { vi: "Bao lương", en: "Guaranteed pay" },
+  // "Theo giờ" = lương giờ ở Mỹ (bộ tách tin từ nhóm: "$28-34/hr") — trước đây hiện nguyên chữ Việt ở bản EN.
+  "Theo giờ": { vi: "Lương giờ", en: "Hourly" },
   "Theo giờ AUD": { vi: "Lương giờ (AUD)", en: "Hourly (AUD)" },
   "Theo tuần AUD": { vi: "Lương tuần (AUD)", en: "Weekly (AUD)" },
   "Thỏa thuận": { vi: "Thoả thuận", en: "Negotiable" },

@@ -472,7 +472,7 @@ export default function JobDetailPage({ params }: PageProps) {
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">{dt(s.title)}</p>
-                  <p className="truncate text-xs text-slate-400">{s.salonName} · {s.city}</p>
+                  <p className="truncate text-xs text-slate-400">{[s.salonName, s.city].filter(Boolean).join(" · ")}</p>
                 </div>
                 <span className="flex-shrink-0 text-xs font-bold text-emerald-400">{dt(s.salaryAmount)}</span>
                 <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600 group-hover:text-pink-400" />

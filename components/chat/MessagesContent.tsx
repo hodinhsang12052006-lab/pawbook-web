@@ -1491,7 +1491,7 @@ export default function MessagesContent({
                           {!isGroup && isVerifiedRole(partner!.role) && <VerifiedBadge className="h-3.5 w-3.5" />}
                           {!isGroup && partner!.id === official?.id && <Pin className="h-3 w-3 flex-shrink-0 rotate-45 text-slate-500" aria-label={tr("Đã ghim", "Pinned")} />}
                           {!isGroup && (
-                          <span className={`m-role flex-shrink-0 truncate rounded px-1.5 py-px text-[9px] font-bold ${isVerifiedRole(partner!.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-400"}`}>{isVerifiedRole(partner!.role) ? tr("Chính thức", "Official") : ROLE_VI()[partner!.role] || tr("Thành viên", "Member")}</span>
+                          <span className={`flex-shrink-0 rounded px-1.5 py-px text-[9px] font-bold ${isVerifiedRole(partner!.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-400"}`}>{isVerifiedRole(partner!.role) ? tr("Chính thức", "Official") : ROLE_VI()[partner!.role] || tr("Thành viên", "Member")}</span>
                           )}
                         </p>
                         {lastMsg && <span className={`m-time flex-shrink-0 ${unread > 0 ? "m-time-unread" : ""}`}>{shortChatTime(lastMsg.createdAt, currentUser?.market)}</span>}
@@ -1549,7 +1549,7 @@ export default function MessagesContent({
                   aria-label={tr("Quay lại danh sách", "Back to chats")}
                   className="m-back -ml-1 mr-0.5 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-slate-200 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white md:hidden"
                 >
-                  <ArrowLeft className="h-[22px] w-[22px]" /><span className="sr-only">{locale === "vi" ? tr("Quay lại", "Back") : "Back"}</span>
+                  <ArrowLeft className="h-4 w-4" /><span className="sr-only">{locale === "vi" ? tr("Quay lại", "Back") : "Back"}</span>
                 </button>
                 <div className="relative flex-shrink-0">
                   {activeChat.isGroup ? (
@@ -1584,7 +1584,7 @@ export default function MessagesContent({
                       <>
                         {partnerOnline ? (
                           <span className="flex items-center gap-1.5 font-semibold text-emerald-300">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{tr(" Đang hoạt động", " Active now")}
+                            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" />{tr(" Đang hoạt động", " Active now")}
                           </span>
                         ) : connLost ? (
                           <span>{CS.connecting()}</span>

@@ -83,8 +83,8 @@ html:not([data-ui-classic]) .pn-msgr .m-conv > .relative:first-child > span[aria
   width: 14px; height: 14px; border: 2px solid var(--m-ground); background: var(--m-online); box-shadow: none;
 }
 html:not([data-ui-classic]) .pn-msgr .m-name { font-size: 17px; line-height: 22px; font-weight: 600; color: var(--m-text); }
-html:not([data-ui-classic]) .pn-msgr .m-role { font-size: 13px; line-height: 18px; font-weight: 400; color: var(--m-text-3); background: none; padding: 0; }
-html:not([data-ui-classic]) .pn-msgr .m-role::before { content: "·"; margin: 0 4px 0 2px; }
+html:not([data-ui-classic]) .pn-msgr :is(.m-role, .m-name > span.rounded) { font-size: 13px; line-height: 18px; font-weight: 400; color: var(--m-text-3); background: none; padding: 0; }
+html:not([data-ui-classic]) .pn-msgr :is(.m-role, .m-name > span.rounded)::before { content: "·"; margin: 0 4px 0 2px; }
 html:not([data-ui-classic]) .pn-msgr .m-time { font-size: 13px; line-height: 18px; font-weight: 400; color: var(--m-text-3); font-variant-numeric: tabular-nums; }
 html:not([data-ui-classic]) .pn-msgr .m-time.m-time-unread { color: var(--m-accent-ink); font-weight: 600; }
 html:not([data-ui-classic]) .pn-msgr .m-preview { font-size: 15px; line-height: 20px; font-weight: 400; color: var(--m-text-2); }
@@ -321,3 +321,8 @@ html:not([data-ui-classic]) .pn-msgr .m-list-scroll section[aria-label] a.rounde
 html:not([data-ui-classic]) .pn-msgr .m-audio > div:first-child { background: none; padding: 0; border-radius: 0; }
 html:not([data-ui-classic]) .pn-msgr .m-in.m-audio > div:first-child button:first-child { background: var(--m-accent); }
 html:not([data-ui-classic]) .pn-msgr .m-out.m-audio > div:first-child button:first-child { color: var(--m-accent-2); }
+
+/* Dòng có chuỗi tr() giữ nguyên markup — chỉnh bằng CSS: vai trò ở hàng tên (chữ thường, không chip), nút Back 22px, chấm online 6px */
+html:not([data-ui-classic]) .pn-msgr .m-name > span.rounded { --tw-ring-shadow: 0 0 #0000; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 0; }
+html:not([data-ui-classic]) .pn-msgr .m-back svg { width: 22px; height: 22px; }
+html:not([data-ui-classic]) .pn-msgr .pn-glass-bar span.bg-emerald-400 { width: 6px; height: 6px; box-shadow: none; }

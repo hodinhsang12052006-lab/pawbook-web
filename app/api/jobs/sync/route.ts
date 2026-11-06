@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { blockedPhones, ingestBatch, ingestOne, type IngestInput } from "@/lib/jobIngest/ingest";
+import { blockedPhones, ingestBatch, ingestOne, INGEST_LAST_AT_KEY, type IngestInput } from "@/lib/jobIngest/ingest";
+import { setSetting } from "@/lib/settings";
 import { parseLocation } from "@/lib/jobIngest/parse";
 
 // POST /api/jobs/sync — tool lọc bài gửi tin TIỆM NHỜ ĐĂNG (định dạng của tool):
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
   // 1 bài → trả kết quả của bài đó
   if (!Array.isArray(body) && !("posts" in body)) {
     const r = await ingestOne(toInput(body as SyncPost), await blockedPhones());
+    if (r.status !== "skipped") await setSetting(INGEST_LAST_AT_KEY, new Date().toISOString()).catch(() => {}); // nhịp tim nguồn tin
     const code = r.status === "created" ? 201 : r.status === "skipped" ? 422 : 200;
     return NextResponse.json({ status: r.status, job_id: r.jobId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null }, { status: code });
   }

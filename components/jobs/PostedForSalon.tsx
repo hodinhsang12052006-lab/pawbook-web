@@ -6,9 +6,18 @@ import { Clock, Loader2, MapPin, Store, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { timeAgo } from "@/lib/feedFormat";
 
-// Tin PawNail ĐĂNG HỘ tiệm (tiệm nhờ đăng): ghi rõ nguồn, địa chỉ + bản đồ, hết hạn;
-// tiệm có thể "nhận tin" (tự quản lý trên PawNail) hoặc "gỡ tin" — gửi yêu cầu cho admin.
-export function PostedForSalonBanner({ postedAt, expired, address, repostCount }: { postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number }) {
+// Nguồn của tin KHÔNG phải chủ tiệm tự đăng — ghi đúng sự thật:
+//   "assisted" = PawNail đăng hộ THEO YÊU CẦU của tiệm (admin ghi nhận người yêu cầu lúc đăng)
+//   "ingest" (và nguồn khác) = tin TỔNG HỢP từ bài đăng công khai: tiệm KHÔNG nhờ đăng, PawNail không đại diện tiệm.
+export function sourceLabel(source?: string | null): { chip: string; hint: string } {
+  if (source === "assisted") return { chip: tr("Đăng hộ tiệm", "Posted for salon"), hint: tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail at the salon's request — call the salon directly") };
+  return { chip: tr("Tin tổng hợp", "Aggregated"), hint: tr("Tổng hợp từ bài đăng công khai — PawNail không phải người đăng. Gọi hỏi tiệm trước khi đi.", "Aggregated from a public post — PawNail didn't write it. Call the salon to confirm.") };
+}
+
+// Tin đăng hộ / tổng hợp: ghi rõ nguồn, địa chỉ + bản đồ, hết hạn; tiệm có thể "nhận tin" (tự quản lý trên
+// PawNail) hoặc "gỡ tin" — gửi yêu cầu cho admin.
+export function PostedForSalonBanner({ source, postedAt, expired, address, repostCount }: { source?: string | null; postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number }) {
+  const assisted = source === "assisted";
   return (
     <div className="space-y-2">
       {expired && (
@@ -16,14 +25,22 @@ export function PostedForSalonBanner({ postedAt, expired, address, repostCount }
           <Clock className="h-4 w-4 shrink-0" />{tr(" Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", " This listing has expired — the salon may be fully staffed. Call first.")}
         </p>
       )}
-      <p className="flex items-start gap-2 rounded-xl bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-500/25">
+      <p className="flex items-start gap-2 rounded-xl bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-500/25" data-testid="source-banner">
         <Store className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
-        <span>
-          {tr("PawNail đăng hộ theo yêu cầu của tiệm", "Posted by PawNail on the salon's behalf")}
-          {postedAt ? tr(` · tiệm gửi ${timeAgo(postedAt)}`, ` · sent ${timeAgo(postedAt)}`) : ""}
-          {repostCount && repostCount > 1 ? tr(` · tiệm đã đăng lại ${repostCount} lần (đang cần người)`, ` · reposted ${repostCount} times (still hiring)`) : ""}
-          {tr(". Gọi trực tiếp số của tiệm để hỏi việc.", ". Call the salon directly to ask about the job.")}
-        </span>
+        {assisted ? (
+          <span>
+            {tr("PawNail đăng hộ theo yêu cầu của tiệm", "Posted by PawNail at the salon's request")}
+            {postedAt ? tr(` · tiệm gửi ${timeAgo(postedAt)}`, ` · sent ${timeAgo(postedAt)}`) : ""}
+            {repostCount && repostCount > 1 ? tr(` · tiệm đã nhờ đăng lại ${repostCount} lần`, ` · reposted ${repostCount} times`) : ""}
+            {tr(". Gọi trực tiếp số của tiệm để hỏi việc.", ". Call the salon directly to ask about the job.")}
+          </span>
+        ) : (
+          <span>
+            {tr("Tin tổng hợp từ bài đăng công khai — PawNail không phải người đăng và không đại diện tiệm", "Aggregated from a public post — PawNail did not write it and does not represent the salon")}
+            {postedAt ? tr(` · đăng ${timeAgo(postedAt)}`, ` · posted ${timeAgo(postedAt)}`) : ""}
+            {tr(". Gọi hỏi tiệm trước khi đi.", ". Call the salon to confirm before you go.")}
+          </span>
+        )}
       </p>
       {address && (
         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/[0.07]">

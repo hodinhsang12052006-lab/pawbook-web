@@ -6,6 +6,7 @@ import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { getResponseStats, describeResponse } from "@/lib/responseTime";
 import { getJobMedia } from "@/lib/jobMedia";
+import { jobTtlDays } from "@/lib/jobIngest/ingest";
 
 const FIRST_VIEWERS = 10;
 const FRESH_MS = 48 * 60 * 60 * 1000;
@@ -48,9 +49,12 @@ export async function GET(
     // Link bài gốc / khoá chống trùng của tin tổng hợp: chỉ admin cần, không trả ra ngoài.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sourceUrl, sourceKey, sourceFbHash, ...pub } = job;
+    // Tin tự đăng cũ chưa có hạn → hạn = ngày đăng + JOB_TTL_DAYS (khớp activeJobWhere)
+    const expiresAt = job.expiresAt ?? (job.source ? null : new Date(job.createdAt.getTime() + jobTtlDays() * 86_400_000));
     return NextResponse.json({
       ...tidyIngestJob(pub),
-      expired: !!job.expiresAt && job.expiresAt.getTime() <= Date.now(),
+      expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      expired: !!expiresAt && expiresAt.getTime() <= Date.now(),
       saveCount,
       mediaUrls: mediaMap.get(job.id) ?? [],
       heat: {
@@ -75,6 +79,30 @@ export async function GET(
       { error: "Đã xảy ra lỗi khi lấy chi tiết tin tuyển dụng." },
       { status: 500 }
     );
+  }
+}
+
+// PATCH /api/jobs/:id { action: "renew" } — chủ tiệm "Vẫn đang tuyển? Gia hạn 30 ngày" (chỉ tin TỰ ĐĂNG của chính họ).
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+    const { id } = await params;
+    const body = (await request.json().catch(() => ({}))) as { action?: string };
+    if (body.action !== "renew") return NextResponse.json({ error: "Yêu cầu không hợp lệ." }, { status: 400 });
+    const job = await prisma.job.findUnique({ where: { id }, select: { ownerId: true, source: true } });
+    if (!job) return NextResponse.json({ error: "Tin tuyển dụng không tồn tại." }, { status: 404 });
+    if (job.ownerId !== userId || job.source) return NextResponse.json({ error: "Bạn chỉ gia hạn được tin do chính tiệm mình đăng." }, { status: 403 });
+    const expiresAt = new Date(Date.now() + jobTtlDays() * 86_400_000);
+    await prisma.job.update({ where: { id }, data: { expiresAt } });
+    return NextResponse.json({ ok: true, expiresAt: expiresAt.toISOString() });
+  } catch (error) {
+    console.error("Renew job API error:", (error as Error)?.message);
+    return NextResponse.json({ error: "Không gia hạn được tin. Vui lòng thử lại." }, { status: 500 });
   }
 }
 

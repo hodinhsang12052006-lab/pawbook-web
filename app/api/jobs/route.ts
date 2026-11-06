@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { jobPostBlocked } from "@/lib/abuseGuard";
 import { realOnly } from "@/lib/demo";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
-import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { activeJobWhere, jobTtlDays } from "@/lib/jobIngest/ingest";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { notifyUrgentJob } from "@/lib/jobAlerts";
@@ -161,6 +161,8 @@ export async function POST(req: Request) {
         benefits: Array.isArray(benefits) ? benefits.join(",") : (benefits || ""),
         phone,
         isUrgent: isUrgent !== undefined ? !!isUrgent : true,
+        // Tin tự đăng tự ẩn sau JOB_TTL_DAYS (mặc định 30) — chủ tiệm bấm "Vẫn đang tuyển? Gia hạn" để giữ tin.
+        expiresAt: new Date(Date.now() + jobTtlDays() * 86_400_000),
       },
     });
 

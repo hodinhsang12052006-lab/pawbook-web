@@ -3,8 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { Role } from "@prisma/client";
-import { DEMO_EMAIL_SUFFIX, realUserWhere } from "@/lib/demo";
-import { INGEST_OWNER_EMAIL, INGEST_SOURCE } from "@/lib/jobIngest/ingest";
+import { DEMO_EMAIL_SUFFIX, realOnly, realUserWhere } from "@/lib/demo";
+import { activeJobWhere, INGEST_OWNER_EMAIL, INGEST_SOURCE } from "@/lib/jobIngest/ingest";
 
 // GET — "Sức khoẻ tăng trưởng" cho admin: chỉ SỐ ĐẾM tổng hợp, không lộ thông tin cá nhân.
 // Người dùng thật = loại tài khoản mẫu (@pawnailjobs.demo) và admin.
@@ -37,7 +37,7 @@ export async function GET() {
     n(prisma.nailDesign.count({ where: { status: "draft" } })),
     n(prisma.nailDesign.count({ where: { status: "published" } })),
     n(prisma.nailDesign.count({ where: { status: "draft", OR: [{ imageUrl: null }, { imageUrl: "" }] } })),
-    n(prisma.job.count({ where: { source: INGEST_SOURCE, expiresAt: { gt: new Date() } } })),
+    n(prisma.job.count({ where: { AND: [{ source: INGEST_SOURCE }, activeJobWhere(), { owner: realOnly() }] } })), // đúng số đang hiện công khai
     n(prisma.jobRequest.count({ where: { handledAt: null } })),
   ]);
   const total = techs + owners;

@@ -6,7 +6,6 @@ import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -14,6 +13,8 @@ import { useTr } from "@/lib/i18n/useTr";
 import { JobAlertButton } from "@/components/jobs/JobAlerts";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { dt } from "@/lib/i18n/dataEn";
+import ExternalJobs from "@/components/jobs/ExternalJobs";
+import { sourceLabel } from "@/components/jobs/PostedForSalon";
 
 export interface JobType {
   id: string;
@@ -35,7 +36,8 @@ export interface JobType {
   saveCount?: number;
   heat?: { viewsToday: number; contacts7d: number; hot: boolean };
   mediaUrls?: string[];
-  // Tin PawNail ĐĂNG HỘ tiệm (tiệm nhờ đăng, nhận qua /api/ingest/jobs): gọi trực tiếp tiệm.
+  // null = chủ tiệm tự đăng · "assisted" = PawNail đăng hộ theo yêu cầu (có ghi nhận người yêu cầu)
+  // · "ingest" = tin TỔNG HỢP từ bài đăng công khai (không phải tiệm nhờ đăng) — xem PostedForSalon.sourceLabel
   source?: string | null;
   sourcePostedAt?: string | null;
   address?: string | null;
@@ -53,6 +55,8 @@ interface JobBoardProps {
   market: "US" | "AU";
   state: string;
   city: string;
+  /** Bỏ lọc bang (nút "Xem tin ở bang khác" khi bang đang chọn chưa có tin). */
+  onClearState?: () => void;
 }
 
 // Hiệu ứng bấm nút kiểu app native
@@ -88,39 +92,26 @@ function timeAgo(iso: string): string {
   return tr(`${days} ngày trước`, `${days}d ago`);
 }
 
-// Banner "nhịp thị trường": ưu tiên số LIVE từ chính các tin đang mở trên
-// app (đủ ≥3 tin mới hiện); app còn ít dữ liệu thì dùng số khảo sát cộng đồng
-// và GHI RÕ nguồn + thời điểm — không nói "ngay bây giờ" với số cũ.
+// Banner "nhịp thị trường": CHỈ số LIVE từ chính các tin đang mở trên app (đủ ≥3 tin mới hiện).
+// Ít hơn 3 tin → không hiện gì (11/2026: bỏ số khảo sát nhóm Facebook 9/2026 — cũ và từ cách thu thập
+// PawNail không dùng nữa; đặt cạnh dòng "chưa có tin" là gây hiểu nhầm).
 export interface JobTotals { total: number; new7d: number; urgent: number }
 
 function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; state: string; totals: JobTotals }) {
   useTr(); // render lại khi đổi VI/EN
   const scope = state ? stateName(market, state) : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
   const { total, new7d: newThisWeek, urgent } = totals;
-
-  if (total >= 3) {
-    return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface refined:[&_.text-emerald-300]:font-bold refined:[&_.text-emerald-300]:text-white">
-        <span className="relative flex h-2.5 w-2.5 flex-shrink-0 refined:h-2 refined:w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 refined:hidden" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 refined:h-2 refined:w-2" />
-        </span>
-        <p className="text-xs text-slate-200 sm:text-sm">
-          <span className="font-black text-emerald-300">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
-          {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
-          {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent}{tr(" tin gấp", " urgent")}</span></>}
-        </p>
-      </div>
-    );
-  }
-
-  const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
-  const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
+  if (total < 3) return null;
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface">
-      <TrendingUp className="h-5 w-5 flex-shrink-0 text-emerald-400 refined:text-slate-400" />
+    <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface refined:[&_.text-emerald-300]:font-bold refined:[&_.text-emerald-300]:text-white">
+      <span className="relative flex h-2.5 w-2.5 flex-shrink-0 refined:h-2 refined:w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 refined:hidden" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 refined:h-2 refined:w-2" />
+      </span>
       <p className="text-xs text-slate-200 sm:text-sm">
-        <span className="font-black text-emerald-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span>{tr(" tại ", " in ")}{stateSignal ? scope : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia")}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ đang là bên được săn đón.", " in one survey of nail groups (Sep 2026) — techs are in demand.")}
+        <span className="font-black text-emerald-300">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
+        {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
+        {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent}{tr(" tin gấp", " urgent")}</span></>}
       </p>
     </div>
   );
@@ -222,9 +213,9 @@ function JobCard({
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
           <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
           <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
-          {job.source === "ingest" && (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-500/25" title={tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail on the salon's behalf — call the salon directly")}>
-              {tr("Đăng hộ tiệm", "Posted for salon")}
+          {job.source && (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-500/25" title={sourceLabel(job.source).hint}>
+              {sourceLabel(job.source).chip}
             </span>
           )}
         </Link>
@@ -332,8 +323,8 @@ function JobCard({
         >
           <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
         </a>
-        {job.source === "ingest" ? (
-          // Tin đăng hộ: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
+        {job.source ? (
+          // Tin đăng hộ / tổng hợp: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
           <Link
             href={`/jobs/${job.id}`}
             className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
@@ -353,7 +344,60 @@ function JobCard({
   );
 }
 
-export default function JobBoard({ market, state, city }: JobBoardProps) {
+// Bảng trống: nói THẬT (số tin thật ở nơi khác / PawNail mới ở thị trường này) — không hứa "còn rất nhiều tiệm".
+function EmptyJobs({ market, state, filtered, onClearState }: { market: "US" | "AU"; state: string; filtered: boolean; onClearState?: () => void }) {
+  useTr();
+  const { user } = useSessionUser();
+  const [marketTotal, setMarketTotal] = useState<number | null>(filtered ? null : 0);
+  useEffect(() => {
+    if (!filtered) { setMarketTotal(0); return; }
+    let cancelled = false;
+    setMarketTotal(null);
+    fetch(`/api/jobs?market=${market}&page=1&pageSize=5`)
+      .then((r) => (r.ok ? Number(r.headers.get("X-Total-Count")) || 0 : 0))
+      .then((n) => !cancelled && setMarketTotal(n))
+      .catch(() => !cancelled && setMarketTotal(0));
+    return () => { cancelled = true; };
+  }, [market, filtered]);
+  const where = state ? stateName(market, state) : "";
+  const marketName = market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
+  const showOwnerCta = !user || user.role === "OWNER" || user.role === "ADMIN";
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center" data-testid="jobs-empty">
+      <p className="text-4xl">💅</p>
+      <p className="text-base font-bold text-slate-300">
+        {where ? tr(`Chưa có tin tuyển thợ ở ${where}`, `No jobs in ${where} yet`) : filtered ? tr("Chưa có tin khớp tìm kiếm", "No jobs match your search") : tr(`Chưa có tin tuyển thợ nào tại ${marketName} lúc này`, `No open jobs in ${marketName} right now`)}
+      </p>
+      {marketTotal !== null && marketTotal > 0 && filtered ? (
+        <>
+          <p className="text-sm text-slate-400">{tr(`Có ${marketTotal} tin ở nơi khác tại ${marketName}.`, `There ${marketTotal === 1 ? "is 1 job" : `are ${marketTotal} jobs`} elsewhere in ${marketName}.`)}</p>
+          {state && onClearState && (
+            <button type="button" onClick={onClearState} className="min-h-[40px] rounded-xl px-4 text-sm font-bold text-pink-300 ring-1 ring-pink-500/30 hover:bg-pink-500/10">
+              {tr("Xem tin ở bang khác", "See other states")}
+            </button>
+          )}
+          <JobAlertButton market={market} state={state} />
+        </>
+      ) : marketTotal === 0 ? (
+        <>
+          <p className="max-w-md text-sm text-slate-400">
+            {market === "AU"
+              ? tr(`PawNail mới có mặt tại Úc — bật thông báo việc để là người đầu tiên biết khi tiệm${where ? ` ở ${where}` : ""} đăng tin.`, `PawNail is new in Australia — turn on job alerts to be the first to know when a salon${where ? ` in ${where}` : ""} posts.`)
+              : tr(`Bật thông báo việc để biết ngay khi tiệm${where ? ` ở ${where}` : ""} đăng tin mới.`, `Turn on job alerts to hear as soon as a salon${where ? ` in ${where}` : ""} posts a job.`)}
+          </p>
+          <JobAlertButton market={market} state={state} />
+          {showOwnerCta && (
+            <Link href="/jobs/create" className="min-h-[40px] pt-2 text-sm font-bold text-pink-300 hover:text-pink-200">
+              {tr("Chủ tiệm: đăng tin tuyển thợ miễn phí →", "Salon owner? Post a job for free →")}
+            </Link>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export default function JobBoard({ market, state, city, onClearState }: JobBoardProps) {
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const [jobs, setJobs] = useState<JobType[]>([]);
@@ -497,15 +541,8 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
   if (jobs.length === 0 && page === 1) {
     return (
       <div className="space-y-4">
-        <DemandFomoBanner market={market} state={state} totals={totals} />
-        <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-          <p className="text-4xl">💅</p>
-          <p className="text-base font-bold text-slate-300">{tr("Chưa có tin tuyển thợ ở khu vực này", "No jobs in this area yet")}</p>
-          <JobAlertButton market={market} state={state} />
-          <p className="text-sm text-slate-500">
-            {tr("Nhưng đừng bỏ cuộc — thử đổi bang hoặc thành phố khác, ", "Don't give up — try another state or city, ")}{market === "US" ? tr("toàn nước Mỹ", "across the US") : tr("toàn nước Úc", "across Australia")}{tr(" vẫn còn rất nhiều tiệm đang cần thợ.", " plenty of salons are still hiring.")}
-          </p>
-        </div>
+        <EmptyJobs market={market} state={state} filtered={!!state || !!city} onClearState={onClearState} />
+        <ExternalJobs market={market} state={state} q={city} />
       </div>
     );
   }
@@ -553,6 +590,7 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
       {!showSavedOnly && (
         <>
           <Pagination page={page} pages={pages} onPage={goPage} />
+          {page >= pages && <ExternalJobs market={market} state={state} q={city} />}
           {pages > 1 && (
             <p className="text-center text-xs text-slate-500">
               {tr(`Trang ${page}/${pages} · tin ${(page - 1) * JOBS_PER_PAGE + 1}–${Math.min(page * JOBS_PER_PAGE, totals.total)} trong ${totals.total}`, `Page ${page} of ${pages} · jobs ${(page - 1) * JOBS_PER_PAGE + 1}–${Math.min(page * JOBS_PER_PAGE, totals.total)} of ${totals.total}`)}

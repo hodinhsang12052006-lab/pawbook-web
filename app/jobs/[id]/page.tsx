@@ -49,8 +49,9 @@ interface JobDetail {
   heat?: { viewsToday: number; contacts7d: number; hot: boolean; firstViewers: number | null };
   mediaUrls?: string[];
   ownerResponse?: { label: string; fast: boolean; samples: number } | null;
-  // Tin PawNail đăng hộ tiệm (tiệm nhờ đăng)
+  // null = chủ tiệm tự đăng · "assisted" = đăng hộ theo yêu cầu · "ingest" = tin tổng hợp từ bài công khai
   source?: string | null;
+  expiresAt?: string | null;
   sourcePostedAt?: string | null;
   address?: string | null;
   expired?: boolean;
@@ -135,6 +136,18 @@ export default function JobDetailPage({ params }: PageProps) {
     }
   };
 
+  // Chủ tiệm: "Vẫn đang tuyển? Gia hạn 30 ngày" — tin tự đăng tự ẩn sau 30 ngày nếu không gia hạn.
+  const [renewing, setRenewing] = useState(false);
+  const renew = async () => {
+    setRenewing(true);
+    const res = await fetch(`/api/jobs/${jobId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "renew" }) }).catch(() => null);
+    const j = await res?.json().catch(() => ({}));
+    setRenewing(false);
+    if (!res?.ok) { toast.error(j?.error || tr("Chưa gia hạn được, thử lại sau.", "Couldn't renew, please try again.")); return; }
+    setJob((prev) => (prev ? { ...prev, expiresAt: j.expiresAt, expired: false } : prev));
+    toast.success(tr("Đã gia hạn tin thêm 30 ngày.", "Listing renewed for 30 more days."));
+  };
+
   const share = async () => {
     const url = window.location.href;
     try {
@@ -193,7 +206,9 @@ export default function JobDetailPage({ params }: PageProps) {
     { icon: Globe2, label: tr("Thị trường", "Market"), value: <span className="inline-flex items-center gap-1.5"><Flag code={job.market} /> {job.market === "US" ? tr("Mỹ", "US") : tr("Úc", "Australia")}</span> },
   ];
   const isOwnJob = user?.id && user.id === job.ownerId;
-  const postedForSalon = job.source === "ingest";
+  const postedForSalon = !!job.source;
+  const expiresMs = job.expiresAt ? new Date(job.expiresAt).getTime() : null;
+  const daysLeft = expiresMs ? Math.ceil((expiresMs - Date.now()) / 86_400_000) : null;
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -337,7 +352,20 @@ export default function JobDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {postedForSalon && <PostedForSalonBanner postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} />}
+          {postedForSalon && <PostedForSalonBanner source={job.source} postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} />}
+          {!postedForSalon && job.expired && !isOwnJob && (
+            <p className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-500/25">{tr("Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", "This listing has expired — the salon may be fully staffed. Call first.")}</p>
+          )}
+          {isOwnJob && !postedForSalon && daysLeft !== null && daysLeft <= 7 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 ring-1 ring-amber-500/25" data-testid="renew-job">
+              <p className="text-sm font-semibold text-amber-200">
+                {job.expired || daysLeft <= 0 ? tr("Tin đã hết hạn và không còn hiện trên bảng việc.", "This listing has expired and is hidden from the board.") : tr(`Tin sẽ tự ẩn sau ${daysLeft} ngày.`, `This listing hides in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`)}
+              </p>
+              <button type="button" onClick={renew} disabled={renewing} className="min-h-[40px] rounded-xl bg-amber-400 px-4 text-sm font-bold text-slate-950 disabled:opacity-50">
+                {tr("Vẫn đang tuyển? Gia hạn 30 ngày", "Still hiring? Renew 30 days")}
+              </button>
+            </div>
+          )}
 
           {!isOwnJob && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">

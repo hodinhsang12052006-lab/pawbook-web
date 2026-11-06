@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { INGEST_SOURCE, ingestBatch, type IngestInput } from "@/lib/jobIngest/ingest";
+import { realOnly } from "@/lib/demo";
+import { activeJobWhere, INGEST_SOURCE, ingestBatch, type IngestInput } from "@/lib/jobIngest/ingest";
 
 // Cổng nhận tin từ tool lọc nhóm. Bảo vệ bằng INGEST_KEY (Vercel):  Authorization: Bearer <INGEST_KEY>
 //   POST { posts: [{ text, sourceUrl?, postedAt?, phone?, salonName?, address?, city?, state?, zip?, market?, salary? }] }  (≤ 200 bài/lần)
@@ -28,10 +29,13 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const now = new Date();
-  const [active, expired, byState] = await Promise.all([
+  // active = ĐÚNG số đang hiện công khai (còn hạn + bộ lọc chữ + tài khoản thật); notExpired − active = bị bộ lọc ẩn
+  const shown = { AND: [{ source: INGEST_SOURCE }, activeJobWhere(), { owner: realOnly() }] };
+  const [active, notExpired, expired, byState] = await Promise.all([
+    prisma.job.count({ where: shown }),
     prisma.job.count({ where: { source: INGEST_SOURCE, expiresAt: { gt: now } } }),
     prisma.job.count({ where: { source: INGEST_SOURCE, expiresAt: { lte: now } } }),
-    prisma.job.groupBy({ by: ["market", "state"], where: { source: INGEST_SOURCE, expiresAt: { gt: now } }, _count: { _all: true } }),
+    prisma.job.groupBy({ by: ["market", "state"], where: shown, _count: { _all: true } }),
   ]);
-  return NextResponse.json({ active, expired, byState: byState.map((r) => ({ market: r.market, state: r.state, n: r._count._all })) });
+  return NextResponse.json({ active, hiddenByFilter: Math.max(0, notExpired - active), expired, byState: byState.map((r) => ({ market: r.market, state: r.state, n: r._count._all })) });
 }

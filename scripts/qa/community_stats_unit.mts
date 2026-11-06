@@ -1,11 +1,10 @@
 // Số liệu "cộng đồng" KHÔNG tính bài của tài khoản chính thức (ADMIN) và nói đúng nguồn của tin tổng hợp:
 //   - Xu hướng (lib/trends): hashtag nổi / bài hot không lấy bài ADMIN dù có hashtag + lượt thích
 //   - Toast hoạt động (/api/activity): không có bài ADMIN; tin tổng hợp không bị nói là tiệm "vừa đăng"
-// Chạy trên DB local prisma/dev.db (đã db push đúng schema). Dữ liệu tạo ra được xoá ở cuối.
+// Chạy trên 1 SQLite TẠM đúng schema (scripts/qa/_temp_sqlite.ts) — không đụng prisma/dev.db, không đụng Turso.
 //   env -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN npx tsx scripts/qa/community_stats_unit.mts
-if (process.env.TURSO_DATABASE_URL || process.env.TURSO_AUTH_TOKEN) throw new Error("Chỉ chạy trên SQLite local — env -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN …");
-import prismaMod from "../../lib/prisma";
-const prisma = ((prismaMod as unknown as { default?: typeof prismaMod }).default ?? prismaMod);
+import { useTempSqlite } from "./_temp_sqlite";
+const { db: prisma, cleanup } = useTempSqlite("community_stats");
 
 let pass = 0, fail = 0;
 const ok = (id: string, d: string, c: boolean, x = "") => { c ? pass++ : fail++; console.log(`${c ? "✅" : "❌"} [${id}] ${d}${c ? "" : "  → " + x}`); };
@@ -44,6 +43,6 @@ await prisma.job.delete({ where: { id: ing.id } });
 await prisma.postLike.deleteMany({ where: { postId: { in: [...adminPosts, ...techPosts].map((p) => p.id) } } });
 await prisma.post.deleteMany({ where: { id: { in: [...adminPosts, ...techPosts].map((p) => p.id) } } });
 await prisma.user.deleteMany({ where: { id: { in: [admin.id, tech.id, owner.id, ...fans.map((f) => f.id)] } } });
-await prisma.$disconnect();
+await cleanup();
 console.log(`\nSố liệu cộng đồng: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

@@ -1,9 +1,9 @@
 // Nội dung mỗi ngày: tin ngành → bài viết (Gemini giả, chống bịa số) + bài "4 mẫu nail hôm nay".
-//   DATABASE_URL="file:./prisma/dev.db" npx tsx scripts/qa/content_daily_unit.mts
+//   env -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN npx tsx scripts/qa/content_daily_unit.mts
+// Chạy trên 1 SQLite TẠM đúng schema (scripts/qa/_temp_sqlite.ts) — không đụng prisma/dev.db, không đụng Turso.
 import http from "node:http";
-if (process.env.TURSO_DATABASE_URL) throw new Error("Bài test chỉ chạy trên DB local — bỏ TURSO_DATABASE_URL (env -u TURSO_DATABASE_URL …)");
-import prismaMod from "../../lib/prisma";
-const prisma = ((prismaMod as unknown as { default?: typeof prismaMod }).default ?? prismaMod);
+import { useTempSqlite } from "./_temp_sqlite";
+const { db: prisma, cleanup } = useTempSqlite("content_daily");
 
 let pass = 0, fail = 0;
 const ok = (id: string, d: string, c: boolean, x = "") => { c ? pass++ : fail++; console.log(`${c ? "✅" : "❌"} [${id}] ${d}${c ? "" : "  → " + x}`); };
@@ -98,20 +98,30 @@ ok("J2", "Cùng ngày → không đăng bài điểm tin thứ 2", d2.posted ===
 const o5 = await publishDailyOfficialPost(new Date(now.getTime() + 86400e3));
 ok("J3", "Bài 📍 không chiếm suất bài kiến thức", o5.posted === true, JSON.stringify(o5));
 await prisma.job.deleteMany({ where: { id: { in: jobIds } } });
-// Bài điểm tin CHỈ từ tin tiệm tự đăng của tài khoản thật: tin mẫu (@pawnailjobs.demo) và tin tổng hợp (source=ingest)
-// cùng bang, cùng ngày không được lên bài; chỉ có tin mẫu / tổng hợp → không đăng.
+// Bài điểm tin lấy MỌI tin tuyển thật đang mở — kể cả tin TỪ NHÓM cộng đồng PawNail (source=ingest, bot của chủ chia
+// sẻ bài tiệm nhờ đăng; quyết định của chủ 06/11/2026) — nhưng KHÔNG lấy tin mẫu (@pawnailjobs.demo) và tin đã gỡ.
 const demoOwner = await prisma.user.create({ data: { email: `digest.${t}@x.pawnailjobs.demo`, name: "Demo Owner", password: "x", role: "OWNER" } });
+// Tài khoản hệ thống của tin từ nhóm (như INGEST_OWNER_EMAIL: đuôi feed.pawnail.invalid, KHÔNG phải email mẫu)
+const feedOwner = await prisma.user.create({ data: { email: `tonghop.${t}@feed.pawnail.invalid`, name: "PawNail · Tin tổng hợp", password: "x", role: "OWNER" } });
 const mk = (ownerId: string, name: string, extra: Record<string, unknown> = {}) => prisma.job.create({ data: { ownerId, title: "Cần thợ", salonName: name, description: "x", market: "US", state: "NV", city: "Las Vegas", salaryType: "Bao lương tuần", salaryAmount: "$1,200/tuần", skills: "Bột/Acrylic", benefits: "", phone: "(702) 555-0101", createdAt: now, ...extra } as any });
-const onlyFake = [await mk(demoOwner.id, `Demo Nails ${t}-a`), await mk(demoOwner.id, `Demo Nails ${t}-b`), await mk(owner.id, `Ingest Nails ${t}-c`, { source: "ingest", expiresAt: new Date(Date.now() + 5 * 86400e3) })];
+const groupJob = (name: string, phone: string, extra: Record<string, unknown> = {}) => mk(feedOwner.id, name, { source: "ingest", phone, sourcePostedAt: now, expiresAt: new Date(Date.now() + 5 * 86400e3), ...extra });
+const nvRows = [
+  await mk(demoOwner.id, `Demo Nails ${t}-a`), await mk(demoOwner.id, `Demo Nails ${t}-b`),
+  await groupJob(`Group Nails ${t}-c`, "(702) 555-0102", { sourceUrl: "https://www.facebook.com/groups/1/posts/77" }),
+  // Tin đã GỠ theo yêu cầu (removeJobPublicData: hết hạn lúc gỡ) — không bao giờ lên bài điểm tin
+  await mk(feedOwner.id, `Removed Nails ${t}-r`, { source: "removed", phone: "", expiresAt: new Date(Date.now() - 3600e3) }),
+];
 const d4 = await publishJobDigest(new Date(now.getTime() + 2 * 86400e3));
-ok("J4", "Chỉ có tin MẪU + tin tổng hợp trong bang → KHÔNG đăng bài điểm tin", d4.posted === false, JSON.stringify(d4));
-const real2 = [await mk(owner.id, `Real Nails ${t}-1`), await mk(owner.id, `Real Nails ${t}-2`)];
+ok("J4", "Bang chỉ có 2 tin MẪU + 1 tin từ nhóm + 1 tin đã gỡ → chưa đủ 2 tin thật → KHÔNG đăng (tin mẫu / tin đã gỡ không được tính)", d4.posted === false && d4.reason === "chưa bang nào đủ 2 tin mới", JSON.stringify(d4));
+// Thêm 1 tin từ nhóm KHÔNG có link bài gốc → bang có 2 tin từ nhóm (không tin tự đăng nào) → VẪN đăng bài điểm tin
+nvRows.push(await groupJob(`Group Nails ${t}-d`, "(702) 555-0103"));
 const d5 = await publishJobDigest(new Date(now.getTime() + 3 * 86400e3));
 const dp5 = await prisma.post.findFirst({ where: { authorId: admin.id, content: { startsWith: "📍 Nevada" } }, orderBy: { createdAt: "desc" } });
 const c5 = dp5?.content || "";
-ok("J5", "Bài điểm tin chỉ liệt kê 2 tiệm THẬT tự đăng (không tin mẫu, không tin tổng hợp)", d5.posted === true && /Nevada: 2 tiệm/.test(c5) && c5.includes(`Real Nails ${t}-1`) && c5.includes(`Real Nails ${t}-2`) && !c5.includes("Demo Nails") && !c5.includes("Ingest Nails"), c5.slice(0, 240));
-await prisma.job.deleteMany({ where: { id: { in: [...onlyFake, ...real2].map((j) => j.id) } } });
+ok("J5", "Bài điểm tin GỒM tin từ nhóm cộng đồng PawNail (có / không có link bài gốc), KHÔNG tin mẫu, không tin đã gỡ, không lộ SĐT", d5.posted === true && /Nevada: 2 tiệm/.test(c5) && c5.includes(`Group Nails ${t}-c`) && c5.includes(`Group Nails ${t}-d`) && !c5.includes("Demo Nails") && !c5.includes("Removed Nails") && !/555-01\d\d|702\) 555/.test(c5), c5.slice(0, 240));
+await prisma.job.deleteMany({ where: { id: { in: nvRows.map((j) => j.id) } } });
 await prisma.user.delete({ where: { id: demoOwner.id } });
+await prisma.user.delete({ where: { id: feedOwner.id } });
 await prisma.user.delete({ where: { id: owner.id } });
 const g3 = await publishDesignGallery(new Date(now.getTime() + 86400e3));
 const used = new Set([...g1.ids!, ...g2b.ids!, ...g2c.ids!]);
@@ -122,5 +132,5 @@ await prisma.nailDesign.deleteMany({ where: { id: { in: ids } } });
 await prisma.user.delete({ where: { id: admin.id } });
 gem.close();
 console.log(`\nNội dung mỗi ngày (tin ngành + ảnh mẫu): ${pass}/${pass + fail} PASS`);
-await prisma.$disconnect();
+await cleanup();
 process.exit(fail ? 1 : 0);

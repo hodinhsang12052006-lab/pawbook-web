@@ -298,6 +298,45 @@ ok("A3", "INGEST_AGGREGATED=off → bài từ nhóm bị bỏ (công tắc khẩ
   offRes.status === "skipped" && /INGEST_AGGREGATED=off/.test(offRes.reason || "") && assistedRes.status === "created" && overwrite.status === "skipped" && kept?.source === "assisted" && /bao lương/.test(kept?.description || ""),
   JSON.stringify({ offRes, assistedRes, overwrite, src: kept?.source }));
 
+// ---- Tin đăng hộ chỉ được "giữ chỗ" khi CÒN HẠN: hết hạn rồi thì bài mới từ nhóm của tiệm lại lên bảng như main ----
+const onBoard = async (phone: string) => db.job.count({ where: { AND: [{ phone }, ing.activeJobWhere()] } });
+const DAYMS = 86400_000;
+// (a) admin đăng hộ → hết hạn → bot gửi bài mới cùng SĐT
+const asg = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp ở Katy TX, bao lương $1,300/tuần. LH 281-555-0147", salonName: "Expired Assist Nails", state: "TX", market: "US" }, new Set(), { assisted: true });
+await db.job.update({ where: { id: asg.jobId! }, data: { expiresAt: new Date(Date.now() - DAYMS) } });
+const dryAfter = await ing.ingestOne({ text: "Cần thợ chân tay nước gấp, tip cao. LH 281-555-0147", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/12" }, new Set(), { dryRun: true });
+const grpAfter = await ing.ingestOne({ text: "Cần thợ chân tay nước gấp, tip cao. LH 281-555-0147", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/12" }, new Set());
+const grpRow = grpAfter.jobId ? await db.job.findUnique({ where: { id: grpAfter.jobId } }) : null;
+const oldAsg = await db.job.findUnique({ where: { id: asg.jobId! } });
+ok("A4", "Tin ĐĂNG HỘ đã HẾT HẠN không chặn bot: bài mới từ nhóm cùng SĐT được nhận (xem trước + thật = created, source ingest, giữ SĐT, hiện trên bảng); tin đăng hộ cũ giữ nguyên làm lịch sử",
+  asg.status === "created" && dryAfter.status === "created" && grpAfter.status === "created" && grpRow?.source === "ingest" && grpRow?.phone === "(281) 555-0147" && /tip cao/.test(grpRow?.description || "")
+    && (await onBoard("(281) 555-0147")) === 1 && oldAsg?.source === "assisted" && /bao lương/.test(oldAsg?.description || ""),
+  JSON.stringify({ asg, dryAfter, grpAfter, grpSrc: grpRow?.source, oldSrc: oldAsg?.source, board: await onBoard("(281) 555-0147") }));
+// (b) chiều ngược: bot đăng tiệm → admin đăng hộ cùng SĐT (đẩy tin, đổi nhãn "assisted") → còn hạn: bot nhường (tiệm vẫn
+//     hiện qua tin đăng hộ); hết hạn: bài sau của bot lại lên bảng (trước đây khoá mãi mãi)
+const grpFirst = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp, lương cao. LH 832-555-0148", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/13" }, new Set());
+const asgBump = await ing.ingestOne({ text: "Tiệm cần thợ bột + chân tay nước, bao lương $1,400/tuần. LH 832-555-0148", salonName: "Relabel QA Nails", state: "TX", market: "US" }, new Set(), { assisted: true });
+const relabeled = await db.job.findUnique({ where: { id: grpFirst.jobId! } });
+const whileActive = await ing.ingestOne({ text: "Cần thợ dip gấp, bao ăn ở. LH 832-555-0148", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/14" }, new Set());
+const boardActive = await onBoard("(832) 555-0148");
+await db.job.update({ where: { id: grpFirst.jobId! }, data: { expiresAt: new Date(Date.now() - DAYMS) } });
+const afterExpiry = await ing.ingestOne({ text: "Cần thợ dip gấp, bao ăn ở. LH 832-555-0148", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/14" }, new Set());
+const boardAfter = await onBoard("(832) 555-0148");
+ok("A5", "Bot đăng → admin đăng hộ cùng tiệm (đổi nhãn assisted) → còn hạn: bài từ nhóm nhường, tiệm VẪN hiện 1 tin; hết hạn: bài mới từ nhóm được nhận lại (created, hiện trên bảng)",
+  grpFirst.status === "created" && asgBump.status === "bumped" && asgBump.jobId === grpFirst.jobId && relabeled?.source === "assisted" && whileActive.status === "skipped" && /còn hạn/.test(whileActive.reason || "") && boardActive === 1
+    && afterExpiry.status === "created" && afterExpiry.jobId !== grpFirst.jobId && boardAfter === 1,
+  JSON.stringify({ grpFirst, asgBump, relabeled: relabeled?.source, whileActive, boardActive, afterExpiry, boardAfter }));
+
+// ---- Nhịp tim NGAY SAU TRIỂN KHAI: chưa có ingest_last_at (bản cũ không ghi) → không báo động giả ----
+const tDeploy = Date.now();
+const hbEst = await ing.ingestHeartbeat(new Date(tDeploy + 2 * H)); // tin từ nhóm mới nhất trong DB vừa tạo
+const hbGrace = await ing.ingestHeartbeat(new Date(tDeploy + 25 * H)); // tin trong DB đã cũ nhưng mới bắt đầu theo dõi
+const hbWatched = await ing.ingestHeartbeat(new Date(tDeploy + 50 * H)); // đã theo dõi đủ 24 giờ mà không có tin nào
+ok("B0", "Chưa có ingest_last_at: lấy tin từ nhóm mới nhất trong DB làm 'lần cuối nhận' (ước tính) → không cảnh báo; tin trong DB cũ → chỉ cảnh báo sau khi đã theo dõi đủ 24 giờ",
+  hbEst.stale === false && hbEst.lastAtEstimated === true && !!hbEst.lastAt && Math.abs(Date.parse(hbEst.lastAt) - tDeploy) < 10 * 60_000
+    && hbGrace.stale === false && hbWatched.stale === true && hbWatched.rejectedOnly === false,
+  JSON.stringify({ hbEst, hbGrace, hbWatched }));
+
 // ---- Nhịp tim: lô đúng khoá ghi lại; quá 24 giờ không có tin mới → stale; bot gửi mà bị loại hết → rejectedOnly ----
 const tNow = new Date();
 await ing.recordIngestHeartbeat([{ status: "created" }], tNow);
@@ -306,7 +345,7 @@ const hbOld = await ing.ingestHeartbeat(new Date(tNow.getTime() + 25 * H));
 await ing.recordIngestHeartbeat([{ status: "skipped" }], new Date(tNow.getTime() + 3 * H));
 const hbRejected = await ing.ingestHeartbeat(new Date(tNow.getTime() + 26 * H));
 ok("B1", "Nhịp tim: vừa nhận → không cảnh báo; quá 24 giờ → stale (admin cảnh báo); lô sau đó toàn bài bị loại → rejectedOnly; accepting = true khi biến không đặt",
-  hbFresh.stale === false && hbFresh.rejectedOnly === false && hbOld.stale === true && hbRejected.stale === true && hbRejected.rejectedOnly === true && hbFresh.accepting === true && hbFresh.lastAt === tNow.toISOString(),
+  hbFresh.stale === false && hbFresh.rejectedOnly === false && hbOld.stale === true && hbRejected.stale === true && hbRejected.rejectedOnly === true && hbFresh.accepting === true && hbFresh.lastAt === tNow.toISOString() && hbFresh.lastAtEstimated === false,
   JSON.stringify({ hbFresh, hbOld, hbRejected }));
 
 await db.$disconnect();

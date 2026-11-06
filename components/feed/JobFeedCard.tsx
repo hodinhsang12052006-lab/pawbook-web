@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, DollarSign, Flame, MapPin, MessageCircle, Phone, Sparkles } from "lucide-react";
+import { Briefcase, DollarSign, ExternalLink, Flame, MapPin, MessageCircle, Phone, Sparkles } from "lucide-react";
 import type { JobType } from "@/components/jobs/JobBoard";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { placeLabel } from "@/lib/stateNames";
@@ -74,13 +74,26 @@ export default function JobFeedCard({ job }: { job: JobType }) {
       </Link>
 
       <div className="flex items-center gap-2 border-t border-white/5 px-4 py-3">
-        <a
-          href={`tel:${job.phone}`}
-          onClick={() => trackJobContact(job.id)}
-          className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 ${PRESS}`}
-        >
-          <Phone className="h-4 w-4" />{tr("Gọi ngay", "Call now")}
-        </a>
+        {job.phone ? (
+          <a
+            href={`tel:${job.phone}`}
+            onClick={() => trackJobContact(job.id)}
+            className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 ${PRESS}`}
+          >
+            <Phone className="h-4 w-4" />{tr("Gọi ngay", "Call now")}
+          </a>
+        ) : job.sourceLink ? (
+          // Tin TỔNG HỢP: không có SĐT (không lấy SĐT từ bài đăng) → mở bài gốc, ghi rõ nguồn
+          <a
+            href={job.sourceLink.href}
+            target="_blank"
+            rel="noopener nofollow ugc"
+            onClick={() => trackJobContact(job.id)}
+            className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-2 text-center text-sm font-bold text-white hover:bg-emerald-600 ${PRESS}`}
+          >
+            <ExternalLink className="h-4 w-4 flex-shrink-0" />{tr(`Bài gốc trên ${job.sourceLink.name}`, `Original post on ${job.sourceLink.name}`)}
+          </a>
+        ) : null}
         {job.source ? (
           <Link href={`/jobs/${job.id}`} className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}>
             <MapPin className="h-4 w-4" />{tr("Chi tiết", "Details")}

@@ -20,11 +20,18 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     }
     const n = items.length;
     const title = trL(lang, `${u.name} — Menu dịch vụ & bảng giá`, `${u.name} — Menu & prices`);
-    const description = trL(
-      lang,
-      `${n} dịch vụ kèm giá và thời gian làm${u.city ? ` tại ${u.city}` : ""}. Gửi yêu cầu đặt lịch trên PawNail.`,
-      `${n} ${n === 1 ? "service" : "services"} with prices and timing${u.city ? ` in ${u.city}` : ""}. Request a booking on PawNail.`
-    );
+    // Menu chưa có mục nào → không ghi "0 dịch vụ" trong bản xem trước.
+    const description = n
+      ? trL(
+          lang,
+          `${n} dịch vụ kèm giá và thời gian làm${u.city ? ` tại ${u.city}` : ""}. Gửi yêu cầu đặt lịch trên PawNail.`,
+          `${n} ${n === 1 ? "service" : "services"} with prices and timing${u.city ? ` in ${u.city}` : ""}. Request a booking on PawNail.`
+        )
+      : trL(
+          lang,
+          `Menu dịch vụ và bảng giá${u.city ? ` tại ${u.city}` : ""}. Gửi yêu cầu đặt lịch trên PawNail.`,
+          `Services and prices${u.city ? ` in ${u.city}` : ""}. Request a booking on PawNail.`
+        );
     return { title, description, alternates: alternates(`/menu/${uid}`, lang), openGraph: openGraph(lang, { title, description, ...(cover ? { images: [cover] } : {}) }) };
   } catch {
     return fallback;

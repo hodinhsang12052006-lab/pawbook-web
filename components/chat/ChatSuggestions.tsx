@@ -7,13 +7,15 @@ import Avatar from "@/components/ui/Avatar";
 import { currentLocale, tr } from "@/lib/i18n/tr";
 import { menuText } from "@/lib/menu";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn"; // lương "…/tuần" → "…/wk" như bảng việc
 
 // Danh sách chat còn ít cuộc trò chuyện → không để khoảng trống: gợi ý bằng DỮ LIỆU THẬT
 // (thợ: tiệm đang tuyển mới nhất · chủ tiệm: thợ đang tìm việc, chưa có thì mời đăng tin).
 interface Job { id: string; salonName: string; city: string | null; state: string | null; salaryAmount: string | null; isUrgent?: boolean }
 interface Tech { user?: { id: string; name: string; avatarUrl: string | null }; city?: string | null; state?: string | null; specialties?: string | string[] }
 
-export default function ChatSuggestions({ role, market }: { role: string | null; market: string | null }) {
+// excludeIds (V2): người đã có trong danh sách chat + chính mình — không bao giờ gợi ý lại.
+export default function ChatSuggestions({ role, market, excludeIds = [] }: { role: string | null; market: string | null; excludeIds?: string[] }) {
   useTr();
   const owner = role === "OWNER";
   const client = role === "CLIENT";
@@ -21,10 +23,11 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
   const [techs, setTechs] = useState<Tech[] | null>(null);
   const [salons, setSalons] = useState<{ id: string; name: string; avatarUrl: string | null; city: string | null; services: { name: string; nameEn?: string | null; nameVi?: string | null; priceFrom: number }[] }[] | null>(null);
   const m = market === "AU" ? "AU" : "US";
+  const skip = new Set(excludeIds);
   useEffect(() => {
     // Khách đi làm nail: gợi ý tiệm / thợ có menu để nhắn hỏi mẫu — KHÔNG gợi ý việc làm.
-    if (client) fetch(`/api/salons?market=${m}&limit=3`).then((r) => (r.ok ? r.json() : { items: [] })).then((d) => setSalons(Array.isArray(d.items) ? d.items : [])).catch(() => setSalons([]));
-    else if (owner) fetch(`/api/technicians?market=${m}`).then((r) => (r.ok ? r.json() : [])).then((d) => setTechs((Array.isArray(d) ? d : []).slice(0, 3))).catch(() => setTechs([]));
+    if (client) fetch(`/api/salons?market=${m}&limit=8`).then((r) => (r.ok ? r.json() : { items: [] })).then((d) => setSalons(Array.isArray(d.items) ? d.items : [])).catch(() => setSalons([]));
+    else if (owner) fetch(`/api/technicians?market=${m}`).then((r) => (r.ok ? r.json() : [])).then((d) => setTechs(Array.isArray(d) ? d : [])).catch(() => setTechs([]));
     else fetch(`/api/jobs?market=${m}&page=1&pageSize=5`).then((r) => (r.ok ? r.json() : [])).then((d) => setJobs((Array.isArray(d) ? d : []).slice(0, 3))).catch(() => setJobs([]));
   }, [owner, client, m]);
 
@@ -36,12 +39,13 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
   const card = "flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3 ring-1 ring-white/[0.07] transition-colors hover:bg-white/[0.07]";
 
   if (client) {
-    if (!salons || !salons.length) return null;
+    const shown = (salons ?? []).filter((x) => !skip.has(x.id)).slice(0, 3);
+    if (!shown.length) return null;
     return (
       <section aria-label={tr("Gợi ý cho bạn", "Suggested for you")}>
         {head}
         <div className="space-y-2">
-          {salons.map((s) => (
+          {shown.map((s) => (
             <Link key={s.id} href={`/messages?to=${s.id}`} className={card}>
               <Avatar src={s.avatarUrl} name={s.name} seed={s.id} className="h-10 w-10" alt="" />
               <span className="min-w-0 flex-1">
@@ -63,7 +67,7 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
       <section aria-label={tr("Gợi ý cho bạn", "Suggested for you")}>
         {head}
         <div className="space-y-2">
-          {techs.map((t) => t.user && (
+          {techs.filter((t) => t.user && !skip.has(t.user.id)).slice(0, 3).map((t) => t.user && (
             <Link key={t.user.id} href={`/profile/${t.user.id}`} className={card}>
               <Avatar src={t.user.avatarUrl} name={t.user.name} seed={t.user.id} className="h-10 w-10" alt="" />
               <span className="min-w-0 flex-1">
@@ -99,7 +103,7 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
                 <span className="truncate">{j.salonName}</span>
                 {j.isUrgent && <span className="flex-shrink-0 rounded-full bg-rose-500/20 px-1.5 text-[10px] font-black text-rose-200">{tr("Gấp", "Urgent")}</span>}
               </span>
-              <span className="block truncate text-xs text-slate-400">{[j.city, j.state].filter(Boolean).join(", ")}{j.salaryAmount && j.salaryAmount !== "Thỏa thuận" ? ` · ${j.salaryAmount}` : ""}</span>
+              <span className="block truncate text-xs text-slate-400">{[j.city, j.state].filter(Boolean).join(", ")}{j.salaryAmount && j.salaryAmount !== "Thỏa thuận" ? ` · ${dt(j.salaryAmount)}` : ""}</span>
             </span>
             <ChevronRight className="h-4 w-4 text-slate-500" />
           </Link>

@@ -75,9 +75,9 @@ export default function BottomNav() {
     document.documentElement.toggleAttribute("data-ui-classic", onAuth || (pathname === "/" && !sessionUser));
   }, [pathname, loading, sessionUser]);
 
-  // Ẩn khi chưa đăng nhập, trong luồng /auth/*, và trên /messages (ô soạn
-  // tin sát đáy màn hình — thanh nav sẽ chồng lên bàn phím/ô nhập).
-  const hidden = loading || !sessionUser || pathname?.startsWith("/auth") || pathname?.startsWith("/messages");
+  // Ẩn khi chưa đăng nhập và trong luồng /auth/*. /messages: danh sách chat GIỮ thanh dưới (như mọi app nhắn tin);
+  // chỉ ẩn khi đang mở 1 cuộc trò chuyện (html[data-chat-open] — CSS .pn-bnav) để không đè ô soạn tin/bàn phím.
+  const hidden = loading || !sessionUser || pathname?.startsWith("/auth");
   if (hidden) return null;
 
   const isOwner = sessionUser.role === "OWNER";
@@ -165,29 +165,29 @@ export default function BottomNav() {
     {/* Lớp nền dưới thanh nổi: che khe 10px + vùng an toàn phía dưới để nội dung không lộ dưới thanh */}
     <div
       aria-hidden
-      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-pn-canvas from-55% to-transparent transition-opacity duration-300 md:hidden ${hiddenByScroll ? "opacity-0" : "opacity-100"}`}
+      className={`pn-bnav pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-pn-canvas-deep from-55% to-transparent transition-opacity duration-300 md:hidden ${hiddenByScroll ? "opacity-0" : "opacity-100"}`}
       style={{ height: "calc(max(10px, env(safe-area-inset-bottom)) + 84px)" }}
     />
     <nav
       aria-label={tr("Điều hướng chính", "Main navigation")}
-      className={`fixed inset-x-3 z-50 transition-transform duration-300 ease-out md:hidden ${hiddenByScroll ? "translate-y-[calc(100%+24px)]" : "translate-y-0"}`}
+      className={`pn-bnav fixed inset-x-3 z-50 transition-transform duration-300 ease-out md:hidden ${hiddenByScroll ? "translate-y-[calc(100%+24px)]" : "translate-y-0"}`}
       style={{ bottom: "max(10px, env(safe-area-inset-bottom))" }}
     >
-      <div className="relative grid grid-cols-5 items-center rounded-[20px] border border-white/[0.08] bg-slate-900 px-1 py-1.5 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)]">
+      <div className="pn-dock relative grid grid-cols-5 items-center rounded-[24px] px-1 py-1.5">
         {/* Viên sáng trượt theo mục đang chọn */}
         {activeIndex >= 0 && (
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-y-1.5 left-1 w-[calc((100%-0.5rem)/5)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="pointer-events-none absolute inset-y-1.5 left-1 w-[calc((100%-0.5rem)/5)] transition-transform duration-[240ms] ease-[cubic-bezier(.77,0,.175,1)] motion-reduce:transition-none"
             style={{ transform: `translateX(${activeIndex * 100}%)` }}
           >
-            <span className="absolute inset-x-1.5 inset-y-0.5 rounded-[14px] bg-white/[0.08]" />
+            <span className="absolute inset-x-1.5 inset-y-0.5 rounded-[16px] bg-[rgb(255_240_246/0.08)]" />
           </span>
         )}
 
         {slots.map((item, i) =>
           item === null ? (
-            <div key="create" className="flex justify-center [&>button]:mt-0 [&>button]:h-12 [&>button]:w-12 [&>button]:rounded-full [&>button]:bg-none [&>button]:bg-pink-600 [&>button]:shadow-none [&>button]:ring-0 [&>button:active]:bg-pink-700">
+            <div key="create" className="flex justify-center [&>button]:mt-0 [&>button]:h-12 [&>button]:w-12 [&>button]:rounded-full [&>button]:bg-none [&>button]:bg-pn-brand [&>button]:shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_6px_16px_-4px_rgb(8_4_10/0.6)] [&>button]:ring-0 [&>button]:transition-[transform,background-color] [&>button]:duration-[120ms] [&>button:active]:scale-[.94] [&>button:active]:bg-pn-brand-press">
               <button
                 type="button"
                 onClick={createAction}
@@ -207,12 +207,12 @@ export default function BottomNav() {
               }}
               aria-current={item.active ? "page" : undefined}
               className={`relative z-10 flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl transition-colors duration-200 active:scale-95 ${
-                item.active ? "text-white" : "text-slate-500"
+                item.active ? "text-pn-text" : "text-pn-text-2"
               }`}
             >
               <span key={popId === item.id ? `pop-${i}` : `still-${i}`} className={`relative ${popId === item.id ? "nav-pop" : ""}`}>
                 {item.icon ? (
-                  <item.icon className={`h-[22px] w-[22px] ${item.active ? "text-pink-400" : ""}`} strokeWidth={item.active ? 2.4 : 2} />
+                  <item.icon className="h-[22px] w-[22px]" strokeWidth={item.active ? 2.25 : 1.75} />
                 ) : (
                   <span aria-hidden>
                   <Avatar
@@ -220,17 +220,17 @@ export default function BottomNav() {
                     name={sessionUser.name}
                     seed={sessionUser.id}
                     loading="eager"
-                    className={`h-[24px] w-[24px] ${item.active ? "ring-2 ring-pink-400" : "ring-1 ring-white/20"}`}
+                    className={`h-[24px] w-[24px] ${item.active ? "ring-2 ring-pn-text" : "ring-1 ring-pn-line-strong"}`}
                   />
                   </span>
                 )}
                 {!!item.badge && (
-                  <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-slate-900 bg-pink-600 px-1 text-[10px] font-bold leading-none text-white">
+                  <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-[#241c27] bg-pn-brand px-1 text-[11px] font-semibold leading-none text-white tabular-nums">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
                 )}
               </span>
-              <span className={`text-[11px] leading-none ${item.active ? "font-semibold" : "font-medium"}`}>{item.label}</span>
+              <span className={`text-[12px] leading-4 ${item.active ? "font-semibold" : "font-normal"}`}>{item.label}</span>
             </button>
           )
         )}

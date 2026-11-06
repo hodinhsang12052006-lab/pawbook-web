@@ -6,8 +6,8 @@
   "dir": "ltr",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b0b0c",
-  "theme_color": "#0b0b0c",
+  "background_color": "#171119",
+  "theme_color": "#171119",
   "orientation": "portrait",
   "categories": [
     "business",

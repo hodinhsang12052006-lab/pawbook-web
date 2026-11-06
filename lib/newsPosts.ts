@@ -26,6 +26,9 @@ const FILLER = /(chi tiết (xem |có )?(trong|tại) bài gốc|xem thêm (tron
 export function weakWriting(w: Partial<Written>): string | null {
   const hook = String(w.hook || "").replace(/^\p{Extended_Pictographic}️?\s*/u, "").trim();
   if (hook.length < 25 || hook.split(/\s+/).length < 6) return "tiêu đề quá ngắn / cụt";
+  // Câu mở giật tít / câu hỏi bỏ lửng ("🚨 …", "Có vấn đề gì với…?", "Tai nạn…!") — không đúng giọng tin ngành
+  const rawHook = String(w.hook || "").trim();
+  if (/^(🚨|🤔)/u.test(rawHook) || /^(Tai nạn|Vụ việc|Có vấn đề gì|Tại sao)(\s|$)/u.test(hook) || /[!?]\s*$/.test(hook)) return "tiêu đề giật tít / câu hỏi";
   const pts = (w.points || []).map((p) => String(p).trim()).filter(Boolean);
   if (pts.length < 2) return "ít hơn 2 ý";
   if (pts.some((p) => FILLER.test(p) || p.length < 15)) return "có ý rỗng";
@@ -84,7 +87,18 @@ QUY TẮC BẮT BUỘC:
 const OFF_TOPIC = /\b(cats?|kittens?|dogs?|pupp(y|ies)|animal|rescue|miss manners|dear abby|celebrit|star['’]?s?\b|royal|princess|kardashian|taylor swift|downton|horoscope|recipe|chisme)\b/i;
 // Tin ngoài Mỹ / Úc lọt vào bộ lọc (Google News khớp lỏng)
 const ELSEWHERE = /\b(toronto|ontario|canada|canadian|vancouver|montreal|calgary|london|england|scotland|ireland|singapore|india|philippines|new zealand|auckland|hong kong|mong kok|hdb|red dot|malaysia|china|chinese|taiwan|japan|korea|seoul|dubai)\b/i;
-const postable = (n: NewsItem) => !OFF_TOPIC.test(n.title) && !ELSEWHERE.test(n.title);
+// Tin "sự cố giật gân" (tai nạn xe lao vào tiệm, cháy, cướp, bắt giữ…) — không giúp thợ / chủ tiệm làm nghề, chỉ gây
+// hoang mang (06/11/2026: "🚨 Tai nạn xảy ra tại salon nail!" về 1 vụ xe điện đâm tiệm). Chỉ giữ khi là tin LUẬT /
+// AN TOÀN có nội dung quy định thật (OSHA, luật, giấy phép, thanh tra, nghiên cứu).
+export const INCIDENT = /\b(crash(es|ed)?|fire|blaze|burn(ed|ing)?|shoot(ing)?|shot|stab(bed)?|robb(ery|ed)|arrest(ed)?|killed|dies|died|death|murder|assault|police)\b/i;
+const REGULATORY = /(osha|regulat|law|bill|licen[cs]|inspection|study)/i;
+// Nguồn không phù hợp làm tin ngành chính thức (giật gân / không phải tiếng Anh ở thị trường Mỹ-Úc)
+export const SOURCE_BLOCK = /(breitbart|infowars|daily mail|the sun\b|ny post|new york post|korea|hankook|chosun|joongang|yonhap|nhk)/i;
+export const postable = (n: Pick<NewsItem, "title" | "source" | "topic">) =>
+  !OFF_TOPIC.test(n.title) &&
+  !ELSEWHERE.test(n.title) &&
+  !SOURCE_BLOCK.test(n.source || "") &&
+  (!INCIDENT.test(n.title) || ((n.topic === "law" || n.topic === "safety") && REGULATORY.test(n.title)));
 
 /** Viết bài: Cloudflare Workers AI (miễn phí) trước, Gemini dự phòng. */
 async function write(text: string): Promise<Written> {

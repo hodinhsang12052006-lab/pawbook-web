@@ -11,6 +11,8 @@ import SoundSettings from "@/components/settings/SoundSettings";
 import EmailDigestToggle from "@/components/settings/EmailDigestToggle";
 import Avatar from "@/components/ui/Avatar";
 import { isPlaceholderAvatar } from "@/lib/avatar";
+import { defaultCover, COVER_FADE } from "@/lib/defaultCovers";
+import { cdnImage } from "@/lib/cdnImage";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
@@ -318,6 +320,7 @@ export default function ProfilePage() {
 
   const isOwner = profile?.role === "OWNER";
   const isTechnician = profile?.role === "TECHNICIAN";
+  const ownCover = isTechnician ? portfolioImages.find((u) => !/\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(u)) : undefined;
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -325,10 +328,17 @@ export default function ProfilePage() {
 
       <main className={`mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 pt-5 md:px-6 md:pt-6 ${dirty ? "pb-40 md:pb-16" : "pb-5"}`}>
         {/* ===== HEADER: bìa + ảnh đại diện (bấm để đổi) ===== */}
-        <section className="overflow-hidden rounded-3xl border border-white/[0.07] bg-slate-900">
-          <div className="relative h-24 border-b border-pn-line bg-pn-raised sm:h-32" />
+        <section className="pn-profile-head overflow-hidden rounded-3xl border border-white/[0.07] bg-slate-900">
+          {/* Bìa: thợ có ảnh portfolio → ảnh đầu tiên; còn lại kết cấu "sơn mài" trừu tượng cùng tông avatar (lib/defaultCovers) */}
+          <div aria-hidden className="relative h-32 overflow-hidden bg-pn-raised sm:h-40" style={ownCover ? undefined : defaultCover(profile?.id)}>
+            {ownCover && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cdnImage(ownCover, 768)} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+            )}
+            <div className="absolute inset-0" style={{ background: COVER_FADE }} />
+          </div>
           <div className="px-4 pb-5 sm:px-6">
-            <div className="-mt-10 flex items-end justify-between gap-3 sm:-mt-12">
+            <div className="-mt-11 flex items-end justify-between gap-3 sm:-mt-12">
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
@@ -336,13 +346,19 @@ export default function ProfilePage() {
                 aria-label={tr("Đổi ảnh đại diện", "Change profile photo")}
                 className="group relative flex-shrink-0 rounded-full"
               >
-                <Avatar src={profile?.avatarUrl} name={name} seed={profile?.id} loading="eager" className="h-20 w-20 shadow-xl shadow-black/50 ring-4 ring-slate-900 sm:h-24 sm:w-24" />
+                <Avatar src={profile?.avatarUrl} name={name} seed={profile?.id} loading="eager" glyph={isOwner ? "store" : isTechnician ? "polish" : undefined} className="h-[88px] w-[88px] shadow-xl shadow-black/50 ring-4 ring-slate-900 refined:ring-[3px] refined:ring-pn-surface refined:shadow-[0_1px_2px_rgb(8_4_10/0.35),0_12px_32px_-16px_rgb(8_4_10/0.7)] sm:h-[104px] sm:w-[104px]" />
                 <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                   <Camera className="h-5 w-5 text-white" />
                 </span>
+                {isPlaceholderAvatar(profile?.avatarUrl) ? (
+                  <span className="absolute -bottom-2 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border-2 border-pn-surface bg-pink-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                    {avatarUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}{tr("Thêm ảnh", "Add photo")}
+                  </span>
+                ) : (
                 <span className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-900 bg-pink-600 text-white">
                   {avatarUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 </span>
+                )}
               </button>
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               <div className="flex flex-wrap justify-end gap-2">
@@ -372,16 +388,6 @@ export default function ProfilePage() {
               </span>
               <span className="truncate">{profile?.email}</span>
             </div>
-            {isPlaceholderAvatar(profile?.avatarUrl) && (
-              <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                className="mt-3 flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-left text-xs text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.07] [&>svg]:text-pink-400"
-              >
-                <Camera className="h-4 w-4 flex-shrink-0" />
-                {isOwner ? tr("Thêm ảnh đại diện thật — hồ sơ có ảnh được thợ tin tưởng và nhắn tin nhiều hơn.", "Add a real profile photo — techs trust and message profiles with photos more.") : tr("Thêm ảnh đại diện thật — hồ sơ có ảnh được chủ tiệm tin tưởng và nhắn tin nhiều hơn.", "Add a real profile photo — salon owners trust and message profiles with photos more.")}
-              </button>
-            )}
           </div>
         </section>
 

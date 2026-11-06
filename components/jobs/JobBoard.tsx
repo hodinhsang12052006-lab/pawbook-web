@@ -49,6 +49,7 @@ const MIN_CONTACTS = 2;
 const MIN_SAVES = 2;
 
 const NEW_JOB_MS = 24 * 60 * 60 * 1000;
+const URGENT_MAX_MS = 72 * 60 * 60 * 1000;
 
 interface JobBoardProps {
   market: "US" | "AU";
@@ -197,6 +198,8 @@ function JobCard({
   useEffect(() => trackJobView(ref.current, job.id), [job.id]);
   const heat = job.heat;
   const isNew = Date.now() - new Date(job.createdAt).getTime() < NEW_JOB_MS;
+  // "Gấp" chỉ đúng trong 72 giờ đầu — tin 8–10 ngày vẫn gắn "Gấp" là không thật
+  const urgentStale = Date.now() - new Date(job.createdAt).getTime() > URGENT_MAX_MS;
 
   // Tín hiệu "đám đông" THẬT, chỉ hiện khi vượt ngưỡng.
   const signals: { icon: typeof Eye; text: string }[] = [];
@@ -211,7 +214,7 @@ function JobCard({
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
-          <h3 lang={hasVietnamese(dt(job.title)) ? "vi" : undefined} className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
+          <h3 lang={hasVietnamese(dt(job.title)) ? "vi" : undefined} className="truncate text-base font-bold leading-snug text-white hover:text-pink-200 refined:line-clamp-2 refined:whitespace-normal refined:break-words">{dt(job.title)}</h3>
           <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
             {job.source === "ingest" && (
@@ -239,7 +242,7 @@ function JobCard({
             {isNew && !heat?.hot && (
               <span className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300">{tr("Mới", "New")}</span>
             )}
-            {job.isUrgent && (
+            {job.isUrgent && !urgentStale && (
               <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400">
                 <Flame className="h-3 w-3" />{tr(" Cần gấp", " Urgent")}
               </span>
@@ -286,7 +289,7 @@ function JobCard({
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
         {placeLabel(job.city, job.market, job.state)}
-        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("Gần bạn", "Near you")}</span>}
+        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("Cùng bang với bạn", "In your state")}</span>}
       </span>
 
       {signals.length > 0 && (

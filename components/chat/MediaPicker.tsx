@@ -1,5 +1,6 @@
 "use client";
 
+import { CS } from "@/lib/i18n/chatStrings";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Search, X, Loader2 } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
@@ -125,7 +126,7 @@ export default function MediaPicker({ tab, onTab, onEmoji, onSticker, onGif, onC
                 {pack === p.id && <span className="whitespace-nowrap">{tr(p.label[0], p.label[1])}</span>}
               </button>
             ))}
-            <span className="ml-auto pr-1 text-[9px] text-slate-600" title="Noto Emoji Animation — Google, CC BY 4.0">Noto · CC BY 4.0</span>
+            <a href="https://googlefonts.github.io/noto-emoji-animation/" target="_blank" rel="noopener noreferrer" className="pn-micro ml-auto pr-1 text-[12px] font-normal text-slate-500 underline-offset-2 hover:underline" title="Noto Emoji Animation — Google, CC BY 4.0">{CS.stickerCredit()}</a>
           </div>
         </>
       )}

@@ -11,6 +11,7 @@ import { jobAlertChannelName } from "@/lib/pusherChannel";
 import { playSound, getSoundPrefs, setSoundPrefs } from "@/lib/sounds";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
+import { X, UserRound, Camera, Sparkles } from "lucide-react"; // V2.2: nút đóng sheet + 2 việc nên làm khi chưa có thông báo
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -208,6 +209,10 @@ export default function NotificationBell() {
             <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] font-semibold text-pink-300 hover:text-pink-200">
               <CheckCheck className="h-3.5 w-3.5" />{tr(" Đánh dấu đã đọc", " Mark all read")}
             </button>
+            {/* Điện thoại: bảng là sheet cao gần hết màn hình → cần nút đóng rõ ràng */}
+            <button type="button" onClick={() => setOpen(false)} aria-label={tr("Đóng", "Close")} className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/10 sm:hidden">
+              <X className="h-5 w-5" />
+            </button>
             </div>
           </div>
 
@@ -225,6 +230,31 @@ export default function NotificationBell() {
                     ? tr("Tin trả lời từ tiệm và cập nhật lịch hẹn sẽ hiện ở đây.", "Replies from salons and booking updates show up here.")
                     : tr("Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.", "When someone likes, comments on or reviews you, it shows up here.")}
                 </p>
+                {/* 2 việc nên làm tiếp — thông báo đến từ người thật tương tác với hồ sơ / bài của bạn */}
+                <div className="mt-5 grid gap-2 text-left">
+                  {(user?.role === "CLIENT"
+                    ? [
+                        { href: "/designs", icon: Sparkles, label: tr("Xem mẫu nail", "Browse nail looks") },
+                        { href: "/tryon", icon: Camera, label: tr("Thử mẫu trên tay", "Try on looks") },
+                      ]
+                    : [
+                        { href: "/profile", icon: UserRound, label: tr("Hoàn thiện hồ sơ", "Complete your profile") },
+                        { href: "/?tab=feed", icon: Camera, label: tr("Đăng mẫu của bạn", "Post your work"), compose: true },
+                      ]
+                  ).map((a) => (
+                    <Link
+                      key={a.href}
+                      href={a.href}
+                      onClick={() => {
+                        if ("compose" in a && a.compose) { try { sessionStorage.setItem("pn_compose", "1"); sessionStorage.setItem("pn_compose_type", "SHOWCASE"); } catch {} }
+                        setOpen(false);
+                      }}
+                      className="flex min-h-[48px] items-center gap-3 rounded-xl bg-white/[0.04] px-3.5 text-sm font-semibold text-slate-100 ring-1 ring-white/[0.08] hover:bg-white/[0.07]"
+                    >
+                      <a.icon className="h-[18px] w-[18px] text-pink-300" />{a.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
             {items?.map((n) => {

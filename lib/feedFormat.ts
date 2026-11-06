@@ -1,5 +1,5 @@
 import React from "react";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 
 // "5 phút trước" / "2 giờ trước" / "3 ngày trước" — không kéo thêm date-fns
 // chỉ cho 1 hàm nhỏ này.
@@ -12,7 +12,19 @@ export function timeAgo(iso: string): string {
   if (hours < 24) return tr(`${hours} giờ trước`, `${hours}h ago`);
   const days = Math.floor(hours / 24);
   if (days < 7) return tr(`${days} ngày trước`, `${days}d ago`);
-  return new Date(iso).toLocaleDateString(tr("vi-VN", "en-US"), { day: "2-digit", month: "2-digit", year: "numeric" });
+  return shortDate(iso);
+}
+
+/** Ngày tháng bằng chữ, không mơ hồ giữa Mỹ / Úc: "Oct 2" · "2 Oct" (en-AU) · "2 thg 10"; thêm năm khi khác năm nay.
+ *  (Trước đây "10/02/2026": người dùng Úc đọc thành 10 tháng 2.) */
+export function shortDate(iso: string | Date, market?: string | null): string {
+  const d = new Date(iso);
+  let loc = "vi-VN";
+  if (currentLocale() === "en") {
+    const nav = typeof navigator !== "undefined" ? navigator.language || "" : "";
+    loc = market === "AU" ? "en-AU" : market === "US" ? "en-US" : /^en-(AU|NZ|GB)/i.test(nav) ? "en-AU" : "en-US";
+  }
+  return d.toLocaleDateString(loc, d.getFullYear() === new Date().getFullYear() ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
 }
 
 // Tách nội dung bài đăng thành đoạn text thường + hashtag (#ViecLam,

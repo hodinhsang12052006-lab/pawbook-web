@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, Check, Loader2, MessageSquare, Phone, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
+import BookingLinkCard from "@/components/booking/BookingLinkCard";
 import { currentLocale, tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -113,6 +114,11 @@ export default function BookingInbox() {
 
       {list === null ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pink-400" /></div>
+      ) : list.length === 0 && tab === "new" ? (
+        <div className="space-y-3">
+          <p className="px-1 text-sm font-semibold text-slate-300">{tr("Chưa có yêu cầu mới", "No new requests")}</p>
+          <BookingLinkCard userId={user.id} name={techName} />
+        </div>
       ) : list.length === 0 ? (
         <div className="rounded-3xl bg-white/[0.03] p-8 text-center ring-1 ring-white/10">
           <p className="text-sm font-bold text-slate-200">{tab === "new" ? tr("Chưa có yêu cầu đặt lịch.", "No booking requests yet.") : tr("Chưa có lịch hẹn ở mục này.", "Nothing in this list yet.")}</p>

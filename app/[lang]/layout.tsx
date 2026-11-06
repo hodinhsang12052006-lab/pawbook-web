@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SITE_URL } from "@/lib/siteUrl";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "../globals.css";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
@@ -27,12 +27,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin", "latin-ext", "vietnamese"],
 });
 
+// Chữ trong app (V2): Be Vietnam Pro — SIL OFL 1.1, đủ dấu tiếng Việt, tự host qua next/font (không gọi Google lúc chạy).
+// Chỉ áp cho html:not([data-ui-classic]) trong globals.css; trang khách "/" + /auth/* giữ font cũ.
+const beVietnam = Be_Vietnam_Pro({
+  variable: "--font-pn",
+  weight: ["400", "600"],
+  subsets: ["latin", "vietnamese"], // latin-ext không cần (EN + VI) — bớt file tải trước trên mọi trang
+  display: "swap",
+});
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#0b0b0c",
+  // Cho phép phóng to chữ (WCAG 1.4.4). Chống iOS tự zoom khi chạm ô nhập: globals.css ép mọi ô nhập trong app ≥ 16px
+  // trên điện thoại, và trên iOS cả trang classic (khách "/", /auth/*) — không cần maximum-scale nữa.
+  themeColor: "#1c1521",
 };
 
 const SITE_TITLE = {
@@ -93,7 +102,7 @@ export default async function RootLayout({
       lang={lang}
       suppressHydrationWarning // data-authed do script đầu trang đặt trước khi React chạy
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      className={`${geistSans.variable} ${geistMono.variable} ${beVietnam.variable} h-full antialiased scroll-smooth`}
     >
       <head>
         {/* Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app (components/InstallPrompt.tsx) */}
@@ -130,18 +139,18 @@ export default async function RootLayout({
                   containerStyle={{ top: 76 }}
                   toastOptions={{
                     style: {
-                      background: "#1c1c1f",
-                      color: "#f1f5f9",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "#2e2433",
+                      color: "#f6f0f5",
+                      border: "1px solid rgba(255,240,246,0.09)",
                       borderRadius: "14px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
+                      boxShadow: "0 2px 6px rgba(8,4,10,0.4), 0 16px 40px -12px rgba(8,4,10,0.75)",
                       maxWidth: "92vw",
                     },
-                    success: { iconTheme: { primary: "#34d399", secondary: "#1c1c1f" } },
-                    error: { iconTheme: { primary: "#fb7185", secondary: "#1c1c1f" } },
-                    loading: { iconTheme: { primary: "#f472b6", secondary: "#1c1c1f" } },
+                    success: { iconTheme: { primary: "#34d399", secondary: "#2e2433" } },
+                    error: { iconTheme: { primary: "#fb7185", secondary: "#2e2433" } },
+                    loading: { iconTheme: { primary: "#f59bbe", secondary: "#2e2433" } },
                   }}
                 />
                 <PusherStatusBanner />

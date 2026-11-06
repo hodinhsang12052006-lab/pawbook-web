@@ -1,0 +1,45 @@
+PawNail (bitpawos) — third-party notices
+=========================================
+
+This product includes or loads the following third-party works. Each remains under its own licence.
+No Telegram, WhatsApp, Apple or other messenger brand assets (icons, stickers, emoji sets, wallpapers,
+logos or exact geometry) are used anywhere in this product.
+
+
+1. Be Vietnam Pro (typeface) — in-app UI font
+   Copyright 2021 The Be Vietnam Pro Project Authors (designers: Lâm Bảo, Tony Le, ViệtAnh Nguyễn)
+   Licence: SIL Open Font License, Version 1.1 — https://openfontlicense.org
+   Source: Google Fonts (https://fonts.google.com/specimen/Be+Vietnam+Pro), self-hosted at build time by next/font.
+
+2. Lucide icons (lucide-react)
+   Copyright (c) Lucide Contributors; portions Copyright (c) 2013-2022 Cole Bemis (Feather)
+   Licence: ISC — https://github.com/lucide-icons/lucide/blob/main/LICENSE
+
+3. Noto Emoji Animation — animated chat stickers (lib/chatStickers.ts, components/chat/MediaPicker.tsx)
+   "Animated emoji: Noto Emoji Animation by Google, CC BY 4.0"
+   Licence: Creative Commons Attribution 4.0 International — https://creativecommons.org/licenses/by/4.0/
+   Project page: https://googlefonts.github.io/noto-emoji-animation/
+   The attribution line is shown in the sticker sheet. Files are currently loaded from fonts.gstatic.com
+   (static SVG first; the animated WebP only for a newly arrived sticker or on tap).
+
+4. Sticker stills (the static frame of each sticker)
+   Loaded from the same Noto Emoji Animation set on fonts.gstatic.com (/s/e/notoemoji/…/emoji.svg), so they are
+   covered by item 3 (CC BY 4.0, same attribution line) — not by the Noto Emoji GitHub repository's Apache-2.0 terms.
+   (The separate Noto Emoji font / image repository, https://github.com/googlefonts/noto-emoji, is Apache 2.0 /
+   SIL OFL 1.1 and is not bundled.)
+
+5. GIPHY — GIF search in chat (/api/gifs). "Powered by GIPHY" attribution is shown where GIF results appear,
+   as required by the GIPHY API Terms.
+
+6. PawNail original artwork (no third-party licence required)
+   - Default profile covers (lib/defaultCovers.ts) and "polish-swatch monogram" default avatars
+     (components/ui/Avatar.tsx, lib/avatar.ts): abstract lacquer textures, the nail line-art motif and initials drawn
+     in code; profile-header role glyphs (storefront for salon owners, polish bottle for nail techs) are simple
+     original line drawings. No people, no faces, no text, no logos.
+   - Booking QR codes are generated on the device with the "qrcode" package (MIT).
+   - Chat wallpapers (lib/chatWallpapers.ts): original nail line-art motif, glitter dot tile and marble vein tile.
+   - Chat bubble tail (components/chat/messenger.css): original shape.
+   - Seasonal banner art (lib/seasonArt.ts → public/hands/*.jpg): PawNail's own hand plates used by the try-on /
+     design engine (lib/designRender.ts). Always shown with an "AI illustration" label. When a published PawNail
+     design matches the season, its image (labelled the same way) is used instead.
+   © PawNail.

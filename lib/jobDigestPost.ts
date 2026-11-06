@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { getSetting, setSetting } from "@/lib/settings";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { realUserWhere } from "@/lib/demo";
 import { stateName } from "@/lib/stateNames";
 import { SITE_URL } from "@/lib/siteUrl";
 import { savePostEn } from "@/lib/postEn";
@@ -24,7 +25,9 @@ export async function publishJobDigest(now = new Date()): Promise<{ posted: bool
   if (await prisma.post.count({ where: { authorId: officialId, createdAt: { gte: dayStart }, content: { startsWith: DIGEST_PREFIX } } })) return { posted: false, reason: "hôm nay đã có" };
 
   const jobs = (await prisma.job.findMany({
-    where: { AND: [activeJobWhere(), { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }] },
+    // Chỉ tiệm THẬT: bài chính thức đăng công khai không bao giờ được nêu tiệm dữ liệu mẫu (…pawnailjobs.demo) như
+    // tiệm đang tuyển thật (06/11/2026: các bài 📍 từ 01/11 từng liệt kê "Sunny Nails & Spa" của tài khoản seed).
+    where: { AND: [activeJobWhere(), { owner: realUserWhere }, { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }] },
     orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
     select: { market: true, state: true, city: true, salonName: true, skills: true, salaryAmount: true, isUrgent: true, source: true, description: true },
     take: 500,

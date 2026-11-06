@@ -86,7 +86,7 @@ function firstMedia(images: any[]): { url: string; isVideo: boolean } | null {
 function TechnicianCardSkeleton() {
   useTr(); // render lại khi đổi VI/EN
   return (
-    <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-800/70 border border-slate-800 animate-pulse">
+    <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-800/70 border border-slate-800 animate-pulse refined:aspect-[4/6] refined:rounded-2xl">
       <div className="absolute inset-x-0 bottom-0 p-2.5 space-y-1.5">
         <div className="h-2.5 w-2/3 rounded bg-slate-700" />
         <div className="h-2 w-1/2 rounded bg-slate-700/70" />
@@ -147,7 +147,7 @@ function NoMediaCover({ tech }: { tech: TechnicianType }) {
   const [a, b] = avatarGradient(tech.user.id);
   const [ca, cb] = avatarGradientClassic(tech.user.id);
   return (
-    <div className="absolute inset-0 flex items-center justify-center refined:[background:var(--nm-bg)]!" style={{ background: `linear-gradient(135deg, ${ca}55, ${cb}33), #0f172a`, ["--nm-bg" as string]: `linear-gradient(160deg, ${a}40, ${b}1f), #17171a` }}>
+    <div className="absolute inset-0 flex items-center justify-center refined:[background:var(--nm-bg)]!" style={{ background: `linear-gradient(135deg, ${ca}55, ${cb}33), #0f172a`, ["--nm-bg" as string]: `linear-gradient(160deg, ${a}40, ${b}1f), var(--color-pn-surface)` }}>
       <div className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px] refined:hidden" />
       <Avatar src={tech.user.avatarUrl} name={tech.user.name} seed={tech.user.id} className="relative -mt-6 h-16 w-16 ring-4 ring-white/10 shadow-xl" />
     </div>
@@ -162,8 +162,10 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
   return (
     <button
       onClick={onClick}
-      className={`relative aspect-square rounded-xl overflow-hidden bg-slate-900 border border-slate-800 group text-left ${PRESS}`}
+      className={`relative aspect-square rounded-xl overflow-hidden bg-slate-900 border border-slate-800 group text-left ${PRESS} refined:flex refined:aspect-auto refined:flex-col refined:rounded-2xl refined:bg-pn-surface refined:border-pn-line`}
     >
+      {/* V2: ảnh ở trên, tên + thông tin nằm DƯỚI ảnh trên nền thẻ (trước: 4 lớp chữ chồng trên ảnh nhỏ, ảnh sáng thì không đọc được tên) */}
+      <div className="absolute inset-0 refined:relative refined:inset-auto refined:aspect-[4/5] refined:w-full refined:overflow-hidden">
       {/* Nền xám chờ tải — fade ra khi ảnh/video thật đã sẵn sàng */}
       {media && <div className={`absolute inset-0 bg-slate-800 transition-opacity duration-300 ${loaded ? "opacity-0" : "opacity-100 animate-pulse"}`} />}
 
@@ -203,7 +205,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
       {/* Chuyên môn — badge tay nghề hiện ngay ngoài lưới ảnh, chủ tiệm
           không cần bấm vào hồ sơ mới biết thợ chuyên gì. */}
       {tech.specialties.length > 0 && (
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[46%] refined:top-auto refined:right-auto refined:bottom-[46px] refined:left-2.5 refined:z-10 refined:max-w-[calc(100%-1.25rem)] refined:items-start refined:[&>span]:border-white/10 refined:[&>span]:text-[10px] refined:[&>span]:font-semibold refined:[&>span:nth-child(n+2)]:hidden">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[46%] refined:hidden refined:top-auto refined:right-auto refined:bottom-[46px] refined:left-2.5 refined:z-10 refined:max-w-[calc(100%-1.25rem)] refined:items-start refined:[&>span]:border-white/10 refined:[&>span]:text-[10px] refined:[&>span]:font-semibold refined:[&>span:nth-child(n+2)]:hidden">
           {tech.specialties.slice(0, 2).map((s, i) => (
             <span
               key={s}
@@ -215,12 +217,19 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
-        <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
-        <p className="text-[10px] text-slate-300 truncate">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", tech.yearsOfExperience === 1 ? " yr exp" : " yrs exp")}</p>
       </div>
 
-      <StatusBadge status={tech.status} />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8 refined:static refined:bg-none refined:px-3 refined:pb-3 refined:pt-2.5">
+        <p className="text-xs font-bold text-white truncate refined:flex refined:items-center refined:gap-1.5 refined:text-[15px] refined:font-semibold refined:leading-5 refined:text-pn-text">
+          {tech.status === "AVAILABLE" && <span role="img" aria-label={tr("Đang rảnh hôm nay", "Available today")} title={tr("Đang rảnh hôm nay", "Available today")} className="hidden h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400 ring-2 ring-emerald-400/20 refined:inline-block" />}
+          {tech.status === "URGENT" && <span role="img" aria-label={tr("Tìm việc gấp", "Needs work now")} title={tr("Tìm việc gấp", "Needs work now")} className="hidden h-2 w-2 flex-shrink-0 rounded-full bg-amber-400 ring-2 ring-amber-400/20 refined:inline-block" />}
+          <span className="truncate">{tech.user.name}</span>
+        </p>
+        <p className="text-[10px] text-slate-300 truncate refined:mt-0.5 refined:line-clamp-2 refined:whitespace-normal refined:text-[13px] refined:leading-[18px] refined:text-pn-text-2">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", tech.yearsOfExperience === 1 ? " yr exp" : " yrs exp")}</p>
+        {tech.specialties[0] && <p className="hidden truncate text-[12px] font-medium leading-4 text-pn-text-3 refined:mt-1 refined:block">{tr(`Chuyên ${tech.specialties[0]}`, `${valueLabel(tech.specialties[0])} specialist`)}</p>}
+      </div>
+
+      <span className="refined:hidden"><StatusBadge status={tech.status} /></span>
     </button>
   );
 }

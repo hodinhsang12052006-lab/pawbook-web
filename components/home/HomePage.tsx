@@ -25,6 +25,13 @@ import { Sparkles, Search, Newspaper, X, Briefcase, Store, Hand, ArrowRight, Com
 import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import AreaFilter from "@/components/home/AreaFilter";
+
+// Khách (trang "/" classic): KHÔNG bọc — các thẻ nằm thẳng trong cột như cũ (từng pixel; khối bọc rỗng từng cộng
+// thêm 20px khoảng cách). Đã đăng nhập: khối .pn-nudges để điện thoại chỉ hiện 1 ô gợi ý (globals.css).
+function NudgeSlot({ on, children }: { on: boolean; children: React.ReactNode }) {
+  return on ? <div className="pn-nudges space-y-5">{children}</div> : <>{children}</>;
+}
 
 // Lời chào theo giờ địa phương — chi tiết nhỏ giúp app có "hơi người".
 function greeting(date = new Date()) {
@@ -293,7 +300,7 @@ export default function HomePage() {
 
             {/* Region Switcher — nổi bật, chữ to, tương phản cao */}
             {sessionUser && (
-              <div className="px-1">
+              <div className="pn-greet px-1">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                   {greeting()}{displayName ? `, ${displayName}` : ""}
                 </h1>
@@ -307,6 +314,9 @@ export default function HomePage() {
             {/* Điện thoại: lối tắt kiểu app ngay dưới lời chào, rồi mới tới thẻ gợi ý. */}
             {sessionUser && tab === "feed" && <ToolsPanel variant="row" />}
 
+            {/* V2.1 — 1 ô gợi ý duy nhất trên điện thoại (trong app): các thẻ gợi ý xếp theo ưu tiên trong .pn-nudges, CSS chỉ
+                hiện thẻ THẬT đầu tiên (globals.css). Đóng thẻ đó thì thẻ kế tiếp hiện. Máy tính vẫn hiện đủ như cũ. */}
+            <NudgeSlot on={!!sessionUser}>
             {sessionUser && <GettingStarted compact={tab !== "feed"} />}
 
             {/* Render cả khi phiên đang tải: thẻ tự giữ chỗ (html[data-mn]) để không giật bố cục */}
@@ -339,10 +349,11 @@ export default function HomePage() {
                 </button>
               </div>
             )}
+            </NudgeSlot>
 
             {/* Bộ lọc — ĐIỆN THOẠI: gọn 1 hàng (Mỹ/Úc · chip bang vuốt ngang · 🔍),
                 trước đây chiếm ~200px khiến nội dung bị đẩy xuống dưới màn hình đầu. */}
-            <div className="glass-card space-y-2 rounded-2xl p-2 md:hidden">
+            <div className="glass-card space-y-2 rounded-2xl p-2 md:hidden refined:hidden">
               <div className="flex items-center gap-2">
                 <div className="flex flex-shrink-0 rounded-full bg-slate-950/70 p-0.5 ring-1 ring-white/10" role="group" aria-label={tr("Thị trường", "Market")}>
                   {(["US", "AU"] as const).map((m) => (
@@ -465,8 +476,9 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             {/* Điện thoại: lớp nền phủ tràn hết chiều ngang (không còn tấm nền vuông thò ra 2 bên thanh tab) */}
-            <div data-home-tabs className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:border-b refined:border-pn-line refined:bg-pn-canvas refined:[backdrop-filter:none] refined:[mask-image:none]">
-              <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
+            <div data-home-tabs className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:[mask-image:none] pn-glass pn-sticky-tabs">
+              <div className="refined:max-md:flex refined:max-md:items-center refined:max-md:gap-2">
+              <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20 refined:max-md:min-w-0 refined:max-md:flex-1">
                 {/* Viên chọn trượt mượt sang tab đang mở */}
                 <span
                   aria-hidden
@@ -493,6 +505,21 @@ export default function HomePage() {
                     <span><span className="sm:hidden">{t.short}</span><span className="hidden sm:inline">{t.long}</span></span>
                   </button>
                 ))}
+              </div>
+              {sessionUser && (
+                <span className="hidden refined:max-md:contents">
+                  <AreaFilter
+                    market={market}
+                    state={state}
+                    city={city}
+                    states={states}
+                    tab={tab}
+                    onMarket={setMarket}
+                    onState={setState}
+                    onCity={setCity}
+                  />
+                </span>
+              )}
               </div>
             </div>
 

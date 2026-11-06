@@ -9,6 +9,8 @@ import type { StudioData } from "@/lib/contentEngine";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt } from "@/lib/i18n/dataEn";
+import { useClassicUI } from "@/lib/useClassicUI";
+import SeasonBanner from "./SeasonBanner";
 
 export type Studio = StudioData & { tip: string };
 
@@ -63,7 +65,7 @@ const HIDE_KEY = "pn_studio_hide";
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Thẻ "Chủ đề tuần + thử thách hashtag" đầu bảng tin. */
-export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner: boolean; onJoin: (hashtag: string) => void }) {
+export function ThemeCard({ studio, isOwner, onJoin, market = "US" }: { studio: Studio; isOwner: boolean; onJoin: (hashtag: string) => void; market?: "US" | "AU" }) {
   useTr(); // render lại khi đổi VI/EN
   // Thẻ chỉ dựng sau khi tải Studio (không có ở HTML máy chủ) → đọc localStorage ngay lúc khởi tạo được, không
   // cần render "ẩn" trước rồi mới hiện (từng là 1 lần giật bố cục nữa)
@@ -72,9 +74,18 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
   });
   const t = studio.theme;
   const ref = useRef<HTMLElement>(null);
-  useEffect(() => { rememberTheme(!t || hidden ? null : ref.current?.offsetHeight ?? null); }, [t, hidden]);
+  const classic = useClassicUI();
+  useEffect(() => { rememberTheme(!t || hidden ? null : ref.current?.offsetHeight ?? null); }, [t, hidden, classic]);
   if (!t || hidden) return null;
   const c = studio.challenge;
+  const hide = () => {
+    setHidden(true);
+    try {
+      localStorage.setItem(HIDE_KEY, today());
+    } catch {}
+  };
+  // Trong app (V2): băng-rôn ảnh kiểu tạp chí. Trang khách "/" (classic) giữ nguyên thẻ cũ bên dưới.
+  if (!classic) return <SeasonBanner ref={ref} studio={studio} isOwner={isOwner} market={market} onJoin={onJoin} onHide={hide} />;
 
   return (
     <section

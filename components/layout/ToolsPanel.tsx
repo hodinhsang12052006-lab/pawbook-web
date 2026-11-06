@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck } from "lucide-react";
+import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck, Palette, LayoutGrid } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -108,22 +108,28 @@ function useTools(): Tool[] {
 // ngang trên trang chủ mobile (trước đây mobile không có lối tắt công cụ).
 export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
   useTr(); // render lại khi đổi VI/EN
-  const tools = useTools();
+  // "Mẫu nail mới" có biểu tượng riêng — trước đây trùng ✨ với "Thử mẫu trên tay" ngay cạnh
+  const tools = useTools().map((t) => (t.href === "/designs" ? { ...t, icon: Palette } : t));
 
   if (variant === "row") {
+    // Hàng lối tắt kiểu app: đúng 5 ô, vừa 1 hàng từ 360px (dưới 360px thì vuốt ngang). "Tin nhắn" đã có ở
+    // thanh dưới nên không lặp lại; ô thứ nhất = việc chính theo vai trò (đăng tin / thu nhập).
+    const all = tools.map((t, i) => ({ ...t, primary: i === 1 })).filter((t) => t.href !== "/messages");
+    // > 5 công cụ: 4 ô + ô "Tất cả" mở trang /tools (trước đây cắt cụt còn 5 → mất Xu hướng, Nail Radar, Kho vật tư)
+    const row: (typeof all[number])[] = all.length > 5
+      ? [...all.slice(0, 4), { href: "/tools", label: tr("Tất cả công cụ", "All tools"), stat: tr("Xem mọi công cụ", "See every tool"), icon: LayoutGrid, tone: "", primary: false }]
+      : all;
     return (
-      // Hàng lối tắt kiểu app (icon + nhãn ngắn) — trước đây là thẻ 160px chiếm nửa màn
-      // hình điện thoại. Chi tiết (stat) vẫn có ở thanh bên trên máy tính.
       <nav aria-label={tr("Công cụ", "Tools")} className="-mx-4 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
-        {tools.map(({ href, label, stat, icon: Icon, badge }, i) => (
-          <Link key={href} href={href} title={stat} className="relative flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center active:scale-95 transition-transform">
-            <span className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${i === 1 ? "bg-pink-600/[0.12] text-pink-400 ring-pink-500/20" : "bg-white/[0.06] text-slate-100 ring-white/[0.08]"}`}>
-              <Icon className="h-5 w-5" />
+        {row.map(({ href, label, stat, icon: Icon, badge, primary }) => (
+          <Link key={href} href={href} title={stat} className="pn-qa relative flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 rounded-2xl px-0.5 py-1 text-center transition-transform duration-[120ms] active:scale-[.97] min-[360px]:w-auto">
+            <span className={`pn-qa-tile relative flex h-[52px] w-[52px] items-center justify-center rounded-2xl ${primary ? "pn-qa-primary" : ""}`}>
+              <Icon className="h-[22px] w-[22px]" />
               {!!badge && badge > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-pink-600 px-1 text-[10px] font-bold leading-[18px] text-white ring-2 ring-slate-950">{badge > 9 ? "9+" : badge}</span>
+                <span className="pn-micro absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-pn-brand px-1 leading-[20px] text-white ring-2 ring-pn-canvas tabular-nums">{badge > 9 ? "9+" : badge}</span>
               )}
             </span>
-            <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-slate-300">{label}</span>
+            <span className="line-clamp-2 text-[13px] font-normal leading-4 text-pn-text-2">{label}</span>
           </Link>
         ))}
       </nav>

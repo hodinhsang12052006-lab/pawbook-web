@@ -5,8 +5,7 @@
 import React from "react";
 import { useIsOnline } from "@/lib/presence";
 import { tr } from "@/lib/i18n/tr";
-import { chatListTime } from "@/lib/i18n/format";
-import type { Locale } from "@/lib/i18n/config";
+import { listTime } from "@/lib/chat/chatTime";
 
 export const POPULAR_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
@@ -43,16 +42,16 @@ export interface MessageType {
   isOptimistic?: boolean;
   sendError?: boolean;
   reactions?: { e: string; u: string }[];
+  /** Mã do máy gửi tạo (V2): khoá React ổn định từ lúc hiện bong bóng tạm tới khi máy chủ xác nhận. */
+  clientId?: string;
 }
 
 // Bỏ dấu tiếng Việt để tìm "nguyen" ra "Nguyễn".
 export const foldVi = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
-// Giờ hiển thị kiểu Messenger/Zalo: hôm nay → giờ · trong tuần → thứ · cũ hơn → ngày, theo ngôn ngữ +
-// thị trường (en-US "3:16 AM", en-AU "3:16 am", vi "03:16"). Phụ thuộc múi giờ người xem → chỉ gọi sau khi
-// mount (useMounted), không render trên máy chủ.
-export function shortChatTime(iso: string, lang: Locale, market?: string | null) {
-  return chatListTime(iso, lang, market);
+// Giờ ở danh sách chat (V2: lib/chat/chatTime — đúng ngôn ngữ + thị trường, "3:13 PM" / "15:13" / "Mon" / "Oct 30").
+export function shortChatTime(iso: string, market?: string | null) {
+  return listTime(iso, market);
 }
 
 // Avatar có chấm xanh khi người đó THẬT SỰ đang mở app (Pusher presence).
@@ -147,12 +146,31 @@ export function chatKeyFor(chat: { id: string; conversationId?: string } | null 
   return chat.conversationId || `partner:${chat.id}`;
 }
 
+// Gộp + sắp xếp. Tin xác nhận từ máy chủ (phản hồi POST hoặc Pusher, tới theo thứ tự nào cũng được) THAY bong
+// bóng tạm cùng clientId ngay tại chỗ — giữ clientId làm khoá React → không dựng lại, không chạy lại hiệu ứng.
+// (Trước đây khớp theo NỘI DUNG: gửi "ok" 2 lần liền thì 1 phản hồi xoá cả 2 bong bóng tạm.)
+// Tin đang chờ gửi xếp sau mọi tin đã xác nhận.
 export function mergeSorted(a: MessageType[], b: MessageType[]): MessageType[] {
   const map = new Map<string, MessageType>();
-  a.forEach((m) => map.set(m.id, m));
-  b.forEach((m) => map.set(m.id, m));
+  const byClient = new Map<string, string>();
+  const put = (m: MessageType) => {
+    if (m.clientId) {
+      const prevId = byClient.get(m.clientId);
+      if (prevId && prevId !== m.id) {
+        const prev = map.get(prevId);
+        map.delete(prevId);
+        // tin tạm bị thay bởi bản thật; bản thật tới trước rồi thì giữ bản thật
+        if (prev && !prev.isOptimistic && m.isOptimistic) { map.set(prevId, prev); return; }
+      }
+      byClient.set(m.clientId, m.id);
+    }
+    const old = map.get(m.id);
+    map.set(m.id, old?.clientId && !m.clientId ? { ...m, clientId: old.clientId } : m);
+  };
+  a.forEach(put);
+  b.forEach(put);
   return Array.from(map.values()).sort(
-    (x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime()
+    (x, y) => (x.isOptimistic ? 1 : 0) - (y.isOptimistic ? 1 : 0) || new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime()
   );
 }
 
@@ -172,6 +190,7 @@ export function mapServerMessage(m: any): MessageType {
       : { id: "", name: "User", role: "USER" } as any,
     conversationId: m.conversationId,
     reactions: Array.isArray(m.reactions) ? m.reactions : undefined,
+    ...(typeof m.clientId === "string" ? { clientId: m.clientId } : {}),
   };
 }
 

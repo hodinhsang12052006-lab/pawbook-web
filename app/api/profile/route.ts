@@ -142,8 +142,9 @@ export async function GET(req: NextRequest) {
     }
 
     // "SĐT đã xác minh" — chỉ khi số đã xác minh KHỚP số đang lưu (đổi số là mất dấu).
+    // ?trust=1 (Messenger: dòng tin cậy của đối phương) = chỉ phần này, không tính huy hiệu / số liệu tài khoản chính thức.
     let phoneVerified: boolean | undefined;
-    if (wantBadges) {
+    if (wantBadges || searchParams.get("trust") === "1") {
       phoneVerified = await Promise.all([
         prisma.phoneVerification.findUnique({ where: { userId: user.id }, select: { phone: true } }),
         prisma.user.findUnique({ where: { id: user.id }, select: { phone: true, market: true } }),

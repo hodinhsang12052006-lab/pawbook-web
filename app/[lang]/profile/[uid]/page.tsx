@@ -5,7 +5,7 @@ import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import {
   Loader2, AlertCircle, MessageCircle, MapPin, Briefcase, Star, Images, ShieldCheck, BadgeCheck, HeartHandshake, Home as HomeIcon, Users2, Award, Store, Sparkles, CalendarDays, Share2, PenSquare, ChevronRight, LayoutGrid, DollarSign, Crown, Zap, Heart, Megaphone, BookOpen,
-  CalendarCheck,
+  CalendarCheck, Hand,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,6 +16,8 @@ import OfficialProfile from "@/components/profile/OfficialProfile";
 import ShareCardButton from "@/components/profile/ShareCard";
 import NailMenu from "@/components/menu/NailMenu";
 import { stateName, placeLabel } from "@/lib/stateNames";
+import { defaultCover, COVER_FADE } from "@/lib/defaultCovers";
+import { isPlaceholderAvatar } from "@/lib/avatar";
 
 interface PageProps {
   params: Promise<{ uid: string }>;
@@ -288,6 +290,9 @@ export default function PublicProfilePage({ params }: PageProps) {
       ];
 
   const reviewsTabCount = clientView ? clientStats?.count ?? 0 : reviewCount;
+  // Không hiện ô số liệu bằng 0 / "—" (trông như hồ sơ bỏ hoang); số thật > 0 vẫn hiện như cũ.
+  const shownStats = stats.filter((x) => x.value !== 0 && x.value !== "—" && x.value != null);
+
   const allTabs: { key: TabKey; label: string; icon: typeof Star; count?: number }[] = isOwnerProfile
     ? [
         { key: "overview", label: tr("Tổng quan", "Overview"), icon: LayoutGrid },
@@ -357,26 +362,29 @@ export default function PublicProfilePage({ params }: PageProps) {
         <section className="relative overflow-hidden border-b border-white/10 bg-slate-950/60 md:rounded-3xl md:border md:shadow-2xl md:shadow-black/40">
           {/* Ảnh bìa: thợ có portfolio → dùng chính mẫu móng đẹp nhất; còn
               lại là gradient riêng theo người (cùng màu với avatar). */}
-          <div className={`relative h-32 overflow-hidden sm:h-44 ${coverImage ? "bg-pn-raised" : "border-b border-pn-line bg-pn-raised"}`}>
-            {coverImage ? (
-              <Image src={coverImage} alt="" fill priority sizes="(max-width: 768px) 100vw, 768px" className="object-cover" />
-            ) : (
-              <>
-                <div className="absolute -right-10 -top-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
-              </>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-slate-950/80" />
+          <div aria-hidden className="relative h-40 overflow-hidden bg-pn-raised sm:h-[200px]" style={coverImage ? undefined : defaultCover(profile.id)}>
+            {coverImage && <Image src={coverImage} alt="" fill priority sizes="(max-width: 768px) 100vw, 768px" className="object-cover" />}
+            <div className="absolute inset-0" style={{ background: COVER_FADE }} />
           </div>
 
           <div className="relative px-4 pb-5 sm:px-6">
             <div className="-mt-12 flex items-end justify-between gap-3 sm:-mt-14">
-              <Avatar
-                src={profile.avatarUrl}
-                name={profile.name}
-                seed={profile.id}
-                loading="eager"
-                className="h-24 w-24 shadow-xl shadow-black/50 ring-4 ring-slate-950 sm:h-28 sm:w-28"
-              />
+              <span className="relative flex-shrink-0">
+                <Avatar
+                  src={profile.avatarUrl}
+                  name={profile.name}
+                  seed={profile.id}
+                  loading="eager"
+                  glyph={profile.role === "OWNER" ? "store" : profile.role === "TECHNICIAN" ? "polish" : undefined}
+                  className="h-[88px] w-[88px] ring-[3px] ring-pn-surface shadow-[0_1px_2px_rgb(8_4_10/0.35),0_12px_32px_-16px_rgb(8_4_10/0.7)] sm:h-[104px] sm:w-[104px]"
+                />
+                {/* Chưa có ảnh thật: biểu tượng vai trò (champagne) góc dưới phải — không bao giờ là mặt người */}
+                {isPlaceholderAvatar(profile.avatarUrl) && profile.role === "CLIENT" && (
+                  <span aria-hidden className="absolute bottom-0.5 right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-pn-overlay text-pn-champagne ring-2 ring-pn-surface">
+                    {profile.role === "OWNER" ? <Store className="h-3.5 w-3.5" /> : profile.role === "CLIENT" ? <Hand className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  </span>
+                )}
+              </span>
               <div className="hidden items-center gap-2 pb-1 sm:flex">
                 {shareButton}
                 {primaryAction}
@@ -480,8 +488,14 @@ export default function PublicProfilePage({ params }: PageProps) {
           </div>
 
           {/* Dải số liệu THẬT (đánh giá, tin tuyển, ảnh…) — không bịa lượng khách/tip */}
-          <div className="grid grid-cols-4 divide-x divide-white/5 border-t border-white/5 bg-white/[0.015]">
-            {stats.map((s) => (
+          {shownStats.length === 0 ? (
+            <p className="flex items-center gap-2 border-t border-pn-line-soft px-4 py-3.5 text-[13px] text-pn-text-2 sm:px-6">
+              <Sparkles className="h-4 w-4 text-pn-champagne" />
+              {joined ? tr(`Mới tham gia PawNail · Tháng ${joined.getMonth() + 1}/${joined.getFullYear()}`, `New on PawNail · ${joined.toLocaleDateString("en-US", { month: "short", year: "numeric" })}`) : tr("Mới tham gia PawNail", "New on PawNail")}
+            </p>
+          ) : (
+          <div className="grid divide-x divide-white/5 border-t border-white/5 bg-white/[0.015]" style={{ gridTemplateColumns: `repeat(${shownStats.length}, minmax(0, 1fr))` }}>
+            {shownStats.map((s) => (
               <div key={s.label} className="px-1 py-3.5 text-center">
                 <p className="flex items-center justify-center gap-1 text-lg font-black text-white">
                   {s.value}
@@ -491,6 +505,7 @@ export default function PublicProfilePage({ params }: PageProps) {
               </div>
             ))}
           </div>
+          )}
         </section>
 
 

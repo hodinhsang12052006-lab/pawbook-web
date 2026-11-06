@@ -14,7 +14,8 @@ export const STICKER_PACKS: StickerPack[] = [
   { id: "feel", label: ["Cảm xúc", "Feelings"], icon: "😂", items: ["😂", "🤣", "🥰", "😍", "😘", "😭", "🥺", "😡", "😱", "🤯", "🤩", "🥳", "😎", "🤔", "🙄", "😴", "🤗", "🤭", "😳", "😅", "😊", "😇", "🥲", "😮", "💀", "🙈", "👋"] },
   { id: "salon", label: ["Tiệm nail", "Salon"], icon: "💅", items: ["💅", "✨", "🔥", "💖", "💯", "👏", "🙏", "💸", "👍", "💪", "🎉", "🎁", "⭐", "🌈", "🌸"] },
   { id: "pets", label: ["Thú cưng", "Pets"], icon: "😺", items: ["😺", "😹", "😻", "🐕", "🦊", "🐼", "🦄", "🦁", "🐧", "🦉"] },
-  { id: "party", label: ["Lễ hội", "Holidays"], icon: "🎃", items: ["🎃", "👻", "🎆", "❤️", "💘", "🎂", "🍾", "🥳", "🎉", "🎁"] },
+  // Sau Halloween (đã lưu trữ 31/10): bộ lễ hội mở đầu bằng ✨ — mùa thu / cuối năm lên trước, 🎃 👻 xuống cuối.
+  { id: "party", label: ["Lễ hội", "Holidays"], icon: "✨", items: ["✨", "🍂", "❄️", "⛄", "🎁", "🎆", "🍾", "🥳", "🎉", "❤️", "💘", "🎂", "🎃", "👻"] },
 ];
 
 const ANIMATED = new Set(STICKER_PACKS.flatMap((p) => p.items));

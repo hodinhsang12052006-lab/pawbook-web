@@ -98,6 +98,20 @@ ok("J2", "Cùng ngày → không đăng bài điểm tin thứ 2", d2.posted ===
 const o5 = await publishDailyOfficialPost(new Date(now.getTime() + 86400e3));
 ok("J3", "Bài 📍 không chiếm suất bài kiến thức", o5.posted === true, JSON.stringify(o5));
 await prisma.job.deleteMany({ where: { id: { in: jobIds } } });
+// Bài điểm tin CHỈ từ tin tiệm tự đăng của tài khoản thật: tin mẫu (@pawnailjobs.demo) và tin tổng hợp (source=ingest)
+// cùng bang, cùng ngày không được lên bài; chỉ có tin mẫu / tổng hợp → không đăng.
+const demoOwner = await prisma.user.create({ data: { email: `digest.${t}@x.pawnailjobs.demo`, name: "Demo Owner", password: "x", role: "OWNER" } });
+const mk = (ownerId: string, name: string, extra: Record<string, unknown> = {}) => prisma.job.create({ data: { ownerId, title: "Cần thợ", salonName: name, description: "x", market: "US", state: "NV", city: "Las Vegas", salaryType: "Bao lương tuần", salaryAmount: "$1,200/tuần", skills: "Bột/Acrylic", benefits: "", phone: "(702) 555-0101", createdAt: now, ...extra } as any });
+const onlyFake = [await mk(demoOwner.id, `Demo Nails ${t}-a`), await mk(demoOwner.id, `Demo Nails ${t}-b`), await mk(owner.id, `Ingest Nails ${t}-c`, { source: "ingest", expiresAt: new Date(Date.now() + 5 * 86400e3) })];
+const d4 = await publishJobDigest(new Date(now.getTime() + 2 * 86400e3));
+ok("J4", "Chỉ có tin MẪU + tin tổng hợp trong bang → KHÔNG đăng bài điểm tin", d4.posted === false, JSON.stringify(d4));
+const real2 = [await mk(owner.id, `Real Nails ${t}-1`), await mk(owner.id, `Real Nails ${t}-2`)];
+const d5 = await publishJobDigest(new Date(now.getTime() + 3 * 86400e3));
+const dp5 = await prisma.post.findFirst({ where: { authorId: admin.id, content: { startsWith: "📍 Nevada" } }, orderBy: { createdAt: "desc" } });
+const c5 = dp5?.content || "";
+ok("J5", "Bài điểm tin chỉ liệt kê 2 tiệm THẬT tự đăng (không tin mẫu, không tin tổng hợp)", d5.posted === true && /Nevada: 2 tiệm/.test(c5) && c5.includes(`Real Nails ${t}-1`) && c5.includes(`Real Nails ${t}-2`) && !c5.includes("Demo Nails") && !c5.includes("Ingest Nails"), c5.slice(0, 240));
+await prisma.job.deleteMany({ where: { id: { in: [...onlyFake, ...real2].map((j) => j.id) } } });
+await prisma.user.delete({ where: { id: demoOwner.id } });
 await prisma.user.delete({ where: { id: owner.id } });
 const g3 = await publishDesignGallery(new Date(now.getTime() + 86400e3));
 const used = new Set([...g1.ids!, ...g2b.ids!, ...g2c.ids!]);

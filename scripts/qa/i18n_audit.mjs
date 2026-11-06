@@ -9,7 +9,8 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, SEED_TECH, fakeIp } from "./lib.mjs";
 
 const MODE = process.argv[2] || "en";
-const db = createClient({ url: "file:prisma/dev.db" });
+// DB của server đang chạy (scripts/qa/make-qa-db.sh → QA_DB_URL=file:<qa.db>); mặc định prisma/dev.db.
+const db = createClient({ url: process.env.QA_DB_URL || "file:prisma/dev.db" });
 const VN = /[ạảấầậắằặẹẻếềệịọỏốồộớờợụủứừựỳỵỷỹđĐăâêôơưÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂƠƯàáãèéìíòóõùúý]/;
 
 // Chữ do NGƯỜI DÙNG/dữ liệu tạo ra (không phải giao diện) → bỏ qua khi quét.

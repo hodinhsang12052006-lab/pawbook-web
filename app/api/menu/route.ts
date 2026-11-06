@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { MAX_MENU_ITEMS, parseMenuItem, parseMenuItemEn, toPublicMenuItem } from "@/lib/menu";
-import { menuI18nFor, menuI18nOne, translateMenuItemOnSave } from "@/lib/menuI18n";
+import { menuI18nFor, menuI18nOne, translateMenuItemOnSave, translateMissingMenu } from "@/lib/menuI18n";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // GET /api/menu?userId=… — menu mẫu nail của 1 thợ / tiệm (công khai: chỉ mẫu đang hiện, không có
@@ -28,6 +28,8 @@ export async function GET(req: Request) {
     take: MAX_MENU_ITEMS,
   });
   const i18n = await menuI18nFor(rows);
+  // Mẫu cũ chưa có bản dịch → dịch sau khi trả lời (lần xem sau có tên tiếng Anh cho khách).
+  after(() => translateMissingMenu(rows, i18n));
   return NextResponse.json(
     {
       owner: { id: owner.id, name: owner.name, avatarUrl: owner.avatarUrl, role: owner.role, market: owner.market, state: owner.state, city: owner.city, salonName: owner.role === "OWNER" ? owner.jobs[0]?.salonName ?? null : null },

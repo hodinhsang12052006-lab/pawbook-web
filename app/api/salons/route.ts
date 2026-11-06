@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { realOnly } from "@/lib/demo";
-import { menuI18nFor } from "@/lib/menuI18n";
+import { menuI18nFor, translateMissingMenu } from "@/lib/menuI18n";
 
 // GET /api/salons?market=US&state=CA&limit=24 — "Tiệm & thợ quanh bạn" cho KHÁCH đi làm nail.
 // Chỉ người có thứ khách cần xem trước khi chọn: menu dịch vụ có giá HOẶC ảnh tác phẩm thật.
@@ -37,6 +37,7 @@ export async function GET(req: Request) {
     const parse = (s: string | null | undefined): string[] => { try { const v = JSON.parse(s || "[]"); return Array.isArray(v) ? v.filter((x) => typeof x === "string") : []; } catch { return []; } };
     // Tên mẫu theo ngôn ngữ (trả CẢ 2 bản: API này cache chung ở CDN cho người xem EN lẫn VI).
     const i18n = await menuI18nFor([...local, ...more].flatMap((u) => u.menuItems));
+    after(() => translateMissingMenu([...local, ...more].flatMap((u) => u.menuItems), i18n, 12));
     const items = [...local, ...more].map((u) => {
       const ratings = u.clientReviews.map((r) => r.rating);
       const photos = [...u.menuItems.flatMap((m) => parse(m.images)), ...parse(u.technicianProfile?.portfolioImages)].filter((x) => /^https:\/\//.test(x)).slice(0, 4);

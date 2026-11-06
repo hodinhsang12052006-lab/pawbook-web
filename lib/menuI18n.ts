@@ -84,3 +84,21 @@ export async function translateMenuItemOnSave(row: Row, ownerProvided?: { nameEn
     if (row.description && !hasDesc) await translateEntries("menu.desc", [{ id: row.id, src: row.description }], to, { maxNew: 1 });
   }
 }
+
+/**
+ * Mẫu cũ (tạo trước khi có dịch lúc lưu) chưa có bản ngôn ngữ còn lại → dịch dần trong after() mỗi lần menu
+ * được xem (tối đa `max` mẫu / lượt) — tự bù dữ liệu cũ, không cần chạy script trên production.
+ */
+export async function translateMissingMenu(rows: Row[], i18n: Map<string, MenuI18n>, max = 8): Promise<void> {
+  let n = 0;
+  for (const r of rows) {
+    if (n >= max) break;
+    const v = i18n.get(r.id);
+    const lang = detectTextLang(`${r.name} ${r.description ?? ""}`);
+    if (!lang) continue;
+    const missing = lang === "vi" ? !v?.nameEn : !v?.nameVi;
+    if (!missing) continue;
+    n++;
+    await translateMenuItemOnSave(r).catch(() => {});
+  }
+}

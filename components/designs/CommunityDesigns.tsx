@@ -13,15 +13,22 @@ interface Item {
   author: { id: string; name: string; avatarUrl: string | null; role: string };
 }
 
+// 1 lần tải cho cả trang (2 vị trí dùng chung): "top" chỉ hiện khi CÓ ảnh thật, "bottom" chỉ hiện ô mời đăng khi CHƯA có
+// → trang Mẫu nail mở ra bằng lưới ảnh, không còn mở bằng 1 ô trống nét đứt.
+let firstPage: Promise<{ items: Item[]; hasMore: boolean }> | null = null;
+const loadFirst = () => (firstPage ??= fetch("/api/designs/community?limit=12").then((r) => (r.ok ? r.json() : null)).then((j) => ({ items: (j?.items ?? []) as Item[], hasMore: !!j?.hasMore })).catch(() => { firstPage = null; return { items: [] as Item[], hasMore: false }; }));
+
 // Ảnh THẬT thợ & tiệm đăng (bài "Khoe tay nghề" có ảnh) — hiện ngay ở trang Mẫu nail, không cần duyệt.
-export default function CommunityDesigns() {
+export default function CommunityDesigns({ placement }: { placement?: "top" | "bottom" } = {}) {
   const router = useRouter();
   const { user } = useSessionUser();
   const [items, setItems] = useState<Item[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    fetch("/api/designs/community?limit=12").then((r) => (r.ok ? r.json() : null)).then((j) => { setItems(j?.items ?? []); setHasMore(!!j?.hasMore); }).catch(() => setItems([]));
+    let live = true;
+    loadFirst().then((j) => { if (live) { setItems(j.items); setHasMore(j.hasMore); } });
+    return () => { live = false; };
   }, []);
   const more = () => {
     if (!items || busy) return;
@@ -34,6 +41,8 @@ export default function CommunityDesigns() {
     router.push("/?tab=feed");
   };
 
+  if (placement === "top" && !items?.length) return null;
+  if (placement === "bottom" && (items === null || items.length > 0)) return null;
   return (
     <section className="space-y-3" aria-labelledby="community-designs" data-testid="community-designs">
       <div className="flex items-end justify-between gap-3">

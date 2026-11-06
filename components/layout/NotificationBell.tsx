@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift, X, UserRound, Camera, Sparkles } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
@@ -170,7 +170,7 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={toggle}
-        aria-label={unread > 0 ? tr(`Thông báo, ${unread} chưa đọc`, `Notifications, ${unread} unread`) : "Thông báo"}
+        aria-label={unread > 0 ? tr(`Thông báo, ${unread} chưa đọc`, `Notifications, ${unread} unread`) : tr("Thông báo", "Notifications")}
         aria-expanded={open}
         className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
       >
@@ -188,7 +188,7 @@ export default function NotificationBell() {
         <div
           role="dialog"
           aria-label={tr("Thông báo", "Notifications")}
-          className="fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] shadow-2xl shadow-black/70 animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
+          className="pn-notif-panel fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] shadow-2xl shadow-black/70 animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
         >
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <p className="text-sm font-black text-white">{tr("Thông báo", "Notifications")}</p>
@@ -207,6 +207,10 @@ export default function NotificationBell() {
             <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] font-semibold text-pink-300 hover:text-pink-200">
               <CheckCheck className="h-3.5 w-3.5" />{tr(" Đánh dấu đã đọc", " Mark all read")}
             </button>
+            {/* Điện thoại: bảng là sheet cao gần hết màn hình → cần nút đóng rõ ràng */}
+            <button type="button" onClick={() => setOpen(false)} aria-label={tr("Đóng", "Close")} className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/10 sm:hidden">
+              <X className="h-5 w-5" />
+            </button>
             </div>
           </div>
 
@@ -220,6 +224,31 @@ export default function NotificationBell() {
                 </span>
                 <p className="mt-3 text-sm font-bold text-slate-200">{tr("Chưa có thông báo", "No notifications yet")}</p>
                 <p className="mt-1 text-xs text-slate-500">{tr("Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.", "When someone likes, comments on or reviews you, it shows up here.")}</p>
+                {/* 2 việc nên làm tiếp — thông báo đến từ người thật tương tác với hồ sơ / bài của bạn */}
+                <div className="mt-5 grid gap-2 text-left">
+                  {(user?.role === "CLIENT"
+                    ? [
+                        { href: "/designs", icon: Sparkles, label: tr("Xem mẫu nail", "Browse nail looks") },
+                        { href: "/tryon", icon: Camera, label: tr("Thử mẫu trên tay", "Try on looks") },
+                      ]
+                    : [
+                        { href: "/profile", icon: UserRound, label: tr("Hoàn thiện hồ sơ", "Complete your profile") },
+                        { href: "/?tab=feed", icon: Camera, label: tr("Đăng mẫu của bạn", "Post your work"), compose: true },
+                      ]
+                  ).map((a) => (
+                    <Link
+                      key={a.href}
+                      href={a.href}
+                      onClick={() => {
+                        if ("compose" in a && a.compose) { try { sessionStorage.setItem("pn_compose", "1"); sessionStorage.setItem("pn_compose_type", "SHOWCASE"); } catch {} }
+                        setOpen(false);
+                      }}
+                      className="flex min-h-[48px] items-center gap-3 rounded-xl bg-white/[0.04] px-3.5 text-sm font-semibold text-slate-100 ring-1 ring-white/[0.08] hover:bg-white/[0.07]"
+                    >
+                      <a.icon className="h-[18px] w-[18px] text-pink-300" />{a.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
             {items?.map((n) => {

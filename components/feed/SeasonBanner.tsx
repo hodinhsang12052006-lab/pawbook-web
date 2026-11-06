@@ -119,7 +119,7 @@ export default function SeasonBanner({
         <div className="pn-season-ideas -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {t.ideas.map((idea, i) => (
             <span key={idea} className="pn-season-idea flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold text-pn-text">
-              <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: i % 2 ? t.colors[1] : t.colors[0] }} />
+              <span aria-hidden className="h-2 w-2 rounded-full ring-1 ring-white/45" style={{ background: i % 2 ? t.colors[1] : t.colors[0] }} />
               {dt(idea)}
             </span>
           ))}

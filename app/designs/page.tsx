@@ -57,10 +57,10 @@ export default function DesignsPage() {
         <header className="space-y-1">
           <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-pink-300"><Sparkles className="h-4 w-4" />{tr(" PawNail Studio · cập nhật mỗi ngày", " PawNail Studio · updated daily")}</p>
           <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{tr("Mẫu nail mới", "Fresh nail designs")}</h1>
-          <p className="max-w-2xl text-sm text-slate-400">{tr("Ý tưởng theo dịp lễ và xu hướng đang lên, kèm vật tư cần chuẩn bị và các bước làm. Hình là minh hoạ (có ghi nhãn nguồn), không phải ảnh tay nghề thật — làm xong nhớ đăng ảnh thật nhé.", "Ideas for upcoming holidays and rising trends, with the materials to prepare and the steps. Pictures are labeled illustrations, not real work — post a real photo when you've made it.")}</p>
+          <p className="max-w-2xl text-[13px] leading-5 text-slate-400">{tr("Minh hoạ AI kèm vật tư & các bước · không phải ảnh tay nghề thật", "AI illustrations with supplies & steps · not photos of real work")}</p>
         </header>
 
-        <CommunityDesigns />
+        <CommunityDesigns placement="top" />
         <MenuShowcase />
 
         <h2 className="flex items-center gap-2 pt-2 text-base font-black text-white"><Sparkles className="h-4 w-4 text-pink-300" />{tr("Ý tưởng mẫu PawNail", "PawNail design ideas")}</h2>
@@ -94,6 +94,7 @@ export default function DesignsPage() {
             </button>
           </div>
         )}
+        <CommunityDesigns placement="bottom" />
       </main>
       {open && <DesignSheet d={open} onClose={() => setOpen(null)} onSaved={(s, n) => update(open.id, s, n)} />}
     </div>

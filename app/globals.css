@@ -1151,3 +1151,64 @@ html:not([data-ui-classic]) .pn-profile-head { background: var(--color-pn-surfac
 
 /* /messages: thanh dưới chỉ ẩn khi đang mở 1 cuộc trò chuyện (danh sách chat vẫn có thanh dưới) */
 html[data-chat-open] .pn-bnav { display: none; }
+
+/* ---- V2.2 ---- */
+/* Thông báo trên điện thoại: sheet cao gần hết màn hình (trượt lên từ dưới), danh sách cuộn bên trong, chừa vùng an toàn */
+@media (max-width: 639px) {
+  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] {
+    inset: calc(env(safe-area-inset-top) + 56px) 0 0 0;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+    animation: pn-sheet-in var(--pn-dur-sheet, 280ms) var(--pn-ease-drawer) both;
+  }
+  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] > div:last-child {
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  }
+  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"]::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: rgb(255 240 246 / 0.22);
+  }
+  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] > div:first-child { padding-top: 18px; }
+
+  /* Chi tiết việc: thanh Gọi / Nhắn dính ngay trên dock (kiểu Indeed / Fresha), tôn trọng vùng an toàn */
+  html:not([data-ui-classic]) .pn-job-cta {
+    position: sticky;
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 72px);
+    z-index: 30;
+    flex-direction: row;
+    gap: 8px;
+    margin: 0 -20px -20px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-pn-line);
+    border-radius: 0 0 16px 16px;
+    background: var(--pn-glass-dock);
+    -webkit-backdrop-filter: var(--pn-glass-filter);
+    backdrop-filter: var(--pn-glass-filter);
+  }
+  html:not([data-ui-classic]) .pn-job-cta > * { padding-block: 12px; font-size: 15px; }
+  html:not([data-ui-classic]) .pn-job-cta > a { flex: 1.25 1 0; }
+  html:not([data-ui-classic]) .pn-job-cta .pn-cta-num { display: none; }
+  /* dock luôn hiện trên trang chi tiết việc để thanh hành động nằm đúng chỗ */
+  html:not([data-ui-classic]) body:has(.pn-job-cta) .pn-bnav { transform: none !important; opacity: 1 !important; }
+}
+html[data-lowmem]:not([data-ui-classic]) .pn-job-cta { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--color-pn-surface); }
+
+/* Thẻ bài: nhãn "Khoe tay nghề" nhỏ, nằm cùng hàng tên */
+html:not([data-ui-classic]) .pn-post-tag { line-height: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] { animation: none; }
+}

@@ -137,7 +137,8 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       <div ref={boxRef} className="glass-card scroll-mt-40 flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2">
         <Avatar src={user.avatarUrl} name={user.name} seed={user.id} className="h-9 w-9" loading="eager" />
         <button type="button" onClick={() => expand()} className="min-h-11 min-w-0 flex-1 truncate rounded-full bg-pn-raised px-4 text-left text-[15px] text-pn-text-3 ring-1 ring-inset ring-pn-line">
-          {tr("Khoe tác phẩm móng mới, cập nhật tình hình tiệm, hoặc bất cứ điều gì... #NailArt", "Show your latest nail work, share salon news, anything... #NailArt")}
+          {/* Ô thu gọn: câu ngắn riêng (vừa 1 dòng, không cắt "…"); câu đầy đủ vẫn là placeholder của ô soạn bên dưới */}
+          {tr("Khoe mẫu mới, tin tiệm…", "Share your latest work…")}
         </button>
         <button type="button" onClick={() => expand(() => fileInputRef.current?.click())} aria-label={tr("Ảnh/Video", "Photo/Video")} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-pn-text-2 active:bg-white/[0.06]">
           <ImageIcon className="h-[22px] w-[22px]" />

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Heart, MessageCircle, Send, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
+import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 import ArticleText, { parseArticle } from "./ArticleText";
@@ -293,7 +293,43 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <Avatar src={post.author.avatarUrl} name={post.author.name} seed={post.author.id ?? undefined} className="h-11 w-11 ring-1 ring-white/10" />
           </Link>
         )}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 refined:hidden">
+          <div className="flex items-center gap-2 flex-wrap">
+            {anon ? (
+              <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
+            ) : (
+              <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
+                {post.author.name}
+              </Link>
+            )}
+            {anon && <span className="inline-flex flex-shrink-0 items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-200">{tr("Tâm sự ẩn danh", "Anonymous")}</span>}
+            {isVerifiedRole(post.author.role) && <VerifiedBadge className="-ml-1 h-4 w-4" />}
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0 ${isVerifiedRole(post.author.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-300"}`}>
+              {isVerifiedRole(post.author.role) ? tr("Chính thức", "Official") : roleBadgeLabel(post.author.role)}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 flex-wrap">
+            {(post.city || post.state) && (
+              <span className="flex items-center gap-0.5">
+                <MapPin className="h-3 w-3" /> {[post.city, post.state].filter(Boolean).join(", ")}
+              </span>
+            )}
+            <span>·</span>
+            <span>{timeAgo(post.createdAt)}</span>
+            {post.isHot && (
+              <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
+                {tr("🔥 Đang hot", "🔥 Trending")}
+              </span>
+            )}
+          </div>
+        </div>
+        {badge?.label && (
+          <span className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold ${badge.classes} refined:hidden`}>
+            {badge.label}
+          </span>
+        )}
+        {/* V2 (trong app): 1 dòng tên + 1 dòng meta "Nail tech · San Antonio, TX · Oct 2 · [nhãn]"; trang khách "/" giữ khối cũ ở trên */}
+        <div className="hidden min-w-0 flex-1 refined:block">
           <div className="flex min-w-0 items-center gap-1.5">
             {anon ? (
               <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
@@ -304,11 +340,6 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             )}
             {anon && <span className="inline-flex flex-shrink-0 items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-200">{tr("Tâm sự ẩn danh", "Anonymous")}</span>}
             {isVerifiedRole(post.author.role) && <VerifiedBadge className="h-4 w-4 flex-shrink-0" />}
-            {badge?.label && (
-              <span className={`pn-post-tag min-w-0 shrink-[4] truncate rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
-                {badge.label}
-              </span>
-            )}
           </div>
           {/* 1 dòng meta: "Nail tech · San Antonio, TX · Oct 2" — vai trò là chữ thường, không thêm 1 hàng nhãn */}
           <p className="pn-post-meta mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-slate-500">
@@ -321,6 +352,12 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
                   {parts.length > 0 && <span className="min-w-0 truncate">{parts.join(" · ")}</span>}
                   {parts.length > 0 && <span aria-hidden className="flex-shrink-0">·</span>}
                   <time dateTime={post.createdAt} className="flex-shrink-0 whitespace-nowrap">{timeAgo(post.createdAt)}</time>
+                  {/* nhãn loại bài (Khoe tay nghề / Tin ngành / Mẫu hôm nay…) nằm cuối dòng meta — tên người đăng không bị cắt */}
+                  {badge?.label && (
+                    <span className={`pn-post-tag ml-1 flex-shrink-0 rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
+                      {badge.label}
+                    </span>
+                  )}
                 </>
               );
             })()}

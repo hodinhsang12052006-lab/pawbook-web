@@ -223,7 +223,7 @@ function JobCard({
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 break-words text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
+          <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200 refined:line-clamp-2 refined:whitespace-normal refined:break-words">{dt(job.title)}</h3>
           <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
           {job.source === "ingest" && (
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-500/25" title={tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail on the salon's behalf — call the salon directly")}>

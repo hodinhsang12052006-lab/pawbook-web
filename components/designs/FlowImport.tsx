@@ -19,7 +19,7 @@ type Status = "checking" | "ready" | "blocked" | "queued" | "uploading" | "impor
 interface Item {
   key: string; file: File; name: string; preview: string; code: string | null; nameIssue?: FilenameIssue; w: number; h: number;
   row?: FlowRow; issue?: string; dupOf?: string; dups?: number; pinned?: boolean;
-  checked: boolean; status: Status; error?: string; detail?: string; upload?: Upload; newUrl?: string;
+  checked: boolean; status: Status; error?: string; detail?: string; upload?: Upload; newUrl?: string; prevUrl?: string | null;
 }
 interface Candidate { id: string; title: string; titleEn: string; shape: string; pattern: string; finish: string; occasion: string | null; imageUrl: string | null }
 interface Run { total: number; ok: number; failed: number; stopped?: boolean }
@@ -80,8 +80,12 @@ async function readSize(file: File): Promise<{ w: number; h: number }> {
 
 /** Thu nhỏ về cạnh dài ≤ 2048 và mã hoá JPEG 0.9 (nền trắng cho ảnh PNG trong suốt). JPEG đã ≤ 2048 → gửi nguyên. */
 async function uploadBlob(it: Item): Promise<Blob> {
-  if (it.file.type === "image/jpeg" && Math.max(it.w, it.h) <= FLOW_MAX_SIDE && it.file.size <= 10 * 1024 * 1024) return it.file;
   try {
+    // đọc vào bộ nhớ ngay (không gửi file đang nằm trên ổ đĩa): file bị đổi tên / chuyển chỗ sau khi thả thì báo
+    // "không đọc được ảnh" rõ ràng, thay vì lỗi mạng khó hiểu giữa chừng
+    if (it.file.type === "image/jpeg" && Math.max(it.w, it.h) <= FLOW_MAX_SIDE && it.file.size <= 10 * 1024 * 1024) {
+      return new Blob([await it.file.arrayBuffer()], { type: "image/jpeg" });
+    }
     const bmp = await createImageBitmap(it.file);
     const scale = Math.min(1, FLOW_MAX_SIDE / Math.max(bmp.width, bmp.height));
     const w = Math.round(bmp.width * scale);
@@ -127,16 +131,17 @@ async function collectDropped(files: File[], entries: (FileSystemEntry | null)[]
 const isSquare = (w: number, h: number) => w > 0 && Math.abs(w - h) <= FLOW_SQUARE_TOLERANCE * Math.max(w, h);
 const kb = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`);
 
-/** Trùng mẫu: mỗi mẫu chỉ 1 file được dùng — file chủ tiệm chọn (pinned), không thì file MỚI NHẤT; các file khác chờ. */
+/** Trùng mẫu: mỗi mẫu chỉ 1 file được dùng — file chủ tiệm chọn (pinned), file vừa đăng trong lượt này, không thì file
+ *  MỚI NHẤT; các file khác chờ (tick để đổi). */
 function arrange(list: Item[]): Item[] {
   const groups = new Map<string, Item[]>();
   for (const i of list) {
-    if (i.issue || !i.row?.found || !PICKABLE.includes(i.status)) continue;
+    if (i.issue || !i.row?.found || !(PICKABLE.includes(i.status) || i.status === "done")) continue;
     groups.set(i.row.designId, [...(groups.get(i.row.designId) ?? []), i]);
   }
   const winner = new Map<string, { key: string; n: number }>();
   for (const g of groups.values()) {
-    const w = g.find((i) => i.pinned) ?? [...g].sort((a, b) => b.file.lastModified - a.file.lastModified || b.name.localeCompare(a.name))[0];
+    const w = g.find((i) => i.pinned) ?? g.find((i) => i.status === "done") ?? [...g].sort((a, b) => b.file.lastModified - a.file.lastModified || b.name.localeCompare(a.name))[0];
     for (const i of g) winner.set(i.key, { key: w.key, n: g.length - 1 });
   }
   return list.map((i) => {
@@ -295,7 +300,7 @@ export default function FlowImport() {
   const swap = (key: string) => setItems((list) => {
     const did = list.find((i) => i.key === key)?.row?.designId;
     if (!did) return list;
-    return arrange(list.map((i) => (i.row?.designId === did && PICKABLE.includes(i.status) ? { ...i, pinned: i.key === key, checked: i.key === key } : i)));
+    return arrange(list.map((i) => (i.row?.designId === did ? { ...i, pinned: i.key === key, checked: i.key === key && PICKABLE.includes(i.status) } : i)));
   });
   const remove = (key: string) => setItems((list) => {
     const it = list.find((i) => i.key === key);
@@ -328,7 +333,12 @@ export default function FlowImport() {
       patch(it.key, { status: "importing", error: undefined, detail: undefined });
       const u = upload;
       const r = await withRetry(() => postJson<{ imageUrl: string; flow: FlowMark }>("/api/admin/designs/flow/import", { code: it.code, ...u }), stopped);
-      patch(it.key, { status: "done", checked: false, newUrl: r.imageUrl, row: it.row ? { ...it.row, flow: r.flow } : it.row });
+      const did = it.row?.designId;
+      setItems((list) => list.map((i) => {
+        if (!i.row || i.row.designId !== did) return i;
+        const row = { ...i.row, flow: r.flow, imageUrl: r.imageUrl, was: i.row.flow ? i.row.was : i.row.imageUrl };
+        return i.key === it.key ? { ...i, status: "done", checked: false, newUrl: r.imageUrl, prevUrl: row.was, row } : { ...i, row };
+      }));
       return true;
     } catch (err) {
       const raw = err instanceof FlowFail ? err.raw : String((err as Error)?.message ?? err);
@@ -376,10 +386,15 @@ export default function FlowImport() {
     }));
     return n;
   }, []);
+  // hoàn tác 1 mẫu: mọi thẻ của mẫu đó về ảnh trước Flow (thẻ vừa đăng → "Đã hoàn tác")
   const markUndone = useCallback((id: string, ok: boolean, e?: unknown) => {
-    setItems((list) => list.map((i) => (i.row?.designId === id && (i.status === "done" || i.status === "importing")
-      ? ok ? { ...i, status: "undone", error: undefined, detail: undefined, upload: undefined, row: { ...i.row, flow: null } } : { ...i, status: "done", ...explain(e) }
-      : i)));
+    setItems((list) => list.map((i) => {
+      if (i.row?.designId !== id) return i;
+      const mine = i.status === "done" || i.status === "importing";
+      if (!ok) return mine ? { ...i, status: "done", ...explain(e) } : i;
+      const row = i.row.flow ? { ...i.row, flow: null, imageUrl: i.row.was, was: null } : i.row;
+      return mine ? { ...i, status: "undone", error: undefined, detail: undefined, upload: undefined, prevUrl: undefined, row } : { ...i, row };
+    }));
   }, [explain]);
   const undoItems = async (list: Item[]) => {
     const ids = [...new Set(list.flatMap((i) => (i.row ? [i.row.designId] : [])))];
@@ -474,7 +489,7 @@ export default function FlowImport() {
       )}
 
       {items.length > 0 && (
-        <div data-testid="flow-runbar" className="sticky top-[68px] z-30 space-y-2 rounded-xl bg-slate-900/95 px-3 py-2 ring-1 ring-white/10 backdrop-blur">
+        <div data-testid="flow-runbar" className="sticky top-16 z-30 space-y-2 rounded-xl bg-slate-900/95 px-3 py-2 ring-1 ring-white/10 backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <label className="inline-flex min-h-[36px] items-center gap-2 text-xs font-semibold text-slate-200">
               <input
@@ -510,7 +525,7 @@ export default function FlowImport() {
                 {run.failed ? <span className="text-rose-300">{tr(` · ${run.failed} lỗi`, ` · ${run.failed} failed`)}</span> : null}
               </p>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={run.total} aria-valuenow={run.ok + run.failed}>
-                <div className="h-full rounded-full bg-slate-200 transition-[width] duration-300" style={{ width: `${Math.round(((run.ok + run.failed) / Math.max(1, run.total)) * 100)}%` }} />
+                <div className={`h-full rounded-full bg-slate-200 ${run.ok + run.failed ? "transition-[width] duration-300" : ""}`} style={{ width: `${Math.round(((run.ok + run.failed) / Math.max(1, run.total)) * 100)}%` }} />
               </div>
             </div>
           )}
@@ -569,7 +584,7 @@ export default function FlowImport() {
                 className="ml-auto inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-900 disabled:opacity-40 sm:flex-none"
               >
                 {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                {tr(`Đăng ${selected.length} ảnh đã chọn`, `Publish ${selected.length} selected`)}
+                {running ? tr("Đang đăng…", "Publishing…") : tr(`Đăng ${selected.length} ảnh đã chọn`, `Publish ${selected.length} selected`)}
               </button>
             </div>
           )}
@@ -632,6 +647,7 @@ function ReviewCard({ it, locale, dupName, busy, onToggle, onRetry, onUndo, onRe
   const working = BUSY.includes(it.status);
   const canPick = !it.issue && PICKABLE.includes(it.status);
   const title = r?.found ? (locale === "en" ? r.title : r.titleVi || r.title) : it.name;
+  const oldUrl = it.status === "done" ? it.prevUrl ?? null : r?.imageUrl ?? null;
   return (
     <article data-testid="flow-card" data-code={it.code ?? ""} className="min-w-0 rounded-xl border border-white/10 bg-slate-900/70 p-3">
       <div className="flex items-start gap-2">
@@ -664,9 +680,9 @@ function ReviewCard({ it, locale, dupName, busy, onToggle, onRetry, onUndo, onRe
         <span className="min-w-0">
           <span className="mb-1 block truncate text-[11px] font-semibold text-slate-300">{it.status === "done" ? tr("Ảnh cũ (đã cất)", "Old image (kept)") : tr("Ảnh hiện tại", "Current image")}</span>
           <span className="block aspect-square overflow-hidden rounded-lg bg-slate-800">
-            {r?.imageUrl
+            {oldUrl
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={cdnImage(r.imageUrl, 360)} alt={tr("Ảnh hiện tại", "Current image")} loading="lazy" className="h-full w-full object-cover" />
+              ? <img src={cdnImage(oldUrl, 360)} alt={tr("Ảnh hiện tại", "Current image")} loading="lazy" className="h-full w-full object-cover" />
               : <span className="flex h-full items-center justify-center text-[11px] text-slate-500">{tr("Chưa có ảnh", "No image")}</span>}
           </span>
         </span>
@@ -681,7 +697,7 @@ function ReviewCard({ it, locale, dupName, busy, onToggle, onRetry, onUndo, onRe
       {it.dupOf && (
         <p className="mt-2 text-[11px] text-amber-200">{tr(`Trùng mẫu — đang dùng file “${dupName ?? "khác"}”. Tick ô này để dùng file này thay.`, `Duplicate — “${dupName ?? "another file"}” is used. Tick this box to use this file instead.`)}</p>
       )}
-      {!!it.dups && !it.dupOf && (
+      {!!it.dups && !it.dupOf && it.status !== "done" && (
         <p className="mt-2 text-[11px] text-slate-400">{tr(`Có ${it.dups + 1} file cho mẫu này — đang dùng file này (mới nhất hoặc bạn chọn).`, `${it.dups + 1} files for this design — using this one (newest, or your pick).`)}</p>
       )}
       {r?.flow && it.status !== "done" && !it.issue && (
@@ -731,6 +747,7 @@ function CompareDialog({ it, locale, onClose }: { it: Item; locale: string; onCl
   }, [onClose]);
   const r = it.row;
   const title = r?.found ? (locale === "en" ? r.title : r.titleVi || r.title) : it.name;
+  const oldUrl = it.status === "done" ? it.prevUrl ?? null : r?.imageUrl ?? null;
   return (
     <div role="dialog" aria-modal="true" aria-label={tr("So sánh ảnh", "Compare images")} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-3" onClick={onClose}>
       <div className="max-h-full w-full max-w-5xl overflow-auto rounded-2xl bg-slate-950 p-3 ring-1 ring-white/10" onClick={(e) => e.stopPropagation()}>
@@ -740,10 +757,10 @@ function CompareDialog({ it, locale, onClose }: { it: Item; locale: string; onCl
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <figure className="min-w-0">
-            <figcaption className="mb-1 text-xs font-semibold text-slate-300">{tr("Ảnh hiện tại", "Current image")}</figcaption>
-            {r?.imageUrl
+            <figcaption className="mb-1 text-xs font-semibold text-slate-300">{it.status === "done" ? tr("Ảnh cũ (đã cất)", "Old image (kept)") : tr("Ảnh hiện tại", "Current image")}</figcaption>
+            {oldUrl
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={cdnImage(r.imageUrl, 1024)} alt={tr("Ảnh hiện tại", "Current image")} className="aspect-square w-full rounded-lg bg-slate-800 object-cover" />
+              ? <img src={cdnImage(oldUrl, 1024)} alt={tr("Ảnh hiện tại", "Current image")} className="aspect-square w-full rounded-lg bg-slate-800 object-cover" />
               : <div className="flex aspect-square items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-500">{tr("Chưa có ảnh", "No image")}</div>}
           </figure>
           <figure className="min-w-0">

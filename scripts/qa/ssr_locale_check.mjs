@@ -152,10 +152,15 @@ console.log("\nSEO tags:");
 console.log("\nRSC / segment prefetch by cookie:");
 for (const cookie of ["vi", "en"]) {
   const headers = { rsc: "1", "next-router-prefetch": "1", "next-router-segment-prefetch": "/_tree", cookie: `bitpaw_locale=${cookie}` };
-  const res = await fetch(`${BASE_URL}/designs?_rsc=qa${cookie}`, { headers, redirect: "manual" });
+  // Next 16 kiểm tra giá trị ?_rsc= theo băm của các header RSC: giá trị sai → 307 sang đúng ?_rsc=<băm> (chống
+  // đầu độc cache). Theo đúng 1 lần chuyển hướng đó, giữ nguyên header + cookie.
+  let res = await fetch(`${BASE_URL}/designs?_rsc=qa${cookie}`, { headers, redirect: "manual" });
+  const loc = res.headers.get("location") || "";
+  if ((res.status === 307 || res.status === 308) && /[?&]_rsc=/.test(loc)) res = await fetch(new URL(loc, BASE_URL), { headers, redirect: "manual" });
   const body = res.status === 200 ? await res.text() : "";
   // Cây segment chứa giá trị của [lang] ("lang","vi" / "lang","en") — đúng nhánh thì chỉ có ngôn ngữ của cookie.
-  const hasVi = /"lang","vi"|\["lang","vi"|lang\|vi/.test(body), hasEn = /"lang","en"|\["lang","en"|lang\|en/.test(body);
+  // Next 16.4: {"n":"lang","t":"d","k":"vi"} · bản cũ: ["lang","vi","d"].
+  const hasVi = /"n":"lang"[^}]*"k":"vi"|"lang","vi"|lang\|vi/.test(body), hasEn = /"n":"lang"[^}]*"k":"en"|"lang","en"|lang\|en/.test(body);
   check(res.status === 200 && (cookie === "vi" ? hasVi && !hasEn : hasEn && !hasVi), `/designs prefetch with cookie=${cookie} → ${res.status}, tree lang=${hasVi ? "vi" : hasEn ? "en" : "?"}`);
 }
 
@@ -231,8 +236,11 @@ if (process.argv.includes("--browser")) {
     } catch {}
   });
   const lp = await legacy.newPage();
-  await lp.goto(BASE_URL + "/designs", { waitUntil: "networkidle" });
-  await lp.waitForTimeout(1500);
+  // Trang tự tải lại 1 lần → "networkidle" của lần điều hướng đầu có thể không bao giờ tới (request của bản
+  // trước khi tải lại bị bỏ dở) → chờ KẾT QUẢ: <html lang="vi"> sau khi tải lại.
+  await lp.goto(BASE_URL + "/designs", { waitUntil: "load" });
+  await lp.waitForFunction(() => document.documentElement.lang === "vi", null, { timeout: 15000 }).catch(() => {});
+  await lp.waitForLoadState("load").catch(() => {});
   const lr = await lp.evaluate(() => ({ lang: document.documentElement.lang, cookie: document.cookie }));
   check(lr.lang === "vi" && /bitpaw_locale=vi/.test(lr.cookie), `legacy localStorage "vi" → cookie written, page reloaded in ${lr.lang}`);
   // Khách EN mở link /vi/… → gợi ý "View in English".

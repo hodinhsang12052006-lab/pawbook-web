@@ -22,14 +22,14 @@ export default function Navbar() {
   const { unreadCount, resetUnread } = useUnreadMessages();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-slate-950/[0.97] backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent refined:bg-pn-canvas refined:[backdrop-filter:none] refined:after:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Logo & Brand */}
         <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">
-          <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10">
+          <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-pink-500/20 refined:shadow-none">
             <Image src="/cho1.jpg" alt="PawNail Jobs" fill sizes="40px" className="object-cover" />
           </div>
-          <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-lg font-extrabold tracking-wide text-transparent hidden sm:inline">
+          <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-lg font-extrabold tracking-wide text-transparent hidden sm:inline refined:via-pink-400 refined:to-pink-400">
             PawNail Jobs
           </span>
         </div>

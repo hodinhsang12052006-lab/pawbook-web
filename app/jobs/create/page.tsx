@@ -139,10 +139,13 @@ export default function CreateJobPage() {
     { n: 3, icon: Images, label: tr("Ảnh & video", "Photos") },
     { n: 4, icon: Sparkles, label: tr("Kỹ năng", "Skills") },
   ];
-  const chip = (on: boolean, tone: "pink" | "emerald" = "pink") =>
-    `rounded-full px-3.5 py-2 text-xs font-bold ring-1 transition-all active:scale-95 ${on ? (tone === "pink" ? "bg-pink-500/15 text-pink-200 ring-pink-500/60" : "bg-emerald-500/15 text-emerald-200 ring-emerald-500/60") : "text-slate-400 ring-white/10 hover:ring-white/25"}`;
-  const next = "flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 py-3 font-bold text-white shadow-lg shadow-pink-600/20 transition-all hover:brightness-110 disabled:opacity-40";
-  const back = "rounded-xl px-4 py-3 font-bold text-slate-300 ring-1 ring-white/10 hover:bg-white/5";
+  // 11/2026: 1 kiểu chip đang chọn cho mọi nhóm (nền trắng, chữ đen) — tone giữ cho chỗ gọi, không đổi màu nữa.
+  const chip = (on: boolean, tone: "pink" | "emerald" = "pink") => {
+    void tone;
+    return `rounded-full px-3.5 py-2 text-xs font-bold ring-1 transition-all active:scale-95 ${on ? "bg-white text-slate-950 ring-white" : "bg-white/[0.04] text-slate-300 ring-white/[0.08] hover:ring-white/25"}`;
+  };
+  const next = "flex h-12 w-full flex-1 items-center justify-center gap-2 rounded-xl bg-pink-600 px-5 font-bold text-white transition-colors enabled:hover:bg-pn-brand-hover enabled:active:bg-pn-brand-press disabled:bg-pn-raised disabled:text-pn-text-3 disabled:opacity-100";
+  const back = "h-12 rounded-xl px-5 font-bold text-slate-300 ring-1 ring-white/10 hover:bg-white/5";
 
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
@@ -177,7 +180,7 @@ export default function CreateJobPage() {
                     type="button"
                     onClick={() => { setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0][0]); }}
                     aria-pressed={market === m}
-                    className={`rounded-xl py-3 font-bold ring-2 transition-all ${market === m ? "bg-pink-500/10 text-white ring-pink-500" : "text-slate-400 ring-white/10"}`}
+                    className={`rounded-xl py-3 font-bold ring-[1.5px] transition-all ${market === m ? "bg-white/[0.04] text-white ring-pink-400" : "text-slate-400 ring-white/10"}`}
                   >
                     <span className="inline-flex items-center gap-1.5"><Flag code={m} /> {m === "US" ? tr("Mỹ (US)", "United States") : tr("Úc (AU)", "Australia")}</span>
                   </button>
@@ -213,7 +216,7 @@ export default function CreateJobPage() {
                 <span className="field-label">{tr("Hình thức trả lương *", "Pay type *")}</span>
                 <div className="grid grid-cols-2 gap-2">
                   {salaryTypes.map(([v, en]) => (
-                    <button key={v} type="button" onClick={() => setSalaryType(v)} aria-pressed={salaryType === v} className={`rounded-xl py-2.5 text-xs font-bold ring-2 transition-all ${salaryType === v ? "bg-pink-500/10 text-white ring-pink-500" : "text-slate-400 ring-white/10"}`}>
+                    <button key={v} type="button" onClick={() => setSalaryType(v)} aria-pressed={salaryType === v} className={`rounded-xl py-2.5 text-xs font-bold ring-[1.5px] transition-all ${salaryType === v ? "bg-white/[0.04] text-white ring-pink-400" : "text-slate-400 ring-white/10"}`}>
                       {tr(v, en)}
                     </button>
                   ))}

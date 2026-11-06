@@ -8,7 +8,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import Avatar from "@/components/ui/Avatar";
-import { avatarGradient } from "@/lib/avatar";
+import { avatarGradient, avatarGradientClassic } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
@@ -147,8 +147,8 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === "AVAILABLE") {
     return (
-      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-start gap-1.5 rounded-lg bg-black/60 px-2 py-1 text-[10px] font-semibold text-white leading-tight ring-1 ring-white/10 backdrop-blur-sm">
-        <span className="h-1.5 w-1.5 flex-shrink-0 mt-[3px] rounded-full bg-emerald-400" />
+      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight refined:h-6 refined:max-w-[calc(100%-1rem)] refined:items-center refined:gap-1.5 refined:whitespace-nowrap refined:rounded-full refined:bg-black/65 refined:px-2.5 refined:py-0 refined:text-[11px] refined:font-semibold refined:ring-1 refined:ring-white/10 refined:backdrop-blur-sm refined:[&>span:last-child]:line-clamp-none">
+        <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse refined:mt-0 refined:bg-emerald-400 refined:animate-none" />
         <span className="line-clamp-2">{tr("Đang rảnh hôm nay", "Available today")}</span>
       </span>
     );
@@ -166,9 +166,10 @@ function StatusBadge({ status }: { status: string }) {
 function NoMediaCover({ tech }: { tech: TechnicianType }) {
   useTr(); // render lại khi đổi VI/EN
   const [a, b] = avatarGradient(tech.user.id);
+  const [ca, cb] = avatarGradientClassic(tech.user.id);
   return (
-    <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${a}55, ${b}33), #161618` }}>
-      <div className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px]" />
+    <div className="absolute inset-0 flex items-center justify-center refined:[background:var(--nm-bg)]!" style={{ background: `linear-gradient(135deg, ${ca}55, ${cb}33), #0f172a`, ["--nm-bg" as string]: `linear-gradient(160deg, ${a}40, ${b}1f), #17171a` }}>
+      <div className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px] refined:hidden" />
       <Avatar src={tech.user.avatarUrl} name={tech.user.name} seed={tech.user.id} className="relative -mt-6 h-16 w-16 ring-4 ring-white/10 shadow-xl" />
     </div>
   );
@@ -223,7 +224,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
       {/* Chuyên môn — badge tay nghề hiện ngay ngoài lưới ảnh, chủ tiệm
           không cần bấm vào hồ sơ mới biết thợ chuyên gì. */}
       {tech.specialties.length > 0 && (
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[46%]">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 max-w-[46%] refined:top-auto refined:right-auto refined:bottom-[46px] refined:left-2.5 refined:z-10 refined:max-w-[calc(100%-1.25rem)] refined:items-start refined:[&>span]:border-white/10 refined:[&>span]:text-[10px] refined:[&>span]:font-semibold refined:[&>span:nth-child(n+2)]:hidden">
           {tech.specialties.slice(0, 2).map((s, i) => (
             <span
               key={s}

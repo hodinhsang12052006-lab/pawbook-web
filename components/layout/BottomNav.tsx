@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Newspaper, Briefcase, Users, MessageCircle, Plus, Home, Sparkles, Store, type LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -68,7 +68,7 @@ export default function BottomNav() {
   // Giao diện "classic" (cũ) chỉ còn cho /auth/* và trang chủ khách "/" — xem html[data-ui-classic]
   // trong globals.css. Script đầu trang (app/layout.tsx) đặt trước khi vẽ; ở đây đồng bộ khi đổi
   // trang / đăng nhập / đăng xuất (component này luôn được mount, hook vẫn chạy khi trả về null).
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onAuth = !!pathname?.startsWith("/auth");
     if (!onAuth && pathname === "/" && loading) return;
     document.documentElement.toggleAttribute("data-ui-classic", onAuth || (pathname === "/" && !sessionUser));
@@ -160,6 +160,13 @@ export default function BottomNav() {
   const activeIndex = slots.findIndex((it) => it?.active);
 
   return (
+    <>
+    {/* Lớp nền dưới thanh nổi: che khe 10px + vùng an toàn phía dưới để nội dung không lộ dưới thanh */}
+    <div
+      aria-hidden
+      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-pn-canvas from-55% to-transparent transition-opacity duration-300 md:hidden ${hiddenByScroll ? "opacity-0" : "opacity-100"}`}
+      style={{ height: "calc(max(10px, env(safe-area-inset-bottom)) + 84px)" }}
+    />
     <nav
       aria-label={tr("Điều hướng chính", "Main navigation")}
       className={`fixed inset-x-3 z-50 transition-transform duration-300 ease-out md:hidden ${hiddenByScroll ? "translate-y-[calc(100%+24px)]" : "translate-y-0"}`}
@@ -173,18 +180,18 @@ export default function BottomNav() {
             className="pointer-events-none absolute inset-y-1.5 left-1 w-[calc((100%-0.5rem)/5)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{ transform: `translateX(${activeIndex * 100}%)` }}
           >
-            <span className="absolute inset-x-1.5 inset-y-0.5 rounded-[14px] bg-white/[0.07]" />
+            <span className="absolute inset-x-1.5 inset-y-0.5 rounded-[14px] bg-white/[0.08]" />
           </span>
         )}
 
         {slots.map((item, i) =>
           item === null ? (
-            <div key="create" className="flex justify-center">
+            <div key="create" className="flex justify-center [&>button]:mt-0 [&>button]:h-12 [&>button]:w-12 [&>button]:rounded-full [&>button]:bg-none [&>button]:bg-pink-600 [&>button]:shadow-none [&>button]:ring-0 [&>button:active]:bg-pink-700">
               <button
                 type="button"
                 onClick={createAction}
                 aria-label={isClient ? tr("Tìm tiệm & đặt lịch", "Find a salon & book") : isOwner ? tr("Đăng tin tuyển thợ", "Post a job") : tr("Đăng bài mới", "New post")}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-600 text-white transition-transform duration-150 ease-out active:scale-95 active:bg-pink-700"
+                className="-mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 via-fuchsia-600 to-purple-600 text-white shadow-[0_10px_24px_-6px_rgba(219,39,119,0.75)] ring-4 ring-slate-950 transition-transform duration-150 active:scale-90"
               >
                 {isClient ? <Store className="h-[22px] w-[22px]" strokeWidth={2.25} /> : <Plus className="h-[22px] w-[22px]" strokeWidth={2.25} />}
               </button>
@@ -204,7 +211,7 @@ export default function BottomNav() {
             >
               <span key={popId === item.id ? `pop-${i}` : `still-${i}`} className={`relative ${popId === item.id ? "nav-pop" : ""}`}>
                 {item.icon ? (
-                  <item.icon className={`h-[22px] w-[22px] ${item.active ? "text-white" : ""}`} strokeWidth={item.active ? 2.4 : 2} />
+                  <item.icon className={`h-[22px] w-[22px] ${item.active ? "text-pink-400" : ""}`} strokeWidth={item.active ? 2.4 : 2} />
                 ) : (
                   <span aria-hidden>
                   <Avatar
@@ -212,7 +219,7 @@ export default function BottomNav() {
                     name={sessionUser.name}
                     seed={sessionUser.id}
                     loading="eager"
-                    className={`h-[24px] w-[24px] ${item.active ? "ring-2 ring-white" : "ring-1 ring-white/20"}`}
+                    className={`h-[24px] w-[24px] ${item.active ? "ring-2 ring-pink-400" : "ring-1 ring-white/20"}`}
                   />
                   </span>
                 )}
@@ -228,5 +235,6 @@ export default function BottomNav() {
         )}
       </div>
     </nav>
+    </>
   );
 }

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* `refined:` = mọi trang TRONG app (không phải trang chủ khách "/" + /auth/* — 2 bề mặt đó có
+   <html data-ui-classic> và giữ nguyên giao diện cũ). Component dùng chung với trang khách: giữ
+   class cũ làm nền, đặt kiểu mới sau `refined:` → trang khách không đổi 1 pixel. */
+@custom-variant refined (html:not([data-ui-classic]) &);
+
 @theme {
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
@@ -34,13 +39,13 @@
    (classic) vẫn hiển thị đúng. */
 @theme static {
   --color-pn-canvas: #0b0b0c;   /* nền app, nền chat, thanh trên / khung soạn tin */
-  --color-pn-surface: #141416;  /* thẻ (.glass-card), sheet, bảng thông báo */
+  --color-pn-surface: #17171a;  /* thẻ (.glass-card), sheet — 1 nấc sáng hơn canvas, đọc được trên OLED */
   --color-pn-raised: #1c1c1f;   /* ô nhập, tìm kiếm, ô soạn tin, toast */
   --color-pn-overlay: #232327;  /* menu/popover, nút gửi khi tắt */
   --color-pn-bubble: #26262a;   /* bong bóng người kia, bong bóng "đang soạn" */
-  --color-pn-thumb: #2c2c31;    /* nút đang chọn của segmented control */
-  --color-pn-line: rgb(255 255 255 / 0.07);
-  --color-pn-line-strong: rgb(255 255 255 / 0.12);
+  --color-pn-thumb: #34343a;    /* nút đang chọn của segmented control */
+  --color-pn-line: rgb(255 255 255 / 0.085);
+  --color-pn-line-strong: rgb(255 255 255 / 0.14);
   --color-pn-control: #3a3a40;
   --color-pn-text: #f4f4f5;     /* 17.9:1 trên canvas */
   --color-pn-text-2: #a1a1aa;   /* 7.7:1 */
@@ -436,7 +441,7 @@ body {
    Chiều sâu đến từ độ tương phản bong bóng/nền, các thanh viền mảnh và ảnh thật. Hình nền
    tuỳ chọn (lib/chatWallpapers.ts) đặt qua style inline nên vẫn ghi đè được. */
 .chat-wallpaper {
-  background-color: #0b0b0c;
+  background-color: var(--color-pn-canvas);
   background-image: none;
 }
 
@@ -468,29 +473,31 @@ body {
 .pn-chat-backdrop, .pn-orb, .pn-grain, .pn-vignette { display: none; }
 
 /* Bong bóng */
-.pn-bubble-me { background: #db2777; color: #fff; box-shadow: none; }
-.pn-bubble-them { background: #26262a; border: 0; box-shadow: none; color: #f4f4f5; }
+.pn-bubble-me { background: var(--color-pn-brand); color: #fff; box-shadow: none; }
+.pn-bubble-them { background: var(--color-pn-bubble); border: 0; box-shadow: none; color: var(--color-pn-text); }
 @keyframes pn-in { from { opacity: 0; transform: translate3d(0, 6px, 0) scale(.98); } to { opacity: 1; transform: none; } }
 .pn-in-me, .pn-in-them { animation: pn-in .18s cubic-bezier(.23, 1, .32, 1) both; }
 .pn-in-me { transform-origin: bottom right; }
 .pn-in-them { transform-origin: bottom left; }
 
 /* Thanh trên: đặc, viền mảnh trung tính */
-.pn-glass-bar { background: #0b0b0c; border-bottom: 1px solid rgb(255 255 255 / .06); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.pn-glass-bar { background: var(--chat-bar-bg, var(--color-pn-canvas)); border-bottom: 1px solid rgb(255 255 255 / .06); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .pn-glass-bar::after { content: none; }
 /* Icon hành động trên thanh (gọi, video, menu…) trung tính — màu nhấn để dành cho trạng thái */
 .pn-glass-bar .text-pink-400 { color: #d4d4d8; }
 .pn-glass-bar .text-pink-400:hover { color: #fff; }
 
 /* Khung soạn tin (không backdrop-filter: lớp mờ phải tính lại mỗi lần gõ phím trên máy yếu) */
-.pn-composer { background: #0b0b0c; }
-.pn-input-wrap { position: relative; border-radius: 9999px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06); transition: box-shadow .15s ease-out; }
-.pn-input-wrap:focus-within { background: #1c1c1f; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .18); }
+.pn-composer { background: var(--chat-bar-bg, var(--color-pn-canvas)); }
+.pn-input-wrap { position: relative; border-radius: 9999px; background: var(--color-pn-raised); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06); transition: box-shadow .15s ease-out; }
+.pn-input-wrap:focus-within { background: var(--color-pn-raised); box-shadow: inset 0 0 0 1.5px var(--color-pn-brand-ink); }
+.pn-input-wrap input, .pn-input-wrap textarea { text-overflow: ellipsis; }
+.pn-input-wrap input::placeholder, .pn-input-wrap textarea::placeholder { text-overflow: ellipsis; }
 .pn-composer form .text-pink-400 { color: #a1a1aa; }
 .pn-composer form .text-pink-400:hover { color: #f4f4f5; }
-.pn-composer button[type="submit"] { background-image: none; background-color: #db2777; box-shadow: none; }
-.pn-composer button[type="submit"]:not(:disabled):active { background-color: #be185d; }
-.pn-composer button[type="submit"]:disabled { background-color: #232327; color: #63636b; opacity: 1; }
+.pn-composer button[type="submit"] { background-image: none; background-color: var(--color-pn-brand); box-shadow: none; }
+.pn-composer button[type="submit"]:not(:disabled):active { background-color: var(--color-pn-brand-press); }
+.pn-composer button[type="submit"]:disabled { background-color: var(--color-pn-overlay); color: #63636b; opacity: 1; }
 .pn-send-on { position: relative; box-shadow: none; }
 .pn-send-on::after { content: none; }
 /* Nhãn "Gợi ý" của hàng gợi ý trả lời: trung tính */
@@ -498,7 +505,7 @@ body {
 
 /* Ngăn cách ngày: chữ thường, không viên kính */
 .pn-date-pill { background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; color: #8e8e96; font-weight: 500; }
-.pn-presence-ring { box-shadow: 0 0 0 2px #0b0b0c, 0 0 0 3.5px #34d399; }
+.pn-presence-ring { box-shadow: 0 0 0 2px var(--color-pn-canvas), 0 0 0 3.5px #34d399; }
 
 /* Danh sách chat */
 .pn-conv-active { background: rgb(255 255 255 / .06); box-shadow: none; }
@@ -558,7 +565,7 @@ html:not([data-ui-classic]) {
   --color-slate-700: #3a3a40;
   --color-slate-800: #26262a;
   --color-slate-850: #1f1f23;
-  --color-slate-900: #161618;
+  --color-slate-900: #17171a;
   --color-slate-950: #0b0b0c;
 
   /* MỘT màu nhấn, sRGB (bỏ chất neon của oklch trên màn P3). 500 gộp vào 600 → mọi gradient
@@ -575,18 +582,19 @@ html:not([data-ui-classic]) {
   --color-pink-900: #831843;
   --color-pink-950: #500724;
 
-  /* fuchsia / purple / violet / indigo gộp vào màu nhấn → "from-pink-600 to-fuchsia-600",
-     "from-purple-600 via-indigo-600 to-pink-600" thành hồng đặc; nền ám tím (…-950/30) thành trung tính. */
-  --color-fuchsia-50: #fdf2f8;  --color-purple-50: #fdf2f8;  --color-violet-50: #fdf2f8;  --color-indigo-50: #fdf2f8;
-  --color-fuchsia-100: #fce7f3; --color-purple-100: #fce7f3; --color-violet-100: #fce7f3; --color-indigo-100: #fce7f3;
-  --color-fuchsia-200: #fbcfe8; --color-purple-200: #fbcfe8; --color-violet-200: #fbcfe8; --color-indigo-200: #fbcfe8;
-  --color-fuchsia-300: #f9a8d4; --color-purple-300: #f9a8d4; --color-violet-300: #f9a8d4; --color-indigo-300: #f9a8d4;
-  --color-fuchsia-400: #f472b6; --color-purple-400: #f472b6; --color-violet-400: #f472b6; --color-indigo-400: #f472b6;
+  /* fuchsia / purple / violet / indigo: nền đặc 500–800 gộp vào màu nhấn → "from-pink-600 to-fuchsia-600",
+     "from-purple-600 via-indigo-600 to-pink-600" thành hồng đặc; sắc nhạt 50–400 (chữ/icon/viền trang trí) và
+     nền ám tím (…-900/950) thành trung tính — bớt hồng thay vì thêm hồng. */
+  --color-fuchsia-50: #fafafa;  --color-purple-50: #fafafa;  --color-violet-50: #fafafa;  --color-indigo-50: #fafafa;
+  --color-fuchsia-100: #f4f4f5; --color-purple-100: #f4f4f5; --color-violet-100: #f4f4f5; --color-indigo-100: #f4f4f5;
+  --color-fuchsia-200: #e4e4e7; --color-purple-200: #e4e4e7; --color-violet-200: #e4e4e7; --color-indigo-200: #e4e4e7;
+  --color-fuchsia-300: #d4d4d8; --color-purple-300: #d4d4d8; --color-violet-300: #d4d4d8; --color-indigo-300: #d4d4d8;
+  --color-fuchsia-400: #a1a1aa; --color-purple-400: #a1a1aa; --color-violet-400: #a1a1aa; --color-indigo-400: #a1a1aa;
   --color-fuchsia-500: #db2777; --color-purple-500: #db2777; --color-violet-500: #db2777; --color-indigo-500: #db2777;
   --color-fuchsia-600: #db2777; --color-purple-600: #db2777; --color-violet-600: #db2777; --color-indigo-600: #db2777;
   --color-fuchsia-700: #be185d; --color-purple-700: #be185d; --color-violet-700: #be185d; --color-indigo-700: #be185d;
   --color-fuchsia-800: #9d174d; --color-purple-800: #9d174d; --color-violet-800: #9d174d; --color-indigo-800: #9d174d;
-  --color-fuchsia-900: #161618; --color-purple-900: #161618; --color-violet-900: #161618; --color-indigo-900: #161618;
+  --color-fuchsia-900: #17171a; --color-purple-900: #17171a; --color-violet-900: #17171a; --color-indigo-900: #17171a;
   --color-fuchsia-950: #0b0b0c; --color-purple-950: #0b0b0c; --color-violet-950: #0b0b0c; --color-indigo-950: #0b0b0c;
 
   /* Màu ngữ nghĩa ghim về sRGB: dịu và nhất quán. lương = emerald, gấp = red/rose, hot = orange,
@@ -618,7 +626,7 @@ html:not([data-ui-classic]) .absolute.rounded-full:is(.blur-2xl, .blur-3xl, [cla
 /* Nền app: than chì tĩnh + 3% sáng nhẹ phía trên cho chiều sâu. Tắt aurora, kim tuyến "+",
    chùm sáng, lưới chấm, vignette, hạt phim (vẫn giữ markup + CSS cũ cho bề mặt classic). */
 html:not([data-ui-classic]) .app-backdrop {
-  background: radial-gradient(120% 40rem at 50% -14rem, rgb(255 255 255 / 0.03), transparent 70%), #0b0b0c;
+  background: radial-gradient(120% 40rem at 50% -14rem, rgb(255 255 255 / 0.03), transparent 70%), var(--color-pn-canvas);
 }
 html:not([data-ui-classic]) .app-backdrop::before,
 html:not([data-ui-classic]) .app-backdrop::after,
@@ -627,17 +635,17 @@ html:not([data-ui-classic]) .app-backdrop > * {
 }
 
 /* Thẻ "bắt đầu" (GettingStarted) — chỉ móc CSS vì className nằm chung dòng với chữ */
-html:not([data-ui-classic]) section[data-nudge] {
-  background: #141416;
+html:not([data-ui-classic]) :is(section[data-nudge], a[data-nudge]) {
+  background: var(--color-pn-surface);
   background-image: none;
-  border-color: rgb(255 255 255 / 0.07);
+  border-color: var(--color-pn-line);
 }
 
 @layer components {
   /* Trong @layer components để hover:border-* / !border-* vẫn thắng. (0,2,1) > .glass-card mobile. */
   html:not([data-ui-classic]) .glass-card {
-    background: #141416;
-    border: 1px solid rgb(255 255 255 / 0.07);
+    background: var(--color-pn-surface);
+    border: 1px solid var(--color-pn-line);
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -648,14 +656,14 @@ html:not([data-ui-classic]) section[data-nudge] {
   }
   html:not([data-ui-classic]) .input-field {
     border-color: rgb(255 255 255 / 0.08);
-    background: #141416;
-    color: #f4f4f5;
+    background: var(--color-pn-surface);
+    color: var(--color-pn-text);
   }
   html:not([data-ui-classic]) .input-field:hover { border-color: rgb(255 255 255 / 0.14); }
   html:not([data-ui-classic]) .input-field:focus {
-    border-color: #db2777;
-    box-shadow: 0 0 0 1px #db2777;
-    background: #1c1c1f;
+    border-color: var(--color-pn-brand);
+    box-shadow: 0 0 0 1px var(--color-pn-brand);
+    background: var(--color-pn-raised);
   }
   html:not([data-ui-classic]) .field-label { color: #a1a1aa; }
 }
@@ -665,14 +673,90 @@ html:not([data-ui-classic]) ::selection { background: rgb(219 39 119 / 0.35); co
 html:not([data-ui-classic]) ::placeholder { color: #8e8e96; opacity: 1; }
 html:not([data-ui-classic]) :is(input, textarea) { caret-color: #f472b6; }
 html:not([data-ui-classic]) :is(a, button, [role="tab"], summary):focus-visible { outline: 2px solid #f472b6; outline-offset: 2px; }
-html:not([data-ui-classic]) ::-webkit-scrollbar-track { background: #0b0b0c; }
+html:not([data-ui-classic]) ::-webkit-scrollbar-track { background: var(--color-pn-canvas); }
 html:not([data-ui-classic]) ::-webkit-scrollbar-thumb { background: #2a2a2e; }
 html:not([data-ui-classic]) ::-webkit-scrollbar-thumb:hover { background: #3a3a40; }
 
-/* Giảm chuyển động: tắt cả các hiệu ứng vào của modal / tin nhắn / sheet */
+/* ===== Móc CSS cho các dòng TSX nằm sát chữ hiển thị (11/2026) =====
+   Nhánh copy đang viết lại chữ ở ~230 file → các dòng className dính liền dòng chữ được giữ NGUYÊN như main,
+   kiểu "refined" đặt ở đây, khớp theo tổ hợp class / id / thuộc tính đã có. Merge 2 nhánh không đụng nhau. */
+
+/* Bảng thông báo (NotificationBell): bề mặt nổi + viền rõ + bóng nổi (thẻ trang chỉ có viền) */
+html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"] {
+  background: var(--color-pn-raised);
+  border-color: var(--color-pn-line-strong);
+  box-shadow: var(--shadow-pn-float);
+}
+
+/* Chip "Đang hot" (JobBoard + /jobs/[id]): nền cam nhạt + viền mảnh, không khối gradient phát sáng */
+html:not([data-ui-classic]) .bg-gradient-to-r.from-orange-500.to-red-500.shadow-orange-500\/30 {
+  background: rgb(251 146 60 / 0.15);
+  color: #fdba74;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgb(251 146 60 / 0.25);
+}
+html:not([data-ui-classic]) .bg-gradient-to-r.from-orange-500.to-red-500.shadow-orange-500\/30 svg { fill: currentColor; }
+
+/* Thẻ nhấn "sky" (Nhịp đau tuần, Ai đã xem hồ sơ) → thẻ trung tính; sky không còn là màu nhấn thứ 2 */
+html:not([data-ui-classic]) .bg-gradient-to-br.from-sky-500\/\[0\.08\] {
+  background: var(--color-pn-surface);
+  border-color: var(--color-pn-line);
+}
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] .hover\:ring-sky-400\/50:hover,
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] .hover\:ring-sky-400\/40:hover { --tw-ring-color: rgb(255 255 255 / 0.2); }
+/* Bình chọn: phiếu của mình = sắc màu nhấn, dấu tick màu nhấn */
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] .bg-sky-500\/30 { background-color: rgb(219 39 119 / 0.25); }
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] svg.text-sky-300 { color: var(--color-pn-brand-ink); }
+/* Ai đã xem hồ sơ: ô icon + tên tiệm trung tính */
+html:not([data-ui-classic]) #ai-da-xem .bg-sky-500\/15 { background-color: rgb(255 255 255 / 0.06); color: #d4d4d8; --tw-ring-color: rgb(255 255 255 / 0.08); }
+html:not([data-ui-classic]) #ai-da-xem svg.text-sky-300 { color: var(--color-pn-text-2); }
+html:not([data-ui-classic]) #ai-da-xem .text-sky-200 { color: var(--color-pn-text); }
+
+/* Nhãn mắt (eyebrow) — MỘT kiểu: 11px, đậm vừa, chữ hoa giãn nhẹ, slate-400, icon cùng màu.
+   (Trước: "PAWNAIL STUDIO · UPDATED DAILY" hồng, "WEEKLY PULSE"/"WHO VIEWED" xanh trời, "SUGGESTED" xám + icon hồng.) */
+html:not([data-ui-classic]) :is(p, h2, h3).uppercase:is(.tracking-wider, .tracking-wide):is(.text-pink-300, .text-pink-400, .text-sky-300) {
+  color: var(--color-pn-text-2);
+  font-size: 11px;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+html:not([data-ui-classic]) :is(p, h2, h3).uppercase:is(.tracking-wider, .tracking-wide) > svg { color: inherit; }
+/* Icon đầu tiêu đề mục (Mẫu nail mới: máy ảnh hồng / sổ vàng / lấp lánh hồng) → cùng 1 màu trung tính */
+html:not([data-ui-classic]) h2:is(.text-base, .text-lg) > svg:first-child:is(.text-pink-300, .text-pink-400, .text-amber-300, .text-emerald-300, .text-sky-300) {
+  color: var(--color-pn-text-2);
+}
+
+/* Chip đang chọn kiểu "sky" (bộ lọc trong sheet Báo việc mới) → cùng quy tắc chip lọc: nền trắng, chữ đen */
+html:not([data-ui-classic]) button[aria-pressed="true"].bg-sky-500\/20 {
+  background-color: #fff;
+  color: var(--color-pn-canvas);
+  --tw-ring-color: #fff;
+}
+
+/* Thẻ "Bước tiếp theo" (GettingStarted compact) — hover + bộ đếm trung tính */
+html:not([data-ui-classic]) a[data-nudge]:hover { background: var(--color-pn-raised); }
+html:not([data-ui-classic]) [data-nudge] .text-pink-200 { color: #d4d4d8; }
+
+/* Hover của nút chính: trong app pink-500 == pink-600 (và fuchsia 500 == 600) nên "hover:bg-pink-500" /
+   "hover:from-pink-500" không đổi gì → tối đi 1 nấc (brand-hover). Chỉ chọn đúng tên class, không quét chuỗi con. */
+@media (hover: hover) {
+  html:not([data-ui-classic]) :is(.hover\:bg-pink-500, .hover\:bg-pink-600, .hover\:bg-fuchsia-500, .hover\:bg-fuchsia-600):hover {
+    background-color: var(--color-pn-brand-hover);
+  }
+  html:not([data-ui-classic]) :is(.hover\:from-pink-500, .hover\:from-pink-600, .hover\:from-fuchsia-500):hover {
+    background-image: none;
+    background-color: var(--color-pn-brand-hover);
+  }
+}
+
+/* Giảm chuyển động: tắt cả các hiệu ứng vào của modal / tin nhắn / sheet, và mọi hiệu ứng lặp vô hạn
+   của Tailwind (ping/pulse/bounce — chấm "live", skeleton, badge) ở MỌI trang. */
 @media (prefers-reduced-motion: reduce) {
   .animate-fadeIn, .animate-scaleUp, .message-slide-up, .message-bounce-in, .animate-callSheetUp,
-  .pn-in-me, .pn-in-them, .pn-fade-in {
+  .pn-in-me, .pn-in-them, .pn-fade-in,
+  .animate-ping, .animate-pulse, .animate-bounce {
     animation: none;
   }
+  .animate-ping { opacity: 0; }
 }

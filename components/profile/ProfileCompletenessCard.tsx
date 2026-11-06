@@ -38,19 +38,13 @@ export default function ProfileCompletenessCard({
               cy="24"
               r={radius}
               fill="none"
-              stroke="url(#completeGrad)"
+              stroke="#db2777"
               strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={circumference * (1 - percent / 100)}
               className="transition-[stroke-dashoffset] duration-700"
             />
-            <defs>
-              <linearGradient id="completeGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#db2777" />
-                <stop offset="100%" stopColor="#db2777" />
-              </linearGradient>
-            </defs>
           </svg>
           <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-white">{percent}%</span>
         </div>

@@ -1659,7 +1659,7 @@ export default function MessagesContent({
                     <PlusIcon className="h-5 w-5" />
                   </button>
                 ) : (
-                <>
+                <div className="-ml-1 flex flex-shrink-0 items-center">
                 <button
                   type="button"
                   onClick={handleUploadImage}
@@ -1706,7 +1706,7 @@ export default function MessagesContent({
                     <SparklesIcon className="h-[22px] w-[22px]" />
                   </button>
                 )}
-                </>
+                </div>
                 )}
 
                 <div className="pn-input-wrap flex min-w-0 flex-1 items-center">
@@ -1728,7 +1728,7 @@ export default function MessagesContent({
                     enterKeyHint="send"
                     autoComplete="off"
                     placeholder={t("messenger.inputPlaceholder")}
-                    className="min-w-0 flex-1 rounded-full border-0 bg-transparent py-2.5 pl-4 pr-11 text-base text-slate-100 placeholder-slate-400/70 focus:outline-none sm:text-sm"
+                    className="min-w-0 flex-1 truncate rounded-full border-0 bg-transparent py-2.5 pl-3.5 pr-10 text-base text-slate-100 placeholder-slate-400/70 focus:outline-none sm:text-sm"
                   />
                   <button
                     type="button"

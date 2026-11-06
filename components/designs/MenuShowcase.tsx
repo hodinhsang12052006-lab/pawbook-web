@@ -31,7 +31,7 @@ export default function MenuShowcase() {
             </div>
             <div className="space-y-1 p-2.5">
               <p className="line-clamp-1 text-[13px] font-bold text-white">{it.name}</p>
-              <p className="text-sm font-black text-emerald-300">{priceLabel(it.priceFrom, it.priceTo)}</p>
+              <p className="text-sm font-semibold tabular-nums text-slate-50">{priceLabel(it.priceFrom, it.priceTo)}</p>
               <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
                 <Avatar src={it.owner.avatarUrl} name={it.owner.name} seed={it.owner.id} className="h-4 w-4" alt="" />
                 <span className="truncate">{it.owner.name}{it.owner.city ? ` · ${it.owner.city}` : ""}</span>

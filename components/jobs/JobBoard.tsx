@@ -100,13 +100,13 @@ function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; stat
 
   if (total >= 3) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3">
-        <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface">
+        <span className="relative flex h-2.5 w-2.5 flex-shrink-0 refined:h-2 refined:w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 refined:hidden" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 refined:h-2 refined:w-2" />
         </span>
         <p className="text-xs text-slate-200 sm:text-sm">
-          <span className="font-black text-emerald-300">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
+          <span className="font-black text-emerald-300 refined:font-bold refined:text-white">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
           {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
           {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent}{tr(" tin gấp", " urgent")}</span></>}
         </p>
@@ -117,8 +117,8 @@ function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; stat
   const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
   const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3">
-      <TrendingUp className="h-5 w-5 flex-shrink-0 text-emerald-400" />
+    <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface">
+      <TrendingUp className="h-5 w-5 flex-shrink-0 text-emerald-400 refined:text-slate-400" />
       <p className="text-xs text-slate-200 sm:text-sm">
         <span className="font-black text-emerald-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span>{tr(" tại ", " in ")}{stateSignal ? scope : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia")}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ đang là bên được săn đón.", " in one survey of nail groups (Sep 2026) — techs are in demand.")}
       </p>
@@ -216,7 +216,7 @@ function JobCard({
   return (
     <div
       ref={ref}
-      className={`glass-card relative space-y-3 rounded-2xl p-4 transition-colors hover:border-pink-500/40 sm:p-5 ${heat?.hot ? "!border-orange-500/30" : ""}`}
+      className={`glass-card relative space-y-3 rounded-2xl p-4 transition-colors hover:border-pink-500/40 sm:p-5 ${heat?.hot ? "!border-orange-500/40 shadow-[0_0_0_1px_rgba(249,115,22,0.15),0_12px_40px_-16px_rgba(249,115,22,0.45)] refined:!border-orange-500/25 refined:shadow-none" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
@@ -238,15 +238,15 @@ function JobCard({
         <div className="flex flex-shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-1">
             {heat?.hot && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-orange-400/15 px-2 py-1 text-[11px] font-bold text-orange-300 ring-1 ring-inset ring-orange-400/25" title={tr("Nhiều người xem / liên hệ tin này", "Many people are viewing / contacting this job")}>
-                <Zap className="h-3 w-3 fill-current" />{tr(" Đang hot", " Hot")}
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2 py-1 text-[11px] font-black text-white shadow-lg shadow-orange-500/30" title={tr("Nhiều người xem / liên hệ tin này", "Many people are viewing / contacting this job")}>
+                <Zap className="h-3 w-3 fill-white" />{tr(" Đang hot", " Hot")}
               </span>
             )}
             {isNew && !heat?.hot && (
               <span className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300">{tr("✨ Mới", "✨ New")}</span>
             )}
             {job.isUrgent && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-400/10 px-2.5 py-1 text-[11px] font-bold text-red-300 ring-1 ring-inset ring-red-400/25">
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400">
                 <Flame className="h-3 w-3" />{tr(" Gấp", " Urgent")}
               </span>
             )}
@@ -276,9 +276,9 @@ function JobCard({
       {/* Con số lương — thứ đầu tiên thợ nhìn vào, phải to/đậm/tương phản nhất card. */}
       <div className="flex flex-wrap items-center gap-2">
         {/\d/.test(job.salaryAmount || "") ? (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-400/10 py-1 pl-2 pr-2.5 ring-1 ring-inset ring-emerald-400/20">
-            <DollarSign className="h-5 w-5 text-emerald-300" />
-            <span className="text-xl font-black leading-none tracking-tight tabular-nums text-emerald-200 sm:text-2xl">{dt(job.salaryAmount)}</span>
+          <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1.5 pl-2.5 pr-3 shadow-lg shadow-emerald-500/20 refined:rounded-lg refined:bg-none refined:bg-emerald-400/10 refined:py-1 refined:pl-2 refined:pr-2.5 refined:shadow-none refined:ring-1 refined:ring-inset refined:ring-emerald-400/20">
+            <DollarSign className="h-5 w-5 text-emerald-950 refined:text-emerald-300" />
+            <span className="text-xl font-black leading-none tracking-tight text-emerald-950 sm:text-2xl refined:tabular-nums refined:text-emerald-200">{dt(job.salaryAmount)}</span>
           </span>
         ) : (
           // Chưa ghi con số → nhãn gọn, không khối xanh to có dấu "$" trống
@@ -292,13 +292,13 @@ function JobCard({
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
         {placeLabel(job.city, job.market, job.state)}
-        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("📍 Gần bạn", "📍 Near you")}</span>}
+        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25 refined:bg-white/[0.06] refined:font-semibold refined:text-slate-200 refined:ring-white/10">{tr("📍 Gần bạn", "📍 Near you")}</span>}
       </span>
 
       {signals.length > 0 && (
-        <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-xl bg-amber-500/[0.06] px-3 py-2 ring-1 ring-amber-500/15">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-xl bg-amber-500/[0.06] px-3 py-2 ring-1 ring-amber-500/15 refined:bg-white/[0.03] refined:ring-white/[0.06]">
           {signals.map((sg) => (
-            <span key={sg.text} className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-200/90">
+            <span key={sg.text} className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-200/90 refined:text-slate-300 refined:[&>svg]:text-amber-300">
               <sg.icon className="h-3.5 w-3.5" /> {sg.text}
             </span>
           ))}
@@ -308,7 +308,7 @@ function JobCard({
       {job.skills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {job.skills.map((skill) => (
-            <span key={skill} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold text-slate-300 ring-1 ring-inset ring-white/[0.08]">{valueLabel(skill)}</span>
+            <span key={skill} className="rounded-full border border-pink-500/25 bg-pink-500/10 px-2.5 py-1 text-[11px] font-semibold text-pink-300 refined:border-white/[0.08] refined:bg-white/[0.05] refined:text-slate-300">{valueLabel(skill)}</span>
           ))}
         </div>
       )}
@@ -316,7 +316,7 @@ function JobCard({
       {job.benefits.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {job.benefits.filter((b) => !(b === "Bao lương" && /bao l/i.test(job.salaryType || ""))).map((benefit) => (
-            <span key={benefit} className="inline-flex items-center gap-1 rounded-full bg-amber-400/[0.08] px-2.5 py-1 text-[11px] font-semibold text-amber-200 ring-1 ring-inset ring-amber-400/20">
+            <span key={benefit} className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 refined:border-white/[0.08] refined:bg-white/[0.05] refined:font-semibold refined:text-slate-200">
               {benefitIcon(benefit)} {valueLabel(benefit)}
             </span>
           ))}
@@ -328,7 +328,7 @@ function JobCard({
         <a
           href={`tel:${job.phone}`}
           onClick={() => trackJobContact(job.id)}
-          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-bold text-white hover:bg-emerald-600 ${PRESS}`}
+          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
         >
           <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
         </a>
@@ -336,14 +336,14 @@ function JobCard({
           // Tin đăng hộ: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
           <Link
             href={`/jobs/${job.id}`}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
           >
             <MapPin className="h-5 w-5" />{tr(" Chi tiết", " Details")}
           </Link>
         ) : (
           <button
             onClick={() => { trackJobContact(job.id); onMessage(); }}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
           >
             <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin", " Message")}
           </button>

@@ -182,11 +182,13 @@ export default function NotificationBell() {
         )}
       </button>
 
+      {/* Điện thoại: lớp tối phía sau bảng (chạm để đóng) → bảng đọc rõ là đang nổi; kiểu bảng ở globals.css (.pn-notif-scrim + dialog) */}
+      {open && <div aria-hidden onClick={() => setOpen(false)} className="pn-notif-scrim fixed inset-0 z-[59] bg-black/50 animate-fadeIn sm:hidden" />}
       {open && (
         <div
           role="dialog"
           aria-label="Thông báo"
-          className="fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-pn-surface shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
+          className="fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] shadow-2xl shadow-black/70 animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
         >
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <p className="text-sm font-black text-white">Thông báo</p>

@@ -133,32 +133,55 @@ export const WALLPAPER_ORBS: Record<string, [string, string, string]> = {
 
 // ---- 11/2026: bộ hình nền "refined" — tĩnh, trung tính, tinh tế ----
 // Giữ nguyên 8 id + tên vi/en ở trên (đã lưu trong localStorage pn_chat_wp); chỉ thay phần hiển thị.
-// Mặc định = mặt phẳng than chì như nền app. Các tông màu chỉ là 1 lớp phủ 8% neo phía trên, mờ hết
-// trước 55% chiều cao → độ tương phản của bong bóng không đổi.
+// Mặc định = mặt phẳng than chì như nền app. Các tông màu là 1 lớp phủ ~18% neo phía trên, mờ dần tới
+// ~75% chiều cao → chọn là THẤY đổi, mà chữ trong bong bóng vẫn giữ nguyên độ tương phản (bong bóng đặc).
+// Ô xem trước (swatch) vẽ ĐÚNG lớp phủ đó → không hứa màu mà nền không có. `--chat-bar-bg` = màu nền của
+// hình nền → thanh trên + khung soạn tin liền mạch với nền, không lộ đường nối.
 const NAIL_PATHS =
   "<path d='M24 18c-6 0-9 6-9 14v16c0 4 3 6 9 6s9-2 9-6V32c0-8-3-14-9-14z'/>" +
   "<path d='M18 26c3-3 9-3 12 0'/>" +
   "<circle cx='86' cy='34' r='5'/><circle cx='86' cy='22' r='6'/><circle cx='97' cy='31' r='6'/><circle cx='93' cy='44' r='6'/><circle cx='79' cy='44' r='6'/><circle cx='75' cy='31' r='6'/>" +
   "<path d='M22 96c8-6 16-6 24 0'/>";
-const NAIL_SOFT = svg(`<g fill='none' stroke='rgba(255,255,255,0.045)' stroke-width='1.2'>${NAIL_PATHS}</g>`);
+const NAIL_SOFT = svg(`<g fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='1.2'>${NAIL_PATHS}</g>`);
 const NAIL_SWATCH = svg(`<g fill='none' stroke='rgba(255,255,255,0.16)' stroke-width='1.2'>${NAIL_PATHS}</g>`);
 const GLITTER_SOFT = svg(
-  "<g fill='rgba(253,224,171,0.16)'><circle cx='12' cy='18' r='1'/><circle cx='70' cy='9' r='0.7'/><circle cx='104' cy='40' r='1.1'/><circle cx='40' cy='62' r='0.8'/><circle cx='88' cy='86' r='0.9'/><circle cx='18' cy='104' r='0.7'/></g>",
+  "<g fill='rgba(253,224,171,0.2)'><circle cx='12' cy='18' r='1'/><circle cx='70' cy='9' r='0.7'/><circle cx='104' cy='40' r='1.1'/><circle cx='40' cy='62' r='0.8'/><circle cx='88' cy='86' r='0.9'/><circle cx='18' cy='104' r='0.7'/></g>",
   140
 );
-const wash = (rgb: string) => `linear-gradient(180deg, rgba(${rgb},.08), rgba(${rgb},0) 55%)`;
+// Đá marble: vài đường vân cong mềm (không phải 1 vệt chéo — trông như loá màn hình)
+const marbleVeins = (a: number) =>
+  svg(
+    `<g fill='none' stroke-linecap='round'>` +
+      `<path d='M-20 70C40 40 70 120 130 90s90-60 150-20' stroke='rgba(255,255,255,${a})' stroke-width='1.6'/>` +
+      `<path d='M-20 170c50-30 90 10 140-15s80-55 160-25' stroke='rgba(255,255,255,${a * 0.7})' stroke-width='1'/>` +
+      `<path d='M60 -10c-10 60 30 90 10 150s20 80 40 120' stroke='rgba(255,255,255,${a * 0.55})' stroke-width='0.8'/>` +
+      `<path d='M180 -10c-20 50 10 80-15 130' stroke='rgba(255,255,255,${a * 0.45})' stroke-width='0.7'/>` +
+      `</g>`,
+    240
+  );
+const WASH = "18";
+const wash = (rgb: string) => `linear-gradient(180deg, rgba(${rgb},.${WASH}) 0%, rgba(${rgb},.07) 40%, rgba(${rgb},0) 75%)`;
+const tone = (bg: string, rgb: string): Pick<ChatWallpaper, "style" | "swatch"> => ({
+  style: { backgroundColor: bg, backgroundImage: wash(rgb), ["--chat-bar-bg" as string]: bg } as CSSProperties,
+  swatch: `${wash(rgb)}, ${bg}`,
+});
 
 const REFINED: Record<string, Pick<ChatWallpaper, "style" | "swatch" | "pattern">> = {
-  default: { style: { backgroundColor: "#0b0b0c" }, swatch: "linear-gradient(180deg,#1c1c1f,#0b0b0c)" },
-  nails: { style: { backgroundColor: "#0b0b0c", backgroundImage: NAIL_SOFT, backgroundSize: "120px 120px" }, swatch: `${NAIL_SWATCH}, #141416`, pattern: true },
-  rose: { style: { backgroundColor: "#0f0b0d", backgroundImage: wash("219,39,119") }, swatch: "linear-gradient(180deg,#3a1a28,#0f0b0d 75%)" },
-  aurora: { style: { backgroundColor: "#0d0c11", backgroundImage: wash("124,108,196") }, swatch: "linear-gradient(180deg,#26233a,#0d0c11 75%)" },
-  glitter: { style: { backgroundColor: "#0d0c0b", backgroundImage: GLITTER_SOFT, backgroundSize: "140px 140px" }, swatch: `${GLITTER_SOFT}, linear-gradient(180deg,#221d14,#0d0c0b)`, pattern: true },
-  marble: {
-    style: { backgroundColor: "#111112", backgroundImage: "linear-gradient(115deg, transparent 40%, rgba(255,255,255,.035) 42%, transparent 46%), linear-gradient(35deg, transparent 55%, rgba(255,255,255,.025) 57%, transparent 60%)" },
-    swatch: "linear-gradient(115deg,#26262a 40%,#3a3a40 43%,#26262a 47%)",
+  default: { style: { backgroundColor: "#0b0b0c" }, swatch: "#0b0b0c" },
+  nails: { style: { backgroundColor: "#0b0b0c", backgroundImage: NAIL_SOFT, backgroundSize: "120px 120px" }, swatch: `${NAIL_SWATCH}, #0b0b0c`, pattern: true },
+  rose: tone("#0f0b0d", "219,39,119"),
+  aurora: tone("#0d0c11", "124,108,196"),
+  glitter: {
+    style: { backgroundColor: "#0d0c0b", backgroundImage: `${GLITTER_SOFT}, ${wash("214,170,90")}`, backgroundSize: "140px 140px, auto", ["--chat-bar-bg" as string]: "#0d0c0b" } as CSSProperties,
+    swatch: `${GLITTER_SOFT}, ${wash("214,170,90")}, #0d0c0b`,
+    pattern: true,
   },
-  ocean: { style: { backgroundColor: "#0a0f10", backgroundImage: wash("45,140,150") }, swatch: "linear-gradient(180deg,#123236,#0a0f10 75%)" },
-  champagne: { style: { backgroundColor: "#100e0a", backgroundImage: wash("214,170,90") }, swatch: "linear-gradient(180deg,#33291a,#100e0a 75%)" },
+  marble: {
+    style: { backgroundColor: "#111112", backgroundImage: marbleVeins(0.05), backgroundSize: "240px 240px", ["--chat-bar-bg" as string]: "#111112" } as CSSProperties,
+    swatch: `${marbleVeins(0.16)}, #18181a`,
+    pattern: true,
+  },
+  ocean: tone("#0a0f10", "45,140,150"),
+  champagne: tone("#100e0a", "214,170,90"),
 };
 for (const w of CHAT_WALLPAPERS) if (REFINED[w.id]) Object.assign(w, REFINED[w.id]);

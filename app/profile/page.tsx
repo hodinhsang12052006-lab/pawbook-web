@@ -9,7 +9,7 @@ import InviteFriends from "@/components/profile/InviteFriends";
 import SoundSettings from "@/components/settings/SoundSettings";
 import EmailDigestToggle from "@/components/settings/EmailDigestToggle";
 import Avatar from "@/components/ui/Avatar";
-import { avatarGradient, isPlaceholderAvatar } from "@/lib/avatar";
+import { isPlaceholderAvatar } from "@/lib/avatar";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
@@ -308,7 +308,6 @@ export default function ProfilePage() {
     );
   }
 
-  const [g1, g2] = avatarGradient(profile?.id);
   const isOwner = profile?.role === "OWNER";
   const isTechnician = profile?.role === "TECHNICIAN";
 
@@ -316,12 +315,10 @@ export default function ProfilePage() {
     <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 pb-40 pt-5 md:px-6 md:pb-16 md:pt-6">
+      <main className={`mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 pt-5 md:px-6 md:pt-6 ${dirty ? "pb-40 md:pb-16" : "pb-5"}`}>
         {/* ===== HEADER: bìa + ảnh đại diện (bấm để đổi) ===== */}
         <section className="overflow-hidden rounded-3xl border border-white/[0.07] bg-slate-900">
-          <div className="relative h-24 sm:h-32" style={{ background: `linear-gradient(180deg, ${g1}40 0%, ${g2}14 100%), #161618` }}>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900" />
-          </div>
+          <div className="relative h-24 border-b border-pn-line bg-pn-raised sm:h-32" />
           <div className="px-4 pb-5 sm:px-6">
             <div className="-mt-10 flex items-end justify-between gap-3 sm:-mt-12">
               <button
@@ -352,7 +349,7 @@ export default function ProfilePage() {
               {profile?.id && profile.role !== "ADMIN" && (
                 <Link
                   href={`/profile/${profile.id}?tab=menu`}
-                  className="mb-1 flex items-center gap-1.5 rounded-xl bg-amber-500/10 px-3.5 py-2 text-xs font-bold text-amber-100 ring-1 ring-amber-400/25 transition-colors hover:bg-amber-500/15"
+                  className="mb-1 flex items-center gap-1.5 rounded-xl bg-white/[0.06] px-3.5 py-2 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/10"
                 >
                   <BookOpen className="h-4 w-4" />{tr(" Menu mẫu của tôi", " My nail menu")}
                 </Link>
@@ -361,7 +358,7 @@ export default function ProfilePage() {
             </div>
             <h1 className="mt-3 truncate text-2xl font-black tracking-tight text-white">{name || tr("Hồ sơ của bạn", "Your profile")}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-400">
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ${isOwner ? "bg-amber-500/10 text-amber-200 ring-amber-500/25" : "bg-pink-500/10 text-pink-200 ring-pink-500/25"}`}>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-semibold text-slate-200 ring-1 ring-white/10 [&>svg]:text-slate-400">
                 {isOwner ? <Store className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
                 {isOwner ? tr("Chủ tiệm", "Salon owner") : tr("Thợ Nail", "Nail tech")}
               </span>
@@ -371,9 +368,9 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="mt-3 flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-left text-xs text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.07]"
+                className="mt-3 flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-left text-xs text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.07] [&>svg]:text-pink-400"
               >
-                <Camera className="h-4 w-4 flex-shrink-0 text-pink-300" />
+                <Camera className="h-4 w-4 flex-shrink-0" />
                 {isOwner ? tr("Thêm ảnh đại diện thật — hồ sơ có ảnh được thợ tin tưởng và nhắn tin nhiều hơn.", "Add a real profile photo — techs trust and message profiles with photos more.") : tr("Thêm ảnh đại diện thật — hồ sơ có ảnh được chủ tiệm tin tưởng và nhắn tin nhiều hơn.", "Add a real profile photo — salon owners trust and message profiles with photos more.")}
               </button>
             )}
@@ -385,26 +382,26 @@ export default function ProfilePage() {
         {/* Công cụ hằng ngày — gọn 2 cột thay vì 2 banner to chiếm chỗ. */}
         <div className={`grid gap-3 ${isTechnician ? "sm:grid-cols-2" : ""}`}>
           {isTechnician && (
-            <Link href="/tools/income-tracker" className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-purple-500/40">
-              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-purple-500/15 ring-1 ring-purple-500/30">
-                <Wallet className="h-5 w-5 text-purple-300" />
+            <Link href="/tools/income-tracker" className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-white/[0.16]">
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
+                <Wallet className="h-5 w-5 text-slate-200" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold text-white">{tr("Thu nhập & Tip", "Earnings & tips")}</span>
                 <span className="block truncate text-[11px] text-slate-500">{tr("Ghi turn + tip, đối chiếu phiếu lương", "Log turns + tips, check your paycheck")}</span>
               </span>
-              <ArrowRight className="h-4 w-4 flex-shrink-0 text-slate-600 transition-colors group-hover:text-purple-300" />
+              <ArrowRight className="h-4 w-4 flex-shrink-0 text-slate-600 transition-colors group-hover:text-slate-300" />
             </Link>
           )}
-          <Link href="/tools/radar" className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-amber-500/40">
-            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/30">
-              <Radar className="h-5 w-5 text-amber-300" />
+          <Link href="/tools/radar" className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-white/[0.16]">
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
+              <Radar className="h-5 w-5 text-slate-200" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold text-white">Nail Radar</span>
               <span className="block truncate text-[11px] text-slate-500">{tr("Bao lương & chia turn theo tiểu bang", "Guaranteed pay & splits by state")}</span>
             </span>
-            <ArrowRight className="h-4 w-4 flex-shrink-0 text-slate-600 transition-colors group-hover:text-amber-300" />
+            <ArrowRight className="h-4 w-4 flex-shrink-0 text-slate-600 transition-colors group-hover:text-slate-300" />
           </Link>
         </div>
 
@@ -412,7 +409,7 @@ export default function ProfilePage() {
         {profile && profile.role !== "ADMIN" && (
           <div className="space-y-3">
             <ProfileViewsCard role={profile.role} />
-            <div className="flex flex-col gap-2 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/[0.05] p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 rounded-2xl border border-pn-line bg-pn-surface p-4 sm:flex-row sm:items-center">
               <p className="flex-1 text-xs leading-relaxed text-slate-300">
                 <span className="block text-sm font-bold text-white">{tr("Thẻ portfolio để đăng mạng xã hội", "Portfolio card for social media")}</span>
                 {isOwner
@@ -509,7 +506,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => toggleSpecialty(s)}
                       aria-pressed={on}
-                      className={`flex min-h-[36px] items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold ring-1 transition-all ${on ? "bg-pink-500/15 text-pink-100 ring-pink-500/60" : "text-slate-400 ring-white/10 hover:ring-white/25 hover:text-slate-200"}`}
+                      className={`flex min-h-[36px] items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold ring-1 transition-all ${on ? "bg-white text-slate-950 ring-white" : "text-slate-400 ring-white/10 hover:ring-white/25 hover:text-slate-200"}`}
                     >
                       {on && <CheckCircle2 className="h-3.5 w-3.5" />} {valueLabel(s)}
                     </button>
@@ -665,7 +662,7 @@ export default function ProfilePage() {
       </main>
 
       {/* Thanh lưu dính đáy: CÓ thay đổi → thanh rộng nhắc lưu; chưa sửa gì → nút nhỏ ở góc. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+82px)] z-40 px-4 md:bottom-6">
+      <div className={dirty ? "pointer-events-none fixed inset-x-0 bottom-[calc(max(10px,env(safe-area-inset-bottom))+82px)] z-40 px-4 md:bottom-6 [&>div]:border-white/10 [&>div]:bg-pn-raised [&>div]:shadow-pn-float [&>div]:[backdrop-filter:none] [&_p]:text-slate-200 [&_button]:bg-none [&_button]:bg-pink-600 [&_button]:shadow-none" : "mx-auto w-full max-w-3xl px-4 pb-32 md:px-6 md:pb-16"}>
         {dirty ? (
           <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-pink-500/30 bg-slate-950/95 p-2.5 pl-4 shadow-2xl shadow-black/60 backdrop-blur-xl md:px-3">
             <p className="flex-1 text-xs font-semibold text-pink-200">{tr("Bạn có thay đổi chưa lưu", "You have unsaved changes")}</p>
@@ -679,7 +676,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           // Điện thoại: nút nhỏ nằm bên TRÁI — bên phải là nút "lên đầu trang" (trước đây chồng nhau).
-          <div className="mx-auto flex max-w-3xl justify-start md:justify-end">
+          <div className="flex md:justify-end [&>button]:h-12 [&>button]:w-full [&>button]:justify-center [&>button]:gap-2 [&>button]:rounded-xl [&>button]:bg-white/[0.06] [&>button]:px-5 [&>button]:text-sm [&>button]:font-semibold [&>button]:text-slate-100 [&>button]:shadow-none [&>button]:[backdrop-filter:none] [&>button:hover]:bg-white/10 md:[&>button]:w-auto">
             <button
               onClick={handleSave}
               disabled={saving}

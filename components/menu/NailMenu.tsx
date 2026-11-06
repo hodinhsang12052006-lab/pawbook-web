@@ -214,7 +214,7 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
                       <span className="truncate text-sm font-semibold text-slate-100">{it.name}</span>
                       {!it.active && <span className="flex-shrink-0 text-[10px] font-bold text-slate-400">{tr("Đang ẩn", "Hidden")}</span>}
                       <span className="min-w-[1rem] flex-1 translate-y-[-3px] border-b border-dotted border-white/15" />
-                      <span className="flex-shrink-0 text-sm font-black text-emerald-300">{priceLabel(it.priceFrom, it.priceTo)}</span>
+                      <span className="flex-shrink-0 text-sm font-semibold tabular-nums text-slate-50">{priceLabel(it.priceFrom, it.priceTo)}</span>
                     </button>
                     {isOwner && (
                       <span className="flex flex-shrink-0 items-center">
@@ -249,7 +249,7 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
                     <div className="space-y-1 p-3">
                       <p className="line-clamp-2 text-[13px] font-bold leading-snug text-white">{it.name}</p>
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-sm font-black text-emerald-300">{priceLabel(it.priceFrom, it.priceTo)}</span>
+                        <span className="text-sm font-semibold tabular-nums text-slate-50">{priceLabel(it.priceFrom, it.priceTo)}</span>
                         {it.minutes && <span className="flex items-center gap-0.5 text-[11px] text-slate-400"><Clock className="h-3 w-3" />{it.minutes}′</span>}
                       </div>
                       {isOwner && it.materialCost !== null && (
@@ -357,7 +357,7 @@ function MenuItemSheet({ it, isOwner, ownerName, canChat, onClose, onWant, onBoo
             <p className="text-[11px] font-black uppercase tracking-wider text-pink-300">{tr(CATEGORY_LABEL[it.category][0], CATEGORY_LABEL[it.category][1])}</p>
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-xl font-black leading-tight text-white">{it.name}</h2>
-              <span className="flex-shrink-0 text-xl font-black text-emerald-300">{priceLabel(it.priceFrom, it.priceTo)}</span>
+              <span className="flex-shrink-0 text-xl font-bold tabular-nums text-slate-50">{priceLabel(it.priceFrom, it.priceTo)}</span>
             </div>
             {it.description && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">{it.description}</p>}
             {chips.length > 0 && (
@@ -422,7 +422,7 @@ function MenuQr({ url, title, onClose }: { url: string; title: string; onClose: 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {src ? <img src={src} alt={tr("Mã QR menu", "Menu QR code")} className="h-full w-full" /> : <div className="flex h-full items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>}
         </div>
-        <p className="mt-3 break-all text-[11px] text-slate-500">{url.replace(/^https?:\/\//, "")}</p>
+        <p className="mt-3 break-all text-[11px] text-slate-600">{url.replace(/^https?:\/\//, "")}</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" onClick={onClose} className="rounded-xl bg-slate-100 py-2.5 text-sm font-bold text-slate-700">{tr("Đóng", "Close")}</button>
           <button type="button" onClick={download} disabled={!src} className="rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white disabled:opacity-50">{tr("Tải ảnh", "Download")}</button>

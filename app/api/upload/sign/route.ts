@@ -14,14 +14,14 @@ const VIDEO_FORMATS = "mp4,mov,webm,m4v,m4a,ogg,mp3,wav";
 export async function POST() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const key = `upload-sign:${userId}`;
-  if (isRateLimited(key, 30, 60 * 60 * 1000)) return NextResponse.json({ error: "Bạn tải lên quá nhiều, thử lại sau." }, { status: 429 });
+  if (isRateLimited(key, 30, 60 * 60 * 1000)) return NextResponse.json({ error: "Bạn tải lên quá nhiều, thử lại sau.", errorEn: "Too many uploads. Please try again later." }, { status: 429 });
   recordAttempt(key, 60 * 60 * 1000);
 
   const { CLOUDINARY_CLOUD_NAME: cloudName, CLOUDINARY_API_KEY: apiKey, CLOUDINARY_API_SECRET: secret } = process.env;
   if (!cloudName || !apiKey || !secret) {
-    return NextResponse.json({ error: "Máy chủ chưa cấu hình kho video." }, { status: 503 });
+    return NextResponse.json({ error: "Máy chủ chưa cấu hình kho video.", errorEn: "Video uploads aren't set up yet." }, { status: 503 });
   }
   const timestamp = Math.round(Date.now() / 1000);
   const params = { allowed_formats: VIDEO_FORMATS, folder: "pawbook/video", timestamp };

@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { getTranslations, translateEntries } from "@/lib/contentTranslations";
+import { canonicalBenefits, canonicalSkills } from "@/lib/nailVocab";
+import { detectTextLang } from "@/lib/i18n/detectLang";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
@@ -19,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để xem hồ sơ." },
+        { error: "Vui lòng đăng nhập để xem hồ sơ.", errorEn: "Log in to view this profile." },
         { status: 401 }
       );
     }
@@ -72,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "Tài khoản người dùng không tồn tại." },
+        { error: "Tài khoản người dùng không tồn tại.", errorEn: "This account doesn't exist." },
         { status: 404 }
       );
     }
@@ -82,15 +85,30 @@ export async function GET(req: NextRequest) {
       createdAt: job.createdAt.toISOString(),
     }));
 
+    // Giới thiệu thợ tự viết → bản dịch (lưu đệm) cho người xem ngôn ngữ còn lại, kèm "Show original".
+    // Hồ sơ cũ chưa có bản dịch: dịch sau khi trả lời để lần xem sau có ngay.
+    const bio = user.technicianProfile?.bio?.trim() || "";
+    const bioTx: { en?: string; vi?: string; origin?: string } = {};
+    if (bio && searchParams.get("badges") === "1" && detectTextLang(bio)) {
+      const entries = [{ id: user.id, src: bio }];
+      const [en, vi] = await Promise.all([getTranslations("bio", entries, "en"), getTranslations("bio", entries, "vi")]);
+      if (en.get(user.id)) { bioTx.en = en.get(user.id)!.text; bioTx.origin = en.get(user.id)!.origin; }
+      if (vi.get(user.id)) { bioTx.vi = vi.get(user.id)!.text; bioTx.origin = bioTx.origin ?? vi.get(user.id)!.origin; }
+      const other = detectTextLang(bio) === "vi" ? "en" : "vi";
+      if (!bioTx[other]) after(() => translateEntries("bio", entries, other, { maxNew: 1 }).then(() => undefined).catch(() => undefined));
+    }
     const technicianProfile = user.technicianProfile
       ? {
           ...user.technicianProfile,
+          // Giá trị cũ của form đăng ký → bộ từ vựng chung (lib/nailVocab).
+          specialties: canonicalSkills(user.technicianProfile.specialties).join(","),
+          bioTx,
           // Desired salary is the technician's own negotiation preference —
           // relevant only to themselves (and Admin's lead radar via a
           // separate, already-gated endpoint), not to public viewers.
           desiredSalaryType: isSelf ? user.technicianProfile.desiredSalaryType : null,
           desiredSalaryAmount: isSelf ? user.technicianProfile.desiredSalaryAmount : null,
-          desiredBenefits: isSelf ? user.technicianProfile.desiredBenefits : null,
+          desiredBenefits: isSelf ? canonicalBenefits(user.technicianProfile.desiredBenefits).join(",") || null : null,
           portfolioImages: JSON.parse(user.technicianProfile.portfolioImages || "[]"),
           createdAt: user.technicianProfile.createdAt.toISOString(),
           updatedAt: user.technicianProfile.updatedAt.toISOString(),
@@ -146,7 +164,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error("GET profile error:", err);
     return NextResponse.json(
-      { error: "Lỗi hệ thống khi tải thông tin hồ sơ." },
+      { error: "Lỗi hệ thống khi tải thông tin hồ sơ.", errorEn: "Couldn't load the profile. Please try again." },
       { status: 500 }
     );
   }
@@ -159,7 +177,7 @@ export async function PUT(req: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để chỉnh sửa hồ sơ." },
+        { error: "Vui lòng đăng nhập để chỉnh sửa hồ sơ.", errorEn: "Log in to edit your profile." },
         { status: 401 }
       );
     }
@@ -189,11 +207,11 @@ export async function PUT(req: Request) {
     for (const [key, [value, max]] of Object.entries(textLimits)) {
       if (value === undefined || value === null) continue;
       if (typeof value !== "string" || value.length > max) {
-        return NextResponse.json({ error: `Trường "${key}" không hợp lệ hoặc quá dài.` }, { status: 400 });
+        return NextResponse.json({ error: `Trường "${key}" không hợp lệ hoặc quá dài.`, errorEn: `The "${key}" field is invalid or too long.` }, { status: 400 });
       }
     }
     if (name !== undefined && !String(name).trim()) {
-      return NextResponse.json({ error: "Tên không được để trống." }, { status: 400 });
+      return NextResponse.json({ error: "Tên không được để trống.", errorEn: "Enter a name." }, { status: 400 });
     }
     const portfolio = technician?.portfolioImages;
     if (portfolio !== undefined) {
@@ -203,21 +221,21 @@ export async function PUT(req: Request) {
         portfolio.some((u: unknown) => typeof u !== "string") ||
         JSON.stringify(portfolio).length > 8_000_000
       ) {
-        return NextResponse.json({ error: "Danh sách ảnh portfolio không hợp lệ (tối đa 30 ảnh)." }, { status: 400 });
+        return NextResponse.json({ error: "Danh sách ảnh portfolio không hợp lệ (tối đa 30 ảnh).", errorEn: "Invalid portfolio photos (up to 30)." }, { status: 400 });
       }
     }
 
     // Trạng thái thợ chỉ có 3 giá trị — chuỗi lạ làm thợ "biến mất" khỏi bộ lọc Thợ rảnh / hiện nhãn rác.
     if (technician?.status !== undefined && technician.status !== null && !["AVAILABLE", "URGENT", "BETTER"].includes(technician.status)) {
-      return NextResponse.json({ error: "Trạng thái không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Trạng thái không hợp lệ.", errorEn: "Invalid status." }, { status: 400 });
     }
     // Ảnh đại diện / ảnh tác phẩm: chỉ ảnh thật (https hoặc ảnh nhúng data:image) — chặn scheme lạ.
     const imgOk = (u: unknown) => typeof u === "string" && (u === "" || /^(https:\/\/|\/(?!\/))[^\s"'<>]+$/i.test(u) || /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(u));
     if (avatarUrl !== undefined && avatarUrl !== null && !imgOk(avatarUrl)) {
-      return NextResponse.json({ error: "Ảnh đại diện không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Ảnh đại diện không hợp lệ.", errorEn: "Invalid profile photo." }, { status: 400 });
     }
     if (Array.isArray(portfolio) && portfolio.some((u: unknown) => !imgOk(u) || u === "")) {
-      return NextResponse.json({ error: "Ảnh tác phẩm không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Ảnh tác phẩm không hợp lệ.", errorEn: "Invalid portfolio photo." }, { status: 400 });
     }
 
     const updateData: any = {};
@@ -282,6 +300,12 @@ export async function PUT(req: Request) {
       });
     }
 
+    // Giới thiệu mới → dịch sang ngôn ngữ còn lại sau khi trả lời (khách tiếng Anh đọc được).
+    const newBio = updatedTechnicianProfile?.bio?.trim();
+    if (newBio && detectTextLang(newBio)) {
+      const to = detectTextLang(newBio) === "vi" ? "en" : "vi";
+      after(() => translateEntries("bio", [{ id: userId, src: newBio }], to, { maxNew: 1 }).then(() => undefined).catch(() => undefined));
+    }
     return NextResponse.json({
       message: "Cập nhật hồ sơ thành công! 🎉",
       user: updatedUser,
@@ -295,7 +319,7 @@ export async function PUT(req: Request) {
   } catch (err: any) {
     console.error("PUT profile error:", err);
     return NextResponse.json(
-      { error: "Lỗi hệ thống khi cập nhật hồ sơ." },
+      { error: "Lỗi hệ thống khi cập nhật hồ sơ.", errorEn: "Couldn't update your profile. Please try again." },
       { status: 500 }
     );
   }
@@ -313,7 +337,7 @@ export async function DELETE(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để xóa tài khoản." },
+        { error: "Vui lòng đăng nhập để xóa tài khoản.", errorEn: "Log in to delete your account." },
         { status: 401 }
       );
     }
@@ -325,7 +349,7 @@ export async function DELETE(req: Request) {
   } catch (err: any) {
     console.error("DELETE profile error:", err);
     return NextResponse.json(
-      { error: "Lỗi hệ thống khi xóa tài khoản." },
+      { error: "Lỗi hệ thống khi xóa tài khoản.", errorEn: "Couldn't delete the account. Please try again." },
       { status: 500 }
     );
   }

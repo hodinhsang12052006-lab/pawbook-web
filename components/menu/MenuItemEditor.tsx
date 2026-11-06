@@ -1,15 +1,19 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useMemo, useState } from "react";
 import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
-import { tr } from "@/lib/i18n/tr";
+import { currentLocale, tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { hasVietnamese } from "@/lib/i18n/viText";
 import { uploadMedia } from "@/lib/mediaUpload";
 import { CATEGORY_LABEL, MAX_MENU_IMAGES, MENU_CATEGORIES, TECHNIQUES, materialCost, priceLabel, type MenuCategory, type MenuMaterial, type PublicMenuItem } from "@/lib/menu";
 
 // Thêm / sửa 1 mẫu trong menu. Phần "Vật tư" chỉ chủ menu thấy: nhập giá mua → tự tính chi phí + lời.
-const COMMON_MATERIALS = ["Base gel", "Top gel", "Gel màu", "Bột acrylic", "Dung dịch (monomer)", "Bột dip", "Activator", "Tips Gel-X", "Bột chrome", "Đá / charm", "Sticker / foil", "Dầu dưỡng da", "Giũa + buffer", "Bông + giấy lau"];
+// Gợi ý vật tư theo ngôn ngữ của thợ — hàm để đọc đúng VI/EN lúc render.
+const COMMON_MATERIALS = (): string[] =>
+  ([["Base gel", "Base gel"], ["Top gel", "Top gel"], ["Gel màu", "Color gel"], ["Bột acrylic", "Acrylic powder"], ["Dung dịch (monomer)", "Monomer liquid"], ["Bột dip", "Dip powder"], ["Activator", "Activator"], ["Tips Gel-X", "Gel-X tips"], ["Bột chrome", "Chrome powder"], ["Đá / charm", "Gems / charms"], ["Sticker / foil", "Stickers / foil"], ["Dầu dưỡng da", "Cuticle oil"], ["Giũa + buffer", "File + buffer"], ["Bông + giấy lau", "Cotton + lint-free wipes"]] as const).map(([vi, en]) => tr(vi, en));
 
 export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved, onDeleted }: {
   item: PublicMenuItem | null; // null = thêm mới
@@ -21,6 +25,9 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
   useTr();
   const [category, setCategory] = useState<MenuCategory>(item?.category ?? "HAND");
   const [name, setName] = useState(item?.name ?? "");
+  // Tên khách Mỹ / Úc thấy: thợ dùng giao diện tiếng Việt (hoặc tên có dấu) được mời xác nhận / sửa. Để trống →
+  // PawNail tự dịch sau khi lưu.
+  const [nameEn, setNameEn] = useState(item?.nameEn ?? "");
   const [technique, setTechnique] = useState(item?.technique ?? "");
   const [priceFrom, setPriceFrom] = useState(item ? String(item.priceFrom) : "");
   const [priceTo, setPriceTo] = useState(item?.priceTo ? String(item.priceTo) : "");
@@ -37,7 +44,7 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
   const cost = useMemo(() => materialCost(materials.filter((m) => m.name.trim())), [materials]);
   const pf = Number(priceFrom) || 0;
   const pt = Number(priceTo) || 0;
-  const suggestions = useMemo(() => Array.from(new Set([...knownMaterials, ...COMMON_MATERIALS])), [knownMaterials]);
+  const suggestions = useMemo(() => Array.from(new Set([...knownMaterials, ...COMMON_MATERIALS()])), [knownMaterials]);
 
   const addPhoto = () => {
     if (images.length >= MAX_MENU_IMAGES) return;
@@ -62,6 +69,7 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
 
   const setMat = (i: number, patch: Partial<MenuMaterial>) => setMaterials((p) => p.map((m, k) => (k === i ? { ...m, ...patch } : m)));
 
+  const askEn = currentLocale() === "vi" || hasVietnamese(name);
   const save = async () => {
     if (name.trim().length < 2) return toast.error(tr("Nhập tên mẫu.", "Enter a name."));
     if (!priceFrom.trim()) return toast.error(tr("Nhập giá.", "Enter a price."));
@@ -69,11 +77,13 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
     const body = {
       category, name, technique, priceFrom, priceTo: priceTo || null, minutes: minutes || null, durabilityWeeks: weeks || null, difficulty,
       description, images, materials: materials.filter((m) => m.name.trim()), active, sourceDesignId: item?.sourceDesignId ?? null,
+      // Đổi tên tiếng Việt mà để nguyên tên tiếng Anh cũ → không gửi (tên cũ không còn đúng), PawNail dịch lại.
+      ...(askEn && nameEn.trim() && !(item && name.trim() !== item.name && nameEn.trim() === (item.nameEn ?? "")) ? { nameEn: nameEn.trim() } : {}),
     };
     try {
       const res = await fetch(item ? `/api/menu/${item.id}` : "/api/menu", { method: item ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Lưu thất bại.", "Couldn't save."));
+      if (!res.ok) throw new Error(apiError(d, "Lưu thất bại.", "Couldn't save."));
       toast.success(item ? tr("Đã lưu mẫu", "Saved") : tr("Đã thêm vào menu", "Added to your menu"));
       onSaved(d.item);
     } catch (e) {
@@ -137,6 +147,18 @@ export default function MenuItemEditor({ item, knownMaterials, onClose, onSaved,
             <span className={label}>{tr("Tên mẫu", "Design name")}</span>
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={tr("VD: French tráng gương ngắn", "e.g. Short mirror French")} className={field} />
           </label>
+
+          {askEn && (
+            <label className="block">
+              <span className={label}>{tr("Tên tiếng Anh khách thấy", "English name clients see")}</span>
+              <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} maxLength={80} lang="en" placeholder={tr("VD: Short mirror French", "e.g. Short mirror French")} className={field} />
+              <span className="mt-1 block text-[11px] leading-snug text-slate-500">
+                {item?.enOrigin === "mt" && nameEn === (item?.nameEn ?? "")
+                  ? tr("PawNail đã dịch tự động — kiểm tra lại rồi lưu để xác nhận.", "Translated automatically — check it, then save to confirm.")
+                  : tr("Khách ở Mỹ / Úc đọc tên này. Để trống, PawNail sẽ tự dịch.", "Clients in the US and Australia see this name. Leave it blank and PawNail translates it.")}
+              </span>
+            </label>
+          )}
 
           {category !== "ADDON" && (
             <div>

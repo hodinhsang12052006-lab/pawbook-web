@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getClientIp } from "@/lib/rateLimit";
+import { LOCALE_COOKIE, negotiateLocale } from "@/lib/i18n/config";
 
 // In-memory sliding-window counters, keyed by `${bucketName}:${ip}`.
 // CAVEAT: this only protects a single long-running Node process. On
@@ -75,7 +76,11 @@ export async function proxy(request: NextRequest) {
         return new NextResponse(
           JSON.stringify({
             error: "Too Many Requests",
-            message: `Bạn đã vượt quá giới hạn ${limit} yêu cầu / ${Math.round(windowMs / 1000)}s. Vui lòng thử lại sau.`,
+            // Cùng quy tắc ngôn ngữ với trang (cookie → Accept-Language → EN).
+            message:
+              negotiateLocale(request.cookies.get(LOCALE_COOKIE)?.value, request.headers.get("accept-language")) === "vi"
+                ? `Bạn đã vượt quá giới hạn ${limit} yêu cầu / ${Math.round(windowMs / 1000)}s. Vui lòng thử lại sau.`
+                : `Too many attempts (limit ${limit} per ${Math.round(windowMs / 1000)}s). Please try again later.`,
           }),
           {
             status: 429,

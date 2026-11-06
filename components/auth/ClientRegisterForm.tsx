@@ -2,6 +2,7 @@
 
 // Đăng ký KHÁCH đi làm nail — 1 màn, ~30 giây: tên, khu vực, email + mật khẩu (SĐT không bắt buộc).
 // Không hỏi kỹ năng / lương / tiệm — khách vào thẳng trang chủ riêng (mẫu, tiệm quanh bạn, đặt lịch).
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useContext, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Heart, Loader2 } from "lucide-react";
@@ -10,22 +11,30 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
 import SocialLogin from "@/components/auth/SocialLogin";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 
 export default function ClientRegisterForm() {
   useTr();
   const { theme } = useContext(AuthSettingsContext);
   const isDark = theme === "dark";
   const [name, setName] = useState("");
-  const [market, setMarket] = useState<"US" | "AU">("US");
-  const [state, setState] = useState("");
+  // Thị trường mặc định theo người xem (IP / en-AU / múi giờ Úc) — khách ở Sydney không bị chọn sẵn 🇺🇸 và
+  // đầu số +1. Bấm chọn thì giữ lựa chọn đó.
+  const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
+  const [picked, setPicked] = useState<"US" | "AU" | null>(null);
+  const market = picked ?? viewerMarket;
+  const setMarket = (m: "US" | "AU") => { setPicked(m); rememberMarket(m); };
+  const [stateRaw, setState] = useState("");
   const [city, setCity] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const states = market === "US" ? US_ALL_CODES : AU_ALL_CODES;
+  // Bang của thị trường khác (thị trường mặc định vừa đổi theo IP / múi giờ) → coi như chưa chọn.
+  const state = (states as readonly string[]).includes(stateRaw) ? stateRaw : "";
   // Đăng ký bằng Google / Facebook từ màn này → bước Hoàn tất chọn sẵn "Khách".
   React.useEffect(() => { try { localStorage.setItem("pn_role_hint", "CLIENT"); } catch {} }, []);
   const field = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base ${isDark ? "border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500" : "border-slate-300 bg-white text-slate-900 placeholder-slate-400"}`;
@@ -42,10 +51,10 @@ export default function ClientRegisterForm() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "CLIENT", market, state, city, name: name.trim(), email: email.trim(), password, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
+        body: JSON.stringify({ role: "CLIENT", locale: currentLocale(), market, state, city, name: name.trim(), email: email.trim(), password, phone: phone.trim() ? `${market === "US" ? "+1" : "+61"} ${phone.trim()}` : "" }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Không đăng ký được, thử lại.", "Couldn't sign up, try again."));
+      if (!res.ok) throw new Error(apiError(d, "Không đăng ký được, thử lại.", "Couldn't sign up, try again."));
       const r = await signIn("credentials", { redirect: false, email: email.trim(), password });
       if (!r?.ok) throw new Error(tr("Đã tạo tài khoản — hãy đăng nhập.", "Account created — please log in."));
       window.location.href = "/";
@@ -59,7 +68,7 @@ export default function ClientRegisterForm() {
     <form onSubmit={submit} className="mx-auto w-full max-w-md space-y-4">
       <div className="space-y-1 text-center lg:text-left">
         <h2 className={`flex items-center justify-center gap-2 text-2xl font-extrabold lg:justify-start ${isDark ? "text-white" : "text-slate-900"}`}><Heart className="h-6 w-6 text-pink-500" />{tr("Tài khoản khách làm nail", "Nail client account")}</h2>
-        <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{tr("Lưu mẫu yêu thích, tìm tiệm gần bạn, đặt lịch không cần gọi — miễn phí.", "Save looks, find salons near you, book without calling — free.")}</p>
+        <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{tr("Lưu mẫu yêu thích, tìm tiệm gần bạn và gửi yêu cầu đặt lịch không cần gọi điện.", "Save designs, find salons near you and request bookings without calling.")}</p>
       </div>
       <SocialLogin dark={isDark} divider heading={tr("Nhanh nhất: dùng tài khoản có sẵn", "Fastest: use an existing account")} />
       <div>
@@ -76,7 +85,7 @@ export default function ClientRegisterForm() {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="cl-city" className={label}>{tr("Thành phố", "City")}</label>
-          <input id="cl-city" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && states.includes(g)) setState(g); }} placeholder={tr("VD: Houston", "e.g. Houston")} className={field} />
+          <input id="cl-city" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && states.includes(g)) setState(g); }} placeholder={market === "AU" ? tr("VD: Parramatta", "e.g. Parramatta") : tr("VD: Houston", "e.g. Houston")} className={field} />
         </div>
         <div>
           <label htmlFor="cl-state" className={label}>{tr("Bang", "State")}</label>
@@ -88,7 +97,7 @@ export default function ClientRegisterForm() {
       </div>
       <div>
         <label htmlFor="cl-email" className={label}>Email</label>
-        <input id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="ban@email.com" className={field} />
+        <input id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={tr("ban@email.com", "you@email.com")} className={field} />
       </div>
       <div>
         <label htmlFor="cl-pass" className={label}>{tr("Mật khẩu", "Password")}</label>
@@ -96,7 +105,11 @@ export default function ClientRegisterForm() {
       </div>
       <div>
         <label htmlFor="cl-phone" className={label}>{tr("Số điện thoại", "Phone")} <span className="font-normal text-slate-500">{tr("(không bắt buộc — để tiệm xác nhận lịch)", "(optional — for booking confirmations)")}</span></label>
-        <input id="cl-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555 123 4567" className={field} />
+        <div className="flex items-center gap-2">
+          <span className={`flex min-h-[48px] items-center rounded-2xl border px-3 text-sm font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-300" : "border-slate-300 bg-white text-slate-700"}`} aria-hidden>{market === "US" ? "+1" : "+61"}</span>
+          <input id="cl-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={market === "AU" ? "412 345 678" : "555 123 4567"} className={field} aria-describedby="cl-phone-cc" />
+          <span id="cl-phone-cc" className="sr-only">{market === "US" ? tr("Mã vùng +1 (Mỹ)", "Country code +1 (US)") : tr("Mã vùng +61 (Úc)", "Country code +61 (Australia)")}</span>
+        </div>
       </div>
       <button type="submit" disabled={busy} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-base font-black text-white shadow-lg shadow-pink-600/25 disabled:opacity-60">
         {busy && <Loader2 className="h-5 w-5 animate-spin" />}{tr("Tạo tài khoản", "Create account")}

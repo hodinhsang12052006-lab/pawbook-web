@@ -1,6 +1,8 @@
 // BOT NỘI DUNG PAWNAIL — soạn bài đăng cho tài khoản chính thức, đánh đúng điều
-// thợ nail & chủ tiệm người Việt ở Mỹ/Úc quan tâm nhất: TIỀN (thuế, tip, lương),
+// thợ nail & chủ tiệm tại Mỹ/Úc quan tâm nhất: TIỀN (thuế, tip, lương),
 // AN TOÀN (lừa đảo), SỨC KHOẺ, TAY NGHỀ, QUẢN LÝ TIỆM, XU HƯỚNG.
+// Bài có bản tiếng Anh (`en`) mới hiện với người xem tiếng Anh (lib/postEn.ts); bài chỉ có tiếng Việt
+// (kho kiến thức, "Tiếng Anh tiệm nail"…) chỉ hiện với người dùng tiếng Việt.
 //
 // Nguyên tắc:
 //   • Đúng lúc: bài theo mùa (hạn thuế quý, mùa thuế, mùa lễ…) được ưu tiên.
@@ -24,6 +26,7 @@ export interface BotDraft {
   seasonal: boolean;
   title: string;
   text: string; // bài hoàn chỉnh để đăng
+  textEn?: string; // bản tiếng Anh (nếu chủ đề có) — lưu kèm bài, hiện cho người xem tiếng Anh
   caption: string; // bản ngắn cho Facebook / TikTok
   sources: { label: string; url: string }[];
 }
@@ -34,6 +37,7 @@ export const PILLAR_LABEL: Record<Pillar, string> = {
 };
 
 const TAX_NOTE = "ℹ️ Thông tin chung, không thay cho tư vấn thuế — trường hợp cụ thể hãy hỏi CPA / kế toán của bạn.";
+const TAX_NOTE_EN = "ℹ️ General information, not tax advice — ask your CPA or accountant about your situation.";
 const SRC = {
   irsTips: { label: "IRS — No tax on tips", url: "https://www.irs.gov/newsroom/one-big-beautiful-bill-act-tax-deductions-for-working-americans-and-seniors" },
   irsEst: { label: "IRS — Estimated taxes", url: "https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes" },
@@ -62,6 +66,8 @@ export interface Topic {
   tax?: boolean;
   sources?: { label: string; url: string }[];
   tags: string;
+  /** Bản tiếng Anh (không bắt buộc). Cùng khuôn: emoji + tiêu đề / các ý / lời kêu gọi / nguồn / hashtag. */
+  en?: { title: (ctx: Ctx) => string; bullets: (ctx: Ctx) => string[]; cta: string; tags: string };
 }
 export interface Ctx { now: Date; theme?: { title: string; emoji: string } | null }
 
@@ -82,27 +88,48 @@ const BASE_TOPICS: Topic[] = [
   // ---------- Bài ghim ----------
   {
     id: "welcome", pillar: "community", audience: "all", market: "ALL", pinned: true,
-    title: () => "📌 Chào mừng đến với PawNail Jobs — sàn việc làm nail miễn phí cho người Việt tại Mỹ & Úc",
+    title: () => "📌 Chào mừng đến với PawNail — nền tảng dành cho ngành nail tại Mỹ và Úc",
     bullets: () => [
-      "Thợ tìm tiệm, chủ tiệm tìm thợ — nhắn tin, gọi điện trực tiếp, KHÔNG qua môi giới, KHÔNG mất phí kết nối.",
-      "Đánh giá 2 chiều từ người từng làm việc thật: thợ xem tiệm có sòng phẳng không, tiệm xem tay nghề thợ.",
-      "Mẫu nail mới mỗi ngày kèm vật tư & cách làm, radar lương theo tiểu bang, kho vật tư giá sỉ.",
-      "Cần hỗ trợ tài khoản, báo lừa đảo hay góp ý: nhắn thẳng cho tài khoản này — đội ngũ trả lời trong 24 giờ.",
+      "Thợ và tiệm liên hệ trực tiếp — nhắn tin và gọi ngay trong app. PawNail không thu phí thợ và tiệm.",
+      "Đánh giá hai chiều từ những người đã thực sự làm việc cùng nhau.",
+      "Mẫu nail mới mỗi ngày kèm vật tư và các bước làm, mức lương tham khảo theo bang, và chợ vật tư.",
+      "Cần hỗ trợ tài khoản, báo lừa đảo hay góp ý tính năng? Hãy nhắn cho tài khoản này.",
     ],
-    cta: "👉 Theo dõi PawNail Jobs để không bỏ lỡ việc gấp, mẹo nghề và thông tin thuế quan trọng.",
+    cta: "Theo dõi PawNail để nhận tin tuyển mới, mẹo nghề và thông tin thuế quan trọng.",
     tags: "#PawNail #ThoNail #TiemNail #ViecLamNail",
+    en: {
+      title: () => "📌 Welcome to PawNail — the platform for the nail industry in the US and Australia",
+      bullets: () => [
+        "Techs and salons connect directly: message and call in the app. PawNail doesn't charge techs or salons.",
+        "Two-way reviews from people who actually worked together.",
+        "Daily nail designs with materials and steps, pay benchmarks by state, and a supply exchange.",
+        "Need account help, want to report a scam or suggest a feature? Message this account.",
+      ],
+      cta: "Follow PawNail for new jobs, pro tips and important tax updates.",
+      tags: "#PawNail #NailTech #NailSalon #NailJobs",
+    },
   },
   {
     id: "safety-pinned", pillar: "safety", audience: "all", market: "ALL", pinned: true,
-    title: () => "📌 3 nguyên tắc an toàn trên PawNail — đọc 30 giây, tránh mất tiền oan",
+    title: () => "📌 3 nguyên tắc an toàn trên PawNail — đọc trong 30 giây",
     bullets: () => [
-      "PawNail và tiệm uy tín KHÔNG BAO GIỜ đòi chuyển tiền cọc để \"giữ chỗ làm\", \"mua đồ nghề\" hay \"làm giấy tờ\". Ai đòi → dừng ngay.",
+      "PawNail và tiệm uy tín không bao giờ đòi chuyển tiền cọc để \"giữ chỗ làm\", \"mua đồ nghề\" hay \"làm giấy tờ\". Ai đòi, hãy dừng ngay.",
       "Thoả thuận lương, chia turn, chỗ ở qua tin nhắn trong app để có bằng chứng khi cần.",
-      "Thấy dấu hiệu lạ: bấm ⋮ → Báo cáo. Mọi báo cáo được xem trong 24 giờ, người báo được giữ kín.",
+      "Thấy dấu hiệu lạ: bấm ⋮ → Báo cáo. Báo cáo được đội ngũ PawNail xem xét và người báo được giữ kín.",
     ],
-    cta: "🔁 Chia sẻ cho người mới vào nghề — một lần nhắc có thể giữ lại cả tháng lương.",
+    cta: "Chia sẻ cho người mới vào nghề — một lần nhắc có thể giữ lại cả tháng lương.",
     sources: [SRC.ftc],
     tags: "#PawNail #AnToan #LuaDao",
+    en: {
+      title: () => "📌 3 safety rules on PawNail — a 30-second read",
+      bullets: () => [
+        "PawNail and legitimate salons never ask for a deposit to \"hold a job\", \"buy tools\" or \"do paperwork\". If anyone asks, stop.",
+        "Agree on pay, commission split and housing in app messages, so you have a record if you need it.",
+        "See something off? Tap ⋮ → Report. Reports are reviewed by the PawNail team, and the person reporting stays anonymous.",
+      ],
+      cta: "Share this with someone new to the trade — one reminder can save a month's pay.",
+      tags: "#PawNail #StaySafe #NailTech",
+    },
   },
 
   // ---------- 💵 Tiền & thuế (Mỹ) ----------
@@ -246,15 +273,25 @@ const BASE_TOPICS: Topic[] = [
   // ---------- 🛡️ An toàn ----------
   {
     id: "deposit-scam", pillar: "safety", audience: "tech", market: "ALL",
-    title: () => "🚨 Chưa đi làm đã đòi chuyển tiền \"giữ chỗ\" / \"mua đồ nghề\"? 100% là lừa đảo",
+    title: () => "🚨 Chưa đi làm đã đòi chuyển tiền \"giữ chỗ\" / \"mua đồ nghề\"? Đó là dấu hiệu lừa đảo",
     bullets: () => [
       "Dấu hiệu: lương hứa cao bất thường, giục chuyển tiền gấp, chỉ nhắn tin không cho gọi video, không cho địa chỉ tiệm rõ ràng.",
-      "Tiệm thật trả lương CHO bạn — không bao giờ thu tiền của thợ để nhận việc.",
+      "Tiệm thật trả lương cho bạn — không bao giờ thu tiền của thợ để nhận việc.",
       "Gặp trường hợp này: không chuyển tiền, chụp lại tin nhắn, bấm ⋮ → Báo cáo trên PawNail.",
     ],
-    cta: "🔁 Chia sẻ để bạn thợ mới qua không mất tiền oan.",
+    cta: "Chia sẻ để người mới vào nghề không mất tiền oan.",
     sources: [SRC.ftc],
     tags: "#LuaDao #AnToan #ThoNail",
+    en: {
+      title: () => "🚨 Asked to pay to \"hold a job\" or \"buy tools\" before you start? That's a scam",
+      bullets: () => [
+        "Warning signs: unusually high pay, pressure to send money fast, text-only contact with no video call, no clear salon address.",
+        "A real salon pays you — it never charges a tech to get a job.",
+        "If this happens: don't send money, screenshot the messages, and tap ⋮ → Report on PawNail.",
+      ],
+      cta: "Share this so people new to the trade don't lose money.",
+      tags: "#ScamAlert #StaySafe #NailTech",
+    },
   },
   {
     id: "check-scam", pillar: "safety", audience: "owner", market: "US",
@@ -267,6 +304,16 @@ const BASE_TOPICS: Topic[] = [
     cta: "💬 Tiệm bạn từng gặp chiêu nào? Kể để mọi người cùng tránh.",
     sources: [SRC.ftc],
     tags: "#LuaDao #ChuTiemNail",
+    en: {
+      title: () => "🚨 Salon owners: watch for clients who \"overpay by check and ask for the difference back\"",
+      bullets: () => [
+        "The usual setup: a check or money order for more than the price, then a request to send back the extra by Zelle or gift card. A few days later the check bounces.",
+        "Your bank will never call to ask for a verification code or password, or tell you to \"move money to a safe account\".",
+        "If in doubt, hang up and call the number on the back of your bank card yourself.",
+      ],
+      cta: "Has your salon seen a scam like this? Share it so others can avoid it.",
+      tags: "#ScamAlert #SalonOwner",
+    },
   },
   {
     id: "housing", pillar: "safety", audience: "tech", market: "ALL",
@@ -278,7 +325,7 @@ const BASE_TOPICS: Topic[] = [
       "Gọi video xem tiệm & chỗ ở trước khi mua vé.",
       "Báo cho người thân địa chỉ mới và số điện thoại chủ tiệm.",
     ],
-    cta: "📌 Lưu lại — lần sau nhận việc xa chỉ cần hỏi theo danh sách này.",
+    cta: "Lưu lại — lần sau nhận việc xa chỉ cần hỏi theo danh sách này.",
     tags: "#ThoNail #DiLamXa #AnToan",
   },
 
@@ -291,7 +338,7 @@ const BASE_TOPICS: Topic[] = [
       "Bàn có máy hút bụi, mở thông gió, đóng nắp lọ liquid/hoá chất khi không dùng.",
       "Đeo găng tay khi dùng hoá chất; không ăn uống ngay tại bàn làm.",
     ],
-    cta: "🔁 Gửi cho người thân đang làm nail — sức khoẻ là vốn lâu dài của nghề.",
+    cta: "Gửi cho người thân đang làm nail — sức khoẻ là vốn lâu dài của nghề.",
     sources: [SRC.osha],
     tags: "#SucKhoeThoNail #ThoNail",
   },
@@ -395,8 +442,18 @@ const BASE_TOPICS: Topic[] = [
       "Bấm \"Lưu mẫu\" để để dành, bấm \"Tôi làm mẫu này\" để khoe ảnh thật sau khi làm.",
       "Chuẩn bị vật tư sớm 1–2 tuần trước dịp lễ để không bị hết hàng.",
     ],
-    cta: "👉 Xem ngay ở mục Mẫu nail: bitpawos.com/designs",
+    cta: "Xem ở mục Mẫu nail: bitpawos.com/designs",
     tags: "#MauNail #PawNail",
+    en: {
+      title: ({ theme }) => `${theme?.emoji ?? "✨"} The ${theme?.title ?? "new"} collection is on PawNail — with materials and steps`,
+      bullets: ({ theme }) => [
+        `Dozens of ${theme?.title ?? "new"} designs, each with a materials list, step-by-step instructions, timing and a suggested price.`,
+        "Tap \"Save design\" to keep it for later, and \"I made this\" to share a photo of your version.",
+        "Stock up on materials 1–2 weeks before the holiday so you don't run out.",
+      ],
+      cta: "See them under Designs: bitpawos.com/designs",
+      tags: "#NailDesigns #PawNail",
+    },
   },
 
   // ---------- 💬 Cộng đồng ----------
@@ -418,12 +475,16 @@ const hash = (s: string) => {
 function render(t: Topic, ctx: Ctx): BotDraft {
   const title = t.title(ctx);
   const lines = t.bullets(ctx).map((b) => `• ${b}`);
-  const src = t.sources?.length ? `Nguồn: ${t.sources.map((x) => x.label.split(" — ")[0]).join(", ")}` : "";
+  const sourceNames = t.sources?.length ? t.sources.map((x) => x.label.split(" — ")[0]).join(", ") : "";
+  const src = sourceNames ? `Nguồn: ${sourceNames}` : "";
   const text = [title, "", ...lines, "", t.cta, ...(t.tax ? ["", TAX_NOTE] : []), ...(src ? ["", src] : []), "", t.tags].join("\n").slice(0, 1990);
+  const textEn = t.en
+    ? [t.en.title(ctx), "", ...t.en.bullets(ctx).map((b) => `• ${b}`), "", t.en.cta, ...(t.tax ? ["", TAX_NOTE_EN] : []), ...(sourceNames ? ["", `Source: ${sourceNames}`] : []), "", t.en.tags].join("\n").slice(0, 1990)
+    : undefined;
   const caption = `${title}\n\n${lines.slice(0, 3).join("\n")}\n\n${t.cta}\n${t.tags} #PawNail`.slice(0, 1200);
   return {
     id: `${t.id}-${hash(title)}`, pillar: t.pillar, audience: t.audience, market: t.market, pinned: !!t.pinned, seasonal: !!t.when && t.id !== "theme-collection",
-    title, text, caption, sources: t.sources ? [...t.sources] : [],
+    title, text, ...(textEn ? { textEn } : {}), caption, sources: t.sources ? [...t.sources] : [],
   };
 }
 

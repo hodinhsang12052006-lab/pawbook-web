@@ -13,19 +13,22 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
+import { POSITIONS } from "@/lib/nailVocab";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
 import { stateName } from "@/lib/stateNames";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
 import { dt } from "@/lib/i18n/dataEn";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
+import { apiError } from "@/lib/i18n/apiError";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 // Đây vừa là nhãn hiển thị vừa là giá trị lưu DB (salaryType/urgentRole) —
 // hiển thị cho MỌI người xem bất kể locale (JobBoard render verbatim), nên
 // cố tình giữ tiếng Việt, không đưa vào t() để tránh dữ liệu lẫn ngôn ngữ.
-const ROLE_OPTIONS = ["Thợ Bột", "Thợ Dip", "Thợ Nước", "All-around"];
+// Vị trí cần tuyển — bộ từ vựng chung (lib/nailVocab.ts): "Thợ bột", "Thợ dip", "Thợ chân tay nước", "Thợ làm được tất cả".
+const ROLE_OPTIONS = POSITIONS;
 const SALARY_TYPES_US = ["Bao lương tuần", "% Ăn chia"];
 const SALARY_TYPES_AU = ["Theo giờ AUD", "Theo tuần AUD"];
 
@@ -144,7 +147,7 @@ export default function OwnerRegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name, email, password, role: "OWNER", market, state, city,
+          name, email, password, role: "OWNER", locale: currentLocale(), market, state, city,
           phone: `${countryCode} ${phone.trim()}`,
           salonName, urgentRole, salaryType, salaryAmount, hasHousing,
           diagnosedPains: nextPains,
@@ -153,7 +156,7 @@ export default function OwnerRegisterForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t("auth.owner.registerFailed"));
+        setError(apiError(data, t("auth.owner.registerFailed"), t("auth.owner.registerFailed")));
         setLoading(false);
         return;
       }

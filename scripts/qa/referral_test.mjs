@@ -6,7 +6,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Results, fakeIp, registerUser } from "./lib.mjs";
 
 const R = new Results("Mời bạn bè");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const refOf = async (id) => (await db.execute({ sql: `SELECT referredById FROM "User" WHERE id = ?`, args: [id] })).rows[0]?.referredById ?? null;
 const idOf = async (email) => (await db.execute({ sql: `SELECT id FROM "User" WHERE email = ?`, args: [email] })).rows[0]?.id;
 const errors = [];

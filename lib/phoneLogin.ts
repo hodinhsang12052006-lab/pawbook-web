@@ -59,7 +59,7 @@ export async function authorizePhone(rawPhone: unknown, market: unknown, rawCode
   const u =
     existing ??
     (await prisma.user.create({
-      data: { email, name: "Thành viên PawNail", password: OAUTH_PASSWORD_PREFIX + crypto.randomBytes(24).toString("hex"), role: "TECHNICIAN", phone, market: phone.startsWith("+61") ? "AU" : "US" },
+      data: { email, name: "PawNail member", password: OAUTH_PASSWORD_PREFIX + crypto.randomBytes(24).toString("hex"), role: "TECHNICIAN", phone, market: phone.startsWith("+61") ? "AU" : "US" },
       select: { id: true, name: true, email: true, role: true, password: true, state: true },
     }));
   await prisma.phoneVerification.upsert({ where: { userId: u.id }, update: { phone, verifiedAt: new Date() }, create: { userId: u.id, phone } });

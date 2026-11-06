@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     // Chỉ bộ cảm xúc có sẵn — chặn nhét chuỗi tuỳ ý vào tin của người khác (kiểm tra SAU quyền: người
     // ngoài luôn nhận 403, tin không tồn tại luôn 404, dù gửi emoji gì).
     if (!REACTION_EMOJIS.includes(emoji)) {
-      return NextResponse.json({ error: "Cảm xúc không hợp lệ" }, { status: 400 });
+      return NextResponse.json({ error: "Cảm xúc không hợp lệ", errorEn: "Invalid reaction." }, { status: 400 });
     }
 
     const key = { messageId_userId: { messageId, userId } };

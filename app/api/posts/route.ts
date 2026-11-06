@@ -6,6 +6,10 @@ import { realOnly } from "@/lib/demo";
 import { sendPush } from "@/lib/push";
 import { getViews } from "@/lib/postStats";
 import { kindOf, mixFeed } from "@/lib/feedMix";
+import { getPostEn, savePostEn, type PostEn } from "@/lib/postEn";
+import { hasVietnamese } from "@/lib/i18n/viText";
+import { isLocale, type Locale } from "@/lib/i18n/config";
+import { localeFromRequest } from "@/lib/i18n/server";
 import { Market, PostType } from "@prisma/client";
 
 const PAGE_SIZE = 12;
@@ -21,26 +25,38 @@ const HOT_SCORE = 5;
 type PollView = { question: string; options: { label: string; votes: number }[]; total: number; myVote: number | null } | null;
 
 // Bài "Tâm sự ẩn danh": KHÔNG trả id / tên / ảnh / thành phố người đăng — chỉ vai trò + bang.
-function anonAuthor(a: { role?: string; state?: string | null } | null) {
-  return { id: null, name: a?.role === "OWNER" ? "Chủ tiệm ẩn danh" : "Thợ ẩn danh", avatarUrl: null, role: a?.role ?? "TECHNICIAN", city: null, state: a?.state ?? null, anonymous: true };
+function anonAuthor(a: { role?: string; state?: string | null } | null, lang: Locale) {
+  const owner = a?.role === "OWNER";
+  const name = lang === "vi" ? (owner ? "Chủ tiệm ẩn danh" : "Thợ ẩn danh") : owner ? "Anonymous salon owner" : "Anonymous nail tech";
+  return { id: null, name, avatarUrl: null, role: a?.role ?? "TECHNICIAN", city: null, state: a?.state ?? null, anonymous: true };
 }
 
-function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0, poll: PollView = null) {
+// Bài chính thức có bản tiếng Anh (lib/postEn.ts) → người xem tiếng Anh nhận bản đó (cả câu hỏi thăm dò).
+function localized(post: { content: string }, poll: PollView, en: PostEn | undefined, lang: Locale): { content: string; poll: PollView } {
+  if (lang !== "en" || !en) return { content: post.content, poll };
+  const p = poll && en.question
+    ? { ...poll, question: en.question, options: poll.options.map((o, i) => ({ ...o, label: en.options?.[i] ?? o.label })) }
+    : poll;
+  return { content: en.content, poll: p };
+}
+
+function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0, poll: PollView = null, lang: Locale = "en", en?: PostEn) {
   const likeCount = post._count?.likes ?? 0;
   const commentCount = post._count?.comments ?? 0;
   const isRecent = Date.now() - post.createdAt.getTime() < HOT_WINDOW_MS;
+  const shown = localized(post, poll, en, lang);
   return {
     id: post.id,
-    content: post.content,
+    content: shown.content,
     postType: post.postType,
     mediaUrls: post.mediaUrls ? JSON.parse(post.mediaUrls) : [],
     market: post.market,
     state: post.state,
     city: post.city,
     createdAt: post.createdAt.toISOString(),
-    author: post.anonymous ? anonAuthor(post.author) : post.author,
+    author: post.anonymous ? anonAuthor(post.author, lang) : post.author,
     anonymous: !!post.anonymous,
-    poll,
+    poll: shown.poll,
     likeCount,
     commentCount,
     likedByMe: viewerId ? (post.likes?.length ?? 0) > 0 : false,
@@ -51,9 +67,10 @@ function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views
   };
 }
 
-// GET /api/posts?market=&state=&city=&authorId=&postType=&cursor= — newsfeed
+// GET /api/posts?market=&state=&city=&authorId=&postType=&cursor=&lang= — newsfeed
 // trang chủ, phân trang kiểu cursor giống /api/messages (mượt cho vuốt vô
 // hạn trên mobile, không lệch trang khi có bài mới chen vào giữa lúc cuộn).
+// lang = ngôn ngữ trang (client gửi kèm; thiếu → cookie / Accept-Language → en).
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -66,6 +83,8 @@ export async function GET(req: NextRequest) {
     const authorId = searchParams.get("authorId");
     const postType = searchParams.get("postType");
     const cursor = searchParams.get("cursor");
+    const langParam = searchParams.get("lang");
+    const lang: Locale = isLocale(langParam) ? langParam : localeFromRequest(req);
 
     // Chỉ bài đã đăng (tâm sự ẩn danh chờ duyệt thì chưa hiện)
     const where: any = { status: "published" };
@@ -82,9 +101,11 @@ export async function GET(req: NextRequest) {
     // Bảng tin chung: không hiện bài của tài khoản dữ liệu mẫu (lib/demo)
     if (!authorId) where.author = realOnly();
 
-    const posts = await prisma.post.findMany({
+    // Người xem tiếng Anh: bài chính thức CHỈ có tiếng Việt bị bỏ qua → quét rộng hơn 1 trang để vẫn đủ 12 bài.
+    const take = lang === "en" ? PAGE_SIZE * 3 : PAGE_SIZE;
+    const scanned = await prisma.post.findMany({
       where,
-      take: PAGE_SIZE,
+      take,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: "desc" },
       include: {
@@ -93,8 +114,21 @@ export async function GET(req: NextRequest) {
         ...(viewerId ? { likes: { where: { userId: viewerId }, select: { id: true } } } : {}),
       },
     });
+    const enById = await getPostEn(scanned.filter((p) => p.author.role === "ADMIN").map((p) => p.id));
 
-    const nextCursor = posts.length === PAGE_SIZE ? posts[posts.length - 1].id : null;
+    let posts = scanned;
+    let nextCursor: string | null = scanned.length === PAGE_SIZE ? scanned[scanned.length - 1].id : null;
+    if (lang === "en") {
+      posts = [];
+      let lastScanned: string | null = null;
+      for (const p of scanned) {
+        lastScanned = p.id;
+        if (p.author.role === "ADMIN" && !enById.has(p.id) && hasVietnamese(p.content)) continue;
+        posts.push(p);
+        if (posts.length === PAGE_SIZE) break;
+      }
+      nextCursor = lastScanned && (posts.length === PAGE_SIZE || scanned.length === take) ? lastScanned : null;
+    }
 
     // Bảng tin chung (không phải trang hồ sơ 1 người): bỏ bài chính thức đã có bản MỚI HƠN cùng loại trong 24h
     // (kể cả khi bản mới nằm ở trang trước), rồi rải đều bài chính thức giữa bài của người thật.
@@ -150,12 +184,12 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      posts: shown.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null)),
+      posts: shown.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null, lang, enById.get(p.id))),
       nextCursor,
     });
   } catch (error) {
     console.error("GET /api/posts error:", error);
-    return NextResponse.json({ error: "Không thể tải bảng tin." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể tải bảng tin.", errorEn: "Couldn't load the feed." }, { status: 500 });
   }
 }
 
@@ -164,12 +198,12 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bài." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập để đăng bài.", errorEn: "Log in to post." }, { status: 401 });
     }
 
     // Bảng tin là cộng đồng NGHỀ (thợ / chủ tiệm) — khách đi làm nail không đăng ở đây.
     if ((session.user as { role?: string }).role === "CLIENT") {
-      return NextResponse.json({ error: "Bảng tin dành cho thợ và chủ tiệm. Bạn có thể nhắn tiệm hoặc để lại đánh giá sau khi làm móng." }, { status: 403 });
+      return NextResponse.json({ error: "Bảng tin dành cho thợ và chủ tiệm. Bạn có thể nhắn tiệm hoặc để lại đánh giá sau khi làm móng.", errorEn: "The feed is for nail techs and salon owners. You can message a salon or leave a review after your appointment." }, { status: 403 });
     }
 
     const body = await req.json();
@@ -178,10 +212,10 @@ export async function POST(req: NextRequest) {
     const anonymous = body?.anonymous === true;
 
     if (!content || typeof content !== "string" || !content.trim()) {
-      return NextResponse.json({ error: "Nội dung bài đăng không được để trống." }, { status: 400 });
+      return NextResponse.json({ error: "Nội dung bài đăng không được để trống.", errorEn: "Write something before you post." }, { status: 400 });
     }
     if (content.length > 2000) {
-      return NextResponse.json({ error: "Nội dung bài đăng quá dài (tối đa 2000 ký tự)." }, { status: 400 });
+      return NextResponse.json({ error: "Nội dung bài đăng quá dài (tối đa 2000 ký tự).", errorEn: "Posts can be up to 2,000 characters." }, { status: 400 });
     }
     const safePostType: PostType = VALID_POST_TYPES.includes(postType) ? postType : "GENERAL";
     const safeMediaUrls = Array.isArray(mediaUrls)
@@ -190,16 +224,16 @@ export async function POST(req: NextRequest) {
     // Mỗi trang feed kéo 12 bài kèm toàn bộ mediaUrls — giới hạn số ảnh và
     // tổng dung lượng để 1 bài không làm nặng feed của mọi người.
     if (safeMediaUrls.length > 10 || JSON.stringify(safeMediaUrls).length > 8_000_000) {
-      return NextResponse.json({ error: "Tối đa 10 ảnh mỗi bài đăng." }, { status: 400 });
+      return NextResponse.json({ error: "Tối đa 10 ảnh mỗi bài đăng.", errorEn: "Up to 10 photos per post." }, { status: 400 });
     }
 
     const author = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { market: true, state: true, city: true },
+      select: { market: true, state: true, city: true, role: true },
     });
     if (anonymous) {
       const today = await prisma.post.count({ where: { authorId: session.user.id, anonymous: true, createdAt: { gte: new Date(Date.now() - 86_400_000) } } });
-      if (today >= 3) return NextResponse.json({ error: "Mỗi ngày tối đa 3 tâm sự ẩn danh — mai bạn gửi tiếp nhé." }, { status: 429 });
+      if (today >= 3) return NextResponse.json({ error: "Mỗi ngày tối đa 3 tâm sự ẩn danh — mai bạn gửi tiếp nhé.", errorEn: "You can send up to 3 anonymous posts a day. Please try again tomorrow." }, { status: 429 });
     }
 
     const post = await prisma.post.create({
@@ -219,13 +253,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Bài chính thức đăng từ Bot nội dung kèm bản tiếng Anh (chỉ tài khoản ADMIN — kiểm lại trong DB).
+    if (author?.role === "ADMIN" && !anonymous && typeof body.contentEn === "string" && body.contentEn.trim()) {
+      await savePostEn(post.id, body.contentEn.slice(0, 4000));
+    }
+
     if (anonymous) {
       const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
-      sendPush(admins.map((a) => a.id), { title: "🤫 Tâm sự ẩn danh chờ duyệt", body: content.trim().slice(0, 80), url: "/admin/studio#tam-su", tag: "pn-anon" }).catch(() => {});
+      sendPush(admins.map((a) => a.id), { title: "Tâm sự ẩn danh chờ duyệt", body: content.trim().slice(0, 80), url: "/admin/studio#tam-su", tag: "pn-anon", en: { title: "Anonymous post waiting for review" } }).catch(() => {});
     }
     return NextResponse.json({ ...mapPost(post, session.user.id), pending: anonymous }, { status: 201 });
   } catch (error) {
     console.error("POST /api/posts error:", error);
-    return NextResponse.json({ error: "Không thể đăng bài. Vui lòng thử lại." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể đăng bài. Vui lòng thử lại.", errorEn: "Couldn't publish the post. Please try again." }, { status: 500 });
   }
 }

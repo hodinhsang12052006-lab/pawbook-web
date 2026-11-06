@@ -9,7 +9,8 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, SEED_TECH, fakeIp } from "./lib.mjs";
 
 const MODE = process.argv[2] || "en";
-const db = createClient({ url: "file:prisma/dev.db" });
+// DB của server đang chạy (scripts/qa/make-qa-db.sh → QA_DB_URL=file:<qa.db>); mặc định prisma/dev.db.
+const db = createClient({ url: process.env.QA_DB_URL || "file:prisma/dev.db" });
 const VN = /[ạảấầậắằặẹẻếềệịọỏốồộớờợụủứừựỳỵỷỹđĐăâêôơưÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂƠƯàáãèéìíòóõùúý]/;
 
 // Chữ do NGƯỜI DÙNG/dữ liệu tạo ra (không phải giao diện) → bỏ qua khi quét.
@@ -18,7 +19,7 @@ for (const sql of [
   `SELECT name AS t FROM "User"`, `SELECT city AS t FROM "User"`, `SELECT title AS t FROM "Job"`, `SELECT salonName AS t FROM "Job"`,
   `SELECT description AS t FROM "Job"`, `SELECT city AS t FROM "Job"`, `SELECT content AS t FROM "Post"`, `SELECT content AS t FROM "PostComment"`,
   `SELECT body AS t FROM "Message"`, `SELECT title AS t FROM "SupplyProduct"`, `SELECT description AS t FROM "SupplyProduct"`, `SELECT bio AS t FROM "TechnicianProfile"`,
-  `SELECT comment AS t FROM "Review"`, `SELECT turnSplitPolicy AS t FROM "User"`, `SELECT clientTypePolicy AS t FROM "User"`, `SELECT salaryAmount AS t FROM "Job"`,
+  `SELECT comment AS t FROM "Review"`, `SELECT name AS t FROM "MenuItem"`, `SELECT description AS t FROM "MenuItem"`, `SELECT turnSplitPolicy AS t FROM "User"`, `SELECT clientTypePolicy AS t FROM "User"`, `SELECT salaryAmount AS t FROM "Job"`,
 ]) {
   try {
     for (const r of (await db.execute(sql)).rows) if (r.t) for (const part of String(r.t).split(/\n+/)) data.add(part.trim());
@@ -29,6 +30,8 @@ const isData = (s) => [...data].some((d) => d && (d === s || (d.length > 12 && (
 const browser = await chromium.launch();
 async function ctx(locale) {
   const c = await browser.newContext({ ...devices["Pixel 7"], locale: locale === "en" ? "en-US" : "vi-VN" });
+  // Ngôn ngữ do máy chủ chọn (cookie bitpaw_locale → Accept-Language → en); localStorage chỉ còn để tương thích bản cũ.
+  await c.addCookies([{ name: "bitpaw_locale", value: locale, url: BASE_URL }]);
   await c.addInitScript((m) => {
     try {
       localStorage.setItem("bitpaw_locale", m);
@@ -60,6 +63,9 @@ async function harvest(p) {
     while ((n = w.nextNode())) {
       const el = n.parentElement;
       if (!el || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(el.tagName)) continue;
+      if (el.closest('[lang="vi"]') && document.documentElement.lang !== "vi") continue;
+      // Phần tiếng Anh cố ý (trang Hỗ trợ / Xoá dữ liệu in cả 2 ngôn ngữ, mỗi phần có lang riêng) — không phải chữ sót.
+      if (el.closest('[lang="en"]') && document.documentElement.lang !== "en") continue;
       const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden") continue;
       const t = n.textContent.replace(/\s+/g, " ").trim();
@@ -79,9 +85,11 @@ const found = new Map(); // chuỗi → tập trang
 const EN_WORDS = /\b(Loading|Submit|Cancel|Save|Delete|Search|Message|Messages|Profile|Settings|Close|Back|Next|Share|Report|Block|Pinned|Official|Verified|Sign in|Log in|Share card|New|Hot|Urgent|Jobs?|Feed)\b/;
 function record(page, strings) {
   for (const raw of strings) {
-    const s = raw.replace(/^\[(placeholder|aria-label|title|alt)\] /, "");
+    // "Machine-translated · original: <chữ thợ tự gõ>" — phần sau dấu ":" là nội dung người dùng (cố ý hiện bản gốc).
+    const s = raw.replace(/^\[(placeholder|aria-label|title|alt)\] /, "").replace(/^(Machine-translated · original|Dịch máy · bản gốc): (.+)$/, (m, k, orig) => (isData(orig.trim()) ? k : m));
     if (MODE === "en") {
-      if (!VN.test(s) || isData(s)) continue;
+      // "Tiếng Việt" = tên ngôn ngữ (bộ chọn ngôn ngữ / dòng "Có tiếng Anh và tiếng Việt") — cố ý, không phải chữ sót.
+      if (!VN.test(s.replace(/Tiếng Việt/g, "")) || isData(s)) continue;
     } else {
       // VI: cụm tiếng Anh thuần (không dấu, ≥2 từ hoặc từ UI phổ biến) — bỏ thương hiệu/tên riêng.
       if (VN.test(s) || isData(s) || !EN_WORDS.test(s) || /PawNail|Nail Radar|Gel-X|Dip\/SNS|Acrylic|Design|Wax|Studio|Portfolio|GIF|POS|Supply|Halloween|TikTok|Facebook|Instagram|iPhone|Android|Google|Apple|App Store|Zalo|Live|Demo|OK|US|AU/.test(s)) continue;
@@ -99,13 +107,20 @@ const jobId = (await db.execute(`SELECT id FROM "Job" LIMIT 1`)).rows[0].id;
 {
   const c = await ctx(MODE);
   const p = await c.newPage();
-  for (const path of ["/auth/register", "/auth/register?role=technician", "/auth/register?role=owner", "/auth/login", "/terms", "/privacy", "/offline", "/khong-ton-tai-404"]) {
+  // Trang khách chưa đăng nhập thấy đầu tiên (trang chủ, mẫu, thử mẫu, tiệm, menu quét QR, hỗ trợ).
+  const designId = (await db.execute(`SELECT id FROM "NailDesign" LIMIT 1`)).rows[0]?.id;
+  const guestPaths = [
+    "/", "/?tab=jobs", "/?tab=portfolio", "/designs", ...(designId ? [`/designs/${designId}`] : []), "/tryon", "/salons",
+    `/menu/${techId}`, `/profile/${techId}`, `/profile/${ownerId}`, `/jobs/${jobId}`, "/trends", "/tools/radar", "/supply",
+    "/support", "/data-deletion", "/auth/forgot",
+  ];
+  for (const path of [...guestPaths, "/auth/register", "/auth/register?role=technician", "/auth/register?role=owner", "/auth/register?role=client", "/auth/login", "/terms", "/privacy", "/offline", "/khong-ton-tai-404"]) {
     await p.goto(BASE_URL + path).catch(() => {});
     record("khách " + path, await harvest(p));
   }
   // các bước đăng ký thợ
   await p.goto(BASE_URL + "/auth/register?role=technician");
-  await p.getByPlaceholder(/Kim Nails/).fill("Audit");
+  await p.getByPlaceholder(/Kim Nguy/).fill("Audit");
   await p.locator('input[type="tel"], input[placeholder*="555"]').first().fill("7135550100");
   await p.getByPlaceholder(/Los Angeles/).fill("Houston");
   await p.locator('input[type="email"]').fill(`audit.${Date.now()}@qa.test`);
@@ -139,6 +154,27 @@ const jobId = (await db.execute(`SELECT id FROM "Job" LIMIT 1`)).rows[0].id;
   record("chủ tiệm mới: xem trước demo", await harvest(q));
   await c.close();
   await c2.close();
+}
+
+// ----- Khách làm nail (đăng ký qua form thật, rồi xem các màn hình của khách) -----
+{
+  const c = await ctx(MODE);
+  const p = await c.newPage();
+  await p.goto(BASE_URL + "/auth/register?role=client");
+  await p.locator("#cl-name").fill("Audit Client").catch(() => {});
+  await p.locator("#cl-city").fill("Houston").catch(() => {});
+  await p.locator("#cl-state").selectOption("TX").catch(() => {});
+  await p.locator("#cl-email").fill(`audit.c.${Date.now()}@qa.test`).catch(() => {});
+  await p.locator("#cl-pass").fill("QaPass#2026").catch(() => {});
+  await p.locator('button[type="submit"]').last().click().catch(() => {});
+  const ok = await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 }).then(() => true, () => false);
+  if (ok) {
+    for (const path of ["/", "/designs", "/salons", "/tryon", "/messages", "/profile", "/bookings"]) {
+      await p.goto(BASE_URL + path).catch(() => {});
+      record("khách làm nail " + path, await harvest(p));
+    }
+  } else console.error("⚠️ khách làm nail: đăng ký không thành công — bỏ qua phần này");
+  await c.close();
 }
 
 // ----- Thợ -----

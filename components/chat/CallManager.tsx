@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Phone, Video, VideoOff, PhoneOff, Loader2, Mic, MicOff, Volume2, MessageCircle } from "lucide-react";
@@ -235,7 +236,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         const res = await signal(partner.id, "offer", { callType: type, callId: newCallId });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || tr("Không thể bắt đầu cuộc gọi.", "Couldn't start the call."));
+          throw new Error(apiError(data, "Không thể bắt đầu cuộc gọi.", "Couldn't start the call."));
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : tr("Không thể bắt đầu cuộc gọi.", "Couldn't start the call."));

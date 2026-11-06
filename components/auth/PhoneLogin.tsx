@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2, Smartphone } from "lucide-react";
@@ -31,7 +32,7 @@ export default function PhoneLogin({ dark = true }: { dark?: boolean }) {
     try {
       const r = await fetch("/api/auth/phone/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, market, locale: document.documentElement.lang === "en" ? "en" : "vi" }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setErr(j.error || tr("Không gửi được mã, thử lại sau.", "Couldn't send the code, try again later.")); return; }
+      if (!r.ok) { setErr(apiError(j, "Không gửi được mã, thử lại sau.", "Couldn't send the code, try again later.")); return; }
       setTo(j.to || phone); setStep("code"); setWait(30); setCode("");
       setTimeout(() => codeRef.current?.focus(), 50);
     } finally { setBusy(false); }

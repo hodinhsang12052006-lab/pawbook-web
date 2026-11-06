@@ -1,12 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playSound } from "@/lib/sounds";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { joinOwnPresence } from "@/lib/presence";
+import { tr } from "@/lib/i18n/tr";
 
 interface UnreadMessagesContextValue {
   unreadCount: number;
@@ -25,7 +26,7 @@ const UnreadMessagesContext = createContext<UnreadMessagesContextValue>({
 // `pathname`, resubscribed on every single route change for no reason).
 export function UnreadMessagesProvider({ children }: { children: React.ReactNode }) {
   const { user: sessionUser } = useSessionUser();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const pathnameRef = useRef(pathname);
@@ -80,13 +81,13 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
 
       setUnreadCount((c) => c + 1);
       playSound("message");
-      const who = message.sender?.name || "ai đó";
+      const who = message.sender?.name || tr("ai đó", "someone");
       if (message.type === "CALL") {
         // Nhật ký cuộc gọi — không hiện chuỗi thô "missed:audio".
-        if (/^(missed|declined)/.test(message.content || "")) toast(`Cuộc gọi nhỡ từ ${who}`, { icon: "📞", position: "top-right" });
+        if (/^(missed|declined)/.test(message.content || "")) toast(tr(`Cuộc gọi nhỡ từ ${who}`, `Missed call from ${who}`), { icon: "📞", position: "top-right" });
       } else {
-        const preview = message.type === "IMAGE" ? "📷 Ảnh" : (message.content || "").substring(0, 40);
-        toast.success(`Tin nhắn mới từ ${who}: ${preview}`, { icon: "💬", position: "top-right" });
+        const preview = message.type === "IMAGE" ? tr("Ảnh", "Photo") : (message.content || "").substring(0, 40);
+        toast.success(tr(`Tin nhắn mới từ ${who}: ${preview}`, `New message from ${who}: ${preview}`), { icon: "💬", position: "top-right" });
       }
     };
 

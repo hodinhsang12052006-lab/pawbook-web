@@ -6,7 +6,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, registerUser } from "./lib.mjs";
 const OUT = (process.env.TEMP || ".") + "/offshots";
 fs.mkdirSync(OUT, { recursive: true });
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 let adm = (await db.execute(`SELECT id, email FROM "User" WHERE email LIKE 'official.shot.%' LIMIT 1`)).rows[0];
 let pass = "QaPass#2026x";
 if (!adm) {

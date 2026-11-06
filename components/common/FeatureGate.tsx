@@ -39,7 +39,7 @@ export default function FeatureGate({ icon: Icon, title, lead, points, path, log
       {!loggedIn && (
         <div className="relative mx-auto mt-6 flex max-w-md flex-col gap-2.5">
           <Link href="/auth/register?role=technician" className="flex items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-pink-600/25 transition active:scale-[0.98]">
-            {tr("Tạo tài khoản miễn phí — 60 giây", "Create a free account — 60 seconds")}
+            {tr("Tạo tài khoản — chỉ khoảng một phút", "Create your account — it takes about a minute")}
           </Link>
           <Link href={`/auth/login?callbackUrl=${encodeURIComponent(path)}`} className="text-center text-sm font-semibold text-slate-400 hover:text-white">
             {tr("Đã có tài khoản? ", "Already have an account? ")}<span className="text-pink-300">{tr("Đăng nhập", "Log in")}</span>

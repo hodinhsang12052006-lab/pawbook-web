@@ -23,8 +23,8 @@ export default function InviteFriends() {
   if (!d) return <div className="h-40 animate-pulse rounded-xl bg-slate-950/50 ring-1 ring-white/10" />;
 
   const message = tr(
-    "Mình đang dùng PawNail Jobs để tìm việc / tìm thợ nail — miễn phí, nhắn trực tiếp với tiệm. Vào thử nè:",
-    "I'm using PawNail Jobs to find nail jobs / techs — free, message salons directly. Try it:",
+    "Mình đang dùng PawNail cho việc làm nail và tuyển thợ — nhắn tin trực tiếp với tiệm và thợ. Bạn xem thử:",
+    "I'm using PawNail for nail jobs and hiring — you can message salons and techs directly. Take a look:",
   );
   const copy = async () => {
     try {
@@ -36,7 +36,7 @@ export default function InviteFriends() {
   };
   const share = async () => {
     if (navigator.share) {
-      try { await navigator.share({ title: "PawNail Jobs", text: message, url: d.link }); } catch {}
+      try { await navigator.share({ title: "PawNail", text: message, url: d.link }); } catch {}
       return;
     }
     copy();
@@ -65,7 +65,7 @@ export default function InviteFriends() {
           {left === 0 ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 px-2.5 py-1 text-[11px] font-bold text-fuchsia-200 ring-1 ring-fuchsia-400/40"><Megaphone className="h-3.5 w-3.5" />{tr(" Đại sứ PawNail", " PawNail Ambassador")}</span>
           ) : (
-            <span className="text-[11px] text-slate-400">{tr(`Còn ${left} người → huy hiệu Đại sứ`, `${left} more → Ambassador badge`)}</span>
+            <span className="text-[11px] text-slate-400">{tr(`Mời thêm ${left} người để nhận huy hiệu Đại sứ`, `Invite ${left} more ${left === 1 ? "person" : "people"} to earn the Ambassador badge`)}</span>
           )}
         </div>
         <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/5">

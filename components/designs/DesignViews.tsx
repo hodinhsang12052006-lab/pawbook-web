@@ -10,7 +10,9 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { dt } from "@/lib/i18n/dataEn";
 import { THEMES } from "@/lib/studioThemes";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 import { tr } from "@/lib/i18n/tr";
+import { apiError } from "@/lib/i18n/apiError";
 import { useTr } from "@/lib/i18n/useTr";
 import { playSound } from "@/lib/sounds";
 import NailArt from "@/components/designs/NailArt";
@@ -171,15 +173,17 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
   const [menuBusy, setMenuBusy] = useState(false);
   const canMenu = user?.role === "TECHNICIAN" || user?.role === "OWNER";
   // Khách đi làm nail KHÔNG cần vật tư / các bước (thông tin nghề) — cần giá + chỗ làm được mẫu này.
-  const isClient = user?.role === "CLIENT";
   const isPro = canMenu || user?.role === "ADMIN";
+  // Khách làm nail và người chưa đăng nhập: nút của KHÁCH (tìm tiệm, thử trên tay) — không "Tôi làm mẫu này" /
+  // "đăng ảnh để lên bảng xếp hạng" (lời mời dành cho thợ).
+  const isClient = !isPro;
   const addToMenu = async () => {
     setMenuBusy(true);
     try {
       const res = await fetch("/api/menu/from-design", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ designId: d.id }) });
       const r = await res.json().catch(() => ({}));
       if (res.status === 409) return toast(tr("Mẫu này đã có trong menu của bạn.", "Already in your menu."));
-      if (!res.ok) throw new Error(r.error);
+      if (!res.ok) throw new Error(apiError(r, "Không thêm được, thử lại.", "Couldn't add, try again."));
       toast.success(tr("Đã thêm vào menu — vào hồ sơ để chỉnh giá, ảnh thật.", "Added to your menu — open your profile to set price & real photos."));
     } catch (e) {
       toast.error((e as Error).message || tr("Không thêm được, thử lại.", "Couldn't add, try again."));
@@ -340,7 +344,7 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
           </Link>
         )}
       </div>
-      {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh THẬT kèm ", "Done? Post a REAL photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
+      {!isClient && <p className="text-center text-[11px] text-slate-500">{tr("Làm xong? Đăng ảnh thật kèm ", "Done? Post a real photo with ")}{hashtagFor(d)}{tr(" để lên bảng xếp hạng tuần.", " to join this week's ranking.")}</p>}
     </div>
   );
 }
@@ -350,12 +354,13 @@ export function DesignsStrip() {
   useTr(); // render lại khi đổi VI/EN
   const [items, setItems] = useState<Design[] | null>(null);
   const [open, setOpen] = useState<Design | null>(null);
+  const { market } = useViewerMarket();
   useEffect(() => {
-    fetch("/api/designs?limit=8")
+    fetch(`/api/designs?limit=8&market=${market}`)
       .then((r) => (r.ok ? r.json() : { designs: [] }))
       .then((d) => setItems(d.designs || []))
       .catch(() => setItems([]));
-  }, []);
+  }, [market]);
   if (!items?.length) return null;
   const update = (id: string, saved: boolean, saves: number) => {
     setItems((list) => list?.map((x) => (x.id === id ? { ...x, saved, saves } : x)) ?? null);

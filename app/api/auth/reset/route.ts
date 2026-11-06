@@ -12,14 +12,14 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { token?: unknown; password?: unknown };
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
-  if (!token || token.length > 200) return NextResponse.json({ error: "Link không hợp lệ." }, { status: 400 });
+  if (!token || token.length > 200) return NextResponse.json({ error: "Link không hợp lệ.", errorEn: "This link isn't valid." }, { status: 400 });
   if (password.length < 8 || password.length > 128) {
-    return NextResponse.json({ error: "Mật khẩu cần từ 8 đến 128 ký tự." }, { status: 400 });
+    return NextResponse.json({ error: "Mật khẩu cần từ 8 đến 128 ký tự.", errorEn: "Passwords must be 8 to 128 characters." }, { status: 400 });
   }
 
   const row = await prisma.passwordReset.findUnique({ where: { tokenHash: sha256(token) }, select: { id: true, userId: true, expiresAt: true, usedAt: true } });
   if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) {
-    return NextResponse.json({ error: "Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới." }, { status: 410 });
+    return NextResponse.json({ error: "Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.", errorEn: "This link has expired or was already used. Please request a new one." }, { status: 410 });
   }
 
   const hashed = await bcrypt.hash(password, 10);

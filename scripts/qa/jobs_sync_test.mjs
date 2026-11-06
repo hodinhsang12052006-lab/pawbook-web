@@ -4,7 +4,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Results } from "./lib.mjs";
 
 const R = new Results("Đồng bộ tin từ tool (/api/jobs/sync)");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const KEY = "test-ingest-key-0123456789abcdef";
 const sync = (body, headers = { authorization: `Bearer ${KEY}` }) => fetch(BASE_URL + "/api/jobs/sync", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const t = String(Date.now()).slice(-5);

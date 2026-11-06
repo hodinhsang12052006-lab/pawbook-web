@@ -10,11 +10,11 @@ async function me() {
   return (session?.user as { id?: string } | undefined)?.id ?? null;
 }
 const missing = (err: unknown) => /no such table|P2021/i.test(String((err as Error)?.message || err));
-const unavailable = () => NextResponse.json({ error: "Tính năng đang được bật, thử lại sau ít phút." }, { status: 503 });
+const unavailable = () => NextResponse.json({ error: "Tính năng đang được bật, thử lại sau ít phút.", errorEn: "This feature is being turned on. Please try again in a few minutes." }, { status: 503 });
 
 export async function GET() {
   const userId = await me();
-  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   try {
     const alerts = await prisma.jobAlert.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { id: true, market: true, state: true, skill: true, createdAt: true } });
     return NextResponse.json({ alerts, max: MAX_JOB_ALERTS });
@@ -26,16 +26,16 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const userId = await me();
-  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const data = cleanAlert(await req.json().catch(() => null));
-  if (!data) return NextResponse.json({ error: "Tiêu chí không hợp lệ." }, { status: 400 });
+  if (!data) return NextResponse.json({ error: "Tiêu chí không hợp lệ.", errorEn: "Invalid alert criteria." }, { status: 400 });
   try {
     const existing = await prisma.jobAlert.findMany({ where: { userId }, select: { market: true, state: true, skill: true } });
     if (existing.some((a) => a.market === data.market && a.state === data.state && a.skill === data.skill)) {
-      return NextResponse.json({ error: "Bạn đã có thông báo này rồi." }, { status: 409 });
+      return NextResponse.json({ error: "Bạn đã có thông báo này rồi.", errorEn: "You already have this alert." }, { status: 409 });
     }
     if (existing.length >= MAX_JOB_ALERTS) {
-      return NextResponse.json({ error: `Tối đa ${MAX_JOB_ALERTS} thông báo việc — xoá bớt 1 cái trong Hồ sơ.` }, { status: 409 });
+      return NextResponse.json({ error: `Tối đa ${MAX_JOB_ALERTS} thông báo việc — xoá bớt 1 cái trong Hồ sơ.`, errorEn: `You can have up to ${MAX_JOB_ALERTS} job alerts. Remove one in your profile first.` }, { status: 409 });
     }
     const alert = await prisma.jobAlert.create({ data: { userId, ...data }, select: { id: true, market: true, state: true, skill: true, createdAt: true } });
     return NextResponse.json({ alert }, { status: 201 });
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const userId = await me();
-  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
   const id = new URL(req.url).searchParams.get("id") || "";
   try {
     // deleteMany + userId: không xoá được thông báo của người khác.

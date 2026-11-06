@@ -5,7 +5,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Client, Results, registerUser } from "./lib.mjs";
 
 const R = new Results("Đăng hộ tiệm");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const KEY = "test-ingest-key-0123456789abcdef";
 const ingest = (posts, key = KEY) => fetch(BASE_URL + "/api/ingest/jobs", { method: "POST", headers: { "Content-Type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify({ posts }) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const tag = String(Date.now()).slice(-4);
@@ -47,7 +47,7 @@ try {
   await p.goto(`${BASE_URL}/jobs/${jobId}`);
   await p.getByText("PawNail đăng hộ theo yêu cầu của tiệm").waitFor({ timeout: 15000 });
   const html = await (await fetch(`${BASE_URL}/jobs/${jobId}`)).text();
-  R.check("I6", "Trang tin: nhãn đăng hộ + địa chỉ có link bản đồ + nút Gọi; KHÔNG có 'Nhắn tin qua App'; có 'Tôi là chủ tiệm này'", (await p.getByRole("link", { name: /Bản đồ/ }).count()) > 0 && (await p.getByText(/Gọi ngay/).count()) > 0 && (await p.getByText("Nhắn tin qua App").count()) === 0 && (await p.getByRole("button", { name: "Tôi là chủ tiệm này" }).count()) > 0);
+  R.check("I6", "Trang tin: nhãn đăng hộ + địa chỉ có link bản đồ + nút Gọi; KHÔNG có nút nhắn tin trong app; có 'Tôi là chủ tiệm này'", (await p.getByRole("link", { name: /Bản đồ/ }).count()) > 0 && (await p.getByText(/Gọi ngay|Gọi cho tiệm/).count()) > 0 && (await p.getByText(/Nhắn tin qua App|Nhắn tin trong app/).count()) === 0 && (await p.getByRole("button", { name: "Tôi là chủ tiệm này" }).count()) > 0);
   await p.screenshot({ path: `${process.env.TEMP || "."}/ingest_detail.png`, fullPage: true }).catch(() => {});
   R.check("I7", "Không khai tin đăng hộ cho Google (noindex, không JobPosting)", /noindex/.test(html) && !/"@type":"JobPosting"/.test(html));
 

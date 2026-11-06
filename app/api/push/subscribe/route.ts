@@ -53,12 +53,12 @@ export async function POST(req: Request) {
   const userId = await me();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const key = `push:${getClientIp(req)}`;
-  if (isRateLimited(key, 20, 10 * 60 * 1000)) return NextResponse.json({ error: "Thử lại sau." }, { status: 429 });
+  if (isRateLimited(key, 20, 10 * 60 * 1000)) return NextResponse.json({ error: "Thử lại sau.", errorEn: "Please try again later." }, { status: 429 });
   recordAttempt(key, 10 * 60 * 1000);
 
   const body = await req.json().catch(() => ({}));
   if (!validEndpoint(body.endpoint) || !validKey(body.keys?.p256dh) || !validKey(body.keys?.auth)) {
-    return NextResponse.json({ error: "Đăng ký không hợp lệ." }, { status: 400 });
+    return NextResponse.json({ error: "Đăng ký không hợp lệ.", errorEn: "Invalid registration." }, { status: 400 });
   }
   try {
     await prisma.pushSubscription.upsert({
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("push subscribe error:", err);
-    return NextResponse.json({ error: "Chưa bật được thông báo." }, { status: 503 });
+    return NextResponse.json({ error: "Chưa bật được thông báo.", errorEn: "Couldn't turn on notifications." }, { status: 503 });
   }
 }
 
@@ -80,7 +80,7 @@ export async function DELETE(req: Request) {
   const userId = await me();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  if (typeof body.endpoint !== "string") return NextResponse.json({ error: "Thiếu endpoint." }, { status: 400 });
+  if (typeof body.endpoint !== "string") return NextResponse.json({ error: "Thiếu endpoint.", errorEn: "Missing endpoint." }, { status: 400 });
   try {
     // Chỉ xoá được thiết bị của CHÍNH MÌNH.
     await prisma.pushSubscription.deleteMany({ where: { endpoint: body.endpoint, userId } });

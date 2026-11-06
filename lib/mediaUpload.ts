@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import { prepareFileForUpload } from "@/lib/compressImage";
 import { tr } from "@/lib/i18n/tr";
 
@@ -15,7 +16,7 @@ export class UploadError extends Error {}
 async function signedUpload(file: File, onProgress?: (pct: number) => void, label = tr("video", "video")): Promise<string> {
   const signRes = await fetch("/api/upload/sign", { method: "POST" });
   const sign = await signRes.json().catch(() => ({}));
-  if (!signRes.ok) throw new UploadError(sign.error || tr(`Chưa tải được ${label}.`, `Couldn't upload the ${label}.`));
+  if (!signRes.ok) throw new UploadError(apiError(sign, `Chưa tải được ${label}.`, `Couldn't upload the ${label}.`));
   const form = new FormData();
   form.append("file", file);
   form.append("api_key", sign.apiKey);
@@ -60,7 +61,7 @@ export async function uploadMedia(file: File, onProgress?: (pct: number) => void
   onProgress?.(30);
   const res = await fetch("/api/upload", { method: "POST", body: form });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.url) throw new UploadError(data.error || tr("Tải ảnh thất bại.", "Image upload failed."));
+  if (!res.ok || !data.url) throw new UploadError(apiError(data, "Tải ảnh thất bại.", "Image upload failed."));
   onProgress?.(100);
   return data.url as string;
 }

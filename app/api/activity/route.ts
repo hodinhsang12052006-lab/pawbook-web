@@ -4,7 +4,7 @@ import { realOnly } from "@/lib/demo";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { tidyIngestJob } from "@/lib/jobIngest/display";
 import { placeLabel } from "@/lib/stateNames";
-import { dtEn } from "@/lib/i18n/dataEn";
+import { dtEn } from "@/lib/i18n/dtEn";
 
 // GET /api/activity — hoạt động THẬT gần đây cho thông báo "đám đông"
 // (FomoToast): tin tuyển mới, thợ vừa cập nhật portfolio, bài đăng được
@@ -61,11 +61,11 @@ export async function GET() {
     const events: ActivityEvent[] = [
       ...jobs.map(tidyIngestJob).map((j) => ({
         kind: "job" as const,
-        title: j.isUrgent ? "Tin tuyển gấp" : "Tin tuyển mới",
+        title: "Việc mới",
         text: `${j.salonName} tại ${placeLabel(j.city, j.market, j.state)} ${verb(j.createdAt, "vừa đăng", "đang tuyển")}: “${j.title}”`,
         chip: j.salaryAmount,
         en: {
-          title: j.isUrgent ? "Urgent job" : "New job",
+          title: "New job",
           text: `${j.salonName} in ${placeLabel(j.city, j.market, j.state)} ${now - j.createdAt.getTime() < FRESH_MS ? "just posted" : "is hiring"}: “${dtEn(j.title)}”`,
           chip: dtEn(j.salaryAmount),
         },
@@ -77,7 +77,7 @@ export async function GET() {
         const skill = t.specialties.split(",").map((s) => s.trim()).filter(Boolean)[0];
         return {
           kind: "tech" as const,
-          title: "Thợ cập nhật portfolio",
+          title: "Thợ cập nhật tay nghề",
           text: `${t.user.name}${skill ? ` (thợ ${skill})` : ""} ${verb(t.updatedAt, "vừa thêm", "đã thêm")} mẫu móng mới${t.city ? ` tại ${t.city}` : ""}`,
           en: {
             title: "Portfolio update",

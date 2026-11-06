@@ -1,16 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
-import { parseMenuItem, toPublicMenuItem } from "@/lib/menu";
+import { parseMenuItem, parseMenuItemEn, toPublicMenuItem } from "@/lib/menu";
+import { menuI18nOne, translateMenuItemOnSave } from "@/lib/menuI18n";
+import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // PATCH /api/menu/:id — sửa mẫu (cả bản đầy đủ, hoặc chỉ { active } để ẩn/hiện) · DELETE — xoá. Chỉ chủ menu.
 async function mine(id: string) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
-  if (!me) return { error: NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 }) };
+  if (!me) return { error: NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 }) };
   const row = await prisma.menuItem.findUnique({ where: { id } });
-  if (!row) return { error: NextResponse.json({ error: "Không tìm thấy mẫu." }, { status: 404 }) };
-  if (row.ownerId !== me) return { error: NextResponse.json({ error: "Không phải menu của bạn." }, { status: 403 }) };
+  if (!row) return { error: NextResponse.json({ error: "Không tìm thấy mẫu.", errorEn: "Couldn't find this design." }, { status: 404 }) };
+  if (row.ownerId !== me) return { error: NextResponse.json({ error: "Không phải menu của bạn.", errorEn: "This isn't your menu." }, { status: 403 }) };
   return { row };
 }
 
@@ -22,13 +24,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // Chỉ bật/tắt hiển thị
   if (Object.keys(body).length === 1 && typeof body.active === "boolean") {
     const row = await prisma.menuItem.update({ where: { id }, data: { active: body.active } });
-    return NextResponse.json({ item: toPublicMenuItem(row, true) });
+    return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) });
   }
   const parsed = parseMenuItem(body);
-  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorEn: errorEn(parsed.error) }, { status: 400 });
   const v = parsed.value;
   const row = await prisma.menuItem.update({ where: { id }, data: { ...v, images: JSON.stringify(v.images), materials: JSON.stringify(v.materials) } });
-  return NextResponse.json({ item: toPublicMenuItem(row, true) });
+  // Tên tiếng Anh thợ xác nhận / sửa → lưu ngay. Đổi tên tiếng Việt mà không gửi tên tiếng Anh → bản dịch cũ
+  // tự hết hiệu lực (mã băm bản gốc đổi) và được dịch lại sau khi trả lời.
+  const en = parseMenuItemEn(body);
+  if (en.nameEn || en.descriptionEn) await translateMenuItemOnSave(row, en).catch(() => {});
+  else after(() => translateMenuItemOnSave(row).catch(() => {}));
+  return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) });
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {

@@ -21,12 +21,12 @@ export async function POST(req: Request) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const key = `push-native:${getClientIp(req)}`;
-  if (isRateLimited(key, 20, 600_000)) return NextResponse.json({ error: "Thử lại sau." }, { status: 429 });
+  if (isRateLimited(key, 20, 600_000)) return NextResponse.json({ error: "Thử lại sau.", errorEn: "Please try again later." }, { status: 429 });
   recordAttempt(key, 600_000);
   const body = (await req.json().catch(() => ({}))) as { token?: unknown; platform?: unknown };
-  if (!validToken(body.token)) return NextResponse.json({ error: "Token không hợp lệ." }, { status: 400 });
+  if (!validToken(body.token)) return NextResponse.json({ error: "Token không hợp lệ.", errorEn: "Invalid token." }, { status: 400 });
   const platform = body.platform === "ios" ? "ios" : "android";
-  if (platform === "ios" ? !apnsEnabled() : !fcmEnabled()) return NextResponse.json({ error: "Thông báo app chưa bật trên máy chủ." }, { status: 503 });
+  if (platform === "ios" ? !apnsEnabled() : !fcmEnabled()) return NextResponse.json({ error: "Thông báo app chưa bật trên máy chủ.", errorEn: "App notifications aren't set up on the server." }, { status: 503 });
   const endpoint = (platform === "ios" ? "apns:" : "fcm:") + body.token;
   try {
     // Token gắn với THIẾT BỊ: người khác đăng nhập trên máy này → token chuyển chủ.
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("push native subscribe error:", err);
-    return NextResponse.json({ error: "Chưa bật được thông báo." }, { status: 503 });
+    return NextResponse.json({ error: "Chưa bật được thông báo.", errorEn: "Couldn't turn on notifications." }, { status: 503 });
   }
 }
 
@@ -48,7 +48,7 @@ export async function DELETE(req: Request) {
   const userId = await me();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { token?: unknown };
-  if (!validToken(body.token)) return NextResponse.json({ error: "Token không hợp lệ." }, { status: 400 });
+  if (!validToken(body.token)) return NextResponse.json({ error: "Token không hợp lệ.", errorEn: "Invalid token." }, { status: 400 });
   await prisma.pushSubscription.deleteMany({ where: { endpoint: { in: ["fcm:" + body.token, "apns:" + body.token] }, userId } }).catch(() => {});
   return NextResponse.json({ ok: true });
 }

@@ -135,12 +135,13 @@ export default function NailStudio({ photos = [], market = "US", onSend, sendLab
       return;
     }
     if (nails.length >= 5) { toast(tr("Đã đủ 5 móng — bấm Tạo mẫu.", "All 5 nails found — tap Create.")); return; }
+    const centre = market === "AU" ? "centre" : "center";
     const id = `t${seq.current++}`;
     setWorking(true);
     engine.current.call({ kind: "tap", id, point: p }).then((rep) => {
       apply(rep);
       if (rep.kind === "nails" && rep.added) added.current.push(id);
-      else toast(tr("Chưa nhận ra móng ở đó — chạm đúng giữa móng, hoặc bật “Chạm gốc + đầu”.", "Couldn't find a nail there — tap its centre, or switch on “Tap base + tip”."), { icon: "👆" });
+      else toast(tr("Chưa nhận ra móng ở đó — chạm đúng giữa móng, hoặc chạm gốc rồi chạm đầu móng.", `Couldn't find a nail there — tap its ${centre}, or tap its base, then its tip.`), { icon: "👆" });
     }).catch(() => {}).finally(() => setWorking(false));
   };
 
@@ -271,7 +272,7 @@ export default function NailStudio({ photos = [], market = "US", onSend, sendLab
 
       {step === "photo" && (
         <section className="space-y-3">
-          <p className="text-sm text-slate-300">{tr("Chụp mu bàn tay (thấy rõ móng, đủ sáng) — máy tự nhận móng và gợi ý mẫu hợp tay:", "Snap the back of the hand (nails clearly visible, good light) — we find the nails and suggest looks that suit the hand:")}</p>
+          <p className="text-sm text-slate-300">{tr("Chọn ảnh mu bàn tay, thấy rõ móng và đủ sáng:", "Use a photo of the back of the hand, with the nails in clear view and good light:")}</p>
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {photos.slice(0, 6).map((u) => (
@@ -298,11 +299,11 @@ export default function NailStudio({ photos = [], market = "US", onSend, sendLab
                 ? tr("Đang tìm móng trên ảnh…", "Finding the nails…")
                 : manual
                   ? pending
-                    ? tr("Giờ chạm vào ĐẦU móng đó (mép móng phía ngoài).", "Now tap the TIP of that nail (free edge).")
-                    : tr("Chạm GỐC móng (sát da) rồi chạm ĐẦU móng.", "Tap the nail BASE (at the cuticle), then its TIP.")
+                    ? tr("Giờ chạm vào đầu móng đó (mép móng phía ngoài).", "Now tap the tip of that nail (the free edge).")
+                    : tr("Chạm gốc móng (sát da) rồi chạm đầu móng.", "Tap the base of the nail (at the cuticle), then its tip.")
                   : nails.length
-                    ? tr(`Đã nhận ${nails.length} móng. Móng nào còn thiếu: chạm 1 lần vào giữa móng · nhận nhầm: chạm vào viền để bỏ.`, `${nails.length} nails found. Missing one? Tap its centre once · wrong one? Tap its outline to remove.`)
-                    : tr("Chưa tự nhận được móng — chạm 1 lần vào giữa từng móng.", "Couldn't find nails automatically — tap the centre of each nail.")}
+                    ? tr(`Đã nhận ${nails.length} móng. Móng nào còn thiếu: chạm 1 lần vào giữa móng · nhận nhầm: chạm vào viền để bỏ.`, `${nails.length} ${nails.length === 1 ? "nail" : "nails"} found. Missing one? Tap its ${market === "AU" ? "centre" : "center"} once · Wrong one? Tap its outline to remove it.`)
+                    : tr("Chưa tự nhận được móng — chạm 1 lần vào giữa từng móng.", `Couldn't find nails automatically — tap the ${market === "AU" ? "centre" : "center"} of each nail.`)}
             </span>
           </p>
           <div className="relative cursor-crosshair overflow-hidden rounded-2xl ring-1 ring-white/10" onClick={tap} data-busy={detecting || working ? "1" : "0"}>
@@ -323,7 +324,7 @@ export default function NailStudio({ photos = [], market = "US", onSend, sendLab
           {profileCard}
           <button type="button" onClick={() => { setManual((m) => !m); setPending(null); }} aria-pressed={manual} className={`flex min-h-[40px] w-full items-center justify-center gap-2 rounded-2xl text-xs font-bold ring-1 ${manual ? "bg-pink-600/20 text-pink-200 ring-pink-400/40" : "bg-white/[0.04] text-slate-300 ring-white/10"}`}>
             {manual ? <Hand className="h-4 w-4" /> : <MousePointerClick className="h-4 w-4" />}
-            {manual ? tr("Đang chạm gốc + đầu móng — bấm để về chạm 1 lần", "Tap base + tip mode — tap to switch back") : tr("Móng khó nhận? Chạm gốc + đầu móng", "Hard nail? Tap base + tip instead")}
+            {manual ? tr("Đang chạm gốc rồi đầu móng — bấm để về chạm 1 lần", "Tapping base, then tip — tap to switch back") : tr("Móng chưa nhận được? Chạm gốc rồi chạm đầu móng", "Nail not picked up? Tap its base, then its tip")}
           </button>
           <div className="grid grid-cols-3 gap-2">
             <button type="button" onClick={undo} disabled={!pending && !nails.length} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] text-sm font-bold text-slate-200 ring-1 ring-white/10 disabled:opacity-40"><Undo2 className="h-4 w-4" />{tr("Hoàn tác", "Undo")}</button>

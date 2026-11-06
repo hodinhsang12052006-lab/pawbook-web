@@ -47,7 +47,7 @@ const noCall = (user, timeout = 10000) => user.page.locator("[data-call-phase]")
 
 async function openChat(user, partnerId) {
   await user.page.goto(BASE_URL + `/messages?to=${partnerId}`);
-  await user.page.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+  await user.page.locator("[data-chat-input]").waitFor({ timeout: 20000 });
   await user.page.waitForTimeout(1500); // chờ Pusher subscribe
 }
 const dial = (user, type) => user.page.getByTitle(type === "audio" ? /Cuộc gọi thoại/ : /Cuộc gọi video/).first().click();

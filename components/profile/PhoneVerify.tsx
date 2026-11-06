@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useRef, useState } from "react";
 import { BadgeCheck, Loader2, ShieldCheck, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -44,7 +45,7 @@ export default function PhoneVerify({ dirty = false, refreshKey = 0 }: { dirty?:
     try {
       const res = await fetch("/api/phone/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send", locale: currentLocale() }) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Không gửi được mã.", "Couldn't send the code."));
+      if (!res.ok) throw new Error(apiError(d, "Không gửi được mã.", "Couldn't send the code."));
       setSentTo(d.to);
       setOpen(true);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -60,7 +61,7 @@ export default function PhoneVerify({ dirty = false, refreshKey = 0 }: { dirty?:
     try {
       const res = await fetch("/api/phone/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check", code }) });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || tr("Mã không đúng.", "Wrong code."));
+      if (!res.ok) throw new Error(apiError(d, "Mã không đúng.", "Wrong code."));
       playSound("success");
       toast.success(tr("Đã xác minh số điện thoại! Hồ sơ có dấu ✓ đáng tin hơn.", "Phone verified! Your profile now shows a trusted ✓."));
       setSt((s) => (s ? { ...s, verified: true } : s));

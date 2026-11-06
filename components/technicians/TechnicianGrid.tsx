@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { AlertCircle, Flame, Play, Zap } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, Play, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient, avatarGradientClassic } from "@/lib/avatar";
@@ -36,26 +36,6 @@ interface TechnicianGridProps {
 // Hiệu ứng bấm nút kiểu app native
 const PRESS = "active:scale-95 transition-transform duration-100";
 
-// FOMO ngược cho CHỦ TIỆM (đối xứng với banner "cầu thợ" bên JobBoard dành
-// cho thợ) — cùng data quét thật cho thấy lượng "chủ tìm thợ" áp đảo hẳn
-// "thợ tìm việc", tức thợ mới là bên khan hiếm. Nhắn nhẹ điều đó với chủ
-// tiệm đang lướt "Thợ Đang Rảnh" để họ nhắn tin/unlock sớm thay vì lưỡng lự,
-// không bịa số "X tiệm khác đang xem" vì app chưa có tracking lượt xem thật.
-function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: string }) {
-  useTr(); // render lại khi đổi VI/EN
-  const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
-  const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
-  const scopeLabel = stateSignal ? tr(`tại ${stateName(market, state)}`, `in ${stateName(market, state)}`) : market === "US" ? tr("tại Mỹ", "in the US") : tr("tại Úc", "in Australia");
-
-  return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-pn-surface px-4 py-3 mb-3">
-      <Zap className="h-5 w-5 text-amber-400 flex-shrink-0" />
-      <p className="text-xs sm:text-sm text-slate-200">
-        <span className="font-black text-amber-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span> {scopeLabel}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.", " in one survey of nail groups (Sep 2026) — great techs get many offers, message as soon as you find a match.")}
-      </p>
-    </div>
-  );
-}
 
 // Chưa có thợ (thật) ở khu vực: không để trang trống — mời đúng người làm đúng việc, kèm số tin tuyển THẬT.
 function EmptyTechs({ market, state, role }: { market: "US" | "AU"; state: string; role: string | null }) {
@@ -70,21 +50,20 @@ function EmptyTechs({ market, state, role }: { market: "US" | "AU"; state: strin
   const tech = role === "TECHNICIAN";
   return (
     <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-gradient-to-br from-pink-500/10 via-fuchsia-500/5 to-transparent p-6 text-center ring-1 ring-white/10">
-      <p className="text-4xl">💅</p>
-      <h3 className="text-lg font-black text-white">{tr(`Thợ đang tìm việc ở ${where} sẽ hiện ở đây`, `Techs looking for work in ${where} show up here`)}</h3>
+      <h3 className="text-lg font-black text-white">{tr(`Chưa có thợ sẵn sàng tại ${where}.`, `No available techs in ${where} yet.`)}</h3>
       {owner ? (
         <>
-          <p className="text-sm leading-relaxed text-slate-300">{tr("Đăng tin tuyển — thợ trong khu vực bật báo việc sẽ nhận thông báo ngay khi tin lên, nhắn thẳng cho bạn.", "Post a job — techs nearby with job alerts get notified instantly and message you directly.")}</p>
-          <a href="/jobs/create" className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tr("Đăng tin tuyển thợ", "Post a job")}</a>
+          <p className="text-sm leading-relaxed text-slate-300">{tr("Đăng tin tuyển để thợ gần tiệm tìm đến bạn.", "Post a job so techs nearby can find you.")}</p>
+          <Link href="/jobs/create" className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tr("Đăng tin tuyển", "Post a job")}</Link>
         </>
       ) : (
         <>
           <p className="text-sm leading-relaxed text-slate-300">
-            {jobs ? tr(`Đang có ${jobs} tiệm tuyển thợ ở ${where}. `, `${jobs} salons are hiring in ${where}. `) : ""}
-            {tr("Đăng hồ sơ + vài ảnh móng đẹp nhất để tiệm tìm thấy bạn trước — miễn phí.", "Add your profile and best nail photos so salons find you first — free.")}
+            {jobs ? tr(`Hiện có ${jobs} việc đang tuyển tại ${where}. `, `There are ${jobs} open jobs in ${where}. `) : ""}
+            {tr("Tạo hồ sơ và thêm vài ảnh tay nghề để tiệm tìm đến bạn.", "Create your profile and add a few photos of your work so salons can find you.")}
           </p>
-          <a href={tech ? "/profile" : "/auth/register?role=technician"} className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tech ? tr("Thêm ảnh portfolio", "Add portfolio photos") : tr("Tạo hồ sơ thợ miễn phí", "Create a free tech profile")}</a>
-          {!!jobs && <a href="/?tab=jobs" className="block text-xs font-bold text-pink-300 hover:underline">{tr(`Xem ${jobs} việc đang tuyển →`, `See ${jobs} open jobs →`)}</a>}
+          <Link href={tech ? "/profile" : "/auth/register?role=technician"} className="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-pink-600/20">{tech ? tr("Thêm ảnh tay nghề", "Add photos of your work") : tr("Tạo hồ sơ thợ nail", "Create your tech profile")}</Link>
+          {!!jobs && <Link href="/?tab=jobs" className="block text-xs font-bold text-pink-300 hover:underline">{tr(`Xem ${jobs} việc đang tuyển`, `See ${jobs} open jobs`)} →</Link>}
         </>
       )}
     </div>
@@ -141,7 +120,7 @@ function StatusBadge({ status }: { status: string }) {
   if (status === "URGENT") {
     return (
       <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
-        <Flame className="h-2.5 w-2.5 flex-shrink-0" /> <span className="truncate">{tr("Tìm việc gấp", "Needs work now")}</span>
+        <Zap className="h-2.5 w-2.5 flex-shrink-0" /> <span className="truncate">{tr("Sẵn sàng ngay", "Available now")}</span>
       </span>
     );
   }
@@ -149,14 +128,14 @@ function StatusBadge({ status }: { status: string }) {
     return (
       <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight refined:h-6 refined:max-w-[calc(100%-1rem)] refined:items-center refined:gap-1.5 refined:whitespace-nowrap refined:rounded-full refined:bg-black/65 refined:px-2.5 refined:py-0 refined:text-[11px] refined:font-semibold refined:ring-1 refined:ring-white/10 refined:backdrop-blur-sm refined:[&>span:last-child]:line-clamp-none">
         <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse refined:mt-0 refined:bg-emerald-400 refined:animate-none" />
-        <span className="line-clamp-2">{tr("Đang rảnh hôm nay", "Available today")}</span>
+        <span className="line-clamp-2">{tr("Sẵn sàng nhận việc", "Open to work")}</span>
       </span>
     );
   }
   if (status === "BETTER") {
     return (
       <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white">
-        <span className="truncate">{tr("Đang tìm chỗ tốt hơn", "Open to better offers")}</span>
+        <span className="truncate">{tr("Cân nhắc nơi mới", "Open to better offers")}</span>
       </span>
     );
   }
@@ -230,7 +209,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
               key={s}
               className="rounded-full bg-black/60 backdrop-blur-sm border border-white/15 px-2 py-0.5 text-[9px] font-bold text-white block truncate max-w-full"
             >
-              {i === 0 ? tr(`Chuyên ${s}`, `${valueLabel(s)} specialist`) : valueLabel(s)}
+              {i === 0 ? tr(`Chuyên ${valueLabel(s)}`, `${valueLabel(s)} specialist`) : valueLabel(s)}
             </span>
           ))}
         </div>
@@ -238,7 +217,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
         <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
-        <p className="text-[10px] text-slate-300 truncate">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", " yrs exp")}</p>
+        <p className="text-[10px] text-slate-300 truncate">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", tech.yearsOfExperience === 1 ? " yr exp" : " yrs exp")}</p>
       </div>
 
       <StatusBadge status={tech.status} />
@@ -250,7 +229,6 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const { user } = useSessionUser();
-  const isOwner = user?.role === "OWNER";
   const [techs, setTechs] = useState<TechnicianType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -298,7 +276,6 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
   if (techs.length === 0) {
     return (
       <div>
-        {isOwner && <OwnerScarcityBanner market={market} state={state} />}
         <EmptyTechs market={market} state={state} role={user?.role ?? null} />
       </div>
     );
@@ -306,7 +283,6 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
 
   return (
     <div className="animate-fadeIn">
-      {isOwner && <OwnerScarcityBanner market={market} state={state} />}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
         {techs.map((tech) => (
           <TechnicianCard key={tech.id} tech={tech} onClick={() => router.push(`/profile/${tech.userId}`)} />

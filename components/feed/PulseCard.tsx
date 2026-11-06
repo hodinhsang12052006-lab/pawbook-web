@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import { Activity, Loader2, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -38,7 +39,7 @@ export default function PulseCard() {
     try {
       const res = await fetch("/api/pulse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ option }) });
       const next = await res.json();
-      if (!res.ok) throw new Error(next.error || tr("Không ghi nhận được.", "Couldn't record your answer."));
+      if (!res.ok) throw new Error(apiError(next, "Không ghi nhận được.", "Couldn't record your answer."));
       setData(next);
       playSound("success");
     } catch (err) {
@@ -50,9 +51,9 @@ export default function PulseCard() {
 
   const shown = data.localResults ?? data.results;
   return (
-    <section aria-label={tr("Nhịp đau tuần", "Weekly pulse")} className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
+    <section aria-label={tr("Khảo sát nhanh tuần này", "This week's quick poll")} className="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/[0.08] via-slate-900/60 to-slate-900/40 p-4">
       <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-sky-300">
-        <Activity className="h-3.5 w-3.5" />{tr(" Nhịp đau tuần · 1 chạm, ẩn danh", " Weekly pulse · one tap, anonymous")}
+        <Activity className="h-3.5 w-3.5" />{tr(" Khảo sát nhanh tuần này · 1 chạm, ẩn danh", " This week's quick poll · one tap, anonymous")}
       </p>
       <h3 className="mt-1.5 text-[15px] font-black leading-snug text-white">{dt(q.text)}</h3>
 

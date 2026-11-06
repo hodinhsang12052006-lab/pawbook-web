@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { X, ArrowRight, Flame, Sparkles, Heart, BarChart3 } from "lucide-react";
-import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
+import { X, ArrowRight, Briefcase, Sparkles, Heart } from "lucide-react";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
-type Kind = "job" | "tech" | "post" | "survey";
+type Kind = "job" | "tech" | "post";
 
 interface FomoMessage {
   kind: Kind;
@@ -20,35 +20,17 @@ interface FomoMessage {
   href?: string;
   at?: string; // ISO — sự kiện thật thì hiện "x phút trước"
   actor?: { id: string; name: string; avatarUrl: string | null };
-  m?: "US" | "AU"; // số khảo sát chỉ của 1 thị trường
+  m?: "US" | "AU"; // sự kiện chỉ của 1 thị trường
   en?: { title: string; text: string; chip?: string }; // sự kiện thật: bản EN từ máy chủ
 }
 
-// Số liệu tổng hợp THẬT từ 1 đợt khảo sát cộng đồng (lib/nailRadarData.ts).
-// Ghi rõ NGUỒN + THỜI ĐIỂM — đây là số của 1 đợt khảo sát, không phải số
-// "ngay lúc này"; nói quá là quảng cáo gây hiểu lầm.
-// Hàm (không phải hằng) để chữ đổi theo VI/EN lúc tạo hàng đợi.
-// market: chỉ hiện số của đúng thị trường người dùng (thợ Texas không cần số của Úc).
-const SURVEY_MESSAGES = (market?: string | null): FomoMessage[] => {
-  const SURVEY = tr("khảo sát nhóm nail Facebook, 9/2026", "Facebook nail-group survey, Sep 2026");
-  const title = tr("Nhịp thị trường", "Market pulse");
-  const all: FomoMessage[] = [
-  { kind: "survey", title, text: tr(`${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ tin chủ tìm thợ nail tại Mỹ & Úc trong 1 đợt ${SURVEY} — thợ đang là bên được săn đón`, `${TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU}+ salon posts seeking nail techs in the US & Australia in one ${SURVEY} — techs are in demand`) },
-  { kind: "survey", m: "US", title, text: tr(`Texas dẫn đầu nhu cầu với ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} tin tìm thợ, nhiều nhất là thợ Bột/Acrylic (${SURVEY})`, `Texas leads demand with ${DEMAND_SIGNAL.US?.TX?.demandCount ?? 0} hiring posts, mostly for acrylic techs (${SURVEY})`) },
-  { kind: "survey", m: "AU", title, text: tr(`Úc: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} tin tìm thợ tại NSW & Victoria (${SURVEY})`, `Australia: ${(DEMAND_SIGNAL.AU?.NSW?.demandCount ?? 0) + (DEMAND_SIGNAL.AU?.VIC?.demandCount ?? 0)} hiring posts in NSW & Victoria (${SURVEY})`) },
-  ];
-  return all.filter((x) => !x.m || !market || x.m === market);
-};
+// CHỈ hoạt động thật từ /api/activity (tin tuyển mới, thợ cập nhật tay nghề, bài được thích) — không
+// sự kiện bịa, không chèn số khảo sát 9/2026 (số đó chỉ nằm trong Nail Radar, kèm nguồn).
 
-// Trước đây xen kẽ "sự kiện" BỊA (tên người, số tiền, "3 phút trước" không
-// hề xảy ra) — social proof giả. Giờ CHỈ có hoạt động thật từ /api/activity
-// + số liệu khảo sát có ghi nguồn.
-
-const KIND_STYLE: Record<Kind, { icon: typeof Flame; tile: string; label: string; bar: string }> = {
-  job: { icon: Flame, tile: "from-orange-500 to-red-500", label: "text-orange-300", bar: "from-orange-500 to-red-500" },
+const KIND_STYLE: Record<Kind, { icon: typeof Briefcase; tile: string; label: string; bar: string }> = {
+  job: { icon: Briefcase, tile: "from-violet-500 to-fuchsia-600", label: "text-violet-300", bar: "from-violet-500 to-fuchsia-500" },
   tech: { icon: Sparkles, tile: "from-pink-500 to-fuchsia-600", label: "text-pink-300", bar: "from-pink-500 to-fuchsia-500" },
   post: { icon: Heart, tile: "from-rose-500 to-pink-500", label: "text-rose-300", bar: "from-rose-500 to-pink-500" },
-  survey: { icon: BarChart3, tile: "from-emerald-500 to-teal-500", label: "text-emerald-300", bar: "from-emerald-500 to-teal-400" },
 };
 
 // Nhịp hiển thị: lần đầu sau vài giây, sau đó thưa dần; mỗi phiên tối đa vài
@@ -92,7 +74,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function FomoToast() {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const router = useRouter();
   const [current, setCurrent] = useState<FomoMessage | null>(null);
   const { locale } = useLanguage();
@@ -104,7 +86,7 @@ export default function FomoToast() {
   const market = (user?.market as string | undefined) ?? null;
   const marketRef = useRef(market);
   marketRef.current = market; // phiên đăng nhập có thể tải xong SAU khi hàng đợi đã dựng
-  const poolRef = useRef<FomoMessage[]>(SURVEY_MESSAGES(null));
+  const poolRef = useRef<FomoMessage[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleRef = useRef<((delay: number) => void) | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,8 +104,7 @@ export default function FomoToast() {
       .then((r) => (r.ok ? r.json() : []))
       .then((events: FomoMessage[]) => {
         if (cancelled || !Array.isArray(events)) return;
-        // Sự kiện thật là chính; số khảo sát chỉ xen vào cho đỡ lặp.
-        poolRef.current = [...events.filter((e) => e && e.text), ...SURVEY_MESSAGES(null)];
+        poolRef.current = events.filter((e) => e && e.text);
         queueRef.current = [];
       })
       .catch(() => {});
@@ -198,7 +179,7 @@ export default function FomoToast() {
   // Khách đi làm nail không cần tin tuyển thợ / thợ cập nhật portfolio — đó là chuyện nghề.
   if (!current || quiet || user?.role === "CLIENT") return null;
   const msg = locale === "en" && current.en ? { ...current, ...current.en } : current;
-  const st = KIND_STYLE[current.kind] ?? KIND_STYLE.survey;
+  const st = KIND_STYLE[current.kind] ?? KIND_STYLE.job;
   const Icon = st.icon;
 
   const open = () => {
@@ -269,7 +250,7 @@ export default function FomoToast() {
                 )}
                 {current.href && (
                   <span className="ml-auto inline-flex items-center gap-0.5 text-[11px] font-bold text-pink-300">
-                    Xem <ArrowRight className="h-3 w-3" />
+                    {tr("Xem", "View")} <ArrowRight className="h-3 w-3" />
                   </span>
                 )}
               </div>
@@ -280,7 +261,7 @@ export default function FomoToast() {
         <button
           type="button"
           onClick={() => dismiss(true)}
-          aria-label="Ẩn thông báo"
+          aria-label={tr("Ẩn thông báo", "Dismiss")}
           className="absolute right-1.5 top-1.5 rounded-full p-1.5 text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
         >
           <X className="h-3.5 w-3.5" />

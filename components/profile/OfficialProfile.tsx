@@ -6,7 +6,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   MessageCircle, Share2, PenSquare, Radar, ShieldCheck, Mail, Copy, FileText, Lock, HeartHandshake, BadgeCheck, Users, Newspaper,
-  Briefcase, Palette, Receipt, TrendingUp, Clock, Globe2, CalendarDays, ChevronRight, Bot, Flame, MapPin, LayoutGrid,
+  Briefcase, Palette, Receipt, TrendingUp, Clock, Globe2, CalendarDays, ChevronRight, Bot, MapPin, LayoutGrid,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
@@ -15,7 +15,7 @@ import FeedPostCard, { type FeedPost } from "@/components/feed/FeedPostCard";
 import { DesignsStrip } from "@/components/designs/DesignViews";
 import { EmptyState, SectionTitle } from "@/components/profile/ProfileSections";
 import { valueLabel } from "@/lib/i18n/valueLabel";
-import { tr } from "@/lib/i18n/tr";
+import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
 interface OfficialStats { members: number; availableTechs: number; jobs30d: number; posts: number }
@@ -26,14 +26,14 @@ interface Props {
 interface MiniJob { id: string; title: string; salonName: string; city: string; state: string; salaryType?: string | null; salaryAmount?: string | null; isUrgent?: boolean }
 
 // Email hỗ trợ dùng chung toàn site (Điều khoản, Bảo mật, Quên mật khẩu) — đổi qua NEXT_PUBLIC_SUPPORT_EMAIL.
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawos.com";
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
 
 // Lối tắt — icon nét vẽ đồng bộ (không dùng emoji), mỗi mục 1 màu thương hiệu.
 const SHORTCUTS = [
-  { href: "/?tab=jobs", icon: Briefcase, vi: "Việc gấp", en: "Urgent jobs", hintVi: "Tiệm đang cần thợ ngay", hintEn: "Salons hiring now", tone: "text-orange-300 from-orange-500/25 to-rose-500/10 ring-orange-400/25" },
+  { href: "/?tab=jobs", icon: Briefcase, vi: "Việc làm", en: "Jobs", hintVi: "Tiệm đang tuyển thợ", hintEn: "Salons hiring now", tone: "text-violet-300 from-violet-500/25 to-fuchsia-500/10 ring-violet-400/25" },
   { href: "/designs", icon: Palette, vi: "Mẫu nail", en: "Designs", hintVi: "Mẫu mới mỗi ngày + vật tư", hintEn: "Daily designs + materials", tone: "text-pink-300 from-pink-500/25 to-fuchsia-500/10 ring-pink-400/25" },
-  { href: "/tools/income-tracker", icon: Receipt, vi: "Thuế & tip", en: "Tax & tips", hintVi: "Ghi tip, chuẩn bị mùa thuế", hintEn: "Log tips, get tax-ready", tone: "text-emerald-300 from-emerald-500/25 to-teal-500/10 ring-emerald-400/25" },
-  { href: "/trends", icon: TrendingUp, vi: "Lương", en: "Pay trends", hintVi: "Lương theo tiểu bang", hintEn: "Pay by state", tone: "text-sky-300 from-sky-500/25 to-blue-500/10 ring-sky-400/25" },
+  { href: "/tools/income-tracker", icon: Receipt, vi: "Thu nhập & tip", en: "Income & tips", hintVi: "Ghi turn và tip từng ca", hintEn: "Log turns and tips per shift", tone: "text-emerald-300 from-emerald-500/25 to-teal-500/10 ring-emerald-400/25" },
+  { href: "/trends", icon: TrendingUp, vi: "Xu hướng", en: "Trends", hintVi: "Mẫu và lương theo bang", hintEn: "Designs and pay by state", tone: "text-sky-300 from-sky-500/25 to-blue-500/10 ring-sky-400/25" },
   { href: "#an-toan", icon: ShieldCheck, vi: "An toàn", en: "Safety", hintVi: "Tránh lừa đảo, báo cáo", hintEn: "Avoid scams, report", tone: "text-violet-300 from-violet-500/25 to-indigo-500/10 ring-violet-400/25" },
 ] as const;
 const fmt = (n?: number) => (typeof n === "number" ? n.toLocaleString("en-US") : "—");
@@ -50,7 +50,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
   const s = profile.official;
 
   useEffect(() => {
-    fetch(`/api/posts?authorId=${profile.id}`)
+    fetch(`/api/posts?authorId=${profile.id}&lang=${currentLocale()}`)
       .then((r) => (r.ok ? r.json() : { posts: [] }))
       // Bài ghim (mở đầu bằng 📌) luôn nằm trên cùng, còn lại mới nhất trước.
       .then((d) => setPosts([...(d.posts || [])].sort((a: FeedPost, b: FeedPost) => Number(String(b.content ?? "").startsWith("📌")) - Number(String(a.content ?? "").startsWith("📌")))))
@@ -90,7 +90,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
 
   const stats = [
     { v: fmt(s?.members), l: tr("Thành viên", "Members") },
-    { v: fmt(s?.availableTechs), l: tr("Thợ đang rảnh", "Techs available") },
+    { v: fmt(s?.availableTechs), l: tr("Thợ sẵn sàng", "Available techs") },
     { v: fmt(s?.jobs30d), l: tr("Tin 30 ngày", "Jobs · 30d") },
     { v: fmt(s?.posts), l: tr("Bài cộng đồng", "Community posts") },
   ];
@@ -98,7 +98,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
   const infoRows = (
     <ul className="space-y-2.5 text-sm text-slate-300">
       <li className="flex items-center gap-3"><Globe2 className="h-4 w-4 flex-shrink-0 text-slate-500" /><span className="flex items-center gap-1.5"><Flag code="US" /><Flag code="AU" />{tr(" Phục vụ thợ & tiệm tại Mỹ và Úc", " Serving techs & salons in the US and Australia")}</span></li>
-      <li className="flex items-center gap-3"><Clock className="h-4 w-4 flex-shrink-0 text-slate-500" />{tr("Thường trả lời trong 24 giờ", "Usually replies within 24 hours")}</li>
+      <li className="flex items-center gap-3"><Clock className="h-4 w-4 flex-shrink-0 text-slate-500" />{tr("Nhắn tin bất cứ lúc nào — đội ngũ PawNail sẽ phản hồi", "Message anytime — the PawNail team will get back to you")}</li>
       <li className="flex items-center gap-3"><Mail className="h-4 w-4 flex-shrink-0 text-slate-500" /><span className="truncate">{SUPPORT_EMAIL}</span></li>
       <li className="flex items-center gap-3"><Globe2 className="h-4 w-4 flex-shrink-0 text-slate-500" />bitpawos.com</li>
       {since && <li className="flex items-center gap-3"><CalendarDays className="h-4 w-4 flex-shrink-0 text-slate-500" />{tr(`Hoạt động từ ${since}`, `Active since ${since}`)}</li>}
@@ -114,7 +114,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
           <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cho1.jpg" alt="" aria-hidden className="absolute -right-6 -top-6 h-48 w-48 rotate-12 rounded-[2.5rem] object-cover opacity-25 sm:h-64 sm:w-64 lg:right-10 lg:h-72 lg:w-72" />
-          <div className="absolute bottom-3 right-4 rounded-full bg-black/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/90 backdrop-blur sm:right-6 sm:text-[11px]">PawNail Jobs · Official</div>
+          <div className="absolute bottom-3 right-4 rounded-full bg-black/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/90 backdrop-blur sm:right-6 sm:text-[11px]">{tr("PawNail · Chính thức", "PawNail · Official")}</div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/80" />
         </div>
 
@@ -135,17 +135,17 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
               <h1 className="flex items-center gap-2 text-[26px] font-black tracking-tight text-white sm:text-[30px]">
                 {profile.name} <VerifiedBadge className="h-6 w-6" />
               </h1>
-              <p className="mt-0.5 text-sm font-semibold text-sky-300">{tr("Tài khoản chính thức của PawNail Jobs", "Official PawNail Jobs account")}</p>
+              <p className="mt-0.5 text-sm font-semibold text-sky-300">{tr("Tài khoản chính thức của PawNail", "Official PawNail account")}</p>
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-200 ring-1 ring-sky-500/30"><BadgeCheck className="h-3.5 w-3.5" />{tr(" Đã xác minh", " Verified")}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 px-2.5 py-1 text-[11px] font-bold text-pink-200 ring-1 ring-pink-500/25"><ShieldCheck className="h-3.5 w-3.5" />{tr(" Kênh hỗ trợ & an toàn", " Support & safety")}</span>
               </div>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-                {tr("Nền tảng kết nối thợ nail và chủ tiệm người Việt tại Mỹ & Úc — miễn phí, không qua môi giới. Nhắn tin cho chúng tôi khi cần hỗ trợ tài khoản, báo lừa đảo hay góp ý tính năng.", "Connecting Vietnamese nail techs and salon owners across the US & Australia — free, no middlemen. Message us for account help, to report scams, or to suggest features.")}
+                {tr("Tài khoản chính thức của PawNail — nền tảng cho khách, thợ nail và chủ tiệm tại Mỹ và Úc. Nhắn tin cho chúng tôi khi cần hỗ trợ tài khoản, báo lừa đảo hoặc góp ý tính năng.", "The official PawNail account. PawNail is the platform for nail clients, technicians and salons in the US and Australia. Message us for account help, to report a scam or to suggest a feature.")}
               </p>
               <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 lg:hidden">
                 <span className="flex items-center gap-1"><Flag code="US" /><Flag code="AU" /> {tr("Mỹ & Úc", "US & AU")}</span>
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{tr("Trả lời trong 24 giờ", "Replies within 24h")}</span>
+                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{tr("Đội ngũ PawNail phản hồi tin nhắn", "Replies from the PawNail team")}</span>
               </p>
             </div>
           </div>
@@ -219,8 +219,8 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
                 <div id="an-toan" className={`${card} scroll-mt-28 space-y-3`}>
                   <SectionTitle icon={HeartHandshake}>{tr("Cam kết của PawNail", "Our commitments")}</SectionTitle>
                   <ul className="space-y-2.5 text-sm text-slate-300">
-                    <li className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-300" />{tr(" Miễn phí kết nối — thợ và chủ tiệm nói chuyện trực tiếp, không qua môi giới.", " Free to connect — techs and owners talk directly, no middlemen.")}</li>
-                    <li className="flex gap-2.5"><ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-300" />{tr(" Đánh giá 2 chiều từ người làm việc thật; báo cáo vi phạm được xem xét trong 24 giờ.", " Two-way reviews from real coworkers; reports reviewed within 24 hours.")}</li>
+                    <li className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-300" />{tr(" Thợ và tiệm liên hệ trực tiếp — nhắn tin và gọi ngay trong app. PawNail không thu phí thợ và tiệm.", " Techs and salons connect directly: message and call in the app. PawNail doesn't charge techs or salons.")}</li>
+                    <li className="flex gap-2.5"><ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-300" />{tr(" Đánh giá hai chiều từ những người đã thực sự làm việc cùng nhau. Báo cáo vi phạm được đội ngũ PawNail xem xét.", " Two-way reviews from people who actually worked together. Reports are reviewed by the PawNail team.")}</li>
                     <li className="flex gap-2.5"><Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-300" />{tr(" Không bao giờ yêu cầu chuyển tiền đặt cọc để \"giữ chỗ làm\" — gặp trường hợp này hãy báo ngay.", " We never ask for a deposit to \"hold a job\" — if anyone does, report it right away.")}</li>
                   </ul>
                 </div>
@@ -231,8 +231,8 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
                     <span className="flex-1 select-all text-sm font-semibold text-slate-100">{SUPPORT_EMAIL}</span>
                     <button onClick={copyEmail} aria-label={tr("Sao chép email", "Copy email")} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"><Copy className="h-4 w-4" /></button>
                   </div>
-                  <p className="text-sm text-slate-300">{tr("Cách nhanh nhất: nhắn tin trực tiếp trong app — thường trả lời trong 24 giờ. Báo lừa đảo: bấm ⋮ → Báo cáo trên tin nhắn, bài đăng hoặc hồ sơ.", "Fastest: message us in the app — we usually reply within 24 hours. To report a scam, tap ⋮ → Report on the message, post or profile.")}</p>
-                  {!isSelf && <Link href={`/messages?to=${profile.id}`} className="flex items-center gap-2 text-sm font-bold text-sky-300 hover:text-sky-200"><MessageCircle className="h-4 w-4" />{tr(" Nhắn tin cho PawNail Jobs", " Message PawNail Jobs")}</Link>}
+                  <p className="text-sm text-slate-300">{tr("Nhắn tin cho chúng tôi bất cứ lúc nào — đội ngũ PawNail sẽ phản hồi. Báo lừa đảo: bấm ⋮ → Báo cáo trên tin nhắn, bài đăng hoặc hồ sơ.", "Message us anytime — the PawNail team will get back to you. To report a scam, tap ⋮ → Report on the message, post or profile.")}</p>
+                  {!isSelf && <Link href={`/messages?to=${profile.id}`} className="flex items-center gap-2 text-sm font-bold text-sky-300 hover:text-sky-200"><MessageCircle className="h-4 w-4" />{tr(" Nhắn tin cho PawNail", " Message PawNail")}</Link>}
                 </div>
                 <div className={`${card} space-y-1`}>
                   <SectionTitle icon={FileText}>{tr("Chính sách", "Policies")}</SectionTitle>
@@ -271,7 +271,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
 
           <div className={card}>
             <div className="flex items-center justify-between">
-              <SectionTitle icon={Flame}>{tr("Việc gấp mới nhất", "Latest urgent jobs")}</SectionTitle>
+              <SectionTitle icon={Briefcase}>{tr("Việc làm mới nhất", "Latest jobs")}</SectionTitle>
               <Link href="/?tab=jobs" className="text-xs font-bold text-sky-300 hover:text-sky-200">{tr("Xem tất cả", "See all")}</Link>
             </div>
             {jobs === null ? (

@@ -17,7 +17,8 @@ async function cls(ctx, path = "/") {
   await p.waitForTimeout(5000);
   const v = await p.evaluate(() => window.__cls);
   if (v > 0.1) console.log("   nguồn:", (await p.evaluate(() => window.__src)).join(" || "));
-  const hero = (await p.locator("h1", { hasText: "SÀN KẾT NỐI" }).isVisible()) ? 1 : 0;
+  // Tiêu đề hero nhận diện bằng thuộc tính (không phụ thuộc câu chữ / ngôn ngữ).
+  const hero = (await p.locator("h1[data-hero-title]").isVisible()) ? 1 : 0;
   await p.close();
   return { v: +v.toFixed(3), hero };
 }

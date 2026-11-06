@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Briefcase, ChevronRight, Megaphone, Sparkles, Store } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
-import { tr } from "@/lib/i18n/tr";
+import { currentLocale, tr } from "@/lib/i18n/tr";
+import { menuText } from "@/lib/menu";
 import { useTr } from "@/lib/i18n/useTr";
 
 // Danh sách chat còn ít cuộc trò chuyện → không để khoảng trống: gợi ý bằng DỮ LIỆU THẬT
@@ -18,7 +19,7 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
   const client = role === "CLIENT";
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [techs, setTechs] = useState<Tech[] | null>(null);
-  const [salons, setSalons] = useState<{ id: string; name: string; avatarUrl: string | null; city: string | null; services: { name: string; priceFrom: number }[] }[] | null>(null);
+  const [salons, setSalons] = useState<{ id: string; name: string; avatarUrl: string | null; city: string | null; services: { name: string; nameEn?: string | null; nameVi?: string | null; priceFrom: number }[] }[] | null>(null);
   const m = market === "AU" ? "AU" : "US";
   useEffect(() => {
     // Khách đi làm nail: gợi ý tiệm / thợ có menu để nhắn hỏi mẫu — KHÔNG gợi ý việc làm.
@@ -45,7 +46,7 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
               <Avatar src={s.avatarUrl} name={s.name} seed={s.id} className="h-10 w-10" alt="" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-white">{s.name}</span>
-                <span className="block truncate text-xs text-slate-400">{s.services[0] ? `${s.services[0].name} · $${s.services[0].priceFrom}+` : tr("Nhắn hỏi mẫu & giá", "Ask about looks & prices")}{s.city ? ` · ${s.city}` : ""}</span>
+                <span className="block truncate text-xs text-slate-400">{s.services[0] ? `${menuText({ ...s.services[0], description: null }, currentLocale()).name} · $${s.services[0].priceFrom}+` : tr("Nhắn hỏi mẫu & giá", "Ask about looks & prices")}{s.city ? ` · ${s.city}` : ""}</span>
               </span>
               <ChevronRight className="h-4 w-4 text-slate-500" />
             </Link>

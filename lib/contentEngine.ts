@@ -13,46 +13,48 @@ import type { Market } from "@prisma/client";
 // Mọi nội dung do app tạo đều gắn nhãn "PawNail Studio" — KHÔNG đăng thay hay
 // giả làm thành viên nào.
 
-import { THEMES, type Theme } from "@/lib/studioThemes";
+import { THEMES, themeInMarket, themeTags, themeWindow, type Theme } from "@/lib/studioThemes";
 export { THEMES, type Theme };
 
 const TIPS = {
   TECHNICIAN: [
-    "Chụp ảnh móng dưới ánh sáng tự nhiên gần cửa sổ — màu thật, nhìn \"pro\" hơn hẳn đèn vàng.",
-    "Đăng ít nhất 3 mẫu portfolio rõ nét — hồ sơ có ảnh được chủ tiệm nhắn nhiều hơn hẳn hồ sơ trống.",
-    "Bật trạng thái \"Tìm việc gấp\" khi cần việc — hồ sơ của bạn được ưu tiên hiển thị cho chủ tiệm.",
+    "Chụp ảnh móng dưới ánh sáng tự nhiên gần cửa sổ — lên đúng màu, chuyên nghiệp hơn đèn vàng.",
+    "Đăng ít nhất 3 ảnh tay nghề rõ nét — chủ tiệm xem ảnh trước khi nhắn tin.",
+    "Bật trạng thái \"Sẵn sàng nhận việc ngay\" khi cần việc — hồ sơ của bạn được hiện trước cho chủ tiệm.",
     "Trước khi nhận việc, hỏi rõ cách chia turn và tip tiền mặt hay qua thẻ — ghi lại bằng tin nhắn.",
     "Không chuyển tiền đặt cọc cho bất kỳ ai để \"giữ chỗ làm\" — tiệm thật không bao giờ yêu cầu.",
-    "Ghi turn + tip mỗi tối trong \"Thu nhập & Tip\" — cuối tuần đối chiếu phiếu lương trong 1 phút.",
+    "Ghi turn + tip mỗi tối trong \"Thu nhập & tip\" — cuối tuần đối chiếu với phiếu lương.",
     "Thêm hashtag kỹ năng (#GelX #Dip #Bot) khi đăng bài — chủ tiệm tìm thợ theo đúng kỹ năng đó.",
     "Trả lời tin nhắn tiệm trong 1 giờ — bạn sẽ nhận huy hiệu \"Phản hồi nhanh\" trên hồ sơ.",
-    "Xem Nail Radar trước khi bay sang bang mới — biết mức bao lương để thương lượng tự tin.",
-    "Video ngắn 10 giây quay tay đang làm mẫu giữ người xem lâu hơn ảnh tĩnh.",
+    "Xem Nail Radar trước khi chuyển sang bang mới — biết mức bao lương để thương lượng tự tin.",
+    "Video ngắn 10 giây quay tay đang làm mẫu cho tiệm thấy rõ kỹ thuật của bạn.",
   ],
   OWNER: [
-    "Ghi rõ lương + chia turn ngay trong tin tuyển — tin có số lương cụ thể được thợ liên hệ nhiều hơn.",
-    "Bật \"Cần gấp\" khi thiếu thợ — thợ cùng bang được báo ngay lập tức trên điện thoại.",
-    "Trả lời thợ trong 1 giờ để có huy hiệu \"Phản hồi nhanh\" — thợ giỏi ưu tiên tiệm trả lời nhanh.",
-    "Đăng 3–5 ảnh \"Khoe tiệm\" (không gian, ghế, đèn) — thợ chọn tiệm bằng mắt trước khi gọi.",
+    "Ghi rõ lương + chia turn ngay trong tin tuyển — thợ biết ngay tin có phù hợp hay không.",
+    "Gắn nhãn \"Cần gấp\" khi thiếu thợ — thợ cùng bang nhận thông báo trên điện thoại.",
+    "Trả lời thợ trong 1 giờ để có huy hiệu \"Phản hồi nhanh\" — thợ giỏi thường cân nhắc nhiều lời mời cùng lúc.",
+    "Đăng 3–5 ảnh tiệm (không gian, ghế, đèn) ở mục \"Chia sẻ tác phẩm / tiệm\" — thợ thường chọn tiệm qua ảnh trước khi gọi.",
     "Điền \"Chính sách tiệm\" (chia turn, loại khách, chỗ ở) — trả lời trước câu hỏi thợ nào cũng hỏi.",
-    "So mức lương với Nail Radar của bang trước khi đăng — trả thấp hơn thị trường là tin chìm nghỉm.",
-    "Đánh giá thợ sau khi làm việc — hệ thống đánh giá 2 chiều giúp cả cộng đồng tin nhau hơn.",
-    "Đăng tin vào sáng thứ 2–3 — đầu tuần thợ lên kế hoạch tìm chỗ mới nhiều nhất.",
+    "So mức lương với Nail Radar của bang trước khi đăng — để đặt mức lương cạnh tranh.",
+    "Đánh giá thợ sau khi làm việc — đánh giá 2 chiều giúp thợ và tiệm tin nhau hơn.",
+    "Thêm ảnh hoặc video tiệm vào tin tuyển — thợ hình dung được nơi làm trước khi gọi.",
     "Ghi quyền lợi cụ thể (bao ăn ở, đưa đón) — thợ ở xa quyết định dựa trên chỗ ở.",
-    "Nhắn tin chào thợ mới bằng tên + 1 câu về tiệm — tỉ lệ được trả lời cao hơn tin nhắn chung chung.",
+    "Nhắn tin chào thợ bằng tên + 1 câu về tiệm — lời chào riêng tự nhiên hơn tin nhắn chung chung.",
   ],
 };
 
 const md = (d: Date) => (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
-function inWindow(t: Theme, d: Date) {
+function inWindow(t: Theme, d: Date, market: Market) {
   const v = md(d);
-  const a = t.from[0] * 100 + t.from[1];
-  const b = t.to[0] * 100 + t.to[1];
+  // Úc ở Nam bán cầu: mùa xuân / hè / thu theo khung riêng (themeWindow).
+  const w = themeWindow(t, market);
+  const a = w.from[0] * 100 + w.from[1];
+  const b = w.to[0] * 100 + w.to[1];
   return a <= b ? v >= a && v <= b : v >= a || v <= b; // vắt qua năm mới
 }
 
 export function activeThemes(date: Date, market: Market): Theme[] {
-  return THEMES.filter((t) => inWindow(t, date) && (!t.markets || t.markets.includes(market))).sort((a, b) => b.priority - a.priority);
+  return THEMES.filter((t) => inWindow(t, date, market) && themeInMarket(t, market)).sort((a, b) => b.priority - a.priority);
 }
 
 export function tipOfDay(date: Date, role: "OWNER" | "TECHNICIAN") {
@@ -98,7 +100,8 @@ export async function getStudio(market: Market, now = new Date()): Promise<Studi
   if (primary) {
     // SQLite LIKE không phân biệt hoa/thường với chữ ASCII — đủ cho hashtag không dấu.
     const posts = await prisma.post.findMany({
-      where: { anonymous: false, status: "published", content: { contains: `#${primary.hashtag}` }, createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) }, author: realOnly() },
+      // Hashtag tiếng Anh mới + bí danh tiếng Việt cũ (#PawNailFall · #MongMuaThu) đều được tính.
+      where: { anonymous: false, status: "published", OR: themeTags(primary).map((tag) => ({ content: { contains: `#${tag}` } })), createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) }, author: realOnly() },
       select: { id: true, mediaUrls: true, author: { select: { id: true, name: true, avatarUrl: true } }, _count: { select: { likes: true } } },
       take: 200,
     });

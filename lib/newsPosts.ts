@@ -1,6 +1,8 @@
 // TIN NGÀNH NAIL (Mỹ / Úc) → BÀI VIẾT trên bảng tin, đăng từ TÀI KHOẢN CHÍNH THỨC PawNail.
 //   - Nguồn: Google News + NAILS Magazine (lib/industryFeed.ts) — chỉ tiêu đề + tóm tắt ngắn của báo.
-//   - Gemini viết lại bằng giọng tự nhiên, thân thiện như người trong nghề ("mình"), tiếng Việt.
+//   - AI viết lại bằng giọng chuyên nghiệp, gần gũi, HAI thứ tiếng (tiếng Việt + tiếng Anh, cùng nội dung).
+//     Bản tiếng Anh lưu kèm bài (lib/postEn.ts) → người xem tiếng Anh thấy bản đó; thiếu / yếu → bài chỉ hiện
+//     với người dùng tiếng Việt.
 //   - CHỐNG BỊA: chỉ dựa trên tiêu đề + tóm tắt; con số nào không có trong nguồn → bỏ cả bài.
 //   - Luôn ghi Nguồn + link bài gốc; không chép nguyên văn; không bịa trải nghiệm cá nhân.
 //   - Mỗi ngày tối đa NEWS_POSTS_PER_DAY (mặc định 2), không đăng lại tin đã đăng.
@@ -10,13 +12,14 @@ import { geminiEnabled, geminiJson } from "@/lib/gemini";
 import { cfJson, cfTextEnabled } from "@/lib/cfText";
 import { getIndustryNews, type NewsItem } from "@/lib/industryFeed";
 import { getSetting, setSetting } from "@/lib/settings";
+import { savePostEn } from "@/lib/postEn";
 
 const KEY = "news_posted_links";
 const DAY = 86_400_000;
 export const newsPerDay = () => Math.min(4, Math.max(0, Number(process.env.NEWS_POSTS_PER_DAY ?? 2)));
 const hash = (s: string) => crypto.createHash("sha1").update(s).digest("hex").slice(0, 16);
 
-interface Written { hook: string; points: string[]; takeaway: string; hashtags: string[] }
+interface Written { hook: string; points: string[]; takeaway: string; hashtags: string[]; hookEn?: string; pointsEn?: string[]; takeawayEn?: string }
 
 const FILLER = /(chi tiết (xem |có )?(trong|tại) bài gốc|xem thêm (trong|tại) bài gốc|đang cập nhật|không rõ|n\/a)/i;
 /** Lý do bài viết yếu (để bỏ qua), hoặc null nếu đạt. */
@@ -36,6 +39,9 @@ const CF_SCHEMA = {
     points: { type: "array", items: { type: "string" } },
     takeaway: { type: "string" },
     hashtags: { type: "array", items: { type: "string" } },
+    hookEn: { type: "string" },
+    pointsEn: { type: "array", items: { type: "string" } },
+    takeawayEn: { type: "string" },
   },
   required: ["hook", "points", "takeaway", "hashtags"],
 };
@@ -46,14 +52,18 @@ const SCHEMA = {
     points: { type: "ARRAY", items: { type: "STRING" } },
     takeaway: { type: "STRING" },
     hashtags: { type: "ARRAY", items: { type: "STRING" } },
+    hookEn: { type: "STRING" },
+    pointsEn: { type: "ARRAY", items: { type: "STRING" } },
+    takeawayEn: { type: "STRING" },
   },
   required: ["hook", "points", "takeaway", "hashtags"],
 };
 
 function prompt(n: NewsItem) {
   const where = n.market === "AU" ? "Úc" : "Mỹ";
-  return `Bạn là người viết bài cho PawNail Jobs — cộng đồng thợ nail và chủ tiệm nail người Việt ở Mỹ và Úc.
-Viết lại TIN NGÀNH dưới đây thành 1 bài đăng mạng xã hội bằng TIẾNG VIỆT, giọng tự nhiên, gần gũi như người trong nghề chia sẻ (xưng "mình", gọi "các bạn"), không văn mẫu, không giật tít quá đà.
+  return `Bạn là người viết bài cho PawNail — nền tảng dành cho thợ nail và chủ tiệm nail tại Mỹ và Úc.
+Viết lại TIN NGÀNH dưới đây thành 1 bài đăng ngắn bằng HAI thứ tiếng, cùng nội dung: tiếng Việt (hook, points, takeaway) và tiếng Anh Mỹ (hookEn, pointsEn, takeawayEn).
+Giọng chuyên nghiệp, gần gũi, rõ ràng như một thương hiệu làm đẹp nói với người trong nghề. Tiếng Việt gọi người đọc là "bạn", không xưng "mình"; không văn mẫu, không giật tít, không viết hoa cả câu.
 
 TIN (${where}) — từ ${n.source}:
 Tiêu đề: ${n.title}
@@ -63,9 +73,10 @@ QUY TẮC BẮT BUỘC:
 - CHỈ dùng thông tin có trong tiêu đề và tóm tắt ở trên. KHÔNG thêm sự kiện, con số, tên người, địa danh, ngày tháng không có trong đó.
 - Thiếu chi tiết thì nói thẳng "chi tiết trong bài gốc" — không đoán.
 - KHÔNG bịa trải nghiệm cá nhân ("hôm qua mình gặp…"), KHÔNG chép nguyên câu dài của báo.
-- hook: 1 câu mở bài gây tò mò, có 1 emoji phù hợp ở đầu, tối đa 120 ký tự.
+- hook: 1 câu mở bài rõ ý, tối đa 120 ký tự, không emoji.
 - points: 2–3 ý ngắn tóm tắt tin (mỗi ý ≤ 140 ký tự).
 - takeaway: 1–2 câu "điều này có ý nghĩa gì với thợ nail / chủ tiệm ở ${where}" — lời khuyên chung, thận trọng, không khẳng định điều nguồn không nói.
+- hookEn, pointsEn, takeawayEn: bản tiếng Anh của đúng 3 phần trên, cùng quy tắc (sentence case, không emoji, không "best", "#1", "guaranteed").
 - hashtags: 2–3 hashtag tiếng Việt không dấu, không khoảng trắng (VD: TinNganhNail).`;
 }
 
@@ -92,21 +103,32 @@ function numbersSupported(written: string, n: NewsItem) {
 
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
 
+const LEAD_EMOJI = /^\p{Extended_Pictographic}️?\s*/u;
+
 export function composeNewsPost(n: NewsItem, w: Written) {
   const points = (Array.isArray(w.points) ? w.points : []).map((p) => clip(p, 160)).filter(Boolean).slice(0, 3);
-  const tags = (Array.isArray(w.hashtags) ? w.hashtags : []).map((h) => clip(h, 30).replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean).slice(0, 3);
+  const tags = (Array.isArray(w.hashtags) ? w.hashtags : []).map((h) => clip(h, 30).replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean).slice(0, 2);
   if (!tags.includes("TinNganhNail")) tags.unshift("TinNganhNail");
   return [
-    `📰 ${clip(w.hook, 140).replace(/^📰\s*/, "")}`,
+    `📰 ${clip(w.hook, 140).replace(LEAD_EMOJI, "")}`,
     "",
     ...points.map((p) => `• ${p}`),
     "",
-    `👉 ${clip(w.takeaway, 300)}`,
+    clip(w.takeaway, 300),
     "",
     `Nguồn: ${n.source} — ${n.link}`,
     "",
-    tags.slice(0, 4).map((t) => `#${t}`).join(" "),
+    ["NailIndustry", "NailTech", ...tags].slice(0, 5).map((t) => `#${t}`).join(" "),
   ].join("\n");
+}
+
+/** Bản tiếng Anh (cùng khuôn) — null nếu AI không trả đủ / viết hụt. */
+export function composeNewsPostEn(n: NewsItem, w: Written): string | null {
+  const hook = clip(w.hookEn, 140).replace(LEAD_EMOJI, "");
+  const points = (Array.isArray(w.pointsEn) ? w.pointsEn : []).map((p) => clip(p, 160)).filter(Boolean).slice(0, 3);
+  const takeaway = clip(w.takeawayEn, 300);
+  if (hook.length < 25 || points.length < 2 || points.some((p) => p.length < 15) || !takeaway) return null;
+  return [`📰 ${hook}`, "", ...points.map((p) => `• ${p}`), "", takeaway, "", `Source: ${n.source} — ${n.link}`, "", "#NailIndustry #NailTech"].join("\n");
 }
 
 async function postedSet(): Promise<Set<string>> {
@@ -149,9 +171,13 @@ export async function publishNewsPosts(now = new Date(), opts: { max?: number; t
       // Bài AI viết hụt (12/10/2026: tiêu đề "🚨 Một salon nail", ý "Chi tiết trong bài gốc") → không đăng.
       const weak = weakWriting(w);
       if (weak) { skipped.push(`bài viết yếu (${weak}): ${n.title.slice(0, 50)}`); done.add(hash(n.link)); continue; }
+      const id = "c" + crypto.randomBytes(12).toString("hex");
       await prisma.post.create({
-        data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: text, postType: "GENERAL", mediaUrls: "[]", market: n.market === "AU" ? "AU" : "US", createdAt: new Date(now.getTime() + posted.length * 1000) },
+        data: { id, authorId: officialId, content: text, postType: "GENERAL", mediaUrls: "[]", market: n.market === "AU" ? "AU" : "US", createdAt: new Date(now.getTime() + posted.length * 1000) },
       });
+      // Bản tiếng Anh: cùng kiểm tra chống bịa số như bản tiếng Việt.
+      const en = composeNewsPostEn(n, w);
+      if (en && numbersSupported([w.hookEn, ...(w.pointsEn || []), w.takeawayEn].join(" "), n)) await savePostEn(id, en);
       done.add(hash(n.link)); done.add(hash(n.title.toLowerCase()));
       posted.push(n.title);
       left--;

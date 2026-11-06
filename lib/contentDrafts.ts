@@ -33,7 +33,7 @@ export function buildDrafts(s: Signals, news: NewsItem[]): Draft[] {
     add({
       kind: "pulse",
       title: `📊 ${p.topic}: ${p.top!.pct}% chọn "${p.top!.label}"`,
-      body: `${p.total} ${who} tại ${where} trả lời "Nhịp đau tuần" trên PawNail — ${p.options.filter((o) => o.votes).map((o) => `${o.label} ${o.pct}%`).join(" · ")}. Bạn thì sao? Trả lời câu hỏi tuần này ngay trên bảng tin.`,
+      body: `${p.total} ${who} tại ${where} trả lời "Khảo sát nhanh tuần này" trên PawNail — ${p.options.filter((o) => o.votes).map((o) => `${o.label} ${o.pct}%`).join(" · ")}. Bạn thì sao? Trả lời câu hỏi tuần này ngay trên bảng tin.`,
       href: "/?tab=feed",
       caption: `${p.top!.pct}% ${who} nail ở ${where} nói: "${p.top!.label}" là điều ${/học/.test(p.topic) ? "muốn học nhất" : "đáng bàn nhất"} tuần này. Còn bạn? 👇 ${BASE_TAGS}`,
       evidence: `Tuần ${p.week}, ${p.total} phiếu`,
@@ -43,9 +43,9 @@ export function buildDrafts(s: Signals, news: NewsItem[]): Draft[] {
     add({
       kind: "gap",
       title: `🔥 Thiếu thợ ${g.skill} tại ${g.label}: ${g.jobs} tin cần, ${g.techs} thợ sẵn sàng`,
-      body: `14 ngày qua có ${g.jobs} tin tuyển ở ${g.label} cần kỹ năng ${g.skill}, trong khi chỉ ${g.techs} thợ có kỹ năng này đang sẵn sàng nhận việc. Thợ ${g.skill}: bật "Tìm việc gấp" và cập nhật portfolio để tiệm tìm thấy bạn.`,
+      body: `14 ngày qua có ${g.jobs} tin tuyển ở ${g.label} cần kỹ năng ${g.skill}, trong khi chỉ ${g.techs} thợ có kỹ năng này đang sẵn sàng nhận việc. Thợ ${g.skill}: bật "Sẵn sàng nhận việc ngay" và cập nhật ảnh tay nghề để tiệm tìm thấy bạn.`,
       href: "/?tab=jobs",
-      caption: `Thợ ${g.skill} ở ${g.label} đang được săn: ${g.jobs} tiệm cần, mới ${g.techs} thợ sẵn sàng. Vào PawNail xem việc ngay 💅 ${BASE_TAGS} #${g.skill.replace(/\W/g, "")}`,
+      caption: `${g.label}: ${g.jobs} tin tuyển cần thợ ${g.skill}, ${g.techs} thợ sẵn sàng nhận việc. Xem việc làm trên PawNail. ${BASE_TAGS} #${g.skill.replace(/\W/g, "")}`,
       evidence: `Tin tuyển 14 ngày ↔ hồ sơ thợ đang rảnh tại ${g.state}`,
     });
   }
@@ -66,7 +66,7 @@ export function buildDrafts(s: Signals, news: NewsItem[]): Draft[] {
       title: `📈 #${t.tag} đang lên: ${t.now} bài tuần này`,
       body: `Hashtag #${t.tag} có ${t.now} bài trong 7 ngày qua${t.before ? ` (tuần trước ${t.before})` : ""}. Đăng mẫu của bạn kèm #${t.tag} để lên bảng Xu hướng.`,
       href: "/trends",
-      caption: `#${t.tag} đang hot trong cộng đồng thợ nail Việt! Khoe mẫu của bạn trên PawNail nhé ✨ ${BASE_TAGS} #${t.tag}`,
+      caption: `#${t.tag} đang được nhiều thợ nail chia sẻ. Đăng mẫu của bạn trên PawNail. ${BASE_TAGS} #${t.tag}`,
       evidence: `Bài đăng 14 ngày qua`,
     });
   }

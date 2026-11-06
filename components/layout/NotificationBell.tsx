@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift, CalendarCheck } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
@@ -16,7 +16,7 @@ import { useTr } from "@/lib/i18n/useTr";
 
 interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite" | "booking";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn?: string;
@@ -33,6 +33,7 @@ const KIND_STYLE: Record<NotificationItem["kind"], { icon: typeof Heart; cls: st
   job: { icon: Flame, cls: "bg-gradient-to-br from-orange-500 to-red-500 text-white" },
   view: { icon: Eye, cls: "bg-sky-500 text-white" },
   invite: { icon: Gift, cls: "bg-fuchsia-500 text-white" },
+  booking: { icon: CalendarCheck, cls: "bg-emerald-500 text-white" },
 };
 
 // Mốc "đã xem thông báo" lưu theo user trên thiết bị (không cần bảng DB mới).
@@ -170,7 +171,7 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={toggle}
-        aria-label={unread > 0 ? tr(`Thông báo, ${unread} chưa đọc`, `Notifications, ${unread} unread`) : "Thông báo"}
+        aria-label={unread > 0 ? tr(`Thông báo, ${unread} chưa đọc`, `Notifications, ${unread} unread`) : tr("Thông báo", "Notifications")}
         aria-expanded={open}
         className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
       >
@@ -187,11 +188,11 @@ export default function NotificationBell() {
       {open && (
         <div
           role="dialog"
-          aria-label="Thông báo"
+          aria-label={tr("Thông báo", "Notifications")}
           className="fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] shadow-2xl shadow-black/70 animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
         >
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
-            <p className="text-sm font-black text-white">Thông báo</p>
+            <p className="text-sm font-black text-white">{tr("Thông báo", "Notifications")}</p>
             <div className="flex items-center gap-1">
             <button
               onClick={() => {
@@ -218,8 +219,12 @@ export default function NotificationBell() {
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-500/10 text-pink-300 ring-1 ring-pink-500/20">
                   <Bell className="h-5 w-5" />
                 </span>
-                <p className="mt-3 text-sm font-bold text-slate-200">{tr("Chưa có thông báo", "No notifications yet")}</p>
-                <p className="mt-1 text-xs text-slate-500">{tr("Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.", "When someone likes, comments on or reviews you, it shows up here.")}</p>
+                <p className="mt-3 text-sm font-bold text-slate-200">{tr("Bạn đã xem hết thông báo.", "You're all caught up.")}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {user?.role === "CLIENT"
+                    ? tr("Tin trả lời từ tiệm và cập nhật lịch hẹn sẽ hiện ở đây.", "Replies from salons and booking updates show up here.")
+                    : tr("Khi có người thích, bình luận hay đánh giá bạn, thông báo sẽ hiện ở đây.", "When someone likes, comments on or reviews you, it shows up here.")}
+                </p>
               </div>
             )}
             {items?.map((n) => {

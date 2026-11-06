@@ -15,7 +15,7 @@ export async function findOrCreateOAuthUser(p: { email: string; name?: string | 
   const email = p.email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true, password: true, state: true } });
   if (existing) return existing;
-  const name = (p.name || email.split("@")[0]).trim().slice(0, 80) || "Thành viên PawNail";
+  const name = (p.name || email.split("@")[0]).trim().slice(0, 80) || "PawNail member";
   // Ảnh từ Google (lh3.googleusercontent.com) không nằm trong CSP img-src → bỏ, dùng chữ cái đầu.
   return prisma.user.create({
     data: { email, name, password: OAUTH_PASSWORD_PREFIX + crypto.randomBytes(24).toString("hex"), role: "TECHNICIAN", avatarUrl: null },

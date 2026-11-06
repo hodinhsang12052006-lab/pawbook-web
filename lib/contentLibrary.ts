@@ -1,5 +1,5 @@
 // KHO BÀI DÙNG QUANH NĂM cho tài khoản chính thức — bổ sung cho lib/contentBot.ts (bài thuế/
-// an toàn/theo mùa). Viết cho thợ nail & chủ tiệm người Việt ở Mỹ/Úc: tiếng Anh đứng quầy, sửa lỗi
+// an toàn/theo mùa). Viết cho thợ nail & chủ tiệm đọc tiếng Việt tại Mỹ/Úc: tiếng Anh đứng quầy, sửa lỗi
 // tay nghề, sức khoẻ, vệ sinh, nghề nghiệp, quản lý tiệm.
 //
 // Nguyên tắc: lời khuyên chung, dùng được ngay; KHÔNG đưa con số luật/thuế (phần đó ở contentBot
@@ -157,7 +157,7 @@ export const LIBRARY_TOPICS: Topic[] = [
       "Phòng quá lạnh làm bột khô chậm và đục — giữ phòng ấm vừa phải.",
       "Dung dịch (liquid) để mở nắp lâu bị bẩn: dùng chén nhỏ, đổ lượng vừa đủ cho mỗi khách.",
     ],
-    cta: "💬 Bạn dùng tỉ lệ nước:bột thế nào cho mùa lạnh? Chia sẻ bí quyết cho anh chị em nha.",
+    cta: "💬 Bạn dùng tỉ lệ nước:bột thế nào cho mùa lạnh? Chia sẻ bí quyết cho mọi người nhé.",
     tags: "#TayNghe #BotAcrylic #ThoNail",
   }),
   t({
@@ -206,7 +206,7 @@ export const LIBRARY_TOPICS: Topic[] = [
       "Dán băng định hình (French guide) cho khách khó tính, lên màu xong gỡ khi còn ướt.",
       "Vẽ đường cong 2 bên trước, nối vào giữa sau — dễ cân hơn vẽ 1 nét.",
     ],
-    cta: "💬 Bạn quen cách nào? Bình luận chia sẻ, hoặc quay video 10 giây đăng mục Khoe tay nghề để chủ tiệm thấy bạn nha!",
+    cta: "💬 Bạn quen cách nào? Bình luận chia sẻ, hoặc quay video 10 giây đăng mục Chia sẻ tác phẩm để chủ tiệm thấy tay nghề của bạn.",
     tags: "#TayNghe #FrenchTip #ThoNail",
   }),
 
@@ -314,7 +314,7 @@ export const LIBRARY_TOPICS: Topic[] = [
       "Đăng đều 3–4 lần/tuần, video ngắn 10–15 giây quá trình làm thu hút hơn ảnh tĩnh.",
       "Ghi rõ thành phố + tiệm trong phần giới thiệu để khách địa phương tìm thấy.",
       "Trả lời bình luận, tin nhắn trong ngày.",
-      "Đăng ảnh lên mục Khoe tay nghề trên PawNail — chủ tiệm đang tìm thợ cũng xem mục này.",
+      "Đăng ảnh lên mục Chia sẻ tác phẩm trên PawNail — chủ tiệm đang tìm thợ cũng xem mục này.",
     ],
     cta: "💬 Kênh nào mang khách cho bạn nhiều nhất: Instagram, TikTok hay Facebook? Bình luận chia sẻ nha!",
     tags: "#ThoNail #Portfolio #MarketingTiemNail",
@@ -416,7 +416,7 @@ export const LIBRARY_TOPICS: Topic[] = [
     title: "🌧️ Ngày vắng khách: 5 việc nên làm thay vì ngồi chờ",
     bullets: [
       "Nhắn khách cũ lâu chưa quay lại (danh sách 4–6 tuần trước).",
-      "Chụp ảnh mẫu mới, đăng mạng xã hội và mục Khoe tay nghề trên PawNail.",
+      "Chụp ảnh mẫu mới, đăng mạng xã hội và mục Chia sẻ tác phẩm trên PawNail.",
       "Cho thợ tập kỹ thuật mới trên tay giả.",
       "Vệ sinh tổng thể, kiểm kê supply.",
       "Cập nhật giờ mở cửa, ảnh tiệm trên Google Maps.",

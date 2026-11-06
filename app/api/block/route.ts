@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
 
     const blocks = await prisma.blockedUser.findMany({
@@ -20,7 +20,7 @@ export async function GET() {
     return NextResponse.json({ blockedUserIds: blocks.map((b) => b.blockedUserId) });
   } catch (err) {
     console.error("GET /api/block error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống.", errorEn: "Something went wrong. Please try again." }, { status: 500 });
   }
 }
 
@@ -29,15 +29,15 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
 
     const { userId } = await req.json();
     if (!userId) {
-      return NextResponse.json({ error: "Thiếu userId." }, { status: 400 });
+      return NextResponse.json({ error: "Thiếu userId.", errorEn: "Missing user." }, { status: 400 });
     }
     if (userId === session.user.id) {
-      return NextResponse.json({ error: "Không thể tự chặn chính mình." }, { status: 400 });
+      return NextResponse.json({ error: "Không thể tự chặn chính mình.", errorEn: "You can't block yourself." }, { status: 400 });
     }
 
     await prisma.blockedUser.upsert({
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ blocked: true });
   } catch (err) {
     console.error("POST /api/block error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống khi chặn người dùng." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống khi chặn người dùng.", errorEn: "Couldn't block this user. Please try again." }, { status: 500 });
   }
 }
 
@@ -60,12 +60,12 @@ export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
 
     const userId = req.nextUrl.searchParams.get("userId");
     if (!userId) {
-      return NextResponse.json({ error: "Thiếu userId." }, { status: 400 });
+      return NextResponse.json({ error: "Thiếu userId.", errorEn: "Missing user." }, { status: 400 });
     }
 
     await prisma.blockedUser.deleteMany({
@@ -75,6 +75,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ blocked: false });
   } catch (err) {
     console.error("DELETE /api/block error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống khi bỏ chặn." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống khi bỏ chặn.", errorEn: "Couldn't unblock. Please try again." }, { status: 500 });
   }
 }

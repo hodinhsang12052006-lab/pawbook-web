@@ -7,7 +7,7 @@ import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_TECH, registerUser, fake
 
 const R = new Results("Mẫu nail AI mỗi ngày");
 const TMP = process.env.TEMP || ".";
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000");
 await db.execute(`DELETE FROM "NailDesignSave"`);
 await db.execute(`DELETE FROM "NailDesign"`);
@@ -177,6 +177,8 @@ try {
   browser = await chromium.launch();
   const page = async (locale = "vi-VN") => {
     const ctx = await browser.newContext({ ...devices["Pixel 7"], locale });
+    // Ngôn ngữ do máy chủ chọn (cookie bitpaw_locale → Accept-Language → en); localStorage chỉ còn để tương thích bản cũ.
+    await ctx.addCookies([{ name: "bitpaw_locale", value: locale === "en-US" ? "en" : "vi", url: BASE_URL }]);
     if (locale === "en-US") await ctx.addInitScript(() => { try { localStorage.setItem("bitpaw_locale", "en"); } catch {} });
     const ip = fakeIp();
     await ctx.route(BASE_URL + "/**", (route) => route.continue({ headers: { ...route.request().headers(), "cf-connecting-ip": ip } }));

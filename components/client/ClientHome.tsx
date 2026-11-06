@@ -10,25 +10,38 @@ import { DesignsStrip } from "@/components/designs/DesignViews";
 import MenuShowcase from "@/components/designs/MenuShowcase";
 import SalonDirectory from "@/components/client/SalonDirectory";
 import { clientTipOfDay } from "@/lib/clientTips";
+import { marketSpelling } from "@/lib/i18n/spelling";
 import { stateName } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+
+// Tên để chào: "Nguyễn Văn An" → "An" (họ đứng trước), "Emma Clark" → "Emma" (tên đứng trước),
+// "Ngọc Anh" → "Ngọc Anh". Trước đây luôn lấy từ cuối → khách tiếng Anh bị chào bằng họ ("Hi Clark").
+const VN_SURNAMES = new Set(["nguyen", "tran", "le", "pham", "hoang", "huynh", "phan", "vu", "vo", "dang", "bui", "do", "ho", "ngo", "duong", "ly", "dinh", "truong", "trinh", "doan", "luong"]);
+function givenName(full: string): string {
+  const w = full.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  if (w.length <= 1) return w[0] || "";
+  const fold = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/gi, "d").toLowerCase();
+  if (VN_SURNAMES.has(fold(w[0]))) return w[w.length - 1];
+  if (/[ăâđêôơưạảấầậắằặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i.test(full)) return w.length === 2 ? w.join(" ") : w[w.length - 1];
+  return w[0];
+}
 
 export default function ClientHome({ user }: { user: { id: string; name?: string | null; market?: "US" | "AU"; state?: string | null } }) {
   useTr();
   const market = user.market === "AU" ? "AU" : "US";
   const state = user.state || "";
-  const first = (user.name || "").trim().split(/\s+/).pop() || "";
+  const first = givenName(user.name || "");
   const tip = clientTipOfDay();
   const tiles = [
-    { href: "/designs", icon: Sparkles, title: tr("Mẫu trend", "Trending looks"), sub: tr("Ý tưởng mới mỗi ngày", "New ideas daily"), tone: "from-pink-500/25 to-fuchsia-500/10 text-pink-200" },
+    { href: "/designs", icon: Sparkles, title: tr("Mẫu nail", "Designs"), sub: tr("Ý tưởng mới mỗi ngày", "New ideas every day"), tone: "from-pink-500/25 to-fuchsia-500/10 text-pink-200" },
     { href: "/salons", icon: Store, title: tr("Tiệm gần bạn", "Salons near you"), sub: state ? stateName(market, state) : tr("Xem giá & ảnh thật", "Real photos & prices"), tone: "from-amber-500/25 to-orange-500/10 text-amber-200" },
-    { href: "/designs?saved=1", icon: Bookmark, title: tr("Mẫu đã lưu", "Saved looks"), sub: tr("Đưa thợ xem ngay", "Show your tech"), tone: "from-violet-500/25 to-sky-500/10 text-violet-200" },
+    { href: "/designs?saved=1", icon: Bookmark, title: tr("Mẫu đã lưu", "Saved designs"), sub: tr("Đưa thợ xem ngay", "Show your tech"), tone: "from-violet-500/25 to-sky-500/10 text-violet-200" },
   ];
   return (
     <div className="space-y-6">
       <header className="px-1">
-        <h1 className="text-xl font-black tracking-tight text-white">{tr(`Chào ${first || "bạn"} 💅`, `Hi ${first || "there"} 💅`)}</h1>
+        <h1 className="text-xl font-black tracking-tight text-white">{tr(`Chào ${first || "bạn"}`, `Hi ${first || "there"}`)}</h1>
         <p className="mt-0.5 text-sm text-slate-400">{tr("Hôm nay muốn làm móng kiểu gì?", "What look are you in the mood for?")}</p>
       </header>
 
@@ -46,8 +59,8 @@ export default function ClientHome({ user }: { user: { id: string; name?: string
         <span className="flex items-center gap-3 p-3.5">
           <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-fuchsia-600 shadow-lg shadow-pink-600/30"><Wand2 className="h-5 w-5 text-white" /></span>
           <span className="min-w-0">
-            <span className="block text-[15px] font-black text-white">{tr("Chụp tay — xem mẫu hợp với BẠN", "Snap your hand — see looks made for YOU")}</span>
-            <span className="block text-xs text-white/70">{tr("Máy tự nhận móng, soi tông da + dáng móng, vẽ 10 mẫu trend lên chính móng bạn", "We find your nails, read your skin tone + nail shape, and paint 10 trending looks on them")}</span>
+            <span className="block text-[15px] font-black text-white">{tr("Thử những mẫu hợp với tay bạn", "Try on looks made for your hands")}</span>
+            <span className="block text-xs text-white/70">{tr("Chụp một ảnh: PawNail Try-On nhận móng, tông da và dáng móng, rồi vẽ 10 mẫu gợi ý lên chính móng bạn", "Take one photo: PawNail Try-On finds your nails, reads your skin tone and nail shape, and paints 10 suggested looks on them")}</span>
           </span>
         </span>
       </Link>
@@ -80,7 +93,7 @@ export default function ClientHome({ user }: { user: { id: string; name?: string
         <Lightbulb className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300" />
         <div>
           <p className="text-[11px] font-black uppercase tracking-wider text-emerald-300">{tr("Mẹo giữ móng đẹp hôm nay", "Today's nail-care tip")}</p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-200">{tr(tip.vi, tip.en)}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-200">{tr(tip.vi, marketSpelling(tip.en, market))}</p>
         </div>
       </section>
 

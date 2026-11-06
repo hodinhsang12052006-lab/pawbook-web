@@ -47,7 +47,8 @@ export function detectIntents(text: string, type = "TEXT"): Intent[] {
   return [...new Set(out)];
 }
 
-export interface MenuLite { name: string; priceFrom: number; priceTo: number | null }
+/** nameEn: tên tiếng Anh cho khách (mẫu PawNail / thợ xác nhận / dịch máy) — trả lời khách tiếng Anh dùng tên này. */
+export interface MenuLite { name: string; nameEn?: string | null; priceFrom: number; priceTo: number | null }
 export interface ProCtx { market: "US" | "AU"; menu: MenuLite[]; menuUrl: string; /** khách chưa nhắn chữ / không đoán được → tiếng của thợ */ fallbackVi?: boolean }
 export interface Suggestion { label: string; text: string; action?: "studio" | "consult" }
 
@@ -63,7 +64,9 @@ export function proSuggestions(last: { content: string; type: string } | null, c
   const vi = !last || last.type !== "TEXT" ? fb : replyInVietnamese(last.content, fb);
   const T = (v: string, e: string) => (vi ? v : e);
   const items = ctx.menu.filter((m) => m.priceFrom > 0).slice(0, 3);
-  const priceLine = items.length ? items.map((m) => `${m.name} ${range(m, ctx.market)}`).join(", ") : "";
+  // Trả lời khách tiếng Anh → tên món tiếng Anh (trước đây gửi "Đồi mồi caramel viền vàng $55–70" cho khách Mỹ).
+  const priceLine = items.length ? items.map((m) => `${vi ? m.name : m.nameEn || m.name} ${range(m, ctx.market)}`).join(", ") : "";
+  const colours = ctx.market === "AU" ? "colours" : "colors";
   const out: Suggestion[] = [];
   const add = (s: Suggestion) => { if (!out.some((o) => o.text === s.text) && out.length < 3) out.push(s); };
   const intents = last ? detectIntents(last.content, last.type) : [];
@@ -71,7 +74,7 @@ export function proSuggestions(last: { content: string; type: string } | null, c
     switch (it) {
       case "design":
         add({ label: T("✨ Vẽ thử mẫu lên tay khách", "✨ Try it on their hand"), text: T("Mẫu xinh quá ạ 😍 Em làm được mẫu này nha. Để em vẽ thử lên tay chị/anh cho mình xem trước nhé!", "Love this look 😍 I can do it! Let me show you how it looks on your own hand first."), action: "studio" });
-        add({ label: T("🔍 Soi tay tư vấn", "🔍 Hand consult"), text: T("Em xem kỹ tay chị/anh rồi tư vấn dáng + màu hợp nhất nha.", "Let me check your nails and suggest the best shape and colours."), action: "consult" });
+        add({ label: T("🔍 Soi tay tư vấn", "🔍 Hand consult"), text: T("Em xem kỹ tay chị/anh rồi tư vấn dáng + màu hợp nhất nha.", `Let me check your nails and suggest the best shape and ${colours}.`), action: "consult" });
         if (priceLine) add({ label: T("💲 Báo giá theo menu", "💲 Quote from menu"), text: T(`Dạ mẫu kiểu này bên em khoảng: ${priceLine}. Em báo giá chính xác khi xem kỹ mẫu ạ.`, `For this kind of set: ${priceLine}. I'll confirm the exact price once I see the details.`) });
         break;
       case "price":
@@ -139,6 +142,8 @@ export interface HireCtx {
   /** thợ: kỹ năng + số năm + link hồ sơ (ảnh tay nghề) */
   skills?: string[]; years?: number; profileUrl?: string;
   fallbackVi?: boolean;
+  /** đối phương đã từng nhắn chưa — chưa thì chỉ gợi ý câu MỞ ĐẦU, không gợi ý "trả lời" cho câu chưa ai hỏi */
+  partnerWrote?: boolean;
 }
 
 /** Gợi ý trả lời trong chat TUYỂN THỢ (chủ tiệm trả lời thợ, hoặc thợ trả lời chủ tiệm). */
@@ -159,6 +164,12 @@ export function hireSuggestions(last: { content: string; type: string } | null, 
     const housing = !!ctx.housing || /chỗ ở|housing/i.test(job?.benefits || "");
     const askSkills = { label: T("🧰 Hỏi tay nghề", "🧰 Ask skills"), text: T("Bạn làm được những món nào (Bột / Dip / Gel-X / vẽ…), đang ở khu nào ạ? Gửi tiệm vài ảnh tay nghề nha.", "Which services can you do (acrylic / dip / Gel-X / art…), and where are you based? Please send a few photos of your work.") };
     const invite = { label: T("📅 Hẹn thử tay nghề", "📅 Invite for a trial"), text: T(`Bạn ghé tiệm thử tay nghề được hôm nào ạ?${place ? ` Tiệm ở ${place},` : ""} hẹn giờ xong tiệm gửi địa chỉ cụ thể nha.`, `When could you come in for a skills trial?${place ? ` We're in ${place} —` : ""} I'll send the exact address once we set a time.`) };
+    // Thợ chưa nhắn gì → câu mở đầu của tiệm.
+    if (!last && ctx.partnerWrote === false) {
+      add({ label: T("👋 Chào thợ", "👋 Greet"), text: T(`Chào bạn! Tiệm đang cần thợ${pay ? ` — ${pay}` : ""}. Bạn còn nhận việc không ạ?`, `Hi! We're hiring${pay ? ` — ${pay}` : ""}. Are you taking on work at the moment?`) });
+      add(askSkills);
+      return out;
+    }
     for (const it of intents) {
       if (it === "pay") add({ label: T("💵 Trả lời lương", "💵 Answer pay"), text: pay ? T(`Dạ lương bên tiệm: ${pay}${ctx.turn ? ` · chia turn ${ctx.turn}` : ""}. Bạn làm được những món nào để tiệm sắp xếp ạ?`, `Pay at our salon: ${pay}${ctx.turn ? ` · turn split ${ctx.turn}` : ""}. Which services can you do?`) : T("Lương tuỳ tay nghề + món làm được ạ. Bạn gửi tiệm vài ảnh tay nghề, tiệm báo lương cụ thể nha.", "Pay depends on skills and services. Send me a few photos of your work and I'll give you exact numbers.") });
       if (it === "housing") add(housing ? { label: T("🏠 Có chỗ ở", "🏠 Housing: yes"), text: T("Dạ tiệm có hỗ trợ chỗ ở cho thợ ở xa nha.", "Yes, we help with housing for techs moving from out of town.") } : { label: T("🏠 Trả lời chỗ ở", "🏠 Answer housing"), text: T("Về chỗ ở, tiệm trao đổi cụ thể khi bạn ghé nha.", "We can talk about housing in person when you come by.") });
@@ -182,6 +193,12 @@ export function hireSuggestions(last: { content: string; type: string } | null, 
   const intro = { label: T("🙋 Giới thiệu bản thân", "🙋 Introduce myself"), text: T(`Dạ em còn nhận việc ạ! Em làm được ${skills || "các món cơ bản"}${exp}${place ? `, đang ở ${place}` : ""}.${link}`, `Yes, I'm available! I can do ${skills || "the basics"}${exp}${place ? `, based in ${place}` : ""}.${link}`) };
   const askTerms = { label: T("❓ Hỏi lương / turn / chỗ ở", "❓ Ask pay / turns / housing"), text: T("Cho em hỏi lương tính bao lương hay ăn chia, chia turn sao và tiệm có hỗ trợ chỗ ở không ạ?", "Could you tell me the pay (salary or commission), how turns are split, and whether you help with housing?") };
   const hasNumber = !!last && /\d/.test(last.content);
+  // Chưa có tin nào của chủ tiệm → chỉ câu mở đầu (trước đây gợi ý "Dạ em còn nhận việc ạ!" khi chưa ai hỏi).
+  if (!last && ctx.partnerWrote === false) {
+    add({ label: T("👋 Hỏi tiệm còn tuyển không", "👋 Ask if they're hiring"), text: T("Chào anh/chị, tiệm còn tuyển thợ không ạ?", "Hi! Is the salon still hiring?") });
+    add(askTerms);
+    return out;
+  }
   for (const it of intents) {
     if (it === "hiring" || it === "greeting") add(intro);
     if (it === "skills") add({ label: T("💅 Trả lời tay nghề", "💅 Answer skills"), text: T(`Dạ em làm được ${skills || "ạ"}${exp}.${link}`, `I can do ${skills || "that"}${exp}.${link}`) });

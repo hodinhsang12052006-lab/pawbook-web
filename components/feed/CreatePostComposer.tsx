@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Image as ImageIcon, X, Loader2, Sparkles } from "lucide-react";
@@ -15,8 +16,8 @@ const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
 const POST_TYPE_OPTIONS = (): { value: "GENERAL" | "SHOWCASE"; label: string }[] => [
-  { value: "GENERAL", label: tr("💬 Chia sẻ", "💬 Share") },
-  { value: "SHOWCASE", label: tr("✨ Khoe tay nghề / tiệm", "✨ Show off work / salon") },
+  { value: "GENERAL", label: tr("Chia sẻ", "Share") },
+  { value: "SHOWCASE", label: tr("Chia sẻ tác phẩm / tiệm", "Showcase work / salon") },
 ];
 
 export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { onPosted: (post: FeedPost) => void; suggestedTags?: string[] }) {
@@ -79,7 +80,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
           if (res.ok && data.url) {
             setMediaUrls((prev) => [...prev, data.url]);
           } else {
-            toast.error(data.error || tr(`Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
+            toast.error(apiError(data, `Không thể tải "${rawFile.name}" lên.`, `Couldn't upload "${rawFile.name}".`));
           }
         } catch (err) {
           toast.error(err instanceof FileTooLargeError ? err.message : tr(`Lỗi mạng khi tải "${rawFile.name}" lên.`, `Network error uploading "${rawFile.name}".`));
@@ -107,7 +108,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể đăng bài.", "Couldn't publish the post."));
+        toast.error(apiError(data, "Không thể đăng bài.", "Couldn't publish the post."));
         return;
       }
       if (!data.pending) onPosted(data);

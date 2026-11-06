@@ -11,12 +11,12 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
 
     const technicianUserId = req.nextUrl.searchParams.get("technicianUserId");
     if (!technicianUserId) {
-      return NextResponse.json({ error: "Thiếu technicianUserId." }, { status: 400 });
+      return NextResponse.json({ error: "Thiếu technicianUserId.", errorEn: "Missing technician." }, { status: 400 });
     }
 
     const unlock = await prisma.unlockContact.findUnique({
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ unlocked: !!unlock, unlockedAt: unlock?.unlockedAt ?? null });
   } catch (err) {
     console.error("GET /api/unlock error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống khi kiểm tra trạng thái mở khóa." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống khi kiểm tra trạng thái mở khóa.", errorEn: "Couldn't check the unlock status. Please try again." }, { status: 500 });
   }
 }
 
@@ -42,11 +42,11 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
     if (session.user.role !== Role.OWNER) {
       return NextResponse.json(
-        { error: "Chỉ tài khoản Chủ tiệm mới có thể mở khóa liên hệ thợ." },
+        { error: "Chỉ tài khoản Chủ tiệm mới có thể mở khóa liên hệ thợ.", errorEn: "Only salon owner accounts can unlock a tech's contact details." },
         { status: 403 }
       );
     }
@@ -55,10 +55,10 @@ export async function POST(req: NextRequest) {
     const { technicianUserId, deepSurveyAnswers, hiringTimeline } = body;
 
     if (!technicianUserId) {
-      return NextResponse.json({ error: "Thiếu technicianUserId." }, { status: 400 });
+      return NextResponse.json({ error: "Thiếu technicianUserId.", errorEn: "Missing technician." }, { status: 400 });
     }
     if (technicianUserId === session.user.id) {
-      return NextResponse.json({ error: "Không thể tự mở khóa liên hệ với chính mình." }, { status: 400 });
+      return NextResponse.json({ error: "Không thể tự mở khóa liên hệ với chính mình.", errorEn: "You can't unlock your own contact details." }, { status: 400 });
     }
 
     const technician = await prisma.user.findUnique({
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       select: { id: true, role: true },
     });
     if (!technician || technician.role !== Role.TECHNICIAN) {
-      return NextResponse.json({ error: "Không tìm thấy hồ sơ thợ này." }, { status: 404 });
+      return NextResponse.json({ error: "Không tìm thấy hồ sơ thợ này.", errorEn: "Couldn't find this technician's profile." }, { status: 404 });
     }
 
     // Idempotent theo đúng yêu cầu "không bắt họ làm lại lần thứ 2 với cùng
@@ -94,6 +94,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ unlocked: true, unlockedAt: unlock.unlockedAt }, { status: 201 });
   } catch (err) {
     console.error("POST /api/unlock error:", err);
-    return NextResponse.json({ error: "Lỗi hệ thống khi mở khóa liên hệ." }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi hệ thống khi mở khóa liên hệ.", errorEn: "Couldn't unlock the contact. Please try again." }, { status: 500 });
   }
 }

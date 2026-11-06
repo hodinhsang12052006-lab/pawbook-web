@@ -30,6 +30,8 @@ async function swipe(page, cdp, fromX, toX, y) {
 }
 
 const selectedTab = (p) => p.locator('[role="tab"][aria-selected="true"]').innerText();
+// Vị trí tab đang chọn (TAB_ORDER của trang chủ: 0 = Bảng tin, 1 = Việc làm, 2 = Thợ) — không phụ thuộc chữ trên tab.
+const selectedIndex = (p) => p.locator('[role="tab"]').evaluateAll((els) => els.findIndex((e) => e.getAttribute("aria-selected") === "true"));
 
 try {
   // ===== THỢ trên điện thoại =====
@@ -49,7 +51,7 @@ try {
 
   await nav.getByRole("button", { name: "Việc làm" }).click();
   await tp.waitForTimeout(600);
-  R.check("M2", "Bấm 'Việc làm' → tab Việc gấp, URL ?tab=jobs, nút sáng đúng", (await selectedTab(tp)).includes("Việc gấp") && tp.url().includes("tab=jobs") && (await nav.getByRole("button", { name: "Việc làm" }).getAttribute("aria-current")) === "page", tp.url());
+  R.check("M2", "Bấm 'Việc làm' → tab Việc gấp, URL ?tab=jobs, nút sáng đúng", (await selectedIndex(tp)) === 1 && tp.url().includes("tab=jobs") && (await nav.getByRole("button", { name: "Việc làm" }).getAttribute("aria-current")) === "page", tp.url());
 
   // Cuộn để thanh tab lên gần đầu màn hình, rồi vuốt ngay trên vùng nội dung.
   await tp.evaluate(() => {
@@ -60,17 +62,17 @@ try {
   const box = await tp.locator('[role="tablist"]').boundingBox();
   const y = Math.min(box.y + box.height + 200, tp.viewportSize().height - 160);
   await swipe(tp, cdp, 330, 60, y);
-  const afterLeft = await selectedTab(tp);
+  const afterLeft = await selectedIndex(tp);
   await swipe(tp, cdp, 60, 330, y);
-  const afterRight = await selectedTab(tp);
-  R.check("M3", "Vuốt trái → 'Thợ rảnh', vuốt phải → quay lại 'Việc gấp'", afterLeft.includes("Thợ rảnh") && afterRight.includes("Việc gấp"), `${afterLeft} / ${afterRight}`);
+  const afterRight = await selectedIndex(tp);
+  R.check("M3", "Vuốt trái → tab Thợ (vị trí 2), vuốt phải → quay lại tab Việc làm (vị trí 1)", afterLeft === 2 && afterRight === 1, `${afterLeft} / ${afterRight}`);
 
   // Vuốt trên hàng chip bang (cuộn ngang) KHÔNG được đổi tab
   await tp.evaluate(() => window.scrollTo(0, 0));
   await tp.waitForTimeout(300);
   const chip = await tp.getByRole("button", { name: "Tất cả bang" }).boundingBox();
   await swipe(tp, cdp, 330, 60, chip.y + chip.height / 2);
-  R.check("M4", "Vuốt trên hàng chip bang chỉ cuộn, không đổi tab", (await selectedTab(tp)).includes("Việc gấp"), await selectedTab(tp));
+  R.check("M4", "Vuốt trên hàng chip bang chỉ cuộn, không đổi tab", (await selectedIndex(tp)) === 1, await selectedTab(tp));
 
   // Viên chọn trượt đúng vị trí
   const tx = await tp.locator('[role="tablist"] > span[aria-hidden]').evaluate((el) => el.style.transform);
@@ -108,7 +110,7 @@ try {
   const toast = tp.locator('[role="status"]').filter({ has: tp.getByRole("button", { name: "Ẩn thông báo" }) });
   const appeared = await toast.waitFor({ timeout: 34000 }).then(() => true).catch(() => false);
   const label = appeared ? await toast.locator("p").first().innerText() : "";
-  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG/i.test(label), label);
+  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /VIỆC MỚI|TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG/i.test(label), label);
   await tp.screenshot({ path: `${OUT}/m_fomo.png` });
   if (appeared) {
     await toast.getByRole("button", { name: "Ẩn thông báo" }).click();
@@ -130,12 +132,13 @@ try {
   await op.goto(BASE_URL + "/?tab=feed");
   const onav = op.getByRole("navigation", { name: "Điều hướng chính" });
   await onav.waitFor({ timeout: 15000 });
-  await onav.getByRole("button", { name: "Tìm thợ" }).click();
+  await onav.getByRole("button", { name: /^(Tìm thợ|Tuyển thợ)$/ }).click();
   await op.waitForTimeout(600);
   const ownerTab = await selectedTab(op);
+  const ownerIdx = await selectedIndex(op); // 2 = tab Thợ
   await onav.getByRole("button", { name: "Đăng tin tuyển thợ" }).click();
   await op.waitForURL(/\/jobs\/create/, { timeout: 15000 }).catch(() => {});
-  R.check("M11", "Chủ tiệm: 'Tìm thợ' → tab Thợ rảnh; ＋ → trang đăng tin", ownerTab.includes("Thợ rảnh") && op.url().includes("/jobs/create"), `${ownerTab} ${op.url()}`);
+  R.check("M11", "Chủ tiệm: 'Tuyển thợ' → tab Thợ; ＋ → trang đăng tin", ownerIdx === 2 && op.url().includes("/jobs/create"), `${ownerTab} ${op.url()}`);
   await op.goto(BASE_URL + "/?tab=jobs");
   await op.waitForTimeout(1500);
   await op.screenshot({ path: `${OUT}/m_owner_nav.png` });

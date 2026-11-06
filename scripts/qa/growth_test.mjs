@@ -5,7 +5,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Results, registerUser } from "./lib.mjs";
 
 const R = new Results("Sức khoẻ tăng trưởng");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const errors = [];
 let browser;
 const realCount = async (role) => Number((await db.execute({ sql: `SELECT COUNT(*) n FROM "User" WHERE role = ? AND email NOT LIKE '%pawnailjobs.demo' AND email != 'tonghop@feed.pawnail.invalid'`, args: [role] })).rows[0].n); // bỏ tài khoản hệ thống "Tin tổng hợp"

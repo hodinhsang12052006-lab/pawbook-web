@@ -2,6 +2,7 @@
 
 // Các khối dùng trên trang hồ sơ công khai (app/profile/[uid]/page.tsx) — tách
 // ra cho trang chính gọn, dễ đọc và dễ sửa.
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -198,7 +199,7 @@ export function ReviewsSection({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể gửi đánh giá.", "Couldn't submit the review."));
+        toast.error(apiError(data, "Không thể gửi đánh giá.", "Couldn't submit the review."));
         return;
       }
       toast.success(tr("Đã gửi đánh giá — cảm ơn bạn! 🙏", "Review submitted — thank you! 🙏"));
@@ -397,7 +398,7 @@ export function GallerySection({ ownerId }: { ownerId: string }) {
   }
   const media = posts.flatMap((p) => p.mediaUrls);
   if (media.length === 0) {
-    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint='Ảnh/video đăng mục "Khoe tiệm" trên bảng tin sẽ hiện ở đây.' />;
+    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint={tr('Ảnh và video bạn đăng ở mục "Chia sẻ tác phẩm / tiệm" trên bảng tin sẽ hiện tại đây.', 'Photos and videos you post as "Showcase work / salon" in the feed appear here.')} />;
   }
   return <MediaGrid urls={media} />;
 }

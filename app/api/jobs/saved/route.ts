@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
     const userId = (session.user as any).id;
 
@@ -23,6 +23,6 @@ export async function GET() {
     return NextResponse.json(saved.map((s) => s.jobId));
   } catch (error: any) {
     console.error("Fetch saved jobs API error:", error);
-    return NextResponse.json({ error: "Không thể tải danh sách tin đã lưu." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể tải danh sách tin đã lưu.", errorEn: "Couldn't load your saved jobs." }, { status: 500 });
   }
 }

@@ -38,6 +38,16 @@
                 <data android:pathPrefix="/tryon" />
                 <data android:pathPrefix="/trends" />
                 <data android:pathPrefix="/r/" />
+                <!-- URL tiếng Việt (/vi/…) cũng mở trong app — Google lập chỉ mục cả 2 bản. -->
+                <data android:pathPrefix="/vi/jobs" />
+                <data android:pathPrefix="/vi/salons" />
+                <data android:pathPrefix="/vi/designs" />
+                <data android:pathPrefix="/vi/profile" />
+                <data android:pathPrefix="/vi/messages" />
+                <data android:pathPrefix="/vi/tryon" />
+                <data android:pathPrefix="/vi/trends" />
+                <data android:pathPrefix="/vi/menu" />
+                <data android:pathPrefix="/menu" />
             </intent-filter>
         </activity>
 

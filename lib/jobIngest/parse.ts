@@ -6,6 +6,8 @@ import { anyStateName } from "@/lib/stateNames";
 
 export interface ParsedJob {
   isHiring: boolean;
+  /** Có yêu cầu giới tính / tuổi (sẽ bị gỡ khi đăng hộ tiệm). */
+  discriminatory: boolean;
   market: "US" | "AU" | null;
   phone: string | null; // E.164: +1XXXXXXXXXX / +61XXXXXXXXX
   phoneDisplay: string | null; // (713) 555-0123 / 0412 345 678
@@ -326,6 +328,50 @@ export const isAdPost = (text: string) => AD_POST.test(String(text || ""));
 /** Bài thợ đi tìm việc — không đưa vào mục Việc làm dù có chữ "cần thợ". */
 export const isJobSeeking = (text: string) => SEEKING_STRONG.test(String(text || "").slice(0, 400)) || SEEKING.test(String(text || "").slice(0, 160));
 
+// YÊU CẦU GIỚI TÍNH / TUỔI trong tin tuyển ("cần 1 thợ nữ trẻ", "dưới 30 tuổi", "female only") — trái luật chống phân
+// biệt đối xử khi tuyển dụng (Mỹ: Title VII, ADEA; Úc: Sex / Age Discrimination Act). Tin PawNail đăng hộ tiệm được
+// GỠ cụm đó trước khi lên bảng việc làm; admin xem trước thấy cảnh báo. "nam nữ đều được" / "male or female" không bị bắt.
+const W = "(?![\\p{L}\\p{N}])"; // hết từ (chữ tiếng Việt có dấu nên không dùng \b)
+const NOUN = "(th[ợo]|nh[âa]n vi[êe]n|ng[ườu][ờo]i|ng[uư][oơ]i|c[ôo] g[áa]i|ch[ịi] em|b[ạa]n)";
+// Không bắt "nam nữ", "nam/nữ", "nam, nữ", "nam hoặc nữ", "nữ và nam" (= giới tính nào cũng được).
+const EITHER = "(?!\\s*(?:\\/|-|,|&|ho[ặa]c|hay|v[àa])?\\s*(?:n[ữu]|nam)" + W + ")";
+// "… trẻ", "… trẻ đẹp", "… xinh" theo sau (yêu cầu tuổi / ngoại hình)
+const LOOKS = "(\\s+tr[ẻe]" + W + ")?(\\s+(đ[ẹe]p|xinh)" + W + ")?";
+const DISCRIM_RULES: [RegExp, string][] = [
+  // "ưu tiên nữ", "chỉ nhận nam", "chỉ tuyển thợ nữ trẻ"
+  [new RegExp("(ư|u)u ti[êe]n\\s+(th[ợo]\\s+)?(n[ữu]|nam|tr[ẻe])" + W + EITHER + LOOKS, "giu"), ""],
+  [new RegExp("ch[ỉi] (nh[ậa]n|tuy[ểe]n)\\s+(th[ợo]\\s+)?(n[ữu]|nam|tr[ẻe])" + W + EITHER + LOOKS, "giu"), ""],
+  // "thợ nữ trẻ", "thợ nam", "cô gái trẻ" → giữ danh từ
+  [new RegExp(NOUN + "\\s+(n[ữu]|nam)" + W + EITHER + LOOKS, "giu"), "$1"],
+  [new RegExp(NOUN + "\\s+tr[ẻe]" + W + "(\\s+(đ[ẹe]p|xinh)" + W + ")?", "giu"), "$1"],
+  // tuổi: "dưới 30 tuổi", "từ 18-35 tuổi", "độ tuổi 20 - 35"
+  [new RegExp("(d[ưu][ớo]i|tr[êe]n|t[ừu]|kho[ảa]ng)?\\s*\\d{2}\\s*(?:-|–|đến|den|t[ớo]i)\\s*\\d{2}\\s*tu[ổo]i" + W, "giu"), ""],
+  [new RegExp("(d[ưu][ớo]i|tr[êe]n)\\s*\\d{2}\\s*tu[ổo]i" + W, "giu"), ""],
+  [new RegExp("(đ[ộo] tu[ổo]i|tu[ổo]i)\\s*(t[ừu]\\s*)?\\d{2}\\s*(?:-|–|đến|den|t[ớo]i)\\s*\\d{2}" + W, "giu"), ""],
+  // English
+  [/\b(?:(?:young|female|male|pretty)\s+)+(?=(?:nail\s+)?(?:techs?|technicians?|workers?|staff|girls?|lady|ladies|guys?)\b)/gi, ""],
+  [/\b(?:females?|males?|women|men|girls?|ladies|guys?)\s+only\b/gi, ""],
+  [/\b(?:under|over|below|above)\s+\d{2}\s*(?:years?\s*old|yrs?|y\/?o)\b/gi, ""],
+  [/\bages?\s*\d{2}\s*(?:-|–|to)\s*\d{2}\b/gi, ""],
+];
+
+/** Tin có yêu cầu giới tính / tuổi không. */
+export const hasDiscriminatoryRequirement = (text: string): boolean => DISCRIM_RULES.some(([re]) => { re.lastIndex = 0; return re.test(String(text || "")); });
+
+/** Gỡ yêu cầu giới tính / tuổi khỏi nội dung tin (giữ phần còn lại nguyên văn). */
+export function stripDiscriminatoryRequirements(text: string): string {
+  let s = String(text || "");
+  for (const [re, to] of DISCRIM_RULES) { re.lastIndex = 0; s = s.replace(re, to); }
+  // Dọn dấu câu còn sót sau khi gỡ cụm ("Ưu tiên nữ, dưới 30 tuổi. Lương cao" → "Lương cao").
+  return s
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([,.;:!?)])/g, "$1")
+    .replace(/\(\s*\)/g, "")
+    .replace(/,\s*(?=[,.;:!?])/g, "")
+    .replace(/(^|\n|[.!?]\s)\s*[,.;:]+\s*/g, "$1")
+    .replace(/^[ \t]+|[ \t]+$/gm, "");
+}
+
 export function parseJobPost(raw: string): ParsedJob {
   const text = String(raw || "").slice(0, 6000);
   const sale = isSalonSale(text);
@@ -350,5 +396,6 @@ export function parseJobPost(raw: string): ParsedJob {
     isHiring, isSale: sale, market, phone: ph?.e164 ?? null, phoneDisplay: ph?.display ?? null, salonName, address: addr?.address ?? null, zip: addr?.zip ?? null,
     state, city: place.city ?? addr?.city ?? cityFromText(text), salaryType: sal.salaryType, salaryAmount: sal.salaryAmount, skills, benefits, isUrgent,
     title: title.slice(0, 80),
+    discriminatory: hasDiscriminatoryRequirement(text),
   };
 }

@@ -67,7 +67,7 @@ try {
   R.check("C6", "Thanh dưới của khách: Trang chủ · Mẫu nail · Tin nhắn · Tôi — không có Việc làm / Bảng tin", /Mẫu nail/.test(nav) && /Tôi/.test(nav) && !/Việc làm|Bảng tin|Tìm thợ/.test(nav), nav.replace(/\s+/g, " "));
 
   // Mẫu nail: khách thấy giá + tìm tiệm, KHÔNG thấy vật tư / các bước (thông tin nghề)
-  const db = createClient({ url: "file:prisma/dev.db" });
+  const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
   await db.execute("PRAGMA busy_timeout = 10000");
   await db.execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: ["qa-client-look"] });
   await db.execute({
@@ -114,7 +114,7 @@ try {
   R.check("C12", "Không có lỗi JavaScript", c.errors.length === 0 && o.errors.length === 0, [...c.errors, ...o.errors].join(" | "));
 } finally {
   if (mk.data?.item?.id) await tech.req(`/api/menu/${mk.data.item.id}`, { method: "DELETE" });
-  await createClient({ url: "file:prisma/dev.db" }).execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: ["qa-client-look"] }).catch(() => {});
+  await createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */.execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: ["qa-client-look"] }).catch(() => {});
   await browser.close();
 }
 const s = R.summary();

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BookOpen, Camera, CheckCircle2, Clock, Hand, ImagePlus, Loader2, Pencil, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
@@ -98,11 +99,11 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
       return;
     }
     if (r.d.code === "AI_UNAVAILABLE") {
-      toast(r.d.error);
+      toast(apiError(r.d, "AI đang bận — bạn có thể tự chọn tình trạng bên dưới.", "The AI is busy right now. You can pick the condition below."));
       await manual();
       return;
     }
-    toast.error(r.d.error || tr("Không soi được, thử lại.", "Couldn't analyse, try again."));
+    toast.error(apiError(r.d, "Không soi được, thử lại.", "Couldn't analyse, try again."));
     setPhase("start");
   };
 
@@ -111,7 +112,7 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
     const perception = p ?? DEFAULT_PERCEPTION(part);
     setPhase("loading");
     const r = await post({ perception, part, prefs });
-    if (!r.ok) { toast.error(r.d.error || tr("Có lỗi, thử lại.", "Something went wrong.")); setPhase("start"); return; }
+    if (!r.ok) { toast.error(apiError(r.d, "Có lỗi, thử lại.", "Something went wrong.")); setPhase("start"); return; }
     setResult({ ...r.d, provider: "manual" });
     setEditing(true);
     setPhase("result");
@@ -168,12 +169,12 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
         icon={Hand}
         loggedIn={!!user}
         path="/consult"
-        title={tr("Soi tay tư vấn bằng AI", "AI hand consultation")}
-        lead={tr("Khách không biết làm mẫu gì? Chụp tay khách — vài giây có ngay lời tư vấn như thợ lâu năm.", "Client can't decide? Snap their hand — in seconds you get advice like a seasoned tech.")}
+        title={tr("Phân tích tay & móng", "Hand & nail analysis")}
+        lead={tr("Chụp tay khách để phân tích tay và móng, nhận gợi ý tư vấn trong vài giây.", "Snap a client's hand to analyze their hands and nails, and get consultation tips in seconds.")}
         points={[
           tr("Nhận ra tình trạng da tay, móng (khô, nứt, móng yếu…) và cách xử lý an toàn", "Spots skin & nail condition (dry, cracked, weak nails…) and how to treat it safely"),
-          tr("Gợi ý quy trình làm + thời gian + giá, đúng với menu của bạn", "Suggests the service steps, time and price from your own menu"),
-          tr("Đưa khách xem ngay các mẫu hợp tay, hợp dáng móng — chốt đơn nhanh hơn", "Shows the client designs that suit their hands — close the sale faster"),
+          tr("Gợi ý quy trình, thời gian và giá theo menu của bạn", "Suggests the service steps, time and price from your own menu"),
+          tr("Cho khách xem các mẫu hợp tay, hợp dáng móng — giúp khách chọn mẫu nhanh hơn", "Shows designs that suit their hands and nail shape — helps clients choose with confidence"),
         ]}
       />
     );
@@ -182,8 +183,8 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
   return (
     <div className="space-y-5" ref={topRef}>
       <header className={embedded ? "hidden" : "space-y-1"}>
-        <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Hand className="h-6 w-6 text-pink-300" />{tr("Soi tay tư vấn", "Hand consultation")}</h1>
-        <p className="text-sm text-slate-400">{tr("Chụp tay khách → xem tình trạng, quy trình nên làm và những mẫu hợp nhất. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand → see its condition, the right service plan and the best-matching designs. Show the client your screen.")}</p>
+        <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Hand className="h-6 w-6 text-pink-300" />{tr("Phân tích tay & móng", "Hand & nail analysis")}</h1>
+        <p className="text-sm text-slate-400">{tr("Chụp tay khách để xem tình trạng móng, quy trình nên làm và những mẫu phù hợp. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand to see its condition, the right service plan and the designs that suit it — then help them choose with confidence.")}</p>
       </header>
 
       {phase === "start" && (
@@ -414,7 +415,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
       </Section>
 
       {/* Hợp với khách */}
-      <Section title={tr("Hợp với khách", "Best for this client")} icon={<Sparkles className="h-4 w-4 text-pink-300" />}>
+      <Section title={tr("Hợp với khách", "Suits this client")} icon={<Sparkles className="h-4 w-4 text-pink-300" />}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{tr("Dáng móng", "Nail shape")}</p>
@@ -422,7 +423,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
               <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-2.5 ring-1 ring-white/10">
                 <ShapeIcon id={s.id} className={`h-10 w-7 flex-shrink-0 ${i === 0 ? "text-pink-300" : "text-slate-300"}`} />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-white">{t(LABELS.shape[s.id])}{i === 0 && <span className="ml-1.5 rounded-full bg-pink-500/20 px-1.5 py-0.5 text-[10px] font-black text-pink-200">{tr("Hợp nhất", "Best")}</span>}</p>
+                  <p className="text-sm font-bold text-white">{t(LABELS.shape[s.id])}{i === 0 && <span className="ml-1.5 rounded-full bg-pink-500/20 px-1.5 py-0.5 text-[10px] font-black text-pink-200">{tr("Hợp nhất", "Recommended")}</span>}</p>
                   <p className="text-xs text-slate-400">{t(s.why)}</p>
                 </div>
               </div>
@@ -461,7 +462,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
             <li key={i} className={`flex gap-3 rounded-2xl p-3 ${s.flag ? "bg-rose-500/10 ring-1 ring-rose-500/30" : "bg-white/[0.02]"}`}>
               <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-black ${s.flag ? "bg-rose-500 text-white" : "bg-sky-500/15 text-sky-300"}`}>{s.flag ? "!" : i + 1 - a.steps.filter((x, k) => x.flag && k < i).length}</span>
               <div className="min-w-0 flex-1">
-                <p className="flex items-baseline justify-between gap-2 text-sm font-bold text-white">{t(s.title)}{s.minutes > 0 && <span className="flex-shrink-0 text-[11px] font-semibold text-slate-500">{s.minutes}′</span>}</p>
+                <p className="flex items-baseline justify-between gap-2 text-sm font-bold text-white">{t(s.title)}{s.minutes > 0 && <span className="flex-shrink-0 text-[11px] font-semibold text-slate-500">{s.minutes}{tr(" phút", " min")}</span>}</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{t(s.detail)}</p>
               </div>
             </li>
@@ -495,7 +496,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
       {r.menuTotal === 0 && (
         <Link href={`/profile/${userId}?tab=menu`} className="flex items-center gap-3 rounded-3xl bg-amber-500/[0.07] p-4 ring-1 ring-amber-400/20 hover:bg-amber-500/10">
           <BookOpen className="h-5 w-5 flex-shrink-0 text-amber-300" />
-          <span className="text-sm text-amber-50">{tr("Tạo menu mẫu có giá — lần sau app gợi ý luôn mẫu CỦA BẠN hợp với tay khách.", "Build your priced menu — next time the app suggests YOUR designs that suit the client.")}</span>
+          <span className="text-sm text-amber-50">{tr("Tạo menu mẫu có giá — lần sau app gợi ý luôn những mẫu của bạn hợp với tay khách.", "Build your priced menu — next time the app suggests your own designs that suit the client.")}</span>
         </Link>
       )}
 

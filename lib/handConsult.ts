@@ -113,7 +113,7 @@ export const CONDITIONS: Record<string, ConditionDef> = {
   ingrown_risk: {
     part: "FOOT", label: ["Khoé móng chân đâm vào da", "Ingrown toenail risk"], minutes: 3,
     what: ["Khoé móng chân cong, có xu hướng đâm vào da.", "The toenail edge curves into the skin."],
-    todo: ["Cắt THẲNG ngang, không khoét sâu khoé. Nếu sưng, đỏ, đau → không xử lý, khuyên khách gặp bác sĩ.", "Cut STRAIGHT across, never dig into the corners. If swollen, red or painful → don't treat, refer to a doctor."],
+    todo: ["Cắt thẳng ngang, không khoét sâu khoé. Nếu sưng, đỏ, đau → không xử lý, khuyên khách gặp bác sĩ.", "Cut straight across, never dig into the corners. If swollen, red or painful → don't treat, refer to a doctor."],
     care: ["Mang giày rộng mũi, cắt móng thẳng ngang.", "Wear roomy shoes and cut straight across."],
   },
   // ---- Dấu hiệu phải NGỪNG — thợ nail không được chữa ----

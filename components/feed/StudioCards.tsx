@@ -133,7 +133,7 @@ export function ThemeCard({ studio, isOwner, onJoin }: { studio: Studio; isOwner
               <span className="text-[11px] font-semibold text-white/70">{c.posts}{tr(" bài đã tham gia", " entries so far")}</span>
             </div>
           ) : (
-            <span className="text-[11px] font-semibold text-white/60">{tr("Đăng ảnh mẫu bạn làm — bài được thích nhiều nhất được ghim Top tuần 🏆", "Post your set — the most-liked one gets pinned #1 this week 🏆")}</span>
+            <span className="text-[11px] font-semibold text-white/60">{tr("Đăng mẫu bạn làm — bài được thích nhiều nhất sẽ được giới thiệu đầu bảng tuần này.", "Post your set — the most-liked entry is featured at the top of this week's board.")}</span>
           )}
         </div>
       </div>
@@ -161,6 +161,8 @@ export function TipCard({ tip }: { tip: string }) {
 export function RecapCard({ recap, market }: { recap: NonNullable<Studio["recap"]>; market: "US" | "AU" }) {
   useTr(); // render lại khi đổi VI/EN
   const cur = market === "AU" ? "A$" : "$";
+  // Tuần chưa có tin tuyển mới thì không hiện thẻ "0 tin tuyển mới — tuyển nhiều nhất —" (trống và kém tin cậy).
+  if (!recap.newJobs && !recap.medianPay) return null;
   return (
     <Link href="/trends" className="group block rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] via-slate-900/40 to-slate-900/30 p-4 transition-colors hover:border-emerald-500/40">
       <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-300">
@@ -169,7 +171,7 @@ export function RecapCard({ recap, market }: { recap: NonNullable<Studio["recap"
       <div className="mt-2 grid grid-cols-3 gap-2">
         <div>
           <p className="text-xl font-black text-white">{recap.newJobs}</p>
-          <p className="text-[10px] text-slate-500">{tr("tin tuyển mới", "new jobs")}</p>
+          <p className="text-[10px] text-slate-500">{tr("tin tuyển mới", recap.newJobs === 1 ? "new job" : "new jobs")}</p>
         </div>
         <div>
           <p className="truncate text-sm font-black text-white">{recap.topState ?? "—"}</p>
@@ -207,7 +209,7 @@ export function ChallengeBoard({ studio }: { studio: Studio }) {
       </div>
       {c.entries.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-slate-400">
-          {tr("Đăng mẫu móng kèm ", "Post your nails with ")}<b className="text-pink-300">#{c.hashtag}</b>{tr(" — bài được thích nhiều nhất lên Top 1, hiện trước mọi tiệm đang tìm thợ.", " — the most-liked set takes #1 and is shown to every salon hiring.")}
+          {tr("Đăng mẫu kèm ", "Post your set with ")}<b className="text-pink-300">#{c.hashtag}</b>{tr(". Bài được thích nhiều nhất sẽ được giới thiệu đầu bảng tuần này.", ". The most-liked entry is featured at the top of this week's board.")}
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2.5">

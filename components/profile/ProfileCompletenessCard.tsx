@@ -24,8 +24,8 @@ export default function ProfileCompletenessCard({
   const done = percent >= 100;
   const benefit =
     role === "OWNER"
-      ? tr("Hồ sơ tiệm đầy đủ giúp thợ tin tưởng và gọi nhiều hơn.", "A complete salon profile earns more trust and calls from techs.")
-      : tr("Hồ sơ đầy đủ được chủ tiệm chú ý và nhắn tin nhiều hơn.", "Complete profiles get noticed and messaged more by salons.");
+      ? tr("Thợ xem hồ sơ tiệm trước khi gọi — thông tin đầy đủ giúp thợ hiểu rõ tiệm.", "Techs read your salon profile before they call. Complete details help them decide.")
+      : tr("Tiệm xem hồ sơ của bạn trước khi nhắn tin — thông tin đầy đủ giúp tiệm hiểu rõ tay nghề.", "Salons read your profile before they message you. Complete details show your skills.");
 
   return (
     <div className="glass-card rounded-2xl p-4">

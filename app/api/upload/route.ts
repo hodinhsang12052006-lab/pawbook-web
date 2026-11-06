@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để tải lên tệp tin." },
+        { error: "Vui lòng đăng nhập để tải lên tệp tin.", errorEn: "Log in to upload files." },
         { status: 401 }
       );
     }
@@ -24,14 +24,14 @@ export async function POST(req: Request) {
 
     if (!file) {
       return NextResponse.json(
-        { error: "Không tìm thấy tệp tin nào để tải lên." },
+        { error: "Không tìm thấy tệp tin nào để tải lên.", errorEn: "No file to upload." },
         { status: 400 }
       );
     }
 
     if (file.size > 10 * 1024 * 1024) { // 10MB max size limit
       return NextResponse.json(
-        { error: "File quá lớn (tối đa 10MB)" },
+        { error: "File quá lớn (tối đa 10MB)", errorEn: "The file is too large (10 MB max)." },
         { status: 400 }
       );
     }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF." },
+        { error: "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.", errorEn: "Only JPG, PNG, WEBP or GIF images are supported." },
         { status: 400 }
       );
     }
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("Cloudinary upload API error:", err);
     return NextResponse.json(
-      { error: "Lỗi hệ thống trong quá trình tải tệp tin lên đám mây Cloudinary." },
+      { error: "Lỗi hệ thống trong quá trình tải tệp tin lên đám mây Cloudinary.", errorEn: "Upload failed. Please try again." },
       { status: 500 }
     );
   }

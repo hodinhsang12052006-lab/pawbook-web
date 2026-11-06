@@ -59,7 +59,7 @@ function toInput(p: SyncPost): IngestInput {
 export async function POST(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized — thiếu hoặc sai INGEST_KEY" }, { status: 401 });
   const body = (await req.json().catch(() => null)) as SyncPost | SyncPost[] | { posts?: SyncPost[] } | null;
-  if (!body || typeof body !== "object") return NextResponse.json({ error: "Body phải là JSON" }, { status: 400 });
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Body phải là JSON", errorEn: "The request body must be JSON." }, { status: 400 });
 
   // 1 bài → trả kết quả của bài đó
   if (!Array.isArray(body) && !("posts" in body)) {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: r.status, job_id: r.jobId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null }, { status: code });
   }
   const list = (Array.isArray(body) ? body : body.posts) || [];
-  if (!Array.isArray(list) || !list.length) return NextResponse.json({ error: "Chưa có bài nào" }, { status: 400 });
+  if (!Array.isArray(list) || !list.length) return NextResponse.json({ error: "Chưa có bài nào", errorEn: "No posts yet." }, { status: 400 });
   if (list.length > 200) return NextResponse.json({ error: "Tối đa 200 bài mỗi lần gửi" }, { status: 413 });
   const out = await ingestBatch(list.filter((p) => p && typeof p === "object").map(toInput));
   return NextResponse.json({

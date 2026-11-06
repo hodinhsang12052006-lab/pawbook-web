@@ -137,6 +137,8 @@ try {
   browser = await chromium.launch();
   async function login(email, password = DEMO_PASSWORD, locale = "vi-VN") {
     const ctx = await browser.newContext({ ...devices["Pixel 7"], locale, acceptDownloads: true });
+    // Ngôn ngữ do máy chủ chọn (cookie bitpaw_locale → Accept-Language → en); localStorage chỉ còn để tương thích bản cũ.
+    await ctx.addCookies([{ name: "bitpaw_locale", value: locale === "en-US" ? "en" : "vi", url: BASE_URL }]);
     if (locale === "en-US") await ctx.addInitScript(() => { try { localStorage.setItem("bitpaw_locale", "en"); } catch {} });
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(e.message));
@@ -177,7 +179,7 @@ try {
 
   // (6) Hình nền chat
   await tp.goto(BASE_URL + `/messages?to=${owner.userId}`);
-  await tp.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+  await tp.locator("[data-chat-input]").waitFor({ timeout: 20000 });
   await tp.getByTitle("Thêm tùy chọn").click();
   await tp.getByRole("button", { name: /Hình nền đoạn chat/ }).click();
   const pick = tp.getByRole("dialog", { name: "Chọn hình nền đoạn chat" });
@@ -190,7 +192,7 @@ try {
   R.check("UI4", "Chọn 'Hoa móng' → nền khung chat đổi ngay", bg1.id === "nails" && /svg/.test(bg1.img), JSON.stringify(bg1).slice(0, 120));
   await tp.screenshot({ path: `${OUT}/ret_wallpaper_chat.png` });
   await tp.reload();
-  await tp.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+  await tp.locator("[data-chat-input]").waitFor({ timeout: 20000 });
   const bg2 = await wpEl.getAttribute("data-wallpaper");
   R.check("UI5", "Tải lại trang → vẫn giữ hình nền đã chọn (riêng cuộc trò chuyện này)", bg2 === "nails", bg2);
 

@@ -1,5 +1,6 @@
 // Đặt lịch không cần tài khoản — kiểm tra đầu vào, chuẩn hoá SĐT Mỹ / Úc, câu nhắn soạn sẵn (dùng chung
 // máy chủ + client).
+import { SCHEDULED_RE, dayLabel, scheduledLabel } from "@/lib/i18n/format";
 
 export const TIMES = ["morning", "afternoon", "evening"] as const;
 export type BookingTime = (typeof TIMES)[number];
@@ -83,26 +84,32 @@ export function parseBooking(b: Record<string, unknown>, now = new Date()): { ok
   };
 }
 
-/** "Thứ 7, 18/10" · "Sat, Oct 18" */
-export function dateLabel(ymdStr: string | null, locale: "vi" | "en"): string {
-  if (!ymdStr) return "";
-  const [y, m, d] = ymdStr.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  if (locale === "en") return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-  const wd = dt.getUTCDay();
-  return `${wd === 0 ? "CN" : `Thứ ${wd + 1}`}, ${d}/${m}`;
+/** Ngày mong muốn theo ngôn ngữ + thị trường: "Thứ 7, 18/10" · en-US "Sat, Oct 18" · en-AU "Sat 18 Oct". */
+export function dateLabel(ymdStr: string | null, locale: "vi" | "en", market?: string | null): string {
+  return dayLabel(ymdStr, locale, market);
 }
 
-/** Tin nhắn SMS soạn sẵn cho thợ gửi khách (từ điện thoại của chính thợ — 0đ). */
-export function smsText(b: { clientName: string; itemName: string | null; preferredDate: string | null; preferredTime: string | null; locale: string; scheduledFor?: string | null }, techName: string, kind: "confirm" | "ask" = "ask"): string {
+/** Giờ chốt hợp lệ: "YYYY-MM-DDTHH:mm" (giờ địa phương của tiệm, từ ô chọn ngày + ô chọn giờ). */
+export const isScheduledIso = (v: unknown): v is string => typeof v === "string" && SCHEDULED_RE.test(v);
+/** Giờ ô chọn giờ đề xuất theo buổi khách muốn. */
+export const DEFAULT_HOUR: Record<BookingTime, string> = { morning: "10:00", afternoon: "14:00", evening: "18:00" };
+
+/**
+ * Tin nhắn SMS soạn sẵn cho thợ gửi khách (từ điện thoại của chính thợ — 0đ). Ngôn ngữ theo KHÁCH (b.locale),
+ * định dạng ngày giờ theo thị trường của tiệm (en-US "Sat, Nov 7 · 2:30 PM", en-AU "Sat 7 Nov · 2:30 pm") —
+ * không bao giờ theo ngôn ngữ giao diện của thợ.
+ */
+export function smsText(b: { clientName: string; itemName: string | null; preferredDate: string | null; preferredTime: string | null; locale: string; scheduledFor?: string | null }, techName: string, kind: "confirm" | "ask" = "ask", market?: string | null): string {
   const en = b.locale === "en";
+  const lang = en ? "en" : "vi";
   const t = (TIMES as readonly string[]).includes(String(b.preferredTime)) ? TIME_LABEL[b.preferredTime as BookingTime][en ? 1 : 0].toLowerCase() : "";
-  const when = [dateLabel(b.preferredDate, en ? "en" : "vi"), t].filter(Boolean).join(" ");
+  const when = [dateLabel(b.preferredDate, lang, market), t].filter(Boolean).join(" ");
   const what = b.itemName ? (en ? ` for "${b.itemName}"` : ` làm mẫu "${b.itemName}"`) : "";
   if (kind === "confirm" && b.scheduledFor) {
+    const at = scheduledLabel(b.scheduledFor, lang, market);
     return en
-      ? `Hi ${b.clientName}, this is ${techName} (PawNail). You're booked${what} on ${b.scheduledFor}. See you then!`
-      : `Chào ${b.clientName}, mình là ${techName} (PawNail). Mình xác nhận lịch${what} vào ${b.scheduledFor} nha. Hẹn gặp bạn!`;
+      ? `Hi ${b.clientName}, this is ${techName} (PawNail). You're booked${what} on ${at}. See you then!`
+      : `Chào ${b.clientName}, mình là ${techName} (PawNail). Mình xác nhận lịch${what} vào ${at} nha. Hẹn gặp bạn!`;
   }
   return en
     ? `Hi ${b.clientName}, this is ${techName} (PawNail). Got your request${what}${when ? ` (${when})` : ""}. What time works best for you?`

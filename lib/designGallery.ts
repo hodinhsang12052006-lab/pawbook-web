@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { getSetting, setSetting } from "@/lib/settings";
 import { upcomingThemes } from "@/lib/aiDesigns";
 import { SITE_URL } from "@/lib/siteUrl";
+import { savePostEn } from "@/lib/postEn";
+import { dtEn } from "@/lib/i18n/dtEn";
 
 const KEY = "gallery_featured_designs";
 export const GALLERY_PREFIX = "✨ 4 mẫu nail";
@@ -28,7 +30,7 @@ export async function publishDesignGallery(now = new Date()): Promise<{ posted: 
   const theme = upcomingThemes("US", now)[0];
   const base = { status: "published", imageUrl: { startsWith: "https://" }, id: { notIn: featured } } as const;
   const pick = async (extra: object, n: number, skip: string[] = []) =>
-    prisma.nailDesign.findMany({ where: { ...base, ...extra, ...(skip.length ? { AND: [{ id: { notIn: skip } }] } : {}) }, orderBy: [{ saves: { _count: "desc" } }, { publishedAt: "desc" }], take: n, select: { id: true, title: true, imageUrl: true, occasion: true } });
+    prisma.nailDesign.findMany({ where: { ...base, ...extra, ...(skip.length ? { AND: [{ id: { notIn: skip } }] } : {}) }, orderBy: [{ saves: { _count: "desc" } }, { publishedAt: "desc" }], take: n, select: { id: true, title: true, titleEn: true, imageUrl: true, occasion: true } });
 
   // Góc của bài hôm nay theo thứ tự lượt.
   const variant = todayCount % GALLERY_PER_DAY;
@@ -42,21 +44,39 @@ export async function publishDesignGallery(now = new Date()): Promise<{ posted: 
     variant === 1 ? `${GALLERY_PREFIX} dễ làm, lên đều tay — thợ mới cũng làm đẹp 🌱`
     : variant === 2 ? `${GALLERY_PREFIX} quanh năm, khách nào cũng hợp 💗`
     : `${GALLERY_PREFIX} đáng thử hôm nay${seasonal ? ` — có mẫu ${theme!.title} ${theme!.emoji}` : ""}`;
-  const ask = variant === 1 ? "Mẫu nào bạn làm dưới 45 phút? Khoe ảnh thật cho thợ mới học với nha 💅" : "Bạn thích mẫu số mấy? Làm xong nhớ đăng ảnh thật khoe tay nghề nhé 💅";
+  const ask = variant === 1 ? "Mẫu nào bạn làm dưới 45 phút? Chia sẻ ảnh thật để thợ mới cùng học nhé 💅" : "Bạn thích mẫu số mấy? Làm xong, đăng ảnh thật ở mục Chia sẻ tác phẩm nhé 💅";
   const lines = list.map((d, i) => `${i + 1}. ${d.title}`);
   const content = [
     head,
     "",
     ...lines,
     "",
-    `👉 Mỗi mẫu có sẵn vật tư, các bước làm và giá gợi ý: ${SITE_URL}/designs`,
+    `Mỗi mẫu có sẵn vật tư, các bước làm và giá gợi ý: ${SITE_URL}/designs`,
     ask,
     "",
     "Ảnh minh hoạ AI · #MauNail #PawNail",
   ].join("\n");
+  // Bản tiếng Anh: tiêu đề mẫu lấy từ NailDesign.titleEn (mẫu nào cũng có sẵn 2 thứ tiếng).
+  const headEn =
+    variant === 1 ? "✨ 4 nail designs that are easy to get right — great for newer techs"
+    : variant === 2 ? "✨ 4 nail designs for any season and any client"
+    : `✨ 4 nail designs to try today${seasonal ? ` — including ${dtEn(theme!.title)} ${theme!.emoji}` : ""}`;
+  const askEn = variant === 1 ? "Which one can you do in under 45 minutes? Share a photo of your version for newer techs." : "Which one is your favorite? Share a photo of your version when you're done.";
+  const contentEn = [
+    headEn,
+    "",
+    ...list.map((d, i) => `${i + 1}. ${d.titleEn || d.title}`),
+    "",
+    `Each design comes with materials, steps and a suggested price: ${SITE_URL}/designs`,
+    askEn,
+    "",
+    "AI illustrations · #NailDesigns #PawNail",
+  ].join("\n");
+  const id = "c" + crypto.randomBytes(12).toString("hex");
   await prisma.post.create({
-    data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content, postType: "GENERAL", mediaUrls: JSON.stringify(list.map((d) => d.imageUrl)), market: null, createdAt: now },
+    data: { id, authorId: officialId, content, postType: "GENERAL", mediaUrls: JSON.stringify(list.map((d) => d.imageUrl)), market: null, createdAt: now },
   });
+  await savePostEn(id, contentEn);
   await setSetting(KEY, JSON.stringify([...featured, ...list.map((d) => d.id)].slice(-2000)));
   return { posted: true, ids: list.map((d) => d.id) };
 }

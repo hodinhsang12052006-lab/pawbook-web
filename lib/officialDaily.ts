@@ -7,6 +7,7 @@ import { buildBotDrafts, firstLine } from "@/lib/contentBot";
 import { upcomingThemes } from "@/lib/aiDesigns";
 import { GALLERY_PREFIX } from "@/lib/designGallery";
 import { DIGEST_PREFIX } from "@/lib/jobDigestPost";
+import { savePostEn } from "@/lib/postEn";
 
 export const KNOWLEDGE_PER_DAY = 2;
 
@@ -37,9 +38,12 @@ export async function publishDailyOfficialPost(now = new Date()): Promise<{ post
     if (t && (await prisma.nailDesign.count({ where: { status: "published", occasion: t.id } }).catch(() => 0)) >= 10) theme = { title: t.title, emoji: t.emoji };
     const draft = buildBotDrafts({ market, now, theme, publishedTitles: published }).find((d) => !d.pinned && !published.has(firstLine(d.text)));
     if (!draft) continue;
+    const id = "c" + crypto.randomBytes(12).toString("hex");
     await prisma.post.create({
-      data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: draft.text, postType: "GENERAL", mediaUrls: "[]", market: draft.market === "ALL" ? null : draft.market, createdAt: now },
+      data: { id, authorId: officialId, content: draft.text, postType: "GENERAL", mediaUrls: "[]", market: draft.market === "ALL" ? null : draft.market, createdAt: now },
     });
+    // Bài có bản tiếng Anh → người xem tiếng Anh thấy bản đó; không có → bài chỉ hiện với người dùng tiếng Việt.
+    if (draft.textEn) await savePostEn(id, draft.textEn);
     return { posted: true, title: firstLine(draft.text) };
   }
   return { posted: false, reason: "hết bài mới trong kho nội dung" };

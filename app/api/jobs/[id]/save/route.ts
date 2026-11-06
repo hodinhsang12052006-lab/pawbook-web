@@ -14,14 +14,14 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
     const userId = (session.user as any).id;
     const { id: jobId } = await params;
 
     const job = await prisma.job.findUnique({ where: { id: jobId }, select: { id: true, ownerId: true, title: true } });
     if (!job) {
-      return NextResponse.json({ error: "Tin tuyển dụng không tồn tại." }, { status: 404 });
+      return NextResponse.json({ error: "Tin tuyển dụng không tồn tại.", errorEn: "This job post doesn't exist." }, { status: 404 });
     }
 
     const existed = await prisma.savedJob.findUnique({ where: { userId_jobId: { userId, jobId } }, select: { id: true } });
@@ -36,7 +36,7 @@ export async function POST(
     return NextResponse.json(saved, { status: 201 });
   } catch (error: any) {
     console.error("Save job API error:", error);
-    return NextResponse.json({ error: "Không thể lưu tin. Vui lòng thử lại." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể lưu tin. Vui lòng thử lại.", errorEn: "Couldn't save the job. Please try again." }, { status: 500 });
   }
 }
 
@@ -48,7 +48,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 });
+      return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
     }
     const userId = (session.user as any).id;
     const { id: jobId } = await params;
@@ -58,6 +58,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Đã bỏ lưu tin." });
   } catch (error: any) {
     console.error("Unsave job API error:", error);
-    return NextResponse.json({ error: "Không thể bỏ lưu tin. Vui lòng thử lại." }, { status: 500 });
+    return NextResponse.json({ error: "Không thể bỏ lưu tin. Vui lòng thử lại.", errorEn: "Couldn't unsave the job. Please try again." }, { status: 500 });
   }
 }

@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const token = sp.get("token");
   if (token) {
     const b = await byToken(token);
-    if (!b || b.status !== "done") return NextResponse.json({ error: "Link đánh giá không đúng hoặc đã bị xoá." }, { status: 404 });
+    if (!b || b.status !== "done") return NextResponse.json({ error: "Link đánh giá không đúng hoặc đã bị xoá.", errorEn: "This review link is invalid or was removed." }, { status: 404 });
     const done = await prisma.clientReview.findUnique({ where: { bookingId: b.id }, select: { rating: true } });
     return NextResponse.json(
       {
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     );
   }
   const techId = sp.get("techId");
-  if (!techId) return NextResponse.json({ error: "Thiếu techId" }, { status: 400 });
+  if (!techId) return NextResponse.json({ error: "Thiếu techId", errorEn: "Missing technician." }, { status: 400 });
   const where = { techId, hidden: false };
   const [agg, rows] = await Promise.all([
     prisma.clientReview.aggregate({ where, _avg: { rating: true }, _count: { _all: true } }),
@@ -53,28 +53,29 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const ipKey = `client-review:${getClientIp(req)}`;
-  if (isRateLimited(ipKey, 10, 60 * 60 * 1000)) return NextResponse.json({ error: "Bạn gửi hơi nhiều, thử lại sau nhé." }, { status: 429 });
+  if (isRateLimited(ipKey, 10, 60 * 60 * 1000)) return NextResponse.json({ error: "Bạn gửi hơi nhiều, thử lại sau nhé.", errorEn: "Too many requests. Please try again later." }, { status: 429 });
   recordAttempt(ipKey, 60 * 60 * 1000);
   const body = (await req.json().catch(() => ({}))) as { token?: unknown; rating?: unknown; comment?: unknown; displayName?: unknown };
   const b = await byToken(String(body.token ?? ""));
-  if (!b || b.status !== "done") return NextResponse.json({ error: "Link đánh giá không đúng hoặc đã bị xoá." }, { status: 404 });
-  if (Date.now() - b.updatedAt.getTime() > REVIEW_DAYS * DAY) return NextResponse.json({ error: "Link đánh giá đã hết hạn." }, { status: 410 });
+  if (!b || b.status !== "done") return NextResponse.json({ error: "Link đánh giá không đúng hoặc đã bị xoá.", errorEn: "This review link is invalid or was removed." }, { status: 404 });
+  if (Date.now() - b.updatedAt.getTime() > REVIEW_DAYS * DAY) return NextResponse.json({ error: "Link đánh giá đã hết hạn.", errorEn: "This review link has expired." }, { status: 410 });
   const rating = Math.round(Number(body.rating));
-  if (!(rating >= 1 && rating <= 5)) return NextResponse.json({ error: "Chọn số sao từ 1 đến 5." }, { status: 400 });
+  if (!(rating >= 1 && rating <= 5)) return NextResponse.json({ error: "Chọn số sao từ 1 đến 5.", errorEn: "Choose 1 to 5 stars." }, { status: 400 });
   const comment = typeof body.comment === "string" ? body.comment.replace(/\s+/g, " ").trim().slice(0, 500) || null : null;
-  if (comment && LINK.test(comment)) return NextResponse.json({ error: "Nhận xét không được chứa đường link." }, { status: 400 });
+  if (comment && LINK.test(comment)) return NextResponse.json({ error: "Nhận xét không được chứa đường link.", errorEn: "Reviews can't include links." }, { status: 400 });
   const displayName = (typeof body.displayName === "string" ? body.displayName.replace(/\s+/g, " ").trim().slice(0, 30) : "") || shortName(b.clientName);
   try {
     await prisma.clientReview.create({ data: { techId: b.techId, bookingId: b.id, rating, comment, displayName, itemName: b.itemName } });
   } catch (e) {
-    if (/Unique constraint|P2002/i.test(String((e as Error)?.message))) return NextResponse.json({ error: "Lịch hẹn này đã được đánh giá — cảm ơn bạn!" }, { status: 409 });
+    if (/Unique constraint|P2002/i.test(String((e as Error)?.message))) return NextResponse.json({ error: "Lịch hẹn này đã được đánh giá — cảm ơn bạn!", errorEn: "This appointment has already been reviewed. Thank you!" }, { status: 409 });
     throw e;
   }
   await sendPush(b.techId, {
-    title: `${"⭐".repeat(rating)} Khách vừa đánh giá bạn`,
+    title: `Khách vừa đánh giá bạn ${rating}/5`,
     body: `${displayName}${comment ? `: “${comment.slice(0, 80)}”` : ""}`,
     url: `/profile/${b.techId}?tab=menu`,
     tag: "pn-client-review",
+    en: { title: `New client review: ${rating}/5` },
   }).catch(() => 0);
   return NextResponse.json({ ok: true }, { status: 201 });
 }

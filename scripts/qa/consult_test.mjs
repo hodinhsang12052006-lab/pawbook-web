@@ -44,7 +44,7 @@ const cf = http.createServer((req, res) => {
 }).listen(4992);
 
 // ---------- Dữ liệu mẫu (DB LOCAL) ----------
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000");
 const IMG = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
 const QA = [

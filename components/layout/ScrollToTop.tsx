@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tr } from "@/lib/i18n/tr";
 import { ArrowUp } from "lucide-react";
 
 // Nút cuộn lên đầu — xuất hiện sau khi cuộn xuống đủ xa (feed/job board có
@@ -21,7 +22,7 @@ export default function ScrollToTop() {
     <button
       type="button"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      aria-label="Lên đầu trang"
+      aria-label={tr("Lên đầu trang", "Back to top")}
       className="fixed right-4 bottom-24 md:bottom-6 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-slate-700/60 bg-slate-900/80 text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md transition-all hover:border-pink-500/50 hover:text-white active:scale-90 animate-fadeIn"
     >
       <ArrowUp className="h-5 w-5" />

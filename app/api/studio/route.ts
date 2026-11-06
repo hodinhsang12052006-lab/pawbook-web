@@ -17,6 +17,6 @@ export async function GET(req: Request) {
     );
   } catch (error) {
     console.error("GET /api/studio error:", error);
-    return NextResponse.json({ error: "Không tải được nội dung." }, { status: 500 });
+    return NextResponse.json({ error: "Không tải được nội dung.", errorEn: "Couldn't load this content." }, { status: 500 });
   }
 }

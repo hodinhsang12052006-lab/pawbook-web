@@ -9,7 +9,7 @@ import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, SEED_OWNER_2, SEED_TECH, Results, 
 const R = new Results("Chat mượt");
 const CPU = Number(process.env.CPU || 4);
 const HISTORY = 150;
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const browser = await chromium.launch();
 
 async function login(email, device = devices["Pixel 7"]) {
@@ -61,7 +61,7 @@ await page.addInitScript(() => {
 const resetPerf = () => page.evaluate(() => { window.__perf.long = []; window.__perf.events = []; });
 const readPerf = () => page.evaluate(() => window.__perf);
 const pct = (arr, p) => (arr.length ? [...arr].sort((a, b) => a - b)[Math.min(arr.length - 1, Math.floor(arr.length * p))] : 0);
-const box = page.getByPlaceholder(/Viết tin nhắn/);
+const box = page.locator("[data-chat-input]");
 const out = {};
 
 // 1) Mở chat có lịch sử dài (vào thẳng từ hồ sơ/tin tuyển).

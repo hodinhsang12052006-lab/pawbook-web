@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPusherClient } from "@/lib/pusherClient";
+import { tr } from "@/lib/i18n/tr";
 
 // Global banner for the ONE shared Pusher connection (singleton client — see
 // lib/pusherClient.ts). CallManager and MessagesContent each bind their own
@@ -38,7 +39,7 @@ export default function PusherStatusBanner() {
   return (
     <div className="fixed top-0 inset-x-0 z-[100] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-xs font-bold text-amber-950 shadow-lg animate-fadeIn pt-[max(0.5rem,env(safe-area-inset-top))]">
       <span className="h-2 w-2 rounded-full bg-amber-900 animate-pulse flex-shrink-0" />
-      Đang kết nối lại máy chủ tin nhắn...
+      {tr("Đang kết nối lại tin nhắn…", "Reconnecting to messages…")}
     </div>
   );
 }

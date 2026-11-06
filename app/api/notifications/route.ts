@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { clientBookings } from "@/lib/bookingClients";
+import { scheduledLabel } from "@/lib/i18n/format";
 
 // GET /api/notifications — thông báo cho chuông 🔔, tổng hợp từ dữ liệu SẴN
 // CÓ (không cần bảng mới): thích / bình luận bài của mình, đánh giá về mình,
@@ -14,7 +16,7 @@ const PER_KIND = 15;
 
 export interface NotificationItem {
   id: string;
-  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite";
+  kind: "like" | "comment" | "review" | "save" | "unlock" | "job" | "view" | "invite" | "booking";
   actor: { id: string | null; name: string; nameEn?: string; avatarUrl: string | null };
   text: string;
   textEn: string;
@@ -100,6 +102,9 @@ export async function GET() {
         .catch(() => []),
     ]);
 
+    const bookingUpdates = meRow?.role === "CLIENT"
+      ? (await clientBookings(me).catch(() => [])).filter((b) => (b.status === "confirmed" || b.status === "declined") && new Date(b.updatedAt).getTime() >= since.getTime())
+      : [];
     const items: NotificationItem[] = [
       ...likes.map((l) => ({
         id: `like-${l.id}`,
@@ -165,6 +170,16 @@ export async function GET() {
         href: `/profile/${v.viewer.id}`,
         createdAt: v.createdAt.toISOString(),
       })),
+      // Khách: tiệm xác nhận / từ chối lịch hẹn mình đã gửi (khi đăng nhập).
+      ...bookingUpdates.map((b) => ({
+        id: `booking-${b.id}-${b.status}`,
+        kind: "booking" as const,
+        actor: { id: b.tech.id, name: b.tech.name, avatarUrl: b.tech.avatarUrl },
+        text: b.status === "confirmed" ? `đã xác nhận lịch hẹn của bạn${b.scheduledFor ? `: ${scheduledLabel(b.scheduledFor, "vi", b.tech.market)}` : ""}` : "không nhận được lịch hẹn này — bạn thử ngày khác nhé",
+        textEn: b.status === "confirmed" ? `confirmed your booking${b.scheduledFor ? `: ${scheduledLabel(b.scheduledFor, "en", b.tech.market)}` : ""}` : "can't take this booking — try another day",
+        href: "/bookings",
+        createdAt: b.updatedAt,
+      })),
       ...urgentJobs.map((j) => ({
         id: `job-${j.id}`,
         kind: "job" as const,
@@ -181,6 +196,6 @@ export async function GET() {
     return NextResponse.json({ items });
   } catch (error) {
     console.error("GET /api/notifications error:", error);
-    return NextResponse.json({ error: "Không tải được thông báo." }, { status: 500 });
+    return NextResponse.json({ error: "Không tải được thông báo.", errorEn: "Couldn't load notifications." }, { status: 500 });
   }
 }

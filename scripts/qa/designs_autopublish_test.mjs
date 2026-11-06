@@ -5,7 +5,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Client, Results, SEED_TECH, registerUser } from "./lib.mjs";
 
 const R = new Results("Mẫu nail lên thẳng + ảnh thật");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const errors = [];
 let browser;
 const IMG = "https://res.cloudinary.com/demo/image/upload/sample.jpg";

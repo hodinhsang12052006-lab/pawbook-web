@@ -5,6 +5,8 @@
 import React from "react";
 import { useIsOnline } from "@/lib/presence";
 import { tr } from "@/lib/i18n/tr";
+import { chatListTime } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
 
 export const POPULAR_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
@@ -17,19 +19,6 @@ export const POPULAR_EMOJIS = [
   "✍️", "👍", "👎", "👊", "✊", "🤛", "🤜", "🤝", "👏", "🙌",
   "👐", "🤲", "🙏", "💅", "🤳", "💪", "🦾", "🦿", "❤️", "🧡",
   "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "🔥", "✨",
-];
-
-export const MOCK_STICKERS = [
-  { emoji: "🐶", label: "Cún Cười" },
-  { emoji: "🐱", label: "Mèo Wow" },
-  { emoji: "🚀", label: "Thăng Tiến" },
-  { emoji: "💎", label: "VIP Deal" },
-  { emoji: "💼", label: "Duyệt Công" },
-  { emoji: "🚗", label: "Vận Chuyển" },
-  { emoji: "🛠️", label: "Đang Tới" },
-  { emoji: "🔥", label: "Hot Deal" },
-  { emoji: "🎉", label: "Chốt Deal" },
-  { emoji: "👍", label: "Cực Tốt" },
 ];
 
 export interface UserType {
@@ -59,14 +48,11 @@ export interface MessageType {
 // Bỏ dấu tiếng Việt để tìm "nguyen" ra "Nguyễn".
 export const foldVi = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
-// Giờ hiển thị kiểu Messenger/Zalo: hôm nay → 14:05 · trong tuần → T3 · cũ hơn → 12/09.
-export function shortChatTime(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(tr("vi-VN", "en-US"), { hour: "2-digit", minute: "2-digit" });
-  const days = (now.getTime() - d.getTime()) / 86_400_000;
-  if (days < 7) return (tr("CN T2 T3 T4 T5 T6 T7", "Sun Mon Tue Wed Thu Fri Sat").split(" "))[d.getDay()];
-  return d.toLocaleDateString(tr("vi-VN", "en-US"), { day: "2-digit", month: "2-digit" });
+// Giờ hiển thị kiểu Messenger/Zalo: hôm nay → giờ · trong tuần → thứ · cũ hơn → ngày, theo ngôn ngữ +
+// thị trường (en-US "3:16 AM", en-AU "3:16 am", vi "03:16"). Phụ thuộc múi giờ người xem → chỉ gọi sau khi
+// mount (useMounted), không render trên máy chủ.
+export function shortChatTime(iso: string, lang: Locale, market?: string | null) {
+  return chatListTime(iso, lang, market);
 }
 
 // Avatar có chấm xanh khi người đó THẬT SỰ đang mở app (Pusher presence).
@@ -106,7 +92,7 @@ export function describeCall(body: string) {
 }
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
-export const ROLE_VI = (): Record<string, string> => ({ OWNER: tr("Chủ tiệm", "Salon owner"), TECHNICIAN: tr("Thợ Nail", "Nail tech"), ADMIN: tr("Quản trị viên", "Admin"), CLIENT: tr("Khách làm nail", "Nail client") });
+export const ROLE_VI = (): Record<string, string> => ({ OWNER: tr("Chủ tiệm", "Salon owner"), TECHNICIAN: tr("Thợ nail", "Nail tech"), ADMIN: tr("Quản trị viên", "Admin"), CLIENT: tr("Khách làm nail", "Nail client") });
 
 export interface ConversationType {
   id: string;

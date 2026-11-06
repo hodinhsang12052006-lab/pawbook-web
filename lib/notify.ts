@@ -15,5 +15,6 @@ export async function notifyUser(userId: string | null | undefined, actorId: str
   }
   // Thông báo đẩy: tới được cả khi người nhận đã đóng app. Service worker tự
   // bỏ qua nếu họ đang mở app (đã có chuông + âm thanh trong app).
-  await sendPush(userId, { title: "PawNail", body: text, url, tag: "pn-notify" });
+  // Người nhận dùng tiếng Anh (mặc định) thấy textEn; người dùng tiếng Việt thấy text.
+  await sendPush(userId, { title: "PawNail", body: text, url, tag: "pn-notify", ...(textEn ? { en: { body: textEn } } : {}) });
 }

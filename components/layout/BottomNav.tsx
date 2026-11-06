@@ -2,7 +2,8 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Newspaper, Briefcase, Users, MessageCircle, Plus, Home, Sparkles, Store, type LucideIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
 import Avatar from "@/components/ui/Avatar";
@@ -27,7 +28,7 @@ interface NavItem {
 // để nhường chỗ cho nội dung, hiện lại ngay khi cuộn lên.
 export default function BottomNav() {
   useTr(); // render lại khi đổi VI/EN
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const router = useRouter();
   const { user: sessionUser, loading } = useSessionUser();
   const { unreadCount } = useUnreadMessages();
@@ -96,7 +97,7 @@ export default function BottomNav() {
 
   const clientItems: NavItem[] = [
     { id: "feed", label: tr("Trang chủ", "Home"), icon: Home, onClick: () => router.push("/"), active: isHome },
-    { id: "second", label: tr("Mẫu nail", "Looks"), icon: Sparkles, onClick: () => router.push("/designs"), active: pathname?.startsWith("/designs") ?? false },
+    { id: "second", label: tr("Mẫu nail", "Designs"), icon: Sparkles, onClick: () => router.push("/designs"), active: pathname?.startsWith("/designs") ?? false },
   ];
   const items: NavItem[] = [
     ...(isClient ? clientItems : []),
@@ -111,7 +112,7 @@ export default function BottomNav() {
     },
     {
       id: "second",
-      label: isOwner ? tr("Tìm thợ", "Find techs") : tr("Việc làm", "Jobs"),
+      label: isOwner ? tr("Tuyển thợ", "Hire") : tr("Việc làm", "Jobs"),
       icon: isOwner ? Users : Briefcase,
       onClick: () => goToTab(secondTab),
       active: isHome && currentTab === secondTab,
@@ -126,7 +127,7 @@ export default function BottomNav() {
     },
     {
       id: "profile",
-      label: isClient ? tr("Tôi", "Me") : tr("Hồ sơ", "Profile"),
+      label: isClient ? tr("Tài khoản", "Account") : tr("Hồ sơ", "Profile"),
       onClick: () => router.push("/profile"),
       active: pathname?.startsWith("/profile") ?? false,
     },
@@ -190,7 +191,7 @@ export default function BottomNav() {
               <button
                 type="button"
                 onClick={createAction}
-                aria-label={isClient ? tr("Tìm tiệm & đặt lịch", "Find a salon & book") : isOwner ? tr("Đăng tin tuyển thợ", "Post a job") : tr("Đăng bài mới", "New post")}
+                aria-label={isClient ? tr("Tìm tiệm", "Find a salon") : isOwner ? tr("Đăng tin tuyển thợ", "Post a job") : tr("Đăng bài mới", "New post")}
                 className="-mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 via-fuchsia-600 to-purple-600 text-white shadow-[0_10px_24px_-6px_rgba(219,39,119,0.75)] ring-4 ring-slate-950 transition-transform duration-150 active:scale-90"
               >
                 {isClient ? <Store className="h-[22px] w-[22px]" strokeWidth={2.25} /> : <Plus className="h-[22px] w-[22px]" strokeWidth={2.25} />}

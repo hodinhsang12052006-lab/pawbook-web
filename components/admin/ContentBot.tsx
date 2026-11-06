@@ -14,6 +14,7 @@ export default function ContentBot() {
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [drafts, setDrafts] = useState<BotDraft[] | null>(null);
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [editsEn, setEditsEn] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [posted, setPosted] = useState<Set<string>>(new Set());
 
@@ -28,9 +29,11 @@ export default function ContentBot() {
 
   const publish = async (d: BotDraft) => {
     const content = (edits[d.id] ?? d.text).trim();
-    if (!confirm("Đăng bài này lên bảng tin + hồ sơ PawNail Jobs?")) return;
+    if (!confirm("Đăng bài này lên bảng tin + hồ sơ PawNail?")) return;
     setBusy(d.id);
-    const res = await fetch("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content, postType: "GENERAL", mediaUrls: [] }) });
+    // Bản tiếng Anh (nếu chủ đề có) đi kèm — người xem tiếng Anh thấy bản này. Bài chỉ có tiếng Việt chỉ hiện với người dùng tiếng Việt.
+    const contentEn = d.textEn ? (editsEn[d.id] ?? d.textEn).trim() : undefined;
+    const res = await fetch("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content, ...(contentEn ? { contentEn } : {}), postType: "GENERAL", mediaUrls: [] }) });
     const r = await res.json().catch(() => ({}));
     setBusy(null);
     if (!res.ok) return toast.error(r.error || "Không đăng được.");
@@ -82,6 +85,19 @@ export default function ContentBot() {
                   disabled={done}
                   className="w-full resize-y rounded-lg bg-slate-900/80 p-2.5 text-xs leading-relaxed text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-sky-500/60 disabled:opacity-60"
                 />
+                {d.textEn ? (
+                  <textarea
+                    aria-label="Bản tiếng Anh"
+                    lang="en"
+                    value={editsEn[d.id] ?? d.textEn}
+                    onChange={(e) => setEditsEn((x) => ({ ...x, [d.id]: e.target.value }))}
+                    rows={6}
+                    disabled={done}
+                    className="w-full resize-y rounded-lg bg-slate-900/60 p-2.5 text-xs leading-relaxed text-slate-300 ring-1 ring-white/10 focus:outline-none focus:ring-sky-500/60 disabled:opacity-60"
+                  />
+                ) : (
+                  <p className="text-[11px] text-slate-500">Chưa có bản tiếng Anh — bài chỉ hiện với người dùng tiếng Việt.</p>
+                )}
                 {!!d.sources.length && (
                   <p className="text-[11px] text-slate-500">Kiểm chứng: {d.sources.map((s, i) => <React.Fragment key={s.url}>{i > 0 && " · "}<a href={s.url} target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:underline">{s.label}</a></React.Fragment>)}</p>
                 )}

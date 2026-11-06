@@ -9,6 +9,7 @@ import { chatChannelName } from "@/lib/pusherChannel";
 import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
 import { sendPush } from "@/lib/push";
 import { coldDmBlocked } from "@/lib/abuseGuard";
+import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để xem tin nhắn." },
+        { error: "Vui lòng đăng nhập để xem tin nhắn.", errorEn: "Log in to see your messages." },
         { status: 401 }
       );
     }
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
 
       if (!conversation) {
         return NextResponse.json(
-          { error: "Cuộc trò chuyện không tồn tại." },
+          { error: "Cuộc trò chuyện không tồn tại.", errorEn: "This conversation doesn't exist." },
           { status: 404 }
         );
       }
@@ -75,7 +76,7 @@ export async function GET(req: Request) {
       const isMember = conversation.participants.some((p) => p.id === userId);
       if (!isMember) {
         return NextResponse.json(
-          { error: "Bạn không có quyền truy cập cuộc trò chuyện này." },
+          { error: "Bạn không có quyền truy cập cuộc trò chuyện này.", errorEn: "You don't have access to this conversation." },
           { status: 403 }
         );
       }
@@ -276,7 +277,7 @@ export async function GET(req: Request) {
   } catch (error: any) {
     console.error("GET messages error:", error);
     return NextResponse.json(
-      { error: "Không thể lấy danh sách tin nhắn." },
+      { error: "Không thể lấy danh sách tin nhắn.", errorEn: "Couldn't load messages." },
       { status: 500 }
     );
   }
@@ -289,7 +290,7 @@ export async function POST(req: Request) {
 
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "Vui lòng đăng nhập để gửi tin nhắn." },
+        { error: "Vui lòng đăng nhập để gửi tin nhắn.", errorEn: "Log in to send messages." },
         { status: 401 }
       );
     }
@@ -309,7 +310,7 @@ export async function POST(req: Request) {
 
     if (!messageText) {
       return NextResponse.json(
-        { error: "Nội dung tin nhắn không thể bỏ trống." },
+        { error: "Nội dung tin nhắn không thể bỏ trống.", errorEn: "Write a message first." },
         { status: 400 }
       );
     }
@@ -320,7 +321,7 @@ export async function POST(req: Request) {
     const maxLength = msgType === "TEXT" ? 5000 : 2_000_000;
     if (messageText.length > maxLength) {
       return NextResponse.json(
-        { error: "Tin nhắn quá dài." },
+        { error: "Tin nhắn quá dài.", errorEn: "This message is too long." },
         { status: 400 }
       );
     }
@@ -333,21 +334,21 @@ export async function POST(req: Request) {
     // hoặc data URL ảnh (fallback khi chưa cấu hình Cloudinary) — chặn phần còn lại.
     // Nhật ký cuộc gọi do CallManager ghi: "missed:audio", "ended:video:125"…
     if (msgType === "CALL" && !/^(missed|declined|ended):(audio|video)(:\d{1,6})?$/.test(messageText)) {
-      return NextResponse.json({ error: "Nhật ký cuộc gọi không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Nhật ký cuộc gọi không hợp lệ.", errorEn: "Invalid call log." }, { status: 400 });
     }
     if (msgType === "STICKER" && messageText.length > 16) {
-      return NextResponse.json({ error: "Sticker không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Sticker không hợp lệ.", errorEn: "Invalid sticker." }, { status: 400 });
     }
 
     // Tin thoại: chỉ file ghi âm đã tải lên Cloudinary của PawNail (kèm "#d=<giây>" để hiện thời lượng).
     if (msgType === "AUDIO" && !/^https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/video\/upload\/[^\s"'<>]+(#d=\d{1,3})?$/i.test(messageText)) {
-      return NextResponse.json({ error: "Tin nhắn thoại không hợp lệ." }, { status: 400 });
+      return NextResponse.json({ error: "Tin nhắn thoại không hợp lệ.", errorEn: "Invalid voice message." }, { status: 400 });
     }
     if (msgType === "IMAGE" || msgType === "VIDEO") {
       const ALLOWED_MEDIA = /^(https:\/\/res\.cloudinary\.com\/|https:\/\/[a-z0-9-]+\.tenor\.com\/|https:\/\/media\.tenor\.com\/|https:\/\/[a-z0-9-]+\.giphy\.com\/|data:image\/|data:video\/)/i;
       if (!ALLOWED_MEDIA.test(messageText)) {
         return NextResponse.json(
-          { error: "Chỉ chấp nhận ảnh/video tải lên qua ứng dụng." },
+          { error: "Chỉ chấp nhận ảnh/video tải lên qua ứng dụng.", errorEn: "Photos and videos must be uploaded through the app." },
           { status: 400 }
         );
       }
@@ -373,10 +374,10 @@ export async function POST(req: Request) {
       } else {
         // Chống spam: mở cuộc trò chuyện MỚI với người lạ có giới hạn / ngày (lib/abuseGuard).
         if (typeof receiverId !== "string" || receiverId === userId) {
-          return NextResponse.json({ error: "Người nhận không hợp lệ." }, { status: 400 });
+          return NextResponse.json({ error: "Người nhận không hợp lệ.", errorEn: "Invalid recipient." }, { status: 400 });
         }
         const capped = await coldDmBlocked(userId);
-        if (capped) return NextResponse.json({ error: capped, code: "COLD_DM_LIMIT" }, { status: 429 });
+        if (capped) return NextResponse.json({ error: capped, errorEn: errorEn(capped), code: "COLD_DM_LIMIT" }, { status: 429 });
         // Create new conversation
         const createdConv = await prisma.conversation.create({
           data: {
@@ -391,7 +392,7 @@ export async function POST(req: Request) {
 
     if (!activeConversationId) {
       return NextResponse.json(
-        { error: "Mã cuộc trò chuyện (conversationId) hoặc người nhận (receiverId) không hợp lệ." },
+        { error: "Mã cuộc trò chuyện (conversationId) hoặc người nhận (receiverId) không hợp lệ.", errorEn: "Invalid conversation or recipient." },
         { status: 400 }
       );
     }
@@ -408,7 +409,7 @@ export async function POST(req: Request) {
 
     if (!conversation) {
       return NextResponse.json(
-        { error: "Cuộc trò chuyện không tồn tại." },
+        { error: "Cuộc trò chuyện không tồn tại.", errorEn: "This conversation doesn't exist." },
         { status: 404 }
       );
     }
@@ -416,7 +417,7 @@ export async function POST(req: Request) {
     const isMember = conversation.participants.some((p) => p.id === userId);
     if (!isMember) {
       return NextResponse.json(
-        { error: "Bạn không có thẩm quyền trong cuộc trò chuyện này." },
+        { error: "Bạn không có thẩm quyền trong cuộc trò chuyện này.", errorEn: "You don't have permission to do that in this conversation." },
         { status: 403 }
       );
     }
@@ -438,7 +439,7 @@ export async function POST(req: Request) {
         });
         if (blockExists) {
           return NextResponse.json(
-            { error: "Không thể gửi tin nhắn — một trong hai người đã chặn." },
+            { error: "Không thể gửi tin nhắn — một trong hai người đã chặn.", errorEn: "You can't message this person." },
             { status: 403 }
           );
         }
@@ -451,7 +452,7 @@ export async function POST(req: Request) {
       const hasAny = await prisma.message.findFirst({ where: { conversationId: activeConversationId }, select: { id: true } });
       if (!hasAny) {
         const capped = await coldDmBlocked(userId);
-        if (capped) return NextResponse.json({ error: capped, code: "COLD_DM_LIMIT" }, { status: 429 });
+        if (capped) return NextResponse.json({ error: capped, errorEn: errorEn(capped), code: "COLD_DM_LIMIT" }, { status: 429 });
       }
     }
 
@@ -523,11 +524,14 @@ export async function POST(req: Request) {
     if (recipients.length && msgType !== "CALL") {
       const preview =
         msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : msgType === "AUDIO" ? "🎤 Đã gửi một tin nhắn thoại" : msgType === "STICKER" ? `${messageText} Sticker` : messageText;
+      const previewEn =
+        msgType === "IMAGE" ? "📷 Sent a photo" : msgType === "VIDEO" ? "🎬 Sent a video" : msgType === "AUDIO" ? "🎤 Sent a voice message" : msgType === "STICKER" ? `${messageText} Sticker` : messageText;
       sendPush(recipients, {
         title: sender.name,
         body: preview,
         url: `/messages?to=${userId}`,
         tag: `pn-chat-${activeConversationId}`,
+        en: { body: previewEn },
       }).catch(() => {});
     }
 
@@ -540,7 +544,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("POST message error:", error);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi hệ thống khi gửi tin nhắn." },
+      { error: "Đã xảy ra lỗi hệ thống khi gửi tin nhắn.", errorEn: "Couldn't send the message. Please try again." },
       { status: 500 }
     );
   }

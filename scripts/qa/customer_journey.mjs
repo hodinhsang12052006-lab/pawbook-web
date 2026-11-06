@@ -124,9 +124,9 @@ try {
   await step("A7 Việc gấp", p, async () => { await p.goto(BASE_URL + "/?tab=jobs"); await settle(p); });
   await step("A8 Mở 1 tin tuyển", p, async () => { await p.locator('a[href^="/jobs/"]').first().click({ timeout: 10000 }); await p.waitForURL(/\/jobs\//); await settle(p); });
   await step("A9 Nhắn tin cho tiệm", p, async () => {
-    const b = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
+    const b = p.getByRole("button", { name: /Nhắn tin qua App|Nhắn tin trong app/ }).or(p.getByRole("link", { name: /Nhắn tin qua App|Nhắn tin trong app/ })).first();
     await b.click({ timeout: 10000 });
-    await p.getByPlaceholder(/Viết tin nhắn/).fill("Dạ em chào anh chị, tiệm còn cần thợ không ạ?");
+    await p.locator("[data-chat-input]").fill("Dạ em chào anh chị, tiệm còn cần thợ không ạ?");
     await p.keyboard.press("Enter"); await p.waitForTimeout(1500);
   });
   await step("A10 Hồ sơ → Xác minh SĐT qua SMS", p, async () => {
@@ -160,10 +160,10 @@ try {
   const email = `khach.e.${stamp}@qa.test`;
   await step("B1 Đăng ký thợ bằng email", b, async () => {
     await b.goto(BASE_URL + "/auth/register?role=technician"); await settle(b);
-    await b.getByPlaceholder("VD: Kim Nails").fill("Bảo Ngọc");
+    await b.getByPlaceholder("VD: Kim Nguyễn").fill("Bảo Ngọc");
     await b.getByPlaceholder("555 123 4567").fill("7135550142");
     await b.getByPlaceholder("VD: Los Angeles").fill("Houston");
-    await b.getByPlaceholder("ban@email.com").fill(email);
+    await b.getByPlaceholder(/ban@email.com|you@email.com/).fill(email);
     await b.locator('input[type="password"]').fill("QaPass#2026");
     await b.getByRole("button", { name: /Tiếp tục/ }).first().click();
     await b.getByText("Tay nghề & mong muốn").waitFor({ timeout: 20000 });

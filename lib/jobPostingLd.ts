@@ -3,6 +3,9 @@
 // Chỉ ghi những gì CÓ THẬT trong tin (không bịa giờ làm, loại hợp đồng…).
 import { SITE_URL } from "@/lib/siteUrl";
 import { stateName } from "@/lib/stateNames";
+import { localePath, type Locale } from "@/lib/i18n/config";
+import { dtEn } from "@/lib/i18n/dtEn";
+import { vocabLabel } from "@/lib/nailVocab";
 
 export interface JobForLd {
   id: string;
@@ -36,22 +39,25 @@ export function parseSalary(amount?: string | null, type?: string | null): { min
   return { min, max, unit };
 }
 
-export function jobPostingLd(j: JobForLd) {
+/** `lang` = ngôn ngữ của trang (url khớp canonical); `descriptionEn` = bản dịch mô tả cho trang tiếng Anh. */
+export function jobPostingLd(j: JobForLd, lang: Locale = "en", descriptionEn?: string | null) {
   const country = j.market === "AU" ? "AU" : "US";
   const skills = (j.skills ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const benefits = (j.benefits ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const salary = parseSalary(j.salaryAmount, j.salaryType);
+  const en = lang === "en";
+  const L = (v: string) => vocabLabel(v, lang, j.market);
   const description = [
-    j.description,
-    skills.length ? `Kỹ năng cần: ${skills.join(", ")}.` : "",
-    benefits.length ? `Quyền lợi: ${benefits.join(", ")}.` : "",
-    j.salaryAmount ? `Lương: ${j.salaryAmount}${j.salaryType ? ` (${j.salaryType})` : ""}.` : "",
+    en ? descriptionEn || dtEn(j.description) : j.description,
+    skills.length ? (en ? `Skills: ${skills.map(L).join(", ")}.` : `Kỹ năng cần: ${skills.map(L).join(", ")}.`) : "",
+    benefits.length ? (en ? `Benefits: ${benefits.map(L).join(", ")}.` : `Quyền lợi: ${benefits.map(L).join(", ")}.`) : "",
+    j.salaryAmount ? (en ? `Pay: ${dtEn(j.salaryAmount)}${j.salaryType ? ` (${L(j.salaryType)})` : ""}.` : `Lương: ${j.salaryAmount}${j.salaryType ? ` (${L(j.salaryType)})` : ""}.`) : "",
   ].filter(Boolean).join("\n");
   const valid = new Date(j.createdAt.getTime() + VALID_DAYS * 86_400_000);
   return {
     "@context": "https://schema.org/",
     "@type": "JobPosting",
-    title: j.title,
+    title: en ? dtEn(j.title) : j.title,
     description,
     identifier: { "@type": "PropertyValue", name: "PawNail Jobs", value: j.id },
     datePosted: j.createdAt.toISOString(),
@@ -67,7 +73,8 @@ export function jobPostingLd(j: JobForLd) {
     ...(skills.length ? { skills: skills.join(", ") } : {}),
     industry: "Nail salon",
     occupationalCategory: "39-5092.00 Manicurists and Pedicurists",
-    url: `${SITE_URL}/jobs/${j.id}`,
+    // trùng với canonical của trang (EN: /jobs/…, VI: /vi/jobs/…)
+    url: `${SITE_URL}${localePath(`/jobs/${j.id}`, lang)}`,
     directApply: false,
   };
 }

@@ -15,7 +15,7 @@ const R = new Results("Chốt: chủ tiệm, người mới, SMS, Google/Apple, 
 const TMP = process.env.TEMP || ".";
 const KEYS = TMP + "/qa-keys";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000");
 const listen = (srv, port) => new Promise((r) => srv.listen(port, "127.0.0.1", r));
 const readBody = (req) => new Promise((r) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => r(b)); });

@@ -39,18 +39,18 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   let ms = await timed(p, async () => {
     // Khách xem được trang chủ (bảng tin, việc, thợ) trước khi đăng ký.
     await p.goto(BASE_URL + "/");
-    await p.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).waitFor();
+    await p.locator('[data-hero-cta="tech"]').waitFor();
   });
   note("THỢ", "Mở app lần đầu → trang chủ công khai", { ms });
   await shot(p, "A01_landing", true);
   await shot(p, "A01_landing_fold");
 
   await p.goto(BASE_URL + "/auth/register?role=technician");
-  await p.getByPlaceholder("VD: Kim Nails").waitFor();
+  await p.getByPlaceholder("VD: Kim Nguyễn").waitFor();
   note("THỢ", "Đăng ký bước 1: số ô phải điền", { inputs: await countInputs(p) });
   await shot(p, "A02_reg_step1", true);
   const stamp = Date.now();
-  await p.getByPlaceholder("VD: Kim Nails").fill("Lan Nguyễn");
+  await p.getByPlaceholder("VD: Kim Nguyễn").fill("Lan Nguyễn");
   await p.getByPlaceholder("555 123 4567").fill("7135550199");
   await p.getByPlaceholder("VD: Los Angeles").fill("Houston");
   note("THỢ", "Gõ Houston → ô Bang tự chọn", { state: await p.getByLabel(/Bang|Tiểu bang/).first().inputValue().catch(() => "?") });
@@ -62,10 +62,10 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   await shot(p, "A03_reg_step2", true);
   await p.getByRole("button", { name: /Bột|Acrylic/ }).first().click();
   await p.getByRole("button", { name: /Tiếp tục/ }).last().click();
-  await p.getByText("Ảnh mẫu móng của bạn").waitFor({ timeout: 10000 });
+  await p.getByText(/Ảnh tay nghề của bạn|Ảnh mẫu móng của bạn/).waitFor({ timeout: 10000 });
   await shot(p, "A04_reg_step3", true);
   // Người dùng thật hay BỎ QUA ảnh lúc đăng ký → thử hoàn tất không ảnh
-  const finish = p.getByRole("button", { name: /Hoàn Tất/ });
+  const finish = p.getByRole("button", { name: /Hoàn tất/i });
   const canSkip = await finish.isEnabled();
   note("THỢ", "Bước 3: hoàn tất được khi chưa có ảnh?", { canSkip });
   if (!canSkip) {
@@ -87,21 +87,21 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   ms = await timed(p, async () => {
     // Thanh dưới là NÚT (không phải link) — bấm như người dùng thật.
     await p.getByRole("button", { name: /^Việc làm$/ }).last().click({ timeout: 5000 });
-    await p.getByRole("link", { name: /Gọi ngay/ }).first().waitFor({ timeout: 15000 });
+    await p.getByRole("link", { name: /Gọi ngay|Gọi cho tiệm/ }).first().waitFor({ timeout: 15000 });
   });
   note("THỢ", "Bấm Việc làm → thấy tin", { ms });
   await shot(p, "A06_jobs");
-  await p.getByRole("link", { name: /Gọi ngay/ }).first().evaluate((el) => el.closest("article,div[class*=rounded]")?.querySelector("a,h3")?.click());
+  await p.getByRole("link", { name: /Gọi ngay|Gọi cho tiệm/ }).first().evaluate((el) => el.closest("article,div[class*=rounded]")?.querySelector("a,h3")?.click());
   await p.waitForURL(/\/jobs\//, { timeout: 10000 }).catch(() => {});
   await p.waitForTimeout(1200);
   await shot(p, "A07_job_detail", true);
   note("THỢ", "Chi tiết tin", { url: p.url().replace(BASE_URL, "") });
 
-  const msgBtn = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
+  const msgBtn = p.getByRole("button", { name: /Nhắn tin qua App|Nhắn tin trong app/ }).or(p.getByRole("link", { name: /Nhắn tin qua App|Nhắn tin trong app/ })).first();
   if (await msgBtn.count()) {
     ms = await timed(p, async () => {
       await msgBtn.click();
-      await p.getByPlaceholder(/Viết tin nhắn/).waitFor({ timeout: 20000 });
+      await p.locator("[data-chat-input]").waitFor({ timeout: 20000 });
     });
     note("THỢ", "Nhắn tiệm từ tin → khung chat sẵn sàng", { ms });
     await shot(p, "A08_chat_first");

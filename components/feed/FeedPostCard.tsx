@@ -1,11 +1,12 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
+import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag, TrendingUp } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 import ArticleText, { parseArticle } from "./ArticleText";
@@ -14,6 +15,8 @@ import { trackPostView } from "@/lib/viewTracker";
 import Avatar from "@/components/ui/Avatar";
 import { playSound } from "@/lib/sounds";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
+import VietnameseChip from "@/components/common/LangChip";
+import { hasVietnamese } from "@/lib/i18n/viText";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -52,8 +55,8 @@ const PRESS = "active:scale-95 transition-transform duration-100";
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
 const POST_TYPE_BADGE = (): Record<string, { label: string; classes: string }> => ({
-  SHOWCASE: { label: tr("✨ Khoe tay nghề", "✨ Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
-  JOB: { label: tr("🔥 Tuyển thợ", "🔥 Hiring"), classes: "bg-red-500/10 border-red-500/25 text-red-300" },
+  SHOWCASE: { label: tr("Chia sẻ tác phẩm", "Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
+  JOB: { label: tr("Tuyển thợ", "Hiring"), classes: "bg-red-500/10 border-red-500/25 text-red-300" },
   GENERAL: { label: "", classes: "" },
 });
 
@@ -63,7 +66,7 @@ function PostText({ content }: { content: string }) {
   const [open, setOpen] = useState(!long);
   return (
     <div className="px-4 pb-3">
-      <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-200 ${open ? "" : "line-clamp-6"}`}>{renderContentWithHashtags(content)}</p>
+      <p lang={hasVietnamese(content) ? "vi" : undefined} className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-200 ${open ? "" : "line-clamp-6"}`}>{renderContentWithHashtags(content)}</p>
       {long && (
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-1 min-h-[32px] text-sm font-bold text-slate-400 hover:text-white">
           {open ? tr("Thu gọn", "Show less") : tr("… Xem thêm", "… See more")}
@@ -122,7 +125,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
     try {
       const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || tr("Không thể xóa bài viết.", "Couldn't delete the post."));
+      if (!res.ok) throw new Error(apiError(data, "Không thể xóa bài viết.", "Couldn't delete the post."));
       toast.success(tr("Đã xóa bài viết.", "Post deleted."));
       onDeleted?.(post.id);
     } catch (err) {
@@ -159,11 +162,11 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   };
   // Bài tin ngành (📰) và bài ảnh mẫu (✨ 4 mẫu nail) của tài khoản chính thức có nhãn riêng.
   const badge = post.content?.startsWith("📰")
-    ? { label: tr("📰 Tin ngành", "📰 Industry news"), classes: "bg-sky-500/10 border-sky-500/25 text-sky-300" }
+    ? { label: tr("Tin ngành", "Industry news"), classes: "bg-sky-500/10 border-sky-500/25 text-sky-300" }
     : post.content?.startsWith("💬") && post.poll
-    ? { label: tr("💬 Thảo luận", "💬 Discussion"), classes: "bg-amber-500/10 border-amber-500/25 text-amber-200" }
+    ? { label: tr("Thảo luận", "Discussion"), classes: "bg-amber-500/10 border-amber-500/25 text-amber-200" }
     : post.content?.startsWith("✨ 4 mẫu nail")
-    ? { label: tr("💅 Mẫu hôm nay", "💅 Today's designs"), classes: "bg-pink-500/10 border-pink-500/25 text-pink-300" }
+    ? { label: tr("Mẫu hôm nay", "Today's designs"), classes: "bg-pink-500/10 border-pink-500/25 text-pink-300" }
     : POST_TYPE_BADGE()[post.postType];
 
   const handleToggleLike = async () => {
@@ -239,7 +242,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || tr("Không thể gửi bình luận.", "Couldn't post the comment."));
+        toast.error(apiError(data, "Không thể gửi bình luận.", "Couldn't post the comment."));
         return;
       }
       setComments((prev) => [...(prev || []), data]);
@@ -266,7 +269,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             {anon ? (
-              <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
+              <span className="truncate text-sm font-bold text-slate-100">{post.author.role === "OWNER" ? tr("Chủ tiệm ẩn danh", "Anonymous salon owner") : tr("Thợ ẩn danh", "Anonymous nail tech")}</span>
             ) : (
               <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
                 {post.author.name}
@@ -288,7 +291,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <span>{timeAgo(post.createdAt)}</span>
             {post.isHot && (
               <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
-                {tr("🔥 Đang hot", "🔥 Trending")}
+                <TrendingUp className="h-3 w-3" aria-hidden />{tr("Được quan tâm", "Trending")}
               </span>
             )}
           </div>
@@ -342,6 +345,8 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
 
       {/* NỘI DUNG */}
       {post.content && (article ? <ArticleText article={article} /> : <PostText content={post.content} />)}
+      {/* Người xem tiếng Anh: bài viết bằng tiếng Việt được hiện nguyên văn, kèm nhãn nhỏ để họ hiểu vì sao. */}
+      <VietnameseChip text={[post.content]} className="mx-4 mb-3" />
       {post.poll && <PollCard postId={post.id} poll={post.poll} />}
 
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,
@@ -482,7 +487,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           href={`/profile/${post.author.id}`}
           className={`ml-auto flex items-center gap-1 rounded-xl border border-pink-500/30 bg-pink-500/5 px-3 py-2 text-[11px] font-bold text-pink-300 hover:bg-pink-500/15 transition-colors ${PRESS}`}
         >
-          {post.author.role === "ADMIN" ? tr("Xem hồ sơ", "View profile") : post.author.role === "OWNER" ? tr("Xem Tiệm", "View salon") : tr("Xem Tay Nghề", "View work")}
+          {post.author.role === "ADMIN" ? tr("Xem hồ sơ", "View profile") : post.author.role === "OWNER" ? tr("Xem tiệm", "View salon") : tr("Xem tay nghề", "View work")}
           <ArrowRight className="h-3 w-3" />
         </Link>}
       </div>

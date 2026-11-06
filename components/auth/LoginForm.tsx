@@ -8,6 +8,7 @@ import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { tr } from "@/lib/i18n/tr";
+import { apiError } from "@/lib/i18n/apiError";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
@@ -50,10 +51,15 @@ export default function LoginForm() {
       });
 
       if (res?.error) {
-        if (res.error === "CredentialsSignin" || res.error.includes("credential")) {
+        // authorize() (lib/authOptions.ts) báo lỗi bằng tiếng Việt → đổi sang câu theo ngôn ngữ trang.
+        if (res.error === "CredentialsSignin" || res.error.includes("credential") || /không chính xác/i.test(res.error)) {
           setError(t("auth.login.errorInvalid"));
+        } else if (/đầy đủ email/i.test(res.error)) {
+          setError(t("auth.login.errorEmpty"));
+        } else if (/tạm khóa|tạm khoá/i.test(res.error)) {
+          setError(tr("Tài khoản tạm khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.", "Too many failed sign-in attempts. Please try again in 15 minutes."));
         } else {
-          setError(res.error);
+          setError(apiError({ error: res.error }, t("auth.login.errorUnknown"), "Something went wrong. Please try again."));
         }
       } else {
         // Test thật trên production phát hiện router.push("/") + router.refresh()

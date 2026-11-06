@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import Link from "next/link";
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import {
@@ -37,6 +38,8 @@ import { uploadMedia } from "@/lib/mediaUpload";
 import { CHAT_WALLPAPERS, getWallpaperId, saveWallpaper, wallpaperById } from "@/lib/chatWallpapers";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { useMounted } from "@/lib/useMounted";
+import { autoTranslates, getTranslation, requestTranslation, useMessageTranslation } from "./messageTranslation";
 
 export default function MessagesContent({
   initialSessionUser,
@@ -393,7 +396,7 @@ export default function MessagesContent({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || tr("Không thể cập nhật trạng thái chặn.", "Couldn't update block status."));
+        toast.error(apiError(data, "Không thể cập nhật trạng thái chặn.", "Couldn't update block status."));
         return;
       }
       setBlockedUserIds((prev) => {
@@ -425,7 +428,7 @@ export default function MessagesContent({
         setReportReason("");
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || tr("Không thể gửi báo cáo.", "Couldn't send the report."));
+        toast.error(apiError(data, "Không thể gửi báo cáo.", "Couldn't send the report."));
       }
     } catch {
       toast.error(tr("Lỗi mạng.", "Network error."));
@@ -585,10 +588,26 @@ export default function MessagesContent({
     };
     el.addEventListener("load", keepPinned, true);
     el.addEventListener("loadedmetadata", keepPinned, true);
+    // Thẻ "menu & mẫu" của đối phương, ảnh trong thẻ, khung gợi ý… nạp SAU khi mở chat và cao thêm phía trên
+    // tin nhắn → trước đây chat dừng ở giữa (scrollTop 166/713), tin mới nhất (vừa được báo) bị che.
+    // Theo dõi kích thước từng khối con: đang ở đáy thì giữ dính đáy; đang kéo lên đọc thì để yên.
+    let ro: ResizeObserver | null = null;
+    let mo: MutationObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        if (isNearBottomRef.current && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+      });
+      const observeChildren = () => Array.from(el.children).forEach((c) => ro!.observe(c));
+      observeChildren();
+      mo = new MutationObserver(observeChildren);
+      mo.observe(el, { childList: true });
+    }
     return () => {
       el.removeEventListener("scroll", handleScroll);
       el.removeEventListener("load", keepPinned, true);
       el.removeEventListener("loadedmetadata", keepPinned, true);
+      ro?.disconnect();
+      mo?.disconnect();
     };
     // Khung cuộn chỉ có khi đang mở 1 cuộc trò chuyện → gắn lại mỗi lần mở / đổi cuộc trò chuyện
     // (trước đây gắn 1 lần lúc vào trang: vào hộp thư rồi mới bấm mở thì không bao giờ gắn).
@@ -904,7 +923,7 @@ export default function MessagesContent({
         });
       } else {
         const errData = await res.json().catch(() => ({}));
-        toast.error(errData.error || tr("Gửi tin nhắn thất bại.", "Message failed to send."));
+        toast.error(apiError(errData, "Gửi tin nhắn thất bại.", "Message failed to send."));
         patchBucket(sendKey, (bucket) => ({
           ...bucket,
           messages: bucket.messages.map((m) => (m.id === tempId ? { ...m, sendError: true } : m)),
@@ -980,7 +999,7 @@ export default function MessagesContent({
         setSelectedUserIds([]);
         loadData(true);
       } else {
-        toast.error(data.error || tr("Tạo nhóm thất bại.", "Couldn't create the group."), { id: toastId });
+        toast.error(apiError(data, "Tạo nhóm thất bại.", "Couldn't create the group."), { id: toastId });
       }
     } catch (err) {
       toast.error(tr("Lỗi kết nối mạng.", "Network connection error."), { id: toastId });
@@ -1085,6 +1104,16 @@ export default function MessagesContent({
         return pb - pa || b.sortAt.localeCompare(a.sortAt);
       });
   }, [conversations, listQuery, currentUser?.id, official?.id]);
+  // Xem trước tin cuối ở danh sách: người xem tiếng Anh + tin tiếng Việt của người kia → hiện bản dịch
+  // (dùng chung bản dịch với bong bóng chat). Chỉ xin dịch cho ~12 hội thoại đầu.
+  const mounted = useMounted();
+  const viewerLang = locale === "vi" ? "vi" : "en";
+  useMessageTranslation("", "", viewerLang, { enabled: false, auto: false }); // đăng ký render lại khi có bản dịch
+  useEffect(() => {
+    conversationRows.slice(0, 12).forEach(({ lastMsg }) => {
+      if (lastMsg && lastMsg.type === "TEXT" && lastMsg.senderId !== currentUser?.id && autoTranslates(lastMsg.body, viewerLang)) requestTranslation(lastMsg.id, viewerLang);
+    });
+  }, [conversationRows, viewerLang, currentUser?.id]);
   const hasOfficialConv = !!official && conversations.some((c) => !c.isGroup && c.participants.some((p) => p.id === official.id));
   const showOfficialStub = !!official && official.id !== currentUser?.id && !hasOfficialConv && !listQuery.trim();
   const openOfficialChat = () =>
@@ -1124,6 +1153,7 @@ export default function MessagesContent({
     if (m.senderId === currentUser?.id) break;
     if (m.type === "IMAGE" || !m.type || m.type === "TEXT") { unanswered = { content: String(m.content || ""), type: m.type === "IMAGE" ? "IMAGE" : "TEXT" }; break; }
   }
+  const partnerWrote = chatMessages.some((m) => m.senderId !== currentUser?.id && m.type !== "SYSTEM");
   // Props ỔN ĐỊNH cho MessageRow (React.memo): đối tượng/hàm giữ nguyên danh
   // tính giữa các lần render, gọi bản mới nhất qua ref.
   const rowChat = useMemo(
@@ -1159,7 +1189,7 @@ export default function MessagesContent({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowGroupModal(true)}
-              className="p-2 rounded-xl bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-pink-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-extrabold shadow-sm shadow-pink-500/5 uppercase tracking-wide"
+              className="p-2 rounded-xl bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-pink-300 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold shadow-sm shadow-pink-500/5"
               title={tr("Tạo nhóm chat mới", "New group chat")}
             >
               <Plus className="h-4 w-4" /> {t("messenger.newGroup")}
@@ -1217,8 +1247,9 @@ export default function MessagesContent({
                 const fromMe = lastMsg?.senderId === currentUser?.id;
                 const unread = isActive ? 0 : conv.unreadCount || 0;
                 const isTyping = typingByConv[conv.id] !== undefined;
+                const txPreview = lastMsg && lastMsg.type === "TEXT" && !fromMe ? getTranslation(lastMsg.id, viewerLang) : undefined;
                 const preview = lastMsg
-                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "AUDIO" ? tr("🎤 Tin nhắn thoại", "🎤 Voice message") : lastMsg.type === "STICKER" ? `${lastMsg.body} Sticker` : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : lastMsg.body}`
+                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "AUDIO" ? tr("🎤 Tin nhắn thoại", "🎤 Voice message") : lastMsg.type === "STICKER" ? `${lastMsg.body} Sticker` : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : txPreview?.status === "done" && txPreview.text ? txPreview.text : txPreview?.status === "loading" ? tr("Đang dịch…", "Translating…") : lastMsg.body}`
                   : isGroup
                   ? tr(`${conv.participants.length} thành viên`, `${conv.participants.length} members`)
                   : tr("Bắt đầu trò chuyện", "Start chatting");
@@ -1256,7 +1287,7 @@ export default function MessagesContent({
                           {!isGroup && isVerifiedRole(partner!.role) && <VerifiedBadge className="h-3.5 w-3.5" />}
                           {!isGroup && partner!.id === official?.id && <Pin className="h-3 w-3 flex-shrink-0 rotate-45 text-slate-500" aria-label={tr("Đã ghim", "Pinned")} />}
                         </p>
-                        {lastMsg && <span className={`flex-shrink-0 text-[10px] ${unread > 0 ? "font-bold text-pink-300" : "text-slate-500"}`}>{shortChatTime(lastMsg.createdAt)}</span>}
+                        {lastMsg && <span className={`flex-shrink-0 text-[10px] ${unread > 0 ? "font-bold text-pink-300" : "text-slate-500"}`}>{mounted ? shortChatTime(lastMsg.createdAt, viewerLang, currentUser?.market) : ""}</span>}
                       </div>
                       <div className="flex items-center gap-1.5">
                         {!isGroup && (
@@ -1487,6 +1518,7 @@ export default function MessagesContent({
                   partner={{ id: activeChat.id, name: activeChat.name, role: activeChat.role, isGroup: activeChat.isGroup }}
                   onStudio={() => setStudioOpen(true)}
                   onSendText={(text) => handleSendMessage(null, text)}
+                  compact={chatMessages.length > 0}
                 />
               )}
 
@@ -1507,6 +1539,7 @@ export default function MessagesContent({
                       seenAt={isLastSelf && activeChat.conversationId ? seenByConv[activeChat.conversationId] : undefined}
                       reactions={messageReactions[msg.id] ?? msg.reactions}
                       locale={locale}
+                      market={currentUser?.market ?? null}
                       t={t}
                       onCallBack={!activeChat.isGroup ? rowHandlers.callBack : undefined}
                       onReact={rowHandlers.react}
@@ -1518,7 +1551,8 @@ export default function MessagesContent({
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 animate-fadeIn">
                   <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/20 to-fuchsia-500/20 ring-1 ring-pink-500/30 text-2xl">👋</span>
                   <p className="text-sm font-bold text-slate-200">{t("messenger.noMessagesYet")}</p>
-                  <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{t("messenger.noMessagesHint")}</p>
+                  {/* Có khách làm nail trong cuộc trò chuyện → nói về giá / lịch trống, không nói "chia turn" (chuyện giữa thợ và tiệm). */}
+                  <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{currentUser?.role === "CLIENT" || activeChat.role === "CLIENT" ? tr("Gửi lời chào, hoặc hỏi về giá và lịch còn trống.", "Say hi, or ask about prices and openings.") : t("messenger.noMessagesHint")}</p>
                   {/* Gợi ý câu mở đầu theo vai trò — bấm để điền sẵn vào ô nhập. */}
                   <div className="mt-1 flex max-w-md flex-wrap justify-center gap-2">
                     {/* đúng cặp vai trò: khách hỏi tiệm (lịch, giá) khác hẳn thợ hỏi việc — trước đây khách cũng thấy "tiệm còn tuyển thợ không" */}
@@ -1621,6 +1655,7 @@ export default function MessagesContent({
                   me={{ id: currentUser.id, role: currentUser.role, market: currentUser.market }}
                   partner={{ id: activeChat.id, role: activeChat.role, isGroup: !!activeChat.isGroup }}
                   last={unanswered}
+                  partnerWrote={partnerWrote}
                   onFill={(text) => { setMessageText(text); setToolsOpen(false); inputRef.current?.focus(); }}
                   onStudio={() => { handleCloseMediaPanel(); setStudioOpen(true); }}
                   onConsult={(image) => { handleCloseMediaPanel(); setConsult({ image }); }}
@@ -1648,18 +1683,21 @@ export default function MessagesContent({
                 </div>
               ) : (
               <form onSubmit={(e) => handleSendMessage(e)} className="flex items-center gap-1 sm:gap-1.5">
-                {hasText && !toolsOpen ? (
+                {/* Màn hẹp (điện thoại) hoặc đang gõ: các nút ảnh / ghi âm / GIF / tạo mẫu thu vào 1 nút "+" để ô
+                    nhập đủ rộng (iPhone 14: trước đây placeholder bị cắt còn "Write a mess"). */}
+                {!toolsOpen && (
                   <button
                     type="button"
                     onClick={() => setToolsOpen(true)}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-pink-300 ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    className={`${hasText ? "flex" : "flex sm:hidden"} h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-pink-300 ring-1 ring-white/10 transition-colors hover:bg-white/10`}
                     title={tr("Ảnh, ghi âm, GIF", "Photo, voice, GIF")}
                     aria-label={tr("Mở thêm: ảnh, ghi âm, GIF", "More: photo, voice, GIF")}
+                    aria-expanded={false}
                   >
                     <PlusIcon className="h-5 w-5" />
                   </button>
-                ) : (
-                <div className="-ml-1 flex flex-shrink-0 items-center">
+                )}
+                <div className={toolsOpen ? "-ml-1 flex flex-shrink-0 items-center" : hasText ? "hidden" : "hidden sm:-ml-1 sm:flex sm:flex-shrink-0 sm:items-center"}>
                 <button
                   type="button"
                   onClick={handleUploadImage}
@@ -1707,7 +1745,6 @@ export default function MessagesContent({
                   </button>
                 )}
                 </div>
-                )}
 
                 <div className="pn-input-wrap flex min-w-0 flex-1 items-center">
                   <input
@@ -1727,6 +1764,8 @@ export default function MessagesContent({
                     }}
                     enterKeyHint="send"
                     autoComplete="off"
+                    // QA chọn ô nhập bằng thuộc tính này, không theo chữ gợi ý (đã đổi "Viết tin nhắn..." → "Nhắn tin").
+                    data-chat-input=""
                     placeholder={t("messenger.inputPlaceholder")}
                     className="min-w-0 flex-1 truncate rounded-full border-0 bg-transparent py-2.5 pl-3.5 pr-10 text-base text-slate-100 placeholder-slate-400/70 focus:outline-none sm:text-sm"
                   />
@@ -1811,12 +1850,12 @@ export default function MessagesContent({
               <section className="grid grid-cols-2 gap-3">
                 {(currentUser?.role === "OWNER"
                   ? [
-                      { href: "/?tab=portfolio", title: tr("Tìm thợ đang rảnh", "Find available techs"), desc: tr("Xem portfolio & nhắn tin ngay", "See portfolios & message now"), icon: "💅" },
-                      { href: "/jobs/create", title: tr("Đăng tin tuyển thợ", "Post a job"), desc: tr("Thợ phù hợp sẽ chủ động nhắn", "Matching techs will reach out"), icon: "📢" },
+                      { href: "/?tab=portfolio", title: tr("Tìm thợ sẵn sàng", "Find available techs"), desc: tr("Xem tay nghề và nhắn tin", "See portfolios and message"), icon: "💅" },
+                      { href: "/jobs/create", title: tr("Đăng tin tuyển thợ", "Post a job"), desc: tr("Thợ có thể gọi hoặc nhắn tin trực tiếp cho bạn", "Techs can call or message you directly"), icon: "📢" },
                     ]
                   : [
-                      { href: "/?tab=jobs", title: tr("Tìm việc gấp", "Find work fast"), desc: tr("Nhắn tiệm đang tuyển quanh bạn", "Message salons hiring near you"), icon: "🔥" },
-                      { href: "/profile", title: tr("Cập nhật portfolio", "Update portfolio"), desc: tr("Ảnh đẹp được tiệm nhắn nhiều hơn", "Great photos get more salon messages"), icon: "📸" },
+                      { href: "/?tab=jobs", title: tr("Xem việc làm", "Explore jobs"), desc: tr("Nhắn tin cho tiệm đang tuyển quanh bạn", "Message salons hiring near you"), icon: "💼" },
+                      { href: "/profile", title: tr("Cập nhật ảnh tay nghề", "Update your portfolio"), desc: tr("Tiệm xem được tay nghề của bạn trước khi nhắn tin", "Salons see your work before they message you"), icon: "📸" },
                     ]
                 ).map((a) => (
                   <Link key={a.href} href={a.href} className="glass-card rounded-2xl p-4 transition hover:border-pink-500/40">

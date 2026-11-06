@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError } from "@/lib/i18n/apiError";
 import React, { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawos.com";
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
 
 function useStyles() {
   const { theme } = useContext(AuthSettingsContext);
@@ -45,7 +46,7 @@ export function ForgotPasswordForm() {
       const r = await res.json().catch(() => ({}));
       if (res.status === 503 && r.fallback) setDisabled(true);
       else if (res.status === 429) setError(tr("Bạn thử quá nhiều lần. Vui lòng đợi 15 phút rồi thử lại.", "Too many attempts. Please wait 15 minutes and try again."));
-      else if (!res.ok) setError(r.error || tr("Không gửi được, vui lòng thử lại.", "Couldn't send, please try again."));
+      else if (!res.ok) setError(apiError(r, "Không gửi được, vui lòng thử lại.", "Couldn't send, please try again."));
       else setSent(true);
     } catch {
       setError(tr("Lỗi kết nối, vui lòng thử lại.", "Network error, please try again."));
@@ -80,7 +81,7 @@ export function ForgotPasswordForm() {
             <label htmlFor="forgot-email" className={c.label}>{tr("Địa chỉ email", "Email address")}</label>
             <div className="relative mt-1">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5"><Mail className="h-4 w-4 text-slate-400" /></div>
-              <input id="forgot-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ban@email.com" className={c.input} />
+              <input id="forgot-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tr("ban@email.com", "you@email.com")} className={c.input} />
             </div>
           </div>
           <button type="submit" disabled={busy} className={c.btn}>
@@ -122,7 +123,7 @@ export function ResetPasswordForm() {
     try {
       const res = await fetch("/api/auth/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, password: pw }) });
       const r = await res.json().catch(() => ({}));
-      if (!res.ok) setError(res.status === 410 ? tr("Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.", "This link has expired or was already used. Please request a new one.") : r.error || tr("Không đặt lại được, vui lòng thử lại.", "Couldn't reset, please try again."));
+      if (!res.ok) setError(res.status === 410 ? tr("Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.", "This link has expired or was already used. Please request a new one.") : apiError(r, "Không đặt lại được, vui lòng thử lại.", "Couldn't reset, please try again."));
       else {
         setDone(true);
         setTimeout(() => router.push("/auth/login"), 2500);

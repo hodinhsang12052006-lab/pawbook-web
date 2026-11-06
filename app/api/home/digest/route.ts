@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
     const raw = new URL(req.url).searchParams.get("since");
     const parsed = raw ? new Date(raw) : null;
-    if (!parsed || isNaN(parsed.getTime())) return NextResponse.json({ error: "since không hợp lệ" }, { status: 400 });
+    if (!parsed || isNaN(parsed.getTime())) return NextResponse.json({ error: "since không hợp lệ", errorEn: "Invalid since parameter." }, { status: 400 });
     const since = new Date(Math.max(parsed.getTime(), Date.now() - MAX_LOOKBACK_MS));
 
     const user = await prisma.user.findUnique({ where: { id: me }, select: { role: true, market: true, state: true } });
@@ -36,6 +36,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ since: since.toISOString(), state: user.state, market: user.market, newJobs, likes, comments, saves, newTechs });
   } catch (error) {
     console.error("GET /api/home/digest error:", error);
-    return NextResponse.json({ error: "Không tải được." }, { status: 500 });
+    return NextResponse.json({ error: "Không tải được.", errorEn: "Couldn't load." }, { status: 500 });
   }
 }

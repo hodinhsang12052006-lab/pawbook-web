@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -14,6 +13,8 @@ import { useTr } from "@/lib/i18n/useTr";
 import { JobAlertButton } from "@/components/jobs/JobAlerts";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { dt } from "@/lib/i18n/dataEn";
+import VietnameseChip from "@/components/common/LangChip";
+import { hasVietnamese } from "@/lib/i18n/viText";
 
 export interface JobType {
   id: string;
@@ -53,6 +54,8 @@ interface JobBoardProps {
   market: "US" | "AU";
   state: string;
   city: string;
+  /** Bỏ lọc bang (nút "Xem tất cả bang" ở trạng thái rỗng). */
+  onShowAllStates?: () => void;
 }
 
 // Hiệu ứng bấm nút kiểu app native
@@ -93,34 +96,22 @@ function timeAgo(iso: string): string {
 // và GHI RÕ nguồn + thời điểm — không nói "ngay bây giờ" với số cũ.
 export interface JobTotals { total: number; new7d: number; urgent: number }
 
-function DemandFomoBanner({ market, state, totals }: { market: "US" | "AU"; state: string; totals: JobTotals }) {
-  useTr(); // render lại khi đổi VI/EN
+// Dải số liệu TRỰC TIẾP của bảng việc làm (cùng truy vấn với danh sách bên dưới). Ít hơn 3 tin thì ẩn —
+// không thay bằng số khảo sát cũ (số khảo sát 9/2026 chỉ nằm trong Nail Radar, kèm nguồn).
+function LiveJobsBanner({ market, state, totals }: { market: "US" | "AU"; state: string; totals: JobTotals }) {
+  useTr();
   const scope = state ? stateName(market, state) : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
-  const { total, new7d: newThisWeek, urgent } = totals;
-
-  if (total >= 3) {
-    return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface refined:[&_.text-emerald-300]:font-bold refined:[&_.text-emerald-300]:text-white">
-        <span className="relative flex h-2.5 w-2.5 flex-shrink-0 refined:h-2 refined:w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 refined:hidden" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 refined:h-2 refined:w-2" />
-        </span>
-        <p className="text-xs text-slate-200 sm:text-sm">
-          <span className="font-black text-emerald-300">{total}{tr(" tin đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
-          {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
-          {urgent > 0 && <> · <span className="font-bold text-orange-300">{urgent}{tr(" tin gấp", " urgent")}</span></>}
-        </p>
-      </div>
-    );
-  }
-
-  const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
-  const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
+  const { total, new7d: newThisWeek } = totals;
+  if (total < 3) return null;
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-slate-900/30 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface">
-      <TrendingUp className="h-5 w-5 flex-shrink-0 text-emerald-400 refined:text-slate-400" />
+    <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/50 via-slate-900/40 to-slate-900/30 px-4 py-3 refined:border-pn-line refined:bg-none refined:bg-pn-surface refined:[&_.text-emerald-300]:font-bold refined:[&_.text-emerald-300]:text-white">
+      <span className="relative flex h-2.5 w-2.5 flex-shrink-0 refined:h-2 refined:w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 refined:hidden" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 refined:h-2 refined:w-2" />
+      </span>
       <p className="text-xs text-slate-200 sm:text-sm">
-        <span className="font-black text-emerald-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span>{tr(" tại ", " in ")}{stateSignal ? scope : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia")}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ đang là bên được săn đón.", " in one survey of nail groups (Sep 2026) — techs are in demand.")}
+        <span className="font-black text-emerald-300">{total.toLocaleString("en-US")}{tr(" việc đang tuyển", " open jobs")}</span>{tr(" tại ", " in ")}{scope}
+        {newThisWeek > 0 && <> · <span className="font-bold text-white">{newThisWeek.toLocaleString("en-US")}{tr(" tin mới", " new")}</span>{tr(" trong 7 ngày", " in 7 days")}</>}
       </p>
     </div>
   );
@@ -220,13 +211,16 @@ function JobCard({
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
+          <h3 lang={hasVietnamese(dt(job.title)) ? "vi" : undefined} className="truncate text-base font-bold leading-snug text-white hover:text-pink-200">{dt(job.title)}</h3>
           <p className="truncate text-sm font-semibold text-slate-400">{job.salonName}</p>
-          {job.source === "ingest" && (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-500/25" title={tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail on the salon's behalf — call the salon directly")}>
-              {tr("Đăng hộ tiệm", "Posted for salon")}
-            </span>
-          )}
+          <span className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
+            {job.source === "ingest" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-500/25" title={tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail on the salon's behalf — call the salon directly")}>
+                {tr("Đăng hộ tiệm", "Posted for salon")}
+              </span>
+            )}
+            <VietnameseChip text={[dt(job.title), job.description]} />
+          </span>
         </Link>
         <button
           onClick={onToggleSave}
@@ -238,16 +232,16 @@ function JobCard({
         <div className="flex flex-shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-1">
             {heat?.hot && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2 py-1 text-[11px] font-black text-white shadow-lg shadow-orange-500/30" title={tr("Nhiều người xem / liên hệ tin này", "Many people are viewing / contacting this job")}>
-                <Zap className="h-3 w-3 fill-white" />{tr(" Đang hot", " Hot")}
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2 py-1 text-[11px] font-black text-white shadow-lg shadow-orange-500/30" title={tr("Nhiều người xem hoặc liên hệ tin này", "Many people are viewing or contacting this job")}>
+                <Zap className="h-3 w-3 fill-white" />{tr(" Được quan tâm", " Popular")}
               </span>
             )}
             {isNew && !heat?.hot && (
-              <span className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300">{tr("✨ Mới", "✨ New")}</span>
+              <span className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/15 px-2 py-1 text-[11px] font-bold text-sky-300">{tr("Mới", "New")}</span>
             )}
             {job.isUrgent && (
               <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-[11px] font-bold text-red-400">
-                <Flame className="h-3 w-3" />{tr(" Gấp", " Urgent")}
+                <Flame className="h-3 w-3" />{tr(" Cần gấp", " Urgent")}
               </span>
             )}
           </div>
@@ -292,7 +286,7 @@ function JobCard({
       <span className="flex items-center gap-1.5 text-sm text-slate-300">
         <MapPin className="h-4 w-4 flex-shrink-0 text-slate-500" />
         {placeLabel(job.city, job.market, job.state)}
-        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("📍 Gần bạn", "📍 Near you")}</span>}
+        {nearYou && <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/25">{tr("Gần bạn", "Near you")}</span>}
       </span>
 
       {signals.length > 0 && (
@@ -317,7 +311,7 @@ function JobCard({
         <div className="flex flex-wrap gap-1.5">
           {job.benefits.filter((b) => !(b === "Bao lương" && /bao l/i.test(job.salaryType || ""))).map((benefit) => (
             <span key={benefit} className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-300 refined:border-white/[0.08] refined:bg-white/[0.05] refined:font-semibold refined:text-slate-200">
-              {benefitIcon(benefit)} {valueLabel(benefit)}
+              {benefitIcon(benefit)} {valueLabel(benefit, job.market)}
             </span>
           ))}
         </div>
@@ -328,22 +322,22 @@ function JobCard({
         <a
           href={`tel:${job.phone}`}
           onClick={() => trackJobContact(job.id)}
-          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
+          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
         >
-          <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
+          <Phone className="h-5 w-5" />{tr(" Gọi cho tiệm", " Call the salon")}
         </a>
         {job.source === "ingest" ? (
           // Tin đăng hộ: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
           <Link
             href={`/jobs/${job.id}`}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
           >
-            <MapPin className="h-5 w-5" />{tr(" Chi tiết", " Details")}
+            <MapPin className="h-5 w-5" />{tr(" Xem chi tiết", " View details")}
           </Link>
         ) : (
           <button
             onClick={() => { trackJobContact(job.id); onMessage(); }}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
           >
             <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin", " Message")}
           </button>
@@ -353,7 +347,7 @@ function JobCard({
   );
 }
 
-export default function JobBoard({ market, state, city }: JobBoardProps) {
+export default function JobBoard({ market, state, city, onShowAllStates }: JobBoardProps) {
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const [jobs, setJobs] = useState<JobType[]>([]);
@@ -494,25 +488,27 @@ export default function JobBoard({ market, state, city }: JobBoardProps) {
     );
   }
 
+  const area = state ? stateName(market, state) : market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
   if (jobs.length === 0 && page === 1) {
     return (
-      <div className="space-y-4">
-        <DemandFomoBanner market={market} state={state} totals={totals} />
-        <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-          <p className="text-4xl">💅</p>
-          <p className="text-base font-bold text-slate-300">{tr("Chưa có tin tuyển thợ ở khu vực này", "No jobs in this area yet")}</p>
+      <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white/[0.03] px-6 py-12 text-center ring-1 ring-white/10" data-testid="jobs-empty">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-500/10 text-pink-300 ring-1 ring-pink-500/20"><Briefcase className="h-5 w-5" /></span>
+        <p className="text-base font-bold text-slate-200">{tr(`Hiện chưa có việc làm tại ${area}.`, `No open jobs in ${area} right now.`)}</p>
+        <p className="max-w-sm text-sm text-slate-400">{state ? tr("Tin mới sẽ hiện tại đây khi tiệm đăng. Bạn có thể xem tất cả các bang.", "New jobs appear here as salons post them. Try all states in the meantime.") : tr("Tin mới sẽ hiện tại đây khi tiệm đăng.", "New jobs appear here as salons post them.")}</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {state && onShowAllStates && (
+            <button type="button" onClick={onShowAllStates} className="min-h-[40px] rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-xs font-bold text-white">{tr("Xem tất cả bang", "Show all states")}</button>
+          )}
           <JobAlertButton market={market} state={state} />
-          <p className="text-sm text-slate-500">
-            {tr("Nhưng đừng bỏ cuộc — thử đổi bang hoặc thành phố khác, ", "Don't give up — try another state or city, ")}{market === "US" ? tr("toàn nước Mỹ", "across the US") : tr("toàn nước Úc", "across Australia")}{tr(" vẫn còn rất nhiều tiệm đang cần thợ.", " plenty of salons are still hiring.")}
-          </p>
         </div>
+        <Link href="/tools/radar" className="text-xs font-bold text-pink-300 hover:underline">{tr(`Xem lương tham khảo tại ${area}`, `See pay benchmarks for ${area}`)} →</Link>
       </div>
     );
   }
 
   return (
     <div ref={topRef} className="space-y-4 animate-fadeIn">
-      <DemandFomoBanner market={market} state={state} totals={totals} />
+      <LiveJobsBanner market={market} state={state} totals={totals} />
 
       <div className="flex flex-wrap items-center gap-2">
       <button

@@ -70,7 +70,7 @@ function useTools(): Tool[] {
   const radar = user?.state ? getRadarEstimate(market, user.state, "BOT") : null;
   const radarStat = radar
     ? tr(`${user.state} · $${radar.rateMin.toLocaleString("en-US")}–${radar.rateMax.toLocaleString("en-US")}/tuần`, `${user.state} · $${radar.rateMin.toLocaleString("en-US")}–${radar.rateMax.toLocaleString("en-US")}/week`)
-    : tr("Mức bao lương & chia turn theo bang", "Pay & commission rates by state");
+    : tr("Lương tham khảo theo bang", "Pay benchmarks by state");
 
   const roleTool: Tool =
     user?.role === "ADMIN"
@@ -79,18 +79,28 @@ function useTools(): Tool[] {
       ? { href: "/jobs/create", label: tr("Đăng tin tuyển thợ", "Post a job"), stat: tr(`${user?.jobs?.length ?? 0} tin đang mở`, `${user?.jobs?.length ?? 0} open jobs`), icon: PlusCircle, tone: "bg-pink-500/15 text-pink-300" }
       : { href: "/tools/income-tracker", label: tr("Thu nhập & tip", "Income & tips"), stat: income === null ? tr("Ghi turn + tip mỗi tối", "Log turns + tips nightly") : tr(`Tuần này: $${income.toLocaleString("en-US")}`, `This week: $${income.toLocaleString("en-US")}`), icon: Wallet, tone: "bg-violet-500/15 text-violet-300" };
 
+  // KHÁCH làm nail: chỉ công cụ của khách — không lương, không chợ vật tư, không việc làm.
+  if (user?.role === "CLIENT") {
+    return [
+      { href: "/messages", label: tr("Tin nhắn", "Messages"), stat: unreadCount > 0 ? tr(`${unreadCount} tin chưa đọc`, `${unreadCount} unread`) : tr("Chat với tiệm & thợ", "Chat with salons & techs"), icon: MessageCircle, tone: "bg-sky-500/15 text-sky-300", badge: unreadCount },
+      { href: "/bookings", label: tr("Lịch hẹn", "My bookings"), stat: tr("Yêu cầu đã gửi & giờ đã chốt", "Requests and confirmed times"), icon: CalendarCheck, tone: "bg-pink-500/15 text-pink-300" },
+      { href: "/tryon", label: tr("Thử mẫu", "Try-On"), stat: tr("Thử mẫu trên tay bạn", "Try looks on your hand"), icon: Sparkles, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
+      { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mới mỗi ngày", "Fresh ideas every day"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
+      { href: "/trends", label: tr("Xu hướng", "Trends"), stat: tr("Mẫu & tiệm được yêu thích", "Most-loved looks & salons"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
+    ];
+  }
   return [
     { href: "/messages", label: tr("Tin nhắn", "Messages"), stat: unreadCount > 0 ? tr(`${unreadCount} tin chưa đọc`, `${unreadCount} unread`) : tr("Chat với tiệm & thợ", "Chat with salons & techs"), icon: MessageCircle, tone: "bg-sky-500/15 text-sky-300", badge: unreadCount },
     roleTool,
     ...(user?.role === "TECHNICIAN" || user?.role === "OWNER"
       ? [{ href: "/bookings", label: tr("Lịch hẹn", "Bookings"), stat: newBookings > 0 ? tr(`${newBookings} khách mới đặt lịch`, `${newBookings} new requests`) : tr("Khách đặt từ menu / mã QR", "Requests from your menu / QR"), icon: CalendarCheck, tone: "bg-pink-500/15 text-pink-300", badge: newBookings } as Tool,
-        { href: "/tryon", label: tr("Thử mẫu trên tay", "Try-on looks"), stat: tr("Vẽ 10 mẫu trend lên tay khách + giá", "Paint 10 trending looks on a client's hand"), icon: Sparkles, tone: "bg-fuchsia-500/15 text-fuchsia-300" } as Tool,
-        { href: "/consult", label: tr("Soi tay tư vấn", "Hand consult"), stat: tr("Chụp tay khách → tình trạng + mẫu hợp", "Snap a client's hand → condition + matching designs"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
+        { href: "/tryon", label: tr("Thử mẫu", "Try-On"), stat: tr("Vẽ 10 mẫu gợi ý lên tay khách + giá", "Paint 10 suggested looks on a client's hand"), icon: Sparkles, tone: "bg-fuchsia-500/15 text-fuchsia-300" } as Tool,
+        { href: "/consult", label: tr("Phân tích tay & móng", "Hand & nail analysis"), stat: tr("Chụp tay khách để xem tình trạng móng và mẫu phù hợp", "Snap a client's hand to see nail condition and designs that suit it"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
       : []),
     { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
-    { href: "/trends", label: tr("Xu hướng tuần", "Weekly trends"), stat: tr("Mẫu hot · thợ nổi bật · lương", "Hot designs · top techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
+    { href: "/trends", label: tr("Xu hướng", "Trends"), stat: tr("Mẫu được yêu thích · thợ nổi bật · lương", "Most-loved designs · standout techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
     { href: "/tools/radar", label: "Nail Radar", stat: radarStat, icon: Radar, tone: "bg-amber-500/15 text-amber-300" },
-    { href: "/supply", label: tr("Kho hàng vật tư", "Supply store"), stat: tr("Vật tư giá sỉ từ các tiệm", "Wholesale supplies from salons"), icon: ShoppingBag, tone: "bg-emerald-500/15 text-emerald-300" },
+    { href: "/supply", label: tr("Chợ vật tư", "Supply exchange"), stat: tr("Vật tư tiệm bán lại", "Surplus supplies from salons"), icon: ShoppingBag, tone: "bg-emerald-500/15 text-emerald-300" },
   ];
 }
 

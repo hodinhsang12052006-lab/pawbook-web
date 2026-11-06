@@ -39,7 +39,10 @@ export function profileFromModels(models: NailModel[]): HandProfile | null {
   const colored = models.filter((m) => m.byColor && m.contrast >= 14);
   return {
     undertone, depth, skinHex: toHex(skin), nails: models.length, ratio,
-    length: ratio < 1.05 ? "short" : ratio < 1.45 ? "medium" : "long",
+    // dài / rộng của khuôn gồm cả phần móng trên nền thịt: móng ngắn sát (hand.jpg, ombre.jpg) ≈ 1.3–1.5, móng có
+    // mép tự do vừa (pink.jpg, white.jpg) ≈ 1.6–1.95, móng dài (olive.jpg) ≥ 2.0 — đo bằng scripts/qa/tryon_length_probe.mts.
+    // Ngưỡng cũ (1.05 / 1.45) gọi móng ngắn là "móng dài".
+    length: ratio < 1.55 ? "short" : ratio < 2 ? "medium" : "long",
     tip: rt < 0.35 ? "square" : rt < 0.75 ? "squoval" : rt < 1.2 ? "round" : rt < 1.6 ? "oval" : "almond",
     polishHex: colored.length ? toHex([0, 1, 2].map((c) => med(colored.map((m) => m.nail[c])))) : null,
   };

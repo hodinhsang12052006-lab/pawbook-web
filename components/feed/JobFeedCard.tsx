@@ -9,6 +9,7 @@ import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { placeLabel } from "@/lib/stateNames";
 import { timeAgo } from "@/lib/feedFormat";
 import { dt } from "@/lib/i18n/dataEn";
+import { hasVietnamese } from "@/lib/i18n/viText";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -54,7 +55,7 @@ export default function JobFeedCard({ job }: { job: JobType }) {
       </div>
 
       <Link href={`/jobs/${job.id}`} className="block space-y-2.5 px-4 py-3">
-        <h3 className="text-[17px] font-black leading-snug text-white">{dt(job.title)}</h3>
+        <h3 lang={hasVietnamese(dt(job.title)) ? "vi" : undefined} className="text-[17px] font-black leading-snug text-white">{dt(job.title)}</h3>
         <div className="flex flex-wrap items-center gap-2">
           {/\d/.test(job.salaryAmount || "") ? (
             <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1 pl-2 pr-2.5 shadow-lg shadow-emerald-500/20">
@@ -68,7 +69,7 @@ export default function JobFeedCard({ job }: { job: JobType }) {
             <span key={s} className="rounded-lg border border-pink-500/25 bg-pink-500/10 px-2 py-0.5 text-[11px] font-bold text-pink-200">{valueLabel(s)}</span>
           ))}
         </div>
-        {desc && <p className="line-clamp-2 text-sm leading-relaxed text-slate-300">{desc}</p>}
+        {desc && <p className="line-clamp-2 text-sm leading-relaxed text-slate-300" lang={hasVietnamese(dt(desc)) ? "vi" : undefined}>{dt(desc)}</p>}
         {job.source === "ingest" && <p className="text-[11px] text-slate-500">{tr("PawNail đăng hộ tiệm — gọi thẳng cho tiệm", "Posted by PawNail for the salon — call the salon directly")}</p>}
       </Link>
 

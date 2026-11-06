@@ -6,7 +6,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Client, Results, fakeIp, registerUser } from "./lib.mjs";
 
 const R = new Results("Hacker đợt 3");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const mails = [];
 const resend = http.createServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { mails.push(JSON.parse(b || "{}")); res.writeHead(200, { "content-type": "application/json" }).end('{"id":"x"}'); }); });
 await new Promise((r) => resend.listen(4991, "127.0.0.1", r));

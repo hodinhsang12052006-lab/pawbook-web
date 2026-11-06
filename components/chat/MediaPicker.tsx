@@ -143,7 +143,8 @@ const FALLBACK_GIFS = [
   "https://i.giphy.com/7YBZCh1TIoC8U.gif", "https://i.giphy.com/t3s3uEQ5j181C.gif", "https://i.giphy.com/3oEjI6SIIHBdRxXI40.gif",
 ].map((url) => ({ url, preview: url }));
 
-const GIF_TAGS = ["Cảm ơn", "Haha", "Yêu", "Chúc mừng", "Ok", "Buồn", "Wow", "Nails"];
+// Gợi ý tìm GIF theo ngôn ngữ đang dùng — tìm bằng đúng chữ hiển thị trên chip.
+const GIF_TAGS: [string, string][] = [["Cảm ơn", "Thank you"], ["Haha", "Haha"], ["Yêu", "Love"], ["Chúc mừng", "Congrats"], ["Ok", "OK"], ["Buồn", "Sad"], ["Wow", "Wow"], ["Nails", "Nails"]];
 
 function GifTab({ onGif }: { onGif: (url: string) => void }) {
   useTr();
@@ -180,9 +181,10 @@ function GifTab({ onGif }: { onGif: (url: string) => void }) {
         </label>
         {enabled && (
           <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto pb-1">
-            {GIF_TAGS.map((t) => (
-              <button key={t} type="button" onClick={() => setQ(t)} className="flex-shrink-0 rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-semibold text-slate-300 hover:bg-white/10">{t}</button>
-            ))}
+            {GIF_TAGS.map(([vi, en]) => {
+              const label = tr(vi, en);
+              return <button key={en} type="button" onClick={() => setQ(label)} className="flex-shrink-0 rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-semibold text-slate-300 hover:bg-white/10">{label}</button>;
+            })}
           </div>
         )}
       </div>

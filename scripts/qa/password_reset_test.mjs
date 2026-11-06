@@ -7,7 +7,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Results, fakeIp, registerUser } from "./lib.mjs";
 
 const R = new Results("Quên mật khẩu");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 const mails = [];
 const resend = http.createServer((req, res) => {
   let b = "";

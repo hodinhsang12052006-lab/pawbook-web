@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { Capacitor } from "@capacitor/core";
 import { Download, PlusSquare, Share, X } from "lucide-react";
@@ -29,7 +29,7 @@ function writeState(s: InstallState) {
 }
 
 export default function InstallPrompt() {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const { user } = useSessionUser();
   const loggedIn = !!user;
   const [mode, setMode] = useState<Mode | null>(null);
@@ -114,16 +114,16 @@ export default function InstallPrompt() {
             <p className="text-sm font-bold text-white">{tr("Cài PawNail lên điện thoại", "Install PawNail on your phone")}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-400">
               {mode === "inapp"
-                ? tr("Bạn đang mở trong Zalo/Facebook. Bấm ⋯ → \"Mở bằng trình duyệt\" để cài app và nhận báo việc mới.", "You're inside Zalo/Facebook. Tap ⋯ → \"Open in browser\" to install and get job alerts.")
-                : tr("Mở nhanh 1 chạm như app thật, nhận báo ngay khi có việc / thợ mới. Miễn phí, không tốn dung lượng.", "One-tap like a real app, instant alerts for new jobs / techs. Free, takes no space.")}
+                ? tr("Bạn đang mở trong trình duyệt của ứng dụng (Facebook, Zalo…). Bấm ⋯ → \"Mở bằng trình duyệt\" để cài PawNail.", "You're in an in-app browser. Tap ⋯ → \"Open in browser\" to install PawNail.")
+                : tr("Mở PawNail chỉ một chạm từ màn hình chính và nhận thông báo.", "Open PawNail in one tap from your home screen and get notifications.")}
             </p>
           </div>
         </div>
         {mode === "android" && (
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={close} className="min-h-[44px] flex-1 rounded-xl bg-white/5 text-sm font-semibold text-slate-300 ring-1 ring-white/10">{tr("Để sau", "Later")}</button>
+            <button type="button" onClick={close} className="min-h-[44px] flex-1 rounded-xl bg-white/5 text-sm font-semibold text-slate-300 ring-1 ring-white/10">{tr("Để sau", "Not now")}</button>
             <button type="button" onClick={install} className="flex min-h-[44px] flex-[2] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-bold text-white">
-              <Download className="h-4 w-4" />{tr(" Cài app", " Install")}
+              <Download className="h-4 w-4" />{tr(" Cài ứng dụng", " Install app")}
             </button>
           </div>
         )}

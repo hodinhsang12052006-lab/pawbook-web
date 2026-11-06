@@ -2,9 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { Briefcase, Store, Newspaper } from "lucide-react";
+import { Briefcase, Users, Newspaper, Compass } from "lucide-react";
 import ToolsPanel from "@/components/layout/ToolsPanel";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
@@ -17,24 +18,28 @@ import { useTr } from "@/lib/i18n/useTr";
 interface SidebarProps {
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
+  /** Khách chưa đăng nhập: tab đầu là "Khám phá" (mẫu, thử mẫu, tiệm) thay cho "Bảng tin". */
+  guest?: boolean;
 }
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, guest = false }: SidebarProps) {
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const { user: effectiveUser, loading: sessionLoading } = useSessionUser();
 
   const userName = effectiveUser?.name || tr("Thành viên", "Member");
   const userRole = effectiveUser?.role || "TECHNICIAN";
   const userLocation = [effectiveUser?.city, stateName(effectiveUser?.market, effectiveUser?.state)].filter(Boolean).join(", ") || tr("Chưa cập nhật khu vực", "Location not set");
-  const roleLabel = userRole === "OWNER" ? tr("Chủ tiệm", "Salon owner") : userRole === "ADMIN" ? tr("Quản trị", "Admin") : tr("Thợ Nail", "Nail tech");
+  const roleLabel = userRole === "OWNER" ? tr("Chủ tiệm", "Salon owner") : userRole === "ADMIN" ? tr("Quản trị", "Admin") : tr("Thợ nail", "Nail tech");
   const completeness = getProfileCompleteness(effectiveUser);
 
   const menuItems = [
-    { id: "feed", label: tr("Bảng Tin", "Feed"), icon: Newspaper, route: "/?tab=feed" },
-    { id: "jobs", label: tr("Cần Thợ Gấp", "Urgent jobs"), icon: Briefcase, route: "/?tab=jobs" },
-    { id: "portfolio", label: tr("Thợ Đang Rảnh", "Available techs"), icon: Store, route: "/?tab=portfolio" },
+    guest
+      ? { id: "feed", label: tr("Khám phá", "Discover"), icon: Compass, route: "/?tab=feed" }
+      : { id: "feed", label: tr("Bảng tin", "Feed"), icon: Newspaper, route: "/?tab=feed" },
+    { id: "jobs", label: tr("Việc làm", "Jobs"), icon: Briefcase, route: "/?tab=jobs" },
+    { id: "portfolio", label: tr("Thợ sẵn sàng", "Available techs"), icon: Users, route: "/?tab=portfolio" },
   ];
 
   const handleNavigation = (id: string, route: string) => {
@@ -71,10 +76,10 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
             ) : !effectiveUser ? (
               <div className="mb-4 rounded-xl bg-gradient-to-br from-pink-600/15 to-fuchsia-600/5 p-3.5 ring-1 ring-pink-500/20">
                 <p className="text-sm font-black text-white">{tr("Tham gia PawNail", "Join PawNail")}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{tr("Miễn phí — tìm việc, tìm thợ và nhắn tin trực tiếp.", "Free — find jobs, find techs and message directly.")}</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{tr("Thử mẫu, tìm tiệm, tìm việc hoặc tuyển thợ — nhắn tin trực tiếp trong app.", "Try on looks, find a salon, find work or hire — message directly in the app.")}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">{tr("Đăng ký", "Sign up")}</Link>
-                  <Link href="/auth/login" className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">{tr("Đăng nhập", "Sign in")}</Link>
+                  <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">{tr("Tạo tài khoản", "Create account")}</Link>
+                  <Link href="/auth/login" className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">{tr("Đăng nhập", "Log in")}</Link>
                 </div>
               </div>
             ) : (

@@ -1,4 +1,5 @@
-// EMAIL TÓM TẮT HẰNG TUẦN — lý do để người dùng quay lại, chỉ gửi khi CÓ điều mới.
+// EMAIL CẬP NHẬT HẰNG TUẦN — lý do để người dùng quay lại, chỉ gửi khi CÓ điều mới. Viết theo ngôn ngữ
+// của người nhận (lib/userLocale.ts, mặc định tiếng Anh).
 //   Thợ:     việc mới trong bang 7 ngày · lương tuần trung bình bang · tiệm đã xem hồ sơ · mẫu nail mới
 //   Chủ tiệm: thợ đang rảnh trong bang · lượt xem / liên hệ tin tuyển của mình trong tuần
 // Mọi số đều là số đếm thật. Có link hủy nhận (ký HMAC) + header List-Unsubscribe.
@@ -9,6 +10,8 @@ import { weeklyPay } from "@/lib/trends";
 import { stateName } from "@/lib/stateNames";
 import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
+import { dtEn } from "@/lib/i18n/dtEn";
+import { localePath, type Locale } from "@/lib/i18n/config";
 
 const DAY = 86_400_000;
 const esc = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -25,32 +28,38 @@ export function verifyUnsub(userId: string, sig: string) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-export interface DigestUser { id: string; name: string; email: string; role: string; market: "US" | "AU"; state: string | null; city: string | null }
+export interface DigestUser { id: string; name: string; email: string; role: string; market: "US" | "AU"; state: string | null; city: string | null; locale?: Locale }
 export interface Digest { subject: string; html: string; text: string }
 
-function shell(title: string, intro: string, blocks: string, cta: { label: string; href: string }, userId: string) {
-  return `<!doctype html><html><body style="margin:0;background:#0b0b14;font-family:Arial,Helvetica,sans-serif;color:#e2e8f0">
+function shell(locale: Locale, title: string, intro: string, blocks: string, cta: { label: string; href: string }, userId: string) {
+  const L = (vi: string, en: string) => (locale === "vi" ? vi : en);
+  return `<!doctype html><html lang="${locale}"><body style="margin:0;background:#0b0b14;font-family:Arial,Helvetica,sans-serif;color:#e2e8f0">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121f;border-radius:16px;border:1px solid #2a2a40;padding:26px">
-<tr><td style="font-size:13px;font-weight:800;letter-spacing:.08em;color:#f472b6">PAWNAIL JOBS · TUẦN NÀY</td></tr>
+<tr><td style="font-size:13px;font-weight:800;letter-spacing:.04em;color:#f472b6">${L("PawNail · Cập nhật tuần", "PawNail · Weekly update")}</td></tr>
 <tr><td style="padding-top:8px;font-size:22px;font-weight:800;color:#fff">${esc(title)}</td></tr>
 <tr><td style="padding-top:8px;font-size:14px;line-height:1.6;color:#cbd5e1">${intro}</td></tr>
 ${blocks}
 <tr><td style="padding:22px 0 6px" align="center"><a href="${esc(cta.href)}" style="display:inline-block;background:#db2777;color:#fff;text-decoration:none;font-weight:800;padding:13px 26px;border-radius:12px">${esc(cta.label)}</a></td></tr>
-<tr><td style="padding-top:18px;font-size:11px;line-height:1.6;color:#64748b">Bạn nhận email này vì có tài khoản PawNail Jobs. <a href="${esc(unsubUrl(userId))}" style="color:#94a3b8">Hủy nhận email tóm tắt</a> · <a href="${SITE_URL}/privacy" style="color:#94a3b8">Bảo mật</a></td></tr>
+<tr><td style="padding-top:18px;font-size:11px;line-height:1.6;color:#64748b">${L("Bạn nhận email này vì có tài khoản PawNail.", "You're receiving this because you have a PawNail account.")} <a href="${esc(unsubUrl(userId))}" style="color:#94a3b8">${L("Hủy nhận email cập nhật tuần", "Unsubscribe from weekly updates")}</a> · <a href="${SITE_URL}${localePath("/privacy", locale)}" style="color:#94a3b8">${L("Bảo mật", "Privacy")}</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
-const section = (title: string, rows: string) => `<tr><td style="padding-top:18px"><div style="font-size:13px;font-weight:800;color:#f9a8d4;text-transform:uppercase;letter-spacing:.05em">${esc(title)}</div>${rows}</td></tr>`;
+const section = (title: string, rows: string) => `<tr><td style="padding-top:18px"><div style="font-size:13px;font-weight:800;color:#f9a8d4;letter-spacing:.02em">${esc(title)}</div>${rows}</td></tr>`;
 const row = (main: string, sub: string, href: string) =>
   `<a href="${esc(href)}" style="display:block;margin-top:8px;padding:11px 13px;background:#1a1a2e;border-radius:10px;text-decoration:none"><span style="display:block;font-size:14px;font-weight:700;color:#f1f5f9">${esc(main)}</span><span style="display:block;margin-top:2px;font-size:12px;color:#94a3b8">${esc(sub)}</span></a>`;
 const stat = (big: string, label: string) => `<tr><td style="padding-top:14px"><span style="font-size:26px;font-weight:800;color:#34d399">${esc(big)}</span> <span style="font-size:13px;color:#cbd5e1">${esc(label)}</span></td></tr>`;
 
-/** Bản tóm tắt cho 1 người; null = tuần này không có gì đáng gửi (không làm phiền). */
+/** Bản tóm tắt cho 1 người, theo ngôn ngữ của họ (mặc định tiếng Anh); null = tuần này không có gì đáng gửi. */
 export async function buildDigest(u: DigestUser, now = new Date()): Promise<Digest | null> {
+  const locale: Locale = u.locale === "vi" ? "vi" : "en";
+  const en = locale === "en";
+  const L = (vi: string, e: string) => (en ? e : vi);
+  const T = (s: string | null | undefined) => (s ? (en ? dtEn(s) : s) : "");
+  const url = (path: string) => `${SITE_URL}${localePath(path, locale)}`;
   const since = new Date(now.getTime() - 7 * DAY);
   // Tên đầy đủ: người dùng ghi cả "Lan Nguyen" lẫn "Nguyễn Lan" — đoán tên riêng dễ sai.
-  const first = (u.name || "").trim() || "bạn";
-  const where = u.state ? stateName(u.market, u.state) : u.market === "AU" ? "Úc" : "Mỹ";
+  const first = (u.name || "").trim() || L("bạn", "there");
+  const where = u.state ? stateName(u.market, u.state) : u.market === "AU" ? L("Úc", "Australia") : L("Mỹ", "the US");
 
   if (u.role === "TECHNICIAN") {
     const [jobs, views, designs] = await Promise.all([
@@ -67,15 +76,23 @@ export async function buildDigest(u: DigestUser, now = new Date()): Promise<Dige
     const pays = jobs.map((j) => weeklyPay(j.salaryAmount || "", j.salaryType || "")).filter((x): x is number => !!x).sort((a, b) => a - b);
     const median = pays.length >= 3 ? pays[Math.floor(pays.length / 2)] : null;
     const blocks = [
-      views ? stat(String(views), `lượt chủ tiệm đã xem hồ sơ bạn tuần này`) : "",
-      jobs.length ? section(`${jobs.length} việc mới tại ${where}`, jobs.slice(0, 5).map((j) => row(j.title, `${j.salonName} · ${j.city}${j.salaryAmount ? ` · ${j.salaryAmount}` : ""}`, `${SITE_URL}/jobs/${j.id}`)).join("")) : "",
-      median ? stat(money(median, u.market), `lương tuần trung bình của tin mới ở ${where}`) : "",
-      designs ? section("Mẫu nail mới", row(`${designs} mẫu mới tuần này`, "Có sẵn vật tư, các bước làm và giá gợi ý", `${SITE_URL}/designs`)) : "",
+      views ? stat(String(views), L("lượt chủ tiệm đã xem hồ sơ của bạn tuần này", `salon view${views === 1 ? "" : "s"} of your profile this week`)) : "",
+      jobs.length ? section(L(`${jobs.length} việc làm mới tại ${where}`, `${jobs.length} new job${jobs.length === 1 ? "" : "s"} in ${where}`), jobs.slice(0, 5).map((j) => row(T(j.title), `${j.salonName} · ${j.city}${j.salaryAmount ? ` · ${T(j.salaryAmount)}` : ""}`, url(`/jobs/${j.id}`))).join("")) : "",
+      median ? stat(money(median, u.market), L(`lương tuần trung bình của tin mới tại ${where}`, `median weekly pay in new ${where} posts`)) : "",
+      designs ? section(L("Mẫu nail mới", "New nail designs"), row(L(`${designs} mẫu mới tuần này`, `${designs} new design${designs === 1 ? "" : "s"} this week`), L("Kèm vật tư, các bước làm và giá gợi ý", "With materials, steps and a suggested price"), url("/designs"))) : "",
     ].join("");
-    const subject = jobs.length ? `${jobs.length} việc nail mới tại ${where} tuần này${views ? ` · ${views} tiệm đã xem hồ sơ bạn` : ""}` : `${views} tiệm đã xem hồ sơ bạn tuần này`;
-    const intro = `Chào ${esc(first)}, đây là những gì mới trên PawNail tuần qua — số liệu thật từ ${esc(where)}.`;
-    const text = [`Chào ${first},`, ...jobs.slice(0, 5).map((j) => `• ${j.title} — ${j.salonName}, ${j.city} ${j.salaryAmount ?? ""}: ${SITE_URL}/jobs/${j.id}`), views ? `${views} lượt chủ tiệm xem hồ sơ bạn.` : "", `Mở PawNail: ${SITE_URL}/?tab=jobs`, `Hủy nhận: ${unsubUrl(u.id)}`].filter(Boolean).join("\n");
-    return { subject, html: shell(jobs.length ? `${jobs.length} việc mới gần bạn` : "Tiệm đang để ý bạn", intro, blocks, { label: "Xem việc mới", href: `${SITE_URL}/?tab=jobs` }, u.id), text };
+    const subject = jobs.length
+      ? L(`${jobs.length} việc làm nail mới tại ${where} tuần này${views ? ` · ${views} tiệm đã xem hồ sơ của bạn` : ""}`, `${jobs.length} new nail job${jobs.length === 1 ? "" : "s"} in ${where} this week${views ? ` · ${views} salon${views === 1 ? "" : "s"} viewed your profile` : ""}`)
+      : L(`${views} tiệm đã xem hồ sơ của bạn tuần này`, `${views} salon${views === 1 ? "" : "s"} viewed your profile this week`);
+    const intro = L(`Chào ${esc(first)}, đây là những gì mới trên PawNail tại ${esc(where)} tuần này.`, `Hi ${esc(first)}, here's what's new on PawNail in ${esc(where)} this week.`);
+    const text = [
+      L(`Chào ${first},`, `Hi ${first},`),
+      ...jobs.slice(0, 5).map((j) => `• ${T(j.title)} — ${j.salonName}, ${j.city} ${T(j.salaryAmount)}: ${url(`/jobs/${j.id}`)}`),
+      views ? L(`${views} lượt chủ tiệm xem hồ sơ của bạn.`, `${views} salon view${views === 1 ? "" : "s"} of your profile.`) : "",
+      `${L("Mở PawNail", "Open PawNail")}: ${url("/?tab=jobs")}`,
+      `${L("Hủy nhận", "Unsubscribe")}: ${unsubUrl(u.id)}`,
+    ].filter(Boolean).join("\n");
+    return { subject, html: shell(locale, jobs.length ? L(`${jobs.length} việc làm mới gần bạn`, `${jobs.length} new job${jobs.length === 1 ? "" : "s"} near you`) : L("Tiệm đã xem hồ sơ của bạn", "Salons viewed your profile"), intro, blocks, { label: L("Xem việc mới", "See new jobs"), href: url("/?tab=jobs") }, u.id), text };
   }
 
   if (u.role === "OWNER") {
@@ -95,15 +112,25 @@ export async function buildDigest(u: DigestUser, now = new Date()): Promise<Dige
     const views = daily?._sum.views ?? 0;
     const contacts = daily?._sum.contacts ?? 0;
     if (!techs.length && !views) return null;
+    const skills = (csv: string | null) => csv?.split(",").slice(0, 2).map((s) => T(s.trim())).join(", ") || L("Thợ nail", "Nail technician");
+    const exp = (y: number | null) => (y ? L(`${y} năm kinh nghiệm`, `${y} yr${y === 1 ? "" : "s"} experience`) : L("Thợ mới", "New tech"));
     const blocks = [
-      views ? stat(String(views), `lượt xem tin tuyển của bạn tuần này${contacts ? ` · ${contacts} lượt bấm gọi/nhắn` : ""}`) : "",
-      techs.length ? section(`Thợ đang rảnh tại ${where}`, techs.map((t) => row(t.user.name, `${t.specialties?.split(",").slice(0, 2).join(", ") || "Thợ nail"} · ${t.yearsOfExperience ? `${t.yearsOfExperience} năm KN` : "Thợ mới"}${t.user.city ? ` · ${t.user.city}` : ""}`, `${SITE_URL}/profile/${t.user.id}`)).join("")) : "",
-      !myJobs.length ? section("Mẹo", row("Đăng tin tuyển miễn phí", "Thợ gần tiệm nhận báo ngay khi bạn đăng", `${SITE_URL}/jobs/create`)) : "",
+      views ? stat(String(views), L(`lượt xem tin tuyển của bạn tuần này${contacts ? ` · ${contacts} lượt bấm gọi/nhắn` : ""}`, `view${views === 1 ? "" : "s"} of your job post this week${contacts ? ` · ${contacts} call or message tap${contacts === 1 ? "" : "s"}` : ""}`)) : "",
+      techs.length ? section(L(`Thợ sẵn sàng nhận việc tại ${where}`, `Technicians available in ${where}`), techs.map((t) => row(t.user.name, `${skills(t.specialties)} · ${exp(t.yearsOfExperience)}${t.user.city ? ` · ${t.user.city}` : ""}`, url(`/profile/${t.user.id}`))).join("")) : "",
+      !myJobs.length ? section(L("Gợi ý", "Tip"), row(L("Đăng tin tuyển", "Post a job"), L("Thợ gần tiệm được báo khi bạn đăng tin", "Techs near your salon are notified when you post"), url("/jobs/create"))) : "",
     ].join("");
-    const subject = techs.length ? `${techs.length} thợ đang rảnh tại ${where} tuần này${views ? ` · tin của bạn có ${views} lượt xem` : ""}` : `Tin tuyển của bạn có ${views} lượt xem tuần này`;
-    const intro = `Chào ${esc(first)}, đây là tình hình tuyển thợ quanh tiệm bạn tuần qua — số liệu thật.`;
-    const text = [`Chào ${first},`, ...techs.map((t) => `• ${t.user.name}: ${SITE_URL}/profile/${t.user.id}`), views ? `Tin của bạn: ${views} lượt xem, ${contacts} lượt liên hệ.` : "", `Mở PawNail: ${SITE_URL}/?tab=portfolio`, `Hủy nhận: ${unsubUrl(u.id)}`].filter(Boolean).join("\n");
-    return { subject, html: shell(techs.length ? "Thợ đang rảnh gần tiệm bạn" : "Tin tuyển của bạn tuần này", intro, blocks, { label: "Xem thợ đang rảnh", href: `${SITE_URL}/?tab=portfolio` }, u.id), text };
+    const subject = techs.length
+      ? L(`${techs.length} thợ sẵn sàng nhận việc tại ${where} tuần này${views ? ` · tin của bạn có ${views} lượt xem` : ""}`, `${techs.length} technician${techs.length === 1 ? "" : "s"} available in ${where} this week${views ? ` · your job post had ${views} view${views === 1 ? "" : "s"}` : ""}`)
+      : L(`Tin tuyển của bạn có ${views} lượt xem tuần này`, `Your job post had ${views} view${views === 1 ? "" : "s"} this week`);
+    const intro = L(`Chào ${esc(first)}, đây là những gì mới trên PawNail tại ${esc(where)} tuần này.`, `Hi ${esc(first)}, here's what's new on PawNail in ${esc(where)} this week.`);
+    const text = [
+      L(`Chào ${first},`, `Hi ${first},`),
+      ...techs.map((t) => `• ${t.user.name}: ${url(`/profile/${t.user.id}`)}`),
+      views ? L(`Tin của bạn: ${views} lượt xem, ${contacts} lượt liên hệ.`, `Your job post: ${views} views, ${contacts} contacts.`) : "",
+      `${L("Mở PawNail", "Open PawNail")}: ${url("/?tab=portfolio")}`,
+      `${L("Hủy nhận", "Unsubscribe")}: ${unsubUrl(u.id)}`,
+    ].filter(Boolean).join("\n");
+    return { subject, html: shell(locale, techs.length ? L("Thợ sẵn sàng nhận việc gần tiệm bạn", "Technicians available near your salon") : L("Tin tuyển của bạn tuần này", "Your job post this week"), intro, blocks, { label: L("Xem thợ sẵn sàng", "See available techs"), href: url("/?tab=portfolio") }, u.id), text };
   }
   return null;
 }

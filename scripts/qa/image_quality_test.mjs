@@ -9,7 +9,7 @@ import { BASE_URL, Client, Results, SEED_TECH, registerUser } from "./lib.mjs";
 
 if (!/localhost|127\.0\.0\.1/.test(BASE_URL)) throw new Error("image_quality_test chỉ chạy với server local");
 const R = new Results("AI chấm ảnh mẫu nail");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
 await db.execute("PRAGMA busy_timeout = 10000");
 const today = new Date().toISOString().slice(0, 10);
 await db.execute(`DELETE FROM "NailDesignSave"`);

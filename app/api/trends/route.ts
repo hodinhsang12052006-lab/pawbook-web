@@ -11,6 +11,6 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("GET /api/trends error:", error);
-    return NextResponse.json({ error: "Không tải được xu hướng." }, { status: 500 });
+    return NextResponse.json({ error: "Không tải được xu hướng.", errorEn: "Couldn't load trends." }, { status: 500 });
   }
 }

@@ -22,7 +22,7 @@ const LEN_EN = { short: "short", medium: "medium", long: "long" } as const;
 export function profileChips(p: HandProfile): Bi[] {
   return [
     { vi: `Da ${DEPTH_VI[p.depth]}, tông ${TONE_VI[p.undertone]}`, en: `${DEPTH_EN[p.depth][0].toUpperCase()}${DEPTH_EN[p.depth].slice(1)} skin, ${TONE_EN[p.undertone]} undertone` },
-    { vi: `Móng ${LEN_VI[p.length]} · ${p.nails} móng`, en: `${LEN_EN[p.length][0].toUpperCase()}${LEN_EN[p.length].slice(1)} nails · ${p.nails} found` },
+    { vi: `Móng ${LEN_VI[p.length]} · ${p.nails} móng`, en: `${LEN_EN[p.length][0].toUpperCase()}${LEN_EN[p.length].slice(1)} nails · ${p.nails} ${p.nails === 1 ? "nail" : "nails"} found` },
     { vi: `Dáng hợp nhất: ${SHAPE_VI[bestShape(p)]}`, en: `Most flattering shape: ${bestShape(p)}` },
   ];
 }
@@ -60,7 +60,8 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
   const slim = { vi: `móng ${LEN_VI[p.length]} của bạn trông dài hơn`, en: `makes your ${LEN_EN[p.length]} nails look longer` };
   const TAG = {
     skin: { vi: "Hợp tông da", en: "Suits your skin" }, trend: { vi: "Trend 2026", en: "2026 trend" },
-    slim: { vi: "Làm ngón thon", en: "Slimming" }, bold: { vi: "Cá tính", en: "Statement" },
+    // "Kéo dài ngón" / "Elongating": nói về hiệu ứng thị giác của mẫu, không dùng chữ về vóc dáng ("Slimming").
+    slim: { vi: "Kéo dài ngón", en: "Elongating" }, bold: { vi: "Cá tính", en: "Statement" },
   };
   const metal = t.metal;
   const nude = pick(t.nude), rich = deep ? pick(["cherry", "emerald", "plum", ...t.rich] as CK[]) : pick(t.rich);
@@ -101,7 +102,7 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       if (kind === "stripes") return { spec: { shape: shape === "square" ? "almond" : shape, finish: "glossy" as const, pattern: "stripes", colors: [pick([nude, "pinkNude", "cloudDancer"] as CK[]), pick(["white", "espresso", "black"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.slim,
         why: { vi: `Sọc mảnh dọc móng — kéo dài ngón tay, "almond nails stripes" +694% trên Pinterest`, en: `Fine vertical stripes — lengthen the fingers; "almond nails stripes" +694% on Pinterest` } };
       if (kind === "polka") return { spec: { shape, finish: "glossy" as const, pattern: "polka", colors: [pick([nude, "cloudDancer", "babyPink"] as CK[]), pick(["chocolate", "burgundy", "white"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
-        why: { vi: "Chấm bi nhỏ tối giản — đang hot lại, hợp móng ngắn", en: "Minimal tiny polka dots — back in style, perfect on short nails" } };
+        why: { vi: "Chấm bi nhỏ tối giản — đang trở lại, hợp móng ngắn", en: "Minimal tiny polka dots — back in style, perfect on short nails" } };
       if (kind === "fawn") return { spec: { shape, finish: "glossy" as const, pattern: "fawn", colors: [pick(["caramel", "coffee"] as CK[]), "cloudDancer", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
         why: { vi: "Da hươu (fawn) — animal print mềm của thu 2026, nhẹ nhàng hơn da báo", en: "Fawn print — fall 2026's soft animal print, gentler than leopard" } };
       if (kind === "foil") return { spec: { shape, finish: "glossy" as const, pattern: "foil", colors: [pick([rich, nude, "olive"] as CK[]), "white", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
@@ -156,6 +157,10 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
         why: { vi: "Cụm đá pha lê + ngọc trai trên 2 ngón — lấp lánh mỗi lần cử động tay", en: "A crystal-and-pearl cluster on two nails — sparkles every time you move" } };
     })(),
   ];
+  // Câu "vì sao hợp" luôn viết hoa chữ đầu (trước đây "milky pink nude matched to…") và theo chính tả của thị
+  // trường (Mỹ: center / color, Úc: centre / colour).
+  const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+  const spell = (s: string) => (market === "AU" ? s.replace(/\bcenter\b/g, "centre").replace(/\bcolor/g, "colour") : s.replace(/\bcentre\b/g, "center").replace(/\bcolour/g, "color"));
   return items.map((it, i) => {
     const d = buildDesign({ occasion: null, system: sys, ...it.spec } as EngineSpec, market);
     // tên trend khách hay tìm (glazed donut, micro French) thay tên kỹ thuật
@@ -166,7 +171,7 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       : d.title;
     return {
       id: `${salt}-a${i}`, title, palette: d.palette, shape: d.shape, finish: d.finish, pattern: d.pattern,
-      priceHint: d.priceHint, minutes: d.minutes, skills: d.skills, why: it.why, tag: it.tag,
+      priceHint: d.priceHint, minutes: d.minutes, skills: d.skills, why: { vi: cap(it.why.vi), en: cap(spell(it.why.en)) }, tag: it.tag,
     };
   });
 }

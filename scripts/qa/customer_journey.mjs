@@ -124,7 +124,7 @@ try {
   await step("A7 Việc gấp", p, async () => { await p.goto(BASE_URL + "/?tab=jobs"); await settle(p); });
   await step("A8 Mở 1 tin tuyển", p, async () => { await p.locator('a[href^="/jobs/"]').first().click({ timeout: 10000 }); await p.waitForURL(/\/jobs\//); await settle(p); });
   await step("A9 Nhắn tin cho tiệm", p, async () => {
-    const b = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
+    const b = p.getByRole("button", { name: /Nhắn tin qua App|Nhắn tin trong app/ }).or(p.getByRole("link", { name: /Nhắn tin qua App|Nhắn tin trong app/ })).first();
     await b.click({ timeout: 10000 });
     await p.locator("[data-chat-input]").fill("Dạ em chào anh chị, tiệm còn cần thợ không ạ?");
     await p.keyboard.press("Enter"); await p.waitForTimeout(1500);

@@ -87,17 +87,17 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   ms = await timed(p, async () => {
     // Thanh dưới là NÚT (không phải link) — bấm như người dùng thật.
     await p.getByRole("button", { name: /^Việc làm$/ }).last().click({ timeout: 5000 });
-    await p.getByRole("link", { name: /Gọi ngay/ }).first().waitFor({ timeout: 15000 });
+    await p.getByRole("link", { name: /Gọi ngay|Gọi cho tiệm/ }).first().waitFor({ timeout: 15000 });
   });
   note("THỢ", "Bấm Việc làm → thấy tin", { ms });
   await shot(p, "A06_jobs");
-  await p.getByRole("link", { name: /Gọi ngay/ }).first().evaluate((el) => el.closest("article,div[class*=rounded]")?.querySelector("a,h3")?.click());
+  await p.getByRole("link", { name: /Gọi ngay|Gọi cho tiệm/ }).first().evaluate((el) => el.closest("article,div[class*=rounded]")?.querySelector("a,h3")?.click());
   await p.waitForURL(/\/jobs\//, { timeout: 10000 }).catch(() => {});
   await p.waitForTimeout(1200);
   await shot(p, "A07_job_detail", true);
   note("THỢ", "Chi tiết tin", { url: p.url().replace(BASE_URL, "") });
 
-  const msgBtn = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
+  const msgBtn = p.getByRole("button", { name: /Nhắn tin qua App|Nhắn tin trong app/ }).or(p.getByRole("link", { name: /Nhắn tin qua App|Nhắn tin trong app/ })).first();
   if (await msgBtn.count()) {
     ms = await timed(p, async () => {
       await msgBtn.click();

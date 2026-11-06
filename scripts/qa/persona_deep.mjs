@@ -80,7 +80,7 @@ const stamp = Date.now();
   }, { full: true });
   await step("THO", "Mở 1 tin tuyển", p, async () => { await p.locator('a[href^="/jobs/"]').first().click({ timeout: 10000 }); await p.waitForURL(/\/jobs\//); await settle(p); }, { full: true });
   await step("THO", "Nhắn tin cho tiệm", p, async () => {
-    const b = p.getByRole("button", { name: /Nhắn tin qua App/ }).or(p.getByRole("link", { name: /Nhắn tin qua App/ })).first();
+    const b = p.getByRole("button", { name: /Nhắn tin qua App|Nhắn tin trong app/ }).or(p.getByRole("link", { name: /Nhắn tin qua App|Nhắn tin trong app/ })).first();
     await b.click({ timeout: 8000 }); await p.locator("[data-chat-input]").waitFor({ timeout: 20000 });
     await p.locator("[data-chat-input]").fill("Dạ chào anh chị, tiệm còn tuyển thợ không ạ?"); await p.keyboard.press("Enter"); await p.waitForTimeout(1200);
   });

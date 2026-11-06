@@ -734,6 +734,36 @@ html:not([data-ui-classic]) button[aria-pressed="true"].bg-sky-500\/20 {
   --tw-ring-color: #fff;
 }
 
+/* Lịch hẹn trống (BookingInbox): icon lịch trong vòng tròn trung tính + "Mở menu của tôi" thành nút phụ */
+html:not([data-ui-classic]) div.rounded-3xl.bg-white\/\[0\.03\].p-8.text-center::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.06) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18M9 16l2 2 4-4'/%3E%3C/svg%3E") center / 22px no-repeat;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+html:not([data-ui-classic]) div.rounded-3xl.bg-white\/\[0\.03\].p-8.text-center p > a {
+  display: flex;
+  width: fit-content;
+  height: 40px;
+  align-items: center;
+  margin: 16px auto 0;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  color: var(--color-pn-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+html:not([data-ui-classic]) div.rounded-3xl.bg-white\/\[0\.03\].p-8.text-center p > a:hover { background: rgb(255 255 255 / 0.1); }
+
+/* Tiêu đề lớn: khít chữ nhẹ (Roboto 700 ở cỡ lớn trông rời rạc) */
+html:not([data-ui-classic]) :is(h1, h2).font-black:is(.text-xl, .text-2xl, .text-3xl) { letter-spacing: -0.01em; }
+
 /* Thẻ "Bước tiếp theo" (GettingStarted compact) — hover + bộ đếm trung tính */
 html:not([data-ui-classic]) a[data-nudge]:hover { background: var(--color-pn-raised); }
 html:not([data-ui-classic]) [data-nudge] .text-pink-200 { color: #d4d4d8; }

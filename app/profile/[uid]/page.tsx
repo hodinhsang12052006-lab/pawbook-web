@@ -15,7 +15,6 @@ import Avatar from "@/components/ui/Avatar";
 import OfficialProfile from "@/components/profile/OfficialProfile";
 import ShareCardButton from "@/components/profile/ShareCard";
 import NailMenu from "@/components/menu/NailMenu";
-import { avatarGradient } from "@/lib/avatar";
 import { stateName, placeLabel } from "@/lib/stateNames";
 
 interface PageProps {
@@ -241,7 +240,6 @@ export default function PublicProfilePage({ params }: PageProps) {
     : [];
   const location = [profile.city, stateName(profile.market, profile.state)].filter(Boolean).join(", ");
   const joined = profile.createdAt ? new Date(profile.createdAt) : null;
-  const [g1, g2] = avatarGradient(profile.id);
   const coverImage = isTech && portfolio.find((u) => !isVideoUrl(u));
   const reviewCount = trustSummary?.count ?? 0;
 
@@ -326,12 +324,11 @@ export default function PublicProfilePage({ params }: PageProps) {
         <section className="relative overflow-hidden border-b border-white/10 bg-slate-950/60 md:rounded-3xl md:border md:shadow-2xl md:shadow-black/40">
           {/* Ảnh bìa: thợ có portfolio → dùng chính mẫu móng đẹp nhất; còn
               lại là gradient riêng theo người (cùng màu với avatar). */}
-          <div className="relative h-32 overflow-hidden sm:h-44" style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}>
+          <div className={`relative h-32 overflow-hidden sm:h-44 ${coverImage ? "bg-pn-raised" : "border-b border-pn-line bg-pn-raised"}`}>
             {coverImage ? (
               <Image src={coverImage} alt="" fill priority sizes="(max-width: 768px) 100vw, 768px" className="object-cover" />
             ) : (
               <>
-                <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:18px_18px]" />
                 <div className="absolute -right-10 -top-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
               </>
             )}

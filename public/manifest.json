@@ -4,8 +4,8 @@
   "description": "Sàn kết nối chủ tiệm nail và thợ nail tại Mỹ & Úc — đăng tin tuyển thợ gấp, đăng portfolio tìm việc, nhắn tin và gọi trực tiếp.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111018",
-  "theme_color": "#020617",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
   "orientation": "portrait",
   "categories": [
     "business",

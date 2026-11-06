@@ -243,7 +243,7 @@ export default function JobDetailPage({ params }: PageProps) {
 
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {facts.map(({ icon: Icon, label, value, accent }) => (
-              <div key={label} className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3">
+              <div key={label} className="rounded-xl bg-white/[0.035] p-3">
                 <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   <Icon className="h-3.5 w-3.5" /> {label}
                 </dt>
@@ -271,8 +271,8 @@ export default function JobDetailPage({ params }: PageProps) {
                 {items.length > 0 && (
                   <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-white/5">
                     {items.map((it) => (
-                      <span key={it.text} className={`inline-flex items-center gap-1.5 text-xs font-semibold ${it.tone}`}>
-                        <it.icon className="h-3.5 w-3.5" /> {it.text}
+                      <span key={it.text} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+                        <it.icon className={`h-3.5 w-3.5 ${it.tone}`} /> {it.text}
                       </span>
                     ))}
                   </div>
@@ -331,7 +331,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <h2 className="text-sm font-bold text-slate-200">{tr("Quyền lợi", "Benefits")}</h2>
               <div className="flex flex-wrap gap-2">
                 {job.benefits.map((b) => (
-                  <span key={b} className="rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 text-xs font-semibold text-emerald-300">🎁 {valueLabel(b)}</span>
+                  <span key={b} className="rounded-full bg-white/[0.05] px-3 py-1 text-xs font-semibold text-slate-200 ring-1 ring-inset ring-white/[0.08]">🎁 {valueLabel(b)}</span>
                 ))}
               </div>
             </section>
@@ -344,7 +344,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <a
                 href={telHref(job.phone, job.market)}
                 onClick={() => trackJobContact(job.id)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-700/25 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press py-3.5 text-base font-bold text-white transition-colors"
               >
                 <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
               </a>
@@ -353,7 +353,7 @@ export default function JobDetailPage({ params }: PageProps) {
                   if (user?.id) trackJobContact(job.id);
                   router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login");
                 }}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 py-3.5 text-base font-bold text-slate-100 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] hover:bg-white/10 py-3.5 text-base font-bold text-slate-100 transition-colors"
               >
                 <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin qua App", " Message in app")}
               </button>}

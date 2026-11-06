@@ -26,7 +26,7 @@ const beVietnam = Be_Vietnam_Pro({
 
 const VI = {
   title: "Không tìm thấy trang",
-  body: "Trang không tồn tại hoặc tin đã bị gỡ.",
+  body: "Trang này không tồn tại hoặc tin đã bị gỡ.", // cùng câu với 404 trong app (components/NotFoundView.tsx)
   home: "Về trang chủ",
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { SearchX, Home } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
@@ -9,7 +10,12 @@ import { useTr } from "@/lib/i18n/useTr";
 // tối), 1 link hỏng/tin đã bị xóa từng hiện ra trang trắng trơn không có
 // đường quay lại, trông như app bị lỗi.
 export default function NotFoundView() {
-  useTr(); // render lại khi đổi VI/EN
+  const { locale } = useTr(); // render lại khi đổi VI/EN
+  // Tiêu đề tab: generateMetadata của app/[lang]/not-found.tsx chỉ vào HTML máy chủ; khi trình duyệt dựng cây
+  // từ payload (404 → __next_error__), Next đặt lại tiêu đề mặc định của layout. Đặt lại đúng ngôn ngữ ở đây.
+  useEffect(() => {
+    document.title = `${tr("Không tìm thấy trang", "Page not found")} · PawNail`;
+  }, [locale]);
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-6 text-center">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />

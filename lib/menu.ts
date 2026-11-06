@@ -34,6 +34,13 @@ export interface MenuItemInput {
 export interface PublicMenuItem extends Omit<MenuItemInput, "materials"> {
   id: string;
   sortOrder: number;
+  // Bản theo ngôn ngữ người xem (lib/menuI18n.ts): null = chưa có → hiện nguyên văn. enOrigin "mt" = dịch máy.
+  nameEn?: string | null;
+  descriptionEn?: string | null;
+  nameVi?: string | null;
+  descriptionVi?: string | null;
+  enOrigin?: "mt" | "owner" | "design" | null;
+  viOrigin?: "mt" | "owner" | "design" | null;
   // Chỉ chủ menu nhận được (người khác: null)
   materials: MenuMaterial[] | null;
   materialCost: number | null;
@@ -100,12 +107,34 @@ export function parseMenuItem(b: Record<string, unknown>): { ok: true; value: Me
   };
 }
 
+/** Tên tiếng Anh thợ tự nhập / xác nhận cho khách (trình sửa menu). undefined = không gửi (giữ nguyên). */
+export function parseMenuItemEn(b: Record<string, unknown>): { nameEn?: string | null; descriptionEn?: string | null } {
+  const out: { nameEn?: string | null; descriptionEn?: string | null } = {};
+  if (typeof b.nameEn === "string") out.nameEn = str(b.nameEn, 80) || null;
+  if (typeof b.descriptionEn === "string") out.descriptionEn = str(b.descriptionEn, 500) || null;
+  return out;
+}
+
+type I18nFields = Pick<PublicMenuItem, "nameEn" | "descriptionEn" | "nameVi" | "descriptionVi" | "enOrigin" | "viOrigin">;
+
+/**
+ * Tên / mô tả để HIỂN THỊ cho người xem `locale` + có phải dịch máy không (để hiện "Show original").
+ * Không có bản dịch → nguyên văn.
+ */
+export function menuText(item: Pick<PublicMenuItem, "name" | "description"> & Partial<I18nFields>, locale: "vi" | "en") {
+  const name = (locale === "en" ? item.nameEn : item.nameVi) || item.name;
+  const description = (locale === "en" ? item.descriptionEn : item.descriptionVi) || item.description;
+  const origin = locale === "en" ? item.enOrigin : item.viOrigin;
+  const translated = name !== item.name || description !== item.description;
+  return { name, description, translated, machine: translated && origin === "mt", originalName: item.name, originalDescription: item.description };
+}
+
 /** Dòng DB → dữ liệu trả về; `owner` = người xem có phải chủ menu không. */
 export function toPublicMenuItem(r: {
   id: string; category: string; name: string; description: string | null; technique: string | null; priceFrom: number; priceTo: number | null;
   minutes: number | null; durabilityWeeks: number | null; difficulty: number | null; occasion: string | null; images: string; materials: string;
   sourceDesignId: string | null; sortOrder: number; active: boolean;
-}, owner: boolean): PublicMenuItem {
+}, owner: boolean, i18n?: I18nFields | null): PublicMenuItem {
   const parse = <T,>(s: string, d: T): T => { try { const v = JSON.parse(s); return Array.isArray(v) ? (v as T) : d; } catch { return d; } };
   const mats = parse<MenuMaterial[]>(r.materials, []);
   return {
@@ -126,5 +155,11 @@ export function toPublicMenuItem(r: {
     active: r.active,
     materials: owner ? mats : null,
     materialCost: owner ? materialCost(mats) : null,
+    nameEn: i18n?.nameEn ?? null,
+    descriptionEn: i18n?.descriptionEn ?? null,
+    nameVi: i18n?.nameVi ?? null,
+    descriptionVi: i18n?.descriptionVi ?? null,
+    enOrigin: i18n?.enOrigin ?? null,
+    viOrigin: i18n?.viOrigin ?? null,
   };
 }

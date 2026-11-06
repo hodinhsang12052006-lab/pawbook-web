@@ -9,12 +9,14 @@ import toast from "react-hot-toast";
 import Avatar from "@/components/ui/Avatar";
 import { cdnImage } from "@/lib/cdnImage";
 import { stateName } from "@/lib/stateNames";
-import { tr } from "@/lib/i18n/tr";
+import { currentLocale, tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { menuText } from "@/lib/menu";
+import { detectTextLang } from "@/lib/i18n/detectLang";
 
 export interface SalonItem {
   id: string; name: string; avatarUrl: string | null; kind: "salon" | "tech"; state: string | null; city: string | null; local: boolean;
-  photos: string[]; services: { name: string; priceFrom: number; priceTo: number | null }[]; skills: string[]; rating: number | null; reviews: number;
+  photos: string[]; services: { name: string; nameEn?: string | null; nameVi?: string | null; enOrigin?: "mt" | "owner" | "design" | null; priceFrom: number; priceTo: number | null }[]; skills: string[]; rating: number | null; reviews: number;
 }
 
 const price = (s: { priceFrom: number; priceTo: number | null }) => `$${s.priceFrom}${s.priceTo && s.priceTo > s.priceFrom ? `–${s.priceTo}` : "+"}`;
@@ -45,7 +47,7 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
             </p>
             <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400"><MapPin className="h-3.5 w-3.5 flex-shrink-0" />{where || tr("Chưa ghi khu vực", "Area not listed")}</p>
             {s.rating !== null ? (
-              <p className="mt-1 flex items-center gap-1 text-xs font-bold text-amber-300"><Star className="h-3.5 w-3.5 fill-amber-300" />{s.rating.toFixed(1)}<span className="font-semibold text-slate-500">· {s.reviews} {tr("đánh giá", "reviews")}</span></p>
+              <p className="mt-1 flex items-center gap-1 text-xs font-bold text-amber-300"><Star className="h-3.5 w-3.5 fill-amber-300" />{s.rating.toFixed(1)}<span className="font-semibold text-slate-500">· {s.reviews} {tr("đánh giá", s.reviews === 1 ? "review" : "reviews")}</span></p>
             ) : (
               <p className="mt-1 text-xs font-semibold text-emerald-300/90">{s.kind === "salon" ? tr("Tiệm mới trên PawNail", "New on PawNail") : tr("Thợ mới trên PawNail", "New on PawNail")}</p>
             )}
@@ -53,12 +55,15 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
         </div>
         {s.services.length > 0 && (
           <ul className="space-y-1 border-t border-white/5 px-4 py-3">
-            {s.services.map((sv) => (
+            {s.services.map((sv) => {
+              const t = menuText({ ...sv, description: null }, currentLocale());
+              return (
               <li key={sv.name} className="flex items-center justify-between gap-3 text-sm">
-                <span className="truncate text-slate-200">{sv.name}</span>
+                <span className="truncate text-slate-200" lang={detectTextLang(t.name) ?? undefined} title={t.machine ? tr(`Dịch máy · bản gốc: ${t.originalName}`, `Machine-translated · original: ${t.originalName}`) : undefined}>{t.name}</span>
                 <span className="flex-shrink-0 font-bold text-emerald-300">{price(sv)}</span>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </Link>

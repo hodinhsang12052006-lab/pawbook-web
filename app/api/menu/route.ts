@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
-import { MAX_MENU_ITEMS, parseMenuItem, toPublicMenuItem } from "@/lib/menu";
+import { MAX_MENU_ITEMS, parseMenuItem, parseMenuItemEn, toPublicMenuItem } from "@/lib/menu";
+import { menuI18nFor, menuI18nOne, translateMenuItemOnSave } from "@/lib/menuI18n";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
 // GET /api/menu?userId=… — menu mẫu nail của 1 thợ / tiệm (công khai: chỉ mẫu đang hiện, không có
@@ -26,11 +27,12 @@ export async function GET(req: Request) {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     take: MAX_MENU_ITEMS,
   });
+  const i18n = await menuI18nFor(rows);
   return NextResponse.json(
     {
       owner: { id: owner.id, name: owner.name, avatarUrl: owner.avatarUrl, role: owner.role, market: owner.market, state: owner.state, city: owner.city, salonName: owner.role === "OWNER" ? owner.jobs[0]?.salonName ?? null : null },
       isOwner,
-      items: rows.map((r) => toPublicMenuItem(r, isOwner)),
+      items: rows.map((r) => toPublicMenuItem(r, isOwner, i18n.get(r.id))),
     },
     // Không cache ở CDN: chủ menu và khách cùng 1 URL nhưng nhận dữ liệu khác nhau (vật tư, mẫu đang ẩn).
     { headers: { "Cache-Control": "private, no-store" } },
@@ -47,11 +49,16 @@ export async function POST(req: Request) {
   recordAttempt(key, 60 * 60 * 1000);
   const count = await prisma.menuItem.count({ where: { ownerId: me } });
   if (count >= MAX_MENU_ITEMS) return NextResponse.json({ error: `Menu tối đa ${MAX_MENU_ITEMS} mẫu.`, errorEn: `A menu can have up to ${MAX_MENU_ITEMS} items.` }, { status: 400 });
-  const parsed = parseMenuItem((await req.json().catch(() => ({}))) as Record<string, unknown>);
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const parsed = parseMenuItem(body);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorEn: errorEn(parsed.error) }, { status: 400 });
   const v = parsed.value;
   const row = await prisma.menuItem.create({
     data: { ...v, images: JSON.stringify(v.images), materials: JSON.stringify(v.materials), ownerId: me, sortOrder: count },
   });
-  return NextResponse.json({ item: toPublicMenuItem(row, true) }, { status: 201 });
+  // Tên tiếng Anh cho khách: thợ tự nhập thì lưu ngay; còn lại dịch máy sau khi trả lời (không làm chậm nút Lưu).
+  const en = parseMenuItemEn(body);
+  if (en.nameEn || en.descriptionEn) await translateMenuItemOnSave(row, en).catch(() => {});
+  else after(() => translateMenuItemOnSave(row).catch(() => {}));
+  return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) }, { status: 201 });
 }

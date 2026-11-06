@@ -7,15 +7,19 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpen, CalendarCheck, Sparkles } from "lucide-react";
 import { cdnImage } from "@/lib/cdnImage";
-import { tr } from "@/lib/i18n/tr";
+import { currentLocale, tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { menuText, type PublicMenuItem } from "@/lib/menu";
+import { detectTextLang } from "@/lib/i18n/detectLang";
 
-interface Item { id: string; name: string; priceFrom: number; priceTo: number | null; images: string[] }
+type Item = Pick<PublicMenuItem, "id" | "name" | "description" | "priceFrom" | "priceTo" | "images" | "nameEn" | "nameVi" | "descriptionEn" | "descriptionVi" | "enOrigin" | "viOrigin">;
 const PRO = new Set(["TECHNICIAN", "OWNER"]);
 
-export default function ChatContextCard({ meRole, meId, partner, onStudio, onSendText }: {
+export default function ChatContextCard({ meRole, meId, partner, onStudio, onSendText, compact = false }: {
   meRole: string | null | undefined;
   meId: string;
+  /** cuộc trò chuyện đã có tin → thẻ thu gọn 1 hàng (không đẩy tin mới nhất ra khỏi màn hình) */
+  compact?: boolean;
   partner: { id: string; name: string; role: string; isGroup: boolean };
   onStudio: () => void;
   onSendText: (text: string) => void;
@@ -39,7 +43,25 @@ export default function ChatContextCard({ meRole, meId, partner, onStudio, onSen
     return (
       <section className="mx-auto mb-3 w-full max-w-md rounded-3xl bg-slate-950/70 p-3.5 ring-1 ring-white/10 backdrop-blur" aria-label={tr("Menu của tiệm", "Salon menu")}>
         <p className="flex items-center gap-1.5 text-xs font-black text-pink-200"><BookOpen className="h-4 w-4" />{tr(`Menu & mẫu của ${partner.name}`, `${partner.name}'s menu & looks`)}</p>
-        {items.length > 0 ? (
+        {items.length > 0 && compact ? (
+          <div className="mt-2 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+            {items.map((it) => {
+              const name = menuText(it, currentLocale()).name;
+              return (
+                <Link key={it.id} href={`/menu/${partner.id}`} className="flex w-[46%] flex-shrink-0 items-center gap-2 rounded-2xl bg-white/[0.04] p-1.5 ring-1 ring-white/10" aria-label={name}>
+                  {it.images[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={cdnImage(it.images[0], 120)} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-xl object-cover" />
+                  ) : <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-pink-500/10"><Sparkles className="h-4 w-4 text-pink-300" /></span>}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-bold text-white" lang={detectTextLang(name) ?? undefined}>{name}</span>
+                    <span className="block text-[11px] font-bold text-emerald-300">${it.priceFrom}{it.priceTo && it.priceTo > it.priceFrom ? `–${it.priceTo}` : "+"}</span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : items.length > 0 ? (
           <div className="mt-2.5 grid grid-cols-2 gap-2">
             {items.map((it) => (
               <Link key={it.id} href={`/menu/${partner.id}`} className="overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-white/10">
@@ -48,7 +70,7 @@ export default function ChatContextCard({ meRole, meId, partner, onStudio, onSen
                   <img src={cdnImage(it.images[0], 320)} alt="" loading="lazy" className="aspect-square w-full object-cover" />
                 ) : <span className="flex aspect-square items-center justify-center bg-pink-500/10"><Sparkles className="h-5 w-5 text-pink-300" /></span>}
                 <span className="block px-2 py-1.5">
-                  <span className="block truncate text-[12px] font-bold text-white">{it.name}</span>
+                  <span className="block truncate text-[12px] font-bold text-white" lang={detectTextLang(menuText(it, currentLocale()).name) ?? undefined}>{menuText(it, currentLocale()).name}</span>
                   <span className="block text-[11px] font-bold text-emerald-300">${it.priceFrom}{it.priceTo && it.priceTo > it.priceFrom ? `–${it.priceTo}` : "+"}</span>
                 </span>
               </Link>

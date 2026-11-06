@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { toPublicMenuItem } from "@/lib/menu";
+import { menuI18nFor } from "@/lib/menuI18n";
 
 // GET /api/menu/showcase — mẫu có ẢNH THẬT trong menu của thợ / tiệm (trang Mẫu nail).
 // Bỏ mẫu chép từ kho PawNail mà vẫn dùng ảnh AI (thư mục pawbook/designs): chỉ khoe tay nghề thật.
@@ -13,7 +14,8 @@ export async function GET(req: Request) {
       take: limit,
       include: { owner: { select: { id: true, name: true, avatarUrl: true, city: true } } },
     });
-    const items = rows.map((r) => ({ ...toPublicMenuItem(r, false), owner: r.owner }));
+    const i18n = await menuI18nFor(rows);
+    const items = rows.map((r) => ({ ...toPublicMenuItem(r, false, i18n.get(r.id)), owner: r.owner }));
     return NextResponse.json({ items }, { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } });
   } catch (err) {
     if (/no such table|P2021/i.test(String((err as Error)?.message))) return NextResponse.json({ items: [] });

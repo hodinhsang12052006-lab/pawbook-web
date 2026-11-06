@@ -3,9 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { MAX_MENU_ITEMS, toPublicMenuItem } from "@/lib/menu";
+import { localeFromRequest } from "@/lib/i18n/server";
+import { menuI18nOne } from "@/lib/menuI18n";
 
 // POST /api/menu/from-design { designId } — "Thêm vào menu của tôi" từ kho Mẫu nail PawNail:
 // chép tên, mô tả, kỹ thuật, độ khó, thời gian, giá gợi ý, vật tư, ảnh → thợ chỉ cần sửa giá / thay ảnh thật.
+// Tên / mô tả / vật tư chép theo NGÔN NGỮ của thợ đang dùng; bản ngôn ngữ còn lại (khách tiếng Anh thấy
+// "Caramel tortoiseshell with gold" thay vì "Đồi mồi caramel viền vàng") tra qua sourceDesignId lúc đọc
+// (lib/menuI18n.ts) — cả những mẫu đã chép trước đây cũng đúng ngay.
 export async function POST(req: Request) {
   const me = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id;
   if (!me) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
@@ -23,17 +28,21 @@ export async function POST(req: Request) {
   const nums = (d.priceHint || "").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
   const priceFrom = nums[0] ?? 0;
   const priceTo = nums[1] && nums[1] > priceFrom ? nums[1] : null;
+  const en = localeFromRequest(req) === "en";
   let mats: { name: string; qty: string; cost: null }[] = [];
   try {
-    mats = (JSON.parse(d.materials || "[]") as { vi?: string; en?: string; qty?: string }[]).map((m) => ({ name: String(m.vi || m.en || "").slice(0, 60), qty: String(m.qty || "").slice(0, 30), cost: null })).filter((m) => m.name).slice(0, 30);
+    mats = (JSON.parse(d.materials || "[]") as { vi?: string; en?: string; qty?: string }[])
+      .map((m) => ({ name: String((en ? m.en || m.vi : m.vi || m.en) || "").slice(0, 60), qty: String(m.qty || "").slice(0, 30), cost: null }))
+      .filter((m) => m.name)
+      .slice(0, 30);
   } catch {}
   const skills = (d.skills || "").split(",").map((s) => s.trim()).filter(Boolean);
   const row = await prisma.menuItem.create({
     data: {
       ownerId: me,
       category: skills.includes("Chân tay nước") ? "FOOT" : "HAND",
-      name: d.title.slice(0, 80),
-      description: d.description?.slice(0, 500) || null,
+      name: (en ? d.titleEn || d.title : d.title).slice(0, 80),
+      description: (en ? d.descriptionEn || d.description : d.description)?.slice(0, 500) || null,
       technique: skills[0]?.slice(0, 40) || null,
       priceFrom,
       priceTo,
@@ -46,5 +55,5 @@ export async function POST(req: Request) {
       sortOrder: count,
     },
   });
-  return NextResponse.json({ item: toPublicMenuItem(row, true) }, { status: 201 });
+  return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) }, { status: 201 });
 }

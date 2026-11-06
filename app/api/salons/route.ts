@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { realOnly } from "@/lib/demo";
+import { menuI18nFor } from "@/lib/menuI18n";
 
 // GET /api/salons?market=US&state=CA&limit=24 — "Tiệm & thợ quanh bạn" cho KHÁCH đi làm nail.
 // Chỉ người có thứ khách cần xem trước khi chọn: menu dịch vụ có giá HOẶC ảnh tác phẩm thật.
@@ -24,7 +25,9 @@ export async function GET(req: Request) {
     const select = Prisma.validator<Prisma.UserSelect>()({
       id: true, name: true, avatarUrl: true, role: true, state: true, city: true,
       technicianProfile: { select: { portfolioImages: true, specialties: true, yearsOfExperience: true } },
-      menuItems: { where: { active: true }, orderBy: { sortOrder: "asc" as const }, take: 3, select: { name: true, priceFrom: true, priceTo: true, images: true } },
+      menuItems: { where: { active: true }, orderBy: { sortOrder: "asc" as const }, take: 3, select: { id: true, name: true, description: true, sourceDesignId: true, priceFrom: true, priceTo: true, images: true } },
+      // Tiệm: khách thấy TÊN TIỆM ("Luxe Nails & Spa"), không phải tên chủ tiệm.
+      jobs: { select: { salonName: true }, orderBy: { createdAt: "asc" as const }, take: 1 },
       clientReviews: { where: { hidden: false }, select: { rating: true } },
     });
     const local = state ? await prisma.user.findMany({ where: { ...base, state }, select, take: limit }) : [];
@@ -32,13 +35,19 @@ export async function GET(req: Request) {
       ? await prisma.user.findMany({ where: { ...base, ...(state ? { NOT: { state } } : {}) }, select, take: limit - local.length, orderBy: { createdAt: "desc" } })
       : [];
     const parse = (s: string | null | undefined): string[] => { try { const v = JSON.parse(s || "[]"); return Array.isArray(v) ? v.filter((x) => typeof x === "string") : []; } catch { return []; } };
+    // Tên mẫu theo ngôn ngữ (trả CẢ 2 bản: API này cache chung ở CDN cho người xem EN lẫn VI).
+    const i18n = await menuI18nFor([...local, ...more].flatMap((u) => u.menuItems));
     const items = [...local, ...more].map((u) => {
       const ratings = u.clientReviews.map((r) => r.rating);
       const photos = [...u.menuItems.flatMap((m) => parse(m.images)), ...parse(u.technicianProfile?.portfolioImages)].filter((x) => /^https:\/\//.test(x)).slice(0, 4);
       return {
-        id: u.id, name: u.name, avatarUrl: u.avatarUrl, kind: u.role === "OWNER" ? "salon" : "tech", state: u.state, city: u.city, local: !!state && u.state === state,
+        id: u.id, name: (u.role === "OWNER" && u.jobs[0]?.salonName?.trim()) || u.name, ownerName: u.role === "OWNER" ? u.name : null,
+        avatarUrl: u.avatarUrl, kind: u.role === "OWNER" ? "salon" : "tech", state: u.state, city: u.city, local: !!state && u.state === state,
         photos,
-        services: u.menuItems.map((m) => ({ name: m.name, priceFrom: m.priceFrom, priceTo: m.priceTo })),
+        services: u.menuItems.map((m) => {
+          const t = i18n.get(m.id);
+          return { name: m.name, nameEn: t?.nameEn ?? null, nameVi: t?.nameVi ?? null, enOrigin: t?.enOrigin ?? null, priceFrom: m.priceFrom, priceTo: m.priceTo };
+        }),
         skills: (u.technicianProfile?.specialties || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 3),
         rating: ratings.length ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : null,
         reviews: ratings.length,

@@ -5,7 +5,8 @@ import prisma from "@/lib/prisma";
 import { getClientIp, isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { sendPush } from "@/lib/push";
 import { STATUSES, dateLabel, formatPhone, parseBooking, TIME_LABEL, type BookingTime } from "@/lib/booking";
-import { priceLabel } from "@/lib/menu";
+import { menuText, priceLabel } from "@/lib/menu";
+import { menuI18nOne } from "@/lib/menuI18n";
 import { withReviewUrl } from "@/lib/bookingServer";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
 
@@ -32,9 +33,11 @@ export async function POST(req: Request) {
   let itemName: string | null = null;
   let itemPrice: string | null = null;
   if (v.menuItemId) {
-    const it = await prisma.menuItem.findFirst({ where: { id: v.menuItemId, ownerId: tech.id, active: true }, select: { name: true, priceFrom: true, priceTo: true } });
+    const it = await prisma.menuItem.findFirst({ where: { id: v.menuItemId, ownerId: tech.id, active: true }, select: { id: true, name: true, description: true, sourceDesignId: true, priceFrom: true, priceTo: true } });
     if (!it) return NextResponse.json({ error: "Mẫu này không còn trong menu.", errorEn: "This design is no longer on the menu." }, { status: 404 });
-    itemName = it.name;
+    // Tên mẫu theo ngôn ngữ của KHÁCH: SMS xác nhận thợ gửi khách dùng tên này (khách Mỹ không nhận
+    // "Đồi mồi caramel viền vàng").
+    itemName = menuText({ ...it, ...(await menuI18nOne(it)) }, v.locale).name;
     itemPrice = priceLabel(it.priceFrom, it.priceTo);
   }
 

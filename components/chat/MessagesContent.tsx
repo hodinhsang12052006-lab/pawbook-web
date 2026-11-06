@@ -1518,6 +1518,7 @@ export default function MessagesContent({
                   partner={{ id: activeChat.id, name: activeChat.name, role: activeChat.role, isGroup: activeChat.isGroup }}
                   onStudio={() => setStudioOpen(true)}
                   onSendText={(text) => handleSendMessage(null, text)}
+                  compact={chatMessages.length > 0}
                 />
               )}
 

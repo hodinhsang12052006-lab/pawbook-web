@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, BookOpen, CalendarCheck, Clock, Eye, EyeOff, Images, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
-import { tr } from "@/lib/i18n/tr";
+import { currentLocale, tr } from "@/lib/i18n/tr";
 import { apiError } from "@/lib/i18n/apiError";
+import { valueLabel } from "@/lib/i18n/valueLabel";
+import { detectTextLang } from "@/lib/i18n/detectLang";
 import { useTr } from "@/lib/i18n/useTr";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { cdnImage } from "@/lib/cdnImage";
-import { CATEGORY_LABEL, MENU_CATEGORIES, priceLabel, type MenuCategory, type PublicMenuItem } from "@/lib/menu";
+import { CATEGORY_LABEL, MENU_CATEGORIES, menuText, priceLabel, type MenuCategory, type PublicMenuItem } from "@/lib/menu";
 import MenuItemEditor from "./MenuItemEditor";
 import QuickMenu from "./QuickMenu";
 import BookingForm from "@/components/booking/BookingForm";
@@ -23,6 +25,16 @@ import { placeLabel } from "@/lib/stateNames";
 interface MenuOwner { id: string; name: string | null; avatarUrl: string | null; role: string; market: string | null; city: string | null; state: string | null; salonName: string | null }
 
 const DIFF = () => [tr("Dễ", "Easy"), tr("Vừa", "Medium"), tr("Khó", "Advanced")];
+
+// Khách xem menu: tên / mô tả theo ngôn ngữ của khách (mẫu PawNail, thợ xác nhận, hoặc dịch máy). Bản gốc giữ
+// lại cho nút "Xem bản gốc". Chủ menu luôn thấy đúng chữ mình nhập (để sửa).
+type ViewItem = PublicMenuItem & { originalName?: string; originalDescription?: string | null; machine?: boolean };
+function localize(it: PublicMenuItem): ViewItem {
+  const t = menuText(it, currentLocale());
+  if (!t.translated) return it;
+  return { ...it, name: t.name, description: t.description, originalName: t.originalName, originalDescription: t.originalDescription, machine: t.machine };
+}
+const svcCount = (n: number) => tr(`${n} mẫu`, `${n} ${n === 1 ? "service" : "services"}`);
 
 export default function NailMenu({ userId, header = false }: { userId: string; header?: boolean }) {
   useTr();
@@ -47,7 +59,7 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
       const res = await fetch(`/api/menu?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
       const d = await res.json();
       if (!res.ok) throw new Error(apiError(d, "Không tải được menu.", "Couldn't load the menu."));
-      setItems(d.items);
+      setItems(d.isOwner ? d.items : (d.items as PublicMenuItem[]).map(localize));
       setOwner(d.owner);
       setIsOwner(Boolean(d.isOwner));
     } catch (e) {
@@ -145,8 +157,8 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
           <h2 className="flex items-center gap-2 text-base font-black text-white"><BookOpen className="h-4 w-4 text-amber-300" />{tr("Menu mẫu nail", "Nail menu")}</h2>
           <p className="text-xs text-slate-400">
             {isOwner
-              ? tr(`${items.length} mẫu · ${visibleCount} đang hiện cho khách`, `${items.length} designs · ${visibleCount} visible to clients`)
-              : tr(`${items.length} mẫu · giá tham khảo, chốt khi xem tay`, `${items.length} designs · guide prices, final after consultation`)}
+              ? `${svcCount(items.length)} · ${tr(`${visibleCount} đang hiện cho khách`, `${visibleCount} visible to clients`)}`
+              : `${svcCount(items.length)} · ${tr("Giá tham khảo, báo giá chính xác khi tiệm xem tay", "Prices are a guide — final price confirmed at your visit")}`}
           </p>
         </div>
         {!isOwner && items.length > 0 && (
@@ -251,7 +263,7 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
                       <p className="line-clamp-2 text-[13px] font-bold leading-snug text-white">{it.name}</p>
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-sm font-black text-emerald-300">{priceLabel(it.priceFrom, it.priceTo)}</span>
-                        {it.minutes && <span className="flex items-center gap-0.5 text-[11px] text-slate-400"><Clock className="h-3 w-3" />{it.minutes}′</span>}
+                        {it.minutes && <span className="flex items-center gap-0.5 text-[11px] text-slate-400"><Clock className="h-3 w-3" />{it.minutes}{tr(" phút", " min")}</span>}
                       </div>
                       {isOwner && it.materialCost !== null && (
                         <p className="text-[11px] text-slate-400">{tr("Vật tư", "Materials")} ${it.materialCost.toFixed(2)} · <span className="text-emerald-300/90">{tr("lời", "margin")} ~${Math.max(0, Math.round(it.priceFrom - it.materialCost))}</span></p>
@@ -327,8 +339,12 @@ function MenuItemSheet({ it, isOwner, ownerName, canChat, onClose, onWant, onBoo
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  const v = it as ViewItem;
+  const [orig, setOrig] = useState(false);
+  const name = orig && v.originalName ? v.originalName : it.name;
+  const description = orig && v.originalName ? v.originalDescription ?? null : it.description;
   const chips = [
-    it.technique,
+    it.technique ? valueLabel(it.technique) : null,
     it.minutes ? `⏱ ${it.minutes}${tr(" phút", " min")}` : null,
     it.durabilityWeeks ? tr(`Giữ ${it.durabilityWeeks} tuần`, `Lasts ${it.durabilityWeeks} wk`) : null,
     it.difficulty ? DIFF()[it.difficulty - 1] : null,
@@ -357,10 +373,18 @@ function MenuItemSheet({ it, isOwner, ownerName, canChat, onClose, onWant, onBoo
           <div className="space-y-1.5">
             <p className="text-[11px] font-black uppercase tracking-wider text-pink-300">{tr(CATEGORY_LABEL[it.category][0], CATEGORY_LABEL[it.category][1])}</p>
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-xl font-black leading-tight text-white">{it.name}</h2>
+              <h2 className="text-xl font-black leading-tight text-white" lang={detectTextLang(name) ?? undefined}>{name}</h2>
               <span className="flex-shrink-0 text-xl font-black text-emerald-300">{priceLabel(it.priceFrom, it.priceTo)}</span>
             </div>
-            {it.description && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">{it.description}</p>}
+            {description && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300" lang={detectTextLang(description) ?? undefined}>{description}</p>}
+            {v.originalName && (
+              <p className="text-[11px] text-slate-500">
+                {v.machine ? tr("Dịch tự động. ", "Automatically translated. ") : ""}
+                <button type="button" onClick={() => setOrig((o) => !o)} className="font-semibold text-sky-300 hover:underline">
+                  {orig ? tr("Xem bản dịch", "Show translation") : detectTextLang(v.originalName) === "vi" ? tr("Xem bản gốc", "Show original (Tiếng Việt)") : tr("Xem bản gốc (tiếng Anh)", "Show original")}
+                </button>
+              </p>
+            )}
             {chips.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {chips.map((c) => <span key={c} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-slate-200">{c}</span>)}

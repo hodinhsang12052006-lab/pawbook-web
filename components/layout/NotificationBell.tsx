@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift, X, UserRound, Camera, Sparkles } from "lucide-react";
+import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
@@ -11,6 +11,7 @@ import { jobAlertChannelName } from "@/lib/pusherChannel";
 import { playSound, getSoundPrefs, setSoundPrefs } from "@/lib/sounds";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
+import { X, UserRound, Camera, Sparkles } from "lucide-react"; // V2.2: nút đóng sheet + 2 việc nên làm khi chưa có thông báo
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -188,7 +189,7 @@ export default function NotificationBell() {
         <div
           role="dialog"
           aria-label={tr("Thông báo", "Notifications")}
-          className="pn-notif-panel fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] shadow-2xl shadow-black/70 animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
+          className="fixed inset-x-2 top-16 z-[60] max-h-[75vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] shadow-2xl shadow-black/70 animate-scaleUp sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-[380px]"
         >
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <p className="text-sm font-black text-white">{tr("Thông báo", "Notifications")}</p>

@@ -1156,7 +1156,7 @@ html[data-chat-open] .pn-bnav { display: none; }
 /* ---- V2.2 ---- */
 /* Thông báo trên điện thoại: sheet cao gần hết màn hình (trượt lên từ dưới), danh sách cuộn bên trong, chừa vùng an toàn */
 @media (max-width: 639px) {
-  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] {
+  html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"][aria-label] {
     inset: calc(env(safe-area-inset-top) + 56px) 0 0 0;
     max-height: none;
     display: flex;
@@ -1165,13 +1165,13 @@ html[data-chat-open] .pn-bnav { display: none; }
     border-bottom: 0;
     animation: pn-sheet-in var(--pn-dur-sheet, 280ms) var(--pn-ease-drawer) both;
   }
-  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] > div:last-child {
+  html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"][aria-label] > div:last-child {
     max-height: none;
     flex: 1 1 auto;
     min-height: 0;
     padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
   }
-  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"]::before {
+  html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"][aria-label]::before {
     content: "";
     position: absolute;
     top: 6px;
@@ -1182,9 +1182,9 @@ html[data-chat-open] .pn-bnav { display: none; }
     border-radius: 999px;
     background: rgb(255 240 246 / 0.22);
   }
-  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] > div:first-child { padding-top: 18px; }
+  html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"][aria-label] > div:first-child { padding-top: 18px; }
   /* sheet đang mở: dock ẩn đi (thanh trên là 1 lớp cô lập nên dock từng nổi đè lên sheet) */
-  html:not([data-ui-classic]) body:has(.pn-notif-panel) .pn-bnav { display: none; }
+  html:not([data-ui-classic]) body:has(.pn-notif-scrim) .pn-bnav { display: none; }
 
   /* Chi tiết việc: thanh Gọi / Nhắn dính ngay trên dock (kiểu Indeed / Fresha), tôn trọng vùng an toàn */
   html:not([data-ui-classic]) .pn-job-cta {
@@ -1213,7 +1213,7 @@ html[data-lowmem]:not([data-ui-classic]) .pn-job-cta { -webkit-backdrop-filter: 
 html:not([data-ui-classic]) .pn-post-tag { line-height: 16px; }
 
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] { animation: none; }
+  html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"][aria-label] { animation: none; }
 }
 
 /* Trang chủ điện thoại: thẻ "Bắt đầu với PawNail" chỉ hiện BƯỚC TIẾP THEO (đã xong + các bước sau ẩn đi, số 0/3 vẫn

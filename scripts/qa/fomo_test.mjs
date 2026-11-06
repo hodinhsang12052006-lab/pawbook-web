@@ -89,7 +89,7 @@ const pub = (await new Client().req(`/api/profile?id=${tech.userId}&badges=1`)).
 R.check("FM17", "Hồ sơ có huy hiệu 'Thành viên sáng lập' (đăng ký trước 2027)", pub.badges?.some((b) => b.key === "founding"), JSON.stringify(pub.badges));
 R.check("FM18", "Hồ sơ công khai vẫn không lộ SĐT/email", !pub.phone && !pub.email);
 
-// ---- UI: thẻ 'Đang hot' + trang Xu hướng + toast việc gấp realtime ----
+// ---- UI: thẻ 'Nổi bật' (trước đây 'Đang hot') + trang Xu hướng + toast việc gấp realtime ----
 const browser = await chromium.launch();
 const errors = [];
 try {
@@ -103,9 +103,9 @@ try {
   await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 });
 
   await p.goto(`${BASE_URL}/jobs/${jobId}`);
-  const hot = await p.getByText("Đang hot").first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+  const hot = await p.getByText("Nổi bật", { exact: true }).first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   const views = await p.getByText(/người xem hôm nay/).first().isVisible().catch(() => false);
-  R.check("FM19", "Trang tin hiện 'Đang hot' + 'N người xem hôm nay'", hot && views);
+  R.check("FM19", "Trang tin hiện 'Nổi bật' + 'N người xem hôm nay'", hot && views);
   await p.screenshot({ path: process.env.TEMP + "/fomo_job.png", fullPage: true });
 
   await p.goto(`${BASE_URL}/trends`);

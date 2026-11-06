@@ -236,7 +236,7 @@ function JobCard({
           <div className="flex items-center gap-1">
             {heat?.hot && (
               <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2 py-1 text-[11px] font-black text-white shadow-lg shadow-orange-500/30" title={tr("Nhiều người xem hoặc liên hệ tin này", "Many people are viewing or contacting this job")}>
-                <Zap className="h-3 w-3 fill-white" />{tr(" Được quan tâm", " Popular")}
+                <Zap className="h-3 w-3 fill-white" />{tr(" Nổi bật", " Popular")}
               </span>
             )}
             {isNew && !heat?.hot && (

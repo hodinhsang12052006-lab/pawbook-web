@@ -224,21 +224,25 @@ export default function JobDetailPage({ params }: PageProps) {
 
         <article ref={articleRef} className={`glass-card rounded-2xl p-5 sm:p-6 space-y-5 ${job.heat?.hot ? "!border-orange-500/40" : ""}`}>
           <header className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {job.heat?.hot && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2.5 py-1 text-xs font-black text-white shadow-lg shadow-orange-500/30">
-                  <Zap className="h-3.5 w-3.5 fill-white" />{tr(" Được quan tâm", " Popular")}
+            {/* 2 nhóm: huy hiệu + ngày đăng (tự xuống dòng TRONG nhóm) · Lưu/Chia sẻ luôn ở góc phải dòng đầu —
+                trước đây cả hàng flex-wrap, huy hiệu dài đẩy 2 nút xuống 1 dòng riêng, tiêu đề tụt ~45px. */}
+            <div className="flex items-start gap-2">
+              <div className="flex min-h-[34px] min-w-0 flex-1 flex-wrap items-center gap-2">
+                {job.heat?.hot && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-2.5 py-1 text-xs font-black text-white shadow-lg shadow-orange-500/30">
+                    <Zap className="h-3.5 w-3.5 fill-white" />{tr(" Nổi bật", " Popular")}
+                  </span>
+                )}
+                {job.isUrgent && Date.now() - new Date(job.createdAt).getTime() < 72 * 3600_000 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400 border border-red-500/30">
+                    <Flame className="h-3.5 w-3.5" />{tr(" Cần gấp", " Urgent")}
+                  </span>
+                )}
+                <span className="inline-flex min-w-0 items-center gap-1 text-xs text-slate-500">
+                  <Clock className="h-3.5 w-3.5 flex-shrink-0" /><span className="truncate">{tr(" Đăng ", " Posted ")}{timeAgo(job.createdAt)}</span>
                 </span>
-              )}
-              {job.isUrgent && Date.now() - new Date(job.createdAt).getTime() < 72 * 3600_000 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400 border border-red-500/30">
-                  <Flame className="h-3.5 w-3.5" />{tr(" Cần gấp", " Urgent")}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                <Clock className="h-3.5 w-3.5" />{tr(" Đăng ", " Posted ")}{timeAgo(job.createdAt)}
-              </span>
-              <div className="ml-auto flex items-center gap-1">
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-1">
                 <button
                   onClick={toggleSave}
                   aria-label={saved ? tr("Bỏ lưu tin", "Unsave job") : tr("Lưu tin", "Save job")}

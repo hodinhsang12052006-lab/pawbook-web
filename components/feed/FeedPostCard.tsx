@@ -291,7 +291,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             <span>{timeAgo(post.createdAt)}</span>
             {post.isHot && (
               <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
-                <TrendingUp className="h-3 w-3" aria-hidden />{tr("Được quan tâm", "Trending")}
+                <TrendingUp className="h-3 w-3" aria-hidden />{tr("Nổi bật", "Trending")}
               </span>
             )}
           </div>

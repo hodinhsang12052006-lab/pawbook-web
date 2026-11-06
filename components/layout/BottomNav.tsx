@@ -74,9 +74,9 @@ export default function BottomNav() {
     document.documentElement.toggleAttribute("data-ui-classic", onAuth || (pathname === "/" && !sessionUser));
   }, [pathname, loading, sessionUser]);
 
-  // Ẩn khi chưa đăng nhập, trong luồng /auth/*, và trên /messages (ô soạn
-  // tin sát đáy màn hình — thanh nav sẽ chồng lên bàn phím/ô nhập).
-  const hidden = loading || !sessionUser || pathname?.startsWith("/auth") || pathname?.startsWith("/messages");
+  // Ẩn khi chưa đăng nhập và trong luồng /auth/*. /messages: danh sách chat GIỮ thanh dưới (như mọi app nhắn tin);
+  // chỉ ẩn khi đang mở 1 cuộc trò chuyện (html[data-chat-open] — CSS .pn-bnav) để không đè ô soạn tin/bàn phím.
+  const hidden = loading || !sessionUser || pathname?.startsWith("/auth");
   if (hidden) return null;
 
   const isOwner = sessionUser.role === "OWNER";
@@ -164,12 +164,12 @@ export default function BottomNav() {
     {/* Lớp nền dưới thanh nổi: che khe 10px + vùng an toàn phía dưới để nội dung không lộ dưới thanh */}
     <div
       aria-hidden
-      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-pn-canvas-deep from-55% to-transparent transition-opacity duration-300 md:hidden ${hiddenByScroll ? "opacity-0" : "opacity-100"}`}
+      className={`pn-bnav pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-pn-canvas-deep from-55% to-transparent transition-opacity duration-300 md:hidden ${hiddenByScroll ? "opacity-0" : "opacity-100"}`}
       style={{ height: "calc(max(10px, env(safe-area-inset-bottom)) + 84px)" }}
     />
     <nav
       aria-label={tr("Điều hướng chính", "Main navigation")}
-      className={`fixed inset-x-3 z-50 transition-transform duration-300 ease-out md:hidden ${hiddenByScroll ? "translate-y-[calc(100%+24px)]" : "translate-y-0"}`}
+      className={`pn-bnav fixed inset-x-3 z-50 transition-transform duration-300 ease-out md:hidden ${hiddenByScroll ? "translate-y-[calc(100%+24px)]" : "translate-y-0"}`}
       style={{ bottom: "max(10px, env(safe-area-inset-bottom))" }}
     >
       <div className="pn-dock relative grid grid-cols-5 items-center rounded-[24px] px-1 py-1.5">

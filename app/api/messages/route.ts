@@ -107,10 +107,13 @@ export async function GET(req: Request) {
 
       const messages = await prisma.message.findMany(queryOptions);
 
+      // Con trỏ = tin CUỐI CÙNG được trả về (cũ nhất của trang này); trang sau dùng cursor + skip:1 nên bắt đầu
+      // ngay sau nó. Trước đây con trỏ là hàng thừa (limit+1) bị bỏ đi → hàng đó không bao giờ được trả về:
+      // mất 1 tin mỗi trang (tin thứ 21, rồi cứ 41 tin lại mất 1).
       let nextCursor: string | null = null;
       if (messages.length > limit) {
-        const nextItem = messages.pop();
-        nextCursor = nextItem!.id;
+        messages.pop();
+        nextCursor = messages[messages.length - 1]!.id;
       }
 
       // Reverse messages array to return them in chronological order (oldest first)
@@ -297,6 +300,8 @@ export async function POST(req: Request) {
     const userId = (session.user as any).id;
     const body = await req.json();
     const { receiverId, content, message, conversationId, type } = body;
+    // Mã tin do máy khách tạo (crypto.randomUUID) — gửi lại cùng mã (mạng chập chờn, hàng chờ offline) không tạo tin trùng.
+    const clientId = typeof body.clientId === "string" && /^[A-Za-z0-9-]{8,64}$/.test(body.clientId) ? (body.clientId as string) : null;
 
     // Accept Text, Image URL, or GIF URL content as-is — no artificial type
     // allowlist or URL-scheme gate. The only real requirement is "not empty".
@@ -340,7 +345,7 @@ export async function POST(req: Request) {
     }
 
     // Tin thoại: chỉ file ghi âm đã tải lên Cloudinary của PawNail (kèm "#d=<giây>" để hiện thời lượng).
-    if (msgType === "AUDIO" && !/^https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/video\/upload\/[^\s"'<>]+(#d=\d{1,3})?$/i.test(messageText)) {
+    if (msgType === "AUDIO" && !/^https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/video\/upload\/[^\s"'<>#]+(#d=\d{1,3}(&w=[A-Za-z0-9_-]{1,64})?)?$/i.test(messageText)) {
       return NextResponse.json({ error: "Tin nhắn thoại không hợp lệ." }, { status: 400 });
     }
     if (msgType === "IMAGE" || msgType === "VIDEO") {
@@ -458,7 +463,9 @@ export async function POST(req: Request) {
     // GỬI NHANH: tạo sẵn id + giờ gửi, rồi BẮN realtime cho người nhận SONG SONG với lúc ghi DB
     // (trước đây: ghi DB xong mới bắn → người nhận chờ thêm cả 1 vòng ghi DB). Lỡ ghi DB lỗi
     // (hiếm) thì bắn "message-recalled" để máy người nhận gỡ tin vừa hiện.
-    const msgId = "c" + crypto.randomBytes(12).toString("hex");
+    const msgId = clientId
+      ? "c" + crypto.createHash("sha256").update(`${userId}:${clientId}`).digest("hex").slice(0, 24)
+      : "c" + crypto.randomBytes(12).toString("hex");
     const createdAt = new Date();
     const partner = conversation.participants.find((p) => p.id !== userId);
     const me = conversation.participants.find((p) => p.id === userId);
@@ -486,6 +493,7 @@ export async function POST(req: Request) {
       createdAt,
       type: msgType,
       sender: { id: userId, name: sender.name },
+      ...(clientId ? { clientId } : {}),
     };
     const pusher = getPusherServer();
     const delivery = validChannels.length && pusher
@@ -500,6 +508,16 @@ export async function POST(req: Request) {
       });
     } catch (dbError) {
       await delivery;
+      // Cùng clientId đã lưu rồi (gửi lại) → trả tin cũ, KHÔNG gỡ tin (tin thật đang hiện bên người nhận), không đẩy thông báo lần 2.
+      if (clientId && (dbError as { code?: string })?.code === "P2002") {
+        const existing = await prisma.message.findUnique({ where: { id: msgId }, select: { id: true, body: true, type: true, senderId: true, createdAt: true, conversationId: true } });
+        if (existing && existing.senderId === userId) {
+          return NextResponse.json({
+            message: { id: existing.id, content: existing.body, type: existing.type, senderId: existing.senderId, receiverId: partner ? partner.id : "", createdAt: existing.createdAt, sender, receiver: partner || { id: "", name: "User", role: "USER" }, conversationId: existing.conversationId, clientId },
+            duplicate: true,
+          }, { status: 200 });
+        }
+      }
       await pusher?.trigger(validChannels, "message-recalled", { id: msgId, conversationId: activeConversationId }).catch(() => {});
       throw dbError;
     }
@@ -515,6 +533,7 @@ export async function POST(req: Request) {
       sender,
       receiver: partner || { id: "", name: "User", role: "USER" },
       conversationId: activeConversationId,
+      ...(clientId ? { clientId } : {}),
     };
 
     // Thông báo đẩy cho người nhận đang KHÔNG mở app (service worker tự bỏ

@@ -1068,3 +1068,6 @@ html:not([data-ui-classic]) main article.glass-card { content-visibility: auto; 
   }
   .animate-ping { opacity: 0; }
 }
+
+/* /messages: thanh dưới chỉ ẩn khi đang mở 1 cuộc trò chuyện (danh sách chat vẫn có thanh dưới) */
+html[data-chat-open] .pn-bnav { display: none; }

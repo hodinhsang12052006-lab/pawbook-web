@@ -37,17 +37,18 @@ const CLASSIC: [string, string][] = [
   ["#e11d48", "#f97316"], // đỏ hồng → cam
   ["#4f46e5", "#0ea5e9"], // chàm → xanh trời
 ];
-// V2 (06/11/2026, trong app): "monogram mẫu sơn" — mỗi người 1 cặp [nền, ánh] như 1 lọ sơn móng (oxblood, hồng,
-// mauve, mận, đồng, xanh xô thơm, xanh két, cacao). Chữ ngà #f6f0f5 ≥ 4.8:1 trên mọi tông. Không bao giờ là mặt người.
+// V2 (06/11/2026, trong app): "monogram mẫu sơn" — mỗi người 1 cặp [nền, ánh] như 1 lọ sơn móng. Không bao giờ là mặt người.
+// V2.1 (review "đục, xỉn"): sáng hơn ~10 L* và đậm màu hơn (raspberry, rose, orchid, san hô, vàng đồng, ngọc lục,
+// xanh két, chàm); bỏ cặp cacao + mận tối nhất. Chữ ngà #f6f0f5 ≥ 4.69:1 trên CẢ 2 đầu gradient (đo WCAG).
 const GRADIENTS: [string, string][] = [
-  ["#6b2337", "#8d3550"], // oxblood
-  ["#7e3356", "#9a4469"], // rose
-  ["#5f4366", "#7a5781"], // mauve
-  ["#4a3256", "#634373"], // plum
-  ["#6e5534", "#83653f"], // bronze
-  ["#465c4a", "#566f5a"], // sage
-  ["#2e5a5e", "#3d7276"], // teal
-  ["#5a3f35", "#765447"], // cocoa
+  ["#a12f5a", "#b03a68"], // raspberry
+  ["#a8336f", "#b63e7c"], // rose
+  ["#8a4a9c", "#9150a4"], // orchid
+  ["#ad4436", "#b2493b"], // coral
+  ["#7f5e1f", "#876423"], // bronze gold
+  ["#37724f", "#3b7753"], // jade
+  ["#1c6e78", "#20737e"], // teal
+  ["#5d57b0", "#6661ba"], // indigo
 ];
 
 /**

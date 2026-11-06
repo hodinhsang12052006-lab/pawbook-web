@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { CheckCircle2, Circle, ArrowRight, Trophy } from "lucide-react";
 import type { Completeness } from "@/lib/profileCompleteness";
 import { tr } from "@/lib/i18n/tr";
@@ -19,6 +20,9 @@ export default function ProfileCompletenessCard({
 }) {
   useTr(); // render lại khi đổi VI/EN
   const { percent, items, nextItem } = completeness;
+  // Checklist: mục đã xong gom thành 1 dòng "4/6 mục đã xong" (bấm để xem) — danh sách chỉ còn việc cần làm
+  const [showDone, setShowDone] = useState(false);
+  const doneCount = items.filter((i) => i.done).length;
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const done = percent >= 100;
@@ -38,7 +42,7 @@ export default function ProfileCompletenessCard({
             <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,240,246,0.1)" strokeWidth="3" />
             <circle cx="16" cy="16" r={r} fill="none" stroke="#db2777" strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - percent / 100)} />
           </svg>
-          <span className="pn-micro absolute inset-0 flex items-center justify-center text-[10px] text-pn-text tabular-nums">{percent}</span>
+          <span className="pn-micro absolute inset-0 flex items-center justify-center text-[9px] tracking-tight text-pn-text tabular-nums">{percent}%</span>
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-semibold leading-5 text-pn-text">{tr("Hoàn thiện hồ sơ", "Complete your profile")}</span>
@@ -87,9 +91,16 @@ export default function ProfileCompletenessCard({
         </Link>
       )}
 
-      {!compact && (
-        <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
-          {items.map((item) => (
+      {!compact && !done && doneCount > 0 && (
+        <button type="button" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone} className="mt-3 inline-flex min-h-[32px] items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          {tr(`${doneCount}/${items.length} mục đã xong`, `${doneCount} of ${items.length} done`)}
+          <span aria-hidden className="text-slate-600">{showDone ? "▴" : "▾"}</span>
+        </button>
+      )}
+      {!compact && !done && (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {items.filter((item) => showDone || !item.done).map((item) => (
             <li key={item.key} className={`flex items-center gap-2 text-xs ${item.done ? "text-slate-500 line-through" : "text-slate-200"}`}>
               {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" /> : <Circle className="h-4 w-4 text-slate-600 flex-shrink-0" />}
               {item.label}

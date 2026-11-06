@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck } from "lucide-react";
+import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck, Palette, LayoutGrid } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -87,7 +87,7 @@ function useTools(): Tool[] {
         { href: "/tryon", label: tr("Thử mẫu trên tay", "Try-on looks"), stat: tr("Vẽ 10 mẫu trend lên tay khách + giá", "Paint 10 trending looks on a client's hand"), icon: Sparkles, tone: "bg-fuchsia-500/15 text-fuchsia-300" } as Tool,
         { href: "/consult", label: tr("Soi tay tư vấn", "Hand consult"), stat: tr("Chụp tay khách → tình trạng + mẫu hợp", "Snap a client's hand → condition + matching designs"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
       : []),
-    { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
+    { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Palette, tone: "bg-pink-500/15 text-pink-300" },
     { href: "/trends", label: tr("Xu hướng tuần", "Weekly trends"), stat: tr("Mẫu hot · thợ nổi bật · lương", "Hot designs · top techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
     { href: "/tools/radar", label: "Nail Radar", stat: radarStat, icon: Radar, tone: "bg-amber-500/15 text-amber-300" },
     { href: "/supply", label: tr("Kho hàng vật tư", "Supply store"), stat: tr("Vật tư giá sỉ từ các tiệm", "Wholesale supplies from salons"), icon: ShoppingBag, tone: "bg-emerald-500/15 text-emerald-300" },
@@ -103,7 +103,11 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
   if (variant === "row") {
     // Hàng lối tắt kiểu app: đúng 5 ô, vừa 1 hàng từ 360px (dưới 360px thì vuốt ngang). "Tin nhắn" đã có ở
     // thanh dưới nên không lặp lại; ô thứ nhất = việc chính theo vai trò (đăng tin / thu nhập).
-    const row = tools.map((t, i) => ({ ...t, primary: i === 1 })).filter((t) => t.href !== "/messages").slice(0, 5);
+    const all = tools.map((t, i) => ({ ...t, primary: i === 1 })).filter((t) => t.href !== "/messages");
+    // > 5 công cụ: 4 ô + ô "Tất cả" mở trang /tools (trước đây cắt cụt còn 5 → mất Xu hướng, Nail Radar, Kho vật tư)
+    const row: (typeof all[number])[] = all.length > 5
+      ? [...all.slice(0, 4), { href: "/tools", label: tr("Tất cả công cụ", "All tools"), stat: tr("Xem mọi công cụ", "See every tool"), icon: LayoutGrid, tone: "", primary: false }]
+      : all;
     return (
       <nav aria-label={tr("Công cụ", "Tools")} className="-mx-4 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
         {row.map(({ href, label, stat, icon: Icon, badge, primary }) => (

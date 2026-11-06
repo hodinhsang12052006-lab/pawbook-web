@@ -342,10 +342,11 @@ export default function PublicProfilePage({ params }: PageProps) {
                   name={profile.name}
                   seed={profile.id}
                   loading="eager"
+                  glyph={profile.role === "OWNER" ? "store" : profile.role === "TECHNICIAN" ? "polish" : undefined}
                   className="h-[88px] w-[88px] ring-[3px] ring-pn-surface shadow-[0_1px_2px_rgb(8_4_10/0.35),0_12px_32px_-16px_rgb(8_4_10/0.7)] sm:h-[104px] sm:w-[104px]"
                 />
                 {/* Chưa có ảnh thật: biểu tượng vai trò (champagne) góc dưới phải — không bao giờ là mặt người */}
-                {isPlaceholderAvatar(profile.avatarUrl) && (
+                {isPlaceholderAvatar(profile.avatarUrl) && profile.role === "CLIENT" && (
                   <span aria-hidden className="absolute bottom-0.5 right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-pn-overlay text-pn-champagne ring-2 ring-pn-surface">
                     {profile.role === "OWNER" ? <Store className="h-3.5 w-3.5" /> : profile.role === "CLIENT" ? <Hand className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
                   </span>

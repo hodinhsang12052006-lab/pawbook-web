@@ -133,6 +133,8 @@ const NAIL_PATHS =
   "<path d='M70 92l4-10 4 10-10-6h12z'/>" +
   "<path d='M22 96c8-6 16-6 24 0'/>";
 const motif = (stroke: string, size: number) => svg(`<g fill='none' stroke='${stroke}' stroke-width='1.2' transform='scale(${size / 120})'>${NAIL_PATHS}</g>`, size);
+/** Họa tiết móng + hoa nét mảnh (gốc PawNail) — dùng lại cho ảnh bìa mặc định của hồ sơ (lib/defaultCovers). */
+export const nailMotif = motif;
 const MOTIF_ROSE = motif("rgba(255,236,246,0.028)", 160);
 const MOTIF_GOLD = motif("rgba(227,196,138,0.06)", 140);
 const MOTIF_SWATCH = motif("rgba(255,236,246,0.16)", 160);

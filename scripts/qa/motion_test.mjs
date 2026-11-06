@@ -30,6 +30,8 @@ async function swipe(page, cdp, fromX, toX, y) {
 }
 
 const selectedTab = (p) => p.locator('[role="tab"][aria-selected="true"]').innerText();
+// Vị trí tab đang chọn (0 = Việc làm, 1 = Thợ, 2 = Bảng tin) — không phụ thuộc chữ trên tab.
+const selectedIndex = (p) => p.locator('[role="tab"]').evaluateAll((els) => els.findIndex((e) => e.getAttribute("aria-selected") === "true"));
 
 try {
   // ===== THỢ trên điện thoại =====
@@ -49,7 +51,7 @@ try {
 
   await nav.getByRole("button", { name: "Việc làm" }).click();
   await tp.waitForTimeout(600);
-  R.check("M2", "Bấm 'Việc làm' → tab Việc gấp, URL ?tab=jobs, nút sáng đúng", (await selectedTab(tp)).includes("Việc gấp") && tp.url().includes("tab=jobs") && (await nav.getByRole("button", { name: "Việc làm" }).getAttribute("aria-current")) === "page", tp.url());
+  R.check("M2", "Bấm 'Việc làm' → tab Việc gấp, URL ?tab=jobs, nút sáng đúng", (await selectedIndex(tp)) === 0 && tp.url().includes("tab=jobs") && (await nav.getByRole("button", { name: "Việc làm" }).getAttribute("aria-current")) === "page", tp.url());
 
   // Cuộn để thanh tab lên gần đầu màn hình, rồi vuốt ngay trên vùng nội dung.
   await tp.evaluate(() => {
@@ -60,17 +62,17 @@ try {
   const box = await tp.locator('[role="tablist"]').boundingBox();
   const y = Math.min(box.y + box.height + 200, tp.viewportSize().height - 160);
   await swipe(tp, cdp, 330, 60, y);
-  const afterLeft = await selectedTab(tp);
+  const afterLeft = await selectedIndex(tp);
   await swipe(tp, cdp, 60, 330, y);
-  const afterRight = await selectedTab(tp);
-  R.check("M3", "Vuốt trái → 'Thợ rảnh', vuốt phải → quay lại 'Việc gấp'", afterLeft.includes("Thợ rảnh") && afterRight.includes("Việc gấp"), `${afterLeft} / ${afterRight}`);
+  const afterRight = await selectedIndex(tp);
+  R.check("M3", "Vuốt trái → tab Thợ (vị trí 1), vuốt phải → quay lại tab Việc làm (vị trí 0)", afterLeft === 1 && afterRight === 0, `${afterLeft} / ${afterRight}`);
 
   // Vuốt trên hàng chip bang (cuộn ngang) KHÔNG được đổi tab
   await tp.evaluate(() => window.scrollTo(0, 0));
   await tp.waitForTimeout(300);
   const chip = await tp.getByRole("button", { name: "Tất cả bang" }).boundingBox();
   await swipe(tp, cdp, 330, 60, chip.y + chip.height / 2);
-  R.check("M4", "Vuốt trên hàng chip bang chỉ cuộn, không đổi tab", (await selectedTab(tp)).includes("Việc gấp"), await selectedTab(tp));
+  R.check("M4", "Vuốt trên hàng chip bang chỉ cuộn, không đổi tab", (await selectedIndex(tp)) === 0, await selectedTab(tp));
 
   // Viên chọn trượt đúng vị trí
   const tx = await tp.locator('[role="tablist"] > span[aria-hidden]').evaluate((el) => el.style.transform);

@@ -184,18 +184,18 @@ if (process.argv.includes("--browser")) {
   const page = await ctx.newPage();
   await page.goto(BASE_URL + "/designs", { waitUntil: "networkidle" });
   const before = await page.evaluate(() => document.documentElement.lang);
-  await Promise.all([page.waitForEvent("load"), page.locator('button[title="Chuyển sang Tiếng Việt"]:visible').first().click()]);
+  await Promise.all([page.waitForEvent("load"), page.locator('button[data-locale-toggle="en"]:visible').first().click()]);
   await page.waitForLoadState("networkidle").catch(() => {});
   const after = await page.evaluate(() => ({ lang: document.documentElement.lang, cookie: document.cookie, ls: localStorage.getItem("bitpaw_locale"), url: location.pathname }));
   check(before === "en" && after.lang === "vi" && /bitpaw_locale=vi/.test(after.cookie) && after.ls === "vi" && after.url === "/designs", `toggle EN→VI on /designs: lang ${before}→${after.lang}, cookie+localStorage=vi, URL stays ${after.url}`);
   await page.goto(BASE_URL + "/auth/login", { waitUntil: "networkidle" });
   check((await page.evaluate(() => document.documentElement.lang)) === "vi", "next page load (/auth/login, server) is Vietnamese");
   // Trang đăng nhập dùng ô chọn ngôn ngữ riêng (app/[lang]/auth/layout.tsx).
-  await Promise.all([page.waitForEvent("load"), page.locator('select[aria-label="Language / Ngôn ngữ"]').selectOption("en")]);
+  await Promise.all([page.waitForEvent("load"), page.locator("select[data-locale-select]").selectOption("en")]);
   await page.waitForLoadState("networkidle").catch(() => {});
   check((await page.evaluate(() => document.documentElement.lang)) === "en", "auth language select VI→EN reloads /auth/login in English");
   await page.goto(BASE_URL + "/vi/designs", { waitUntil: "networkidle" });
-  await Promise.all([page.waitForEvent("load"), page.locator('button[title="Switch to English"]:visible').first().click()]);
+  await Promise.all([page.waitForEvent("load"), page.locator('button[data-locale-toggle="vi"]:visible').first().click()]);
   await page.waitForLoadState("networkidle").catch(() => {});
   const back = await page.evaluate(() => ({ lang: document.documentElement.lang, url: location.pathname, cookie: document.cookie }));
   check(back.lang === "en" && back.url === "/designs" && /bitpaw_locale=en/.test(back.cookie), `toggle VI→EN on /vi/designs → ${back.url} in ${back.lang}, cookie=en`);

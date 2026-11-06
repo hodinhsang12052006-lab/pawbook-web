@@ -39,7 +39,7 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   let ms = await timed(p, async () => {
     // Khách xem được trang chủ (bảng tin, việc, thợ) trước khi đăng ký.
     await p.goto(BASE_URL + "/");
-    await p.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).waitFor();
+    await p.locator('[data-hero-cta="tech"]').waitFor();
   });
   note("THỢ", "Mở app lần đầu → trang chủ công khai", { ms });
   await shot(p, "A01_landing", true);

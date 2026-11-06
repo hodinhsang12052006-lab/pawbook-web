@@ -38,6 +38,7 @@ export default function CustomAuthLayout({
             <Globe className={`h-4 w-4 ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`} />
             <select
               aria-label={tr("Ngôn ngữ", "Language")}
+              data-locale-select
               value={locale}
               onChange={(e) => setLocale(e.target.value as "vi" | "en")}
               className={`bg-transparent text-xs font-bold focus:outline-none cursor-pointer border-none p-0 ${

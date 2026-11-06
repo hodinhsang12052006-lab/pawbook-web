@@ -252,6 +252,7 @@ export default function HomePage() {
                 <a
                   key={p.key}
                   href={p.href}
+                  data-hero-cta={p.key}
                   onClick={(e) => {
                     e.preventDefault();
                     if (p.key === "tech") {

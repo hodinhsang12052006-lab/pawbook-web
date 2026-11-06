@@ -124,7 +124,7 @@ try {
 
   // ---- Hồ sơ chính thức ----
   await tp.goto(BASE_URL + `/profile/${officialId}`);
-  const offHead = await tp.getByText("Tài khoản chính thức của PawNail Jobs").first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  const offHead = await tp.getByText("Tài khoản chính thức của PawNail", { exact: true }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
   R.check("OF12", "Hồ sơ chính thức: tiêu đề + tick xanh", offHead && (await tp.getByRole("img", { name: /Tài khoản chính thức/ }).count()) > 0);
   await tp.screenshot({ path: `${OUT}/of_profile.png`, fullPage: true });
   await tp.getByRole("tab", { name: "Giới thiệu" }).or(tp.getByRole("button", { name: "Giới thiệu" })).first().click();
@@ -200,7 +200,7 @@ try {
     ["/profile", /Your profile|Save profile|Save/],
     ["/trends", /This week's trends/],
     ["/tools/radar", /Choose a state|Reference/],
-    [`/profile/${officialId}`, /Official PawNail Jobs account/],
+    [`/profile/${officialId}`, /Official PawNail account/],
   ];
   for (const [path, re] of pages) {
     await ep.goto(BASE_URL + path);

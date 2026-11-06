@@ -49,12 +49,15 @@ const techCtx = await newCtx();
 tp = await techCtx.newPage();
 watch(tp, "tech");
 
-await step("F1", "Khách vào / xem được trang chủ công khai (tin, thợ) → bấm 'Tìm việc' sang đăng ký", async () => {
+await step("F1", "Khách vào / xem được trang chủ công khai (tin, thợ) → bấm 'Xem việc làm nail' mở tab Việc làm → đăng ký", async () => {
   await tp.goto(BASE_URL + "/");
   if (!tp.url().endsWith("/")) throw new Error("bị chuyển hướng: " + tp.url());
-  await tp.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).waitFor({ timeout: 15000 });
+  // Chọn theo thuộc tính, không theo chữ (chữ hero đổi theo ngôn ngữ / bản copy).
+  await tp.locator('[data-hero-cta="tech"]').waitFor({ timeout: 15000 });
   await shot(tp, "01_public_home");
-  await tp.getByRole("button", { name: /TÌM VIỆC LÀM NAIL/ }).click();
+  await tp.locator('[data-hero-cta="tech"]').click();
+  await tp.waitForURL(/tab=jobs/, { timeout: 15000 });
+  await tp.goto(BASE_URL + "/auth/register");
   await tp.waitForURL(/\/auth\/register/, { timeout: 15000 });
   await shot(tp, "01_register_picker");
 });
@@ -298,8 +301,8 @@ await step("F22", "Trang đăng ký có số liệu, cách hoạt động và FA
   const p = await ctx.newPage();
   await p.goto(BASE_URL + "/auth/register");
   await p.getByText("Hoạt động thế nào?").waitFor({ timeout: 15000 });
-  await p.getByText("PawNail Jobs có thu phí không?").click();
-  await p.getByText(/Đăng ký, đăng tin, xem portfolio và nhắn tin đều miễn phí/).waitFor({ timeout: 5000 });
+  await p.getByText("PawNail có thu phí không?").click();
+  await p.getByText(/Đăng ký, đăng tin, xem hồ sơ tay nghề và nhắn tin đều không mất phí/).waitFor({ timeout: 5000 });
   await ctx.close();
 });
 

@@ -63,6 +63,8 @@ async function harvest(p) {
       const el = n.parentElement;
       if (!el || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(el.tagName)) continue;
       if (el.closest('[lang="vi"]') && document.documentElement.lang !== "vi") continue;
+      // Phần tiếng Anh cố ý (trang Hỗ trợ / Xoá dữ liệu in cả 2 ngôn ngữ, mỗi phần có lang riêng) — không phải chữ sót.
+      if (el.closest('[lang="en"]') && document.documentElement.lang !== "en") continue;
       const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden") continue;
       const t = n.textContent.replace(/\s+/g, " ").trim();

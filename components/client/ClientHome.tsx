@@ -10,6 +10,7 @@ import { DesignsStrip } from "@/components/designs/DesignViews";
 import MenuShowcase from "@/components/designs/MenuShowcase";
 import SalonDirectory from "@/components/client/SalonDirectory";
 import { clientTipOfDay } from "@/lib/clientTips";
+import { marketSpelling } from "@/lib/i18n/spelling";
 import { stateName } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -92,7 +93,7 @@ export default function ClientHome({ user }: { user: { id: string; name?: string
         <Lightbulb className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300" />
         <div>
           <p className="text-[11px] font-black uppercase tracking-wider text-emerald-300">{tr("Mẹo giữ móng đẹp hôm nay", "Today's nail-care tip")}</p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-200">{tr(tip.vi, tip.en)}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-200">{tr(tip.vi, marketSpelling(tip.en, market))}</p>
         </div>
       </section>
 

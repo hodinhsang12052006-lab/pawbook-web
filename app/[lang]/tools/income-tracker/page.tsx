@@ -7,6 +7,10 @@ import Navbar from "@/components/layout/Navbar";
 import { Wallet, Calendar, Plus, TrendingUp, Trash2, Loader2, ClipboardCheck, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { currentLocale } from "@/lib/i18n/tr";
+import { intlLocale } from "@/lib/i18n/config";
+import { weekRange } from "@/lib/i18n/format";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 const STORAGE_KEY_PREFIX = "bitpaw_income_";
@@ -35,12 +39,21 @@ function startOfWeek(dateStr: string) {
   return d;
 }
 
-function formatDateVN(d: Date) {
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+// Khoảng tuần theo ngôn ngữ + thị trường: vi "02/11 – 08/11", en-US "Nov 2 – 8", en-AU "2–8 Nov" (trước đây
+// "02-11 – 08-11" — người Mỹ đọc thành 11/2 – 11/8).
+function weekLabel(a: Date, b: Date, market: string) {
+  return weekRange(a, b, currentLocale(), market);
+}
+function dayLabelOf(iso: string, market: string) {
+  const d = new Date(iso + "T00:00:00");
+  return currentLocale() === "vi"
+    ? d.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(/-/g, "/")
+    : d.toLocaleDateString(intlLocale("en", market), { weekday: "short", day: "numeric", month: "short" });
 }
 
-function currency(n: number) {
-  return "$" + n.toLocaleString("vi-VN");
+// Tiền đô luôn nhóm số kiểu Mỹ / Úc ("$1,200"), không theo kiểu Việt ("$1.200" dễ đọc nhầm); Úc ghi A$.
+function currency(n: number, market = "US") {
+  return (market === "AU" ? "A$" : "$") + n.toLocaleString("en-US");
 }
 
 // Chạy thuần phía Client, lưu vào localStorage theo userId — không đụng DB
@@ -50,6 +63,7 @@ function currency(n: number) {
 export default function IncomeTrackerPage() {
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
+  const { market } = useViewerMarket();
   const [checkingSession, setCheckingSession] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
@@ -294,7 +308,7 @@ export default function IncomeTrackerPage() {
         {/* TỔNG KẾT TUẦN */}
         <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-950/30 via-slate-900/40 to-indigo-950/30 p-5 space-y-4">
           <div className="flex items-center gap-2 text-xs font-bold text-purple-300 uppercase tracking-wide">
-            <TrendingUp className="h-4 w-4" />{tr(" Tổng kết tuần ", " Weekly summary ")}{formatDateVN(weekStart)} – {formatDateVN(weekEnd)}
+            <TrendingUp className="h-4 w-4" />{tr(" Tổng kết tuần ", " Weekly summary ")}{weekLabel(weekStart, weekEnd, market)}
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center">
@@ -304,15 +318,15 @@ export default function IncomeTrackerPage() {
             </div>
             <div className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3">
               <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng dịch vụ", "Total service")}</p>
-              <p className="text-lg font-black text-white mt-1">{currency(weekTotals.totalService)}</p>
+              <p className="text-lg font-black text-white mt-1">{currency(weekTotals.totalService, market)}</p>
             </div>
             <div className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3">
               <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng tip", "Total tips")}</p>
-              <p className="text-lg font-black text-emerald-400 mt-1">{currency(weekTotals.totalTip)}</p>
+              <p className="text-lg font-black text-emerald-400 mt-1">{currency(weekTotals.totalTip, market)}</p>
             </div>
             <div className="rounded-2xl bg-purple-500/10 border border-purple-500/30 p-3">
               <p className="text-[10px] font-bold text-purple-300 uppercase">{tr("Ước tính bạn nhận", "Estimated take-home")}</p>
-              <p className="text-lg font-black text-purple-300 mt-1">{currency(weekTotals.estimatedEarning)}</p>
+              <p className="text-lg font-black text-purple-300 mt-1">{currency(weekTotals.estimatedEarning, market)}</p>
             </div>
           </div>
 
@@ -333,14 +347,10 @@ export default function IncomeTrackerPage() {
               <div key={e.date} className="flex items-center justify-between px-4 py-3 bg-slate-900/20">
                 <div>
                   <p className="text-xs font-bold text-slate-200">
-                    {new Date(e.date + "T00:00:00").toLocaleDateString("vi-VN", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}
+                    {dayLabelOf(e.date, market)}
                   </p>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    {e.turns}{tr(" lượt · DV ", " turns · service ")}{currency(e.serviceAmount)} · Tip {currency(e.tipCash + e.tipCredit)}
+                    {e.turns}{tr(" lượt · DV ", " turns · service ")}{currency(e.serviceAmount, market)} · Tip {currency(e.tipCash + e.tipCredit, market)}
                   </p>
                 </div>
                 <button
@@ -387,7 +397,7 @@ export default function IncomeTrackerPage() {
               </button>
             </div>
             <p className="text-xs text-slate-500">
-              {userName ? `${userName} — ` : ""}{tr("Tuần ", "Week ")}{formatDateVN(weekStart)} – {formatDateVN(weekEnd)}
+              {userName ? `${userName} — ` : ""}{tr("Tuần ", "Week ")}{weekLabel(weekStart, weekEnd, market)}
             </p>
 
             <div className="space-y-2 text-sm">
@@ -397,7 +407,7 @@ export default function IncomeTrackerPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{tr("Tổng tiền dịch vụ", "Service total")}</span>
-                <span className="font-bold text-white">{currency(weekTotals.totalService)}</span>
+                <span className="font-bold text-white">{currency(weekTotals.totalService, market)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{tr("% ăn chia", "% commission")}</span>
@@ -405,15 +415,15 @@ export default function IncomeTrackerPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{tr("Tip tiền mặt", "Cash tips")}</span>
-                <span className="font-bold text-white">{currency(weekTotals.totalTipCash)}</span>
+                <span className="font-bold text-white">{currency(weekTotals.totalTipCash, market)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{tr("Tip thẻ", "Card tips")}</span>
-                <span className="font-bold text-white">{currency(weekTotals.totalTipCredit)}</span>
+                <span className="font-bold text-white">{currency(weekTotals.totalTipCredit, market)}</span>
               </div>
               <div className="border-t border-slate-800 pt-2 flex justify-between text-base">
                 <span className="font-black text-purple-300">{tr("Ước tính bạn nhận", "Estimated take-home")}</span>
-                <span className="font-black text-purple-300">{currency(weekTotals.estimatedEarning)}</span>
+                <span className="font-black text-purple-300">{currency(weekTotals.estimatedEarning, market)}</span>
               </div>
             </div>
 

@@ -95,7 +95,7 @@ export function registrationSummary(i: WelcomeInfo): string {
   return lines.join("\n").slice(0, 4900);
 }
 
-export function welcomeText(i: Pick<WelcomeInfo, "name" | "role" | "locale">, existing = false): string {
+export function welcomeText(i: Pick<WelcomeInfo, "name" | "role" | "locale"> & { market?: WelcomeInfo["market"] }, existing = false): string {
   const en = i.locale !== "vi";
   // Gọi đủ họ tên: tên Việt (Trần Thị Lan) và kiểu Tây (Lan Tran) thứ tự ngược nhau — đoán "tên" dễ sai.
   const name = i.name.trim();
@@ -107,7 +107,7 @@ export function welcomeText(i: Pick<WelcomeInfo, "name" | "role" | "locale">, ex
   }
   if (i.role === "CLIENT") {
     return en
-      ? `Welcome to PawNail, ${name}.\n\nHere you can try on nail looks, discover salons with real photos and prices, and send booking requests without calling.\n\nTry-On: take one photo of your hand to see 10 suggested looks on your own nails, then send your favorite to a salon in chat.\n\nQuestions? Reply here and the PawNail team will get back to you.`
+      ? `Welcome to PawNail, ${name}.\n\nHere you can try on nail looks, discover salons with real photos and prices, and send booking requests without calling.\n\nTry-On: take one photo of your hand to see 10 suggested looks on your own nails, then send your ${i.market === "AU" ? "favourite" : "favorite"} to a salon in chat.\n\nQuestions? Reply here and the PawNail team will get back to you.`
       : `Chào mừng ${name} đến với PawNail.\n\nTại đây bạn có thể thử mẫu nail, tìm tiệm có ảnh thật và bảng giá, và gửi yêu cầu đặt lịch mà không cần gọi điện.\n\nThử mẫu: chụp một ảnh bàn tay để xem 10 mẫu gợi ý trên chính móng của bạn, rồi gửi mẫu ưng ý cho tiệm trong tin nhắn.\n\nCần hỗ trợ? Hãy nhắn tại đây, đội ngũ PawNail sẽ phản hồi.`;
   }
   if (i.role === "OWNER") {

@@ -19,6 +19,10 @@ export const ASSISTED_SOURCE = "assisted";
 export const INGEST_OWNER_EMAIL = "tonghop@feed.pawnail.invalid";
 /** Lần cuối tool lọc nhóm gửi được ≥ 1 tin (nhịp tim — admin thấy khi nguồn tin ngừng gửi). */
 export const INGEST_LAST_AT_KEY = "ingest_last_at";
+/** Lần cuối tool gửi 1 lô đúng khoá, KỂ CẢ khi mọi bài bị loại → phân biệt "tool ngừng gửi" với "tool gửi nhưng bị loại hết". */
+export const INGEST_LAST_BATCH_AT_KEY = "ingest_last_batch_at";
+/** Quá N giờ không nhận được tin nào → trang admin cảnh báo đỏ. */
+export const INGEST_STALE_HOURS = 24;
 const DAY = 86_400_000;
 export const ingestTtlDays = () => Math.min(60, Math.max(3, Number(process.env.INGEST_TTL_DAYS) || 14));
 /** Tin chủ tiệm TỰ ĐĂNG tự ẩn sau N ngày (mặc định 30, 7–90) nếu không bấm "Vẫn đang tuyển? Gia hạn". */
@@ -229,7 +233,22 @@ export async function ingestBatch(items: IngestInput[], opts: IngestOpts = {}) {
     catch (e) { results.push({ i, status: "skipped", reason: `lỗi: ${String((e as Error).message).slice(0, 80)}` }); }
   }
   const count = (s: string) => results.filter((r) => r.status === s).length;
-  // Nhịp tim nguồn tin tổng hợp: lần cuối tool gửi được ít nhất 1 tin (admin đăng hộ không tính)
-  if (!opts.assisted && results.some((r) => r.status !== "skipped")) await setSetting(INGEST_LAST_AT_KEY, new Date().toISOString()).catch(() => {});
+  if (!opts.assisted) await recordIngestHeartbeat(results); // admin đăng hộ không tính là nguồn tin tổng hợp
   return { created: count("created"), bumped: count("bumped"), updated: count("updated"), skipped: count("skipped"), results };
+}
+
+/** Nhịp tim nguồn tin tổng hợp (tool lọc nhóm): ghi mỗi lô đúng khoá; ghi "lần cuối nhận tin" khi ≥ 1 bài được nhận. */
+export async function recordIngestHeartbeat(results: { status: string }[], now = new Date()) {
+  if (!results.length) return;
+  const at = now.toISOString();
+  await setSetting(INGEST_LAST_BATCH_AT_KEY, at).catch(() => {});
+  if (results.some((r) => r.status !== "skipped")) await setSetting(INGEST_LAST_AT_KEY, at).catch(() => {});
+}
+
+/** Cho trang admin: lần cuối nhận tin / nhận lô, và có quá INGEST_STALE_HOURS giờ không có tin mới không. */
+export async function ingestHeartbeat(now = new Date()) {
+  const [lastAt, lastBatchAt] = await Promise.all([getSetting(INGEST_LAST_AT_KEY).catch(() => null), getSetting(INGEST_LAST_BATCH_AT_KEY).catch(() => null)]);
+  const t = lastAt ? Date.parse(lastAt) : NaN;
+  const stale = !Number.isFinite(t) || now.getTime() - t > INGEST_STALE_HOURS * 3_600_000;
+  return { lastAt, lastBatchAt, stale, staleHours: INGEST_STALE_HOURS };
 }

@@ -3,9 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
-import { getSetting } from "@/lib/settings";
 import { findPhone } from "@/lib/jobIngest/parse";
-import { activeJobWhere, ASSISTED_SOURCE, blockedPhones, blockPhone, commitIngest, ingestBatch, INGEST_LAST_AT_KEY, INGEST_SOURCE, jobTtlDays, prepareIngest, type IngestInput } from "@/lib/jobIngest/ingest";
+import { activeJobWhere, ASSISTED_SOURCE, blockedPhones, blockPhone, commitIngest, ingestBatch, ingestHeartbeat, INGEST_SOURCE, jobTtlDays, prepareIngest, type IngestInput } from "@/lib/jobIngest/ingest";
 import { externalJobsStatus } from "@/lib/jobFeeds/sync";
 
 // Admin: "Đăng hộ tiệm" (tiệm NHỜ đăng — ghi nhận người yêu cầu) + xử lý yêu cầu "Nhận tin" / "Gỡ tin".
@@ -34,16 +33,19 @@ export async function GET() {
   if (!(await admin())) return NextResponse.json({ error: "Bạn không có quyền truy cập." }, { status: 403 });
   const now = new Date();
   const sourced = { source: { in: [INGEST_SOURCE, ASSISTED_SOURCE] } };
-  const [requests, active, notExpired, expired, lastIngestAt, external] = await Promise.all([
+  const [requests, active, notExpired, expired, hb, external] = await Promise.all([
     prisma.jobRequest.findMany({ where: { handledAt: null }, orderBy: { createdAt: "desc" }, take: 50, include: { job: { select: { id: true, salonName: true, city: true, state: true, phone: true } } } }),
     // Đếm ĐÚNG như bảng việc công khai (còn hạn + bộ lọc chữ + chỉ tài khoản thật)
     prisma.job.count({ where: { AND: [sourced, activeJobWhere(), { owner: realOnly() }] } }),
     prisma.job.count({ where: { ...sourced, expiresAt: { gt: now } } }),
     prisma.job.count({ where: { ...sourced, expiresAt: { lte: now } } }),
-    getSetting(INGEST_LAST_AT_KEY),
+    ingestHeartbeat(now),
     externalJobsStatus().catch(() => null),
   ]);
-  return NextResponse.json({ requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, lastIngestAt, external }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json(
+    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, lastIngestAt: hb.lastAt, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, staleHours: hb.staleHours, external },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function POST(req: Request) {

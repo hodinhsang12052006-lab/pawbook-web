@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { DEMO_EMAIL_SUFFIX, realOnly, realUserWhere } from "@/lib/demo";
-import { activeJobWhere, INGEST_OWNER_EMAIL, INGEST_SOURCE } from "@/lib/jobIngest/ingest";
+import { activeJobWhere, ingestHeartbeat, INGEST_OWNER_EMAIL, INGEST_SOURCE } from "@/lib/jobIngest/ingest";
 
 // GET — "Sức khoẻ tăng trưởng" cho admin: chỉ SỐ ĐẾM tổng hợp, không lộ thông tin cá nhân.
 // Người dùng thật = loại tài khoản mẫu (@pawnailjobs.demo) và admin.
@@ -40,6 +40,7 @@ export async function GET() {
     n(prisma.job.count({ where: { AND: [{ source: INGEST_SOURCE }, activeJobWhere(), { owner: realOnly() }] } })), // đúng số đang hiện công khai
     n(prisma.jobRequest.count({ where: { handledAt: null } })),
   ]);
+  const hb = await ingestHeartbeat().catch(() => null);
   const total = techs + owners;
   return NextResponse.json(
     {
@@ -50,7 +51,7 @@ export async function GET() {
       install: { installed },
       demo: { users: demoUsers, jobs: demoJobs, posts: demoPosts },
       designs: { drafts, published, noImage },
-      ingest: { active: ingestActive, pendingRequests: ingestRequests },
+      ingest: { active: ingestActive, pendingRequests: ingestRequests, lastAt: hb?.lastAt ?? null, stale: hb?.stale ?? true, staleHours: hb?.staleHours ?? 24 },
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

@@ -10,10 +10,9 @@ interface DryRun { isHiring: boolean; decision: "created" | "bumped" | "updated"
 interface Req { id: string; kind: string; name: string; contact: string; note: string | null; userId: string | null; createdAt: string; job: { id: string; salonName: string; city: string; state: string; phone: string } }
 interface ProviderRun { flag: boolean; keys: boolean; status: string; calls?: number; httpStatus?: number | null; active?: Record<string, number>; hidden?: Record<string, number>; lastSuccessAt?: string | null; alert?: string | null; markets?: Record<string, { fetched: number; created: number; providerCount: number | null }> }
 interface External { flags: { adzuna: { flag: boolean; keys: boolean }; careerjet: { flag: boolean; keys: boolean } }; last: { at: string; adzuna: ProviderRun } | null; live: { active: Record<string, number>; hidden: Record<string, number>; expired: number } | null }
-interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; lastIngestAt: string | null; external: External | null }
+interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; lastIngestAt: string | null; lastBatchAt: string | null; ingestStale: boolean; staleHours: number; external: External | null }
 
 const DECISION: Record<string, string> = { created: "Sẽ tạo tin mới", bumped: "Tiệm đã có tin → sẽ đẩy tin lên đầu (đăng lại)", updated: "Trùng đúng bài cũ → sẽ cập nhật", skipped: "Sẽ BỎ QUA" };
-const STALE_MS = 48 * 3600_000;
 
 // Admin → Studio: "Đăng hộ tiệm" (tiệm NHỜ đăng: dán bài → xem trước quyết định thật → sửa tay → ghi người yêu cầu → đăng)
 // + yêu cầu Nhận tin / Gỡ tin + nhịp tim nguồn tin tổng hợp + trạng thái nguồn đối tác (Adzuna / Careerjet).
@@ -63,7 +62,9 @@ export default function PostForSalons() {
       <input value={ov[k]} onChange={(e) => setOv((o) => ({ ...o, [k]: e.target.value }))} placeholder={ph} className="input-field !py-1.5 text-xs" data-testid={`ov-${k}`} />
     </label>
   );
-  const stale = !data?.lastIngestAt || Date.now() - new Date(data.lastIngestAt).getTime() > STALE_MS;
+  const stale = !!data?.ingestStale;
+  // Tool vẫn gửi lô (đúng khoá) nhưng mọi bài bị loại → lỗi ở bộ lọc / định dạng, không phải tool ngừng
+  const rejectedOnly = !!data?.lastBatchAt && (!data.lastIngestAt || Date.parse(data.lastBatchAt) > Date.parse(data.lastIngestAt) + 60_000);
   const canPost = !!pv && pv.decision !== "skipped" && who.name.trim().length > 1 && who.contact.trim().length >= 6;
   const ext = data?.external;
 
@@ -78,8 +79,10 @@ export default function PostForSalons() {
           <p className="mt-1 text-xs text-slate-300" data-testid="ingest-stats">
             Đang hiện công khai: <b>{data.active}</b> tin (đăng hộ + tổng hợp){data.hiddenByFilter ? ` · bộ lọc chữ ẩn ${data.hiddenByFilter}` : ""} · hết hạn: {data.expired} ·{" "}
             <span className={stale ? "font-bold text-red-300" : "text-emerald-300"} data-testid="ingest-heartbeat">
-              tool tổng hợp gửi lần cuối: {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}{stale ? " ⚠ quá 48 giờ — kiểm tra tool / INGEST_KEY" : ""}
+              tin tổng hợp nhận lần cuối: {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}
+              {stale ? ` ⚠ quá ${data.staleHours} giờ không có tin mới — ${rejectedOnly ? "tool vẫn gửi nhưng mọi bài bị loại (xem lý do trong phản hồi API)" : "tool đã ngừng gửi? kiểm tra tool / INGEST_KEY"}` : ""}
             </span>
+            {data.lastBatchAt && <span className="text-slate-500"> · lô gần nhất: {timeAgo(data.lastBatchAt)}</span>}
           </p>
         )}
       </div>

@@ -13,7 +13,7 @@ import type { Market } from "@prisma/client";
 // Mọi nội dung do app tạo đều gắn nhãn "PawNail Studio" — KHÔNG đăng thay hay
 // giả làm thành viên nào.
 
-import { THEMES, type Theme } from "@/lib/studioThemes";
+import { THEMES, themeInMarket, themeTags, themeWindow, type Theme } from "@/lib/studioThemes";
 export { THEMES, type Theme };
 
 const TIPS = {
@@ -44,15 +44,17 @@ const TIPS = {
 };
 
 const md = (d: Date) => (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
-function inWindow(t: Theme, d: Date) {
+function inWindow(t: Theme, d: Date, market: Market) {
   const v = md(d);
-  const a = t.from[0] * 100 + t.from[1];
-  const b = t.to[0] * 100 + t.to[1];
+  // Úc ở Nam bán cầu: mùa xuân / hè / thu theo khung riêng (themeWindow).
+  const w = themeWindow(t, market);
+  const a = w.from[0] * 100 + w.from[1];
+  const b = w.to[0] * 100 + w.to[1];
   return a <= b ? v >= a && v <= b : v >= a || v <= b; // vắt qua năm mới
 }
 
 export function activeThemes(date: Date, market: Market): Theme[] {
-  return THEMES.filter((t) => inWindow(t, date) && (!t.markets || t.markets.includes(market))).sort((a, b) => b.priority - a.priority);
+  return THEMES.filter((t) => inWindow(t, date, market) && themeInMarket(t, market)).sort((a, b) => b.priority - a.priority);
 }
 
 export function tipOfDay(date: Date, role: "OWNER" | "TECHNICIAN") {
@@ -98,7 +100,8 @@ export async function getStudio(market: Market, now = new Date()): Promise<Studi
   if (primary) {
     // SQLite LIKE không phân biệt hoa/thường với chữ ASCII — đủ cho hashtag không dấu.
     const posts = await prisma.post.findMany({
-      where: { anonymous: false, status: "published", content: { contains: `#${primary.hashtag}` }, createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) }, author: realOnly() },
+      // Hashtag tiếng Anh mới + bí danh tiếng Việt cũ (#PawNailFall · #MongMuaThu) đều được tính.
+      where: { anonymous: false, status: "published", OR: themeTags(primary).map((tag) => ({ content: { contains: `#${tag}` } })), createdAt: { gte: new Date(now.getTime() - 30 * 86_400_000) }, author: realOnly() },
       select: { id: true, mediaUrls: true, author: { select: { id: true, name: true, avatarUrl: true } }, _count: { select: { likes: true } } },
       take: 200,
     });

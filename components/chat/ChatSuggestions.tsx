@@ -6,6 +6,7 @@ import { Briefcase, ChevronRight, Megaphone, Sparkles, Store } from "lucide-reac
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { dt } from "@/lib/i18n/dataEn"; // lương "…/tuần" → "…/wk" như bảng việc
 
 // Danh sách chat còn ít cuộc trò chuyện → không để khoảng trống: gợi ý bằng DỮ LIỆU THẬT
 // (thợ: tiệm đang tuyển mới nhất · chủ tiệm: thợ đang tìm việc, chưa có thì mời đăng tin).
@@ -101,7 +102,7 @@ export default function ChatSuggestions({ role, market, excludeIds = [] }: { rol
                 <span className="truncate">{j.salonName}</span>
                 {j.isUrgent && <span className="flex-shrink-0 rounded-full bg-rose-500/20 px-1.5 text-[10px] font-black text-rose-200">{tr("Gấp", "Urgent")}</span>}
               </span>
-              <span className="block truncate text-xs text-slate-400">{[j.city, j.state].filter(Boolean).join(", ")}{j.salaryAmount && j.salaryAmount !== "Thỏa thuận" ? ` · ${j.salaryAmount}` : ""}</span>
+              <span className="block truncate text-xs text-slate-400">{[j.city, j.state].filter(Boolean).join(", ")}{j.salaryAmount && j.salaryAmount !== "Thỏa thuận" ? ` · ${dt(j.salaryAmount)}` : ""}</span>
             </span>
             <ChevronRight className="h-4 w-4 text-slate-500" />
           </Link>

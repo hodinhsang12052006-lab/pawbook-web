@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 const beVietnam = Be_Vietnam_Pro({
   variable: "--font-pn",
   weight: ["400", "600"],
-  subsets: ["latin", "latin-ext", "vietnamese"],
+  subsets: ["latin", "vietnamese"], // latin-ext không cần (EN + VI) — bớt file tải trước trên mọi trang
   display: "swap",
 });
 
@@ -28,8 +28,9 @@ import type { Viewport } from "next";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Cho phép phóng to chữ (WCAG 1.4.4); ô nhập trong app đều ≥ 16px nên không bị tự zoom khi chạm.
-  themeColor: "#171119",
+  // Cho phép phóng to chữ (WCAG 1.4.4). Chống iOS tự zoom khi chạm ô nhập: globals.css ép mọi ô nhập trong app ≥ 16px
+  // trên điện thoại, và trên iOS cả trang classic (khách "/", /auth/*) — không cần maximum-scale nữa.
+  themeColor: "#1c1521",
 };
 
 export const metadata: Metadata = {
@@ -77,7 +78,7 @@ export default function RootLayout({
         {/* Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app (components/InstallPrompt.tsx) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,p=location.pathname;if(p.indexOf("/auth")===0)d.setAttribute("data-ui-classic","");if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-ui-classic","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h2");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
+            __html: `try{var d=document.documentElement,p=location.pathname;if(p.indexOf("/auth")===0)d.setAttribute("data-ui-classic","");if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-ui-classic","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_LD }} />
@@ -108,18 +109,18 @@ export default function RootLayout({
                   containerStyle={{ top: 76 }}
                   toastOptions={{
                     style: {
-                      background: "#271f2a",
+                      background: "#2e2433",
                       color: "#f6f0f5",
-                      border: "1px solid rgba(255,240,246,0.08)",
+                      border: "1px solid rgba(255,240,246,0.09)",
                       borderRadius: "14px",
                       fontSize: "13px",
                       fontWeight: 600,
                       boxShadow: "0 2px 6px rgba(8,4,10,0.4), 0 16px 40px -12px rgba(8,4,10,0.75)",
                       maxWidth: "92vw",
                     },
-                    success: { iconTheme: { primary: "#34d399", secondary: "#271f2a" } },
-                    error: { iconTheme: { primary: "#fb7185", secondary: "#271f2a" } },
-                    loading: { iconTheme: { primary: "#f59bbe", secondary: "#271f2a" } },
+                    success: { iconTheme: { primary: "#34d399", secondary: "#2e2433" } },
+                    error: { iconTheme: { primary: "#fb7185", secondary: "#2e2433" } },
+                    loading: { iconTheme: { primary: "#f59bbe", secondary: "#2e2433" } },
                   }}
                 />
                 <PusherStatusBanner />

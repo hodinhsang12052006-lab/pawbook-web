@@ -11,6 +11,8 @@ export interface ChatWallpaper {
   style: CSSProperties;
   swatch: string; // CSS background cho ô xem trước
   pattern?: boolean; // swatch có họa tiết lặp (thu nhỏ cho vừa ô)
+  /** background-size của ô xem trước khi pattern (mặc định "60px 60px, auto") — từng lớp, đúng thứ tự swatch */
+  swatchSize?: string;
 }
 
 const svg = (body: string, size = 120) =>
@@ -119,18 +121,6 @@ export function saveWallpaper(chatKey: string | null, id: string, forAll: boolea
 
 export const wallpaperById = (id: string) => CHAT_WALLPAPERS.find((w) => w.id === id) ?? CHAT_WALLPAPERS[0];
 
-// Màu 3 quầng sáng trôi phía sau tin nhắn (components/chat/ChatBackdrop) theo từng chủ đề.
-export const WALLPAPER_ORBS: Record<string, [string, string, string]> = {
-  default: ["rgba(236,72,153,.55)", "rgba(124,58,237,.5)", "rgba(20,184,166,.28)"],
-  nails: ["rgba(236,72,153,.4)", "rgba(190,24,93,.35)", "rgba(251,191,36,.18)"],
-  rose: ["rgba(244,114,182,.5)", "rgba(251,113,133,.4)", "rgba(217,70,239,.25)"],
-  aurora: ["rgba(139,92,246,.55)", "rgba(59,130,246,.4)", "rgba(217,70,239,.3)"],
-  glitter: ["rgba(250,204,21,.25)", "rgba(236,72,153,.3)", "rgba(255,255,255,.12)"],
-  marble: ["rgba(203,213,225,.18)", "rgba(148,163,184,.15)", "rgba(244,114,182,.12)"],
-  ocean: ["rgba(20,184,166,.45)", "rgba(14,165,233,.45)", "rgba(99,102,241,.25)"],
-  champagne: ["rgba(251,191,36,.35)", "rgba(244,114,182,.3)", "rgba(253,186,116,.22)"],
-};
-
 // ---- V2 "warm luxe dark" (06/11/2026): bộ hình nền trong app — tĩnh, ấm, mỗi nền khác nhau rõ ràng ----
 // Giữ nguyên 8 id + tên vi/en ở trên (đã lưu trong localStorage pn_chat_wp); chỉ thay phần hiển thị.
 // Toàn bộ là CSS/SVG tĩnh vẽ trên khung (không phải trên vùng cuộn) — bong bóng đặc nên độ tương phản chữ
@@ -166,21 +156,29 @@ const bar = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},.96)`;
 };
-const wp = (bg: string, image: string, size: string, swatch?: string, pattern?: boolean): Pick<ChatWallpaper, "style" | "swatch" | "pattern"> => ({
+const wp = (bg: string, image: string, size: string, swatch?: string, pattern?: boolean, swatchSize?: string): Pick<ChatWallpaper, "style" | "swatch" | "pattern" | "swatchSize"> => ({
   style: { backgroundColor: bg, backgroundImage: image, backgroundSize: size, ["--chat-bar-bg" as string]: bar(bg) } as CSSProperties,
   swatch: swatch ?? `${image}, ${bg}`,
   pattern,
+  swatchSize,
 });
 
-const REFINED: Record<string, Pick<ChatWallpaper, "style" | "swatch" | "pattern"> & { vi?: string; en?: string }> = {
+// V2.1: nền nâng theo nền app (#1c1521, không gần đen); ô xem trước tô đậm màu riêng của từng nền (trước đây
+// Hồng phấn / Đêm tím / Biển đêm / Lấp lánh gần như y hệt nhau trong ô nhỏ) + background-size đúng từng lớp
+// (ô "Lụa mận" từng lặp gradient 60px thành vạch ngang).
+const SWATCH_GLITTER = svg(
+  "<g fill='rgba(240,214,160,0.75)'><circle cx='10' cy='12' r='1.6'/><circle cx='44' cy='8' r='1.1'/><circle cx='52' cy='34' r='1.8'/><circle cx='22' cy='40' r='1.2'/><circle cx='36' cy='54' r='1.4'/><circle cx='8' cy='56' r='1'/></g>",
+  60
+);
+const REFINED: Record<string, Pick<ChatWallpaper, "style" | "swatch" | "pattern" | "swatchSize"> & { vi?: string; en?: string }> = {
   // Mặc định "Lụa mận": nền mận + ánh sáng hồng/champagne phía trên + họa tiết móng rất mờ
-  default: { ...wp("#16111a", `${AMBIENT}, ${MOTIF_ROSE}`, "auto, auto, 160px 160px", `${AMBIENT}, ${MOTIF_SWATCH}, #16111a`, true), vi: "Lụa mận", en: "Plum silk" },
-  nails: wp("#17121b", MOTIF_GOLD, "140px 140px", `${MOTIF_GOLD_SWATCH}, #17121b`, true),
-  rose: wp("#1a1119", "radial-gradient(80% 50% at 0 0, rgba(232,120,160,.16), transparent 70%), radial-gradient(60% 40% at 100% 100%, rgba(232,120,160,.08), transparent 70%)", "auto, auto"),
-  aurora: wp("#15111d", "radial-gradient(90% 50% at 50% -10%, rgba(150,110,200,.16), transparent 70%)", "auto"),
-  glitter: wp("#17121a", `${GLITTER_DOTS}, radial-gradient(80% 45% at 100% 0, rgba(227,196,138,.08), transparent 70%)`, "140px 140px, auto", `${GLITTER_DOTS}, radial-gradient(80% 45% at 100% 0, rgba(227,196,138,.2), transparent 70%), #17121a`, true),
-  marble: wp("#1a1518", marbleVeins(0.05), "280px 280px", `${marbleVeins(0.14)}, #1f191c`, true),
-  ocean: wp("#101518", "radial-gradient(80% 50% at 100% 0, rgba(70,150,160,.14), transparent 70%)", "auto", "radial-gradient(90% 70% at 100% 0, rgba(70,150,160,.35), transparent 70%), #101518"),
-  champagne: wp("#19140f", "radial-gradient(100% 55% at 50% -10%, rgba(227,196,138,.16), transparent 70%)", "auto", "radial-gradient(100% 70% at 50% -10%, rgba(227,196,138,.36), transparent 70%), #19140f"),
+  default: { ...wp("#1c1521", `${AMBIENT}, ${MOTIF_ROSE}`, "auto, auto, 160px 160px", `radial-gradient(120% 60% at 50% -10%, rgba(236,140,176,.30), transparent 65%), ${MOTIF_SWATCH}, #1c1521`, true, "auto, 60px 60px, auto"), vi: "Lụa mận", en: "Plum silk" },
+  nails: wp("#1d1722", MOTIF_GOLD, "140px 140px", `${MOTIF_GOLD_SWATCH}, #1d1722`, true, "56px 56px, auto"),
+  rose: wp("#211520", "radial-gradient(80% 50% at 0 0, rgba(232,120,160,.16), transparent 70%), radial-gradient(60% 40% at 100% 100%, rgba(232,120,160,.08), transparent 70%)", "auto, auto", "radial-gradient(110% 80% at 0 0, rgba(232,120,160,.55), transparent 70%), radial-gradient(80% 60% at 100% 100%, rgba(232,120,160,.3), transparent 70%), #211520"),
+  aurora: wp("#1b1624", "radial-gradient(90% 50% at 50% -10%, rgba(150,110,200,.16), transparent 70%)", "auto", "radial-gradient(120% 75% at 50% -10%, rgba(150,110,200,.6), transparent 72%), #1b1624"),
+  glitter: wp("#1d1720", `${GLITTER_DOTS}, radial-gradient(80% 45% at 100% 0, rgba(227,196,138,.08), transparent 70%)`, "140px 140px, auto", `${SWATCH_GLITTER}, radial-gradient(90% 60% at 100% 0, rgba(227,196,138,.35), transparent 70%), #1d1720`, true, "30px 30px, auto, auto"),
+  marble: wp("#201a1e", marbleVeins(0.05), "280px 280px", `${marbleVeins(0.16)}, #2a2226`, true, "120px 120px, auto"),
+  ocean: wp("#141b1e", "radial-gradient(80% 50% at 100% 0, rgba(70,150,160,.14), transparent 70%)", "auto", "radial-gradient(110% 85% at 100% 0, rgba(70,170,180,.62), transparent 72%), #141b1e"),
+  champagne: wp("#1f1913", "radial-gradient(100% 55% at 50% -10%, rgba(227,196,138,.16), transparent 70%)", "auto", "radial-gradient(110% 80% at 50% -10%, rgba(227,196,138,.5), transparent 70%), #1f1913"),
 };
 for (const w of CHAT_WALLPAPERS) if (REFINED[w.id]) Object.assign(w, REFINED[w.id]);

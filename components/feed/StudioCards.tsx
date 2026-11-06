@@ -41,11 +41,11 @@ export function rememberTheme(h: number | null) {
   try {
     const d = document.documentElement;
     if (h) {
-      localStorage.setItem("pn_th_h2", String(h));
+      localStorage.setItem("pn_th_h", String(h));
       d.setAttribute("data-th", "");
       d.style.setProperty("--th-h", `${h}px`);
     } else {
-      localStorage.removeItem("pn_th_h2");
+      localStorage.removeItem("pn_th_h");
       d.removeAttribute("data-th");
     }
   } catch {}

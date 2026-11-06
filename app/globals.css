@@ -55,8 +55,24 @@
   --color-pn-brand-press: #be185d;
   --color-pn-brand-ink: #f472b6; /* chữ/icon/link nhấn trên nền tối, 7.4:1 */
   --color-pn-brand-tint: rgb(219 39 119 / 0.12);
-  /* CHỈ cho thứ nổi: bottom nav, menu, sheet, toast. Thẻ nằm yên: chỉ viền, không bóng. */
-  --shadow-pn-float: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  /* V2 "warm luxe dark" (11/2026): tên mới chỉ để Tailwind sinh utility; giá trị thật cho app nằm ở khối
+     html:not([data-ui-classic]) bên dưới. Không bề mặt classic nào dùng các tên pn-*. */
+  --color-pn-canvas-top: #1d161f;
+  --color-pn-canvas-deep: #110c13;
+  --color-pn-line-soft: rgb(255 240 246 / 0.05);
+  --color-pn-me: #852e53;
+  --color-pn-me-press: #752748;
+  --color-pn-champagne: #e6c79a;
+  --color-pn-champagne-deep: #c29e6b;
+  --color-pn-champagne-tint: rgb(230 199 154 / 0.12);
+  --color-pn-champagne-line: rgb(230 199 154 / 0.28);
+  /* Bóng ám tím-đen (không bao giờ đen tuyền). Thẻ nằm yên: viền + rest. Thứ nổi: float. */
+  --shadow-pn-rest: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --shadow-pn-raise: 0 1px 2px rgb(8 4 10 / 0.35), 0 12px 32px -16px rgb(8 4 10 / 0.7);
+  --shadow-pn-float: 0 2px 6px rgb(8 4 10 / 0.4), 0 16px 40px -12px rgb(8 4 10 / 0.75);
+  --radius-pn-hero: 24px;
+  --radius-pn-card: 20px;
+  --radius-pn-control: 14px;
   /* `text-5xs` được dùng (tên người gửi trong nhóm chat) nhưng chưa từng được định nghĩa. */
   --text-5xs: 0.6875rem;
   --text-5xs--line-height: 1rem;
@@ -552,53 +568,91 @@ body {
    ===================================================================== */
 html:not([data-ui-classic]) {
   color-scheme: dark;
-  --background: #0b0b0c;
+  /* V2 "warm luxe dark" (06/11/2026): nền mận-than có chiều sâu (OKLCH L≈.19, C≈.02, hue 318) thay cho
+     than chì gần đen #0b0b0c (chủ tiệm: "đen thui"). Cùng cơ chế: chỉ đổi biến, gần như không sửa TSX. */
+  --background: #171119;
+  --color-black: #0c070e; /* mọi lớp phủ bg-black/NN thành đen-mận */
 
-  /* Bề mặt trung tính (than chì) — bỏ ám xanh navy của slate */
-  --color-slate-50: #fafafa;
-  --color-slate-100: #f4f4f5;
-  --color-slate-200: #e4e4e7;
-  --color-slate-300: #d4d4d8;
-  --color-slate-400: #a1a1aa;
-  --color-slate-500: #8e8e96;
-  --color-slate-600: #63636b;
-  --color-slate-700: #3a3a40;
-  --color-slate-800: #26262a;
-  --color-slate-850: #1f1f23;
-  --color-slate-900: #17171a;
-  --color-slate-950: #0b0b0c;
+  --color-pn-canvas-top: #1d161f;
+  --color-pn-canvas: #171119;
+  --color-pn-canvas-deep: #110c13;
+  --color-pn-surface: #1f1822;
+  --color-pn-raised: #271f2a;
+  --color-pn-overlay: #2f2631;
+  --color-pn-bubble: #2b222e;
+  --color-pn-thumb: #3b313e;
+  --color-pn-control: #6f6572;
+  --color-pn-line-soft: rgb(255 240 246 / 0.05);
+  --color-pn-line: rgb(255 240 246 / 0.08);
+  --color-pn-line-strong: rgb(255 240 246 / 0.14);
+  --color-pn-text: #f6f0f5;
+  --color-pn-text-2: #bdb2ba;
+  --color-pn-text-3: #9e939b;
+  --color-pn-brand: #db2777;
+  --color-pn-brand-hover: #cd206e;
+  --color-pn-brand-press: #b91c63;
+  --color-pn-brand-ink: #f59bbe;
+  --color-pn-brand-tint: rgb(219 39 119 / 0.14);
+  --color-pn-me: #852e53;
+  --color-pn-me-press: #752748;
+  --color-pn-champagne: #e6c79a;
+  --color-pn-champagne-deep: #c29e6b;
+  --color-pn-champagne-tint: rgb(230 199 154 / 0.12);
+  --color-pn-champagne-line: rgb(230 199 154 / 0.28);
+  --shadow-pn-glow: 0 24px 48px -28px color-mix(in srgb, var(--pn-glow, #db2777) 55%, transparent), 0 2px 8px rgb(8 4 10 / 0.35);
+  --pn-glass-bg: rgb(23 17 25 / 0.72);
+  --pn-glass-dock: rgb(31 24 34 / 0.78);
+  --pn-glass-filter: blur(20px) saturate(140%);
+  --pn-ease-out: cubic-bezier(.23, 1, .32, 1);
+  --pn-ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --pn-ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  --pn-dur-press: 120ms;
+  --pn-dur-small: 160ms;
+  --pn-dur-pop: 200ms;
+  --pn-dur-sheet: 320ms;
 
-  /* MỘT màu nhấn, sRGB (bỏ chất neon của oklch trên màn P3). 500 gộp vào 600 → mọi gradient
-     pink-500→600 thành màu đặc, mọi nhãn trắng trên nền hồng ≥ 4.5:1. */
+  /* Thang slate ám mận (≈1.663 chỗ dùng slate-* đổi màu theo, không sửa TSX) */
+  --color-slate-50: #fcf9fb;
+  --color-slate-100: #f6f0f5;
+  --color-slate-200: #e8e0e6;
+  --color-slate-300: #d8d0d6;
+  --color-slate-400: #bdb2ba;
+  --color-slate-500: #9e939b;
+  --color-slate-600: #6f6572;
+  --color-slate-700: #4b414e;
+  --color-slate-800: #2b222e;
+  --color-slate-850: #271f2a;
+  --color-slate-900: #1f1822;
+  --color-slate-950: #171119;
+
+  /* MỘT màu nhấn hồng, sRGB. 500 gộp vào 600 → gradient pink-500→600 thành màu đặc. */
   --color-pink-50: #fdf2f8;
   --color-pink-100: #fce7f3;
   --color-pink-200: #fbcfe8;
-  --color-pink-300: #f9a8d4;
-  --color-pink-400: #f472b6;
+  --color-pink-300: #f7b0cc;
+  --color-pink-400: #f59bbe;
   --color-pink-500: #db2777;
   --color-pink-600: #db2777;
-  --color-pink-700: #be185d;
+  --color-pink-700: #b91c63;
   --color-pink-800: #9d174d;
-  --color-pink-900: #831843;
-  --color-pink-950: #500724;
+  --color-pink-900: #6b1838;
+  --color-pink-950: #3d0f22;
 
-  /* fuchsia / purple / violet / indigo: nền đặc 500–800 gộp vào màu nhấn → "from-pink-600 to-fuchsia-600",
-     "from-purple-600 via-indigo-600 to-pink-600" thành hồng đặc; sắc nhạt 50–400 (chữ/icon/viền trang trí) và
-     nền ám tím (…-900/950) thành trung tính — bớt hồng thay vì thêm hồng. */
-  --color-fuchsia-50: #fafafa;  --color-purple-50: #fafafa;  --color-violet-50: #fafafa;  --color-indigo-50: #fafafa;
-  --color-fuchsia-100: #f4f4f5; --color-purple-100: #f4f4f5; --color-violet-100: #f4f4f5; --color-indigo-100: #f4f4f5;
-  --color-fuchsia-200: #e4e4e7; --color-purple-200: #e4e4e7; --color-violet-200: #e4e4e7; --color-indigo-200: #e4e4e7;
-  --color-fuchsia-300: #d4d4d8; --color-purple-300: #d4d4d8; --color-violet-300: #d4d4d8; --color-indigo-300: #d4d4d8;
-  --color-fuchsia-400: #a1a1aa; --color-purple-400: #a1a1aa; --color-violet-400: #a1a1aa; --color-indigo-400: #a1a1aa;
+  /* fuchsia / purple / violet / indigo: 500–800 gộp vào màu nhấn; sắc nhạt 50–400 → thang mận; 900/950 → bề mặt */
+  --color-fuchsia-50: #fcf9fb;  --color-purple-50: #fcf9fb;  --color-violet-50: #fcf9fb;  --color-indigo-50: #fcf9fb;
+  --color-fuchsia-100: #f6f0f5; --color-purple-100: #f6f0f5; --color-violet-100: #f6f0f5; --color-indigo-100: #f6f0f5;
+  --color-fuchsia-200: #e8e0e6; --color-purple-200: #e8e0e6; --color-violet-200: #e8e0e6; --color-indigo-200: #e8e0e6;
+  --color-fuchsia-300: #d8d0d6; --color-purple-300: #d8d0d6; --color-violet-300: #d8d0d6; --color-indigo-300: #d8d0d6;
+  --color-fuchsia-400: #bdb2ba; --color-purple-400: #bdb2ba; --color-violet-400: #bdb2ba; --color-indigo-400: #bdb2ba;
   --color-fuchsia-500: #db2777; --color-purple-500: #db2777; --color-violet-500: #db2777; --color-indigo-500: #db2777;
   --color-fuchsia-600: #db2777; --color-purple-600: #db2777; --color-violet-600: #db2777; --color-indigo-600: #db2777;
-  --color-fuchsia-700: #be185d; --color-purple-700: #be185d; --color-violet-700: #be185d; --color-indigo-700: #be185d;
+  --color-fuchsia-700: #b91c63; --color-purple-700: #b91c63; --color-violet-700: #b91c63; --color-indigo-700: #b91c63;
   --color-fuchsia-800: #9d174d; --color-purple-800: #9d174d; --color-violet-800: #9d174d; --color-indigo-800: #9d174d;
-  --color-fuchsia-900: #17171a; --color-purple-900: #17171a; --color-violet-900: #17171a; --color-indigo-900: #17171a;
-  --color-fuchsia-950: #0b0b0c; --color-purple-950: #0b0b0c; --color-violet-950: #0b0b0c; --color-indigo-950: #0b0b0c;
+  --color-fuchsia-900: #1f1822; --color-purple-900: #1f1822; --color-violet-900: #1f1822; --color-indigo-900: #1f1822;
+  --color-fuchsia-950: #171119; --color-purple-950: #171119; --color-violet-950: #171119; --color-indigo-950: #171119;
 
   /* Màu ngữ nghĩa ghim về sRGB: dịu và nhất quán. lương = emerald, gấp = red/rose, hot = orange,
-     phúc lợi = amber, tin/mới = sky. Trạng thái = nền nhạt /10–/15 + viền /20–/25 + chữ 200/300. */
+     phúc lợi = amber, tin/mới = sky. Trạng thái = nền nhạt /12–/15 + viền /25 + chữ 300. */
   --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
   --color-emerald-500: #10b981; --color-emerald-600: #059669; --color-emerald-700: #047857;
   --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24;
@@ -608,30 +662,98 @@ html:not([data-ui-classic]) {
   --color-orange-300: #fdba74; --color-orange-400: #fb923c; --color-orange-500: #f97316;
   --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8; --color-sky-500: #0ea5e9;
 
-  /* Tiêu đề bớt "hét": 900 → 700 (Roboto không có 800 nên 800 cũng về 700) */
-  --font-weight-black: 700;
-  --font-weight-extrabold: 700;
-}
+  /* Đúng 2 độ đậm hiển thị: 400 và 600 (Be Vietnam Pro chỉ nạp 2 độ này) */
+  --font-weight-medium: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
 
-/* Không còn quầng màu (glow) ở bất kỳ đâu: shadow-{màu}-* và shadow-[…rgba()] đều biên dịch
-   thành var(--tw-shadow-color, …) → đặt 1 biến là trung hoà cả hai; thứ nổi chỉ còn bóng đen trung tính. */
+  /* Thang chữ app: 24 / 17 / 15 / 13 (+16 cho ô nhập, bong bóng chat). Không có cỡ chữ landing trong app. */
+  --text-xs: 0.8125rem;   --text-xs--line-height: 1.125rem;
+  --text-sm: 0.9375rem;   --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;      --text-base--line-height: 1.375rem;
+  --text-lg: 1.0625rem;   --text-lg--line-height: 1.5rem;
+  --text-xl: 1.5rem;      --text-xl--line-height: 1.875rem;
+  --text-2xl: 1.5rem;     --text-2xl--line-height: 1.875rem;
+  --text-3xl: 1.5rem;     --text-3xl--line-height: 1.875rem;
+  --text-4xl: 1.5rem;     --text-4xl--line-height: 1.875rem;
+  --text-5xl: 1.5rem;     --text-5xl--line-height: 1.875rem;
+  --text-6xl: 1.5rem;     --text-6xl--line-height: 1.875rem;
+  --radius-2xl: 1.25rem;
+  --radius-xl: 0.875rem;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Chữ app: Be Vietnam Pro (OFL-1.1, có dấu tiếng Việt). Trang classic giữ font cũ. */
+html:not([data-ui-classic]) body {
+  font-family: var(--font-pn), system-ui, sans-serif;
+  background-color: var(--color-pn-canvas);
+  color: var(--color-pn-text);
+}
+/* Thanh trên + dock: giữ cỡ chữ nhỏ của chrome (12px) bằng phạm vi biến */
+html:not([data-ui-classic]) :is(header.sticky, nav.fixed) {
+  --text-xs: 0.75rem; --text-xs--line-height: 1rem;
+}
+/* Sàn cỡ chữ trong nội dung: không còn 9–12px (khó đọc ngoài nắng). .pn-micro = huy hiệu đếm (11px). */
+html:not([data-ui-classic]) main :is(.text-\[9px\], .text-\[10px\], .text-\[11px\], .text-\[12px\], .text-2xs, .text-3xs, .text-4xs, .text-5xs):not(.pn-micro) {
+  font-size: 13px;
+  line-height: 18px;
+}
+html:not([data-ui-classic]) .pn-micro { font-size: 11px; line-height: 14px; font-weight: 600; }
+
+/* Không quầng màu (glow) ngoài ngân sách: shadow-{màu}-* và shadow-[…rgba()] biên dịch thành
+   var(--tw-shadow-color, …) → đặt 1 biến là trung hoà cả hai; bóng còn lại ám mận-đen. */
 html:not([data-ui-classic]) :is([class*="shadow-pink-"], [class*="shadow-fuchsia-"], [class*="shadow-purple-"], [class*="shadow-violet-"], [class*="shadow-indigo-"], [class*="shadow-rose-"], [class*="shadow-red-"], [class*="shadow-orange-"], [class*="shadow-amber-"], [class*="shadow-emerald-"], [class*="shadow-sky-"], [class*="shadow-blue-"], [class*="rgba(236,72,153"], [class*="rgba(219,39,119"], [class*="rgba(217,70,239"], [class*="rgba(249,115,22"], [class*="rgba(52,211,153"]) {
-  --tw-shadow-color: rgb(0 0 0 / 0.28);
+  --tw-shadow-color: rgb(8 4 10 / 0.4);
 }
 /* Quầng mờ trang trí (404, offline, trends, FeatureGate, PushPrompt, hồ sơ, màn gọi) */
 html:not([data-ui-classic]) .absolute.rounded-full:is(.blur-2xl, .blur-3xl, [class~="blur-[90px]"], [class~="blur-[100px]"]) {
   display: none;
 }
 
-/* Nền app: than chì tĩnh + 3% sáng nhẹ phía trên cho chiều sâu. Tắt aurora, kim tuyến "+",
-   chùm sáng, lưới chấm, vignette, hạt phim (vẫn giữ markup + CSS cũ cho bề mặt classic). */
+/* Nền app V2: ánh sáng xung quanh tĩnh từ phía trên (hồng + champagne, độ mờ thấp) trên gradient mận.
+   Cố định, 1 lần vẽ, không filter:blur, không animation → rẻ cho WebView máy yếu. Ánh sáng đứng yên ở đầu
+   màn hình như 1 nguồn sáng trong khi nội dung cuộn dưới thanh kính. */
 html:not([data-ui-classic]) .app-backdrop {
-  background: radial-gradient(120% 40rem at 50% -14rem, rgb(255 255 255 / 0.03), transparent 70%), var(--color-pn-canvas);
+  isolation: isolate;
+  background:
+    radial-gradient(110% 26rem at 12% -8rem, rgb(219 39 119 / 0.10), transparent 70%),
+    radial-gradient(80% 22rem at 92% -6rem, rgb(230 199 154 / 0.07), transparent 72%),
+    linear-gradient(180deg, var(--color-pn-canvas-top) 0, var(--color-pn-canvas) 28rem, var(--color-pn-canvas-deep) 100%);
 }
 html:not([data-ui-classic]) .app-backdrop::before,
 html:not([data-ui-classic]) .app-backdrop::after,
 html:not([data-ui-classic]) .app-backdrop > * {
   display: none;
+}
+/* Hạt mịn tĩnh: xoá vệt dải màu (banding) của gradient tối */
+html:not([data-ui-classic]) .app-backdrop > .grain {
+  display: block;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+}
+@media (prefers-contrast: more) {
+  html:not([data-ui-classic]) .app-backdrop { background: var(--color-pn-canvas); }
+  html:not([data-ui-classic]) .app-backdrop > .grain { display: none; }
+  html:not([data-ui-classic]) {
+    --color-pn-line-soft: rgb(255 240 246 / 0.2);
+    --color-pn-line: rgb(255 240 246 / 0.2);
+    --color-pn-line-strong: rgb(255 240 246 / 0.3);
+  }
+}
+
+/* Kính: CHỈ cho chrome cố định (thanh trên, dock, tab dính). Không bao giờ trên thẻ cuộn. */
+html:not([data-ui-classic]) .pn-glass {
+  background: var(--pn-glass-bg);
+  -webkit-backdrop-filter: var(--pn-glass-filter);
+  backdrop-filter: var(--pn-glass-filter);
+  border-bottom: 1px solid var(--color-pn-line-soft);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html:not([data-ui-classic]) .pn-glass { background: var(--color-pn-canvas); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html:not([data-ui-classic]) .pn-glass { background: var(--color-pn-canvas); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
 /* Thẻ "bắt đầu" (GettingStarted) — chỉ móc CSS vì className nằm chung dòng với chữ */
@@ -642,40 +764,51 @@ html:not([data-ui-classic]) :is(section[data-nudge], a[data-nudge]) {
 }
 
 @layer components {
-  /* Trong @layer components để hover:border-* / !border-* vẫn thắng. (0,2,1) > .glass-card mobile. */
+  /* Trong @layer components để hover:border-* / !border-* vẫn thắng. (0,2,1) > .glass-card mobile.
+     V2: bề mặt ấm + ánh sáng rất nhẹ ở mép trên + viền mảnh + highlight trong. Không bóng ngoài cho thẻ nằm yên. */
   html:not([data-ui-classic]) .glass-card {
-    background: var(--color-pn-surface);
+    background: linear-gradient(180deg, rgb(255 240 246 / 0.025), transparent 120px), var(--color-pn-surface);
     border: 1px solid var(--color-pn-line);
-    box-shadow: none;
+    box-shadow: var(--shadow-pn-rest);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
   html:not([data-ui-classic]) .skeleton {
-    background: linear-gradient(90deg, #18181b 0%, #222226 50%, #18181b 100%);
+    background: linear-gradient(90deg, #221a25 0%, #2a212d 50%, #221a25 100%);
     background-size: 800px 100%;
+    animation-duration: 1.6s;
   }
   html:not([data-ui-classic]) .input-field {
-    border-color: rgb(255 255 255 / 0.08);
-    background: var(--color-pn-surface);
+    border-color: var(--color-pn-line);
+    background: var(--color-pn-raised);
     color: var(--color-pn-text);
+    border-radius: 14px;
+    font-size: 16px;
+    min-height: 44px;
   }
-  html:not([data-ui-classic]) .input-field:hover { border-color: rgb(255 255 255 / 0.14); }
+  html:not([data-ui-classic]) .input-field::placeholder { color: var(--color-pn-text-3); }
+  html:not([data-ui-classic]) .input-field:hover { border-color: var(--color-pn-line-strong); }
   html:not([data-ui-classic]) .input-field:focus {
-    border-color: var(--color-pn-brand);
-    box-shadow: 0 0 0 1px var(--color-pn-brand);
+    border-color: var(--color-pn-brand-ink);
+    box-shadow: 0 0 0 3px rgb(219 39 119 / 0.18);
     background: var(--color-pn-raised);
   }
-  html:not([data-ui-classic]) .field-label { color: #a1a1aa; }
+  html:not([data-ui-classic]) .field-label { color: var(--color-pn-text-2); font-size: 13px; }
 }
 
 /* Bề mặt trình duyệt theo bảng màu */
 html:not([data-ui-classic]) ::selection { background: rgb(219 39 119 / 0.35); color: #fff; }
-html:not([data-ui-classic]) ::placeholder { color: #8e8e96; opacity: 1; }
-html:not([data-ui-classic]) :is(input, textarea) { caret-color: #f472b6; }
-html:not([data-ui-classic]) :is(a, button, [role="tab"], summary):focus-visible { outline: 2px solid #f472b6; outline-offset: 2px; }
+html:not([data-ui-classic]) ::placeholder { color: var(--color-pn-text-3); opacity: 1; }
+html:not([data-ui-classic]) :is(input, textarea) { caret-color: #f59bbe; }
+html:not([data-ui-classic]) :is(a, button, [role="tab"], summary):focus-visible { outline: 2px solid #f59bbe; outline-offset: 2px; }
 html:not([data-ui-classic]) ::-webkit-scrollbar-track { background: var(--color-pn-canvas); }
-html:not([data-ui-classic]) ::-webkit-scrollbar-thumb { background: #2a2a2e; }
-html:not([data-ui-classic]) ::-webkit-scrollbar-thumb:hover { background: #3a3a40; }
+html:not([data-ui-classic]) ::-webkit-scrollbar-thumb { background: #3b313e; }
+html:not([data-ui-classic]) ::-webkit-scrollbar-thumb:hover { background: #4b414e; }
+/* Icon Lucide: nét mảnh hơn cho cảm giác cao cấp; mục đang chọn đậm hơn */
+html:not([data-ui-classic]) svg.lucide { stroke-width: 1.75; }
+html:not([data-ui-classic]) [aria-current="page"] svg.lucide { stroke-width: 2.25; }
+/* Số: căn đều chữ số cho lương, giá, giờ, bộ đếm */
+html:not([data-ui-classic]) .tabular-nums { font-variant-numeric: tabular-nums; }
 
 /* ===== Móc CSS cho các dòng TSX nằm sát chữ hiển thị (11/2026) =====
    Nhánh copy đang viết lại chữ ở ~230 file → các dòng className dính liền dòng chữ được giữ NGUYÊN như main,
@@ -789,6 +922,140 @@ html:not([data-ui-classic]) [data-nudge] .text-pink-200 { color: #d4d4d8; }
     background-image: none;
     background-color: var(--color-pn-brand-hover);
   }
+}
+
+/* =====================================================================
+   V2 "warm luxe dark" — thành phần (06/11/2026)
+   ===================================================================== */
+
+/* Dock dưới: kính ấm nổi, viền mảnh, highlight trong + bóng nổi ám mận */
+html:not([data-ui-classic]) .pn-dock {
+  background: var(--pn-glass-dock);
+  -webkit-backdrop-filter: var(--pn-glass-filter);
+  backdrop-filter: var(--pn-glass-filter);
+  border: 1px solid var(--color-pn-line);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), var(--shadow-pn-float);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html:not([data-ui-classic]) .pn-dock { background: var(--color-pn-surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html:not([data-ui-classic]) .pn-dock { background: var(--color-pn-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* Tab dính trang chủ: kính (không viền dưới cứng) */
+html:not([data-ui-classic]) .pn-sticky-tabs { border-bottom: 1px solid var(--color-pn-line-soft); }
+
+/* Segmented control (Bảng tin / Việc / Thợ; tab lịch hẹn): rãnh mờ + viền, thumb nổi nhẹ */
+html:not([data-ui-classic]) [role="tablist"].grid-cols-3 {
+  background: rgb(255 240 246 / 0.04);
+  border-color: var(--color-pn-line);
+  border-radius: 16px;
+  padding: 4px;
+  box-shadow: none;
+}
+html:not([data-ui-classic]) [role="tablist"].grid-cols-3 > span[aria-hidden] {
+  inset-block: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 3);
+  border-radius: 12px;
+  background: var(--color-pn-thumb);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(8 4 10 / 0.4);
+  --tw-ring-shadow: 0 0 #0000;
+  transition-duration: 240ms;
+  transition-timing-function: var(--pn-ease-in-out);
+}
+html:not([data-ui-classic]) [role="tablist"].grid-cols-3 > button[role="tab"] {
+  min-height: 40px;
+  padding-block: 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  border-radius: 12px;
+  color: var(--color-pn-text-2);
+}
+html:not([data-ui-classic]) [role="tablist"].grid-cols-3 > button[role="tab"][aria-selected="true"] { color: var(--color-pn-text); }
+
+/* Lối tắt trang chủ: 5 ô vừa 1 hàng từ 360px (dưới 360px vẫn vuốt ngang) */
+@media (min-width: 360px) and (max-width: 767px) {
+  html:not([data-ui-classic]) nav:has(> .pn-qa) {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
+  html:not([data-ui-classic]) nav:has(> .pn-qa) > .pn-qa { width: auto; }
+}
+html:not([data-ui-classic]) .pn-qa-tile {
+  background: linear-gradient(180deg, #2c2332, #221b28);
+  border: 1px solid var(--color-pn-line);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  color: var(--color-pn-text);
+  border-radius: 16px;
+}
+html:not([data-ui-classic]) .pn-qa-tile.pn-qa-primary {
+  background: var(--color-pn-brand-tint);
+  border-color: rgb(219 39 119 / 0.22);
+  color: var(--color-pn-brand-ink);
+}
+
+/* Thẻ hoàn thiện hồ sơ (1 hàng): nút ẩn canh giữa theo chiều dọc */
+html:not([data-ui-classic]) a.glass-card.min-h-14 + button.absolute { top: 50%; translate: 0 -50%; }
+
+/* ---- Băng-rôn mùa (components/feed/SeasonBanner.tsx) ---- */
+html:not([data-ui-classic]) .pn-season { box-shadow: var(--shadow-pn-glow); }
+.pn-season-media { height: clamp(184px, 50vw, 220px); }
+.pn-season-media img { opacity: 0; transition: opacity 240ms var(--pn-ease-out, ease-out); }
+.pn-season-media img.pn-loaded { opacity: 1; }
+.pn-season-scrim {
+  background: linear-gradient(180deg, rgb(18 12 20 / 0.22) 0%, rgb(18 12 20 / 0) 22%, rgb(18 12 20 / 0) 30%, rgb(18 12 20 / 0.55) 48%, rgb(18 12 20 / 0.8) 62%, rgb(18 12 20 / 0.92) 100%);
+}
+.pn-season-chip {
+  background: rgb(18 12 20 / 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+span.pn-season-chip { height: 24px; padding-inline: 8px; font-size: 13px; line-height: 18px; font-weight: 600; color: #f6f0f5; }
+button > span.pn-season-chip { height: 36px; padding: 0; }
+.pn-season-idea {
+  background: rgb(255 240 246 / 0.05);
+  border: 1px solid color-mix(in srgb, var(--season-ink, #f59bbe) 30%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .pn-season-chip { background: rgb(18 12 20 / 0.85); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* Nút đảo màu (CTA mùa / cao cấp): ngà trên mận 16.5:1 */
+.pn-btn-inverted {
+  background: #f6f0f5;
+  color: #171119;
+  box-shadow: inset 0 -1px 0 rgb(8 4 10 / 0.08);
+  transition: transform var(--pn-dur-press, 120ms) var(--pn-ease-out, ease-out), background-color var(--pn-dur-press, 120ms);
+}
+.pn-btn-inverted:active { transform: scale(0.97); background: #e8e0e6; }
+
+/* Chip lọc (bang / thị trường): cao 32, chữ 13/600 */
+html:not([data-ui-classic]) main button.rounded-full.whitespace-nowrap.border { min-height: 32px; }
+
+/* Nút chính (hồng đặc) trong app: highlight trong rất nhẹ thay cho quầng sáng */
+html:not([data-ui-classic]) :is(.bg-pink-600, .bg-pn-brand):is(button, a) { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18); }
+
+/* Bảng thông báo (NotificationBell) V2: bề mặt overlay ấm */
+html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"] { background: var(--color-pn-overlay); border-radius: 16px; }
+
+/* Hồ sơ: khung đầu hồ sơ dùng bề mặt thẻ */
+html:not([data-ui-classic]) .pn-profile-head { background: var(--color-pn-surface); border-color: var(--color-pn-line); box-shadow: var(--shadow-pn-raise); }
+
+/* Thẻ bảng tin: bỏ qua vẽ khi ngoài màn hình (WebView máy yếu) */
+html:not([data-ui-classic]) main article.glass-card { content-visibility: auto; contain-intrinsic-size: auto 480px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pn-season-media img { transition: none; opacity: 1; }
+  .pn-btn-inverted, .pn-qa { transition: none; }
+  .pn-btn-inverted:active { transform: none; }
 }
 
 /* Giảm chuyển động: tắt cả các hiệu ứng vào của modal / tin nhắn / sheet, và mọi hiệu ứng lặp vô hạn

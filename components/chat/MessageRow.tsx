@@ -290,7 +290,7 @@ function MessageRowImpl({
                           const bubble = parent.parentElement;
                           if (bubble) {
                             bubble.style.background = "none";
-                            bubble.style.backgroundColor = "#26262a";
+                            bubble.style.backgroundColor = "var(--color-pn-bubble)";
                             bubble.style.border = "1px solid rgba(255,255,255,0.08)";
                             bubble.style.padding = "6px 12px";
                             bubble.style.boxShadow = "none";

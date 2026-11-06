@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SITE_URL } from "@/lib/siteUrl";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
@@ -14,14 +14,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Chữ trong app (V2): Be Vietnam Pro — SIL OFL 1.1, đủ dấu tiếng Việt, tự host qua next/font (không gọi Google lúc chạy).
+// Chỉ áp cho html:not([data-ui-classic]) trong globals.css; trang khách "/" + /auth/* giữ font cũ.
+const beVietnam = Be_Vietnam_Pro({
+  variable: "--font-pn",
+  weight: ["400", "600"],
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  display: "swap",
+});
+
 import type { Viewport } from "next";
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#0b0b0c",
+  // Cho phép phóng to chữ (WCAG 1.4.4); ô nhập trong app đều ≥ 16px nên không bị tự zoom khi chạm.
+  themeColor: "#171119",
 };
 
 export const metadata: Metadata = {
@@ -63,13 +71,13 @@ export default function RootLayout({
       lang="vi"
       suppressHydrationWarning // data-authed do script đầu trang đặt trước khi React chạy
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      className={`${geistSans.variable} ${geistMono.variable} ${beVietnam.variable} h-full antialiased scroll-smooth`}
     >
       <head>
         {/* Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app (components/InstallPrompt.tsx) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,p=location.pathname;if(p.indexOf("/auth")===0)d.setAttribute("data-ui-classic","");if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-ui-classic","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
+            __html: `try{var d=document.documentElement,p=location.pathname;if(p.indexOf("/auth")===0)d.setAttribute("data-ui-classic","");if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-ui-classic","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h2");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_LD }} />
@@ -100,18 +108,18 @@ export default function RootLayout({
                   containerStyle={{ top: 76 }}
                   toastOptions={{
                     style: {
-                      background: "#1c1c1f",
-                      color: "#f1f5f9",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "#271f2a",
+                      color: "#f6f0f5",
+                      border: "1px solid rgba(255,240,246,0.08)",
                       borderRadius: "14px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
+                      boxShadow: "0 2px 6px rgba(8,4,10,0.4), 0 16px 40px -12px rgba(8,4,10,0.75)",
                       maxWidth: "92vw",
                     },
-                    success: { iconTheme: { primary: "#34d399", secondary: "#1c1c1f" } },
-                    error: { iconTheme: { primary: "#fb7185", secondary: "#1c1c1f" } },
-                    loading: { iconTheme: { primary: "#f472b6", secondary: "#1c1c1f" } },
+                    success: { iconTheme: { primary: "#34d399", secondary: "#271f2a" } },
+                    error: { iconTheme: { primary: "#fb7185", secondary: "#271f2a" } },
+                    loading: { iconTheme: { primary: "#f59bbe", secondary: "#271f2a" } },
                   }}
                 />
                 <PusherStatusBanner />

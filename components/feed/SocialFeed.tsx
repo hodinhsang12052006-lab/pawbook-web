@@ -283,7 +283,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
           chính là lúc đúng nhất để nhắc thợ đăng bài — họ đang là bên được
           săn đón, chỉ cần xuất hiện là dễ được chủ để ý ngay. */}
       {studio === undefined && <ThemeSlot />}
-      {studio?.theme && <ThemeCard studio={studio} isOwner={user?.role === "OWNER"} onJoin={joinChallenge} />}
+      {studio?.theme && <ThemeCard studio={studio} isOwner={user?.role === "OWNER"} onJoin={joinChallenge} market={market} />}
       {isTech && studio !== undefined && !studio?.theme && (
         <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
           <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />

@@ -55,8 +55,11 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
         </linearGradient>
       </defs>
       <circle cx="20" cy="20" r="20" fill={`url(#${gid})`} />
-      {/* Ánh sáng nhẹ phía trên (chỉ classic — trong app trông lỗi thời) */}
+      {/* Ánh sáng nhẹ phía trên (classic) */}
       <ellipse cx="20" cy="6" rx="18" ry="10" fill="#fff" opacity="0.08" className="refined:hidden" />
+      {/* Trong app: vệt bóng như lọ sơn + vòng trong mảnh ("monogram mẫu sơn" — biểu tượng chung, không phải mặt người) */}
+      <ellipse cx="14" cy="10" rx="14" ry="8" fill="#fff" opacity="0.1" className="hidden refined:inline" />
+      <circle cx="20" cy="20" r="19.5" fill="none" stroke="#fff" strokeOpacity="0.1" strokeWidth="1" className="hidden refined:inline" />
       <text
         x="20"
         y="20"
@@ -67,6 +70,7 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
         fontWeight={700}
         letterSpacing="0.5"
         fontFamily="var(--font-geist-sans), system-ui, sans-serif"
+        className="refined:[fill:#f6f0f5] refined:[font-family:var(--font-pn),system-ui,sans-serif] refined:[font-weight:600] refined:[letter-spacing:0.2px]"
       >
         {text}
       </text>

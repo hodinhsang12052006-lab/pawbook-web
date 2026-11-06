@@ -168,7 +168,7 @@ function NoMediaCover({ tech }: { tech: TechnicianType }) {
   const [a, b] = avatarGradient(tech.user.id);
   const [ca, cb] = avatarGradientClassic(tech.user.id);
   return (
-    <div className="absolute inset-0 flex items-center justify-center refined:[background:var(--nm-bg)]!" style={{ background: `linear-gradient(135deg, ${ca}55, ${cb}33), #0f172a`, ["--nm-bg" as string]: `linear-gradient(160deg, ${a}40, ${b}1f), #17171a` }}>
+    <div className="absolute inset-0 flex items-center justify-center refined:[background:var(--nm-bg)]!" style={{ background: `linear-gradient(135deg, ${ca}55, ${cb}33), #0f172a`, ["--nm-bg" as string]: `linear-gradient(160deg, ${a}40, ${b}1f), var(--color-pn-surface)` }}>
       <div className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px] refined:hidden" />
       <Avatar src={tech.user.avatarUrl} name={tech.user.name} seed={tech.user.id} className="relative -mt-6 h-16 w-16 ring-4 ring-white/10 shadow-xl" />
     </div>

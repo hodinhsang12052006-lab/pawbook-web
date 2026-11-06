@@ -259,7 +259,7 @@ export default function HomePage() {
             {sessionUser && (
               <div className="px-1">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                  {greeting()}{displayName ? `, ${displayName}` : ""} 👋
+                  {greeting()}{displayName ? `, ${displayName}` : ""}
                 </h1>
                 <p className="mt-0.5 text-sm text-slate-400">{(sessionUser.role === "ADMIN" && tabSubtitle()[tab].admin) || tabSubtitle()[tab][sessionUser.role === "OWNER" ? "owner" : "tech"]}</p>
               </div>
@@ -429,7 +429,7 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             {/* Điện thoại: lớp nền phủ tràn hết chiều ngang (không còn tấm nền vuông thò ra 2 bên thanh tab) */}
-            <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:border-b refined:border-pn-line refined:bg-pn-canvas refined:[backdrop-filter:none] refined:[mask-image:none]">
+            <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:[mask-image:none] pn-glass pn-sticky-tabs">
               <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
                 {/* Viên chọn trượt mượt sang tab đang mở */}
                 <span

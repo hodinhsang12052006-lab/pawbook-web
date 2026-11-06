@@ -27,6 +27,27 @@ export default function ProfileCompletenessCard({
       ? tr("Hồ sơ tiệm đầy đủ giúp thợ tin tưởng và gọi nhiều hơn.", "A complete salon profile earns more trust and calls from techs.")
       : tr("Hồ sơ đầy đủ được chủ tiệm chú ý và nhắn tin nhiều hơn.", "Complete profiles get noticed and messaged more by salons.");
 
+  // Trang chủ / thanh bên (compact, V2): 1 hàng 56px — vòng tiến độ 32px, tiêu đề, "Tiếp theo: …". Cả hàng bấm được.
+  if (compact && !done && nextItem) {
+    const r = 13;
+    const c = 2 * Math.PI * r;
+    return (
+      <Link href="/profile" className="glass-card flex min-h-14 items-center gap-3 rounded-2xl py-2 pl-3 pr-12 transition-colors duration-[120ms] active:bg-pn-raised">
+        <span className="relative h-8 w-8 flex-shrink-0" role="img" aria-label={tr(`Hồ sơ hoàn thiện ${percent}%`, `Profile ${percent}% complete`)}>
+          <svg viewBox="0 0 32 32" className="h-8 w-8 -rotate-90">
+            <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,240,246,0.1)" strokeWidth="3" />
+            <circle cx="16" cy="16" r={r} fill="none" stroke="#db2777" strokeWidth="3" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - percent / 100)} />
+          </svg>
+          <span className="pn-micro absolute inset-0 flex items-center justify-center text-[10px] text-pn-text tabular-nums">{percent}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold leading-5 text-pn-text">{tr("Hoàn thiện hồ sơ", "Complete your profile")}</span>
+          <span className="block truncate text-[13px] leading-[18px] text-pn-text-2">{tr("Tiếp theo: ", "Next: ")}{nextItem.label}</span>
+        </span>
+      </Link>
+    );
+  }
+
   return (
     <div className="glass-card rounded-2xl p-4">
       <div className="flex items-center gap-3">

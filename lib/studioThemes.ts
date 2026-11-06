@@ -26,7 +26,7 @@ export const THEMES: Theme[] = [
     colors: ["#f97316", "#7c3aed"], from: [10, 1], to: [10, 31],
   },
   {
-    id: "fall", title: "Móng mùa thu", emoji: "🍂", hashtag: "MongMuaThu", priority: 1,
+    id: "fall", title: "Móng mùa thu", emoji: "🍂", hashtag: "MongMuaThu", priority: 1, markets: ["US"], // Úc đang mùa xuân
     blurb: "Burgundy, nâu caramel, đồi mồi (tortoise) và nhũ vàng đồng đang lên ngôi.",
     ideas: ["Burgundy bóng gương", "Đồi mồi tortoise", "Nâu caramel + viền vàng", "Ombre cam cháy"],
     ownerTip: "Đổi bảng màu trưng bày sang tông ấm — khách nhìn thấy màu mới là muốn đổi màu.",
@@ -68,7 +68,7 @@ export const THEMES: Theme[] = [
     colors: ["#e11d48", "#f472b6"], from: [2, 1], to: [2, 14],
   },
   {
-    id: "spring", title: "Pastel mùa xuân", emoji: "🌸", hashtag: "PastelXuan", priority: 1,
+    id: "spring", title: "Pastel mùa xuân", emoji: "🌸", hashtag: "PastelXuan", priority: 1, markets: ["US"],
     blurb: "Pastel sữa, hoa nhí, french màu — nhẹ nhàng, dễ bán cho khách văn phòng.",
     ideas: ["Pastel 5 ngón 5 màu", "Hoa cúc nhí", "French xanh mint"],
     ownerTip: "Đặt mẫu pastel ngay quầy lễ tân — mẫu dễ, thợ mới cũng làm đẹp, tăng công suất.",
@@ -96,7 +96,7 @@ export const THEMES: Theme[] = [
     colors: ["#e2e8f0", "#f9a8d4"], from: [5, 1], to: [9, 30],
   },
   {
-    id: "summer", title: "Móng mùa hè", emoji: "🌴", hashtag: "MongMuaHe", priority: 1,
+    id: "summer", title: "Móng mùa hè", emoji: "🌴", hashtag: "MongMuaHe", priority: 1, markets: ["US"],
     blurb: "Neon, trái cây, sóng biển — khách đi du lịch làm móng chân nhiều gấp đôi.",
     ideas: ["Neon cam chanh", "Trái cây vẽ tay", "Sóng biển xanh ngọc", "Pedicure màu kẹo"],
     ownerTip: "Combo tay + chân mùa hè — khách đi biển gần như luôn làm cả chân.",
@@ -108,5 +108,20 @@ export const THEMES: Theme[] = [
     ideas: ["Ngắn tròn màu trơn", "Kẻ caro nhỏ", "Nude bền màu"],
     ownerTip: "Ưu đãi sinh viên giờ vắng (thứ 2–4) — lấp lịch trống, tạo khách quen dài hạn.",
     colors: ["#2563eb", "#f43f5e"], from: [8, 10], to: [9, 10],
+  },
+  // ---- Nam bán cầu (Úc): mùa ngược với Mỹ — xuân tháng 9–11, hè (kể cả Giáng Sinh) tháng 12–2 ----
+  {
+    id: "spring-au", title: "Mùa xuân nước Úc", emoji: "🌼", hashtag: "PawNailSpringAU", priority: 1, markets: ["AU"],
+    blurb: "Hoa jacaranda tím, pastel sữa và french màu — mùa cưới, tiệc ngoài trời và Melbourne Cup.",
+    ideas: ["Tím jacaranda", "French pastel", "Hoa nhí vẽ tay", "Nude bóng gương"],
+    ownerTip: "Làm sẵn 3 mẫu \"Spring race day\" cho mùa đua ngựa tháng 11 — khách đặt theo nhóm, tip cao.",
+    colors: ["#a78bfa", "#f9a8d4"], from: [9, 15], to: [11, 30],
+  },
+  {
+    id: "summer-au", title: "Hè nước Úc", emoji: "🌊", hashtag: "PawNailSummerAU", priority: 1, markets: ["AU"],
+    blurb: "Giáng Sinh giữa mùa hè: xanh biển, san hô, chrome ngọc trai và móng chân màu kẹo.",
+    ideas: ["Xanh biển glazed", "San hô bóng", "Chrome ngọc trai", "Pedicure màu kẹo"],
+    ownerTip: "Combo tay + chân trước kỳ nghỉ hè — khách đi biển gần như luôn làm cả chân; mở lịch sớm từ cuối tháng 11.",
+    colors: ["#14b8a6", "#fb7185"], from: [12, 1], to: [2, 28],
   },
 ];

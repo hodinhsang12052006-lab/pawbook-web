@@ -10,6 +10,7 @@ import SoundSettings from "@/components/settings/SoundSettings";
 import EmailDigestToggle from "@/components/settings/EmailDigestToggle";
 import Avatar from "@/components/ui/Avatar";
 import { isPlaceholderAvatar } from "@/lib/avatar";
+import { defaultCover, COVER_FADE } from "@/lib/defaultCovers";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
 import ProfileCompletenessCard from "@/components/profile/ProfileCompletenessCard";
 import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
@@ -310,6 +311,7 @@ export default function ProfilePage() {
 
   const isOwner = profile?.role === "OWNER";
   const isTechnician = profile?.role === "TECHNICIAN";
+  const ownCover = isTechnician ? portfolioImages.find((u) => !/\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(u)) : undefined;
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -317,10 +319,17 @@ export default function ProfilePage() {
 
       <main className={`mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 pt-5 md:px-6 md:pt-6 ${dirty ? "pb-40 md:pb-16" : "pb-5"}`}>
         {/* ===== HEADER: bìa + ảnh đại diện (bấm để đổi) ===== */}
-        <section className="overflow-hidden rounded-3xl border border-white/[0.07] bg-slate-900">
-          <div className="relative h-24 border-b border-pn-line bg-pn-raised sm:h-32" />
+        <section className="pn-profile-head overflow-hidden rounded-3xl border border-white/[0.07] bg-slate-900">
+          {/* Bìa: thợ có ảnh portfolio → ảnh đầu tiên; còn lại kết cấu "sơn mài" trừu tượng cùng tông avatar (lib/defaultCovers) */}
+          <div aria-hidden className="relative h-32 overflow-hidden bg-pn-raised sm:h-40" style={ownCover ? undefined : defaultCover(profile?.id)}>
+            {ownCover && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ownCover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+            )}
+            <div className="absolute inset-0" style={{ background: COVER_FADE }} />
+          </div>
           <div className="px-4 pb-5 sm:px-6">
-            <div className="-mt-10 flex items-end justify-between gap-3 sm:-mt-12">
+            <div className="-mt-11 flex items-end justify-between gap-3 sm:-mt-12">
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
@@ -328,7 +337,7 @@ export default function ProfilePage() {
                 aria-label={tr("Đổi ảnh đại diện", "Change profile photo")}
                 className="group relative flex-shrink-0 rounded-full"
               >
-                <Avatar src={profile?.avatarUrl} name={name} seed={profile?.id} loading="eager" className="h-20 w-20 shadow-xl shadow-black/50 ring-4 ring-slate-900 sm:h-24 sm:w-24" />
+                <Avatar src={profile?.avatarUrl} name={name} seed={profile?.id} loading="eager" className="h-[88px] w-[88px] shadow-xl shadow-black/50 ring-4 ring-slate-900 refined:ring-[3px] refined:ring-pn-surface refined:shadow-[0_1px_2px_rgb(8_4_10/0.35),0_12px_32px_-16px_rgb(8_4_10/0.7)] sm:h-[104px] sm:w-[104px]" />
                 <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                   <Camera className="h-5 w-5 text-white" />
                 </span>

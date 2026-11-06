@@ -37,17 +37,17 @@ const CLASSIC: [string, string][] = [
   ["#e11d48", "#f97316"], // đỏ hồng → cam
   ["#4f46e5", "#0ea5e9"], // chàm → xanh trời
 ];
-// 11/2026 (trong app): cặp gần-đặc, trầm (chữ trắng ≥ 5.4:1) — bỏ gradient 2 màu rực làm "loè"
-// header/danh sách/chat. Không có tông xám: avatar chữ cái xám đọc như tài khoản bị khoá / chưa có thật.
+// V2 (06/11/2026, trong app): "monogram mẫu sơn" — mỗi người 1 cặp [nền, ánh] như 1 lọ sơn móng (oxblood, hồng,
+// mauve, mận, đồng, xanh xô thơm, xanh két, cacao). Chữ ngà #f6f0f5 ≥ 4.8:1 trên mọi tông. Không bao giờ là mặt người.
 const GRADIENTS: [string, string][] = [
-  ["#8a3a5c", "#7a3352"], // hồng trầm
-  ["#3d5a85", "#354f75"], // xanh thép
-  ["#24706e", "#1f6260"], // xanh két
-  ["#33745a", "#2c654e"], // lục
-  ["#86642c", "#765826"], // vàng đất
-  ["#7a4a38", "#6b4131"], // nâu cacao
-  ["#874036", "#77382f"], // đất nung
-  ["#5e6a34", "#525d2d"], // ô liu
+  ["#6b2337", "#8d3550"], // oxblood
+  ["#7e3356", "#9a4469"], // rose
+  ["#5f4366", "#7a5781"], // mauve
+  ["#4a3256", "#634373"], // plum
+  ["#6e5534", "#83653f"], // bronze
+  ["#465c4a", "#566f5a"], // sage
+  ["#2e5a5e", "#3d7276"], // teal
+  ["#5a3f35", "#765447"], // cocoa
 ];
 
 /**
@@ -63,7 +63,8 @@ export function avatarSrc(url: string | null | undefined, name?: string | null, 
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">` +
     `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs>` +
     `<rect width="40" height="40" fill="url(#g)"/>` +
-    `<text x="20" y="20" dy="0.35em" text-anchor="middle" fill="#fff" font-size="${text.length > 1 ? 15 : 17}" font-weight="700" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">${text}</text>` +
+    `<ellipse cx="14" cy="10" rx="14" ry="8" fill="#fff" opacity="0.1"/>` +
+    `<text x="20" y="20" dy="0.35em" text-anchor="middle" fill="#f6f0f5" font-size="${text.length > 1 ? 15 : 17}" font-weight="600" font-family="Be Vietnam Pro,system-ui,-apple-system,Segoe UI,Roboto,sans-serif">${text}</text>` +
     `</svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
@@ -72,6 +73,11 @@ function seedIndex(seed?: string | null): number {
   let h = 0;
   for (const ch of seed || "") h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return h;
+}
+
+/** Chỉ số tông (0–7) theo chuỗi — dùng chung cho avatar + ảnh bìa mặc định (lib/defaultCovers.ts). */
+export function toneIndex(seed?: string | null): number {
+  return seedIndex(seed) % GRADIENTS.length;
 }
 
 /** Màu cố định theo chuỗi (id hoặc tên) — cùng người luôn cùng màu ở mọi nơi. */

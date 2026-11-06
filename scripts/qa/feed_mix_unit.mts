@@ -18,5 +18,16 @@ ok("F4", "2 bài chính thức cùng loại trong 1 trang → giữ bài mới h
 const onlyOfficial = mixFeed([P("o1", "ADMIN", "✨ a"), P("o2", "ADMIN", "📍 b")]).map((p) => p.id);
 ok("F5", "Trang chỉ có bài chính thức → vẫn hiện (không trống)", onlyOfficial.join(",") === "o1,o2", onlyOfficial.join(","));
 
+// 06/11/2026: trang toàn bài chính thức (thực tế hiện nay) — bài kiến thức trùng emoji KHÔNG bị bỏ
+const know = [P("k1", "ADMIN", "🗣️ a"), P("k2", "ADMIN", "🗣️ b"), P("k3", "ADMIN", "💅 c"), P("k4", "ADMIN", "🗣️ d"), P("k5", "ADMIN", "💅 e"), P("k6", "ADMIN", "🗣️ f"), P("k7", "ADMIN", "💅 g")];
+const kOut = mixFeed(know);
+ok("F6", "4 bài 🗣️ + 3 bài 💅 cùng trang → hiện đủ 7 bài", kOut.length === 7, kOut.map((p) => p.id).join(","));
+ok("F7", "Trang toàn bài chính thức → không 2 bài cùng loại liền nhau (khi đổi chỗ được)", kOut.filter((p, i) => i > 0 && kindOf(p.content) === kindOf(kOut[i - 1].content)).length <= 1, kOut.map((p) => p.content).join(" | "));
+const D = (id: string, content: string, day: string) => ({ id, content, author: { role: "ADMIN" }, createdAt: `${day}T12:00:00Z` });
+const days = mixFeed([D("g1", "✨ 4 mẫu", "2026-11-06"), D("g2", "✨ 4 mẫu", "2026-11-06"), D("g3", "✨ 4 mẫu", "2026-11-05"), D("j1", "📍 TX", "2026-11-06"), D("j2", "📍 CA", "2026-11-05")]).map((p) => p.id);
+ok("F8", "Chỉ gộp ✨/📍 CÙNG ngày UTC (giữ bản mới nhất mỗi ngày)", days.length === 4 && !days.includes("g2"), days.join(","));
+const page12 = Array.from({ length: 12 }, (_, i) => P(`a${i}`, "ADMIN", `${["💅", "🗣️", "⭐", "📰", "💬", "🧾"][i % 6]} bài ${i}`));
+ok("F9", "Trang 12 bài chính thức (không có ✨/📍 trùng ngày) → trả ≥ 10 bài", mixFeed(page12).length >= 10, String(mixFeed(page12).length));
+
 console.log(`\nTrộn bảng tin: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

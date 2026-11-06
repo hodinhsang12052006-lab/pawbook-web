@@ -346,16 +346,16 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
 }
 
 /** Dải "Mẫu nail mới hôm nay" trên bảng tin — ẩn khi chưa có mẫu đã duyệt. */
-export function DesignsStrip() {
+export function DesignsStrip({ offset = 0 }: { offset?: number } = {}) {
   useTr(); // render lại khi đổi VI/EN
   const [items, setItems] = useState<Design[] | null>(null);
   const [open, setOpen] = useState<Design | null>(null);
   useEffect(() => {
-    fetch("/api/designs?limit=8")
+    fetch(`/api/designs?limit=8${offset ? `&offset=${offset}` : ""}`)
       .then((r) => (r.ok ? r.json() : { designs: [] }))
       .then((d) => setItems(d.designs || []))
       .catch(() => setItems([]));
-  }, []);
+  }, [offset]);
   if (!items?.length) return null;
   const update = (id: string, saved: boolean, saves: number) => {
     setItems((list) => list?.map((x) => (x.id === id ? { ...x, saved, saves } : x)) ?? null);

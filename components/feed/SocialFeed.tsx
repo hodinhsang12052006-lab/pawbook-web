@@ -17,6 +17,7 @@ import { DesignsStrip } from "@/components/designs/DesignViews";
 import JobFeedCard from "./JobFeedCard";
 import type { JobType } from "@/components/jobs/JobBoard";
 import { stateName } from "@/lib/stateNames";
+import { spaceByKind } from "@/lib/feedMix";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
@@ -24,6 +25,8 @@ const RECAP_AFTER_POST = 8;
 // "Nhịp đau tuần" ngay sau bài đầu tiên; bài radar đã duyệt chen thưa.
 const PULSE_AFTER_POST = 1;
 const RADAR_AFTER_POSTS = [5, 11, 17];
+// Mẫu nail thật (ảnh minh hoạ AI có nhãn) chen giữa bảng tin: sau bài 2 và bài 9 (dải khác nhau) — V2 06/11/2026.
+const DESIGNS_AFTER_POSTS: [number, number][] = [[2, 0], [9, 8]];
 // Tin tuyển THẬT chen vào bảng tin: cứ 3 bài thì 1 tin việc (mới nhất trước).
 const JOB_EVERY_N_POSTS = 3;
 const FEED_JOBS = 15;
@@ -69,7 +72,11 @@ const SUPPLY_EVERY_N_POSTS = 8;
 // đăng cùng lúc thành 1 bức tường "PawNail Jobs" dài cả màn hình. Giữ thứ tự mới
 // nhất cho bài cộng đồng, bài chính thức xen vào sau mỗi bài cộng đồng; còn dư
 // thì chờ trang sau (hết trang mới xếp nốt ở cuối).
+// 06/11/2026: khi CHƯA có bài cộng đồng nào (thực tế hiện nay), luật "chờ bài cộng đồng chen vào" giữ lại mọi bài
+// chính thức trừ 1 → bảng tin chỉ có đúng 1 bài trong khi tự tải hết trang này tới trang khác. Giờ: không có bài
+// cộng đồng thì hiện hết (chỉ đổi chỗ để 2 bài cùng loại không liền nhau); có thì giữ lại tối đa 2 bài chờ trang sau.
 function spreadOfficial(posts: FeedPost[], hasMore: boolean): FeedPost[] {
+  if (!posts.some((p) => p.author.role !== "ADMIN")) return spaceByKind(posts);
   const out: FeedPost[] = [];
   const waiting: FeedPost[] = [];
   let lastOfficial = false;
@@ -82,7 +89,8 @@ function spreadOfficial(posts: FeedPost[], hasMore: boolean): FeedPost[] {
     lastOfficial = false;
     if (waiting.length) { out.push(waiting.shift()!); lastOfficial = true; }
   }
-  return hasMore ? out : out.concat(waiting);
+  // còn trang sau: chỉ giữ lại tối đa 2 bài chờ chen giữa bài cộng đồng của trang sau, phần dư hiện luôn
+  return hasMore ? out.concat(waiting.slice(0, Math.max(0, waiting.length - 2))) : out.concat(waiting);
 }
 
 function FeedSkeleton() {
@@ -133,6 +141,9 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  // Tự tải thêm khi trang đầu quá ít — tối đa 2 lần (trước đây không giới hạn: tải liền 12–14 trang, 1 lỗi là kẹt)
+  const autoLoads = useRef(0);
 
   const loadingMoreRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -153,6 +164,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         if (cancelled) return;
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
+        autoLoads.current = 0;
+        setLoadMoreError(false);
       } catch (err: any) {
         if (!cancelled) setError(err.message || tr("Đã xảy ra lỗi.", "Something went wrong."));
       } finally {
@@ -201,6 +214,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     if (!nextCursor || loadingMoreRef.current) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
+    setLoadMoreError(false);
     try {
       const params = new URLSearchParams({ market, cursor: nextCursor });
       if (state) params.set("state", state);
@@ -210,9 +224,10 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         const data = await res.json();
         setPosts((prev) => [...prev, ...data.posts]);
         setNextCursor(data.nextCursor);
-      }
+      } else setLoadMoreError(true);
     } catch (err) {
       console.error("Failed to load more feed posts:", err);
+      setLoadMoreError(true);
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
@@ -231,7 +246,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [nextCursor, loadMore]);
+    // posts.length: tạo lại observer sau mỗi lần tải xong → mốc đang nằm sẵn trong màn hình vẫn kích hoạt lần nữa
+  }, [nextCursor, loadMore, posts.length]);
 
   const handlePosted = (post: FeedPost) => setPosts((prev) => [post, ...prev]);
 
@@ -248,18 +264,23 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   // Trang đầu toàn bài chính thức → chỉ hiện được 1 bài (số còn lại chờ xen kẽ):
   // tự tải thêm trang để có bài cộng đồng chen vào, khỏi bắt người dùng cuộn.
   useEffect(() => {
-    if (!loading && nextCursor && ordered.length < 6) loadMore();
-  }, [loading, nextCursor, ordered.length, loadMore]);
+    if (!loading && !loadingMoreRef.current && !loadMoreError && nextCursor && ordered.length < 10 && autoLoads.current < 2) {
+      autoLoads.current += 1;
+      loadMore();
+    }
+  }, [loading, nextCursor, ordered.length, loadMore, loadMoreError]);
 
   // Trộn bài đăng + thẻ sản phẩm thành 1 danh sách render duy nhất.
   const feedItems = useMemo(() => {
     const items: Array<
-      { type: "post"; post: FeedPost } | { type: "job"; job: JobType } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" } | { type: "pulse" } | { type: "radar"; post: RadarPost }
+      { type: "post"; post: FeedPost } | { type: "job"; job: JobType } | { type: "supply"; product: SupplyProductType } | { type: "tip" } | { type: "recap" } | { type: "pulse" } | { type: "radar"; post: RadarPost } | { type: "designs"; offset: number }
     > = [];
     let supplyIdx = 0;
     let jobIdx = 0;
     ordered.forEach((post, idx) => {
       items.push({ type: "post", post });
+      const ds = DESIGNS_AFTER_POSTS.find(([after]) => after === idx + 1);
+      if (ds) items.push({ type: "designs", offset: ds[1] });
       if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
       if (idx + 1 === RECAP_AFTER_POST && studio?.recap) items.push({ type: "recap" });
       if (idx + 1 === PULSE_AFTER_POST && user) items.push({ type: "pulse" });
@@ -273,6 +294,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     });
     // Hết bài (bảng tin còn ít) → xếp nốt tin việc ở cuối, đừng để trống.
     if (!nextCursor) while (feedJobs[jobIdx]) items.push({ type: "job", job: feedJobs[jobIdx++] });
+    // Bảng tin còn ngắn (chưa tới bài thứ 2) → dải mẫu nail vẫn có mặt, không để khoảng trống
+    if (ordered.length > 0 && ordered.length < DESIGNS_AFTER_POSTS[0][0]) items.push({ type: "designs", offset: 0 });
     return items;
   }, [ordered, nextCursor, feedJobs, supplyProducts, studio, radarPosts, user]);
 
@@ -310,7 +333,6 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          <DesignsStrip />
           {feedItems.map((item, idx) =>
             item.type === "post" ? (
               <FeedPostCard
@@ -329,6 +351,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
               <PulseCard key="pulse" />
             ) : item.type === "radar" ? (
               <RadarPostCard key={`radar-${item.post.id}`} post={item.post} />
+            ) : item.type === "designs" ? (
+              <DesignsStrip key={`designs-${item.offset}`} offset={item.offset} />
             ) : (
               <RecapCard key="studio-recap" recap={studio!.recap!} market={market} />
             )
@@ -337,6 +361,13 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       )}
 
       <div ref={sentinelRef} className="h-2 w-full" />
+      {loadMoreError && nextCursor && !loadingMore && (
+        <div className="flex justify-center">
+          <button type="button" onClick={() => loadMore()} className="min-h-11 rounded-[14px] border border-pn-line-strong px-5 text-[15px] font-semibold text-pn-text">
+            {tr("Tải thêm", "Load more")}
+          </button>
+        </div>
+      )}
       {loadingMore && (
         <div className="flex items-center justify-center py-3">
           <Loader2 className="h-5 w-5 text-pink-500 animate-spin" />

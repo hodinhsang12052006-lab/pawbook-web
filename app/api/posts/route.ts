@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
 import { sendPush } from "@/lib/push";
 import { getViews } from "@/lib/postStats";
-import { kindOf, mixFeed } from "@/lib/feedMix";
+import { COLLAPSE_KINDS, kindOf, mixFeed } from "@/lib/feedMix";
 import { Market, PostType } from "@prisma/client";
 
 const PAGE_SIZE = 12;
@@ -75,7 +75,8 @@ export async function GET(req: NextRequest) {
     if (market === "US" || market === "AU") and.push({ OR: [{ market: market as Market }, { market: null }] });
     if (state) and.push({ OR: [{ state }, { state: null }] });
     if (and.length) where.AND = and;
-    if (city) where.city = { contains: city };
+    // Lọc thành phố: bài chung (bài chính thức, city trống) vẫn hiện — trước đây ?city=Houston ra 0 bài và màn trống.
+    if (city) (where.AND ??= []).push({ OR: [{ city: { contains: city } }, { city: null }] });
     // Trang hồ sơ 1 người: KHÔNG kèm bài ẩn danh của họ (kẻo lộ danh tính) — trừ chính chủ xem
     if (authorId) { where.authorId = authorId; if (authorId !== viewerId) where.anonymous = false; }
     if (postType && VALID_POST_TYPES.includes(postType)) where.postType = postType as PostType;
@@ -106,11 +107,15 @@ export async function GET(req: NextRequest) {
         take: 60,
         select: { id: true, content: true, createdAt: true },
       });
+      // CHỈ bài lặp hằng ngày (✨ bộ mẫu, 📍 tin việc) mới bị thay bởi bản mới hơn trong 24h; bài kiến thức/tin/thăm dò giữ hết.
+      const collapse = new Set(COLLAPSE_KINDS);
       const newest = new Map<string, { id: string; at: number }>();
-      for (const r of recent) { const k = kindOf(r.content); if (k && !newest.has(k)) newest.set(k, { id: r.id, at: r.createdAt.getTime() }); }
+      for (const r of recent) { const k = kindOf(r.content); if (k && collapse.has(k) && !newest.has(k)) newest.set(k, { id: r.id, at: r.createdAt.getTime() }); }
       shown = mixFeed(posts.filter((p) => {
         if (p.author.role !== "ADMIN") return true;
-        const n = newest.get(kindOf(p.content));
+        const k = kindOf(p.content);
+        if (!collapse.has(k)) return true;
+        const n = newest.get(k);
         return !n || n.id === p.id || n.at - p.createdAt.getTime() > 24 * 3_600_000;
       }));
     }

@@ -119,6 +119,15 @@ export default function HomePage() {
     const urlState = params.get("state");
     if (urlState) setState(urlState);
   }, []);
+  // Người dùng ở Úc vào thẳng bảng tin / việc làm của Úc (trước đây luôn mở US). ?market= trên URL vẫn được ưu tiên;
+  // bang để trống (cả nước) — người dùng tự chọn bang. Chỉ áp 1 lần khi phiên tải xong.
+  const marketFromSession = useRef(false);
+  useEffect(() => {
+    if (marketFromSession.current || !sessionUser) return;
+    marketFromSession.current = true;
+    if (new URLSearchParams(window.location.search).get("market")) return;
+    if (sessionUser.market === "AU") setMarket("AU");
+  }, [sessionUser]);
 
   // BottomNav (mounted globally in the root layout, outside this component's
   // tree — unlike Sidebar, which is a direct child here and gets setTab via

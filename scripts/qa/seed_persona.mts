@@ -36,6 +36,24 @@ const design =
       materials: JSON.stringify([{ vi: "Gel màu caramel", en: "Caramel color gel", qty: "1 lọ" }]), steps: "[]", provider: "sample", prompt: "qa", status: "published", publishedAt: new Date(),
     },
   }));
+// /api/designs chỉ trả mẫu CÓ ảnh → gắn ảnh tay mẫu của repo (public/hands) + vài mẫu theo thị trường / mùa để
+// kiểm tra bộ lọc thị trường (Lễ Tạ Ơn chỉ ở Mỹ, mùa xuân của Úc trong tháng 11) trên /designs.
+if (!design.imageUrl) await prisma.nailDesign.update({ where: { id: design.id }, data: { imageUrl: "/hands/ombre.jpg" } });
+const extra = [
+  { market: "US", occasion: "thanksgiving", title: "Cam cháy Lễ Tạ Ơn", titleEn: "Thanksgiving burnt orange", img: "/hands/olive.jpg" },
+  { market: "AU", occasion: "spring", title: "Pastel mùa xuân", titleEn: "Soft spring pastels", img: "/hands/pink.jpg" },
+  { market: "US", occasion: null, title: "Nude bóng gương", titleEn: "Glossy mirror nude", img: "/hands/white.jpg" },
+] as const;
+for (const x of extra) {
+  if (await prisma.nailDesign.findFirst({ where: { title: x.title } })) continue;
+  await prisma.nailDesign.create({
+    data: {
+      day: new Date().toISOString().slice(0, 10), market: x.market, occasion: x.occasion, title: x.title, titleEn: x.titleEn,
+      description: "Mẫu QA.", descriptionEn: "QA design.", skills: "Gel-X", difficulty: 1, minutes: 50, priceHint: "$45–60",
+      materials: "[]", steps: "[]", imageUrl: x.img, provider: "sample", prompt: "qa", status: "published", publishedAt: new Date(),
+    },
+  });
+}
 if (!(await prisma.menuItem.count({ where: { ownerId: ava.id } }))) {
   await prisma.menuItem.createMany({
     data: [

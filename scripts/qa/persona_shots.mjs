@@ -27,8 +27,13 @@ async function ctxFor({ locale = "en-US", timezoneId = "America/Chicago", loginA
   }
   return ctx;
 }
+const lastPage = new WeakMap();
 async function shot(ctx, url, name, { wait = 1500, act } = {}) {
+  // Đóng trang trước của cùng ngữ cảnh (đã kiểm tra xong) — để mở hàng chục trang messenger cùng lúc thì
+  // Chromium trên máy QA hết bộ nhớ ("Page crashed").
+  await lastPage.get(ctx)?.close().catch(() => {});
   const p = await ctx.newPage();
+  lastPage.set(ctx, p);
   const errors = [];
   p.on("pageerror", (e) => errors.push(String(e.message)));
   p.on("console", (m) => { if (m.type() === "error" && /hydrat|#418|#425|#423/i.test(m.text())) errors.push(m.text()); });
@@ -46,7 +51,8 @@ const visibleText = (p) => p.evaluate(() => {
     if (st.display === "none" || st.visibility === "hidden") return "";
     return [...n.childNodes].map(walk).join(" ");
   };
-  return walk(document.body).replace(/\s+/g, " ");
+  // "Tiếng Việt" = tên ngôn ngữ ở nút VI/EN / link "Tiếng Việt" — cố ý, không phải chữ sót.
+  return walk(document.body).replace(/\s+/g, " ").replace(/Tiếng Việt/g, "Vietnamese");
 });
 
 const ava = await (await fetch(`${BASE_URL}/api/salons?market=US&limit=48`)).json().then((d) => d.items.find((i) => i.name === "Ava Vu"));

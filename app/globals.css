@@ -767,7 +767,8 @@ html:not([data-ui-classic]) :is(.pn-glass, header.sticky.top-0)::before {
   -webkit-backdrop-filter: var(--pn-glass-filter);
   backdrop-filter: var(--pn-glass-filter);
 }
-html:not([data-ui-classic]) body:has(.pn-sticky-tabs) header.sticky.top-0 { border-bottom-color: transparent; }
+/* thanh trên + tab dính = 1 khối: vạch 1px giữa 2 lớp tô cùng màu kính (trước: trong suốt → chữ bài cuộn lộ qua khe 1px) */
+html:not([data-ui-classic]) body:has(.pn-sticky-tabs) header.sticky.top-0 { border-bottom-color: var(--pn-glass-bg); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   html:not([data-ui-classic]) :is(.pn-glass, header.sticky.top-0)::before { background: var(--color-pn-canvas); }
 }
@@ -1182,6 +1183,8 @@ html[data-chat-open] .pn-bnav { display: none; }
     background: rgb(255 240 246 / 0.22);
   }
   html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] > div:first-child { padding-top: 18px; }
+  /* sheet đang mở: dock ẩn đi (thanh trên là 1 lớp cô lập nên dock từng nổi đè lên sheet) */
+  html:not([data-ui-classic]) body:has(.pn-notif-panel) .pn-bnav { display: none; }
 
   /* Chi tiết việc: thanh Gọi / Nhắn dính ngay trên dock (kiểu Indeed / Fresha), tôn trọng vùng an toàn */
   html:not([data-ui-classic]) .pn-job-cta {
@@ -1211,4 +1214,15 @@ html:not([data-ui-classic]) .pn-post-tag { line-height: 16px; }
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-ui-classic]) .pn-notif-scrim + .pn-notif-panel[role="dialog"] { animation: none; }
+}
+
+/* Trang chủ điện thoại: thẻ "Bắt đầu với PawNail" chỉ hiện BƯỚC TIẾP THEO (đã xong + các bước sau ẩn đi, số 0/3 vẫn
+   ở tiêu đề) → băng-rôn mùa + bài đầu tiên lên màn hình đầu. Ô giữ chỗ khi tải co theo đúng chiều cao mới. */
+@media (max-width: 767px) {
+  html:not([data-ui-classic]) .pn-nudges section[data-nudge] { padding: 12px 14px; }
+  html:not([data-ui-classic]) .pn-nudges section[data-nudge] > .h-1\.5 { display: none; }
+  html:not([data-ui-classic]) .pn-nudges section[data-nudge] ol { margin-top: 10px; }
+  html:not([data-ui-classic]) .pn-nudges section[data-nudge] ol > li:has(> a[aria-disabled="true"]),
+  html:not([data-ui-classic]) .pn-nudges section[data-nudge] ol > li:has(> a[aria-disabled="false"]) ~ li { display: none; }
+  html:not([data-ui-classic]) .pn-nudges [data-onb-slot] { height: 118px; }
 }

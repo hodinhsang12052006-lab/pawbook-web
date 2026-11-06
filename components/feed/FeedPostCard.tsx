@@ -298,14 +298,14 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
             {anon ? (
               <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
             ) : (
-              <Link href={`/profile/${post.author.id}`} className="text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
+              <Link href={`/profile/${post.author.id}`} className="min-w-0 text-sm font-bold text-slate-100 hover:text-pink-400 transition-colors truncate">
                 {post.author.name}
               </Link>
             )}
             {anon && <span className="inline-flex flex-shrink-0 items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-200">{tr("Tâm sự ẩn danh", "Anonymous")}</span>}
             {isVerifiedRole(post.author.role) && <VerifiedBadge className="h-4 w-4 flex-shrink-0" />}
             {badge?.label && (
-              <span className={`pn-post-tag flex-shrink-0 rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
+              <span className={`pn-post-tag min-w-0 shrink-[4] truncate rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
                 {badge.label}
               </span>
             )}

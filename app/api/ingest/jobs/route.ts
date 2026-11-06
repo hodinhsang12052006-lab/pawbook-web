@@ -32,10 +32,16 @@ export async function POST(req: Request) {
   // Tin mới tạo: dịch mô tả sang tiếng Anh sau khi trả lời (khách / thợ đọc tiếng Anh thấy bản dịch).
   const created = (out as { results?: { status: string; jobId?: string }[] }).results?.filter((r) => r.status === "created" && r.jobId).map((r) => r.jobId!) ?? [];
   if (created.length) {
-    after(async () => {
-      const jobs = await prisma.job.findMany({ where: { id: { in: created.slice(0, 60) } }, select: { id: true, description: true } });
-      for (const j of jobs) await translateJobOnSave(j);
-    });
+    // after() chỉ có trong request thật của Next; gọi thẳng hàm route (bài test không qua máy chủ) thì bỏ bước dịch
+    // nền — tin vẫn được nhận như bình thường (không bao giờ để bước dịch làm hỏng việc nhận tin của bot).
+    try {
+      after(async () => {
+        const jobs = await prisma.job.findMany({ where: { id: { in: created.slice(0, 60) } }, select: { id: true, description: true } });
+        for (const j of jobs) await translateJobOnSave(j);
+      });
+    } catch {
+      /* ngoài request scope */
+    }
   }
   return NextResponse.json(out);
 }

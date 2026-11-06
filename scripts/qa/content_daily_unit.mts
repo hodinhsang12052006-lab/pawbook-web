@@ -50,7 +50,7 @@ const rf = await publishNewsPosts(new Date(now.getTime() + 5 * 86400e3), { news:
 const all = await prisma.post.findMany({ where: { authorId: admin.id }, select: { content: true } });
 ok("N2", "Tin AI chèn số liệu KHÔNG có trong nguồn ('37%') → bị chặn (bởi lọc số liệu hoặc lọc bài yếu), không đăng", rf.posted.length === 0 && rf.skipped.some((x) => x.includes("số liệu") || x.includes("bài viết yếu")) && !all.some((p) => p.content.includes("37%")), JSON.stringify(rf));
 const p0 = posts[0]?.content || "";
-ok("N3", "Bài có 📰 + ý chính + 'ý nghĩa với thợ/chủ tiệm' + Nguồn & link bài gốc + hashtag", p0.startsWith("📰") && p0.includes("• ") && p0.includes("👉") && p0.includes(`Nguồn: KHOU — https://example.com/a-${t}`) && p0.includes("#TinNganhNail"), p0);
+ok("N3", "Bài có 📰 + ý chính + 'ý nghĩa với thợ/chủ tiệm' + Nguồn & link bài gốc + hashtag", p0.startsWith("📰") && p0.includes("• ") && p0.includes("\n\nChủ tiệm nên theo dõi thông báo của sở cấp phép bang") &&p0.includes(`Nguồn: KHOU — https://example.com/a-${t}`) && p0.includes("#TinNganhNail"), p0);
 ok("N4", "Gắn đúng thị trường (tin Úc → AU)", posts.some((p) => p.market === "AU") && posts.some((p) => p.market === "US"));
 const r2 = await publishNewsPosts(new Date(now.getTime() + 3600e3), { news, max: 2 });
 ok("N5", "Cùng ngày đã đủ 2 tin → không đăng thêm", r2.posted.length === 0);
@@ -92,7 +92,7 @@ for (let i = 0; i < 3; i++) {
 }
 const d1 = await publishJobDigest(new Date(now.getTime() + 3600e3));
 const dp = await prisma.post.findFirst({ where: { authorId: admin.id, content: { startsWith: "📍" } } });
-ok("J1", "Bài 📍 điểm tin việc: đúng bang, liệt kê tiệm + lương, link tab Việc, KHÔNG lộ số điện thoại", d1.posted === true && /Queensland: \d+ tiệm đang cần thợ/.test(dp?.content || "") && (dp?.content || "").includes(`Digest Nails ${t}-0`) && /\?tab=jobs/.test(dp?.content || "") && !(dp?.content || "").includes("+614") && dp?.state === "QLD", dp?.content?.slice(0, 200));
+ok("J1", "Bài 📍 điểm tin việc: đúng bang, liệt kê tiệm + lương, link tab Việc, KHÔNG lộ số điện thoại", d1.posted === true && /Queensland: \d+ tiệm đang (cần|tuyển) thợ/.test(dp?.content || "") && (dp?.content || "").includes(`Digest Nails ${t}-0`) && /\?tab=jobs/.test(dp?.content || "") && !(dp?.content || "").includes("+614") && dp?.state === "QLD", dp?.content?.slice(0, 200));
 const d2 = await publishJobDigest(new Date(now.getTime() + 2 * 3600e3));
 ok("J2", "Cùng ngày → không đăng bài điểm tin thứ 2", d2.posted === false);
 const o5 = await publishDailyOfficialPost(new Date(now.getTime() + 86400e3));

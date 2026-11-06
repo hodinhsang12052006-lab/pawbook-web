@@ -320,7 +320,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <h2 className="text-sm font-bold text-slate-200">{tr("Kỹ năng yêu cầu", "Skills required")}</h2>
               <div className="flex flex-wrap gap-2">
                 {job.skills.map((s) => (
-                  <span key={s} className="rounded-full bg-pink-500/10 border border-pink-500/25 px-3 py-1 text-xs font-semibold text-pink-300">{valueLabel(s)}</span>
+                  <span key={s} className="rounded-full bg-white/[0.05] px-3 py-1 text-xs font-semibold text-slate-300 ring-1 ring-inset ring-white/[0.08]">{valueLabel(s)}</span>
                 ))}
               </div>
             </section>

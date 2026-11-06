@@ -48,7 +48,7 @@ function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: st
   const scopeLabel = stateSignal ? tr(`tại ${stateName(market, state)}`, `in ${stateName(market, state)}`) : market === "US" ? tr("tại Mỹ", "in the US") : tr("tại Úc", "in Australia");
 
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3 mb-3">
+    <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-pn-surface px-4 py-3 mb-3">
       <Zap className="h-5 w-5 text-amber-400 flex-shrink-0" />
       <p className="text-xs sm:text-sm text-slate-200">
         <span className="font-black text-amber-400">{count}{tr("+ tin chủ tìm thợ", "+ salon hiring posts")}</span> {scopeLabel}{tr(" trong 1 đợt khảo sát nhóm nail (9/2026) — thợ giỏi thường nhận nhiều lời mời cùng lúc, nhắn tin ngay khi thấy hồ sơ ưng ý.", " in one survey of nail groups (Sep 2026) — great techs get many offers, message as soon as you find a match.")}
@@ -147,8 +147,8 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === "AVAILABLE") {
     return (
-      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-start gap-1 rounded-lg bg-emerald-500/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-white leading-tight">
-        <span className="h-1.5 w-1.5 flex-shrink-0 mt-0.5 rounded-full bg-white animate-pulse" />
+      <span className="absolute top-2 left-2 max-w-[46%] inline-flex items-start gap-1.5 rounded-lg bg-black/60 px-2 py-1 text-[10px] font-semibold text-white leading-tight ring-1 ring-white/10 backdrop-blur-sm">
+        <span className="h-1.5 w-1.5 flex-shrink-0 mt-[3px] rounded-full bg-emerald-400" />
         <span className="line-clamp-2">{tr("Đang rảnh hôm nay", "Available today")}</span>
       </span>
     );

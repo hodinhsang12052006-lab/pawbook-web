@@ -23,19 +23,18 @@ export default function ClientRegisterForm() {
   // Thị trường mặc định theo người xem (IP / en-AU / múi giờ Úc) — khách ở Sydney không bị chọn sẵn 🇺🇸 và
   // đầu số +1. Bấm chọn thì giữ lựa chọn đó.
   const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
-  const [market, setMarketState] = useState<"US" | "AU">(viewerMarket);
-  const marketTouched = React.useRef(false);
-  React.useEffect(() => {
-    if (!marketTouched.current) { setMarketState(viewerMarket); setState(""); }
-  }, [viewerMarket]);
-  const setMarket = (m: "US" | "AU") => { marketTouched.current = true; setMarketState(m); rememberMarket(m); };
-  const [state, setState] = useState("");
+  const [picked, setPicked] = useState<"US" | "AU" | null>(null);
+  const market = picked ?? viewerMarket;
+  const setMarket = (m: "US" | "AU") => { setPicked(m); rememberMarket(m); };
+  const [stateRaw, setState] = useState("");
   const [city, setCity] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const states = market === "US" ? US_ALL_CODES : AU_ALL_CODES;
+  // Bang của thị trường khác (thị trường mặc định vừa đổi theo IP / múi giờ) → coi như chưa chọn.
+  const state = (states as readonly string[]).includes(stateRaw) ? stateRaw : "";
   // Đăng ký bằng Google / Facebook từ màn này → bước Hoàn tất chọn sẵn "Khách".
   React.useEffect(() => { try { localStorage.setItem("pn_role_hint", "CLIENT"); } catch {} }, []);
   const field = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base ${isDark ? "border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500" : "border-slate-300 bg-white text-slate-900 placeholder-slate-400"}`;

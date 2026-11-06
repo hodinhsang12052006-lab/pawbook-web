@@ -1,6 +1,7 @@
 "use client";
 
 import { apiError } from "@/lib/i18n/apiError";
+import { SKILLS as VOCAB_SKILLS } from "@/lib/nailVocab";
 import React, { useCallback, useEffect, useState } from "react";
 import { BellPlus, BellRing, Loader2, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -14,7 +15,8 @@ import { playSound } from "@/lib/sounds";
 
 // "Báo tôi khi có việc như thế này" — thợ lưu tối đa 3 bộ lọc; có tin mới
 // khớp (thị trường + bang + kỹ năng) là nhận thông báo đẩy ngay.
-const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nước", "Wax", "Mi/Lông mày"];
+// Bộ từ vựng chung (lib/nailVocab.ts) — cùng giá trị với hồ sơ thợ, đăng tin và bộ lọc.
+const SKILLS = VOCAB_SKILLS;
 
 export interface JobAlertRow { id: string; market: "US" | "AU"; state: string | null; skill: string | null }
 

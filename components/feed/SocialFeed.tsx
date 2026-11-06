@@ -187,7 +187,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   // Khách làm nail không thấy chợ vật tư (công cụ của tiệm); chỉ hàng cùng thị trường (giá US$ / A$).
   const isClientViewer = user?.role === "CLIENT";
   useEffect(() => {
-    if (isClientViewer) { setSupplyProducts([]); return; }
+    if (isClientViewer) return;
     let cancelled = false;
     fetch(`/api/supply?market=${market === "AU" ? "AU" : "US"}`)
       .then((res) => (res.ok ? res.json() : { products: [] }))
@@ -269,7 +269,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
       const r = RADAR_AFTER_POSTS.indexOf(idx + 1);
       if (r >= 0 && radarPosts[r]) items.push({ type: "radar", post: radarPosts[r] });
       if ((idx + 1) % JOB_EVERY_N_POSTS === 0 && feedJobs[jobIdx]) items.push({ type: "job", job: feedJobs[jobIdx++] });
-      if (supplyProducts.length > 0 && (idx + 1) % SUPPLY_EVERY_N_POSTS === 0) {
+      if (!isClientViewer && supplyProducts.length > 0 && (idx + 1) % SUPPLY_EVERY_N_POSTS === 0) {
         items.push({ type: "supply", product: supplyProducts[supplyIdx % supplyProducts.length] });
         supplyIdx += 1;
       }

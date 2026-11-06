@@ -108,14 +108,10 @@ export default function HomePage() {
   // Thị trường mặc định theo NGƯỜI XEM (tài khoản → cookie → IP / ngôn ngữ / múi giờ): khách ở Sydney thấy tiệm
   // ở Úc, không phải "Dallas, Texas". ?market= trên URL hoặc bấm 🇺🇸 / 🇦🇺 thì giữ lựa chọn đó (và nhớ lại).
   const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
-  const [market, setMarketState] = useState<"US" | "AU">("US");
-  const marketPinned = useRef(false);
-  useEffect(() => {
-    if (!marketPinned.current) setMarketState(viewerMarket);
-  }, [viewerMarket]);
+  const [pinnedMarket, setPinnedMarket] = useState<"US" | "AU" | null>(null);
+  const market = pinnedMarket ?? viewerMarket;
   const setMarket = (m: "US" | "AU") => {
-    marketPinned.current = true;
-    setMarketState(m);
+    setPinnedMarket(m);
     rememberMarket(m);
   };
   const [state, setState] = useState("");
@@ -132,10 +128,7 @@ export default function HomePage() {
     const urlTab = params.get("tab");
     if (urlTab === "jobs" || urlTab === "portfolio" || urlTab === "feed") setTab(urlTab);
     const urlMarket = params.get("market");
-    if (urlMarket === "US" || urlMarket === "AU") {
-      marketPinned.current = true;
-      setMarketState(urlMarket);
-    }
+    if (urlMarket === "US" || urlMarket === "AU") setPinnedMarket(urlMarket);
     const urlState = params.get("state");
     if (urlState) setState(urlState);
   }, []);

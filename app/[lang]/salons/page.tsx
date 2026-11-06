@@ -18,14 +18,11 @@ export default function SalonsPage() {
   const { user } = useSessionUser();
   // Thị trường theo người xem (tài khoản → lựa chọn đã nhớ → IP / ngôn ngữ / múi giờ).
   const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
-  const [market, setMarketState] = useState<"US" | "AU">("US");
-  const pinned = React.useRef(false);
-  const setMarket = (m: "US" | "AU") => { pinned.current = true; setMarketState(m); rememberMarket(m); };
+  const [pinned, setPinned] = useState<"US" | "AU" | null>(null);
+  const market = pinned ?? viewerMarket;
+  const setMarket = (m: "US" | "AU") => { setPinned(m); rememberMarket(m); };
   const [state, setState] = useState("");
   const [look, setLook] = useState("");
-  useEffect(() => {
-    if (!pinned.current) setMarketState(viewerMarket);
-  }, [viewerMarket]);
   useEffect(() => {
     if (user?.state) setState(user.state);
   }, [user?.state]);

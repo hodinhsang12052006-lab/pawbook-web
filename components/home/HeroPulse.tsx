@@ -12,12 +12,13 @@ import { useTr } from "@/lib/i18n/useTr";
 // Mỹ + Úc ("21 việc làm") trong khi tab Việc làm ở Mỹ ghi "11", hai con số trực tiếp vênh nhau.
 export default function HeroPulse({ market = "US" }: { market?: "US" | "AU" }) {
   useTr();
-  const [n, setN] = useState<{ total: number; fresh: number } | null>(null);
+  const [got, setN] = useState<{ market: string; total: number; fresh: number } | null>(null);
+  // Chỉ hiện số của ĐÚNG thị trường đang xem (đổi thị trường → ẩn tới khi có số mới, không nháy số cũ).
+  const n = got && got.market === market ? got : null;
   useEffect(() => {
     let off = false;
-    setN(null);
     fetch(`/api/jobs?page=1&pageSize=5&market=${market}`)
-      .then((r) => (r.ok ? { total: Number(r.headers.get("X-Total-Count")) || 0, fresh: Number(r.headers.get("X-New-7d")) || 0 } : null))
+      .then((r) => (r.ok ? { market, total: Number(r.headers.get("X-Total-Count")) || 0, fresh: Number(r.headers.get("X-New-7d")) || 0 } : null))
       .then((v) => { if (!off && v && v.total >= 10) setN(v); })
       .catch(() => {});
     return () => { off = true; };

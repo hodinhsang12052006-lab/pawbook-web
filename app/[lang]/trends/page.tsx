@@ -64,9 +64,9 @@ export default function TrendsPage() {
   useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
-  const [market, setMarketState] = useState<"US" | "AU">("US");
-  const pinned = useRef(false);
-  const setMarket = (m: "US" | "AU") => { pinned.current = true; setMarketState(m); rememberMarket(m); };
+  const [pinned, setPinned] = useState<"US" | "AU" | null>(null);
+  const market = pinned ?? viewerMarket;
+  const setMarket = (m: "US" | "AU") => { setPinned(m); rememberMarket(m); };
   const [data, setData] = useState<TrendsData | null>(null);
   const [error, setError] = useState(false);
   const studio = useStudio(market, user?.role);
@@ -79,10 +79,7 @@ export default function TrendsPage() {
     };
   }, [market]);
 
-  // Thị trường theo người xem (tài khoản → lựa chọn đã nhớ → IP / ngôn ngữ / múi giờ).
-  useEffect(() => {
-    if (!pinned.current) setMarketState(viewerMarket);
-  }, [viewerMarket]);
+  // Thị trường theo người xem (tài khoản → lựa chọn đã nhớ → IP / ngôn ngữ / múi giờ), trừ khi đã tự chọn.
 
   useEffect(() => {
     let cancelled = false;

@@ -8,6 +8,8 @@ import { BASE_URL, Client, Results, registerUser } from "./lib.mjs";
 
 const R = new Results("Đăng hộ tiệm");
 const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
+// Server đang chạy trên cùng file (VD after() dịch tin mới vừa nhận đọc DB) → chờ khoá thay vì SQLITE_BUSY ngay.
+await db.execute("PRAGMA busy_timeout = 5000");
 const KEY = "test-ingest-key-0123456789abcdef";
 const ingest = (posts, key = KEY) => fetch(BASE_URL + "/api/ingest/jobs", { method: "POST", headers: { "Content-Type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify({ posts }) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const tag = String(Date.now()).slice(-4);

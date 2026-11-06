@@ -5,6 +5,8 @@ import { BASE_URL, Results } from "./lib.mjs";
 
 const R = new Results("Đồng bộ tin từ tool (/api/jobs/sync)");
 const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
+// Server đang chạy trên cùng file (VD after() dịch tin mới vừa nhận đọc DB) → chờ khoá thay vì SQLITE_BUSY ngay.
+await db.execute("PRAGMA busy_timeout = 5000");
 const KEY = "test-ingest-key-0123456789abcdef";
 const sync = (body, headers = { authorization: `Bearer ${KEY}` }) => fetch(BASE_URL + "/api/jobs/sync", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const t = String(Date.now()).slice(-5);

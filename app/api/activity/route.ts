@@ -59,14 +59,14 @@ export async function GET() {
     const verb = (d: Date, fresh: string, old: string) => (now - d.getTime() < FRESH_MS ? fresh : old);
 
     const events: ActivityEvent[] = [
-      // Tin tổng hợp / đăng hộ (source ≠ null): tiệm KHÔNG tự đăng trên PawNail → không nói "vừa đăng"; ghi đúng nhãn nguồn.
+      // Tin từ nhóm cộng đồng / đăng hộ (source ≠ null): tiệm KHÔNG tự đăng trên PawNail → không nói "vừa đăng"; ghi đúng nhãn nguồn.
       ...jobs.map(tidyIngestJob).map((j) => ({
         kind: "job" as const,
-        title: j.source === "assisted" ? "Đăng hộ tiệm" : j.source ? "Tin tổng hợp" : j.isUrgent ? "Tin tuyển gấp" : "Tin tuyển mới",
+        title: j.source === "assisted" ? "Đăng hộ tiệm" : j.source ? "Từ nhóm cộng đồng PawNail" : j.isUrgent ? "Tin tuyển gấp" : "Tin tuyển mới",
         text: `${j.salonName} tại ${placeLabel(j.city, j.market, j.state)} ${j.source ? "đang tuyển" : verb(j.createdAt, "vừa đăng", "đang tuyển")}: “${j.title}”`,
         chip: j.salaryAmount,
         en: {
-          title: j.source === "assisted" ? "Posted for salon" : j.source ? "Aggregated job" : j.isUrgent ? "Urgent job" : "New job",
+          title: j.source === "assisted" ? "Posted for salon" : j.source ? "Shared from PawNail community groups" : j.isUrgent ? "Urgent job" : "New job",
           text: `${j.salonName} in ${placeLabel(j.city, j.market, j.state)} ${!j.source && now - j.createdAt.getTime() < FRESH_MS ? "just posted" : "is hiring"}: “${dtEn(j.title)}”`,
           chip: dtEn(j.salaryAmount),
         },

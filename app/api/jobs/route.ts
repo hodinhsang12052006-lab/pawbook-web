@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       : null;
 
     const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
-    // publicJob: bỏ khoá nội bộ; tin tổng hợp → không SĐT, mô tả là đoạn trích không SĐT, kèm nguồn + link bài gốc
+    // publicJob: bỏ khoá nội bộ + link thô; tin từ nhóm giữ SĐT + mô tả đầy đủ, kèm link "Xem bài gốc" (nếu có)
     const safeJobs = jobs.map(({ _count, ...job }) => {
       const h = heat.get(job.id);
       return {

@@ -1,10 +1,9 @@
-// Làm gọn tin TỔNG HỢP (tool cào) lúc HIỂN THỊ — không ghi đè dữ liệu gốc (đổi lại được bất cứ lúc nào).
+// Làm gọn tin TỪ NHÓM (bot gửi vào) lúc HIỂN THỊ — không ghi đè dữ liệu gốc (đổi lại được bất cứ lúc nào).
 // Tin đã lưu trước 17/10/2026 còn lỗi: lương lấy nhầm từ SĐT / tiền thuê, tên tiệm kiểu "(tên người đăng)",
 // thành phố thừa chữ cái đầu. Tin chủ tiệm tự đăng giữ nguyên.
 // 17/10/2026 (soi dữ liệu thật): tên tiệm kiểu lời khen ("Salon Sạch Sẽ") → lấy tên thật trong bài ("Dorado Nail
 // Bar"); thiếu thành phố → lấy từ "thành phố Billings, bang Montana"; bỏ chữ "Xem thêm" / "Ẩn bớt" của Facebook.
 import { cityFromText, cleanCity, cleanSalonName, findSalary, findSalonName, safeToolSalary, zipStateInText } from "@/lib/jobIngest/parse";
-import { dropContacts } from "@/lib/jobFeeds/normalize";
 
 const FB_TAIL = /\s*(?:…|\.{3})?\s*(?:Xem thêm|Ẩn bớt|See more|See less)\s*$/i;
 
@@ -27,31 +26,33 @@ export function tidyIngestJob<T extends { source?: string | null; salonName: str
 }
 
 // ===== Dữ liệu CÔNG KHAI của 1 tin (/api/jobs, /api/jobs/:id) =====
-// Tin TỔNG HỢP từ bài đăng công khai ("ingest") phải theo đúng quy tắc của tin bên ngoài:
-//   - ghi NGUỒN + link về bài gốc (sourceLink) — tin không có link bài gốc thì đã bị activeJobWhere ẩn;
-//   - KHÔNG hiện SĐT lấy từ bài đăng (không "Gọi ngay"), mô tả bỏ SĐT / email và chỉ là đoạn trích ≤ 500 ký tự —
-//     người xem mở bài gốc để liên hệ tiệm.
-// Tin tự đăng / đăng hộ theo yêu cầu tiệm: giữ nguyên (SĐT do tiệm cung cấp). Khoá nội bộ (sourceKey, sourceFbHash) và
-// link bài gốc thô không bao giờ trả ra.
+// Tin TỪ NHÓM CỘNG ĐỒNG PAWNAIL ("ingest" — tiệm đăng trong các nhóm Facebook của chủ PawNail và nhờ chia sẻ):
+//   - GIỮ SĐT của tiệm (nút "Gọi ngay") và mô tả ĐẦY ĐỦ (chỉ làm gọn bằng tidyIngestJob) — quyết định của chủ 06/11/2026;
+//   - ghi nguồn: sourceLink = link "Xem bài gốc" khi bài có link https; không có link thì tin VẪN hiện (sourceLink null).
+// Tin tự đăng / đăng hộ theo yêu cầu tiệm: giữ nguyên. Khoá nội bộ (sourceKey, sourceFbHash) và link bài gốc THÔ
+// (sourceUrl) không bao giờ trả ra — chỉ trả bản đã lọc (https, không tài khoản trong URL, bỏ tham số theo dõi).
 export type SourceLink = { href: string; name: string };
-const SNIPPET_MAX = 500;
 
-/** Link bài gốc an toàn để hiện (chỉ https) + tên nguồn ("Facebook" / tên miền). */
+const FB_HOST = /(^|\.)(facebook\.com|fb\.com)$/;
+// Tham số cần để mở đúng bài trên Facebook (permalink.php?story_fbid=…&id=…, photo.php?fbid=…). Còn lại (__cft__,
+// __tn__, mibextid, rdid, share_url…) là mã theo dõi / phiên → bỏ.
+const FB_KEEP = new Set(["story_fbid", "id", "fbid", "set", "multi_permalinks", "post_id", "comment_id", "v"]);
+
+/** Link bài gốc an toàn để hiện (chỉ https, không user:pass) + tên nguồn ("Facebook" / tên miền). */
 export function sourceLinkOf(url: string | null | undefined): SourceLink | null {
   try {
-    const u = new URL(String(url || ""));
-    if (u.protocol !== "https:" || u.username || u.password) return null;
+    const u = new URL(String(url || "").trim());
+    if (u.protocol !== "https:" || u.username || u.password || !u.hostname.includes(".")) return null;
     const host = u.hostname.toLowerCase().replace(/^(?:www|m|mbasic|web)\./, "");
-    return { href: u.toString(), name: /(^|\.)(facebook\.com|fb\.com)$/.test(host) ? "Facebook" : host };
+    const isFb = FB_HOST.test(host);
+    if (isFb) {
+      for (const k of [...u.searchParams.keys()]) if (!FB_KEEP.has(k)) u.searchParams.delete(k);
+      u.hash = "";
+    }
+    return { href: u.toString(), name: isFb ? "Facebook" : host };
   } catch {
     return null;
   }
-}
-
-/** Bỏ SĐT / email (giữ xuống dòng) rồi cắt thành đoạn trích. */
-export function contactFreeSnippet(text: string | null | undefined, max = SNIPPET_MAX): string {
-  const s = String(text || "").split("\n").map((l) => dropContacts(l)).filter(Boolean).join("\n").trim();
-  return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
 }
 
 type PublicJobInput = { source?: string | null; sourceUrl?: string | null; sourceKey?: string | null; sourceFbHash?: string | null; phone: string; salonName: string; city: string | null; state: string | null; salaryAmount: string | null; description: string | null; market?: string | null };
@@ -59,6 +60,5 @@ export function publicJob<T extends PublicJobInput>(job: T): Omit<T, "sourceUrl"
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { sourceUrl, sourceKey, sourceFbHash, ...rest } = job;
   const tidy = tidyIngestJob(rest);
-  if (job.source !== "ingest") return { ...tidy, sourceLink: null };
-  return { ...tidy, phone: "", description: contactFreeSnippet(tidy.description), sourceLink: sourceLinkOf(sourceUrl) };
+  return { ...tidy, sourceLink: job.source === "ingest" ? sourceLinkOf(sourceUrl) : null };
 }

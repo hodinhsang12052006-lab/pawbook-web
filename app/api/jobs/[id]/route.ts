@@ -6,7 +6,7 @@ import { publicJob } from "@/lib/jobIngest/display";
 import { getJobHeat, isHot } from "@/lib/jobStats";
 import { getResponseStats, describeResponse } from "@/lib/responseTime";
 import { getJobMedia } from "@/lib/jobMedia";
-import { effectiveExpiry, INGEST_SOURCE, isRemovedJob, jobTtlDays } from "@/lib/jobIngest/ingest";
+import { effectiveExpiry, isRemovedJob, jobTtlDays } from "@/lib/jobIngest/ingest";
 
 const FIRST_VIEWERS = 10;
 const FRESH_MS = 48 * 60 * 60 * 1000;
@@ -36,10 +36,9 @@ export async function GET(
         { status: 404 }
       );
     }
-    // Tin đã GỠ theo yêu cầu của tiệm (dữ liệu công khai đã xoá), hoặc tin tổng hợp không có link bài gốc (không ghi
-    // được nguồn) → 410, không trả gì về tiệm.
-    const pub = publicJob(job);
-    if (isRemovedJob(job) || (job.source === INGEST_SOURCE && !pub.sourceLink)) {
+    // Tin đã GỠ theo yêu cầu của tiệm (dữ liệu công khai đã xoá) → 410, không trả gì về tiệm.
+    // (Tin từ nhóm KHÔNG có link bài gốc vẫn hiện bình thường.)
+    if (isRemovedJob(job)) {
       return NextResponse.json({ error: "Tin này đã được gỡ.", removed: true }, { status: 410, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
     }
 
@@ -52,7 +51,8 @@ export async function GET(
     const h = heatMap.get(job.id);
     const fresh = Date.now() - job.createdAt.getTime() < FRESH_MS;
 
-    // Khoá chống trùng không trả ra ngoài; tin tổng hợp chỉ có nguồn + link bài gốc, không SĐT (publicJob).
+    // publicJob: khoá chống trùng / link thô không trả ra; tin từ nhóm giữ SĐT + mô tả đầy đủ, kèm link "Xem bài gốc".
+    const pub = publicJob(job);
     // Tin tự đăng cũ chưa có hạn → hạn = max(ngày đăng, ngày áp dụng) + JOB_TTL_DAYS (khớp activeJobWhere)
     const expiresAt = effectiveExpiry(job);
     return NextResponse.json({

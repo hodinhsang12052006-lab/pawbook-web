@@ -9,7 +9,8 @@ import { externalJobsStatus } from "@/lib/jobFeeds/sync";
 
 // Admin: "Đăng hộ tiệm" (tiệm NHỜ đăng — ghi nhận người yêu cầu) + xử lý yêu cầu "Nhận tin" / "Gỡ tin".
 //   GET                                     → yêu cầu đang chờ + số tin THẬT đang hiện / bị bộ lọc ẩn / hết hạn
-//                                              + lần cuối tool tổng hợp gửi tin + trạng thái nguồn đối tác (Adzuna)
+//                                              + nhịp tim bot đọc nhóm (lần cuối nhận tin, quá 24 giờ → cảnh báo)
+//                                              + trạng thái nguồn đối tác (Adzuna / Careerjet — tắt mặc định)
 //   POST { action: "dryrun"|"preview", text, overrides? } → quyết định THẬT của máy chủ (chưa lưu) + trường đã tách
 //   POST { action: "post", posts: [{ text, sourceUrl?, ...overrides }], requester: { name, contact, requestedAt? } }
 //        → đăng với source "assisted" (nhãn "Đăng hộ tiệm") + lưu người yêu cầu (JobRequest kind "assist")
@@ -43,7 +44,7 @@ export async function GET() {
     externalJobsStatus().catch(() => null),
   ]);
   return NextResponse.json(
-    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, ingestAccepting: hb.accepting, lastIngestAt: hb.lastAt, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, staleHours: hb.staleHours, external },
+    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, ingestAccepting: hb.accepting, lastIngestAt: hb.lastAt, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, ingestRejectedOnly: hb.rejectedOnly, staleHours: hb.staleHours, external },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

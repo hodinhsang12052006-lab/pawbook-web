@@ -14,7 +14,7 @@ interface External {
   last: { at: string; adzuna: ProviderRun } | null;
   live: { active: Record<string, number>; hidden: Record<string, number>; expired: number } | null;
 }
-interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; ingestAccepting?: boolean; lastIngestAt: string | null; lastBatchAt: string | null; ingestStale: boolean; staleHours: number; external: External | null }
+interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; ingestAccepting?: boolean; lastIngestAt: string | null; lastBatchAt: string | null; ingestStale: boolean; ingestRejectedOnly?: boolean; staleHours: number; external: External | null }
 
 const DECISION: Record<string, string> = { created: "Sẽ tạo tin mới", bumped: "Tiệm đã có tin → sẽ đẩy tin lên đầu (đăng lại)", updated: "Trùng đúng bài cũ → sẽ cập nhật", skipped: "Sẽ BỎ QUA" };
 
@@ -66,6 +66,7 @@ export default function PostForSalons() {
       <input value={ov[k]} onChange={(e) => setOv((o) => ({ ...o, [k]: e.target.value }))} placeholder={ph} className="input-field !py-1.5 text-xs" data-testid={`ov-${k}`} />
     </label>
   );
+  const stale = !!data?.ingestStale;
   const canPost = !!pv && pv.decision !== "skipped" && who.name.trim().length > 1 && who.contact.trim().length >= 6;
   const ext = data?.external;
 
@@ -78,10 +79,15 @@ export default function PostForSalons() {
         </p>
         {data && (
           <p className="mt-1 text-xs text-slate-300" data-testid="ingest-stats">
-            Đang hiện công khai: <b>{data.active}</b> tin (đăng hộ + tổng hợp){data.hiddenByFilter ? ` · bộ lọc chữ ẩn ${data.hiddenByFilter}` : ""} · hết hạn: {data.expired} ·{" "}
-            {/* Chỉ thông tin (không cảnh báo, không kêu khởi động lại tool lọc nhóm — cách thu thập đó đã dừng) */}
-            <span className="text-slate-400" data-testid="ingest-heartbeat">
-              tin tổng hợp: {data.ingestAccepting ? "đang nhận" : "đã ngừng nhận tin mới"} · nhận lần cuối {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}
+            Đang hiện công khai: <b>{data.active}</b> tin (đăng hộ + từ nhóm){data.hiddenByFilter ? ` · bộ lọc chữ ẩn ${data.hiddenByFilter}` : ""} · hết hạn: {data.expired} ·{" "}
+            {/* Nhịp tim bot đọc nhóm cộng đồng: quá 24 giờ không có tin mới → cảnh báo đỏ + cách xử lý bằng lời thường */}
+            <span className={data.ingestAccepting === false ? "font-bold text-amber-300" : stale ? "font-bold text-red-300" : "text-emerald-300"} data-testid="ingest-heartbeat">
+              tin từ nhóm nhận lần cuối: {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}
+              {data.ingestAccepting === false
+                ? " ⏸ đang tạm ngừng nhận (INGEST_AGGREGATED=off trên Vercel — xoá biến đó rồi Redeploy để nhận lại)"
+                : stale
+                  ? ` ⚠ quá ${data.staleHours} giờ không có tin mới — ${data.ingestRejectedOnly ? "bot vẫn gửi nhưng bài nào cũng bị loại (thử dán 1 bài ở ô dưới để xem lý do)" : "bot đọc nhóm có thể đã dừng, thường do cookie Facebook hết hạn: đăng nhập lại Facebook trong bot rồi chạy lại"}`
+                  : ""}
             </span>
             {data.lastBatchAt && <span className="text-slate-500"> · lô gần nhất: {timeAgo(data.lastBatchAt)}</span>}
           </p>
@@ -139,7 +145,7 @@ export default function PostForSalons() {
           <p className="flex items-center gap-2 font-bold text-slate-200"><Globe className="h-3.5 w-3.5" /> Nguồn việc đối tác</p>
           <p className="text-slate-400">
             Adzuna: {ext.flags.adzuna.flag ? "BẬT" : "tắt"} · khoá {ext.flags.adzuna.keys ? "có" : "chưa có"} · giấy phép {ext.flags.adzuna.licensed ? "có (ADZUNA_LICENSE_REF)" : "CHƯA có"}
-            {ext.live ? ` · ${ext.flags.adzuna.public ? "đang hiện" : "đã lấy (chưa hiện)"} US ${ext.live.active.US ?? 0} / AU ${ext.live.active.AU ?? 0}` : " · chưa tạo bảng (prisma/sql/2026-11-07_external_jobs.sql)"}
+            {ext.live ? ` · ${ext.flags.adzuna.public ? "đang hiện" : "đã lấy (chưa hiện)"} US ${ext.live.active.US ?? 0} / AU ${ext.live.active.AU ?? 0}` : " · chưa tạo bảng ExternalJob — chỉ cần khi bật Adzuna (prisma/sql/2026-11-07_external_jobs.sql)"}
             {ext.live && Object.keys(ext.live.hidden).length ? ` · ẩn: ${Object.entries(ext.live.hidden).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}
           </p>
           {ext.flags.adzuna.flag && !ext.flags.adzuna.licensed && (

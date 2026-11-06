@@ -1,14 +1,16 @@
-// NHẬN TIN TỔNG HỢP từ tool lọc nhóm (source "ingest") + tin ADMIN ĐĂNG HỘ theo yêu cầu tiệm (source "assisted").
-//   - 11/2026: NGỪNG NHẬN tin tổng hợp mới từ tool lọc nhóm (mặc định; INGEST_AGGREGATED=on mới mở lại). Tin đó
-//     không có người yêu cầu, SĐT lấy từ bài đăng → trái quy tắc "không thu SĐT, ghi nguồn có link về bài gốc".
-//     Tin cũ còn hạn vẫn hiện tới khi hết hạn (≤ 14 ngày) nhưng KHÔNG hiện SĐT, chỉ hiện nguồn + link bài gốc
-//     (lib/jobIngest/display.publicJob); tin không có link bài gốc thì không hiện. Đăng hộ THEO YÊU CẦU tiệm
-//     ("assisted", có ghi người yêu cầu) là đường duy nhất PawNail đăng tin thay tiệm.
+// NHẬN TIN TỪ NHÓM CỘNG ĐỒNG PAWNAIL (source "ingest") + tin ADMIN ĐĂNG HỘ theo yêu cầu tiệm (source "assisted").
+//   - Quyết định của chủ (06/11/2026): tin "ingest" đến từ ~100 nhóm Facebook DO CHỦ PAWNAIL QUẢN LÝ — tiệm đăng tuyển
+//     trong nhóm và nhờ chủ chia sẻ; bot của chủ gửi bài vào /api/ingest/jobs (hoặc /api/jobs/sync). Đây là giá trị
+//     cốt lõi: tin hiện trên bảng việc với SĐT của tiệm + nút "Gọi ngay", mô tả đầy đủ. MẶC ĐỊNH LUÔN NHẬN.
+//     INGEST_AGGREGATED chỉ là công tắc KHẨN CẤP: đặt đúng "off" mới ngừng nhận (410 INGEST_OFF); không đặt → nhận.
+//     Nguồn ghi rõ: nhãn "Từ nhóm cộng đồng PawNail" + link "Xem bài gốc" khi có link https (display.publicJob);
+//     tin không có link bài gốc VẪN hiện.
 //   - Tách SĐT / tên tiệm / địa chỉ / bang / lương… (parse.ts); trường tool đã tách sẵn được ưu tiên.
-//   - Chống trùng: cùng SĐT + nội dung (sourceKey) hoặc cùng SĐT còn hạn → CẬP NHẬT tin cũ. Tin tổng hợp KHÔNG BAO GIỜ
+//   - Chống trùng: cùng SĐT + nội dung (sourceKey) hoặc cùng SĐT còn hạn → CẬP NHẬT tin cũ. Tin từ nhóm KHÔNG BAO GIỜ
 //     ghi đè tin đăng hộ theo yêu cầu (giữ nguồn gốc mạnh hơn).
 //   - Tự hết hạn sau INGEST_TTL_DAYS (mặc định 14) kể từ ngày bài gốc đăng.
 //   - Số đã yêu cầu "Gỡ tin" (admin duyệt) → không bao giờ đăng lại; dữ liệu công khai của tin bị xoá (removeJobPublicData).
+//   - Nhịp tim: mỗi lô bot gửi được ghi lại; quá 24 giờ không có tin mới → trang admin cảnh báo kèm cách xử lý.
 //   - prepareIngest (thuần, không ghi DB) → commitIngest: admin "Xem trước" dùng ĐÚNG quyết định thật (dryRun).
 // Tất cả tin đứng tên 1 tài khoản hệ thống "PawNail · Tin tổng hợp" (KHÔNG tạo tài khoản mạo danh từng tiệm).
 import crypto from "node:crypto";
@@ -26,13 +28,14 @@ export const ASSISTED_SOURCE = "assisted";
  *  GET /api/jobs/:id trả 410, không hiện ở đâu nữa. */
 export const REMOVED_SOURCE = "removed";
 export const INGEST_OWNER_EMAIL = "tonghop@feed.pawnail.invalid";
-/** Có nhận tin TỔNG HỢP mới từ tool lọc nhóm không (/api/ingest/jobs, /api/jobs/sync). Mặc định TẮT. */
-export const aggregatedIngestOn = () => /^(on|1|true|yes)$/i.test(String(process.env.INGEST_AGGREGATED || "").trim());
-/** Lần cuối tool lọc nhóm gửi được ≥ 1 tin (chỉ để admin biết — không phải việc cần xử lý). */
+/** Có nhận tin từ nhóm (bot của chủ → /api/ingest/jobs, /api/jobs/sync) không. MẶC ĐỊNH NHẬN; chỉ ngừng khi chủ đặt
+ *  INGEST_AGGREGATED=off (công tắc khẩn cấp). Mọi giá trị khác (không đặt, "on", rỗng…) → nhận như bình thường. */
+export const aggregatedIngestOn = () => String(process.env.INGEST_AGGREGATED ?? "").trim().toLowerCase() !== "off";
+/** Lần cuối bot gửi được ≥ 1 tin (nhịp tim nguồn tin — quá INGEST_STALE_HOURS → admin được cảnh báo). */
 export const INGEST_LAST_AT_KEY = "ingest_last_at";
 /** Lần cuối tool gửi 1 lô đúng khoá, KỂ CẢ khi mọi bài bị loại → phân biệt "tool ngừng gửi" với "tool gửi nhưng bị loại hết". */
 export const INGEST_LAST_BATCH_AT_KEY = "ingest_last_batch_at";
-/** Quá N giờ không nhận tin → trang admin ghi "không có tin mới" (thông tin, không cảnh báo / không kêu khởi động tool). */
+/** Quá N giờ không nhận được tin mới nào → trang admin cảnh báo (kèm cách xử lý: bot có thể cần cookie Facebook mới). */
 export const INGEST_STALE_HOURS = 24;
 const DAY = 86_400_000;
 export const ingestTtlDays = () => Math.min(60, Math.max(3, Number(process.env.INGEST_TTL_DAYS) || 14));
@@ -66,9 +69,9 @@ const SALE_WORDS = ["sang tiệm", "Sang tiệm", "SANG TIỆM", "cần sang", "
 // Bài THỢ TÌM VIỆC lọt vào trước khi có bộ lọc isJobSeeking (17/10/2026) — ẩn lúc hiển thị (không xoá).
 const SEEK_WORDS = ["Góc tìm việc", "góc tìm việc", "GÓC TÌM VIỆC", "chủ shop nào cần thợ", "Chủ shop nào cần thợ", "Vietnailshelper", "trải nghiệm dịch vụ", "dịch vụ đăng tin"];
 const LEGACY_FILTER_BEFORE = new Date("2026-10-18T00:00:00Z");
-/** Điều kiện Prisma: tin còn hạn, không phải bài sang / bán tiệm cũ, tin tổng hợp phải có link bài gốc.
+/** Điều kiện Prisma: tin còn hạn, không phải bài sang / bán tiệm cũ. Tin từ nhóm có hay không có link bài gốc đều hiện.
  *  Tin tự đăng: có expiresAt (đăng từ 11/2026) → theo hạn; tin cũ chưa có hạn → hạn = max(ngày đăng, ngày áp dụng)
- *  + JOB_TTL_DAYS (khớp effectiveExpiry). */
+ *  + JOB_TTL_DAYS (khớp effectiveExpiry). Tin đã gỡ có expiresAt = lúc gỡ → tự rơi khỏi điều kiện này. */
 export const activeJobWhere = (now = new Date()) => {
   const ttl = jobTtlDays() * DAY;
   // max(createdAt, rollout) + ttl > now  ⇔  createdAt > now − ttl  HOẶC  rollout + ttl > now (còn trong thời gian ân hạn)
@@ -79,8 +82,6 @@ export const activeJobWhere = (now = new Date()) => {
       // Viết dạng OR (không dùng NOT(a AND b)): source NULL → so sánh SQL ra NULL, NOT(NULL) sẽ ẩn nhầm tin tự đăng.
       // sourcePostedAt NULL → nhánh "gte" ra sai → rơi xuống nhánh lọc chữ (đúng ý: tin cũ không rõ ngày vẫn bị lọc).
       { OR: [{ source: null }, { source: { not: INGEST_SOURCE } }, { sourcePostedAt: { gte: LEGACY_FILTER_BEFORE } }, { NOT: { OR: [...SALE_WORDS, ...SEEK_WORDS].map((w) => ({ description: { contains: w } })) } }] },
-      // Tin tổng hợp phải ghi được nguồn có link về bài gốc — không có link thì không hiện.
-      { OR: [{ source: null }, { source: { not: INGEST_SOURCE } }, { sourceUrl: { startsWith: "https://" } }] },
     ],
   };
 };
@@ -256,8 +257,8 @@ export async function commitIngest(prep: Extract<PreparedIngest, { status: "ok" 
 }
 
 export async function ingestOne(input: IngestInput, blocked: Set<string>, opts: IngestOpts & { dryRun?: boolean } = {}): Promise<IngestResult> {
-  // Tin tổng hợp từ tool lọc nhóm: mặc định không nhận (route đã chặn trước; chặn thêm ở đây cho chắc)
-  if (!opts.assisted && !aggregatedIngestOn()) return { status: "skipped", reason: "đã ngừng nhận tin tổng hợp (INGEST_AGGREGATED tắt)" };
+  // Công tắc khẩn cấp INGEST_AGGREGATED=off: route đã trả 410 trước; chặn thêm ở đây cho chắc. Đăng hộ không bị ảnh hưởng.
+  if (!opts.assisted && !aggregatedIngestOn()) return { status: "skipped", reason: "đang tạm ngừng nhận tin từ nhóm (INGEST_AGGREGATED=off)" };
   const prep = prepareIngest(input, blocked, opts);
   if (prep.status === "skipped") return { status: "skipped", reason: prep.reason };
   return commitIngest(prep, { dryRun: opts.dryRun });
@@ -275,7 +276,7 @@ export async function ingestBatch(items: IngestInput[], opts: IngestOpts = {}) {
   return { created: count("created"), bumped: count("bumped"), updated: count("updated"), skipped: count("skipped"), results };
 }
 
-/** Nhịp tim nguồn tin tổng hợp (tool lọc nhóm): ghi mỗi lô đúng khoá; ghi "lần cuối nhận tin" khi ≥ 1 bài được nhận. */
+/** Nhịp tim nguồn tin từ nhóm (bot của chủ): ghi mỗi lô đúng khoá; ghi "lần cuối nhận tin" khi ≥ 1 bài được nhận. */
 export async function recordIngestHeartbeat(results: { status: string }[], now = new Date()) {
   if (!results.length) return;
   const at = now.toISOString();
@@ -283,13 +284,16 @@ export async function recordIngestHeartbeat(results: { status: string }[], now =
   if (results.some((r) => r.status !== "skipped")) await setSetting(INGEST_LAST_AT_KEY, at).catch(() => {});
 }
 
-/** Cho trang admin (CHỈ THÔNG TIN): nhận tin tổng hợp có đang bật không, lần cuối nhận tin / nhận lô,
- *  và đã quá INGEST_STALE_HOURS giờ chưa có tin mới. Không phải cảnh báo — không kêu admin khởi động lại tool. */
+/** Cho trang admin: có đang nhận tin từ nhóm không (công tắc khẩn cấp), lần cuối nhận tin / nhận lô, và đã quá
+ *  INGEST_STALE_HOURS giờ chưa có tin mới (→ cảnh báo: bot ngừng gửi, thường do cookie Facebook hết hạn). */
 export async function ingestHeartbeat(now = new Date()) {
   const [lastAt, lastBatchAt] = await Promise.all([getSetting(INGEST_LAST_AT_KEY).catch(() => null), getSetting(INGEST_LAST_BATCH_AT_KEY).catch(() => null)]);
   const t = lastAt ? Date.parse(lastAt) : NaN;
   const stale = !Number.isFinite(t) || now.getTime() - t > INGEST_STALE_HOURS * 3_600_000;
-  return { accepting: aggregatedIngestOn(), lastAt, lastBatchAt, stale, staleHours: INGEST_STALE_HOURS };
+  // Bot vẫn gửi lô (đúng khoá) SAU lần cuối có tin được nhận → bài bị loại hết (định dạng / bộ lọc), không phải bot ngừng gửi
+  const b = lastBatchAt ? Date.parse(lastBatchAt) : NaN;
+  const rejectedOnly = Number.isFinite(b) && (!Number.isFinite(t) || b > t + 60_000);
+  return { accepting: aggregatedIngestOn(), lastAt, lastBatchAt, stale, rejectedOnly, staleHours: INGEST_STALE_HOURS };
 }
 
 /** Admin duyệt "Gỡ tin": giữ dòng tin (để lịch sử JobRequest còn tham chiếu) nhưng XOÁ mọi dữ liệu công khai của tiệm

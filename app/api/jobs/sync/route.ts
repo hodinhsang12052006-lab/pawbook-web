@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { aggregatedIngestOn, blockedPhones, ingestBatch, ingestOne, recordIngestHeartbeat, type IngestInput } from "@/lib/jobIngest/ingest";
 import { parseLocation } from "@/lib/jobIngest/parse";
 
-// POST /api/jobs/sync — tool lọc bài gửi tin TIỆM NHỜ ĐĂNG (định dạng của tool):
+// POST /api/jobs/sync — bot của chủ gửi tin tiệm đăng trong nhóm cộng đồng PawNail (định dạng của tool). LUÔN NHẬN;
+// công tắc khẩn cấp INGEST_AGGREGATED=off → 410 INGEST_OFF.
 //   { title, salon_name, phone, facebook_url, location, state, salary, skills[], content, post_url, country }
 // Gửi 1 bài (object), nhiều bài (mảng) hoặc { posts: [...] } (≤ 200).
 // Bắt buộc khoá: header "Authorization: Bearer <INGEST_KEY>" (hoặc "x-api-key: <INGEST_KEY>").
@@ -58,8 +59,8 @@ function toInput(p: SyncPost): IngestInput {
 
 export async function POST(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized — thiếu hoặc sai INGEST_KEY" }, { status: 401 });
-  // 11/2026: ngừng nhận tin tổng hợp từ tool lọc nhóm (mặc định) — xem app/api/ingest/jobs/route.ts
-  if (!aggregatedIngestOn()) return NextResponse.json({ error: "Đã ngừng nhận tin tổng hợp (INGEST_AGGREGATED tắt).", code: "INGEST_OFF" }, { status: 410 });
+  // Công tắc KHẨN CẤP (INGEST_AGGREGATED=off) — xem app/api/ingest/jobs/route.ts. Không đặt → nhận như bình thường.
+  if (!aggregatedIngestOn()) return NextResponse.json({ error: "Đang tạm ngừng nhận tin từ nhóm (INGEST_AGGREGATED=off).", code: "INGEST_OFF" }, { status: 410 });
   const body = (await req.json().catch(() => null)) as SyncPost | SyncPost[] | { posts?: SyncPost[] } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Body phải là JSON" }, { status: 400 });
 

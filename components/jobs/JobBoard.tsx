@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,7 @@ import { JobAlertButton } from "@/components/jobs/JobAlerts";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { dt } from "@/lib/i18n/dataEn";
 import ExternalJobs from "@/components/jobs/ExternalJobs";
-import { sourceLabel } from "@/components/jobs/PostedForSalon";
+import { OriginalPostLink, sourceLabel } from "@/components/jobs/PostedForSalon";
 
 export interface JobType {
   id: string;
@@ -37,11 +37,11 @@ export interface JobType {
   heat?: { viewsToday: number; contacts7d: number; hot: boolean };
   mediaUrls?: string[];
   // null = chủ tiệm tự đăng · "assisted" = PawNail đăng hộ theo yêu cầu (có ghi nhận người yêu cầu)
-  // · "ingest" = tin TỔNG HỢP từ bài đăng công khai (không phải tiệm nhờ đăng) — xem PostedForSalon.sourceLabel
+  // · "ingest" = tiệm đăng trong nhóm cộng đồng PawNail, bot chia sẻ lên (có SĐT tiệm) — xem PostedForSalon.sourceLabel
   source?: string | null;
   sourcePostedAt?: string | null;
   address?: string | null;
-  /** Tin tổng hợp: nguồn + link bài gốc (phone = "" — không hiện SĐT lấy từ bài đăng). */
+  /** Tin từ nhóm: link "Xem bài gốc" (chỉ khi bài có link https; null → tin vẫn hiện, không có link). */
   sourceLink?: { href: string; name: string } | null;
 }
 
@@ -316,9 +316,12 @@ function JobCard({
         </div>
       )}
 
+      {/* Nguồn: tin từ nhóm cộng đồng PawNail có link bài gốc → "Xem bài gốc" (nhỏ, không thay nút Gọi ngay) */}
+      {job.sourceLink && <OriginalPostLink link={job.sourceLink} className="text-xs" />}
+
       {/* CTA — chạm ngón cái chuẩn (min 48px), chữ to rõ để móng dài bấm không trượt. */}
       <div className="flex items-center gap-2 border-t border-slate-850 pt-2">
-        {job.phone ? (
+        {job.phone && (
           <a
             href={`tel:${job.phone}`}
             onClick={() => trackJobContact(job.id)}
@@ -326,21 +329,9 @@ function JobCard({
           >
             <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
           </a>
-        ) : job.sourceLink ? (
-          // Tin TỔNG HỢP: không hiện SĐT lấy từ bài đăng — mở bài gốc (ghi rõ nguồn) để liên hệ tiệm
-          <a
-            href={job.sourceLink.href}
-            target="_blank"
-            rel="noopener nofollow ugc"
-            onClick={() => trackJobContact(job.id)}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-2 text-center text-sm font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
-            data-testid="job-source-link"
-          >
-            <ExternalLink className="h-4 w-4 flex-shrink-0" />{tr(` Bài gốc trên ${job.sourceLink.name}`, ` Original post on ${job.sourceLink.name}`)}
-          </a>
-        ) : null}
+        )}
         {job.source ? (
-          // Tin đăng hộ / tổng hợp: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
+          // Tin đăng hộ / từ nhóm: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
           <Link
             href={`/jobs/${job.id}`}
             className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-base font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}

@@ -5,9 +5,9 @@
 //   2. Lấy tin nail US + AU → chuẩn hoá (normalize.ts) → thêm mới / làm mới lastSeenAt + NỘI DUNG (lương, tiêu đề,
 //      đoạn trích, link… đổi thì cập nhật ngay; lọc SĐT / không-phải-nail chạy lại trên nội dung mới).
 //   3. Hết hạn = min(ngày đăng gốc + 30 ngày, lần cuối còn thấy + 60 giờ); hết hạn quá 7 ngày → xoá hẳn.
-//   4. Chống trùng: tin TIỆM TỰ ĐĂNG / đăng hộ theo yêu cầu tiệm trên PawNail thắng (ẩn bản Adzuna trùng, kiểm lại
-//      mỗi lượt). Tin TỔNG HỢP từ nhóm (source "ingest") KHÔNG dùng để ẩn tin Adzuna — bản có giấy phép, ghi nguồn rõ
-//      ràng được giữ. Trùng nhau trong Adzuna → giữ tin mới nhất.
+//   4. Chống trùng: tin của tiệm trên PawNail thắng — tiệm tự đăng, đăng hộ theo yêu cầu, hoặc tiệm đăng trong nhóm
+//      cộng đồng PawNail (source "ingest", có SĐT + nút Gọi ngay) → ẩn bản Adzuna trùng, kiểm lại mỗi lượt.
+//      Trùng nhau trong Adzuna → giữ tin mới nhất.
 //   5. Ghi tóm tắt lượt chạy (AppSetting "external_jobs_last_run") cho trang admin — không có khoá / URL / nội dung tin.
 //   Ngân sách thời gian: `deadline` = hạn GỌI Adzuna (mỗi lượt gọi tự rút ngắn timeout cho khớp), `workDeadline` = hạn
 //   bắt đầu ghi DB; đối chiếu + ghi tóm tắt LUÔN chạy (route đặt 30 s / 45 s trong maxDuration 60 s).
@@ -15,7 +15,7 @@
 import type { Market, Prisma, PrismaClient } from "@prisma/client";
 import defaultPrisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
-import { activeJobWhere, INGEST_SOURCE } from "@/lib/jobIngest/ingest";
+import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { fetchAdzunaMarket, type AdzunaStatus } from "@/lib/jobFeeds/adzuna";
 import { adzunaFlagOn, adzunaKeys, adzunaLicenseRef, adzunaPublic, attributionFor, careerjetEnabled, careerjetFlagOn, careerjetKey, careerjetTermsRef, MAX_AGE_DAYS, purgeAfterDays, referralFeeDisclosed, seenTtlHours } from "@/lib/jobFeeds/config";
 import { companyTokens, companyTokensMatch, isNailJob, normalizeAdzuna, normText } from "@/lib/jobFeeds/normalize";
@@ -117,17 +117,16 @@ export async function reconcileExternalJobs(db: Db, provider: string, now = new 
     where: { provider, expiresAt: { gt: now } },
     select: { id: true, market: true, state: true, city: true, company: true, title: true, snippet: true, dedupeKey: true, providerCreatedAt: true, hiddenReason: true },
   });
-  // Tin trên PawNail đang hiện, chỉ tài khoản thật: tiệm tự đăng (source null) + đăng hộ theo yêu cầu tiệm ("assisted").
-  // Tin tổng hợp từ nhóm ("ingest") bị bỏ qua: không được ẩn bản Adzuna có giấy phép + ghi nguồn thay cho nó.
+  // Tin trên PawNail đang hiện, chỉ tài khoản thật: tiệm tự đăng (source null) + đăng hộ theo yêu cầu ("assisted") + tin
+  // tiệm đăng trong nhóm cộng đồng PawNail ("ingest"). Tin đã gỡ có hạn = lúc gỡ → activeJobWhere đã loại.
   const jobs = await db.job.findMany({
-    where: { AND: [activeJobWhere(), { owner: realOnly() }, { OR: [{ source: null }, { source: { not: INGEST_SOURCE } }] }] },
+    where: { AND: [activeJobWhere(), { owner: realOnly() }] },
     select: { salonName: true, city: true, state: true, market: true, source: true },
     take: 5000,
   });
   // Gom theo thị trường|bang + tách từ tên tiệm 1 lần (không chuẩn hoá lại cho mỗi cặp)
   const byArea = new Map<string, { own: boolean; city: string; tokens: string[] }[]>();
   for (const j of jobs) {
-    if (j.source === INGEST_SOURCE) continue;
     const k = `${j.market}|${j.state}`;
     if (!byArea.has(k)) byArea.set(k, []);
     byArea.get(k)!.push({ own: !j.source, city: normText(j.city), tokens: [...new Set(companyTokens(j.salonName))] });

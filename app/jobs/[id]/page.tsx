@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import {
   ArrowLeft, MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Building, Clock,
-  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight, Eye, Zap, Timer, Sparkles, ExternalLink,
+  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight, Eye, Zap, Timer, Sparkles,
 } from "lucide-react";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
@@ -49,7 +49,7 @@ interface JobDetail {
   heat?: { viewsToday: number; contacts7d: number; hot: boolean; firstViewers: number | null };
   mediaUrls?: string[];
   ownerResponse?: { label: string; fast: boolean; samples: number } | null;
-  // null = chủ tiệm tự đăng · "assisted" = đăng hộ theo yêu cầu · "ingest" = tin tổng hợp từ bài công khai
+  // null = chủ tiệm tự đăng · "assisted" = đăng hộ theo yêu cầu · "ingest" = tiệm đăng trong nhóm cộng đồng PawNail
   source?: string | null;
   expiresAt?: string | null;
   sourcePostedAt?: string | null;
@@ -58,7 +58,7 @@ interface JobDetail {
   /** Số ngày còn lại tới lúc tin tự ẩn (máy chủ tính) — null nếu không có hạn. */
   daysLeft?: number | null;
   repostCount?: number;
-  /** Tin tổng hợp: nguồn + link bài gốc; phone = "" (không hiện SĐT lấy từ bài đăng). */
+  /** Tin từ nhóm: link "Xem bài gốc" (chỉ khi bài có link https). SĐT của tiệm vẫn ở `phone` (nút Gọi ngay). */
   sourceLink?: { href: string; name: string } | null;
 }
 
@@ -356,7 +356,7 @@ export default function JobDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {postedForSalon && <PostedForSalonBanner source={job.source} postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} sourceName={job.sourceLink?.name} />}
+          {postedForSalon && <PostedForSalonBanner source={job.source} postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} sourceLink={job.sourceLink} />}
           {!postedForSalon && job.expired && !isOwnJob && (
             <p className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-500/25">{tr("Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", "This listing has expired — the salon may be fully staffed. Call first.")}</p>
           )}
@@ -373,7 +373,7 @@ export default function JobDetailPage({ params }: PageProps) {
 
           {!isOwnJob && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
-              {job.phone ? (
+              {job.phone && (
                 <a
                   href={telHref(job.phone, job.market)}
                   onClick={() => trackJobContact(job.id)}
@@ -381,19 +381,7 @@ export default function JobDetailPage({ params }: PageProps) {
                 >
                   <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
                 </a>
-              ) : job.sourceLink ? (
-                // Tin TỔNG HỢP: không hiện SĐT lấy từ bài đăng — liên hệ tiệm qua bài gốc (ghi rõ nguồn)
-                <a
-                  href={job.sourceLink.href}
-                  target="_blank"
-                  rel="noopener nofollow ugc"
-                  onClick={() => trackJobContact(job.id)}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press px-3 py-3.5 text-center text-base font-bold text-white transition-colors"
-                  data-testid="job-source-link"
-                >
-                  <ExternalLink className="h-5 w-5 flex-shrink-0" />{tr(` Xem bài gốc trên ${job.sourceLink.name}`, ` View the original post on ${job.sourceLink.name}`)}
-                </a>
-              ) : null}
+              )}
               {!postedForSalon && <button
                 onClick={() => {
                   if (user?.id) trackJobContact(job.id);

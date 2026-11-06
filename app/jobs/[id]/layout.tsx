@@ -21,15 +21,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     // Ảnh tiệm nằm ở bảng riêng JobMedia (có thể chưa có bảng ở DB cũ → bỏ qua).
     const media = await prisma.jobMedia.findUnique({ where: { jobId: id }, select: { mediaUrls: true } }).catch(() => null);
     const title = `${j.title} · ${j.salonName} — PawNail Jobs`;
+    // Tin đăng hộ / từ nhóm cộng đồng: tiệm chưa dùng app → chỉ gọi trực tiếp (không "nhắn tin")
     const description = j.source
-      ? `${j.salaryAmount} · ${placeLabel(j.city, j.market, j.state)}. Xem nguồn tin và liên hệ tiệm trên PawNail Jobs.`
+      ? `${j.salaryAmount} · ${placeLabel(j.city, j.market, j.state)}. Gọi trực tiếp cho tiệm trên PawNail Jobs.`
       : `${j.salaryAmount} · ${placeLabel(j.city, j.market, j.state)}. Gọi hoặc nhắn tin trực tiếp cho tiệm trên PawNail Jobs.`;
     const image = firstImage(media?.mediaUrls);
     const expired = isPastExpiry(effectiveExpiry(j));
     return {
       title,
       description,
-      // Tin MẪU / tin tổng hợp / đăng hộ / tin đã hết hạn: không cho Google lập chỉ mục (Google for Jobs phạt tin không còn tuyển).
+      // Tin MẪU / tin từ nhóm / đăng hộ / tin đã hết hạn: không cho Google lập chỉ mục (Google for Jobs phạt tin không còn tuyển).
       ...(isDemoEmail(j.owner?.email) || j.source || expired ? { robots: { index: false, follow: false } } : {}),
       alternates: { canonical: `${SITE_URL}/jobs/${j.id}` },
       openGraph: { title, description, url: `${SITE_URL}/jobs/${j.id}`, siteName: "PawNail Jobs", type: "website", ...(image ? { images: [{ url: image }] } : {}) },

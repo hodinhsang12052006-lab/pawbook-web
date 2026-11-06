@@ -2,30 +2,42 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Clock, Loader2, MapPin, Store, X } from "lucide-react";
+import { Clock, ExternalLink, Loader2, MapPin, Store, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { timeAgo } from "@/lib/feedFormat";
 
 // Nguồn của tin KHÔNG phải chủ tiệm tự đăng — ghi đúng sự thật:
 //   "assisted" = PawNail đăng hộ THEO YÊU CẦU của tiệm (admin ghi nhận người yêu cầu lúc đăng)
-//   "ingest" (và nguồn khác) = tin TỔNG HỢP từ bài đăng công khai: tiệm KHÔNG nhờ đăng, PawNail không đại diện tiệm.
+//   "ingest" = tiệm đăng tuyển trong NHÓM CỘNG ĐỒNG PAWNAIL trên Facebook (nhóm do PawNail quản lý) và bot của PawNail
+//              chia sẻ lên bảng việc — SĐT là của tiệm, gọi trực tiếp tiệm.
 export function sourceLabel(source?: string | null): { chip: string; hint: string } {
   if (source === "assisted") return { chip: tr("Đăng hộ tiệm", "Posted for salon"), hint: tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail at the salon's request — call the salon directly") };
-  return { chip: tr("Tin tổng hợp", "Aggregated"), hint: tr("Tổng hợp từ bài đăng công khai — PawNail không phải người đăng. Mở bài gốc để liên hệ tiệm.", "Aggregated from a public post — PawNail didn't write it. Open the original post to contact the salon.") };
+  return { chip: tr("Từ nhóm cộng đồng PawNail", "Shared from PawNail community groups"), hint: tr("Tiệm đăng trong nhóm cộng đồng PawNail — gọi trực tiếp tiệm để hỏi việc", "Shared from a salon's post in PawNail community groups — call the salon directly") };
 }
 
-// Tin đăng hộ / tổng hợp: ghi rõ nguồn, địa chỉ + bản đồ, hết hạn; tiệm có thể "nhận tin" (tự quản lý trên
+/** Link "Xem bài gốc" (chỉ có khi bài trong nhóm có link https — máy chủ đã lọc, xem lib/jobIngest/display.sourceLinkOf). */
+export function OriginalPostLink({ link, className = "", testId = "job-source-link" }: { link?: { href: string; name: string } | null; className?: string; testId?: string }) {
+  if (!link) return null;
+  return (
+    <a href={link.href} target="_blank" rel="noopener nofollow ugc" className={`inline-flex items-center gap-1 font-semibold text-sky-300 hover:text-sky-200 ${className}`} data-testid={testId}>
+      <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      {link.name === "Facebook" ? tr("Xem bài gốc trên Facebook", "View original post on Facebook") : tr("Xem bài gốc", "View original post")}
+    </a>
+  );
+}
+
+// Tin đăng hộ / từ nhóm: ghi rõ nguồn, địa chỉ + bản đồ, hết hạn; tiệm có thể "nhận tin" (tự quản lý trên
 // PawNail) hoặc "gỡ tin" — gửi yêu cầu cho admin.
-export function PostedForSalonBanner({ source, postedAt, expired, address, repostCount, sourceName }: { source?: string | null; postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number; sourceName?: string | null }) {
+export function PostedForSalonBanner({ source, postedAt, expired, address, repostCount, sourceLink }: { source?: string | null; postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number; sourceLink?: { href: string; name: string } | null }) {
   const assisted = source === "assisted";
   return (
     <div className="space-y-2">
       {expired && (
         <p className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-500/25">
-          <Clock className="h-4 w-4 shrink-0" />{tr(" Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Hỏi tiệm trước khi đi nhé.", " This listing has expired — the salon may be fully staffed. Check with the salon first.")}
+          <Clock className="h-4 w-4 shrink-0" />{tr(" Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", " This listing has expired — the salon may be fully staffed. Call first.")}
         </p>
       )}
-      <p className="flex items-start gap-2 rounded-xl bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-500/25" data-testid="source-banner">
+      <div className="flex items-start gap-2 rounded-xl bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-500/25" data-testid="source-banner">
         <Store className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
         {assisted ? (
           <span>
@@ -35,15 +47,17 @@ export function PostedForSalonBanner({ source, postedAt, expired, address, repos
             {tr(". Gọi trực tiếp số của tiệm để hỏi việc.", ". Call the salon directly to ask about the job.")}
           </span>
         ) : (
-          <span>
-            {sourceName
-              ? tr(`Tin tổng hợp từ 1 bài đăng công khai trên ${sourceName} — PawNail không phải người đăng và không đại diện tiệm`, `Aggregated from a public post on ${sourceName} — PawNail did not write it and does not represent the salon`)
-              : tr("Tin tổng hợp từ bài đăng công khai — PawNail không phải người đăng và không đại diện tiệm", "Aggregated from a public post — PawNail did not write it and does not represent the salon")}
-            {postedAt ? tr(` · đăng ${timeAgo(postedAt)}`, ` · posted ${timeAgo(postedAt)}`) : ""}
-            {tr(". Đây là đoạn trích — mở bài gốc để xem đầy đủ và liên hệ tiệm.", ". This is an excerpt — open the original post for full details and to contact the salon.")}
-          </span>
+          <div className="min-w-0 space-y-1">
+            <p>
+              {tr("Chia sẻ từ nhóm cộng đồng PawNail — tiệm đăng tuyển trong nhóm", "Shared from PawNail community groups — the salon posted this in the group")}
+              {postedAt ? tr(` · đăng ${timeAgo(postedAt)}`, ` · posted ${timeAgo(postedAt)}`) : ""}
+              {repostCount && repostCount > 1 ? tr(` · tiệm đã đăng lại ${repostCount} lần`, ` · reposted ${repostCount} times`) : ""}
+              {tr(". Gọi trực tiếp số của tiệm để hỏi việc.", ". Call the salon directly to ask about the job.")}
+            </p>
+            <OriginalPostLink link={sourceLink} className="text-xs" />
+          </div>
         )}
-      </p>
+      </div>
       {address && (
         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/[0.07]">
           <MapPin className="h-4 w-4 shrink-0 text-pink-300" />

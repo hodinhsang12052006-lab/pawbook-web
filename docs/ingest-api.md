@@ -1,6 +1,7 @@
-# Nối tool lọc bài → PawNail (đăng hộ tiệm)
+# Nối bot nhóm cộng đồng → PawNail
 
-Tool của bạn gửi bài tuyển thợ (tiệm đã nhờ đăng) lên PawNail. PawNail tự tách
+Bot của bạn đọc các nhóm Facebook cộng đồng PawNail (nhóm do bạn quản lý, tiệm đăng tuyển và nhờ chia sẻ) rồi gửi
+bài tuyển thợ lên PawNail. **Không cần cài đặt gì thêm** — chỉ cần `INGEST_KEY` như trước. PawNail tự tách
 **SĐT, tên tiệm, địa chỉ, ZIP → bang/thành phố, lương, kỹ năng, chỗ ở, tin gấp**, chống trùng,
 và ẩn tin sau **14 ngày** kể từ ngày bài gốc đăng.
 
@@ -20,7 +21,7 @@ URL = "https://www.bitpawos.com/api/ingest/jobs"
 posts = [
     {
         "text": "CẦN GẤP THỢ BỘT ... Gọi (832) 555-0187",   # nguyên văn bài (bắt buộc nếu không gửi các trường bên dưới)
-        "sourceUrl": "https://www.facebook.com/groups/.../posts/...",  # chỉ admin thấy
+        "sourceUrl": "https://www.facebook.com/groups/.../posts/...",  # hiện thành link "Xem bài gốc" (chỉ https; mã theo dõi bị bỏ)
         "postedAt": "2026-10-11T08:30:00Z",          # ngày bài gốc đăng (ISO) — bài > 14 ngày bị bỏ qua
         # Trường tool ĐÃ TÁCH SẴN (nếu có) — được ưu tiên hơn kết quả PawNail tự tách:
         # "phone": "(832) 555-0187", "salonName": "Sunny Nails & Spa",
@@ -79,8 +80,18 @@ tiệm đã yêu cầu gỡ tin.
 Xem thống kê: `GET https://www.bitpawos.com/api/ingest/jobs` (cùng header) → số tin đang hiện / hết hạn / theo bang.
 
 ## Trên PawNail
-- Tin hiện nhãn **“Đăng hộ tiệm”**, nút chính **Gọi ngay** (tiệm chưa dùng app nên không nhắn trong app).
+- Tin hiện nhãn **“Từ nhóm cộng đồng PawNail” / “Shared from PawNail community groups”**, **SĐT của tiệm** và nút
+  **Gọi ngay**, mô tả đầy đủ của bài (tiệm chưa dùng app nên không có nút nhắn trong app — nút thứ 2 là **Chi tiết**).
+- Bài có `sourceUrl` dạng https → thêm link nhỏ **“Xem bài gốc”**. Bài **không có** link vẫn hiện bình thường.
 - Địa chỉ có nút **Bản đồ**. Không khai cho Google for Jobs (Google chỉ nhận tin chủ tiệm tự đăng).
 - Tiệm bấm **“Tôi là chủ tiệm này”** → admin chuyển tin sang tài khoản chủ tiệm (thành người dùng thật).
-- Tiệm bấm **“Gỡ tin này”** → admin duyệt ở Studio → tin bị gỡ và **số đó không bao giờ được đăng lại**.
+- Tiệm bấm **“Gỡ tin này”** → admin duyệt ở Studio → SĐT / mô tả / địa chỉ / link bị xoá, trang tin trả 410 và
+  **số đó không bao giờ được đăng lại**.
 - Đăng tay từng bài: Admin → Studio → **Đăng hộ tiệm** (dán bài → Xem trước → Đăng hộ).
+
+## Nhịp tim + công tắc khẩn cấp
+- Mỗi lô bot gửi đúng khoá được ghi lại. **Quá 24 giờ không có tin mới** → trang Admin (Sức khoẻ tăng trưởng + Studio →
+  Đăng hộ tiệm) báo đỏ kèm cách xử lý: thường là bot cần **đăng nhập lại Facebook / cookie mới**. Nếu bot vẫn gửi mà
+  bài nào cũng bị loại, trang admin ghi rõ như vậy (xem `reason` trong phản hồi).
+- Cần dừng gấp (VD bot gửi nhầm hàng loạt): đặt `INGEST_AGGREGATED=off` trên Vercel → hai địa chỉ trên trả
+  `410 {"code":"INGEST_OFF"}`. Xoá biến đó rồi Redeploy để nhận lại. Không đặt biến = luôn nhận.

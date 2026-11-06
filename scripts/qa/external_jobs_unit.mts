@@ -20,10 +20,13 @@ await db.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExternalJob"`);
 const sql = fs.readFileSync("prisma/sql/2026-11-07_external_jobs.sql", "utf8").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").split(";").map((x) => x.trim()).filter(Boolean);
 for (const st of sql) await db.$executeRawUnsafe(st);
 ok("X0", "File SQL 2026-11-07_external_jobs.sql tạo được bảng ExternalJob mà Prisma đọc / ghi được", (await db.externalJob.count()) === 0);
+// lib/prisma dùng globalThis.prisma nếu đã có → mọi hàm dùng Prisma mặc định (ingest, activeJobWhere…) chạy trên DB TẠM này
+(globalThis as unknown as { prisma: PrismaClient }).prisma = db;
 
-const { normalizeAdzuna, normalizeCareerjet, isNailJob, companyMatch, hasContactInfo, stripHtml, stateCode } = await import("../../lib/jobFeeds/normalize");
-const { runExternalJobsSync, listExternalJobs, SUMMARY_KEY } = await import("../../lib/jobFeeds/sync");
+const { normalizeAdzuna, normalizeCareerjet, isNailJob, companyMatch, hasContactInfo, stripHtml, stateCode, dropContacts } = await import("../../lib/jobFeeds/normalize");
+const { runExternalJobsSync, listExternalJobs, upsertExternalJobs, toPublic, SUMMARY_KEY } = await import("../../lib/jobFeeds/sync");
 const { searchCareerjet } = await import("../../lib/jobFeeds/careerjet");
+const cfg = await import("../../lib/jobFeeds/config");
 
 // ---- Thuần hàm ----
 ok("N1", "Lọc nail: 'Nail Technician', 'Manicurist', 'Beauty Therapist' (đoạn trích có nail tech) → nail; 'Roofing Nailer', 'Framing Carpenter (nail gun)' → không",
@@ -144,6 +147,136 @@ ok("C3", "Careerjet thiếu khoá → disabled, không gọi mạng", (await sea
 
 const raw = normalizeAdzuna({ id: "z1", title: "Nail Tech", redirect_url: "http://www.adzuna.com/land/ad/z1", created: "2026-11-01" }, "US", T0);
 ok("C4", "Adzuna: chỉ nhận link https về đúng tên miền Adzuna", raw === null);
+
+// ================= Vòng sửa 2 (review 11/2026) =================
+// ---- Giấy phép: khoá dùng thử KHÔNG BAO GIỜ đủ để hiện công khai ----
+for (const k of ["EXTERNAL_JOBS_ADZUNA", "ADZUNA_LICENSE_REF", "EXTERNAL_JOBS_CAREERJET", "CAREERJET_API_KEY", "CAREERJET_TERMS_CONFIRMED"]) delete process.env[k];
+process.env.EXTERNAL_JOBS_ADZUNA = "on"; process.env.ADZUNA_APP_ID = "qa-app-id"; process.env.ADZUNA_APP_KEY = SECRET;
+const trialOnly = cfg.adzunaEnabled() && !cfg.adzunaPublic();
+process.env.ADZUNA_LICENSE_REF = "off";
+const offRef = cfg.adzunaPublic();
+process.env.ADZUNA_LICENSE_REF = "ADZ-2026-117 / 2026-11-20";
+const licensed = cfg.adzunaPublic();
+process.env.EXTERNAL_JOBS_CAREERJET = "on"; process.env.CAREERJET_API_KEY = "cj-test-key";
+const cjNoTerms = cfg.careerjetEnabled();
+process.env.CAREERJET_TERMS_CONFIRMED = "email 2026-11-21";
+const cjTerms = cfg.careerjetEnabled();
+ok("L1", "Adzuna bật + khoá mà CHƯA có ADZUNA_LICENSE_REF → cron được lấy (admin kiểm tra) nhưng KHÔNG hiện công khai; 'off' không tính là mã giấy phép; Careerjet cần CAREERJET_TERMS_CONFIRMED",
+  trialOnly && !offRef && licensed && !cjNoTerms && cjTerms, JSON.stringify({ trialOnly, offRef, licensed, cjNoTerms, cjTerms }));
+for (const k of ["EXTERNAL_JOBS_CAREERJET", "CAREERJET_API_KEY", "CAREERJET_TERMS_CONFIRMED", "ADZUNA_LICENSE_REF"]) delete process.env[k];
+
+// ---- Không bịa độ mới ----
+const noDate = normalizeAdzuna({ id: "nd1", title: "Nail Technician", redirect_url: "https://www.adzuna.com/land/ad/nd1" }, "US", T0);
+const badDate = normalizeAdzuna({ id: "nd2", title: "Nail Technician", redirect_url: "https://www.adzuna.com/land/ad/nd2", created: "not a date" }, "US", T0);
+const futureDate = normalizeAdzuna({ id: "nd3", title: "Nail Technician", redirect_url: "https://www.adzuna.com/land/ad/nd3", created: "2027-01-01T00:00:00Z" }, "US", T0);
+const cjUndated = normalizeCareerjet({ title: "Nail Technician", company: "Glow", locations: "Houston, TX", url: "https://jobviewtrack.com/en-us/job-nd" }, "US", T0);
+const cjPub = cjUndated ? toPublic({ ...cjUndated, id: "cj_x" }, "US") : null;
+ok("D1", "Thiếu / sai / tương lai ngày đăng: Adzuna → BỎ tin; Careerjet → providerCreatedAt null, postedAt null (không bao giờ = 'bây giờ')",
+  noDate === null && badDate === null && futureDate === null && cjUndated?.providerCreatedAt === null && cjPub?.postedAt === null, JSON.stringify({ noDate, badDate, futureDate, cj: cjUndated?.providerCreatedAt, pub: cjPub?.postedAt }));
+
+// ---- Link về đúng tên miền, chỉ https ----
+const hostCases = [
+  normalizeAdzuna({ id: "h1", title: "Nail Tech", created: "2026-11-01", redirect_url: "https://adzuna.attacker.com/land/ad/h1" }, "US", T0),
+  normalizeAdzuna({ id: "h2", title: "Nail Tech", created: "2026-11-01", redirect_url: "https://evil-adzuna.com/land/ad/h2" }, "US", T0),
+  normalizeAdzuna({ id: "h3", title: "Nail Tech", created: "2026-11-01", redirect_url: "https://www.adzuna.com.evil.io/x" }, "US", T0),
+  normalizeCareerjet({ title: "Nail Tech", url: "https://evil.example/phish", date: "2026-11-01" }, "US", T0),
+  normalizeCareerjet({ title: "Nail Tech", url: "http://jobviewtrack.com/en-us/job-1", date: "2026-11-01" }, "US", T0),
+];
+const hostOk = [
+  normalizeAdzuna({ id: "h4", title: "Nail Tech", created: "2026-11-01", redirect_url: "https://www.adzuna.com.au/land/ad/h4" }, "AU", T0),
+  normalizeCareerjet({ title: "Nail Tech", url: "https://www.careerjet.com.au/jobad/x", date: "2026-11-01" }, "AU", T0),
+];
+ok("H1", "Chặn adzuna.attacker.com / evil-adzuna.com / adzuna.com.evil.io / evil.example / http://; nhận adzuna.com.au + careerjet.com.au https", hostCases.every((x) => x === null) && hostOk.every((x) => !!x), JSON.stringify(hostCases.map((x) => !!x)));
+
+// ---- Lọc SĐT / email (lỗ cũ) + dọn đuôi tiêu đề ----
+const leaks = ["+61 (0)412 345 678", "call 1300 123 456", "ring 1800-555-019", "ph 13 12 34", "name[at]domain.com", "jobs (at) glow (dot) com"];
+const clean = ["$45,000 - 55,000 per year", "$130,000 package", "13 years experience", "Level 13, 1300 sq ft"];
+ok("P1", "Bắt '+61 (0)4xx', 1300/1800/13xx, email '[at]'/'(at)'; không bắt nhầm lương / số năm / diện tích; 'Nail Tech - call 0412 555 019' → 'Nail Tech'",
+  leaks.every(hasContactInfo) && !clean.some(hasContactInfo) && dropContacts("Nail Tech - call 0412 555 019") === "Nail Tech" && dropContacts("Nail Tech (call 0412 555 019)") === "Nail Tech" && dropContacts("Gel-X Artist") === "Gel-X Artist",
+  JSON.stringify({ leaks: leaks.map(hasContactInfo), clean: clean.map(hasContactInfo), t: dropContacts("Nail Tech (call 0412 555 019)") }));
+
+// ---- Làm mới nội dung mỗi lần thấy + không lưu toạ độ + chạy chồng (P2002) ----
+process.env.EXTERNAL_JOBS_ADZUNA = "on";
+const T1 = new Date("2026-11-20T06:30:00Z");
+const base = { salary_is_predicted: "0", latitude: 29.7, longitude: -95.3, location: { display_name: "Houston, Texas", area: ["US", "Texas", "Harris County", "Houston"] }, created: "2026-11-19T10:00:00Z" };
+const v1 = normalizeAdzuna({ ...base, id: "r1", title: "Nail Technician", company: { display_name: "Refresh Nails" }, salary_min: 30000, salary_max: 35000, redirect_url: "https://www.adzuna.com/land/ad/r1?v=1", description: "Old text." }, "US", T1)!;
+const v2 = normalizeAdzuna({ ...base, id: "r1", title: "Senior Nail Technician", company: { display_name: "Refresh Nails" }, salary_min: 42000, salary_max: 48000, redirect_url: "https://www.adzuna.com/land/ad/r1?v=2", description: "Now call 713-555-0101.", created: "2026-11-20T01:00:00Z" }, "US", T1)!;
+await upsertExternalJobs(db, [v1], T1);
+const u2 = await upsertExternalJobs(db, [v2], new Date(T1.getTime() + 24 * H));
+const rr1 = await row("r1");
+ok("R1", "Tin đã có: lương / tiêu đề / link / đoạn trích đổi → cập nhật ngay (đoạn trích mới có SĐT → bỏ); ngày đăng gốc giữ nguyên; không lưu lat/lng",
+  u2.refreshed === 1 && rr1?.salaryMin === 42000 && rr1?.title === "Senior Nail Technician" && rr1?.redirectUrl.endsWith("v=2") && rr1?.snippet === null && rr1?.providerCreatedAt.toISOString() === "2026-11-19T10:00:00.000Z" && rr1?.lat === null && rr1?.lng === null,
+  JSON.stringify({ refreshed: u2.refreshed, s: rr1?.salaryMin, t: rr1?.title, sn: rr1?.snippet, lat: rr1?.lat }));
+const dupItems = ["o1", "o2", "o3"].map((id) => normalizeAdzuna({ ...base, id, title: "Nail Technician", company: { display_name: `Overlap ${id}` }, redirect_url: `https://www.adzuna.com/land/ad/${id}` }, "US", T1)!);
+const both = await Promise.allSettled([upsertExternalJobs(db, dupItems, T1), upsertExternalJobs(db, dupItems, T1)]);
+ok("O1", "2 lượt cron chạy chồng cùng tin mới → không lỗi P2002 / 500; mỗi tin đúng 1 dòng", both.every((b) => b.status === "fulfilled") && (await db.externalJob.count({ where: { providerJobId: { in: ["o1", "o2", "o3"] } } })) === 3, JSON.stringify(both.map((b) => b.status === "rejected" ? String((b.reason as Error)?.message).slice(0, 120) : "ok")));
+
+// ---- Tin tổng hợp ('ingest') KHÔNG được che tin Adzuna; tin đăng hộ ('assisted') thì có ----
+const ingestOwner = await db.user.create({ data: { email: `ext.ingest.${Date.now()}@qa.test`, name: "QA Feed", password: "x", role: "OWNER", market: "US", state: "TX" } });
+await db.job.create({ data: { title: "Cần thợ", salonName: "Ingest Only Nails", description: "x", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Houston", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(713) 555-0111", source: "ingest", sourceUrl: "https://www.facebook.com/groups/1/posts/2", sourcePostedAt: T1, expiresAt: new Date(Date.now() + 5 * 86400_000) } });
+await db.job.create({ data: { title: "Cần thợ", salonName: "Assisted Glam Nails", description: "x", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Houston", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(713) 555-0112", source: "assisted", sourcePostedAt: T1, expiresAt: new Date(Date.now() + 5 * 86400_000) } });
+const ingestMatch = normalizeAdzuna({ ...base, id: "i1", title: "Nail Technician", company: { display_name: "Ingest Only Nails" }, redirect_url: "https://www.adzuna.com/land/ad/i1" }, "US", T1)!;
+const assistMatch = normalizeAdzuna({ ...base, id: "i2", title: "Nail Technician", company: { display_name: "Assisted Glam Nails LLC" }, redirect_url: "https://www.adzuna.com/land/ad/i2" }, "US", T1)!;
+await upsertExternalJobs(db, [ingestMatch, assistMatch], T1);
+const { reconcileExternalJobs } = await import("../../lib/jobFeeds/sync");
+await reconcileExternalJobs(db, "adzuna", T1);
+ok("I1", "Adzuna trùng tin TỔNG HỢP → vẫn hiện (bản có giấy phép + ghi nguồn thắng); trùng tin ĐĂNG HỘ theo yêu cầu → ẩn dup_job", (await row("i1"))?.hiddenReason === null && (await row("i2"))?.hiddenReason === "dup_job", JSON.stringify([(await row("i1"))?.hiddenReason, (await row("i2"))?.hiddenReason]));
+
+// ---- Ngân sách thời gian: fetch chậm không làm cron quá 60 s; đối chiếu + tóm tắt luôn chạy ----
+await db.appSetting.deleteMany({ where: { key: SUMMARY_KEY } });
+let slowCalls = 0;
+const slowFetch = (_u: string, init?: RequestInit) => new Promise<Response>((resolve, reject) => {
+  slowCalls++;
+  const t = setTimeout(() => resolve(new Response(JSON.stringify({ count: 0, results: [] }), { status: 200 })), 20_000);
+  init?.signal?.addEventListener("abort", () => { clearTimeout(t); reject(new Error("aborted")); });
+});
+const t0 = Date.now();
+const slow = await runExternalJobsSync({ db, fetchImpl: slowFetch, now: T1, deadline: t0 + 2_500, workDeadline: t0 + 3_500 });
+const took = Date.now() - t0;
+const sumSlow = (await db.appSetting.findUnique({ where: { key: SUMMARY_KEY } }))?.value || "";
+ok("T1", "Fetch treo: lượt gọi bị cắt đúng hạn (timeout = thời gian còn lại), không gọi thị trường sau, status 'deadline', đối chiếu + tóm tắt admin vẫn ghi, tổng < 5 s",
+  slow.adzuna.status === "deadline" && slowCalls === 1 && took < 5_000 && /"status":"deadline"/.test(sumSlow) && !!slow.adzuna.active, JSON.stringify({ st: slow.adzuna.status, slowCalls, took }));
+delete process.env.EXTERNAL_JOBS_ADZUNA;
+
+// ---- Tin tự đăng: hạn 30 ngày tính từ max(ngày đăng, ngày áp dụng) — không ẩn đột ngột lúc triển khai ----
+const ing = await import("../../lib/jobIngest/ingest");
+const disp = await import("../../lib/jobIngest/display");
+const legacy = await db.job.create({ data: { title: "Cần thợ (QA legacy)", salonName: "Legacy QA Nails", description: "", ownerId: owner.id, market: "US", state: "NY", city: "Queens", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(718) 555-0100", createdAt: new Date("2026-10-15T12:00:00Z") } });
+const visibleAt = async (d: string) => !!(await db.job.findFirst({ where: { AND: [{ id: legacy.id }, ing.activeJobWhere(new Date(d))] }, select: { id: true } }));
+const eff = ing.effectiveExpiry(legacy)?.toISOString();
+ok("E1", "Tin tự đăng cũ (15/10, chưa có hạn): vẫn hiện 14/11 và 06/12, ẩn từ 07/12 (= ngày áp dụng 07/11 + 30); effectiveExpiry khớp",
+  (await visibleAt("2026-11-14T12:00:00Z")) && (await visibleAt("2026-12-06T12:00:00Z")) && !(await visibleAt("2026-12-07T00:00:01Z")) && eff === "2026-12-07T00:00:00.000Z", String(eff));
+const newer = await db.job.create({ data: { title: "Cần thợ (QA newer)", salonName: "Newer QA Nails", description: "", ownerId: owner.id, market: "US", state: "NY", city: "Queens", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(718) 555-0101", createdAt: new Date("2026-11-20T00:00:00Z") } });
+ok("E2", "Tin tự đăng không có hạn đăng sau ngày áp dụng → hạn = ngày đăng + 30", ing.effectiveExpiry(newer)?.toISOString() === "2026-12-20T00:00:00.000Z" && ing.effectiveExpiry({ expiresAt: null, createdAt: new Date(), source: "ingest" }) === null);
+
+// ---- Gỡ tin: xoá dữ liệu công khai, đánh dấu removed ----
+const toRemove = await db.job.create({ data: { title: "Cần thợ bột", salonName: "Takedown QA Nails", description: "Gọi 832-555-0199 gặp Linda", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Katy", salaryType: "x", salaryAmount: "$1,200/tuần", skills: "Bột", benefits: "", phone: "(832) 555-0199", address: "1 Main St, Katy TX", zip: "77449", source: "ingest", sourceUrl: "https://www.facebook.com/groups/1/posts/9", sourceKey: "k", sourceFbHash: "h", expiresAt: new Date(Date.now() + 5 * 86400_000) } });
+await ing.removeJobPublicData(toRemove.id, db);
+const gone = await db.job.findUnique({ where: { id: toRemove.id } });
+ok("K1", "Gỡ tin: SĐT / mô tả / địa chỉ / ZIP / link bài gốc / tên tiệm bị xoá, source = removed, hết hạn ngay, không còn trong activeJobWhere",
+  !!gone && ing.isRemovedJob(gone) && gone.phone === "" && gone.description === "" && gone.address === null && gone.zip === null && gone.sourceUrl === null && gone.salonName === "" && gone.sourceFbHash === null && !(await db.job.findFirst({ where: { AND: [{ id: toRemove.id }, ing.activeJobWhere()] } })),
+  JSON.stringify(gone));
+
+// ---- Tin tổng hợp công khai: không SĐT, đoạn trích không SĐT, có nguồn + link; thiếu link → không hiện ----
+const ingPub = disp.publicJob({ source: "ingest", sourceUrl: "https://m.facebook.com/groups/1/posts/3", sourceKey: "k", sourceFbHash: "h", phone: "(713) 555-0111", salonName: "Ingest Only Nails", city: "Houston", state: "TX", salaryAmount: "$1,200/tuần", description: "Cần thợ bột gấp\nLH: 713-555-0111 hoặc text 7135550112\nemail glow[at]mail.com", market: "US" });
+const selfPub = disp.publicJob({ source: null, sourceUrl: null, sourceKey: null, sourceFbHash: null, phone: "(718) 555-0100", salonName: "Self Nails", city: "Queens", state: "NY", salaryAmount: "$1,000", description: "Call 718-555-0100", market: "US" });
+const noLink = await db.job.create({ data: { title: "Cần thợ", salonName: "No Link Nails", description: "x", ownerId: ingestOwner.id, market: "US", state: "TX", city: "Houston", salaryType: "x", salaryAmount: "x", skills: "", benefits: "", phone: "(713) 555-0113", source: "ingest", sourcePostedAt: T1, expiresAt: new Date(Date.now() + 5 * 86400_000) } });
+ok("G1", "Tin tổng hợp: phone rỗng, mô tả bỏ mọi SĐT / email, nguồn 'Facebook' + link https bài gốc, không lộ sourceKey; tin tự đăng giữ SĐT; tin tổng hợp không có link → activeJobWhere ẩn",
+  ingPub.phone === "" && !hasContactInfo(ingPub.description || "") && ingPub.description.startsWith("Cần thợ bột gấp") && ingPub.sourceLink?.name === "Facebook" && ingPub.sourceLink.href.startsWith("https://m.facebook.com/") && !("sourceKey" in ingPub) && !("sourceUrl" in ingPub)
+    && selfPub.phone === "(718) 555-0100" && selfPub.sourceLink === null && !(await db.job.findFirst({ where: { AND: [{ id: noLink.id }, ing.activeJobWhere()] } })),
+  JSON.stringify({ ingPub, selfPhone: selfPub.phone }));
+
+// ---- Ngừng nhận tin tổng hợp (mặc định) + tin đăng hộ không bị ghi đè ----
+delete process.env.INGEST_AGGREGATED;
+const offRes = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp, lương cao. LH 281-555-0144", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/10" }, new Set());
+const assistedRes = await ing.ingestOne({ text: "Tiệm cần thợ bột gấp ở Houston TX, bao lương $1,200/tuần. LH 281-555-0145", salonName: "Requested QA Nails", state: "TX", market: "US" }, new Set(), { assisted: true });
+process.env.INGEST_AGGREGATED = "on";
+const overwrite = await ing.ingestOne({ text: "Cần thợ chân tay nước, tip cao. LH 281-555-0145", state: "TX", market: "US", sourceUrl: "https://www.facebook.com/groups/1/posts/11" }, new Set());
+delete process.env.INGEST_AGGREGATED;
+const kept = assistedRes.jobId ? await db.job.findUnique({ where: { id: assistedRes.jobId } }) : null;
+ok("A1", "INGEST_AGGREGATED tắt → bài tổng hợp bị bỏ; tin ĐĂNG HỘ vẫn đăng được; bài tổng hợp cùng SĐT KHÔNG ghi đè / đổi nhãn tin đăng hộ",
+  offRes.status === "skipped" && /INGEST_AGGREGATED/.test(offRes.reason || "") && assistedRes.status === "created" && overwrite.status === "skipped" && kept?.source === "assisted" && /bao lương/.test(kept?.description || ""),
+  JSON.stringify({ offRes, assistedRes, overwrite, src: kept?.source }));
 
 await db.$disconnect();
 try { fs.rmSync(dbFile, { force: true }); fs.rmSync(dbFile + "-journal", { force: true }); } catch {}

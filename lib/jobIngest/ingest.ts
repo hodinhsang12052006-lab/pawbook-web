@@ -52,6 +52,8 @@ export function effectiveExpiry(job: { expiresAt: Date | null; createdAt: Date; 
   if (job.source) return null;
   return new Date(Math.max(job.createdAt.getTime(), jobTtlRollout().getTime()) + jobTtlDays() * DAY);
 }
+/** Hạn đã qua chưa (null = không có hạn → chưa hết). Tách ra hàm để thành phần máy chủ không gọi Date.now() lúc render. */
+export const isPastExpiry = (exp: Date | null | undefined, now = Date.now()) => !!exp && exp.getTime() <= now;
 /** Tin nhắc chủ tiệm gia hạn trước N ngày (thông báo chuông + banner trên trang tin). */
 export const RENEW_REMINDER_DAYS = 7;
 

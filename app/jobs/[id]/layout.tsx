@@ -4,7 +4,7 @@ import { placeLabel } from "@/lib/stateNames";
 import { firstImage, jobPostingLd } from "@/lib/jobPostingLd";
 import { SITE_URL } from "@/lib/siteUrl";
 import { isDemoEmail } from "@/lib/demo";
-import { effectiveExpiry, isRemovedJob } from "@/lib/jobIngest/ingest";
+import { effectiveExpiry, isPastExpiry, isRemovedJob } from "@/lib/jobIngest/ingest";
 
 const JOB_SELECT = { id: true, title: true, salonName: true, description: true, salaryType: true, salaryAmount: true, city: true, state: true, market: true, skills: true, benefits: true, createdAt: true, expiresAt: true, source: true, owner: { select: { email: true } } } as const;
 const GENERIC: Metadata = { title: "Tin tuyển dụng — PawNail Jobs" };
@@ -25,8 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       ? `${j.salaryAmount} · ${placeLabel(j.city, j.market, j.state)}. Xem nguồn tin và liên hệ tiệm trên PawNail Jobs.`
       : `${j.salaryAmount} · ${placeLabel(j.city, j.market, j.state)}. Gọi hoặc nhắn tin trực tiếp cho tiệm trên PawNail Jobs.`;
     const image = firstImage(media?.mediaUrls);
-    const exp = effectiveExpiry(j);
-    const expired = !!exp && exp.getTime() <= Date.now();
+    const expired = isPastExpiry(effectiveExpiry(j));
     return {
       title,
       description,
@@ -50,7 +49,7 @@ export default async function Layout({ children, params }: { children: React.Rea
     const j = await prisma.job.findUnique({ where: { id }, select: JOB_SELECT });
     if (j && !isDemoEmail(j.owner?.email) && !j.source) {
       const validThrough = effectiveExpiry(j);
-      if (!validThrough || validThrough.getTime() > Date.now()) ld = jobPostingLd({ ...j, validThrough });
+      if (!isPastExpiry(validThrough)) ld = jobPostingLd({ ...j, validThrough });
     }
   } catch {}
   return (

@@ -132,12 +132,13 @@ try {
   await op.goto(BASE_URL + "/?tab=feed");
   const onav = op.getByRole("navigation", { name: "Điều hướng chính" });
   await onav.waitFor({ timeout: 15000 });
-  await onav.getByRole("button", { name: "Tìm thợ" }).click();
+  await onav.getByRole("button", { name: /^(Tìm thợ|Tuyển thợ)$/ }).click();
   await op.waitForTimeout(600);
   const ownerTab = await selectedTab(op);
+  const ownerIdx = await selectedIndex(op); // 2 = tab Thợ
   await onav.getByRole("button", { name: "Đăng tin tuyển thợ" }).click();
   await op.waitForURL(/\/jobs\/create/, { timeout: 15000 }).catch(() => {});
-  R.check("M11", "Chủ tiệm: 'Tìm thợ' → tab Thợ rảnh; ＋ → trang đăng tin", ownerTab.includes("Thợ rảnh") && op.url().includes("/jobs/create"), `${ownerTab} ${op.url()}`);
+  R.check("M11", "Chủ tiệm: 'Tuyển thợ' → tab Thợ; ＋ → trang đăng tin", ownerIdx === 2 && op.url().includes("/jobs/create"), `${ownerTab} ${op.url()}`);
   await op.goto(BASE_URL + "/?tab=jobs");
   await op.waitForTimeout(1500);
   await op.screenshot({ path: `${OUT}/m_owner_nav.png` });

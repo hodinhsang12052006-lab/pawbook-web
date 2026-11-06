@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Check, Loader2, Sparkles, Trash2, Wand2, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { AiBadge, DesignVisual, occasionLabel, type Design } from "@/components/designs/DesignViews";
+import FlowImport from "@/components/designs/FlowImport";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 
 interface State { oldImages?: number; enabled: boolean; storage?: boolean; textOnly?: boolean; cfImages?: number; imagesToday?: number; nextOccasion?: { id: string; title: string; emoji: string } | null; dailyLimit: number; review?: boolean; madeToday: number; drafts: (Design & { quality?: number | null })[]; published: (Design & { quality?: number | null })[]; needsSql?: boolean }
@@ -164,6 +165,7 @@ export default function AdminDesigns() {
       ))}
       {st && st.enabled && (st.textOnly || st.storage === false) && <p className="rounded-xl bg-sky-500/10 px-3 py-2 text-xs text-sky-200 ring-1 ring-sky-500/25">Chế độ chỉ viết chữ (Gemini miễn phí): AI viết ý tưởng + vật tư + các bước, minh hoạ do app tự vẽ từ bảng màu. Bật ảnh AI: bỏ AI_DESIGNS_TEXT_ONLY trên Vercel sau khi gắn thanh toán Google.</p>}
       {st?.needsSql && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/25">Chưa tạo bảng — chạy prisma/sql/2026-10-09_nail_designs.sql.</p>}
+      <FlowImport />
 
       {!!st?.drafts.length && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/10">

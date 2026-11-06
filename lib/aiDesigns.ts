@@ -10,6 +10,7 @@ import { generateEngineDesigns, generateOccasionBatch, PATTERN_IDS, type EngineD
 import { cfDailyImages, cfImage, cfImageEnabled } from "@/lib/cfImage";
 import { canRenderPattern, renderDesignImage, pickHand, spreadVariant } from "@/lib/designRender";
 import { PROCEDURAL } from "@/lib/tryon/patterns";
+import { FLOW_WHERE, isFlowPrompt, redrawKeepMarks } from "@/lib/flowMarks";
 
 // "Mẫu nail AI mỗi ngày":
 //   1. Bối cảnh THẬT: dịp lễ đang/ sắp diễn ra (lịch Studio), hashtag đang lên,
@@ -195,7 +196,8 @@ export async function generateDesigns(market: "US" | "AU", count: number): Promi
   await Promise.all(
     list.map(async (d) => {
       try {
-        const imagePrompt = `${cut(d.imagePrompt, 900)}\n\n${IMAGE_STYLE}`;
+        // bỏ ngoặc [] trong chữ AI viết — ngoặc vuông dành cho dấu ảnh ([ai:][flow:][was:]…), chữ không được giả dấu
+        const imagePrompt = `${cut(d.imagePrompt, 900).replace(/[[\]]/g, "")}\n\n${IMAGE_STYLE}`;
         let imageUrl: string | null = null;
         if (wantImages) {
           try {
@@ -280,7 +282,7 @@ async function saveEngineDesigns(list: EngineDesign[], market: "US" | "AU") {
   const created: string[] = [];
   const jobs: ImageJob[] = [];
   for (const d of list) {
-    const prompt = `${d.imagePrompt}\n\n${IMAGE_STYLE}`.slice(0, 2000);
+    const prompt = `${d.imagePrompt.replace(/[[\]]/g, "")}\n\n${IMAGE_STYLE}`.slice(0, 2000);
     const row = await prisma.nailDesign.create({
       data: {
         ...(await publishState()),
@@ -402,23 +404,34 @@ async function renderOn(): Promise<boolean> {
 }
 /** Vẽ ảnh 1 mẫu bằng máy PawNail rồi lưu. Ảnh AI cũ (nếu có) giữ link trong prompt [ai:…] — khôi phục được. */
 // `used`: tay mẫu đã dùng trong lượt này → chọn biến thể ra tay khác (kho mẫu không lặp 1 bàn tay ở các ô liền nhau)
-async function renderAndStore(id: string, variant = 0, used?: Set<string>): Promise<string | null> {
+// Ảnh Google Flow (dấu [flow:], lib/flowMarks) chỉ bị thay khi ADMIN bấm vẽ lại (`explicit`) — ảnh Flow, ảnh trước Flow
+// và ảnh AI gốc đều cất vào [ai:…]. Trả: link ảnh mới · null = không vẽ được · false = mẫu vừa bị đổi lúc đang vẽ
+// (VD admin vừa nhập ảnh Flow) → bỏ qua, không ghi đè.
+async function renderAndStore(id: string, variant = 0, used?: Set<string>, explicit = false): Promise<string | null | false> {
   const row = await prisma.nailDesign.findUnique({ where: { id }, select: { id: true, palette: true, shape: true, finish: true, pattern: true, skills: true, prompt: true, imageUrl: true } });
-  if (!row || !canRenderPattern(row.pattern)) return null;
+  if (!row || !canRenderPattern(row.pattern) || (isFlowPrompt(row.prompt) && !explicit)) return null;
   const d = { id: row.id, palette: parse(row.palette, [] as string[]), shape: row.shape, finish: row.finish, pattern: row.pattern, skills: row.skills.split(",").filter(Boolean) };
   const v = used ? spreadVariant(d, used, variant) : variant;
   used?.add(pickHand(d, v).file);
   const img = await renderDesignImage(d, v);
   const imageUrl = await store(img);
-  const keepOld = row.imageUrl && !row.prompt.includes("[pr:") && !row.prompt.includes("[ai:") ? `[ai:${row.imageUrl}]` : "";
-  const marks = `${row.prompt.match(/\[ai:[^\]]*\]/)?.[0] ?? keepOld}${row.prompt.match(/\[redraws:\d+\]/)?.[0] ?? ""}${renderMark()}`;
-  const base = row.prompt.replace(/\[(q|try|pr|ai|redraws|img):[^\]]*\]/g, "").trimEnd();
-  await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${base.slice(0, 2000 - marks.length)}${marks}` } });
-  return imageUrl;
+  const ais = [...new Set(row.prompt.match(/\[ai:[^\]]*\]/g) ?? [])].join("");
+  const keepOld = row.imageUrl && !row.prompt.includes("[pr:") && !ais ? `[ai:${row.imageUrl}]` : "";
+  const marks = `${redrawKeepMarks(row.prompt, row.imageUrl) || ais || keepOld}${row.prompt.match(/\[redraws:\d+\]/)?.[0] ?? ""}${renderMark()}`;
+  const base = row.prompt.replace(/\[(q|try|pr|ai|redraws|img|flow|was|wasmk):[^\]]*\]/g, "").trimEnd();
+  const u = await prisma.nailDesign.updateMany({ where: unchangedWhere(id, row.prompt, row.imageUrl, explicit), data: { imageUrl, prompt: `${base.slice(0, Math.max(0, 2000 - marks.length))}${marks}` } });
+  return u.count ? imageUrl : false;
 }
 
+/** Điều kiện ghi ảnh tự động: mẫu còn y như lúc đọc (prompt, ảnh) và — trừ khi admin bấm vẽ lại — không phải ảnh Flow.
+ *  Máy vẽ mất vài giây → vài chục giây; admin nhập ảnh Flow trong lúc đó thì lệnh ghi khớp 0 dòng (bỏ qua). */
+export const unchangedWhere = (id: string, prompt: string, imageUrl?: string | null, allowFlow = false) => ({
+  id, prompt, ...(imageUrl === undefined ? {} : { imageUrl }), ...(allowFlow ? {} : { NOT: [FLOW_WHERE] }),
+});
+
 // mẫu đang hiện còn ảnh cũ (ảnh AI / ảnh vẽ bằng bộ tay mẫu cũ) mà máy PawNail vẽ lại được
-const oldImageWhere = () => ({ provider: "pawnail", status: "published", imageUrl: { not: null }, pattern: { in: [...PROCEDURAL] }, NOT: { prompt: { contains: `:${RENDER_GEN}]` } } });
+// — trừ ảnh Google Flow (FLOW_WHERE)
+export const oldImageWhere = () => ({ provider: "pawnail", status: "published", imageUrl: { not: null }, pattern: { in: [...PROCEDURAL] }, NOT: [{ prompt: { contains: `:${RENDER_GEN}]` } }, FLOW_WHERE] });
 /** Số ảnh cũ còn chờ vẽ lại (admin xem tiến độ). */
 export async function oldImagesLeft(): Promise<number> {
   return prisma.nailDesign.count({ where: oldImageWhere() });
@@ -446,6 +459,7 @@ export async function rerenderAiImages(deadline: number, max = 8): Promise<{ don
 
 async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]): Promise<number> {
   let rendered = 0;
+  jobs = jobs.filter((j) => !isFlowPrompt(j.prompt)); // ảnh Google Flow: máy không tự vẽ đè
   // 1) hoạ tiết máy PawNail tự vẽ được → vẽ bằng máy PawNail (không tốn lượt AI, không lỗi giải phẫu)
   if (jobs.length && storageReady() && (await renderOn())) {
     const rest: ImageJob[] = [];
@@ -453,7 +467,9 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
     for (const job of jobs) {
       if (deadline - Date.now() < 6000) { rest.push(job); continue; }
       try {
-        if (await renderAndStore(job.id, 0, used)) { rendered++; continue; }
+        const r = await renderAndStore(job.id, 0, used);
+        if (r) { rendered++; continue; }
+        if (r === false) continue; // mẫu vừa đổi (VD vừa nhập ảnh Flow) → không vẽ đè bằng AI
       } catch (err) {
         errors.push(`Máy PawNail chưa vẽ được ảnh (thử AI): ${(err as Error).message.slice(0, 120)}`);
       }
@@ -479,14 +495,15 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
         const score = best.verdict?.score;
         if (score === undefined || score < KEEP_SCORE) {
           // Ảnh tốt nhất vẫn xấu → không đăng; đánh dấu đã thử hôm nay, mai vẽ lại.
-          await prisma.nailDesign.update({ where: { id: job.id }, data: { prompt: `${job.prompt}${tryMark()}`.slice(0, 2000) } });
+          await prisma.nailDesign.updateMany({ where: unchangedWhere(job.id, job.prompt), data: { prompt: `${job.prompt}${tryMark()}`.slice(0, 2000) } });
           errors.push(`Ảnh chưa đạt (${score}/10 sau ${best.tried} ảnh: ${best.verdict?.issues.join(", ") || "chất lượng thấp"}) — giữ hình minh hoạ, mai vẽ lại.`);
           continue;
         }
         const imageUrl = await store(best.img);
         const q = score !== undefined ? `[q:${score}]` : "";
-        await prisma.nailDesign.update({ where: { id: job.id }, data: { imageUrl, prompt: `${job.prompt.replace(/\[(q|try|hid):[^\]]*\]/g, "")}${q}${imgMark()}`.slice(0, 2000) } });
-        done++;
+        // chỉ ghi khi mẫu còn y như lúc đọc job.prompt (AI vẽ 10–30 giây — admin có thể vừa nhập ảnh Flow)
+        const w = await prisma.nailDesign.updateMany({ where: unchangedWhere(job.id, job.prompt), data: { imageUrl, prompt: `${job.prompt.replace(/\[(q|try|hid):[^\]]*\]/g, "")}${q}${imgMark()}`.slice(0, 2000) } });
+        if (w.count) done++;
       } catch (err) {
         const msg = (err as Error).message;
         // Hết lượt miễn phí trong ngày (Cloudflare reset 00:00 UTC) → dừng hẳn, mai vẽ bù tiếp.
@@ -508,9 +525,10 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
 
 /** Vẽ bù ảnh cho mẫu PawNail nháp (14 ngày gần đây) còn thiếu ảnh — lỗi/quá giờ, hoặc
  *  bộ mẫu lớn đang vẽ dần. Mỗi lượt vẽ được bao nhiêu thì vẽ, trong hạn mức ngày. */
+export const backfillWhere = () => ({ provider: "pawnail", imageUrl: null, status: { in: ["draft", "published"] }, createdAt: { gte: new Date(Date.now() - 14 * DAY_MS) }, NOT: [FLOW_WHERE] });
 export async function backfillImages(deadline: number): Promise<{ drawn: number; errors: string[] }> {
   const rows = await prisma.nailDesign.findMany({
-    where: { provider: "pawnail", imageUrl: null, status: { in: ["draft", "published"] }, createdAt: { gte: new Date(Date.now() - 14 * DAY_MS) } },
+    where: backfillWhere(),
     select: { id: true, prompt: true },
     orderBy: { createdAt: "asc" },
     take: 40,
@@ -523,8 +541,10 @@ export async function backfillImages(deadline: number): Promise<{ drawn: number;
 }
 
 export const MAX_REDRAWS = 3;
+const CHANGED_MEANWHILE = "Mẫu vừa được đổi ở nơi khác (VD vừa nhập ảnh Flow) — tải lại trang rồi thử lại.";
 // Phần mô tả bộ móng (trước khung ảnh và các dấu [redraws:…][img:…]).
-const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img|q|try|hid):[^\]]*\]/g, "").split("\n\n")[0].trim();
+// Dấu ảnh Flow / link ảnh cũ ([pr:][ai:][flow:][was:][wasmk:]) không phải mô tả — không gửi cho máy vẽ.
+const subjectOf = (prompt: string) => prompt.replace(/\[(redraws|img|q|try|hid|pr|ai|flow|was|wasmk):[^\]]*\]/g, "").split("\n\n")[0].trim();
 
 /** Admin bấm "Vẽ lại ảnh" (ảnh lỗi tay, sai hoạ tiết…) — tối đa MAX_REDRAWS lần/mẫu.
  *  Luôn dùng khung ảnh MỚI NHẤT (IMAGE_STYLE) với phần mô tả bộ móng đã lưu. */
@@ -534,10 +554,11 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
   if (r0 && canRenderPattern(r0.pattern) && storageReady() && (await renderOn())) {
     const n0 = Number(r0.prompt.match(/\[redraws:(\d+)\]/)?.[1] ?? 0);
     try {
-      const imageUrl = await renderAndStore(id, n0 + 1);
+      const imageUrl = await renderAndStore(id, n0 + 1, undefined, true);
+      if (imageUrl === false) return { error: CHANGED_MEANWHILE };
       if (imageUrl) {
         const cur = (await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true } }))!.prompt;
-        await prisma.nailDesign.update({ where: { id }, data: { prompt: cur.replace(/\[redraws:\d+\]/, "").replace(renderMark(), `[redraws:${n0 + 1}]${renderMark()}`) } });
+        await prisma.nailDesign.updateMany({ where: { id, prompt: cur }, data: { prompt: cur.replace(/\[redraws:\d+\]/, "").replace(renderMark(), `[redraws:${n0 + 1}]${renderMark()}`) } });
         return { imageUrl, redraws: n0 + 1 };
       }
     } catch (err) {
@@ -545,7 +566,7 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
     }
   }
   if (!cfImageEnabled() || !storageReady()) return { error: "Chưa bật vẽ ảnh (Cloudflare Workers AI)." };
-  const row = await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true } });
+  const row = await prisma.nailDesign.findUnique({ where: { id }, select: { prompt: true, imageUrl: true } });
   if (!row) return { error: "Không tìm thấy mẫu." };
   const n = Number(row.prompt.match(/\[redraws:(\d+)\]/)?.[1] ?? 0);
   if (n >= MAX_REDRAWS) return { error: `Mẫu này đã vẽ lại ${MAX_REDRAWS} lần — bỏ mẫu hoặc tạo mẫu mới.` };
@@ -559,7 +580,9 @@ export async function redrawImage(id: string): Promise<{ imageUrl?: string; erro
     if (best.verdict.score < KEEP_SCORE) return { error: `Ảnh vẽ lại chưa đạt (${best.verdict.score}/10: ${best.verdict.issues.join(", ") || "chất lượng thấp"}) — giữ ảnh cũ, thử lại sau.` };
     const imageUrl = await store(best.img);
     const q = `[q:${best.verdict.score}]`;
-    await prisma.nailDesign.update({ where: { id }, data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n[redraws:${n + 1}]${q}${imgMark()}`.slice(0, 2000) } });
+    const keep = redrawKeepMarks(row.prompt, row.imageUrl); // vẽ đè ảnh Google Flow → ảnh Flow + ảnh cũ cất vào [ai:…]
+    const w = await prisma.nailDesign.updateMany({ where: unchangedWhere(id, row.prompt, row.imageUrl, true), data: { imageUrl, prompt: `${subject}\n\n${IMAGE_STYLE}\n`.slice(0, Math.max(0, 1940 - keep.length)) + `${keep}[redraws:${n + 1}]${q}${imgMark()}` } });
+    if (!w.count) return { error: CHANGED_MEANWHILE };
     return { imageUrl, redraws: n + 1 };
   } catch (err) {
     return { error: `Không vẽ được ảnh: ${(err as Error).message.slice(0, 160)}` };
@@ -612,6 +635,8 @@ export interface PublicDesign {
   provider: string;
   /** ảnh do máy PawNail vẽ trên tay mẫu (không phải AI vẽ cả bàn tay) — để ghi nhãn đúng nguồn */
   rendered?: boolean;
+  /** nguồn ảnh: "flow" = ảnh Google Flow chủ tiệm nhập (nhãn "Ảnh minh hoạ AI"), "render" = máy PawNail vẽ, "ai" = AI vẽ */
+  imageSource?: "flow" | "render" | "ai" | null;
   status: string;
   saves: number;
   saved?: boolean;
@@ -632,12 +657,14 @@ export function toPublic(r: {
   palette?: string; shape?: string; finish?: string; pattern?: string; provider?: string; prompt?: string;
   status: string; publishedAt: Date | null; _count?: { saves: number };
 }): PublicDesign {
+  const flow = isFlowPrompt(r.prompt);
   return {
     id: r.id, day: r.day, occasion: r.occasion, title: r.title, titleEn: r.titleEn, description: r.description, descriptionEn: r.descriptionEn,
     skills: r.skills ? r.skills.split(",").filter(Boolean) : [], difficulty: r.difficulty, minutes: r.minutes, priceHint: r.priceHint,
     materials: parse(r.materials, []), steps: parse(r.steps, []), imageUrl: r.imageUrl, videoUrl: r.videoUrl, status: r.status,
     palette: parse(r.palette ?? "[]", [] as string[]), shape: r.shape ?? "almond", finish: r.finish ?? "glossy", pattern: r.pattern ?? "solid", provider: r.provider ?? "gemini",
     saves: r._count?.saves ?? 0, publishedAt: r.publishedAt?.toISOString() ?? null,
-    rendered: !!r.imageUrl && !!r.prompt?.includes("[pr:"),
+    rendered: !!r.imageUrl && !flow && !!r.prompt?.includes("[pr:"),
+    imageSource: !r.imageUrl ? null : flow ? "flow" : r.prompt?.includes("[pr:") ? "render" : "ai",
   };
 }

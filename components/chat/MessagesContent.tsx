@@ -49,6 +49,23 @@ function growInput(el: HTMLTextAreaElement | null) {
 }
 const finePointer = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: fine)").matches;
 
+// Thông tin tin cậy THẬT của đối phương (1 lần / người / phiên): thành phố, ngày tham gia, SĐT đã xác minh.
+type PartnerTrust = { city?: string | null; state?: string | null; createdAt?: string; phoneVerified?: boolean };
+const trustCache = new Map<string, Promise<PartnerTrust | null>>();
+function loadTrust(id: string): Promise<PartnerTrust | null> {
+  if (!trustCache.has(id)) {
+    trustCache.set(
+      id,
+      fetch(`/api/profile?id=${encodeURIComponent(id)}&badges=1`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((u) => (u && !u.error ? { city: u.city, state: u.state, createdAt: u.createdAt, phoneVerified: u.phoneVerified === true } : null))
+        .catch(() => null)
+    );
+  }
+  return trustCache.get(id)!;
+}
+const SAFETY_KEY = "pn_safety_dismissed";
+
 export default function MessagesContent({
   initialSessionUser,
   initialConversations,
@@ -1191,6 +1208,33 @@ export default function MessagesContent({
     retry: (m: MessageType) => rowLatest.current.retrySendMessage(m),
   }), []);
 
+  // ----- V2: tin cậy của đối phương (thẻ đầu cuộc trò chuyện) + thẻ "Nhắn tin an toàn" lần đầu liên hệ
+  const [partnerTrust, setPartnerTrust] = useState<PartnerTrust | null>(null);
+  useEffect(() => {
+    setPartnerTrust(null);
+    if (!activeChat || activeChat.isGroup) return;
+    let alive = true;
+    loadTrust(activeChat.id).then((t) => alive && setPartnerTrust(t));
+    return () => { alive = false; };
+  }, [activeChat?.id, activeChat?.isGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [safetyHidden, setSafetyHidden] = useState<Record<string, true>>(() => {
+    try { return JSON.parse(localStorage.getItem(SAFETY_KEY) || "{}"); } catch { return {}; }
+  });
+  const activeConv = activeChat?.conversationId ? conversations.find((c) => c.id === activeChat.conversationId) : undefined;
+  const iSentAny = chatMessages.some((m) => m.senderId === currentUser?.id);
+  const convYoung = !activeConv || Date.now() - new Date(activeConv.createdAt).getTime() < 7 * 86_400_000;
+  const showSafety =
+    !!activeChat && !activeChat.isGroup && activeChat.role !== "ADMIN" && !isVerifiedRole(activeChat.role) &&
+    (convYoung || !iSentAny) && !safetyHidden[activeKey || ""];
+  const dismissSafety = () => {
+    const k = activeKey || "";
+    setSafetyHidden((prev) => {
+      const next = { ...prev, [k]: true as const };
+      try { localStorage.setItem(SAFETY_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   // ----- V2: mốc "đã xem" dạng số (MessageRow nhận boolean → memo giữ được)
   const seenAtMs = activeChat?.conversationId && seenByConv[activeChat.conversationId] ? new Date(seenByConv[activeChat.conversationId]).getTime() : 0;
 
@@ -1512,6 +1556,7 @@ export default function MessagesContent({
                       <Link href={`/profile/${activeChat.id}`} className="truncate hover:text-pink-200">{activeChat.name}</Link>
                     )}
                     {!activeChat.isGroup && isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
+                    {!activeChat.isGroup && partnerTrust?.phoneVerified && <ShieldCheck aria-label={tr(" SĐT đã xác minh", " Phone verified").trim()} className="h-3.5 w-3.5 flex-shrink-0 text-emerald-300" />}
                   </h3>
                   {/* Trước đây chấm xanh "đang hoạt động" hiện cứng cho MỌI người
                       (app không theo dõi online) — bỏ, thay bằng thông tin thật. */}
@@ -1660,9 +1705,29 @@ export default function MessagesContent({
                     {isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
                   </p>
                   <p className="text-xs text-slate-400">{ROLE_VI()[activeChat.role] || tr("Thành viên PawNail", "PawNail member")}</p>
+                  {(partnerTrust?.city || partnerTrust?.state) && <p className="text-[13px] text-[var(--m-text-2)]">{[partnerTrust.city, partnerTrust.state].filter(Boolean).join(", ")}</p>}
+                  {partnerTrust?.createdAt && (
+                    <p className="text-[12px] text-[var(--m-text-3)]">
+                      {CS.joined(new Date(partnerTrust.createdAt).toLocaleDateString(locale === "vi" ? "vi-VN" : currentUser?.market === "AU" ? "en-AU" : "en-US", { month: "short", year: "numeric" }))}
+                    </p>
+                  )}
                   <Link href={`/profile/${activeChat.id}`} className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12] sm:hidden">
                     {tr("Xem hồ sơ", "View profile")}
                   </Link>
+                </div>
+              )}
+
+              {showSafety && !chatNextCursor && (
+                <div className="m-safety flex-none" role="note">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--m-champagne)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-semibold text-[var(--m-text)]">{CS.safetyTitle()}</p>
+                    <p className="mt-0.5">{CS.safetyBody()}</p>
+                    <button type="button" onClick={() => setShowReportModal(true)} className="mt-1.5 min-h-8 text-[14px] font-semibold text-[var(--m-accent-ink)]">{CS.report()}</button>
+                  </div>
+                  <button type="button" onClick={dismissSafety} aria-label={CS.dismiss()} className="-mr-1 -mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[var(--m-text-3)]">
+                    <XIcon className="h-4 w-4" />
+                  </button>
                 </div>
               )}
 

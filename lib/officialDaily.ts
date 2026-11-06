@@ -9,6 +9,9 @@ import { GALLERY_PREFIX } from "@/lib/designGallery";
 import { DIGEST_PREFIX } from "@/lib/jobDigestPost";
 
 export const KNOWLEDGE_PER_DAY = 2;
+const SHAPE_COOLDOWN_MS = 60 * 86_400_000;
+/** Dòng đầu bỏ mọi chữ số — "còn 12 ngày" và "còn 11 ngày" là cùng 1 bài. */
+export const titleShape = (content: string) => firstLine(content).replace(/\d+/g, "#");
 
 export async function publishDailyOfficialPost(now = new Date()): Promise<{ posted: boolean; title?: string; reason?: string }> {
   if (process.env.OFFICIAL_DAILY_POST === "0") return { posted: false, reason: "đã tắt" };
@@ -26,8 +29,16 @@ export async function publishDailyOfficialPost(now = new Date()): Promise<{ post
   if (knowledgeToday >= KNOWLEDGE_PER_DAY) return { posted: false, reason: "hôm nay đã có bài" };
   if (recent) return { posted: false, reason: "vừa đăng, chờ lượt sau" };
 
-  const mine = await prisma.post.findMany({ where: { authorId: officialId }, select: { content: true }, take: 1000 });
+  const mine = await prisma.post.findMany({ where: { authorId: officialId }, select: { content: true, createdAt: true }, take: 1000 });
   const published = new Set(mine.map((p) => firstLine(p.content)));
+  // Tiêu đề có số thay đổi theo ngày (VD "⏰ … hạn đóng thuế quý … (còn 12 ngày)") → so dòng đầu đã bỏ số: cùng chủ đề
+  // đăng trong 60 ngày qua thì không đăng lại (trước đây mỗi ngày 1 bài gần y hệt suốt 3 tuần trước hạn thuế).
+  const lastByShape = new Map<string, number>();
+  for (const p of mine) {
+    const k = titleShape(p.content);
+    lastByShape.set(k, Math.max(lastByShape.get(k) ?? 0, p.createdAt.getTime()));
+  }
+  const recentShape = (text: string) => (lastByShape.get(titleShape(text)) ?? 0) > now.getTime() - SHAPE_COOLDOWN_MS;
   const day = Math.floor(now.getTime() / 86_400_000);
   const markets: ("US" | "AU")[] = day % 2 === 0 ? ["US", "AU"] : ["AU", "US"];
   for (const market of markets) {
@@ -35,7 +46,7 @@ export async function publishDailyOfficialPost(now = new Date()): Promise<{ post
     let theme: { title: string; emoji: string } | null = null;
     const t = upcomingThemes(market, now)[0];
     if (t && (await prisma.nailDesign.count({ where: { status: "published", occasion: t.id } }).catch(() => 0)) >= 10) theme = { title: t.title, emoji: t.emoji };
-    const draft = buildBotDrafts({ market, now, theme, publishedTitles: published }).find((d) => !d.pinned && !published.has(firstLine(d.text)));
+    const draft = buildBotDrafts({ market, now, theme, publishedTitles: published }).find((d) => !d.pinned && !published.has(firstLine(d.text)) && !recentShape(d.text));
     if (!draft) continue;
     await prisma.post.create({
       data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: draft.text, postType: "GENERAL", mediaUrls: "[]", market: draft.market === "ALL" ? null : draft.market, createdAt: now },

@@ -23,8 +23,8 @@ export default function TryOnPage() {
           <h1 className="text-2xl font-black tracking-tight text-white [text-wrap:balance]">{isClient ? tr("Thử mẫu nail trên chính tay bạn", "Try nail looks on your own hand") : tr("Tạo mẫu trên tay khách", "Try-on looks for your client")}</h1>
           <p className="text-sm text-slate-400 [text-wrap:pretty]">
             {isClient
-              ? tr("Chụp mu bàn tay — PawNail tự nhận móng, soi tông da + dáng móng của bạn rồi vẽ 10 mẫu trend hợp tay ngay trên móng thật. Thích mẫu nào thì đưa tiệm xem.", "Snap the back of your hand — PawNail finds your nails, reads your skin tone and nail shape, then paints 10 trending looks that suit you right on your real nails. Show the one you love to a salon.")
-              : tr("Chụp tay khách — máy tự nhận móng, soi tông da + dáng móng, vẽ 10 mẫu trend hợp tay khách kèm giá gợi ý. Lưu ảnh hoặc gửi khách trong tin nhắn (nút ✨).", "Snap the client's hand — we find the nails, read skin tone and nail shape, and paint 10 trending looks that suit the client, with suggested prices. Save, or send from Messages (✨ button).")}
+              ? tr("Chụp mu bàn tay — PawNail tự nhận diện móng, phân tích tông da và dáng móng, rồi phủ 10 mẫu đang thịnh hành lên chính móng của bạn. Ưng mẫu nào, bạn đưa tiệm xem.", "Snap the back of your hand — PawNail finds your nails, reads your skin tone and nail shape, then paints 10 trending looks that suit you right on your real nails. Show the one you love to a salon.")
+              : tr("Chụp tay khách — PawNail tự nhận diện móng, phân tích tông da và dáng móng, rồi phủ 10 mẫu đang thịnh hành hợp tay khách, kèm giá gợi ý. Lưu ảnh hoặc gửi cho khách trong tin nhắn (nút ✨).", "Snap the client's hand — we find the nails, read skin tone and nail shape, and paint 10 trending looks that suit the client, with suggested prices. Save, or send from Messages (✨ button).")}
           </p>
         </header>
         <NailStudio market={user?.market === "AU" ? "AU" : "US"} />

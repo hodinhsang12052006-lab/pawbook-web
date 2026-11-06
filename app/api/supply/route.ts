@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { getTranslations, translateEntries } from "@/lib/contentTranslations";
+import { dtEn } from "@/lib/i18n/dtEn";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
@@ -22,6 +24,9 @@ function mapProduct(p: any) {
     discountPercent,
     createdAt: p.createdAt.toISOString(),
     seller: p.seller,
+    // Tên tiếng Anh / tiếng Việt cho người xem ngôn ngữ còn lại (ảnh alt + tiêu đề): bảng dtEn hoặc dịch máy.
+    titleEn: p.titleEn ?? null,
+    titleVi: p.titleVi ?? null,
   };
 }
 
@@ -31,10 +36,12 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const sellerId = searchParams.get("sellerId");
     const cursor = searchParams.get("cursor");
+    // Thị trường của người xem: người mua ở Dallas không cần (và không đọc được giá tiền của) hàng ở Footscray.
+    const market = searchParams.get("market") === "AU" ? "AU" : searchParams.get("market") === "US" ? "US" : null;
 
     const where: any = {};
     if (sellerId) where.sellerId = sellerId;
-    else where.seller = realOnly(); // danh sách chung: không hiện hàng của tài khoản mẫu
+    else where.seller = { ...realOnly(), ...(market ? { market } : {}) }; // danh sách chung: không hiện hàng của tài khoản mẫu
 
     const products = await prisma.supplyProduct.findMany({
       where,
@@ -42,13 +49,24 @@ export async function GET(req: NextRequest) {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: "desc" },
       include: {
-        seller: { select: { id: true, name: true, avatarUrl: true, city: true, state: true } },
+        seller: { select: { id: true, name: true, avatarUrl: true, city: true, state: true, market: true } },
       },
     });
 
     const nextCursor = products.length === PAGE_SIZE ? products[products.length - 1].id : null;
+    const entries = products.map((p) => ({ id: p.id, src: p.title }));
+    const [en, vi] = await Promise.all([getTranslations("supply.title", entries, "en"), getTranslations("supply.title", entries, "vi")]);
+    // Tên chưa có bản dịch → dịch sau khi trả lời (lần tải sau có ngay).
+    const missing = entries.filter((e) => !en.has(e.id) && !vi.has(e.id) && dtEn(e.src) === e.src);
+    if (missing.length) {
+      after(async () => {
+        await translateEntries("supply.title", missing, "en", { maxNew: 10 }).catch(() => undefined);
+        await translateEntries("supply.title", missing, "vi", { maxNew: 10 }).catch(() => undefined);
+      });
+    }
+    const withTx = products.map((p) => ({ ...p, titleEn: en.get(p.id)?.text ?? (dtEn(p.title) !== p.title ? dtEn(p.title) : null), titleVi: vi.get(p.id)?.text ?? null }));
 
-    return NextResponse.json({ products: products.map(mapProduct), nextCursor });
+    return NextResponse.json({ products: withTx.map(mapProduct), nextCursor });
   } catch (error) {
     console.error("GET /api/supply error:", error);
     return NextResponse.json({ error: "Không thể tải kho hàng.", errorEn: "Couldn't load supplies." }, { status: 500 });

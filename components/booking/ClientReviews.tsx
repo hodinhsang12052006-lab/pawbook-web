@@ -25,7 +25,7 @@ export default function ClientReviews({ techId }: { techId: string }) {
           <div className="flex" aria-label={tr(`${d.average} trên 5 sao`, `${d.average} out of 5`)}>
             {[1, 2, 3, 4, 5].map((n) => <Star key={n} className={`h-4 w-4 ${n <= Math.round(d.average ?? 0) ? "fill-amber-400 text-amber-400" : "text-slate-600"}`} />)}
           </div>
-          <p className="text-xs text-slate-400">{tr(`${d.count} đánh giá từ khách đã đặt lịch`, `${d.count} reviews from verified bookings`)}</p>
+          <p className="text-xs text-slate-400">{tr(`${d.count} đánh giá từ khách đã đặt lịch`, `${d.count} ${d.count === 1 ? "review" : "reviews"} from verified bookings`)}</p>
         </div>
       </div>
       <ul className="space-y-2.5">

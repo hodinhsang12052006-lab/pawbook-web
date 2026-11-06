@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { getTranslations, translateEntries } from "@/lib/contentTranslations";
+import { canonicalBenefits, canonicalSkills } from "@/lib/nailVocab";
+import { detectTextLang } from "@/lib/i18n/detectLang";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
@@ -82,15 +85,30 @@ export async function GET(req: NextRequest) {
       createdAt: job.createdAt.toISOString(),
     }));
 
+    // Giới thiệu thợ tự viết → bản dịch (lưu đệm) cho người xem ngôn ngữ còn lại, kèm "Show original".
+    // Hồ sơ cũ chưa có bản dịch: dịch sau khi trả lời để lần xem sau có ngay.
+    const bio = user.technicianProfile?.bio?.trim() || "";
+    const bioTx: { en?: string; vi?: string; origin?: string } = {};
+    if (bio && searchParams.get("badges") === "1" && detectTextLang(bio)) {
+      const entries = [{ id: user.id, src: bio }];
+      const [en, vi] = await Promise.all([getTranslations("bio", entries, "en"), getTranslations("bio", entries, "vi")]);
+      if (en.get(user.id)) { bioTx.en = en.get(user.id)!.text; bioTx.origin = en.get(user.id)!.origin; }
+      if (vi.get(user.id)) { bioTx.vi = vi.get(user.id)!.text; bioTx.origin = bioTx.origin ?? vi.get(user.id)!.origin; }
+      const other = detectTextLang(bio) === "vi" ? "en" : "vi";
+      if (!bioTx[other]) after(() => translateEntries("bio", entries, other, { maxNew: 1 }).then(() => undefined).catch(() => undefined));
+    }
     const technicianProfile = user.technicianProfile
       ? {
           ...user.technicianProfile,
+          // Giá trị cũ của form đăng ký → bộ từ vựng chung (lib/nailVocab).
+          specialties: canonicalSkills(user.technicianProfile.specialties).join(","),
+          bioTx,
           // Desired salary is the technician's own negotiation preference —
           // relevant only to themselves (and Admin's lead radar via a
           // separate, already-gated endpoint), not to public viewers.
           desiredSalaryType: isSelf ? user.technicianProfile.desiredSalaryType : null,
           desiredSalaryAmount: isSelf ? user.technicianProfile.desiredSalaryAmount : null,
-          desiredBenefits: isSelf ? user.technicianProfile.desiredBenefits : null,
+          desiredBenefits: isSelf ? canonicalBenefits(user.technicianProfile.desiredBenefits).join(",") || null : null,
           portfolioImages: JSON.parse(user.technicianProfile.portfolioImages || "[]"),
           createdAt: user.technicianProfile.createdAt.toISOString(),
           updatedAt: user.technicianProfile.updatedAt.toISOString(),
@@ -282,6 +300,12 @@ export async function PUT(req: Request) {
       });
     }
 
+    // Giới thiệu mới → dịch sang ngôn ngữ còn lại sau khi trả lời (khách tiếng Anh đọc được).
+    const newBio = updatedTechnicianProfile?.bio?.trim();
+    if (newBio && detectTextLang(newBio)) {
+      const to = detectTextLang(newBio) === "vi" ? "en" : "vi";
+      after(() => translateEntries("bio", [{ id: userId, src: newBio }], to, { maxNew: 1 }).then(() => undefined).catch(() => undefined));
+    }
     return NextResponse.json({
       message: "Cập nhật hồ sơ thành công! 🎉",
       user: updatedUser,

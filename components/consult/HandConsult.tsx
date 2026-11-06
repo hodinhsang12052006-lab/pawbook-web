@@ -169,12 +169,12 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
         icon={Hand}
         loggedIn={!!user}
         path="/consult"
-        title={tr("Soi tay tư vấn bằng AI", "AI hand consultation")}
-        lead={tr("Khách không biết làm mẫu gì? Chụp tay khách — vài giây có ngay lời tư vấn như thợ lâu năm.", "Client can't decide? Snap their hand — in seconds you get advice like a seasoned tech.")}
+        title={tr("Phân tích tay & móng", "Hand & nail analysis")}
+        lead={tr("Chụp tay khách để phân tích tay và móng, nhận gợi ý tư vấn trong vài giây.", "Snap a client's hand to analyze their hands and nails, and get consultation tips in seconds.")}
         points={[
           tr("Nhận ra tình trạng da tay, móng (khô, nứt, móng yếu…) và cách xử lý an toàn", "Spots skin & nail condition (dry, cracked, weak nails…) and how to treat it safely"),
-          tr("Gợi ý quy trình làm + thời gian + giá, đúng với menu của bạn", "Suggests the service steps, time and price from your own menu"),
-          tr("Đưa khách xem ngay các mẫu hợp tay, hợp dáng móng — chốt đơn nhanh hơn", "Shows the client designs that suit their hands — close the sale faster"),
+          tr("Gợi ý quy trình, thời gian và giá theo menu của bạn", "Suggests the service steps, time and price from your own menu"),
+          tr("Cho khách xem các mẫu hợp tay, hợp dáng móng — giúp khách chọn mẫu nhanh hơn", "Shows designs that suit their hands and nail shape — helps clients choose with confidence"),
         ]}
       />
     );
@@ -183,8 +183,8 @@ export default function HandConsult({ chatImage, onShare, vi = true, embedded = 
   return (
     <div className="space-y-5" ref={topRef}>
       <header className={embedded ? "hidden" : "space-y-1"}>
-        <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Hand className="h-6 w-6 text-pink-300" />{tr("Soi tay tư vấn", "Hand consultation")}</h1>
-        <p className="text-sm text-slate-400">{tr("Chụp tay khách → xem tình trạng, quy trình nên làm và những mẫu hợp nhất. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand → see its condition, the right service plan and the designs that suit it. Show the client your screen.")}</p>
+        <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Hand className="h-6 w-6 text-pink-300" />{tr("Phân tích tay & móng", "Hand & nail analysis")}</h1>
+        <p className="text-sm text-slate-400">{tr("Chụp tay khách để xem tình trạng móng, quy trình nên làm và những mẫu phù hợp. Đưa điện thoại cho khách xem cùng.", "Snap the client's hand to see its condition, the right service plan and the designs that suit it — then help them choose with confidence.")}</p>
       </header>
 
       {phase === "start" && (

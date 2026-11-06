@@ -186,7 +186,7 @@ export default function IncomeTrackerPage() {
             <Wallet className="h-6 w-6 text-purple-400" />{tr(" Thu nhập & tip", " Income & tips")}
           </h1>
           <p className="text-sm text-slate-400">
-            {tr("Ghi turn + tip mỗi tối, tự cộng dồn theo tuần — đối chiếu phiếu lương cuối tuần cho chuẩn.", "Log turns + tips each night, auto-totaled by week — check your weekly paycheck with confidence.")}
+            {tr("Ghi turn và tip mỗi tối, tự cộng dồn theo tuần để đối chiếu với phiếu lương cuối tuần.", "Log turns + tips each night, auto-totaled by week — check your weekly paycheck with confidence.")}
           </p>
         </div>
 
@@ -210,7 +210,7 @@ export default function IncomeTrackerPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Số lượt làm (Turn)", "Turns")}</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">{tr("Số turn", "Turns")}</label>
               <input
                 type="number"
                 inputMode="numeric"
@@ -275,7 +275,7 @@ export default function IncomeTrackerPage() {
         <div className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold text-slate-300">{tr("Bạn ăn chia bao nhiêu % dịch vụ?", "What % of service do you keep?")}</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">{tr("Tip mặc định tính đủ về bạn.", "Tips count in full to you by default.")}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{tr("Mặc định toàn bộ tip thuộc về bạn.", "By default, all tips count as yours.")}</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <input
@@ -307,7 +307,7 @@ export default function IncomeTrackerPage() {
               <p className="text-lg font-black text-white mt-1">{currency(weekTotals.totalService)}</p>
             </div>
             <div className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng Tip", "Total tips")}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">{tr("Tổng tip", "Total tips")}</p>
               <p className="text-lg font-black text-emerald-400 mt-1">{currency(weekTotals.totalTip)}</p>
             </div>
             <div className="rounded-2xl bg-purple-500/10 border border-purple-500/30 p-3">

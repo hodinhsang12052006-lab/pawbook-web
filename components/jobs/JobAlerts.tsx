@@ -71,7 +71,7 @@ export function JobAlertButton({ market, state }: { market: "US" | "AU"; state: 
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-bold text-sky-200 transition-colors hover:bg-sky-500/20"
       >
-        <BellPlus className="h-3.5 w-3.5" /> {tr("Báo tôi khi có việc như này", "Alert me for jobs like this")}
+        <BellPlus className="h-3.5 w-3.5" /> {tr("Báo tôi khi có việc tương tự", "Alert me for jobs like this")}
       </button>
       {open && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => !busy && setOpen(false)}>
@@ -124,7 +124,7 @@ export function JobAlertsManager() {
 
   if (!alerts) return <div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" />;
   if (!alerts.length) {
-    return <p className="text-xs leading-relaxed text-slate-400">{tr("Chưa có. Vào tab Việc làm, chọn bang rồi bấm “Báo tôi khi có việc như này” — có tin khớp là bạn nhận thông báo ngay.", "None yet. Open the Jobs tab, pick a state and tap “Alert me for jobs like this” — you'll be notified as soon as a matching job is posted.")}</p>;
+    return <p className="text-xs leading-relaxed text-slate-400">{tr("Chưa có. Vào tab Việc làm, chọn bang rồi bấm “Báo tôi khi có việc tương tự” — có tin khớp là bạn nhận thông báo ngay.", "None yet. Open the Jobs tab, pick a state and tap “Alert me for jobs like this” — you'll be notified as soon as a matching job is posted.")}</p>;
   }
   return (
     <ul className="space-y-2">

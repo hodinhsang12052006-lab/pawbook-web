@@ -74,14 +74,14 @@ const TURN_SPLIT_BY_SKILL: Record<SkillKey, string[]> = {
 };
 
 const SUPPLY_POLICY_BY_SKILL: Record<SkillKey, string> = {
-  BOT: "Chủ thường bao supply cơ bản (bột, dung dịch); thợ tự sắm đồ nghề tay (giũa, cọ, máy mài riêng).",
-  DIP: "Chủ thường bao supply cơ bản (bột dip, top/base); thợ tự sắm đồ nghề tay.",
+  BOT: "Chủ tiệm thường lo vật tư cơ bản (bột, dung dịch); thợ tự sắm đồ nghề tay (giũa, cọ, máy mài riêng).",
+  DIP: "Chủ tiệm thường lo vật tư cơ bản (bột dip, top/base); thợ tự sắm đồ nghề tay.",
   TAY_NUOC: "Chủ thường bao toàn bộ supply (sơn, dụng cụ ngâm/tẩy tế bào chết dùng chung).",
 };
 
 export const NEGOTIATION_TIPS = [
   "Xin xem ảnh/video tiệm thật (không phải ảnh mạng) trước khi quyết định bay xa.",
-  "Hỏi rõ mức bao lương là bao nhiêu TUẦN đầu và có giảm sau đó không.",
+  "Hỏi rõ được bao lương trong bao nhiêu tuần đầu và sau đó có thay đổi không.",
   "Xác nhận bằng tin nhắn/văn bản mức chia turn và ai bao supply — tránh thỏa thuận miệng.",
   "Hỏi thẳng: tiệm đông khách loại nào (walk-in, khách hẹn, khách sang) để ước lượng tip thực tế.",
   "Nếu được bao chỗ ở, hỏi rõ: ở chung hay riêng, có tính phí trừ lương không.",
@@ -91,7 +91,7 @@ export const NEGOTIATION_TIPS = [
 export const OWNER_CHECKLIST = [
   "Bao lương $___/tuần trong bao nhiêu tuần đầu?",
   "Chia turn tỉ lệ bao nhiêu (6/4, 7/3...) sau giai đoạn bao lương?",
-  "Ai bao supply — chủ hay thợ tự mua?",
+  "Ai trả tiền vật tư — chủ hay thợ?",
   "Có chỗ ở/bao ăn ở cho thợ ở xa không? Có trừ vào lương không?",
   "Tiệm đông khách loại nào — walk-in hay khách hẹn trước?",
   "Lịch làm việc: mấy ngày/tuần, giờ mở-đóng cửa cụ thể?",

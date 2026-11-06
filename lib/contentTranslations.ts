@@ -13,7 +13,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { detectTextLang } from "@/lib/i18n/detectLang";
 import { machineTranslate } from "@/lib/machineTranslate";
 
-export type TxKind = "msg" | "menu.name" | "menu.desc" | "bio" | "job.title" | "job.desc";
+export type TxKind = "msg" | "menu.name" | "menu.desc" | "bio" | "job.title" | "job.desc" | "supply.title";
 export type TxOrigin = "mt" | "owner" | "design";
 export interface Tx {
   text: string;

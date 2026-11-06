@@ -178,7 +178,7 @@ export default function StudioRoomPage() {
 
             {/* ===== TÍN HIỆU ===== */}
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <Panel title="Nhịp đau tuần" icon={Activity} hint="Phiếu bấm-1-lần của thợ & chủ tiệm">
+              <Panel title="Khảo sát nhanh tuần này" icon={Activity} hint="Phiếu bấm-1-lần của thợ & chủ tiệm">
                 {s.pulse.length === 0 ? <Empty text="Chưa có phiếu nào tuần này." /> : s.pulse.map((p) => (
                   <div key={p.questionId + p.week} className="space-y-1.5">
                     <p className="text-xs font-bold text-slate-200">{p.topic} <span className="font-normal text-slate-500">· tuần {p.week.split("-W")[1]} · {p.total} phiếu{p.published ? "" : " (chưa đủ mẫu công bố)"}</span></p>

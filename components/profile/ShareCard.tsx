@@ -324,11 +324,11 @@ export default function ShareCardButton({ data, className = "" }: { data: ShareC
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onClick={close}>
           <div role="dialog" aria-label={tr("Thẻ chia sẻ", "Share card")} className="flex max-h-full w-full max-w-sm flex-col gap-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <p className="text-sm font-black text-white">{tr("Thẻ portfolio của bạn", "Your portfolio card")}</p>
+              <p className="text-sm font-black text-white">{data.role === "OWNER" ? tr("Thẻ giới thiệu tiệm", "Your salon share card") : tr("Thẻ giới thiệu tay nghề", "Your portfolio share card")}</p>
               <button type="button" onClick={close} aria-label={tr("Đóng", "Close")} className="rounded-full p-1.5 text-slate-300 hover:bg-white/10"><X className="h-5 w-5" /></button>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview.url} alt={tr("Thẻ portfolio", "Portfolio card")} className="max-h-[62vh] w-full rounded-2xl object-contain shadow-2xl ring-1 ring-white/10" />
+            <img src={preview.url} alt={data.role === "OWNER" ? tr("Thẻ giới thiệu tiệm", "Salon share card") : tr("Thẻ giới thiệu tay nghề", "Portfolio share card")} className="max-h-[62vh] w-full rounded-2xl object-contain shadow-2xl ring-1 ring-white/10" />
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={share} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white"><Share2 className="h-4 w-4" />{tr(" Chia sẻ", " Share")}</button>
               <button type="button" onClick={download} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.08] text-sm font-bold text-white ring-1 ring-white/10"><Download className="h-4 w-4" />{tr(" Lưu ảnh", " Save image")}</button>

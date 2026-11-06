@@ -11,6 +11,8 @@ import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import SupplyProductCard, { SupplyProductType } from "@/components/feed/SupplyProductCard";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { useRouter } from "next/navigation";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
 
@@ -170,6 +172,13 @@ function CreateProductForm({ onCreated, onClose }: { onCreated: (p: SupplyProduc
 export default function SupplyPage() {
   useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
+  const router = useRouter();
+  // Chợ vật tư là công cụ của TIỆM / THỢ — khách làm nail được đưa sang danh sách tiệm.
+  useEffect(() => {
+    if (user?.role === "CLIENT") router.replace("/salons");
+  }, [user?.role, router]);
+  // Chỉ hàng ở thị trường của người xem (giá ghi US$ / A$ trên từng thẻ).
+  const { market, setMarket } = useViewerMarket();
   const [products, setProducts] = useState<SupplyProductType[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -190,7 +199,8 @@ export default function SupplyPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/supply")
+    setLoading(true);
+    fetch(`/api/supply?market=${market}`)
       .then((res) => {
         if (!res.ok) throw new Error(tr("Không thể tải kho hàng.", "Couldn't load supplies."));
         return res.json();
@@ -209,14 +219,14 @@ export default function SupplyPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [market]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMoreRef.current) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/supply?cursor=${nextCursor}`);
+      const res = await fetch(`/api/supply?market=${market}&cursor=${nextCursor}`);
       if (res.ok) {
         const data = await res.json();
         setProducts((prev) => [...prev, ...data.products]);
@@ -226,7 +236,7 @@ export default function SupplyPage() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [nextCursor]);
+  }, [nextCursor, market]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -246,6 +256,13 @@ export default function SupplyPage() {
               <Package className="h-6 w-6 text-amber-400" />{tr(" Chợ vật tư nail", " Nail supply exchange")}
             </h1>
             <p className="text-sm text-slate-400 mt-1">{tr("Tiệm đăng bán vật tư dư. Không thanh toán trong app — nhắn tin cho người bán để thỏa thuận.", "Salons list surplus supplies. No in-app payment — message the seller to arrange the sale.")}</p>
+            <div className="mt-2 inline-flex rounded-xl bg-white/[0.04] p-1 ring-1 ring-white/10" role="group" aria-label={tr("Thị trường", "Market")}>
+              {(["US", "AU"] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setMarket(m)} aria-pressed={market === m} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${market === m ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"}`}>
+                  {m === "US" ? tr("Mỹ (US$)", "US (US$)") : tr("Úc (A$)", "Australia (A$)")}
+                </button>
+              ))}
+            </div>
           </div>
           {user?.role === "OWNER" && (
             <button

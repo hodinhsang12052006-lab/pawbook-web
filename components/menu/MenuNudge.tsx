@@ -60,7 +60,7 @@ export default function MenuNudge() {
       <Link href={`/profile/${user.id}?tab=menu${photos > 0 ? "&quick=1" : ""}`} className={`flex ${H} items-center gap-3 rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-500/[0.10] to-pink-500/[0.06] pl-3.5 pr-11 transition-colors hover:from-amber-500/[0.16]`}>
         <BookOpen className="h-5 w-5 flex-shrink-0 text-amber-300" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-bold text-white">{tr("Tạo menu mẫu có giá — khách xem là nhắn đặt", "Build a priced design menu — clients book from it")}</span>
+          <span className="block truncate text-sm font-bold text-white">{tr("Tạo menu mẫu kèm giá để khách xem và gửi yêu cầu đặt lịch", "Build a priced menu clients can book from")}</span>
           <span className="block truncate text-xs text-slate-400">{photos > 0 ? tr(`Dùng ${photos} ảnh bạn đã có, xong trong 2 phút`, `Use your ${photos} existing photos — done in 2 minutes`) : tr("Kèm mã QR in dán ở quầy", "Comes with a QR code for your station")}</span>
         </span>
         <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-500" />

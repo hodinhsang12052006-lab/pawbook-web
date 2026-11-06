@@ -33,7 +33,7 @@ export function buildDrafts(s: Signals, news: NewsItem[]): Draft[] {
     add({
       kind: "pulse",
       title: `📊 ${p.topic}: ${p.top!.pct}% chọn "${p.top!.label}"`,
-      body: `${p.total} ${who} tại ${where} trả lời "Nhịp đau tuần" trên PawNail — ${p.options.filter((o) => o.votes).map((o) => `${o.label} ${o.pct}%`).join(" · ")}. Bạn thì sao? Trả lời câu hỏi tuần này ngay trên bảng tin.`,
+      body: `${p.total} ${who} tại ${where} trả lời "Khảo sát nhanh tuần này" trên PawNail — ${p.options.filter((o) => o.votes).map((o) => `${o.label} ${o.pct}%`).join(" · ")}. Bạn thì sao? Trả lời câu hỏi tuần này ngay trên bảng tin.`,
       href: "/?tab=feed",
       caption: `${p.top!.pct}% ${who} nail ở ${where} nói: "${p.top!.label}" là điều ${/học/.test(p.topic) ? "muốn học nhất" : "đáng bàn nhất"} tuần này. Còn bạn? 👇 ${BASE_TAGS}`,
       evidence: `Tuần ${p.week}, ${p.total} phiếu`,

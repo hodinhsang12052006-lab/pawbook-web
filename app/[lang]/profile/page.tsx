@@ -399,7 +399,7 @@ export default function ProfilePage() {
                 <Wallet className="h-5 w-5 text-purple-300" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-white">{tr("Thu nhập & Tip", "Earnings & tips")}</span>
+                <span className="block text-sm font-bold text-white">{tr("Thu nhập & tip", "Earnings & tips")}</span>
                 <span className="block truncate text-[11px] text-slate-500">{tr("Ghi turn + tip, đối chiếu phiếu lương", "Log turns + tips, check your paycheck")}</span>
               </span>
               <ArrowRight className="h-4 w-4 flex-shrink-0 text-slate-600 transition-colors group-hover:text-purple-300" />
@@ -423,10 +423,10 @@ export default function ProfilePage() {
             <ProfileViewsCard role={profile.role} />
             <div className="flex flex-col gap-2 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/[0.05] p-4 sm:flex-row sm:items-center">
               <p className="flex-1 text-xs leading-relaxed text-slate-300">
-                <span className="block text-sm font-bold text-white">{tr("Thẻ portfolio để đăng mạng xã hội", "Portfolio card for social media")}</span>
+                <span className="block text-sm font-bold text-white">{isOwner ? tr("Thẻ giới thiệu tiệm", "Salon share card") : tr("Thẻ giới thiệu tay nghề", "Portfolio share card")}</span>
                 {isOwner
-                  ? tr("Ảnh đẹp có tên tiệm + mã QR — đăng Facebook/Instagram là thợ quét vào nhắn tiệm ngay.", "A polished image with your salon name + QR code — post it and techs can scan to message you.")
-                  : tr("Ảnh đẹp có mẫu móng, kỹ năng + mã QR — đăng Facebook/TikTok là tiệm quét vào nhắn bạn ngay.", "A polished image with your work, skills + QR code — post it and salons can scan to message you.")}
+                  ? tr("Ảnh có tên tiệm và mã QR. Thợ quét mã để xem hồ sơ tiệm và nhắn tin cho tiệm.", "An image with your salon name and a QR code. Techs scan it to see your salon and message you.")
+                  : tr("Ảnh mẫu móng, kỹ năng và mã QR. Tiệm quét mã để xem hồ sơ và nhắn tin cho bạn.", "Your work, skills and a QR code in one image. Salons scan it to see your profile and message you.")}
               </p>
               <ShareCardButton
                 data={{
@@ -502,7 +502,7 @@ export default function ProfilePage() {
                 <input id="pf-years" type="number" min={0} value={years} onChange={(e) => setYears(Number(e.target.value))} className="input-field" />
               </div>
               <div>
-                <label className="field-label" htmlFor="pf-tenure">{tr("Gắn bó TB (tháng/tiệm)", "Avg. tenure (months/salon)")}</label>
+                <label className="field-label" htmlFor="pf-tenure">{tr("Thời gian làm trung bình mỗi tiệm (tháng)", "Average months per salon")}</label>
                 <input id="pf-tenure" type="number" min={0} value={avgTenureMonths} onChange={(e) => setAvgTenureMonths(e.target.value)} placeholder={tr("VD: 8", "e.g. 8")} className="input-field" />
               </div>
             </div>
@@ -629,7 +629,7 @@ export default function ProfilePage() {
         {/* ===== MỜI BẠN BÈ ===== */}
         {profile && profile.role !== "ADMIN" && (
           <div id="moi-ban-be" className="scroll-mt-24">
-            <FormSection icon={Gift} title={tr("Mời bạn bè", "Invite friends")} hint={tr("Thợ & tiệm càng đông, việc và thợ càng dễ tìm — cho chính bạn.", "More techs & salons means easier hiring and job hunting — for you too.")}>
+            <FormSection icon={Gift} title={tr("Mời bạn bè", "Invite friends")} hint={tr("Càng nhiều thợ và tiệm tham gia, bạn càng dễ tìm được việc và thợ phù hợp.", "The more techs and salons join, the easier it is to find the right job or hire.")}>
               <InviteFriends />
             </FormSection>
           </div>

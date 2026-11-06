@@ -259,7 +259,7 @@ export default function NailRadarPage() {
             {/* Owner checklist */}
             <div className="glass-card rounded-2xl p-4 space-y-2.5">
               <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <ClipboardList className="h-4 w-4 text-emerald-400" />{tr(" Checklist hỏi chủ trước khi nhận việc", " Questions to ask the owner before accepting")}
+                <ClipboardList className="h-4 w-4 text-emerald-400" />{tr(" Những điều cần hỏi chủ tiệm trước khi nhận việc", " Questions to ask the owner before accepting")}
               </p>
               <ul className="space-y-1.5">
                 {result.ownerChecklist.map((item, i) => (

@@ -81,7 +81,7 @@ export default function QuickMenu({ onClose, onDone }: { onClose: () => void; on
             <div className="py-10 text-center">
               <ImageOff className="mx-auto h-8 w-8 text-slate-500" />
               <p className="mt-2 text-sm font-bold text-slate-200">{tr("Chưa có ảnh nào để dùng", "No photos to use yet")}</p>
-              <p className="mt-1 text-xs text-slate-400">{tr("Thêm ảnh vào portfolio hoặc đăng bài “Khoe tay nghề”, rồi quay lại — hoặc bấm “Thêm mẫu” để tải ảnh mới.", "Add portfolio photos or post a showcase, then come back — or use “Add design” to upload new photos.")}</p>
+              <p className="mt-1 text-xs text-slate-400">{tr("Thêm ảnh vào portfolio hoặc đăng bài “Chia sẻ tác phẩm”, rồi quay lại — hoặc bấm “Thêm mẫu” để tải ảnh mới.", "Add portfolio photos or post a showcase, then come back — or use “Add design” to upload new photos.")}</p>
             </div>
           ) : !rows ? (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">

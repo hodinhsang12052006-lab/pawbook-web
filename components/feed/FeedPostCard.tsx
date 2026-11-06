@@ -54,7 +54,7 @@ const PRESS = "active:scale-95 transition-transform duration-100";
 
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
 const POST_TYPE_BADGE = (): Record<string, { label: string; classes: string }> => ({
-  SHOWCASE: { label: tr("Khoe tay nghề", "Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
+  SHOWCASE: { label: tr("Chia sẻ tác phẩm", "Showcase"), classes: "bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-300" },
   JOB: { label: tr("Tuyển thợ", "Hiring"), classes: "bg-red-500/10 border-red-500/25 text-red-300" },
   GENERAL: { label: "", classes: "" },
 });
@@ -486,7 +486,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           href={`/profile/${post.author.id}`}
           className={`ml-auto flex items-center gap-1 rounded-xl border border-pink-500/30 bg-pink-500/5 px-3 py-2 text-[11px] font-bold text-pink-300 hover:bg-pink-500/15 transition-colors ${PRESS}`}
         >
-          {post.author.role === "ADMIN" ? tr("Xem hồ sơ", "View profile") : post.author.role === "OWNER" ? tr("Xem Tiệm", "View salon") : tr("Xem Tay Nghề", "View work")}
+          {post.author.role === "ADMIN" ? tr("Xem hồ sơ", "View profile") : post.author.role === "OWNER" ? tr("Xem tiệm", "View salon") : tr("Xem tay nghề", "View work")}
           <ArrowRight className="h-3 w-3" />
         </Link>}
       </div>

@@ -17,7 +17,7 @@ const PRESS = "active:scale-[0.98] transition-transform duration-100";
 // Hàm (không phải hằng) để nhãn đổi theo VI/EN.
 const POST_TYPE_OPTIONS = (): { value: "GENERAL" | "SHOWCASE"; label: string }[] => [
   { value: "GENERAL", label: tr("Chia sẻ", "Share") },
-  { value: "SHOWCASE", label: tr("Khoe tay nghề / tiệm", "Showcase work / salon") },
+  { value: "SHOWCASE", label: tr("Chia sẻ tác phẩm / tiệm", "Showcase work / salon") },
 ];
 
 export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { onPosted: (post: FeedPost) => void; suggestedTags?: string[] }) {

@@ -200,8 +200,8 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
           <div className="rounded-3xl bg-gradient-to-br from-amber-500/10 via-pink-500/5 to-transparent p-6 ring-1 ring-amber-400/20">
             <h3 className="text-base font-black text-white">{tr("Tạo menu mẫu của riêng bạn", "Build your own design menu")}</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-300">
-              {tr("Khách xem trước mẫu, giá, thời gian làm — bấm 1 nút là nhắn bạn đặt lịch. Bạn ghi vật tư để biết mỗi mẫu lời bao nhiêu (khách không thấy phần này).",
-                "Clients preview designs, prices and timing — one tap to message you. Log materials to see your margin per design (clients never see this).")}
+              {tr("Khách xem trước mẫu, giá, thời gian làm và gửi yêu cầu đặt lịch chỉ với một chạm. Ghi vật tư để biết lãi của từng mẫu (khách không thấy).",
+                "Clients preview services, prices and timing, then request a booking in one tap. Log materials to see your margin on each service (clients never see this).")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {photoCount > 0 && (

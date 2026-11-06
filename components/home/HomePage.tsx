@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import HeroPulse from "@/components/home/HeroPulse";
+import HeroLanding from "@/components/home/HeroLanding";
+import LandingFaq from "@/components/home/LandingFaq";
+import SiteFooter from "@/components/layout/SiteFooter";
 import GuestDiscover from "@/components/home/GuestDiscover";
 import ClientHome from "@/components/client/ClientHome";
 import Navbar from "@/components/layout/Navbar";
@@ -21,7 +23,7 @@ import ProfileViewsCard from "@/components/profile/ProfileViewsCard";
 import GettingStarted from "@/components/onboarding/GettingStarted";
 import MenuNudge from "@/components/menu/MenuNudge";
 import { getProfileCompleteness } from "@/lib/profileCompleteness";
-import { Sparkles, Search, Newspaper, X, Briefcase, Store, Hand, ArrowRight, Compass, Users } from "lucide-react";
+import { Search, Newspaper, X, Briefcase, Compass, Users } from "lucide-react";
 import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -227,69 +229,16 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen text-slate-100">
       <Navbar />
 
-      {/* HERO — chỉ hiện cho khách chưa đăng nhập, đánh thẳng thị giác 3 giây đầu */}
+      {/* HERO — chỉ cho khách chưa đăng nhập (html[data-surface="landing"]). Máy từng đăng nhập: ẩn ngay từ HTML đầu
+          (html[data-authed]) trong lúc tải phiên → không nháy hero rồi mới chuyển sang bảng tin. */}
       {showHero && (
-        <section className={`relative overflow-hidden border-b border-slate-900 ${sessionLoading ? "[html[data-authed]_&]:hidden" : ""}`}>
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-600/20 via-fuchsia-600/10 to-slate-950" />
-          <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-pink-500/20 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
-          <div aria-hidden className="hero-spot pointer-events-none absolute inset-0" />
-          <div aria-hidden className="hero-grid pointer-events-none absolute inset-0" />
-
-          <div className="relative mx-auto max-w-5xl px-4 py-10 sm:py-14 text-center space-y-6">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 px-3 py-1 text-xs font-semibold text-pink-200">
-              <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />{tr("Dành cho khách, thợ nail và chủ tiệm · Mỹ & Úc", "For nail clients, technicians and salons · US & Australia")}
-            </span>
-
-            <h1 data-hero-title className="hero-title-glow text-3xl sm:text-5xl font-black leading-tight text-white tracking-tight [text-wrap:balance]">
-              {tr("Nền tảng chuyên nghiệp", "The platform for")}<br />
-              <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
-                {tr("cho ngành nail", "the nail industry")}
-              </span>
-            </h1>
-            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              {tr("Thử mẫu và đặt lịch. Tìm nơi làm phù hợp. Tuyển thợ cho tiệm. PawNail kết nối khách, thợ nail và chủ tiệm trên khắp nước Mỹ và Úc.", "Try on a look and book it. Find your next chair. Hire your next tech. PawNail brings nail clients, technicians and salons together across the US and Australia.")}
-            </p>
-
-            {/* Ba lối vào ngang hàng: khách · thợ · chủ tiệm (khách không còn là đường link phụ) */}
-            <div className="grid gap-3 pt-2 text-left sm:grid-cols-3">
-              {([
-                { key: "client", icon: Hand, title: tr("Bạn là khách làm nail", "Getting your nails done"), desc: tr("Thử mẫu, tìm tiệm, gửi yêu cầu đặt lịch", "Try on looks, find a salon, request a booking"), cta: tr("Thử mẫu trên tay", "Try on nail looks"), href: "/tryon", tone: "from-pink-600 to-fuchsia-600 shadow-pink-600/30", ring: "ring-pink-500/30 hover:ring-pink-400/60" },
-                { key: "tech", icon: Briefcase, title: tr("Thợ nail", "Nail technicians"), desc: tr("Giới thiệu tay nghề và tìm nơi làm phù hợp", "Showcase your work and find your next chair"), cta: tr("Xem việc làm nail", "Explore nail jobs"), href: "/?tab=jobs", tone: "from-fuchsia-600 to-violet-600 shadow-fuchsia-600/30", ring: "ring-fuchsia-500/30 hover:ring-fuchsia-400/60" },
-                { key: "owner", icon: Store, title: tr("Chủ tiệm", "Salon owners"), desc: tr("Tuyển thợ, chia sẻ menu, nhận đặt lịch", "Hire techs, share your menu, take bookings"), cta: tr("Tuyển thợ nail", "Hire nail techs"), href: "/auth/register?role=owner", tone: "from-violet-600 to-purple-600 shadow-violet-600/30", ring: "ring-violet-500/30 hover:ring-violet-400/60" },
-              ] as const).map((p) => (
-                <a
-                  key={p.key}
-                  href={p.href}
-                  data-hero-cta={p.key}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (p.key === "tech") {
-                      changeTab("jobs");
-                      document.querySelector("[data-home-tabs]")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    } else router.push(p.href);
-                  }}
-                  className={`group flex flex-col rounded-2xl bg-slate-950/50 p-4 ring-1 backdrop-blur transition-all active:scale-[0.98] sm:p-5 ${p.ring}`}
-                >
-                  <span className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-3">
-                    <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ${p.tone}`}>
-                      <p.icon className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-base font-bold text-white">{p.title}</span>
-                      <span className="mt-0.5 block text-sm leading-snug text-slate-400">{p.desc}</span>
-                    </span>
-                  </span>
-                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-pink-300 group-hover:text-pink-200 sm:mt-auto sm:pt-4">
-                    {p.cta}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </a>
-              ))}
-            </div>
-            <p className="text-xs text-slate-400">{tr("Không thu phí thợ và tiệm · Có tiếng Anh và tiếng Việt", "No fees for techs or salons · Available in English and Tiếng Việt")}</p>
-            <HeroPulse market={market} />
-          </div>
-        </section>
+        <HeroLanding
+          className={sessionLoading ? "[html[data-authed]_&]:hidden" : ""}
+          onExploreJobs={() => {
+            changeTab("jobs");
+            document.querySelector("[data-home-tabs]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
       )}
 
       <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-28 md:pb-8">
@@ -515,20 +464,19 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
-              {sessionUser && (
-                <span className="hidden refined:max-md:contents">
-                  <AreaFilter
-                    market={market}
-                    state={state}
-                    city={city}
-                    states={states}
-                    tab={tab}
-                    onMarket={setMarket}
-                    onState={setState}
-                    onCity={setCity}
-                  />
-                </span>
-              )}
+              {/* Khách cũng có bộ lọc khu vực trên điện thoại (thẻ lọc cũ của khách đã bỏ cùng giao diện classic) */}
+              <span className="hidden refined:max-md:contents">
+                <AreaFilter
+                  market={market}
+                  state={state}
+                  city={city}
+                  states={states}
+                  tab={tab}
+                  onMarket={setMarket}
+                  onState={setState}
+                  onCity={setCity}
+                />
+              </span>
               </div>
             </div>
 
@@ -541,6 +489,7 @@ export default function HomePage() {
                     Máy từng đăng nhập (html[data-authed]) không bao giờ thấy khối này: CSS ẩn ngay từ HTML đầu. */}
                 <div className={sessionLoading ? "[html[data-authed]_&]:hidden" : ""}>
                   <GuestDiscover market={market} state={state} />
+                  <LandingFaq />
                 </div>
                 {sessionLoading && (
                   <div aria-hidden className="hidden space-y-4 [html[data-authed]_&]:block">
@@ -564,9 +513,15 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500">
-        <p>{tr("© 2026 PawNail. Nền tảng cho ngành nail tại Mỹ và Úc.", "© 2026 PawNail. The platform for the nail industry in the US and Australia.")}</p>
-      </footer>
+      {guestView ? (
+        <div className={sessionLoading ? "[html[data-authed]_&]:hidden" : ""}>
+          <SiteFooter />
+        </div>
+      ) : (
+        <footer className="hidden md:block border-t border-slate-900/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500">
+          <p>{tr("© 2026 PawNail. Nền tảng cho ngành nail tại Mỹ và Úc.", "© 2026 PawNail. The platform for the nail industry in the US and Australia.")}</p>
+        </footer>
+      )}
     </div>
   );
 }

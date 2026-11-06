@@ -88,7 +88,7 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
         fontSize={text.length > 1 ? 15 : 17}
         fontWeight={700}
         letterSpacing="0.5"
-        fontFamily="var(--font-geist-sans), system-ui, sans-serif"
+        fontFamily="var(--font-pn), system-ui, sans-serif"
         className="refined:[fill:#f6f0f5] refined:[font-family:var(--font-pn),system-ui,sans-serif] refined:[font-weight:600] refined:[letter-spacing:0.2px]"
       >
         {text}

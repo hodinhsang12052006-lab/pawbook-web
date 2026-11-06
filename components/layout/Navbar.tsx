@@ -12,6 +12,7 @@ import LanguageToggle from "@/components/layout/LanguageToggle";
 import NotificationBell from "@/components/layout/NotificationBell";
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
+import "@/components/marketing/marketing.css";
 import { useTr } from "@/lib/i18n/useTr";
 
 export default function Navbar() {
@@ -20,11 +21,22 @@ export default function Navbar() {
   const { t } = useLanguage();
   const { user: sessionUser, loading: loadingSession } = useSessionUser();
   const { unreadCount, resetUnread } = useUnreadMessages();
+  // Khách chưa đăng nhập (kể cả lúc đang tải phiên trên máy chưa từng đăng nhập) → chrome marketing.
+  const guestChrome = !sessionUser;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent refined:bg-pn-canvas refined:[backdrop-filter:none] refined:after:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left: Logo & Brand */}
+        {/* Left: Logo & Brand. Khách (landing): logo 36px viền mảnh + chữ ngà đặc (không chữ gradient — chữ foil duy nhất
+            của màn hình là H1). Thành viên: giữ nguyên kiểu trong app. */}
+        {guestChrome ? (
+          <Link href="/" className="flex items-center gap-2.5 rounded-xl" aria-label="PawNail">
+            <span className="pn-nav-logo">
+              <Image src="/cho1.jpg" alt="" fill sizes="36px" className="object-cover" priority />
+            </span>
+            <span className="pn-wordmark hidden sm:inline">PawNail</span>
+          </Link>
+        ) : (
         <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">
           <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-pink-500/20 refined:shadow-none">
             <Image src="/cho1.jpg" alt="PawNail" fill sizes="40px" className="object-cover" />
@@ -33,16 +45,17 @@ export default function Navbar() {
             PawNail
           </span>
         </div>
+        )}
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4">
           {loadingSession ? (
             <>
             {/* Đang tải phiên: khách thấy ngay nút Đăng nhập/Đăng ký (không nhảy), máy từng đăng nhập thấy khung chờ */}
-            <div className="flex items-center gap-2 [html[data-authed]_&]:hidden" aria-hidden>
+            <div className="flex items-center gap-1.5 sm:gap-2 [html[data-authed]_&]:hidden">
               <LanguageToggle />
-              <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-300">{t("menu.login")}</span>
-              <span className="rounded-full bg-pink-600 px-3 py-1.5 text-xs font-semibold text-white">{t("menu.register")}</span>
+              <Link href="/auth/login" className="pn-nav-login">{t("menu.login")}</Link>
+              <Link href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</Link>
             </div>
             <div className="hidden items-center gap-3 pl-4 border-l border-slate-800 animate-pulse [html[data-authed]_&]:flex">
               <div className="h-8 w-8 rounded-full bg-slate-800"></div>
@@ -119,20 +132,10 @@ export default function Navbar() {
               <LanguageToggle className="ml-1" />
             </>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <LanguageToggle />
-              <button
-                onClick={() => router.push("/auth/login")}
-                className="text-xs font-semibold text-slate-300 hover:text-white px-2.5 py-1.5 transition-colors cursor-pointer"
-              >
-                {t("menu.login")}
-              </button>
-              <button
-                onClick={() => router.push("/auth/register")}
-                className="rounded-full bg-pink-600 hover:bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 transition-all duration-200 cursor-pointer"
-              >
-                {t("menu.register")}
-              </button>
+              <Link href="/auth/login" className="pn-nav-login">{t("menu.login")}</Link>
+              <Link href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</Link>
             </div>
           )}
         </div>

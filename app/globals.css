@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* `refined:` = mọi trang TRONG app (không phải trang chủ khách "/" + /auth/* — 2 bề mặt đó có
-   <html data-ui-classic> và giữ nguyên giao diện cũ). Component dùng chung với trang khách: giữ
-   class cũ làm nền, đặt kiểu mới sau `refined:` → trang khách không đổi 1 pixel. */
+/* `refined:` = kiểu V2. Từ 11/2026 (phase 1) giao diện "classic" đã bỏ hẳn: không trang nào còn <html data-ui-classic>,
+   nên biến thể này LUÔN khớp — giữ nguyên định nghĩa để khỏi sửa hàng trăm className `refined:` trong TSX.
+   Trang chủ khách "/" và /auth/* là bề mặt marketing: html[data-surface="landing" | "auth"] (nền sân khấu, xem dưới). */
 @custom-variant refined (html:not([data-ui-classic]) &);
 
 @theme {
@@ -86,12 +86,6 @@
      này cho nền tối: đạt 4.8–5.5:1 trên mọi nền tối đang dùng. */
   --color-slate-500: #7487a3;
 }
-/* Trang đăng nhập/đăng ký có chế độ SÁNG — giữ slate-500 gốc của Tailwind ở
-   đó (màu sáng hơn trên nền trắng sẽ lại thiếu tương phản). */
-.theme-light {
-  --color-slate-500: oklch(55.4% 0.046 257.417);
-}
-
 body {
   background-color: var(--background);
   color: var(--foreground);
@@ -199,152 +193,15 @@ body {
   animation: messageSlideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Auth pages (login/register) — "aurora" background: a few large blurred
-   color blobs drifting on independent slow loops. Kept to transform+opacity
-   only (no layout-affecting properties, no JS ticking) so it stays cheap —
-   this codebase previously ripped out heavy 3D/scroll-hijack effects from
-   every internal page for performance, so new decoration here must stay in
-   that budget rather than reintroduce it via a different mechanism. */
-@keyframes auroraDriftA {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(6%, 8%) scale(1.08); }
-  66% { transform: translate(-5%, 4%) scale(0.95); }
-}
-@keyframes auroraDriftB {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  40% { transform: translate(-7%, -6%) scale(1.1); }
-  75% { transform: translate(5%, -3%) scale(0.93); }
-}
-@keyframes auroraDriftC {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(4%, -9%) scale(1.06); }
-}
-.animate-aurora-a { animation: auroraDriftA 22s ease-in-out infinite; }
-.animate-aurora-b { animation: auroraDriftB 28s ease-in-out infinite; }
-.animate-aurora-c { animation: auroraDriftC 34s ease-in-out infinite; }
-
-/* Faint grid texture drifting diagonally behind the aurora blobs. */
-@keyframes gridDrift {
-  from { background-position: 0 0; }
-  to { background-position: 40px 40px; }
-}
-.animate-grid-drift { animation: gridDrift 14s linear infinite; }
-
-/* Glitter/sparkle dots — nods to the nail industry without costing more
-   than a few positioned <span> elements. */
-@keyframes twinkle {
-  0%, 100% { opacity: 0.15; transform: scale(0.8); }
-  50% { opacity: 0.95; transform: scale(1.2); }
-}
-.animate-twinkle { animation: twinkle 3.2s ease-in-out infinite; }
-
-/* Slow breathing glow used behind the form panel — subtle enough to not
-   fight with form contrast in either theme. */
-@keyframes breathe {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.9; transform: scale(1.08); }
-}
-.animate-breathe { animation: breathe 7s ease-in-out infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-aurora-a, .animate-aurora-b, .animate-aurora-c,
-  .animate-grid-drift, .animate-twinkle, .animate-breathe {
-    animation: none;
-  }
-}
-
-/* ===== App backdrop (toàn bộ trang trong app) =====
-   Trước đây mọi trang là 1 mảng đen phẳng #020617 — không chiều sâu, không
-   nhận diện thương hiệu. Lớp nền cố định này (mounted 1 lần ở layout) gồm:
-   3 quầng sáng hồng/tím/xanh rất nhẹ ở mép màn hình, lưới chấm mờ dần về
-   phía dưới (gợi "studio" gọn gàng), và vignette tối viền để nội dung giữa
-   nổi lên. Hoàn toàn tĩnh (không animation) — rẻ cho WebView máy yếu. */
+/* ===== App backdrop (mọi trang) =====
+   Lớp nền cố định (mounted 1 lần ở app/[lang]/layout.tsx). Màu + ánh sáng: khối V2 bên dưới (trong app) và
+   html[data-surface] (trang chủ khách + /auth/*). Hoàn toàn tĩnh — rẻ cho WebView máy yếu. */
 .app-backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(56rem 36rem at 0% -8%, rgba(219, 39, 119, 0.22), transparent 62%),
-    radial-gradient(48rem 32rem at 100% 0%, rgba(124, 58, 237, 0.2), transparent 60%),
-    radial-gradient(52rem 34rem at 50% 115%, rgba(14, 165, 233, 0.1), transparent 60%),
-    linear-gradient(180deg, #07051a 0%, #04030f 55%, #020617 100%);
-}
-.app-backdrop::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(148, 163, 184, 0.13) 1px, transparent 1px);
-  background-size: 24px 24px;
-  -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 25%, transparent 78%);
-  mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 25%, transparent 78%);
-}
-.app-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(2, 6, 23, 0.7) 100%);
-}
-
-/* Nâng cấp nền: 3 dải "aurora" trôi RẤT chậm (40–60 giây/vòng) + chùm sáng
-   phía trên + lớp hạt mịn kiểu phim. Chỉ animate transform/opacity của các
-   lớp gradient có sẵn (KHÔNG dùng filter: blur — đắt) nên GPU gánh nhẹ. Trên
-   điện thoại và khi người dùng bật "giảm chuyển động" thì đứng yên. */
-.app-backdrop .aurora {
-  position: absolute;
-  border-radius: 9999px;
-  opacity: 0.9;
-  will-change: transform;
-}
-.app-backdrop .aurora-1 {
-  width: 70vmax; height: 70vmax; left: -25vmax; top: -38vmax;
-  background: radial-gradient(closest-side, rgba(236, 72, 153, 0.32), rgba(236, 72, 153, 0.08) 55%, transparent);
-  animation: bgDrift1 48s ease-in-out infinite alternate;
-}
-.app-backdrop .aurora-2 {
-  width: 60vmax; height: 60vmax; right: -24vmax; top: -30vmax;
-  background: radial-gradient(closest-side, rgba(139, 92, 246, 0.3), rgba(139, 92, 246, 0.07) 55%, transparent);
-  animation: bgDrift2 58s ease-in-out infinite alternate;
-}
-.app-backdrop .aurora-3 {
-  width: 64vmax; height: 64vmax; left: 20vw; bottom: -46vmax;
-  background: radial-gradient(closest-side, rgba(20, 184, 166, 0.2), rgba(14, 165, 233, 0.05) 55%, transparent);
-  animation: bgDrift3 64s ease-in-out infinite alternate;
-}
-/* Quầng thứ 4: hồng đào ấm góc dưới trái — cân màu với tím / xanh, nhìn "xịn" hơn nền 1 tông. */
-.app-backdrop .aurora-4 {
-  width: 50vmax; height: 50vmax; left: -18vmax; bottom: -22vmax;
-  background: radial-gradient(closest-side, rgba(251, 146, 160, 0.16), rgba(251, 146, 60, 0.04) 55%, transparent);
-  animation: bgDrift2 70s ease-in-out infinite alternate-reverse;
-}
-/* Kim tuyến lấp lánh rất mờ ở nửa trên (ảnh SVG tĩnh, mờ dần xuống dưới) — chất "nail salon" */
-.app-backdrop .glitter {
-  position: absolute; inset: 0; opacity: 0.55;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><g fill='rgba(253,224,171,0.55)'><circle cx='14' cy='22' r='1.1'/><circle cx='104' cy='12' r='0.8'/><circle cx='158' cy='64' r='1.2'/><circle cx='60' cy='92' r='0.8'/><circle cx='132' cy='140' r='1'/><circle cx='26' cy='156' r='0.7'/></g><g fill='rgba(244,114,182,0.5)'><circle cx='84' cy='46' r='0.9'/><circle cx='170' cy='166' r='0.8'/><circle cx='42' cy='122' r='1.1'/><circle cx='118' cy='88' r='0.6'/></g><path d='M146 20l1.4 3.6 3.6 1.4-3.6 1.4-1.4 3.6-1.4-3.6-3.6-1.4 3.6-1.4z' fill='rgba(255,255,255,0.4)'/></svg>");
-  background-size: 180px 180px;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 35%, transparent 70%);
-  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 35%, transparent 70%);
-}
-/* Chùm sáng mảnh từ trên xuống giữa màn hình — tạo cảm giác "sân khấu". */
-.app-backdrop .beam {
-  position: absolute; left: 50%; top: -10vh; width: 60vw; height: 70vh;
-  transform: translateX(-50%);
-  background: radial-gradient(ellipse 50% 60% at 50% 0%, rgba(244, 114, 182, 0.12), transparent 70%);
-}
-@keyframes bgDrift1 {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(12vw, 8vh, 0) scale(1.12); }
-}
-@keyframes bgDrift2 {
-  from { transform: translate3d(0, 0, 0) scale(1.05); }
-  to { transform: translate3d(-10vw, 12vh, 0) scale(0.95); }
-}
-@keyframes bgDrift3 {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(-14vw, -6vh, 0) scale(1.1); }
-}
-@media (max-width: 767px), (prefers-reduced-motion: reduce) {
-  .app-backdrop .aurora { animation: none; }
+  overflow: hidden;
 }
 
 /* @layer components: để utility Tailwind (hover:border-*, bg-*) vẫn ghi đè được. */
@@ -539,30 +396,23 @@ body {
 /* Lớp hạt mịn phủ toàn trang: xoá vệt dải màu (banding) của gradient tối, cho cảm giác giấy in cao cấp. */
 .app-backdrop .grain {
   position: absolute; inset: 0; opacity: 0.07; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size: 160px 160px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 512px 512px;
 }
-/* Hero: lưới chấm mờ dần từ giữa + vệt đèn sân khấu từ trên xuống */
-.hero-grid {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1.3px);
-  background-size: 22px 22px;
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 25%, transparent 75%);
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 25%, transparent 75%);
-}
-.hero-spot {
-  background: radial-gradient(ellipse 45% 55% at 50% -5%, rgba(244, 114, 182, 0.28), rgba(168, 85, 247, 0.1) 45%, transparent 70%);
-}
-.hero-title-glow { text-shadow: 0 0 40px rgba(236, 72, 153, 0.25); }
 .pn-fade-in { animation: pnFadeIn 0.5s ease both; }
 @keyframes pnFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .pn-fade-in { animation: none; } }
+/* Giảm chuyển động: hiệu ứng hiện ra chỉ còn đổi độ mờ (không trượt) */
+@keyframes pnOpacityIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn { animation-name: pnOpacityIn; }
+  .pn-fade-in { animation: none; }
+}
 
 /* =====================================================================
    PawNail "refined professional dark" (11/2026)
    ---------------------------------------------------------------------
-   Mọi thay đổi toàn cục nằm dưới `html:not([data-ui-classic])`.
-   <html data-ui-classic> được đặt TRƯỚC khi vẽ (script đầu trang ở app/layout.tsx, đồng bộ lại
-   trong BottomNav) cho /auth/* và trang chủ khách "/" — 2 bề mặt đó giữ nguyên giao diện cũ.
+   Mọi thay đổi toàn cục nằm dưới `html:not([data-ui-classic])` — từ phase 1 (11/2026) selector này LUÔN khớp
+   (giao diện classic đã bỏ; giữ nguyên để độ ưu tiên (0,1,1) của cả khối không đổi).
    Không lớp (unlayered) + độ ưu tiên (0,1,1) → thắng lớp theme `:root,:host` của Tailwind và
    `:root{--color-slate-500}` ở trên; mọi utility slate/pink/fuchsia… (kể cả /alpha) đi qua các biến này.
    ===================================================================== */
@@ -686,7 +536,7 @@ html:not([data-ui-classic]) {
   --radius-xl: 0.875rem;
   -webkit-tap-highlight-color: transparent;
 }
-/* Chữ app: Be Vietnam Pro (OFL-1.1, có dấu tiếng Việt). Trang classic giữ font cũ. */
+/* Chữ: Be Vietnam Pro (OFL-1.1, có dấu tiếng Việt) trên MỌI bề mặt. Tiêu đề marketing: .pn-display (Fraunces). */
 html:not([data-ui-classic]) body {
   font-family: var(--font-pn), system-ui, sans-serif;
   background-color: var(--color-pn-canvas);
@@ -1069,7 +919,7 @@ html:not([data-ui-classic]) a.glass-card.min-h-14 + button.absolute { top: 50%; 
 
 /* ---- Băng-rôn mùa (components/feed/SeasonBanner.tsx) ---- */
 /* Quầng sáng DUY NHẤT của màn hình: lệch xuống, màu mùa (--pn-glow đặt trên chính thẻ) — không bao giờ quầng 0-offset */
-html:not([data-ui-classic]) .pn-season { box-shadow: 0 24px 48px -28px color-mix(in srgb, var(--pn-glow, #db2777) 60%, transparent), 0 2px 8px rgb(8 4 10 / 0.35); }
+html:not([data-ui-classic]) .pn-season-card { box-shadow: 0 24px 48px -28px color-mix(in srgb, var(--pn-glow, #db2777) 60%, transparent), 0 2px 8px rgb(8 4 10 / 0.35); }
 .pn-season-media { height: clamp(172px, 42vw, 220px); }
 /* Điện thoại: băng-rôn gọn (ý tưởng mẫu nằm trong trang chủ đề) để băng-rôn + bài đầu tiên vừa màn hình đầu */
 @media (max-width: 639px) { .pn-season-ideas { display: none; } }
@@ -1132,7 +982,7 @@ html:not([data-ui-classic]) .pn-profile-head { background: var(--color-pn-surfac
 /* Giảm chuyển động: tắt cả các hiệu ứng vào của modal / tin nhắn / sheet, và mọi hiệu ứng lặp vô hạn
    của Tailwind (ping/pulse/bounce — chấm "live", skeleton, badge) ở MỌI trang. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-fadeIn, .animate-scaleUp, .message-slide-up, .message-bounce-in, .animate-callSheetUp,
+  .animate-scaleUp, .message-slide-up, .message-bounce-in, .animate-callSheetUp,
   .pn-in-me, .pn-in-them, .pn-fade-in,
   .animate-ping, .animate-pulse, .animate-bounce {
     animation: none;
@@ -1141,13 +991,9 @@ html:not([data-ui-classic]) .pn-profile-head { background: var(--color-pn-surfac
 }
 
 /* Ô nhập ≥ 16px trên điện thoại: iOS Safari / WKWebView tự phóng to (và kẹt phóng to) khi chạm ô < 16px — giờ trang
-   cho phép phóng to (WCAG 1.4.4) nên không còn maximum-scale chặn việc đó. Trang classic (khách "/", /auth/*) chỉ áp
-   trên iOS (@supports -webkit-touch-callout) → Android / máy tính giữ nguyên từng pixel. */
+   cho phép phóng to (WCAG 1.4.4) nên không còn maximum-scale chặn việc đó. */
 @media (max-width: 767px) {
   html:not([data-ui-classic]) :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), textarea, select) { font-size: max(16px, 1em); }
-}
-@supports (-webkit-touch-callout: none) {
-  html[data-ui-classic] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), textarea, select) { font-size: max(16px, 1em); }
 }
 
 /* /messages: thanh dưới chỉ ẩn khi đang mở 1 cuộc trò chuyện (danh sách chat vẫn có thanh dưới) */
@@ -1229,3 +1075,149 @@ html:not([data-ui-classic]) .pn-post-tag { line-height: 16px; }
   html:not([data-ui-classic]) .pn-nudges section[data-nudge] ol > li:has(> a[aria-disabled="false"]) ~ li { display: none; }
   html:not([data-ui-classic]) .pn-nudges [data-onb-slot] { height: 118px; }
 }
+
+/* =====================================================================
+   Marketing surfaces — trang chủ khách "/" (html[data-surface="landing"]) + /auth/* (data-surface="auth")
+   Phase 1 (11/2026). Cùng nền mận V2 (#1c1521), chiều sâu đến từ ánh sáng + vignette + ảnh thật:
+   key (hồng, trên phải) · rim (màu mùa, dưới trái) · ground · gloss chéo · vignette · grain 512px.
+   Tĩnh hoàn toàn: 0 animation, không filter. Mùa CHỈ đổi các biến --pn-rim / --pn-foil / --s-* bên dưới.
+   ===================================================================== */
+:root {
+  --pn-rim: rgb(230 199 154 / 0.10);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f3d4c6 48%, #e6c79a 100%);
+  --s-a: 219 39 119;
+  --s-b: 230 199 154;
+  --s-spark: 255 236 205;
+  --s-ink: #f7b0cc;
+  --s-bokeh: 0;
+  --s-spark-o: 0.55;
+  --s-flare: 0;
+}
+html[data-season="us-harvest"] {
+  --pn-rim: rgb(214 140 72 / 0.12);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f2c9a0 50%, #e0a86a 100%);
+  --s-a: 214 140 72; --s-b: 158 38 64; --s-spark: 252 214 168; --s-ink: #f2c9a0;
+  --s-bokeh: 0.9; --s-spark-o: 0.45; --s-flare: 0.55;
+}
+html[data-season="us-holiday"] {
+  --pn-rim: rgb(230 199 154 / 0.14);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f6e3c3 50%, #e6c79a 100%);
+  --s-a: 230 199 154; --s-b: 178 34 60; --s-spark: 255 238 210; --s-ink: #f3dcb3;
+  --s-bokeh: 0.7; --s-spark-o: 1; --s-flare: 1;
+}
+html[data-season="nye"] {
+  --pn-rim: rgb(226 232 240 / 0.10);
+  --pn-foil: linear-gradient(100deg, #f6e3c3 0%, #ffffff 45%, #d9dde6 100%);
+  --s-a: 240 214 160; --s-b: 210 216 228; --s-spark: 255 242 220; --s-ink: #f6e3c3;
+  --s-bokeh: 0.45; --s-spark-o: 1; --s-flare: 0.8;
+}
+html[data-season="us-winter"] {
+  --pn-rim: rgb(196 206 222 / 0.10);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f1e6ef 50%, #cfd6e4 100%);
+  --s-a: 203 213 225; --s-b: 219 39 119; --s-spark: 230 236 245; --s-ink: #e6e9f2;
+  --s-bokeh: 0.35; --s-spark-o: 0.35; --s-flare: 0.5;
+}
+html[data-season="au-jacaranda"] {
+  --pn-rim: rgb(167 139 250 / 0.12);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #dccbff 50%, #b9a3f5 100%);
+  --s-a: 167 139 250; --s-b: 251 164 140; --s-spark: 237 233 254; --s-ink: #e2d8ff;
+  --s-bokeh: 0.85; --s-spark-o: 0.4; --s-flare: 0.5;
+}
+html[data-season="au-summer-festive"] {
+  --pn-rim: rgb(94 214 196 / 0.10);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #fbd5bf 45%, #e6c79a 100%);
+  --s-a: 230 199 154; --s-b: 94 214 196; --s-spark: 255 236 200; --s-ink: #fde1c4;
+  --s-bokeh: 0.8; --s-spark-o: 0.85; --s-flare: 1;
+}
+html[data-season="au-summer"] {
+  --pn-rim: rgb(94 214 196 / 0.10);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #ffc4b0 50%, #8fe3d8 100%);
+  --s-a: 94 214 196; --s-b: 251 128 114; --s-spark: 255 247 230; --s-ink: #c9f4ec;
+  --s-bokeh: 0.7; --s-spark-o: 0.3; --s-flare: 0.6;
+}
+
+html[data-surface] { color-scheme: dark; }
+html[data-surface] .app-backdrop {
+  background:
+    radial-gradient(70vmax 52vmax at 78% -12%, rgb(219 39 119 / 0.20), transparent 62%),
+    radial-gradient(60vmax 44vmax at -10% 105%, var(--pn-rim), transparent 60%),
+    linear-gradient(180deg, #241b29 0, #1c1521 32rem);
+  background-color: #1c1521;
+}
+html[data-surface="auth"] .app-backdrop {
+  background:
+    radial-gradient(70vmax 52vmax at 72% -14%, rgb(219 39 119 / 0.20), transparent 62%),
+    radial-gradient(60vmax 44vmax at -8% 100%, var(--pn-rim), transparent 60%),
+    linear-gradient(180deg, #241b29 0, #1c1521 32rem);
+  background-color: #1c1521;
+}
+/* gloss: 1 vệt sáng chéo rất mờ */
+html[data-surface] .app-backdrop::before {
+  display: block;
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(115deg, transparent 38%, rgb(255 240 246 / 0.035) 50%, transparent 62%);
+}
+/* vignette */
+html[data-surface] .app-backdrop::after {
+  display: block;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 35%, transparent 60%, rgb(12 7 14 / 0.35) 100%);
+}
+html[data-surface] .app-backdrop > .grain { display: block; opacity: 0.05; mix-blend-mode: soft-light; }
+@media (max-width: 767px) {
+  html[data-surface] .app-backdrop,
+  html[data-surface="auth"] .app-backdrop {
+    background:
+      radial-gradient(120vw 70vw at 90% -10%, rgb(219 39 119 / 0.18), transparent 65%),
+      radial-gradient(60vmax 44vmax at -10% 105%, var(--pn-rim), transparent 60%),
+      linear-gradient(180deg, #241b29 0, #1c1521 32rem);
+    background-color: #1c1521;
+  }
+  html[data-surface] .app-backdrop::before { display: none; }
+}
+@media (prefers-contrast: more) {
+  html[data-surface] .app-backdrop,
+  html[data-surface="auth"] .app-backdrop { background: #1c1521; }
+  html[data-surface] .app-backdrop::before,
+  html[data-surface] .app-backdrop::after,
+  html[data-surface] .app-backdrop > .grain { display: none; }
+}
+
+/* Chữ tiêu đề marketing (landing H1/H2, auth H1 + tagline): Fraunces 600, cỡ quang học tự động.
+   --pn-lh do từng tiêu đề đặt; tiếng Việt +0.10 (dấu chồng hai tầng). */
+.pn-display {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+  line-height: var(--pn-lh, 1.1);
+  text-wrap: balance;
+}
+html[lang="vi"] .pn-display { line-height: calc(var(--pn-lh, 1.1) + 0.1); }
+/* Chữ "foil" — đúng 1 đoạn chữ gradient mỗi màn hình (H1 landing / tagline auth); màu theo mùa */
+.pn-foil {
+  background: var(--pn-foil);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-contrast: more) { .pn-foil { background: none; color: #f7b0cc; } }
+@media (forced-colors: active) { .pn-foil { background: none; color: CanvasText; } }
+
+/* Thanh trên ở landing: trong suốt trên hero, thành kính sau 64px cuộn (Chromium: scroll-driven; Firefox: kính luôn) */
+html[data-surface="landing"]:not([data-ui-classic]) body:has(header) header.sticky.top-0 { border-bottom-color: transparent; }
+html[data-surface="landing"] header.sticky.top-0::before { box-shadow: 0 1px 0 var(--color-pn-line-soft); }
+@supports (animation-timeline: scroll()) {
+  html[data-surface="landing"] header.sticky.top-0::before {
+    animation: pnHdr linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 64px;
+  }
+}
+@keyframes pnHdr { from { opacity: 0; } to { opacity: 1; } }

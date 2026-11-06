@@ -16,11 +16,11 @@ export default function LanguageToggle({ className = "" }: { className?: string 
       onClick={toggleLocale}
       title={hint}
       data-locale-toggle={locale}
-      className={`flex min-h-[36px] items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-300 hover:text-white hover:border-slate-700 transition-all duration-200 cursor-pointer select-none ${className}`}
+      className={`flex h-9 flex-shrink-0 items-center gap-1 rounded-full border border-pn-line-strong bg-transparent px-3 text-[13px] font-semibold leading-none text-[#f6f0f5] transition-colors duration-200 hover:bg-white/[0.06] cursor-pointer select-none ${className}`}
     >
-      <span className={locale === "en" ? "opacity-100" : "opacity-40"}>EN</span>
-      <span className="text-slate-600"> · </span>
-      <span className={locale === "vi" ? "opacity-100" : "opacity-40"}>VI</span>
+      <span className={locale === "en" ? "opacity-100" : "opacity-55"}>EN</span>
+      <span aria-hidden className="opacity-55">·</span>
+      <span className={locale === "vi" ? "opacity-100" : "opacity-55"}>VI</span>
       <span className="sr-only">{` — ${hint}`}</span>
     </button>
   );

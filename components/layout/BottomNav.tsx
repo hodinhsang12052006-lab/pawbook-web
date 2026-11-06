@@ -66,13 +66,15 @@ export default function BottomNav() {
   // Icon "nảy" khi vừa đổi mục.
   const [popId, setPopId] = useState<string | null>(null);
 
-  // Giao diện "classic" (cũ) chỉ còn cho /auth/* và trang chủ khách "/" — xem html[data-ui-classic]
-  // trong globals.css. Script đầu trang (app/layout.tsx) đặt trước khi vẽ; ở đây đồng bộ khi đổi
-  // trang / đăng nhập / đăng xuất (component này luôn được mount, hook vẫn chạy khi trả về null).
+  // Bề mặt marketing: html[data-surface="landing"] (trang chủ khách "/") / "auth" (/auth/*) — nền sân khấu + hero
+  // (globals.css). Script đầu trang (app/[lang]/layout.tsx) đặt trước khi vẽ; ở đây đồng bộ khi đổi trang / đăng
+  // nhập / đăng xuất (component này luôn được mount, hook vẫn chạy khi trả về null).
   useLayoutEffect(() => {
-    const onAuth = !!pathname?.startsWith("/auth");
-    if (!onAuth && pathname === "/" && loading) return;
-    document.documentElement.toggleAttribute("data-ui-classic", onAuth || (pathname === "/" && !sessionUser));
+    const h = document.documentElement;
+    if (pathname?.startsWith("/auth")) h.setAttribute("data-surface", "auth");
+    else if (pathname === "/" && loading) return;
+    else if (pathname === "/" && !sessionUser) h.setAttribute("data-surface", "landing");
+    else h.removeAttribute("data-surface");
   }, [pathname, loading, sessionUser]);
 
   // Ẩn khi chưa đăng nhập và trong luồng /auth/*. /messages: danh sách chat GIỮ thanh dưới (như mọi app nhắn tin);

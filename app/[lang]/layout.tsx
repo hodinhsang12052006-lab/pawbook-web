@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { SITE_URL } from "@/lib/siteUrl";
-import { Be_Vietnam_Pro, Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "../globals.css";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { langFrom, openGraph } from "@/lib/i18n/server";
+import { SEASON_BOOT } from "@/lib/season";
 
 // Layout GỐC nằm dưới segment [lang]: mỗi trang được prerender 1 lần cho mỗi ngôn
 // ngữ (/en/…, /vi/…) và edge rewrite trong next.config.ts chọn bản đúng theo
@@ -15,20 +16,8 @@ export function generateStaticParams() {
 }
 export const dynamicParams = false;
 
-// "vietnamese" + "latin-ext": dấu ạ, ế, ở… dùng đúng font Geist thay vì rơi về
-// font hệ thống. unicode-range → khách EN không tải các tệp này.
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "latin-ext", "vietnamese"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin", "latin-ext", "vietnamese"],
-});
-
-// Chữ trong app (V2): Be Vietnam Pro — SIL OFL 1.1, đủ dấu tiếng Việt, tự host qua next/font (không gọi Google lúc chạy).
-// Chỉ áp cho html:not([data-ui-classic]) trong globals.css; trang khách "/" + /auth/* giữ font cũ.
+// Chữ của MỌI bề mặt (app, trang chủ khách, /auth/*): Be Vietnam Pro — SIL OFL 1.1, đủ dấu tiếng Việt, tự host qua
+// next/font (không gọi Google lúc chạy). Tiêu đề marketing dùng thêm Fraunces (lib/fonts.ts, chỉ nạp ở landing + auth).
 const beVietnam = Be_Vietnam_Pro({
   variable: "--font-pn",
   weight: ["400", "600"],
@@ -39,8 +28,8 @@ const beVietnam = Be_Vietnam_Pro({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Cho phép phóng to chữ (WCAG 1.4.4). Chống iOS tự zoom khi chạm ô nhập: globals.css ép mọi ô nhập trong app ≥ 16px
-  // trên điện thoại, và trên iOS cả trang classic (khách "/", /auth/*) — không cần maximum-scale nữa.
+  // Cho phép phóng to chữ (WCAG 1.4.4). Chống iOS tự zoom khi chạm ô nhập: globals.css ép mọi ô nhập ≥ 16px trên
+  // điện thoại (ô nhập /auth/* luôn 16px) — không cần maximum-scale nữa.
   themeColor: "#1c1521",
 };
 
@@ -102,26 +91,21 @@ export default async function RootLayout({
       lang={lang}
       suppressHydrationWarning // data-authed do script đầu trang đặt trước khi React chạy
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${beVietnam.variable} h-full antialiased scroll-smooth`}
+      className={`${beVietnam.variable} h-full antialiased scroll-smooth`}
     >
       <head>
-        {/* Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app (components/InstallPrompt.tsx) */}
+        {/* Trước khi vẽ: html[data-surface] (landing khách "/" · /auth/*), data-authed…, mùa + thị trường (SEASON_BOOT,
+            lib/season.ts). Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,p=location.pathname;if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-ui-classic","");if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-ui-classic","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});`,
+            __html: `try{var d=document.documentElement,p=location.pathname;if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT}`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: siteLd(lang) }} />
       </head>
       <body className="min-h-full bg-slate-950 text-slate-50 flex flex-col selection:bg-blue-600/30 selection:text-blue-200">
-        {/* Nền chung toàn app — xem .app-backdrop trong globals.css */}
+        {/* Nền chung toàn app — xem .app-backdrop trong globals.css (landing / auth: html[data-surface]) */}
         <div aria-hidden className="app-backdrop">
-          <span className="aurora aurora-1" />
-          <span className="aurora aurora-2" />
-          <span className="aurora aurora-3" />
-          <span className="aurora aurora-4" />
-          <span className="glitter" />
-          <span className="beam" />
           <span className="grain" />
         </div>
         <LanguageProvider initialLocale={lang}>

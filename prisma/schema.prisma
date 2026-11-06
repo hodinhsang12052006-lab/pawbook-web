@@ -304,6 +304,43 @@ model Job {
   @@index([expiresAt])
 }
 
+// TIN VIỆC TỪ ĐỐI TÁC (Adzuna…) — bảng RIÊNG, không bao giờ lẫn với tin tiệm tự đăng (bảng Job):
+// không SĐT, không email, không mô tả đầy đủ, không dữ liệu ứng viên; chỉ đoạn trích nhà cung cấp trả,
+// link về trang gốc (redirectUrl giữ nguyên), tự hết hạn + tự xoá (lib/jobFeeds/sync.ts).
+// prisma/sql/2026-11-07_external_jobs.sql — bật bằng EXTERNAL_JOBS_ADZUNA=on SAU KHI có giấy phép Adzuna.
+model ExternalJob {
+  id                String   @id @default(cuid())
+  provider          String // "adzuna" (nhà cung cấp duy nhất được LƯU; Careerjet chỉ tìm trực tiếp, không lưu)
+  providerJobId     String
+  market            Market
+  title             String // ≤ 140, bỏ HTML
+  company           String? // company.display_name — chỉ là chữ, KHÔNG phải hồ sơ tiệm PawNail
+  locationLabel     String
+  state             String?
+  city              String?
+  lat               Float?
+  lng               Float?
+  salaryMin         Int? // chỉ khi nhà tuyển dụng ghi lương thật (salary_is_predicted = "0")
+  salaryMax         Int?
+  salaryCurrency    String? // USD | AUD
+  salaryPeriod      String? // "YEAR" (Adzuna quy ra năm)
+  contractTime      String? // full_time | part_time
+  contractType      String? // permanent | contract
+  snippet           String? // ≤ 500, bỏ HTML; NULL nếu có SĐT / email
+  redirectUrl       String
+  providerCreatedAt DateTime
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime
+  expiresAt         DateTime
+  dedupeKey         String
+  hiddenReason      String? // not_nail | dup_salon_post | dup_job | dup_provider | admin
+
+  @@unique([provider, providerJobId])
+  @@index([market, state])
+  @@index([expiresAt])
+  @@index([dedupeKey])
+}
+
 // "Tôi là chủ tiệm này" / "Gỡ tin" trên tin tổng hợp → admin xử lý.
 model JobRequest {
   id        String    @id @default(cuid())

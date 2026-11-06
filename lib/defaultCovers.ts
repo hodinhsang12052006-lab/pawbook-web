@@ -13,12 +13,15 @@ export function defaultCover(seed?: string | null): CSSProperties {
     backgroundColor: "#171119",
     backgroundImage: [
       GRAIN,
+      // ánh bóng sơn mài phía trên trái + 2 dải "lụa" chéo → mặt sơn có chiều sâu, không phẳng
+      "radial-gradient(55% 90% at 28% 0%, rgb(255 255 255 / 0.10), transparent 62%)",
+      "linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.07) 46%, transparent 54%)",
+      "linear-gradient(122deg, transparent 62%, rgb(255 255 255 / 0.045) 69%, transparent 75%)",
       `radial-gradient(120% 140% at 85% -20%, ${sheen}cc, transparent 60%)`,
       `radial-gradient(90% 120% at 0% 120%, ${base}b3, transparent 65%)`,
-      "linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.06) 46%, transparent 54%)",
       `linear-gradient(135deg, ${base} 0%, #171119 100%)`,
     ].join(", "),
-    backgroundSize: "160px 160px, auto, auto, auto, auto",
+    backgroundSize: "160px 160px, auto, auto, auto, auto, auto, auto",
   };
 }
 

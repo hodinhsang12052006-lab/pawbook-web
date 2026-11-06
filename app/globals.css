@@ -859,11 +859,16 @@ html:not([data-ui-classic]) #ai-da-xem .text-sky-200 { color: var(--color-pn-tex
 /* Nhãn mắt (eyebrow) — MỘT kiểu: 11px, đậm vừa, chữ hoa giãn nhẹ, slate-400, icon cùng màu.
    (Trước: "PAWNAIL STUDIO · UPDATED DAILY" hồng, "WEEKLY PULSE"/"WHO VIEWED" xanh trời, "SUGGESTED" xám + icon hồng.) */
 html:not([data-ui-classic]) :is(p, h2, h3).uppercase:is(.tracking-wider, .tracking-wide):is(.text-pink-300, .text-pink-400, .text-sky-300) {
-  color: var(--color-pn-text-2);
-  font-size: 11px;
-  line-height: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  color: var(--color-pn-text-3);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+/* V2: mọi nhãn mắt (eyebrow) chữ HOA giãn → dòng meta chữ thường 13px (craft-floor: không eyebrow) */
+html:not([data-ui-classic]) main :is(p, h2, h3, span).uppercase:is(.tracking-wider, .tracking-wide, .tracking-widest) {
+  text-transform: none;
+  letter-spacing: 0;
 }
 html:not([data-ui-classic]) :is(p, h2, h3).uppercase:is(.tracking-wider, .tracking-wide) > svg { color: inherit; }
 /* Icon đầu tiêu đề mục (Mẫu nail mới: máy ảnh hồng / sổ vàng / lấp lánh hồng) → cùng 1 màu trung tính */
@@ -1005,12 +1010,14 @@ html:not([data-ui-classic]) .pn-qa-tile.pn-qa-primary {
 html:not([data-ui-classic]) a.glass-card.min-h-14 + button.absolute { top: 50%; translate: 0 -50%; }
 
 /* ---- Băng-rôn mùa (components/feed/SeasonBanner.tsx) ---- */
-html:not([data-ui-classic]) .pn-season { box-shadow: var(--shadow-pn-glow); }
+/* Quầng sáng DUY NHẤT của màn hình: lệch xuống, màu mùa (--pn-glow đặt trên chính thẻ) — không bao giờ quầng 0-offset */
+html:not([data-ui-classic]) .pn-season { box-shadow: 0 24px 48px -28px color-mix(in srgb, var(--pn-glow, #db2777) 60%, transparent), 0 2px 8px rgb(8 4 10 / 0.35); }
 .pn-season-media { height: clamp(184px, 50vw, 220px); }
 .pn-season-media img { opacity: 0; transition: opacity 240ms var(--pn-ease-out, ease-out); }
 .pn-season-media img.pn-loaded { opacity: 1; }
 .pn-season-scrim {
-  background: linear-gradient(180deg, rgb(18 12 20 / 0.22) 0%, rgb(18 12 20 / 0) 22%, rgb(18 12 20 / 0) 30%, rgb(18 12 20 / 0.55) 48%, rgb(18 12 20 / 0.8) 62%, rgb(18 12 20 / 0.92) 100%);
+  /* đo sẵn: chữ ngà ≥ 4.5:1 trên chỗ sáng nhất của ảnh len; đáy hoà vào bề mặt thẻ (không vạch cứng) */
+  background: linear-gradient(180deg, rgb(18 12 20 / 0.22) 0%, rgb(18 12 20 / 0) 22%, rgb(18 12 20 / 0) 30%, rgb(18 12 20 / 0.55) 48%, rgb(18 12 20 / 0.8) 62%, rgb(26 20 29 / 0.94) 86%, rgb(31 24 34) 100%);
 }
 .pn-season-chip {
   background: rgb(18 12 20 / 0.55);
@@ -1027,6 +1034,9 @@ button > span.pn-season-chip { height: 36px; padding: 0; }
 @media (prefers-reduced-transparency: reduce) {
   .pn-season-chip { background: rgb(18 12 20 / 0.85); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* Lương trên thẻ việc: 17/600 số căn đều (trước 24–30px "hét"); dòng có chuỗi dt() nên chỉnh bằng CSS */
+html:not([data-ui-classic]) main span.text-xl.text-emerald-950 { font-size: 17px; line-height: 22px; letter-spacing: 0; }
 
 /* Nút đảo màu (CTA mùa / cao cấp): ngà trên mận 16.5:1 */
 .pn-btn-inverted {

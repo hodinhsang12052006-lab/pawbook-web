@@ -31,6 +31,9 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
+  // V2: ô soạn bài thu gọn thành 1 hàng 56px (avatar + ô "Chia sẻ tay nghề…" + nút ảnh) — bấm mới mở đủ công cụ.
+  // Trước đây khối 5 nút chiếm ~200px ngay đầu bảng tin, người mới thấy công cụ trước khi thấy nội dung.
+  const [open, setOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +41,7 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
   // Đến từ trang khác thì cờ nằm trong sessionStorage (đọc 1 lần lúc mount).
   useEffect(() => {
     const focusComposer = () => {
+      setOpen(true);
       // Hashtag thử thách (nút "Tham gia #…") — điền sẵn vào cuối bài.
       let tag: string | null = null;
       try {
@@ -123,6 +127,24 @@ export default function CreatePostComposer({ onPosted, suggestedTags = [] }: { o
       setPosting(false);
     }
   };
+
+  if (!open && !content && mediaUrls.length === 0) {
+    const expand = (then?: () => void) => {
+      setOpen(true);
+      setTimeout(() => (then ? then() : textareaRef.current?.focus()), 0);
+    };
+    return (
+      <div ref={boxRef} className="glass-card scroll-mt-40 flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2">
+        <Avatar src={user.avatarUrl} name={user.name} seed={user.id} className="h-9 w-9" loading="eager" />
+        <button type="button" onClick={() => expand()} className="min-h-11 min-w-0 flex-1 truncate rounded-full bg-pn-raised px-4 text-left text-[15px] text-pn-text-3 ring-1 ring-inset ring-pn-line">
+          {tr("Khoe tác phẩm móng mới, cập nhật tình hình tiệm, hoặc bất cứ điều gì... #NailArt", "Show your latest nail work, share salon news, anything... #NailArt")}
+        </button>
+        <button type="button" onClick={() => expand(() => fileInputRef.current?.click())} aria-label={tr("Ảnh/Video", "Photo/Video")} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-pn-text-2 active:bg-white/[0.06]">
+          <ImageIcon className="h-[22px] w-[22px]" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div ref={boxRef} className="glass-card scroll-mt-40 rounded-2xl p-4 space-y-3">

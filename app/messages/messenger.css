@@ -165,8 +165,8 @@ html:not([data-ui-classic]) .pn-msgr .m-bubble {
 html:not([data-ui-classic]) .pn-msgr .m-out { background: var(--m-out-bg); color: var(--m-out-text); }
 html:not([data-ui-classic]) .pn-msgr .m-in { background: var(--m-in-bg); color: var(--m-in-text); box-shadow: inset 0 0 0 1px rgb(255 236 246 / 0.05); }
 html:not([data-ui-classic]) .pn-msgr .m-text { margin: 0; }
-html:not([data-ui-classic]) .pn-msgr .m-meta-spacer { display: inline-block; width: 44px; height: 1px; }
-html:not([data-ui-classic]) .pn-msgr .m-meta-spacer.m-spacer-out { width: 62px; }
+html:not([data-ui-classic]) .pn-msgr .m-meta-spacer { display: inline-block; width: 60px; height: 1px; }
+html:not([data-ui-classic]) .pn-msgr .m-meta-spacer.m-spacer-out { width: 76px; }
 html:not([data-ui-classic]) .pn-msgr .m-meta {
   position: absolute; right: 10px; bottom: 5px; display: inline-flex; align-items: center; gap: 3px;
   font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none;
@@ -191,8 +191,8 @@ html:not([data-ui-classic]) .pn-msgr .m-bl-tail { border-bottom-left-radius: var
 /* Đuôi bong bóng: 1 đường cong gốc của PawNail (mask SVG), chỉ ở tin lẻ / tin cuối cụm */
 html:not([data-ui-classic]) .pn-msgr .m-tail::after {
   content: ""; position: absolute; bottom: 0; width: 12px; height: 18px; pointer-events: none;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cpath d='M0 0C.5 8 4 14.5 12 18H0Z'/%3E%3C/svg%3E") no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cpath d='M0 0C.5 8 4 14.5 12 18H0Z'/%3E%3C/svg%3E") no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cpath d='M0 0H5C5 8 7.5 14.5 12 18H0Z'/%3E%3C/svg%3E") no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cpath d='M0 0H5C5 8 7.5 14.5 12 18H0Z'/%3E%3C/svg%3E") no-repeat;
 }
 html:not([data-ui-classic]) .pn-msgr .m-out.m-tail::after { right: -7px; background: var(--m-out-solid); }
 html:not([data-ui-classic]) .pn-msgr .m-in.m-tail::after { left: -7px; transform: scaleX(-1); background: var(--m-in-bg); }
@@ -316,3 +316,8 @@ html:not([data-ui-classic]) .pn-msgr .m-list-scroll section[aria-label] > p:firs
 }
 html:not([data-ui-classic]) .pn-msgr .m-list-scroll section[aria-label] > p:first-child > svg { display: none; }
 html:not([data-ui-classic]) .pn-msgr .m-list-scroll section[aria-label] a.rounded-2xl { min-height: 64px; background: rgb(255 255 255 / 0.03); box-shadow: inset 0 0 0 1px var(--m-line); --tw-ring-shadow: 0 0 #0000; }
+
+/* Tin thoại: bong bóng V2 lo nền + góc; trình phát bên trong trong suốt */
+html:not([data-ui-classic]) .pn-msgr .m-audio > div:first-child { background: none; padding: 0; border-radius: 0; }
+html:not([data-ui-classic]) .pn-msgr .m-in.m-audio > div:first-child button:first-child { background: var(--m-accent); }
+html:not([data-ui-classic]) .pn-msgr .m-out.m-audio > div:first-child button:first-child { color: var(--m-accent-2); }

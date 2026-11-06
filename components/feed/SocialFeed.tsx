@@ -18,6 +18,7 @@ import JobFeedCard from "./JobFeedCard";
 import type { JobType } from "@/components/jobs/JobBoard";
 import { stateName } from "@/lib/stateNames";
 import { spaceByKind } from "@/lib/feedMix";
+import { useClassicUI } from "@/lib/useClassicUI";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
@@ -47,9 +48,9 @@ function NewJobsBanner({ jobs, total, urgent, market, state }: { jobs: JobType[]
     ? tr(`${fresh} việc mới kể từ lần trước bạn ghé`, `${fresh} new job${fresh > 1 ? "s" : ""} since your last visit`)
     : tr(`${total} việc đang tuyển tại ${scope}${urgent ? ` · ${urgent} việc gấp` : ""}`, `${total} open job${total > 1 ? "s" : ""} in ${scope}${urgent ? ` · ${urgent} urgent` : ""}`);
   return (
-    <Link href="/?tab=jobs" className="flex items-center gap-3 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/15 via-pink-500/10 to-slate-900/30 px-4 py-3 transition-colors hover:border-orange-400/60">
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-pink-600">
-        <Flame className="h-5 w-5 text-white" />
+    <Link href="/?tab=jobs" className="flex min-h-14 items-center gap-3 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/15 via-pink-500/10 to-slate-900/30 px-4 py-3 transition-colors hover:border-orange-400/60 refined:border-pn-line refined:bg-none refined:bg-pn-surface">
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-pink-600 refined:bg-none refined:bg-orange-500/15 refined:text-orange-300">
+        <Flame className="h-5 w-5 text-white refined:text-orange-300" />
       </span>
       <span className="min-w-0 flex-1 text-sm font-bold text-white">{text}</span>
       <span className="inline-flex flex-shrink-0 items-center text-xs font-black text-orange-300">{tr("Xem ngay", "View")}<ChevronRight className="h-4 w-4" /></span>
@@ -119,6 +120,8 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const isTech = user?.role === "TECHNICIAN";
+  // Trang khách "/" (classic) giữ bố cục cũ (dải mẫu nail ở đầu); trong app: dải mẫu chen giữa bài (V2)
+  const classic = useClassicUI();
   const studio = useStudio(market, user?.role);
   // tuần này không có thẻ chủ đề → bỏ chỗ giữ (lần sau không chừa khoảng trống rồi xẹp xuống)
   useEffect(() => { if (studio !== undefined && !studio?.theme) rememberTheme(null); }, [studio]);
@@ -279,7 +282,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     let jobIdx = 0;
     ordered.forEach((post, idx) => {
       items.push({ type: "post", post });
-      const ds = DESIGNS_AFTER_POSTS.find(([after]) => after === idx + 1);
+      const ds = !classic && DESIGNS_AFTER_POSTS.find(([after]) => after === idx + 1);
       if (ds) items.push({ type: "designs", offset: ds[1] });
       if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
       if (idx + 1 === RECAP_AFTER_POST && studio?.recap) items.push({ type: "recap" });
@@ -295,9 +298,9 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     // Hết bài (bảng tin còn ít) → xếp nốt tin việc ở cuối, đừng để trống.
     if (!nextCursor) while (feedJobs[jobIdx]) items.push({ type: "job", job: feedJobs[jobIdx++] });
     // Bảng tin còn ngắn (chưa tới bài thứ 2) → dải mẫu nail vẫn có mặt, không để khoảng trống
-    if (ordered.length > 0 && ordered.length < DESIGNS_AFTER_POSTS[0][0]) items.push({ type: "designs", offset: 0 });
+    if (!classic && ordered.length > 0 && ordered.length < DESIGNS_AFTER_POSTS[0][0]) items.push({ type: "designs", offset: 0 });
     return items;
-  }, [ordered, nextCursor, feedJobs, supplyProducts, studio, radarPosts, user]);
+  }, [ordered, nextCursor, feedJobs, supplyProducts, studio, radarPosts, user, classic]);
 
   return (
     <div className="space-y-4">
@@ -333,6 +336,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         </div>
       ) : (
         <div className="space-y-4">
+          {classic && <DesignsStrip />}
           {feedItems.map((item, idx) =>
             item.type === "post" ? (
               <FeedPostCard

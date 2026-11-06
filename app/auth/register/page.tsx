@@ -3,7 +3,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { Sparkles, Store, ArrowRight, UserPlus, SlidersHorizontal, MessageCircle, ChevronDown, Heart } from "lucide-react";
-import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
+import { TOTAL_DEMAND_COUNT, demandSnapshotFresh } from "@/lib/nailRadarData";
 import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
@@ -88,9 +88,10 @@ function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
 
       {/* Số liệu thật (lấy từ nailRadarData, cùng nguồn với badge bên trái) —
           không bịa số người dùng. */}
-      <div className={`grid grid-cols-3 divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
+      {/* Số khảo sát 9/2026 quá 30 ngày → bỏ ô đó (không hiện số cũ như số hiện tại). */}
+      <div className={`grid ${demandSnapshotFresh() ? "grid-cols-3" : "grid-cols-2"} divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
         {[
-          { value: `${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")}+`, label: t("auth.rolePicker.statJobs") },
+          ...(demandSnapshotFresh() ? [{ value: `${(TOTAL_DEMAND_COUNT.US + TOTAL_DEMAND_COUNT.AU).toLocaleString("en-US")}+`, label: t("auth.rolePicker.statJobs") }] : []),
           { value: "2", label: t("auth.rolePicker.statMarkets") },
           { value: "100%", label: t("auth.rolePicker.statFree") },
         ].map((stat) => (

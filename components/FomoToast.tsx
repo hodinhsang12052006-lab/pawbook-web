@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { X, ArrowRight, Flame, Sparkles, Heart, BarChart3 } from "lucide-react";
-import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
+import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL, demandSnapshotFresh } from "@/lib/nailRadarData";
 import { timeAgo } from "@/lib/feedFormat";
 import Avatar from "@/components/ui/Avatar";
 import { tr } from "@/lib/i18n/tr";
@@ -30,6 +30,7 @@ interface FomoMessage {
 // Hàm (không phải hằng) để chữ đổi theo VI/EN lúc tạo hàng đợi.
 // market: chỉ hiện số của đúng thị trường người dùng (thợ Texas không cần số của Úc).
 const SURVEY_MESSAGES = (market?: string | null): FomoMessage[] => {
+  if (!demandSnapshotFresh()) return []; // số khảo sát 9/2026 đã cũ → không hiện nữa
   const SURVEY = tr("khảo sát nhóm nail Facebook, 9/2026", "Facebook nail-group survey, Sep 2026");
   const title = tr("Nhịp thị trường", "Market pulse");
   const all: FomoMessage[] = [

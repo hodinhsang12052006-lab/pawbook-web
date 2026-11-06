@@ -36,7 +36,7 @@ ok("N4", "Tên bang Adzuna → mã PawNail (Texas → TX, New South Wales → NS
 // ---- Nhà cung cấp giả ----
 const T0 = new Date("2026-11-07T06:30:00Z");
 const H = 3600_000;
-const adz = (o: Record<string, unknown>) => ({ salary_is_predicted: "0", contract_time: "full_time", latitude: 29.7, longitude: -95.3, ...o });
+const adz = <T extends { id: string }>(o: T) => ({ salary_is_predicted: "0", contract_time: "full_time", latitude: 29.7, longitude: -95.3, ...o });
 const US_ALL = [
   adz({ id: "a1", title: "Nail Technician", company: { display_name: "Lucky Nails" }, location: { display_name: "Houston, Harris County", area: ["US", "Texas", "Harris County", "Houston"] }, salary_min: 40000, salary_max: 50000, redirect_url: "https://www.adzuna.com/land/ad/a1?se=x&v=y", created: "2026-11-05T10:00:00Z", description: "Busy salon hiring a <b>nail tech</b>." }),
   adz({ id: "a2", title: "Nail Tech", company: { display_name: "Glam Studio" }, location: { display_name: "Dallas, Dallas County", area: ["US", "Texas", "Dallas County", "Dallas"] }, salary_min: 99999, salary_max: 99999, salary_is_predicted: "1", redirect_url: "https://www.adzuna.com/land/ad/a2", created: "2026-11-04T10:00:00Z", description: "Acrylic and gel." }),

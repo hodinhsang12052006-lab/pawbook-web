@@ -23,8 +23,18 @@ export default function DesignsPage() {
   const isPro = user?.role === "TECHNICIAN" || user?.role === "OWNER" || user?.role === "ADMIN";
   // Mẫu hợp với thị trường người xem (Lễ Tạ Ơn chỉ ở Mỹ; mùa theo bán cầu).
   const { market } = useViewerMarket();
-  const [all, setAll] = useState<Design[] | null>(null);
-  const [occasion, setOccasion] = useState<string | null>(null);
+  // Danh sách + dịp đang lọc GẮN với thị trường đã tải: đổi thị trường → coi như chưa tải / chưa lọc (suy ra lúc
+  // render, không đặt lại state trong effect).
+  const [loaded, setLoaded] = useState<{ market: string; list: Design[] } | null>(null);
+  const all = loaded?.market === market ? loaded.list : null;
+  const setAll = (fn: (l: Design[] | null) => Design[] | null) =>
+    setLoaded((cur) => {
+      const next = fn(cur?.market === market ? cur.list : null);
+      return next ? { market, list: next } : null;
+    });
+  const [occ, setOcc] = useState<{ market: string; value: string } | null>(null);
+  const occasion = occ?.market === market ? occ.value : null;
+  const setOccasion = (v: string | null) => setOcc(v ? { market, value: v } : null);
   const [skill, setSkill] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   // /designs?saved=1 (lối tắt "Mẫu đã lưu" của khách) → mở thẳng mục Đã lưu
@@ -35,12 +45,12 @@ export default function DesignsPage() {
   const PAGE = 48;
 
   useEffect(() => {
-    setAll(null);
-    setOccasion(null);
+    let off = false;
     fetch(`/api/designs?limit=${PAGE}&market=${market}`)
       .then((r) => (r.ok ? r.json() : { designs: [] }))
-      .then((d) => { setAll(d.designs || []); setHasMore(!!d.hasMore); })
-      .catch(() => setAll([]));
+      .then((d) => { if (!off) { setLoaded({ market, list: d.designs || [] }); setHasMore(!!d.hasMore); } })
+      .catch(() => { if (!off) setLoaded({ market, list: [] }); });
+    return () => { off = true; };
   }, [market]);
   // Bộ mẫu lễ có thể cả trăm mẫu → tải thêm từng trang thay vì tải hết một lần.
   const loadMore = () => {

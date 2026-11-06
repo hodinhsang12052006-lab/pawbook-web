@@ -181,7 +181,9 @@ export default function SupplyPage() {
   const { market, setMarket } = useViewerMarket();
   const [products, setProducts] = useState<SupplyProductType[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // "Đang tải" = chưa có kết quả cho ĐÚNG thị trường đang xem (đổi thị trường → tự về trạng thái tải).
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const loading = loadedFor !== market;
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -199,7 +201,6 @@ export default function SupplyPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetch(`/api/supply?market=${market}`)
       .then((res) => {
         if (!res.ok) throw new Error(tr("Không thể tải kho hàng.", "Couldn't load supplies."));
@@ -214,7 +215,7 @@ export default function SupplyPage() {
         if (!cancelled) setError(err.message || tr("Đã xảy ra lỗi.", "Something went wrong."));
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadedFor(market);
       });
     return () => {
       cancelled = true;

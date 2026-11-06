@@ -196,8 +196,8 @@ export default function FlowImport() {
 
   return (
     <section id="anh-flow" aria-label={tr("Ảnh từ Google Flow", "Images from Google Flow")} className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-2 sm:flex-nowrap">
+        <div className="min-w-0 sm:flex-1">
           <h3 className="flex items-center gap-2 text-base font-bold text-white"><ImagePlus className="h-4 w-4 text-slate-300" /> {tr("Ảnh từ Google Flow", "Images from Google Flow")}</h3>
           <p className="text-xs text-slate-400">
             {tr(
@@ -207,7 +207,7 @@ export default function FlowImport() {
           </p>
         </div>
         {manifest && (
-          <p data-testid="flow-progress" className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs text-slate-300 ring-1 ring-white/10">
+          <p data-testid="flow-progress" className="shrink-0 rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs text-slate-300 ring-1 ring-white/10">
             {tr(`Lô ${manifest.batch}: ${manifest.imported}/${manifest.rows.length} mẫu đã có ảnh Flow`, `Batch ${manifest.batch}: ${manifest.imported}/${manifest.rows.length} designs have a Flow image`)}
           </p>
         )}

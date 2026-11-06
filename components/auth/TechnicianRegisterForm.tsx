@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import {
-  Phone, Lock, Mail, User as UserIcon, Loader2, AlertCircle,
-  ArrowLeft, ArrowRight, Upload, X, Flame, CheckCircle2, RefreshCw,
+  Phone, Lock, Mail, User as UserIcon, Loader2,
+  ArrowLeft, ArrowRight, Upload, X, Flame, CheckCircle2, RefreshCw, Check,
 } from "lucide-react";
-import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
 import { stateName } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -20,6 +19,7 @@ import { SIGNUP_SKILLS, techBenefits } from "@/lib/nailVocab";
 import { useViewerMarket } from "@/lib/useViewerMarket";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { apiError } from "@/lib/i18n/apiError";
+import { AuthTitle, BackToRoles, CountryCodeSelect, ErrorBox, MarketSeg, Submit } from "@/components/auth/fields";
 
 const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
@@ -29,16 +29,11 @@ const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
 // ("Bột (Acrylic/Ombre)", "Gel-X/Biab") nên hồ sơ và bộ lọc không nhận ra kỹ năng của thợ.
 const SKILL_OPTIONS = SIGNUP_SKILLS;
 
-// Hiệu ứng bấm nút kiểu app native — dùng chung cho mọi nút chạm-để-chọn
-const PRESS = "active:scale-[0.98] transition-transform duration-100";
-
-export default function TechnicianRegisterForm() {
+export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
-  const { theme } = useContext(AuthSettingsContext);
   const { t } = useLanguage();
   const { refresh: refreshSession } = useSessionUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isDark = theme === "dark";
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -68,7 +63,7 @@ export default function TechnicianRegisterForm() {
   const states = market === "US" ? US_STATES : AU_STATES;
   // Visa theo đúng thị trường (Mỹ: EB-3, Úc: 482)
   const BENEFIT_OPTIONS = techBenefits(market);
-  // Thị trường mặc định theo người xem (IP / ngôn ngữ / múi giờ) — tới khi họ tự bấm 🇺🇸 / 🇦🇺.
+  // Thị trường mặc định theo người xem (IP / ngôn ngữ / múi giờ) — tới khi họ tự bấm Mỹ / Úc.
   const { market: viewerMarket } = useViewerMarket();
   const marketTouched = useRef(false);
   useEffect(() => {
@@ -79,12 +74,6 @@ export default function TechnicianRegisterForm() {
     setBenefits([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewerMarket]);
-  const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
-  const labelClass = isDark ? "text-slate-300" : "text-slate-700";
-  const inputClass = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all ${
-    isDark ? "border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500" : "border-slate-300 bg-white text-slate-900 placeholder-slate-400"
-  }`;
-
   const toggleSpecialty = (s: string) => setSpecialties((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
   const toggleBenefit = (b: string) => setBenefits((p) => (p.includes(b) ? p.filter((x) => x !== b) : [...p, b]));
 
@@ -191,261 +180,194 @@ export default function TechnicianRegisterForm() {
     }
   };
 
+  const setMarketAll = (m: "US" | "AU") => { marketTouched.current = true; setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setCountryCode(m === "US" ? "+1" : "+61"); setBenefits([]); };
+
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center lg:text-left">
-        <h2 className={`text-2xl font-extrabold ${isDark ? "text-white" : "text-slate-900"}`}>
-          {step === 1 && t("auth.technician.step1Heading")}
-          {step === 2 && t("auth.technician.step2Heading")}
-          {step === 3 && t("auth.technician.step3Heading")}
-        </h2>
-        <p className={isDark ? "text-slate-400 text-sm" : "text-slate-500 text-sm"}>
-          {t("auth.technician.stepProgress", { current: step })}
-        </p>
+    <div className="pn-stack-24">
+      <div>
+        {step === 1 && <BackToRoles onBack={onBack} />}
+        <AuthTitle
+          title={step === 1 ? t("auth.technician.step1Heading") : step === 2 ? t("auth.technician.step2Heading") : t("auth.technician.step3Heading")}
+          sub={t("auth.technician.stepProgress", { current: step })}
+        />
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          <AlertCircle className="h-5 w-5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorBox>{error}</ErrorBox>}
 
       {/* STEP 1 */}
       {step === 1 && (
-        <div className="space-y-4 animate-fadeIn">
-          <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.technician.nameLabel")}</label>
-            <div className="relative">
-              <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.technician.namePlaceholder")} className={`${inputClass} pl-11`} />
+        <div className="pn-stack-24">
+          <div className="pn-stack-16">
+            <div>
+              <label htmlFor="tr-name" className="pn-label">{t("auth.technician.nameLabel")}</label>
+              <div className="pn-field-icon">
+                <UserIcon aria-hidden />
+                <input id="tr-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.technician.namePlaceholder")} className="pn-input" />
+              </div>
             </div>
-          </div>
-
-          <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.phoneLabel")}</label>
-            <div className="flex gap-2">
-              <select
-                aria-label={tr("Mã quốc gia", "Country code")}
-              value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value as "+1" | "+61")}
-                className={`min-h-[48px] rounded-2xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}
-              >
-                <option value="+1">🇺🇸 +1</option>
-                <option value="+61">🇦🇺 +61</option>
-              </select>
-              <div className="relative flex-1">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className={`${inputClass} pl-11`} />
+            <div>
+              <label htmlFor="tr-phone" className="pn-label">{t("auth.common.phoneLabel")}</label>
+              <div className="flex gap-2">
+                <CountryCodeSelect value={countryCode} onChange={setCountryCode} />
+                <div className="pn-field-icon flex-1">
+                  <Phone aria-hidden />
+                  <input id="tr-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className="pn-input" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => { marketTouched.current = true; setMarket("US"); setState(US_STATES[0]); setCountryCode("+1"); setBenefits([]); }}
-              className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "US" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-            >
-              {t("auth.common.marketUS")}
-            </button>
-            <button
-              type="button"
-              onClick={() => { marketTouched.current = true; setMarket("AU"); setState(AU_STATES[0]); setCountryCode("+61"); setBenefits([]); }}
-              className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "AU" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-            >
-              {t("auth.common.marketAU")}
-            </button>
+          <div className="pn-stack-16">
+            <MarketSeg value={market} onChange={setMarketAll} label={tr("Bạn làm ở đâu?", "Where do you work?")} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="tr-state" className="pn-label">{t("auth.common.stateLabel")}</label>
+                <select id="tr-state" value={state} onChange={(e) => setState(e.target.value)} className="pn-input">
+                  {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="tr-city" className="pn-label">{t("auth.common.cityLabel")}</label>
+                <input id="tr-city" autoComplete="address-level2" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className="pn-input" />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="pn-stack-16">
             <div>
-              <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.stateLabel")}</label>
-              <select aria-label={t("auth.common.stateLabel")} value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
-                {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
-              </select>
+              <label htmlFor="tr-email" className="pn-label">{t("auth.common.emailLoginLabel")}</label>
+              <div className="pn-field-icon">
+                <Mail aria-hidden />
+                <input id="tr-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className="pn-input" />
+              </div>
             </div>
             <div>
-              <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.cityLabel")}</label>
-              <input value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
+              <label htmlFor="tr-pass" className="pn-label">{t("auth.common.passwordLabel")}</label>
+              <div className="pn-field-icon">
+                <Lock aria-hidden />
+                <input id="tr-pass" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className="pn-input" />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.emailLoginLabel")}</label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className={`${inputClass} pl-11`} />
-            </div>
-          </div>
-          <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.passwordLabel")}</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className={`${inputClass} pl-11`} />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleFinishStep1}
-            disabled={loading}
-            className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 py-3.5 text-base font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 disabled:opacity-50 ${PRESS}`}
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><span>{t("auth.common.continue")}</span><ArrowRight className="h-5 w-5" /></>}
-          </button>
+          <Submit type="button" onClick={handleFinishStep1} busy={loading}>
+            {!loading && <><span>{t("auth.common.continue")}</span><ArrowRight className="h-[18px] w-[18px]" aria-hidden /></>}
+          </Submit>
         </div>
       )}
 
       {/* STEP 2 */}
       {step === 2 && (
-        <div className="space-y-5 animate-fadeIn">
-          <div>
-            <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.technician.specialtiesLabel")}</label>
-            <div className="flex flex-wrap gap-2">
+        <div className="pn-stack-24">
+          <fieldset>
+            <legend className="pn-label">{t("auth.technician.specialtiesLabel")}</legend>
+            <div className="pn-pills" style={{ marginTop: 4 }}>
               {SKILL_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleSpecialty(s)}
-                  className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${specialties.includes(s) ? "border-pink-500 bg-pink-500/15 text-pink-400" : `${cardClass} ${labelClass}`}`}
-                >
+                <button key={s} type="button" aria-pressed={specialties.includes(s)} onClick={() => toggleSpecialty(s)} className="pn-pill">
+                  {specialties.includes(s) && <Check aria-hidden />}
                   {valueLabel(s)}
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
-          <div>
-            <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.technician.desiredSalaryLabel")}</label>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <button
-                type="button"
-                onClick={() => setSalaryMode("Bao lương")}
-                className={`min-h-[48px] rounded-2xl py-2.5 text-sm font-bold border-2 ${PRESS} ${salaryMode === "Bao lương" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-              >
-                {valueLabel("Bao lương")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSalaryMode("Ăn chia %")}
-                className={`min-h-[48px] rounded-2xl py-2.5 text-sm font-bold border-2 ${PRESS} ${salaryMode === "Ăn chia %" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-              >
-                {valueLabel("Ăn chia %")}
-              </button>
+          <fieldset className="pn-stack-16">
+            <legend className="pn-label">{t("auth.technician.desiredSalaryLabel")}</legend>
+            <div className="pn-seg" role="group" aria-label={t("auth.technician.desiredSalaryLabel")}>
+              {(["Bao lương", "Ăn chia %"] as const).map((m) => (
+                <button key={m} type="button" aria-pressed={salaryMode === m} onClick={() => setSalaryMode(m)}>{valueLabel(m)}</button>
+              ))}
             </div>
             <input
+              aria-label={t("auth.technician.desiredSalaryLabel")}
               value={salaryAmount}
               onChange={(e) => setSalaryAmount(e.target.value)}
               placeholder={salaryMode === "Bao lương" ? tr("VD: $1,200/tuần", "e.g. $1,200/week") : tr("VD: 60/40", "e.g. 60/40")}
-              className={inputClass}
+              className="pn-input"
             />
-          </div>
+          </fieldset>
 
-          <div>
-            <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.technician.benefitsLabel")}</label>
-            <div className="flex flex-wrap gap-2">
+          <fieldset>
+            <legend className="pn-label">{t("auth.technician.benefitsLabel")}</legend>
+            <div className="pn-pills" style={{ marginTop: 4 }}>
               {BENEFIT_OPTIONS.map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  onClick={() => toggleBenefit(b)}
-                  className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${benefits.includes(b) ? "border-emerald-500 bg-emerald-500/15 text-emerald-400" : `${cardClass} ${labelClass}`}`}
-                >
+                <button key={b} type="button" aria-pressed={benefits.includes(b)} onClick={() => toggleBenefit(b)} className="pn-pill">
+                  {benefits.includes(b) && <Check aria-hidden />}
                   {valueLabel(b, market)}
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div className="flex gap-3">
-            <button type="button" onClick={() => setStep(1)} className={`min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border px-4 py-3.5 font-bold ${cardClass} ${labelClass} ${PRESS}`}>
-              <ArrowLeft className="h-5 w-5" />
+            <button type="button" onClick={() => setStep(1)} className="pn-btn pn-ghost" aria-label={tr("Quay lại", "Back")} style={{ height: 52, padding: "0 18px" }}>
+              <ArrowLeft className="h-[18px] w-[18px]" aria-hidden />
             </button>
-            <button
-              type="button"
-              onClick={() => setStep(3)}
-              className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 py-3.5 text-base font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 ${PRESS}`}
-            >
-              <span>{t("auth.common.continue")}</span>
-              <ArrowRight className="h-5 w-5" />
-            </button>
+            <div className="flex-1">
+              <Submit type="button" onClick={() => setStep(3)}>
+                <span>{t("auth.common.continue")}</span><ArrowRight className="h-[18px] w-[18px]" aria-hidden />
+              </Submit>
+            </div>
           </div>
         </div>
       )}
 
       {/* STEP 3 */}
       {step === 3 && (
-        <div className="space-y-5 animate-fadeIn">
+        <div className="pn-stack-24">
           <div>
-            <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.technician.uploadLabel")}</label>
-            <div className="grid grid-cols-3 gap-2">
+            <p className="pn-label">{t("auth.technician.uploadLabel")}</p>
+            <div className="pn-uploads">
               {portfolioImages.map((url) => (
-                <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-slate-800 group">
-                  <img src={url} alt="portfolio" className="h-full w-full object-cover" />
-                  <button onClick={() => removeImage(url)} className={`absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center text-white ${PRESS}`}>
-                    <X className="h-3.5 w-3.5" />
+                <div key={url}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={tr("Ảnh tác phẩm", "Portfolio photo")} className="h-full w-full object-cover" />
+                  <button type="button" onClick={() => removeImage(url)} aria-label={tr("Xoá ảnh", "Remove photo")} className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white">
+                    <X className="h-4 w-4" aria-hidden />
                   </button>
                 </div>
               ))}
               {portfolioImages.length < 5 && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className={`aspect-square rounded-xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center gap-1 text-slate-500 hover:border-purple-500 hover:text-purple-400 transition-colors ${PRESS}`}
-                >
-                  {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-                  <span className="text-[10px] font-bold">{t("auth.technician.uploadButton")}</span>
-                </button>
+                <div>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="pn-upload-add">
+                    {uploading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Upload className="h-5 w-5" aria-hidden />}
+                    <span>{t("auth.technician.uploadButton")}</span>
+                  </button>
+                </div>
               )}
             </div>
             <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleUploadPhoto} />
           </div>
 
-          <div>
-            <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.technician.statusLabel")}</label>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setStatus("URGENT")}
-                className={`w-full min-h-[48px] flex items-center gap-3 rounded-2xl p-4 border-2 ${PRESS} ${status === "URGENT" ? "border-red-500 bg-red-500/10" : cardClass}`}
-              >
-                <Flame className={`h-5 w-5 ${status === "URGENT" ? "text-red-400" : "text-slate-500"}`} />
-                <span className={`font-bold ${status === "URGENT" ? "text-red-300" : labelClass}`}>{t("auth.technician.statusUrgent")}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus("BETTER")}
-                className={`w-full min-h-[48px] flex items-center gap-3 rounded-2xl p-4 border-2 ${PRESS} ${status === "BETTER" ? "border-blue-500 bg-blue-500/10" : cardClass}`}
-              >
-                <RefreshCw className={`h-5 w-5 ${status === "BETTER" ? "text-blue-400" : "text-slate-500"}`} />
-                <span className={`font-bold ${status === "BETTER" ? "text-blue-300" : labelClass}`}>{t("auth.technician.statusBetter")}</span>
-              </button>
-            </div>
-          </div>
+          <fieldset className="space-y-2">
+            <legend className="pn-label">{t("auth.technician.statusLabel")}</legend>
+            <button type="button" aria-pressed={status === "URGENT"} onClick={() => setStatus("URGENT")} className="pn-choice">
+              <Flame aria-hidden />
+              <span className="font-semibold">{t("auth.technician.statusUrgent")}</span>
+            </button>
+            <button type="button" aria-pressed={status === "BETTER"} onClick={() => setStatus("BETTER")} className="pn-choice">
+              <RefreshCw aria-hidden />
+              <span className="font-semibold">{t("auth.technician.statusBetter")}</span>
+            </button>
+          </fieldset>
 
           <div className="flex gap-3">
-            <button type="button" onClick={() => setStep(2)} className={`min-h-[48px] flex items-center justify-center gap-2 rounded-2xl border px-4 py-3.5 font-bold ${cardClass} ${labelClass} ${PRESS}`}>
-              <ArrowLeft className="h-5 w-5" />
+            <button type="button" onClick={() => setStep(2)} className="pn-btn pn-ghost" aria-label={tr("Quay lại", "Back")} style={{ height: 52, padding: "0 18px" }}>
+              <ArrowLeft className="h-[18px] w-[18px]" aria-hidden />
             </button>
-            <button
-              type="button"
-              onClick={handleFinish}
-              disabled={loading}
-              className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 py-3.5 text-base font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 disabled:opacity-50 ${PRESS}`}
-            >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><CheckCircle2 className="h-5 w-5" /><span>{t("auth.technician.finishButton")}</span></>}
-            </button>
+            <div className="flex-1">
+              <Submit type="button" onClick={handleFinish} busy={loading}>
+                {!loading && <CheckCircle2 className="h-[18px] w-[18px]" aria-hidden />}
+                <span>{t("auth.technician.finishButton")}</span>
+              </Submit>
+            </div>
           </div>
         </div>
       )}
 
-      <p className={`text-center text-sm ${labelClass}`}>
+      <p className="pn-muted pn-center">
         {t("auth.common.alreadyHaveAccount")}{" "}
-        <Link href="/auth/login" className="font-bold text-purple-500 hover:text-purple-400 transition-colors">
-          {t("auth.common.loginNow")}
-        </Link>
+        <Link href="/auth/login" className="pn-a">{t("auth.common.loginNow")}</Link>
       </p>
     </div>
   );

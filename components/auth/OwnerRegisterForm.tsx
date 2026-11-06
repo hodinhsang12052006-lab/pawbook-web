@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import {
-  Store, Phone, Lock, Mail, User as UserIcon, Loader2, AlertCircle,
-  ArrowRight, Home, CheckCircle2,
+  Store, Phone, Lock, Mail, User as UserIcon, Loader2,
+  ArrowRight, Home, CheckCircle2, Check,
 } from "lucide-react";
-import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
+import { AuthTitle, BackToRoles, CountryCodeSelect, ErrorBox, MarketSeg, Submit } from "@/components/auth/fields";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -33,8 +33,6 @@ const ROLE_OPTIONS = POSITIONS;
 const SALARY_TYPES_US = ["Bao lương tuần", "% Ăn chia"];
 const SALARY_TYPES_AU = ["Theo giờ AUD", "Theo tuần AUD"];
 
-// Hiệu ứng bấm nút kiểu app native — dùng chung cho mọi nút chạm-để-chọn
-const PRESS = "active:scale-[0.98] transition-transform duration-100";
 const ANSWER_DELAY_MS = 250;
 
 interface SurveyAnswerRecord {
@@ -45,12 +43,10 @@ interface SurveyAnswerRecord {
   answeredAt: string;
 }
 
-export default function OwnerRegisterForm() {
+export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
-  const { theme } = useContext(AuthSettingsContext);
   const { t } = useLanguage();
   const { refresh: refreshSession } = useSessionUser();
-  const isDark = theme === "dark";
 
   // phase: "setup" (screen 1) -> "survey" (screen 2, 5 questions) ->
   // "diagnostic" (màn hình chẩn đoán sau khi tạo tài khoản thành công)
@@ -81,12 +77,6 @@ export default function OwnerRegisterForm() {
 
   const states = market === "US" ? US_STATES : AU_STATES;
   const salaryTypes = market === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU;
-
-  const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
-  const labelClass = isDark ? "text-slate-300" : "text-slate-700";
-  const inputClass = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all ${
-    isDark ? "border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500" : "border-slate-300 bg-white text-slate-900 placeholder-slate-400"
-  }`;
 
   const toggleRole = (r: string) => setUrgentRole((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
 
@@ -196,238 +186,157 @@ export default function OwnerRegisterForm() {
   if (phase === "survey") {
     const q = SURVEY[surveyIndex];
     return (
-      <div className="mx-auto w-full max-w-md space-y-6">
-        <div className="space-y-2">
-          <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-pink-400" : "text-pink-600"}`}>
-            {t("auth.owner.surveyIntro")}
-          </p>
-          <div className="flex gap-1.5">
+      <div className="pn-stack-24">
+        <div className="space-y-3">
+          <p className="pn-meta">{t("auth.owner.surveyIntro")}</p>
+          <div className="pn-progress" aria-hidden>
             {SURVEY.map((_, idx) => (
-              <div key={idx} className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${idx <= surveyIndex ? "bg-pink-500" : isDark ? "bg-slate-800" : "bg-slate-200"}`} />
+              <span key={idx} data-on={idx <= surveyIndex ? "" : undefined} />
             ))}
           </div>
-          <p className={`text-xs ${labelClass}`}>{t("auth.owner.surveyProgress", { current: surveyIndex + 1, total: SURVEY.length, title: dt(q.title) })}</p>
+          <p className="pn-meta">{t("auth.owner.surveyProgress", { current: surveyIndex + 1, total: SURVEY.length, title: dt(q.title) })}</p>
         </div>
 
-        {error && (
-          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        {error && <ErrorBox>{error}</ErrorBox>}
 
-        <h2 className={`text-xl font-extrabold leading-snug transition-opacity duration-200 ${isDark ? "text-white" : "text-slate-900"}`}>
-          {dt(q.question)}
-        </h2>
+        <h1 className="pn-display pn-h1">{dt(q.question)}</h1>
 
         <div className="space-y-3">
-          <button
-            type="button"
-            disabled={loading || advancing}
-            onClick={() => handleAnswer(true)}
-            className={`w-full text-left rounded-2xl border-2 p-4 transition-all disabled:cursor-not-allowed ${PRESS} ${
-              selectedOption === "A" ? "border-pink-500 bg-pink-500/10" : `${cardClass} hover:border-pink-500/50`
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <span className={`text-sm leading-relaxed ${labelClass}`}>{dt(q.optionA)}</span>
-              {selectedOption === "A" && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-pink-400" />}
-            </div>
+          <button type="button" disabled={loading || advancing} aria-pressed={selectedOption === "A"} onClick={() => handleAnswer(true)} className="pn-choice">
+            <span className="flex-1">{dt(q.optionA)}</span>
+            {selectedOption === "A" && <CheckCircle2 aria-hidden />}
           </button>
-          <button
-            type="button"
-            disabled={loading || advancing}
-            onClick={() => handleAnswer(false)}
-            className={`w-full text-left rounded-2xl border-2 p-4 transition-all disabled:cursor-not-allowed ${PRESS} ${
-              selectedOption === "B" ? "border-emerald-500 bg-emerald-500/10" : `${cardClass} hover:border-emerald-500/50`
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <span className={`text-sm leading-relaxed ${labelClass}`}>{dt(q.optionB)}</span>
-              {selectedOption === "B" && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-400" />}
-            </div>
+          <button type="button" disabled={loading || advancing} aria-pressed={selectedOption === "B"} onClick={() => handleAnswer(false)} className="pn-choice">
+            <span className="flex-1">{dt(q.optionB)}</span>
+            {selectedOption === "B" && <CheckCircle2 aria-hidden />}
           </button>
         </div>
 
         {!loading && (
-          <button
-            type="button"
-            disabled={advancing}
-            onClick={() => finishRegistration(pains, answers)}
-            className={`w-full text-center text-sm font-semibold underline-offset-4 hover:underline ${isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-800"}`}
-          >
+          <button type="button" disabled={advancing} onClick={() => finishRegistration(pains, answers)} className="pn-btn pn-ghost pn-ghost--block">
             {t("auth.owner.skipSurvey")}
           </button>
         )}
 
         {loading && (
-          <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
-            <Loader2 className="h-4 w-4 animate-spin" />
+          <p className="pn-meta flex items-center justify-center gap-2" role="status">
+            <Loader2 className="h-[18px] w-[18px] animate-spin" aria-hidden />
             <span>{t("auth.owner.creatingShop")}</span>
-          </div>
+          </p>
         )}
       </div>
     );
   }
 
+  const setMarketAll = (m: "US" | "AU") => { setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setCountryCode(m === "US" ? "+1" : "+61"); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]); };
+
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center lg:text-left">
-        <h2 className={`text-2xl font-extrabold ${isDark ? "text-white" : "text-slate-900"}`}>
-          {t("auth.owner.heading")}
-        </h2>
-        <p className={isDark ? "text-slate-400 text-sm" : "text-slate-500 text-sm"}>
-          {t("auth.owner.subheading")}
-        </p>
+    <div className="pn-stack-24">
+      <div>
+        <BackToRoles onBack={onBack} />
+        <AuthTitle title={t("auth.owner.heading")} sub={t("auth.owner.subheading")} />
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          <AlertCircle className="h-5 w-5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorBox>{error}</ErrorBox>}
 
-      <div className="space-y-4">
+      <div className="pn-stack-16">
         <div>
-          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.nameLabel")}</label>
-          <div className="relative">
-            <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.owner.namePlaceholder")} className={`${inputClass} pl-11`} />
+          <label htmlFor="ow-name" className="pn-label">{t("auth.owner.nameLabel")}</label>
+          <div className="pn-field-icon">
+            <UserIcon aria-hidden />
+            <input id="ow-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.owner.namePlaceholder")} className="pn-input" />
           </div>
         </div>
-
         <div>
-          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.salonLabel")}</label>
-          <div className="relative">
-            <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-            <input value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder={t("auth.owner.salonPlaceholder")} className={`${inputClass} pl-11`} />
+          <label htmlFor="ow-salon" className="pn-label">{t("auth.owner.salonLabel")}</label>
+          <div className="pn-field-icon">
+            <Store aria-hidden />
+            <input id="ow-salon" autoComplete="organization" value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder={t("auth.owner.salonPlaceholder")} className="pn-input" />
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => { setMarket("US"); setState(US_STATES[0]); setCountryCode("+1"); setSalaryType(SALARY_TYPES_US[0]); }}
-            className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "US" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-          >
-            {t("auth.common.marketUS")}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMarket("AU"); setState(AU_STATES[0]); setCountryCode("+61"); setSalaryType(SALARY_TYPES_AU[0]); }}
-            className={`min-h-[48px] rounded-2xl py-3 text-sm font-bold border-2 ${PRESS} ${market === "AU" ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-          >
-            {t("auth.common.marketAU")}
-          </button>
-        </div>
-
+      <div className="pn-stack-16">
+        <MarketSeg value={market} onChange={setMarketAll} label={tr("Tiệm ở đâu?", "Where is your salon?")} />
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.stateLabel")}</label>
-            <select aria-label={t("auth.common.stateLabel")} value={state} onChange={(e) => setState(e.target.value)} className={inputClass}>
+            <label htmlFor="ow-state" className="pn-label">{t("auth.common.stateLabel")}</label>
+            <select id="ow-state" value={state} onChange={(e) => setState(e.target.value)} className="pn-input">
               {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
             </select>
           </div>
           <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.cityLabel")}</label>
-            <input value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className={inputClass} />
+            <label htmlFor="ow-city" className="pn-label">{t("auth.common.cityLabel")}</label>
+            <input id="ow-city" autoComplete="address-level2" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className="pn-input" />
           </div>
         </div>
-
         <div>
-          <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.owner.phoneLabel")}</label>
+          <label htmlFor="ow-phone" className="pn-label">{t("auth.owner.phoneLabel")}</label>
           <div className="flex gap-2">
-            <select
-              aria-label={tr("Mã quốc gia", "Country code")}
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value as "+1" | "+61")}
-              className={`min-h-[48px] rounded-2xl border px-3 py-3 text-base font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-100" : "border-slate-300 bg-white text-slate-900"}`}
-            >
-              <option value="+1">🇺🇸 +1</option>
-              <option value="+61">🇦🇺 +61</option>
-            </select>
-            <div className="relative flex-1">
-              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className={`${inputClass} pl-11`} />
+            <CountryCodeSelect value={countryCode} onChange={setCountryCode} />
+            <div className="pn-field-icon flex-1">
+              <Phone aria-hidden />
+              <input id="ow-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className="pn-input" />
             </div>
           </div>
         </div>
+      </div>
 
-        <div>
-          <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.owner.urgentRoleLabel")}</label>
-          <div className="flex flex-wrap gap-2">
+      <div className="pn-stack-16">
+        <fieldset>
+          <legend className="pn-label">{t("auth.owner.urgentRoleLabel")}</legend>
+          <div className="pn-pills" style={{ marginTop: 4 }}>
             {ROLE_OPTIONS.map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => toggleRole(r)}
-                className={`min-h-[48px] rounded-full px-3.5 py-2.5 text-sm font-bold border-2 transition-colors ${PRESS} ${urgentRole.includes(r) ? "border-pink-500 bg-pink-500/15 text-pink-400" : `${cardClass} ${labelClass}`}`}
-              >
+              <button key={r} type="button" aria-pressed={urgentRole.includes(r)} onClick={() => toggleRole(r)} className="pn-pill">
+                {urgentRole.includes(r) && <Check aria-hidden />}
                 {valueLabel(r)}
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        <div>
-          <label className={`block text-sm font-bold mb-2 ${labelClass}`}>{t("auth.owner.salaryLabel")}</label>
-          <div className="grid grid-cols-2 gap-2 mb-2">
+        <fieldset className="pn-stack-16">
+          <legend className="pn-label">{t("auth.owner.salaryLabel")}</legend>
+          <div className="pn-seg" role="group" aria-label={t("auth.owner.salaryLabel")}>
             {salaryTypes.map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setSalaryType(st)}
-                className={`min-h-[48px] rounded-2xl py-2.5 text-xs font-bold border-2 ${PRESS} ${salaryType === st ? "border-pink-500 bg-pink-500/10" : cardClass} ${isDark ? "text-white" : "text-slate-900"}`}
-              >
-                {valueLabel(st)}
-              </button>
+              <button key={st} type="button" aria-pressed={salaryType === st} onClick={() => setSalaryType(st)}>{valueLabel(st)}</button>
             ))}
           </div>
-          <input value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder={t("auth.owner.salaryPlaceholder")} className={inputClass} />
-        </div>
+          <input aria-label={t("auth.owner.salaryLabel")} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder={t("auth.owner.salaryPlaceholder")} className="pn-input" />
+        </fieldset>
 
-        <button
-          type="button"
-          onClick={() => setHasHousing(!hasHousing)}
-          className={`w-full min-h-[48px] flex items-center gap-3 rounded-2xl p-4 border-2 ${PRESS} ${hasHousing ? "border-emerald-500 bg-emerald-500/10" : cardClass}`}
-        >
-          <Home className={`h-5 w-5 ${hasHousing ? "text-emerald-400" : "text-slate-500"}`} />
-          <span className={`font-bold ${hasHousing ? "text-emerald-300" : labelClass}`}>{t("auth.owner.housing")}</span>
-        </button>
-
-        <div className="pt-2 border-t border-slate-800/60 space-y-4">
-          <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.emailLoginLabel")}</label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className={`${inputClass} pl-11`} />
-            </div>
-          </div>
-          <div>
-            <label className={`block text-sm font-bold mb-1.5 ${labelClass}`}>{t("auth.common.passwordLabel")}</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className={`${inputClass} pl-11`} />
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleStartSurvey}
-          className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 py-3.5 text-base font-bold text-white shadow-lg shadow-purple-600/25 hover:brightness-110 ${PRESS}`}
-        >
-          <span>{t("auth.owner.startSurveyButton")}</span>
-          <ArrowRight className="h-5 w-5" />
+        <button type="button" aria-pressed={hasHousing} onClick={() => setHasHousing(!hasHousing)} className="pn-choice">
+          <Home aria-hidden />
+          <span className="flex-1 font-semibold">{t("auth.owner.housing")}</span>
+          {hasHousing && <Check aria-hidden />}
         </button>
       </div>
 
-      <p className={`text-center text-sm ${labelClass}`}>
+      <div className="pn-stack-16">
+        <div>
+          <label htmlFor="ow-email" className="pn-label">{t("auth.common.emailLoginLabel")}</label>
+          <div className="pn-field-icon">
+            <Mail aria-hidden />
+            <input id="ow-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className="pn-input" />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="ow-pass" className="pn-label">{t("auth.common.passwordLabel")}</label>
+          <div className="pn-field-icon">
+            <Lock aria-hidden />
+            <input id="ow-pass" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className="pn-input" />
+          </div>
+        </div>
+      </div>
+
+      <Submit type="button" onClick={handleStartSurvey}>
+        <span>{t("auth.owner.startSurveyButton")}</span>
+        <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
+      </Submit>
+
+      <p className="pn-muted pn-center">
         {t("auth.common.alreadyHaveAccount")}{" "}
-        <Link href="/auth/login" className="font-bold text-purple-500 hover:text-purple-400 transition-colors">
-          {t("auth.common.loginNow")}
-        </Link>
+        <Link href="/auth/login" className="pn-a">{t("auth.common.loginNow")}</Link>
       </p>
     </div>
   );

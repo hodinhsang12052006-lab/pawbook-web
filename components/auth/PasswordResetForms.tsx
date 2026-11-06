@@ -1,36 +1,19 @@
 "use client";
 
 import { apiError } from "@/lib/i18n/apiError";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from "lucide-react";
-import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock, Mail, MailCheck } from "lucide-react";
+import { AuthTitle, ErrorBox, OkBox, Submit } from "@/components/auth/fields";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
-const PRESS = "active:scale-[0.98] transition-transform duration-100";
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
-
-function useStyles() {
-  const { theme } = useContext(AuthSettingsContext);
-  const dark = theme === "dark";
-  return {
-    dark,
-    input: `block w-full min-h-[48px] rounded-2xl h-12 pl-10 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all ${dark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900"} border`,
-    label: `block text-xs font-bold ${dark ? "text-slate-300" : "text-slate-700"}`,
-    muted: `text-sm ${dark ? "text-slate-400" : "text-slate-500"}`,
-    title: `text-2xl font-bold tracking-tight sm:text-3xl ${dark ? "text-white" : "text-slate-900"}`,
-    btn: `flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 px-4 text-sm font-bold text-white shadow-lg shadow-purple-600/25 disabled:opacity-60 ${PRESS}`,
-    error: `flex items-start gap-2.5 rounded-xl border p-4 text-sm ${dark ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-red-200 bg-red-50 text-red-600"}`,
-    ok: `flex items-start gap-2.5 rounded-xl border p-4 text-sm ${dark ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`,
-  };
-}
 
 /** /auth/forgot — nhập email nhận link đặt lại mật khẩu. */
 export function ForgotPasswordForm() {
   useTr(); // render lại khi đổi VI/EN
-  const c = useStyles();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -56,43 +39,37 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center lg:text-left">
-        <h2 className={c.title}>{tr("Quên mật khẩu?", "Forgot your password?")}</h2>
-        <p className={c.muted}>{tr("Nhập email bạn dùng để đăng ký — chúng tôi sẽ gửi link đặt mật khẩu mới.", "Enter the email you signed up with — we'll send you a link to set a new password.")}</p>
-      </div>
+    <div className="pn-stack-24">
+      <AuthTitle title={tr("Quên mật khẩu?", "Forgot your password?")} sub={tr("Nhập email bạn dùng để đăng ký — chúng tôi sẽ gửi link đặt mật khẩu mới.", "Enter the email you signed up with — we'll send you a link to set a new password.")} />
 
       {sent ? (
-        <div className={c.ok} role="status">
-          <MailCheck className="mt-0.5 h-5 w-5 flex-shrink-0" />
-          <span>{tr("Nếu email này có tài khoản PawNail, chúng tôi vừa gửi link đặt lại mật khẩu (hiệu lực 30 phút). Kiểm tra hộp thư, cả mục Spam / Quảng cáo.", "If this email has a PawNail account, we've sent a reset link (valid for 30 minutes). Check your inbox, including Spam / Promotions.")}</span>
-        </div>
+        <OkBox icon={<MailCheck aria-hidden style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1 }} />}>{tr("Nếu email này có tài khoản PawNail, chúng tôi vừa gửi link đặt lại mật khẩu (hiệu lực 30 phút). Kiểm tra hộp thư, cả mục Spam / Quảng cáo.", "If this email has a PawNail account, we've sent a reset link (valid for 30 minutes). Check your inbox, including Spam / Promotions.")}
+        </OkBox>
       ) : disabled ? (
-        <div className={c.error} role="alert">
-          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
-          <span>{tr(`Tính năng tự đặt lại mật khẩu đang được hoàn thiện. Vui lòng liên hệ ${SUPPORT_EMAIL} để được cấp lại mật khẩu.`, `Self-service reset is coming soon. Please email ${SUPPORT_EMAIL} and we'll get you back in.`)}</span>
-        </div>
+        <ErrorBox>
+          {tr(`Tính năng tự đặt lại mật khẩu đang được hoàn thiện. Vui lòng liên hệ ${SUPPORT_EMAIL} để được cấp lại mật khẩu.`, `Self-service reset is coming soon. Please email ${SUPPORT_EMAIL} and we'll get you back in.`)}
+        </ErrorBox>
       ) : (
-        <form onSubmit={submit} className="space-y-4">
-          {error && (
-            <div className={c.error} role="alert"><AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" /><span>{error}</span></div>
-          )}
+        <form onSubmit={submit} className="pn-stack-16">
+          {error && <ErrorBox>{error}</ErrorBox>}
           <div>
-            <label htmlFor="forgot-email" className={c.label}>{tr("Địa chỉ email", "Email address")}</label>
-            <div className="relative mt-1">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5"><Mail className="h-4 w-4 text-slate-400" /></div>
-              <input id="forgot-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tr("ban@email.com", "you@email.com")} className={c.input} />
+            <label htmlFor="forgot-email" className="pn-label">{tr("Địa chỉ email", "Email address")}</label>
+            <div className="pn-field-icon">
+              <Mail aria-hidden />
+              <input id="forgot-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tr("ban@email.com", "you@email.com")} className="pn-input" />
             </div>
           </div>
-          <button type="submit" disabled={busy} className={c.btn}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} {tr("Gửi link đặt lại", "Send reset link")}
-          </button>
+          <div style={{ paddingTop: 8 }}>
+            <Submit busy={busy}>{tr("Gửi link đặt lại", "Send reset link")}</Submit>
+          </div>
         </form>
       )}
 
-      <Link href="/auth/login" className={`flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-500 hover:text-purple-400`}>
-        <ArrowLeft className="h-4 w-4" />{tr(" Quay lại đăng nhập", " Back to sign in")}
-      </Link>
+      <p className="pn-center">
+        <Link href="/auth/login" className="pn-a inline-flex items-center gap-1.5" style={{ fontSize: 15 }}>
+          <ArrowLeft className="h-4 w-4" aria-hidden />{tr("Quay lại đăng nhập", "Back to sign in")}
+        </Link>
+      </p>
     </div>
   );
 }
@@ -100,7 +77,6 @@ export function ForgotPasswordForm() {
 /** /auth/reset?token=… — đặt mật khẩu mới. */
 export function ResetPasswordForm() {
   useTr();
-  const c = useStyles();
   const router = useRouter();
   const [token, setToken] = useState("");
   const [pw, setPw] = useState("");
@@ -136,39 +112,40 @@ export function ResetPasswordForm() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center lg:text-left">
-        <h2 className={c.title}>{tr("Đặt mật khẩu mới", "Set a new password")}</h2>
-        <p className={c.muted}>{tr("Chọn mật khẩu mới cho tài khoản PawNail của bạn (ít nhất 8 ký tự).", "Choose a new password for your PawNail account (at least 8 characters).")}</p>
-      </div>
+    <div className="pn-stack-24">
+      <AuthTitle title={tr("Đặt mật khẩu mới", "Set a new password")} sub={tr("Chọn mật khẩu mới cho tài khoản PawNail của bạn (ít nhất 8 ký tự).", "Choose a new password for your PawNail account (at least 8 characters).")} />
       {done ? (
-        <div className={c.ok} role="status"><CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0" /><span>{tr("Đã đổi mật khẩu! Đang chuyển sang trang đăng nhập…", "Password updated! Taking you to sign in…")}</span></div>
+        <OkBox icon={<CheckCircle2 aria-hidden style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1 }} />}>{tr("Đã đổi mật khẩu! Đang chuyển sang trang đăng nhập…", "Password updated! Taking you to sign in…")}</OkBox>
       ) : !token ? (
-        <div className={c.error} role="alert"><AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" /><span>{tr("Link không hợp lệ. Hãy mở đúng link trong email, hoặc yêu cầu link mới.", "Invalid link. Open the link from your email, or request a new one.")}</span></div>
+        <ErrorBox>{tr("Link không hợp lệ. Hãy mở đúng link trong email, hoặc yêu cầu link mới.", "Invalid link. Open the link from your email, or request a new one.")}</ErrorBox>
       ) : (
-        <form onSubmit={submit} className="space-y-4">
-          {error && <div className={c.error} role="alert"><AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" /><span>{error}</span></div>}
+        <form onSubmit={submit} className="pn-stack-16">
+          {error && <ErrorBox>{error}</ErrorBox>}
           {[["new-password", tr("Mật khẩu mới", "New password"), pw, setPw], ["confirm-password", tr("Nhập lại mật khẩu", "Confirm password"), pw2, setPw2]].map(([id, label, val, set]) => (
             <div key={id as string}>
-              <label htmlFor={id as string} className={c.label}>{label as string}</label>
-              <div className="relative mt-1">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5"><Lock className="h-4 w-4 text-slate-400" /></div>
-                <input id={id as string} type={show ? "text" : "password"} required minLength={8} maxLength={128} autoComplete="new-password" value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)} className={`${c.input} pr-11`} />
+              <label htmlFor={id as string} className="pn-label">{label as string}</label>
+              <div className="pn-field-icon">
+                <Lock aria-hidden />
+                <input id={id as string} type={show ? "text" : "password"} required minLength={8} maxLength={128} autoComplete="new-password" value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)} className="pn-input" style={{ paddingRight: 48 }} />
                 {id === "new-password" && (
-                  <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? tr("Ẩn mật khẩu", "Hide password") : tr("Hiện mật khẩu", "Show password")} className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                    {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? tr("Ẩn mật khẩu", "Hide password") : tr("Hiện mật khẩu", "Show password")} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-[14px] text-[#a69ba4] hover:text-white">
+                    {show ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                   </button>
                 )}
               </div>
             </div>
           ))}
-          <button type="submit" disabled={busy} className={c.btn}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} {tr("Lưu mật khẩu mới", "Save new password")}</button>
+          <div style={{ paddingTop: 8 }}>
+            <Submit busy={busy}>{tr("Lưu mật khẩu mới", "Save new password")}</Submit>
+          </div>
         </form>
       )}
       {(!done) && (
-        <Link href={token ? "/auth/login" : "/auth/forgot"} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-500 hover:text-purple-400">
-          <ArrowLeft className="h-4 w-4" />{token ? tr(" Quay lại đăng nhập", " Back to sign in") : tr(" Yêu cầu link mới", " Request a new link")}
-        </Link>
+        <p className="pn-center">
+          <Link href={token ? "/auth/login" : "/auth/forgot"} className="pn-a inline-flex items-center gap-1.5" style={{ fontSize: 15 }}>
+            <ArrowLeft className="h-4 w-4" aria-hidden />{token ? tr("Quay lại đăng nhập", "Back to sign in") : tr("Yêu cầu link mới", "Request a new link")}
+          </Link>
+        </p>
       )}
     </div>
   );

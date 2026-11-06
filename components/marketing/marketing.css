@@ -123,6 +123,7 @@ textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 }
 .pn-img-label[data-chip="br"] { left: auto; right: 12px; }
 .pn-img-label[data-chip="tl"] { bottom: auto; top: 12px; }
+.pn-img-label[data-chip="tr"] { bottom: auto; top: 12px; left: auto; right: 12px; }
 
 /* ---------- Dividers / errors / misc ---------- */
 .pn-or { display: flex; align-items: center; gap: 12px; font: 400 13px/18px var(--font-pn), system-ui, sans-serif; color: #a69ba4; }
@@ -135,9 +136,10 @@ textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 .pn-error > svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
 .pn-spin { width: 18px; height: 18px; animation: pnSpin 0.9s linear infinite; }
 @keyframes pnSpin { to { transform: rotate(360deg); } }
+/* fact rows: every item carries its own 4px dot (wraps cleanly — no orphan separator at a line start) */
 .pn-dots { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
-.pn-dots > * { position: relative; }
-.pn-dots > * + *::before { content: ""; position: absolute; left: -11px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 999px; background: #f59bbe; }
+.pn-dots > * { display: inline-flex; align-items: center; gap: 8px; }
+.pn-dots > *::before { content: ""; flex-shrink: 0; width: 4px; height: 4px; border-radius: 999px; background: #f59bbe; }
 
 /* ---------- Guest navbar ---------- */
 .pn-nav-logo { position: relative; width: 36px; height: 36px; overflow: hidden; border-radius: 10px; box-shadow: 0 0 0 1px var(--color-pn-line-strong); flex-shrink: 0; }
@@ -161,7 +163,6 @@ textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 .pn-hero-aud { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 16px 0 0; font: 400 15px/22px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
 .pn-hero-trust { order: 6; margin: 20px 0 0; font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #a69ba4; }
 .pn-hero-trust.pn-dots { gap: 8px 20px; }
-.pn-hero-trust.pn-dots > * + *::before { left: -12px; }
 .pn-stage { order: 5; position: relative; margin: 28px -16px 0; }
 @media (min-width: 640px) { .pn-hero-lede { font-size: 17px; line-height: 27px; } }
 @media (min-width: 1024px) {

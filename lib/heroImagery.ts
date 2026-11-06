@@ -12,6 +12,7 @@ import type { SeasonId } from "@/lib/season";
 export type HeroSlot = "front" | "mid" | "back" | "m4" | "m5";
 export const HERO_SLOTS: readonly HeroSlot[] = ["front", "mid", "back", "m4", "m5"];
 export type Skin = "fair" | "light-olive" | "medium-tan" | "warm-medium-brown" | "deep-brown";
+export type Chip = "bl" | "br" | "tl" | "tr";
 export type Backdrop = "linen" | "marble" | "sage-plaster" | "travertine" | "satin" | "oak" | "ceramic";
 
 export interface HeroImage {
@@ -25,7 +26,7 @@ export interface HeroImage {
   /** horizontal crop start (fraction of the 1024 px source) */
   crop: { x0: number };
   /** corner of the image-source chip — the corner away from the nails */
-  chip: "bl" | "br" | "tl";
+  chip: Chip;
   w: number;
   h: number;
   widths: number[];
@@ -92,6 +93,19 @@ export const HERO_SIZES = {
   back: "(min-width:1024px) 200px, min(64vw, 300px)",
   strip: "min(64vw, 300px)",
 } as const;
+/**
+ * Chip corner per position: in the 3D stack the mid card shows only its LEFT part (a "br" chip would hide behind
+ * the front card → top-left, which is clear of the nails for every mid entry) and the back card only its bottom /
+ * right edge (never "tl"); the auth plate's back card shows only its RIGHT part ("tr"). "a>b" = replace a by b,
+ * "*>b" = always b. The pre-paint picker applies the same rule (data-chip-fix).
+ */
+export const CHIP_FIX: Partial<Record<HeroSlot | "authBack", string>> = { mid: "br>tl", back: "tl>bl", authBack: "*>tr" };
+export function fixChip(chip: Chip, fix: string | undefined): Chip {
+  if (!fix) return chip;
+  const [from, to] = fix.split(">");
+  return from === "*" || from === chip ? (to as Chip) : chip;
+}
+
 export const slotSizes = (slot: HeroSlot) => (slot === "front" || slot === "mid" || slot === "back" ? HERO_SIZES[slot] : HERO_SIZES.strip);
 
 /**
@@ -121,7 +135,7 @@ export function heroPickerScript(lang: "en" | "vi", withAlt = true): string {
   return (
     `(()=>{try{var M=${data},r=document.currentScript.previousElementSibling,` +
     `t=(M.s[document.documentElement.getAttribute("data-season")]||M.s.base).split(" ");` +
-    `r.querySelectorAll("[data-hero-slot]").forEach(e=>{var a=M.c[t[+e.dataset.heroSlot]],i=e.querySelector("img"),s=e.querySelector("source"),l=e.querySelector("[data-chip]");` +
-    `s.srcset=[480,640,800].map(w=>"/hero/"+a[0]+"-"+w+".avif "+w+"w").join(", ");s.sizes=i.sizes=e.dataset.sizes;i.alt=a[1];i.src="/hero/"+a[0]+"-640.webp";l&&(l.dataset.chip=a[2])})}catch(e){}})()`
+    `r.querySelectorAll("[data-hero-slot]").forEach(e=>{var a=M.c[t[+e.dataset.heroSlot]],i=e.querySelector("img"),s=e.querySelector("source"),l=e.querySelector("[data-chip]"),c=a[2],f=(e.dataset.chipFix||"").split(">");` +
+    `if(f[0]=="*"||f[0]==c)c=f[1];s.srcset=[480,640,800].map(w=>"/hero/"+a[0]+"-"+w+".avif "+w+"w").join(", ");s.sizes=i.sizes=e.dataset.sizes;i.alt=a[1];i.src="/hero/"+a[0]+"-640.webp";l&&(l.dataset.chip=c)})}catch(e){}})()`
   );
 }

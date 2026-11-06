@@ -11,7 +11,7 @@
 import React, { useEffect, useRef, useSyncExternalStore } from "react";
 import SeasonLayer from "@/components/season/SeasonLayer";
 import { useSeason } from "@/lib/useSeason";
-import { HERO_SLOTS, avifSrcSet, heroPickerScript, heroSet, slotSizes, webpSrc } from "@/lib/heroImagery";
+import { CHIP_FIX, HERO_SLOTS, avifSrcSet, fixChip, heroPickerScript, heroSet, slotSizes, webpSrc } from "@/lib/heroImagery";
 import { imageLabel } from "@/lib/imageLabel";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -49,7 +49,7 @@ export default function HeroLacquerStack() {
           const im = set[slot];
           const sizes = slotSizes(slot);
           return (
-            <figure key={slot} className={`pn-card pn-card--${slot}`} data-hero-slot={i} data-sizes={sizes}>
+            <figure key={slot} className={`pn-card pn-card--${slot}`} data-hero-slot={i} data-sizes={sizes} data-chip-fix={CHIP_FIX[slot]}>
               <picture>
                 <source type="image/avif" srcSet={mounted ? avifSrcSet(im) : undefined} sizes={mounted ? sizes : undefined} suppressHydrationWarning />
                 {/* eslint-disable-next-line @next/next/no-img-element -- art-directed AVIF set picked before first paint */}
@@ -65,7 +65,7 @@ export default function HeroLacquerStack() {
                   suppressHydrationWarning
                 />
               </picture>
-              <span className="pn-img-label" data-chip={mounted ? im.chip : "bl"} suppressHydrationWarning>{label}</span>
+              <span className="pn-img-label" data-chip={mounted ? fixChip(im.chip, CHIP_FIX[slot]) : "bl"} suppressHydrationWarning>{label}</span>
             </figure>
           );
         })}
@@ -82,7 +82,7 @@ export default function HeroLacquerStack() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img width={800} height={1000} src={webpSrc(im)} alt={`${im.alt[lang]} — ${lang === "vi" ? "ảnh minh hoạ AI" : "AI illustration"}`} />
                 </picture>
-                <span className="pn-img-label" data-chip={im.chip}>{label}</span>
+                <span className="pn-img-label" data-chip={fixChip(im.chip, CHIP_FIX[slot])}>{label}</span>
               </figure>
             );
           })}

@@ -371,9 +371,9 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="mt-3 flex items-center gap-2 rounded-xl bg-pink-500/[0.08] px-3 py-2 text-left text-xs text-pink-200 ring-1 ring-pink-500/20 hover:bg-pink-500/[0.12]"
+                className="mt-3 flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-left text-xs text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.07]"
               >
-                <Camera className="h-4 w-4 flex-shrink-0" />
+                <Camera className="h-4 w-4 flex-shrink-0 text-pink-300" />
                 {isOwner ? tr("Thêm ảnh đại diện thật — hồ sơ có ảnh được thợ tin tưởng và nhắn tin nhiều hơn.", "Add a real profile photo — techs trust and message profiles with photos more.") : tr("Thêm ảnh đại diện thật — hồ sơ có ảnh được chủ tiệm tin tưởng và nhắn tin nhiều hơn.", "Add a real profile photo — salon owners trust and message profiles with photos more.")}
               </button>
             )}

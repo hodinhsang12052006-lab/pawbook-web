@@ -167,7 +167,7 @@ function NoMediaCover({ tech }: { tech: TechnicianType }) {
   useTr(); // render lại khi đổi VI/EN
   const [a, b] = avatarGradient(tech.user.id);
   return (
-    <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${a}55, ${b}33), #0f172a` }}>
+    <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${a}55, ${b}33), #161618` }}>
       <div className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px]" />
       <Avatar src={tech.user.avatarUrl} name={tech.user.name} seed={tech.user.id} className="relative -mt-6 h-16 w-16 ring-4 ring-white/10 shadow-xl" />
     </div>

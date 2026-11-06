@@ -105,14 +105,17 @@ export default function FlowImport() {
   }, [tr]);
 
   const addFiles = useCallback(async (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => ACCEPT.split(",").includes(f.type) || (!f.type && /.(jpe?g|png|webp)$/i.test(f.name))).slice(0, 300);
+    const list = Array.from(files).filter((f) => ACCEPT.split(",").includes(f.type) || (!f.type && /\.(jpe?g|png|webp)$/i.test(f.name))).slice(0, 300);
     if (!list.length) return;
-    const fresh: Item[] = await Promise.all(
-      list.map(async (file, n) => ({
-        key: `${Date.now()}-${n}-${file.name}`, file, preview: URL.createObjectURL(file), code: codeFromFilename(file.name),
+    // đọc kích thước từng nhóm 6 ảnh (thả 200 ảnh một lúc không giải mã cùng lúc → không ngốn RAM trên điện thoại)
+    const fresh: Item[] = [];
+    const stamp = Date.now();
+    for (let k = 0; k < list.length; k += 6) {
+      fresh.push(...(await Promise.all(list.slice(k, k + 6).map(async (file, n) => ({
+        key: `${stamp}-${k + n}-${file.name}`, file, preview: URL.createObjectURL(file), code: codeFromFilename(file.name),
         ...(await readSize(file)), checked: false, status: "checking" as Status,
-      })),
-    );
+      })))));
+    }
     setItems((cur) => [...cur, ...fresh]);
     const codes = [...new Set(fresh.flatMap((i) => (i.code ? [i.code] : [])))];
     const rows = new Map<string, FlowRow>();
@@ -240,7 +243,7 @@ export default function FlowImport() {
             />
             {tr(`Chọn tất cả (${selected.length}/${selectable.length})`, `Select all (${selected.length}/${selectable.length})`)}
           </label>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {doneCount > 0 && <span className="text-xs text-emerald-300">{tr(`Đã đăng ${doneCount}`, `${doneCount} published`)}</span>}
             <button
               type="button"
@@ -248,14 +251,14 @@ export default function FlowImport() {
               disabled={running}
               className="inline-flex min-h-[36px] items-center rounded-lg px-3 text-xs font-semibold text-slate-300 ring-1 ring-white/15 disabled:opacity-40"
             >
-              {tr("Xoá danh sách", "Clear list")}
+              {tr("Xoá hết", "Clear")}
             </button>
             <button
               type="button"
               data-testid="flow-publish"
               onClick={() => runAll(selected)}
               disabled={!selected.length || running || !storage}
-              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-900 disabled:opacity-40"
+              className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-900 disabled:opacity-40 sm:flex-none"
             >
               {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               {tr(`Đăng ${selected.length} ảnh đã chọn`, `Publish ${selected.length} selected`)}
@@ -332,7 +335,7 @@ function ReviewCard({ it, busy, onToggle, onRetry, onUndo }: { it: Item; busy: b
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={it.preview} alt={tr("Ảnh mới từ Flow", "New Flow image")} loading="lazy" className="h-full w-full object-cover" />
           </div>
-          <figcaption className="mt-1 truncate text-[11px] text-slate-400">{tr("Ảnh mới", "New")} · {it.w}×{it.h} · {kb(it.file.size)}</figcaption>
+          <figcaption className="mt-1 truncate text-[11px] text-slate-400">{tr("Ảnh mới", "New")} · {it.w}×{it.h}<span className="hidden sm:inline"> · {kb(it.file.size)}</span></figcaption>
         </figure>
       </div>
       {r?.flow && it.status !== "done" && !it.issue && (

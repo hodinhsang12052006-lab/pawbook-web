@@ -26,7 +26,7 @@ Object.assign(process.env, {
 });
 
 let pass = 0, fail = 0;
-const ok = (id: string, d: string, c: boolean, x: unknown = "") => { c ? pass++ : fail++; console.log(`${c ? "✅" : "❌"} [${id}] ${d}${c ? "" : "  → " + (typeof x === "string" ? x : JSON.stringify(x))}`); };
+const ok = (id: string, d: string, c: boolean, x: unknown = "") => { if (c) pass++; else fail++; console.log(`${c ? "✅" : "❌"} [${id}] ${d}${c ? "" : "  → " + (typeof x === "string" ? x : JSON.stringify(x))}`); };
 
 // ---- bản sao DB: bổ sung bảng còn thiếu theo prisma/schema.prisma (prisma migrate diff, chỉ đọc/ghi file tạm) ----
 const diff = spawnSync(process.execPath, [path.join("node_modules", "prisma", "build", "index.js"), "migrate", "diff", "--from-url", DB_URL, "--to-schema-datamodel", "prisma/schema.prisma", "--script"], { encoding: "utf8", env: process.env });

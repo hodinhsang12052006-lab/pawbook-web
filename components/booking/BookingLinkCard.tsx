@@ -11,9 +11,9 @@ import { useTr } from "@/lib/i18n/useTr";
 // khách đặt lịch thế nào. Link = menu công khai /menu/[uid] (khách đặt không cần tài khoản).
 export default function BookingLinkCard({ userId, name }: { userId: string; name: string }) {
   useTr();
-  const [origin, setOrigin] = useState("");
+  // Thẻ chỉ hiện sau khi danh sách lịch hẹn tải xong ở trình duyệt → đọc origin ngay lúc khởi tạo
+  const [origin] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
   const [qr, setQr] = useState<string | null>(null);
-  useEffect(() => setOrigin(window.location.origin), []);
   const url = `${origin}/menu/${userId}`;
   useEffect(() => {
     if (!origin) return;

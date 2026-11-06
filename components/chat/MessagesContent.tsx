@@ -636,8 +636,16 @@ export default function MessagesContent({
         })
       : null;
     ro?.observe(el);
-    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    // Khối không phải bong bóng (thẻ đầu cuộc trò chuyện, thẻ an toàn, thẻ menu/việc, "đang soạn") tải dữ liệu sau
+    // và cao thêm → theo dõi riêng các khối đó (không theo dõi từng bong bóng: tin mới vẫn cuộn mượt như cũ).
+    const isBlock = (n: Node): n is Element => n instanceof Element && !n.matches(".m-row, .m-sep, .m-gap");
+    Array.from(el.children).filter(isBlock).forEach((c) => ro?.observe(c));
+    const mo = typeof MutationObserver !== "undefined"
+      ? new MutationObserver((muts) => { for (const m of muts) m.addedNodes.forEach((n) => { if (isBlock(n)) ro?.observe(n); }); })
+      : null;
+    mo?.observe(el, { childList: true });
     return () => {
+      mo?.disconnect();
       el.removeEventListener("scroll", handleScroll);
       el.removeEventListener("scroll", track);
       el.removeEventListener("load", keepPinned, true);
@@ -1226,6 +1234,11 @@ export default function MessagesContent({
   const showSafety =
     !!activeChat && !activeChat.isGroup && activeChat.role !== "ADMIN" && !isVerifiedRole(activeChat.role) &&
     (convYoung || !iSentAny) && !safetyHidden[activeKey || ""];
+  // Thẻ đầu cuộc trò chuyện cao thêm khi thông tin tin cậy / thẻ an toàn tải xong → vẫn giữ dính đáy nếu đang ở đáy
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (el && isNearBottomRef.current && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+  }, [partnerTrust, showSafety]);
   const dismissSafety = () => {
     const k = activeKey || "";
     setSafetyHidden((prev) => {

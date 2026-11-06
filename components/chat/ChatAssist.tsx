@@ -15,11 +15,13 @@ import { useTr } from "@/lib/i18n/useTr";
 
 const PRO = new Set(["TECHNICIAN", "OWNER"]);
 
-export default function ChatAssist({ me, partner, last, onFill, onStudio, onConsult, onPhoto }: {
+export default function ChatAssist({ me, partner, last, partnerWrote, onFill, onStudio, onConsult, onPhoto }: {
   me: { id: string; role: string; market?: string | null };
   partner: { id: string; role: string; isGroup: boolean };
   /** tin khách gửi mà thợ CHƯA trả lời (null: đã trả lời / chưa có tin) */
   last: { content: string; type: string } | null;
+  /** đối phương đã từng nhắn trong cuộc trò chuyện này chưa */
+  partnerWrote?: boolean;
   onFill: (text: string) => void;
   onStudio: () => void;
   onConsult: (image: string | null) => void;
@@ -39,7 +41,7 @@ export default function ChatAssist({ me, partner, last, onFill, onStudio, onCons
     fetch(`/api/menu?userId=${encodeURIComponent(me.id)}`)
       .then((r) => (r.ok ? r.json() : { items: [] }))
       // thợ đang xem menu của mình → API trả cả món đang ẩn; gợi ý giá chỉ lấy món khách đang thấy
-      .then((d) => { if (!off) setMenu((Array.isArray(d.items) ? d.items : []).filter((i: { active?: boolean }) => i.active !== false).map((i: MenuLite) => ({ name: i.name, priceFrom: Number(i.priceFrom) || 0, priceTo: i.priceTo == null ? null : Number(i.priceTo) }))); })
+      .then((d) => { if (!off) setMenu((Array.isArray(d.items) ? d.items : []).filter((i: { active?: boolean }) => i.active !== false).map((i: MenuLite) => ({ name: i.name, nameEn: i.nameEn ?? null, priceFrom: Number(i.priceFrom) || 0, priceTo: i.priceTo == null ? null : Number(i.priceTo) }))); })
       .catch(() => { if (!off) setMenu([]); });
     return () => { off = true; };
   }, [proSide, me.id]);
@@ -71,12 +73,13 @@ export default function ChatAssist({ me, partner, last, onFill, onStudio, onCons
       skills: String(tp?.specialties || "").split(",").map((x: string) => x.trim()).filter(Boolean),
       years: Number(tp?.yearsOfExperience) || 0, profileUrl: `${origin}/profile/${me.id}`,
       fallbackVi: loc === "vi",
+      partnerWrote: !!partnerWrote,
     });
-  }, [hireSide, profile, me.id, me.role, lastContent, lastType, loc]);
+  }, [hireSide, profile, me.id, me.role, lastContent, lastType, loc, partnerWrote]);
 
   if (hireSide && hire.length) {
     return (
-      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" data-testid="chat-assist" aria-label={tr("Trợ lý PawNail — gợi ý trả lời", "PawNail assistant — reply suggestions")}>
+      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 pr-6 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)]" data-testid="chat-assist" aria-label={tr("Trợ lý PawNail — gợi ý trả lời", "PawNail assistant — reply suggestions")}>
         <span className="flex flex-shrink-0 items-center gap-1 pr-0.5 text-[10px] font-black uppercase tracking-wider text-pink-300/80"><Sparkles className="h-3.5 w-3.5" />{tr("Gợi ý", "Suggest")}</span>
         {hire.map((s) => (
           <button key={s.label} type="button" className={chip} title={s.text} onClick={() => onFill(s.text)}>{s.label}</button>
@@ -87,7 +90,7 @@ export default function ChatAssist({ me, partner, last, onFill, onStudio, onCons
 
   if (proSide && suggestions.length) {
     return (
-      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" data-testid="chat-assist" aria-label={tr("Trợ lý PawNail — gợi ý trả lời", "PawNail assistant — reply suggestions")}>
+      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 pr-6 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)]" data-testid="chat-assist" aria-label={tr("Trợ lý PawNail — gợi ý trả lời", "PawNail assistant — reply suggestions")}>
         <span className="flex flex-shrink-0 items-center gap-1 pr-0.5 text-[10px] font-black uppercase tracking-wider text-pink-300/80"><Sparkles className="h-3.5 w-3.5" />{tr("Gợi ý", "Suggest")}</span>
         {suggestions.map((s) => (
           <button
@@ -111,7 +114,7 @@ export default function ChatAssist({ me, partner, last, onFill, onStudio, onCons
   }
   if (clientSide) {
     return (
-      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" data-testid="chat-assist" aria-label={tr("Lối tắt cho khách", "Client shortcuts")}>
+      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 pr-6 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)]" data-testid="chat-assist" aria-label={tr("Lối tắt cho khách", "Client shortcuts")}>
         <Link href={`/menu/${partner.id}`} className={chip}><BookOpen className="h-3.5 w-3.5" />{tr("Menu & đặt lịch", "Menu & booking")}</Link>
         <button type="button" className={chip} onClick={onStudio}><Wand2 className="h-3.5 w-3.5" />{tr("Thử mẫu trên tay & gửi tiệm", "Try looks on my hand")}</button>
         <button type="button" className={chip} onClick={onPhoto}><Camera className="h-3.5 w-3.5" />{tr("Gửi ảnh tay để tư vấn", "Send a hand photo")}</button>

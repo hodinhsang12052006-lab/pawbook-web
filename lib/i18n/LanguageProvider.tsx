@@ -78,8 +78,23 @@ export function LanguageProvider({ initialLocale, children }: { initialLocale: L
   const setLocale = useCallback(
     (next: Locale) => {
       if (!isLocale(next) || next === locale) return;
+      // Ghi tại chỗ trước (dự phòng khi mạng lỗi), rồi để MÁY CHỦ đặt cookie 1 năm: cookie do script ghi bị
+      // Safari / WKWebView của app iOS (ITP) cắt còn 7 ngày → hết hạn là người chọn tiếng Việt nhận HTML
+      // tiếng Anh. Tải lại sau khi máy chủ trả lời (tối đa 1,5 giây).
       persistLocale(next);
-      reloadInLocale(next);
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        reloadInLocale(next);
+      };
+      const timer = setTimeout(go, 1500);
+      fetch("/api/me/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale: next, cookie: true }), credentials: "same-origin" })
+        .catch(() => {})
+        .finally(() => {
+          clearTimeout(timer);
+          go();
+        });
     },
     [locale]
   );
@@ -97,6 +112,8 @@ export function LanguageProvider({ initialLocale, children }: { initialLocale: L
     } catch {}
     if (isLocale(saved)) {
       persistLocale(saved);
+      // Cookie mất (vd. Safari ITP xoá cookie do script ghi sau 7 ngày) → xin máy chủ đặt lại cookie bền.
+      const durable = fetch("/api/me/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale: saved, cookie: true }), credentials: "same-origin" }).catch(() => {});
       if (saved === locale || !readLocaleCookie()) return; // cookie bị chặn → không tải lại (tránh vòng lặp)
       try {
         if (sessionStorage.getItem(SYNC_FLAG)) return;
@@ -104,7 +121,8 @@ export function LanguageProvider({ initialLocale, children }: { initialLocale: L
       } catch {
         return;
       }
-      reloadInLocale(saved);
+      const target = saved;
+      Promise.race([durable, new Promise((r) => setTimeout(r, 1500))]).finally(() => reloadInLocale(target));
       return;
     }
     // Vào thẳng 1 link /vi/* (Google, link chia sẻ) trên máy có tiếng Việt → nhớ

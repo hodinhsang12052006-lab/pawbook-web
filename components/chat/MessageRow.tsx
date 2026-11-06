@@ -9,6 +9,10 @@ import { stickerStill, stickerUrl } from "@/lib/chatStickers";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { describeCall, type MessageType } from "./chatShared";
+import { clockTime, longDate } from "@/lib/i18n/format";
+import { detectTextLang } from "@/lib/i18n/detectLang";
+import type { Locale } from "@/lib/i18n/config";
+import { autoTranslates, canTranslate, requestTranslation, useMessageTranslation } from "./messageTranslation";
 
 // Một bong bóng tin nhắn — React.memo: khi gõ phím, có tin mới, đang tải thêm
 // lịch sử hay đối phương "đang soạn", CHỈ những tin thật sự đổi mới render lại
@@ -26,6 +30,8 @@ export interface MessageRowProps {
   seenAt?: string;
   reactions?: Reaction[];
   locale: string;
+  /** Thị trường của người xem (định dạng giờ en-US "3:16 AM" / en-AU "3:16 am"). */
+  market?: string | null;
   t: (key: string) => string;
   onCallBack?: (kind: "audio" | "video") => void;
   onReact: (messageId: string, icon: string, current?: Reaction[]) => void;
@@ -44,6 +50,7 @@ function MessageRowImpl({
   seenAt,
   reactions,
   locale,
+  market,
   t,
   onCallBack,
   onReact,
@@ -64,6 +71,15 @@ function MessageRowImpl({
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", esc); };
   }, [picker]);
   const isSelf = msg.senderId === currentUser?.id;
+  const viewer: Locale = locale === "vi" ? "vi" : "en";
+  // Dịch tin của người kia: người xem tiếng Anh nhận tin tiếng Việt → tự dịch (nút "Show original");
+  // người xem tiếng Việt nhận tin tiếng Anh → nút "Xem bản dịch".
+  const isText = (msg.type === "TEXT" || !msg.type) && !msg.isOptimistic;
+  const translatable = isText && !isSelf && canTranslate(msg.content, viewer);
+  const autoTx = translatable && autoTranslates(msg.content, viewer);
+  const [showOriginal, setShowOriginal] = React.useState(false);
+  const tx = useMessageTranslation(msg.id, msg.content, viewer, { enabled: translatable, auto: autoTx });
+  const fmtTime = (iso: string) => clockTime(iso, viewer, market);
   const senderAvatar = isSelf
     ? avatarSrc(currentUser.avatarUrl, currentUser.name, currentUser.id)
     : avatarSrc(
@@ -137,7 +153,7 @@ function MessageRowImpl({
     const yesterday = new Date(Date.now() - 86400000).toDateString();
     if (msgDay === today) return t("messenger.today");
     if (msgDay === yesterday) return t("messenger.yesterday");
-    return d.toLocaleDateString(locale === "en" ? "en-US" : "vi-VN", { day: "2-digit", month: "long", year: "numeric" });
+    return longDate(d, viewer, market);
   })();
   // Cùng ngày nhưng cách tin trước > 30 phút → nhãn giờ nhỏ ở giữa (như Messenger), đỡ phải nhìn giờ từng tin.
   const timeGap = !showDateSeparator && !!prevMsg && new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 30 * 60_000;
@@ -147,7 +163,7 @@ function MessageRowImpl({
     </div>
   ) : timeGap ? (
     <div key={`gap-${msg.id || idx}`} className="my-4 flex w-full items-center justify-center">
-      <span className="pn-date-pill rounded-full px-3 py-1 text-[11px] font-semibold text-slate-300">{new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
+      <span className="pn-date-pill rounded-full px-3 py-1 text-[11px] font-semibold text-slate-300">{fmtTime(msg.createdAt)}</span>
     </div>
   ) : null;
 
@@ -155,7 +171,7 @@ function MessageRowImpl({
     // Nhật ký cuộc gọi như Messenger: bong bóng gọn nằm ĐÚNG phía người gọi (trước đây là thẻ hồng
     // to giữa màn hình — 2 cuộc nhỡ liền nhau thành 2 khối to, rất rối).
     const call = describeCall(msg.content);
-    const time = new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    const time = fmtTime(msg.createdAt);
     return (
       <React.Fragment key={msg.id || idx}>
         {dateSeparator}
@@ -308,7 +324,37 @@ function MessageRowImpl({
                 ) : msg.type === "VIDEO" ? (
                   <video src={msg.content} controls playsInline preload="metadata" className="block max-h-80 w-64 max-w-full rounded-2xl bg-black" />
                 ) : (
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  (() => {
+                    const showTx = tx?.status === "done" && !!tx.text && !showOriginal;
+                    const shown = showTx ? tx!.text! : msg.content;
+                    const srcLang = detectTextLang(msg.content);
+                    return (
+                      <>
+                        <p className="whitespace-pre-wrap" lang={showTx ? viewer : srcLang ?? undefined}>{shown}</p>
+                        {translatable && (
+                          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] leading-tight text-slate-400">
+                            {tx?.status === "loading" ? (
+                              <span>{tr("Đang dịch…", "Translating…")}</span>
+                            ) : tx?.status === "done" ? (
+                              <>
+                                {showTx && <span>{srcLang === "vi" ? tr("Dịch từ tiếng Việt", "Translated from Vietnamese") : tr("Dịch từ tiếng Anh", "Translated from English")}</span>}
+                                {showTx && <span aria-hidden>·</span>}
+                                <button type="button" onClick={() => setShowOriginal((v) => !v)} className="font-semibold text-sky-300 hover:underline">
+                                  {showTx ? tr("Xem bản gốc", "Show original") : tr("Xem bản dịch", "See translation")}
+                                </button>
+                              </>
+                            ) : tx?.status === "failed" ? (
+                              <span>{tr("Chưa dịch được tin này.", "Translation isn't available for this message.")}</span>
+                            ) : (
+                              <button type="button" onClick={() => requestTranslation(msg.id, viewer)} className="font-semibold text-sky-300 hover:underline">
+                                {tr("Xem bản dịch", "See translation")}
+                              </button>
+                            )}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()
                 )}
               </div>
             )}
@@ -330,7 +376,7 @@ function MessageRowImpl({
           {/* Giờ gửi ở tin cuối mỗi cụm; tin cuối của mình kèm Đã gửi/Đã xem. */}
           {(isLastInGroup || isLastSelf) && (
             <span className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
-              {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+              {fmtTime(msg.createdAt)}
               {isLastSelf &&
                 !activeChat.isGroup &&
                 !msg.isOptimistic &&

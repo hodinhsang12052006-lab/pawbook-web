@@ -101,7 +101,7 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       if (kind === "stripes") return { spec: { shape: shape === "square" ? "almond" : shape, finish: "glossy" as const, pattern: "stripes", colors: [pick([nude, "pinkNude", "cloudDancer"] as CK[]), pick(["white", "espresso", "black"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.slim,
         why: { vi: `Sọc mảnh dọc móng — kéo dài ngón tay, "almond nails stripes" +694% trên Pinterest`, en: `Fine vertical stripes — lengthen the fingers; "almond nails stripes" +694% on Pinterest` } };
       if (kind === "polka") return { spec: { shape, finish: "glossy" as const, pattern: "polka", colors: [pick([nude, "cloudDancer", "babyPink"] as CK[]), pick(["chocolate", "burgundy", "white"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
-        why: { vi: "Chấm bi nhỏ tối giản — đang hot lại, hợp móng ngắn", en: "Minimal tiny polka dots — back in style, perfect on short nails" } };
+        why: { vi: "Chấm bi nhỏ tối giản — đang trở lại, hợp móng ngắn", en: "Minimal tiny polka dots — back in style, perfect on short nails" } };
       if (kind === "fawn") return { spec: { shape, finish: "glossy" as const, pattern: "fawn", colors: [pick(["caramel", "coffee"] as CK[]), "cloudDancer", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
         why: { vi: "Da hươu (fawn) — animal print mềm của thu 2026, nhẹ nhàng hơn da báo", en: "Fawn print — fall 2026's soft animal print, gentler than leopard" } };
       if (kind === "foil") return { spec: { shape, finish: "glossy" as const, pattern: "foil", colors: [pick([rich, nude, "olive"] as CK[]), "white", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,

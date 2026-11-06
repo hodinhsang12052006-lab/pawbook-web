@@ -330,7 +330,7 @@ const EN: Record<string, string> = {
   "Bột Acrylic cao cấp 500g": "Premium acrylic powder 500g",
   "Bám dính tốt, không ố vàng, dùng được cho cả đắp form dài.": "Strong adhesion, non-yellowing, works for long sculpted sets.",
   "Bộ sơn Gel 12 màu Trend 2026": "12-color gel polish set — 2026 trends",
-  "12 màu hot nhất mùa này, chuẩn bảng màu chrome/pastel, hàng chính hãng.": "This season's 12 hottest chrome and pastel shades, authentic brand.",
+  "12 màu hot nhất mùa này, chuẩn bảng màu chrome/pastel, hàng chính hãng.": "12 popular chrome and pastel shades this season, authentic brand.",
 };
 
 // Kỹ năng trong tiêu đề tự sinh "Cần thợ Bột/Acrylic/Dip/SNS gấp" — tên kỹ năng

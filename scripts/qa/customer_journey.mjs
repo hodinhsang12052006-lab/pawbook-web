@@ -163,7 +163,7 @@ try {
     await b.getByPlaceholder("VD: Kim Nails").fill("Bảo Ngọc");
     await b.getByPlaceholder("555 123 4567").fill("7135550142");
     await b.getByPlaceholder("VD: Los Angeles").fill("Houston");
-    await b.getByPlaceholder("ban@email.com").fill(email);
+    await b.getByPlaceholder(/ban@email.com|you@email.com/).fill(email);
     await b.locator('input[type="password"]').fill("QaPass#2026");
     await b.getByRole("button", { name: /Tiếp tục/ }).first().click();
     await b.getByText("Tay nghề & mong muốn").waitFor({ timeout: 20000 });

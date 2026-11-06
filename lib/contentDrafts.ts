@@ -43,9 +43,9 @@ export function buildDrafts(s: Signals, news: NewsItem[]): Draft[] {
     add({
       kind: "gap",
       title: `🔥 Thiếu thợ ${g.skill} tại ${g.label}: ${g.jobs} tin cần, ${g.techs} thợ sẵn sàng`,
-      body: `14 ngày qua có ${g.jobs} tin tuyển ở ${g.label} cần kỹ năng ${g.skill}, trong khi chỉ ${g.techs} thợ có kỹ năng này đang sẵn sàng nhận việc. Thợ ${g.skill}: bật "Tìm việc gấp" và cập nhật portfolio để tiệm tìm thấy bạn.`,
+      body: `14 ngày qua có ${g.jobs} tin tuyển ở ${g.label} cần kỹ năng ${g.skill}, trong khi chỉ ${g.techs} thợ có kỹ năng này đang sẵn sàng nhận việc. Thợ ${g.skill}: bật "Sẵn sàng nhận việc ngay" và cập nhật ảnh tay nghề để tiệm tìm thấy bạn.`,
       href: "/?tab=jobs",
-      caption: `Thợ ${g.skill} ở ${g.label} đang được săn: ${g.jobs} tiệm cần, mới ${g.techs} thợ sẵn sàng. Vào PawNail xem việc ngay 💅 ${BASE_TAGS} #${g.skill.replace(/\W/g, "")}`,
+      caption: `${g.label}: ${g.jobs} tin tuyển cần thợ ${g.skill}, ${g.techs} thợ sẵn sàng nhận việc. Xem việc làm trên PawNail. ${BASE_TAGS} #${g.skill.replace(/\W/g, "")}`,
       evidence: `Tin tuyển 14 ngày ↔ hồ sơ thợ đang rảnh tại ${g.state}`,
     });
   }

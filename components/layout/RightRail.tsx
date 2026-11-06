@@ -58,12 +58,12 @@ export default function RightRail({ market, state }: { market: "US" | "AU"; stat
 
         <section className="glass-card rounded-2xl p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
-            <Flame className="h-4 w-4" />{tr(" Tin gấp mới nhất", " Latest urgent jobs")}
+            <Flame className="h-4 w-4" />{tr(" Tin gắn nhãn cần gấp", " Jobs marked urgent")}
           </h3>
           <div className="mt-3 space-y-2">
             {jobs === null &&
               Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-14" />)}
-            {jobs?.length === 0 && <p className="text-xs text-slate-500">{tr("Chưa có tin gấp ở khu vực này.", "No urgent jobs in this area yet.")}</p>}
+            {jobs?.length === 0 && <p className="text-xs text-slate-500">{tr("Chưa có tin cần gấp ở khu vực này.", "No jobs marked urgent in this area yet.")}</p>}
             {jobs?.map((job) => (
               <Link
                 key={job.id}

@@ -5,7 +5,8 @@ import { Check, ClipboardCopy, ImagePlus, Loader2, RotateCcw, Undo2, Upload } fr
 import { useTr } from "@/lib/i18n/useTr";
 import { cdnImage } from "@/lib/cdnImage";
 import { flowBatches, type FlowBatch } from "@/lib/designArt";
-import { codeFromFilename, FLOW_MAX_SIDE, FLOW_MIN_SIDE, FLOW_SQUARE_TOLERANCE, type FlowMark } from "@/lib/flowMarks";
+import { parseFlowFilename } from "@/lib/flowBriefs";
+import { FLOW_MAX_SIDE, FLOW_MIN_SIDE, FLOW_SQUARE_TOLERANCE, type FlowMark } from "@/lib/flowMarks";
 
 // Admin → Phòng nội dung → Mẫu nail: nhập ảnh chủ tiệm vẽ bằng Google Flow (Nano Banana).
 // Kéo thả nhiều ảnh đặt tên theo mã (D001… hoặc id mẫu) → xem ẢNH CŨ / ẢNH MỚI từng mẫu → chọn → Đăng:
@@ -13,7 +14,7 @@ import { codeFromFilename, FLOW_MAX_SIDE, FLOW_MIN_SIDE, FLOW_SQUARE_TOLERANCE, 
 // gắn ảnh vào mẫu (ảnh cũ giữ lại, bấm Hoàn tác là về). Thêm "Xuất brief" cho các mẫu chưa có ảnh Flow.
 
 interface FlowRow { code: string; designId: string; title: string; occasion: string | null; status: string | null; imageUrl: string | null; flow: FlowMark | null; was: string | null; found: boolean }
-interface Upload { secure_url: string; public_id: string; width: number; height: number; bytes: number }
+interface Upload { secure_url: string; public_id: string; version: number; signature: string; width: number; height: number; bytes: number }
 type Status = "checking" | "ready" | "blocked" | "uploading" | "importing" | "done" | "error" | "undone";
 interface Item {
   key: string; file: File; preview: string; code: string | null; w: number; h: number;
@@ -112,7 +113,7 @@ export default function FlowImport() {
     const stamp = Date.now();
     for (let k = 0; k < list.length; k += 6) {
       fresh.push(...(await Promise.all(list.slice(k, k + 6).map(async (file, n) => ({
-        key: `${stamp}-${k + n}-${file.name}`, file, preview: URL.createObjectURL(file), code: codeFromFilename(file.name),
+        key: `${stamp}-${k + n}-${file.name}`, file, preview: URL.createObjectURL(file), code: parseFlowFilename(file.name).code,
         ...(await readSize(file)), checked: false, status: "checking" as Status,
       })))));
     }
@@ -151,7 +152,7 @@ export default function FlowImport() {
         const res = await fetch(s.uploadUrl, { method: "POST", body: form });
         const up = await res.json().catch(() => ({}));
         if (!res.ok || !up.secure_url) throw new Error(up?.error?.message || tr("Tải ảnh lên Cloudinary không được.", "Cloudinary upload failed."));
-        upload = { secure_url: up.secure_url, public_id: up.public_id, width: up.width, height: up.height, bytes: up.bytes };
+        upload = { secure_url: up.secure_url, public_id: up.public_id, version: up.version, signature: up.signature, width: up.width, height: up.height, bytes: up.bytes };
         patch(it.key, { upload });
       }
       patch(it.key, { status: "importing", error: undefined });

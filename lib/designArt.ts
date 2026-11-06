@@ -113,7 +113,9 @@ export const ART_STYLE =
 
 export interface ArtDesign { code: string; titleEn: string; shape: string; pattern: string; finish: string }
 
-const clean = (s: string) => String(s ?? "").replace(/[[\]]/g, "").replace(/\s+/g, " ").trim();
+// Tên mẫu do AI viết từ dữ liệu xu hướng → chỉ giữ chữ, số, dấu câu cơ bản, tối đa 80 ký tự: không ngoặc, không xuống
+// dòng, không ":" — tên mẫu không thể chen "lệnh" vào tin nhắn gửi trợ lý Flow.
+const clean = (s: string) => String(s ?? "").replace(/[^\p{L}\p{M}\p{N} .,'&+\-/!?]+/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80).trim();
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Phần riêng của 1 brief: "<da> hand with medium-length <dáng> nails: <mẫu>. <Tư thế>, on <nền>". `k` = vị trí trong lô. */

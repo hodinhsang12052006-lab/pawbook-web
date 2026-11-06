@@ -12,6 +12,7 @@ const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"'
 /** "<strong>Nail</strong> Tech &amp; Spa" → "Nail Tech & Spa" (chữ thuần, không thẻ HTML). */
 export function stripHtml(s: unknown): string {
   return String(s ?? "")
+    .replace(/<\/?(?:b|strong|i|em|u|span|a|mark|small)[^>]*>/gi, "") // thẻ trong dòng: bỏ, không chèn cách
     .replace(/<[^>]*>/g, " ")
     .replace(/&(#\d+|#x[\da-f]+|[a-z]+\d*);/gi, (m, e: string) => {
       const k = e.toLowerCase();
@@ -21,6 +22,7 @@ export function stripHtml(s: unknown): string {
     })
     .replace(/[<>]/g, " ")
     .replace(/\s+/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1")
     .trim();
 }
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);

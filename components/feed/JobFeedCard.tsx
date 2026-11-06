@@ -55,7 +55,7 @@ export default function JobFeedCard({ job }: { job: JobType }) {
       </div>
 
       <Link href={`/jobs/${job.id}`} className="block space-y-2.5 px-4 py-3">
-        <h3 className="text-[17px] font-black leading-snug text-white">{dt(job.title)}</h3>
+        <h3 lang={hasVietnamese(dt(job.title)) ? "vi" : undefined} className="text-[17px] font-black leading-snug text-white">{dt(job.title)}</h3>
         <div className="flex flex-wrap items-center gap-2">
           {/\d/.test(job.salaryAmount || "") ? (
             <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-1 pl-2 pr-2.5 shadow-lg shadow-emerald-500/20">

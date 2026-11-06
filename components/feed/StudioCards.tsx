@@ -159,6 +159,8 @@ export function TipCard({ tip }: { tip: string }) {
 export function RecapCard({ recap, market }: { recap: NonNullable<Studio["recap"]>; market: "US" | "AU" }) {
   useTr(); // render lại khi đổi VI/EN
   const cur = market === "AU" ? "A$" : "$";
+  // Tuần chưa có tin tuyển mới thì không hiện thẻ "0 tin tuyển mới — tuyển nhiều nhất —" (trống và kém tin cậy).
+  if (!recap.newJobs && !recap.medianPay) return null;
   return (
     <Link href="/trends" className="group block rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] via-slate-900/40 to-slate-900/30 p-4 transition-colors hover:border-emerald-500/40">
       <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-300">
@@ -167,7 +169,7 @@ export function RecapCard({ recap, market }: { recap: NonNullable<Studio["recap"
       <div className="mt-2 grid grid-cols-3 gap-2">
         <div>
           <p className="text-xl font-black text-white">{recap.newJobs}</p>
-          <p className="text-[10px] text-slate-500">{tr("tin tuyển mới", "new jobs")}</p>
+          <p className="text-[10px] text-slate-500">{tr("tin tuyển mới", recap.newJobs === 1 ? "new job" : "new jobs")}</p>
         </div>
         <div>
           <p className="truncate text-sm font-black text-white">{recap.topState ?? "—"}</p>

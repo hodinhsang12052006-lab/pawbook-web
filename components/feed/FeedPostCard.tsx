@@ -16,6 +16,7 @@ import Avatar from "@/components/ui/Avatar";
 import { playSound } from "@/lib/sounds";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
 import VietnameseChip from "@/components/common/LangChip";
+import { hasVietnamese } from "@/lib/i18n/viText";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -65,7 +66,7 @@ function PostText({ content }: { content: string }) {
   const [open, setOpen] = useState(!long);
   return (
     <div className="px-4 pb-3">
-      <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-200 ${open ? "" : "line-clamp-6"}`}>{renderContentWithHashtags(content)}</p>
+      <p lang={hasVietnamese(content) ? "vi" : undefined} className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-200 ${open ? "" : "line-clamp-6"}`}>{renderContentWithHashtags(content)}</p>
       {long && (
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-1 min-h-[32px] text-sm font-bold text-slate-400 hover:text-white">
           {open ? tr("Thu gọn", "Show less") : tr("… Xem thêm", "… See more")}

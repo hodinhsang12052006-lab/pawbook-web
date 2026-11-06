@@ -208,7 +208,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
               key={s}
               className="rounded-full bg-black/60 backdrop-blur-sm border border-white/15 px-2 py-0.5 text-[9px] font-bold text-white block truncate max-w-full"
             >
-              {i === 0 ? tr(`Chuyên ${s}`, `${valueLabel(s)} specialist`) : valueLabel(s)}
+              {i === 0 ? tr(`Chuyên ${valueLabel(s)}`, `${valueLabel(s)} specialist`) : valueLabel(s)}
             </span>
           ))}
         </div>
@@ -216,7 +216,7 @@ function TechnicianCard({ tech, onClick }: { tech: TechnicianType; onClick: () =
 
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
         <p className="text-xs font-bold text-white truncate">{tech.user.name}</p>
-        <p className="text-[10px] text-slate-300 truncate">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", " yrs exp")}</p>
+        <p className="text-[10px] text-slate-300 truncate">{placeLabel(tech.city, tech.market, tech.state)} · {tech.yearsOfExperience}{tr(" năm KN", tech.yearsOfExperience === 1 ? " yr exp" : " yrs exp")}</p>
       </div>
 
       <StatusBadge status={tech.status} />

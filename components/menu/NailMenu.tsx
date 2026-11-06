@@ -411,11 +411,11 @@ function MenuItemSheet({ it, isOwner, ownerName, canChat, onClose, onWant, onBoo
             <button type="button" onClick={onEdit} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-black text-white ring-1 ring-white/10 hover:bg-white/10"><Pencil className="h-4 w-4" />{tr("Sửa mẫu", "Edit design")}</button>
           ) : (
             <>
-              <button type="button" onClick={onBook} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-pink-600/20"><CalendarCheck className="h-4 w-4" />{tr("Đặt lịch mẫu này", "Book this design")}</button>
+              <button type="button" onClick={onBook} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-pink-600/20"><CalendarCheck className="h-4 w-4" />{tr("Đặt lịch mẫu này", "Book this")}</button>
               {canChat && (
                 <button type="button" onClick={onWant} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin hỏi thêm", "Message about it")}</button>
               )}
-              <p className="text-center text-[11px] text-slate-500">{tr(`Không cần tài khoản — ${ownerName ?? "thợ"} gọi / nhắn bạn để chốt giờ. Giá chốt khi xem tay.`, `No account needed — ${ownerName ?? "the tech"} will call or text you to confirm. Final price after consultation.`)}</p>
+              <p className="text-center text-[11px] text-slate-500">{tr(`Không cần tài khoản — ${ownerName ?? "thợ"} sẽ gọi hoặc nhắn tin để xác nhận giờ hẹn. Giá tham khảo, báo giá chính xác khi tiệm xem tay.`, `No account needed — ${ownerName ?? "the tech"} will call or text you to confirm a time. Prices are a guide — final price confirmed at your visit.`)}</p>
             </>
           )}
         </div>

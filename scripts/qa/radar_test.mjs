@@ -85,13 +85,13 @@ try {
   await p.getByRole("button", { name: /^Đăng nhập$/ }).click();
   await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 });
   await p.goto(BASE_URL + "/?tab=feed");
-  const card = p.getByRole("region", { name: "Nhịp đau tuần" });
+  const card = p.getByRole("region", { name: /^(Khảo sát nhanh tuần này|This week's quick poll)$/ });
   const shown = await card.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-  R.check("RA17", "Bảng tin có thẻ 'Nhịp đau tuần' cho người chưa trả lời", shown);
+  R.check("RA17", "Bảng tin có thẻ 'Khảo sát nhanh tuần này' cho người chưa trả lời", shown);
   if (shown) {
     await card.scrollIntoViewIfNeeded();
     await card.getByRole("button").first().click();
-    const ack = await card.getByText(/%|Đã ghi nhận/).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    const ack = await card.getByText(/%|Đã ghi nhận|Recorded/).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
     R.check("RA18", "Bấm 1 lần → hiện kết quả / xác nhận ngay trong thẻ", ack);
     await p.screenshot({ path: (process.env.TEMP || ".") + "/radar_pulse.png" });
   } else R.check("RA18", "Bấm trả lời", false, "thẻ không hiện");
@@ -106,9 +106,9 @@ try {
   R.check("RA20", "Tiêu đề chứa HTML hiển thị như chữ, không chạy mã (chống XSS)", (await p.evaluate(() => window.__xss)) !== 1);
 
   await p.goto(BASE_URL + "/trends");
-  const sec = await p.getByRole("heading", { name: "Nhịp đau ngành" }).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-  const newsSec = await p.getByRole("heading", { name: "Tin ngành nail" }).isVisible().catch(() => false);
-  R.check("RA21", "Trang Xu hướng có 'Nhịp đau ngành' + 'Tin ngành nail'", sec && (newsSec || d.news.length === 0), `pulse=${sec} news=${newsSec}`);
+  const sec = await p.getByRole("heading", { name: /Khảo sát nhanh trong ngành|Industry quick polls/ }).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  const newsSec = await p.getByRole("heading", { name: /Tin ngành nail|Nail industry news/ }).isVisible().catch(() => false);
+  R.check("RA21", "Trang Xu hướng có 'Khảo sát nhanh trong ngành' + 'Tin ngành nail'", sec && (newsSec || d.news.length === 0), `pulse=${sec} news=${newsSec}`);
   await p.screenshot({ path: (process.env.TEMP || ".") + "/radar_trends.png", fullPage: true });
 
   const actx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "vi-VN" });

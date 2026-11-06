@@ -44,7 +44,7 @@ export async function publishDesignGallery(now = new Date()): Promise<{ posted: 
     variant === 1 ? `${GALLERY_PREFIX} dễ làm, lên đều tay — thợ mới cũng làm đẹp 🌱`
     : variant === 2 ? `${GALLERY_PREFIX} quanh năm, khách nào cũng hợp 💗`
     : `${GALLERY_PREFIX} đáng thử hôm nay${seasonal ? ` — có mẫu ${theme!.title} ${theme!.emoji}` : ""}`;
-  const ask = variant === 1 ? "Mẫu nào bạn làm dưới 45 phút? Khoe ảnh thật cho thợ mới học với nha 💅" : "Bạn thích mẫu số mấy? Làm xong nhớ đăng ảnh thật khoe tay nghề nhé 💅";
+  const ask = variant === 1 ? "Mẫu nào bạn làm dưới 45 phút? Chia sẻ ảnh thật để thợ mới cùng học nhé 💅" : "Bạn thích mẫu số mấy? Làm xong, đăng ảnh thật ở mục Chia sẻ tác phẩm nhé 💅";
   const lines = list.map((d, i) => `${i + 1}. ${d.title}`);
   const content = [
     head,

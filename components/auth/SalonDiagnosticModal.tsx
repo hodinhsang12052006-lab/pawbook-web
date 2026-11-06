@@ -245,7 +245,7 @@ export default function SalonDiagnosticModal({ salonName, pains, onFinish }: Sal
                 <div className="space-y-1">
                   <h3 className="text-lg font-extrabold text-white">{tr("Xem trước: bảng chia turn công bằng", "Preview: fair turn board")}</h3>
                   <p className="text-sm text-slate-400">
-                    {tr("Bản xem trước (sắp ra mắt): màn hình iPad tại quầy — thợ tự xem lượt và tip của mình, không ai tị nạnh ai.", "Preview (coming soon): an iPad screen at the front desk — techs see their own turns and tips, so no one feels shortchanged.")}
+                    {tr("Bản xem trước (sắp ra mắt): màn hình iPad tại quầy — thợ tự xem lượt và tip của mình, rõ ràng và minh bạch.", "Preview (coming soon): an iPad screen at the front desk — techs see their own turns and tips, so no one feels shortchanged.")}
                   </p>
                 </div>
 

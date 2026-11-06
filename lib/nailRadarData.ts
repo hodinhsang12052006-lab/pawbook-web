@@ -82,7 +82,7 @@ const SUPPLY_POLICY_BY_SKILL: Record<SkillKey, string> = {
 export const NEGOTIATION_TIPS = [
   "Xin xem ảnh/video tiệm thật (không phải ảnh mạng) trước khi quyết định bay xa.",
   "Hỏi rõ được bao lương trong bao nhiêu tuần đầu và sau đó có thay đổi không.",
-  "Xác nhận bằng tin nhắn/văn bản mức chia turn và ai bao supply — tránh thỏa thuận miệng.",
+  "Xác nhận bằng tin nhắn/văn bản mức chia turn và ai trả tiền vật tư — tránh thỏa thuận miệng.",
   "Hỏi thẳng: tiệm đông khách loại nào (walk-in, khách hẹn, khách sang) để ước lượng tip thực tế.",
   "Nếu được bao chỗ ở, hỏi rõ: ở chung hay riêng, có tính phí trừ lương không.",
   "Hỏi lịch nghỉ, số ngày làm/tuần trước khi nhận lời — tránh hiểu lầm giờ giấc.",

@@ -54,7 +54,7 @@ export default function CommunityDesigns({ pro = true }: { pro?: boolean }) {
         <button type="button" onClick={post} className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-white/15 p-4 text-left hover:border-pink-400/40">
           <Images className="h-8 w-8 shrink-0 text-pink-300" />
           <span>
-            <span className="block text-sm font-bold text-white">{tr("Khoe ảnh thật tay nghề của bạn", "Show off your real work")}</span>
+            <span className="block text-sm font-bold text-white">{tr("Chia sẻ ảnh thật tác phẩm của bạn", "Share your real work")}</span>
             <span className="block text-xs text-slate-400">{tr("Đăng ảnh một bộ móng bạn đã làm — ảnh rõ nét thể hiện tay nghề tốt nhất.", "Post a photo of a set you've done. Clear photos show your skill best.")}</span>
           </span>
         </button>

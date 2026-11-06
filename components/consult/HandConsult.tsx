@@ -462,7 +462,7 @@ function ResultView({ r, preview, editing, refreshing, onEdit, onChange, onReset
             <li key={i} className={`flex gap-3 rounded-2xl p-3 ${s.flag ? "bg-rose-500/10 ring-1 ring-rose-500/30" : "bg-white/[0.02]"}`}>
               <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-black ${s.flag ? "bg-rose-500 text-white" : "bg-sky-500/15 text-sky-300"}`}>{s.flag ? "!" : i + 1 - a.steps.filter((x, k) => x.flag && k < i).length}</span>
               <div className="min-w-0 flex-1">
-                <p className="flex items-baseline justify-between gap-2 text-sm font-bold text-white">{t(s.title)}{s.minutes > 0 && <span className="flex-shrink-0 text-[11px] font-semibold text-slate-500">{s.minutes}′</span>}</p>
+                <p className="flex items-baseline justify-between gap-2 text-sm font-bold text-white">{t(s.title)}{s.minutes > 0 && <span className="flex-shrink-0 text-[11px] font-semibold text-slate-500">{s.minutes}{tr(" phút", " min")}</span>}</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{t(s.detail)}</p>
               </div>
             </li>

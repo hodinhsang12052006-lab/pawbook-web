@@ -33,7 +33,7 @@ const TIPS = {
     "Ghi rõ lương + chia turn ngay trong tin tuyển — thợ biết ngay tin có phù hợp hay không.",
     "Gắn nhãn \"Cần gấp\" khi thiếu thợ — thợ cùng bang nhận thông báo trên điện thoại.",
     "Trả lời thợ trong 1 giờ để có huy hiệu \"Phản hồi nhanh\" — thợ giỏi thường cân nhắc nhiều lời mời cùng lúc.",
-    "Đăng 3–5 ảnh \"Khoe tiệm\" (không gian, ghế, đèn) — thợ chọn tiệm bằng mắt trước khi gọi.",
+    "Đăng 3–5 ảnh tiệm (không gian, ghế, đèn) ở mục \"Chia sẻ tác phẩm / tiệm\" — thợ thường chọn tiệm qua ảnh trước khi gọi.",
     "Điền \"Chính sách tiệm\" (chia turn, loại khách, chỗ ở) — trả lời trước câu hỏi thợ nào cũng hỏi.",
     "So mức lương với Nail Radar của bang trước khi đăng — để đặt mức lương cạnh tranh.",
     "Đánh giá thợ sau khi làm việc — đánh giá 2 chiều giúp thợ và tiệm tin nhau hơn.",

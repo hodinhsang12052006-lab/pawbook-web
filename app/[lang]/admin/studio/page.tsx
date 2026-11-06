@@ -22,7 +22,7 @@ interface StudioPost { id: string; kind: string; title: string; body: string; hr
 interface Payload { signals: Signals; news: NewsItem[]; drafts: Draft[]; posts: StudioPost[] }
 
 const KIND: Record<string, { label: string; icon: typeof Flame; cls: string }> = {
-  pulse: { label: "Nhịp đau", icon: Activity, cls: "bg-sky-500/15 text-sky-300 ring-sky-500/30" },
+  pulse: { label: "Khảo sát nhanh", icon: Activity, cls: "bg-sky-500/15 text-sky-300 ring-sky-500/30" },
   gap: { label: "Thiếu thợ", icon: Flame, cls: "bg-orange-500/15 text-orange-300 ring-orange-500/30" },
   salary: { label: "Lương", icon: DollarSign, cls: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30" },
   hashtag: { label: "Hashtag", icon: Hash, cls: "bg-fuchsia-500/15 text-fuchsia-300 ring-fuchsia-500/30" },
@@ -151,7 +151,7 @@ export default function StudioRoomPage() {
             {/* ===== BÀI NHÁP ===== */}
             <Panel title={`Bài nháp sẵn sàng (${data.drafts.length})`} icon={Send} hint="Tự soạn từ tín hiệu bên dưới. Kiểm tra số liệu ở dòng 'Nguồn' trước khi đăng.">
               {data.drafts.length === 0 ? (
-                <Empty text="Chưa đủ tín hiệu để soạn bài — cần thêm dữ liệu (phiếu Nhịp đau, tin tuyển, đánh giá)." />
+                <Empty text="Chưa đủ tín hiệu để soạn bài — cần thêm dữ liệu (phiếu khảo sát nhanh, tin tuyển, đánh giá)." />
               ) : (
                 <div className="grid gap-3 lg:grid-cols-2">
                   {data.drafts.map((d) => {

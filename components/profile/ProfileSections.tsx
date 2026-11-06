@@ -398,7 +398,7 @@ export function GallerySection({ ownerId }: { ownerId: string }) {
   }
   const media = posts.flatMap((p) => p.mediaUrls);
   if (media.length === 0) {
-    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint={tr('Ảnh và video bạn đăng mục "Khoe tiệm" trên bảng tin sẽ hiện tại đây.', 'Photos and videos you post as "Salon showcase" in the feed appear here.')} />;
+    return <EmptyState icon={Images} title={tr("Chưa có ảnh tiệm", "No salon photos yet")} hint={tr('Ảnh và video bạn đăng ở mục "Chia sẻ tác phẩm / tiệm" trên bảng tin sẽ hiện tại đây.', 'Photos and videos you post as "Showcase work / salon" in the feed appear here.')} />;
   }
   return <MediaGrid urls={media} />;
 }

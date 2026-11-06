@@ -212,7 +212,7 @@ export default function JobDetailPage({ params }: PageProps) {
                   <Zap className="h-3.5 w-3.5 fill-white" />{tr(" Đang hot", " Hot")}
                 </span>
               )}
-              {job.isUrgent && (
+              {job.isUrgent && Date.now() - new Date(job.createdAt).getTime() < 72 * 3600_000 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400 border border-red-500/30">
                   <Flame className="h-3.5 w-3.5" />{tr(" Cần gấp", " Urgent")}
                 </span>
@@ -340,13 +340,13 @@ export default function JobDetailPage({ params }: PageProps) {
           {postedForSalon && <PostedForSalonBanner postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} />}
 
           {!isOwnJob && (
-            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
+            <div className="pn-job-cta flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
               <a
                 href={telHref(job.phone, job.market)}
                 onClick={() => trackJobContact(job.id)}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press py-3.5 text-base font-bold text-white transition-colors"
               >
-                <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
+                <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}<span className="pn-cta-num">{formatPhone(job.phone, job.market)}</span>
               </a>
               {!postedForSalon && <button
                 onClick={() => {

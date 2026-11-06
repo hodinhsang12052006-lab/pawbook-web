@@ -7,8 +7,11 @@ import { sendPush } from "@/lib/push";
 import { getViews } from "@/lib/postStats";
 import { COLLAPSE_KINDS, kindOf, mixFeed } from "@/lib/feedMix";
 import { Market, PostType } from "@prisma/client";
+import { deriveEn, galleryTitles, pollEn, splitEn, type EnCtx } from "@/lib/officialEn";
+import { translateEnabled } from "@/lib/translateEn";
 
 const PAGE_SIZE = 12;
+const TRANSLATE_ON = translateEnabled();
 const VALID_POST_TYPES = ["GENERAL", "SHOWCASE", "JOB"];
 
 type Liker = { id: string; name: string; avatarUrl: string | null };
@@ -18,20 +21,27 @@ type Liker = { id: string; name: string; avatarUrl: string | null };
 const HOT_WINDOW_MS = 48 * 60 * 60 * 1000;
 const HOT_SCORE = 5;
 
-type PollView = { question: string; options: { label: string; votes: number }[]; total: number; myVote: number | null } | null;
+type PollView = { question: string; options: { label: string; votes: number }[]; total: number; myVote: number | null; questionEn?: string; optionsEn?: string[] } | null;
 
 // Bài "Tâm sự ẩn danh": KHÔNG trả id / tên / ảnh / thành phố người đăng — chỉ vai trò + bang.
 function anonAuthor(a: { role?: string; state?: string | null } | null) {
   return { id: null, name: a?.role === "OWNER" ? "Chủ tiệm ẩn danh" : "Thợ ẩn danh", avatarUrl: null, role: a?.role ?? "TECHNICIAN", city: null, state: a?.state ?? null, anonymous: true };
 }
 
-function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0, poll: PollView = null) {
+function mapPost(post: any, viewerId: string | null, likers: Liker[] = [], views = 0, poll: PollView = null, en: EnCtx = {}) {
   const likeCount = post._count?.likes ?? 0;
+  // Bài chính thức: tách bản EN (lib/officialEn) — bài cũ chỉ có tiếng Việt thì dựng lại từ khuôn mẫu nếu được.
+  const official = post.author?.role === "ADMIN";
+  const split = official ? splitEn(post.content) : { vi: post.content, en: null };
+  const contentEn = official ? split.en ?? deriveEn(split.vi, en) : null;
   const commentCount = post._count?.comments ?? 0;
   const isRecent = Date.now() - post.createdAt.getTime() < HOT_WINDOW_MS;
   return {
     id: post.id,
-    content: post.content,
+    content: split.vi,
+    contentEn,
+    // "Xem bản dịch" chỉ hiện khi máy chủ có AI dịch (Cloudflare / Gemini)
+    canTranslate: TRANSLATE_ON,
     postType: post.postType,
     mediaUrls: post.mediaUrls ? JSON.parse(post.mediaUrls) : [],
     market: post.market,
@@ -76,7 +86,7 @@ export async function GET(req: NextRequest) {
     if (state) and.push({ OR: [{ state }, { state: null }] });
     if (and.length) where.AND = and;
     // Lọc thành phố: bài chung (bài chính thức, city trống) vẫn hiện — trước đây ?city=Houston ra 0 bài và màn trống.
-    if (city) (where.AND ??= []).push({ OR: [{ city: { contains: city } }, { city: null }] });
+    if (city) (where.AND ??= []).push({ OR: [{ city: { contains: city } }, { city: null, author: { role: "ADMIN" } }] });
     // Trang hồ sơ 1 người: KHÔNG kèm bài ẩn danh của họ (kẻo lộ danh tính) — trừ chính chủ xem
     if (authorId) { where.authorId = authorId; if (authorId !== viewerId) where.anonymous = false; }
     if (postType && VALID_POST_TYPES.includes(postType)) where.postType = postType as PostType;
@@ -145,7 +155,8 @@ export async function GET(req: NextRequest) {
       let labels: string[] = [];
       try { labels = JSON.parse(p.options); } catch {}
       const options = labels.map((label, i) => ({ label, votes: tally.find((t) => t.postId === p.postId && t.option === i)?._count._all ?? 0 }));
-      polls.set(p.postId, { question: p.question, options, total: options.reduce((a, o) => a + o.votes, 0), myVote: mine.find((m) => m.postId === p.postId)?.option ?? null });
+      const pe = pollEn(p.question);
+      polls.set(p.postId, { question: p.question, options, total: options.reduce((a, o) => a + o.votes, 0), myVote: mine.find((m) => m.postId === p.postId)?.option ?? null, ...(pe && pe.options.length === options.length ? { questionEn: pe.question, optionsEn: pe.options } : {}) });
     }
     const likersByPost = new Map<string, Liker[]>();
     for (const like of recentLikes) {
@@ -154,8 +165,16 @@ export async function GET(req: NextRequest) {
       likersByPost.set(like.postId, list);
     }
 
+    // Bộ mẫu cũ (chưa có bản EN trong bài): tra tên mẫu tiếng Anh trong bảng NailDesign — 1 query cho cả trang
+    const vTitles = [...new Set(shown.filter((p) => p.author.role === "ADMIN" && !splitEn(p.content).en).flatMap((p) => galleryTitles(p.content)))];
+    const designTitleEn = new Map<string, string>();
+    if (vTitles.length) {
+      const rows = await prisma.nailDesign.findMany({ where: { title: { in: vTitles.slice(0, 60) } }, select: { title: true, titleEn: true } }).catch(() => []);
+      for (const r of rows) if (r.titleEn) designTitleEn.set(r.title, r.titleEn);
+    }
+
     return NextResponse.json({
-      posts: shown.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null)),
+      posts: shown.map((p) => mapPost(p, viewerId, likersByPost.get(p.id), viewsByPost.get(p.id) ?? 0, polls.get(p.id) ?? null, { designTitleEn })),
       nextCursor,
     });
   } catch (error) {

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
+import { Heart, MessageCircle, Send, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { timeAgo, renderContentWithHashtags, roleBadgeLabel } from "@/lib/feedFormat";
 import ArticleText, { parseArticle } from "./ArticleText";
@@ -20,6 +20,10 @@ import { useTr } from "@/lib/i18n/useTr";
 export interface FeedPost {
   id: string;
   content: string;
+  /** Bản tiếng Anh của bài chính thức (lib/officialEn) — null nếu chưa có */
+  contentEn?: string | null;
+  /** Máy chủ có AI dịch → hiện "Xem bản dịch" */
+  canTranslate?: boolean;
   postType: "GENERAL" | "SHOWCASE" | "JOB";
   mediaUrls: string[];
   market: string | null;
@@ -82,8 +86,11 @@ const REPORT_REASONS = () => [tr("Lừa đảo / spam", "Scam / spam"), tr("Nộ
 // Dưới ngưỡng này thì ẩn "lượt xem" — số quá nhỏ nhìn vắng, phản tác dụng.
 const MIN_VIEWS_SHOWN = 5;
 
+// Có dấu tiếng Việt → coi là bài tiếng Việt (đủ cho việc chọn chiều dịch)
+const VI_MARKS = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
+
 export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDeleted?: (postId: string) => void }) {
-  useTr(); // render lại khi đổi VI/EN
+  const { locale } = useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
   const { user: currentUser } = useSessionUser();
 
@@ -108,8 +115,31 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
   const [commentCount, setCommentCount] = useState(post.commentCount);
 
   const isOwnPost = !!post.author.id && currentUser?.id === post.author.id;
+  // Ngôn ngữ nội dung: bài chính thức có bản EN → người dùng EN đọc bản EN; bài khác ngôn ngữ người xem → "Xem bản dịch".
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const officialEn = locale === "en" && post.contentEn ? post.contentEn : null;
+  const body = showOriginal ? post.content : translated ?? officialEn ?? post.content;
+  const contentIsVi = VI_MARKS.test(post.content);
+  const offerTranslate = !officialEn && !!post.canTranslate && !!currentUser && !isOwnPost && post.content.trim().length > 12 && (locale === "en" ? contentIsVi : !contentIsVi && /[a-z]{3,}/i.test(post.content));
+  const translate = async () => {
+    if (translated) { setShowOriginal(false); return; }
+    setTranslating(true);
+    try {
+      const r = await fetch(`/api/posts/${post.id}/translate?to=${locale === "en" ? "en" : "vi"}`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.text) throw new Error();
+      setTranslated(d.text);
+      setShowOriginal(false);
+    } catch {
+      toast.error(tr("Chưa dịch được bài này, thử lại sau.", "Couldn't translate this post. Try again later."));
+    } finally {
+      setTranslating(false);
+    }
+  };
   // Bài chính thức chỉ có chữ → trình bày dạng bài báo nhỏ (xem ArticleText).
-  const article = useMemo(() => (post.author.role === "ADMIN" && !post.mediaUrls.length ? parseArticle(post.content) : null), [post.author.role, post.mediaUrls.length, post.content]);
+  const article = useMemo(() => (post.author.role === "ADMIN" && !post.mediaUrls.length ? parseArticle(body) : null), [post.author.role, post.mediaUrls.length, body]);
   const anon = !!post.anonymous;
   const canDelete = isOwnPost || currentUser?.role === "ADMIN";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -264,7 +294,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
           </Link>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex min-w-0 items-center gap-1.5">
             {anon ? (
               <span className="truncate text-sm font-bold text-slate-100">{post.author.name}</span>
             ) : (
@@ -273,31 +303,34 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
               </Link>
             )}
             {anon && <span className="inline-flex flex-shrink-0 items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-200">{tr("Tâm sự ẩn danh", "Anonymous")}</span>}
-            {isVerifiedRole(post.author.role) && <VerifiedBadge className="-ml-1 h-4 w-4" />}
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0 ${isVerifiedRole(post.author.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-300"}`}>
-              {isVerifiedRole(post.author.role) ? tr("Chính thức", "Official") : roleBadgeLabel(post.author.role)}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 flex-wrap">
-            {(post.city || post.state) && (
-              <span className="flex items-center gap-0.5">
-                <MapPin className="h-3 w-3" /> {[post.city, post.state].filter(Boolean).join(", ")}
+            {isVerifiedRole(post.author.role) && <VerifiedBadge className="h-4 w-4 flex-shrink-0" />}
+            {badge?.label && (
+              <span className={`pn-post-tag flex-shrink-0 rounded-full border px-2 py-px text-[10px] font-bold ${badge.classes}`}>
+                {badge.label}
               </span>
             )}
-            <span>·</span>
-            <span>{timeAgo(post.createdAt)}</span>
+          </div>
+          {/* 1 dòng meta: "Nail tech · San Antonio, TX · Oct 2" — vai trò là chữ thường, không thêm 1 hàng nhãn */}
+          <p className="pn-post-meta mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-slate-500">
+            {(() => {
+              const role = isVerifiedRole(post.author.role) ? tr("Chính thức", "Official") : roleBadgeLabel(post.author.role).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "");
+              const place = [post.city, post.state].filter(Boolean).join(", ");
+              const parts = [anon ? "" : role, place].filter(Boolean);
+              return (
+                <>
+                  {parts.length > 0 && <span className="min-w-0 truncate">{parts.join(" · ")}</span>}
+                  {parts.length > 0 && <span aria-hidden className="flex-shrink-0">·</span>}
+                  <time dateTime={post.createdAt} className="flex-shrink-0 whitespace-nowrap">{timeAgo(post.createdAt)}</time>
+                </>
+              );
+            })()}
             {post.isHot && (
               <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-px text-[10px] font-bold text-orange-300">
                 {tr("🔥 Đang hot", "🔥 Trending")}
               </span>
             )}
-          </div>
+          </p>
         </div>
-        {badge?.label && (
-          <span className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold ${badge.classes}`}>
-            {badge.label}
-          </span>
-        )}
         {currentUser && (
           <div className="relative flex-shrink-0">
             <button
@@ -341,7 +374,22 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
       </div>
 
       {/* NỘI DUNG */}
-      {post.content && (article ? <ArticleText article={article} /> : <PostText content={post.content} />)}
+      {post.content && (article ? <ArticleText article={article} /> : <PostText content={body} />)}
+      {(offerTranslate || translated) && (
+        <div className="-mt-1 flex items-center gap-2 px-4 pb-3 text-xs">
+          {translated && !showOriginal ? (
+            <>
+              <span className="text-slate-500">{tr("Bản dịch tự động", "Auto-translated")}</span>
+              <span aria-hidden className="text-slate-600">·</span>
+              <button type="button" onClick={() => setShowOriginal(true)} className="min-h-[32px] font-semibold text-slate-300 hover:text-white">{tr("Xem bản gốc", "See original")}</button>
+            </>
+          ) : (
+            <button type="button" onClick={translate} disabled={translating} className="inline-flex min-h-[32px] items-center gap-1.5 font-semibold text-slate-300 hover:text-white disabled:opacity-60">
+              {translating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{tr("Xem bản dịch", "See translation")}
+            </button>
+          )}
+        </div>
+      )}
       {post.poll && <PollCard postId={post.id} poll={post.poll} />}
 
       {/* MEDIA CAROUSEL — vuốt ngang 1 ngón tay, scroll-snap gốc trình duyệt,

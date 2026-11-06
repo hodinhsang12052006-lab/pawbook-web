@@ -60,8 +60,8 @@ const stamp = Date.now();
 {
   const p = await ctx();
   await step("THO", "Đăng ký thợ — bước 1", p, async () => {
-    await p.goto(BASE_URL + "/auth/register?role=technician"); await p.getByPlaceholder("VD: Kim Nails").waitFor();
-    await p.getByPlaceholder("VD: Kim Nails").fill("Lan Nguyễn");
+    await p.goto(BASE_URL + "/auth/register?role=technician"); await p.getByPlaceholder("VD: Kim Nguyễn").waitFor();
+    await p.getByPlaceholder("VD: Kim Nguyễn").fill("Lan Nguyễn");
     await p.getByPlaceholder("555 123 4567").fill("7135550199");
     await p.getByPlaceholder("VD: Los Angeles").fill("Houston");
     await p.getByPlaceholder("ban@email.com").fill(`deep.t.${stamp}@qa.test`);

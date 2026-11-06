@@ -46,11 +46,11 @@ const countInputs = (p) => p.evaluate(() => [...document.querySelectorAll("input
   await shot(p, "A01_landing_fold");
 
   await p.goto(BASE_URL + "/auth/register?role=technician");
-  await p.getByPlaceholder("VD: Kim Nails").waitFor();
+  await p.getByPlaceholder("VD: Kim Nguyễn").waitFor();
   note("THỢ", "Đăng ký bước 1: số ô phải điền", { inputs: await countInputs(p) });
   await shot(p, "A02_reg_step1", true);
   const stamp = Date.now();
-  await p.getByPlaceholder("VD: Kim Nails").fill("Lan Nguyễn");
+  await p.getByPlaceholder("VD: Kim Nguyễn").fill("Lan Nguyễn");
   await p.getByPlaceholder("555 123 4567").fill("7135550199");
   await p.getByPlaceholder("VD: Los Angeles").fill("Houston");
   note("THỢ", "Gõ Houston → ô Bang tự chọn", { state: await p.getByLabel(/Bang|Tiểu bang/).first().inputValue().catch(() => "?") });

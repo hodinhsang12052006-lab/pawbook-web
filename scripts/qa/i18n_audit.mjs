@@ -19,7 +19,7 @@ for (const sql of [
   `SELECT name AS t FROM "User"`, `SELECT city AS t FROM "User"`, `SELECT title AS t FROM "Job"`, `SELECT salonName AS t FROM "Job"`,
   `SELECT description AS t FROM "Job"`, `SELECT city AS t FROM "Job"`, `SELECT content AS t FROM "Post"`, `SELECT content AS t FROM "PostComment"`,
   `SELECT body AS t FROM "Message"`, `SELECT title AS t FROM "SupplyProduct"`, `SELECT description AS t FROM "SupplyProduct"`, `SELECT bio AS t FROM "TechnicianProfile"`,
-  `SELECT comment AS t FROM "Review"`, `SELECT turnSplitPolicy AS t FROM "User"`, `SELECT clientTypePolicy AS t FROM "User"`, `SELECT salaryAmount AS t FROM "Job"`,
+  `SELECT comment AS t FROM "Review"`, `SELECT name AS t FROM "MenuItem"`, `SELECT description AS t FROM "MenuItem"`, `SELECT turnSplitPolicy AS t FROM "User"`, `SELECT clientTypePolicy AS t FROM "User"`, `SELECT salaryAmount AS t FROM "Job"`,
 ]) {
   try {
     for (const r of (await db.execute(sql)).rows) if (r.t) for (const part of String(r.t).split(/\n+/)) data.add(part.trim());
@@ -85,7 +85,8 @@ const found = new Map(); // chuỗi → tập trang
 const EN_WORDS = /\b(Loading|Submit|Cancel|Save|Delete|Search|Message|Messages|Profile|Settings|Close|Back|Next|Share|Report|Block|Pinned|Official|Verified|Sign in|Log in|Share card|New|Hot|Urgent|Jobs?|Feed)\b/;
 function record(page, strings) {
   for (const raw of strings) {
-    const s = raw.replace(/^\[(placeholder|aria-label|title|alt)\] /, "");
+    // "Machine-translated · original: <chữ thợ tự gõ>" — phần sau dấu ":" là nội dung người dùng (cố ý hiện bản gốc).
+    const s = raw.replace(/^\[(placeholder|aria-label|title|alt)\] /, "").replace(/^(Machine-translated · original|Dịch máy · bản gốc): (.+)$/, (m, k, orig) => (isData(orig.trim()) ? k : m));
     if (MODE === "en") {
       // "Tiếng Việt" = tên ngôn ngữ (bộ chọn ngôn ngữ / dòng "Có tiếng Anh và tiếng Việt") — cố ý, không phải chữ sót.
       if (!VN.test(s.replace(/Tiếng Việt/g, "")) || isData(s)) continue;
@@ -119,7 +120,7 @@ const jobId = (await db.execute(`SELECT id FROM "Job" LIMIT 1`)).rows[0].id;
   }
   // các bước đăng ký thợ
   await p.goto(BASE_URL + "/auth/register?role=technician");
-  await p.getByPlaceholder(/Kim Nails/).fill("Audit");
+  await p.getByPlaceholder(/Kim Nguy/).fill("Audit");
   await p.locator('input[type="tel"], input[placeholder*="555"]').first().fill("7135550100");
   await p.getByPlaceholder(/Los Angeles/).fill("Houston");
   await p.locator('input[type="email"]').fill(`audit.${Date.now()}@qa.test`);

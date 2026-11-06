@@ -64,7 +64,7 @@ await step("F1", "Khách vào / xem được trang chủ công khai (tin, thợ)
 
 await step("F2", "Đăng ký thợ — bước 1 (thông tin + tài khoản)", async () => {
   await tp.goto(BASE_URL + "/auth/register?role=technician");
-  await tp.getByPlaceholder("VD: Kim Nails").fill(techName);
+  await tp.getByPlaceholder("VD: Kim Nguyễn").fill(techName);
   await tp.getByPlaceholder("555 123 4567").fill("4085550199");
   await tp.getByPlaceholder("VD: Los Angeles").fill("San Jose");
   await tp.getByPlaceholder("ban@email.com").fill(techEmail);

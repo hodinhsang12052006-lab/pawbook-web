@@ -160,7 +160,7 @@ try {
   const email = `khach.e.${stamp}@qa.test`;
   await step("B1 Đăng ký thợ bằng email", b, async () => {
     await b.goto(BASE_URL + "/auth/register?role=technician"); await settle(b);
-    await b.getByPlaceholder("VD: Kim Nails").fill("Bảo Ngọc");
+    await b.getByPlaceholder("VD: Kim Nguyễn").fill("Bảo Ngọc");
     await b.getByPlaceholder("555 123 4567").fill("7135550142");
     await b.getByPlaceholder("VD: Los Angeles").fill("Houston");
     await b.getByPlaceholder(/ban@email.com|you@email.com/).fill(email);

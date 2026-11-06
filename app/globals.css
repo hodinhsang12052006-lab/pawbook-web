@@ -1204,6 +1204,9 @@ html[data-chat-open] .pn-bnav { display: none; }
   html:not([data-ui-classic]) .pn-job-cta > * { padding-block: 12px; font-size: 15px; }
   html:not([data-ui-classic]) .pn-job-cta > a { flex: 1.25 1 0; }
   html:not([data-ui-classic]) .pn-job-cta .pn-cta-num { display: none; }
+  /* EN-first nhãn dài ("Message in the app") — trên thanh dính ở điện thoại chỉ giữ "Message", 1 dòng */
+  html:not([data-ui-classic]) .pn-job-cta .pn-cta-long { display: none; }
+  html:not([data-ui-classic]) .pn-job-cta > * { white-space: nowrap; }
   /* dock luôn hiện trên trang chi tiết việc để thanh hành động nằm đúng chỗ */
   html:not([data-ui-classic]) body:has(.pn-job-cta) .pn-bnav { transform: none !important; opacity: 1 !important; }
 }

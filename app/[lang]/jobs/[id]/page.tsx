@@ -381,8 +381,9 @@ export default function JobDetailPage({ params }: PageProps) {
                   router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login");
                 }}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] hover:bg-white/10 py-3.5 text-base font-bold text-slate-100 transition-colors"
+                aria-label={tr("Nhắn tin trong app", "Message in the app")}
               >
-                <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin trong app", " Message in the app")}
+                <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin", " Message")}<span className="pn-cta-long">{tr(" trong app", " in the app")}</span>
               </button>}
             </div>
           )}

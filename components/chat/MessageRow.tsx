@@ -7,11 +7,10 @@ import toast from "react-hot-toast";
 import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
 import { stickerStill, stickerUrl } from "@/lib/chatStickers";
 import { avatarSrc } from "@/lib/avatar";
-import { tr, currentLocale } from "@/lib/i18n/tr";
+import { tr } from "@/lib/i18n/tr";
 import { CS } from "@/lib/i18n/chatStrings";
 import { bubbleTime, dayLabel, sameChatGroup } from "@/lib/chat/chatTime";
 import { linkify } from "@/lib/chat/linkify";
-import { pickLang } from "@/lib/enMark";
 import { describeCall, type MessageType } from "./chatShared";
 
 // Một bong bóng tin nhắn — React.memo: khi gõ phím, có tin mới, đang tải thêm
@@ -272,8 +271,7 @@ function MessageRowImpl({
     body = (
       <div className={`m-bubble ${isSelf ? "m-out" : "m-in"} ${corner} ${tail ? "m-tail" : ""}`}>
         <p className="m-text">
-          {/* tin chào của tài khoản chính thức có 2 thứ tiếng (lib/enMark) → hiện đúng ngôn ngữ người xem */}
-          {linkify(pickLang(msg.content, currentLocale()), "m-link")}
+          {linkify(msg.content, "m-link")}
           <span className={`m-meta-spacer ${isSelf ? "m-spacer-out" : ""}`} aria-hidden />
         </p>
         {meta}

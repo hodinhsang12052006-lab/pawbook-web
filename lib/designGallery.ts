@@ -5,8 +5,6 @@ import prisma from "@/lib/prisma";
 import { getSetting, setSetting } from "@/lib/settings";
 import { upcomingThemes } from "@/lib/aiDesigns";
 import { SITE_URL } from "@/lib/siteUrl";
-import { GALLERY_ASK_EN, GALLERY_HEAD_EN, galleryEn, joinEn } from "@/lib/officialEn";
-import { dtEn } from "@/lib/i18n/dataEn";
 
 const KEY = "gallery_featured_designs";
 export const GALLERY_PREFIX = "✨ 4 mẫu nail";
@@ -30,7 +28,7 @@ export async function publishDesignGallery(now = new Date()): Promise<{ posted: 
   const theme = upcomingThemes("US", now)[0];
   const base = { status: "published", imageUrl: { startsWith: "https://" }, id: { notIn: featured } } as const;
   const pick = async (extra: object, n: number, skip: string[] = []) =>
-    prisma.nailDesign.findMany({ where: { ...base, ...extra, ...(skip.length ? { AND: [{ id: { notIn: skip } }] } : {}) }, orderBy: [{ saves: { _count: "desc" } }, { publishedAt: "desc" }], take: n, select: { id: true, title: true, titleEn: true, imageUrl: true, occasion: true } });
+    prisma.nailDesign.findMany({ where: { ...base, ...extra, ...(skip.length ? { AND: [{ id: { notIn: skip } }] } : {}) }, orderBy: [{ saves: { _count: "desc" } }, { publishedAt: "desc" }], take: n, select: { id: true, title: true, imageUrl: true, occasion: true } });
 
   // Góc của bài hôm nay theo thứ tự lượt.
   const variant = todayCount % GALLERY_PER_DAY;
@@ -56,11 +54,8 @@ export async function publishDesignGallery(now = new Date()): Promise<{ posted: 
     "",
     "Ảnh minh hoạ AI · #MauNail #PawNail",
   ].join("\n");
-  // Bản EN cùng bài (lib/officialEn): tên mẫu tiếng Anh có sẵn trong NailDesign.titleEn
-  const headEn = variant === 1 ? GALLERY_HEAD_EN.easy : variant === 2 ? GALLERY_HEAD_EN.yearRound : GALLERY_HEAD_EN.today + (seasonal ? ` — including ${dtEn(theme!.title)} ${theme!.emoji}` : "");
-  const contentEn = galleryEn(headEn, list.map((d) => d.titleEn || d.title), SITE_URL, variant === 1 ? GALLERY_ASK_EN.easy : GALLERY_ASK_EN.other);
   await prisma.post.create({
-    data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: joinEn(content, contentEn), postType: "GENERAL", mediaUrls: JSON.stringify(list.map((d) => d.imageUrl)), market: null, createdAt: now },
+    data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content, postType: "GENERAL", mediaUrls: JSON.stringify(list.map((d) => d.imageUrl)), market: null, createdAt: now },
   });
   await setSetting(KEY, JSON.stringify([...featured, ...list.map((d) => d.id)].slice(-2000)));
   return { posted: true, ids: list.map((d) => d.id) };

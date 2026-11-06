@@ -10,8 +10,6 @@ import { geminiEnabled, geminiJson } from "@/lib/gemini";
 import { cfJson, cfTextEnabled } from "@/lib/cfText";
 import { getIndustryNews, type NewsItem } from "@/lib/industryFeed";
 import { getSetting, setSetting } from "@/lib/settings";
-import { joinEn } from "@/lib/officialEn";
-import { translatePost } from "@/lib/translateEn";
 
 const KEY = "news_posted_links";
 const DAY = 86_400_000;
@@ -165,10 +163,8 @@ export async function publishNewsPosts(now = new Date(), opts: { max?: number; t
       // Bài AI viết hụt (12/10/2026: tiêu đề "🚨 Một salon nail", ý "Chi tiết trong bài gốc") → không đăng.
       const weak = weakWriting(w);
       if (weak) { skipped.push(`bài viết yếu (${weak}): ${n.title.slice(0, 50)}`); done.add(hash(n.link)); continue; }
-      // Bản EN cho người dùng Mỹ / Úc (tin gốc vốn tiếng Anh); dịch hụt / sai số liệu → chỉ đăng bản tiếng Việt
-      const en = opts.deadline && Date.now() > opts.deadline - 20_000 ? null : await translatePost(text, "en", 12_000).catch(() => null);
       await prisma.post.create({
-        data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: joinEn(text, en), postType: "GENERAL", mediaUrls: "[]", market: n.market === "AU" ? "AU" : "US", createdAt: new Date(now.getTime() + posted.length * 1000) },
+        data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: text, postType: "GENERAL", mediaUrls: "[]", market: n.market === "AU" ? "AU" : "US", createdAt: new Date(now.getTime() + posted.length * 1000) },
       });
       done.add(hash(n.link)); done.add(hash(n.title.toLowerCase()));
       posted.push(n.title);

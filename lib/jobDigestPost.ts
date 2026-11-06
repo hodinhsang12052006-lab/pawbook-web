@@ -10,8 +10,6 @@ import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { realUserWhere } from "@/lib/demo";
 import { stateName } from "@/lib/stateNames";
 import { SITE_URL } from "@/lib/siteUrl";
-import { digestEn, digestLineEn, joinEn } from "@/lib/officialEn";
-import { dtEn } from "@/lib/i18n/dataEn";
 
 export const DIGEST_PREFIX = "📍 ";
 const KEY = "job_digest_last";
@@ -67,15 +65,8 @@ export async function publishJobDigest(now = new Date()): Promise<{ posted: bool
     "",
     `#ViecLamNail #ThoNail #${name.replace(/\s+/g, "")}`,
   ].join("\n");
-  // Bản EN cùng bài (lib/officialEn)
-  const linesEn = list.slice(0, 5).map((j) => digestLineEn({
-    salonName: j.salonName, city: j.city,
-    skills: (j.skills || "").split(",").filter(Boolean).slice(0, 2).map((x) => dtEn(x.trim())).join(", "),
-    salary: j.salaryAmount || "", urgent: j.isUrgent,
-  }));
-  const contentEn = digestEn(name, list.length, urgent, linesEn, list.length - 5, SITE_URL);
   await prisma.post.create({
-    data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content: joinEn(content, contentEn), postType: "GENERAL", mediaUrls: "[]", market, state, createdAt: now },
+    data: { id: "c" + crypto.randomBytes(12).toString("hex"), authorId: officialId, content, postType: "GENERAL", mediaUrls: "[]", market, state, createdAt: now },
   });
   last[key] = now.getTime();
   await setSetting(KEY, JSON.stringify(last));

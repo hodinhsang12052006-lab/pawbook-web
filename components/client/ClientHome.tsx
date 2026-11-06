@@ -18,10 +18,7 @@ export default function ClientHome({ user }: { user: { id: string; name?: string
   useTr();
   const market = user.market === "AU" ? "AU" : "US";
   const state = user.state || "";
-  // Tên gọi: tên Việt (họ đứng đầu: "Nguyễn Thị Lan") → chữ cuối; tên kiểu Mỹ/Úc ("Jamie Lee") → chữ đầu (trước: "Hi Lee")
-  const words = (user.name || "").trim().split(/\s+/).filter(Boolean);
-  const viOrder = words.length > 1 && /^(nguy[eễ]n|tr[aầ]n|l[eê]|ph[aạ]m|ho[aà]ng|hu[yỳ]nh|phan|v[uũ]|v[oõ]|[dđ][aặ]ng|b[uù]i|[dđ][oỗ]|h[oồ]|ng[oô]|d[uư][oơ]ng|tr[uư][oơ]ng|[dđ]inh)$/i.test(words[0]);
-  const first = (viOrder ? words[words.length - 1] : words[0]) || "";
+  const first = (user.name || "").trim().split(/\s+/).pop() || "";
   const tip = clientTipOfDay();
   const tiles = [
     { href: "/designs", icon: Sparkles, title: tr("Mẫu trend", "Trending looks"), sub: tr("Ý tưởng mới mỗi ngày", "New ideas daily"), tone: "from-pink-500/25 to-fuchsia-500/10 text-pink-200" },

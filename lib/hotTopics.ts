@@ -5,7 +5,6 @@
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
 import { getSetting, setSetting } from "@/lib/settings";
-import { HOT_TOPIC_EN, joinEn } from "@/lib/officialEn";
 
 export interface HotTopic { key: string; match: RegExp; text: string; question: string; options: string[] }
 
@@ -75,8 +74,7 @@ export async function publishHotTopicPost(now = new Date()): Promise<{ posted: b
   const day = Math.floor(now.getTime() / DAY);
   const pick = [...pool].sort((a, b) => live(b) - live(a) || ((TOPIC_BANK.indexOf(a) - day) % 12 + 12) % 12 - (((TOPIC_BANK.indexOf(b) - day) % 12 + 12) % 12))[0];
   const id = "c" + crypto.randomBytes(12).toString("hex");
-  // Bài 2 thứ tiếng (bản EN viết tay trong lib/officialEn) — người dùng EN không còn thấy bài tiếng Việt khó đọc
-  await prisma.post.create({ data: { id, authorId: officialId, content: joinEn(pick.text, HOT_TOPIC_EN[pick.key]?.text), postType: "GENERAL", mediaUrls: "[]", market: null, createdAt: now } });
+  await prisma.post.create({ data: { id, authorId: officialId, content: pick.text, postType: "GENERAL", mediaUrls: "[]", market: null, createdAt: now } });
   await prisma.postPoll.create({ data: { postId: id, question: pick.question, options: JSON.stringify(pick.options) } });
   await setSetting(LAST_KEY, JSON.stringify({ ...last, [pick.key]: now.getTime() }));
   return { posted: true, key: pick.key };

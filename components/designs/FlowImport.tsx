@@ -341,6 +341,9 @@ function ReviewCard({ it, busy, onToggle, onRetry, onUndo }: { it: Item; busy: b
       {r?.flow && it.status !== "done" && !it.issue && (
         <p className="mt-2 text-[11px] text-slate-400">{tr(`Mẫu này đã có ảnh Flow (${r.flow.code}, ${r.flow.date}) — đăng sẽ thay ảnh đó.`, `Already has a Flow image (${r.flow.code}, ${r.flow.date}) — publishing replaces it.`)}</p>
       )}
+      {r?.found && r.status !== "published" && !it.issue && (
+        <p className="mt-2 text-[11px] text-slate-400">{tr(`Mẫu đang ở trạng thái "${r.status}" — khách chưa thấy mẫu này.`, `This design is "${r.status}" — clients can't see it yet.`)}</p>
+      )}
       {it.issue && <p className="mt-2 text-xs text-amber-200">{it.issue}</p>}
       {it.error && <p className="mt-2 break-words text-xs text-rose-300">{it.error}</p>}
       {(it.status === "error" || it.status === "done" || working) && (

@@ -1,16 +1,28 @@
 import type { Metadata } from "next";
+import { Be_Vietnam_Pro } from "next/font/google";
+import { SearchX, Home } from "lucide-react";
 import "./globals.css";
 
 // 404 cho URL KHÔNG khớp route nào (vd. /abc/xyz, /vi/khong-co). Layout gốc nằm dưới app/[lang] nên trang này
 // tự dựng <html>/<body> và là HTML TĨNH dùng chung mọi ngôn ngữ. Chỉ hiện MỘT ngôn ngữ: tiếng Anh mặc định;
 // script nhỏ đổi sang tiếng Việt trước khi vẽ khi người xem đã chọn tiếng Việt (cookie bitpaw_locale), hoặc
 // chưa chọn mà ngôn ngữ ĐẦU TIÊN của trình duyệt là tiếng Việt / URL dưới /vi — cùng quy tắc với
-// lib/i18n/config.ts. Trang gọi notFound() bên trong app dùng app/[lang]/not-found.tsx — đúng ngôn ngữ.
+// lib/i18n/config.ts. Trang gọi notFound() bên trong app VÀ mọi URL trang không khớp (app/[lang]/[...missing])
+// dùng app/[lang]/not-found.tsx — đúng ngôn ngữ, có dock. Trang này chỉ còn cho URL nằm ngoài cây ngôn ngữ
+// (vd. đường dẫn có đuôi tệp không tồn tại) — vẫn cùng diện mạo 404 trong app (font, nền mận, biểu tượng).
 // Bật bằng experimental.globalNotFound trong next.config.ts.
 export const metadata: Metadata = {
   title: "Page not found · PawNail",
   robots: { index: false },
 };
+
+// Cùng font chữ app với app/[lang]/layout.tsx (--font-pn, áp qua html:not([data-ui-classic]) body trong globals.css).
+const beVietnam = Be_Vietnam_Pro({
+  variable: "--font-pn",
+  weight: ["400", "600"],
+  subsets: ["latin", "vietnamese"],
+  display: "swap",
+});
 
 const VI = {
   title: "Không tìm thấy trang",
@@ -22,13 +34,23 @@ const SWAP = `(function(){try{var c=document.cookie.match(/(?:^|;\\s*)bitpaw_loc
 
 export default function GlobalNotFound() {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
+    <html lang="en" suppressHydrationWarning className={`${beVietnam.variable} h-full antialiased`}>
+      <body className="min-h-full bg-slate-950 text-slate-50 antialiased">
+        {/* Nền chung toàn app (gradient mận + ánh sáng tĩnh) — xem .app-backdrop trong globals.css */}
+        <div aria-hidden className="app-backdrop">
+          <span className="aurora aurora-1" />
+          <span className="aurora aurora-2" />
+          <span className="aurora aurora-3" />
+          <span className="aurora aurora-4" />
+          <span className="glitter" />
+          <span className="beam" />
+          <span className="grain" />
+        </div>
         <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
-          <div aria-hidden className="absolute -top-24 -left-16 h-96 w-96 rounded-full bg-fuchsia-600/20 blur-[100px]" />
-          <div aria-hidden className="absolute -bottom-24 -right-16 h-96 w-96 rounded-full bg-indigo-600/20 blur-[100px]" />
           <div className="relative z-10 flex max-w-sm flex-col items-center gap-5">
-            <p className="text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-fuchsia-400 to-violet-400">404</p>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-pink-500/30 bg-pink-500/10">
+              <SearchX aria-hidden className="h-6 w-6 text-pink-400" />
+            </div>
             <div className="space-y-2">
               <h1 className="text-xl font-black text-white" data-vi={VI.title} suppressHydrationWarning>Page not found</h1>
               <p className="text-sm text-slate-400" data-vi={VI.body} suppressHydrationWarning>This page doesn&apos;t exist or the post was removed.</p>
@@ -38,11 +60,10 @@ export default function GlobalNotFound() {
             <a
               id="pn-404-home"
               href="/"
-              data-vi={VI.home}
-              suppressHydrationWarning
-              className="flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-6 text-sm font-bold text-white shadow-lg shadow-purple-600/25 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-6 text-sm font-bold text-white shadow-lg shadow-purple-600/25 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
             >
-              Back to home
+              <Home aria-hidden className="h-4 w-4" />
+              <span data-vi={VI.home} suppressHydrationWarning>Back to home</span>
             </a>
           </div>
         </main>

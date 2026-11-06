@@ -5,7 +5,7 @@ import Image from "next/image";
 import { AlertCircle, Flame, Play, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL } from "@/lib/nailRadarData";
+import { TOTAL_DEMAND_COUNT, DEMAND_SIGNAL, demandSnapshotFresh } from "@/lib/nailRadarData";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import Avatar from "@/components/ui/Avatar";
 import { avatarGradient, avatarGradientClassic } from "@/lib/avatar";
@@ -43,6 +43,7 @@ const PRESS = "active:scale-95 transition-transform duration-100";
 // không bịa số "X tiệm khác đang xem" vì app chưa có tracking lượt xem thật.
 function OwnerScarcityBanner({ market, state }: { market: "US" | "AU"; state: string }) {
   useTr(); // render lại khi đổi VI/EN
+  if (!demandSnapshotFresh()) return null; // số khảo sát 9/2026 đã cũ → không hiện nữa
   const stateSignal = state ? DEMAND_SIGNAL[market]?.[state] : null;
   const count = stateSignal?.demandCount ?? TOTAL_DEMAND_COUNT[market];
   const scopeLabel = stateSignal ? tr(`tại ${stateName(market, state)}`, `in ${stateName(market, state)}`) : market === "US" ? tr("tại Mỹ", "in the US") : tr("tại Úc", "in Australia");

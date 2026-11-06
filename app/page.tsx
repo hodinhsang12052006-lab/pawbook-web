@@ -10,7 +10,7 @@ import JobBoard from "@/components/jobs/JobBoard";
 import TechnicianGrid from "@/components/technicians/TechnicianGrid";
 import SocialFeed from "@/components/feed/SocialFeed";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { stateName } from "@/lib/stateNames";
+import { AU_ALL_CODES, stateName, US_ALL_CODES } from "@/lib/stateNames";
 import RightRail from "@/components/layout/RightRail";
 import ToolsPanel from "@/components/layout/ToolsPanel";
 import WelcomeBack from "@/components/layout/WelcomeBack";
@@ -40,8 +40,10 @@ const tabSubtitle = (): Record<"feed" | "jobs" | "portfolio", { owner: string; t
   portfolio: { owner: tr("Thợ đang sẵn sàng nhận việc — xem portfolio và nhắn tin trực tiếp.", "Techs ready to work — view portfolios and message directly."), tech: tr("Xem portfolio thợ khác để lấy cảm hứng mẫu mới.", "Browse other techs’ portfolios for new design ideas.") },
 });
 
-const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
-const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Chip bang: 10 bang đông thợ (Mỹ) / 6 bang lớn (Úc) — bang đang chọn hoặc bang trong hồ sơ người xem được thêm vào
+// nếu nằm ngoài danh sách (VD tiệm ở OH / TAS), để tin ở bang nhỏ không chỉ thấy được ở "Tất cả bang".
+const US_STATES = US_ALL_CODES.slice(0, 10);
+const AU_STATES = AU_ALL_CODES.slice(0, 6);
 
 type HomeTab = "feed" | "jobs" | "portfolio";
 const TAB_ORDER: HomeTab[] = ["feed", "jobs", "portfolio"];
@@ -101,6 +103,8 @@ export default function HomePage() {
     changeTab(next);
   };
   const [market, setMarket] = useState<"US" | "AU">("US");
+  // Đã chọn thị trường (qua ?market= hoặc bấm Mỹ/Úc) → không tự đổi theo hồ sơ nữa
+  const marketChosen = useRef(false);
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [showCitySearch, setShowCitySearch] = useState(false);
@@ -115,7 +119,7 @@ export default function HomePage() {
     const urlTab = params.get("tab");
     if (urlTab === "jobs" || urlTab === "portfolio" || urlTab === "feed") setTab(urlTab);
     const urlMarket = params.get("market");
-    if (urlMarket === "US" || urlMarket === "AU") setMarket(urlMarket);
+    if (urlMarket === "US" || urlMarket === "AU") { setMarket(urlMarket); marketChosen.current = true; }
     const urlState = params.get("state");
     if (urlState) setState(urlState);
   }, []);
@@ -172,7 +176,18 @@ export default function HomePage() {
   // tách chung 1 quy tắc được.
   const displayName = (sessionUser?.name || "").trim();
 
-  const states = market === "US" ? US_STATES : AU_STATES;
+  // Người xem ở Úc mở trang chủ (không có ?market=) → bảng việc mở đúng thị trường Úc thay vì luôn là Mỹ
+  useEffect(() => {
+    const m = sessionUser?.market;
+    if (!marketChosen.current && (m === "US" || m === "AU")) { marketChosen.current = true; setMarket(m); }
+  }, [sessionUser?.market]);
+  const states = (() => {
+    const base: string[] = market === "US" ? US_STATES : AU_STATES;
+    const all: readonly string[] = market === "US" ? US_ALL_CODES : AU_ALL_CODES;
+    const mine = sessionUser?.market === market ? String(sessionUser?.state || "").toUpperCase() : "";
+    const extra = [state, mine].filter((s, i, a) => !!s && all.includes(s) && !base.includes(s) && a.indexOf(s) === i);
+    return [...base, ...extra];
+  })();
   // Khách: hero có sẵn ngay trong HTML đầu tiên (trước đây chờ tải phiên ~1s rồi mới chen vào,
   // đẩy cả trang xuống — CLS 0.8). Máy từng đăng nhập → CSS ẩn ngay từ đầu (html[data-authed]).
   const showHero = !sessionUser;
@@ -312,7 +327,7 @@ export default function HomePage() {
                   {(["US", "AU"] as const).map((m) => (
                     <button
                       key={m}
-                      onClick={() => { setMarket(m); setState(""); }}
+                      onClick={() => { marketChosen.current = true; setMarket(m); setState(""); }}
                       aria-pressed={market === m}
                       className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow refined:bg-none refined:bg-pn-thumb refined:shadow-none refined:ring-1 refined:ring-inset refined:ring-white/[0.06]" : "text-slate-400"}`}
                     >
@@ -366,7 +381,7 @@ export default function HomePage() {
             <div className="glass-card hidden space-y-3 rounded-2xl p-3 sm:p-4 md:block">
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-950/60 p-1 border border-slate-800/80">
                 <button
-                  onClick={() => { setMarket("US"); setState(""); }}
+                  onClick={() => { marketChosen.current = true; setMarket("US"); setState(""); }}
                   aria-pressed={market === "US"}
                   className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${
                     market === "US"
@@ -377,7 +392,7 @@ export default function HomePage() {
                   <Flag code="US" />{tr(" Mỹ · US", " United States")}
                 </button>
                 <button
-                  onClick={() => { setMarket("AU"); setState(""); }}
+                  onClick={() => { marketChosen.current = true; setMarket("AU"); setState(""); }}
                   aria-pressed={market === "AU"}
                   className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${
                     market === "AU"

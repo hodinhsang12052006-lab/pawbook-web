@@ -116,6 +116,13 @@ export interface DemandSignal {
 // Tổng số tin "chủ tìm thợ" ghi nhận được trên toàn bộ đợt quét (kể cả các
 // bang mẫu quá nhỏ không liệt kê riêng ở dưới) — dùng cho các câu FOMO tổng
 // quát kiểu "hơn 1,000 tiệm đang cần thợ" (xem components/FomoToast.tsx).
+/** Ngày đợt ĐẾM tin trong nhóm (một lần, 9/2026 — không lặp lại; tin từ nhóm cộng đồng vẫn vào bảng việc qua bot của
+ *  chủ, xem lib/jobIngest/ingest.ts). Số của đợt đếm này chỉ được hiện trong
+ *  30 ngày sau ngày quét; quá hạn thì mọi banner / toast / huy hiệu "N+ tin tìm thợ" tự ẩn (không quét lại). */
+export const DEMAND_SNAPSHOT_DATE = "2026-09-23";
+export const DEMAND_SNAPSHOT_MAX_AGE_DAYS = 30;
+export const demandSnapshotFresh = (now = Date.now()) => now - Date.parse(`${DEMAND_SNAPSHOT_DATE}T00:00:00Z`) <= DEMAND_SNAPSHOT_MAX_AGE_DAYS * 86_400_000;
+
 export const TOTAL_DEMAND_COUNT: Record<Market, number> = {
   US: 639,
   AU: 387,
@@ -156,7 +163,11 @@ export interface RadarResult {
   supplyPolicy: string;
   negotiationTips: string[];
   ownerChecklist: string[];
+  /** Số tin tuyển từ ĐỢT QUÉT NHÓM MỘT LẦN (9/2026). null khi đợt quét đã quá DEMAND_SNAPSHOT_MAX_AGE_DAYS
+   *  (đợt đếm một lần, không cập nhật → không trình bày như số hiện tại). */
   demandSignal: DemandSignal | null;
+  /** Ngày đợt quét (để ghi "đợt quét một lần, 9/2026") — null khi demandSignal null. */
+  demandSnapshotDate: string | null;
 }
 
 export function getRadarEstimate(market: Market, state: string, skill: SkillKey): RadarResult | null {
@@ -180,6 +191,9 @@ export function getRadarEstimate(market: Market, state: string, skill: SkillKey)
     supplyPolicy: SUPPLY_POLICY_BY_SKILL[skill],
     negotiationTips: NEGOTIATION_TIPS,
     ownerChecklist: OWNER_CHECKLIST,
-    demandSignal: getDemandSignal(market, state),
+    ...(() => {
+      const demandSignal = demandSnapshotFresh() ? getDemandSignal(market, state) : null;
+      return { demandSignal, demandSnapshotDate: demandSignal ? DEMAND_SNAPSHOT_DATE : null };
+    })(),
   };
 }

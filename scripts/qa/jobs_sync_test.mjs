@@ -4,7 +4,7 @@ import { createClient } from "@libsql/client";
 import { BASE_URL, Results } from "./lib.mjs";
 
 const R = new Results("Đồng bộ tin từ tool (/api/jobs/sync)");
-const db = createClient({ url: "file:prisma/dev.db" });
+const db = createClient({ url: process.env.QA_DB_URL || "file:prisma/dev.db" }); // QA_DB_URL: server chạy trên bản sao .db
 const KEY = "test-ingest-key-0123456789abcdef";
 const sync = (body, headers = { authorization: `Bearer ${KEY}` }) => fetch(BASE_URL + "/api/jobs/sync", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 const t = String(Date.now()).slice(-5);
@@ -72,7 +72,7 @@ try {
   const q2 = await fetch(`${BASE_URL}/api/jobs?state=TX&q=khongcotiemnaynhe${t}`).then((r) => r.json());
   const q3 = await fetch(`${BASE_URL}/api/jobs?state=NSW&q=Bankstown`).then((r) => r.json());
   R.check("S10", "GET /api/jobs?state=TX&q=tên tiệm → tìm đúng; từ khoá không có → rỗng; lọc bang NSW + q", q1.length === 1 && q1[0].id === id && q2.length === 0 && q3.some((j) => j.id === batch.data.results?.[1]?.job_id), `${q1.length}/${q2.length}/${q3.length}`);
-  R.check("S11", "API công khai KHÔNG lộ link bài / mã băm Facebook", !("sourceUrl" in q1[0]) && !("sourceFbHash" in q1[0]) && !("sourceKey" in q1[0]) && q1[0].repostCount === 3);
+  R.check("S11", "API công khai KHÔNG lộ link bài thô / mã băm Facebook; tin từ nhóm có SĐT tiệm (Gọi ngay) + link 'Xem bài gốc'", !("sourceUrl" in q1[0]) && !("sourceFbHash" in q1[0]) && !("sourceKey" in q1[0]) && q1[0].repostCount === 3 && q1[0].phone === `(713) 555-0${t.slice(-3)}` && String(q1[0].sourceLink?.href || "").startsWith("https://facebook.com/groups/g/posts/"), JSON.stringify({ phone: q1[0]?.phone, link: q1[0]?.sourceLink }));
 
   // Bài KHÔNG ghi bang / thành phố → đoán bang từ mã vùng SĐT Mỹ (trước đây: "không xác định được bang")
   const ph2 = `(281) 555-0${String(Number(t.slice(-3)) + 1).padStart(3, "0").slice(-3)}`;

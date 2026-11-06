@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { getClientIp, isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/siteUrl";
+import { REMOVED_SOURCE } from "@/lib/jobIngest/ingest";
 
 // POST { kind: "claim"|"remove", name, contact, note? } — tiệm xin NHẬN hoặc GỠ tin PawNail đăng hộ.
 // Lưu yêu cầu (admin xử lý ở Studio) + báo email hỗ trợ. Không đổi gì trên tin ngay (tránh người lạ gỡ bậy).
@@ -22,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const note = typeof b?.note === "string" ? b.note.trim().slice(0, 500) : "";
   if (!kind || !name || contact.length < 6) return NextResponse.json({ error: "Nhập tên và SĐT/email để PawNail liên hệ lại." }, { status: 400 });
   const job = await prisma.job.findUnique({ where: { id }, select: { id: true, source: true, salonName: true, city: true, state: true, phone: true } });
-  if (!job || !job.source) return NextResponse.json({ error: "Không tìm thấy tin." }, { status: 404 });
+  if (!job || !job.source || job.source === REMOVED_SOURCE) return NextResponse.json({ error: "Không tìm thấy tin." }, { status: 404 });
   recordAttempt(ipKey, HOUR);
   const userId = ((await getServerSession(authOptions))?.user as { id?: string } | undefined)?.id ?? null;
   await prisma.jobRequest.create({ data: { jobId: job.id, kind, name, contact, note: note || null, userId } });

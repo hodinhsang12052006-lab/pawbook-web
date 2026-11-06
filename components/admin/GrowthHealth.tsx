@@ -11,7 +11,7 @@ interface Growth {
   install: { installed: number };
   demo: { users: number; jobs: number; posts: number };
   designs: { drafts: number; published: number; noImage: number };
-  ingest?: { active: number; pendingRequests: number };
+  ingest?: { active: number; pendingRequests: number; accepting?: boolean; lastAt?: string | null; lastAtEstimated?: boolean; lastBatchAt?: string | null; rejectedOnly?: boolean; stale?: boolean; staleHours?: number };
 }
 
 // "Sức khoẻ tăng trưởng" — số THẬT (đã loại tài khoản mẫu), để biết tính năng nào giữ chân người dùng.
@@ -31,7 +31,7 @@ export default function GrowthHealth() {
     { icon: Gift, label: "Mời bạn bè", value: g.referral.invited, sub: `người tham gia nhờ link mời · +${g.referral.invited7} tuần này` },
     { icon: Download, label: "Đã cài app", value: g.install.installed, sub: "mở PawNail từ màn hình chính" },
     { icon: Palette, label: "Mẫu nail", value: g.designs.published, sub: `đã đăng · ${g.designs.drafts} chờ duyệt · ${g.designs.noImage} chưa có ảnh` },
-    ...(g.ingest ? [{ icon: Store, label: "Tin đăng hộ tiệm", value: g.ingest.active, sub: `đang hiện · ${g.ingest.pendingRequests} yêu cầu nhận/gỡ chờ xử lý` }] : []),
+    ...(g.ingest ? [{ icon: Store, label: "Tin từ nhóm", value: g.ingest.active, sub: `đang hiện · ${g.ingest.pendingRequests} yêu cầu nhận/gỡ chờ xử lý` }] : []),
   ];
   return (
     <section className="glass-card space-y-3 rounded-2xl p-4" data-testid="growth-health">
@@ -51,6 +51,21 @@ export default function GrowthHealth() {
           Dữ liệu nhập sẵn (email đuôi pawnailjobs.demo, không tính vào số người dùng ở trên): {g.demo.users} tài khoản, {g.demo.jobs} tin tuyển, {g.demo.posts} bài đăng.
         </p>
       )}
+      {/* Nguồn tin từ nhóm cộng đồng (bot của chủ → /api/ingest/jobs): tạm ngừng bằng công tắc, hoặc quá 24 giờ không có tin
+          mới → cảnh báo kèm cách xử lý bằng lời thường (ingestHeartbeat). */}
+      {g.ingest && g.ingest.accepting === false ? (
+        <p className="rounded-xl bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200 ring-1 ring-amber-500/25" data-testid="ingest-stale">
+          ⏸ Đang TẠM NGỪNG nhận tin từ nhóm (Vercel có biến INGEST_AGGREGATED=off). Muốn nhận lại: xoá biến đó trên Vercel rồi Redeploy.
+        </p>
+      ) : g.ingest?.stale ? (
+        <p className="rounded-xl bg-red-500/10 p-3 text-xs leading-relaxed text-red-200 ring-1 ring-red-500/25" data-testid="ingest-stale">
+          ⚠ Quá {g.ingest.staleHours ?? 24} giờ chưa có tin mới từ nhóm ({g.ingest.lastAt ? `${g.ingest.lastAtEstimated ? "tin từ nhóm mới nhất trên bảng" : "lần cuối nhận"} ${new Date(g.ingest.lastAt).toLocaleString("vi-VN")}` : "chưa nhận tin nào"}).{" "}
+          {g.ingest.rejectedOnly
+            ? "Bot vẫn gửi bài nhưng bài nào cũng bị loại — xem lý do trong phản hồi của bot (Studio → Đăng hộ tiệm để thử 1 bài)."
+            : "Bot đọc nhóm có thể đã dừng — thường do cookie Facebook hết hạn: mở bot, đăng nhập lại Facebook (hoặc dán cookie mới) rồi chạy lại."}{" "}
+          Tin cũ tự hết hạn sau 14 ngày nên bảng việc sẽ vơi dần nếu không có tin mới.
+        </p>
+      ) : null}
       {g.designs.published === 0 && g.designs.drafts > 0 && (
         <p className="rounded-xl bg-sky-500/10 p-3 text-xs text-sky-200 ring-1 ring-sky-500/25">Chưa có mẫu nail nào được đăng — trang /designs đang trống với người dùng. Duyệt ở mục Mẫu nail bên dưới.</p>
       )}

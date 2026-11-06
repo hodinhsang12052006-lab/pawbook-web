@@ -18,9 +18,11 @@ export interface JobForLd {
   benefits?: string | null;
   createdAt: Date;
   mediaUrls?: string | null;
+  /** Hạn hiển thị THẬT của tin (ingest.effectiveExpiry) — validThrough phải khớp lúc tin tự ẩn trên bảng việc. */
+  validThrough?: Date | null;
 }
 
-const VALID_DAYS = 60; // tin quá 60 ngày coi như hết hạn
+const VALID_DAYS = 30; // dự phòng khi không có hạn thật (khớp JOB_TTL_DAYS mặc định)
 
 /** "$1,200-1,500/tuần" → { min: 1200, max: 1500, unit: "WEEK" }; không đọc được → null. */
 export function parseSalary(amount?: string | null, type?: string | null): { min: number; max: number; unit: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR" } | null {
@@ -47,7 +49,7 @@ export function jobPostingLd(j: JobForLd) {
     benefits.length ? `Quyền lợi: ${benefits.join(", ")}.` : "",
     j.salaryAmount ? `Lương: ${j.salaryAmount}${j.salaryType ? ` (${j.salaryType})` : ""}.` : "",
   ].filter(Boolean).join("\n");
-  const valid = new Date(j.createdAt.getTime() + VALID_DAYS * 86_400_000);
+  const valid = j.validThrough ?? new Date(j.createdAt.getTime() + VALID_DAYS * 86_400_000);
   return {
     "@context": "https://schema.org/",
     "@type": "JobPosting",

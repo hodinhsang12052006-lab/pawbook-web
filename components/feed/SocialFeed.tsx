@@ -7,7 +7,7 @@ import FeedPostCard, { FeedPost } from "./FeedPostCard";
 import SupplyProductCard, { SupplyProductType } from "./SupplyProductCard";
 import CreatePostComposer from "./CreatePostComposer";
 import { useSessionUser } from "@/lib/SessionUserContext";
-import { TOTAL_DEMAND_COUNT } from "@/lib/nailRadarData";
+import { TOTAL_DEMAND_COUNT, demandSnapshotFresh } from "@/lib/nailRadarData";
 import { useStudio, ThemeCard, ThemeSlot, rememberTheme, TipCard, RecapCard } from "./StudioCards";
 import PulseCard from "./PulseCard";
 import RadarPostCard, { type RadarPost } from "./RadarPostCard";
@@ -284,7 +284,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
           săn đón, chỉ cần xuất hiện là dễ được chủ để ý ngay. */}
       {studio === undefined && <ThemeSlot />}
       {studio?.theme && <ThemeCard studio={studio} isOwner={user?.role === "OWNER"} onJoin={joinChallenge} />}
-      {isTech && studio !== undefined && !studio?.theme && (
+      {isTech && studio !== undefined && !studio?.theme && demandSnapshotFresh() && (
         <div className="flex items-center gap-3 rounded-2xl border border-pink-500/25 bg-gradient-to-r from-pink-950/30 via-slate-900/30 to-slate-900/30 px-4 py-3">
           <Sparkles className="h-5 w-5 text-pink-400 flex-shrink-0" />
           <p className="text-xs sm:text-sm text-slate-200">

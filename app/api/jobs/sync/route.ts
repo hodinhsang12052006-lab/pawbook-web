@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { blockedPhones, ingestBatch, ingestOne, type IngestInput } from "@/lib/jobIngest/ingest";
+import { aggregatedIngestOn, blockedPhones, ingestBatch, ingestOne, recordIngestHeartbeat, type IngestInput } from "@/lib/jobIngest/ingest";
 import { parseLocation } from "@/lib/jobIngest/parse";
 
-// POST /api/jobs/sync — tool lọc bài gửi tin TIỆM NHỜ ĐĂNG (định dạng của tool):
+// POST /api/jobs/sync — bot của chủ gửi tin tiệm đăng trong nhóm cộng đồng PawNail (định dạng của tool). LUÔN NHẬN;
+// công tắc khẩn cấp INGEST_AGGREGATED=off → 410 INGEST_OFF.
 //   { title, salon_name, phone, facebook_url, location, state, salary, skills[], content, post_url, country }
 // Gửi 1 bài (object), nhiều bài (mảng) hoặc { posts: [...] } (≤ 200).
 // Bắt buộc khoá: header "Authorization: Bearer <INGEST_KEY>" (hoặc "x-api-key: <INGEST_KEY>").
@@ -58,12 +59,15 @@ function toInput(p: SyncPost): IngestInput {
 
 export async function POST(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized — thiếu hoặc sai INGEST_KEY" }, { status: 401 });
+  // Công tắc KHẨN CẤP (INGEST_AGGREGATED=off) — xem app/api/ingest/jobs/route.ts. Không đặt → nhận như bình thường.
+  if (!aggregatedIngestOn()) return NextResponse.json({ error: "Đang tạm ngừng nhận tin từ nhóm (INGEST_AGGREGATED=off).", code: "INGEST_OFF" }, { status: 410 });
   const body = (await req.json().catch(() => null)) as SyncPost | SyncPost[] | { posts?: SyncPost[] } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Body phải là JSON" }, { status: 400 });
 
   // 1 bài → trả kết quả của bài đó
   if (!Array.isArray(body) && !("posts" in body)) {
     const r = await ingestOne(toInput(body as SyncPost), await blockedPhones());
+    await recordIngestHeartbeat([r]); // nhịp tim nguồn tin
     const code = r.status === "created" ? 201 : r.status === "skipped" ? 422 : 200;
     return NextResponse.json({ status: r.status, job_id: r.jobId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null }, { status: code });
   }

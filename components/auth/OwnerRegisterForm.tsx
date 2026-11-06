@@ -15,13 +15,14 @@ import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { SURVEY } from "@/lib/ownerSurvey";
-import { stateName } from "@/lib/stateNames";
+import { AU_ALL_CODES, stateName, US_ALL_CODES } from "@/lib/stateNames";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
 import { dt } from "@/lib/i18n/dataEn";
 import { tr } from "@/lib/i18n/tr";
 
-const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
-const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Đủ 50 bang + DC / 8 bang Úc (10 bang đông thợ lên đầu).
+const US_STATES = US_ALL_CODES;
+const AU_STATES = AU_ALL_CODES;
 // Đây vừa là nhãn hiển thị vừa là giá trị lưu DB (salaryType/urgentRole) —
 // hiển thị cho MỌI người xem bất kể locale (JobBoard render verbatim), nên
 // cố tình giữ tiếng Việt, không đưa vào t() để tránh dữ liệu lẫn ngôn ngữ.

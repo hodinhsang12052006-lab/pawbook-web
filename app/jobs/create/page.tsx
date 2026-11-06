@@ -6,15 +6,16 @@ import { ArrowLeft, ArrowRight, Loader2, Save, Flame, ImagePlus, X, Play, MapPin
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { stateName } from "@/lib/stateNames";
+import { AU_ALL_CODES, stateName, US_ALL_CODES } from "@/lib/stateNames";
 import { playSound } from "@/lib/sounds";
 import Flag from "@/components/ui/Flag";
 import { useTr } from "@/lib/i18n/useTr";
 import { guessState } from "@/lib/cityState";
 import { uploadMedia, MAX_VIDEO_MB } from "@/lib/mediaUpload";
 
-const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
-const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Đủ 50 bang + DC / 8 bang Úc (10 bang đông thợ lên đầu) — trước đây chỉ 10 / 6 nên tiệm ở OH, PA, MI, TAS… không chọn được bang thật.
+const US_STATES = US_ALL_CODES;
+const AU_STATES = AU_ALL_CODES;
 // Giá trị lưu xuống DB giữ nguyên tiếng Việt (bộ lọc/tín hiệu dựa vào đó); chỉ nhãn hiển thị đổi theo ngôn ngữ.
 const SKILL_OPTIONS: [string, string][] = [["Bột/Acrylic", "Acrylic"], ["Dip/SNS", "Dip/SNS"], ["Gel-X", "Gel-X"], ["Design", "Nail art"], ["Chân tay nước", "Mani-pedi"], ["Wax", "Wax"], ["Mi/Lông mày", "Lashes/Brows"]];
 const BENEFIT_OPTIONS: [string, string][] = [["Có chỗ ở", "Housing provided"], ["Bao lương", "Guaranteed pay"], ["Hỗ trợ đổi bang", "Relocation help"], ["Hỗ trợ Visa 482/EB3", "Visa 482/EB3 support"], ["Tip cao", "High tips"], ["Xe đưa đón", "Transport provided"]];
@@ -60,6 +61,20 @@ export default function CreateJobPage() {
           toast.error(tr("Chỉ tài khoản Chủ tiệm mới đăng được tin tuyển thợ.", "Only salon owner accounts can post jobs."));
           router.push("/");
           return;
+        }
+        // Điền sẵn từ hồ sơ chủ tiệm (thị trường / bang / thành phố / SĐT / tên tiệm ở tin gần nhất) — vẫn sửa được.
+        const p = await fetch("/api/profile").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+        if (p) {
+          const m: "US" | "AU" = p.market === "AU" ? "AU" : "US";
+          const codes: readonly string[] = m === "AU" ? AU_STATES : US_STATES;
+          setMarket(m);
+          setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0][0]);
+          const st = String(p.state || "").trim().toUpperCase();
+          setState(codes.includes(st) ? st : codes[0]);
+          if (typeof p.city === "string" && p.city.trim() && p.city.trim() !== "—") setCity((c) => c || p.city.trim().slice(0, 60));
+          if (typeof p.phone === "string" && p.phone.trim()) setPhone((v) => v || p.phone.trim());
+          const lastSalon = Array.isArray(p.jobs) ? p.jobs.find((j: { salonName?: string }) => j?.salonName)?.salonName : null;
+          if (lastSalon) setSalonName((v) => v || String(lastSalon).slice(0, 60));
         }
       } finally {
         setCheckingSession(false);

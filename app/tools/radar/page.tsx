@@ -36,7 +36,8 @@ interface RadarResult {
   supplyPolicy: string;
   negotiationTips: string[];
   ownerChecklist: string[];
-  demandSignal: DemandSignal | null;
+  demandSignal: DemandSignal | null; // null khi đợt quét 9/2026 đã cũ (không còn hiện)
+  demandSnapshotDate?: string | null;
 }
 
 const TREND_SKILL_LABEL = (): Record<string, string> => ({
@@ -181,36 +182,33 @@ export default function NailRadarPage() {
               <p className="text-[10px] text-slate-500">{result.currency}{tr(" / tuần · ", " / week · ")}{stateName(market, state)}</p>
             </div>
 
-            {/* Demand signal — số tin tuyển thợ thật ghi nhận từ cộng đồng */}
-            <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-2.5">
-              <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />{tr(" Cầu thợ thực tế từ cộng đồng", " Real demand from the community")}
-              </p>
-              {result.demandSignal ? (
-                <>
-                  <p className="text-2xl font-black text-emerald-400">
-                    {result.demandSignal.demandCount}{tr(" tin tuyển thợ", " hiring posts")}
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    {tr("ghi nhận tại ", "recorded in ")}{stateName(market, state)}{tr(" qua các nhóm cộng đồng ngành nail", " across nail community groups")}
-                    {result.demandSignal.wageMentions > 0 && (
-                      <> · {result.demandSignal.wageMentions}{tr(" tin có nhắc mức lương cụ thể", " posts mention specific pay")}</>
-                    )}
-                  </p>
-                  {result.demandSignal.topSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {result.demandSignal.topSkills.map((sk) => (
-                        <span key={sk} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                          {TREND_SKILL_LABEL()[sk] || sk}
-                        </span>
-                      ))}
-                    </div>
+            {/* Số tin tuyển từ ĐỢT QUÉT NHÓM MỘT LẦN (9/2026): chỉ hiện khi đợt quét còn trong 30 ngày (máy chủ trả
+                demandSignal = null khi đã cũ) và luôn ghi rõ "một lần, 9/2026" — không trình bày như số hiện tại. */}
+            {result.demandSignal && (
+              <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/30 via-slate-900/30 to-slate-900/30 p-4 space-y-2.5" data-testid="radar-demand">
+                <p className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />{tr(" Tin tuyển thợ trong 1 đợt quét nhóm (9/2026)", " Hiring posts in a one-off group scan (Sep 2026)")}
+                </p>
+                <p className="text-2xl font-black text-emerald-400">
+                  {result.demandSignal.demandCount}{tr(" tin tuyển thợ", " hiring posts")}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  {tr("tại ", "in ")}{stateName(market, state)}{tr(" · đợt quét một lần các nhóm ngành nail, 9/2026 — không phải số hiện tại", " · one-off scan of nail community groups, Sep 2026 — not a current count")}
+                  {result.demandSignal.wageMentions > 0 && (
+                    <> · {result.demandSignal.wageMentions}{tr(" tin có nhắc mức lương cụ thể", " posts mention specific pay")}</>
                   )}
-                </>
-              ) : (
-                <p className="text-xs text-slate-500">{tr("Chưa đủ dữ liệu cộng đồng cho bang này trong đợt quét gần nhất.", "Not enough community data for this state in the latest scan.")}</p>
-              )}
-            </div>
+                </p>
+                {result.demandSignal.topSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {result.demandSignal.topSkills.map((sk) => (
+                      <span key={sk} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                        {TREND_SKILL_LABEL()[sk] || sk}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Turn split */}
             <div className="glass-card rounded-2xl p-4 space-y-2.5">

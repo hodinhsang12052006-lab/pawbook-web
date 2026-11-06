@@ -162,7 +162,11 @@ export interface RadarResult {
   supplyPolicy: string;
   negotiationTips: string[];
   ownerChecklist: string[];
+  /** Số tin tuyển từ ĐỢT QUÉT NHÓM MỘT LẦN (9/2026). null khi đợt quét đã quá DEMAND_SNAPSHOT_MAX_AGE_DAYS
+   *  (cách thu thập này PawNail không dùng nữa → không trình bày như số hiện tại). */
   demandSignal: DemandSignal | null;
+  /** Ngày đợt quét (để ghi "đợt quét một lần, 9/2026") — null khi demandSignal null. */
+  demandSnapshotDate: string | null;
 }
 
 export function getRadarEstimate(market: Market, state: string, skill: SkillKey): RadarResult | null {
@@ -186,6 +190,9 @@ export function getRadarEstimate(market: Market, state: string, skill: SkillKey)
     supplyPolicy: SUPPLY_POLICY_BY_SKILL[skill],
     negotiationTips: NEGOTIATION_TIPS,
     ownerChecklist: OWNER_CHECKLIST,
-    demandSignal: getDemandSignal(market, state),
+    ...(() => {
+      const demandSignal = demandSnapshotFresh() ? getDemandSignal(market, state) : null;
+      return { demandSignal, demandSnapshotDate: demandSignal ? DEMAND_SNAPSHOT_DATE : null };
+    })(),
   };
 }

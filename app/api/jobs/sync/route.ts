@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { blockedPhones, ingestBatch, ingestOne, recordIngestHeartbeat, type IngestInput } from "@/lib/jobIngest/ingest";
+import { aggregatedIngestOn, blockedPhones, ingestBatch, ingestOne, recordIngestHeartbeat, type IngestInput } from "@/lib/jobIngest/ingest";
 import { parseLocation } from "@/lib/jobIngest/parse";
 
 // POST /api/jobs/sync — tool lọc bài gửi tin TIỆM NHỜ ĐĂNG (định dạng của tool):
@@ -58,6 +58,8 @@ function toInput(p: SyncPost): IngestInput {
 
 export async function POST(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized — thiếu hoặc sai INGEST_KEY" }, { status: 401 });
+  // 11/2026: ngừng nhận tin tổng hợp từ tool lọc nhóm (mặc định) — xem app/api/ingest/jobs/route.ts
+  if (!aggregatedIngestOn()) return NextResponse.json({ error: "Đã ngừng nhận tin tổng hợp (INGEST_AGGREGATED tắt).", code: "INGEST_OFF" }, { status: 410 });
   const body = (await req.json().catch(() => null)) as SyncPost | SyncPost[] | { posts?: SyncPost[] } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Body phải là JSON" }, { status: 400 });
 

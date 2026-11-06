@@ -11,18 +11,18 @@ import { timeAgo } from "@/lib/feedFormat";
 //   "ingest" (và nguồn khác) = tin TỔNG HỢP từ bài đăng công khai: tiệm KHÔNG nhờ đăng, PawNail không đại diện tiệm.
 export function sourceLabel(source?: string | null): { chip: string; hint: string } {
   if (source === "assisted") return { chip: tr("Đăng hộ tiệm", "Posted for salon"), hint: tr("PawNail đăng hộ theo yêu cầu của tiệm — gọi trực tiếp tiệm để hỏi", "Posted by PawNail at the salon's request — call the salon directly") };
-  return { chip: tr("Tin tổng hợp", "Aggregated"), hint: tr("Tổng hợp từ bài đăng công khai — PawNail không phải người đăng. Gọi hỏi tiệm trước khi đi.", "Aggregated from a public post — PawNail didn't write it. Call the salon to confirm.") };
+  return { chip: tr("Tin tổng hợp", "Aggregated"), hint: tr("Tổng hợp từ bài đăng công khai — PawNail không phải người đăng. Mở bài gốc để liên hệ tiệm.", "Aggregated from a public post — PawNail didn't write it. Open the original post to contact the salon.") };
 }
 
 // Tin đăng hộ / tổng hợp: ghi rõ nguồn, địa chỉ + bản đồ, hết hạn; tiệm có thể "nhận tin" (tự quản lý trên
 // PawNail) hoặc "gỡ tin" — gửi yêu cầu cho admin.
-export function PostedForSalonBanner({ source, postedAt, expired, address, repostCount }: { source?: string | null; postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number }) {
+export function PostedForSalonBanner({ source, postedAt, expired, address, repostCount, sourceName }: { source?: string | null; postedAt?: string | null; expired?: boolean; address?: string | null; repostCount?: number; sourceName?: string | null }) {
   const assisted = source === "assisted";
   return (
     <div className="space-y-2">
       {expired && (
         <p className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-500/25">
-          <Clock className="h-4 w-4 shrink-0" />{tr(" Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", " This listing has expired — the salon may be fully staffed. Call first.")}
+          <Clock className="h-4 w-4 shrink-0" />{tr(" Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Hỏi tiệm trước khi đi nhé.", " This listing has expired — the salon may be fully staffed. Check with the salon first.")}
         </p>
       )}
       <p className="flex items-start gap-2 rounded-xl bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-500/25" data-testid="source-banner">
@@ -36,9 +36,11 @@ export function PostedForSalonBanner({ source, postedAt, expired, address, repos
           </span>
         ) : (
           <span>
-            {tr("Tin tổng hợp từ bài đăng công khai — PawNail không phải người đăng và không đại diện tiệm", "Aggregated from a public post — PawNail did not write it and does not represent the salon")}
+            {sourceName
+              ? tr(`Tin tổng hợp từ 1 bài đăng công khai trên ${sourceName} — PawNail không phải người đăng và không đại diện tiệm`, `Aggregated from a public post on ${sourceName} — PawNail did not write it and does not represent the salon`)
+              : tr("Tin tổng hợp từ bài đăng công khai — PawNail không phải người đăng và không đại diện tiệm", "Aggregated from a public post — PawNail did not write it and does not represent the salon")}
             {postedAt ? tr(` · đăng ${timeAgo(postedAt)}`, ` · posted ${timeAgo(postedAt)}`) : ""}
-            {tr(". Gọi hỏi tiệm trước khi đi.", ". Call the salon to confirm before you go.")}
+            {tr(". Đây là đoạn trích — mở bài gốc để xem đầy đủ và liên hệ tiệm.", ". This is an excerpt — open the original post for full details and to contact the salon.")}
           </span>
         )}
       </p>

@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
 import { findPhone } from "@/lib/jobIngest/parse";
-import { activeJobWhere, ASSISTED_SOURCE, blockedPhones, blockPhone, commitIngest, ingestBatch, ingestHeartbeat, INGEST_SOURCE, jobTtlDays, prepareIngest, type IngestInput } from "@/lib/jobIngest/ingest";
+import { activeJobWhere, ASSISTED_SOURCE, blockedPhones, blockPhone, commitIngest, ingestBatch, ingestHeartbeat, INGEST_SOURCE, jobTtlDays, prepareIngest, removeJobPublicData, type IngestInput } from "@/lib/jobIngest/ingest";
 import { externalJobsStatus } from "@/lib/jobFeeds/sync";
 
 // Admin: "Đăng hộ tiệm" (tiệm NHỜ đăng — ghi nhận người yêu cầu) + xử lý yêu cầu "Nhận tin" / "Gỡ tin".
@@ -43,7 +43,7 @@ export async function GET() {
     externalJobsStatus().catch(() => null),
   ]);
   return NextResponse.json(
-    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, lastIngestAt: hb.lastAt, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, staleHours: hb.staleHours, external },
+    { requests, active, hiddenByFilter: Math.max(0, notExpired - active), expired, ingestAccepting: hb.accepting, lastIngestAt: hb.lastAt, lastBatchAt: hb.lastBatchAt, ingestStale: hb.stale, staleHours: hb.staleHours, external },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }
@@ -83,7 +83,8 @@ export async function POST(req: Request) {
       return { text: s(x.text, 6000), sourceUrl: s(x.sourceUrl, 300), ...overrides(x) } as IngestInput;
     });
     const out = await ingestBatch(inputs, { assisted: true });
-    const ids = out.results.filter((r) => r.status !== "skipped" && r.jobId).map((r) => r.jobId!);
+    // Ghi người yêu cầu cho tin MỚI hoặc tiệm nhờ đăng LẠI bài mới; gửi lại đúng bài cũ ("updated") không thêm dòng trùng.
+    const ids = [...new Set(out.results.filter((r) => (r.status === "created" || r.status === "bumped") && r.jobId).map((r) => r.jobId!))];
     if (ids.length) {
       await prisma.jobRequest.createMany({
         data: ids.map((jobId) => ({ jobId, kind: "assist", name, contact, note: `requestedAt=${reqAt.toISOString()} · admin=${adminId}`, userId: null, handledAt: new Date() })),
@@ -99,8 +100,9 @@ export async function POST(req: Request) {
       const e164 = findPhone(r.job.phone)?.e164;
       if (e164) await blockPhone(e164); // không đăng lại số này
       await prisma.jobRequest.updateMany({ where: { jobId: r.jobId, handledAt: null }, data: { handledAt: new Date() } });
-      // Cho hết hạn ngay thay vì xoá → giữ lại lịch sử yêu cầu (JobRequest) để đối chiếu sau này
-      await prisma.job.update({ where: { id: r.jobId }, data: { expiresAt: new Date() } });
+      // Giữ dòng tin (lịch sử JobRequest còn tham chiếu) nhưng XOÁ hết dữ liệu công khai của tiệm (SĐT, mô tả, địa chỉ,
+      // tên tiệm, link bài gốc, ảnh) + đánh dấu "removed" → /jobs/:id trả 410, không còn trong bảng việc / thẻ chia sẻ.
+      await removeJobPublicData(r.jobId);
       return NextResponse.json({ ok: true, removed: true });
     }
     if (b.decision === "claim") {

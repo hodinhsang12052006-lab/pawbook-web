@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import {
   ArrowLeft, MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Building, Clock,
-  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight, Eye, Zap, Timer, Sparkles,
+  Bookmark, BookmarkCheck, Share2, ShieldCheck, Globe2, Wallet, ChevronRight, Eye, Zap, Timer, Sparkles, ExternalLink,
 } from "lucide-react";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
@@ -55,7 +55,11 @@ interface JobDetail {
   sourcePostedAt?: string | null;
   address?: string | null;
   expired?: boolean;
+  /** Số ngày còn lại tới lúc tin tự ẩn (máy chủ tính) — null nếu không có hạn. */
+  daysLeft?: number | null;
   repostCount?: number;
+  /** Tin tổng hợp: nguồn + link bài gốc; phone = "" (không hiện SĐT lấy từ bài đăng). */
+  sourceLink?: { href: string; name: string } | null;
 }
 
 export default function JobDetailPage({ params }: PageProps) {
@@ -83,6 +87,7 @@ export default function JobDetailPage({ params }: PageProps) {
         setLoading(true);
         setError(null);
         const res = await fetch(`/api/jobs/${jobId}`);
+        if (res.status === 410) throw new Error(tr("Tin này đã được gỡ.", "This listing has been removed."));
         if (!res.ok) throw new Error(tr("Tin tuyển dụng không tồn tại hoặc đã bị gỡ bỏ.", "This job doesn't exist or has been removed."));
         const data: JobDetail = await res.json();
         if (cancelled) return;
@@ -144,7 +149,7 @@ export default function JobDetailPage({ params }: PageProps) {
     const j = await res?.json().catch(() => ({}));
     setRenewing(false);
     if (!res?.ok) { toast.error(j?.error || tr("Chưa gia hạn được, thử lại sau.", "Couldn't renew, please try again.")); return; }
-    setJob((prev) => (prev ? { ...prev, expiresAt: j.expiresAt, expired: false } : prev));
+    setJob((prev) => (prev ? { ...prev, expiresAt: j.expiresAt, daysLeft: typeof j.daysLeft === "number" ? j.daysLeft : null, expired: false } : prev));
     toast.success(tr("Đã gia hạn tin thêm 30 ngày.", "Listing renewed for 30 more days."));
   };
 
@@ -207,8 +212,7 @@ export default function JobDetailPage({ params }: PageProps) {
   ];
   const isOwnJob = user?.id && user.id === job.ownerId;
   const postedForSalon = !!job.source;
-  const expiresMs = job.expiresAt ? new Date(job.expiresAt).getTime() : null;
-  const daysLeft = expiresMs ? Math.ceil((expiresMs - Date.now()) / 86_400_000) : null;
+  const daysLeft = typeof job.daysLeft === "number" ? job.daysLeft : null; // máy chủ tính (không gọi Date.now() lúc render)
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
@@ -352,7 +356,7 @@ export default function JobDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {postedForSalon && <PostedForSalonBanner source={job.source} postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} />}
+          {postedForSalon && <PostedForSalonBanner source={job.source} postedAt={job.sourcePostedAt} expired={job.expired} address={job.address} repostCount={job.repostCount} sourceName={job.sourceLink?.name} />}
           {!postedForSalon && job.expired && !isOwnJob && (
             <p className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-200 ring-1 ring-amber-500/25">{tr("Tin này đã hết hạn — tiệm có thể đã tuyển đủ. Gọi hỏi trước khi đi nhé.", "This listing has expired — the salon may be fully staffed. Call first.")}</p>
           )}
@@ -369,13 +373,27 @@ export default function JobDetailPage({ params }: PageProps) {
 
           {!isOwnJob && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800/80">
-              <a
-                href={telHref(job.phone, job.market)}
-                onClick={() => trackJobContact(job.id)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press py-3.5 text-base font-bold text-white transition-colors"
-              >
-                <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
-              </a>
+              {job.phone ? (
+                <a
+                  href={telHref(job.phone, job.market)}
+                  onClick={() => trackJobContact(job.id)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press py-3.5 text-base font-bold text-white transition-colors"
+                >
+                  <Phone className="h-5 w-5" />{tr(" Gọi ngay ", " Call now ")}{formatPhone(job.phone, job.market)}
+                </a>
+              ) : job.sourceLink ? (
+                // Tin TỔNG HỢP: không hiện SĐT lấy từ bài đăng — liên hệ tiệm qua bài gốc (ghi rõ nguồn)
+                <a
+                  href={job.sourceLink.href}
+                  target="_blank"
+                  rel="noopener nofollow ugc"
+                  onClick={() => trackJobContact(job.id)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pink-600 hover:bg-pn-brand-hover active:bg-pn-brand-press px-3 py-3.5 text-center text-base font-bold text-white transition-colors"
+                  data-testid="job-source-link"
+                >
+                  <ExternalLink className="h-5 w-5 flex-shrink-0" />{tr(` Xem bài gốc trên ${job.sourceLink.name}`, ` View the original post on ${job.sourceLink.name}`)}
+                </a>
+              ) : null}
               {!postedForSalon && <button
                 onClick={() => {
                   if (user?.id) trackJobContact(job.id);

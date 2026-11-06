@@ -8,9 +8,13 @@ import { timeAgo } from "@/lib/feedFormat";
 interface Final { title: string; salonName: string; phone: string; market: "US" | "AU"; state: string; city: string; salaryAmount: string; salaryType: string; skills: string[]; benefits: string[]; address: string | null }
 interface DryRun { isHiring: boolean; decision: "created" | "bumped" | "updated" | "skipped"; reason?: string | null; final?: Final; phoneDisplay: string | null; salonName: string | null; city: string | null; state: string | null; salaryAmount: string; salaryType: string }
 interface Req { id: string; kind: string; name: string; contact: string; note: string | null; userId: string | null; createdAt: string; job: { id: string; salonName: string; city: string; state: string; phone: string } }
-interface ProviderRun { flag: boolean; keys: boolean; status: string; calls?: number; httpStatus?: number | null; active?: Record<string, number>; hidden?: Record<string, number>; lastSuccessAt?: string | null; alert?: string | null; markets?: Record<string, { fetched: number; created: number; providerCount: number | null }> }
-interface External { flags: { adzuna: { flag: boolean; keys: boolean }; careerjet: { flag: boolean; keys: boolean } }; last: { at: string; adzuna: ProviderRun } | null; live: { active: Record<string, number>; hidden: Record<string, number>; expired: number } | null }
-interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; lastIngestAt: string | null; lastBatchAt: string | null; ingestStale: boolean; staleHours: number; external: External | null }
+interface ProviderRun { flag: boolean; keys: boolean; licensed?: boolean; status: string; calls?: number; httpStatus?: number | null; active?: Record<string, number>; hidden?: Record<string, number>; lastSuccessAt?: string | null; alert?: string | null; markets?: Record<string, { fetched: number; dropped?: number; created: number; providerCount: number | null }> }
+interface External {
+  flags: { adzuna: { flag: boolean; keys: boolean; licensed?: boolean; public?: boolean }; careerjet: { flag: boolean; keys: boolean; terms?: boolean; enabled?: boolean }; referralFee?: boolean };
+  last: { at: string; adzuna: ProviderRun } | null;
+  live: { active: Record<string, number>; hidden: Record<string, number>; expired: number } | null;
+}
+interface Data { requests: Req[]; active: number; hiddenByFilter: number; expired: number; ingestAccepting?: boolean; lastIngestAt: string | null; lastBatchAt: string | null; ingestStale: boolean; staleHours: number; external: External | null }
 
 const DECISION: Record<string, string> = { created: "Sẽ tạo tin mới", bumped: "Tiệm đã có tin → sẽ đẩy tin lên đầu (đăng lại)", updated: "Trùng đúng bài cũ → sẽ cập nhật", skipped: "Sẽ BỎ QUA" };
 
@@ -62,9 +66,6 @@ export default function PostForSalons() {
       <input value={ov[k]} onChange={(e) => setOv((o) => ({ ...o, [k]: e.target.value }))} placeholder={ph} className="input-field !py-1.5 text-xs" data-testid={`ov-${k}`} />
     </label>
   );
-  const stale = !!data?.ingestStale;
-  // Tool vẫn gửi lô (đúng khoá) nhưng mọi bài bị loại → lỗi ở bộ lọc / định dạng, không phải tool ngừng
-  const rejectedOnly = !!data?.lastBatchAt && (!data.lastIngestAt || Date.parse(data.lastBatchAt) > Date.parse(data.lastIngestAt) + 60_000);
   const canPost = !!pv && pv.decision !== "skipped" && who.name.trim().length > 1 && who.contact.trim().length >= 6;
   const ext = data?.external;
 
@@ -78,9 +79,9 @@ export default function PostForSalons() {
         {data && (
           <p className="mt-1 text-xs text-slate-300" data-testid="ingest-stats">
             Đang hiện công khai: <b>{data.active}</b> tin (đăng hộ + tổng hợp){data.hiddenByFilter ? ` · bộ lọc chữ ẩn ${data.hiddenByFilter}` : ""} · hết hạn: {data.expired} ·{" "}
-            <span className={stale ? "font-bold text-red-300" : "text-emerald-300"} data-testid="ingest-heartbeat">
-              tin tổng hợp nhận lần cuối: {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}
-              {stale ? ` ⚠ quá ${data.staleHours} giờ không có tin mới — ${rejectedOnly ? "tool vẫn gửi nhưng mọi bài bị loại (xem lý do trong phản hồi API)" : "tool đã ngừng gửi? kiểm tra tool / INGEST_KEY"}` : ""}
+            {/* Chỉ thông tin (không cảnh báo, không kêu khởi động lại tool lọc nhóm — cách thu thập đó đã dừng) */}
+            <span className="text-slate-400" data-testid="ingest-heartbeat">
+              tin tổng hợp: {data.ingestAccepting ? "đang nhận" : "đã ngừng nhận tin mới"} · nhận lần cuối {data.lastIngestAt ? timeAgo(data.lastIngestAt) : "chưa ghi nhận"}
             </span>
             {data.lastBatchAt && <span className="text-slate-500"> · lô gần nhất: {timeAgo(data.lastBatchAt)}</span>}
           </p>
@@ -137,18 +138,27 @@ export default function PostForSalons() {
         <div className="space-y-1 rounded-xl bg-slate-950/60 p-3 text-xs ring-1 ring-white/10" data-testid="external-status">
           <p className="flex items-center gap-2 font-bold text-slate-200"><Globe className="h-3.5 w-3.5" /> Nguồn việc đối tác</p>
           <p className="text-slate-400">
-            Adzuna: {ext.flags.adzuna.flag ? "BẬT" : "tắt"} · khoá {ext.flags.adzuna.keys ? "có" : "chưa có"}
-            {ext.live ? ` · đang hiện US ${ext.live.active.US ?? 0} / AU ${ext.live.active.AU ?? 0}` : " · chưa tạo bảng (prisma/sql/2026-11-07_external_jobs.sql)"}
+            Adzuna: {ext.flags.adzuna.flag ? "BẬT" : "tắt"} · khoá {ext.flags.adzuna.keys ? "có" : "chưa có"} · giấy phép {ext.flags.adzuna.licensed ? "có (ADZUNA_LICENSE_REF)" : "CHƯA có"}
+            {ext.live ? ` · ${ext.flags.adzuna.public ? "đang hiện" : "đã lấy (chưa hiện)"} US ${ext.live.active.US ?? 0} / AU ${ext.live.active.AU ?? 0}` : " · chưa tạo bảng (prisma/sql/2026-11-07_external_jobs.sql)"}
             {ext.live && Object.keys(ext.live.hidden).length ? ` · ẩn: ${Object.entries(ext.live.hidden).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}
           </p>
+          {ext.flags.adzuna.flag && !ext.flags.adzuna.licensed && (
+            <p className="font-bold text-amber-300" data-testid="adzuna-no-license">
+              Chưa có giấy phép: chỉ kiểm tra dữ liệu (độ phủ / chất lượng) — tin Adzuna KHÔNG hiện công khai. Có giấy phép thương mại thì đặt ADZUNA_LICENSE_REF.
+            </p>
+          )}
           {ext.last?.adzuna && (
             <p className={ext.last.adzuna.alert ? "font-bold text-red-300" : "text-slate-400"}>
               Lượt cron gần nhất: {timeAgo(ext.last.at)} · {ext.last.adzuna.status}{ext.last.adzuna.httpStatus ? ` (HTTP ${ext.last.adzuna.httpStatus})` : ""}
-              {ext.last.adzuna.markets ? ` · ${Object.entries(ext.last.adzuna.markets).map(([m, v]) => `${m}: ${v.fetched} lấy về / ${v.created} mới${v.providerCount != null ? ` / Adzuna có ${v.providerCount}` : ""}`).join(" · ")}` : ""}
+              {ext.last.adzuna.markets ? ` · ${Object.entries(ext.last.adzuna.markets).map(([m, v]) => `${m}: ${v.fetched} lấy về / ${v.created} mới${v.dropped ? ` / ${v.dropped} bỏ (link lạ, thiếu ngày)` : ""}${v.providerCount != null ? ` / Adzuna có ${v.providerCount}` : ""}`).join(" · ")}` : ""}
               {ext.last.adzuna.alert === "auth_error" ? " ⚠ khoá bị từ chối — kiểm tra ADZUNA_APP_ID/KEY hoặc giấy phép" : ext.last.adzuna.alert === "empty_48h" ? " ⚠ 48 giờ không có tin nào hiện được" : ext.last.adzuna.alert ? ` ⚠ ${ext.last.adzuna.alert}` : ""}
             </p>
           )}
-          <p className="text-slate-400">Careerjet (tìm trực tiếp, không lưu): {ext.flags.careerjet.flag ? "BẬT" : "tắt"} · khoá {ext.flags.careerjet.keys ? "có" : "chưa có"}</p>
+          <p className="text-slate-400">
+            Careerjet (tìm trực tiếp, không lưu): {ext.flags.careerjet.flag ? "BẬT" : "tắt"} · khoá {ext.flags.careerjet.keys ? "có" : "chưa có"} · điều khoản {ext.flags.careerjet.terms ? "đã xác nhận" : "CHƯA xác nhận bằng văn bản (CAREERJET_TERMS_CONFIRMED)"}
+            {ext.flags.careerjet.enabled ? " → nút tìm đang hiện" : " → nút tìm không hiện"}
+            {ext.flags.referralFee ? " · có ghi \"PawNail có thể nhận phí giới thiệu\"" : ""}
+          </p>
         </div>
       )}
 

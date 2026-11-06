@@ -51,7 +51,7 @@ export async function GET() {
       install: { installed },
       demo: { users: demoUsers, jobs: demoJobs, posts: demoPosts },
       designs: { drafts, published, noImage },
-      ingest: { active: ingestActive, pendingRequests: ingestRequests, lastAt: hb?.lastAt ?? null, stale: hb?.stale ?? true, staleHours: hb?.staleHours ?? 24 },
+      ingest: { active: ingestActive, pendingRequests: ingestRequests, accepting: hb?.accepting ?? false, lastAt: hb?.lastAt ?? null, stale: hb?.stale ?? true, staleHours: hb?.staleHours ?? 24 },
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

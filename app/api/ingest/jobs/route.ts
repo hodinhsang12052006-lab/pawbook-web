@@ -2,11 +2,12 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { realOnly } from "@/lib/demo";
-import { activeJobWhere, INGEST_SOURCE, ingestBatch, type IngestInput } from "@/lib/jobIngest/ingest";
+import { activeJobWhere, aggregatedIngestOn, INGEST_SOURCE, ingestBatch, type IngestInput } from "@/lib/jobIngest/ingest";
 
 // Cổng nhận tin từ tool lọc nhóm. Bảo vệ bằng INGEST_KEY (Vercel):  Authorization: Bearer <INGEST_KEY>
 //   POST { posts: [{ text, sourceUrl?, postedAt?, phone?, salonName?, address?, city?, state?, zip?, market?, salary? }] }  (≤ 200 bài/lần)
-//   GET  → thống kê tin tổng hợp
+//        → MẶC ĐỊNH TẮT (410 INGEST_OFF) — chỉ nhận khi INGEST_AGGREGATED=on
+//   GET  → thống kê tin tổng hợp (accepting = đang nhận hay không)
 export const maxDuration = 60;
 
 function authed(req: Request) {
@@ -19,6 +20,9 @@ function authed(req: Request) {
 
 export async function POST(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // 11/2026: ngừng nhận tin tổng hợp từ tool lọc nhóm (không có người yêu cầu, SĐT lấy từ bài đăng). Mở lại chỉ khi
+  // chủ đặt INGEST_AGGREGATED=on. Tin tiệm NHỜ đăng → Admin → Studio → "Đăng hộ tiệm" (ghi người yêu cầu).
+  if (!aggregatedIngestOn()) return NextResponse.json({ error: "Đã ngừng nhận tin tổng hợp (INGEST_AGGREGATED tắt).", code: "INGEST_OFF" }, { status: 410 });
   const body = (await req.json().catch(() => null)) as { posts?: unknown } | null;
   const posts = Array.isArray(body?.posts) ? (body!.posts as IngestInput[]).filter((p) => p && typeof p === "object") : [];
   if (!posts.length) return NextResponse.json({ error: "posts: mảng bài đăng (≤ 200)" }, { status: 400 });
@@ -37,5 +41,5 @@ export async function GET(req: Request) {
     prisma.job.count({ where: { source: INGEST_SOURCE, expiresAt: { lte: now } } }),
     prisma.job.groupBy({ by: ["market", "state"], where: shown, _count: { _all: true } }),
   ]);
-  return NextResponse.json({ active, hiddenByFilter: Math.max(0, notExpired - active), expired, byState: byState.map((r) => ({ market: r.market, state: r.state, n: r._count._all })) });
+  return NextResponse.json({ accepting: aggregatedIngestOn(), active, hiddenByFilter: Math.max(0, notExpired - active), expired, byState: byState.map((r) => ({ market: r.market, state: r.state, n: r._count._all })) });
 }

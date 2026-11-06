@@ -279,7 +279,7 @@ model Job {
   createdAt DateTime @default(now())
 
   // TIN TỔNG HỢP (nhận từ tool lọc nhóm qua /api/ingest/jobs) — prisma/sql/2026-10-11e_job_ingest.sql
-  source         String? // "ingest" = tin tổng hợp; null = chủ tiệm tự đăng
+  source         String? // null = chủ tiệm tự đăng · "assisted" = đăng hộ theo yêu cầu tiệm · "ingest" = tin tổng hợp · "removed" = đã gỡ theo yêu cầu (dữ liệu công khai đã xoá)
   sourceUrl      String? // link bài gốc (chỉ admin thấy)
   sourceKey      String? // khoá chống trùng (SĐT + nội dung)
   sourcePostedAt DateTime? // ngày bài gốc đăng
@@ -318,8 +318,8 @@ model ExternalJob {
   locationLabel     String
   state             String?
   city              String?
-  lat               Float?
-  lng               Float?
+  lat               Float? // KHÔNG ghi (tối thiểu hoá dữ liệu — chưa có tính năng nào cần); giữ cột để không phải đổi bảng
+  lng               Float? // như trên
   salaryMin         Int? // chỉ khi nhà tuyển dụng ghi lương thật (salary_is_predicted = "0")
   salaryMax         Int?
   salaryCurrency    String? // USD | AUD
@@ -328,7 +328,7 @@ model ExternalJob {
   contractType      String? // permanent | contract
   snippet           String? // ≤ 500, bỏ HTML; NULL nếu có SĐT / email
   redirectUrl       String
-  providerCreatedAt DateTime
+  providerCreatedAt DateTime // ngày đăng gốc của Adzuna; tin không có ngày đăng bị bỏ (không bịa "vừa đăng")
   firstSeenAt       DateTime @default(now())
   lastSeenAt        DateTime
   expiresAt         DateTime
@@ -339,14 +339,15 @@ model ExternalJob {
   @@index([market, state])
   @@index([expiresAt])
   @@index([dedupeKey])
+  @@index([provider, market, hiddenReason, expiresAt]) // truy vấn hiển thị /api/jobs/external
 }
 
-// "Tôi là chủ tiệm này" / "Gỡ tin" trên tin tổng hợp → admin xử lý.
+// "Tôi là chủ tiệm này" / "Gỡ tin" trên tin tổng hợp → admin xử lý; "assist" = người của tiệm đã nhờ PawNail đăng hộ.
 model JobRequest {
   id        String    @id @default(cuid())
   jobId     String
   job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  kind      String // "claim" | "remove"
+  kind      String // "claim" | "remove" | "assist"
   name      String
   contact   String
   note      String?

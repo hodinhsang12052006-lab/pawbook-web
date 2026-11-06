@@ -11,7 +11,7 @@ interface Growth {
   install: { installed: number };
   demo: { users: number; jobs: number; posts: number };
   designs: { drafts: number; published: number; noImage: number };
-  ingest?: { active: number; pendingRequests: number; lastAt?: string | null; stale?: boolean; staleHours?: number };
+  ingest?: { active: number; pendingRequests: number; accepting?: boolean; lastAt?: string | null; stale?: boolean; staleHours?: number };
 }
 
 // "Sức khoẻ tăng trưởng" — số THẬT (đã loại tài khoản mẫu), để biết tính năng nào giữ chân người dùng.
@@ -51,9 +51,11 @@ export default function GrowthHealth() {
           Dữ liệu nhập sẵn (email đuôi pawnailjobs.demo, không tính vào số người dùng ở trên): {g.demo.users} tài khoản, {g.demo.jobs} tin tuyển, {g.demo.posts} bài đăng.
         </p>
       )}
-      {g.ingest?.stale && (
-        <p className="rounded-xl bg-red-500/10 p-3 text-xs text-red-200 ring-1 ring-red-500/25" data-testid="ingest-stale">
-          ⚠ Nguồn tin tổng hợp: {g.ingest.lastAt ? `lần cuối nhận tin ${new Date(g.ingest.lastAt).toLocaleString("vi-VN")}` : "chưa nhận tin nào"} — quá {g.ingest.staleHours ?? 24} giờ không có tin mới. Tin cũ tự hết hạn sau 14 ngày nên bảng việc sẽ vơi dần. Kiểm tra tool / INGEST_KEY (Studio → Đăng hộ tiệm).
+      {/* CHỈ THÔNG TIN: tin tổng hợp từ tool lọc nhóm đã ngừng nhận (quy tắc ghi nguồn / không thu SĐT) — không kêu
+          khởi động lại tool. Cách có thêm tin: tiệm tự đăng, "Đăng hộ tiệm" khi tiệm nhờ, nguồn đối tác có giấy phép. */}
+      {g.ingest && (g.ingest.stale || g.ingest.accepting === false) && (
+        <p className="rounded-xl bg-white/[0.03] p-3 text-xs leading-relaxed text-slate-400 ring-1 ring-white/10" data-testid="ingest-stale">
+          Tin tổng hợp: {g.ingest.accepting === false ? "đã ngừng nhận tin mới" : "đang nhận"} · {g.ingest.lastAt ? `lần cuối nhận ${new Date(g.ingest.lastAt).toLocaleString("vi-VN")}` : "chưa nhận tin nào"}. Tin còn lại tự hết hạn sau 14 ngày.
         </p>
       )}
       {g.designs.published === 0 && g.designs.drafts > 0 && (

@@ -1,8 +1,14 @@
 // NHẬN TIN TỔNG HỢP từ tool lọc nhóm (source "ingest") + tin ADMIN ĐĂNG HỘ theo yêu cầu tiệm (source "assisted").
+//   - 11/2026: NGỪNG NHẬN tin tổng hợp mới từ tool lọc nhóm (mặc định; INGEST_AGGREGATED=on mới mở lại). Tin đó
+//     không có người yêu cầu, SĐT lấy từ bài đăng → trái quy tắc "không thu SĐT, ghi nguồn có link về bài gốc".
+//     Tin cũ còn hạn vẫn hiện tới khi hết hạn (≤ 14 ngày) nhưng KHÔNG hiện SĐT, chỉ hiện nguồn + link bài gốc
+//     (lib/jobIngest/display.publicJob); tin không có link bài gốc thì không hiện. Đăng hộ THEO YÊU CẦU tiệm
+//     ("assisted", có ghi người yêu cầu) là đường duy nhất PawNail đăng tin thay tiệm.
 //   - Tách SĐT / tên tiệm / địa chỉ / bang / lương… (parse.ts); trường tool đã tách sẵn được ưu tiên.
-//   - Chống trùng: cùng SĐT + nội dung (sourceKey) hoặc cùng SĐT còn hạn → CẬP NHẬT tin cũ.
+//   - Chống trùng: cùng SĐT + nội dung (sourceKey) hoặc cùng SĐT còn hạn → CẬP NHẬT tin cũ. Tin tổng hợp KHÔNG BAO GIỜ
+//     ghi đè tin đăng hộ theo yêu cầu (giữ nguồn gốc mạnh hơn).
 //   - Tự hết hạn sau INGEST_TTL_DAYS (mặc định 14) kể từ ngày bài gốc đăng.
-//   - Số đã yêu cầu "Gỡ tin" (admin duyệt) → không bao giờ đăng lại.
+//   - Số đã yêu cầu "Gỡ tin" (admin duyệt) → không bao giờ đăng lại; dữ liệu công khai của tin bị xoá (removeJobPublicData).
 //   - prepareIngest (thuần, không ghi DB) → commitIngest: admin "Xem trước" dùng ĐÚNG quyết định thật (dryRun).
 // Tất cả tin đứng tên 1 tài khoản hệ thống "PawNail · Tin tổng hợp" (KHÔNG tạo tài khoản mạo danh từng tiệm).
 import crypto from "node:crypto";
@@ -16,17 +22,38 @@ import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
 export const INGEST_SOURCE = "ingest";
 /** Admin đăng hộ THEO YÊU CẦU của tiệm (có ghi nhận người yêu cầu) — khác tin tổng hợp từ bài công khai. */
 export const ASSISTED_SOURCE = "assisted";
+/** Tin đã GỠ theo yêu cầu của tiệm: giữ dòng (lịch sử JobRequest) nhưng đã xoá SĐT / mô tả / địa chỉ / tên tiệm;
+ *  GET /api/jobs/:id trả 410, không hiện ở đâu nữa. */
+export const REMOVED_SOURCE = "removed";
 export const INGEST_OWNER_EMAIL = "tonghop@feed.pawnail.invalid";
-/** Lần cuối tool lọc nhóm gửi được ≥ 1 tin (nhịp tim — admin thấy khi nguồn tin ngừng gửi). */
+/** Có nhận tin TỔNG HỢP mới từ tool lọc nhóm không (/api/ingest/jobs, /api/jobs/sync). Mặc định TẮT. */
+export const aggregatedIngestOn = () => /^(on|1|true|yes)$/i.test(String(process.env.INGEST_AGGREGATED || "").trim());
+/** Lần cuối tool lọc nhóm gửi được ≥ 1 tin (chỉ để admin biết — không phải việc cần xử lý). */
 export const INGEST_LAST_AT_KEY = "ingest_last_at";
 /** Lần cuối tool gửi 1 lô đúng khoá, KỂ CẢ khi mọi bài bị loại → phân biệt "tool ngừng gửi" với "tool gửi nhưng bị loại hết". */
 export const INGEST_LAST_BATCH_AT_KEY = "ingest_last_batch_at";
-/** Quá N giờ không nhận được tin nào → trang admin cảnh báo đỏ. */
+/** Quá N giờ không nhận tin → trang admin ghi "không có tin mới" (thông tin, không cảnh báo / không kêu khởi động tool). */
 export const INGEST_STALE_HOURS = 24;
 const DAY = 86_400_000;
 export const ingestTtlDays = () => Math.min(60, Math.max(3, Number(process.env.INGEST_TTL_DAYS) || 14));
 /** Tin chủ tiệm TỰ ĐĂNG tự ẩn sau N ngày (mặc định 30, 7–90) nếu không bấm "Vẫn đang tuyển? Gia hạn". */
 export const jobTtlDays = () => Math.min(90, Math.max(7, Number(process.env.JOB_TTL_DAYS) || 30));
+/** Ngày bắt đầu áp hạn 30 ngày cho tin tự đăng. Tin tự đăng CŨ (chưa có expiresAt) được tính hạn từ
+ *  max(ngày đăng, ngày áp dụng) → không tin nào bị ẩn đột ngột lúc triển khai. Đổi bằng JOB_TTL_ROLLOUT (ISO) nếu
+ *  triển khai muộn hơn. */
+const JOB_TTL_ROLLOUT_DEFAULT = "2026-11-07T00:00:00Z";
+export const jobTtlRollout = () => {
+  const t = Date.parse(String(process.env.JOB_TTL_ROLLOUT || ""));
+  return new Date(Number.isFinite(t) ? t : Date.parse(JOB_TTL_ROLLOUT_DEFAULT));
+};
+/** Hạn hiển thị THẬT của 1 tin: expiresAt nếu có; tin tự đăng cũ chưa có hạn → max(ngày đăng, ngày áp dụng) + TTL. */
+export function effectiveExpiry(job: { expiresAt: Date | null; createdAt: Date; source: string | null }): Date | null {
+  if (job.expiresAt) return job.expiresAt;
+  if (job.source) return null;
+  return new Date(Math.max(job.createdAt.getTime(), jobTtlRollout().getTime()) + jobTtlDays() * DAY);
+}
+/** Tin nhắc chủ tiệm gia hạn trước N ngày (thông báo chuông + banner trên trang tin). */
+export const RENEW_REMINDER_DAYS = 7;
 
 // Bài SANG / BÁN tiệm mà tool từng gửi lẫn vào (trước 17/10/2026 chưa lọc) — ẩn khỏi mục Việc làm.
 // Chỉ áp cho tin TỔNG HỢP CŨ (source = ingest, bài gốc trước 18/10/2026): từ 17/10 bộ tách đã tự loại bài bán tiệm /
@@ -37,16 +64,21 @@ const SALE_WORDS = ["sang tiệm", "Sang tiệm", "SANG TIỆM", "cần sang", "
 // Bài THỢ TÌM VIỆC lọt vào trước khi có bộ lọc isJobSeeking (17/10/2026) — ẩn lúc hiển thị (không xoá).
 const SEEK_WORDS = ["Góc tìm việc", "góc tìm việc", "GÓC TÌM VIỆC", "chủ shop nào cần thợ", "Chủ shop nào cần thợ", "Vietnailshelper", "trải nghiệm dịch vụ", "dịch vụ đăng tin"];
 const LEGACY_FILTER_BEFORE = new Date("2026-10-18T00:00:00Z");
-/** Điều kiện Prisma: tin còn hạn, không phải bài sang / bán tiệm cũ.
- *  Tin tự đăng: có expiresAt (đăng từ 11/2026) → theo hạn; tin cũ chưa có hạn → còn hiện JOB_TTL_DAYS ngày từ lúc đăng. */
-export const activeJobWhere = () => {
-  const now = new Date();
+/** Điều kiện Prisma: tin còn hạn, không phải bài sang / bán tiệm cũ, tin tổng hợp phải có link bài gốc.
+ *  Tin tự đăng: có expiresAt (đăng từ 11/2026) → theo hạn; tin cũ chưa có hạn → hạn = max(ngày đăng, ngày áp dụng)
+ *  + JOB_TTL_DAYS (khớp effectiveExpiry). */
+export const activeJobWhere = (now = new Date()) => {
+  const ttl = jobTtlDays() * DAY;
+  // max(createdAt, rollout) + ttl > now  ⇔  createdAt > now − ttl  HOẶC  rollout + ttl > now (còn trong thời gian ân hạn)
+  const legacy = jobTtlRollout().getTime() + ttl > now.getTime() ? { expiresAt: null } : { expiresAt: null, createdAt: { gt: new Date(now.getTime() - ttl) } };
   return {
     AND: [
-      { OR: [{ expiresAt: { gt: now } }, { expiresAt: null, createdAt: { gt: new Date(now.getTime() - jobTtlDays() * DAY) } }] },
+      { OR: [{ expiresAt: { gt: now } }, legacy] },
       // Viết dạng OR (không dùng NOT(a AND b)): source NULL → so sánh SQL ra NULL, NOT(NULL) sẽ ẩn nhầm tin tự đăng.
       // sourcePostedAt NULL → nhánh "gte" ra sai → rơi xuống nhánh lọc chữ (đúng ý: tin cũ không rõ ngày vẫn bị lọc).
       { OR: [{ source: null }, { source: { not: INGEST_SOURCE } }, { sourcePostedAt: { gte: LEGACY_FILTER_BEFORE } }, { NOT: { OR: [...SALE_WORDS, ...SEEK_WORDS].map((w) => ({ description: { contains: w } })) } }] },
+      // Tin tổng hợp phải ghi được nguồn có link về bài gốc — không có link thì không hiện.
+      { OR: [{ source: null }, { source: { not: INGEST_SOURCE } }, { sourceUrl: { startsWith: "https://" } }] },
     ],
   };
 };
@@ -197,9 +229,11 @@ export async function commitIngest(prep: Extract<PreparedIngest, { status: "ok" 
   const same = await prisma.job.findFirst({
     where: { source: { in: [INGEST_SOURCE, ASSISTED_SOURCE] }, OR: [{ sourceKey: data.sourceKey }, { phone: data.phone }, ...(fbHash ? [{ sourceFbHash: fbHash }] : [])] },
     orderBy: { createdAt: "desc" },
-    select: { id: true, sourceUrl: true, sourceKey: true, repostCount: true },
+    select: { id: true, source: true, sourceUrl: true, sourceKey: true, repostCount: true },
   });
   if (same) {
+    // Tin ĐĂNG HỘ theo yêu cầu tiệm (có người yêu cầu) không bao giờ bị tin tổng hợp ghi đè / đổi nhãn thành "tổng hợp"
+    if (same.source === ASSISTED_SOURCE && data.source !== ASSISTED_SOURCE) return { status: "skipped", reason: "tiệm đã nhờ PawNail đăng tin này (đăng hộ) — không ghi đè", jobId: same.id };
     const samePost = data.sourceUrl ? same.sourceUrl === data.sourceUrl : same.sourceKey === data.sourceKey;
     if (samePost) {
       if (!opts.dryRun) await prisma.job.update({ where: { id: same.id }, data: { ...data, ...(fbHash ? { sourceFbHash: fbHash } : {}) } });
@@ -220,6 +254,8 @@ export async function commitIngest(prep: Extract<PreparedIngest, { status: "ok" 
 }
 
 export async function ingestOne(input: IngestInput, blocked: Set<string>, opts: IngestOpts & { dryRun?: boolean } = {}): Promise<IngestResult> {
+  // Tin tổng hợp từ tool lọc nhóm: mặc định không nhận (route đã chặn trước; chặn thêm ở đây cho chắc)
+  if (!opts.assisted && !aggregatedIngestOn()) return { status: "skipped", reason: "đã ngừng nhận tin tổng hợp (INGEST_AGGREGATED tắt)" };
   const prep = prepareIngest(input, blocked, opts);
   if (prep.status === "skipped") return { status: "skipped", reason: prep.reason };
   return commitIngest(prep, { dryRun: opts.dryRun });
@@ -245,10 +281,26 @@ export async function recordIngestHeartbeat(results: { status: string }[], now =
   if (results.some((r) => r.status !== "skipped")) await setSetting(INGEST_LAST_AT_KEY, at).catch(() => {});
 }
 
-/** Cho trang admin: lần cuối nhận tin / nhận lô, và có quá INGEST_STALE_HOURS giờ không có tin mới không. */
+/** Cho trang admin (CHỈ THÔNG TIN): nhận tin tổng hợp có đang bật không, lần cuối nhận tin / nhận lô,
+ *  và đã quá INGEST_STALE_HOURS giờ chưa có tin mới. Không phải cảnh báo — không kêu admin khởi động lại tool. */
 export async function ingestHeartbeat(now = new Date()) {
   const [lastAt, lastBatchAt] = await Promise.all([getSetting(INGEST_LAST_AT_KEY).catch(() => null), getSetting(INGEST_LAST_BATCH_AT_KEY).catch(() => null)]);
   const t = lastAt ? Date.parse(lastAt) : NaN;
   const stale = !Number.isFinite(t) || now.getTime() - t > INGEST_STALE_HOURS * 3_600_000;
-  return { lastAt, lastBatchAt, stale, staleHours: INGEST_STALE_HOURS };
+  return { accepting: aggregatedIngestOn(), lastAt, lastBatchAt, stale, staleHours: INGEST_STALE_HOURS };
 }
+
+/** Admin duyệt "Gỡ tin": giữ dòng tin (để lịch sử JobRequest còn tham chiếu) nhưng XOÁ mọi dữ liệu công khai của tiệm
+ *  (SĐT, mô tả, địa chỉ, ZIP, link bài gốc, tên tiệm, ảnh) và đánh dấu source = "removed" → GET /api/jobs/:id trả 410,
+ *  không nằm trong bảng việc / sitemap / JSON-LD / thẻ chia sẻ. Số điện thoại đã được chặn đăng lại (blockPhone) trước đó. */
+export async function removeJobPublicData(jobId: string, db: Pick<typeof prisma, "job" | "jobMedia"> = prisma, now = new Date()) {
+  await db.job.update({
+    where: { id: jobId },
+    data: {
+      source: REMOVED_SOURCE, expiresAt: now, phone: "", description: "", address: null, zip: null, salonName: "",
+      title: "Tin đã gỡ", sourceUrl: null, sourceKey: null, sourceFbHash: null, salaryAmount: "", skills: "", benefits: "", isUrgent: false,
+    },
+  });
+  await db.jobMedia.deleteMany({ where: { jobId } }).catch(() => {}); // bảng có thể chưa có ở DB cũ
+}
+export const isRemovedJob = (job: { source?: string | null } | null | undefined) => job?.source === REMOVED_SOURCE;

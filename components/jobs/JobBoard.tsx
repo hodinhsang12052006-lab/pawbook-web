@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, TrendingUp, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Clock, Bookmark, Eye, Zap, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
@@ -41,6 +41,8 @@ export interface JobType {
   source?: string | null;
   sourcePostedAt?: string | null;
   address?: string | null;
+  /** Tin tổng hợp: nguồn + link bài gốc (phone = "" — không hiện SĐT lấy từ bài đăng). */
+  sourceLink?: { href: string; name: string } | null;
 }
 
 // Ngưỡng hiển thị (khớp lib/jobStats HEAT_MIN) — số nhỏ quá thì ẩn, tránh
@@ -316,13 +318,27 @@ function JobCard({
 
       {/* CTA — chạm ngón cái chuẩn (min 48px), chữ to rõ để móng dài bấm không trượt. */}
       <div className="flex items-center gap-2 border-t border-slate-850 pt-2">
-        <a
-          href={`tel:${job.phone}`}
-          onClick={() => trackJobContact(job.id)}
-          className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
-        >
-          <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
-        </a>
+        {job.phone ? (
+          <a
+            href={`tel:${job.phone}`}
+            onClick={() => trackJobContact(job.id)}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
+          >
+            <Phone className="h-5 w-5" />{tr(" Gọi ngay", " Call now")}
+          </a>
+        ) : job.sourceLink ? (
+          // Tin TỔNG HỢP: không hiện SĐT lấy từ bài đăng — mở bài gốc (ghi rõ nguồn) để liên hệ tiệm
+          <a
+            href={job.sourceLink.href}
+            target="_blank"
+            rel="noopener nofollow ugc"
+            onClick={() => trackJobContact(job.id)}
+            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-2 text-center text-sm font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
+            data-testid="job-source-link"
+          >
+            <ExternalLink className="h-4 w-4 flex-shrink-0" />{tr(` Bài gốc trên ${job.sourceLink.name}`, ` Original post on ${job.sourceLink.name}`)}
+          </a>
+        ) : null}
         {job.source ? (
           // Tin đăng hộ / tổng hợp: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
           <Link
@@ -348,25 +364,27 @@ function JobCard({
 function EmptyJobs({ market, state, filtered, onClearState }: { market: "US" | "AU"; state: string; filtered: boolean; onClearState?: () => void }) {
   useTr();
   const { user } = useSessionUser();
-  const [marketTotal, setMarketTotal] = useState<number | null>(filtered ? null : 0);
+  // Số tin của cả thị trường — chỉ cần khi đang lọc; gắn với thị trường đã hỏi (không setState đồng bộ trong effect)
+  const [fetched, setFetched] = useState<{ market: string; n: number } | null>(null);
   useEffect(() => {
-    if (!filtered) { setMarketTotal(0); return; }
+    if (!filtered) return;
     let cancelled = false;
-    setMarketTotal(null);
     fetch(`/api/jobs?market=${market}&page=1&pageSize=5`)
       .then((r) => (r.ok ? Number(r.headers.get("X-Total-Count")) || 0 : 0))
-      .then((n) => !cancelled && setMarketTotal(n))
-      .catch(() => !cancelled && setMarketTotal(0));
+      .then((n) => { if (!cancelled) setFetched({ market, n }); })
+      .catch(() => { if (!cancelled) setFetched({ market, n: 0 }); });
     return () => { cancelled = true; };
   }, [market, filtered]);
+  const marketTotal: number | null = !filtered ? 0 : fetched?.market === market ? fetched.n : null;
   const where = state ? stateName(market, state) : "";
   const marketName = market === "US" ? tr("Mỹ", "the US") : tr("Úc", "Australia");
   const showOwnerCta = !user || user.role === "OWNER" || user.role === "ADMIN";
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-10 text-center" data-testid="jobs-empty">
       <p className="text-4xl">💅</p>
+      {/* "trên PawNail": mục tin đối tác (via Adzuna…) có thể hiện ngay bên dưới → không nói "không có việc" chung chung */}
       <p className="text-base font-bold text-slate-300">
-        {where ? tr(`Chưa có tin tuyển thợ ở ${where}`, `No jobs in ${where} yet`) : filtered ? tr("Chưa có tin khớp tìm kiếm", "No jobs match your search") : tr(`Chưa có tin tuyển thợ nào tại ${marketName} lúc này`, `No open jobs in ${marketName} right now`)}
+        {where ? tr(`Chưa có tin tiệm đăng trên PawNail ở ${where}`, `No salon posts on PawNail in ${where} yet`) : filtered ? tr("Chưa có tin trên PawNail khớp tìm kiếm", "No PawNail posts match your search") : tr(`Chưa có tin tiệm đăng trên PawNail tại ${marketName}`, `No salon posts on PawNail in ${marketName} yet`)}
       </p>
       {marketTotal !== null && marketTotal > 0 && filtered ? (
         <>

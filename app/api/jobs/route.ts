@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { jobPostBlocked } from "@/lib/abuseGuard";
 import { realOnly } from "@/lib/demo";
-import { tidyIngestJob } from "@/lib/jobIngest/display";
+import { publicJob } from "@/lib/jobIngest/display";
 import { activeJobWhere, jobTtlDays } from "@/lib/jobIngest/ingest";
 import { Market, Role } from "@prisma/client";
 import { getJobHeat, isHot } from "@/lib/jobStats";
@@ -63,11 +63,11 @@ export async function GET(req: NextRequest) {
       : null;
 
     const [heat, media] = await Promise.all([getJobHeat(jobs.map((j) => j.id)), getJobMedia(jobs.map((j) => j.id))]);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const safeJobs = jobs.map(({ _count, sourceUrl, sourceKey, sourceFbHash, ...job }) => {
+    // publicJob: bỏ khoá nội bộ; tin tổng hợp → không SĐT, mô tả là đoạn trích không SĐT, kèm nguồn + link bài gốc
+    const safeJobs = jobs.map(({ _count, ...job }) => {
       const h = heat.get(job.id);
       return {
-      ...tidyIngestJob(job),
+      ...publicJob(job),
       saveCount: _count.savedBy,
       mediaUrls: media.get(job.id) ?? [],
       // Số liệu "nóng" thật — UI tự ẩn khi dưới ngưỡng (lib/jobStats HEAT_MIN).

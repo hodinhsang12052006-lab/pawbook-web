@@ -9,6 +9,7 @@ import { useTr } from "@/lib/i18n/useTr";
 // 30/10/2026: thêm vai trò khách, video / tin nhắn thoại / bài đăng / báo lỗi, các nhà cung cấp Sentry, Cloudflare,
 // Vercel, Turso, Resend, Facebook; nói đúng phạm vi xoá (file đã tải lên Cloudinary xoá theo yêu cầu qua email,
 // như trang /data-deletion) — khớp khai báo An toàn dữ liệu / App Privacy trên store.
+// 06/11/2026: Careerjet (nút tìm việc trên web gửi IP + trình duyệt), tin việc "via Adzuna / Careerjet" là tin của trang khác.
 const S = "space-y-2";
 const H2 = "text-lg font-bold text-white";
 const B = "text-slate-100";
@@ -19,7 +20,7 @@ function PrivacyVi() {
     <>
       <div>
         <h1 className="text-2xl font-black text-white mb-2">Chính sách bảo mật</h1>
-        <p className="text-xs text-slate-500">Cập nhật lần cuối: 30/10/2026</p>
+        <p className="text-xs text-slate-500">Cập nhật lần cuối: 06/11/2026</p>
       </div>
       <p>PawNail Jobs (&quot;chúng tôi&quot;) vận hành nền tảng kết nối chủ tiệm nail, thợ nail và khách làm nail tại Mỹ &amp; Úc, truy cập qua website <strong className="text-white">bitpawos.com</strong> và ứng dụng di động PawNail Jobs trên App Store / CH Play. Chính sách này giải thích chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn như thế nào.</p>
       <section className={S}>
@@ -65,6 +66,7 @@ function PrivacyVi() {
           <li><strong className={B}>Thợ / tiệm bạn đặt lịch</strong> — khi bạn đặt lịch từ menu (không cần tài khoản), tên + số điện thoại + ngày giờ mong muốn chỉ gửi cho đúng thợ / tiệm đó để liên hệ xác nhận, không hiện công khai. Yêu cầu đặt lịch tự xoá sau 90 ngày (thợ cũng xoá được bất cứ lúc nào).</li>
           <li><strong className={B}>Google Gemini, Cloudflare Workers AI</strong> — tính năng &quot;Soi tay tư vấn&quot;: ảnh tay / chân do thợ chụp (khi khách đồng ý) được gửi tới AI để nhận diện tình trạng móng rồi bỏ ngay. PawNail <strong className={B}>không lưu</strong> ảnh này và không gắn ảnh với tên khách.</li>
           <li><strong className={B}>Thử mẫu trên tay (PawNail Try-On)</strong> — ảnh tay được xử lý <strong className={B}>ngay trên điện thoại của bạn</strong>, không gửi tới AI hay máy chủ nào. Ảnh mẫu thử chỉ được tải lên khi bạn chủ động bấm Gửi trong tin nhắn (khi đó lưu như ảnh tin nhắn thường).</li>
+          <li><strong className={B}>Careerjet</strong> — chỉ khi bạn bấm &quot;Tìm thêm việc nail trên web&quot; ở mục Việc làm: địa chỉ IP và loại trình duyệt của bạn được gửi tới Careerjet (Careerjet yêu cầu) để lấy kết quả tìm việc. PawNail không lưu các kết quả này. Tin ghi &quot;via Adzuna&quot; / &quot;via Careerjet&quot; là tin của trang tuyển dụng đó, không phải tin đăng trên PawNail: bấm mở tin sẽ sang trang của họ và áp dụng chính sách bảo mật của họ.</li>
         </ul>
       </section>
       <section className={S}>
@@ -94,7 +96,7 @@ function PrivacyEn() {
     <>
       <div>
         <h1 className="text-2xl font-black text-white mb-2">Privacy Policy</h1>
-        <p className="text-xs text-slate-500">Last updated: October 30, 2026</p>
+        <p className="text-xs text-slate-500">Last updated: November 6, 2026</p>
       </div>
       <p>PawNail Jobs (&quot;we&quot;) runs a platform connecting nail salon owners, nail technicians and nail clients in the US &amp; Australia, available at <strong className="text-white">bitpawos.com</strong> and in the PawNail Jobs mobile app on the App Store / Google Play. This policy explains what personal information we collect, how we use it and how we protect it.</p>
       <section className={S}>
@@ -140,6 +142,7 @@ function PrivacyEn() {
           <li><strong className={B}>The tech / salon you book with</strong> — when you book from a menu (no account needed), your name, phone number and preferred time go only to that tech / salon so they can confirm; never shown publicly. Booking requests are deleted automatically after 90 days (the tech can delete them any time).</li>
           <li><strong className={B}>Google Gemini, Cloudflare Workers AI</strong> — the &quot;Hand consultation&quot; tool: a hand / foot photo taken by a technician (with the client&apos;s consent) is sent to the AI to recognise nail condition and then discarded. PawNail <strong className={B}>does not store</strong> these photos or link them to a client&apos;s name.</li>
           <li><strong className={B}>Try looks on your hand (PawNail Try-On)</strong> — hand photos are processed <strong className={B}>on your phone</strong> and are not sent to any AI or server. A try-on image is uploaded only when you choose to Send it in a chat (it is then stored like any chat photo).</li>
+          <li><strong className={B}>Careerjet</strong> — only when you tap &quot;Search more nail jobs on the web&quot; in Jobs: your IP address and browser type are sent to Careerjet (Careerjet requires this) to fetch job results. PawNail does not store these results. Listings marked &quot;via Adzuna&quot; / &quot;via Careerjet&quot; belong to those job sites and are not posted on PawNail: opening one takes you to their website, where their privacy policy applies.</li>
         </ul>
       </section>
       <section className={S}>

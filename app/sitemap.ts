@@ -31,13 +31,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy: { createdAt: "desc" },
       take: 5000,
     });
-    // Nội dung tin do tiệm viết bằng tiếng Việt → bản chuẩn (canonical) là /vi/jobs/… (xem app/[lang]/jobs/[id]/layout.tsx).
-    jobUrls = jobs.map((job) => ({
-      url: `${baseUrl}${localePath(`/jobs/${job.id}`, "vi")}`,
-      lastModified: job.createdAt,
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-    }));
+    // Cả 2 bản (EN /jobs/… + VI /vi/jobs/…) kèm hreflang — cùng quy tắc canonical với trang tin.
+    jobUrls = jobs.flatMap((job) => bilingual(`/jobs/${job.id}`, { lastModified: job.createdAt, changeFrequency: "daily" as const, priority: 0.8 }));
   } catch (e) {
     console.error("Sitemap jobs query failed:", e);
   }

@@ -29,7 +29,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
         : u.role === "TECHNICIAN"
           ? trL(lang, `Ảnh tay nghề, kỹ năng và đánh giá. Nhắn tin cho ${u.name} trên PawNail.`, `Portfolio, skills and reviews. Message ${u.name} on PawNail.`)
           : trL(lang, `Hồ sơ của ${u.name} trên PawNail.`, `${u.name} on PawNail.`);
-    return { title, description, alternates: alternates(`/profile/${uid}`, lang), openGraph: openGraph(lang, { title, description }) };
+    // robots ghi rõ: layout cha (/profile — "Hồ sơ của tôi") đặt noindex, hồ sơ công khai phải được lập chỉ mục.
+    return { title, description, robots: { index: true, follow: true }, alternates: alternates(`/profile/${uid}`, lang), openGraph: openGraph(lang, { title, description }) };
   } catch {
     return fallback;
   }

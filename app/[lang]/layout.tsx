@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "../globals.css";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
-import { alternates, langFrom, openGraph } from "@/lib/i18n/server";
+import { langFrom, openGraph } from "@/lib/i18n/server";
 
 // Layout GỐC nằm dưới segment [lang]: mỗi trang được prerender 1 lần cho mỗi ngôn
 // ngữ (/en/…, /vi/…) và edge rewrite trong next.config.ts chọn bản đúng theo
@@ -53,7 +53,6 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     description: SITE_DESCRIPTION[lang],
     manifest: "/manifest.json",
     applicationName: "PawNail",
-    alternates: alternates("/", lang),
     openGraph: openGraph(lang, { title: SITE_TITLE[lang], description: SITE_DESCRIPTION[lang] }),
   };
 }

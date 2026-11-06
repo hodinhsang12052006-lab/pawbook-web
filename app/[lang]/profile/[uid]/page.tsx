@@ -253,7 +253,9 @@ export default function PublicProfilePage({ params }: PageProps) {
     : [];
   const location = [profile.city, stateName(profile.market, profile.state)].filter(Boolean).join(", ");
   // Tiệm: tiêu đề là TÊN TIỆM ("Luxe Nails & Spa" — trùng với trang menu), tên chủ tiệm ở dòng phụ.
-  const salonName: string | null = isOwnerProfile ? (profile.jobs?.find((j: { salonName?: string }) => j.salonName?.trim())?.salonName?.trim() ?? null) : null;
+  // Cùng quy tắc với /menu, /salons, "Lịch hẹn của tôi": tên tiệm của tin ĐẦU TIÊN tiệm đăng (API trả tin mới nhất trước
+  // → lấy từ cuối danh sách). Trước đây lấy tin mới nhất: đăng 1 tin tên khác là tiêu đề hồ sơ lệch với trang menu.
+  const salonName: string | null = isOwnerProfile ? ([...(profile.jobs ?? [])].reverse().find((j: { salonName?: string }) => j.salonName?.trim())?.salonName?.trim() ?? null) : null;
   const headline = salonName || profile.name;
   const years = tech?.yearsOfExperience ?? 0;
   // Giới thiệu theo ngôn ngữ người xem (bản dịch máy chủ lưu đệm) + "Xem bản gốc".

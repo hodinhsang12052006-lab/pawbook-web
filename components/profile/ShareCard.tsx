@@ -218,7 +218,7 @@ export async function renderShareCard(d: ShareCardData, profileUrl: string): Pro
   let x = 64;
   ctx.font = `700 28px ${FONT}`;
   // Số năm kinh nghiệm là chip đầu tiên (để dòng khu vực không bị cắt chữ).
-  const chips = [...(!isOwner && d.years ? [tr(`${d.years} năm kinh nghiệm`, `${d.years} yrs experience`)] : []), ...(d.skills || []).map((v) => valueLabel(v))];
+  const chips = [...(!isOwner && d.years ? [tr(`${d.years} năm kinh nghiệm`, `${d.years} ${d.years === 1 ? "yr" : "yrs"} experience`)] : []), ...(d.skills || []).map((v) => valueLabel(v))];
   for (const label of chips.slice(0, 5)) {
     const w = ctx.measureText(label).width + 40;
     if (x + w > W - 64 - 280) break;

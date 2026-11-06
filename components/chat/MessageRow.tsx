@@ -290,8 +290,8 @@ function MessageRowImpl({
                           const bubble = parent.parentElement;
                           if (bubble) {
                             bubble.style.background = "none";
-                            bubble.style.backgroundColor = "#0f172a";
-                            bubble.style.border = "1px solid #1e293b";
+                            bubble.style.backgroundColor = "#26262a";
+                            bubble.style.border = "1px solid rgba(255,255,255,0.08)";
                             bubble.style.padding = "6px 12px";
                             bubble.style.boxShadow = "none";
                             bubble.style.maxWidth = "220px";
@@ -330,7 +330,7 @@ function MessageRowImpl({
 
           {/* Giờ gửi ở tin cuối mỗi cụm; tin cuối của mình kèm Đã gửi/Đã xem. */}
           {(isLastInGroup || isLastSelf) && (
-            <span className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
+            <span className={`mt-1 flex items-center gap-1 px-1 text-[11px] text-slate-500 ${isSelf ? "self-end" : "self-start"}`}>
               {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
               {isLastSelf &&
                 !activeChat.isGroup &&

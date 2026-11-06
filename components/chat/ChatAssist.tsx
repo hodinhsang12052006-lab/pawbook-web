@@ -53,7 +53,7 @@ export default function ChatAssist({ me, partner, last, onFill, onStudio, onCons
   }, [proSide, menu, lastContent, lastType, me.market, me.id, loc]);
 
   const base = "flex min-h-[34px] flex-shrink-0 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs font-bold ring-1 transition-colors";
-  const chip = `${base} text-pink-100 ring-pink-400/25 hover:bg-pink-500/15`;
+  const chip = `${base} text-slate-100 ring-white/[0.08] hover:bg-white/[0.1]`;
 
   const hire: Suggestion[] = useMemo(() => {
     // chờ hồ sơ (kỹ năng, tin tuyển) nạp xong — không thì thoáng hiện câu chung chung rồi mới đổi

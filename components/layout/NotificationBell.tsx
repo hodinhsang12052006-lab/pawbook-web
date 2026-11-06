@@ -182,6 +182,8 @@ export default function NotificationBell() {
         )}
       </button>
 
+      {/* Điện thoại: lớp tối phía sau bảng (chạm để đóng) → bảng đọc rõ là đang nổi; kiểu bảng ở globals.css (.pn-notif-scrim + dialog) */}
+      {open && <div aria-hidden onClick={() => setOpen(false)} className="pn-notif-scrim fixed inset-0 z-[59] bg-black/50 animate-fadeIn sm:hidden" />}
       {open && (
         <div
           role="dialog"

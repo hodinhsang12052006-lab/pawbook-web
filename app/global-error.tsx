@@ -20,7 +20,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   return (
     <html lang="vi">
       {/* Style inline — layout gốc (và globals.css) không chạy khi trang này hiện. */}
-      <body style={{ margin: 0, background: "#020617", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
+      <body style={{ margin: 0, background: "#0b0b0c", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24, textAlign: "center" }}>
           <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>{tr("Đã có lỗi xảy ra", "Something went wrong")}</h2>
           <p style={{ fontSize: 14, color: "#94a3b8", margin: 0, maxWidth: 360 }}>{tr("Vui lòng thử tải lại. Nếu vẫn lỗi, hãy quay lại sau ít phút.", "Please try reloading. If it keeps failing, come back in a few minutes.")}</p>

@@ -72,13 +72,13 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
               <ChevronRight className="h-4 w-4 text-slate-500" />
             </Link>
           ))}
-          <Link href="/jobs/create" className={`${card} bg-gradient-to-r from-pink-500/15 to-fuchsia-500/10 ring-pink-500/25`}>
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600"><Megaphone className="h-5 w-5 text-white" /></span>
+          <Link href="/jobs/create" className={`${card}`}>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-600"><Megaphone className="h-5 w-5 text-white" /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold text-white">{tr("Đăng tin tuyển thợ", "Post a job")}</span>
               <span className="block truncate text-xs text-slate-300">{tr("Thợ bật báo việc gần bạn sẽ nhắn bạn ngay", "Nearby techs with alerts will message you")}</span>
             </span>
-            <ChevronRight className="h-4 w-4 text-pink-200" />
+            <ChevronRight className="h-4 w-4 text-slate-500" />
           </Link>
         </div>
       </section>
@@ -92,7 +92,7 @@ export default function ChatSuggestions({ role, market }: { role: string | null;
       <div className="space-y-2">
         {jobs.map((j) => (
           <Link key={j.id} href={`/jobs/${j.id}`} className={card}>
-            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pink-500/25 to-violet-500/25 ring-1 ring-white/10"><Briefcase className="h-5 w-5 text-pink-200" /></span>
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/[0.08]"><Briefcase className="h-5 w-5 text-slate-300" /></span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-sm font-bold text-white">
                 <span className="truncate">{j.salonName}</span>

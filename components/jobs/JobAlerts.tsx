@@ -68,7 +68,7 @@ export function JobAlertButton({ market, state }: { market: "US" | "AU"; state: 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-bold text-sky-200 transition-colors hover:bg-sky-500/20"
+        className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-bold text-sky-200 transition-colors hover:bg-sky-500/20 refined:border-white/10 refined:bg-white/[0.05] refined:font-semibold refined:text-slate-200 refined:hover:bg-white/10 refined:[&>svg]:text-pink-400"
       >
         <BellPlus className="h-3.5 w-3.5" /> {tr("Báo tôi khi có việc như này", "Alert me for jobs like this")}
       </button>

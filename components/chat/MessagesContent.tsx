@@ -1527,7 +1527,7 @@ export default function MessagesContent({
                         key={starter}
                         type="button"
                         onClick={() => setMessageText(starter)}
-                        className="rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1.5 text-xs font-semibold text-pink-200 hover:bg-pink-500/20 transition-colors"
+                        className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-100 ring-1 ring-white/[0.08] hover:bg-white/[0.1] transition-colors"
                       >
                         {starter}
                       </button>
@@ -1542,7 +1542,7 @@ export default function MessagesContent({
                   <div className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
                     <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-full w-full object-cover" />
                   </div>
-                  <div className="rounded-2xl rounded-bl-sm border border-slate-700 bg-slate-800 px-4 py-3 text-slate-300">
+                  <div className="pn-bubble-them rounded-2xl rounded-bl-sm px-4 py-3 text-slate-300">
                     <TypingDots />
                     <span className="sr-only">{tr("Đối phương đang soạn tin", "The other person is typing")}</span>
                   </div>
@@ -1659,7 +1659,7 @@ export default function MessagesContent({
                     <PlusIcon className="h-5 w-5" />
                   </button>
                 ) : (
-                <>
+                <div className="-ml-1 flex flex-shrink-0 items-center">
                 <button
                   type="button"
                   onClick={handleUploadImage}
@@ -1706,7 +1706,7 @@ export default function MessagesContent({
                     <SparklesIcon className="h-[22px] w-[22px]" />
                   </button>
                 )}
-                </>
+                </div>
                 )}
 
                 <div className="pn-input-wrap flex min-w-0 flex-1 items-center">
@@ -1728,7 +1728,7 @@ export default function MessagesContent({
                     enterKeyHint="send"
                     autoComplete="off"
                     placeholder={t("messenger.inputPlaceholder")}
-                    className="min-w-0 flex-1 rounded-full border-0 bg-transparent py-2.5 pl-4 pr-11 text-base text-slate-100 placeholder-slate-400/70 focus:outline-none sm:text-sm"
+                    className="min-w-0 flex-1 truncate rounded-full border-0 bg-transparent py-2.5 pl-3.5 pr-10 text-base text-slate-100 placeholder-slate-400/70 focus:outline-none sm:text-sm"
                   />
                   <button
                     type="button"

@@ -111,7 +111,7 @@ export function DesignCard({ d, onOpen, compact = false }: { d: Design; onOpen: 
         <span className="line-clamp-2 text-sm font-bold leading-snug text-white">{designTitle(d)}</span>
         <span className="mt-auto flex items-center gap-2 pt-1 text-[11px] text-slate-400">
           <span>{DIFF()[d.difficulty - 1]}</span>·<span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" /> {d.minutes}{tr(" phút", " min")}</span>
-          {!compact && d.priceHint && <>·<span className="font-semibold text-emerald-300">{d.priceHint}</span></>}
+          {!compact && d.priceHint && <>·<span className="font-semibold tabular-nums text-slate-100">{d.priceHint}</span></>}
         </span>
       </span>
     </button>

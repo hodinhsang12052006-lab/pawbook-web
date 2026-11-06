@@ -105,9 +105,9 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
       // Hàng lối tắt kiểu app (icon + nhãn ngắn) — trước đây là thẻ 160px chiếm nửa màn
       // hình điện thoại. Chi tiết (stat) vẫn có ở thanh bên trên máy tính.
       <nav aria-label={tr("Công cụ", "Tools")} className="-mx-4 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
-        {tools.map(({ href, label, stat, icon: Icon, tone, badge }) => (
-          <Link key={href} href={href} title={stat} className="relative flex w-[76px] flex-shrink-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center active:scale-95 transition-transform">
-            <span className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-white/10 ${tone}`}>
+        {tools.map(({ href, label, stat, icon: Icon, badge }, i) => (
+          <Link key={href} href={href} title={stat} className="relative flex w-[84px] flex-shrink-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center active:scale-95 transition-transform">
+            <span className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${i === 1 ? "bg-pink-600/[0.12] text-pink-400 ring-pink-500/20" : "bg-white/[0.06] text-slate-100 ring-white/[0.08]"}`}>
               <Icon className="h-5 w-5" />
               {!!badge && badge > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-pink-600 px-1 text-[10px] font-bold leading-[18px] text-white ring-2 ring-slate-950">{badge > 9 ? "9+" : badge}</span>
@@ -122,9 +122,9 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
 
   return (
     <nav aria-label={tr("Công cụ", "Tools")} className="space-y-1">
-      {tools.map(({ href, label, stat, icon: Icon, tone, badge }) => (
+      {tools.map(({ href, label, stat, icon: Icon, badge }) => (
         <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl p-2 hover:bg-white/5 transition-colors">
-          <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${tone}`}>
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-slate-200">
             <Icon className="h-[18px] w-[18px]" />
           </span>
           <span className="min-w-0 flex-1">

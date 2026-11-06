@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { avatarGradient, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
+import { avatarGradient, avatarGradientClassic, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
 
 interface AvatarProps {
   src?: string | null;
@@ -37,7 +37,9 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
     );
   }
 
-  const [from, to] = avatarGradient(seed || name);
+  // Màu gốc làm thuộc tính SVG (trang khách "/" classic); trong app CSS `refined:` đổi sang bảng màu trầm.
+  const [from, to] = avatarGradientClassic(seed || name);
+  const [rFrom, rTo] = avatarGradient(seed || name);
   const text = initialsOf(name);
   return (
     <svg
@@ -48,13 +50,13 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
     >
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={from} />
-          <stop offset="100%" stopColor={to} />
+          <stop offset="0%" stopColor={from} className="refined:[stop-color:var(--av-a)]" style={{ ["--av-a" as string]: rFrom }} />
+          <stop offset="100%" stopColor={to} className="refined:[stop-color:var(--av-b)]" style={{ ["--av-b" as string]: rTo }} />
         </linearGradient>
       </defs>
       <circle cx="20" cy="20" r="20" fill={`url(#${gid})`} />
-      {/* Ánh sáng nhẹ phía trên cho có chiều sâu */}
-      <ellipse cx="20" cy="6" rx="18" ry="10" fill="#fff" opacity="0.08" />
+      {/* Ánh sáng nhẹ phía trên (chỉ classic — trong app trông lỗi thời) */}
+      <ellipse cx="20" cy="6" rx="18" ry="10" fill="#fff" opacity="0.08" className="refined:hidden" />
       <text
         x="20"
         y="20"

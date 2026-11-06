@@ -314,19 +314,19 @@ export default function HomePage() {
                       key={m}
                       onClick={() => { setMarket(m); setState(""); }}
                       aria-pressed={market === m}
-                      className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow" : "text-slate-400"}`}
+                      className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold transition-all active:scale-95 ${market === m ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow refined:bg-none refined:bg-pn-thumb refined:shadow-none refined:ring-1 refined:ring-inset refined:ring-white/[0.06]" : "text-slate-400"}`}
                     >
                       <span className="inline-flex items-center gap-1"><Flag code={m} className="h-3 w-4" /> {m === "US" ? tr("Mỹ", "US") : tr("Úc", "AU")}</span>
                     </button>
                   ))}
                 </div>
-                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden refined:pr-6 refined:[mask-image:linear-gradient(to_right,black_85%,transparent)]">
                   {["", ...states].map((s) => (
                     <button
                       key={s || "all"}
                       onClick={() => setState(s)}
                       className={`min-h-[36px] flex-shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-bold ring-1 transition-all active:scale-95 ${
-                        state === s ? "bg-pink-600 text-white ring-pink-600" : "bg-slate-950/60 text-slate-400 ring-slate-800"
+                        state === s ? "bg-pink-600 text-white ring-pink-600 refined:bg-white refined:text-slate-950 refined:ring-white" : "bg-slate-950/60 text-slate-400 ring-slate-800 refined:bg-white/[0.04] refined:text-slate-300 refined:ring-white/[0.08]"
                       }`}
                     >
                       {s ? stateName(market, s) : tr("Tất cả bang", "All states")}
@@ -337,7 +337,7 @@ export default function HomePage() {
                   onClick={() => setShowCitySearch((v) => !v)}
                   aria-label={tr("Tìm theo thành phố", "Search by city")}
                   aria-expanded={showCitySearch || !!city}
-                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ring-1 transition-colors ${showCitySearch || city ? "bg-pink-500/15 text-pink-300 ring-pink-500/40" : "text-slate-400 ring-slate-800"}`}
+                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ring-1 transition-colors ${showCitySearch || city ? "bg-pink-500/15 text-pink-300 ring-pink-500/40 refined:bg-white/[0.08] refined:text-white refined:ring-white/20" : "text-slate-400 ring-slate-800"}`}
                 >
                   <Search className="h-4 w-4" />
                 </button>
@@ -370,7 +370,7 @@ export default function HomePage() {
                   aria-pressed={market === "US"}
                   className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${
                     market === "US"
-                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/25"
+                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/25 refined:bg-none refined:bg-pn-thumb refined:shadow-none refined:ring-1 refined:ring-inset refined:ring-white/[0.06]"
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
@@ -381,7 +381,7 @@ export default function HomePage() {
                   aria-pressed={market === "AU"}
                   className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${
                     market === "AU"
-                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/25"
+                      ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/25 refined:bg-none refined:bg-pn-thumb refined:shadow-none refined:ring-1 refined:ring-inset refined:ring-white/[0.06]"
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
@@ -394,7 +394,7 @@ export default function HomePage() {
                 <button
                   onClick={() => setState("")}
                   className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold border transition-all active:scale-95 ${
-                    state === "" ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+                    state === "" ? "bg-pink-600 border-pink-600 text-white refined:bg-white refined:border-white refined:text-slate-950" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
                   }`}
                 >
                   {tr("Tất cả bang", "All states")}
@@ -404,7 +404,7 @@ export default function HomePage() {
                     key={s}
                     onClick={() => setState(s)}
                     className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold border transition-all active:scale-95 ${
-                      state === s ? "bg-pink-600 border-pink-600 text-white" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+                      state === s ? "bg-pink-600 border-pink-600 text-white refined:bg-white refined:border-white refined:text-slate-950" : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
                     }`}
                   >
                     {stateName(market, s)}
@@ -429,12 +429,12 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             {/* Điện thoại: lớp nền phủ tràn hết chiều ngang (không còn tấm nền vuông thò ra 2 bên thanh tab) */}
-            <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)]">
+            <div className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:border-b refined:border-pn-line refined:bg-pn-canvas refined:[backdrop-filter:none] refined:[mask-image:none]">
               <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20">
                 {/* Viên chọn trượt mượt sang tab đang mở */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 shadow-lg shadow-pink-600/25 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  className="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 shadow-lg shadow-pink-600/25 refined:bg-none refined:bg-pn-thumb refined:shadow-[0_1px_2px_rgba(0,0,0,0.5)] refined:ring-1 refined:ring-inset refined:ring-white/[0.06] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
                   style={{ transform: `translateX(${TAB_ORDER.indexOf(tab) * 100}%)` }}
                 />
                 {([

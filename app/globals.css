@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* `refined:` = mọi trang TRONG app (không phải trang chủ khách "/" + /auth/* — 2 bề mặt đó có
+   <html data-ui-classic> và giữ nguyên giao diện cũ). Component dùng chung với trang khách: giữ
+   class cũ làm nền, đặt kiểu mới sau `refined:` → trang khách không đổi 1 pixel. */
+@custom-variant refined (html:not([data-ui-classic]) &);
+
 @theme {
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
@@ -25,6 +30,36 @@
   --text-2xs--line-height: 1rem;
   --text-4xs: 0.5625rem;
   --text-4xs--line-height: 0.75rem;
+}
+
+/* ===== PawNail "refined dark" tokens (11/2026) =====
+   `static` = luôn được phát ra, sinh các utility bg-pn-*, text-pn-*, border-pn-*, ring-pn-*.
+   Trung tính (không ám xanh/tím), MỘT màu nhấn hồng đặc cho hành động chính / trạng thái
+   đang chọn / chưa đọc. Toàn cục nhưng "trơ": không class cũ nào dùng → trang auth/landing
+   (classic) vẫn hiển thị đúng. */
+@theme static {
+  --color-pn-canvas: #0b0b0c;   /* nền app, nền chat, thanh trên / khung soạn tin */
+  --color-pn-surface: #17171a;  /* thẻ (.glass-card), sheet — 1 nấc sáng hơn canvas, đọc được trên OLED */
+  --color-pn-raised: #1c1c1f;   /* ô nhập, tìm kiếm, ô soạn tin, toast */
+  --color-pn-overlay: #232327;  /* menu/popover, nút gửi khi tắt */
+  --color-pn-bubble: #26262a;   /* bong bóng người kia, bong bóng "đang soạn" */
+  --color-pn-thumb: #34343a;    /* nút đang chọn của segmented control */
+  --color-pn-line: rgb(255 255 255 / 0.085);
+  --color-pn-line-strong: rgb(255 255 255 / 0.14);
+  --color-pn-control: #3a3a40;
+  --color-pn-text: #f4f4f5;     /* 17.9:1 trên canvas */
+  --color-pn-text-2: #a1a1aa;   /* 7.7:1 */
+  --color-pn-text-3: #8e8e96;   /* sàn chữ phụ / placeholder: ≥4.6:1 trên mọi bề mặt */
+  --color-pn-brand: #db2777;    /* màu nhấn DUY NHẤT, đặc; chữ trắng 4.60:1 */
+  --color-pn-brand-hover: #cf2470;
+  --color-pn-brand-press: #be185d;
+  --color-pn-brand-ink: #f472b6; /* chữ/icon/link nhấn trên nền tối, 7.4:1 */
+  --color-pn-brand-tint: rgb(219 39 119 / 0.12);
+  /* CHỈ cho thứ nổi: bottom nav, menu, sheet, toast. Thẻ nằm yên: chỉ viền, không bóng. */
+  --shadow-pn-float: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  /* `text-5xs` được dùng (tên người gửi trong nhóm chat) nhưng chưa từng được định nghĩa. */
+  --text-5xs: 0.6875rem;
+  --text-5xs--line-height: 1rem;
 }
 
 :root {
@@ -77,21 +112,21 @@ body {
   animation: fadeIn 0.25s ease-out both;
 }
 
+/* Modal/popover mở: ease-out, không "nảy" quá đà (Emil: thao tác lặp lại nhiều lần/ngày). */
 @keyframes scaleUp {
-  from { opacity: 0; transform: scale(0.94); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 .animate-scaleUp {
-  animation: scaleUp 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: scaleUp 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @keyframes messageBounceIn {
-  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
-  60% { opacity: 1; transform: translateY(-1px) scale(1.01); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 .message-bounce-in {
-  animation: messageBounceIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: messageBounceIn 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 /* Chuyển tab trang chủ: nội dung trượt vào theo hướng người dùng vuốt/bấm. */
@@ -106,13 +141,12 @@ body {
 .tab-in-right { animation: tabInFromRight 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .tab-in-left { animation: tabInFromLeft 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 
-/* Icon thanh điều hướng "nảy" nhẹ khi vừa được chọn. */
+/* Icon thanh điều hướng: phản hồi rất nhẹ khi vừa được chọn (không phóng to / nảy). */
 @keyframes navPop {
-  0% { transform: scale(1) translateY(0); }
-  40% { transform: scale(1.18) translateY(-2px); }
-  100% { transform: scale(1) translateY(0); }
+  from { transform: scale(0.92); }
+  to { transform: scale(1); }
 }
-.nav-pop { animation: navPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.nav-pop { animation: navPop 0.16s cubic-bezier(0.23, 1, 0.32, 1); }
 
 /* Thông báo FOMO: trượt vào + thanh đếm ngược thời gian hiển thị. */
 @keyframes fomoIn {
@@ -403,16 +437,12 @@ body {
 }
 
 /* ===== Nền khung chat (Messenger) =====
-   Trước đây là 1 mảng slate-900 phẳng. Giờ: nền tối có chiều sâu, 2 quầng
-   sáng thương hiệu (hồng góc trên, tím góc dưới), lớp chấm mờ rất nhẹ kiểu
-   "giấy dán tường" chat của các app nhắn tin lớn. Tĩnh — không tốn CPU. */
+   11/2026: 1 mặt phẳng tĩnh, cùng màu nền app — không quầng màu, không chấm, không vignette.
+   Chiều sâu đến từ độ tương phản bong bóng/nền, các thanh viền mảnh và ảnh thật. Hình nền
+   tuỳ chọn (lib/chatWallpapers.ts) đặt qua style inline nên vẫn ghi đè được. */
 .chat-wallpaper {
-  background-color: #0a1020;
-  background-image:
-    radial-gradient(38rem 26rem at 100% 0%, rgba(236, 72, 153, 0.09), transparent 60%),
-    radial-gradient(34rem 24rem at 0% 100%, rgba(139, 92, 246, 0.08), transparent 60%),
-    radial-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px);
-  background-size: auto, auto, 18px 18px;
+  background-color: var(--color-pn-canvas);
+  background-image: none;
 }
 
 /* 3 chấm "đang soạn tin" (Messenger). */
@@ -437,66 +467,56 @@ body {
 .pn-scan { animation: pn-scan 1.6s ease-in-out infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .pn-scan { animation: none; top: 40%; } }
 
-/* ============ MESSENGER 2.0 ============
-   Nền "sống" (quầng sáng trôi chậm — chỉ animate transform, không filter → mượt trên máy yếu),
-   bong bóng gradient / kính, tin mới trượt vào. Tôn trọng prefers-reduced-motion. */
-.pn-chat-backdrop { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.pn-orb { position: absolute; width: 70vmax; height: 70vmax; border-radius: 9999px; opacity: .8; will-change: transform; }
-.pn-orb-a { top: -35vmax; right: -25vmax; animation: pn-drift-a 26s ease-in-out infinite alternate; }
-.pn-orb-b { bottom: -40vmax; left: -30vmax; animation: pn-drift-b 32s ease-in-out infinite alternate; }
-.pn-orb-c { top: 30%; left: 35%; width: 45vmax; height: 45vmax; opacity: .5; animation: pn-drift-c 38s ease-in-out infinite alternate; }
-@keyframes pn-drift-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-8vmax, 6vmax, 0) scale(1.12); } }
-@keyframes pn-drift-b { from { transform: translate3d(0, 0, 0) scale(1.05); } to { transform: translate3d(9vmax, -5vmax, 0) scale(.95); } }
-@keyframes pn-drift-c { from { transform: translate3d(-6vmax, 0, 0); } to { transform: translate3d(6vmax, -6vmax, 0); } }
-.pn-vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(2, 4, 12, .55) 100%); }
-.pn-grain { position: absolute; inset: 0; opacity: .22; background-size: 140px 140px; }
+/* ============ MESSENGER 2.0 — refined (11/2026) ============
+   Bình tĩnh, chuyên nghiệp: không quầng sáng trôi, không glow, không gradient trên bong bóng.
+   Tin của mình = màu nhấn đặc (chữ #fff 4.60:1), tin người kia = xám trung tính (13.7:1). */
+.pn-chat-backdrop, .pn-orb, .pn-grain, .pn-vignette { display: none; }
 
 /* Bong bóng */
-.pn-bubble-me {
-  background: linear-gradient(135deg, #ec4899 0%, #d946ef 55%, #8b5cf6 120%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 22px -12px rgba(236, 72, 153, .75);
-  color: #fff;
-}
-.pn-bubble-them {
-  background: linear-gradient(180deg, rgba(41, 37, 68, .82), rgba(30, 27, 50, .82));
-  border: 1px solid rgba(255, 255, 255, .08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 8px 22px -14px rgba(0, 0, 0, .8);
-  color: #f1f5f9;
-}
-@keyframes pn-in-me { from { opacity: 0; transform: translate3d(14px, 6px, 0) scale(.94); } to { opacity: 1; transform: none; } }
-@keyframes pn-in-them { from { opacity: 0; transform: translate3d(-14px, 6px, 0) scale(.94); } to { opacity: 1; transform: none; } }
-.pn-in-me { animation: pn-in-me .32s cubic-bezier(.2, .9, .25, 1.15) both; transform-origin: bottom right; }
-.pn-in-them { animation: pn-in-them .32s cubic-bezier(.2, .9, .25, 1.15) both; transform-origin: bottom left; }
+.pn-bubble-me { background: var(--color-pn-brand); color: #fff; box-shadow: none; }
+.pn-bubble-them { background: var(--color-pn-bubble); border: 0; box-shadow: none; color: var(--color-pn-text); }
+@keyframes pn-in { from { opacity: 0; transform: translate3d(0, 6px, 0) scale(.98); } to { opacity: 1; transform: none; } }
+.pn-in-me, .pn-in-them { animation: pn-in .18s cubic-bezier(.23, 1, .32, 1) both; }
+.pn-in-me { transform-origin: bottom right; }
+.pn-in-them { transform-origin: bottom left; }
 
-/* Thanh trên / khung soạn tin dạng kính */
-.pn-glass-bar {
-  background: linear-gradient(180deg, rgba(10, 8, 22, .78), rgba(10, 8, 22, .55));
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-}
-.pn-glass-bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(236, 72, 153, .55), rgba(139, 92, 246, .55), transparent); }
-/* Khung soạn tin KHÔNG dùng backdrop-filter: nó không đè lên tin nhắn nào (chỉ có nền phía sau) mà lớp mờ
-   phải tính lại mỗi lần gõ 1 chữ → khựng phím trên máy yếu. Gradient đặc nhìn y hệt, nhẹ hơn nhiều. */
-.pn-composer { background: linear-gradient(0deg, rgba(9, 7, 20, .96), rgba(12, 9, 26, .9)); }
-.pn-input-wrap { position: relative; border-radius: 9999px; background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); transition: box-shadow .2s ease, background-color .2s ease; }
-.pn-input-wrap:focus-within { background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px rgba(236, 72, 153, .6), 0 0 0 4px rgba(236, 72, 153, .12); }
-/* Nút gửi phát sáng: vòng sáng là ::after chỉ đổi transform + opacity (chạy trên GPU) — KHÔNG animate
-   box-shadow (bắt trình duyệt vẽ lại mỗi khung hình → gõ phím khựng; chat_perf bắt được 17/10/2026). */
-.pn-send-on { position: relative; box-shadow: 0 6px 18px -6px rgba(217, 70, 239, .8); }
-.pn-send-on::after { content: ""; position: absolute; inset: 0; border-radius: 9999px; border: 2px solid rgba(236, 72, 153, .55); animation: pn-send-ring 2.2s ease-out infinite; pointer-events: none; will-change: transform, opacity; }
-@keyframes pn-send-ring { from { transform: scale(1); opacity: .9; } 70%, to { transform: scale(1.45); opacity: 0; } }
-/* Đang gõ → quầng sáng nền đứng yên (lớp kính mờ của khung soạn tin không phải tính lại mỗi khung hình) */
-.chat-wallpaper:focus-within .pn-orb { animation-play-state: paused; }
-.pn-date-pill { background: rgba(15, 12, 32, .62); border: 1px solid rgba(255, 255, 255, .08); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-.pn-presence-ring { box-shadow: 0 0 0 2px rgba(10, 8, 22, 1), 0 0 0 3.5px rgba(52, 211, 153, .9), 0 0 14px 2px rgba(52, 211, 153, .35); }
+/* Thanh trên: đặc, viền mảnh trung tính */
+.pn-glass-bar { background: var(--chat-bar-bg, var(--color-pn-canvas)); border-bottom: 1px solid rgb(255 255 255 / .06); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.pn-glass-bar::after { content: none; }
+/* Icon hành động trên thanh (gọi, video, menu…) trung tính — màu nhấn để dành cho trạng thái */
+.pn-glass-bar .text-pink-400 { color: #d4d4d8; }
+.pn-glass-bar .text-pink-400:hover { color: #fff; }
+
+/* Khung soạn tin (không backdrop-filter: lớp mờ phải tính lại mỗi lần gõ phím trên máy yếu) */
+.pn-composer { background: var(--chat-bar-bg, var(--color-pn-canvas)); }
+.pn-input-wrap { position: relative; border-radius: 9999px; background: var(--color-pn-raised); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06); transition: box-shadow .15s ease-out; }
+.pn-input-wrap:focus-within { background: var(--color-pn-raised); box-shadow: inset 0 0 0 1.5px var(--color-pn-brand-ink); }
+.pn-input-wrap input, .pn-input-wrap textarea { text-overflow: ellipsis; }
+.pn-input-wrap input::placeholder, .pn-input-wrap textarea::placeholder { text-overflow: ellipsis; }
+.pn-composer form .text-pink-400 { color: #a1a1aa; }
+.pn-composer form .text-pink-400:hover { color: #f4f4f5; }
+.pn-composer button[type="submit"] { background-image: none; background-color: var(--color-pn-brand); box-shadow: none; }
+.pn-composer button[type="submit"]:not(:disabled):active { background-color: var(--color-pn-brand-press); }
+.pn-composer button[type="submit"]:disabled { background-color: var(--color-pn-overlay); color: #63636b; opacity: 1; }
+.pn-send-on { position: relative; box-shadow: none; }
+.pn-send-on::after { content: none; }
+/* Nhãn "Gợi ý" của hàng gợi ý trả lời: trung tính */
+[data-testid="chat-assist"] > span:first-child { color: #8e8e96; }
+
+/* Ngăn cách ngày: chữ thường, không viên kính */
+.pn-date-pill { background: transparent; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; color: #8e8e96; font-weight: 500; }
+.pn-presence-ring { box-shadow: 0 0 0 2px var(--color-pn-canvas), 0 0 0 3.5px #34d399; }
 
 /* Danh sách chat */
-.pn-conv-active { background: linear-gradient(90deg, rgba(236, 72, 153, .16), rgba(139, 92, 246, .08)); box-shadow: inset 0 0 0 1px rgba(236, 72, 153, .28); }
-.pn-list-hero { background: radial-gradient(28rem 12rem at 0% 0%, rgba(236, 72, 153, .22), transparent 70%), radial-gradient(24rem 12rem at 100% 0%, rgba(139, 92, 246, .2), transparent 70%); }
+.pn-conv-active { background: rgb(255 255 255 / .06); box-shadow: none; }
+.pn-list-hero { background: none; }
+.pn-list-hero h2 { background: none; color: #fafafa; -webkit-text-fill-color: currentColor; font-size: 22px; letter-spacing: -0.01em; }
+.pn-list-hero p { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 500; color: #8e8e96; }
+.pn-list-hero button { background: rgb(255 255 255 / .06); border-color: rgb(255 255 255 / .08); color: #e4e4e7; box-shadow: none; text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+.pn-list-hero button:hover { background: rgb(255 255 255 / .1); color: #fff; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pn-orb-a, .pn-orb-b, .pn-orb-c, .pn-send-on::after { animation: none; }
-  .pn-in-me, .pn-in-them { animation-duration: .01s; }
+  .pn-in-me, .pn-in-them { animation: none; }
 }
 
 /* ---- 17/10/2026: nền "xịn" hơn nhưng nhẹ (ảnh tĩnh, không blur động) ---- */
@@ -520,3 +540,264 @@ body {
 .pn-fade-in { animation: pnFadeIn 0.5s ease both; }
 @keyframes pnFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .pn-fade-in { animation: none; } }
+
+/* =====================================================================
+   PawNail "refined professional dark" (11/2026)
+   ---------------------------------------------------------------------
+   Mọi thay đổi toàn cục nằm dưới `html:not([data-ui-classic])`.
+   <html data-ui-classic> được đặt TRƯỚC khi vẽ (script đầu trang ở app/layout.tsx, đồng bộ lại
+   trong BottomNav) cho /auth/* và trang chủ khách "/" — 2 bề mặt đó giữ nguyên giao diện cũ.
+   Không lớp (unlayered) + độ ưu tiên (0,1,1) → thắng lớp theme `:root,:host` của Tailwind và
+   `:root{--color-slate-500}` ở trên; mọi utility slate/pink/fuchsia… (kể cả /alpha) đi qua các biến này.
+   ===================================================================== */
+html:not([data-ui-classic]) {
+  color-scheme: dark;
+  --background: #0b0b0c;
+
+  /* Bề mặt trung tính (than chì) — bỏ ám xanh navy của slate */
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #8e8e96;
+  --color-slate-600: #63636b;
+  --color-slate-700: #3a3a40;
+  --color-slate-800: #26262a;
+  --color-slate-850: #1f1f23;
+  --color-slate-900: #17171a;
+  --color-slate-950: #0b0b0c;
+
+  /* MỘT màu nhấn, sRGB (bỏ chất neon của oklch trên màn P3). 500 gộp vào 600 → mọi gradient
+     pink-500→600 thành màu đặc, mọi nhãn trắng trên nền hồng ≥ 4.5:1. */
+  --color-pink-50: #fdf2f8;
+  --color-pink-100: #fce7f3;
+  --color-pink-200: #fbcfe8;
+  --color-pink-300: #f9a8d4;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #db2777;
+  --color-pink-600: #db2777;
+  --color-pink-700: #be185d;
+  --color-pink-800: #9d174d;
+  --color-pink-900: #831843;
+  --color-pink-950: #500724;
+
+  /* fuchsia / purple / violet / indigo: nền đặc 500–800 gộp vào màu nhấn → "from-pink-600 to-fuchsia-600",
+     "from-purple-600 via-indigo-600 to-pink-600" thành hồng đặc; sắc nhạt 50–400 (chữ/icon/viền trang trí) và
+     nền ám tím (…-900/950) thành trung tính — bớt hồng thay vì thêm hồng. */
+  --color-fuchsia-50: #fafafa;  --color-purple-50: #fafafa;  --color-violet-50: #fafafa;  --color-indigo-50: #fafafa;
+  --color-fuchsia-100: #f4f4f5; --color-purple-100: #f4f4f5; --color-violet-100: #f4f4f5; --color-indigo-100: #f4f4f5;
+  --color-fuchsia-200: #e4e4e7; --color-purple-200: #e4e4e7; --color-violet-200: #e4e4e7; --color-indigo-200: #e4e4e7;
+  --color-fuchsia-300: #d4d4d8; --color-purple-300: #d4d4d8; --color-violet-300: #d4d4d8; --color-indigo-300: #d4d4d8;
+  --color-fuchsia-400: #a1a1aa; --color-purple-400: #a1a1aa; --color-violet-400: #a1a1aa; --color-indigo-400: #a1a1aa;
+  --color-fuchsia-500: #db2777; --color-purple-500: #db2777; --color-violet-500: #db2777; --color-indigo-500: #db2777;
+  --color-fuchsia-600: #db2777; --color-purple-600: #db2777; --color-violet-600: #db2777; --color-indigo-600: #db2777;
+  --color-fuchsia-700: #be185d; --color-purple-700: #be185d; --color-violet-700: #be185d; --color-indigo-700: #be185d;
+  --color-fuchsia-800: #9d174d; --color-purple-800: #9d174d; --color-violet-800: #9d174d; --color-indigo-800: #9d174d;
+  --color-fuchsia-900: #17171a; --color-purple-900: #17171a; --color-violet-900: #17171a; --color-indigo-900: #17171a;
+  --color-fuchsia-950: #0b0b0c; --color-purple-950: #0b0b0c; --color-violet-950: #0b0b0c; --color-indigo-950: #0b0b0c;
+
+  /* Màu ngữ nghĩa ghim về sRGB: dịu và nhất quán. lương = emerald, gấp = red/rose, hot = orange,
+     phúc lợi = amber, tin/mới = sky. Trạng thái = nền nhạt /10–/15 + viền /20–/25 + chữ 200/300. */
+  --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981; --color-emerald-600: #059669; --color-emerald-700: #047857;
+  --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b; --color-amber-600: #d97706;
+  --color-red-300: #fca5a5; --color-red-400: #f87171; --color-red-500: #ef4444; --color-red-600: #dc2626;
+  --color-rose-300: #fda4af; --color-rose-400: #fb7185; --color-rose-500: #f43f5e;
+  --color-orange-300: #fdba74; --color-orange-400: #fb923c; --color-orange-500: #f97316;
+  --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8; --color-sky-500: #0ea5e9;
+
+  /* Tiêu đề bớt "hét": 900 → 700 (Roboto không có 800 nên 800 cũng về 700) */
+  --font-weight-black: 700;
+  --font-weight-extrabold: 700;
+}
+
+/* Không còn quầng màu (glow) ở bất kỳ đâu: shadow-{màu}-* và shadow-[…rgba()] đều biên dịch
+   thành var(--tw-shadow-color, …) → đặt 1 biến là trung hoà cả hai; thứ nổi chỉ còn bóng đen trung tính. */
+html:not([data-ui-classic]) :is([class*="shadow-pink-"], [class*="shadow-fuchsia-"], [class*="shadow-purple-"], [class*="shadow-violet-"], [class*="shadow-indigo-"], [class*="shadow-rose-"], [class*="shadow-red-"], [class*="shadow-orange-"], [class*="shadow-amber-"], [class*="shadow-emerald-"], [class*="shadow-sky-"], [class*="shadow-blue-"], [class*="rgba(236,72,153"], [class*="rgba(219,39,119"], [class*="rgba(217,70,239"], [class*="rgba(249,115,22"], [class*="rgba(52,211,153"]) {
+  --tw-shadow-color: rgb(0 0 0 / 0.28);
+}
+/* Quầng mờ trang trí (404, offline, trends, FeatureGate, PushPrompt, hồ sơ, màn gọi) */
+html:not([data-ui-classic]) .absolute.rounded-full:is(.blur-2xl, .blur-3xl, [class~="blur-[90px]"], [class~="blur-[100px]"]) {
+  display: none;
+}
+
+/* Nền app: than chì tĩnh + 3% sáng nhẹ phía trên cho chiều sâu. Tắt aurora, kim tuyến "+",
+   chùm sáng, lưới chấm, vignette, hạt phim (vẫn giữ markup + CSS cũ cho bề mặt classic). */
+html:not([data-ui-classic]) .app-backdrop {
+  background: radial-gradient(120% 40rem at 50% -14rem, rgb(255 255 255 / 0.03), transparent 70%), var(--color-pn-canvas);
+}
+html:not([data-ui-classic]) .app-backdrop::before,
+html:not([data-ui-classic]) .app-backdrop::after,
+html:not([data-ui-classic]) .app-backdrop > * {
+  display: none;
+}
+
+/* Thẻ "bắt đầu" (GettingStarted) — chỉ móc CSS vì className nằm chung dòng với chữ */
+html:not([data-ui-classic]) :is(section[data-nudge], a[data-nudge]) {
+  background: var(--color-pn-surface);
+  background-image: none;
+  border-color: var(--color-pn-line);
+}
+
+@layer components {
+  /* Trong @layer components để hover:border-* / !border-* vẫn thắng. (0,2,1) > .glass-card mobile. */
+  html:not([data-ui-classic]) .glass-card {
+    background: var(--color-pn-surface);
+    border: 1px solid var(--color-pn-line);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html:not([data-ui-classic]) .skeleton {
+    background: linear-gradient(90deg, #18181b 0%, #222226 50%, #18181b 100%);
+    background-size: 800px 100%;
+  }
+  html:not([data-ui-classic]) .input-field {
+    border-color: rgb(255 255 255 / 0.08);
+    background: var(--color-pn-surface);
+    color: var(--color-pn-text);
+  }
+  html:not([data-ui-classic]) .input-field:hover { border-color: rgb(255 255 255 / 0.14); }
+  html:not([data-ui-classic]) .input-field:focus {
+    border-color: var(--color-pn-brand);
+    box-shadow: 0 0 0 1px var(--color-pn-brand);
+    background: var(--color-pn-raised);
+  }
+  html:not([data-ui-classic]) .field-label { color: #a1a1aa; }
+}
+
+/* Bề mặt trình duyệt theo bảng màu */
+html:not([data-ui-classic]) ::selection { background: rgb(219 39 119 / 0.35); color: #fff; }
+html:not([data-ui-classic]) ::placeholder { color: #8e8e96; opacity: 1; }
+html:not([data-ui-classic]) :is(input, textarea) { caret-color: #f472b6; }
+html:not([data-ui-classic]) :is(a, button, [role="tab"], summary):focus-visible { outline: 2px solid #f472b6; outline-offset: 2px; }
+html:not([data-ui-classic]) ::-webkit-scrollbar-track { background: var(--color-pn-canvas); }
+html:not([data-ui-classic]) ::-webkit-scrollbar-thumb { background: #2a2a2e; }
+html:not([data-ui-classic]) ::-webkit-scrollbar-thumb:hover { background: #3a3a40; }
+
+/* ===== Móc CSS cho các dòng TSX nằm sát chữ hiển thị (11/2026) =====
+   Nhánh copy đang viết lại chữ ở ~230 file → các dòng className dính liền dòng chữ được giữ NGUYÊN như main,
+   kiểu "refined" đặt ở đây, khớp theo tổ hợp class / id / thuộc tính đã có. Merge 2 nhánh không đụng nhau. */
+
+/* Chip "Gần bạn" (JobBoard): trung tính — emerald chỉ còn cho con số lương */
+html:not([data-ui-classic]) .ml-1.bg-emerald-500\/15.ring-emerald-500\/25 {
+  background-color: rgb(255 255 255 / 0.06);
+  color: #e4e4e7;
+  font-weight: 600;
+  --tw-ring-color: rgb(255 255 255 / 0.1);
+}
+
+/* Thanh "chưa lưu" của /profile đang hiện → ẩn nút lên-đầu-trang (cùng góc phải, từng đè lên nút Lưu) */
+body:has(.pn-save-bar) .fixed.right-4.bottom-24 { display: none; }
+
+/* Bảng thông báo (NotificationBell): bề mặt nổi + viền rõ + bóng nổi (thẻ trang chỉ có viền) */
+html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"] {
+  background: var(--color-pn-raised);
+  border-color: var(--color-pn-line-strong);
+  box-shadow: var(--shadow-pn-float);
+}
+
+/* Chip "Đang hot" (JobBoard + /jobs/[id]): nền cam nhạt + viền mảnh, không khối gradient phát sáng */
+html:not([data-ui-classic]) .bg-gradient-to-r.from-orange-500.to-red-500.shadow-orange-500\/30 {
+  background: rgb(251 146 60 / 0.15);
+  color: #fdba74;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgb(251 146 60 / 0.25);
+}
+html:not([data-ui-classic]) .bg-gradient-to-r.from-orange-500.to-red-500.shadow-orange-500\/30 svg { fill: currentColor; }
+
+/* Thẻ nhấn "sky" (Nhịp đau tuần, Ai đã xem hồ sơ) → thẻ trung tính; sky không còn là màu nhấn thứ 2 */
+html:not([data-ui-classic]) .bg-gradient-to-br.from-sky-500\/\[0\.08\] {
+  background: var(--color-pn-surface);
+  border-color: var(--color-pn-line);
+}
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] .hover\:ring-sky-400\/50:hover,
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] .hover\:ring-sky-400\/40:hover { --tw-ring-color: rgb(255 255 255 / 0.2); }
+/* Bình chọn: phiếu của mình = sắc màu nhấn, dấu tick màu nhấn */
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] .bg-sky-500\/30 { background-color: rgb(219 39 119 / 0.25); }
+html:not([data-ui-classic]) .from-sky-500\/\[0\.08\] svg.text-sky-300 { color: var(--color-pn-brand-ink); }
+/* Ai đã xem hồ sơ: ô icon + tên tiệm trung tính */
+html:not([data-ui-classic]) #ai-da-xem .bg-sky-500\/15 { background-color: rgb(255 255 255 / 0.06); color: #d4d4d8; --tw-ring-color: rgb(255 255 255 / 0.08); }
+html:not([data-ui-classic]) #ai-da-xem svg.text-sky-300 { color: var(--color-pn-text-2); }
+html:not([data-ui-classic]) #ai-da-xem .text-sky-200 { color: var(--color-pn-text); }
+
+/* Nhãn mắt (eyebrow) — MỘT kiểu: 11px, đậm vừa, chữ hoa giãn nhẹ, slate-400, icon cùng màu.
+   (Trước: "PAWNAIL STUDIO · UPDATED DAILY" hồng, "WEEKLY PULSE"/"WHO VIEWED" xanh trời, "SUGGESTED" xám + icon hồng.) */
+html:not([data-ui-classic]) :is(p, h2, h3).uppercase:is(.tracking-wider, .tracking-wide):is(.text-pink-300, .text-pink-400, .text-sky-300) {
+  color: var(--color-pn-text-2);
+  font-size: 11px;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+html:not([data-ui-classic]) :is(p, h2, h3).uppercase:is(.tracking-wider, .tracking-wide) > svg { color: inherit; }
+/* Icon đầu tiêu đề mục (Mẫu nail mới: máy ảnh hồng / sổ vàng / lấp lánh hồng) → cùng 1 màu trung tính */
+html:not([data-ui-classic]) h2:is(.text-base, .text-lg) > svg:first-child:is(.text-pink-300, .text-pink-400, .text-amber-300, .text-emerald-300, .text-sky-300) {
+  color: var(--color-pn-text-2);
+}
+
+/* Chip đang chọn kiểu "sky" (bộ lọc trong sheet Báo việc mới) → cùng quy tắc chip lọc: nền trắng, chữ đen */
+html:not([data-ui-classic]) button[aria-pressed="true"].bg-sky-500\/20 {
+  background-color: #fff;
+  color: var(--color-pn-canvas);
+  --tw-ring-color: #fff;
+}
+
+/* Lịch hẹn trống (BookingInbox): icon lịch trong vòng tròn trung tính + "Mở menu của tôi" thành nút phụ */
+html:not([data-ui-classic]) div.rounded-3xl.bg-white\/\[0\.03\].p-8.text-center::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.06) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18M9 16l2 2 4-4'/%3E%3C/svg%3E") center / 22px no-repeat;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+html:not([data-ui-classic]) div.rounded-3xl.bg-white\/\[0\.03\].p-8.text-center p > a {
+  display: flex;
+  width: fit-content;
+  height: 40px;
+  align-items: center;
+  margin: 16px auto 0;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  color: var(--color-pn-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+html:not([data-ui-classic]) div.rounded-3xl.bg-white\/\[0\.03\].p-8.text-center p > a:hover { background: rgb(255 255 255 / 0.1); }
+
+/* Tiêu đề lớn: khít chữ nhẹ (Roboto 700 ở cỡ lớn trông rời rạc) */
+html:not([data-ui-classic]) :is(h1, h2).font-black:is(.text-xl, .text-2xl, .text-3xl) { letter-spacing: -0.01em; }
+
+/* Thẻ "Bước tiếp theo" (GettingStarted compact) — hover + bộ đếm trung tính */
+html:not([data-ui-classic]) a[data-nudge]:hover { background: var(--color-pn-raised); }
+html:not([data-ui-classic]) [data-nudge] .text-pink-200 { color: #d4d4d8; }
+
+/* Hover của nút chính: trong app pink-500 == pink-600 (và fuchsia 500 == 600) nên "hover:bg-pink-500" /
+   "hover:from-pink-500" không đổi gì → tối đi 1 nấc (brand-hover). Chỉ chọn đúng tên class, không quét chuỗi con. */
+@media (hover: hover) {
+  html:not([data-ui-classic]) :is(.hover\:bg-pink-500, .hover\:bg-pink-600, .hover\:bg-fuchsia-500, .hover\:bg-fuchsia-600):hover {
+    background-color: var(--color-pn-brand-hover);
+  }
+  html:not([data-ui-classic]) :is(.hover\:from-pink-500, .hover\:from-pink-600, .hover\:from-fuchsia-500):hover {
+    background-image: none;
+    background-color: var(--color-pn-brand-hover);
+  }
+}
+
+/* Giảm chuyển động: tắt cả các hiệu ứng vào của modal / tin nhắn / sheet, và mọi hiệu ứng lặp vô hạn
+   của Tailwind (ping/pulse/bounce — chấm "live", skeleton, badge) ở MỌI trang. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn, .animate-scaleUp, .message-slide-up, .message-bounce-in, .animate-callSheetUp,
+  .pn-in-me, .pn-in-them, .pn-fade-in,
+  .animate-ping, .animate-pulse, .animate-bounce {
+    animation: none;
+  }
+  .animate-ping { opacity: 0; }
+}

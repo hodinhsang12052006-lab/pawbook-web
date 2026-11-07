@@ -149,7 +149,7 @@ export default function CallScreen(p: CallScreenProps) {
       {/* ---------- stage ---------- */}
       {p.video ? (
         <div className="absolute inset-0">
-          <MediaVideo stream={p.remoteVideo} label={tr(`Video của ${p.peer.name}`, `${p.peer.name}'s video`)} className={`h-full w-full object-cover transition-opacity duration-300 ${remoteShowing ? "opacity-100" : "opacity-0"}`} />
+          <MediaVideo stream={p.remoteVideo} label={tr(`Video của ${p.peer.name}`, `${p.peer.name}'s video`)} className={`h-full w-full bg-black object-cover motion-safe:transition-opacity motion-safe:duration-300 md:object-contain ${remoteShowing ? "opacity-100" : "opacity-0"}`} />
           {!remoteShowing && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-pn-canvas-top to-pn-canvas">
               <Avatar src={p.peer.avatarUrl} name={p.peer.name} seed={p.peer.id} loading="eager" className="h-28 w-28 ring-4 ring-white/10" />
@@ -181,7 +181,7 @@ export default function CallScreen(p: CallScreenProps) {
           <span />
         )}
         <div className="flex shrink-0 items-center gap-2">
-          {p.phase === "connected" && p.quality && (
+          {p.phase === "connected" && p.net === "connected" && p.quality && (
             <span
               title={p.quality === "good" ? tr("Kết nối tốt", "Good connection") : p.quality === "fair" ? tr("Kết nối trung bình", "Fair connection") : tr("Mạng yếu", "Weak connection")}
               className={`flex h-9 items-center gap-1 rounded-full px-2.5 text-[11px] font-bold ring-1 backdrop-blur ${p.quality === "good" ? "bg-black/30 text-emerald-300 ring-white/10" : p.quality === "fair" ? "bg-black/30 text-pn-champagne ring-pn-champagne-line" : "bg-rose-950/60 text-rose-200 ring-rose-400/30"}`}
@@ -213,7 +213,8 @@ export default function CallScreen(p: CallScreenProps) {
           </div>
           <div className="space-y-1.5">
             <h2 className="text-[28px] font-black leading-tight tracking-tight">{p.peer.name}</h2>
-            <p className="text-sm font-semibold tabular-nums text-pn-text-2" data-call-status>
+            <p role="status" className="flex items-center justify-center gap-1.5 text-sm font-semibold tabular-nums text-pn-text-2" data-call-status>
+              {p.net === "reconnecting" && <RefreshCw className="h-4 w-4 motion-safe:animate-spin" />}
               {status}
             </p>
           </div>
@@ -231,7 +232,7 @@ export default function CallScreen(p: CallScreenProps) {
           {weak && <span className="rounded-full bg-rose-950/70 px-2.5 py-1 text-[11px] font-semibold text-rose-100 ring-1 ring-rose-400/30">{tr("Mạng yếu", "Weak connection")}</span>}
         </div>
       )}
-      {p.net === "reconnecting" && (
+      {p.video && p.net === "reconnecting" && (
         <div role="status" className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/10 backdrop-blur">
           <RefreshCw className="h-4 w-4 motion-safe:animate-spin" />
           {tr("Đang kết nối lại…", "Reconnecting…")}
@@ -255,7 +256,7 @@ export default function CallScreen(p: CallScreenProps) {
 
       {/* ---------- controls ---------- */}
       <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col items-center px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
-        <div className="flex w-full max-w-md items-end justify-center gap-3 sm:gap-5">
+        <div className="flex w-full max-w-md items-end justify-center gap-2 min-[380px]:gap-3 sm:gap-5">
           <Control
             label={p.micOn ? tr("Tắt tiếng", "Mute") : tr("Bật tiếng", "Unmute")}
             pressed={!p.micOn}
@@ -265,7 +266,8 @@ export default function CallScreen(p: CallScreenProps) {
           />
           <Control
             label={p.localVideoOn ? tr("Tắt camera", "Stop video") : tr("Bật camera", "Start video")}
-            pressed={!p.localVideoOn}
+            // voice layout: "Start video" is an action, not a toggled-off state
+            pressed={p.video ? !p.localVideoOn : undefined}
             onClick={p.onToggleCam}
             disabled={p.busy}
             icon={p.localVideoOn ? <Video className="h-6 w-6" /> : <VideoOff className="h-6 w-6" />}
@@ -321,7 +323,7 @@ export default function CallScreen(p: CallScreenProps) {
 
 function Control({ label, pressed, onClick, icon, disabled, data }: { label: string; pressed?: boolean; onClick: () => void; icon: React.ReactNode; disabled?: boolean; data: string }) {
   return (
-    <div className="flex w-16 flex-col items-center gap-1.5">
+    <div className="flex w-[4.5rem] flex-col items-center gap-1.5">
       <button
         type="button"
         data-call-control={data}
@@ -336,7 +338,7 @@ function Control({ label, pressed, onClick, icon, disabled, data }: { label: str
       >
         {icon}
       </button>
-      <span className="text-center text-[11px] font-semibold leading-tight text-white/85">{label}</span>
+      <span className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight text-white/85">{label}</span>
     </div>
   );
 }

@@ -60,7 +60,8 @@ export default function WallpaperSheet({
   const [draft, setDraft] = useState<Record<string, PhotoMeta>>({});
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<number | null>(null);
-  const originals = useRef(new Map<string, File>());
+  // Ảnh gốc vừa chọn (chỉ trong lúc bảng mở) — để bật / tắt "Làm mờ" xử lý lại từ ảnh gốc
+  const [originals, setOriginals] = useState<Record<string, File>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const applyRef = useRef<HTMLButtonElement>(null);
   const [, bump] = useState(0);
@@ -105,7 +106,7 @@ export default function WallpaperSheet({
         return;
       }
       cachePhotoUrl(userId, id, out.blob);
-      originals.current.set(id, f);
+      setOriginals((o) => ({ ...o, [id]: f }));
       setDraft((d) => ({ ...d, [id]: { dim: DIM_DEFAULT, blur: false, w: out.w, h: out.h, at: Date.now() } }));
       setSelected(`photo:${id}`);
     } finally {
@@ -119,7 +120,7 @@ export default function WallpaperSheet({
   };
   const toggleBlur = async () => {
     if (!pid || !meta) return;
-    const f = originals.current.get(pid);
+    const f = originals[pid];
     if (!f) return;
     setBusy(true);
     try {
@@ -243,8 +244,8 @@ export default function WallpaperSheet({
               />
               <span className="w-9 flex-shrink-0 text-right tabular-nums">{meta.dim}%</span>
             </label>
-            <label className={`flex flex-shrink-0 items-center gap-2 text-[13px] text-[#c0b2bc] ${originals.current.has(pid) ? "" : "opacity-50"}`}>
-              <input type="checkbox" checked={meta.blur} disabled={!originals.current.has(pid) || busy} onChange={toggleBlur} className="h-4 w-4 accent-[#c0406f]" />
+            <label className={`flex flex-shrink-0 items-center gap-2 text-[13px] text-[#c0b2bc] ${originals[pid] ? "" : "opacity-50"}`}>
+              <input type="checkbox" checked={meta.blur} disabled={!originals[pid] || busy} onChange={toggleBlur} className="h-4 w-4 accent-[#c0406f]" />
               {tr("Làm mờ", "Blur")}
             </label>
           </div>

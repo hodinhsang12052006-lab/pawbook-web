@@ -13,11 +13,12 @@ import { pushGifRecent, readGifRecent, type StoredGif } from "@/lib/stickers/sto
 // trang sau (tối đa 5 trang). Ghi công "Powered by GIPHY / Tenor" luôn hiện khi có kết quả.
 export type GifItem = StoredGif;
 type Provider = "giphy" | "tenor";
-type State =
+type State = (
   | { kind: "loading" }
   | { kind: "ready"; provider: Provider; items: GifItem[]; next: string | null; pages: number; more: boolean }
   | { kind: "disabled" }
-  | { kind: "error" };
+  | { kind: "error" }
+) & { key?: string };
 
 const MAX_PAGES = 5;
 // Chip: nhãn theo ngôn ngữ, nhưng TÌM bằng từ tiếng Anh (GIPHY gắn thẻ tiếng Anh là chính).
@@ -50,7 +51,7 @@ export default function GifTab({
   useTr();
   const [input, setInput] = useState(initialQuery ?? "");
   const [req, setReq] = useState<{ q: string; lang: "vi" | "en" }>({ q: (initialQuery ?? "").trim(), lang });
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const [loaded, setState] = useState<State>({ kind: "loading" });
   const [recent, setRecent] = useState<GifItem[]>(() => (typeof window === "undefined" ? [] : readGifRecent(userId)));
   const [cols, setCols] = useState(2);
   const [retry, setRetry] = useState(0);
@@ -75,21 +76,23 @@ export default function GifTab({
     return (await r.json()) as { enabled: boolean; provider: Provider | null; results: GifItem[]; next: string | null };
   }, []);
 
+  // Kết quả gắn với đúng lượt tìm (key) — đổi từ khoá thì tự về "đang tải" cho tới khi lượt mới về.
+  const key = `${req.lang}|${req.q}|${retry}`;
+  const state = useMemo<State>(() => (loaded.key === key ? loaded : { kind: "loading" }), [loaded, key]);
   useEffect(() => {
     let alive = true;
-    setState({ kind: "loading" });
     scrollRef.current?.scrollTo({ top: 0 });
     fetchPage(req.q, req.lang, null)
       .then((d) => {
         if (!alive) return;
-        if (!d.enabled || !d.provider) setState({ kind: "disabled" });
-        else setState({ kind: "ready", provider: d.provider, items: d.results, next: d.next, pages: 1, more: false });
+        if (!d.enabled || !d.provider) setState({ kind: "disabled", key });
+        else setState({ kind: "ready", provider: d.provider, items: d.results, next: d.next, pages: 1, more: false, key });
       })
-      .catch(() => alive && setState({ kind: "error" }));
+      .catch(() => alive && setState({ kind: "error", key }));
     return () => {
       alive = false;
     };
-  }, [req, retry, fetchPage]);
+  }, [req, key, fetchPage]);
 
   const loadMore = useCallback(async () => {
     if (state.kind !== "ready" || !state.next || state.pages >= MAX_PAGES || loadingMore.current) return;

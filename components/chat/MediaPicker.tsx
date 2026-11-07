@@ -41,15 +41,10 @@ export default function MediaPicker({
 }) {
   useTr();
   const panelRef = useRef<HTMLDivElement>(null);
-  const [recent, setRecent] = useState<string[]>([]);
-  const [group, setGroup] = useState<string>("recent");
+  // Bảng chỉ dựng ở trình duyệt (sau khi bấm mở) → đọc thẳng localStorage lúc khởi tạo
+  const [recent, setRecent] = useState<string[]>(() => (typeof window === "undefined" ? [] : readEmojiRecent(userId)));
+  const [group, setGroup] = useState<string>(() => (recent.length ? "recent" : EMOJI_GROUPS[0].id));
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const r = readEmojiRecent(userId);
-    setRecent(r);
-    if (!r.length) setGroup(EMOJI_GROUPS[0].id);
-  }, [userId]);
   useEffect(() => {
     writeMediaTab(userId, tab);
   }, [userId, tab]);

@@ -54,13 +54,13 @@ export default function StickerPeek({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div role="dialog" aria-modal="true" aria-label={name} className="pn-stk-peek-card flex w-[264px] flex-col items-center gap-4 rounded-[28px] p-4">
+      <div role="dialog" aria-modal="true" aria-label={name} className="pn-stk-peek-card flex w-[272px] flex-col items-center gap-3 rounded-[28px] p-4">
         {src && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={name} width={200} height={200} crossOrigin="anonymous" decoding="async" draggable={false} className={`h-[200px] w-[200px] select-none ${fluent ? "pn-stk-breathe" : ""}`} />
         )}
         <p className="max-w-full truncate text-[13px] text-[#c0b2bc]">{name}</p>
-        <div className="grid w-full grid-cols-2 gap-2">
+        <div className="grid w-full grid-cols-1 gap-2">
           <button ref={sendRef} type="button" data-peek-action="send" onClick={onSend} className="pn-stk-peek-btn pn-stk-peek-primary">
             <Send className="h-4 w-4" aria-hidden />
             {tr("Gửi", "Send")}

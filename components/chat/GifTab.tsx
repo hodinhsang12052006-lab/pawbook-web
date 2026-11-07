@@ -182,7 +182,13 @@ export default function GifTab({
               </button>
             )}
           </label>
-          <div className="mt-1.5 flex items-center gap-2">
+          {/* Ghi công nhà cung cấp: góc phải, ngay dưới ô tìm, luôn hiện khi có kết quả */}
+          <div className="flex h-4 items-center justify-end pr-1 pt-1">
+            {state.kind === "ready" && state.items.length > 0 && (
+              <span className="pn-gif-powered" data-testid="gif-attribution">Powered by {providerName}</span>
+            )}
+          </div>
+          <div className="mt-1 flex items-center">
             <div className="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
               {CHIPS().map(([labelText, term]) => (
                 <button
@@ -200,9 +206,6 @@ export default function GifTab({
                 </button>
               ))}
             </div>
-            {state.kind === "ready" && state.items.length > 0 && (
-              <span className="pn-gif-powered" data-testid="gif-attribution">Powered by {providerName}</span>
-            )}
           </div>
         </div>
       )}

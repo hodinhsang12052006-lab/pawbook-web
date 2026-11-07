@@ -87,18 +87,22 @@ await owner.page.getByRole("button", { name: "Biểu tượng cảm xúc" }).cli
 const tabs = owner.page.getByRole("tab");
 const tabNames = await tabs.allInnerTexts();
 const emojiCount = await owner.page.locator("[role=tablist] ~ *").count();
-await owner.page.getByRole("tab", { name: "Sticker" }).click();
-const panelStill = (await owner.page.getByRole("tab", { name: "Sticker" }).getAttribute("aria-selected")) === "true";
+await owner.page.getByRole("tab", { name: "Nhãn dán" }).click();
+const panelStill = (await owner.page.getByRole("tab", { name: "Nhãn dán" }).getAttribute("aria-selected")) === "true";
 const panel = owner.page.getByRole("dialog", { name: "Chọn biểu tượng" });
-await panel.getByRole("button", { name: "😂", exact: true }).first().click();
+// ô sticker: aria-label = tên sticker (không phải ký tự thô) → chọn theo data-sticker
+const laugh = panel.locator('[data-section="feelings"] [data-sticker="😂"]').first();
+await laugh.scrollIntoViewIfNeeded();
+await laugh.click();
 const stickerImg = owner.page.locator('img[src*="notoemoji/latest/1f602"]').last();
 // Ảnh phải TẢI ĐƯỢC THẬT (naturalWidth > 0) — trước đây chỉ kiểm có thẻ <img>, nên không bắt được
 // chuyện CSP chặn fonts.gstatic.com (sticker rơi về emoji chữ của hệ điều hành).
 const stickerShown = await owner.page.waitForFunction(() => [...document.querySelectorAll('img[src*="notoemoji/latest/1f602"]')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15000 }).then(() => true).catch(() => false);
 const thumbsOk = await owner.page.evaluate(() => [...document.querySelectorAll('img[src*="notoemoji"][src$="emoji.svg"]')].filter((i) => i.complete).every((i) => i.naturalWidth > 0));
-R.check("R7", "Bảng biểu tượng: đủ 3 tab; bấm tab Sticker KHÔNG đóng bảng (lỗi cũ); gửi sticker 😂 → hiện bản hoạt hình", tabNames.join(",") === "Emoji,Sticker,GIF" && panelStill && stickerShown && thumbsOk, JSON.stringify({ tabNames, panelStill, stickerShown, thumbsOk, emojiCount }));
-// Gửi sticker xong bảng tự đóng → mở lại 1 lần, sang tab Emoji
-await owner.page.getByRole("button", { name: "Biểu tượng cảm xúc" }).click();
+const stillOpen = await panel.isVisible();
+R.check("R7", "Bảng biểu tượng: đủ 3 tab (Emoji · Nhãn dán · GIF); bấm tab Nhãn dán KHÔNG đóng bảng; gửi sticker 😂 → hiện bản hoạt hình, bảng VẪN MỞ", tabNames.join(",") === "Emoji,Nhãn dán,GIF" && panelStill && stickerShown && thumbsOk && stillOpen, JSON.stringify({ tabNames, panelStill, stickerShown, thumbsOk, stillOpen, emojiCount }));
+// Bảng vẫn mở sau khi gửi sticker → sang thẳng tab Emoji
+if (!(await panel.isVisible())) await owner.page.getByRole("button", { name: "Biểu tượng cảm xúc" }).click();
 await owner.page.getByRole("tab", { name: "Emoji" }).click();
 await owner.page.getByRole("dialog", { name: "Chọn biểu tượng" }).locator("button[aria-label]").nth(20).waitFor({ timeout: 5000 }).catch(() => {});
 const groupsN = await owner.page.locator('button[title]').filter({ hasText: /./ }).count();
@@ -106,9 +110,21 @@ const emojis = await owner.page.getByRole("dialog", { name: "Chọn biểu tư�
 R.check("R8", "Tab Emoji: nhiều nhóm (mặt cười, cử chỉ, tim, nail & làm đẹp…) và ≥ 60 emoji mỗi nhóm đầu", emojis >= 60, JSON.stringify({ emojis, groupsN }));
 await owner.page.screenshot({ path: process.env.TEMP + "/picker_emoji.png" });
 await owner.page.getByRole("tab", { name: "GIF" }).click();
-await owner.page.locator('img[alt="GIF"]').first().waitFor({ timeout: 8000 }).catch(() => {});
-const gifs = await owner.page.locator('img[alt="GIF"]').count();
-R.check("R9", "Tab GIF: có danh sách GIF (chưa có khoá GIPHY thì dùng bộ có sẵn)", gifs >= 6, String(gifs));
+// Hợp đồng mới: CHỈ GIF thật từ /api/gifs (GIPHY / Tenor). Chưa có khoá → 0 ô GIF + "Hiện chưa dùng được GIF." (không còn bộ GIF dán cứng).
+const gifApi = await owner.page.evaluate(async () => (await fetch("/api/gifs?lang=vi")).json().catch(() => null));
+let r9;
+if (gifApi?.enabled) {
+  await owner.page.locator('img[alt="GIF"]').first().waitFor({ timeout: 8000 }).catch(() => {});
+  const gifs = await owner.page.locator('img[alt="GIF"]').count();
+  const powered = await owner.page.getByTestId("gif-attribution").isVisible().catch(() => false);
+  r9 = { ok: gifs >= 1 && powered, detail: { gifs, powered, provider: gifApi.provider } };
+} else {
+  const off = await owner.page.getByTestId("gif-disabled").waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+  const gifs = await owner.page.locator('img[alt="GIF"]').count();
+  const copy = await owner.page.getByTestId("gif-disabled").innerText().catch(() => "");
+  r9 = { ok: off && gifs === 0 && /Hiện chưa dùng được GIF/.test(copy) && /Gửi nhãn dán/.test(copy), detail: { off, gifs, copy, reason: gifApi?.reason } };
+}
+R.check("R9", gifApi?.enabled ? "Tab GIF (có khoá): có GIF thật + 'Powered by …'" : "Tab GIF (chưa có khoá): KHÔNG có ô GIF nào, báo 'Hiện chưa dùng được GIF.' + nút 'Gửi nhãn dán'", r9.ok, JSON.stringify(r9.detail));
 await owner.page.screenshot({ path: process.env.TEMP + "/picker_gif.png" });
 
 R.check("R10", "Không có lỗi JS ở các máy", !owner.errors.length && !tech.errors.length, JSON.stringify([...owner.errors, ...tech.errors]).slice(0, 300));

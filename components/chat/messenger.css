@@ -398,7 +398,9 @@ html:not([data-ui-classic]) .pn-msgr .pn-stk-cell {
 @media (hover: hover) { html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:hover { background: rgb(255 255 255 / 0.06); } }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:active { transform: scale(.94); }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:focus-visible { outline: 2px solid var(--m-accent-ink); outline-offset: -2px; }
-html:not([data-ui-classic]) .pn-msgr .pn-stk-img { width: 60px; height: 60px; max-width: 80%; max-height: 80%; object-fit: contain; pointer-events: none; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-img { width: 60px; height: 60px; max-width: 80%; max-height: 80%; object-fit: contain; pointer-events: none; border-radius: 14px; }
+/* chỗ giữ mờ khi ảnh chưa về (lần đầu, mạng chậm) — không để lưới trống trơn */
+html:not([data-ui-classic]) .pn-msgr .pn-stk-img:not([data-ok]) { background: rgb(255 240 246 / 0.05); }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-credit { margin: 12px 6px 4px; font-size: 12px; line-height: 18px; color: #a69ba4; text-align: center; }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-credit a { text-decoration: underline; text-underline-offset: 2px; color: inherit; }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-ghost {
@@ -451,7 +453,9 @@ html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet {
   position: relative; width: 100%; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
   padding: 16px 16px 0; border-radius: 24px 24px 0 0; background: var(--m-surface); color: var(--m-text);
   box-shadow: 0 -12px 40px -12px rgb(10 4 14 / 0.7), inset 0 0 0 1px var(--m-line-strong);
-  animation: pn-sheet-in 220ms var(--m-ease) both;
+  /* KHÔNG giữ transform sau khi chạy xong (fill-mode none) — transform còn lại sẽ biến bảng thành khung chứa của các lớp
+     position:fixed bên trong (hộp xác nhận "Mọi đoạn chat" từng bị kẹt trong bảng thay vì phủ màn hình). */
+  animation: pn-sheet-in 220ms var(--m-ease);
 }
 @keyframes pn-sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (min-width: 640px) { html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { max-width: 480px; max-height: min(92dvh, 860px); border-radius: 24px; } }
@@ -460,7 +464,7 @@ html:not([data-ui-classic]) .pn-msgr .pn-wp-preview {
   height: 260px; aspect-ratio: 9 / 10; max-width: 100%; margin: 8px auto 0; padding: 10px; border-radius: 20px;
   box-shadow: inset 0 0 0 1px var(--m-line-strong);
 }
-html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-bubble { font-size: 14px; line-height: 19px; padding: 6px 10px; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-bubble { font-size: 13px; line-height: 18px; padding: 6px 10px; }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-col { max-width: 88%; }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-gap { margin: 2px auto; }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--m-raised); }
@@ -505,7 +509,7 @@ html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-ui-classic]) .pn-stk-breathe { animation: none; }
-  html:not([data-ui-classic]) .pn-stk-peek-card,
-  html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { animation: m-fade 120ms linear both; }
+  html:not([data-ui-classic]) .pn-stk-peek-card { animation: m-fade 120ms linear both; }
+  html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { animation: m-fade 120ms linear; }
   html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:active { transform: none; }
 }

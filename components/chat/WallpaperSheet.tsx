@@ -194,7 +194,6 @@ export default function WallpaperSheet({
           <div className="m-sep !my-0">
             <span className="pn-date-pill">{tr("Hôm nay", "Today")}</span>
           </div>
-          <div className="m-gap">{time}</div>
           <div className="m-row flex justify-start">
             <div className="m-col m-col-group flex flex-col items-start">
               <span className="m-sender">{sampleSender}</span>

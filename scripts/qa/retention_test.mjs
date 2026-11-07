@@ -181,12 +181,12 @@ try {
   await tp.goto(BASE_URL + `/messages?to=${owner.userId}`);
   await tp.locator("[data-chat-input]").waitFor({ timeout: 20000 });
   await tp.getByTitle("Thêm tùy chọn").click();
-  await tp.getByRole("button", { name: /Hình nền đoạn chat/ }).click();
+  await tp.getByRole("menuitem", { name: /Hình nền đoạn chat/ }).click();
   const pick = tp.getByRole("dialog", { name: "Chọn hình nền đoạn chat" });
   await pick.waitFor({ timeout: 5000 });
   await tp.screenshot({ path: `${OUT}/ret_wallpaper_picker.png` });
   await pick.getByRole("button", { name: "Hoa móng" }).click();
-  await pick.getByRole("button", { name: "Xong" }).click();
+  await pick.getByRole("button", { name: "Áp dụng" }).click();
   const wpEl = tp.locator(".chat-wallpaper");
   const bg1 = await wpEl.evaluate((el) => ({ id: el.getAttribute("data-wallpaper"), img: getComputedStyle(el).backgroundImage }));
   R.check("UI4", "Chọn 'Hoa móng' → nền khung chat đổi ngay", bg1.id === "nails" && /svg/.test(bg1.img), JSON.stringify(bg1).slice(0, 120));

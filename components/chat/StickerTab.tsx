@@ -223,7 +223,7 @@ export default function StickerTab({
                   <Star className="h-5 w-5" aria-hidden />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumbUrl(s.icon) ?? ""} alt="" width={26} height={26} loading="lazy" decoding="async" crossOrigin="anonymous" draggable={false} className="h-[26px] w-[26px]" />
+                  <img src={thumbUrl(s.icon) ?? ""} alt="" width={26} height={26} decoding="async" crossOrigin="anonymous" draggable={false} className="h-[26px] w-[26px]" />
                 )}
               </button>
             </React.Fragment>
@@ -387,7 +387,18 @@ const StickerCell = React.memo(function StickerCell({ id, name, onSend, onPeek }
     >
       {thumb ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={hover && anim ? anim : thumb} alt="" width={60} height={60} loading="lazy" decoding="async" crossOrigin="anonymous" draggable={false} className="pn-stk-img" />
+        <img
+          src={hover && anim ? anim : thumb}
+          alt=""
+          width={60}
+          height={60}
+          loading="lazy"
+          decoding="async"
+          crossOrigin="anonymous"
+          draggable={false}
+          onLoad={(e) => e.currentTarget.setAttribute("data-ok", "")}
+          className="pn-stk-img"
+        />
       ) : (
         <span className="text-[40px] leading-none">{stickerGlyph(id) ?? ""}</span>
       )}

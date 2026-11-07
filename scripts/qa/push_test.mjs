@@ -103,6 +103,21 @@ try {
   await new Promise((r) => setTimeout(r, 800));
   R.check("PU8", "Người gửi KHÔNG nhận push tin của chính mình", !inbox.some((m) => m.device === ownerPhone.name), inbox.map((m) => m.device).join());
 
+  // GIF gửi bằng MP4 của GIPHY (11/2026) → xem trước "GIF", không bao giờ "video" / "ảnh"; tin chỉ 1 emoji vẫn là chữ
+  inbox.length = 0;
+  const mp4 = `https://media.giphy.com/media/qaPush/200.mp4#wh=356x200&still=${encodeURIComponent("https://media.giphy.com/media/qaPush/200_s.gif")}`;
+  const gifSent = await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: mp4, type: "IMAGE" } });
+  const gifPush = await waitPush(phone, (p) => /GIF/.test(p.body || ""));
+  const vidSent = await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: mp4.replace("qaPush", "qaPush2"), type: "VIDEO" } });
+  await new Promise((r) => setTimeout(r, 1200));
+  const all = inbox.filter((m) => m.device === phone.name).map((m) => { try { return decrypt(phone, m.body); } catch { return null; } }).filter(Boolean);
+  const emojiSent = await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: "😂" } });
+  const emojiPush = await waitPush(phone, (p) => p.body === "😂");
+  R.check("PU7b", "Tin GIF dạng MP4 → push 'Đã gửi một GIF' / 'Sent a GIF' theo ngôn ngữ người nhận (kể cả khi gửi nhầm type VIDEO — không bao giờ 'video'); tin '😂' → push '😂' (chữ)",
+    gifSent.status === 201 && vidSent.status === 201 && vidSent.data?.message?.type === "IMAGE" && !!gifPush && /^(Đã gửi một GIF|Sent a GIF)$/.test(gifPush.p.body) &&
+      all.length >= 2 && all.every((p) => /GIF/.test(p.body) && !/video|ảnh|photo/i.test(p.body)) && emojiSent.status === 201 && !!emojiPush,
+    JSON.stringify({ gif: gifPush?.p && { body: gifPush.p.body, en: gifPush.p.en }, bodies: all.map((p) => p.body), vid: vidSent.data?.message?.type, emoji: emojiPush?.p?.body }));
+
   // Cuộc gọi
   const offer = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "video", callId: "qapush1" } });
   const call = await waitPush(phone, (p) => p.tag === "pn-call");

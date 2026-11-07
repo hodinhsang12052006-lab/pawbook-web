@@ -15,6 +15,7 @@ import { tr } from "@/lib/i18n/tr";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthPhotoStage from "@/components/auth/AuthPhotoStage";
+import LanguageHints from "@/components/i18n/LanguageHints";
 
 // Bảng thương hiệu chỉ nói điều kiểm chứng được (thử mẫu chạy trên máy, không thu phí thợ/tiệm, hai ngôn ngữ).
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -55,6 +56,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <LanguageToggle />
           </div>
           <div className="pn-auth-form">{children}</div>
+          {/* Gợi ý ngôn ngữ trong luồng, sau form — không bao giờ đè nút / ô nhập (components/i18n/LanguageHints.tsx). */}
+          <LanguageHints placement="auth" />
           <footer className="pn-auth-foot">
             <ul className="flex flex-wrap items-center gap-x-4 gap-y-1" role="list">
               <li>© 2026 PawNail</li>

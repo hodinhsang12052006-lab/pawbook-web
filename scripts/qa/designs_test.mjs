@@ -273,7 +273,8 @@ try {
   await giveImages();
   await sec.getByRole("button", { name: /Duyệt & đăng/ }).first().click();
   await ap.waitForTimeout(1500);
-  const after = (await anon.req("/api/designs")).data.designs.length;
+  // Đếm trong DB: /api/designs giờ theo mùa (dịp ngoài cửa sổ thị trường không hiện), mẫu vừa duyệt có thể thuộc dịp chưa tới.
+  const after = Number((await db.execute(`SELECT COUNT(*) AS n FROM "NailDesign" WHERE status = 'published'`)).rows[0].n);
   R.check("U9", "Phòng nội dung: thấy đủ 22 nháp (3 AI + 4 gợi ý + 15 PawNail), bấm 'Duyệt & đăng' → công khai thêm 1 mẫu", draftCount === 22 && after === 3, `${draftCount} nháp, ${after} công khai`);
   await ap.screenshot({ path: TMP + "/designs_admin.png" });
 

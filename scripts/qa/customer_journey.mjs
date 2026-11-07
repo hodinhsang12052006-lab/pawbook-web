@@ -112,7 +112,7 @@ try {
     await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
   });
   await step("A5 Chọn Thợ nail + khu vực", p, async () => {
-    await p.getByRole("radio", { name: /Tôi là Thợ/ }).click();
+    await p.getByRole("radio", { name: /Tôi là thợ/i }).click();
     await p.getByLabel(/Thành phố/).fill("San Jose");
     await p.getByLabel(/Số điện thoại/).fill("4085550123");
     await p.getByRole("button", { name: /Vào PawNail/ }).click();

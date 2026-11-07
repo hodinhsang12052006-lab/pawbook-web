@@ -155,7 +155,7 @@ try {
       await q.locator("button.pn-choice").first().click();
       await q.waitForTimeout(700);
     }
-    await q.getByText("Tóm tắt khảo sát vận hành").waitFor({ timeout: 20000 });
+    await q.getByText(/Tóm tắt khảo sát|Your survey summary/).waitFor({ timeout: 20000 });
     const txt = await q.evaluate(() => document.body.innerText);
     R.check("OW3", "Màn tóm tắt: 'sắp ra mắt', không còn 'Kích hoạt' / 'set up trong 24h' / 'Live'", /sắp ra mắt/i.test(txt) && !/Kích hoạt|24h|\bLive\b|điểm nghẽn/.test(txt), txt.match(/Kích hoạt|24h|Live|điểm nghẽn/)?.[0]);
     await q.getByRole("button", { name: "Báo tôi" }).first().click();
@@ -258,7 +258,7 @@ try {
     const forced = await p.waitForURL(/\/auth\/complete/, { timeout: 15000 }).then(() => true).catch(() => false);
     R.check("OA3", "Chưa hoàn tất mà vào trang khác → bị đưa lại trang Hoàn tất", forced);
     await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
-    await p.getByRole("radio", { name: /Tôi là Chủ Tiệm/ }).click();
+    await p.getByRole("radio", { name: /Tôi là chủ tiệm/i }).click();
     await p.getByLabel(/Thành phố/).fill("Dallas");
     const st = await p.getByLabel("Bang").inputValue();
     await p.getByLabel(/Số điện thoại/).fill("2145550155");

@@ -119,7 +119,7 @@ try {
   const nameVal = await p.locator("#c-name").inputValue();
   R.check("P14", "Giao diện: nhập số → mã → trang Hoàn tất, SĐT điền sẵn, tên để trống cho tự nhập", pre.replace(/\D/g, "") === uiNum && nameVal === "", `phone=${pre} name=${nameVal}`);
   await p.locator("#c-name").fill("Thảo Vy");
-  await p.getByRole("radio", { name: /Tôi là Thợ/ }).click();
+  await p.getByRole("radio", { name: /Tôi là thợ/i }).click();
   await p.getByLabel(/Thành phố/).fill("Los Angeles");
   await p.getByRole("button", { name: /Vào PawNail/ }).click();
   await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 30000 });

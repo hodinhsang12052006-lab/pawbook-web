@@ -23,7 +23,7 @@
     "qa:snap": "node scripts/qa/snapshots.mjs",
     "qa:tryon": "tsx scripts/qa/tryon_engine_unit.mts && tsx scripts/qa/design_render_unit.mts && tsx scripts/qa/trend_radar_unit.mts",
     "qa:chat-assist": "tsx scripts/qa/chat_assist_unit.mts && node scripts/qa/chat_assist_test.mjs",
-    "qa:calls": "tsx scripts/qa/call_signal_unit.mts && tsx scripts/qa/call_ice_unit.mts && node scripts/qa/call_test.mjs",
+    "qa:calls": "tsx scripts/qa/call_signal_unit.mts && tsx scripts/qa/call_ice_unit.mts && tsx scripts/qa/call_ice_client_unit.mts && tsx scripts/qa/pusher_resub_unit.mts && node scripts/qa/call_test.mjs",
     "qa:jobfeeds": "tsx scripts/qa/external_jobs_unit.mts && tsx scripts/qa/external_jobs_routes.mts && tsx scripts/qa/job_parse_unit.ts",
     "i18n:check": "node scripts/i18n/check-dict-parity.mjs && tsx scripts/i18n/tr_concurrency_test.mts",
     "i18n:static-routes": "node scripts/i18n/check-static-routes.mjs",

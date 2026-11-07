@@ -9,6 +9,7 @@ if (process.env.TURSO_DATABASE_URL || process.env.TURSO_AUTH_TOKEN) {
 }
 const {
   buildFcmMessage,
+  buildFcmReadMessage,
   chatData,
   clipText,
   isDeadTokenError,
@@ -154,7 +155,14 @@ ok("F19", "Lỗi FCM: 404 / UNREGISTERED / INVALID_ARGUMENT về token → token
   ok("F25", "Link chat: /messages?c=<id> (mã hoá ký tự lạ)", chatPushUrl("abc") === "/messages?c=abc" && chatPushUrl("a&b") === "/messages?c=a%26b");
 }
 
-// ---------- 6. Web push giữ nguyên dạng cũ ----------
+// ---------- 6. "Đã đọc" → gỡ thông báo trên máy Android khác của chính mình ----------
+{
+  const r = buildFcmReadMessage("tokR", CID) as unknown as Msg;
+  ok("F27", "Tin 'đã đọc': data-only {type:read, v:1, cid}, ưu tiên thường, ttl 6 giờ, không notification",
+    !("notification" in r) && r.data.type === "read" && r.data.v === "1" && r.data.cid === CID && Object.keys(r.data).length === 3 && r.android.priority === "normal" && r.android.ttl === "21600s", r);
+}
+
+// ---------- 7. Web push giữ nguyên dạng cũ ----------
 {
   const { webPushBody } = await import("../../lib/push");
   const w = JSON.parse(webPushBody({ ...chatPayload(), channel: "general" }));

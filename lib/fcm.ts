@@ -204,8 +204,32 @@ export function isDeadTokenError(status: number, body: string): boolean {
   return /INVALID_ARGUMENT/.test(body) && /registration token|message\.token/i.test(body);
 }
 
+/**
+ * "Đã đọc" — data-only tới các máy Android (bản đủ mới) của CHÍNH người vừa đọc: app gỡ thông báo của cuộc trò chuyện
+ * đó (đọc trên máy tính / máy khác → điện thoại tự sạch thông báo, như Messenger). Ưu tiên thường: không cần đánh
+ * thức máy ngay; app tự bỏ qua nếu không có thông báo nào.
+ */
+export function buildFcmReadMessage(token: string, cid: string): Record<string, unknown> {
+  return { token, data: { type: "read", v: "1", cid: String(cid) }, android: { priority: "normal", ttl: "21600s" } };
+}
+
 /** Gửi tới các thiết bị Android. Trả về danh sách token đã hết hạn (để dọn khỏi DB). */
 export async function sendFcm(targets: (FcmTarget | string)[], p: FcmPayload): Promise<{ sent: number; dead: string[] }> {
+  return sendEach(
+    targets.map((raw) => (typeof raw === "string" ? { token: raw, build: null } : raw)),
+    (target) => buildFcmMessage(target, p)
+  );
+}
+
+/** Báo "đã đọc cuộc trò chuyện cid" tới các token (chỉ gọi với máy chạy bản app ≥ richChatMinBuild()). */
+export async function sendFcmRead(tokens: string[], cid: string): Promise<{ sent: number; dead: string[] }> {
+  return sendEach(
+    tokens.map((token) => ({ token, build: null })),
+    (target) => buildFcmReadMessage(target.token, cid)
+  );
+}
+
+async function sendEach(targets: FcmTarget[], make: (t: FcmTarget) => Record<string, unknown>): Promise<{ sent: number; dead: string[] }> {
   const a = account();
   if (!a || !targets.length) return { sent: 0, dead: [] };
   const token = await accessToken();
@@ -213,13 +237,12 @@ export async function sendFcm(targets: (FcmTarget | string)[], p: FcmPayload): P
   let sent = 0;
   const dead: string[] = [];
   await Promise.all(
-    targets.map(async (raw) => {
-      const target: FcmTarget = typeof raw === "string" ? { token: raw, build: null } : raw;
+    targets.map(async (target) => {
       try {
         const res = await fetch(sendUrl(a.project_id), {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ message: buildFcmMessage(target, p) }),
+          body: JSON.stringify({ message: make(target) }),
           signal: AbortSignal.timeout(10_000),
         });
         if (res.ok) sent++;

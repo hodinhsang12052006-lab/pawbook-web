@@ -25,6 +25,7 @@
   "lcpMs": 2500,
   "jsGrowthBytes": 10240,
   "cssBytes": 231424,
+  "_cssDoc": "CSS on '/' must not exceed the --compare baseline run; cssBytes is the pre-v2 (Nov 6) level and is informational once the v2 in-app CSS shipped.",
   "contrast": 4.5,
   "contrastLarge": 3,
   "naturalWidthRatio": 1.5,

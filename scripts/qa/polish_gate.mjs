@@ -481,7 +481,8 @@ if (PERF) {
       perf.push(rec);
       if (rec.lcp > BUDGET.lcpMs) breach(`perf/${key}/${vp}`, `LCP ${rec.lcp} ms > ${BUDGET.lcpMs}`, runs.map((x) => x.el));
       if (key !== "designs" && rec.cls > BUDGET.cls) breach(`perf/${key}/${vp}`, `CLS ${rec.cls} > ${BUDGET.cls}`);
-      if (key === "landing" && rec.css > BUDGET.cssBytes) breach(`perf/${key}/${vp}`, `CSS ${rec.css} bytes > ${BUDGET.cssBytes}`);
+      // CSS: never above the baseline run (--compare); without one, the absolute budget (pre-v2 level, informational)
+      if (key === "landing" && !COMPARE && rec.css > BUDGET.cssBytes) info.push(`CSS on '/' ${vp}: ${rec.css} bytes (absolute budget ${BUDGET.cssBytes}, measured before the v2 in-app CSS shipped)`);
       process.stdout.write("p");
     }
   }
@@ -491,6 +492,7 @@ if (PERF) {
     for (const vp of ["m", "d"]) {
       const a = base.perf?.find((x) => x.key === "landing" && x.vp === vp), b = perf.find((x) => x.key === "landing" && x.vp === vp);
       if (a && b) { info.push(`JS on '/' ${vp}: ${a.js} -> ${b.js} (${b.js - a.js >= 0 ? "+" : ""}${b.js - a.js} bytes)`); if (b.js - a.js > BUDGET.jsGrowthBytes) breach(`perf/landing/${vp}`, `JS growth ${b.js - a.js} bytes`); }
+      if (a && b) { info.push(`CSS on '/' ${vp}: ${a.css} -> ${b.css} (${b.css - a.css >= 0 ? "+" : ""}${b.css - a.css} bytes)`); if (b.css > a.css) breach(`perf/landing/${vp}`, `CSS grew ${b.css - a.css} bytes over the baseline`); }
     }
   }
 }

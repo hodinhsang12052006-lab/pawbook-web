@@ -35,10 +35,11 @@ html[data-season="au-jacaranda"] .pn-season .fx-petal { display: block; }
 .pn-season .p3 { left: 78%; top: 88%; transform: rotate(60deg) scale(0.7); }
 html[data-season="base"] .pn-season :is(.fx-bokeh, .fx-flare) { display: none; }
 
-/* strip (< 1024): bokeh + 3 glints + dust, static */
+/* strip (< 1024): soft bokeh only, static. On a phone the cards fill the stage, so dust specks and glints could only
+   show in the 12 px gaps / at the screen edge, where they read as stray pixels rather than sparkle. */
 @media (max-width: 1023px) {
   .pn-season { inset: -24px -16px -16px -16px; }
-  .pn-season[data-variant="hero"] :is(.fx-flare, .g2, .g4, .g6) { display: none; }
+  .pn-season[data-variant="hero"] :is(.fx-flare, .fx-glint, .fx-dust, .fx-petal) { display: none !important; }
 }
 
 /* auth plate: ≤ 5 static glints, only in festive seasons */

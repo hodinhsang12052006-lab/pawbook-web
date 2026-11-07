@@ -1403,14 +1403,18 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           onMessageInstead={messageInstead}
         />
       ) : phase === "error" ? (
-        // keep WHICH call failed visible behind the permission dialog
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-24 text-center" aria-hidden>
-          <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="h-28 w-28 ring-4 ring-white/10 shadow-2xl shadow-black/40" />
-          <p className="text-2xl font-black tracking-tight text-pn-text">{peer.name}</p>
-          <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-pn-text-2">
-            {callType === "video" ? <Video className="h-3 w-3" /> : <Phone className="h-3 w-3" />}
-            {typeLabel}
-          </span>
+        // keep WHICH call failed visible ABOVE the permission dialog (a compact header — the card covers the middle)
+        <div className="flex w-full flex-1 flex-col items-center px-6 pt-[max(2.5rem,env(safe-area-inset-top))]" aria-hidden>
+          <div className="flex max-w-full items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-4">
+            <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="h-12 w-12 shrink-0 ring-2 ring-white/10" />
+            <div className="min-w-0 text-left">
+              <p className="truncate text-base font-bold text-pn-text">{peer.name}</p>
+              <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-pn-text-2">
+                {callType === "video" ? <Video className="h-3 w-3" /> : <Phone className="h-3 w-3" />}
+                {typeLabel}
+              </p>
+            </div>
+          </div>
         </div>
       ) : (
         <>

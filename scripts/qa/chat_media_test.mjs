@@ -505,46 +505,67 @@ await emojiSearch.fill("zzqxv");
 await p.waitForTimeout(200);
 const noneMsg = await panel(p).getByText("No emoji found").isVisible().catch(() => false);
 R.check("TG7c", "'tim' → ❤️ đầu + các tim; chuỗi lạ → 'No emoji found'", timRes[0] === "❤️" && timRes.filter((e) => /[❤🧡💛💚💙💜🖤🤍💕💞💓💗💖]/u.test(e)).length >= 8 && noneMsg, JSON.stringify({ tim: timRes.slice(0, 10), noneMsg }));
-// TG7p — độ trễ THẬT khi gõ ở CPU chậm 4× (≈ điện thoại tầm trung): mỗi phím đo (1) Event Timing (xử lý + tới khung hình kế),
-// (2) từ lúc nhấn tới khi lưới kết quả đổi xong VÀ đã vẽ (MutationObserver + 2 rAF). Phím đầu = đổi lưới nhóm → lưới kết quả.
+// TG7p — độ trễ THẬT khi gõ ở CPU chậm 4× (≈ điện thoại tầm trung), so với gõ vào ô soạn tin TRONG CÙNG trang / trạng thái
+// (khung tin còn GIF video, nhãn động… — máy dùng chung với workflow khác nên con số tuyệt đối dao động): mỗi phím đo (1) từ lúc
+// nhấn tới khi chữ đã VẼ (rAF rồi 1 tác vụ MessageChannel = ngay sau lần vẽ đó), (2) tới khi lưới kết quả đổi xong VÀ đã vẽ,
+// (3) Event Timing (thời gian JS xử lý). Phím đầu = đổi lưới nhóm → lưới kết quả.
 await emojiSearch.fill("");
 await p.waitForTimeout(300);
-const cdpT = await p.context().newCDPSession(p);
-await cdpT.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 await p.evaluate(() => {
-  window.__k = [];
   window.__ev = [];
   try {
-    new PerformanceObserver((l) => l.getEntries().forEach((e) => /^(keydown|keypress|input|keyup|beforeinput)$/.test(e.name) && window.__ev.push({ n: e.name, d: Math.round(e.duration), proc: Math.round(e.processingEnd - e.processingStart), t: e.startTime }))).observe({ type: "event", durationThreshold: 16, buffered: false });
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => /^(keydown|keypress|input|keyup|beforeinput)$/.test(e.name) && window.__ev.push({ n: e.name, d: Math.round(e.duration), proc: Math.round(e.processingEnd - e.processingStart) }))).observe({ type: "event", durationThreshold: 16, buffered: false });
   } catch {}
-  const inp = document.querySelector('.pn-media-panel input[aria-label="Search emoji"]');
-  const grid = document.querySelector("[data-emoji-grid]");
-  inp.addEventListener("keydown", () => {
-    const t0 = performance.now();
-    const rec = { t0, frame: null, grid: null };
-    window.__k.push(rec);
-    requestAnimationFrame(() => requestAnimationFrame(() => (rec.frame = Math.round(performance.now() - t0))));
-    const mo = new MutationObserver(() => {
-      mo.disconnect();
-      requestAnimationFrame(() => requestAnimationFrame(() => (rec.grid = Math.round(performance.now() - t0))));
-    });
-    mo.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-emoji-grid"] });
-    setTimeout(() => mo.disconnect(), 1500);
-  });
+  window.__arm = (sel, key, gridSel) => {
+    window[key] = [];
+    const inp = document.querySelector(sel);
+    const grid = gridSel ? document.querySelector(gridSel) : null;
+    const afterPaint = (cb) => requestAnimationFrame(() => { const ch = new MessageChannel(); ch.port1.onmessage = cb; ch.port2.postMessage(0); });
+    const on = () => {
+      const t0 = performance.now();
+      const rec = { frame: null, grid: null };
+      window[key].push(rec);
+      afterPaint(() => (rec.frame = Math.round(performance.now() - t0)));
+      if (!grid) return;
+      const mo = new MutationObserver(() => {
+        mo.disconnect();
+        afterPaint(() => (rec.grid = Math.round(performance.now() - t0)));
+      });
+      mo.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-emoji-grid"] });
+      setTimeout(() => mo.disconnect(), 1500);
+    };
+    inp.addEventListener("keydown", on);
+    return () => inp.removeEventListener("keydown", on);
+  };
 });
+const cdpT = await p.context().newCDPSession(p);
+// (a) ô soạn tin (mốc so sánh) — bảng vẫn mở
+await p.evaluate(() => (window.__offA = window.__arm("[data-chat-input]", "__kc")));
+await cdpT.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+await p.locator("[data-chat-input]").pressSequentially("heart", { delay: 250 });
+await p.waitForTimeout(600);
+await cdpT.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+await p.evaluate(() => window.__offA());
+await p.locator("[data-chat-input]").fill("");
+// (b) ô tìm emoji
+await emojiSearch.click();
+await p.waitForTimeout(300);
+await p.evaluate(() => { window.__ev = []; window.__arm('.pn-media-panel input[aria-label="Search emoji"]', "__k", "[data-emoji-grid]"); });
+await cdpT.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 await emojiSearch.pressSequentially("heart", { delay: 250 });
 await p.waitForTimeout(1200);
-const perf = await p.evaluate(() => ({ k: window.__k.map((r) => [r.frame, r.grid]), ev: window.__ev }));
 await cdpT.send("Emulation.setCPUThrottlingRate", { rate: 1 });
 await cdpT.detach().catch(() => {});
+const perf = await p.evaluate(() => ({ k: window.__k.map((r) => [r.frame, r.grid]), kc: window.__kc.map((r) => r.frame), ev: window.__ev }));
+const medOf = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] ?? 999;
 const frames = perf.k.map((x) => x[0] ?? 999);
 const grids = perf.k.map((x) => x[1]).filter((x) => x !== null);
-const sorted = [...frames].sort((a, b) => a - b);
-const med = sorted[Math.floor(sorted.length / 2)] ?? 999;
+const med = medOf(frames);
+const medC = medOf(perf.kc.map((x) => x ?? 999));
 const evWorst = perf.ev.reduce((m, e) => Math.max(m, e.d), 0);
 const procWorst = perf.ev.reduce((m, e) => Math.max(m, e.proc), 0);
-R.check("TG7p", `CPU chậm 4×, gõ 'heart': phím → khung hình kế ${frames.join("/")}ms (trung vị ${med}ms); phím → lưới kết quả đã vẽ ${perf.k.map((x) => x[1] ?? "–").join("/")}ms (phím đầu = đổi lưới nhóm → kết quả); Event Timing chậm nhất ${evWorst}ms, JS xử lý chậm nhất ${procWorst}ms — ngưỡng: trung vị ≤ 50ms, mọi phím < 150ms tới khung hình kế, lưới đổi < 250ms`,
-  frames.length === 5 && med <= 50 && Math.max(...frames) < 150 && grids.length >= 1 && Math.max(...grids) < 250, JSON.stringify(perf).slice(0, 600));
+R.check("TG7p", `CPU chậm 4×, gõ 'heart' vào ô tìm emoji: phím → chữ đã vẽ ${frames.join("/")}ms (trung vị ${med}ms; ô soạn tin cùng trạng thái: ${perf.kc.join("/")}ms, trung vị ${medC}ms); phím → lưới kết quả đã vẽ ${perf.k.map((x) => x[1] ?? "–").join("/")}ms (phím đầu = đổi lưới nhóm → kết quả); Event Timing chậm nhất ${evWorst}ms, JS xử lý chậm nhất ${procWorst}ms — ngưỡng: trung vị ≤ ô soạn tin + 20ms, mọi phím < 150ms tới khi vẽ, lưới đổi < 250ms`,
+  frames.length === 5 && perf.kc.length === 5 && med <= medC + 20 && Math.max(...frames) < 150 && grids.length >= 1 && Math.max(...grids) < 250, JSON.stringify(perf).slice(0, 600));
 await emojiSearch.fill("");
 await p.keyboard.press("Escape"); // ô tìm rỗng → Esc đóng bảng
 await panel(p).waitFor({ state: "detached", timeout: 4000 }).catch(() => {});

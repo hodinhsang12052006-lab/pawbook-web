@@ -622,6 +622,8 @@ html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif;
 }
 .pn-msgr .m-emoji-1 { font-size: 92px; line-height: 112px; }
+/* ô emoji của bảng: ô nằm ngoài vùng cuộn (nhóm ~100 emoji màu) không phải vẽ / bố cục chi tiết */
+.pn-msgr .pn-emoji-cell { content-visibility: auto; contain-intrinsic-size: auto 40px; }
 .pn-msgr .m-emoji-2 { font-size: 60px; }
 .pn-msgr .m-emoji-3 { font-size: 48px; }
 
@@ -673,4 +675,8 @@ html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-x:hover { background: rgb(2
   html[data-chat-open] .pn-msgr-nav { display: none; }
   html[data-chat-open] .pn-msgr-main { padding: 0; max-width: none; }
   html[data-chat-open] .pn-msgr-frame { border-radius: 0; border-width: 0; box-shadow: none; }
+  /* chỉ còn cuộc trò chuyện (như Telegram): bỏ cột danh sách 30% + hàng "Gợi ý" — mở bàn phím ở màn ngang thấp, khung tin chỉ
+     còn ~65px khi còn 2 thứ đó */
+  html[data-chat-open] .pn-msgr .m-list { display: none; }
+  html[data-chat-open] .pn-msgr :is([data-assist-toggle], [data-testid="chat-assist"]) { display: none; }
 }

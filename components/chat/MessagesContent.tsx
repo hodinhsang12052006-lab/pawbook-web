@@ -162,12 +162,29 @@ export default function MessagesContent({
   const [stickerHint, setStickerHint] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState<string | null>(null);
   const stickerHintRef = useRef<string | null>(null);
+  // Cả ô là 1 emoji → hiện NGAY; chỉ "từ" cuối là emoji (đang gõ câu: "ok 😂", "😂" → "😂😂") → chờ 200ms gõ yên mới hiện,
+  // thanh không bật / tắt liên tục (mỗi lần ~72px khung tin co / giãn). Ẩn thì luôn ngay (không để thanh gợi ý emoji cũ).
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const updateStickerHint = useCallback((v: string) => {
     const g = trailingEmoji(v);
-    if (g === stickerHintRef.current) return;
-    stickerHintRef.current = g;
-    setStickerHint(g);
-    if (!g) setHintDismissed(null);
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    const apply = () => {
+      if (g === stickerHintRef.current) return;
+      stickerHintRef.current = g;
+      setStickerHint(g);
+      if (!g) setHintDismissed(null);
+    };
+    if (!g || g === stickerHintRef.current || v.trim() === g) apply();
+    else hintTimerRef.current = setTimeout(() => {
+      hintTimerRef.current = null;
+      apply();
+    }, 200);
+  }, []);
+  useEffect(() => () => {
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
   }, []);
   const setMessageText = useCallback((v: string | ((prev: string) => string)) => {
     const el = inputRef.current;
@@ -636,7 +653,8 @@ export default function MessagesContent({
         const data = await res.json();
         const safeMsgs = (data.messages || []).map(mapServerMessage);
         const container = scrollContainerRef.current;
-        if (container && safeMsgs.length) {
+        // chỉ khi vẫn đang mở đúng cuộc trò chuyện này (đổi chat giữa chừng → không để lại "đang chỉnh vị trí" cho chat mới)
+        if (container && safeMsgs.length && activeChatRef.current?.conversationId === key) {
           pendingScrollAdjustRef.current = { prevScrollHeight: container.scrollHeight, firstId: chatMessagesRef.current[0]?.id };
         }
         // Việc nền: React chia nhỏ việc dựng vài chục bong bóng → cuộn không khựng.
@@ -688,7 +706,7 @@ export default function MessagesContent({
     // tin mới nhất bị khuất. Đang kéo lên đọc tin cũ thì không kéo xuống.
     const keepPinned = (e: Event) => {
       const t = e.target as HTMLElement | null;
-      if (!t || !/^(IMG|VIDEO)$/.test(t.tagName) || !isNearBottomRef.current || pendingScrollAdjustRef.current) return;
+      if (!t || !/^(IMG|VIDEO)$/.test(t.tagName) || !isNearBottomRef.current) return;
       // GIF có khung cố định theo #wh (không đổi chiều cao khi tải) và trình phát MP4 dựng / gỡ theo vị trí cuộn → không kéo xuống
       if (t.closest(".m-gif")) return;
       el.scrollTop = el.scrollHeight;
@@ -700,9 +718,12 @@ export default function MessagesContent({
     let lastDist = 0;
     const track = () => { lastDist = el.scrollHeight - el.scrollTop - el.clientHeight; };
     el.addEventListener("scroll", track, { passive: true });
+    // Giữ dính đáy KHÔNG phụ thuộc việc đang nạp trang tin cũ (pendingScrollAdjustRef): đang ở đáy thì kéo xuống đáy là đúng,
+    // và bước giữ chỗ khi trang cũ chèn lên đầu (useLayoutEffect bên dưới) cộng thêm phần cao mới → bị kẹp ở đáy, vẫn đúng.
+    // Trước đây máy lag (trang cũ nạp lâu) là các lần giữ dính đáy bị bỏ → tin cuối cao thêm nằm khuất dưới khung soạn tin.
     const ro = typeof ResizeObserver !== "undefined"
       ? new ResizeObserver(() => {
-          if (lastDist <= 80 && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+          if (lastDist <= 80) el.scrollTop = el.scrollHeight;
           track();
         })
       : null;
@@ -725,7 +746,7 @@ export default function MessagesContent({
             rowH.set(e.target, h);
             if (was !== undefined && h > was + 0.5) grew = true; // chỉ khi CAO THÊM (thấp đi thì trình duyệt tự kẹp scrollTop)
           }
-          if (grew && lastDist <= 80 && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+          if (grew && lastDist <= 80) el.scrollTop = el.scrollHeight;
           track();
         })
       : null;
@@ -735,7 +756,13 @@ export default function MessagesContent({
       const next = Array.from(rows).slice(-2);
       if (next.length === tail.length && next.every((r, i) => r === tail[i])) return;
       tail.forEach((r) => { if (!next.includes(r)) tailRo.unobserve(r); });
-      next.forEach((r) => { if (!tail.includes(r)) tailRo.observe(r); });
+      next.forEach((r) => {
+        if (tail.includes(r)) return;
+        // mốc chiều cao lấy NGAY lúc bắt đầu theo dõi (không chờ lần báo đầu của RO): máy lag, dòng có thể cao thêm trước lần
+        // báo đầu → trước đây lần báo đó thành mốc, không bao giờ được tính là "cao thêm".
+        if (!rowH.has(r)) rowH.set(r, r.getBoundingClientRect().height);
+        tailRo.observe(r);
+      });
       tail = next;
     };
     watchTail();
@@ -767,20 +794,23 @@ export default function MessagesContent({
     const el = scrollContainerRef.current;
     if (!el) return;
 
+    // Đổi cuộc trò chuyện xét TRƯỚC: việc chỉnh vị trí của trang tin cũ (nếu còn treo) thuộc chat trước, bỏ đi — trước đây nó
+    // chạy trên chat mới (tin đầu khác) → cộng nhầm scrollTop và bỏ qua bước về đáy.
+    if (prevChatKeyRef.current !== activeKey) {
+      prevChatKeyRef.current = activeKey;
+      prevMessageCountRef.current = chatMessages.length;
+      pendingScrollAdjustRef.current = null;
+      el.scrollTop = el.scrollHeight;
+      isNearBottomRef.current = true; // vừa mở cuộc trò chuyện = đang ở đáy (ảnh tải sau vẫn giữ dính đáy)
+      return;
+    }
+
     if (pendingScrollAdjustRef.current && chatMessages[0]?.id !== pendingScrollAdjustRef.current.firstId) {
       const { prevScrollHeight } = pendingScrollAdjustRef.current;
       // Giữ nguyên chỗ đang đọc (kể cả khi người dùng vẫn đang cuộn).
       el.scrollTop = el.scrollTop + (el.scrollHeight - prevScrollHeight);
       pendingScrollAdjustRef.current = null;
       prevMessageCountRef.current = chatMessages.length;
-      return;
-    }
-
-    if (prevChatKeyRef.current !== activeKey) {
-      prevChatKeyRef.current = activeKey;
-      prevMessageCountRef.current = chatMessages.length;
-      el.scrollTop = el.scrollHeight;
-      isNearBottomRef.current = true; // vừa mở cuộc trò chuyện = đang ở đáy (ảnh tải sau vẫn giữ dính đáy)
       return;
     }
 
@@ -1389,7 +1419,7 @@ export default function MessagesContent({
   // Thẻ đầu cuộc trò chuyện cao thêm khi thông tin tin cậy / thẻ an toàn tải xong → vẫn giữ dính đáy nếu đang ở đáy
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
-    if (el && isNearBottomRef.current && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+    if (el && isNearBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [partnerTrust, showSafety]);
   const dismissSafety = () => {
     const k = activeKey || "";
@@ -1453,7 +1483,7 @@ export default function MessagesContent({
   const stripShown = !!stickerHint && stickerHint !== hintDismissed && !panelOpen && !recording;
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
-    if (el && isNearBottomRef.current && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+    if (el && isNearBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [stripShown, hasText]);
   const panelPushedRef = useRef(false);
   useEffect(() => {
@@ -1704,7 +1734,7 @@ export default function MessagesContent({
     const ro = new ResizeObserver(() => {
       el.parentElement?.style.setProperty("--m-composer-h", `${el.offsetHeight}px`);
       const sc = scrollContainerRef.current;
-      if (sc && isNearBottomRef.current && !pendingScrollAdjustRef.current) sc.scrollTop = sc.scrollHeight;
+      if (sc && isNearBottomRef.current) sc.scrollTop = sc.scrollHeight;
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -2285,7 +2315,7 @@ export default function MessagesContent({
                   Chờ tin MỚI của cuộc trò chuyện nạp xong (không dùng bản lưu trên máy) — không thì thoáng hiện gợi ý theo tin cũ rồi mới đổi. */}
               {/* Bảng Emoji / Nhãn dán / GIF đang mở → ẩn hàng gợi ý (không chen giữa bảng và ô nhập, giữ chỗ cho tin nhắn) */}
               {!panelOpen && !recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && established && !assistOpen && (
-                <button type="button" onClick={() => setAssistOpen(true)} aria-expanded={false} className="mb-2 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] font-semibold text-[var(--m-text-2)] ring-1 ring-white/[0.08]">
+                <button type="button" onClick={() => setAssistOpen(true)} aria-expanded={false} data-assist-toggle="" className="mb-2 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] font-semibold text-[var(--m-text-2)] ring-1 ring-white/[0.08]">
                   <SparklesIcon className="h-3.5 w-3.5" aria-hidden />{tr("Gợi ý", "Suggest")}
                 </button>
               )}

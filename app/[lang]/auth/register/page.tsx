@@ -6,6 +6,7 @@ import OwnerRegisterForm from "@/components/auth/OwnerRegisterForm";
 import ClientRegisterForm from "@/components/auth/ClientRegisterForm";
 import RolePicker, { type Role } from "@/components/auth/RolePicker";
 import { useTr } from "@/lib/i18n/useTr";
+import { useAuthedRedirect } from "@/components/auth/useAuthedRedirect";
 
 export default function CustomRegisterPage() {
   useTr();
@@ -21,38 +22,8 @@ export default function CustomRegisterPage() {
     setReady(true);
   }, []);
 
-  // Chặn đứng: phát hiện qua test thật trên production rằng người dùng ĐÃ
-  // đăng nhập thành công (session hợp lệ) vẫn có thể bị điều hướng tới đây
-  // (nguyên nhân sâu xa chưa xác định được — chỉ xảy ra trên hạ tầng
-  // production/Vercel, không tái hiện được ở local `next start`, và chỉ xảy
-  // ra với request dạng RSC soft-navigation chứ không phải document load
-  // thường — đã thử: xoá pages.newUser, tắt service worker, context trình
-  // duyệt hoàn toàn sạch, đều không hết). Vì fetch thẳng "/" bằng document
-  // request LUÔN trả đúng nội dung (đã verify bằng curl + fetch trực tiếp),
-  // chốt chặn này bắt đúng triệu chứng: nếu phát hiện có session hợp lệ mà
-  // lại đang đứng ở trang đăng ký, buộc HARD RELOAD (không dùng router.push)
-  // để né hẳn đường dẫn RSC bị lỗi, đưa thẳng người dùng về trang chủ.
-  useEffect(() => {
-    // Chặn vòng lặp: nếu "/" TỰ NÓ cũng đang bị đá về đây (nguyên nhân gốc
-    // chưa xác định chắc chắn 100%, nghi do cold-start phía Vercel — có lúc
-    // tái hiện, có lúc không), redirect thẳng lại "/" mà không kiểm tra gì
-    // sẽ tạo vòng lặp vô hạn /→/auth/register→/→/auth/register... còn TỆ
-    // HƠN bug gốc (trước chỉ là sai trang, giờ là treo hẳn không dùng được).
-    // Chỉ bounce 1 lần trong mỗi 5 giây; nếu quay lại đây quá nhanh, dừng
-    // hẳn và hiện trang đăng ký bình thường thay vì lặp mãi.
-    const lastBounceAt = Number(sessionStorage.getItem("authBounceAt") || 0);
-    if (Date.now() - lastBounceAt < 5000) return;
-
-    fetch("/api/auth/session")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((session) => {
-        if (session?.user?.id) {
-          sessionStorage.setItem("authBounceAt", String(Date.now()));
-          window.location.replace("/");
-        }
-      })
-      .catch(() => {});
-  }, []);
+  // Đã đăng nhập → vào app (dùng chung với /auth/login, /auth/forgot — xem components/auth/useAuthedRedirect.ts).
+  useAuthedRedirect();
 
   const pickRole = (r: Role) => {
     setRole(r);
@@ -65,10 +36,20 @@ export default function CustomRegisterPage() {
   const back = () => pickRole(null);
 
   // ?role= is read after mount: hold the column's space (top-aligned column → no layout shift when it fills).
-  if (!ready) return <div aria-hidden style={{ minHeight: 640 }} />;
-
-  if (role === "technician") return <TechnicianRegisterForm onBack={back} />;
-  if (role === "owner") return <OwnerRegisterForm onBack={back} />;
-  if (role === "client") return <ClientRegisterForm onBack={back} />;
-  return <RolePicker onPick={pickRole} />;
+  // .pn-authgate: a signed-in device never sees the guest form before the redirect (useAuthedRedirect, auth.css).
+  return (
+    <div className="pn-authgate">
+      {!ready ? (
+        <div aria-hidden style={{ minHeight: 640 }} />
+      ) : role === "technician" ? (
+        <TechnicianRegisterForm onBack={back} />
+      ) : role === "owner" ? (
+        <OwnerRegisterForm onBack={back} />
+      ) : role === "client" ? (
+        <ClientRegisterForm onBack={back} />
+      ) : (
+        <RolePicker onPick={pickRole} />
+      )}
+    </div>
+  );
 }

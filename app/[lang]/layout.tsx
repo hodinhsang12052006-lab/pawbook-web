@@ -7,6 +7,7 @@ import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { brandOgImage, langFrom, openGraph } from "@/lib/i18n/server";
 import { SEASON_BOOT } from "@/lib/season";
 import { BUBBLE_HEAD_JS } from "@/lib/bubbleMode";
+import { LANG_HINT_BOOT } from "@/lib/i18n/langHintBoot";
 
 // Layout GỐC nằm dưới segment [lang]: mỗi trang được prerender 1 lần cho mỗi ngôn
 // ngữ (/en/…, /vi/…) và edge rewrite trong next.config.ts chọn bản đúng theo
@@ -98,10 +99,11 @@ export default async function RootLayout({
     >
       <head>
         {/* Trước khi vẽ: html[data-surface] (landing khách "/" · /auth/*), data-authed…, mùa + thị trường (SEASON_BOOT,
-            lib/season.ts). Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app. */}
+            lib/season.ts), gợi ý ngôn ngữ html[data-lh] (LANG_HINT_BOOT, lib/i18n/langHintBoot.ts). Chrome có thể bắn
+            "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,p=location.pathname;${BUBBLE_HEAD_JS}if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT}`,
+            __html: `try{var d=document.documentElement,p=location.pathname;${BUBBLE_HEAD_JS}if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT};${LANG_HINT_BOOT}`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: siteLd(lang) }} />
@@ -111,7 +113,9 @@ export default async function RootLayout({
         <div aria-hidden className="app-backdrop">
           <span className="grain" />
         </div>
-        <LanguageProvider initialLocale={lang}>
+        {/* authHint: the /auth/* language hint, rendered by app/[lang]/auth/layout.tsx from context (keeps LanguageHints
+            in this layout's chunk only — see LanguageProvider). */}
+        <LanguageProvider initialLocale={lang} authHint={<LanguageHints placement="auth" />}>
           <SessionUserProvider>
             <CallManagerProvider>
               <UnreadMessagesProvider>
@@ -148,6 +152,12 @@ export default async function RootLayout({
                 </div>
                 <NativeAppBridge />
                 <ServiceWorkerRegister />
+                {/* Gợi ý ngôn ngữ: thanh trong luồng ở đầu trang (landing + app); /auth/* đặt viên riêng ở hàng trên cột form, ngay trên form. */}
+                <div data-bubble-hide className="contents">
+                  <NotInBubble>
+                    <LanguageHints placement="top" />
+                  </NotInBubble>
+                </div>
                 {children}
                 <RefCapture />
                 <div data-bubble-hide className="contents">
@@ -157,7 +167,6 @@ export default async function RootLayout({
                     <PushPrompt />
                     <ScrollToTop />
                     <BottomNav />
-                    <LanguageHints />
                   </NotInBubble>
                 </div>
               </UnreadMessagesProvider>

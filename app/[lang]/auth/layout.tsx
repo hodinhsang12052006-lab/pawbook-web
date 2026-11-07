@@ -18,7 +18,8 @@ import AuthPhotoStage from "@/components/auth/AuthPhotoStage";
 
 // Bảng thương hiệu chỉ nói điều kiểm chứng được (thử mẫu chạy trên máy, không thu phí thợ/tiệm, hai ngôn ngữ).
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const { t } = useLanguage();
+  // authHint = <LanguageHints placement="auth" /> from the root layout (LanguageProvider): not imported here on purpose.
+  const { t, authHint } = useLanguage();
   return (
     <div className={`pn-auth ${fraunces.variable}`}>
       <div className="pn-auth-grid">
@@ -51,8 +52,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <main id="main" className="pn-auth-main">
           <AuthHeader />
+          {/* Hàng trên của cột form: gợi ý ngôn ngữ (trong luồng, NGAY TRÊN form — thấy ở khung hình đầu, không bao giờ
+              đè nút / ô nhập; components/i18n/LanguageHints.tsx) + nút EN·VI (≥ 1024; điện thoại có nút ở thanh đầu). */}
           <div className="pn-auth-top">
-            <LanguageToggle />
+            {authHint}
+            <LanguageToggle className="pn-auth-toggle" />
           </div>
           <div className="pn-auth-form">{children}</div>
           <footer className="pn-auth-foot">

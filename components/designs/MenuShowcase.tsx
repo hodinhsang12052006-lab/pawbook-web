@@ -9,15 +9,26 @@ import { priceLabel, type PublicMenuItem } from "@/lib/menu";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
-type Item = PublicMenuItem & { owner: { id: string; name: string | null; avatarUrl: string | null; city: string | null } };
+export type MenuShowcaseItem = PublicMenuItem & { owner: { id: string; name: string | null; avatarUrl: string | null; city: string | null } };
+type Item = MenuShowcaseItem;
+
+/** 12 món có ảnh + giá (công khai). Lỗi mạng → [] (khối tự ẩn). */
+export const loadMenuShowcase = (): Promise<Item[]> =>
+  fetch("/api/menu/showcase?limit=12").then((r) => (r.ok ? r.json() : null)).then((j) => (j?.items ?? []) as Item[]).catch(() => []);
 
 // Ảnh THẬT kèm giá từ menu của thợ / tiệm — đặt trước ý tưởng AI. Chưa có mẫu nào thì ẩn hẳn.
-export default function MenuShowcase() {
+// `items` (trang /designs): trang tự tải trước rồi hiện cả khối cùng lúc với lưới mẫu — khối không chen vào sau làm
+// lưới bên dưới nhảy xuống (CLS). Không truyền → tự tải (trang chủ khách hàng, nằm dưới các khối khác).
+export default function MenuShowcase({ items: given }: { items?: Item[] } = {}) {
   useTr();
-  const [items, setItems] = useState<Item[]>([]);
+  const [fetched, setFetched] = useState<Item[]>([]);
   useEffect(() => {
-    fetch("/api/menu/showcase?limit=12").then((r) => (r.ok ? r.json() : null)).then((j) => setItems(j?.items ?? [])).catch(() => {});
-  }, []);
+    if (given) return;
+    let live = true;
+    loadMenuShowcase().then((l) => { if (live) setFetched(l); });
+    return () => { live = false; };
+  }, [given]);
+  const items = given ?? fetched;
   if (!items.length) return null;
   return (
     <section aria-label={tr("Menu có giá từ thợ", "Priced menus from techs")} className="space-y-2.5">

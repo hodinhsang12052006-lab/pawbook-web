@@ -4,7 +4,7 @@
 //   node scripts/qa/official_test.mjs
 import { chromium, devices } from "playwright";
 import { createClient } from "@libsql/client";
-import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_TECH, registerUser } from "./lib.mjs";
+import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_TECH, registerUser, sendChat } from "./lib.mjs";
 
 const R = new Results("Tài khoản chính thức, ảnh tin tuyển & tiếng Anh");
 const OUT = process.env.TEMP || ".";
@@ -97,8 +97,8 @@ try {
   await input.waitFor({ timeout: 15000 });
   R.check("OF8", "Mở chat chính thức: header có tên + tick xanh", (await tp.getByRole("img", { name: /Tài khoản chính thức/ }).count()) > 0);
   const msg = `QA hỏi hỗ trợ ${Date.now()}`;
-  await input.fill(msg);
-  await input.press("Enter");
+  // Điện thoại (Pixel 7, chạm): Enter = xuống dòng trong ô soạn V2 → gửi bằng nút Gửi.
+  await sendChat(tp, msg);
   await tp.getByText(msg).last().waitFor({ timeout: 10000 });
   const admin = new Client();
   // Admin xem hộp thư của chính mình (không đọc DM của người khác).

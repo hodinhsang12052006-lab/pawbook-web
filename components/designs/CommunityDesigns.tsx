@@ -16,20 +16,23 @@ interface Item {
 // 1 lần tải cho cả trang (2 vị trí dùng chung): "top" chỉ hiện khi CÓ ảnh thật, "bottom" chỉ hiện ô mời đăng khi CHƯA có
 // → trang Mẫu nail mở ra bằng lưới ảnh, không còn mở bằng 1 ô trống nét đứt.
 let firstPage: Promise<{ items: Item[]; hasMore: boolean }> | null = null;
-const loadFirst = () => (firstPage ??= fetch("/api/designs/community?limit=12").then((r) => (r.ok ? r.json() : null)).then((j) => ({ items: (j?.items ?? []) as Item[], hasMore: !!j?.hasMore })).catch(() => { firstPage = null; return { items: [] as Item[], hasMore: false }; }));
+export type CommunityFirstPage = { items: Item[]; hasMore: boolean };
+export const loadCommunityFirst = () => (firstPage ??= fetch("/api/designs/community?limit=12").then((r) => (r.ok ? r.json() : null)).then((j) => ({ items: (j?.items ?? []) as Item[], hasMore: !!j?.hasMore })).catch(() => { firstPage = null; return { items: [] as Item[], hasMore: false }; }));
 
 // Ảnh THẬT thợ & tiệm đăng (bài "Khoe tay nghề" có ảnh) — hiện ngay ở trang Mẫu nail, không cần duyệt.
-export default function CommunityDesigns({ pro = true, placement }: { pro?: boolean; placement?: "top" | "bottom" } = {}) {
+// `initial` (trang /designs): trang đã tải trang đầu trước khi hiện → khối có ngay từ lần vẽ đầu, không chen vào sau.
+export default function CommunityDesigns({ pro = true, placement, initial }: { pro?: boolean; placement?: "top" | "bottom"; initial?: CommunityFirstPage } = {}) {
   const router = useRouter();
   const { user } = useSessionUser();
-  const [items, setItems] = useState<Item[] | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const [items, setItems] = useState<Item[] | null>(initial?.items ?? null);
+  const [hasMore, setHasMore] = useState(initial?.hasMore ?? false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
+    if (initial) return;
     let live = true;
-    loadFirst().then((j) => { if (live) { setItems(j.items); setHasMore(j.hasMore); } });
+    loadCommunityFirst().then((j) => { if (live) { setItems(j.items); setHasMore(j.hasMore); } });
     return () => { live = false; };
-  }, []);
+  }, [initial]);
   const more = () => {
     if (!items || busy) return;
     setBusy(true);

@@ -43,7 +43,9 @@ try {
   R.check("PR1", "Không để lộ email nào có tài khoản: email lạ và email thật nhận CÙNG câu trả lời; email lạ không gửi thư", unknown.status === 200 && known.status === 200 && unknown.data.message === known.data.message && mails.length === 1, JSON.stringify({ unknown, known, n: mails.length }));
   const m = mails[0];
   const token = tokenOf(m);
-  R.check("PR2", "Gửi đúng 1 thư tới đúng email (chữ hoa/thường đều nhận), qua khoá Resend, từ PawNail Jobs, có link /auth/reset?token=…, song ngữ", m && m.to?.[0] === email && m.auth === "Bearer test-resend" && m.path === "/emails" && /PawNail Jobs/.test(m.from) && !!token && token.length >= 40 && /Đặt lại mật khẩu/.test(m.subject) && /Reset/.test(m.subject) && m.html.includes(`/auth/reset?token=${token}`), JSON.stringify(m)?.slice(0, 200));
+  // Thư theo ngôn ngữ của người yêu cầu (lib/email.ts resetPasswordEmail, cookie / Accept-Language; mặc định EN — API
+  // gọi không kèm ngôn ngữ). Bản VI kiểm tra ở PR4b (trình duyệt vi-VN).
+  R.check("PR2", "Gửi đúng 1 thư tới đúng email (chữ hoa/thường đều nhận), qua khoá Resend, từ PawNail Jobs, có link /auth/reset?token=…, tiếng Anh khi người yêu cầu không chọn tiếng Việt", m && m.to?.[0] === email && m.auth === "Bearer test-resend" && m.path === "/emails" && /PawNail Jobs/.test(m.from) && !!token && token.length >= 40 && m.subject === "Reset your PawNail password" && m.html.includes('lang="en"') && m.html.includes(`/auth/reset?token=${token}`) && !m.html.includes("/vi/auth/reset") && m.text.includes(`/auth/reset?token=${token}`), JSON.stringify(m)?.slice(0, 200));
   const stored = (await db.execute(`SELECT tokenHash FROM "PasswordReset" ORDER BY createdAt DESC LIMIT 1`)).rows[0]?.tokenHash;
   R.check("PR3", "Chỉ lưu HASH của mã trong DB (mã thật chỉ nằm trong email)", !!stored && stored !== token && /^[0-9a-f]{64}$/.test(String(stored)));
 
@@ -61,6 +63,8 @@ try {
   const okMsg = await p.getByRole("status").filter({ hasText: /vừa gửi link đặt lại/ }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   R.check("PR4", "Trang đăng nhập → 'Quên mật khẩu' → nhập email → báo đã gửi (không còn ngõ cụt 'liên hệ support')", okMsg && mails.length === 2);
   const token2 = tokenOf(mails[1]);
+  const vm = mails[1];
+  R.check("PR4b", "Trình duyệt tiếng Việt → thư tiếng Việt, link /vi/auth/reset?token=…", vm && vm.subject === "Đặt lại mật khẩu PawNail" && vm.html.includes('lang="vi"') && vm.html.includes(`/vi/auth/reset?token=${token2}`), JSON.stringify({ subject: vm?.subject, link: vm?.text?.match(/https?:\/\/\S+/)?.[0]?.replace(/token=.*/, "token=…") }));
 
   await p.goto(BASE_URL + `/auth/reset?token=${token2}`);
   await p.locator("#new-password").fill(NEW);

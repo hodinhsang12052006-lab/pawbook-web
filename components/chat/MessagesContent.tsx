@@ -177,8 +177,13 @@ export default function MessagesContent({
       setStickerHint(g);
       if (!g) setHintDismissed(null);
     };
-    if (!g || g === stickerHintRef.current || v.trim() === g) apply();
-    else hintTimerRef.current = setTimeout(() => {
+    if (!g || g === stickerHintRef.current || v.trim() === g) return apply();
+    // đổi sang emoji cuối KHÁC: thanh của emoji cũ ẩn ngay (chạm nhầm sẽ gửi nhãn của emoji cũ), thanh mới chờ 200ms
+    if (stickerHintRef.current) {
+      stickerHintRef.current = null;
+      setStickerHint(null);
+    }
+    hintTimerRef.current = setTimeout(() => {
       hintTimerRef.current = null;
       apply();
     }, 200);

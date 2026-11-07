@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Clock, X } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Clock, Search, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { EMOJI_GROUPS } from "@/lib/chatStickers";
 import { pushEmojiRecent, readEmojiRecent, writeMediaTab } from "@/lib/stickers/store";
+import { buildEmojiIndex, loadEmojiWords, searchEmoji, type EmojiWords } from "@/lib/stickers/emojiSearch";
 import type { StickerMarket } from "@/lib/stickers/seasons";
 import StickerTab from "./StickerTab";
 import GifTab, { type GifItem } from "./GifTab";
 import { probeGifs, useGifEnabled } from "@/lib/chat/gifAvailability";
 
-// Bảng chèn biểu tượng (như Messenger / Telegram): Emoji (chia nhóm + "Gần đây") · Nhãn dán · GIF.
+// Bảng chèn biểu tượng (như Messenger / Telegram): Emoji (ô tìm EN + VI · chia nhóm + "Gần đây") · Nhãn dán · GIF.
 // Bảng nằm trên ô nhập; gửi nhãn dán / GIF xong bảng VẪN MỞ. Đóng: X, Esc, chạm ra ngoài, nút Back (MessagesContent).
 // Tab đang dùng nhớ theo người (pn_media_tab:<userId>); emoji gần đây theo người (pn_emoji_recent:v1:<userId>).
 // GIF chỉ hiện khi máy chủ có khoá GIPHY / Tenor (lib/chat/gifAvailability.ts — hỏi 1 lần / phiên): chưa có → không có tab
@@ -89,6 +90,23 @@ export default function MediaPicker({
   );
   const shown = groups.find((g) => g.id === group) ?? groups[0];
 
+  // Tìm emoji (EN + VI, không dấu — lib/stickers/emojiSearch.ts). Từ khoá CLDR tải động khi chạm / gõ vào ô tìm lần đầu.
+  const [query, setQuery] = useState("");
+  const [words, setWords] = useState<EmojiWords | null>(null);
+  const wordsReq = useRef(false);
+  const loadWords = useCallback(() => {
+    if (wordsReq.current) return;
+    wordsReq.current = true;
+    loadEmojiWords()
+      .then(setWords)
+      .catch(() => {
+        wordsReq.current = false;
+      });
+  }, []);
+  const index = useMemo(() => (words ? buildEmojiIndex(EMOJI_GROUPS.flatMap((g) => g.items), words) : null), [words]);
+  const searching = !!query.trim();
+  const found = useMemo(() => (searching && index ? searchEmoji(query, index, lang) : null), [searching, index, query, lang]);
+
   const tabBtn = (t: MediaTab, label: string) => (
     <button
       type="button"
@@ -116,13 +134,57 @@ export default function MediaPicker({
 
       {tab === "emoji" && (
         <>
-          <p className="px-4 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-[#a69ba4]">{tr(shown.label[0], shown.label[1])}</p>
-          <div ref={scrollRef} className="custom-scrollbar grid flex-1 grid-cols-8 content-start gap-0.5 overflow-y-auto px-2 pb-2">
-            {shown.items.map((e, i) => (
-              <button key={`${e}-${i}`} type="button" onClick={() => pickEmoji(e)} aria-label={e} className="flex aspect-square items-center justify-center rounded-xl text-[26px] leading-none transition-transform hover:scale-110 hover:bg-white/10 active:scale-95">
-                {e}
-              </button>
-            ))}
+          {/* Ô tìm luôn có sẵn (cao cố định) → gõ / xoá tìm không làm bảng nhảy; kết quả thay cho lưới nhóm, cùng chỗ */}
+          <div className="px-3 pt-2">
+            <label className="pn-stk-search">
+              <Search className="h-4 w-4 flex-shrink-0 text-[#a69ba4]" aria-hidden />
+              <input
+                value={query}
+                onChange={(e) => {
+                  loadWords();
+                  setQuery(e.target.value);
+                }}
+                onFocus={loadWords}
+                onPointerDown={loadWords}
+                onKeyDown={(e) => {
+                  // Esc khi đang tìm: xoá ô tìm trước (Esc lần nữa mới đóng bảng)
+                  if (e.key === "Escape" && query) {
+                    e.stopPropagation();
+                    e.nativeEvent.stopImmediatePropagation();
+                    setQuery("");
+                  }
+                }}
+                placeholder={tr("Tìm emoji", "Search emoji")}
+                aria-label={tr("Tìm emoji", "Search emoji")}
+                enterKeyHint="search"
+                autoComplete="off"
+                className="min-w-0 flex-1 bg-transparent text-base text-[#f7eef3] placeholder-[#a69ba4] focus:outline-none sm:text-sm"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={tr("Xoá", "Clear")}
+                  className="-mr-1 flex h-8 w-8 items-center justify-center rounded-full text-[#c0b2bc] hover:bg-white/10"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </label>
+          </div>
+          <p className="h-7 truncate px-4 pb-1 pt-2 text-[11px] font-bold uppercase leading-[16px] tracking-wider text-[#a69ba4]" aria-live="polite">
+            {searching ? (found === null ? tr("Đang tìm…", "Searching…") : found.length ? tr("Kết quả", "Results") : "") : tr(shown.label[0], shown.label[1])}
+          </p>
+          <div ref={scrollRef} data-emoji-grid={searching ? "results" : shown.id} className="custom-scrollbar grid flex-1 grid-cols-8 content-start gap-0.5 overflow-y-auto px-2 pb-2">
+            {searching && found && !found.length ? (
+              <p className="col-span-8 py-8 text-center text-[13px] text-[#c0b2bc]">{tr("Không tìm thấy emoji nào", "No emoji found")}</p>
+            ) : (
+              (searching ? found ?? [] : shown.items).map((e, i) => (
+                <button key={`${e}-${i}`} type="button" onClick={() => pickEmoji(e)} aria-label={e} data-emoji={e} className="flex aspect-square items-center justify-center rounded-xl text-[26px] leading-none transition-transform hover:scale-110 hover:bg-white/10 active:scale-95 motion-reduce:transition-none motion-reduce:hover:scale-100">
+                  {e}
+                </button>
+              ))
+            )}
           </div>
           <div className="flex items-center justify-between gap-0.5 border-t border-white/5 px-2 py-1.5">
             {groups.map((g) => (
@@ -131,11 +193,12 @@ export default function MediaPicker({
                 type="button"
                 onClick={() => {
                   setGroup(g.id);
+                  setQuery("");
                   scrollRef.current?.scrollTo({ top: 0 });
                 }}
                 aria-label={tr(g.label[0], g.label[1])}
                 title={tr(g.label[0], g.label[1])}
-                className={`pn-hit flex h-9 flex-1 items-center justify-center rounded-xl text-lg transition-colors ${shown.id === g.id ? "bg-white/10" : "opacity-60 hover:bg-white/5 hover:opacity-100"}`}
+                className={`pn-hit flex h-9 flex-1 items-center justify-center rounded-xl text-lg transition-colors ${!searching && shown.id === g.id ? "bg-white/10" : "opacity-60 hover:bg-white/5 hover:opacity-100"}`}
               >
                 {g.id === "recent" ? <Clock className="h-4 w-4 text-slate-300" /> : g.icon}
               </button>

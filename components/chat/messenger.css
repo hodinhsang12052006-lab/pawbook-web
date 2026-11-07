@@ -611,3 +611,43 @@ html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="
   html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { animation: m-fade 120ms linear; }
   html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:active { transform: none; }
 }
+
+/* ---------- GIF dạng video (MP4 của GIPHY) · emoji to · gợi ý nhãn dán (11/2026) ----------
+   Quy tắc chức năng (khung GIF, cỡ emoji) KHÔNG gắn html:not([data-ui-classic]) — phải đúng ở mọi giao diện. */
+.pn-gifv { position: relative; display: block; overflow: hidden; }
+.pn-gifv-media { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* Tin chỉ 1–3 emoji: không bong bóng; 1 emoji không có nhãn động Noto (cờ, màu da, mũ phím…) → chữ ~92px; 2–3 → to tĩnh */
+.pn-msgr .m-emoji-big {
+  margin: 2px 0; line-height: 1.12; user-select: none; -webkit-user-select: none; white-space: nowrap;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif;
+}
+.pn-msgr .m-emoji-1 { font-size: 92px; line-height: 112px; }
+.pn-msgr .m-emoji-2 { font-size: 60px; }
+.pn-msgr .m-emoji-3 { font-size: 48px; }
+
+/* Thanh gợi ý nhãn dán: 1 hàng cuộn ngang ngay trên ô soạn tin (trong khung soạn tin → khung tin co lại, không che tin cuối) */
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest {
+  display: flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 4px 4px 4px 6px; border-radius: 20px;
+  background: var(--m-surface); box-shadow: inset 0 0 0 1px var(--m-line-strong);
+  animation: pn-suggest-in 160ms cubic-bezier(.23, 1, .32, 1) both;
+}
+@keyframes pn-suggest-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-row { display: flex; flex: 1; min-width: 0; gap: 2px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn {
+  display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px;
+  scroll-snap-align: start; transition: transform 120ms cubic-bezier(.23, 1, .32, 1), background-color 120ms;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn img { width: 48px; height: 48px; object-fit: contain; pointer-events: none; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn > span { font-size: 36px; line-height: 1; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn:hover { background: rgb(255 240 246 / 0.06); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn:active { transform: scale(.92); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-x {
+  position: relative; display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border-radius: 999px; color: var(--m-text-2);
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-x::before { content: ""; position: absolute; inset: -6px; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-x:hover { background: rgb(255 240 246 / 0.08); color: var(--m-text); }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest { animation: m-fade 120ms linear both; }
+  html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn:active { transform: none; }
+}

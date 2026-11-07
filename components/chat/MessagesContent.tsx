@@ -43,7 +43,10 @@ import { uploadMedia } from "@/lib/mediaUpload";
 import { chatKeyOf, migrateLegacyWallpaper, resolveChoice, type WpRender } from "@/lib/chatWallpapers";
 import { useWallpaperRender, useWpState } from "./useChatWallpaper";
 import { mediaPreview } from "@/lib/chat/preview";
-import { readMediaTab } from "@/lib/stickers/store";
+import { isGifUrl } from "@/lib/chat/gif";
+import { trailingEmoji } from "@/lib/chat/emojiOnly";
+import StickerSuggest from "./StickerSuggest";
+import { pushRecentSticker, readMediaTab } from "@/lib/stickers/store";
 import { probeGifs, useGifEnabled } from "@/lib/chat/gifAvailability";
 import { guessMarketInBrowser, readMarketCookie } from "@/lib/market";
 import { tr } from "@/lib/i18n/tr";
@@ -154,13 +157,26 @@ export default function MessagesContent({
     setHasTextState(v);
     if (!v) setToolsOpen(false); // xoá hết chữ → hiện lại các nút ảnh / ghi âm / GIF
   }, []);
+  // Gợi ý nhãn dán: ô soạn tin là đúng 1 emoji (hoặc "từ" cuối là 1 emoji) → thanh nhãn khớp phía trên ô (StickerSuggest).
+  // Chỉ setState khi emoji gợi ý ĐỔI (gõ chữ thường không render lại component lớn này). Đóng (×) → ẩn cho tới khi đổi emoji.
+  const [stickerHint, setStickerHint] = useState<string | null>(null);
+  const [hintDismissed, setHintDismissed] = useState<string | null>(null);
+  const stickerHintRef = useRef<string | null>(null);
+  const updateStickerHint = useCallback((v: string) => {
+    const g = trailingEmoji(v);
+    if (g === stickerHintRef.current) return;
+    stickerHintRef.current = g;
+    setStickerHint(g);
+    if (!g) setHintDismissed(null);
+  }, []);
   const setMessageText = useCallback((v: string | ((prev: string) => string)) => {
     const el = inputRef.current;
     if (!el) return;
     el.value = typeof v === "function" ? v(el.value) : v;
     setHasText(!!el.value.trim());
+    updateStickerHint(el.value);
     growInput(el);
-  }, [setHasText]);
+  }, [setHasText, updateStickerHint]);
   // Realtime: ai đang soạn tin (theo hội thoại, hết hạn sau 4s) và mốc "đã
   // xem" của đối phương (theo hội thoại).
   const [typingByConv, setTypingByConv] = useState<Record<string, string>>({});
@@ -278,6 +294,7 @@ export default function MessagesContent({
   // Call/message split — interrupt an active call); it's a targeted reset.
   useEffect(() => {
     setMessageText("");
+    updateStickerHint("");
     setShowEmoji(false);
     setShowGifs(false);
     setChatPanelTab("emoji");
@@ -672,6 +689,8 @@ export default function MessagesContent({
     const keepPinned = (e: Event) => {
       const t = e.target as HTMLElement | null;
       if (!t || !/^(IMG|VIDEO)$/.test(t.tagName) || !isNearBottomRef.current || pendingScrollAdjustRef.current) return;
+      // GIF có khung cố định theo #wh (không đổi chiều cao khi tải) và trình phát MP4 dựng / gỡ theo vị trí cuộn → không kéo xuống
+      if (t.closest(".m-gif")) return;
       el.scrollTop = el.scrollHeight;
     };
     el.addEventListener("load", keepPinned, true);
@@ -1066,6 +1085,19 @@ export default function MessagesContent({
     setShowGifs(false);
   }, []);
 
+  // Chạm 1 nhãn trên thanh gợi ý: gửi nhãn đó + bỏ emoji vừa gõ khỏi ô soạn tin (cả ô chỉ là emoji → ô trống; "hehe 😂" →
+  // còn "hehe", không mất chữ đã gõ). Bàn phím vẫn mở (nút chặn pointerdown).
+  const pickSuggestedSticker = (id: string) => {
+    const el = inputRef.current;
+    const g = stickerHintRef.current;
+    if (el && g) {
+      const t = el.value.trimEnd();
+      setMessageText(t.endsWith(g) ? t.slice(0, t.length - g.length).trimEnd() : t);
+    }
+    if (currentUser?.id) pushRecentSticker(currentUser.id, id);
+    handleSendMessage(null, id, "STICKER", undefined, { keepPanel: true });
+  };
+
   // Thả / đổi / gỡ cảm xúc: hiện ngay (đoán trước như máy chủ), rồi lấy bản đã lưu từ máy chủ.
   const handleAddReaction = useCallback(async (messageId: string, icon: string, current?: Reaction[]) => {
     if (!messageId || !activeChat || !currentUser || messageId.startsWith("temp")) return;
@@ -1248,7 +1280,7 @@ export default function MessagesContent({
     // chỉ tin vừa đến (≤ 60 giây) — không đọc tin cũ khi mở cuộc trò chuyện / tải thêm trang cũ
     if (!lastIncomingKey || !lastIncoming || !freshMessageIds.has(lastIncomingKey) || Date.now() - new Date(lastIncoming.createdAt).getTime() > 60_000) return;
     const who = activeChat?.isGroup ? lastIncoming.sender?.name ?? "" : activeChat?.name ?? "";
-    const body = lastIncoming.type === "TEXT" || !lastIncoming.type ? String(lastIncoming.content || "").slice(0, 200) : lastIncoming.type === "IMAGE" ? "📷" : lastIncoming.type === "AUDIO" ? "🎤" : "";
+    const body = lastIncoming.type === "TEXT" || !lastIncoming.type ? String(lastIncoming.content || "").slice(0, 200) : lastIncoming.type === "IMAGE" ? (isGifUrl(lastIncoming.content) ? "GIF" : "📷") : lastIncoming.type === "AUDIO" ? "🎤" : "";
     setLiveText(`${who}: ${body}`);
   }, [lastIncomingKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1277,6 +1309,8 @@ export default function MessagesContent({
   for (let i = chatMessages.length - 1; i >= 0; i--) {
     const m = chatMessages[i];
     if (m.senderId === currentUser?.id) break;
+    // GIF (GIPHY / Tenor, có khi là MP4) không phải ảnh tay / mẫu móng → bỏ qua, xét tin trước đó
+    if (m.type === "IMAGE" && isGifUrl(m.content)) continue;
     if (m.type === "IMAGE" || !m.type || m.type === "TEXT") { unanswered = { content: String(m.content || ""), type: m.type === "IMAGE" ? "IMAGE" : "TEXT" }; break; }
   }
   const partnerWrote = chatMessages.some((m) => m.senderId !== currentUser?.id && m.type !== "SYSTEM");
@@ -2164,7 +2198,7 @@ export default function MessagesContent({
                     <NailStudio
                       market={currentUser?.market === "AU" ? "AU" : "US"}
                       // Thợ: ảnh KHÁCH gửi · Khách: ảnh tay của CHÍNH MÌNH đã gửi (hoặc chụp mới trong Studio)
-                      photos={chatMessages.filter((m) => m.type === "IMAGE" && (clientChat ? m.senderId === currentUser?.id : m.senderId !== currentUser?.id) && /^(https:\/\/|data:image\/)/.test(m.content)).map((m) => m.content).reverse()}
+                      photos={chatMessages.filter((m) => m.type === "IMAGE" && (clientChat ? m.senderId === currentUser?.id : m.senderId !== currentUser?.id) && /^(https:\/\/|data:image\/)/.test(m.content) && !isGifUrl(m.content)).map((m) => m.content).reverse()}
                       sendLabel={clientChat ? tr("Gửi cho tiệm", "Send to the salon") : tr("Gửi cho khách", "Send to client")}
                       onSend={async ({ blobs, looks }) => {
                         for (let i = 0; i < blobs.length; i++) {
@@ -2237,6 +2271,11 @@ export default function MessagesContent({
                   onClose={handleCloseMediaPanel}
                 />
               )}
+              {/* Gợi ý nhãn dán theo emoji đang gõ — trong khung soạn tin (khung tin co lại, tin cuối không bị che); bảng biểu tượng
+                  đang mở thì ẩn (bảng đã có tab Nhãn dán) */}
+              {stickerHint && stickerHint !== hintDismissed && !panelOpen && !recording && currentUser?.id && (
+                <StickerSuggest glyph={stickerHint} onPick={pickSuggestedSticker} onDismiss={() => setHintDismissed(stickerHint)} />
+              )}
               {/* 1 hàng như Messenger: [😊][GIF][📎] · ô nhập bo tròn · nút gửi tròn. Trước đây nút
                   biểu tượng nằm riêng 1 hàng phía trên, tốn chỗ và nhìn rời rạc. */}
               {recording ? (
@@ -2297,6 +2336,7 @@ export default function MessagesContent({
                     onChange={(e) => {
                       const has = !!e.target.value.trim();
                       setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
+                      updateStickerHint(e.target.value); // … hoặc khi emoji gợi ý nhãn dán đổi
                       growInput(e.target);
                       if (has) notifyTyping();
                     }}

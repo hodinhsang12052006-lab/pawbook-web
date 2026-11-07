@@ -5,11 +5,13 @@ import { AlertCircle, Check, CheckCheck, Clock, Phone, PhoneMissed, Video, Refre
 import VoiceMessage from "./VoiceMessage";
 import toast from "react-hot-toast";
 import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
-import { isEmojiOnly, isFluent, isKnownSticker, lottieUrl, stickerGlyph, stillUrl } from "@/lib/stickers/urls";
+import { isEmojiOnly, isFluent, isKnownSticker, lottieUrl, notoIdFor, stickerGlyph, stillUrl } from "@/lib/stickers/urls";
 import { isExtFluentId, loadFullStickerManifest, type StickerMeta } from "@/lib/stickers/manifest";
 import { canAnimate, makeSlots } from "@/lib/stickers/lottie";
 import LottieLayer from "./LottieLayer";
-import { gifAspect, isGifUrl, corsSafeGif } from "@/lib/chat/gif";
+import { gifAspect, gifMediaSrc, gifStill, isGifUrl, isGifVideo, corsSafeGif } from "@/lib/chat/gif";
+import { emojiGraphemes } from "@/lib/chat/emojiOnly";
+import GifVideo from "./GifVideo";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { CS } from "@/lib/i18n/chatStrings";
@@ -147,12 +149,11 @@ function MessageRowImpl({
       <SmilePlus className="h-[18px] w-[18px]" />
     </button>
   ) : null;
-  // Tin chỉ có 1–3 emoji → hiện TO, không bong bóng (như Messenger/iMessage).
-  const emojiCount = [...(msg.content || "").matchAll(/\p{Extended_Pictographic}/gu)].length;
-  const emojiOnly =
-    (msg.type === "TEXT" || !msg.type) &&
-    /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍|\s)+$/u.test(msg.content || "") &&
-    emojiCount <= 3;
+  // Tin chữ chỉ có 1–3 emoji (tách theo cụm: ZWJ, màu da, cờ, mũ phím) → hiện TO, không bong bóng (kiểu Telegram):
+  // 1 emoji = nhãn động Noto 112px (chạy 1 lượt khi hiện rồi đứng) nếu có, không thì emoji chữ ~96px; 2–3 emoji = chữ to tĩnh.
+  const bigEmoji = msg.type === "TEXT" || !msg.type ? emojiGraphemes(msg.content, 3) : null;
+  const emojiOnly = !!bigEmoji;
+  const emojiCount = bigEmoji?.length ?? 0;
   const time = bubbleTime(msg.createdAt, market);
   const status: "pending" | "failed" | "seen" | "sent" | null = !isSelf
     ? null
@@ -239,9 +240,14 @@ function MessageRowImpl({
 
   let body: React.ReactNode;
   if (emojiOnly) {
+    const noto = emojiCount === 1 ? notoIdFor(bigEmoji![0], true) : null;
     body = (
-      <div className="m-bare">
-        <div className={`select-none leading-none ${emojiCount === 1 ? "text-[44px]" : "text-[36px]"}`} aria-label={msg.content}>{msg.content}</div>
+      <div className="m-bare" data-big-emoji={emojiCount}>
+        {noto ? (
+          <StickerView id={noto} size={112} />
+        ) : (
+          <div className={`m-emoji-big m-emoji-${emojiCount}`} role="img" aria-label={msg.content.trim()}>{bigEmoji!.join(emojiCount > 1 ? "\u2009" : "")}</div>
+        )}
         <span className="m-meta-pill" aria-hidden>{time}{tick}</span>
       </div>
     );
@@ -255,19 +261,24 @@ function MessageRowImpl({
     );
   } else if (isMedia) {
     // GIF (GIPHY / Tenor): giữ ĐÚNG tỉ lệ từ "#wh" (không cắt); tin cũ không có #wh → khung vuông, ảnh "contain".
+    // GIF gửi từ 11/2026 là MP4 (+ poster "&still=") → <video> lặp, tắt tiếng, chỉ chạy khi thấy (GifVideo); tin cũ .gif / .webp → <img>.
     const gif = msg.type === "IMAGE" && isGifUrl(msg.content);
+    const gifVideo = gif && isGifVideo(msg.content);
     const ratio = gif ? gifAspect(msg.content) ?? 1 : mediaAspect(msg.content);
     body = (
       <div className={`m-media ${gif ? "m-gif" : ""} ${corner}`} style={{ aspectRatio: String(ratio) }}>
         {mediaBroken ? (
           <span className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-[13px] text-slate-400">
             <ImageOff className="h-6 w-6" />
-            {tr("Ảnh không hiển thị được", "Image unavailable")}
+            {gif ? tr("GIF không hiển thị được", "GIF unavailable") : tr("Ảnh không hiển thị được", "Image unavailable")}
           </span>
         ) : msg.type === "IMAGE" ? (
           // Plain <img>: nội dung từ nhiều host ngoài (Tenor GIF, Cloudinary) — next/image sẽ chặn host lạ.
-          <button type="button" onClick={() => onOpenMedia?.(msg.content)} aria-label={CS.openImage()} className="block h-full w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+          <button type="button" onClick={() => onOpenMedia?.(msg.content)} aria-label={gif ? tr("Mở GIF", "Open GIF") : CS.openImage()} className="block h-full w-full">
+            {gifVideo ? (
+              <GifVideo src={gifMediaSrc(msg.content)} poster={gifStill(msg.content)} rootSelector=".m-scroll" className="h-full w-full" onError={() => setMediaBroken(true)} />
+            ) : (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={msg.content}
               alt={gif ? "GIF" : tr("Hình ảnh", "Image")}
@@ -277,6 +288,7 @@ function MessageRowImpl({
               onError={() => setMediaBroken(true)}
               className={`h-full w-full ${gif ? "object-contain" : "object-cover"}`}
             />
+            )}
             {gif && <span className="m-gif-chip" aria-hidden>GIF</span>}
           </button>
         ) : (
@@ -430,7 +442,7 @@ function MessageRowImpl({
 // mà chỉ là emoji (🐶, 💼 — bộ cũ 07–10/2026) → emoji chữ 64px như trước; chuỗi lạ khác → nhãn "Sticker".
 const bubbleSlots = makeSlots(4);
 
-function StickerView({ id }: { id: string; animate?: boolean }) {
+function StickerView({ id, size = 128 }: { id: string; size?: number }) {
   const key = React.useId();
   const known = isKnownSticker(id);
   const ext = !known && isExtFluentId(id);
@@ -483,13 +495,14 @@ function StickerView({ id }: { id: string; animate?: boolean }) {
   const glyph = stickerGlyph(id) ?? meta?.glyph ?? null;
   const still = stillUrl(id, meta);
 
+  const textPx = size >= 128 ? 64 : Math.round(size * 0.82);
   if (!known && !ext) {
-    if (isEmojiOnly(id)) return <div className="my-1 select-none text-[64px] leading-none" role="img" aria-label={id}>{id}</div>;
+    if (isEmojiOnly(id)) return <div className="my-1 select-none leading-none" style={{ fontSize: textPx }} role="img" aria-label={id}>{id}</div>;
     return <span className="m-sticker-chip">{tr("Nhãn dán", "Sticker")}</span>;
   }
-  if (ext && extMeta === undefined) return <span className="m-sticker-img my-1 block h-[128px] w-[128px]" aria-hidden />;
+  if (ext && extMeta === undefined) return <span className="m-sticker-img my-1 block" style={{ width: size, height: size }} aria-hidden />;
   if (ext && !meta) return <span className="m-sticker-chip">{tr("Nhãn dán", "Sticker")}</span>;
-  if (!still || failed) return <div className="my-1 select-none text-[64px] leading-none" role="img" aria-label={glyph ?? ""}>{glyph}</div>;
+  if (!still || failed) return <div className="my-1 select-none leading-none" style={{ fontSize: textPx }} role="img" aria-label={glyph ?? ""}>{glyph}</div>;
   return (
     <button
       ref={boxRef}
@@ -503,20 +516,21 @@ function StickerView({ id }: { id: string; animate?: boolean }) {
         boxRef.current?.querySelector("img")?.animate?.([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 180, easing: "cubic-bezier(.23,1,.32,1)" });
       }}
       aria-label={glyph ?? tr("Nhãn dán", "Sticker")}
-      className="pn-stk-box my-1 h-[128px] w-[128px]"
+      className="pn-stk-box my-1"
+      style={{ width: size, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={still}
         alt={glyph ?? ""}
-        width={128}
-        height={128}
+        width={size}
+        height={size}
         decoding="async"
         crossOrigin="anonymous"
         draggable={false}
         onError={() => setFailed(true)}
-        className="m-sticker-img h-[128px] w-[128px] select-none"
-        style={ready ? { opacity: 0 } : undefined}
+        className="m-sticker-img select-none"
+        style={{ width: size, height: size, ...(ready ? { opacity: 0 } : {}) }}
       />
       {lottie && (
         <LottieLayer

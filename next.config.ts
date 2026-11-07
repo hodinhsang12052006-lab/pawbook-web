@@ -33,6 +33,13 @@ const mediaCaching = [
     handler: "CacheFirst",
     options: { cacheName: "pn-stickers", expiration: { maxEntries: 500, maxAgeSeconds: 5184000 }, cacheableResponse: { statuses: [200] } },
   },
+  // GIF dạng MP4 (tin GIF từ 11/2026 + ô trong bảng GIF): <video> xin theo từng đoạn (Range → 206) — CacheFirst không lưu được
+  // 206 và trả nguyên tệp 200 cho yêu cầu Range thì Safari không phát. Đi thẳng mạng (bộ đệm HTTP của trình duyệt vẫn giữ).
+  // ĐẶT TRƯỚC quy tắc pn-gifs bên dưới (khớp mọi URL media*.giphy.com).
+  {
+    urlPattern: /^https:\/\/media\d*\.giphy\.com\/[^?#]+\.mp4(?:[?#]|$)/,
+    handler: "NetworkOnly",
+  },
   {
     urlPattern: /^https:\/\/media\d*\.giphy\.com\//,
     handler: "CacheFirst",
@@ -196,7 +203,9 @@ const nextConfig: NextConfig = {
             // (video tải thẳng từ trình duyệt lên Cloudinary bằng chữ ký máy
             // chủ — Vercel giới hạn body ~4.5MB nên không đi qua /api/upload).
             // media.tenor.com / *.giphy.com in img-src: GIF tiles + GIF messages are raw <img> pointing at the
-            // provider's media host (results come from /api/gifs). cdn.jsdelivr.net in img-src (11/2026): Fluent
+            // provider's media host (results come from /api/gifs). *.giphy.com in media-src (11/2026): GIPHY GIFs are
+            // sent + previewed as the provider's MP4 rendition (<video>, poster = still on the same host, img-src).
+            // cdn.jsdelivr.net in img-src (11/2026): Fluent
             // Emoji 3D sticker PNGs (MIT), pinned to one commit of github.com/microsoft/fluentui-emoji.
             // Added *.sentry.io to connect-src + worker-src blob: — phát hiện
             // qua regression scan: Sentry SDK (đã cài qua wizard, không phải do

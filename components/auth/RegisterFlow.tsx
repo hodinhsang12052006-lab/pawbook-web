@@ -10,8 +10,8 @@ import { useAuthedRedirect } from "@/components/auth/useAuthedRedirect";
 import { isRegisterRole } from "@/lib/registerRoles";
 
 // /auth/register: role picker, or one role's sign-up form. Both are in the static HTML (server-rendered per language):
-//   /auth/register              → app/[lang]/auth/register/page.tsx          → initialRole null (picker)
-//   /auth/register?role=client  → app/[lang]/auth/register/[role]/page.tsx   → initialRole "client" (edge rewrite on
+//   /auth/register              → app/[lang]/auth/register/[[...role]]/page.tsx → initialRole null (picker)
+//   /auth/register?role=client  → app/[lang]/auth/register/[[...role]] (role "client") → initialRole "client" (edge rewrite on
 //                                 ?role=, next.config.ts — the browser URL keeps ?role=)
 // so the first paint already has the h1 + the list / form at its final height: no empty placeholder replaced after
 // hydration (CLS 0.11–0.18 on role pages, LCP 6–8 s on a throttled phone). Picking a role / "All account types" stays

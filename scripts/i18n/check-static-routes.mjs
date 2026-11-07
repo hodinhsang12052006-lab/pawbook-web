@@ -14,7 +14,7 @@ const FORMERLY_STATIC = [
   "/auth/reset", "/bookings", "/consult", "/data-deletion", "/designs", "/jobs/create", "/offline", "/privacy", "/profile",
   "/salons", "/supply", "/support", "/terms", "/tools/income-tracker", "/tools/radar", "/trends", "/tryon",
 ];
-// Thêm sau khi chuyển: 1 trang tĩnh cho mỗi vai trò đăng ký (edge rewrite /auth/register?role=… → /[lang]/auth/register/[role]).
+// Thêm sau khi chuyển: 1 trang tĩnh cho mỗi vai trò đăng ký (edge rewrite /auth/register?role=… → /[lang]/auth/register/[[...role]]).
 const NEW_STATIC = ["/auth/register/client", "/auth/register/technician", "/auth/register/owner"];
 // HTML dựng sẵn theo ngôn ngữ, làm mới nền (ISR) — vẫn phục vụ từ cache, không gọi function cho mỗi lượt xem; giới hạn
 // trên của khoảng làm mới (giây): /designs có hàng mẫu đầu tiên dựng ở máy chủ (lib/designsFirstPaint.ts).

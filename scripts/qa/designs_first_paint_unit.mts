@@ -37,7 +37,7 @@ eq("W6 uses the list's objects (fresh saves / saved flags)", withPinned([{ id: "
 eq("C1 calendar order", occasionChips(["christmas", "fall", null, "thanksgiving", "fall"]), ["fall", "thanksgiving", "christmas"]);
 eq("C2 unknown occasions after the known ones, alphabetical", occasionChips(["zz-custom", "aa-custom", "valentine"]), ["valentine", "aa-custom", "zz-custom"]);
 
-// Register roles (edge rewrite /auth/register?role=… → /[lang]/auth/register/[role])
+// Register roles (edge rewrite /auth/register?role=… → /[lang]/auth/register/[[...role]])
 eq("R1 roles", [...REGISTER_ROLES], ["client", "technician", "owner"]);
 eq("R2 role guard", ["client", "owner", "technician", "admin", "", null, "Client"].map(isRegisterRole), [true, true, true, false, false, false, false]);
 

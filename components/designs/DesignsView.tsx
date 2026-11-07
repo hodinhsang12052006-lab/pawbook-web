@@ -18,7 +18,8 @@ const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nướ
 const PAGE = 48;
 // Chip of an occasion only one market has: hidden before paint for the other market (html[data-mkt] is set by the
 // SEASON_BOOT head script, same market order as useViewerMarket) until the viewer's own list replaces these chips.
-const ONLY_IN: Record<"US" | "AU", string> = { US: "[html[data-mkt=AU]_&]:hidden", AU: "[html[data-mkt=US]_&]:hidden" };
+// A page-local rule (not a Tailwind class): the shared stylesheet every page loads stays the same size.
+const ONLY_IN_CSS = "html[data-mkt=AU] [data-only-mkt=US],html[data-mkt=US] [data-only-mkt=AU]{display:none}";
 
 // /designs — "Mẫu nail mới": mẫu mới mỗi ngày theo dịp lễ & xu hướng, kèm vật tư cần chuẩn bị và các bước làm. Chỉ hiện
 // mẫu admin ĐÃ DUYỆT.
@@ -142,7 +143,7 @@ export default function DesignsView({ initial }: { initial: DesignsFirstPaint | 
               const [title, sub] = head(pro);
               const H = on ? "h1" : "p";
               return (
-                <div key={String(pro)} className={`space-y-1 [grid-area:1/1] ${on ? "" : "invisible"}`} aria-hidden={on ? undefined : true}>
+                <div key={String(pro)} className={`space-y-1 ${on ? "" : "invisible"}`} style={{ gridArea: "1 / 1" }} aria-hidden={on ? undefined : true}>
                   <H className="text-2xl font-black tracking-tight text-white sm:text-3xl">{title}</H>
                   <p className="max-w-2xl text-[13px] leading-5 text-slate-400">{sub}</p>
                 </div>
@@ -168,7 +169,8 @@ export default function DesignsView({ initial }: { initial: DesignsFirstPaint | 
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group" aria-label={tr("Lọc mẫu", "Filter designs")}>
               <button type="button" aria-pressed={!occasion && !skill && !savedOnly} onClick={() => { setOccasion(null); setSkill(null); setSavedOnly(false); }} className={chip(!occasion && !skill && !savedOnly)}>{tr("Tất cả", "All")}</button>
               <button type="button" aria-pressed={savedOnly} onClick={() => setSavedOnly((v) => !v)} className={chip(savedOnly)}><Bookmark className="mr-1 inline h-3 w-3" />{tr("Đã lưu", "Saved")}</button>
-              {chips.map(({ id: o, only }) => <button key={o} type="button" aria-pressed={occasion === o} onClick={() => setOccasion(occasion === o ? null : o)} className={`${chip(occasion === o)}${only ? ` ${ONLY_IN[only]}` : ""}`}>{occasionLabel(o)}</button>)}
+              {chips.some((c) => c.only) && <style>{ONLY_IN_CSS}</style>}
+              {chips.map(({ id: o, only }) => <button key={o} type="button" aria-pressed={occasion === o} onClick={() => setOccasion(occasion === o ? null : o)} className={chip(occasion === o)} data-only-mkt={only}>{occasionLabel(o)}</button>)}
               {SKILLS.map((s) => <button key={s} type="button" aria-pressed={skill === s} onClick={() => setSkill(skill === s ? null : s)} className={chip(skill === s)}>{valueLabel(s)}</button>)}
             </div>
 

@@ -108,7 +108,7 @@ const VI_FIRST = { type: "header" as const, key: "accept-language", value: "\\s*
 // Đường dẫn trang (không phải API, asset của Next/Vercel/Cloudflare, .well-known,
 // tệp có đuôi trong /public, hay URL đã có tiền tố ngôn ngữ).
 const PAGE_PATH = "/:path((?!(?:api|_next|_vercel|cdn-cgi|vi|en|\\.well-known)(?:/|$))(?!__next)(?!.*\\.[A-Za-z0-9]{1,6}$).+)";
-// /auth/register?role=client|technician|owner → its own prerendered page per language (app/[lang]/auth/register/[role],
+// /auth/register?role=client|technician|owner → its own prerendered page per language (app/[lang]/auth/register/[[...role]],
 // roles: lib/registerRoles.ts): the role form is in the static HTML instead of an empty placeholder filled after
 // hydration (CLS + LCP). Same locale rules as below; the browser keeps the ?role= URL. Checked by
 // scripts/qa/ssr_locale_check.mjs.

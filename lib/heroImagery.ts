@@ -87,8 +87,10 @@ export function heroSet(season: SeasonId | string | null | undefined): Record<He
 export const avifSrcSet = (i: HeroImage) => i.widths.map((w) => `/hero/${i.file}-${w}.avif ${w}w`).join(", ");
 export const webpSrc = (i: HeroImage) => `/hero/${i.file}-640.webp`;
 
+// Desktop front card: sizes = 1.5 × its 352 px layout width, so a DPR 1 screen still decodes the 640 file (the card
+// is projected in 3D and the eye lands on it first; 480 px looked soft). mid/back already get ≥ 2× from the 480 file.
 export const HERO_SIZES = {
-  front: "(min-width:1024px) 352px, min(64vw, 300px)",
+  front: "(min-width:1024px) 528px, min(64vw, 300px)",
   mid: "(min-width:1024px) 232px, min(64vw, 300px)",
   back: "(min-width:1024px) 200px, min(64vw, 300px)",
   strip: "min(64vw, 300px)",

@@ -14,7 +14,8 @@ import { useTr } from "@/lib/i18n/useTr";
 
 const noop = () => () => {};
 const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
-const SIZES = ["(min-width:1024px) 340px, 1px", "(min-width:1024px) 220px, 1px"];
+// front = 1.5 × its ~340 px layout width (DPR 1 decodes the 640 file; see HERO_SIZES)
+const SIZES = ["(min-width:1024px) 510px, 1px", "(min-width:1024px) 220px, 1px"];
 
 export default function AuthPhotoStage() {
   const { locale } = useTr();

@@ -480,7 +480,7 @@ const compactOnFocus = await p.evaluate(() => ({ groupBar: !!document.querySelec
 await p.evaluate(() => (window.__evt2 = []));
 await p.keyboard.type("cam on", { delay: 90 });
 await p.waitForTimeout(500);
-const camOn = await panel(p).locator('[data-emoji-grid="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
+const camOn = await panel(p).locator('[data-emoji-set="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
 const after0 = await geo();
 const typeEvts = await p.evaluate(() => window.__evt2 || []);
 const keyEvts = typeEvts.filter((e) => /^(keydown|keyup|keypress|beforeinput|input)$/.test(e.n));
@@ -500,7 +500,7 @@ R.check("TG7b", "Chọn 🙏 từ kết quả → chèn vào ô soạn tin + và
   composerVal.endsWith("🙏") && recentStore[0] === "🙏" && recentTab === 1 && afterClear.gridTop === pre.gridTop, JSON.stringify({ composerVal, recentStore: recentStore.slice(0, 4), recentTab, afterClear, pre }));
 await emojiSearch.fill("tim");
 await p.waitForTimeout(300);
-const timRes = await panel(p).locator('[data-emoji-grid="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
+const timRes = await panel(p).locator('[data-emoji-set="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
 await emojiSearch.fill("zzqxv");
 await p.waitForTimeout(200);
 const noneMsg = await panel(p).getByText("No emoji found").isVisible().catch(() => false);
@@ -678,7 +678,7 @@ await post("😂", "TEXT");
   const vSearch = vpanel.getByRole("textbox", { name: "Tìm emoji" });
   await vSearch.fill("tim");
   await vp.waitForTimeout(700);
-  const vTim = await vpanel.locator('[data-emoji-grid="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
+  const vTim = await vpanel.locator('[data-emoji-set="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
   const vLabel = await vpanel.locator("[aria-live=polite]").innerText().catch(() => "");
   await shot(vp, "t16_emoji_search_vi");
   await vSearch.fill("");

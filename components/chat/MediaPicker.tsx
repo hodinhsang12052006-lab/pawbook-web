@@ -213,14 +213,14 @@ export default function MediaPicker({
           <div ref={scrollRef} data-emoji-grid={searching ? "results" : shown.id} className={`custom-scrollbar grid min-h-[88px] flex-1 grid-cols-8 content-start gap-0.5 overflow-y-auto px-2 pb-2 ${compact ? "pt-1.5" : ""}`}>
             {/* Lưới nhóm và lưới kết quả cùng DỰNG SẴN, chỉ ẩn / hiện: phím đầu tiên không phải gỡ ~100 ô của nhóm rồi dựng lại khi
                 xoá ô tìm; ô kết quả giữ khoá theo emoji → mỗi phím chỉ thêm / bớt / dời vài ô. */}
-            <div className={searching ? "hidden" : "contents"}>
+            <div data-emoji-set="group" className={searching ? "hidden" : "contents"}>
               <EmojiGrid items={shown.items} onPick={onPickStable} />
             </div>
-            <div className={searching ? "contents" : "hidden"}>
+            <div data-emoji-set="results" className={searching ? "contents" : "hidden"}>
               {searching && found && !found.length ? (
                 <p className="col-span-8 py-8 text-center text-[13px] text-[#c0b2bc]">{tr("Không tìm thấy emoji nào", "No emoji found")}</p>
               ) : (
-                <EmojiGrid items={found ?? NO_EMOJI} onPick={onPickStable} unique />
+                <EmojiGrid items={found ?? NO_EMOJI} onPick={onPickStable} unique progressive />
               )}
             </div>
           </div>
@@ -257,11 +257,20 @@ const NO_EMOJI: string[] = [];
 // Các ô emoji của lưới (nhóm hoặc kết quả tìm) — memo: chỉ vẽ lại khi danh sách đổi (lượt ưu tiên thấp của useDeferredValue),
 // không vẽ lại ở mỗi phím gõ vào ô tìm. Fragment: ô vẫn là con trực tiếp của lưới 8 cột. unique (kết quả tìm không trùng) →
 // khoá = emoji: gõ thêm 1 chữ thì React giữ lại các ô còn trong kết quả thay vì đổi chữ của mọi ô. pn-emoji-cell:
-// content-visibility: auto — ô ngoài vùng cuộn (nhóm ~100 emoji màu) không phải vẽ.
-const EmojiGrid = React.memo(function EmojiGrid({ items, onPick, unique = false }: { items: readonly string[]; onPick: (e: string) => void; unique?: boolean }) {
+// content-visibility: auto — ô ngoài vùng cuộn (nhóm ~100 emoji màu) không phải vẽ. progressive (kết quả tìm): dựng trước
+// 3 hàng đầu (đủ phủ lưới khi bàn phím mở), phần còn lại ngay sau khung hình đó — phím gõ không phải chờ vẽ cả 6 hàng.
+const FIRST_ROWS = 24;
+const EmojiGrid = React.memo(function EmojiGrid({ items, onPick, unique = false, progressive = false }: { items: readonly string[]; onPick: (e: string) => void; unique?: boolean; progressive?: boolean }) {
+  const [full, setFull] = useState<readonly string[] | null>(null);
+  const partial = progressive && items.length > FIRST_ROWS && full !== items;
+  useEffect(() => {
+    if (!partial) return;
+    const t = setTimeout(() => setFull(items), 50);
+    return () => clearTimeout(t);
+  }, [partial, items]);
   return (
     <>
-      {items.map((e, i) => (
+      {(partial ? items.slice(0, FIRST_ROWS) : items).map((e, i) => (
         <button key={unique ? e : `${e}-${i}`} type="button" onClick={() => onPick(e)} aria-label={e} data-emoji={e} className="pn-emoji-cell flex aspect-square items-center justify-center rounded-xl text-[26px] leading-none transition-transform hover:scale-110 hover:bg-white/10 active:scale-95 motion-reduce:transition-none motion-reduce:hover:scale-100">
           {e}
         </button>

@@ -297,13 +297,13 @@ for (const W of WIDTHS) {
     await es.focus();
     await p.setViewportSize({ width: W, height: Math.round(FULL * 0.58) });
     await es.pressSequentially("heart", { delay: 40 });
-    const got = await dlg.locator('[data-emoji-grid="results"] [data-emoji]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const got = await dlg.locator('[data-emoji-set="results"] [data-emoji]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
     const st = await check(p, `${W}px · emoji search with keyboard open`);
     const g = await p.evaluate(() => {
       const grid = document.querySelector("[data-emoji-grid]")?.getBoundingClientRect();
-      const cells = [...document.querySelectorAll('[data-emoji-grid="results"] [data-emoji]')].map((c) => c.getBoundingClientRect());
+      const cells = [...document.querySelectorAll('[data-emoji-set="results"] [data-emoji]')].map((c) => c.getBoundingClientRect());
       const full = grid ? cells.filter((c) => c.top >= grid.top - 0.5 && c.bottom <= grid.bottom + 0.5 && c.height > 20).length : 0;
-      return { gridH: grid ? Math.round(grid.height) : 0, full, first: document.querySelector('[data-emoji-grid="results"] [data-emoji]')?.getAttribute("data-emoji") };
+      return { gridH: grid ? Math.round(grid.height) : 0, full, first: document.querySelector('[data-emoji-set="results"] [data-emoji]')?.getAttribute("data-emoji") };
     });
     if (!got) st.problems.push("emoji search 'heart' showed no results");
     if (g.gridH < 80) st.problems.push(`emoji results grid only ${g.gridH}px tall with the keyboard open`);

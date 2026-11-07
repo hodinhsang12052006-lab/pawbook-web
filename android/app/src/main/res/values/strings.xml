@@ -4,4 +4,35 @@
     <string name="title_activity_main">PawNail Jobs</string>
     <string name="package_name">com.bitpawos.app</string>
     <string name="custom_url_scheme">com.bitpawos.app</string>
+
+    <!-- Notification channels (Settings > Apps > PawNail Jobs > Notifications). -->
+    <string name="channel_messages_name">Messages</string>
+    <string name="channel_messages_desc">New chat messages. Pops up on screen and can show as a chat bubble.</string>
+    <string name="channel_calls_name">Calls</string>
+    <string name="channel_calls_desc">Incoming voice and video calls</string>
+    <string name="channel_general_name">General</string>
+    <string name="channel_general_desc">Job alerts and other updates</string>
+
+    <!-- Chat notifications -->
+    <string name="chat_you">You</string>
+    <string name="chat_group_fallback">Group chat</string>
+    <string name="chat_new_message">New message</string>
+    <string name="chat_reply">Reply</string>
+    <string name="chat_reply_hint">Write a message…</string>
+    <string name="chat_mark_read">Mark as read</string>
+    <string name="chat_not_sent">Not sent: %1$s</string>
+    <string name="chat_error_signin">Open the app and sign in to reply</string>
+    <string name="chat_error_blocked">You can\'t send messages in this chat</string>
+    <string name="chat_error_limit">Too many messages right now. Try again later.</string>
+    <string name="chat_error_network">Couldn\'t send. Check your connection.</string>
+    <plurals name="chat_summary_conversations">
+        <item quantity="one">%d conversation</item>
+        <item quantity="other">%d conversations</item>
+    </plurals>
+
+    <!-- Chat bubble window -->
+    <string name="title_activity_bubble">Chat</string>
+    <string name="bubble_offline">You\'re offline. Check your connection.</string>
+    <string name="bubble_continue_in_app">Opened in the app</string>
+    <string name="bubble_retry">Retry</string>
 </resources>

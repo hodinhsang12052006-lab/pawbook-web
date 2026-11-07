@@ -143,7 +143,7 @@ export default async function RootLayout({
                 <PusherStatusBanner />
                 <NativeAppBridge />
                 <ServiceWorkerRegister />
-                {/* Gợi ý ngôn ngữ: thanh trong luồng ở đầu trang (landing + app); /auth/* đặt viên riêng sau form. */}
+                {/* Gợi ý ngôn ngữ: thanh trong luồng ở đầu trang (landing + app); /auth/* đặt viên riêng ở hàng trên cột form, ngay trên form. */}
                 <LanguageHints placement="top" />
                 {children}
                 <FomoToast />

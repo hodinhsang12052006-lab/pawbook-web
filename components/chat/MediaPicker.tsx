@@ -116,7 +116,21 @@ export default function MediaPicker({
   }, []);
   const index = useMemo(() => (words ? buildEmojiIndex(EMOJI_GROUPS.flatMap((g) => g.items), words) : null), [words]);
   // Ô tìm cập nhật ngay; lưới kết quả (tới 64 emoji màu, lần đầu vẽ khá tốn) dựng ở lượt ưu tiên thấp → gõ không khựng.
-  const deferredQuery = useDeferredValue(query);
+  // Lưới chỉ đổi SAU khi chữ vừa gõ đã được vẽ (rAF → tác vụ kế): máy chậm, việc dựng lưới không chen trước khung hình hiện chữ;
+  // gõ liên tục thì lưới đổi 1 lần khi ngừng tay 1 khung hình (không dựng lưới cho từng chữ đã bị gõ đè).
+  const [gridQuery, setGridQuery] = useState("");
+  useEffect(() => {
+    if (query === gridQuery) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const raf = requestAnimationFrame(() => {
+      t = setTimeout(() => setGridQuery(query), 0);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (t) clearTimeout(t);
+    };
+  }, [query, gridQuery]);
+  const deferredQuery = useDeferredValue(gridQuery);
   const searching = !!deferredQuery.trim();
   // 48 kết quả (6 hàng) — đủ cho mọi từ khoá, ít ô emoji màu phải vẽ lại mỗi phím hơn
   const found = useMemo(() => (searching && index ? searchEmoji(deferredQuery, index, lang, 48) : null), [searching, index, deferredQuery, lang]);

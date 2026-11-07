@@ -114,15 +114,17 @@ await owner.page.screenshot({ path: process.env.TEMP + "/picker_emoji.png" });
 // Hợp đồng mới: CHỈ GIF thật từ /api/gifs (GIPHY / Tenor). Chưa có khoá → KHÔNG có tab GIF (không còn bộ GIF dán cứng).
 const gifApi = gifOn ? await owner.page.evaluate(async () => (await fetch("/api/gifs?lang=vi")).json().catch(() => null)) : gifProbe;
 let r9;
+const pickerGifs = () => owner.page.getByRole("dialog", { name: "Chọn biểu tượng" }).locator('img[alt="GIF"]');
 if (gifOn) await owner.page.getByRole("tab", { name: "GIF" }).click();
 if (gifApi?.enabled) {
-  await owner.page.locator('img[alt="GIF"]').first().waitFor({ timeout: 8000 }).catch(() => {});
-  const gifs = await owner.page.locator('img[alt="GIF"]').count();
+  // chỉ ô GIF TRONG bảng (tin GIF cũ trong khung chat cũng là <img alt="GIF">)
+  await pickerGifs().first().waitFor({ timeout: 8000 }).catch(() => {});
+  const gifs = await pickerGifs().count();
   const powered = await owner.page.getByTestId("gif-attribution").isVisible().catch(() => false);
   r9 = { ok: gifs >= 1 && powered, detail: { gifs, powered, provider: gifApi.provider } };
 } else {
   const tab = await owner.page.getByRole("tab", { name: "GIF" }).count();
-  const gifs = await owner.page.locator('img[alt="GIF"]').count();
+  const gifs = await pickerGifs().count();
   r9 = { ok: tab === 0 && gifs === 0, detail: { tab, gifs, probe: gifProbe } };
 }
 R.check("R9", gifApi?.enabled ? "Tab GIF (có khoá): có GIF thật + 'Powered by …'" : "GIF (chưa có khoá): không có tab GIF, không có ô GIF nào", r9.ok, JSON.stringify(r9.detail));

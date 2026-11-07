@@ -10,7 +10,7 @@ process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = "1"; // Playwright c
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
-import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, SEED_TECH, Results, fakeIp } from "./lib.mjs";
+import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, SEED_OWNER_2, Results, fakeIp } from "./lib.mjs";
 
 const R = new Results("Service worker + GIF (MP4 qua mạng, poster / GIF cũ vào kho)");
 const SHOTS = process.env.SHOTS_DIR || "";
@@ -40,8 +40,9 @@ async function login(email, phone) {
   return { ctx, me, hd };
 }
 
-const B = await login(SEED_TECH, false);
-const A = await login(SEED_OWNER, true);
+const B = await login(SEED_OWNER, false);
+// cặp owner1 → owner2 (không phải owner1 ↔ tech1 mà nhiều bộ test khác dùng — tin GIF thử không lẫn vào đó)
+const A = await login(SEED_OWNER_2, true);
 // media GIPHY giả: MP4 trả đúng 206 cho Range (như CDN thật), ảnh tĩnh / WebP có ACAO: *
 const media = [];
 await A.ctx.route(/^https:\/\/media\d*\.giphy\.com\//, (r) => {
@@ -49,19 +50,20 @@ await A.ctx.route(/^https:\/\/media\d*\.giphy\.com\//, (r) => {
   const u = req.url();
   const range = req.headers()["range"];
   const fromSw = !!req.serviceWorker?.();
+  const mine = u.includes(`/sw${tag}`); // chỉ đếm media của lượt chạy này
   if (/\.mp4(?:[?#]|$)/.test(u)) {
     const total = VIDEO.length;
     const m = /bytes=(\d+)-(\d*)/.exec(range || "");
     if (m) {
       const start = Number(m[1]);
       const end = Math.min(m[2] ? Number(m[2]) : total - 1, total - 1);
-      media.push({ kind: "mp4", status: 206, range, fromSw });
+      if (mine) media.push({ kind: "mp4", status: 206, range, fromSw });
       return r.fulfill({ status: 206, headers: { "content-type": "video/mp4", "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${total}`, "access-control-allow-origin": "*", "cache-control": "public, max-age=86400" }, body: VIDEO.subarray(start, end + 1) });
     }
-    media.push({ kind: "mp4", status: 200, range: null, fromSw });
+    if (mine) media.push({ kind: "mp4", status: 200, range: null, fromSw });
     return r.fulfill({ status: 200, headers: { "content-type": "video/mp4", "accept-ranges": "bytes", "access-control-allow-origin": "*", "cache-control": "public, max-age=86400" }, body: VIDEO });
   }
-  media.push({ kind: /_s\.gif/.test(u) ? "still" : "webp", status: 200, fromSw, mode: req.headers()["sec-fetch-mode"] || "" });
+  if (mine) media.push({ kind: /_s\.gif/.test(u) ? "still" : "webp", status: 200, fromSw, mode: req.headers()["sec-fetch-mode"] || "" });
   return r.fulfill({ status: 200, headers: { "content-type": "image/svg+xml", "access-control-allow-origin": "*", "cache-control": "public, max-age=86400" }, body: svg(/_s\.gif/.test(u) ? "#7a3e66" : "#3e667a") });
 });
 

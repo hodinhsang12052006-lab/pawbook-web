@@ -190,9 +190,6 @@ final class ChatNotifications {
         if (m.text.isEmpty()) m.text = ctx.getString(R.string.chat_new_message);
         m.ts = parseLong(d.get("ts"), System.currentTimeMillis());
 
-        // Tải avatar người gửi TRƯỚC (mạng, tối đa ~5 s) để phần vẽ chỉ đọc cache.
-        ChatAvatars.loadSquare(ctx, m.avatar, true);
-
         ChatStore.Conv c = ChatStore.addIncoming(ctx, cid, title, group, url, m);
         if (c == null) return true; // tin trùng (FCM gửi lại)
 
@@ -204,6 +201,8 @@ final class ChatNotifications {
         // App đang mở (trang khác): web tự hiện toast + âm thanh → chỉ cập nhật khay, im lặng.
         // Bong bóng của hội thoại đang mở: web trong bong bóng đã hiện tin.
         Mode mode = (AppState.isMainResumed() || AppState.isBubbleOpen(cid)) ? Mode.SILENT : Mode.ALERT;
+        // Tải avatar người gửi trước (mạng, tối đa ~5 s); phần vẽ chỉ đọc cache.
+        ChatAvatars.loadSquare(ctx, m.avatar, true);
         post(ctx, cid, mode);
         return true;
     }

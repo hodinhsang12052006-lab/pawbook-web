@@ -1007,7 +1007,19 @@ if (want("authblip")) {
       // the phone rings for a new call — exactly one incoming UI, no reload
       const before = incomingFor(B).length;
       await dial(A, "audio");
-      await phaseIs(B, "incoming", 15000);
+      const rang = await phaseIs(B, "incoming", 15000).then(() => true).catch(() => false);
+      if (!rang) {
+        const diag = {
+          aPhase: await A.page.locator("[data-call-phase]").getAttribute("data-call-phase").catch(() => null),
+          incomingEvents: incomingFor(B).length - before,
+          subs: mock.subscribers(ch),
+          keeper: await B.page.evaluate(() => ({ st: window.__pnRealtime?.state?.(), stats: window.__pnRealtime?.stats?.(), log: window.__pnRealtime?.log?.().slice(-10) })).catch((e) => String(e)),
+          tail: mock.log.slice(-6).map((e) => `${e.name || e.refused || e.ignored}:${(e.channel || "").slice(0, 20)}`),
+        };
+        await shot(B, `authblip_${variant}_no_ring`);
+        await shot(A, `authblip_${variant}_caller`);
+        return { fail: "B did not ring: " + JSON.stringify(diag) };
+      }
       const ringing = await B.page.locator(sel("incoming")).count();
       await ctl(B, "decline").click();
       await idle(A, 10000);

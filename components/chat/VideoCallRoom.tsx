@@ -286,7 +286,8 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
 
   return (
     <div className="relative h-full w-full overflow-clip bg-slate-950 md:rounded-[1.75rem] md:border md:border-white/10 md:shadow-2xl md:shadow-black/50">
-      <div ref={containerRef} className="h-full w-full" />
+      {/* isolate: các lớp z-index của UIKit (lớp phủ "đang vào phòng" chặn chạm) nằm gọn trong khung này, dưới nút "Kết thúc" */}
+      <div ref={containerRef} className="isolate h-full w-full" />
 
       {!zegoUi && !callError && (
         <button

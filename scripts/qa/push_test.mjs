@@ -171,26 +171,27 @@ try {
   await p.goto(BASE_URL + "/auth/login");
   await p.locator("#email").fill(SEED_TECH);
   await p.locator("#password").fill(DEMO_PASSWORD);
-  await p.getByRole("button", { name: /^Đăng nhập$/ }).click();
-  await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 20000 });
+  await p.getByRole("button", { name: /^(Đăng nhập|Log in)$/ }).click();
+  await p.waitForURL((u) => !/^\/(vi\/)?auth/.test(u.pathname), { timeout: 20000 });
   await p.evaluate(() => { localStorage.removeItem("pn_push_dismissed_at"); sessionStorage.setItem("pn_fomo_session", JSON.stringify({ shown: 99, closes: 9 })); });
   await p.goto(BASE_URL + "/?tab=feed");
   await p.waitForTimeout(28_000); // lời mời hiện sau ~25 giây dùng app
-  const prompt = p.getByRole("dialog", { name: "Bật thông báo" });
+  // Giao diện theo ngôn ngữ của người dùng (EN-first từ 11/2026, như các push ở trên) → nhận cả 2 ngôn ngữ.
+  const prompt = p.getByRole("dialog", { name: /^(Bật thông báo|Turn on notifications)$/ });
   const shown = await prompt.waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
-  R.check("PU15", "Sau ~25 giây dùng app → lời mời 'Bật thông báo' (không bật hộp xin quyền ngay)", shown);
+  R.check("PU15", "Sau ~25 giây dùng app → lời mời 'Bật thông báo' / 'Turn on notifications' theo ngôn ngữ người dùng (không bật hộp xin quyền ngay)", shown);
   await p.screenshot({ path: (process.env.TEMP || ".") + "/push_prompt.png" });
   if (shown) {
     // Nút ✕ phải bấm được (trước đây bị phần chữ đè lên).
-    await prompt.getByRole("button", { name: "Đóng" }).click({ timeout: 5000 });
+    await prompt.getByRole("button", { name: /^(Đóng|Close)$/ }).click({ timeout: 5000 });
     R.check("PU15b", "Nút ✕ trên lời mời bấm được và đóng lời mời", (await prompt.count()) === 0);
     await p.reload();
     await p.waitForTimeout(28_000);
     R.check("PU16", "'Để sau' → không hỏi lại trong 7 ngày", (await prompt.count()) === 0);
   } else R.check("PU16", "Để sau", false, "lời mời không hiện");
   await p.goto(BASE_URL + "/profile");
-  const row = await p.getByRole("switch", { name: "Thông báo đẩy" }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-  R.check("PU17", "Hồ sơ → 'Âm thanh & rung' có công tắc 'Thông báo đẩy'", row);
+  const row = await p.getByRole("switch", { name: /^(Thông báo đẩy|Push notifications)$/ }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+  R.check("PU17", "Hồ sơ → 'Âm thanh & rung' có công tắc 'Thông báo đẩy' / 'Push notifications' (theo ngôn ngữ người dùng)", row);
   R.check("PU18", "Không có lỗi JS", errs.length === 0, errs.join(" | "));
   await browser.close();
 } finally {

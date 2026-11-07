@@ -181,7 +181,7 @@ for (let i = 0; i < 400; i++) {
 await p.waitForTimeout(600);
 const lazyLeft = await panel(p).locator(".pn-stk-ph").count();
 const cellsNow = await panel(p).locator("[data-section] [data-sticker]").count();
-R.check("CM2c", `Mục xa dựng khi tới gần: lúc mở ${mountedAtOpen} ô thật + ${lazyAtStart} ô giữ chỗ → cuộn hết còn ${lazyLeft} ô giữ chỗ, ${cellsNow} ô thật`, mountedAtOpen <= 120 && lazyAtStart > 500 && lazyLeft === 0 && cellsNow >= 700, JSON.stringify({ mountedAtOpen, lazyAtStart, lazyLeft, cellsNow }));
+R.check("CM2c", `Mục xa dựng khi tới gần: lúc mở ${mountedAtOpen} ô thật + ${lazyAtStart} ô giữ chỗ → cuộn hết còn ${lazyLeft} ô giữ chỗ, ${cellsNow} ô thật`, mountedAtOpen <= 120 && lazyAtStart > 600 && lazyLeft === 0 && cellsNow >= 700, JSON.stringify({ mountedAtOpen, lazyAtStart, lazyLeft, cellsNow }));
 await p.waitForFunction(() => [...document.querySelectorAll("[data-testid=sticker-scroll] img")].every((i) => i.getAttribute("src") && i.complete), null, { timeout: 20000 }).catch(() => {});
 const perSection = {};
 for (const key of sections) {

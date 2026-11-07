@@ -24,8 +24,9 @@ import { CS } from "@/lib/i18n/chatStrings";
 // Hình động (Noto lottie.json + lottie-web light, tải động): ô trong "Gần đây" + mục đang xem tự chạy 2 lượt rồi đứng,
 // tối đa 12 ô cùng lúc, chỉ khi ô nằm trong khung cuộn; tắt khi giảm chuyển động / tiết kiệm dữ liệu / 2G (canAnimate).
 // Manifest (tên + từ khoá EN/VI) tải động khi mở tab; phần mở rộng (mọi Fluent 3D) khi bắt đầu tìm.
-// ~770 sticker trong ~18 mục: chỉ các mục đầu (≈ 8 hàng) dựng ô thật ngay; mục khác là khung giữ chỗ CÙNG KÍCH THƯỚC (ô rỗng
-// cùng lưới) cho tới khi tới gần khung cuộn (600px) → mở tab / đổi bộ nhanh, 2 IntersectionObserver chỉ theo dõi ô đã dựng.
+// ~770 sticker trong ~18 mục, mỗi mục chia khối 30 ô (bội số của 5 và 6 cột → các khối nối liền, không hở hàng): chỉ ~30 ô
+// đầu dựng thật ngay; khối khác là lưới ô rỗng CÙNG KÍCH THƯỚC cho tới khi tới gần khung cuộn (400px) → mở tab / đổi bộ nhanh,
+// 2 IntersectionObserver của ô chỉ theo dõi ô đã dựng.
 
 const CELL = 76; // chiều cao ô ~ (rộng bảng / 5 cột) — dùng cho contain-intrinsic-size
 const MAX_PLAYING = 12;
@@ -35,7 +36,9 @@ const cap = (s: string) => (s ? s.charAt(0).toLocaleUpperCase() + s.slice(1) : "
 // Gắn src cho ảnh khi phần tử vào gần khung nhìn của 1 vùng cuộn (1 IntersectionObserver dùng chung cho mọi ô).
 type Observe = (el: Element, onNear: () => void) => () => void;
 const NearContext = React.createContext<{ grid: Observe | null; bar: Observe | null; sec: Observe | null }>({ grid: null, bar: null, sec: null });
-const EAGER_ITEMS = 40; // các mục đứng trước chưa tới ngần này ô → dựng ngay (không chớp khung giữ chỗ lúc mở)
+const CHUNK = 30; // ô / khối lưới dựng một lần
+const EAGER_ITEMS = 30; // khối đầu dựng ngay (không chớp khung giữ chỗ lúc mở)
+const chunksOf = (items: StickerId[]) => Array.from({ length: Math.ceil(items.length / CHUNK) }, (_, i) => items.slice(i * CHUNK, (i + 1) * CHUNK));
 function useNearObserver(rootRef: React.RefObject<HTMLElement | null>, rootMargin: string): Observe {
   const io = useRef<IntersectionObserver | null>(null);
   const cbs = useRef(new Map<Element, () => void>());
@@ -140,7 +143,7 @@ export default function StickerTab({
   const barRef = useRef<HTMLDivElement>(null);
   const gridNear = useNearObserver(scrollRef, "0px 0px 40px 0px");
   const barNear = useNearObserver(barRef, "0px 40px 0px 0px");
-  const secNear = useNearObserver(scrollRef, "600px 0px 600px 0px");
+  const secNear = useNearObserver(scrollRef, "400px 0px 400px 0px");
   const near = useMemo(() => ({ grid: gridNear, bar: barNear, sec: secNear }), [gridNear, barNear, secNear]);
   const [animOn] = useState(() => canAnimate());
   const slots = useMemo(() => makeSlots(MAX_PLAYING), []);
@@ -199,15 +202,19 @@ export default function StickerTab({
   );
 
   const results = useMemo(() => (query && manifest ? searchStickers(query, manifest) : null), [query, manifest]);
-  // Số mục đầu dựng ngay: tới khi các bộ đứng trước (không tính Gần đây / Yêu thích — luôn dựng) đủ EAGER_ITEMS ô
-  const eagerUpTo = useMemo(() => {
+  // Khối dựng ngay ("<mục>:<khối>"): Gần đây / Yêu thích luôn dựng; các bộ thì tới khi đủ EAGER_ITEMS ô
+  const eager = useMemo(() => {
+    const out = new Set<string>();
     let n = 0;
-    let i = 0;
-    while (i < sections.length && n < EAGER_ITEMS) {
-      const s = sections[i++];
-      if (s.key !== "recent" && s.key !== "fav") n += s.items.length;
+    for (const s of sections) {
+      if (s.key === "recent" || s.key === "fav") continue;
+      for (const [ci, part] of chunksOf(s.items).entries()) {
+        if (n >= EAGER_ITEMS) return out;
+        out.add(`${s.key}:${ci}`);
+        n += part.length;
+      }
     }
-    return i;
+    return out;
   }, [sections]);
 
   // Theo dõi mục đang xem (IntersectionObserver trong vùng cuộn) → gạch chân icon bộ + mục được tự chạy hình động
@@ -352,7 +359,7 @@ export default function StickerTab({
                     {tr("Nhấn giữ nhãn dán để thêm vào Yêu thích", marketSpelling("Long-press a sticker to add it to Favorites", market))}
                   </p>
                 )}
-                {sections.map((s, si) => (
+                {sections.map((s) => (
                   <section
                     key={s.key}
                     ref={
@@ -375,11 +382,15 @@ export default function StickerTab({
                         </button>
                       )}
                     </h3>
-                    {s.key === "recent" || s.key === "fav" || eagerUpTo > si ? (
-                      grid(s.items, s.key, s.key === "recent" || s.key === active)
-                    ) : (
-                      <LazyGrid n={s.items.length} render={() => grid(s.items, s.key, s.key === active)} />
-                    )}
+                    {s.key === "recent" || s.key === "fav"
+                      ? grid(s.items, s.key, s.key === "recent" || s.key === active)
+                      : chunksOf(s.items).map((part, ci) =>
+                          eager.has(`${s.key}:${ci}`) ? (
+                            <React.Fragment key={ci}>{grid(part, s.key, s.key === active)}</React.Fragment>
+                          ) : (
+                            <LazyGrid key={ci} n={part.length} render={() => grid(part, s.key, s.key === active)} />
+                          )
+                        )}
                   </section>
                 ))}
               </>

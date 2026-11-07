@@ -414,6 +414,8 @@ html:not([data-ui-classic]) .pn-msgr .pn-stk-cell {
 }
 @media (hover: hover) { html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:hover { background: rgb(255 255 255 / 0.06); } }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-ph { pointer-events: none; }
+/* khối 30 ô nối tiếp trong 1 mục: cùng khe 2px như giữa các hàng */
+html:not([data-ui-classic]) .pn-msgr .pn-stk-grid + .pn-stk-grid { margin-top: 2px; }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:active { transform: scale(.94); }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:focus-visible { outline: 2px solid var(--m-accent-ink); outline-offset: -2px; }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-img { width: 60px; height: 60px; max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; border-radius: 14px; }

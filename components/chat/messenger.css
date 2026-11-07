@@ -507,6 +507,11 @@ html:not([data-ui-classic]) .pn-msgr .pn-wp-preview {
 @media (max-height: 760px) { html:not([data-ui-classic]) .pn-msgr .pn-wp-preview { aspect-ratio: auto; height: 176px; } }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet > :not(.pn-wp-scroll) { flex-shrink: 0; }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 12px -16px 0; padding: 0 16px 4px; }
+/* tên nhóm nền dính đầu vùng cuộn (không bị cắt nửa chữ khi cuộn tới nhóm dưới) */
+html:not([data-ui-classic]) .pn-msgr .pn-wp-group {
+  position: sticky; top: 0; z-index: 2; margin: 0 -16px 6px; padding: 4px 16px 2px; background: var(--m-surface);
+  font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #a69ba4;
+}
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-bubble { font-size: 13px; line-height: 18px; padding: 6px 10px; }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-col { max-width: 88%; }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-gap { margin: 2px auto; }

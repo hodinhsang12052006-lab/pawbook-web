@@ -296,7 +296,7 @@ export default function WallpaperSheet({
           />
           {WALLPAPER_GROUPS.map((g, gi) => (
             <section key={g.id} className={gi ? "mt-3" : ""}>
-              <h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[#a69ba4]">{tr(g.vi, g.en)}</h4>
+              <h4 className="pn-wp-group">{tr(g.vi, g.en)}</h4>
               <div className="grid grid-cols-4 gap-2.5">
                 {gi === 0 && (
                   <>

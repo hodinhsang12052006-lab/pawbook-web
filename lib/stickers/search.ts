@@ -1,7 +1,8 @@
 // Tìm sticker theo chữ (EN + VI, không dấu). Tìm trên MỌI bộ, kể cả bộ theo mùa đang ngoài mùa, và — khi đã tải manifest
 // mở rộng — mọi thư mục Fluent 3D. Nguồn từ: tên + từ khoá Unicode CLDR (EN + VI), thẻ Noto, từ khoá Fluent, tên bộ,
 // từ khoá tiếng Việt viết tay (keywordsVi.ts).
-// Điểm: trùng nguyên từ 3 > đầu từ 2 > chuỗi con (≥ 3 ký tự) 1 (+0,5 nếu trùng ở chính TÊN sticker, EN hoặc VI).
+// Điểm: trùng nguyên từ 3 > đầu từ 2 > chuỗi con (≥ 3 ký tự) 1 (+0,5 nếu trùng ở chính TÊN sticker, EN hoặc VI; +0,4 cho
+// sticker tuyển tay trong keywordsVi.ts — "cảm ơn" ra 🙏 trước 🫂 dù CLDR cũng gắn "cảm ơn" cho 🫂).
 // Hoà điểm → độ phổ biến Noto → thứ tự bộ. Cuối cùng bỏ trùng theo KÝ TỰ: mỗi ký tự 1 lần (ưu tiên bản động Noto);
 // bản 3D trùng ký tự xếp SAU mọi kết quả khác.
 import { foldVi } from "@/lib/chat/fold";
@@ -109,7 +110,7 @@ export function searchStickers(query: string, manifest: Manifest, limit = 60): S
     if (!s) continue;
     for (const t of targets) {
       if (t.startsWith("pack:")) for (const id of packItems(t.slice(5))) bump(id, s);
-      else bump(t, s);
+      else bump(t, s + 0.4);
     }
   }
   const ranked = [...score.entries()]

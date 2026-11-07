@@ -264,6 +264,11 @@ export default function StickerTab({
       // xa (> 3 khung) → nhảy thẳng: cuộn mượt qua cả chục bộ sẽ dựng hết các bộ giữa đường (giật trên máy yếu)
       const far = !!root && !!el && Math.abs(el.offsetTop - root.scrollTop) > root.clientHeight * 3;
       if (root && el) root.scrollTo({ top: el.offsetTop, behavior: reducedMotion() || far ? "auto" : "smooth" });
+      // nhảy thẳng: các mục quanh đích vừa dựng / vừa được vẽ (content-visibility) có thể đổi chiều cao ước lượng → căn lại
+      if (root && el && (far || reducedMotion()))
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (Math.abs(root.scrollTop - el.offsetTop) > 1) root.scrollTop = el.offsetTop;
+        }));
       setActive(key);
     });
   };

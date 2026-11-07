@@ -121,7 +121,7 @@ ok("M9", "Tháng 11 ở Mỹ: Lễ Tạ ơn mở đầu bằng 🥧 🌽 🍂 �
 
 // ---------- 4. Tìm kiếm ----------
 const q = (t: string) => searchStickers(t, FULL);
-ok("Q1", "'cam on' (không dấu) / 'cảm ơn' / 'cám ơn' → có 🙏 + bộ Cảm ơn", q("cam on").includes("🙏") && q("cảm ơn").includes("fl:bouquet") && q("cám ơn").length > 5, q("cam on").slice(0, 6));
+ok("Q1", "'cam on' (không dấu) / 'cảm ơn' / 'cám ơn' → 🙏 đứng đầu (tuyển tay) + bộ Cảm ơn", q("cam on")[0] === "🙏" && q("cảm ơn")[0] === "🙏" && q("cảm ơn").includes("fl:bouquet") && q("cám ơn").length > 5, q("cam on").slice(0, 6));
 ok("Q2", "'móng' → 💅 (Noto, động) đứng trước; 'chuc mung' → 🎉 (bản động trước bản 3D)", q("móng")[0] === "💅" && q("chuc mung").includes("🎉"), { mong: q("móng").slice(0, 4), cm: q("chuc mung").slice(0, 4) });
 ok("Q3", "Tiếng Anh: 'heart' ra ❤️ trước; 'pizza' → 🍕; 'santa' → fl:santa_claus (bộ ngoài mùa vẫn tìm được)", q("heart")[0] === "❤️" && q("pizza")[0] === "🍕" && q("santa").includes("fl:santa_claus"), q("heart").slice(0, 3));
 ok("Q4", "'tết' → bao lì xì + con giáp; chuỗi vô nghĩa → rỗng", q("tết").includes("fl:red_envelope") && q("tết").includes("fl:goat") && q("zzqxv").length === 0);

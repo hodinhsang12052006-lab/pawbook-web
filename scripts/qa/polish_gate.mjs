@@ -286,6 +286,16 @@ function probe(ctx) {
   out.flagsEmoji = /🇺🇸|🇦🇺/.test(document.body.innerText);
   out.areaFilterInTabs = !!document.querySelector("[data-home-tabs] [data-area-filter], [data-home-tabs] [aria-label*='market' i], [data-home-tabs] button[aria-haspopup]");
   out.scrollW = document.documentElement.scrollWidth;
+  // pre-paint photo picker: the first visible hero / plate photo must be requested while the HTML is still parsing
+  // (inline script right after its group), not after hydration — a regression here doubles the throttled LCP
+  {
+    const img = [...document.querySelectorAll(".pn-stack [data-hero-slot] img, .pn-auth-plate [data-hero-slot] img")].find((i) => visible(i) && i.currentSrc);
+    const nav = performance.getEntriesByType("navigation")[0];
+    const res = img && performance.getEntriesByName(img.currentSrc)[0];
+    // no entry = served from the memory cache by an earlier page of this context: nothing to judge
+    out.photoEarly = !img || !res || !nav ? null : res.startTime <= nav.domContentLoadedEventStart;
+    out.photoStart = res ? Math.round(res.startTime) : null; out.dcl = nav ? Math.round(nav.domContentLoadedEventStart) : null;
+  }
   // brand: the wordmark sits next to the B at every width
   out.wordmark = [...document.querySelectorAll("[data-brand] .pn-wordmark, .pn-auth-hdr .pn-wordmark, .pn-auth-panel .pn-wordmark")].some((wm) => visible(wm) && wm.getBoundingClientRect().width > 0);
   // season decoration next to a form: none (auth = tinted halo only); jacaranda petals retired
@@ -427,6 +437,7 @@ for (const r of results) {
     b(r.fan.back >= 0.3, `fanned stack: right card only ${Math.round(r.fan.back * 100)}% visible (want >= 30%)`);
   }
   b(r.wordmark, "PawNail wordmark not visible next to the logo");
+  if (r.photoEarly === false) b(false, `hero / plate photo requested after DOMContentLoaded (${r.photoStart} ms > ${r.dcl} ms): the pre-paint picker did not run`);
   b(r.authSeasonFx === 0, `season glints / petals present (${r.authSeasonFx})`);
   for (const c of r.cards.filter((c) => c.inView || (r.vp === "d"))) {
     if (!c.inView && r.vp === "m") continue;

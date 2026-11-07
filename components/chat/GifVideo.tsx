@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { canAnimate } from "@/lib/stickers/lottie";
+import { corsSafeGif } from "@/lib/chat/gif";
 
 /** Trình duyệt (không phải máy chủ) thiếu IntersectionObserver */
 const noIo = () => typeof window !== "undefined" && typeof IntersectionObserver === "undefined";
@@ -90,8 +91,9 @@ export default function GifVideo({
   return (
     <span ref={boxRef} className={`pn-gifv ${className}`} data-gif-video="" data-playing={mounted && visible && anim ? "1" : "0"}>
       {poster && (!anim || !lazyPoster || seen) && (
+        // crossorigin trên host GIPHY (gửi ACAO: *): phản hồi không "opaque" → service worker lưu được vào kho pn-gifs (như ô GIF)
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={poster} alt="" loading="lazy" decoding="async" draggable={false} className={`pn-gifv-media ${fitClass}`} />
+        <img src={poster} alt="" loading="lazy" decoding="async" draggable={false} {...(corsSafeGif(poster) ? { crossOrigin: "anonymous" as const } : {})} className={`pn-gifv-media ${fitClass}`} />
       )}
       {mounted && (
         <video

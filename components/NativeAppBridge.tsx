@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { getPusherClient } from "@/lib/pusherClient";
+import { isBubbleMode } from "@/lib/bubbleMode";
 
 // Link https://www.bitpawos.com/... mở app qua App Links (Android) / Universal
 // Links (iOS). Ở hosted mode Capacitor KHÔNG tự điều hướng tới link đó (chỉ mở
@@ -28,7 +29,8 @@ export default function NativeAppBridge() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    // Bong bóng chat: nút Back mặc định của hệ thống (thu bong bóng), link do app chính mở — không nghe gì ở đây.
+    if (!Capacitor.isNativePlatform() || isBubbleMode()) return;
 
     let backHandle: PluginListenerHandle | undefined;
     let resumeHandle: PluginListenerHandle | undefined;

@@ -120,6 +120,8 @@ export interface MessagesContentProps {
   initialConversations: any[];
   initialMessages: any[];
   initialSystemUsers: any[];
+  /** Bong bóng chat Android (lib/bubbleMode.ts): chỉ khung chat của cuộc trò chuyện ?c= — không danh sách / nút quay lại / gọi. */
+  bubble?: boolean;
 }
 
 // ---------------------------------------------------------------------------

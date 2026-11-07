@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Volume2, VolumeX, Play, MessageCircle, Bell, Sparkles, Smartphone, BellRing } from "lucide-react";
+import { Volume2, VolumeX, Play, MessageCircle, Bell, Sparkles, Smartphone, BellRing, MessagesSquare, ChevronRight } from "lucide-react";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/pushClient";
+import { getBubbleInfo, openBubbleSettings, type NativeNotifInfo } from "@/lib/nativePush";
 import { DEFAULT_PREFS, getSoundPrefs, playSound, setSoundPrefs, type SoundKind, type SoundPrefs } from "@/lib/sounds";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -68,6 +69,45 @@ function PushRow() {
   );
 }
 
+// Bong bóng chat (chat heads của Android 11+) — CHỈ app Android. App không tự bật được: chỉ đọc được lựa chọn hiện tại
+// (Android 12+) và mở đúng trang Cài đặt Bong bóng của app. Quay lại từ Cài đặt → đọc lại trạng thái.
+function BubbleRow() {
+  useTr(); // render lại khi đổi VI/EN
+  const [info, setInfo] = useState<NativeNotifInfo | null>(null);
+  useEffect(() => {
+    const load = () => getBubbleInfo().then(setInfo, () => setInfo(null));
+    load();
+    const onVis = () => document.visibilityState === "visible" && load();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+  if (!info || info.sdk < 30 || !info.bubbles) return null;
+  const status =
+    info.bubblePref === "all"
+      ? tr("Bật cho mọi cuộc trò chuyện", "On for all conversations")
+      : info.bubblePref === "selected"
+      ? tr("Chỉ cuộc trò chuyện đã chọn", "Selected conversations only")
+      : info.bubblePref === "none"
+      ? tr("Đang tắt", "Off")
+      : tr("Chọn trong Cài đặt Android", "Choose in Android settings");
+  return (
+    <button
+      type="button"
+      onClick={() => openBubbleSettings()}
+      className="flex w-full items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 text-left ring-1 ring-white/5 transition-colors hover:bg-white/[0.04]"
+    >
+      <MessagesSquare className="h-4 w-4 flex-shrink-0 text-pink-300" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-slate-200">{tr("Bong bóng chat", "Chat bubbles")}</span>
+        <span className="block text-[11px] leading-snug text-slate-500">
+          {tr("Cuộc trò chuyện nổi trên mọi app, như Messenger", "Chats float over other apps, like Messenger")} · <span className={info.bubblePref === "all" ? "text-emerald-300" : "text-slate-400"}>{status}</span>
+        </span>
+      </span>
+      <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-500" aria-hidden />
+    </button>
+  );
+}
+
 /** Cài đặt âm thanh & rung (lưu trên thiết bị này). */
 export default function SoundSettings() {
   useTr(); // render lại khi đổi VI/EN
@@ -125,13 +165,14 @@ export default function SoundSettings() {
         <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 ring-1 ring-white/5">
           <Smartphone className="h-4 w-4 flex-shrink-0 text-slate-400" />
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-slate-200">Rung</span>
+            <span className="block text-sm font-semibold text-slate-200">{tr("Rung", "Vibration")}</span>
             <span className="block text-[11px] text-slate-500">{tr("Rung nhẹ khi có tin nhắn & việc gấp (Android)", "Light vibration for messages & urgent jobs (Android)")}</span>
           </span>
-          <Switch on={prefs.vibrate} onChange={(v) => update({ vibrate: v })} label="Rung" />
+          <Switch on={prefs.vibrate} onChange={(v) => update({ vibrate: v })} label={tr("Rung", "Vibration")} />
         </div>
       </div>
       <PushRow />
+      <BubbleRow />
       <p className="px-1 text-[11px] text-slate-500">{tr("Cuộc gọi đến luôn đổ chuông để bạn không lỡ cuộc gọi.", "Incoming calls always ring so you never miss one.")}</p>
     </div>
   );

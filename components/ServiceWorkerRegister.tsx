@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { initNativePush } from "@/lib/nativePush";
+import { isBubbleMode } from "@/lib/bubbleMode";
 
 // next-pwa (v5) chỉ tự chèn mã đăng ký service worker vào entry của Pages
 // Router ("main.js") — App Router dùng entry khác nên SW CHƯA TỪNG được đăng
@@ -14,7 +15,7 @@ export default function ServiceWorkerRegister() {
     initNativePush().catch(() => {});
   }, []);
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator) || isBubbleMode()) return;
     const register = () => navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
     if (document.readyState === "complete") register();
     else {

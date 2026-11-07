@@ -4,6 +4,44 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { groupCreateBlocked } from "@/lib/abuseGuard";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
+import { getConversationMeta } from "@/lib/conversationReads";
+
+// GET /api/conversations?id=<conversationId> — 1 cuộc trò chuyện của chính mình, cùng dạng với danh sách ở trang
+// /messages (app/[lang]/messages/page.tsx). Dùng khi mở /messages?c=<id> (bấm thông báo / bong bóng chat) mà cuộc trò
+// chuyện đó chưa có trong danh sách đã tải (trang chỉ tải 50 cuộc mới tạo nhất).
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return NextResponse.json({ error: "Vui lòng đăng nhập.", errorEn: "Please log in." }, { status: 401 });
+  const id = new URL(req.url).searchParams.get("id") || "";
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return NextResponse.json({ error: "Mã cuộc trò chuyện không hợp lệ.", errorEn: "Invalid conversation." }, { status: 400 });
+  try {
+    // Chỉ thành viên mới thấy (không phân biệt "không tồn tại" với "không có quyền" → không dò được id của người khác).
+    const conv = await prisma.conversation.findFirst({
+      where: { id, participants: { some: { id: userId } } },
+      include: {
+        participants: { select: { id: true, name: true, avatarUrl: true, role: true } },
+        messages: { orderBy: { createdAt: "desc" }, take: 1 },
+      },
+    });
+    if (!conv) return NextResponse.json({ error: "Không tìm thấy cuộc trò chuyện.", errorEn: "Conversation not found." }, { status: 404 });
+    const meta = await getConversationMeta(userId, [conv]);
+    return NextResponse.json({
+      conversation: {
+        id: conv.id,
+        isGroup: conv.isGroup,
+        name: conv.name || null,
+        createdAt: conv.createdAt.toISOString(),
+        participants: conv.participants.map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl || null, role: p.role, lastActiveAt: meta.lastActiveAt(p.id) })),
+        ...meta.conv(conv.id),
+        messages: conv.messages.map((m) => ({ id: m.id, body: m.body, type: m.type, senderId: m.senderId, conversationId: m.conversationId, createdAt: m.createdAt.toISOString() })),
+      },
+    });
+  } catch (error) {
+    console.error("GET conversation error:", error);
+    return NextResponse.json({ error: "Không tải được cuộc trò chuyện.", errorEn: "Couldn't load the conversation." }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {

@@ -40,8 +40,9 @@ export default function HeroLanding({ onExploreJobs, className = "" }: { onExplo
           <p className="pn-hero-aud">
             <span>
               {tr("Thợ nail? ", "Nail tech? ")}
-              <a
+              <Link
                 href="/?tab=jobs"
+                scroll={false}
                 className="pn-link"
                 data-hero-cta="tech"
                 onClick={(e) => {
@@ -50,7 +51,7 @@ export default function HeroLanding({ onExploreJobs, className = "" }: { onExplo
                 }}
               >
                 {tr("Xem việc làm", "Explore jobs")}
-              </a>
+              </Link>
             </span>
             <span>
               {tr("Chủ tiệm? ", "Salon owner? ")}

@@ -3,8 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Lightbulb, TrendingUp, X, Trophy, Heart, Sparkles, ArrowRight } from "lucide-react";
-import Avatar from "@/components/ui/Avatar";
+import { Lightbulb, TrendingUp, Trophy, Heart, ArrowRight } from "lucide-react";
 import type { StudioData } from "@/lib/contentEngine";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -53,12 +52,6 @@ export function rememberTheme(h: number | null) {
 export function ThemeSlot() {
   return <div aria-hidden className="hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-th]_&]:block" style={{ height: "var(--th-h, 0px)" }} />;
 }
-
-const STUDIO_LABEL = (
-  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white/90 ring-1 ring-white/15">
-    <Sparkles className="h-3 w-3" /> PawNail Studio
-  </span>
-);
 
 const HIDE_KEY = "pn_studio_hide";
 const today = () => new Date().toISOString().slice(0, 10);

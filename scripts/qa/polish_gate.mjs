@@ -411,6 +411,40 @@ for (const r of landBase) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Market toggle: US -> AU on "/" swaps html[data-season] + the hero set without a reload; a reload keeps AU (cookie).
+const toggle = [];
+if (!BASELINE) {
+  for (const vp of ["d", "m"]) {
+    const ctx = await browser.newContext({ ...VIEWPORTS[vp], timezoneId: TZ.US, locale: "en-US", extraHTTPHeaders: { "Accept-Language": "en-US,en;q=0.9" } });
+    await ctx.addCookies([{ name: "bitpaw_market", value: "US", url: BASE }]);
+    await ctx.addInitScript(shiftScript("2026-11-27", "US"));
+    const page = await ctx.newPage();
+    const state = () => page.evaluate(() => ({ season: document.documentElement.dataset.season, mkt: document.documentElement.dataset.mkt, front: (document.querySelector(".pn-card--front img")?.currentSrc || "").split("/").pop() }));
+    const rec = { vp };
+    try {
+      await page.goto(BASE + "/", { waitUntil: "load" });
+      await page.waitForTimeout(1200);
+      rec.before = await state();
+      if (vp === "d") {
+        await page.locator("button[aria-pressed]", { hasText: "Australia" }).first().click();
+      } else {
+        await page.locator("[data-home-tabs] button[aria-haspopup='dialog']").first().click();
+        await page.locator("[role='dialog'] [role='group'] button", { hasText: "Australia" }).click();
+      }
+      await page.waitForTimeout(900);
+      rec.after = await state();
+      await page.reload({ waitUntil: "load" });
+      await page.waitForTimeout(1200);
+      rec.reload = await state();
+    } catch (e) { rec.error = e.message.slice(0, 160); }
+    toggle.push(rec);
+    const ok = !rec.error && rec.before?.season === "us-holiday" && rec.after?.season === "au-jacaranda" && rec.after?.mkt === "AU" && rec.after?.front && rec.after.front !== rec.before.front && rec.reload?.season === "au-jacaranda";
+    if (!ok) breach(`toggle/${vp}`, "market toggle did not swap season + hero set (or did not persist)", rec);
+    await ctx.close();
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Throttled performance pass (Pixel 7-class CPU 4x, 150 ms RTT, 9 Mbps)
 const perf = [];
 if (PERF) {
@@ -473,7 +507,7 @@ async function sheet(vp) {
   const rows = [...new Set(mine.map((s) => `${s.key}_${s.vp}_${s.lang}`))];
   const w = vp === "d" ? 360 : 150;
   const cell = (row, col) => {
-    const f = col === "main" ? path.join(baseDir, `${row}_main.png`) : path.join(OUT, "png", `${row}_${col}.png`);
+    const f = col === "main" && baseDir ? path.join(baseDir, `${row}_main.png`) : path.join(OUT, "png", `${row}_${col}.png`);
     return fs.existsSync(f) ? `<img src="file:///${f.replace(/\\/g, "/")}" style="width:${w}px;display:block">` : `<div style="width:${w}px;height:40px;color:#888">—</div>`;
   };
   const html = `<html><body style="margin:0;background:#111;color:#ddd;font:12px system-ui"><table cellspacing="6"><tr><td></td>${cols.map((c) => `<td>${c === "main" ? "before (main)" : c}</td>`).join("")}</tr>${rows.map((r) => `<tr><td style="writing-mode:vertical-rl">${r}</td>${cols.map((c) => `<td>${cell(r, c)}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
@@ -486,14 +520,14 @@ async function sheet(vp) {
   await pg.screenshot({ path: path.join(OUT, `contact_${vp}.png`), fullPage: true });
   await b.close();
 }
-await sheet("d");
-await sheet("m");
 
 const summary = {
   base: BASE, label: LABEL, baseline: BASELINE, when: new Date().toISOString(), pages: results.length, breaches: breaches.length,
   byRule: Object.entries(breaches.reduce((m, x) => ((m[x.msg.replace(/[\d.]+/g, "#").slice(0, 60)] = (m[x.msg.replace(/[\d.]+/g, "#").slice(0, 60)] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]),
 };
-fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify({ summary, info, breaches, perf, results }, null, 1));
+fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify({ summary, info, breaches, perf, toggle, results }, null, 1));
+try { await sheet("d"); await sheet("m"); } catch (e) { console.log("contact sheet failed:", e.message); }
+for (const t of toggle) console.log(`toggle ${t.vp}: ${JSON.stringify(t.before)} -> ${JSON.stringify(t.after)} -> reload ${JSON.stringify(t.reload)}${t.error ? " ERROR " + t.error : ""}`);
 console.log(JSON.stringify(summary, null, 1));
 for (const i of info) console.log("info:", i);
 for (const p of perf) console.log(`perf ${p.key}/${p.vp}: LCP ${p.lcp} ms, CLS ${p.cls}, JS ${p.js}, CSS ${p.css}, font ${p.font}`);

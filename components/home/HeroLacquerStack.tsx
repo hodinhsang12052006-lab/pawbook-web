@@ -52,7 +52,6 @@ export default function HeroLacquerStack() {
             <figure key={slot} className={`pn-card pn-card--${slot}`} data-hero-slot={i} data-sizes={sizes} data-chip-fix={CHIP_FIX[slot]}>
               <picture>
                 <source type="image/avif" srcSet={mounted ? avifSrcSet(im) : undefined} sizes={mounted ? sizes : undefined} suppressHydrationWarning />
-                {/* eslint-disable-next-line @next/next/no-img-element -- art-directed AVIF set picked before first paint */}
                 <img
                   width={800}
                   height={1000}
@@ -79,7 +78,6 @@ export default function HeroLacquerStack() {
               <figure key={slot} className={`pn-card pn-card--${slot}`}>
                 <picture>
                   <source type="image/avif" srcSet={avifSrcSet(im)} sizes={slotSizes(slot)} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img width={800} height={1000} src={webpSrc(im)} alt={`${im.alt[lang]} — ${lang === "vi" ? "ảnh minh hoạ AI" : "AI illustration"}`} />
                 </picture>
                 <span className="pn-img-label" data-chip={fixChip(im.chip, CHIP_FIX[slot])}>{label}</span>

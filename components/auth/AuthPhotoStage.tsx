@@ -32,7 +32,6 @@ export default function AuthPhotoStage() {
       <div className="pn-auth-bleed" aria-hidden="true">
         <picture>
           <source type="image/avif" srcSet={bleedImg.widths.map((w) => `/hero/${bleedImg.file}-${w}.avif ${w}w`).join(", ")} sizes="42vw" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={webpSrc(bleedImg)} alt="" width={bleedImg.w} height={bleedImg.h} />
         </picture>
         <span className="pn-img-label" data-chip="tr">{label}</span>
@@ -52,7 +51,6 @@ export default function AuthPhotoStage() {
           <figure key={cls} className={`pn-card ${cls}`} data-hero-slot={i} data-sizes={SIZES[i]} data-chip-fix={fix}>
             <picture>
               <source type="image/avif" srcSet={mounted ? avifSrcSet(im) : undefined} sizes={mounted ? SIZES[i] : undefined} suppressHydrationWarning />
-              {/* eslint-disable-next-line @next/next/no-img-element -- art-directed AVIF set picked before first paint */}
               <img width={800} height={1000} decoding="async" loading="lazy" src={mounted ? webpSrc(im) : undefined} sizes={mounted ? SIZES[i] : undefined} alt="" suppressHydrationWarning />
             </picture>
             <span className="pn-img-label" data-chip={mounted ? fixChip(im.chip, fix) : "bl"} suppressHydrationWarning>{label}</span>

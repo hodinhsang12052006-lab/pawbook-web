@@ -33,7 +33,6 @@ export default function RolePicker({ onPick }: { onPick: (role: Exclude<Role, nu
           <div key={im.code}>
             <picture>
               <source type="image/avif" srcSet={`/hero/${im.file}-480.avif 480w`} sizes="33vw" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/hero/${im.file}-640.webp`} alt="" width={480} height={600} loading="lazy" decoding="async" />
             </picture>
           </div>

@@ -198,6 +198,28 @@ if (SCENARIO === "off") {
       cIn && perm && /micrô/i.test(permText) && /(ổ khoá|Cài đặt)/.test(permText) && /Thử lại/.test(permText) && layoutOk(lPerm), JSON.stringify({ cIn, perm, permText, lPerm }).slice(0, 300));
     R.check("CL6", "Không có lỗi JS (3 máy)", !A.errors.length && !B.errors.length && !C.errors.length, JSON.stringify([...A.errors, ...B.errors, ...C.errors]).slice(0, 300));
     await C.ctx.close();
+
+    // ---- Mạng chậm: B nghe máy, phòng ZEGOCLOUD còn đang đăng nhập thì B bấm nút cúp máy của UIKit → cuộc gọi KẾT THÚC ở cả 2
+    // máy (trước đây: lời rời phòng bị bỏ qua, 400ms sau hiện "Couldn't join the call", máy bên kia vẫn đổ chuông) ----
+    // (B còn ở màn gọi với C — openChat bên dưới tải lại trang B)
+    const slow = /zegocloud\.com|zego\.im|cool[bgzf]cloud\.com/;
+    const hold = (ms) => new Promise((r) => setTimeout(r, ms));
+    await B.ctx.route(slow, async (r) => { await hold(9000); await r.continue().catch(() => {}); });
+    await B.ctx.routeWebSocket(slow, async (ws) => { await hold(9000); try { ws.connectToServer(); } catch {} });
+    await openChat(A, B.me.id);
+    await openChat(B, A.me.id);
+    await dial(A, "video");
+    const bIn2 = await phase(B, "incoming", 15000);
+    await B.page.getByRole("button", { name: /^(Answer|Trả lời)$/ }).click();
+    const leaveBtn = B.page.locator("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton").first();
+    const leaveShown = await leaveBtn.waitFor({ state: "visible", timeout: 8000 }).then(() => true).catch(() => false);
+    if (leaveShown) await leaveBtn.click();
+    const bEnded = await B.page.locator("[data-call-phase]").waitFor({ state: "detached", timeout: 6000 }).then(() => true).catch(() => false);
+    const aEnded = await A.page.locator("[data-call-phase]").waitFor({ state: "detached", timeout: 8000 }).then(() => true).catch(() => false);
+    const bErr = await B.page.locator("[data-call-error]").count();
+    R.check("CL7", `Mạng chậm (máy chủ ZEGOCLOUD trả lời sau 9s): nghe máy rồi bấm cúp máy của UIKit khi phòng còn đang đăng nhập → kết thúc ở cả 2 máy, không hiện lỗi 'Couldn't join' (nút cúp máy ${leaveShown ? "có" : "KHÔNG"} hiện trước khi đăng nhập xong)`,
+      bIn2 && leaveShown && bEnded && aEnded && bErr === 0, JSON.stringify({ bIn2, leaveShown, bEnded, aEnded, bErr }));
+    await B.ctx.unroute(slow).catch(() => {});
   } else {
     // real: ZEGOCLOUD thật — 2 bên thông, hoặc mã lỗi thật
     const res = await Promise.race([

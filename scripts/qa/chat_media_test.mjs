@@ -505,8 +505,9 @@ await emojiSearch.fill("zzqxv");
 await p.waitForTimeout(200);
 const noneMsg = await panel(p).getByText("No emoji found").isVisible().catch(() => false);
 R.check("TG7c", "'tim' → ❤️ đầu + các tim; chuỗi lạ → 'No emoji found'", timRes[0] === "❤️" && timRes.filter((e) => /[❤🧡💛💚💙💜🖤🤍💕💞💓💗💖]/u.test(e)).length >= 8 && noneMsg, JSON.stringify({ tim: timRes.slice(0, 10), noneMsg }));
-// TG7p — độ trễ THẬT khi gõ ở CPU chậm 4× (≈ điện thoại tầm trung): mỗi phím đo (1) Event Timing (xử lý + tới khung hình kế),
-// (2) từ lúc nhấn tới khi lưới kết quả đổi xong VÀ đã vẽ (MutationObserver + 2 rAF). Phím đầu = đổi lưới nhóm → lưới kết quả.
+// TG7p — độ trễ THẬT khi gõ ở CPU chậm 4× (≈ điện thoại tầm trung): mỗi phím đo (1) từ lúc nhấn tới khi chữ đã VẼ (rAF rồi 1
+// tác vụ MessageChannel = ngay sau lần vẽ đó), (2) tới khi lưới kết quả đổi xong VÀ đã vẽ (MutationObserver + cùng cách đo),
+// (3) Event Timing (xử lý + tới khung hình kế). Phím đầu = đổi lưới nhóm → lưới kết quả.
 await emojiSearch.fill("");
 await p.waitForTimeout(300);
 const cdpT = await p.context().newCDPSession(p);
@@ -523,10 +524,11 @@ await p.evaluate(() => {
     const t0 = performance.now();
     const rec = { t0, frame: null, grid: null };
     window.__k.push(rec);
-    requestAnimationFrame(() => requestAnimationFrame(() => (rec.frame = Math.round(performance.now() - t0))));
+    const afterPaint = (cb) => requestAnimationFrame(() => { const ch = new MessageChannel(); ch.port1.onmessage = cb; ch.port2.postMessage(0); });
+    afterPaint(() => (rec.frame = Math.round(performance.now() - t0)));
     const mo = new MutationObserver(() => {
       mo.disconnect();
-      requestAnimationFrame(() => requestAnimationFrame(() => (rec.grid = Math.round(performance.now() - t0))));
+      afterPaint(() => (rec.grid = Math.round(performance.now() - t0)));
     });
     mo.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-emoji-grid"] });
     setTimeout(() => mo.disconnect(), 1500);
@@ -543,7 +545,7 @@ const sorted = [...frames].sort((a, b) => a - b);
 const med = sorted[Math.floor(sorted.length / 2)] ?? 999;
 const evWorst = perf.ev.reduce((m, e) => Math.max(m, e.d), 0);
 const procWorst = perf.ev.reduce((m, e) => Math.max(m, e.proc), 0);
-R.check("TG7p", `CPU chậm 4×, gõ 'heart': phím → khung hình kế ${frames.join("/")}ms (trung vị ${med}ms); phím → lưới kết quả đã vẽ ${perf.k.map((x) => x[1] ?? "–").join("/")}ms (phím đầu = đổi lưới nhóm → kết quả); Event Timing chậm nhất ${evWorst}ms, JS xử lý chậm nhất ${procWorst}ms — ngưỡng: trung vị ≤ 50ms, mọi phím < 150ms tới khung hình kế, lưới đổi < 250ms`,
+R.check("TG7p", `CPU chậm 4×, gõ 'heart': phím → chữ đã vẽ ${frames.join("/")}ms (trung vị ${med}ms); phím → lưới kết quả đã vẽ ${perf.k.map((x) => x[1] ?? "–").join("/")}ms (phím đầu = đổi lưới nhóm → kết quả); Event Timing chậm nhất ${evWorst}ms, JS xử lý chậm nhất ${procWorst}ms — ngưỡng: trung vị ≤ 50ms, mọi phím < 150ms tới khi vẽ, lưới đổi < 250ms`,
   frames.length === 5 && med <= 50 && Math.max(...frames) < 150 && grids.length >= 1 && Math.max(...grids) < 250, JSON.stringify(perf).slice(0, 600));
 await emojiSearch.fill("");
 await p.keyboard.press("Escape"); // ô tìm rỗng → Esc đóng bảng

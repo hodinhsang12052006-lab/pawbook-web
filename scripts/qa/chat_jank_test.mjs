@@ -215,6 +215,7 @@ await A0.ctx.close();
 const allProblems = [];
 for (const W of WIDTHS) {
   const FULL = W === 360 ? 780 : 915;
+  const tagW = `${stamp}-${W}`; // tin của từng bề rộng riêng (cùng 1 cuộc trò chuyện cho cả 2 lượt)
   const A = await login(SEED_OWNER, { w: W, h: FULL });
   const p = A.page;
   await p.goto(BASE_URL + `/messages?to=${B.me.id}`);
@@ -270,10 +271,10 @@ for (const W of WIDTHS) {
 
   // gửi 5 tin liền (không chờ) — tin tạm → tin thật đổi chỗ không được làm lệch / chồng
   for (let i = 1; i <= 5; i++) {
-    await input.fill(`fast ${i} ${stamp}${i === 3 ? " — a longer one that wraps onto a second line for sure" : ""}`);
+    await input.fill(`fast ${i} ${tagW}${i === 3 ? " — a longer one that wraps onto a second line for sure" : ""}`);
     await p.getByRole("button", { name: "Send message" }).click(); // điện thoại: Enter = xuống dòng
   }
-  await p.getByText(`fast 5 ${stamp}`).last().waitFor({ timeout: 20000 });
+  await p.getByText(`fast 5 ${tagW}`).last().waitFor({ timeout: 20000 });
   await add("5 messages sent back-to-back");
 
   // bàn phím mở / đóng (adjustResize + WebView cuộn ô nhập vào tầm nhìn)
@@ -340,14 +341,14 @@ for (const W of WIDTHS) {
     return [];
   };
   // (a) vừa cuộn vừa nhận: 3 tin tới trong lúc ngón tay đang cuộn lên
-  const recvA = await arrive([1, 2, 3].map((i) => `incoming ${i} ${stamp}`));
+  const recvA = await arrive([1, 2, 3].map((i) => `incoming ${i} ${tagW}`));
   for (let i = 0; i < 6; i++) {
     await p.mouse.move(W / 2, 400);
     await p.mouse.wheel(0, -40);
     await p.waitForTimeout(80);
   }
-  const gotA = await rowWith(`incoming 3 ${stamp}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
-  const nA = await p.evaluate((s) => [...document.querySelectorAll(".m-scroll .m-row")].filter((r) => /incoming [123] /.test(r.textContent || "") && (r.textContent || "").includes(s)).length, stamp);
+  const gotA = await rowWith(`incoming 3 ${tagW}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
+  const nA = await p.evaluate((s) => [...document.querySelectorAll(".m-scroll .m-row")].filter((r) => /incoming [123] /.test(r.textContent || "") && (r.textContent || "").includes(s)).length, tagW);
   const stA = await check(p, `${W}px · messages arrive while scrolling up`, [...recvA, ...(gotA && nA === 3 ? [] : [`incoming messages not in the thread (${nA}/3)`])]);
   steps.push(stA);
   // (b) đứng yên đọc: 2 tin nữa tới → dòng đang đọc giữ nguyên chỗ trên màn hình, hiện nút "xuống tin mới nhất"
@@ -359,8 +360,8 @@ for (const W of WIDTHS) {
     window.__pnAnchor = row;
     return { top: row.getBoundingClientRect().top, st: sc.scrollTop, dist: sc.scrollHeight - sc.scrollTop - sc.clientHeight };
   });
-  const recvB = await arrive([4, 5].map((i) => `incoming ${i} ${stamp}`));
-  const gotB = await rowWith(`incoming 5 ${stamp}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
+  const recvB = await arrive([4, 5].map((i) => `incoming ${i} ${tagW}`));
+  const gotB = await rowWith(`incoming 5 ${tagW}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
   const stB = await check(p, `${W}px · messages arrive while reading older ones`, [...recvB, ...(gotB ? [] : ["incoming 4–5 not in the thread"])]);
   const anchorAfter = await p.evaluate(() => ({ top: window.__pnAnchor?.isConnected ? window.__pnAnchor.getBoundingClientRect().top : null }));
   if (anchorAfter.top === null || Math.abs(anchorAfter.top - anchorBefore.top) > 2) stB.problems.push(`reading position moved: row at ${Math.round(anchorBefore.top)} → ${anchorAfter.top === null ? "gone" : Math.round(anchorAfter.top)}`);
@@ -373,7 +374,7 @@ for (const W of WIDTHS) {
   else await p.evaluate(() => { const sc = document.querySelector(".m-scroll"); sc.scrollTop = sc.scrollHeight; });
   await settle(p);
   const lastTxt = await p.evaluate(() => [...document.querySelectorAll(".m-scroll .m-row")].pop()?.textContent || "");
-  await add("back at bottom with new messages", lastTxt.includes(`incoming 5 ${stamp}`) ? [] : [`last row is not the newest message: "${lastTxt.slice(0, 40)}"`]);
+  await add("back at bottom with new messages", lastTxt.includes(`incoming 5 ${tagW}`) ? [] : [`last row is not the newest message: "${lastTxt.slice(0, 40)}"`]);
 
   // xoay máy (ngang rồi dọc) — ô soạn tin + bàn phím ở màn ngang thấp
   await p.setViewportSize({ width: FULL, height: W });
@@ -392,7 +393,7 @@ for (const W of WIDTHS) {
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await cdp.send("Page.setWebLifecycleState", { state: "frozen" });
-  await send(B, A.me.id, `while away ${stamp}`);
+  await send(B, A.me.id, `while away ${tagW}`);
   await new Promise((r) => setTimeout(r, 1500));
   await cdp.send("Page.setWebLifecycleState", { state: "active" });
   await p.evaluate(() => {
@@ -401,7 +402,7 @@ for (const W of WIDTHS) {
     window.dispatchEvent(new Event("focus"));
     window.dispatchEvent(new Event("pageshow"));
   });
-  const gotAway = await rowWith(`while away ${stamp}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
+  const gotAway = await rowWith(`while away ${tagW}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
   await add("returned from background", gotAway ? [] : ["message sent while in the background never appeared"]);
   await shot(p, `j${W}_05_back`);
 

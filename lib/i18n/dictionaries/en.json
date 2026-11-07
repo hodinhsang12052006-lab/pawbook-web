@@ -7,7 +7,8 @@
     "notifications": "Notifications",
     "logout": "Log out",
     "login": "Log in",
-    "register": "Create account"
+    "register": "Create account",
+    "registerShort": "Sign up"
   },
   "messenger": {
     "title": "Messages",
@@ -102,6 +103,7 @@
       "desc": "Enter your email and password to continue to PawNail.",
       "emailLabel": "Email address",
       "passwordLabel": "Password",
+      "passwordPlaceholder": "Your password",
       "forgotPassword": "Forgot password?",
       "loginButton": "Log in",
       "processing": "Logging in…",
@@ -118,16 +120,19 @@
       "passwordHint": "At least 8 characters",
       "phoneLabel": "Phone number",
       "phonePlaceholder": "555 123 4567",
+      "phonePlaceholderAU": "412 345 678",
       "continue": "Continue",
       "alreadyHaveAccount": "Already have an account?",
-      "loginNow": "Log in now",
+      "loginNow": "Log in",
       "requiredFieldsError": "Please fill in all required fields.",
       "networkError": "Network error. Please try again.",
       "marketUS": "United States",
       "marketAU": "Australia",
       "stateLabel": "State",
+      "statePlaceholder": "Select state",
       "cityLabel": "City",
-      "cityPlaceholder": "e.g. Los Angeles"
+      "cityPlaceholder": "e.g. Los Angeles",
+      "cityPlaceholderAU": "e.g. Parramatta"
     },
     "owner": {
       "heading": "Set up your salon and post a job",

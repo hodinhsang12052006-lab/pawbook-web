@@ -16,6 +16,7 @@ import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useCallManager } from "@/lib/CallManagerContext";
 import { avatarSrc } from "@/lib/avatar";
+import { officialAvatarUrl } from "@/lib/brand";
 import { UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
@@ -1216,7 +1217,7 @@ export default function MessagesContent({
   const showOfficialStub = !!official && official.id !== currentUser?.id && !hasOfficialConv && !listQuery.trim();
   const openOfficialChat = () =>
     official &&
-    setActiveChat({ id: official.id, name: official.name, avatarUrl: official.avatarUrl || "", role: "ADMIN", isGroup: false, isOnline: false, statusText: "" });
+    setActiveChat({ id: official.id, name: official.name, avatarUrl: officialAvatarUrl(official.avatarUrl), role: "ADMIN", isGroup: false, isOnline: false, statusText: "" });
 
   // Vị trí tin cuối cùng của mình trong đoạn chat (gắn Đã gửi/Đã xem).
   const lastSelfIndex = useMemo(
@@ -1589,7 +1590,7 @@ export default function MessagesContent({
                 aria-current={activeChat?.id === official!.id ? "true" : undefined}
                 className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all ${activeChat?.id === official!.id ? "bg-gradient-to-r from-sky-600/20 to-blue-600/10 ring-1 ring-sky-500/30" : "hover:bg-white/[0.04]"}`}
               >
-                <PresenceAvatar watch={false} userId={official!.id} src={avatarSrc(official!.avatarUrl, official!.name, official!.id)} alt={official!.name} />
+                <PresenceAvatar watch={false} userId={official!.id} src={officialAvatarUrl(official!.avatarUrl)} alt={official!.name} />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1 truncate text-[13px] font-bold text-slate-100">
                     {official!.name} <VerifiedBadge className="h-3.5 w-3.5" />

@@ -78,7 +78,7 @@ async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boo
     const fcmSubs = all.filter((s) => s.endpoint.startsWith("fcm:"));
     const apnsSubs = all.filter((s) => s.endpoint.startsWith("apns:"));
     const subs = web ? all.filter((s) => !isNative(s.endpoint)) : [];
-    const body = JSON.stringify({ icon: "/icons/icon-192.webp", ...payload, title: payload.title.slice(0, 80), body: payload.body.slice(0, 180) });
+    const body = JSON.stringify({ icon: "/icons/icon-192.webp?v=b", ...payload, title: payload.title.slice(0, 80), body: payload.body.slice(0, 180) });
     let sent = 0;
     const dead: string[] = [];
     await Promise.all(

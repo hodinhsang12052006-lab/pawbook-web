@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { tr } from "@/lib/i18n/tr";
-import { avatarGradient, avatarGradientClassic, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
+import { avatarGradient, avatarGradientClassic, displayAvatarUrl, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
 
 interface AvatarProps {
   src?: string | null;
@@ -31,7 +31,7 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src!}
+        src={displayAvatarUrl(src)!}
         alt={alt ?? name ?? ""}
         loading={loading}
         onError={() => setBroken(true)}
@@ -88,7 +88,7 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
         fontSize={text.length > 1 ? 15 : 17}
         fontWeight={700}
         letterSpacing="0.5"
-        fontFamily="var(--font-geist-sans), system-ui, sans-serif"
+        fontFamily="var(--font-pn), system-ui, sans-serif"
         className="refined:[fill:#f6f0f5] refined:[font-family:var(--font-pn),system-ui,sans-serif] refined:[font-weight:600] refined:[letter-spacing:0.2px]"
       >
         {text}

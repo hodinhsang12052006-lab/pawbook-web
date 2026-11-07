@@ -3,17 +3,10 @@
 // Bản tiếng Anh cho NỘI DUNG do app sinh ra (chủ đề Studio, mẹo mỗi ngày, câu
 // hỏi Nhịp đau, khảo sát chủ tiệm, dữ liệu Nail Radar…). Dữ liệu gốc giữ
 // tiếng Việt (máy chủ, DB, Lead Radar dùng); chỉ lúc HIỂN THỊ mới đổi:
-//   dt("Mùa Halloween") → "Halloween season" khi đang ở chế độ EN.
+//   dt("Móng mùa thu") → "Fall nails" khi đang ở chế độ EN.
 // Chuỗi không có trong bảng hiển thị nguyên văn.
 const EN: Record<string, string> = {
   // ---- Chủ đề Studio theo mùa (lib/contentEngine.ts) ----
-  "Mùa Halloween": "Halloween season",
-  'Tháng khách thích móng "chơi" nhất năm — đen nhám, cam bí ngô, mắt mèo, nhện mạng.': "The month clients want their most playful nails — matte black, pumpkin orange, cat eye, spider webs.",
-  "Đen nhám + mạng nhện bạc": "Matte black + silver spider web",
-  "Cam bí ngô ombre": "Pumpkin orange ombre",
-  "Mắt mèo xanh rêu": "Moss green cat eye",
-  "Ma trắng 3D mini": "Mini 3D white ghosts",
-  'Làm "Spooky set" cố định 3 mẫu, giá trọn gói — khách chọn nhanh, thợ làm nhanh, tăng vòng khách cuối tuần.': 'Offer a fixed 3-design "Spooky set" at one price — clients choose fast, techs work fast, more weekend turns.',
   "Móng mùa thu": "Fall nails",
   "Burgundy, nâu caramel, đồi mồi (tortoise) và nhũ vàng đồng đang lên ngôi.": "Burgundy, caramel brown, tortoiseshell and bronze shimmer are trending.",
   "Burgundy bóng gương": "Glossy burgundy",

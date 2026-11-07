@@ -86,7 +86,7 @@ try {
   const salonTxt = await c.page.locator("main").innerText({ timeout: 20000 });
   await c.page.getByText("QA Gel-X khách test").first().waitFor({ timeout: 15000 }).catch(() => {});
   const salonTxt2 = await c.page.locator("main").innerText();
-  R.check("C8", "/salons: tiêu đề \"Tiệm & thợ nail quanh bạn\", thẻ thợ có dịch vụ + giá, nút \"Xem menu & đặt lịch\" / \"Nhắn hỏi mẫu\"", /Tiệm & thợ nail quanh bạn/.test(salonTxt) && /QA Gel-X khách test/.test(salonTxt2) && /\$55/.test(salonTxt2) && /Xem menu & đặt lịch/.test(salonTxt2) && /Nhắn hỏi mẫu/.test(salonTxt2), salonTxt2.slice(0, 200));
+  R.check("C8", "/salons: tiêu đề \"Tiệm & thợ nail quanh bạn\", thẻ thợ có dịch vụ + giá, nút \"Xem menu & đặt lịch\" / \"Nhắn hỏi mẫu\"", /Tiệm & thợ nail quanh bạn/.test(salonTxt) && /QA Gel-X khách test/.test(salonTxt2) && /\$55/.test(salonTxt2) && /(Xem )?menu & đặt lịch/i.test(salonTxt2) && /Nhắn hỏi mẫu/.test(salonTxt2), salonTxt2.slice(0, 200));
 
   await c.page.goto(BASE_URL + "/profile");
   const acc = await c.page.locator("main").innerText({ timeout: 20000 });

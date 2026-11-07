@@ -2,7 +2,8 @@
 
 import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
-import { Sparkles, Store, Loader2, Phone, MapPin, Heart } from "lucide-react";
+import { Store, Loader2, Hand, Paintbrush } from "lucide-react";
+import { AuthTitle, MarketSeg, PhonePrefix, Submit } from "@/components/auth/fields";
 import toast from "react-hot-toast";
 import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
@@ -77,95 +78,76 @@ export default function CompleteProfilePage() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-pink-400" />
+      <div className="flex items-center justify-center" style={{ minHeight: 640 }} aria-busy="true">
+        <Loader2 className="h-6 w-6 animate-spin text-[#f59bbe]" aria-hidden />
       </div>
     );
   }
 
-  const card = (on: boolean) =>
-    `flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all active:scale-[0.98] ${on ? "border-pink-500 bg-pink-500/10" : "border-slate-800 bg-slate-900/40 hover:border-pink-500/40"}`;
+  const roles = [
+    { id: "CLIENT" as const, icon: Hand, title: tr("Tôi là khách làm nail", "I'm a nail client"), desc: tr("Thử mẫu trên tay, tìm tiệm và gửi yêu cầu đặt lịch", "Try on looks, discover salons and request a booking") },
+    { id: "TECHNICIAN" as const, icon: Paintbrush, title: tr("Tôi là thợ nail", "I'm a nail technician"), desc: tr("Giới thiệu tay nghề, để tiệm tìm đến và xem việc làm", "Showcase your work, get found by salons and browse jobs") },
+    { id: "OWNER" as const, icon: Store, title: tr("Tôi là chủ tiệm hoặc quản lý", "I own or manage a salon"), desc: tr("Tuyển thợ, chia sẻ menu dịch vụ và nhận yêu cầu đặt lịch", "Hire technicians, share your menu and take booking requests") },
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-5">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-extrabold text-white">{tr("Chào mừng bạn đến với PawNail", "Welcome to PawNail")}</h1>
-        <p className="text-sm text-slate-400">{tr("Còn 1 bước — cho PawNail biết bạn là ai và ở đâu.", "One last step — tell PawNail who you are and where you work.")}</p>
-      </div>
+    <div className="pn-stack-24">
+      <AuthTitle title={tr("Chào mừng bạn đến với PawNail", "Welcome to PawNail")} sub={tr("Còn 1 bước — cho PawNail biết bạn là ai và ở đâu.", "One last step — tell PawNail who you are and where you work.")} />
 
-      <div className="space-y-2.5" role="radiogroup" aria-label={tr("Bạn sử dụng PawNail với vai trò nào?", "How will you use PawNail?")}>
-        <button type="button" role="radio" aria-checked={role === "CLIENT"} onClick={() => setRole("CLIENT")} className={card(role === "CLIENT")}>
-          <Heart className="h-7 w-7 flex-shrink-0 text-pink-400" />
-          <span>
-            <span className="block font-bold text-white">{tr("Tôi là khách làm nail", "I'm a nail client")}</span>
-            <span className="block text-xs text-slate-400">{tr("Thử mẫu trên tay, tìm tiệm và gửi yêu cầu đặt lịch", "Try on looks, discover salons and request a booking")}</span>
-          </span>
-        </button>
-        <button type="button" role="radio" aria-checked={role === "TECHNICIAN"} onClick={() => setRole("TECHNICIAN")} className={card(role === "TECHNICIAN")}>
-          <Sparkles className="h-7 w-7 flex-shrink-0 text-pink-400" />
-          <span>
-            <span className="block font-bold text-white">{tr("Tôi là thợ nail", "I'm a nail technician")}</span>
-            <span className="block text-xs text-slate-400">{tr("Giới thiệu tay nghề, để tiệm tìm đến và xem việc làm", "Showcase your work, get found by salons and browse jobs")}</span>
-          </span>
-        </button>
-        <button type="button" role="radio" aria-checked={role === "OWNER"} onClick={() => setRole("OWNER")} className={card(role === "OWNER")}>
-          <Store className="h-7 w-7 flex-shrink-0 text-pink-400" />
-          <span>
-            <span className="block font-bold text-white">{tr("Tôi là chủ tiệm hoặc quản lý", "I own or manage a salon")}</span>
-            <span className="block text-xs text-slate-400">{tr("Tuyển thợ, chia sẻ menu dịch vụ và nhận yêu cầu đặt lịch", "Hire technicians, share your menu and take booking requests")}</span>
-          </span>
-        </button>
-      </div>
-
-      <div>
-        <label htmlFor="c-name" className="mb-1.5 block text-sm font-bold text-slate-300">{tr("Tên hiển thị", "Display name")}</label>
-        <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("VD: Lan Nguyễn", "e.g. Lan Nguyen")} autoComplete="name" className="input-field" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {(["US", "AU"] as const).map((m) => (
-          <button key={m} type="button" aria-pressed={market === m} onClick={() => { setMarket(m); setState(""); }} className={`min-h-[44px] rounded-2xl border-2 text-sm font-bold ${market === m ? "border-pink-500 bg-pink-500/10 text-white" : "border-slate-800 text-slate-400"}`}>
-            {m === "US" ? tr("🇺🇸 Mỹ", "🇺🇸 United States") : tr("🇦🇺 Úc", "🇦🇺 Australia")}
+      <div className="pn-list" role="radiogroup" aria-label={tr("Bạn sử dụng PawNail với vai trò nào?", "How will you use PawNail?")}>
+        {roles.map(({ id, icon: Icon, title, desc }) => (
+          <button key={id} type="button" role="radio" aria-checked={role === id} onClick={() => setRole(id)} className="pn-row" style={role === id ? { background: "var(--color-pn-brand-tint)" } : undefined}>
+            <span className="pn-row-icon" aria-hidden><Icon strokeWidth={1.75} /></span>
+            <span className="min-w-0">
+              <span className="pn-row-title">{title}</span>
+              <span className="pn-row-desc">{desc}</span>
+            </span>
+            <span aria-hidden className="ml-auto flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full" style={{ boxShadow: role === id ? "inset 0 0 0 6px #f59bbe" : "inset 0 0 0 1.5px #a69ba4" }} />
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="pn-stack-16">
         <div>
-          <label htmlFor="c-city" className="mb-1.5 flex items-center gap-1 text-sm font-bold text-slate-300"><MapPin className="h-3.5 w-3.5" />{tr(" Thành phố", " City")}</label>
-          <input
-            id="c-city"
-            value={city}
-            onChange={(e) => {
-              setCity(e.target.value);
-              const g = guessState(market, e.target.value);
-              if (g && states.includes(g)) setState(g);
-            }}
-            placeholder={tr("VD: Houston", "e.g. Houston")}
-            className="input-field"
-          />
+          <label htmlFor="c-name" className="pn-label">{tr("Tên hiển thị", "Display name")}</label>
+          <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("VD: Lan Nguyễn", "e.g. Lan Nguyen")} autoComplete="name" className="pn-input" />
+        </div>
+        <MarketSeg value={market} onChange={(m) => { setMarket(m); setState(""); }} label={tr("Bạn ở đâu?", "Where are you?")} />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="c-city" className="pn-label">{tr("Thành phố", "City")}</label>
+            <input
+              id="c-city"
+              autoComplete="address-level2"
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+                const g = guessState(market, e.target.value);
+                if (g && states.includes(g)) setState(g);
+              }}
+              placeholder={tr("VD: Houston", "e.g. Houston")}
+              className="pn-input"
+            />
+          </div>
+          <div>
+            <label htmlFor="c-state" className="pn-label">{tr("Bang", "State")}</label>
+            <select id="c-state" value={state} onChange={(e) => setState(e.target.value)} className="pn-input">
+              <option value="">{tr("— Chọn —", "— Select —")}</option>
+              {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
+            </select>
+          </div>
         </div>
         <div>
-          <label htmlFor="c-state" className="mb-1.5 block text-sm font-bold text-slate-300">{tr("Bang", "State")}</label>
-          <select id="c-state" value={state} onChange={(e) => setState(e.target.value)} className="input-field">
-            <option value="">{tr("— Chọn —", "— Select —")}</option>
-            {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
-          </select>
+          <label htmlFor="c-phone" className="pn-label">{tr("Số điện thoại", "Phone number")}{role === "CLIENT" && <span className="pn-opt">{tr(" (không bắt buộc)", " (optional)")}</span>}</label>
+          <div className="flex items-center gap-2">
+            <PhonePrefix market={market} />
+            <input id="c-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555 123 4567" className="pn-input" />
+          </div>
+          <p className="pn-hint">{tr("Không hiện công khai trên hồ sơ của bạn.", "Not shown publicly on your profile.")}</p>
         </div>
       </div>
 
-      <div>
-        <label htmlFor="c-phone" className="mb-1.5 flex items-center gap-1 text-sm font-bold text-slate-300"><Phone className="h-3.5 w-3.5" />{tr(" Số điện thoại", " Phone number")}{role === "CLIENT" && <span className="font-normal text-slate-500">{tr(" (không bắt buộc)", " (optional)")}</span>}</label>
-        <div className="flex gap-2">
-          <span className="flex min-h-[48px] items-center rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm font-bold text-slate-300">{market === "US" ? "+1" : "+61"}</span>
-          <input id="c-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555 123 4567" className="input-field flex-1" />
-        </div>
-        <p className="mt-1 text-[11px] text-slate-500">{tr("Không hiện công khai trên hồ sơ của bạn.", "Not shown publicly on your profile.")}</p>
-      </div>
-
-      <button type="button" onClick={submit} disabled={busy} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-base font-black text-white shadow-lg shadow-pink-600/25 disabled:opacity-60">
-        {busy && <Loader2 className="h-5 w-5 animate-spin" />} {tr("Vào PawNail", "Enter PawNail")}
-      </button>
+      <Submit type="button" onClick={submit} busy={busy}>{tr("Vào PawNail", "Enter PawNail")}</Submit>
     </div>
   );
 }

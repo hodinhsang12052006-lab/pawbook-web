@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isRetiredOccasion } from "@/lib/season";
 import prisma from "@/lib/prisma";
 import { geminiEnabled } from "@/lib/gemini";
 import { backfillImages, dailyLimit, designsNeedReview, generateDesigns, generateEngine, generateOccasion, rerenderAiImages } from "@/lib/aiDesigns";
@@ -30,8 +31,10 @@ export async function GET(req: Request) {
     // Chạy lại trong ngày không tạo thêm: đã đủ mẫu PawNail hôm nay thì thôi.
     // ?count=N (1–8, vẫn cần CRON_SECRET): tạo thêm theo yêu cầu, vẫn trong giới hạn ngày.
     const sp = new URL(req.url).searchParams;
-    // ?occasion=halloween&count=100 → tạo cả bộ mẫu cho dịp lễ (ảnh vẽ dần qua các lượt sau).
+    // ?occasion=christmas&count=100 → tạo cả bộ mẫu cho dịp lễ (ảnh vẽ dần qua các lượt sau).
+    // Dịp đã nghỉ (Halloween) → 400, không tạo gì.
     const occasion = sp.get("occasion");
+    if (isRetiredOccasion(occasion)) return NextResponse.json({ error: "Retired occasion" }, { status: 400 });
     const extra = Math.min(occasion ? 150 : 8, Math.max(0, Math.round(Number(sp.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
     const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; rerendered?: number; official?: unknown; gallery?: unknown; news?: unknown; digest?: unknown } = useGemini

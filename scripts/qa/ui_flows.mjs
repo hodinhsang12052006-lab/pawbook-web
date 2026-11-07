@@ -296,12 +296,15 @@ await step("F21", "Desktop: Sidebar có Công cụ (Tin nhắn, Đăng tin, Rada
   await ctx.close();
 });
 
-await step("F22", "Trang đăng ký có số liệu, cách hoạt động và FAQ mở được", async () => {
+// Phase 1 (11/2026): màn chọn vai trò = 1 danh sách 3 dòng (không bảng số liệu / "cách hoạt động"); FAQ chuyển ra trang chủ khách.
+await step("F22", "Trang đăng ký: 3 vai trò trong 1 danh sách; FAQ ở trang chủ khách mở được", async () => {
   const ctx = await newCtx();
   const p = await ctx.newPage();
   await p.goto(BASE_URL + "/auth/register");
-  await p.getByText("Hoạt động thế nào?").waitFor({ timeout: 15000 });
-  await p.getByText("PawNail có thu phí không?").click();
+  await p.locator(".pn-list .pn-row[data-role]").nth(2).waitFor({ timeout: 15000 });
+  if ((await p.locator(".pn-list .pn-row[data-role]").count()) !== 3) throw new Error("role rows != 3");
+  await p.goto(BASE_URL + "/");
+  await p.getByText("PawNail có thu phí không?").click({ timeout: 15000 });
   await p.getByText(/Đăng ký, đăng tin, xem hồ sơ tay nghề và nhắn tin đều không mất phí/).waitFor({ timeout: 5000 });
   await ctx.close();
 });
@@ -334,11 +337,15 @@ await step("F24", "Menu ⋮: báo cáo bài người khác với lý do có sẵ
 });
 
 await step("F25", "Thả tim: hiện dòng 'Bạn… đã thích' (người thật), double-tap ảnh hiện tim lớn", async () => {
+  // Bài có ảnh do chính test tạo (không dựa vào dữ liệu seed: bảng tin ẩn bài "4 mẫu nail" của tài khoản chính thức
+  // sau 72 giờ — lib/feedFreshness — nên DB local cũ có thể không còn bài ảnh nào).
+  const marker = `QA F25 ảnh ${Date.now().toString(36)}`;
+  const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const made = await op.context().request.post(BASE_URL + "/api/posts", { data: { content: marker, mediaUrls: [png] } });
+  if (!made.ok()) throw new Error("tạo bài ảnh: HTTP " + made.status());
   await op.goto(BASE_URL + "/?tab=feed");
-  // Chỉ lấy bài đăng có nút thích — feed trộn ngẫu nhiên thẻ "Hàng Sỉ" (cũng là
-  // <article> có ảnh) nên .first() theo ảnh có lúc trúng thẻ hàng sỉ.
   const card = op.locator("article")
-    .filter({ has: op.locator("img[sizes]") })
+    .filter({ hasText: marker })
     .filter({ has: op.getByRole("button", { name: /^(Thích|Bỏ thích)$/ }) })
     .first();
   await card.waitFor({ timeout: 15000 });
@@ -346,7 +353,7 @@ await step("F25", "Thả tim: hiện dòng 'Bạn… đã thích' (người th�
     await card.getByRole("button", { name: "Bỏ thích" }).click();
     await card.getByRole("button", { name: "Thích", exact: true }).waitFor();
   }
-  await card.locator("img[sizes]").first().dblclick();
+  await card.locator("div.skeleton img").first().dblclick();
   await card.locator(".heart-big").waitFor({ state: "attached", timeout: 5000 });
   await card.getByRole("button", { name: "Bỏ thích" }).waitFor({ timeout: 10000 });
   await card.getByText(/đã thích/).waitFor({ timeout: 5000 });

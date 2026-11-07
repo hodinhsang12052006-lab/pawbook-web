@@ -111,7 +111,7 @@ export default function DesignsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {list.map((d) => <DesignCard key={d.id} d={d} onOpen={() => setOpen(d)} />)}
+            {list.map((d, i) => <DesignCard key={d.id} d={d} eager={i < 4} onOpen={() => setOpen(d)} />)}
           </div>
         )}
         {hasMore && (

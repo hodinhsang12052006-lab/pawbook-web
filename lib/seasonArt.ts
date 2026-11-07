@@ -35,7 +35,6 @@ const DEFAULT: SeasonArt = { accent: "#db2777", ink: "#f59bbe", image: "/hands/p
 const BY_ID: Record<string, SeasonArt> = {
   fall: { accent: "#c46a32", ink: "#f2b483", image: "/hands/p067.jpg", position: "50% 38%" },
   thanksgiving: { accent: "#a8823a", ink: "#e9cb8f", image: "/hands/olive.jpg", position: "50% 42%" },
-  halloween: { accent: "#c2551f", ink: "#f4a877", image: "/hands/hand.jpg", position: "50% 50%" },
   christmas: { accent: "#b3263f", ink: "#f4a3b0", position: "50% 50%", paint: lacquer("#7d1426", "rgb(214 72 92 / 0.55)", "#2b0a14", "rgb(240 210 150 / 0.55)") },
   newyear: { accent: "#c9a45c", ink: "#ecd6a6", position: "50% 50%", paint: lacquer("#3a2c1c", "rgb(230 199 154 / 0.5)", "#140f0c", "rgb(240 220 170 / 0.75)") },
   tet: { accent: "#c8302c", ink: "#f6a49c", position: "50% 50%", paint: lacquer("#8a1a18", "rgb(230 160 80 / 0.45)", "#2e0808", "rgb(245 215 140 / 0.7)") },

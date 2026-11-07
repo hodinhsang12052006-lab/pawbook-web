@@ -10,7 +10,7 @@ process.loadEnvFile?.(".env");
 
 const email = process.argv[2]?.trim().toLowerCase();
 const name = (process.argv[3] || "PawNail Jobs").trim().slice(0, 80);
-const AVATAR = "/brand/pawnail-official.jpg";
+const AVATAR = "/brand/pawnail-official-b.jpg"; // versioned (lib/brand.ts OFFICIAL_AVATAR)
 if (!email || !email.includes("@")) {
   console.error('Cách dùng: npx tsx scripts/make-official.ts email@cua-ban.com ["Tên hiển thị"]');
   process.exit(1);

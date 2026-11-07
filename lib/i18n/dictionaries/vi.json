@@ -7,7 +7,8 @@
     "notifications": "Thông báo",
     "logout": "Đăng xuất",
     "login": "Đăng nhập",
-    "register": "Tạo tài khoản"
+    "register": "Tạo tài khoản",
+    "registerShort": "Đăng ký"
   },
   "messenger": {
     "title": "Tin nhắn",
@@ -102,6 +103,7 @@
       "desc": "Nhập email và mật khẩu để tiếp tục vào PawNail.",
       "emailLabel": "Địa chỉ email",
       "passwordLabel": "Mật khẩu",
+      "passwordPlaceholder": "Mật khẩu của bạn",
       "forgotPassword": "Quên mật khẩu?",
       "loginButton": "Đăng nhập",
       "processing": "Đang đăng nhập…",
@@ -118,16 +120,19 @@
       "passwordHint": "Tối thiểu 8 ký tự",
       "phoneLabel": "Số điện thoại",
       "phonePlaceholder": "555 123 4567",
+      "phonePlaceholderAU": "412 345 678",
       "continue": "Tiếp tục",
       "alreadyHaveAccount": "Đã có tài khoản?",
-      "loginNow": "Đăng nhập ngay",
+      "loginNow": "Đăng nhập",
       "requiredFieldsError": "Vui lòng điền đầy đủ thông tin bắt buộc.",
       "networkError": "Lỗi kết nối mạng. Vui lòng thử lại.",
       "marketUS": "Mỹ",
       "marketAU": "Úc",
       "stateLabel": "Bang",
+      "statePlaceholder": "Chọn bang",
       "cityLabel": "Thành phố",
-      "cityPlaceholder": "VD: Los Angeles"
+      "cityPlaceholder": "VD: Los Angeles",
+      "cityPlaceholderAU": "VD: Parramatta"
     },
     "owner": {
       "heading": "Thiết lập tiệm và đăng tin tuyển",

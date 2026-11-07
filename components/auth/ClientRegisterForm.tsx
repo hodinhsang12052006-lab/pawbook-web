@@ -3,24 +3,21 @@
 // Đăng ký KHÁCH đi làm nail — 1 màn, ~30 giây: tên, khu vực, email + mật khẩu (SĐT không bắt buộc).
 // Không hỏi kỹ năng / lương / tiệm — khách vào thẳng trang chủ riêng (mẫu, tiệm quanh bạn, đặt lịch).
 import { apiError } from "@/lib/i18n/apiError";
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Heart, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
-import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
-import { guessState } from "@/lib/cityState";
+import { Lock, Mail, User as UserIcon } from "lucide-react";
+import { US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import SocialLogin from "@/components/auth/SocialLogin";
+import { AuthTitle, BackToRoles, CityStateFields, HaveAccount, IconInput, MarketSeg, PhoneField, Submit } from "@/components/auth/fields";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useViewerMarket } from "@/lib/useViewerMarket";
 
-export default function ClientRegisterForm() {
+export default function ClientRegisterForm({ onBack }: { onBack?: () => void }) {
   useTr();
-  const { theme } = useContext(AuthSettingsContext);
-  const isDark = theme === "dark";
   const [name, setName] = useState("");
-  // Thị trường mặc định theo người xem (IP / en-AU / múi giờ Úc) — khách ở Sydney không bị chọn sẵn 🇺🇸 và
+  // Thị trường mặc định theo người xem (múi giờ / ngôn ngữ / IP) — khách ở Sydney không bị chọn sẵn Mỹ và
   // đầu số +1. Bấm chọn thì giữ lựa chọn đó.
   const { market: viewerMarket, setMarket: rememberMarket } = useViewerMarket();
   const [picked, setPicked] = useState<"US" | "AU" | null>(null);
@@ -37,8 +34,6 @@ export default function ClientRegisterForm() {
   const state = (states as readonly string[]).includes(stateRaw) ? stateRaw : "";
   // Đăng ký bằng Google / Facebook từ màn này → bước Hoàn tất chọn sẵn "Khách".
   React.useEffect(() => { try { localStorage.setItem("pn_role_hint", "CLIENT"); } catch {} }, []);
-  const field = `w-full min-h-[48px] rounded-2xl border px-4 py-3 text-base ${isDark ? "border-slate-800 bg-slate-950 text-slate-100 placeholder-slate-500" : "border-slate-300 bg-white text-slate-900 placeholder-slate-400"}`;
-  const label = `mb-1.5 block text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,55 +60,38 @@ export default function ClientRegisterForm() {
   };
 
   return (
-    <form onSubmit={submit} className="mx-auto w-full max-w-md space-y-4">
-      <div className="space-y-1 text-center lg:text-left">
-        <h2 className={`flex items-center justify-center gap-2 text-2xl font-extrabold lg:justify-start ${isDark ? "text-white" : "text-slate-900"}`}><Heart className="h-6 w-6 text-pink-500" />{tr("Tài khoản khách làm nail", "Nail client account")}</h2>
-        <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{tr("Lưu mẫu yêu thích, tìm tiệm gần bạn và gửi yêu cầu đặt lịch không cần gọi điện.", "Save designs, find salons near you and request bookings without calling.")}</p>
-      </div>
-      <SocialLogin dark={isDark} divider heading={tr("Nhanh nhất: dùng tài khoản có sẵn", "Fastest: use an existing account")} />
+    <form onSubmit={submit} className="pn-form">
       <div>
-        <label htmlFor="cl-name" className={label}>{tr("Tên của bạn", "Your name")}</label>
-        <input id="cl-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={tr("VD: Ngọc Anh", "e.g. Anna")} className={field} />
+        <BackToRoles onBack={onBack} />
+        <AuthTitle
+          title={tr("Tài khoản khách làm nail", "Nail client account")}
+          sub={tr("Lưu mẫu yêu thích, tìm tiệm gần bạn và gửi yêu cầu đặt lịch không cần gọi điện.", "Save designs, find salons near you and request bookings without calling.")}
+        />
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {(["US", "AU"] as const).map((m) => (
-          <button key={m} type="button" aria-pressed={market === m} onClick={() => { setMarket(m); setState(""); }} className={`min-h-[44px] rounded-2xl border-2 text-sm font-bold ${market === m ? "border-pink-500 bg-pink-500/10" : isDark ? "border-slate-800" : "border-slate-200"} ${isDark ? "text-white" : "text-slate-900"}`}>
-            {m === "US" ? tr("🇺🇸 Mỹ", "🇺🇸 US") : tr("🇦🇺 Úc", "🇦🇺 Australia")}
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+      <SocialLogin divider heading={tr("Nhanh nhất: dùng tài khoản có sẵn", "Fastest: use an existing account")} />
+
+      <div className="pn-form-group">
         <div>
-          <label htmlFor="cl-city" className={label}>{tr("Thành phố", "City")}</label>
-          <input id="cl-city" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && states.includes(g)) setState(g); }} placeholder={market === "AU" ? tr("VD: Parramatta", "e.g. Parramatta") : tr("VD: Houston", "e.g. Houston")} className={field} />
+          <label htmlFor="cl-name" className="pn-label">{tr("Tên của bạn", "Your name")}</label>
+          <IconInput icon={UserIcon} id="cl-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={tr("VD: Ngọc Anh", "e.g. Anna")} />
+        </div>
+        <MarketSeg value={market} onChange={(m) => { setMarket(m); setState(""); }} label={tr("Bạn ở đâu?", "Where are you?")} />
+        <CityStateFields idPrefix="cl" market={market} city={city} onCity={setCity} state={state} onState={setState} states={states} />
+      </div>
+
+      <div className="pn-form-group">
+        <div>
+          <label htmlFor="cl-email" className="pn-label">Email</label>
+          <IconInput icon={Mail} id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={tr("ban@email.com", "you@email.com")} />
         </div>
         <div>
-          <label htmlFor="cl-state" className={label}>{tr("Bang", "State")}</label>
-          <select id="cl-state" value={state} onChange={(e) => setState(e.target.value)} className={field}>
-            <option value="">{tr("— Chọn —", "— Select —")}</option>
-            {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
-          </select>
+          <label htmlFor="cl-pass" className="pn-label">{tr("Mật khẩu", "Password")}</label>
+          <IconInput icon={Lock} id="cl-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder={tr("Tối thiểu 8 ký tự", "At least 8 characters")} />
         </div>
+        <PhoneField id="cl-phone" market={market} value={phone} onChange={setPhone} label={tr("Số điện thoại", "Phone")} optional={tr("(không bắt buộc — để tiệm xác nhận lịch)", "(optional — for booking confirmations)")} />
       </div>
-      <div>
-        <label htmlFor="cl-email" className={label}>Email</label>
-        <input id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={tr("ban@email.com", "you@email.com")} className={field} />
-      </div>
-      <div>
-        <label htmlFor="cl-pass" className={label}>{tr("Mật khẩu", "Password")}</label>
-        <input id="cl-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder={tr("Tối thiểu 8 ký tự", "At least 8 characters")} className={field} />
-      </div>
-      <div>
-        <label htmlFor="cl-phone" className={label}>{tr("Số điện thoại", "Phone")} <span className="font-normal text-slate-500">{tr("(không bắt buộc — để tiệm xác nhận lịch)", "(optional — for booking confirmations)")}</span></label>
-        <div className="flex items-center gap-2">
-          <span className={`flex min-h-[48px] items-center rounded-2xl border px-3 text-sm font-bold ${isDark ? "border-slate-800 bg-slate-950 text-slate-300" : "border-slate-300 bg-white text-slate-700"}`} aria-hidden>{market === "US" ? "+1" : "+61"}</span>
-          <input id="cl-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={market === "AU" ? "412 345 678" : "555 123 4567"} className={field} aria-describedby="cl-phone-cc" />
-          <span id="cl-phone-cc" className="sr-only">{market === "US" ? tr("Mã vùng +1 (Mỹ)", "Country code +1 (US)") : tr("Mã vùng +61 (Úc)", "Country code +61 (Australia)")}</span>
-        </div>
-      </div>
-      <button type="submit" disabled={busy} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-base font-black text-white shadow-lg shadow-pink-600/25 disabled:opacity-60">
-        {busy && <Loader2 className="h-5 w-5 animate-spin" />}{tr("Tạo tài khoản", "Create account")}
-      </button>
+      <Submit busy={busy}>{tr("Tạo tài khoản", "Create account")}</Submit>
+      <HaveAccount />
     </form>
   );
 }

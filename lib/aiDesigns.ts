@@ -2,8 +2,9 @@ import { v2 as cloudinary } from "cloudinary";
 import prisma from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { judgeImage, type Verdict } from "@/lib/imageJudge";
-import { activeThemes, THEMES } from "@/lib/contentEngine";
-import { themeWindow } from "@/lib/studioThemes";
+import { THEMES } from "@/lib/contentEngine";
+import { activeOccasions, isRetiredOccasion } from "@/lib/season";
+import { SEASONAL_THEMES } from "@/lib/studioThemes";
 import { getSignals } from "@/lib/trendSignals";
 import { geminiEnabled, geminiImage, geminiJson } from "@/lib/gemini";
 import { SAMPLE_DESIGNS } from "@/lib/designSamples";
@@ -120,17 +121,16 @@ const cut = (s: unknown, n: number) => String(s ?? "").trim().slice(0, n);
 const clean = (b: Partial<Bi> | undefined, n: number): Bi => ({ vi: cut(b?.vi, n), en: cut(b?.en, n) });
 
 export function upcomingThemes(market: "US" | "AU", now: Date) {
-  // Dịp đang diễn ra + dịp bắt đầu trong 21 ngày tới (thợ cần chuẩn bị vật tư trước).
-  const ids = new Set<string>();
-  const out: { id: string; title: string; emoji: string; ideas: string[]; startsIn: number }[] = [];
-  for (let d = 0; d <= 21; d += 3) {
-    for (const t of activeThemes(new Date(now.getTime() + d * DAY_MS), market)) {
-      if (ids.has(t.id)) continue;
-      ids.add(t.id);
-      out.push({ id: t.id, title: t.title, emoji: t.emoji, ideas: t.ideas, startsIn: d });
-    }
-  }
-  return out.slice(0, 4);
+  // Dịp đang diễn ra + dịp bắt đầu trong 21 ngày tới (thợ cần chuẩn bị vật tư trước) — ngày địa phương của thị
+  // trường (lib/season.ts activeOccasions), không bao giờ có dịp đã nghỉ (Halloween). MÙA (thu / xuân / hè…) chỉ tính khi
+  // đã vào mùa ở bán cầu đó — chỉ dịp lễ mới được báo trước (tháng 2 ở Sydney chưa vẽ mẫu thu).
+  const { active, upcoming } = activeOccasions(market, now, { upcomingDays: 21 });
+  return [...active.map((id) => ({ id, startsIn: 0 })), ...upcoming.filter((u) => !SEASONAL_THEMES.has(u.id))]
+    .slice(0, 4)
+    .map(({ id, startsIn }) => {
+      const t = THEMES.find((x) => x.id === id)!;
+      return { id: t.id, title: t.title, emoji: t.emoji, ideas: t.ideas, startsIn };
+    });
 }
 
 /** Có chỗ lưu ảnh chưa (Cloudinary; hoặc data URL khi test local). */
@@ -305,21 +305,21 @@ async function saveEngineDesigns(list: EngineDesign[], market: "US" | "AU") {
   return { created, jobs };
 }
 
-// Bộ mẫu theo dịp lễ (VD 100 mẫu Halloween) — miễn phí nên không tính vào giới hạn
+// Bộ mẫu theo dịp lễ (VD 100 mẫu Giáng Sinh) — miễn phí nên không tính vào giới hạn
 // ngày thường, nhưng vẫn chặn trần để Phòng nội dung không bị ngập.
 export const OCCASION_BATCH_MAX = 150;
 
 function daysUntil(theme: (typeof THEMES)[number], market: "US" | "AU", now: Date) {
-  if (activeThemes(now, market).some((t) => t.id === theme.id)) return 0;
-  const from = themeWindow(theme, market).from; // Úc: khung Nam bán cầu
-  const d = new Date(Date.UTC(now.getUTCFullYear(), from[0] - 1, from[1]));
-  if (d.getTime() < now.getTime()) d.setUTCFullYear(d.getUTCFullYear() + 1);
-  return Math.ceil((d.getTime() - now.getTime()) / DAY_MS);
+  // ngày địa phương của thị trường; Úc: khung Nam bán cầu (lib/season.ts)
+  const { active, upcoming } = activeOccasions(market, now, { upcomingDays: 366 });
+  if (active.includes(theme.id)) return 0;
+  return upcoming.find((u) => u.id === theme.id)?.startsIn ?? 366;
 }
 
 /** Tạo CẢ BỘ mẫu cho 1 dịp lễ (xem generateOccasionBatch). Ảnh vẽ dần: lượt này vẽ
  *  được bao nhiêu thì vẽ, phần còn lại các lượt cron sau tự vẽ bù. */
 export async function generateOccasion(market: "US" | "AU", occasionId: string, count: number, deadline = Date.now() + 50_000): Promise<GenerateResult> {
+  if (isRetiredOccasion(occasionId)) return { created: [], skipped: count, errors: ["Dịp này đã ngừng (Halloween) — không tạo mẫu mới."] };
   const theme = THEMES.find((t) => t.id === occasionId && (!t.markets || t.markets.includes(market)));
   if (!theme) return { created: [], skipped: count, errors: ["Không có dịp lễ này ở thị trường đã chọn."] };
   const n = Math.max(0, Math.min(count, OCCASION_BATCH_MAX));

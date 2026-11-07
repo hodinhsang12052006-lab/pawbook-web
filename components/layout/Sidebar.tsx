@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import IntentLink from "@/components/marketing/IntentLink";
 import { Briefcase, Users, Newspaper, Compass } from "lucide-react";
 import ToolsPanel from "@/components/layout/ToolsPanel";
 import { useRouter } from "next/navigation";
@@ -74,12 +75,13 @@ export default function Sidebar({ activeTab, setActiveTab, guest = false }: Side
                 </div>
               </div>
             ) : !effectiveUser ? (
-              <div className="mb-4 rounded-xl bg-gradient-to-br from-pink-600/15 to-fuchsia-600/5 p-3.5 ring-1 ring-pink-500/20">
-                <p className="text-sm font-black text-white">{tr("Tham gia PawNail", "Join PawNail")}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{tr("Thử mẫu, tìm tiệm, tìm việc hoặc tuyển thợ — nhắn tin trực tiếp trong app.", "Try on looks, find a salon, find work or hire — message directly in the app.")}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Link href="/auth/register" className="rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 py-2 text-center text-xs font-bold text-white">{tr("Tạo tài khoản", "Create account")}</Link>
-                  <Link href="/auth/login" className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">{tr("Đăng nhập", "Log in")}</Link>
+              <div className="mb-4 rounded-xl bg-white/[0.03] p-3.5 ring-1 ring-inset ring-pn-line">
+                <p className="text-sm font-semibold text-white">{tr("Tham gia PawNail", "Join PawNail")}</p>
+                <p className="mt-0.5 text-[13px] leading-[18px] text-slate-400">{tr("Thử mẫu, tìm tiệm, tìm việc hoặc tuyển thợ — nhắn tin trực tiếp trong app.", "Try on looks, find a salon, find work or hire — message directly in the app.")}</p>
+                {/* stacked full width: "Create account" / "Tạo tài khoản" never wraps or touches the button edges */}
+                <div className="mt-3 grid gap-2">
+                  <IntentLink href="/auth/register" className="flex min-h-10 items-center justify-center whitespace-nowrap rounded-xl bg-white/[0.08] px-4 text-center text-[14px] font-semibold text-white ring-1 ring-inset ring-pn-line-strong hover:bg-white/[0.12]">{tr("Tạo tài khoản", "Create account")}</IntentLink>
+                  <IntentLink href="/auth/login" className="flex min-h-10 items-center justify-center whitespace-nowrap rounded-xl px-4 text-center text-[14px] font-semibold text-slate-200 ring-1 ring-inset ring-pn-line hover:bg-white/5">{tr("Đăng nhập", "Log in")}</IntentLink>
                 </div>
               </div>
             ) : (
@@ -109,7 +111,9 @@ export default function Sidebar({ activeTab, setActiveTab, guest = false }: Side
                     aria-current={isActive ? "page" : undefined}
                     className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95 ${
                       isActive
-                        ? "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/20"
+                        ? guest
+                          ? "bg-pn-thumb text-white ring-1 ring-inset ring-white/[0.08]"
+                          : "bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-lg shadow-pink-600/20"
                         : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
                     }`}
                   >
@@ -121,7 +125,8 @@ export default function Sidebar({ activeTab, setActiveTab, guest = false }: Side
             </nav>
 
             <p className="mt-5 mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">{tr("Công cụ", "Tools")}</p>
-            <ToolsPanel variant="list" />
+            {/* guests: tool names only (the one-line subtitles truncated mid-word in a 256 px sidebar) */}
+            <ToolsPanel variant="list" compact={guest} />
           </div>
 
           {completeness && <ProfileCompletenessCard completeness={completeness} compact role={userRole} />}

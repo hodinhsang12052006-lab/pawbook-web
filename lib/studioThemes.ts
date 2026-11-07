@@ -1,4 +1,9 @@
 import type { Market } from "@prisma/client";
+import { RETIRED_OCCASIONS, isRetiredOccasion } from "@/lib/season";
+
+// Halloween is retired as a season and as an occasion (lib/season.ts). Archived Halloween designs still render
+// (renderers stay) but no list, cron, trend or feed path offers the occasion any more.
+export { RETIRED_OCCASIONS };
 
 // Lịch chủ đề nail theo mùa — tách riêng (không đụng DB) để giao diện
 // (trình duyệt) cũng dùng được. lib/contentEngine.ts dùng lại từ đây.
@@ -22,13 +27,6 @@ export interface Theme {
 }
 
 export const THEMES: Theme[] = [
-  {
-    id: "halloween", title: "Mùa Halloween", emoji: "🎃", hashtag: "PawNailHalloween", priority: 3,
-    blurb: "Tháng khách thích móng \"chơi\" nhất năm — đen nhám, cam bí ngô, mắt mèo, nhện mạng.",
-    ideas: ["Đen nhám + mạng nhện bạc", "Cam bí ngô ombre", "Mắt mèo xanh rêu", "Ma trắng 3D mini"],
-    ownerTip: "Làm \"Spooky set\" cố định 3 mẫu, giá trọn gói — khách chọn nhanh, thợ làm nhanh, tăng vòng khách cuối tuần.",
-    colors: ["#f97316", "#7c3aed"], from: [10, 1], to: [10, 31],
-  },
   {
     id: "fall", title: "Móng mùa thu", emoji: "🍂", hashtag: "PawNailFall", aliases: ["MongMuaThu"], priority: 1, southern: { from: [3, 1], to: [5, 31] },
     blurb: "Burgundy, nâu caramel, đồi mồi (tortoise) và nhũ vàng đồng đang lên ngôi.",
@@ -140,6 +138,7 @@ export function themeByTag(tag: string): Theme | undefined {
  * (Lễ Tạ Ơn với khách Úc) và mẫu MÙA của bán cầu kia (mẫu "mùa thu" vẽ cho Mỹ không hợp tháng 11 ở Sydney).
  */
 export function designFitsMarket(d: { market?: string | null; occasion?: string | null }, market: Market | string): boolean {
+  if (isRetiredOccasion(d.occasion)) return false;
   const t = d.occasion ? THEMES.find((x) => x.id === d.occasion) : undefined;
   if (!t) return true;
   if (!themeInMarket(t, market)) return false;

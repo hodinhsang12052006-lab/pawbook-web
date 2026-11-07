@@ -17,7 +17,6 @@ import JobFeedCard from "./JobFeedCard";
 import type { JobType } from "@/components/jobs/JobBoard";
 import { stateName } from "@/lib/stateNames";
 import { spaceByKind } from "@/lib/feedMix";
-import { useClassicUI } from "@/lib/useClassicUI";
 
 // Nội dung PawNail Studio chen giữa bảng tin (mỗi loại 1 lần, đủ thưa).
 const TIP_AFTER_POST = 3;
@@ -119,8 +118,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
   useTr(); // render lại khi đổi VI/EN
   const { user } = useSessionUser();
   const isTech = user?.role === "TECHNICIAN";
-  // Trang khách "/" (classic) giữ bố cục cũ (dải mẫu nail ở đầu); trong app: dải mẫu chen giữa bài (V2)
-  const classic = useClassicUI();
+  // Dải mẫu nail chen giữa bài (V2). Khách chưa đăng nhập không thấy bảng tin (trang chủ khách = GuestDiscover).
   const studio = useStudio(market, user?.role);
   // tuần này không có thẻ chủ đề → bỏ chỗ giữ (lần sau không chừa khoảng trống rồi xẹp xuống)
   useEffect(() => { if (studio !== undefined && !studio?.theme) rememberTheme(null); }, [studio]);
@@ -285,7 +283,7 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     let jobIdx = 0;
     ordered.forEach((post, idx) => {
       items.push({ type: "post", post });
-      const ds = !classic && DESIGNS_AFTER_POSTS.find(([after]) => after === idx + 1);
+      const ds = DESIGNS_AFTER_POSTS.find(([after]) => after === idx + 1);
       if (ds) items.push({ type: "designs", offset: ds[1] });
       if (idx + 1 === TIP_AFTER_POST && studio?.tip) items.push({ type: "tip" });
       if (idx + 1 === RECAP_AFTER_POST && studio?.recap) items.push({ type: "recap" });
@@ -301,9 +299,9 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
     // Hết bài (bảng tin còn ít) → xếp nốt tin việc ở cuối, đừng để trống.
     if (!nextCursor) while (feedJobs[jobIdx]) items.push({ type: "job", job: feedJobs[jobIdx++] });
     // Bảng tin còn ngắn (chưa tới bài thứ 2) → dải mẫu nail vẫn có mặt, không để khoảng trống
-    if (!classic && ordered.length > 0 && ordered.length < DESIGNS_AFTER_POSTS[0][0]) items.push({ type: "designs", offset: 0 });
+    if (ordered.length > 0 && ordered.length < DESIGNS_AFTER_POSTS[0][0]) items.push({ type: "designs", offset: 0 });
     return items;
-  }, [ordered, nextCursor, feedJobs, supplyProducts, studio, radarPosts, user, classic]);
+  }, [ordered, nextCursor, feedJobs, supplyProducts, studio, radarPosts, user]);
 
   return (
     <div className="space-y-4">
@@ -337,7 +335,6 @@ export default function SocialFeed({ market, state, city }: SocialFeedProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {classic && <DesignsStrip />}
           {feedItems.map((item, idx) =>
             item.type === "post" ? (
               <FeedPostCard

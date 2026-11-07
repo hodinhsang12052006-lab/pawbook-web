@@ -152,10 +152,10 @@ try {
     await q.locator('input[type="password"]').fill("QaPass#2026");
     await q.getByRole("button", { name: /Tiếp tục khảo sát nhanh/ }).click();
     for (let i = 0; i < 5; i++) {
-      await q.locator("button.w-full.text-left").first().click();
+      await q.locator("button.pn-choice").first().click();
       await q.waitForTimeout(700);
     }
-    await q.getByText("Tóm tắt khảo sát vận hành").waitFor({ timeout: 20000 });
+    await q.getByText(/Tóm tắt khảo sát|Your survey summary/).waitFor({ timeout: 20000 });
     const txt = await q.evaluate(() => document.body.innerText);
     R.check("OW3", "Màn tóm tắt: 'sắp ra mắt', không còn 'Kích hoạt' / 'set up trong 24h' / 'Live'", /sắp ra mắt/i.test(txt) && !/Kích hoạt|24h|\bLive\b|điểm nghẽn/.test(txt), txt.match(/Kích hoạt|24h|Live|điểm nghẽn/)?.[0]);
     await q.getByRole("button", { name: "Báo tôi" }).first().click();
@@ -252,13 +252,13 @@ try {
     await p.getByRole("button", { name: /Tiếp tục với Test OAuth/ }).click();
     const toComplete = await p.waitForURL(/\/auth\/complete/, { timeout: 30000 }).then(() => true).catch(() => false);
     R.check("OA2", "Đăng nhập OAuth lần đầu → trang 'Hoàn tất' (chọn vai trò, khu vực)", toComplete, p.url());
-    await p.getByText("Chào mừng bạn!").waitFor({ timeout: 15000 });
+    await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
     await p.screenshot({ path: TMP + "/launch_oauth_complete.png" });
     await p.goto(BASE_URL + "/?tab=jobs");
     const forced = await p.waitForURL(/\/auth\/complete/, { timeout: 15000 }).then(() => true).catch(() => false);
     R.check("OA3", "Chưa hoàn tất mà vào trang khác → bị đưa lại trang Hoàn tất", forced);
-    await p.getByText("Chào mừng bạn!").waitFor({ timeout: 15000 });
-    await p.getByRole("radio", { name: /Tôi là Chủ Tiệm/ }).click();
+    await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
+    await p.getByRole("radio", { name: /Tôi là chủ tiệm/i }).click();
     await p.getByLabel(/Thành phố/).fill("Dallas");
     const st = await p.getByLabel("Bang").inputValue();
     await p.getByLabel(/Số điện thoại/).fill("2145550155");
@@ -298,7 +298,8 @@ try {
     await p3.screenshot({ path: TMP + "/launch_oauth_error.png" });
     const reg = await page();
     await reg.goto(BASE_URL + "/auth/register");
-    R.check("OA10", "Trang đăng ký có 'Hoặc đăng ký nhanh bằng' + nút OAuth", await reg.getByText(/Hoặc đăng ký nhanh bằng/i).waitFor({ timeout: 10000 }).then(() => true).catch(() => false));
+    // Phase 1 (11/2026): dưới danh sách vai trò là vạch "hoặc / or" rồi các nút OAuth dạng viên trung tính (.pn-social).
+    R.check("OA10", "Trang đăng ký: vạch 'hoặc' + nút OAuth dưới danh sách vai trò", await reg.locator("[data-role-picker] .pn-social").first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && (await reg.locator("[data-role-picker] .pn-or").count()) === 1);
     await reg.screenshot({ path: TMP + "/launch_register_social.png" });
   }
 

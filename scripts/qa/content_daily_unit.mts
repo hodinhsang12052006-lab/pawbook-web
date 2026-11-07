@@ -57,15 +57,19 @@ ok("N5", "Cùng ngày đã đủ 2 tin → không đăng thêm", r2.posted.lengt
 const r3 = await publishNewsPosts(new Date(now.getTime() + 86400e3), { news, max: 2 });
 ok("N6", "Ngày sau: tin đã đăng / đã chặn KHÔNG đăng lại", r3.posted.length === 0, JSON.stringify(r3));
 
-// Bài ảnh mẫu
+// Bài ảnh mẫu — chỉ ảnh Google Flow đã duyệt (prompt có dấu [flow:CODE:DATE]); ảnh máy vẽ không bao giờ lên bài.
 const ids: string[] = [];
-for (let i = 0; i < 13; i++) {
-  const d = await prisma.nailDesign.create({ data: { day: "2026-10-12", market: "US", title: `Mẫu thử ${t}-${i}`, titleEn: "x", description: "x", descriptionEn: "x", skills: "Gel-X", difficulty: i % 2 ? 1 : 2, minutes: 30, priceHint: "$40", materials: "[]", steps: "[]", imageUrl: `https://res.cloudinary.com/demo/image/upload/s${i}.jpg`, status: "published", publishedAt: now, provider: "pawnail", prompt: "qa" } });
-  ids.push(d.id);
-}
+const mkDesign = (i: number, flow: boolean) => prisma.nailDesign.create({ data: { day: "2026-10-12", market: "US", title: `Mẫu thử ${t}-${i}`, titleEn: "x", description: "x", descriptionEn: "x", skills: "Gel-X", difficulty: i % 2 ? 1 : 2, minutes: 30, priceHint: "$40", materials: "[]", steps: "[]", imageUrl: `https://res.cloudinary.com/demo/image/upload/s${i}.jpg`, status: "published", publishedAt: now, provider: "pawnail", prompt: flow ? `qa [flow:D${String(900 + i).slice(-3)}:2026-11-06]` : "qa" } });
+// 3 mẫu Flow + 6 mẫu máy vẽ → chưa đủ 4 mẫu Flow → bỏ qua ngày (không đăng ảnh máy vẽ)
+for (let i = 0; i < 3; i++) ids.push((await mkDesign(i, true)).id);
+for (let i = 20; i < 26; i++) ids.push((await mkDesign(i, false)).id);
+const g0 = await publishDesignGallery(now);
+ok("G0", "Dưới 4 mẫu Flow (dù có ảnh máy vẽ) → không đăng, lý do 'chưa đủ 4 mẫu Flow'", g0.posted === false && g0.reason === "chưa đủ 4 mẫu Flow", JSON.stringify(g0));
+for (let i = 3; i < 13; i++) ids.push((await mkDesign(i, true)).id);
 const g1 = await publishDesignGallery(now);
 const gp = await prisma.post.findFirst({ where: { authorId: admin.id, content: { startsWith: "✨ 4 mẫu nail" } } });
-ok("G1", "Bài '4 mẫu nail hôm nay': 4 ảnh, có link /designs và nhãn 'Ảnh minh hoạ AI'", g1.posted === true && JSON.parse(gp?.mediaUrls || "[]").length === 4 && /\/designs/.test(gp?.content || "") && /Ảnh minh hoạ AI/.test(gp?.content || ""), JSON.stringify(g1));
+const flowIds = new Set((await prisma.nailDesign.findMany({ where: { id: { in: ids }, prompt: { contains: "[flow:" } }, select: { id: true } })).map((d) => d.id));
+ok("G1", "Bài '4 mẫu nail hôm nay': 4 ảnh Flow, có link /designs và nhãn 'Ảnh minh hoạ AI'", g1.posted === true && JSON.parse(gp?.mediaUrls || "[]").length === 4 && (g1.ids || []).every((x) => flowIds.has(x)) && /\/designs/.test(gp?.content || "") && /Ảnh minh hoạ AI/.test(gp?.content || ""), JSON.stringify(g1));
 const g2 = await publishDesignGallery(new Date(now.getTime() + 3600e3));
 ok("G2", "1 giờ sau → chưa đăng bài ảnh thứ 2 (cách nhau ≥ 4 giờ)", g2.posted === false);
 const g2b = await publishDesignGallery(new Date(now.getTime() + 5 * 3600e3));

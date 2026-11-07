@@ -12,6 +12,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
 import { dtEn } from "@/lib/i18n/dtEn";
 import { localePath, type Locale } from "@/lib/i18n/config";
+import { EMAIL_COLORS as C, emailBrandRow } from "@/lib/email";
 
 const DAY = 86_400_000;
 const esc = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -33,11 +34,11 @@ export interface Digest { subject: string; html: string; text: string }
 
 function shell(locale: Locale, title: string, intro: string, blocks: string, cta: { label: string; href: string }, userId: string) {
   const L = (vi: string, en: string) => (locale === "vi" ? vi : en);
-  return `<!doctype html><html lang="${locale}"><body style="margin:0;background:#0b0b14;font-family:Arial,Helvetica,sans-serif;color:#e2e8f0">
+  return `<!doctype html><html lang="${locale}"><body style="margin:0;background:${C.page};font-family:Arial,Helvetica,sans-serif;color:${C.body}">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121f;border-radius:16px;border:1px solid #2a2a40;padding:26px">
-<tr><td style="font-size:13px;font-weight:800;letter-spacing:.04em;color:#f472b6">${L("PawNail · Cập nhật tuần", "PawNail · Weekly update")}</td></tr>
-<tr><td style="padding-top:8px;font-size:22px;font-weight:800;color:#fff">${esc(title)}</td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${C.card};border-radius:16px;border:1px solid ${C.line};padding:26px">
+<tr><td>${emailBrandRow(L("Cập nhật tuần", "Weekly update"))}</td></tr>
+<tr><td style="padding-top:16px;font-size:22px;font-weight:700;color:${C.text}">${esc(title)}</td></tr>
 <tr><td style="padding-top:8px;font-size:14px;line-height:1.6;color:#cbd5e1">${intro}</td></tr>
 ${blocks}
 <tr><td style="padding:22px 0 6px" align="center"><a href="${esc(cta.href)}" style="display:inline-block;background:#db2777;color:#fff;text-decoration:none;font-weight:800;padding:13px 26px;border-radius:12px">${esc(cta.label)}</a></td></tr>

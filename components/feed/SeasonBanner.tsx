@@ -77,7 +77,7 @@ export default function SeasonBanner({
     <section
       ref={ref}
       aria-label={tr(`Chủ đề tuần: ${t.title}`, `Theme of the week: ${dt(t.title)}`)}
-      className="pn-season relative overflow-hidden rounded-[24px] border border-pn-line bg-pn-surface"
+      className="pn-season-card relative overflow-hidden rounded-[24px] border border-pn-line bg-pn-surface"
       style={{ ["--season" as string]: art.accent, ["--season-ink" as string]: art.ink, ["--pn-glow" as string]: art.accent }}
     >
       <div className={`pn-season-media relative overflow-hidden bg-pn-raised ${done ? "" : "skeleton"}`}>

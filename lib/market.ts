@@ -3,8 +3,8 @@
 //
 // Thứ tự chọn khi người xem chưa chọn (và chưa đăng nhập):
 //   1. quốc gia theo IP (x-vercel-ip-country / CF-IPCountry) — chỉ máy chủ thấy → GET /api/market
-//   2. vùng của Accept-Language / navigator.languages ("en-AU")
-//   3. múi giờ của trình duyệt (Australia/*)
+//   2. múi giờ của trình duyệt (Australia/*) — tại trình duyệt
+//   3. vùng của Accept-Language / navigator.languages ("en-AU")
 //   4. mặc định Mỹ
 // Lựa chọn được nhớ trong cookie bitpaw_market (máy chủ đặt qua /api/market, Max-Age 1 năm) + localStorage.
 // Người đã đăng nhập: luôn theo market của tài khoản.
@@ -63,15 +63,18 @@ export function readMarketCookie(): Market | null {
   return m ? (m[1] as Market) : null;
 }
 
-/** Đoán tại trình duyệt (không có IP): ngôn ngữ trình duyệt → múi giờ → null. */
+/**
+ * Đoán tại trình duyệt (không có IP): MÚI GIỜ trước → ngôn ngữ trình duyệt → null. Múi giờ trước vì rất nhiều
+ * người ở Úc dùng trình duyệt en-US. Cùng thứ tự với SEASON_BOOT (lib/season.ts) để mùa vẽ trước khi React chạy
+ * khớp với thị trường React tính ra.
+ */
 export function guessMarketInBrowser(): Market | null {
   if (typeof navigator === "undefined") return null;
-  const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
-  const byLang = marketFromLanguages(langs);
-  if (byLang) return byLang;
+  let zone: Market | null = null;
   try {
-    return marketFromTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-  } catch {
-    return null;
-  }
+    zone = marketFromTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  } catch {}
+  if (zone === "AU") return "AU";
+  const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
+  return marketFromLanguages(langs) ?? zone;
 }

@@ -1,138 +1,14 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
-import Link from "next/link";
-import { Sparkles, Store, ArrowRight, UserPlus, SlidersHorizontal, MessageCircle, ChevronDown, Heart } from "lucide-react";
-import { AuthSettingsContext } from "@/lib/AuthSettingsContext";
-import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import React, { useEffect, useState } from "react";
 import TechnicianRegisterForm from "@/components/auth/TechnicianRegisterForm";
 import OwnerRegisterForm from "@/components/auth/OwnerRegisterForm";
 import ClientRegisterForm from "@/components/auth/ClientRegisterForm";
-import SocialLogin from "@/components/auth/SocialLogin";
-import { tr } from "@/lib/i18n/tr";
-
-type Role = "technician" | "owner" | "client" | null;
-
-const PRESS = "active:scale-[0.98] transition-transform duration-100";
-
-function RolePicker({ onPick }: { onPick: (role: Role) => void }) {
-  const { theme } = useContext(AuthSettingsContext);
-  const { t } = useLanguage();
-  const isDark = theme === "dark";
-  const cardClass = isDark ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200";
-  const labelClass = isDark ? "text-slate-400" : "text-slate-500";
-
-  return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center lg:text-left">
-        <h2 className={`text-2xl font-extrabold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.title")}</h2>
-        <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.subtitle")}</p>
-      </div>
-
-      {/* Khách làm nail ĐẦU TIÊN — khớp trang chủ (hero dành cho khách). Không hiện số tin tuyển / lời mời "huy hiệu
-          sáng lập" ở màn chọn vai trò: khách cũng thấy màn này. */}
-      <button
-        type="button"
-        onClick={() => onPick("client")}
-        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition-all ${PRESS} ${cardClass} hover:border-pink-500/50`}
-      >
-        <Heart className="h-8 w-8 text-pink-500 flex-shrink-0" />
-        <div className="flex-1">
-          <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.clientTitle")}</p>
-          <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.clientDesc")}</p>
-          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.clientPerks")}</p>
-        </div>
-        <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onPick("technician")}
-        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition-all ${PRESS} ${cardClass} hover:border-pink-500/50`}
-      >
-        <Sparkles className="h-8 w-8 text-pink-500 flex-shrink-0" />
-        <div className="flex-1">
-          <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.technicianTitle")}</p>
-          <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.technicianDesc")}</p>
-          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.technicianPerks")}</p>
-        </div>
-        <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onPick("owner")}
-        className={`w-full min-h-[48px] flex items-center gap-4 rounded-2xl border-2 p-5 text-left transition-all ${PRESS} ${cardClass} hover:border-pink-500/50`}
-      >
-        <Store className="h-8 w-8 text-pink-500 flex-shrink-0" />
-        <div className="flex-1">
-          <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{t("auth.rolePicker.ownerTitle")}</p>
-          <p className={`text-sm ${labelClass}`}>{t("auth.rolePicker.ownerDesc")}</p>
-          <p className="mt-1.5 text-[11px] font-semibold text-pink-400">{t("auth.rolePicker.ownerPerks")}</p>
-        </div>
-        <ArrowRight className="h-5 w-5 text-slate-500 flex-shrink-0" />
-      </button>
-
-      <SocialLogin dark={isDark} divider={false} heading={tr("Hoặc đăng ký nhanh bằng", "Or sign up faster with")} />
-
-      <p className={`text-center text-sm ${labelClass}`}>
-        {t("auth.rolePicker.haveAccount")}{" "}
-        <Link href="/auth/login" className="font-bold text-pink-500 hover:underline">{t("auth.rolePicker.login")}</Link>
-      </p>
-
-      {/* Số liệu thật, trực tiếp: số tin đang tuyển (cùng nguồn với bảng việc làm, chỉ hiện khi ≥ 10) +
-          2 sự thật cố định. Hàng luôn cao bằng nhau (2 hay 3 ô) nên không xô bố cục khi tải xong. */}
-      <div className={`grid grid-cols-2 divide-x rounded-2xl border ${isDark ? "divide-slate-800 border-slate-800 bg-slate-900/30" : "divide-slate-200 border-slate-200 bg-white"}`}>
-        {[
-          { value: "US · AU", label: t("auth.rolePicker.statMarkets") },
-          { value: "EN · VI", label: t("auth.rolePicker.statLanguages") },
-        ].map((stat) => (
-          <div key={stat.label} className="px-2 py-3 text-center">
-            <p className={`text-lg font-black ${isDark ? "text-white" : "text-slate-900"}`}>{stat.value}</p>
-            <p className={`text-[10px] leading-tight ${labelClass}`}>{stat.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <section className="space-y-3">
-        <h3 className={`text-sm font-bold ${isDark ? "text-slate-200" : "text-slate-800"}`}>{t("auth.rolePicker.howTitle")}</h3>
-        <ol className="space-y-2.5">
-          {[
-            { icon: UserPlus, title: t("auth.rolePicker.how1Title"), desc: t("auth.rolePicker.how1Desc") },
-            { icon: SlidersHorizontal, title: t("auth.rolePicker.how2Title"), desc: t("auth.rolePicker.how2Desc") },
-            { icon: MessageCircle, title: t("auth.rolePicker.how3Title"), desc: t("auth.rolePicker.how3Desc") },
-          ].map(({ icon: Icon, title, desc }, i) => (
-            <li key={title} className="flex items-start gap-3">
-              <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500/20 to-violet-500/20 border border-pink-500/20">
-                <Icon className="h-4 w-4 text-pink-400" />
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-pink-600 text-[9px] font-black text-white">{i + 1}</span>
-              </span>
-              <div>
-                <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>{title}</p>
-                <p className={`text-xs ${labelClass}`}>{desc}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="space-y-2">
-        <h3 className={`text-sm font-bold ${isDark ? "text-slate-200" : "text-slate-800"}`}>{t("auth.rolePicker.faqTitle")}</h3>
-        {[1, 2, 3, 4].map((n) => (
-          <details key={n} className={`group rounded-xl border px-4 py-3 ${isDark ? "border-slate-800 bg-slate-900/30" : "border-slate-200 bg-white"}`}>
-            <summary className={`flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold ${isDark ? "text-slate-100" : "text-slate-900"}`}>
-              {t(`auth.rolePicker.faq${n}Q`)}
-              <ChevronDown className="h-4 w-4 flex-shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
-            </summary>
-            <p className={`mt-2 text-xs leading-relaxed ${labelClass}`}>{t(`auth.rolePicker.faq${n}A`)}</p>
-          </details>
-        ))}
-      </section>
-    </div>
-  );
-}
+import RolePicker, { type Role } from "@/components/auth/RolePicker";
+import { useTr } from "@/lib/i18n/useTr";
 
 export default function CustomRegisterPage() {
+  useTr();
   const [role, setRole] = useState<Role>(null);
   const [ready, setReady] = useState(false);
 
@@ -182,13 +58,17 @@ export default function CustomRegisterPage() {
     setRole(r);
     const url = new URL(window.location.href);
     if (r) url.searchParams.set("role", r);
+    else url.searchParams.delete("role");
     window.history.replaceState({}, "", url.toString());
+    window.scrollTo({ top: 0 });
   };
+  const back = () => pickRole(null);
 
-  if (!ready) return null;
+  // ?role= is read after mount: hold the column's space (top-aligned column → no layout shift when it fills).
+  if (!ready) return <div aria-hidden style={{ minHeight: 640 }} />;
 
-  if (role === "technician") return <TechnicianRegisterForm />;
-  if (role === "owner") return <OwnerRegisterForm />;
-  if (role === "client") return <ClientRegisterForm />;
+  if (role === "technician") return <TechnicianRegisterForm onBack={back} />;
+  if (role === "owner") return <OwnerRegisterForm onBack={back} />;
+  if (role === "client") return <ClientRegisterForm onBack={back} />;
   return <RolePicker onPick={pickRole} />;
 }

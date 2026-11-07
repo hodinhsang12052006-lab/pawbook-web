@@ -4,7 +4,7 @@ import { getTrends } from "@/lib/trends";
 import type { Market } from "@prisma/client";
 
 // "PawNail Studio" — bộ máy nội dung tự đổi theo THỜI ĐIỂM:
-//   • Chủ đề tuần theo lịch mùa vụ ngành nail (Halloween, Giáng sinh, Tết,
+//   • Chủ đề tuần theo lịch mùa vụ ngành nail (Lễ Tạ Ơn, Giáng sinh, Tết,
 //     Valentine, mùa cưới…) + gợi ý mẫu + mẹo kinh doanh cho chủ tiệm.
 //   • Thử thách hashtag tuần — kéo NGƯỜI THẬT đăng bài, xếp hạng bằng lượt
 //     thích thật. Đây là cách "bơm content" bền vững: app gợi đề tài, cộng
@@ -13,7 +13,8 @@ import type { Market } from "@prisma/client";
 // Mọi nội dung do app tạo đều gắn nhãn "PawNail Studio" — KHÔNG đăng thay hay
 // giả làm thành viên nào.
 
-import { THEMES, themeInMarket, themeTags, themeWindow, type Theme } from "@/lib/studioThemes";
+import { THEMES, themeTags, type Theme } from "@/lib/studioThemes";
+import { activeOccasions } from "@/lib/season";
 export { THEMES, type Theme };
 
 const TIPS = {
@@ -43,18 +44,12 @@ const TIPS = {
   ],
 };
 
-const md = (d: Date) => (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
-function inWindow(t: Theme, d: Date, market: Market) {
-  const v = md(d);
-  // Úc ở Nam bán cầu: mùa xuân / hè / thu theo khung riêng (themeWindow).
-  const w = themeWindow(t, market);
-  const a = w.from[0] * 100 + w.from[1];
-  const b = w.to[0] * 100 + w.to[1];
-  return a <= b ? v >= a && v <= b : v >= a || v <= b; // vắt qua năm mới
-}
-
+/**
+ * Chủ đề đang chạy hôm nay — theo NGÀY ĐỊA PHƯƠNG của thị trường (New York / Sydney, lib/season.ts), khung Nam
+ * bán cầu cho Úc, Lễ Tạ Ơn tính theo năm, Halloween đã nghỉ hẳn. Ưu tiên cao trước.
+ */
 export function activeThemes(date: Date, market: Market): Theme[] {
-  return THEMES.filter((t) => inWindow(t, date, market) && themeInMarket(t, market)).sort((a, b) => b.priority - a.priority);
+  return activeOccasions(market, date, { upcomingDays: 0 }).active.map((id) => THEMES.find((t) => t.id === id)!).filter(Boolean);
 }
 
 export function tipOfDay(date: Date, role: "OWNER" | "TECHNICIAN") {

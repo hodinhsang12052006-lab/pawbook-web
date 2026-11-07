@@ -2,7 +2,20 @@
 // Cấu hình (Vercel): RESEND_API_KEY + EMAIL_FROM (VD "PawNail <no-reply@bitpawos.com>",
 // tên miền phải được xác minh trong Resend). Chưa cấu hình → emailEnabled() = false.
 
+import { SITE_URL } from "@/lib/siteUrl";
+
 export const emailEnabled = () => !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+
+// Brand lockup for every email / email landing page: the "B" logo (ONE logo, absolute URL, PNG — Outlook and Gmail do
+// not render WebP) + the "PawNail" wordmark in the warm-luxe colours (ivory on plum), same as the app header.
+export const EMAIL_COLORS = { page: "#1c1521", card: "#261d2a", line: "#3b3040", text: "#f6f0f5", body: "#e8e0e6", muted: "#c2b7bf", faint: "#a69ba4", cta: "#db2777", accent: "#f59bbe" } as const;
+export function emailBrandRow(kicker?: string): string {
+  const logo = `${SITE_URL}/brand/logo-b-96.png`;
+  return `<table cellpadding="0" cellspacing="0" role="presentation"><tr>` +
+    `<td style="vertical-align:middle;padding-right:10px"><img src="${logo}" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border-radius:9px;border:1px solid ${EMAIL_COLORS.line}"></td>` +
+    `<td style="vertical-align:middle;font-size:18px;line-height:22px;font-weight:600;color:${EMAIL_COLORS.text};letter-spacing:-0.01em">PawNail${kicker ? `<span style="font-weight:400;color:${EMAIL_COLORS.muted}"> · ${kicker}</span>` : ""}</td>` +
+    `</tr></table>`;
+}
 
 function apiBase() {
   // Máy chủ giả lập chỉ dùng khi kiểm thử local (không bao giờ đặt trên Vercel).
@@ -37,14 +50,15 @@ export function resetPasswordEmail(name: string, link: string, locale: "en" | "v
   const button = vi ? "Đặt lại mật khẩu" : "Reset password";
   const footer = vi ? "Không phải bạn yêu cầu? Bạn có thể bỏ qua email này, mật khẩu sẽ không thay đổi." : "Didn't request this? You can ignore this email. Your password won't change.";
   const fallback = vi ? "Nếu nút không bấm được, mở link:" : "If the button doesn't work, open this link:";
-  const html = `<!doctype html><html lang="${vi ? "vi" : "en"}"><body style="margin:0;background:#0b0b14;font-family:Arial,Helvetica,sans-serif;color:#e2e8f0">
+  const C = EMAIL_COLORS;
+  const html = `<!doctype html><html lang="${vi ? "vi" : "en"}"><body style="margin:0;background:${C.page};font-family:Arial,Helvetica,sans-serif;color:${C.body}">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#12121f;border-radius:16px;border:1px solid #2a2a40;padding:28px">
-<tr><td style="font-size:20px;font-weight:800;color:#f472b6">PawNail</td></tr>
-<tr><td style="padding-top:16px;font-size:15px;line-height:1.6">${body}</td></tr>
-<tr><td style="padding:22px 0" align="center"><a href="${esc(link)}" style="display:inline-block;background:#db2777;color:#fff;text-decoration:none;font-weight:800;padding:14px 28px;border-radius:12px">${button}</a></td></tr>
-<tr><td style="font-size:13px;color:#94a3b8;line-height:1.6">${footer}</td></tr>
-<tr><td style="padding-top:18px;font-size:12px;color:#64748b;word-break:break-all">${fallback} ${esc(link)}</td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:${C.card};border-radius:16px;border:1px solid ${C.line};padding:28px">
+<tr><td>${emailBrandRow()}</td></tr>
+<tr><td style="padding-top:20px;font-size:15px;line-height:1.6">${body}</td></tr>
+<tr><td style="padding:22px 0" align="center"><a href="${esc(link)}" style="display:inline-block;background:${C.cta};color:#fff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:999px">${button}</a></td></tr>
+<tr><td style="font-size:13px;color:${C.muted};line-height:1.6">${footer}</td></tr>
+<tr><td style="padding-top:18px;font-size:12px;color:${C.faint};word-break:break-all">${fallback} ${esc(link)}</td></tr>
 </table></td></tr></table></body></html>`;
   const text = vi
     ? `Chào ${name || "bạn"},\nĐặt lại mật khẩu PawNail (hiệu lực 30 phút, dùng 1 lần):\n${link}\n\n${footer}`

@@ -9,6 +9,7 @@
 // trường thật ngay sau đó — không lệch hydration.
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { MARKET_COOKIE, MARKET_COOKIE_MAX_AGE, guessMarketInBrowser, isMarket, readMarketCookie, type Market } from "@/lib/market";
+import { applySeason } from "@/lib/season";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
 let current: Market | null = null;
@@ -27,6 +28,10 @@ function init() {
     } catch {}
   }
   current = isMarket(saved) ? saved : guessMarketInBrowser() ?? "US";
+  // Mùa (html[data-season]) do SEASON_BOOT đặt trước khi vẽ — cùng thứ tự dò; chỉ sửa nếu lệch.
+  // (init chạy trong getSnapshot, tức lúc render → đẩy việc ghi DOM ra sau.)
+  const guessed = current;
+  if (document.documentElement.getAttribute("data-mkt") !== guessed) queueMicrotask(() => applySeason(guessed));
   if (!readMarketCookie() && !asked) {
     asked = true;
     // Quốc gia theo IP (chỉ máy chủ thấy). Máy chủ cũng đặt cookie 1 năm cho các lần sau.
@@ -36,6 +41,7 @@ function init() {
         const m = d?.market;
         if (isMarket(m) && d?.source !== "default" && m !== current && !readMarketCookieChosen()) {
           current = m;
+          applySeason(m);
           emit();
         }
         if (isMarket(current)) writeLocal(current);
@@ -75,6 +81,7 @@ export function chooseMarket(m: Market) {
     document.cookie = `${MARKET_COOKIE}=${m}; Path=/; Max-Age=${MARKET_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
   } catch {}
   fetch("/api/market", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ market: m }) }).catch(() => {});
+  applySeason(m);
   emit();
 }
 
@@ -91,6 +98,7 @@ export function useViewerMarket(): { market: Market; setMarket: (m: Market) => v
     if (account && account !== current) {
       current = account;
       writeLocal(account);
+      applySeason(account);
       emit();
     }
   }, [account]);

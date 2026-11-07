@@ -9,6 +9,7 @@
 // Ngẫu nhiên CÓ HẠT GIỐNG (ngày + thị trường) → cùng ngày chạy lại ra cùng
 // kết quả; tránh trùng tên với các mẫu đã có.
 
+import { isRetiredOccasion } from "@/lib/season";
 import { activeTrends, type Trend } from "@/lib/trendRadar";
 export interface Bi { vi: string; en: string }
 export type Mat = Bi & { qty: string };
@@ -92,9 +93,6 @@ const METALS: CK[] = ["gold", "silver", "roseGold", "pearl"];
 // (nude / trắng sữa / kem / đen) + 1 kim loại; vàng đi với nền ấm, bạc với nền lạnh, vàng hồng với hồng / nude.
 // Bảng nào ghép với hoạ tiết mà hoạ tiết bị chìm → máy bỏ, lấy bảng khác (xem paletteOk).
 const PALETTES: Record<string, [CK, CK, CK][]> = {
-  // Halloween 2026 "moody luxe": đen, tím cà, rượu ấm, cam cháy, đỏ thẫm, trắng ngà — bỏ pastel (hồng phấn + mắt quỷ nhìn "dị")
-  halloween: [["black", "pumpkin", "silver"], ["black", "bone", "silver"], ["mulledWine", "black", "gold"], ["plumNoir", "bone", "silver"], ["aubergine", "pumpkin", "gold"],
-    ["black", "bloodRed", "silver"], ["milky", "black", "silver"], ["nude", "black", "gold"], ["burnt", "black", "gold"], ["bone", "bloodRed", "silver"], ["plumNoir", "pumpkin", "gold"]],
   fall: [["burgundy", "caramel", "gold"], ["espresso", "nude", "gold"], ["olive", "bone", "gold"], ["cinnamon", "espresso", "gold"], ["coffee", "cloudDancer", "gold"],
     ["mulledWine", "nude", "gold"], ["pewter", "espresso", "silver"], ["emerald", "bone", "gold"], ["cherryCola", "nude", "gold"]],
   thanksgiving: [["cinnamon", "bone", "gold"], ["espresso", "caramel", "gold"], ["nude", "burnt", "gold"], ["mulledWine", "champagne", "gold"], ["caramel", "espresso", "gold"]],
@@ -248,8 +246,7 @@ const ACC = s("ngón áp út và ngón trỏ", "ring and index fingers");
 const gz = (t: Bi, { finish, c1 }: PCtx): Bi => finish !== "chrome" ? t
   : Lof(c1.hex) > 70 ? s(`${t.vi} tráng ngọc trai`, `${t.en} with a pearl glaze`) : s(`${t.vi} tráng gương`, `${t.en} with a chrome glaze`);
 // Bộ phối theo dịp (mix-*): bộ máy (lib/tryon/sets) tự chia vai từng móng; ở đây chỉ là tên + công thức cho thợ.
-const MIX_NAME: Record<"halloween" | "christmas" | "valentine" | "fall" | "newyear", { vi: string; en: string; motifVi: string; motifEn: string; heroVi: string; heroEn: string }> = {
-  halloween: { vi: "Halloween", en: "Halloween", motifVi: "ma, dơi, mạng nhện + móng trơn", motifEn: "ghost, bats, web plus a solid nail", heroVi: "ma / dơi / bí ngô", heroEn: "ghost, bat or pumpkin" },
+const MIX_NAME: Record<"christmas" | "valentine" | "fall" | "newyear", { vi: string; en: string; motifVi: string; motifEn: string; heroVi: string; heroEn: string }> = {
   christmas: { vi: "Giáng sinh", en: "Christmas", motifVi: "lá holly, quả châu, French kẹo gậy + móng nhung", motifEn: "holly, ornament, candy-cane French plus a velvet nail", heroVi: "lá holly / quả châu", heroEn: "holly or ornament" },
   valentine: { vi: "Valentine", en: "Valentine", motifVi: "tim to, French tim, chấm bi", motifEn: "a big heart, heart French and dots", heroVi: "trái tim to", heroEn: "big heart" },
   fall: { vi: "mùa thu", en: "fall", motifVi: "lá thu, đầu đồi mồi, chrome caramel", motifEn: "autumn leaf, tortoise tip and caramel chrome", heroVi: "lá thu", heroEn: "autumn leaf" },
@@ -343,7 +340,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, c2 }) => `${c1.en} nails with small hand-painted five-petal ${c2.en} flowers on accent nails`,
   },
   {
-    id: "web", occasions: ["halloween"], finishes: ["matte", "glossy"], minutes: 15, price: 8, difficulty: 2, design: true,
+    id: "web", retired: true, occasions: ["halloween"], finishes: ["matte", "glossy"], minutes: 15, price: 8, difficulty: 2, design: true,
     title: ({ c1, metal }) => s(`${capVi(c1.vi)} mạng nhện ${metal.vi}`, `${cap(c1.en)} with ${metal.en} spiderwebs`),
     why: s("mạng nhện là mẫu Halloween được hỏi nhiều nhất — sang mà không “lố”", "spiderwebs are the most-requested Halloween look — chic, not costume-y"),
     materials: ({ metal }) => [LINER(metal), LINER_BRUSH],
@@ -630,7 +627,7 @@ export const PATTERNS: Pattern[] = [
 
   // ---------------- Halloween 🎃 (vẽ trên 1–2 ngón nhấn, còn lại màu nền) ----------------
   {
-    id: "ghost", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true, badBase: ["white", "pearl", "butter", "sheer"],
+    id: "ghost", retired: true, occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true, badBase: ["white", "pearl", "butter", "sheer"],
     title: ({ c1 }) => s(`Ma trắng dễ thương nền ${c1.vi}`, `Cute white ghosts on ${c1.en}`),
     why: s("ma trắng mặt cười là mẫu Halloween dễ thương, khách mọi tuổi đều chọn", "cute smiling ghosts are the Halloween look every age group picks"),
     materials: () => [m("Gel trắng đặc (thân ma)", "Opaque white gel (ghost body)"), LINER(COLORS.black), DOT],
@@ -638,7 +635,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1 }) => `${c1.en} nails with a small cute hand-painted white cartoon ghost with black dot eyes on two accent nails`,
   },
   {
-    id: "jackolantern", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true, badBase: ["pumpkin", "burnt", "caramel"],
+    id: "jackolantern", retired: true, occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true, badBase: ["pumpkin", "burnt", "caramel"],
     title: ({ c1 }) => s(`Bí ngô mặt cười nền ${c1.vi}`, `Jack-o'-lantern on ${c1.en}`),
     why: s("bí ngô mặt cười (jack-o'-lantern) là biểu tượng Halloween, làm nhanh, khách nhận ra ngay", "the jack-o'-lantern is the Halloween icon — quick to paint and instantly recognizable"),
     materials: () => [m("Gel cam bí ngô (mặt bí)", "Pumpkin orange gel (pumpkin face)"), LINER(COLORS.black), m("Gel xanh lá (cuống)", "Green gel (stem)")],
@@ -646,7 +643,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1 }) => `${c1.en} nails with two accent nails painted as orange jack-o'-lantern pumpkins with black carved triangle eyes and zigzag smile`,
   },
   {
-    id: "bats", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 6, difficulty: 1, design: true,
+    id: "bats", retired: true, occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 12, price: 6, difficulty: 1, design: true,
     title: ({ c1, metal }) => s(`Dơi bay ${metal.vi} nền ${c1.vi}`, `${cap(metal.en)} flying bats on ${c1.en}`),
     why: s("đàn dơi nhỏ bay chéo móng — tinh tế, đi làm vẫn đeo được", "tiny bats flying across the nail — subtle enough for the office"),
     materials: ({ metal }) => [LINER(metal), m("Sticker dơi (tuỳ chọn, làm nhanh)", "Bat decals (optional, faster)", "1 tấm"), LINER_BRUSH],
@@ -662,7 +659,7 @@ export const PATTERNS: Pattern[] = [
     image: () => "candy corn nails with yellow at the cuticle, orange in the middle and white at the tip on every nail",
   },
   {
-    id: "skull", occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true, badBase: ["white", "pearl", "butter", "sheer"],
+    id: "skull", retired: true, occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 20, price: 10, difficulty: 2, design: true, badBase: ["white", "pearl", "butter", "sheer"],
     title: ({ c1 }) => s(`Đầu lâu tối giản nền ${c1.vi}`, `Minimal skulls on ${c1.en}`),
     why: s("đầu lâu nét tối giản (không ghê) đang được khách thích phong cách gothic chọn", "minimal line skulls (cute, not gory) are a favorite with gothic-style clients"),
     materials: () => [m("Gel trắng đặc", "Opaque white gel"), LINER(COLORS.black), LINER_BRUSH],
@@ -678,7 +675,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1 }) => `${c1.en} nails with a cute cartoon 3D eyeball on two accent nails, playful Halloween style`,
   },
   {
-    id: "slimedrip", occasions: ["halloween"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
+    id: "slimedrip", retired: true, occasions: ["halloween"], finishes: ["glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true,
     title: ({ c1 }) => s(`Slime xanh chảy từ đầu móng nền ${c1.vi}`, `Green slime drips on ${c1.en}`),
     why: s("slime xanh chảy từ đầu móng — vui, nổi, đúng không khí Halloween", "green slime dripping from the tips is fun, bold and very Halloween"),
     materials: () => [m("Gel xanh slime (xanh nõn chuối)", "Slime green gel"), LINER_BRUSH],
@@ -686,7 +683,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1 }) => `${c1.en} nails with glossy bright green slime dripping down from the tips`,
   },
   {
-    id: "moonstars", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true,
+    id: "moonstars", retired: true, occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 1, design: true,
     title: ({ c1, metal }) => s(`Trăng khuyết & sao ${metal.vi} nền ${c1.vi}`, `${cap(metal.en)} crescent moon & stars on ${c1.en}`),
     why: s("trăng khuyết và sao kiểu 'witchy' — Halloween mà sang, đeo được cả sau lễ", "witchy crescent moons and stars — Halloween but elegant, wearable well after the holiday"),
     materials: ({ metal }) => [LINER(metal), m(`Charm trăng & sao ${metal.vi} (tuỳ chọn)`, `${cap(metal.en)} moon & star charms (optional)`, "1 gói"), DOT],
@@ -694,7 +691,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `${c1.en} nails with a small ${metal.en} crescent moon and tiny stars on two accent nails, witchy celestial style`,
   },
   {
-    id: "blackcat", occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, badBase: ["black", "chocolate", "smoke", "plum", "burgundy", "espresso", "navy", "pine"],
+    id: "blackcat", retired: true, occasions: ["halloween"], finishes: ["glossy", "matte"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, badBase: ["black", "chocolate", "smoke", "plum", "burgundy", "espresso", "navy", "pine"],
     title: ({ c1 }) => s(`Mèo đen ngồi nền ${c1.vi}`, `Black cat silhouette on ${c1.en}`),
     why: s("mèo đen (biểu tượng phù thuỷ) vẽ dáng ngồi — dễ thương, người nuôi mèo rất thích", "a sitting black cat (the witch's companion) is adorable — cat lovers ask for it"),
     materials: () => [m("Gel đen đặc (dáng mèo)", "Opaque black gel (cat shape)"), m("Gel vàng (mắt mèo)", "Yellow gel (cat eyes)"), LINER_BRUSH, DOT],
@@ -710,7 +707,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `witchy ${c1.en} nails with thin ${metal.en} outlines and tiny star charms on two accent nails`,
   },
   {
-    id: "mummy", occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, badBase: ["white", "pearl", "butter", "sheer"],
+    id: "mummy", retired: true, occasions: ["halloween"], finishes: ["matte", "glossy"], systems: ["gelx", "gel", "acrylic"], minutes: 15, price: 8, difficulty: 2, design: true, badBase: ["white", "pearl", "butter", "sheer"],
     title: ({ c1 }) => s(`Xác ướp băng trắng nền ${c1.vi}`, `Mummy wraps on ${c1.en}`),
     why: s("xác ướp quấn băng + 2 mắt tròn — mẫu Halloween vui, dễ làm", "mummy wraps with two peeking eyes — a fun, easy Halloween design"),
     materials: () => [m("Gel trắng đặc (băng quấn)", "Opaque white gel (wraps)"), LINER(COLORS.black), LINER_BRUSH, DOT],
@@ -745,7 +742,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, c2 }) => `sheer ${c1.en} base with deep curved ${c2.en} French tips on every nail`,
   },
   {
-    id: "fr-v", occasions: ["trend", "halloween", "prom", "newyear"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 8, difficulty: 2, design: true,
+    id: "fr-v", occasions: ["trend", "prom", "newyear"], finishes: ["glossy", "chrome"], systems: ["gelx", "acrylic", "gel"], minutes: 15, price: 8, difficulty: 2, design: true,
     title: (p) => gz(s(`French chữ V ${p.c2.vi} nền ${p.c1.vi}`, `${cap(p.c2.en)} V-French on ${p.c1.en}`), p),
     why: s("French chữ V (đầu móng nhọn hình mũi tên) làm móng dài và sắc hơn — hợp dáng hạnh nhân, coffin, nhọn", "the V-French (a pointed chevron tip) makes nails look longer and sharper — made for almond, coffin and stiletto"),
     materials: ({ c2 }) => [m(`Gel ${c2.vi} (đầu French)`, `${cap(c2.en)} gel (French tips)`), LINER_BRUSH],
@@ -845,7 +842,7 @@ export const PATTERNS: Pattern[] = [
 
   // ---------------- Chrome màu & nhũ loang ----------------
   {
-    id: "colorchrome", occasions: ["fall", "trend", "newyear", "christmas", "halloween"], finishes: ["chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 2, design: false, keepHue: true,
+    id: "colorchrome", occasions: ["fall", "trend", "newyear", "christmas"], finishes: ["chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 2, design: false, keepHue: true,
     title: ({ c1 }) => s(`Chrome ${c1.vi} giữ màu`, `${cap(c1.en)} colour chrome`),
     why: s("chrome màu (nâu, caramel, xám thiếc, đỏ cherry…) giữ nguyên sắc màu nền mà vẫn bóng gương — trend thu đông 2026", "colour chrome (brown, caramel, pewter, cherry…) keeps the base hue with a mirror shine — the fall/winter 2026 trend"),
     materials: () => [],
@@ -888,7 +885,7 @@ export const PATTERNS: Pattern[] = [
   },
 
   // ---------------- Bộ phối theo dịp: MỖI MÓNG MỘT KIỂU (móng chính / móng phụ / móng nối), không 2 móng giống nhau ----------------
-  ...(["halloween", "christmas", "valentine", "fall", "newyear"] as const).map((occ): Pattern => ({
+  ...(["christmas", "valentine", "fall", "newyear"] as const).map((occ): Pattern => ({
     // chỉ bóng: chrome / mắt mèo phủ cả bộ thì móng chính vẽ tay mất nét (bộ máy tự cho móng nối làm velvet / chrome nếu cần)
     id: `mix-${occ}`, occasions: occ === "fall" ? ["fall", "thanksgiving"] : [occ], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 25, price: 15, difficulty: 2, design: true,
     title: ({ c1, c2 }) => s(`Bộ ${MIX_NAME[occ].vi} mỗi móng một kiểu (${c1.vi} – ${c2.vi})`, `Mismatched ${MIX_NAME[occ].en} set (${c1.en} & ${c2.en})`),
@@ -1336,13 +1333,13 @@ const wpick = <T,>(r: () => number, arr: readonly T[], w: (x: T) => number): T =
 
 // MÙA THEO BÁN CẦU: Úc ngược mùa (tháng 9–11 xuân, 12–2 hè, 3–5 thu). Lịch chủ đề chung (thu / xuân / hè / tựu trường)
 // là mùa của Mỹ → ở Úc đổi sang đúng mùa Úc (tháng 10 ở Úc là mùa xuân, không phải mùa thu nâu caramel).
-// Halloween hết sau 31/10: tháng 11–12 không ra mẫu Halloween nữa dù lịch còn sót.
+// Dịp đã nghỉ (Halloween, lib/season.ts RETIRED_OCCASIONS) không bao giờ ra mẫu nữa, dù lịch còn sót.
 const SEASONAL = new Set(["fall", "spring", "summer", "backtoschool"]);
 const AU_SEASON: Record<number, string> = { 9: "spring", 10: "spring", 11: "spring", 12: "summer", 1: "summer", 2: "summer", 3: "fall", 4: "fall", 5: "fall" };
 // Úc tháng 11–2 là mùa hè (Giáng sinh mùa hè): không nhung, caro, bông tuyết
 const AU_SUMMER_NO = new Set(["velvet", "plaid", "snow"]);
 export function liveOccasions(occs: OccasionInfo[], market: "US" | "AU", month: number): OccasionInfo[] {
-  let out = occs.filter((o) => !(o.id === "halloween" && month >= 11));
+  let out = occs.filter((o) => !isRetiredOccasion(o.id));
   if (market === "AU" && out.some((o) => SEASONAL.has(o.id))) {
     out = out.filter((o) => !SEASONAL.has(o.id));
     const au = AU_SEASON[month];
@@ -1549,6 +1546,7 @@ export function generateEngineDesigns(n: number, input: EngineInput): EngineDesi
  *  của dịp + hoạ tiết chung × bảng màu của dịp; không trùng tên, không ghép màu
  *  làm hoạ tiết bị chìm, trộn hệ móng/dáng/hiệu ứng. Hoạ tiết riêng được ưu tiên. */
 export function generateOccasionBatch(n: number, input: Omit<EngineInput, "occasions"> & { occasion: OccasionInfo }): EngineDesign[] {
+  if (isRetiredOccasion(input.occasion.id)) return []; // Halloween đã nghỉ: không tạo bộ mẫu
   const r = rng(`batch|${input.date}|${input.market}|${input.occasion.id}|${input.salt ?? ""}`);
   const occId = input.occasion.id;
   const palettes = PALETTES[palKey(occId, input.market)] ?? PALETTES.any;

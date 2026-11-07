@@ -3,13 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Lightbulb, TrendingUp, X, Trophy, Heart, Sparkles, ArrowRight } from "lucide-react";
-import Avatar from "@/components/ui/Avatar";
+import { Lightbulb, TrendingUp, Trophy, Heart, ArrowRight } from "lucide-react";
 import type { StudioData } from "@/lib/contentEngine";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { dt } from "@/lib/i18n/dataEn";
-import { useClassicUI } from "@/lib/useClassicUI";
 import SeasonBanner from "./SeasonBanner";
 
 export type Studio = StudioData & { tip: string };
@@ -55,12 +53,6 @@ export function ThemeSlot() {
   return <div aria-hidden className="hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-th]_&]:block" style={{ height: "var(--th-h, 0px)" }} />;
 }
 
-const STUDIO_LABEL = (
-  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white/90 ring-1 ring-white/15">
-    <Sparkles className="h-3 w-3" /> PawNail Studio
-  </span>
-);
-
 const HIDE_KEY = "pn_studio_hide";
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -74,82 +66,16 @@ export function ThemeCard({ studio, isOwner, onJoin, market = "US" }: { studio: 
   });
   const t = studio.theme;
   const ref = useRef<HTMLElement>(null);
-  const classic = useClassicUI();
-  useEffect(() => { rememberTheme(!t || hidden ? null : ref.current?.offsetHeight ?? null); }, [t, hidden, classic]);
+  useEffect(() => { rememberTheme(!t || hidden ? null : ref.current?.offsetHeight ?? null); }, [t, hidden]);
   if (!t || hidden) return null;
-  const c = studio.challenge;
   const hide = () => {
     setHidden(true);
     try {
       localStorage.setItem(HIDE_KEY, today());
     } catch {}
   };
-  // Trong app (V2): băng-rôn ảnh kiểu tạp chí. Trang khách "/" (classic) giữ nguyên thẻ cũ bên dưới.
-  if (!classic) return <SeasonBanner ref={ref} studio={studio} isOwner={isOwner} market={market} onJoin={onJoin} onHide={hide} />;
-
-  return (
-    <section
-      ref={ref}
-      aria-label={tr(`Chủ đề tuần: ${t.title}`, `Theme of the week: ${dt(t.title)}`)}
-      className="relative overflow-hidden rounded-2xl border border-white/10 p-4 shadow-xl shadow-black/30 sm:p-5"
-      style={{ background: `linear-gradient(135deg, ${t.colors[0]}38, ${t.colors[1]}2e), #0b1020` }}
-    >
-      {/* Trong app: nền trầm hơn (lớp phủ; trang khách "/" giữ nền gốc), bỏ emoji 120px mờ (trông như clip-art) */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 hidden refined:block" style={{ background: `linear-gradient(135deg, ${t.colors[0]}24, ${t.colors[1]}14), var(--color-pn-surface)` }} />
-      <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 text-[120px] leading-none opacity-[0.12] refined:hidden">{t.emoji}</div>
-      <button
-        onClick={() => {
-          setHidden(true);
-          try {
-            localStorage.setItem(HIDE_KEY, today());
-          } catch {}
-        }}
-        aria-label={tr("Ẩn chủ đề hôm nay", "Hide today's theme")}
-        className="absolute right-1 top-1 z-10 rounded-full p-2.5 text-white/50 hover:bg-white/10 hover:text-white"
-      >
-        <X className="h-4 w-4" />
-      </button>
-
-      <div className="relative space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {STUDIO_LABEL}
-          <span className="text-[11px] font-semibold text-white/60">{tr("Chủ đề tuần này", "This week's theme")}</span>
-        </div>
-        <div>
-          <h3 className="text-lg font-black tracking-tight text-white sm:text-xl">{t.emoji} {dt(t.title)}</h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-white/75">{dt(isOwner ? t.ownerTip : t.blurb)}</p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {t.ideas.map((idea) => (
-            <span key={idea} className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold text-white/85 ring-1 ring-white/10">{dt(idea)}</span>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-3">
-          <button
-            onClick={() => onJoin(t.hashtag)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-slate-900 shadow-lg transition-transform active:scale-95"
-          >
-            <Trophy className="h-3.5 w-3.5" />{tr(" Tham gia #", " Join #")}{t.hashtag}
-          </button>
-          {c && c.posts > 0 ? (
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {c.entries.map((e) => (
-                  <span key={e.id} className="rounded-full ring-2 ring-[#0b1020] refined:ring-pn-surface">
-                    <Avatar src={e.author.avatarUrl} name={e.author.name} seed={e.author.id} className="h-6 w-6" />
-                  </span>
-                ))}
-              </div>
-              <span className="text-[11px] font-semibold text-white/70">{c.posts}{tr(" bài đã tham gia", " entries so far")}</span>
-            </div>
-          ) : (
-            <span className="text-[11px] font-semibold text-white/60">{tr("Đăng mẫu bạn làm — bài được thích nhiều nhất sẽ được giới thiệu đầu bảng tuần này.", "Post your set — the most-liked entry is featured at the top of this week's board.")}</span>
-          )}
-        </div>
-      </div>
-    </section>
-  );
+  // Băng-rôn ảnh kiểu tạp chí (V2). Khách chưa đăng nhập không thấy bảng tin nên không có nhánh "classic" nữa.
+  return <SeasonBanner ref={ref} studio={studio} isOwner={isOwner} market={market} onJoin={onJoin} onHide={hide} />;
 }
 
 /** "Mẹo hôm nay" — chen giữa bảng tin, đổi mỗi ngày. */

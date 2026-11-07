@@ -1,0 +1,33 @@
+{
+  "_doc": "Budgets for scripts/qa/polish_gate.mjs (landing '/' + /auth/* polish phase, 2026-11-07). Counts are per viewport (elements intersecting the first screen).",
+  "infiniteAnimations": {
+    "landingDesktopBase": 0,
+    "landingDesktopSeason": 8,
+    "landingMobile": 0,
+    "auth": 0,
+    "reducedMotion": 0
+  },
+  "animatedProperties": ["transform", "opacity", "translate", "scale", "rotate"],
+  "blurElementsPerViewport": 4,
+  "colouredGlowsPerViewport": 1,
+  "gradientTextRunsPerViewport": 1,
+  "pinkFilledPerViewport": 2,
+  "heroRadialBackgrounds": 4,
+  "decorTileMinPx": 401,
+  "h1LinesLanding": 2,
+  "h1LinesAuthMax": 2,
+  "minFontPx": 12,
+  "maxFontWeight": 799,
+  "bodyFontPrefix": "Be Vietnam Pro",
+  "displayFontPrefix": "Fraunces",
+  "fontBytesLandingEn": 143360,
+  "cls": 0.02,
+  "lcpMs": 2500,
+  "jsGrowthBytes": 10240,
+  "cssBytes": 231424,
+  "_cssDoc": "CSS on '/' must not exceed the --compare baseline run; cssBytes is the pre-v2 (Nov 6) level and is informational once the v2 in-app CSS shipped.",
+  "contrast": 4.5,
+  "contrastLarge": 3,
+  "naturalWidthRatio": 1.5,
+  "labelChipPx": 12
+}

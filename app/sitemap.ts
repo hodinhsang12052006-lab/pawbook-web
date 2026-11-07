@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import prisma from "@/lib/prisma";
+import { RETIRED_OCCASIONS } from "@/lib/season";
 import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
 import { localePath } from "@/lib/i18n/config";
@@ -43,7 +44,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let designUrls: MetadataRoute.Sitemap = [];
   try {
     const designs = await prisma.nailDesign.findMany({
-      where: { status: "published", imageUrl: { not: null } },
+      // chỉ mẫu đang đăng; không bao giờ mẫu của dịp đã nghỉ (Halloween) — kể cả khi lỡ còn "published"
+      where: { status: "published", imageUrl: { not: null }, OR: [{ occasion: null }, { occasion: { notIn: [...RETIRED_OCCASIONS] } }] },
       select: { id: true, publishedAt: true },
       orderBy: { publishedAt: "desc" },
       take: 3000,

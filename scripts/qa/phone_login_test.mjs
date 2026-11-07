@@ -114,12 +114,12 @@ try {
   await p.screenshot({ path: `${process.env.TEMP || "."}/phone_code.png` }).catch(() => {});
   await p.locator("#pl-code").fill("123456"); // đủ 6 số → tự gửi
   await p.waitForURL(/\/auth\/complete/, { timeout: 20000 });
-  await p.getByText("Chào mừng bạn!").waitFor({ timeout: 15000 });
+  await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
   const pre = await p.locator("#c-phone").inputValue().catch(() => "");
   const nameVal = await p.locator("#c-name").inputValue();
   R.check("P14", "Giao diện: nhập số → mã → trang Hoàn tất, SĐT điền sẵn, tên để trống cho tự nhập", pre.replace(/\D/g, "") === uiNum && nameVal === "", `phone=${pre} name=${nameVal}`);
   await p.locator("#c-name").fill("Thảo Vy");
-  await p.getByRole("radio", { name: /Tôi là Thợ/ }).click();
+  await p.getByRole("radio", { name: /Tôi là thợ/i }).click();
   await p.getByLabel(/Thành phố/).fill("Los Angeles");
   await p.getByRole("button", { name: /Vào PawNail/ }).click();
   await p.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 30000 });

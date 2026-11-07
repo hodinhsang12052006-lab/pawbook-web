@@ -33,8 +33,12 @@ const SOCKET_ID_RE = /^\d{1,20}\.\d{1,20}$/;
 type Json = Record<string, unknown>;
 const err = (status: number, vi: string, en: string) => NextResponse.json({ error: vi, errorEn: en }, { status });
 
+// LOCAL QA ONLY (scripts/qa/call_test.mjs places dozens of calls a minute): CALL_RATE_ALLOW_TEST=1 raises every
+// limit ×20. Ignored on Vercel — never set it there.
+const RATE_SCALE = process.env.CALL_RATE_ALLOW_TEST === "1" && !process.env.VERCEL && !process.env.VERCEL_ENV ? 20 : 1;
+
 function limited(key: string, limit: number, windowMs = MINUTE): boolean {
-  if (isRateLimited(key, limit, windowMs)) return true;
+  if (isRateLimited(key, limit * RATE_SCALE, windowMs)) return true;
   recordAttempt(key, windowMs);
   return false;
 }
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
 
     // ---------- offer (start ringing) ----------
     if (action === "offer") {
-      if (limited(`call-offer:${userId}`, 8) || limited(`call-offer:${userId}:${targetId}`, 3)) {
+      if (limited(`call-offer:${userId}`, 12) || limited(`call-offer:${userId}:${targetId}`, 6)) {
         return err(429, "Bạn gọi quá nhiều lần, thử lại sau ít phút.", "Too many calls. Try again in a minute.");
       }
       const [callee, caller] = await Promise.all([
@@ -186,7 +190,7 @@ export async function POST(req: Request) {
           : pusher.trigger(target, "call-rejected", { fromId: userId, callId: claims.i, reason }),
       ];
       // Người nhận từ chối / báo bận trên 1 máy → các máy khác của họ cũng ngừng đổ chuông.
-      if (!iAmCaller) jobs.push(pusher.trigger(own, "call-handled", { fromId: userId, callId: claims.i, how: reason }, socketId ? { socket_id: socketId } : undefined));
+      if (!iAmCaller && (reason === "decline" || reason === "busy" || reason === "media-error")) jobs.push(pusher.trigger(own, "call-handled", { fromId: userId, callId: claims.i, how: reason }, socketId ? { socket_id: socketId } : undefined));
       await Promise.all(jobs);
       return NextResponse.json({ success: true });
     }

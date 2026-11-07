@@ -13,6 +13,7 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 const require = createRequire(import.meta.url);
 // `ws` ships with the app's runtime deps (via @libsql/isomorphic-ws) — no new dependency.
@@ -106,7 +107,7 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
     const url = new URL(req.url, `http://${host}`);
     let body = "";
     req.on("data", (c) => (body += c));
-    req.on("end", () => {
+    req.on("end", async () => {
       const m = /^\/apps\/([^/]+)\/(events|batch_events)$/.exec(url.pathname);
       if (req.method !== "POST" || !m) return void res.writeHead(404).end("{}");
       if (m[1] !== String(appId)) return void res.writeHead(404).end('{"error":"app"}');
@@ -139,7 +140,7 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
       let out = events.map((e) => ({ channel: e.channel, name: e.name, data: e.data, socket_id: e.socket_id }));
       if (rewrite) {
         try {
-          out = rewrite(out) || out;
+          out = (await rewrite(out)) || out;
         } catch (err) {
           console.error("pusher mock rewrite failed:", err);
         }
@@ -193,7 +194,7 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
       paused = Date.now() + ms;
       setTimeout(flushPaused, ms + 5);
     },
-    /** fn(events[]) → events[] — runs on every REST publish before delivery. */
+    /** fn(events[]) → events[] (or a promise of them) — runs on every REST publish before delivery. */
     setRewrite(fn) {
       rewrite = fn;
     },
@@ -212,7 +213,7 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
   };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] && path.resolve(fileURLToPath(import.meta.url)).toLowerCase() === path.resolve(process.argv[1]).toLowerCase()) {
   const port = Number(process.argv[2] || process.env.PUSHER_MOCK_PORT || 6001);
   await startPusherMock({ port, quiet: false });
 }

@@ -13,6 +13,10 @@ let timer: ReturnType<typeof setInterval> | null = null;
 // Each cycle schedules its notes ahead of time (up to ~1.5 s): stopRingtone() must stop those too, or the ring keeps
 // sounding after Answer / Decline and the ringback plays over the first "hello".
 const live = new Set<OscillatorNode>();
+// True only while a ring vibration pattern was actually accepted by navigator.vibrate(): stopRingtone() runs on every
+// call-UI cleanup (layout remounts included) with no user gesture, and an unconditional vibrate(0) there is what
+// Chrome logs as "[Intervention] Blocked call to navigator.vibrate".
+let vibrating = false;
 
 function audioCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -71,7 +75,7 @@ export function startRingtone(kind: "incoming" | "outgoing") {
         tone(660, 0.4, 0.35, 0.18);
         tone(880, 0.8, 0.35, 0.18);
         tone(660, 1.2, 0.35, 0.18);
-        navigator.vibrate?.([400, 200, 400]);
+        if (navigator.vibrate?.([400, 200, 400])) vibrating = true;
       } else {
         tone(440, 0, 1.0, 0.08);
         tone(480, 0, 1.0, 0.06);
@@ -88,6 +92,8 @@ export function stopRingtone() {
   if (timer) clearInterval(timer);
   timer = null;
   silence();
+  if (!vibrating) return;
+  vibrating = false;
   try {
     navigator.vibrate?.(0);
   } catch {}

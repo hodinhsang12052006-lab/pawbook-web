@@ -1104,21 +1104,21 @@ html[data-season="us-harvest"] {
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f2c9a0 50%, #e0a86a 100%);
   --s-a: 214 140 72; --s-b: 158 38 64; --s-spark: 252 214 168; --s-ink: #f2c9a0;
   --s-bokeh: 0.9; --s-spark-o: 0.45; --s-flare: 0.55;
-  --s-halo: 214 132 64; --s-halo-o: 0.26; --s-halo2: 150 36 62; --s-halo2-o: 0.14;
+  --s-halo: 214 132 64; --s-halo-o: 0.30; --s-halo2: 150 36 62; --s-halo2-o: 0.18;
 }
 html[data-season="us-holiday"] {
   --pn-rim: rgb(46 150 112 / 0.18);
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f6e3c3 38%, #ead08c 68%, #bcd2a2 100%);
   --s-a: 232 202 140; --s-b: 36 140 104; --s-spark: 255 238 210; --s-ink: #f3dcb3;
   --s-bokeh: 0.75; --s-spark-o: 0.9; --s-flare: 0.9;
-  --s-halo: 232 200 136; --s-halo-o: 0.24; --s-halo2: 30 132 98; --s-halo2-o: 0.16;
+  --s-halo: 232 200 136; --s-halo-o: 0.28; --s-halo2: 30 132 98; --s-halo2-o: 0.22;
 }
 html[data-season="nye"] {
   --pn-rim: rgb(214 220 232 / 0.16);
   --pn-foil: linear-gradient(100deg, #f6e3c3 0%, #ffffff 45%, #d9dde6 100%);
   --s-a: 240 214 160; --s-b: 210 216 228; --s-spark: 255 242 220; --s-ink: #f6e3c3;
   --s-bokeh: 0.5; --s-spark-o: 0.9; --s-flare: 0.8;
-  --s-halo: 240 214 160; --s-halo-o: 0.22; --s-halo2: 200 208 224; --s-halo2-o: 0.12;
+  --s-halo: 240 214 160; --s-halo-o: 0.26; --s-halo2: 200 208 224; --s-halo2-o: 0.15;
 }
 html[data-season="us-winter"] {
   --pn-rim: rgb(196 206 222 / 0.12);
@@ -1132,14 +1132,14 @@ html[data-season="au-jacaranda"] {
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #dccbff 50%, #b9a3f5 100%);
   --s-a: 167 139 250; --s-b: 196 168 255; --s-spark: 237 233 254; --s-ink: #e2d8ff;
   --s-bokeh: 0.9; --s-spark-o: 0.4; --s-flare: 0.5;
-  --s-halo: 150 120 246; --s-halo-o: 0.28; --s-halo2: 120 92 214; --s-halo2-o: 0.14;
+  --s-halo: 150 120 246; --s-halo-o: 0.30; --s-halo2: 120 92 214; --s-halo2-o: 0.18;
 }
 html[data-season="au-summer-festive"] {
   --pn-rim: rgb(94 214 196 / 0.18);
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #fbd5bf 42%, #f3c27a 74%, #f0a860 100%);
   --s-a: 246 190 120; --s-b: 94 214 196; --s-spark: 255 236 200; --s-ink: #fde1c4;
   --s-bokeh: 0.85; --s-spark-o: 0.8; --s-flare: 0.9;
-  --s-halo: 246 184 112; --s-halo-o: 0.24; --s-halo2: 64 196 178; --s-halo2-o: 0.14;
+  --s-halo: 246 184 112; --s-halo-o: 0.28; --s-halo2: 64 196 178; --s-halo2-o: 0.18;
 }
 html[data-season="au-summer"] {
   --pn-rim: rgb(94 214 196 / 0.16);

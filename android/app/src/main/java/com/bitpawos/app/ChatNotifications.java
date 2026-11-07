@@ -190,6 +190,9 @@ final class ChatNotifications {
         if (m.text.isEmpty()) m.text = ctx.getString(R.string.chat_new_message);
         m.ts = parseLong(d.get("ts"), System.currentTimeMillis());
 
+        // Tải avatar người gửi TRƯỚC (mạng, tối đa ~5 s) để phần vẽ chỉ đọc cache.
+        ChatAvatars.loadSquare(ctx, m.avatar, true);
+
         ChatStore.Conv c = ChatStore.addIncoming(ctx, cid, title, group, url, m);
         if (c == null) return true; // tin trùng (FCM gửi lại)
 
@@ -201,7 +204,7 @@ final class ChatNotifications {
         // App đang mở (trang khác): web tự hiện toast + âm thanh → chỉ cập nhật khay, im lặng.
         // Bong bóng của hội thoại đang mở: web trong bong bóng đã hiện tin.
         Mode mode = (AppState.isMainResumed() || AppState.isBubbleOpen(cid)) ? Mode.SILENT : Mode.ALERT;
-        post(ctx, c, mode, m);
+        post(ctx, cid, mode);
         return true;
     }
 
@@ -209,12 +212,27 @@ final class ChatNotifications {
     // Vẽ + đăng
     // ---------------------------------------------------------------------------------
 
+    private static final Object POST_LOCK = new Object();
+
     /**
-     * Đăng (lại) thông báo của hội thoại. fresh = tin vừa đến (được phép tải avatar qua mạng
-     * cho người gửi tin này); null = đăng lại từ cache (sau khi trả lời nhanh / đã đọc).
+     * Đăng (lại) thông báo của hội thoại từ trạng thái MỚI NHẤT đã lưu (service, nút trả lời,
+     * plugin có thể gọi cùng lúc: tuần tự hoá để bản cũ không đè bản mới). Chỉ dùng avatar đã
+     * cache — không có mạng ở đây.
      */
-    static void post(Context ctx, ChatStore.Conv c, Mode mode, ChatStore.Msg fresh) {
+    static void post(Context ctx, String cid, Mode mode) {
         if (!canPost(ctx)) return;
+        synchronized (POST_LOCK) {
+            ChatStore.Conv c = ChatStore.get(ctx, cid);
+            if (c == null) return;
+            try {
+                render(ctx, c, mode);
+            } catch (RuntimeException | OutOfMemoryError e) {
+                Log.w(TAG, "render failed: " + e.getClass().getSimpleName());
+            }
+        }
+    }
+
+    private static void render(Context ctx, ChatStore.Conv c, Mode mode) {
         ensureChannelsOnce(ctx);
         String cid = c.cid;
 
@@ -242,8 +260,7 @@ final class ChatNotifications {
                 String key = personKey(m);
                 who = people.get(key);
                 if (who == null) {
-                    boolean net = fresh != null && personKey(fresh).equals(key);
-                    Bitmap sq = ChatAvatars.loadSquare(ctx, m.avatar, net);
+                    Bitmap sq = ChatAvatars.loadSquare(ctx, m.avatar, false);
                     if (sq != null) squares.put(key, sq);
                     who = buildPerson(m, sq);
                     people.put(key, who);
@@ -499,7 +516,7 @@ final class ChatNotifications {
         if (sbn != null && isBubble(sbn)) {
             ChatStore.Conv c = ChatStore.markRead(ctx, cid);
             if (c != null && !c.msgs.isEmpty()) {
-                post(ctx, c, Mode.HIDDEN, null);
+                post(ctx, cid, Mode.HIDDEN);
                 return;
             }
         }

@@ -107,7 +107,7 @@ public class ChatActionReceiver extends BroadcastReceiver {
             c = ChatStore.addOutgoing(app, cid, text, true, app.getString(errorText(r.status)));
         }
         if (c != null) {
-            ChatNotifications.post(app, c, ChatNotifications.Mode.SILENT, null);
+            ChatNotifications.post(app, cid, ChatNotifications.Mode.SILENT);
         } else if (r.ok) {
             // Không còn lịch sử (đã bị xoá): gỡ thông báo cho ô trả lời khỏi quay.
             NotificationManagerCompat.from(app).cancel(ChatNotifications.tagFor(cid), ChatNotifications.CHAT_ID);
@@ -123,7 +123,7 @@ public class ChatActionReceiver extends BroadcastReceiver {
 
     private static void repost(Context app, String cid) {
         ChatStore.Conv c = ChatStore.get(app, cid);
-        if (c != null) ChatNotifications.post(app, c, ChatNotifications.Mode.SILENT, null);
+        if (c != null) ChatNotifications.post(app, cid, ChatNotifications.Mode.SILENT);
     }
 
     private static void markRead(Context app, String cid, String cookie, String ua) {

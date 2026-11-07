@@ -184,7 +184,7 @@ function probe(ctx) {
   // photo cards + label chips
   out.cards = [];
   for (const fig of document.querySelectorAll(".pn-card, .pn-auth-card, [data-hero-slot]")) {
-    if (!visible(fig)) continue;
+    if (!visible(fig) || fig.closest(".pn-strip3")) continue; // the register phone strip carries ONE caption below it
     const img = fig.querySelector("img"); if (!img) continue;
     const r = fig.getBoundingClientRect();
     const chip = fig.querySelector(".pn-img-label");
@@ -255,6 +255,9 @@ function probe(ctx) {
   out.footerLinks = document.querySelectorAll("[data-site-footer] a").length;
   out.heroSelectors = ["[data-hero-title]", "[data-hero-cta='client']", "[data-hero-cta='tech']", "[data-hero-cta='owner']"].map((q) => !!document.querySelector(q));
   out.roleRows = document.querySelectorAll(".pn-list .pn-row[data-role]").length;
+  const strip = document.querySelector(".pn-strip3");
+  out.stripCaption = strip && visible(strip) ? (document.querySelector(".pn-strip3-cap")?.textContent || "").trim() : null;
+  out.mainCtas = [...document.querySelectorAll("main .pn-cta")].filter(visible).length;
   out.inputs = [...document.querySelectorAll("main input:not([type=checkbox]):not([type=radio]):not([type=hidden]), main select")].filter(visible).map((e) => ({ fs: parseFloat(getComputedStyle(e).fontSize), h: Math.round(e.getBoundingClientRect().height) }));
   out.submits = [...document.querySelectorAll("main button[type=submit]")].filter(visible).map((b) => b.classList.contains("pn-cta"));
   out.phoneOptions = [...document.querySelectorAll("main select option")].map((o) => o.textContent.trim()).filter((t) => /^\+\d/.test(t));
@@ -346,7 +349,8 @@ for (const r of results) {
   b(badProps.length === 0, "animated properties beyond transform/opacity", badProps);
   // surfaces
   b(r.blur.length <= BUDGET.blurElementsPerViewport, `blur elements ${r.blur.length}`, r.blur);
-  const glowMax = landing ? BUDGET.colouredGlowsPerViewport : r.submits.length ? 1 : 0;
+  // auth: only the form's primary action (the submit / "Continue" .pn-cta) may glow
+  const glowMax = landing ? BUDGET.colouredGlowsPerViewport : r.mainCtas ? 1 : 0;
   b(r.glow.length <= glowMax, `coloured glows ${r.glow.length} > ${glowMax}`, r.glow);
   b(r.gradText.length <= BUDGET.gradientTextRunsPerViewport, `gradient-text runs ${r.gradText.length}`, r.gradText);
   b(r.pink.length <= BUDGET.pinkFilledPerViewport, `pink-filled elements ${r.pink.length}`, r.pink);
@@ -397,6 +401,7 @@ for (const r of results) {
     b(!r.themeToggle, "theme toggle present");
     b(!r.flagsEmoji, "emoji flags present");
     if (r.key === "register") b(r.roleRows === 3, `role rows ${r.roleRows}`);
+    if (r.stripCaption != null) b(/^(AI illustrations|Ảnh minh hoạ AI)$/.test(r.stripCaption), `register strip caption «${r.stripCaption}»`);
     for (const i of r.inputs) b(i.fs >= 16 && i.h >= 44, `input ${i.fs}px h${i.h}`);
     b(r.submits.every(Boolean), "submit without .pn-cta", r.submits);
     if (r.phoneOptions.length) b(r.phoneOptions.every((t) => /^\+(1|61) \((US|AU|Mỹ|Úc)\)$/.test(t)), "phone options", r.phoneOptions);
@@ -466,20 +471,23 @@ if (PERF) {
           if (!k) return; const b = await r.body().catch(() => null); if (b) bytes[k] += b.length;
         });
         await page.addInitScript(() => {
-          window.__lcp = 0; window.__cls = 0; window.__lcpEl = "";
-          new PerformanceObserver((l) => { for (const e of l.getEntries()) { window.__lcp = e.startTime; window.__lcpEl = e.element ? e.element.tagName + "." + String(e.element.className).slice(0, 40) : e.url; } }).observe({ type: "largest-contentful-paint", buffered: true });
+          window.__lcp = 0; window.__cls = 0; window.__lcpEl = ""; window.__lcpData = false;
+          new PerformanceObserver((l) => { for (const e of l.getEntries()) { window.__lcp = e.startTime; window.__lcpData = /^data:/.test(e.url || ""); window.__lcpEl = e.element ? e.element.tagName + "." + String(e.element.className).slice(0, 40) : e.url; } }).observe({ type: "largest-contentful-paint", buffered: true });
           new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: "layout-shift", buffered: true });
         });
         try { await page.goto(BASE + p, { waitUntil: "load", timeout: 90000 }); } catch {}
         await page.waitForTimeout(3500);
-        const m = await page.evaluate(() => ({ lcp: Math.round(window.__lcp), cls: +window.__cls.toFixed(4), el: window.__lcpEl })).catch(() => ({}));
+        const m = await page.evaluate(() => ({ lcp: Math.round(window.__lcp), cls: +window.__cls.toFixed(4), el: window.__lcpEl, dataUrl: window.__lcpData })).catch(() => ({}));
         runs.push({ ...m, ...bytes });
         await ctx.close();
       }
       const med = (k) => runs.map((x) => x[k]).sort((a, b) => a - b)[1];
       const rec = { key, vp, lcp: med("lcp"), cls: Math.max(...runs.map((x) => x.cls)), js: med("js"), css: med("css"), font: med("font"), img: med("img"), runs };
       perf.push(rec);
-      if (rec.lcp > BUDGET.lcpMs) breach(`perf/${key}/${vp}`, `LCP ${rec.lcp} ms > ${BUDGET.lcpMs}`, runs.map((x) => x.el));
+      // A local demo DB stores design pictures as data: URLs (AI_DESIGNS_ALLOW_DATA_URL) — a 1.3 MB JSON instead of
+      // Cloudinary URLs — so an LCP on such an image says nothing about production: info only.
+      if (rec.lcp > BUDGET.lcpMs && runs.some((x) => x.dataUrl)) info.push(`LCP ${key}/${vp} ${rec.lcp} ms on a data: URL image (local demo data, not representative; check with PageSpeed Insights on a preview)`);
+      else if (rec.lcp > BUDGET.lcpMs) breach(`perf/${key}/${vp}`, `LCP ${rec.lcp} ms > ${BUDGET.lcpMs}`, runs.map((x) => x.el));
       if (key !== "designs" && rec.cls > BUDGET.cls) breach(`perf/${key}/${vp}`, `CLS ${rec.cls} > ${BUDGET.cls}`);
       // CSS: never above the baseline run (--compare); without one, the absolute budget (pre-v2 level, informational)
       if (key === "landing" && !COMPARE && rec.css > BUDGET.cssBytes) info.push(`CSS on '/' ${vp}: ${rec.css} bytes (absolute budget ${BUDGET.cssBytes}, measured before the v2 in-app CSS shipped)`);

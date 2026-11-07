@@ -6,6 +6,7 @@
 // Khối tĩnh (thử mẫu, ảnh có kích thước cố định) ở trên; khối tải sau (tiệm, mẫu) ở dưới → không giật bố cục.
 import React from "react";
 import Link from "next/link";
+import IntentLink from "@/components/marketing/IntentLink";
 import { ArrowRight, MapPin, Wand2 } from "lucide-react";
 import { DesignsStrip } from "@/components/designs/DesignViews";
 import SalonDirectory from "@/components/client/SalonDirectory";
@@ -18,7 +19,7 @@ export default function GuestDiscover({ market, state }: { market: "US" | "AU"; 
   const { locale } = useTr();
   return (
     <div className="space-y-6" data-testid="guest-discover">
-      <Link href="/tryon" className="group block overflow-hidden rounded-[24px] bg-pn-surface shadow-[inset_0_0_0_1px_var(--color-pn-line)] sm:grid sm:grid-cols-[1.1fr_1fr]">
+      <IntentLink href="/tryon" className="group block overflow-hidden rounded-[24px] bg-pn-surface shadow-[inset_0_0_0_1px_var(--color-pn-line)] sm:grid sm:grid-cols-[1.1fr_1fr]">
         <div className="relative grid grid-cols-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/tryon/teaser-before.jpg" alt={tr("Trước khi thử mẫu", "Before try-on")} width={416} height={320} loading="lazy" className="aspect-[13/10] h-full w-full object-cover" />
@@ -37,7 +38,7 @@ export default function GuestDiscover({ market, state }: { market: "US" | "AU"; 
             <Wand2 className="h-4 w-4" />{tr("Chụp ảnh bàn tay", "Take a photo of your hand")}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </span>
         </span>
-      </Link>
+      </IntentLink>
 
       <section className="space-y-3" aria-labelledby="guest-salons">
         <div className="flex items-end justify-between gap-3 px-1">

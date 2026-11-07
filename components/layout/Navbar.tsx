@@ -5,6 +5,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 import { Plus, MessageSquare, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import IntentLink from "@/components/marketing/IntentLink";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -54,8 +55,8 @@ export default function Navbar() {
             {/* Đang tải phiên: khách thấy ngay nút Đăng nhập/Đăng ký (không nhảy), máy từng đăng nhập thấy khung chờ */}
             <div className="flex items-center gap-1.5 sm:gap-2 [html[data-authed]_&]:hidden">
               <LanguageToggle />
-              <Link href="/auth/login" className="pn-nav-login">{t("menu.login")}</Link>
-              <Link href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</Link>
+              <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
+              <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</IntentLink>
             </div>
             <div className="hidden items-center gap-3 pl-4 border-l border-slate-800 animate-pulse [html[data-authed]_&]:flex">
               <div className="h-8 w-8 rounded-full bg-slate-800"></div>
@@ -134,8 +135,8 @@ export default function Navbar() {
           ) : (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <LanguageToggle />
-              <Link href="/auth/login" className="pn-nav-login">{t("menu.login")}</Link>
-              <Link href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</Link>
+              <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
+              <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</IntentLink>
             </div>
           )}
         </div>

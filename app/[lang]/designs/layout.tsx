@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { preconnect } from "react-dom";
 import { langFrom, pageMetadata } from "@/lib/i18n/server";
 
 // Tiêu đề tab + bản xem trước theo ngôn ngữ (page.tsx là client component).
@@ -14,5 +15,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  // Design pictures live on Cloudinary and the grid is fetched client-side: open the connection while the JS loads
+  // (saves the DNS + TLS round trips on the first card, i.e. the LCP image on a phone).
+  preconnect("https://res.cloudinary.com");
   return children;
 }

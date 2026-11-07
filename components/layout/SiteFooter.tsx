@@ -4,7 +4,7 @@
 import "@/components/marketing/marketing.css";
 import React from "react";
 import BrandLogo from "@/components/brand/BrandLogo";
-import Link from "next/link";
+import IntentLink from "@/components/marketing/IntentLink";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -34,7 +34,7 @@ export default function SiteFooter() {
             <ul className="pn-foot-links" role="list">
               {links.map(([label, href]) => (
                 <li key={href}>
-                  <Link href={href}>{label}</Link>
+                  <IntentLink href={href}>{label}</IntentLink>
                 </li>
               ))}
             </ul>

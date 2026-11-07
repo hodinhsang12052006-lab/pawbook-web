@@ -7,6 +7,7 @@
 import "@/components/marketing/marketing.css";
 import React from "react";
 import Link from "next/link";
+import IntentLink from "@/components/marketing/IntentLink";
 import { fraunces } from "@/lib/fonts";
 import HeroLacquerStack from "@/components/home/HeroLacquerStack";
 import { tr } from "@/lib/i18n/tr";
@@ -30,12 +31,12 @@ export default function HeroLanding({ onExploreJobs, className = "" }: { onExplo
             )}
           </p>
           <div className="pn-hero-ctas">
-            <Link href="/tryon" className="pn-btn pn-cta" data-hero-cta="client">
+            <IntentLink href="/tryon" className="pn-btn pn-cta" data-hero-cta="client">
               {tr("Thử mẫu trên tay", "Try on nail looks")}
-            </Link>
-            <Link href="/salons" className="pn-btn pn-ghost">
+            </IntentLink>
+            <IntentLink href="/salons" className="pn-btn pn-ghost">
               {tr("Tìm tiệm", "Find a salon")}
-            </Link>
+            </IntentLink>
           </div>
           <p className="pn-hero-aud">
             <span>
@@ -55,9 +56,9 @@ export default function HeroLanding({ onExploreJobs, className = "" }: { onExplo
             </span>
             <span>
               {tr("Chủ tiệm? ", "Salon owner? ")}
-              <Link href="/auth/register?role=owner" className="pn-link" data-hero-cta="owner">
+              <IntentLink href="/auth/register?role=owner" className="pn-link" data-hero-cta="owner">
                 {tr("Tuyển thợ", "Hire techs")}
-              </Link>
+              </IntentLink>
             </span>
           </p>
           <ul className="pn-hero-trust pn-dots" role="list">

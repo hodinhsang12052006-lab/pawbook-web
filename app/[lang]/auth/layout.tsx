@@ -5,6 +5,7 @@
 // ≥ 1024: sticky brand panel (logo · 2-card photo plate · tagline with one foil run · facts) + form column.
 // < 1024: calm 56 px header + form. The form title is the page's only <h1>; 0 infinite animations.
 import "@/components/marketing/marketing.css";
+import "@/components/auth/auth.css";
 import React from "react";
 import BrandLogo from "@/components/brand/BrandLogo";
 import Link from "next/link";
@@ -28,9 +29,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             </span>
             <span className="pn-wordmark">PawNail</span>
           </Link>
-          <div className="pn-auth-stagewrap">
-            <AuthPhotoStage />
-          </div>
+          {/* DOM order brand → copy → stage (grid rows place the stage in the middle row): with streamed HTML the
+              copy is already laid out in its bottom row when the stage arrives, so the plate never jumps up. */}
           <div className="pn-auth-copy">
             <p className="pn-display pn-tagline">
               {t("auth.brand.tagline1")}
@@ -43,6 +43,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <li>{t("auth.brand.trustBadge2")}</li>
               <li>{t("auth.brand.trustBadge3")}</li>
             </ul>
+          </div>
+          <div className="pn-auth-stagewrap">
+            <AuthPhotoStage />
           </div>
         </aside>
 

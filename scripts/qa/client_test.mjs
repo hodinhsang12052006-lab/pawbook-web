@@ -66,7 +66,8 @@ try {
   // Lối tắt (bản copy 11/2026): "Mẫu nail" (trước là "Mẫu trend") · Tiệm gần bạn · Mẫu đã lưu
   R.check("C5", "Trang chủ khách: lời chào, Mẫu nail / Tiệm gần bạn / Mẫu đã lưu, khối \"Tiệm & thợ quanh bạn\"; KHÔNG có Việc gấp / Thợ rảnh / tuyển thợ / Bảng tin nghề; không tràn ngang",
     /^Chào /m.test(body) && /Mẫu nail/.test(body) && /Tiệm gần bạn/.test(body) && /Mẫu đã lưu/.test(body) && /Tiệm & thợ quanh bạn/.test(body) && !/Việc gấp|Thợ rảnh|tuyển thợ|Đăng tin|Bảng tin/i.test(body) && ov <= 1, JSON.stringify({ ov, sample: body.slice(0, 220) }));
-  R.check("C6", "Thanh dưới của khách: Trang chủ · Mẫu nail · Tin nhắn · Tôi — không có Việc làm / Bảng tin", /Mẫu nail/.test(nav) && /Tôi/.test(nav) && !/Việc làm|Bảng tin|Tìm thợ/.test(nav), nav.replace(/\s+/g, " "));
+  // Tab cuối "Tôi" → "Tài khoản" (bản copy 11/2026)
+  R.check("C6", "Thanh dưới của khách: Trang chủ · Mẫu nail · Tin nhắn · Tài khoản — không có Việc làm / Bảng tin", /Trang chủ/.test(nav) && /Mẫu nail/.test(nav) && /Tin nhắn/.test(nav) && /Tài khoản/.test(nav) && !/Việc làm|Bảng tin|Tìm thợ/.test(nav), nav.replace(/\s+/g, " "));
 
   // Mẫu nail: khách thấy giá + tìm tiệm, KHÔNG thấy vật tư / các bước (thông tin nghề)
   const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
@@ -88,7 +89,10 @@ try {
   const salonTxt = await c.page.locator("main").innerText({ timeout: 20000 });
   await c.page.getByText("QA Gel-X khách test").first().waitFor({ timeout: 15000 }).catch(() => {});
   const salonTxt2 = await c.page.locator("main").innerText();
-  R.check("C8", "/salons: tiêu đề \"Tiệm & thợ nail quanh bạn\", thẻ thợ có dịch vụ + giá, nút \"Xem menu & đặt lịch\" / \"Nhắn hỏi mẫu\"", /Tiệm & thợ nail quanh bạn/.test(salonTxt) && /QA Gel-X khách test/.test(salonTxt2) && /\$55/.test(salonTxt2) && /(Xem )?menu & đặt lịch/i.test(salonTxt2) && /Nhắn hỏi mẫu/.test(salonTxt2), salonTxt2.slice(0, 200));
+  // Nút trên thẻ (bản copy 11/2026): "Menu & đặt lịch" → /menu/<thợ>, "Nhắn tin" (trước là "Nhắn hỏi mẫu") → /messages?to=<thợ>
+  const cardMenu = await c.page.locator(`main a[href="/menu/${tech.userId}"]`).filter({ hasText: /^Menu & đặt lịch$/ }).count();
+  const cardMsg = await c.page.locator(`main a[href="/messages?to=${tech.userId}"]`).filter({ hasText: /^Nhắn tin$/ }).count();
+  R.check("C8", "/salons: tiêu đề \"Tiệm & thợ nail quanh bạn\", thẻ thợ có dịch vụ + giá, nút \"Menu & đặt lịch\" / \"Nhắn tin\" đúng thợ", /Tiệm & thợ nail quanh bạn/.test(salonTxt) && /QA Gel-X khách test/.test(salonTxt2) && /\$55/.test(salonTxt2) && cardMenu > 0 && cardMsg > 0, JSON.stringify({ cardMenu, cardMsg, txt: salonTxt2.slice(0, 160) }));
 
   await c.page.goto(BASE_URL + "/profile");
   const acc = await c.page.locator("main").innerText({ timeout: 20000 });
@@ -103,15 +107,20 @@ try {
   const pub = await o.page.locator("main").innerText();
   R.check("C10", "Hồ sơ công khai của khách: thẻ gọn \"Khách PawNail\" + Nhắn tin (không phải khung hồ sơ thợ trống)", /Khách PawNail/.test(pub) && /Nhắn tin/.test(pub) && !/Portfolio|Kỹ năng/.test(pub), pub.slice(0, 160));
 
-  // Đăng ký: thẻ "Bạn đi làm nail?" → form khách
+  // Đăng ký (phase 1, 11/2026): danh sách vai trò, dòng "Tôi là khách làm nail" → form khách. Trang chủ khách: nút chính
+  // "Thử mẫu trên tay" (→ /tryon) + "Tìm tiệm" (→ /salons) thay cho lối "Bạn đi làm nail? Xem mẫu & tìm tiệm".
   const g = await browser.newContext({ ...devices["iPhone 13"], locale: "vi-VN" });
   const gp = await g.newPage();
   await gp.goto(BASE_URL + "/auth/register");
-  await gp.getByRole("button", { name: /Bạn đi làm nail/ }).click({ timeout: 20000 });
+  const clientRow = gp.locator('.pn-row[data-role="client"]');
+  await clientRow.waitFor({ timeout: 20000 });
+  const rowText = (await clientRow.innerText()).replace(/\s+/g, " ");
+  await clientRow.click();
   const formOk = await gp.getByText("Tài khoản khách làm nail").first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   await gp.goto(BASE_URL + "/");
-  const heroLink = await gp.getByRole("link", { name: /Bạn đi làm nail\? Xem mẫu & tìm tiệm/ }).count();
-  R.check("C11", "Khách mới: trang đăng ký có thẻ \"Bạn đi làm nail? (khách)\" → form khách; trang chủ có lối \"Bạn đi làm nail? Xem mẫu & tìm tiệm\"", formOk && heroLink > 0, JSON.stringify({ formOk, heroLink }));
+  const tryLink = await gp.locator('a[data-hero-cta="client"][href="/tryon"]').filter({ hasText: /Thử mẫu trên tay/ }).count();
+  const salonLink = await gp.locator('a[href="/salons"]').filter({ hasText: /^Tìm tiệm$/ }).count();
+  R.check("C11", "Khách mới: trang đăng ký có dòng \"Tôi là khách làm nail\" → form khách; trang chủ có lối \"Thử mẫu trên tay\" + \"Tìm tiệm\"", /Tôi là khách làm nail/.test(rowText) && formOk && tryLink > 0 && salonLink > 0, JSON.stringify({ rowText, formOk, tryLink, salonLink }));
 
   R.check("C12", "Không có lỗi JavaScript", c.errors.length === 0 && o.errors.length === 0, [...c.errors, ...o.errors].join(" | "));
 } finally {

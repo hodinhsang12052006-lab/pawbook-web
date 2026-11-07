@@ -152,7 +152,7 @@ try {
     await q.locator('input[type="password"]').fill("QaPass#2026");
     await q.getByRole("button", { name: /Tiếp tục khảo sát nhanh/ }).click();
     for (let i = 0; i < 5; i++) {
-      await q.locator("button.w-full.text-left").first().click();
+      await q.locator("button.pn-choice").first().click();
       await q.waitForTimeout(700);
     }
     await q.getByText("Tóm tắt khảo sát vận hành").waitFor({ timeout: 20000 });
@@ -252,12 +252,12 @@ try {
     await p.getByRole("button", { name: /Tiếp tục với Test OAuth/ }).click();
     const toComplete = await p.waitForURL(/\/auth\/complete/, { timeout: 30000 }).then(() => true).catch(() => false);
     R.check("OA2", "Đăng nhập OAuth lần đầu → trang 'Hoàn tất' (chọn vai trò, khu vực)", toComplete, p.url());
-    await p.getByText("Chào mừng bạn!").waitFor({ timeout: 15000 });
+    await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
     await p.screenshot({ path: TMP + "/launch_oauth_complete.png" });
     await p.goto(BASE_URL + "/?tab=jobs");
     const forced = await p.waitForURL(/\/auth\/complete/, { timeout: 15000 }).then(() => true).catch(() => false);
     R.check("OA3", "Chưa hoàn tất mà vào trang khác → bị đưa lại trang Hoàn tất", forced);
-    await p.getByText("Chào mừng bạn!").waitFor({ timeout: 15000 });
+    await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
     await p.getByRole("radio", { name: /Tôi là Chủ Tiệm/ }).click();
     await p.getByLabel(/Thành phố/).fill("Dallas");
     const st = await p.getByLabel("Bang").inputValue();

@@ -145,7 +145,7 @@ const jobId = (await db.execute(`SELECT id FROM "Job" LIMIT 1`)).rows[0].id;
   await q.locator("button").filter({ hasText: /khảo sát|survey/i }).first().click();
   record("khách khảo sát chủ tiệm", await harvest(q));
   for (let i = 0; i < 5; i++) {
-    await q.locator("button.w-full.text-left").first().click().catch(() => {});
+    await q.locator("button.pn-choice").first().click().catch(() => {});
     await q.waitForTimeout(700);
   }
   await q.waitForTimeout(4000);

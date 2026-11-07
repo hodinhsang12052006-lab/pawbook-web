@@ -111,7 +111,7 @@ const stamp = Date.now();
   await step("CHU", "Khảo sát", p, async () => { await p.getByRole("button", { name: /Tiếp tục khảo sát nhanh/ }).click(); await p.waitForTimeout(1200); }, { full: true });
   await step("CHU", "Bỏ qua khảo sát / chẩn đoán", p, async () => {
     const skip = p.getByRole("button", { name: /Bỏ qua khảo sát/ });
-    if (await skip.count()) await skip.click(); else for (let q = 0; q < 8; q++) { const o = p.locator("button.w-full.text-left").first(); if (!(await o.isVisible().catch(() => false))) break; await o.click(); await p.waitForTimeout(600); }
+    if (await skip.count()) await skip.click(); else for (let q = 0; q < 8; q++) { const o = p.locator("button.pn-choice").first(); if (!(await o.isVisible().catch(() => false))) break; await o.click(); await p.waitForTimeout(600); }
     await p.waitForTimeout(2500);
   }, { full: true });
   await step("CHU", "Vào app (danh sách thợ)", p, async () => {

@@ -109,7 +109,7 @@ try {
   await step("A4 Tiếp tục với Google → Hoàn tất", p, async () => {
     await p.getByRole("button", { name: /Tiếp tục với Test OAuth/ }).click();
     await p.waitForURL(/\/auth\/complete/, { timeout: 30000 });
-    await p.getByText("Chào mừng bạn!").waitFor({ timeout: 15000 });
+    await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
   });
   await step("A5 Chọn Thợ nail + khu vực", p, async () => {
     await p.getByRole("radio", { name: /Tôi là Thợ/ }).click();

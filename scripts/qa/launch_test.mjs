@@ -187,7 +187,11 @@ try {
     await p.goto(BASE_URL + "/?tab=feed");
     const card = p.getByRole("region", { name: "Bắt đầu với PawNail" });
     const cardOk = await card.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-    R.check("ON2", "Bảng tin: thẻ 'Bắt đầu với PawNail' 0/3 với 3 việc", cardOk && /0\/3/.test(await card.innerText()) && (await card.getByRole("link").count()) === 3);
+    // Điện thoại (V2.1, globals.css .pn-nudges): thẻ chỉ hiện BƯỚC TIẾP THEO — đủ 3 việc vẫn có trong thẻ, 2 việc sau ẩn;
+    // "0/3" ở tiêu đề. Kiểm tra: 3 việc, đúng 1 việc hiện (= việc đầu chưa xong), 0/3.
+    const onbSteps = cardOk ? await card.locator("ol > li").count() : 0;
+    const onbVisible = cardOk ? await card.getByRole("link").count() : 0;
+    R.check("ON2", "Bảng tin: thẻ 'Bắt đầu với PawNail' 0/3 với 3 việc (điện thoại: hiện bước tiếp theo)", cardOk && /0\/3/.test(await card.innerText()) && onbSteps === 3 && onbVisible === 1, JSON.stringify({ cardOk, onbSteps, onbVisible }));
     await p.screenshot({ path: TMP + "/launch_onboarding.png" });
     await p.goto(BASE_URL + "/?tab=jobs");
     const compact = await p.getByRole("link", { name: "Bắt đầu với PawNail" }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);

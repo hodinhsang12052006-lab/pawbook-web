@@ -5,7 +5,7 @@
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { chromium } from "playwright";
-import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, Results, fakeIp } from "./lib.mjs";
+import { BASE_URL, DEMO_PASSWORD, SEED_OWNER, Results, fakeIp, sendChat, pusherConfigured, PUSHER_CLIENT_MISSING } from "./lib.mjs";
 
 const R = new Results("UI flows");
 const SHOTS = new URL("./reports/flows/", import.meta.url);
@@ -22,8 +22,10 @@ async function newCtx() {
   return ctx;
 }
 const pageErrors = [];
+let pusherClientMissing = false; // trình duyệt báo thiếu khoá Pusher (build không có NEXT_PUBLIC_PUSHER_*)
 function watch(page, who) {
   page.on("pageerror", (e) => pageErrors.push(`${who}: ${e.message.slice(0, 200)}`));
+  page.on("console", (m) => { if (PUSHER_CLIENT_MISSING.test(m.text())) pusherClientMissing = true; });
   page.on("response", (r) => {
     if (r.url().startsWith(BASE_URL) && r.status() >= 500) pageErrors.push(`${who}: HTTP ${r.status()} ${r.url().replace(BASE_URL, "")}`);
   });
@@ -31,11 +33,22 @@ function watch(page, who) {
 async function step(id, desc, fn) {
   try {
     const detail = await fn();
+    if (detail === "skip") return R.skip(id, desc, "no Pusher keys");
     R.check(id, desc, detail !== false, detail === false ? "điều kiện không đạt" : "");
   } catch (e) {
     for (const [pg, who] of [[tp, "tech"], [op, "owner"]]) if (pg) await shot(pg, `FAIL_${id}_${who}`);
     R.check(id, desc, false, e.message.split("\n")[0]);
   }
+}
+
+// Ô soạn bài V2 thu gọn thành 1 hàng ("Khoe mẫu mới, tin tiệm…" — CreatePostComposer); bấm vào mới mở ô soạn đầy đủ.
+async function openComposer(page) {
+  const collapsed = page.getByRole("button", { name: /Khoe mẫu mới, tin tiệm/ });
+  await collapsed.waitFor({ timeout: 15000 });
+  await collapsed.click();
+  const box = page.getByPlaceholder(/Khoe tác phẩm móng mới/);
+  await box.waitFor({ timeout: 5000 });
+  return box;
 }
 
 const stamp = Date.now();
@@ -104,8 +117,7 @@ await step("F5", "Hồ sơ thợ đã lưu kỹ năng + ảnh portfolio", async 
 const postText = `QA bài đăng UI ${stamp}`;
 await step("F6", "Đăng bài lên bảng tin qua composer", async () => {
   await tp.goto(BASE_URL + "/?tab=feed");
-  const box = tp.getByPlaceholder(/Khoe tác phẩm móng mới/);
-  await box.waitFor({ timeout: 15000 });
+  const box = await openComposer(tp);
   await box.fill(postText);
   await tp.getByRole("button", { name: /^Đăng bài$/ }).click();
   await tp.getByText(postText).first().waitFor({ timeout: 15000 });
@@ -178,8 +190,8 @@ await step("F12", "Thợ mở chat với chủ tiệm (/messages?to=) và gửi 
   await tp.goto(BASE_URL + `/messages?to=${ownerId}`);
   const input = tp.locator("[data-chat-input]");
   await input.waitFor({ timeout: 20000 });
-  await input.fill("Chào anh, em muốn ứng tuyển ạ");
-  await input.press("Enter");
+  // Điện thoại: Enter = xuống dòng, gửi bằng nút Gửi (messenger V2)
+  await sendChat(tp, "Chào anh, em muốn ứng tuyển ạ");
   await tp.getByText("Chào anh, em muốn ứng tuyển ạ").last().waitFor({ timeout: 10000 });
   await shot(tp, "10_tech_chat");
 });
@@ -187,9 +199,7 @@ await step("F12", "Thợ mở chat với chủ tiệm (/messages?to=) và gửi 
 await step("F13", "Chủ tiệm nhận được tin và trả lời", async () => {
   await op.goto(BASE_URL + `/messages?to=${techId}`);
   await op.getByText("Chào anh, em muốn ứng tuyển ạ").last().waitFor({ timeout: 20000 });
-  const input = op.locator("[data-chat-input]");
-  await input.fill("OK em, mai ghé tiệm nhé");
-  await input.press("Enter");
+  await sendChat(op, "OK em, mai ghé tiệm nhé");
   await op.getByText("OK em, mai ghé tiệm nhé").last().waitFor({ timeout: 10000 });
   await shot(op, "11_owner_chat");
 });
@@ -250,8 +260,11 @@ await step("F19", "Đổi ảnh đại diện từ trang Tài khoản → % hoà
   await op.getByText("Đã đổi ảnh đại diện!").waitFor({ timeout: 20000 });
   const p = await (await ownerCtx.request.get(BASE_URL + "/api/profile")).json();
   await shot(op, "14_avatar_changed");
-  // Ảnh mới khác ảnh cũ, và mục "Ảnh đại diện" trong checklist đã tick.
-  const avatarItemDone = await op.locator("li", { hasText: "Ảnh đại diện / logo tiệm" }).first().evaluate((el) => el.className.includes("line-through"));
+  // Ảnh mới khác ảnh cũ, và mục "Ảnh đại diện" trong checklist đã tick. Checklist V2 gom mục đã xong vào dòng
+  // "N/6 mục đã xong" (bấm để xem): mục ảnh KHÔNG còn trong danh sách việc cần làm, mở ra thì thấy đã gạch.
+  const todo = await op.locator("li", { hasText: "Ảnh đại diện / logo tiệm" }).count();
+  await op.getByRole("button", { name: /mục đã xong/ }).click();
+  const avatarItemDone = todo === 0 && (await op.locator("li", { hasText: "Ảnh đại diện / logo tiệm" }).first().evaluate((el) => el.className.includes("line-through")));
   return p.avatarUrl !== beforeUrl && !p.avatarUrl.includes("dicebear") && avatarItemDone;
 });
 
@@ -312,8 +325,7 @@ await step("F22", "Trang đăng ký: 3 vai trò trong 1 danh sách; FAQ ở tran
 await step("F23", "Menu ⋮: tự xóa bài của mình → bài biến khỏi bảng tin", async () => {
   const text = `QA bài sẽ xóa ${Date.now()}`;
   await op.goto(BASE_URL + "/?tab=feed");
-  const box = op.getByPlaceholder(/Khoe tác phẩm móng mới/);
-  await box.waitFor({ timeout: 15000 });
+  const box = await openComposer(op);
   await box.fill(text);
   await op.getByRole("button", { name: /^Đăng bài$/ }).click();
   const card = op.locator("article").filter({ hasText: text }).first();
@@ -382,11 +394,17 @@ await step("F26", "Job board: lưu tin → khi ≥2 người lưu thì hiện 'N
   await card2.getByText(/\d+ người đã lưu/).waitFor({ timeout: 10000 });
 });
 
-await step("F27", "Mobile: hàng thẻ Công cụ hiện trên trang chủ", async () => {
+// Hàng lối tắt V2: đúng 5 ô (việc chính theo vai trò + 3 công cụ + "Tất cả công cụ" → /tools có đủ Nail Radar, Xu hướng…).
+await step("F27", "Mobile: hàng thẻ Công cụ hiện trên trang chủ (ô chính theo vai trò + 'Tất cả công cụ' → /tools có Nail Radar)", async () => {
   await op.goto(BASE_URL + "/");
   const row = op.getByRole("navigation", { name: "Công cụ" });
-  await row.getByRole("link", { name: /Nail Radar/ }).waitFor({ timeout: 15000 });
+  await row.getByRole("link", { name: /Đăng tin tuyển thợ/ }).waitFor({ timeout: 15000 });
+  const tiles = await row.getByRole("link").count();
   await shot(op, "19_mobile_tools");
+  await row.getByRole("link", { name: /Tất cả công cụ/ }).click();
+  await op.waitForURL(/\/tools$/, { timeout: 15000 });
+  await op.getByRole("navigation", { name: "Công cụ" }).getByRole("link", { name: /Nail Radar/ }).waitFor({ timeout: 15000 });
+  return tiles === 5;
 });
 
 await step("F28", "Tin nhắn: xem trước tin cuối + giờ, tìm kiếm hoạt động, header có 'Xem hồ sơ', không còn chấm online giả", async () => {
@@ -411,6 +429,9 @@ await step("F28", "Tin nhắn: xem trước tin cuối + giờ, tìm kiếm ho�
 });
 
 await step("F29", "Realtime 2 người: online thật, 'Đang soạn tin', badge chưa đọc, 'Đã xem'", async () => {
+  // Online / đang soạn / đã xem / tin tới ngay đều đi qua Pusher. Không có khoá (máy local) → chỉ kiểm tra phần không
+  // cần realtime (badge chưa đọc ở danh sách, F29a) rồi SKIP phần realtime — không báo lỗi oan.
+  const realtime = !pusherClientMissing && (await pusherConfigured(ownerCtx.request));
   // Thợ seed (khác người đã dùng ở các bước trước) — đăng nhập ở context riêng.
   const techCtx2 = await newCtx();
   const csrf = await (await techCtx2.request.get(BASE_URL + "/api/auth/csrf")).json();
@@ -428,8 +449,14 @@ await step("F29", "Realtime 2 người: online thật, 'Đang soạn tin', badge
   await op.goto(BASE_URL + "/messages");
   const row = op.getByRole("button", { name: new RegExp(techUser.name) }).first();
   await row.waitFor({ timeout: 15000 });
-  const badgeText = await row.locator("span.rounded-full").filter({ hasText: /^\d+$/ }).first().textContent({ timeout: 10000 });
+  // Messenger V2: badge số chưa đọc = span.m-badge ở dòng hội thoại
+  const badgeText = await row.locator(".m-badge").filter({ hasText: /^\d+$/ }).first().textContent({ timeout: 10000 });
   if (!badgeText || Number(badgeText) < 1) throw new Error("không thấy badge chưa đọc");
+  R.check("F29a", "Danh sách tin nhắn: hội thoại có tin mới hiện badge số chưa đọc", true);
+  if (!realtime) {
+    await techCtx2.close();
+    return "skip";
+  }
 
   // Thợ mở app (vào kênh presence của mình) → chủ tiệm thấy "Đang hoạt động".
   await t2.goto(BASE_URL + `/messages?to=${ownerId}`);
@@ -443,9 +470,7 @@ await step("F29", "Realtime 2 người: online thật, 'Đang soạn tin', badge
 
   // Chủ tiệm trả lời → thợ đang mở hội thoại (tự đánh dấu đã đọc) → chủ tiệm thấy "Đã xem".
   const reply = `OK em ${Date.now()}`;
-  const input = op.locator("[data-chat-input]");
-  await input.fill(reply);
-  await input.press("Enter");
+  await sendChat(op, reply);
   await t2.getByText(reply).last().waitFor({ timeout: 15000 });
   await op.getByText("Đã xem").filter({ visible: true }).first().waitFor({ timeout: 20000 });
   await shot(op, "21_realtime_owner");
@@ -470,6 +495,16 @@ await step("F30", "Chuông 🔔: người khác thích bài của mình → badg
   const csrf = await (await liker.request.get(BASE_URL + "/api/auth/csrf")).json();
   await liker.request.post(BASE_URL + "/api/auth/callback/credentials", { form: { csrfToken: csrf.csrfToken, email: "tech8.us@pawnailjobs.demo", password: DEMO_PASSWORD, json: "true" } });
   await liker.request.post(BASE_URL + `/api/posts/${postId}/like`);
+  if (pusherClientMissing || !(await pusherConfigured(ownerCtx.request))) {
+    // Không có khoá Pusher: badge không thể tăng "tức thì". Vẫn kiểm tra thông báo đã được lưu: tải lại → badge + dòng thông báo.
+    await op.reload();
+    await op.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ }).waitFor({ timeout: 15000 });
+    await op.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ }).click();
+    await op.getByRole("dialog", { name: "Thông báo" }).getByText(/đã thích bài viết của bạn/).first().waitFor({ timeout: 10000 });
+    R.check("F30a", "Chuông 🔔 (tải lại trang): người khác thích bài → badge chưa đọc + dòng 'đã thích bài viết của bạn'", true);
+    await liker.close();
+    return "skip";
+  }
   await op.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ }).waitFor({ timeout: 15000 });
   await op.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ }).click();
   await op.getByRole("dialog", { name: "Thông báo" }).getByText(/đã thích bài viết của bạn/).first().waitFor({ timeout: 10000 });

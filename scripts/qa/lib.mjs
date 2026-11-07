@@ -94,9 +94,34 @@ export class Results {
     this.rows.push({ id, desc, pass: !!pass, detail: String(detail).slice(0, 300) });
     console.log(`${pass ? "✅" : "❌"} [${id}] ${desc}${pass ? "" : "  → " + detail}`);
   }
+  /** Không chạy được vì MÔI TRƯỜNG (VD máy local không có khoá Pusher) — không tính là lỗi, nhưng in rõ lý do. */
+  skip(id, desc, reason) {
+    this.rows.push({ id, desc, pass: true, skipped: true, detail: String(reason).slice(0, 300) });
+    console.log(`⏭️  [${id}] ${desc}  → SKIP (${reason})`);
+  }
   summary() {
     const failed = this.rows.filter((r) => !r.pass);
-    console.log(`\n${this.name}: ${this.rows.length - failed.length}/${this.rows.length} PASS`);
-    return { name: this.name, total: this.rows.length, failed: failed.length, rows: this.rows };
+    const skipped = this.rows.filter((r) => r.skipped).length;
+    const ran = this.rows.length - skipped;
+    console.log(`\n${this.name}: ${ran - failed.length}/${ran} PASS${skipped ? ` · ${skipped} SKIP` : ""}`);
+    return { name: this.name, total: this.rows.length, failed: failed.length, skipped, rows: this.rows };
   }
 }
+
+/** Ô soạn tin nhắn (textarea [data-chat-input]): điện thoại (chạm) Enter = xuống dòng, gửi bằng nút "Gửi tin nhắn"
+ *  (components/chat/MessagesContent.tsx). Máy tính: Enter vẫn gửi. Điền + bấm nút → đúng ở cả hai. */
+export async function sendChat(page, text) {
+  const input = page.locator("[data-chat-input]").filter({ visible: true }).first();
+  await input.fill(text);
+  await page.getByRole("button", { name: /^(Gửi tin nhắn|Send message)$/ }).first().click();
+}
+
+/** Realtime (Pusher) có cấu hình trên máy chủ này không? `request` = APIRequestContext ĐÃ đăng nhập
+ *  (/api/pusher/auth trả 503 khi thiếu PUSHER_APP_ID/KEY/SECRET/CLUSTER). Máy local thường không có khoá → các bước
+ *  cần realtime in "SKIP (no Pusher keys)" thay vì báo lỗi. */
+export async function pusherConfigured(request) {
+  const r = await request.post(BASE_URL + "/api/pusher/auth", { form: { socket_id: "1.1", channel_name: "private-qa-probe" } });
+  return r.status() !== 503;
+}
+/** Trình duyệt báo thiếu khoá Pusher phía client (NEXT_PUBLIC_PUSHER_APP_KEY / CLUSTER lúc build). */
+export const PUSHER_CLIENT_MISSING = /Thiếu cấu hình Pusher Client/;

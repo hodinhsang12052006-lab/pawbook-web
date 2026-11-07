@@ -49,7 +49,8 @@ async function ui(email, password) {
 try {
   const c = await ui(reg.body.email, reg.body.password);
   await c.page.goto(BASE_URL + "/");
-  await c.page.getByText(/Chào .*💅/).first().waitFor({ timeout: 20000 });
+  // Lời chào (bản copy chuyên nghiệp 11/2026 bỏ 💅): <h1> "Chào <tên>"
+  await c.page.getByRole("heading", { level: 1, name: /^Chào / }).first().waitFor({ timeout: 20000 });
   await c.page.waitForTimeout(1500);
   const body = await c.page.locator("main").innerText();
   // Thẻ THỬ MẪU đầu trang: ảnh trước / sau thật (tải được), dẫn tới /tryon, nói rõ "soi tông da + dáng móng"
@@ -58,12 +59,13 @@ try {
     const imgs = [...a.querySelectorAll("img")];
     return { href: a.getAttribute("href"), imgs: imgs.length, loaded: imgs.every((i) => i.complete && i.naturalWidth > 100), text: a.textContent || "" };
   }).catch(() => null);
-  R.check("C13", "Trang chủ khách mở đầu bằng thẻ Thử mẫu: ảnh trước / sau thật (cả 2 tải được), \"Chụp tay — xem mẫu hợp với BẠN\", dẫn tới /tryon",
-    !!heroOk && heroOk.href === "/tryon" && heroOk.imgs === 2 && heroOk.loaded && /Chụp tay/.test(heroOk.text) && /tông da/.test(heroOk.text), JSON.stringify(heroOk));
+  R.check("C13", "Trang chủ khách mở đầu bằng thẻ Thử mẫu: ảnh trước / sau thật (cả 2 tải được), \"Thử những mẫu hợp với tay bạn\" + chụp 1 ảnh soi tông da, dẫn tới /tryon",
+    !!heroOk && heroOk.href === "/tryon" && heroOk.imgs === 2 && heroOk.loaded && /mẫu hợp với tay bạn/.test(heroOk.text) && /Chụp một ảnh/.test(heroOk.text) && /tông da/.test(heroOk.text), JSON.stringify(heroOk));
   const nav = await c.page.locator("nav").last().innerText().catch(() => "");
   const ov = await c.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  R.check("C5", "Trang chủ khách: lời chào, Mẫu trend / Tiệm gần bạn / Mẫu đã lưu, khối \"Tiệm & thợ quanh bạn\"; KHÔNG có Việc gấp / Thợ rảnh / tuyển thợ / Bảng tin nghề; không tràn ngang",
-    /Mẫu trend/.test(body) && /Tiệm gần bạn/.test(body) && /Tiệm & thợ quanh bạn/.test(body) && !/Việc gấp|Thợ rảnh|tuyển thợ|Đăng tin|Bảng tin/i.test(body) && ov <= 1, JSON.stringify({ ov, sample: body.slice(0, 220) }));
+  // Lối tắt (bản copy 11/2026): "Mẫu nail" (trước là "Mẫu trend") · Tiệm gần bạn · Mẫu đã lưu
+  R.check("C5", "Trang chủ khách: lời chào, Mẫu nail / Tiệm gần bạn / Mẫu đã lưu, khối \"Tiệm & thợ quanh bạn\"; KHÔNG có Việc gấp / Thợ rảnh / tuyển thợ / Bảng tin nghề; không tràn ngang",
+    /^Chào /m.test(body) && /Mẫu nail/.test(body) && /Tiệm gần bạn/.test(body) && /Mẫu đã lưu/.test(body) && /Tiệm & thợ quanh bạn/.test(body) && !/Việc gấp|Thợ rảnh|tuyển thợ|Đăng tin|Bảng tin/i.test(body) && ov <= 1, JSON.stringify({ ov, sample: body.slice(0, 220) }));
   R.check("C6", "Thanh dưới của khách: Trang chủ · Mẫu nail · Tin nhắn · Tôi — không có Việc làm / Bảng tin", /Mẫu nail/.test(nav) && /Tôi/.test(nav) && !/Việc làm|Bảng tin|Tìm thợ/.test(nav), nav.replace(/\s+/g, " "));
 
   // Mẫu nail: khách thấy giá + tìm tiệm, KHÔNG thấy vật tư / các bước (thông tin nghề)

@@ -33,8 +33,8 @@ const protectedCalls = [
   ["POST", "/api/report", { userId: "x", reason: "x" }],
   ["POST", "/api/reviews", { targetUserId: "x" }],
   ["POST", "/api/unlock", { technicianUserId: "x" }],
-  ["POST", "/api/zego/token", { roomId: "call-a-b" }],
   ["POST", "/api/calls", { targetId: "x", action: "offer" }],
+  ["GET", "/api/calls/ice"],
   ["POST", "/api/supply", { title: "x" }],
   ["GET", "/api/jobs/saved"],
   ["POST", "/api/messages/seen", { conversationId: "x" }],
@@ -139,8 +139,29 @@ let convId;
     headers: { "content-type": "application/x-www-form-urlencoded" },
   });
   R.check("Z13", "Pusher: nghe lén kênh chat của người khác → 403", r.status === 403, `status=${r.status}`);
-  const z = await owner2.req("/api/zego/token", { method: "POST", json: { roomId: `call-${owner.userId}-${tech.userId}` } });
-  R.check("Z14", "Zego: xin token vào phòng gọi người khác → 403", z.status === 403, `status=${z.status}`);
+  // Cuộc gọi WebRTC tự dựng: mọi tín hiệu sau "offer" phải mang call token của ĐÚNG cuộc gọi đó.
+  const sdp = { type: "offer", sdp: "v=0
+" };
+  const sig = (c, extra) => c.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "signal", callId: "zz14call", fromLeg: "leg-aaaa", toLeg: "leg-bbbb", seq: 0, kind: "sdp", data: sdp, ...extra } });
+  const noTok = await sig(owner2, {});
+  R.check("Z14", "Calls: gửi tín hiệu (SDP) không có call token → 403", noTok.status === 403, `status=${noTok.status}`);
+  const offer = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "audio", callId: "zz14call" } });
+  const tok = offer.data?.callToken;
+  const stolen = await sig(owner2, { callToken: tok });
+  R.check("Z14b", "Calls: dùng call token của cuộc gọi NGƯỜI KHÁC → 403", offer.status === 200 && !!tok && stolen.status === 403, `offer=${offer.status} stolen=${stolen.status}`);
+  const wrongCall = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject", callId: "otherid1", callToken: tok, reason: "cancel" } });
+  R.check("Z14c", "Calls: token đúng người nhưng sai callId → 403", wrongCall.status === 403, `status=${wrongCall.status}`);
+  const big = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "signal", callId: "zz14call", callToken: tok, fromLeg: "leg-aaaa", toLeg: "leg-bbbb", seq: 1, kind: "sdp", data: { type: "offer", sdp: "a=x
+".repeat(6000) } } });
+  R.check("Z14d", "Calls: SDP quá lớn (> 24KB) → 413", big.status === 413, `status=${big.status}`);
+  const self = await owner.req("/api/calls", { method: "POST", json: { targetId: owner.userId, action: "offer", callType: "audio" } });
+  R.check("Z14e", "Calls: tự gọi chính mình → 400", self.status === 400, `status=${self.status}`);
+  const ghost = await owner.req("/api/calls", { method: "POST", json: { targetId: "cnotarealuser000000000000", action: "offer", callType: "audio" } });
+  R.check("Z14f", "Calls: gọi người không tồn tại → 404 (hoặc 503 khi server không có realtime)", ghost.status === 404 || ghost.status === 503, `status=${ghost.status}`);
+  await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject", callId: "zz14call", callToken: tok, reason: "cancel" } });
+  const ice = await owner.req("/api/calls/ice");
+  const iceJson = JSON.stringify(ice.data || {});
+  R.check("Z14g", "Calls: /api/calls/ice → 200, no-store, không lộ khoá TURN/Cloudflare", ice.status === 200 && Array.isArray(ice.data?.iceServers) && /no-store/.test(ice.headers.get("cache-control") || "") && !/CLOUDFLARE|API_TOKEN|TURN_SECRET/i.test(iceJson), `status=${ice.status} ${iceJson.slice(0, 120)}`);
 }
 {
   const p = await owner2.req(`/api/profile?id=${owner.userId}`);

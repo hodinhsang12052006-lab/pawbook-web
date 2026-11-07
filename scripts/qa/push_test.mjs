@@ -104,10 +104,10 @@ try {
   R.check("PU8", "Người gửi KHÔNG nhận push tin của chính mình", !inbox.some((m) => m.device === ownerPhone.name), inbox.map((m) => m.device).join());
 
   // Cuộc gọi
-  await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "video", callId: "qapush1" } });
+  const offer = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "video", callId: "qapush1" } });
   const call = await waitPush(phone, (p) => p.tag === "pn-call");
   R.check("PU9", "Cuộc gọi đến → push 'Cuộc gọi video đến' / 'Incoming video call' (theo ngôn ngữ người nhận), mở chat với người gọi", call && /Cuộc gọi video|Incoming video call/.test(call.p.title) && call.p.url === `/messages?to=${owner.userId}`, JSON.stringify(call?.p));
-  await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject" } });
+  await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject", reason: "cancel", callId: offer.data?.callId, callToken: offer.data?.callToken } });
 
   // Việc gấp cùng bang
   const me = (await tech.req("/api/profile")).data;

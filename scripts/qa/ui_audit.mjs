@@ -19,7 +19,7 @@ const VIEWPORTS = {
 // Lỗi bên thứ 3 không thuộc app (không có mạng tới dịch vụ ngoài khi test local…)
 // https://localhost: CSP upgrade-insecure-requests nâng prefetch lên https khi
 // chạy http local — không xảy ra trên production (đã https).
-const IGNORE = [/https:\/\/localhost/, /sentry\.io/, /pusher/i, /sockjs/i, /favicon/, /dicebear/, /zego/i, /giphy/i, /ERR_ABORTED/, /tenor\.com/];
+const IGNORE = [/https:\/\/localhost/, /sentry\.io/, /pusher/i, /sockjs/i, /favicon/, /dicebear/, /giphy/i, /ERR_ABORTED/, /tenor\.com/];
 
 async function apiLogin(context, email) {
   const csrf = await (await context.request.get(BASE_URL + "/api/auth/csrf", { headers: { "cf-connecting-ip": context._qaIp } })).json();

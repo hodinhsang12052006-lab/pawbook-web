@@ -20,7 +20,7 @@ import { officialAvatarUrl } from "@/lib/brand";
 import { UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
-import { preloadCallSdk, preloadCallSdkWhenIdle, probeCalls } from "@/lib/callPreload";
+import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
 import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon, Sparkles as SparklesIcon, X as XIcon, ChevronDown, SendHorizontal } from "lucide-react";
 import MediaLightbox from "@/components/ui/MediaLightbox";
@@ -1765,7 +1765,6 @@ export default function MessagesContent({
   useEffect(() => {
     if (activeChat && !activeChat.isGroup && !bubble) {
       preloadCallSdkWhenIdle();
-      probeCalls(); // gọi được chưa (1 lần / phiên) — bấm gọi khi dịch vụ chưa cấu hình thì báo ngay, không đổ chuông bên kia
     }
   }, [activeChat?.id, activeChat?.isGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 

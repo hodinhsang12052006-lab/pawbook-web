@@ -349,7 +349,9 @@ body {
 .pn-bubble-me { background: var(--color-pn-brand); color: #fff; box-shadow: none; }
 .pn-bubble-them { background: var(--color-pn-bubble); border: 0; box-shadow: none; color: var(--color-pn-text); }
 @keyframes pn-in { from { opacity: 0; transform: translate3d(0, 6px, 0) scale(.98); } to { opacity: 1; transform: none; } }
-.pn-in-me, .pn-in-them { animation: pn-in .18s cubic-bezier(.23, 1, .32, 1) both; }
+/* backwards (không phải both): chạy xong thì KHÔNG giữ transform — trước đây mỗi tin mới giữ mãi 1 transform (lớp compositor
+   riêng cho từng bong bóng, khung chứa cho mọi lớp fixed bên trong) → máy yếu cuộn / bàn phím mở thì bong bóng vẽ lệch. */
+.pn-in-me, .pn-in-them { animation: pn-in .18s cubic-bezier(.23, 1, .32, 1) backwards; }
 .pn-in-me { transform-origin: bottom right; }
 .pn-in-them { transform-origin: bottom left; }
 

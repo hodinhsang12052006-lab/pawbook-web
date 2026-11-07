@@ -14,8 +14,8 @@ import { LEG_RE, chunkSerialized, isSeq, validateSignalData, type SignalEvent } 
 // see app/api/pusher/auth). `fromId` is always set by the SERVER from the session, never by the client.
 //
 // actions:
-//   offer  {targetId, callType, callId?}            → "incoming-call" (+ push "pn-call"); returns {callId, callToken}
-//   ring   {targetId, callId, callToken}             → "incoming-call" again, no push (caller re-rings every few
+//   offer  {targetId, callType, callId?, leg}       → "incoming-call" (+ push "pn-call"); returns {callId, callToken}
+//   ring   {targetId, callId, callToken, leg}        → "incoming-call" again, no push (caller re-rings every few
 //                                                      seconds so a phone that opens PawNail from the push still rings)
 //   accept {targetId, callId, callToken, leg, socketId?} → "call-accepted" to the caller + "call-handled" to the
 //                                                      callee's OTHER devices (they stop ringing)
@@ -81,6 +81,8 @@ export async function POST(req: Request) {
     const target = chatChannelName(targetId);
     const own = chatChannelName(userId);
     const socketId = typeof body.socketId === "string" && SOCKET_ID_RE.test(body.socketId) ? body.socketId : undefined;
+    // The caller's device ("leg"): the callee sends its WebRTC signals to exactly that tab / phone.
+    const leg = typeof body.leg === "string" && LEG_RE.test(body.leg) ? body.leg : null;
 
     // ---------- offer (start ringing) ----------
     if (action === "offer") {
@@ -105,6 +107,7 @@ export async function POST(req: Request) {
         callType,
         callId,
         callToken,
+        callerLeg: leg,
       });
       // Cuộc gọi luôn 1-1 → ?to=<người gọi> đúng. Kênh Android "calls" (ưu tiên cao). after(): không bị Vercel cắt giữa chừng.
       const push = {
@@ -156,6 +159,7 @@ export async function POST(req: Request) {
         callType: claims.t,
         callId: claims.i,
         callToken: body.callToken,
+        callerLeg: leg,
         ring: true,
       });
       return NextResponse.json({ success: true });
@@ -165,8 +169,7 @@ export async function POST(req: Request) {
 
     if (action === "accept") {
       if (iAmCaller) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
-      const leg = body.leg;
-      if (typeof leg !== "string" || !LEG_RE.test(leg)) return err(400, "Thiếu hoặc sai thông tin cuộc gọi.", "Missing or invalid call fields.");
+      if (!leg) return err(400, "Thiếu hoặc sai thông tin cuộc gọi.", "Missing or invalid call fields.");
       await Promise.all([
         pusher.trigger(target, "call-accepted", { fromId: userId, callId: claims.i, leg }),
         // Các máy KHÁC của chính mình ngừng đổ chuông (máy vừa nghe bị loại trừ bằng socket_id).

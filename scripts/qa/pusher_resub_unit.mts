@@ -255,9 +255,27 @@ for (const [id, modes, label] of [
   auth.plan = ["500", "500", "500", "500", "500", "500"];
   const name = "private-chat-i11";
   const ch = keeper!.acquire(name)!;
-  await until(() => auth.calls >= 6, 30000);
-  const back = await until(() => ch.subscribed, 25000);
+  // worst case: 1 + 2 + 4 + 8 + 16 s until the 6th failure, then the capped 15-30 s step before the 7th try
+  await until(() => auth.calls >= 6, 45000);
+  const back = await until(() => ch.subscribed, 35000);
   ok("I11", "6 failures in a row → exactly 1 report, still recovers (backoff capped)", reports.length === 1 && !!back, { reports, calls: auth.calls, back: !!back });
+  keeper!.destroy();
+  client.disconnect();
+}
+
+// I12 — wake('resume') on a HEALTHY socket: ping answered (pong) → no needless reconnect / re-auth on every resume
+{
+  const { client, keeper, auth } = makeClient();
+  await connected(client);
+  const name = "private-chat-i12";
+  keeper!.acquire(name);
+  await subscribedAt(name);
+  const sid = client.connection.socket_id;
+  const calls = auth.calls;
+  keeper!.wake("resume", { longHidden: true });
+  await sleep(1600); // > wakePingMs (1000 in this test)
+  ok("I12", "wake('resume') on a live socket: pong comes back → same socket, no reconnect, no extra auth",
+    client.connection.socket_id === sid && auth.calls === calls && !keeper!.log.some((l) => l.ev === "ping-timeout"), { sid, now: client.connection.socket_id, calls, after: auth.calls });
   keeper!.destroy();
   client.disconnect();
 }

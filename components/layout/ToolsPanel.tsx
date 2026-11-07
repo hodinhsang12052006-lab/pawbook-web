@@ -147,7 +147,9 @@ export default function ToolsPanel({ variant, compact = false }: { variant: "lis
           </span>
           <span className="min-w-0 flex-1" title={compact ? stat : undefined}>
             <span className="block truncate text-[13px] font-semibold text-slate-100">{label}</span>
-            {!compact && <span className="block truncate text-[11px] text-slate-500 group-hover:text-slate-400">{stat}</span>}
+            {/* compact (guest first paint): no subtitle — a device that was signed in before (html[data-authed]) keeps it,
+                so the member sidebar does not grow after the session loads */}
+            <span className={`${compact ? "hidden [html[data-authed]_&]:block" : "block"} truncate text-[11px] text-slate-500 group-hover:text-slate-400`}>{stat}</span>
           </span>
           {!!badge && badge > 0 ? (
             <span className="rounded-full bg-pink-600 px-1.5 text-[10px] font-bold text-white">{badge > 9 ? "9+" : badge}</span>

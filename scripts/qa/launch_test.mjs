@@ -369,8 +369,8 @@ try {
         rs.android?.priority === "high" && rs.android?.ttl === "86400s" && !rs.android?.collapse_key && !rs.android?.notification && JSON.stringify({ message: rs }).length < 3500,
       JSON.stringify(rs).slice(0, 300));
     const lg = [legacy, junkBuild].map((tok) => fcm.sends.find((x) => x.m.token === tok)?.m);
-    R.check("NP9", "Bản app cũ (build 2) / chưa rõ build → vẫn dạng notification như cũ + kênh 'general', link ?c=<id>",
-      lg.every((m) => m && m.notification?.body === text2 && m.android?.notification?.channel_id === "general" && m.data?.url === `/messages?c=${cid}` && !m.data?.type),
+    R.check("NP9", "Bản app cũ (build 2) / chưa rõ build → vẫn dạng notification như cũ + kênh 'messages' (app cũ chưa có kênh → FCM tự về kênh mặc định), link ?c=<id>",
+      lg.every((m) => m && m.notification?.body === text2 && m.android?.notification?.channel_id === "messages" && m.data?.url === `/messages?c=${cid}` && !m.data?.type),
       JSON.stringify(lg.map((m) => m && { n: m.notification, a: m.android, d: m.data })).slice(0, 300));
 
     // Nhóm: link mở đúng NHÓM (trước đây ?to=<người gửi> → mở chat riêng), tiêu đề = tên nhóm.
@@ -400,8 +400,9 @@ try {
     const seenAgain = await t.client.req("/api/messages/seen", { method: "POST", json: { conversationId: gid } });
     await sleep(2000);
     const rd2 = fcm.sends.filter((x) => x.m.data?.type === "read");
-    R.check("NP11", "Đánh dấu đã đọc → data-only {type:read, cid} tới máy build 3 của chính mình (không tới bản cũ, không notification); đọc lại khi không có tin mới → không gửi",
-      seen.status === 200 && seenAgain.status === 200 && rd.length === 1 && rd[0].m.token === rich && rd[0].m.data.cid === gid && !rd[0].m.notification && rd[0].m.android?.priority === "normal" && rd2.length === 1,
+    R.check("NP11", "Đánh dấu đã đọc → data-only {type:read, cid, ts = mốc đọc} tới máy build 3 của chính mình (không tới bản cũ, không notification); đọc lại khi không có tin mới → không gửi",
+      seen.status === 200 && seenAgain.status === 200 && rd.length === 1 && rd[0].m.token === rich && rd[0].m.data.cid === gid && /^\d{13}$/.test(rd[0].m.data.ts) &&
+        Math.abs(Number(rd[0].m.data.ts) - Date.parse(seen.data?.seenAt)) < 5 && !rd[0].m.notification && rd[0].m.android?.priority === "normal" && rd2.length === 1,
       JSON.stringify(rd.map((x) => ({ tok: x.m.token.slice(0, 8), d: x.m.data, a: x.m.android })).concat([{ again: rd2.length }])).slice(0, 300));
 
     // Cuộc gọi → kênh "calls" (dạng notification, kể cả máy build 3).

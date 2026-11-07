@@ -13,6 +13,10 @@
 //   NC8  bong bóng: link hồ sơ → tải trang thật (app native bắt được), không điều hướng phía client
 //   NC9  ?c=<id> khi đang mở chat khác → chuyển đúng cuộc trò chuyện
 //   NC10 ?c=<id> chưa có trong danh sách đã tải → tải riêng rồi mở
+//   NC12 link ?bubble=1 gửi trong tin nhắn KHÔNG bật chế độ bong bóng ở trình duyệt / app chính (chỉ User-Agent)
+//   NC13 bong bóng thiếu ?c= → màn "Couldn't open this conversation" + nút "Open PawNail" (không quay mãi)
+//   NC14 app: bấm thông báo khi app đang chạy → window.__pawnailOpenUrl chuyển trang mềm (không tải lại), path lạ → false
+//   NC15 app: Đăng xuất → gỡ token khỏi tài khoản (DELETE), PawNailNative.clearAll(); đăng nhập lại → tự đăng ký lại
 // Server: bash <script giống scripts/qa/start-launch-server.sh> (cần FIREBASE_SERVICE_ACCOUNT + FCM_ALLOW_TEST để máy chủ
 // báo nativeEnabled). DB: QA_DB_URL=file:… (cùng DB với server).
 //   BASE_URL=http://localhost:3000 QA_DB_URL=file:/path/qa.db node scripts/qa/native_chat_ui_test.mjs
@@ -64,12 +68,12 @@ function fakeAndroid(cfg) {
   } catch {}
   const st = (window.__pn = { calls: [], listeners: {}, perm: saved || cfg.perm });
   const H = (name, promises, callbacks = []) => ({ name, methods: [...promises.map((n) => ({ name: n, rtype: "promise" })), ...callbacks.map((n) => ({ name: n, rtype: "callback" }))] });
-  const nativeMethods = cfg.legacy ? ["getInfo"] : ["getInfo", "setActiveConversation", "clearConversation", "openBubbleSettings", "openNotificationSettings"];
+  const nativeMethods = cfg.legacy ? ["getInfo"] : ["getInfo", "setActiveConversation", "clearConversation", "clearAll", "openBubbleSettings", "openNotificationSettings"];
   const fire = (ev, data) => (st.listeners["PushNotifications:" + ev] || []).forEach((cb) => cb(data));
   window.Capacitor = {
     PluginHeaders: [
       H("App", ["getInfo", "getLaunchUrl", "getState", "minimizeApp", "exitApp", "removeAllListeners"], ["addListener", "removeListener"]),
-      H("PushNotifications", ["register", "unregister", "checkPermissions", "requestPermissions", "removeAllListeners"], ["addListener", "removeListener"]),
+      H("PushNotifications", ["register", "unregister", "checkPermissions", "requestPermissions", "removeAllListeners", "removeAllDeliveredNotifications"], ["addListener", "removeListener"]),
       H("PawNailNative", nativeMethods),
     ],
     nativePromise(plugin, method, options) {
@@ -273,6 +277,8 @@ try {
         list: shown(".m-list"),
         back: !!document.querySelector('[aria-label="Back to chats"]'),
         call: !!document.querySelector('[title="Secure voice call"], [title="Live video call"]'),
+        // Lớp phủ toàn app (lời mời, toast, thanh dưới…) không chỉ bị ẩn mà KHÔNG được mount trong bong bóng.
+        overlaysMounted: [...document.querySelectorAll("[data-bubble-hide]")].reduce((n, el) => n + el.childElementCount, 0),
       };
     });
     await p.screenshot({ path: TMP + "/native_chat_bubble.png" });
@@ -284,7 +290,7 @@ try {
     await sleep(2500);
     const got = (await db.execute({ sql: `SELECT COUNT(*) n FROM "Message" WHERE conversationId = ? AND body = ? AND senderId = ?`, args: [dmId, text, tech.userId] })).rows[0].n;
     R.check("NC7", "Bong bóng: chỉ khung chat (html[data-bubble], không Navbar / thanh dưới / danh sách / nút quay lại / nút gọi) và gửi được tin",
-      ready && state.bubbleAttr && !state.header && !state.bnav && !state.list && !state.back && !state.call && Number(got) === 1, JSON.stringify({ ready, ...state, got }));
+      ready && state.bubbleAttr && !state.header && !state.bnav && !state.list && !state.back && !state.call && state.overlaysMounted === 0 && Number(got) === 1, JSON.stringify({ ready, ...state, got }));
 
     // Link hồ sơ trong khung chat → tải trang thật (app native chuyển sang app chính), không router.push
     await p.evaluate(() => (window.__pnMarker = 1));
@@ -313,6 +319,94 @@ try {
     await p.evaluate((id) => window.history.pushState(null, "", `/messages?c=${id}`), lateId);
     const opened = await visible(p.locator("h3", { hasText: lateName }), 12000);
     R.check("NC10", "?c=<id> chưa có trong danh sách đã tải → tải riêng (/api/conversations?id=) rồi mở", !!lateId && opened, `${late.status} ${opened}`);
+    await ctx.close();
+  }
+
+  // ---------------- NC12: ?bubble=1 trong link không bật chế độ bong bóng ----------------
+  {
+    const { ctx, p } = await newPage({});
+    await p.goto(`${BASE_URL}/jobs?bubble=1`);
+    await p.waitForLoadState("domcontentloaded");
+    await sleep(1500);
+    const onJobs = await p.evaluate(() => document.documentElement.hasAttribute("data-bubble"));
+    await p.goto(`${BASE_URL}/messages?c=${dmId}&bubble=1`);
+    await p.locator("textarea").first().waitFor({ timeout: 20000 }).catch(() => {});
+    await sleep(800);
+    const st = await p.evaluate(() => ({ attr: document.documentElement.hasAttribute("data-bubble"), back: !!document.querySelector('[aria-label="Back to chats"]') }));
+    R.check("NC12", "Link ?bubble=1 (ai cũng gửi được trong tin nhắn) KHÔNG bật chế độ bong bóng: /jobs và /messages vẫn đủ giao diện", !onJobs && !st.attr && st.back, JSON.stringify({ onJobs, ...st }));
+    await ctx.close();
+  }
+
+  // ---------------- NC13: bong bóng thiếu ?c= ----------------
+  {
+    const ua = devices["Pixel 7"].userAgent + " PawNailApp PawNailBubble";
+    const { ctx, p } = await newPage({ ua, viewport: { width: 360, height: 640 }, mobile: false });
+    await p.goto(`${BASE_URL}/messages?bubble=1`);
+    const err = p.getByText("Couldn't open this conversation");
+    const shown = await visible(err, 15000);
+    const btn = p.getByRole("button", { name: "Open PawNail" });
+    const box = shown ? await btn.boundingBox() : null;
+    const busy = await p.locator('[aria-busy="true"]').count();
+    await p.screenshot({ path: TMP + "/native_chat_bubble_missing.png" });
+    R.check("NC13", "Bong bóng không có ?c= → 'Couldn't open this conversation' + nút 'Open PawNail' (≥ 44 px), không vòng quay mãi",
+      shown && !!box && box.height >= 44 && busy === 0, JSON.stringify({ shown, box, busy }));
+    await ctx.close();
+  }
+
+  // ---------------- NC14: bấm thông báo khi app đang chạy → chuyển trang mềm ----------------
+  {
+    const { ctx, p } = await newPage({ android: { perm: "granted", build: 3, sdk: 34, bubblePref: "all", token: "fcmQAsoft" + crypto.randomBytes(20).toString("hex") }, viewport: { width: 1280, height: 860 }, mobile: false });
+    await p.goto(`${BASE_URL}/messages?c=${dmId}`);
+    await p.locator("textarea").first().waitFor({ timeout: 20000 });
+    await p.evaluate(() => (window.__pnMarker = 1));
+    const r1 = await p.evaluate((id) => window.__pawnailOpenUrl?.(`/messages?c=${id}`), gid);
+    const toGroup = await visible(p.locator("h3", { hasText: groupName }), 10000);
+    const marker1 = await p.evaluate(() => window.__pnMarker ?? null);
+    // Chọn cuộc trò chuyện khác trong danh sách (máy tính: URL vẫn ?c=<nhóm>) rồi bấm lại ĐÚNG thông báo của nhóm → URL
+    // không đổi nhưng vẫn mở lại nhóm (trước đây id đã xử lý bị bỏ qua).
+    await p.locator("button.m-conv").filter({ hasNotText: groupName }).first().click();
+    await sleep(1200);
+    const switchedAway = !(await p.locator("h3", { hasText: groupName }).isVisible().catch(() => false));
+    const r2 = await p.evaluate((id) => window.__pawnailOpenUrl?.(`/messages?c=${id}`), gid);
+    const again = await visible(p.locator("h3", { hasText: groupName }), 10000);
+    const r3 = await p.evaluate(() => [window.__pawnailOpenUrl?.("//evil.example/x"), window.__pawnailOpenUrl?.("https://evil.example/"), window.__pawnailOpenUrl?.("/messages x")]);
+    const marker2 = await p.evaluate(() => window.__pnMarker ?? null);
+    R.check("NC14", "App đang chạy: __pawnailOpenUrl('/messages?c=<nhóm>') → true, chuyển sang nhóm KHÔNG tải lại trang (cả lần bấm lại); '//host', URL tuyệt đối, có khoảng trắng → false",
+      r1 === true && toGroup && marker1 === 1 && switchedAway && r2 === true && again && marker2 === 1 && r3.every((x) => x === false), JSON.stringify({ r1, toGroup, marker1, switchedAway, r2, again, marker2, r3 }));
+    await ctx.close();
+  }
+
+  // ---------------- NC15: đăng xuất trong app Android ----------------
+  {
+    const tok = "fcmQAout" + crypto.randomBytes(24).toString("hex");
+    const relog = "fcmQArelog" + crypto.randomBytes(24).toString("hex");
+    const reg = await tech.req("/api/push/native", { method: "POST", json: { token: tok, platform: "android", build: 3 } });
+    const { ctx, p } = await newPage({ android: { perm: "granted", build: 3, sdk: 34, bubblePref: "all", token: relog } });
+    await p.goto(BASE_URL + "/profile");
+    await p.evaluate((t) => localStorage.setItem("pn_native_push_token", t), tok);
+    const signOutBtn = p.getByRole("button", { name: /Sign out/ });
+    const hasBtn = await visible(signOutBtn, 20000);
+    if (hasBtn) {
+      await signOutBtn.first().scrollIntoViewIfNeeded();
+      await signOutBtn.first().click();
+    }
+    await p.waitForURL(/\/auth\/login/, { timeout: 15000 }).catch(() => {});
+    await sleep(500);
+    const row = (await db.execute({ sql: `SELECT COUNT(*) n FROM "PushSubscription" WHERE endpoint = ?`, args: ["fcm:" + tok] })).rows[0].n;
+    const ls = await p.evaluate(() => ({ token: localStorage.getItem("pn_native_push_token"), relogin: localStorage.getItem("pn_native_push_relogin") }));
+    const cleared = (await nativeCalls(p, "clearAll")).length;
+    const session = await p.evaluate(() => fetch("/api/auth/session").then((r) => r.json()).catch(() => null));
+    // Đăng nhập lại (cookie phiên mới) → lần mở app sau tự đăng ký lại token cho tài khoản (không phải bật lại).
+    await ctx.addCookies(techCookies);
+    await p.goto(BASE_URL + "/messages");
+    await p.locator(".m-list").first().waitFor({ timeout: 20000 }).catch(() => {});
+    await sleep(2500);
+    const back = (await db.execute({ sql: `SELECT userId, p256dh FROM "PushSubscription" WHERE endpoint = ?`, args: ["fcm:" + relog] })).rows[0];
+    const ls2 = await p.evaluate(() => ({ token: localStorage.getItem("pn_native_push_token"), relogin: localStorage.getItem("pn_native_push_relogin") }));
+    R.check("NC15", "App: Đăng xuất → token máy này bị gỡ khỏi tài khoản (DB), PawNailNative.clearAll() (thông báo / lịch sử / lối tắt), phiên hết; đăng nhập lại → tự đăng ký lại (native:3), cờ được xoá",
+      reg.status === 200 && hasBtn && Number(row) === 0 && ls.token === null && ls.relogin === "1" && cleared === 1 && !session?.user &&
+        !!back && String(back.userId) === tech.userId && String(back.p256dh) === "native:3" && ls2.token === relog && ls2.relogin === null,
+      JSON.stringify({ reg: reg.status, hasBtn, row, ls, cleared, session: !!session?.user, back, ls2 }).slice(0, 320));
     await ctx.close();
   }
 

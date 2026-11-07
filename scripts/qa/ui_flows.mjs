@@ -296,12 +296,15 @@ await step("F21", "Desktop: Sidebar có Công cụ (Tin nhắn, Đăng tin, Rada
   await ctx.close();
 });
 
-await step("F22", "Trang đăng ký có số liệu, cách hoạt động và FAQ mở được", async () => {
+// Phase 1 (11/2026): màn chọn vai trò = 1 danh sách 3 dòng (không bảng số liệu / "cách hoạt động"); FAQ chuyển ra trang chủ khách.
+await step("F22", "Trang đăng ký: 3 vai trò trong 1 danh sách; FAQ ở trang chủ khách mở được", async () => {
   const ctx = await newCtx();
   const p = await ctx.newPage();
   await p.goto(BASE_URL + "/auth/register");
-  await p.getByText("Hoạt động thế nào?").waitFor({ timeout: 15000 });
-  await p.getByText("PawNail có thu phí không?").click();
+  await p.locator(".pn-list .pn-row[data-role]").nth(2).waitFor({ timeout: 15000 });
+  if ((await p.locator(".pn-list .pn-row[data-role]").count()) !== 3) throw new Error("role rows != 3");
+  await p.goto(BASE_URL + "/");
+  await p.getByText("PawNail có thu phí không?").click({ timeout: 15000 });
   await p.getByText(/Đăng ký, đăng tin, xem hồ sơ tay nghề và nhắn tin đều không mất phí/).waitFor({ timeout: 5000 });
   await ctx.close();
 });

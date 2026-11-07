@@ -12,6 +12,10 @@ await db.execute("PRAGMA busy_timeout = 10000");
 await db.execute(`DELETE FROM "NailDesignSave"`);
 await db.execute(`DELETE FROM "NailDesign"`);
 
+// Dịp lễ dùng trong bài: dịp SẮP TỚI mà máy chủ tự tính (Phòng nội dung → nextOccasion, theo ngày địa phương của thị
+// trường — lib/season.ts). Halloween đã nghỉ hẳn (11/2026) nên bài không còn cố định 1 dịp; gán sau khi admin đăng nhập.
+let OCC = "christmas";
+let OCC_TITLE = "";
 // PNG 8×8 hồng (đủ để trình duyệt hiển thị)
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFTEMIwkAQJ8Q8Iyx8SoAAAAASUVORK5CYII=";
 const calls = [];
@@ -34,8 +38,8 @@ const gemini = http.createServer((req, res) => {
     const n = Number(prompt.match(/ĐÚNG (\d+) mẫu/)?.[1] ?? 3);
     const ideas = Array.from({ length: n }, (_, i) => ({
       title: { vi: `Mắt mèo bí ngô ${Date.now() % 1000}-${i}`, en: `Pumpkin cat eye ${i}` },
-      description: { vi: "Cam bí ngô ánh mắt mèo — hot tuần Halloween.", en: "Pumpkin orange cat eye — hot for Halloween week." },
-      occasion: i === 0 ? "halloween" : "khong-co-that",
+      description: { vi: "Cam bí ngô ánh mắt mèo — đang hot mùa này.", en: "Pumpkin orange cat eye — hot this season." },
+      occasion: i === 0 ? OCC : "khong-co-that",
       skills: ["Gel-X", "Design", "BỊA"],
       difficulty: i === 2 ? 9 : 2,
       minutes: 60,
@@ -96,17 +100,20 @@ try {
   globalThis.__adminForReset = admin;
   const cfg = (await admin.req("/api/admin/designs")).data;
   R.check("D2", "Admin thấy cấu hình: Gemini bật, giới hạn 6 mẫu/ngày", cfg.enabled === true && cfg.dailyLimit === 6 && cfg.madeToday === 0, JSON.stringify(cfg).slice(0, 120));
+  if (cfg.nextOccasion?.id) { OCC = cfg.nextOccasion.id; OCC_TITLE = cfg.nextOccasion.title || ""; }
+  console.log(`   (dịp dùng trong bài: ${OCC} — ${OCC_TITLE})`);
+  const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   calls.length = 0;
   const g = await admin.req("/api/admin/designs", { method: "POST", json: { count: 3 } });
   const textCall = calls.find((c) => c.cfg?.responseMimeType === "application/json");
   const imgCalls = calls.filter((c) => c.cfg?.responseModalities);
   R.check("D3", "Tạo 3 mẫu: Gemini nhận khoá qua header (không nằm trên URL), 1 lần viết + 3 lần vẽ", g.status === 201 && g.data.created.length === 3 && textCall?.key === "test-gemini-key" && !/key=/.test(textCall.path) && imgCalls.length === 3, JSON.stringify(g.data).slice(0, 200));
-  R.check("D4", "Prompt dựa trên bối cảnh thật: dịp Halloween + yêu cầu song ngữ + vật tư + cấm thương hiệu", /halloween/i.test(textCall?.prompt ?? "") && /materials/.test(textCall.prompt) && /Chanel/.test(textCall.prompt));
+  R.check("D4", `Prompt dựa trên bối cảnh thật: dịp sắp tới (${OCC}) + yêu cầu song ngữ + vật tư + cấm thương hiệu; không còn Halloween`, (textCall?.prompt ?? "").includes(OCC) && !/halloween/i.test(textCall.prompt) && /materials/.test(textCall.prompt) && /Chanel/.test(textCall.prompt), (textCall?.prompt ?? "").slice(0, 300));
   R.check("D5", "Ảnh vẽ cận cảnh đầu ngón kiểu ảnh salon trên nền vải (không cả bàn tay, không cầm hoa / ly, không đồ vật có chữ)", imgCalls.length > 0 && imgCalls.every((c) => /Professional nail salon portfolio photograph/.test(c.prompt) && /close-up of the fingertips/.test(c.prompt) && /four slender fingers side by side/.test(c.prompt) && /plain soft cream background/.test(c.prompt) && !/(flower|cup|coffee|bottle|table|window|marble)/i.test(c.prompt.split("Professional nail salon portfolio photograph")[1] || "")), imgCalls.map((c) => c.prompt.slice(-140)).join(" || "));
 
   const drafts = (await admin.req("/api/admin/designs")).data.drafts;
-  const d0 = drafts.find((d) => d.occasion === "halloween");
+  const d0 = drafts.find((d) => d.occasion === OCC);
   R.check("D6", "Bản nháp đủ dữ liệu song ngữ; lọc dữ liệu bịa (kỹ năng lạ, dịp lạ, độ khó 9 → 3)", drafts.length === 3 && d0 && d0.titleEn && d0.materials.length === 3 && d0.steps.length === 4 && drafts.every((d) => !d.skills.includes("BỊA") && d.difficulty <= 3) && drafts.filter((d) => d.occasion === null).length === 2, JSON.stringify(drafts[0]).slice(0, 200));
   R.check("D7", "Bản nháp CHƯA hiện cho người dùng", (await anon.req("/api/designs")).data.designs.length === 0);
 
@@ -116,7 +123,7 @@ try {
   const bad = await admin.req("/api/admin/designs", { method: "PATCH", json: { id: drafts[2].id, status: "hacked" } });
   const pub = (await anon.req("/api/designs")).data.designs;
   R.check("D8", "Duyệt 2 / bỏ 1 → công khai đúng 2 mẫu; trạng thái lạ → 400", pub.length === 2 && bad.status === 400, `${pub.length} ${bad.status}`);
-  R.check("D9", "Lọc theo dịp lễ (halloween) & kỹ năng (Gel-X)", (await anon.req("/api/designs?occasion=halloween")).data.designs.length === (pub.filter((d) => d.occasion === "halloween").length) && (await anon.req("/api/designs?skill=Gel-X")).data.designs.length === 2);
+  R.check("D9", `Lọc theo dịp lễ (${OCC}) & kỹ năng (Gel-X); dịp đã nghỉ (halloween) → rỗng`, (await anon.req(`/api/designs?occasion=${OCC}`)).data.designs.length === (pub.filter((d) => d.occasion === OCC).length) && (await anon.req("/api/designs?occasion=halloween")).data.designs.length === 0 && (await anon.req("/api/designs?skill=Gel-X")).data.designs.length === 2);
 
   imageFails = true;
   const free = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 1 } })).data;
@@ -168,7 +175,7 @@ try {
 
   const smp = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 2, mode: "sample" } })).data;
   const smpRows = (await admin.req("/api/admin/designs")).data.drafts.filter((d) => smp.created.includes(d.id));
-  R.check("D13", "Mẫu gợi ý (không dùng AI): tạo được dù đã hết hạn mức AI; ưu tiên dịp Halloween; đủ song ngữ + vật tư + bảng màu", smp.created.length === 2 && smpRows.every((d) => d.provider === "sample" && d.titleEn && d.materials.length >= 3 && d.palette.length >= 2) && smpRows.some((d) => d.occasion === "halloween"), JSON.stringify(smpRows.map((d) => [d.title, d.occasion])));
+  R.check("D13", "Mẫu gợi ý (không dùng AI): tạo được dù đã hết hạn mức AI; ưu tiên dịp đang / sắp diễn ra (không bao giờ Halloween); đủ song ngữ + vật tư + bảng màu", smp.created.length === 2 && smpRows.every((d) => d.provider === "sample" && d.titleEn && d.materials.length >= 3 && d.palette.length >= 2 && d.occasion !== "halloween") && smpRows.some((d) => d.occasion), JSON.stringify(smpRows.map((d) => [d.title, d.occasion])));
   const smp2 = (await admin.req("/api/admin/designs", { method: "POST", json: { count: 2, mode: "sample" } })).data;
   const titles = (await admin.req("/api/admin/designs")).data.drafts.filter((d) => d.provider === "sample").map((d) => d.title);
   R.check("D14", "Mẫu gợi ý không bị lặp lại", smp2.created.length === 2 && new Set(titles).size === titles.length, titles.join(" | "));
@@ -220,7 +227,7 @@ try {
   await box.waitFor({ timeout: 15000 });
   await p.waitForTimeout(1200);
   const val = await box.inputValue();
-  R.check("U6", "'Tôi làm mẫu này' → ô đăng bài điền sẵn hashtag của mẫu", /#PawNail(Halloween|AI)/.test(val), val);
+  R.check("U6", "'Tôi làm mẫu này' → ô đăng bài điền sẵn hashtag của mẫu", /#PawNail\w+/.test(val), val);
   await p.goto(BASE_URL + `/supply?q=${encodeURIComponent("Gel mắt mèo cam")}`);
   R.check("U7", "Kho hàng mở với bộ lọc 'Đang tìm: …'", await p.getByText(/Đang tìm:/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false));
 
@@ -271,11 +278,12 @@ try {
   await ap.screenshot({ path: TMP + "/designs_admin.png" });
 
   // Bộ mẫu theo dịp lễ + duyệt hàng loạt + phân trang
-  const occ = await admin.req("/api/admin/designs", { method: "POST", json: { mode: "occasion", occasion: "halloween", count: 60 } });
+  const occ = await admin.req("/api/admin/designs", { method: "POST", json: { mode: "occasion", occasion: OCC, count: 60 } });
+  const occRetired = await admin.req("/api/admin/designs", { method: "POST", json: { mode: "occasion", occasion: "halloween", count: 5 } });
   const st2 = (await admin.req("/api/admin/designs")).data;
   const occRows = st2.drafts.filter((d) => occ.data.created?.includes(d.id));
-  R.check("D18", "Tạo bộ 60 mẫu Halloween: đủ 60, đúng dịp, không trùng tên với mẫu đã có, Phòng nội dung hiện đủ + gợi ý dịp sắp tới", occ.status === 201 && occRows.length === 60 && occRows.every((d) => d.occasion === "halloween" && d.provider === "pawnail") && new Set(st2.drafts.map((d) => d.title)).size === st2.drafts.length && st2.nextOccasion?.id === "halloween",
-    JSON.stringify({ s: occ.status, n: occRows.length, next: st2.nextOccasion }));
+  R.check("D18", `Tạo bộ 60 mẫu ${OCC}: đủ 60, đúng dịp, không trùng tên với mẫu đã có, Phòng nội dung hiện đủ + gợi ý dịp sắp tới; dịp đã nghỉ (halloween) không tạo mẫu nào`, occ.status === 201 && occRows.length === 60 && occRows.every((d) => d.occasion === OCC && d.provider === "pawnail") && new Set(st2.drafts.map((d) => d.title)).size === st2.drafts.length && st2.nextOccasion?.id === OCC && !(occRetired.data?.created?.length > 0),
+    JSON.stringify({ s: occ.status, n: occRows.length, next: st2.nextOccasion, retired: occRetired.status }));
   const bulkTech = await tech.req("/api/admin/designs", { method: "PATCH", json: { ids: occRows.slice(0, 5).map((d) => d.id), status: "published" } });
   const bulk = await admin.req("/api/admin/designs", { method: "PATCH", json: { ids: occRows.slice(0, 55).map((d) => d.id), status: "published" } });
   R.check("D19", "Duyệt hàng loạt: admin đăng 55 mẫu một lần; thợ gọi → 403", bulk.status === 200 && bulk.data.count === 55 && bulkTech.status === 403, JSON.stringify(bulk.data));
@@ -290,7 +298,7 @@ try {
   const posted = pin ? await admin.req("/api/posts", { method: "POST", json: { content: pin.text, postType: "GENERAL", mediaUrls: [] } }) : { status: 0 };
   const cb2 = (await admin.req("/api/admin/contentbot")).data;
   R.check("D21", "Bot nội dung: chỉ admin xem được (thợ 403); bài ghim đứng đầu; đăng xong không đề xuất lại", cbTech.status === 403 && cb.drafts.length >= 5 && cb.drafts[0].pinned && posted.status < 300 && !cb2.drafts.some((d) => d.id === pin.id), JSON.stringify({ t: cbTech.status, n: cb.drafts?.length, p: posted.status }));
-  R.check("D22", "Đã có ≥ 10 mẫu Halloween được duyệt → bot đề xuất bài quảng bá bộ sưu tập (có link /designs)", cb.drafts.some((d) => /Bộ sưu tập .*Halloween/.test(d.title) && d.text.includes("bitpawos.com/designs")), cb.drafts.map((d) => d.title).join(" | "));
+  R.check("D22", `Đã có ≥ 10 mẫu ${OCC} được duyệt → bot đề xuất bài quảng bá bộ sưu tập (có link /designs); không bao giờ Halloween`, cb.drafts.some((d) => new RegExp(`Bộ sưu tập .*${escRe(OCC_TITLE)}`).test(d.title) && d.text.includes("bitpawos.com/designs")) && !cb.drafts.some((d) => /halloween/i.test(d.title)), cb.drafts.map((d) => d.title).join(" | "));
 
   const lp = await page();
   await lp.goto(BASE_URL + "/designs");

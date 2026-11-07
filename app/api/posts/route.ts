@@ -11,6 +11,7 @@ import { hasVietnamese } from "@/lib/i18n/viText";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { localeFromRequest } from "@/lib/i18n/server";
 import { Market, PostType } from "@prisma/client";
+import { dropStaleOfficial, officialPostNot } from "@/lib/feedFreshness";
 
 const PAGE_SIZE = 12;
 const VALID_POST_TYPES = ["GENERAL", "SHOWCASE", "JOB"];
@@ -101,6 +102,9 @@ export async function GET(req: NextRequest) {
     if (postType && VALID_POST_TYPES.includes(postType)) where.postType = postType as PostType;
     // Bảng tin chung: không hiện bài của tài khoản dữ liệu mẫu (lib/demo)
     if (!authorId) where.author = realOnly();
+    // Halloween đã nghỉ (lib/season.ts): không bao giờ hiện lại bài chính thức nhắc Halloween / 🎃.
+    // Bảng tin chung: bài "✨ 4 mẫu nail" của tài khoản chính thức chỉ sống 72 giờ (ảnh mẫu của mùa đã qua không trôi lại).
+    where.NOT = officialPostNot(new Date(), !authorId);
 
     // Người xem tiếng Anh: bài chính thức CHỈ có tiếng Việt bị bỏ qua → quét rộng hơn 1 trang để vẫn đủ 12 bài.
     const take = lang === "en" ? PAGE_SIZE * 3 : PAGE_SIZE;
@@ -130,6 +134,10 @@ export async function GET(req: NextRequest) {
       }
       nextCursor = lastScanned && (posts.length === PAGE_SIZE || scanned.length === take) ? lastScanned : null;
     }
+
+    // Lọc sau (cùng trang, như bộ lọc tiếng Anh): bài "Bộ sưu tập <chủ đề> đã lên PawNail" khi chủ đề đó không còn
+    // đang / sắp diễn ra ở thị trường của bài (hoặc người xem); bài "✨ 4 mẫu nail" mà không ảnh nào còn là mẫu đang đăng.
+    if (!authorId && posts.length) posts = await dropStaleOfficial(posts, market === "AU" ? "AU" : market === "US" ? "US" : null);
 
     // Bảng tin chung (không phải trang hồ sơ 1 người): bỏ bài chính thức đã có bản MỚI HƠN cùng loại trong 24h
     // (kể cả khi bản mới nằm ở trang trước), rồi rải đều bài chính thức giữa bài của người thật.

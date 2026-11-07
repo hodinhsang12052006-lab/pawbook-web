@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { toPublic } from "@/lib/aiDesigns";
@@ -8,6 +9,7 @@ import DesignPageView from "@/components/designs/DesignPageView";
 import type { Design } from "@/components/designs/DesignViews";
 import { localePath } from "@/lib/i18n/config";
 import { alternates, langFrom, openGraph, trL } from "@/lib/i18n/server";
+import { RETIRED_OCCASIONS, isRetiredOccasion } from "@/lib/season";
 
 // TRANG RIÊNG TỪNG MẪU NAIL (/designs/[id]): link chia sẻ được (thợ gửi khách "mẫu này nè", khách gửi bạn — dán vào
 // chat có ảnh xem trước), Google tìm thấy (mỗi ngày ~18 mẫu mới: tên mẫu, vật tư, các bước, thời gian, giá gợi ý),
@@ -20,14 +22,19 @@ const SELECT = {
   prompt: true, status: true, publishedAt: true, _count: { select: { saves: true } },
 } as const;
 
+// Đang đăng + ĐÃ LƯU TRỮ (mùa đã qua, kể cả dịp đã nghỉ như Halloween): link cũ đã chia sẻ vẫn mở được, kèm ghi chú
+// "Mẫu mùa trước" và không lập chỉ mục. Nháp / bị từ chối → 404.
 async function load(id: string) {
   try {
-    const r = await prisma.nailDesign.findFirst({ where: { id, status: "published" }, select: SELECT });
+    const r = await prisma.nailDesign.findFirst({ where: { id, status: { in: ["published", "archived"] } }, select: SELECT });
     return r ? (toPublic(r) as unknown as Design) : null;
   } catch {
     return null;
   }
 }
+const isArchived = (d: Design) => (d as unknown as { status?: string }).status === "archived" || isRetiredOccasion(d.occasion);
+// mẫu liên quan: chỉ mẫu đang đăng, không bao giờ mẫu của dịp đã nghỉ
+const LIVE: Prisma.NailDesignWhereInput = { status: "published", imageUrl: { not: null }, OR: [{ occasion: null }, { occasion: { notIn: [...RETIRED_OCCASIONS] } }] };
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string; id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -50,6 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     alternates: alternates(path, lang),
     openGraph: openGraph(lang, { title, description, url: `${SITE_URL}${localePath(path, lang)}`, type: "article", ...(image ? { images: [{ url: image, width: 1200, height: 1200, alt: name }] } : {}) }),
     twitter: { card: image ? "summary_large_image" : "summary", title, description, ...(image ? { images: [image] } : {}) },
+    ...(isArchived(d) ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
@@ -62,11 +70,11 @@ export default async function DesignPage({ params }: { params: Promise<{ lang: s
   let related: Design[] = [];
   try {
     const same = await prisma.nailDesign.findMany({
-      where: { status: "published", imageUrl: { not: null }, id: { not: d.id }, OR: [...(d.occasion ? [{ occasion: d.occasion }] : []), { pattern: d.pattern }] },
+      where: { AND: [LIVE, { id: { not: d.id }, OR: [...(d.occasion && !isRetiredOccasion(d.occasion) ? [{ occasion: d.occasion }] : []), { pattern: d.pattern }] }] },
       select: SELECT, orderBy: { publishedAt: "desc" }, take: 8,
     });
     const more = same.length < 8 ? await prisma.nailDesign.findMany({
-      where: { status: "published", imageUrl: { not: null }, id: { notIn: [d.id, ...same.map((x) => x.id)] } },
+      where: { AND: [LIVE, { id: { notIn: [d.id, ...same.map((x) => x.id)] } }] },
       select: SELECT, orderBy: { publishedAt: "desc" }, take: 8 - same.length,
     }) : [];
     related = [...same, ...more].map((r) => toPublic(r) as unknown as Design);
@@ -88,7 +96,7 @@ export default async function DesignPage({ params }: { params: Promise<{ lang: s
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
-      <DesignPageView d={d} related={related} />
+      <DesignPageView d={d} related={related} archived={isArchived(d)} />
     </>
   );
 }

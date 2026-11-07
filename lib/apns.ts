@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import http2 from "http2";
+import { clipText } from "@/lib/fcm";
 
 // Thông báo đẩy cho iPhone (app native) gửi THẲNG qua Apple APNs bằng khoá
 // .p8 (token-based) — plugin Capacitor trên iOS trả token APNs, không phải
@@ -30,7 +31,7 @@ function providerToken(c: NonNullable<ReturnType<typeof cfg>>): string {
   return jwtCache.token;
 }
 
-export interface ApnsPayload { title: string; body: string; url: string; tag?: string }
+export interface ApnsPayload { title: string; body: string; url: string; tag?: string; chat?: { cid: string } }
 
 /** Gửi tới các token iPhone. Trả về token đã hết hạn (410/BadDeviceToken) để dọn khỏi DB. */
 export async function sendApns(tokens: string[], p: ApnsPayload): Promise<{ sent: number; dead: string[] }> {
@@ -44,7 +45,8 @@ export async function sendApns(tokens: string[], p: ApnsPayload): Promise<{ sent
     return { sent: 0, dead: [] };
   }
   const body = JSON.stringify({
-    aps: { alert: { title: p.title.slice(0, 80), body: p.body.slice(0, 180) }, sound: "default", "thread-id": p.tag || "pawnail" },
+    // Tin chat: gom theo cuộc trò chuyện (thread-id = hội thoại) trong Trung tâm thông báo.
+    aps: { alert: { title: clipText(p.title, 80), body: clipText(p.body, 180) }, sound: "default", "thread-id": p.chat?.cid ? `pn-chat-${p.chat.cid}` : p.tag || "pawnail" },
     url: p.url,
   });
   return new Promise((resolve) => {

@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import prisma from "@/lib/prisma";
-import { fcmEnabled, sendFcm } from "@/lib/fcm";
+import { clipText, fcmEnabled, parseNativeBuild, sendFcm, type FcmChannel, type FcmChat } from "@/lib/fcm";
 import { apnsEnabled, sendApns } from "@/lib/apns";
 import { getUserLocales } from "@/lib/userLocale";
 
@@ -18,6 +18,13 @@ export interface PushPayload {
   icon?: string;
   /** Bản tiếng Anh — người nhận dùng EN (mặc định) thấy bản này; người dùng VI thấy title/body. */
   en?: { title?: string; body?: string };
+  /** Kênh thông báo Android cho dạng tin thường ("general" mặc định; cuộc gọi: "calls"). */
+  channel?: FcmChannel;
+  /**
+   * Tin nhắn chat: app Android đủ mới (lib/fcm.ts richChatMinBuild) nhận tin data-only và tự vẽ thông báo kiểu
+   * Messenger. Nội dung ("text") lấy từ body đã theo ngôn ngữ người nhận. Web push / iPhone bỏ qua trường này.
+   */
+  chat?: FcmChat;
 }
 
 let configured: boolean | null = null;
@@ -71,6 +78,11 @@ export async function sendPush(userIds: string | string[], payload: PushPayload)
 
 type Sub = { id: string; userId: string; endpoint: string; p256dh: string; auth: string };
 
+/** Web push giữ nguyên dạng cũ (worker/index.js chỉ đọc title/body/url/tag/icon) — bỏ phần chỉ dành cho app native. */
+export function webPushBody(p: Omit<PushPayload, "en">): string {
+  return JSON.stringify({ icon: p.icon || "/icons/icon-192.webp", title: clipText(p.title, 80), body: clipText(p.body, 180), url: p.url, tag: p.tag });
+}
+
 async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boolean, android: boolean, ios: boolean): Promise<number> {
   try {
     // App native lưu endpoint "fcm:<token>" (Android) / "apns:<token>" (iPhone) — xem app/api/push/native.
@@ -78,7 +90,7 @@ async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boo
     const fcmSubs = all.filter((s) => s.endpoint.startsWith("fcm:"));
     const apnsSubs = all.filter((s) => s.endpoint.startsWith("apns:"));
     const subs = web ? all.filter((s) => !isNative(s.endpoint)) : [];
-    const body = JSON.stringify({ icon: "/icons/icon-192.webp", ...payload, title: payload.title.slice(0, 80), body: payload.body.slice(0, 180) });
+    const body = webPushBody(payload);
     let sent = 0;
     const dead: string[] = [];
     await Promise.all(
@@ -94,15 +106,20 @@ async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boo
         }
       })
     );
-    for (const [on, list, prefix, send] of [
-      [android, fcmSubs, "fcm:", sendFcm],
-      [ios, apnsSubs, "apns:", sendApns],
-    ] as const) {
-      if (!on || !list.length) continue;
-      const r = await send(list.map((s) => s.endpoint.slice(prefix.length)), payload);
+    // Android: kèm build của từng thiết bị (p256dh "native:<build>") — chỉ bản đủ mới nhận tin chat data-only.
+    if (android && fcmSubs.length) {
+      const r = await sendFcm(fcmSubs.map((s) => ({ token: s.endpoint.slice(4), build: parseNativeBuild(s.p256dh) })), payload);
       sent += r.sent;
       for (const t of r.dead) {
-        const s = list.find((x) => x.endpoint === prefix + t);
+        const s = fcmSubs.find((x) => x.endpoint === "fcm:" + t);
+        if (s) dead.push(s.id);
+      }
+    }
+    if (ios && apnsSubs.length) {
+      const r = await sendApns(apnsSubs.map((s) => s.endpoint.slice(5)), payload);
+      sent += r.sent;
+      for (const t of r.dead) {
+        const s = apnsSubs.find((x) => x.endpoint === "apns:" + t);
         if (s) dead.push(s.id);
       }
     }

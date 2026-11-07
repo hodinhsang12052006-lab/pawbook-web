@@ -95,18 +95,6 @@ export const HERO_SIZES = {
   back: "(min-width:1024px) 188px, min(64vw, 300px)",
   strip: "min(64vw, 300px)",
 } as const;
-/**
- * Chip corner fix-ups ("a>b" = replace a by b, "*>b" = always b; the pre-paint picker applies the same rule via
- * data-chip-fix). Since 11/2026 every photo cluster carries ONE chip on its front card (its own corner, away from
- * the nails), so these are kept only for callers that still label a partly hidden card.
- */
-export const CHIP_FIX: Partial<Record<HeroSlot | "authBack", string>> = { mid: "br>tl", back: "tl>bl", authBack: "*>tr" };
-export function fixChip(chip: Chip, fix: string | undefined): Chip {
-  if (!fix) return chip;
-  const [from, to] = fix.split(">");
-  return from === "*" || from === chip ? (to as Chip) : chip;
-}
-
 export const slotSizes = (slot: HeroSlot) => (slot === "front" || slot === "mid" || slot === "back" ? HERO_SIZES[slot] : HERO_SIZES.strip);
 
 /**
@@ -120,6 +108,9 @@ export const AUTH_BLEED: Partial<Record<SeasonId, string>> = {};
 // The photo markup is rendered WITHOUT src/srcset (nothing downloads for the wrong season), and this inline script
 // — placed right after the markup — reads html[data-season] (SEASON_BOOT) and fills every [data-hero-slot] in its
 // previous sibling before first paint. React then renders the identical attributes after mount.
+// data-eager="<media query>" on a slot: a lazy <img> that is hidden elsewhere (the auth plate is display:none below
+// 1024 px) switches to eager BEFORE its src is set where the query matches, so the visible plate starts downloading
+// while the HTML is still parsing (lazy-load would wait for layout) and phones still never fetch it.
 
 /** Compact per-language data for the picker: c = code → [file, alt, chip], s = season → "slot codes". */
 function pickerData(lang: "en" | "vi", withAlt: boolean) {
@@ -136,7 +127,7 @@ export function heroPickerScript(lang: "en" | "vi", withAlt = true): string {
   return (
     `(()=>{try{var M=${data},r=document.currentScript.previousElementSibling,` +
     `t=(M.s[document.documentElement.getAttribute("data-season")]||M.s.base).split(" ");` +
-    `r.querySelectorAll("[data-hero-slot]").forEach(e=>{var a=M.c[t[+e.dataset.heroSlot]],i=e.querySelector("img"),s=e.querySelector("source"),l=e.querySelector("[data-chip]"),c=a[2],f=(e.dataset.chipFix||"").split(">");` +
-    `if(f[0]=="*"||f[0]==c)c=f[1];s.srcset=[480,640,800].map(w=>"/hero/"+a[0]+"-"+w+".avif "+w+"w").join(", ");s.sizes=i.sizes=e.dataset.sizes;i.alt=a[1];i.src="/hero/"+a[0]+"-640.webp";l&&(l.dataset.chip=c)})}catch(e){}})()`
+    `r.querySelectorAll("[data-hero-slot]").forEach(e=>{var a=M.c[t[+e.dataset.heroSlot]],i=e.querySelector("img"),s=e.querySelector("source"),l=e.querySelector("[data-chip]"),q=e.dataset.eager;` +
+    `q&&matchMedia(q).matches&&(i.loading="eager");s.srcset=[480,640,800].map(w=>"/hero/"+a[0]+"-"+w+".avif "+w+"w").join(", ");s.sizes=i.sizes=e.dataset.sizes;i.alt=a[1];i.src="/hero/"+a[0]+"-640.webp";l&&(l.dataset.chip=a[2])})}catch(e){}})()`
   );
 }

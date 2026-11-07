@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { HERO_IMAGES, HERO_SETS, HERO_SLOTS, AUTH_BLEED, heroSet, heroImage, heroPickerScript, avifSrcSet, webpSrc, fixChip, CHIP_FIX } from "../../lib/heroImagery";
+import { HERO_IMAGES, HERO_SETS, HERO_SLOTS, AUTH_BLEED, heroSet, heroImage, heroPickerScript, avifSrcSet, webpSrc } from "../../lib/heroImagery";
 import { imageLabel } from "../../lib/imageLabel";
 import { SEASON_IDS } from "../../lib/season";
 
@@ -68,7 +68,10 @@ const codeBytes = Buffer.byteLength(en) - dataBytes;
 let parses = true;
 try { new Function(en); new Function(heroPickerScript("vi", false)); } catch { parses = false; }
 check("H8", `Pre-paint picker: code ${codeBytes} B ≤ 600, data ${dataBytes} B ≤ 3.5 KB, parses (EN + VI)`, codeBytes <= 600 && dataBytes <= 3584 && parses);
-check("H9", "Chip fixes: stack mid never hides its chip behind the front card (br → tl), back never tl, auth back always tr", fixChip("br", CHIP_FIX.mid) === "tl" && fixChip("bl", CHIP_FIX.mid) === "bl" && fixChip("tl", CHIP_FIX.back) === "bl" && fixChip("bl", CHIP_FIX.authBack) === "tr");
+// one chip per cluster (front card, its own corner) → no chip fix-ups left in the picker; the auth plate is lazy +
+// display:none on phones and turns eager before its src is set where data-eager matches (desktop starts it at parse)
+const H9 = heroPickerScript("en", false);
+check("H9", "Picker: no chip fix-ups; data-eager switches a slot to loading=eager before src (desktop auth plate)", !/chipFix/.test(H9) && H9.indexOf('i.loading="eager"') > 0 && H9.indexOf('i.loading="eager"') < H9.indexOf("i.src="));
 check("H10", "AUTH_BLEED seam is empty until ≥ 1600×2400 photography exists; heroSet falls back to base", Object.keys(AUTH_BLEED).length === 0 && heroSet("nope").front.code === HERO_SETS.base.front);
 
 console.log(fail ? `\nHero imagery: ${fail}/${n} FAILED` : `\nHero imagery: ${n}/${n} PASS`);

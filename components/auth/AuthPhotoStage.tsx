@@ -47,7 +47,7 @@ export default function AuthPhotoStage() {
     <div className="pn-auth-stage" aria-hidden="true">
       <div className="pn-auth-plate">
         {cards.map(({ im, cls }, i) => (
-          <figure key={cls} className={`pn-card ${cls}`} data-hero-slot={i} data-sizes={SIZES[i]}>
+          <figure key={cls} className={`pn-card ${cls}`} data-hero-slot={i} data-sizes={SIZES[i]} data-eager="(min-width:1024px)">
             <picture>
               <source type="image/avif" srcSet={mounted ? avifSrcSet(im) : undefined} sizes={mounted ? SIZES[i] : undefined} suppressHydrationWarning />
               <img width={800} height={1000} decoding="async" loading="lazy" src={mounted ? webpSrc(im) : undefined} sizes={mounted ? SIZES[i] : undefined} alt="" suppressHydrationWarning />

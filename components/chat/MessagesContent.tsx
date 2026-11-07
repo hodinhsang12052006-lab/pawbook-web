@@ -759,8 +759,9 @@ export default function MessagesContent({
       next.forEach((r) => {
         if (tail.includes(r)) return;
         // mốc chiều cao lấy NGAY lúc bắt đầu theo dõi (không chờ lần báo đầu của RO): máy lag, dòng có thể cao thêm trước lần
-        // báo đầu → trước đây lần báo đó thành mốc, không bao giờ được tính là "cao thêm".
-        if (!rowH.has(r)) rowH.set(r, r.getBoundingClientRect().height);
+        // báo đầu → trước đây lần báo đó thành mốc, không bao giờ được tính là "cao thêm". offsetHeight (không tính transform):
+        // dòng mới đang chạy hiệu ứng vào (scale .98) — đo theo khung đã co sẽ thành "cao thêm" giả, kéo giật mất cuộn mượt.
+        if (!rowH.has(r)) rowH.set(r, (r as HTMLElement).offsetHeight);
         tailRo.observe(r);
       });
       tail = next;

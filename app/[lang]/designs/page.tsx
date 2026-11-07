@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Bookmark } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { DesignCard, DesignSheet, occasionLabel, type Design } from "@/components/designs/DesignViews";
@@ -21,6 +21,8 @@ const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nướ
 // thợ) được CHỜ ĐỦ rồi hiện cùng 1 lần, thay cho lưới khung xương — trước đây "Menu có giá từ thợ" chen vào trên lưới
 // sau khi tải xong, đẩy lưới xuống ~300 px (CLS 0.24 trên điện thoại). Đổi thị trường sau đó: giữ danh sách cũ tới khi
 // danh sách mới về rồi thay tại chỗ (không quay lại khung xương).
+// Một API phụ chậm / treo không được giữ cả lưới: mẫu AI về rồi thì chờ thêm tối đa 1,2 s; quá hạn → hiện lưới, và
+// khối nào về muộn hơn thì nằm SAU lưới (không chen lên trên đẩy lưới xuống).
 export default function DesignsPage() {
   useTr(); // render lại khi đổi VI/EN
   const { user, loading: sessionLoading } = useSessionUser();
@@ -35,14 +37,27 @@ export default function DesignsPage() {
   // Sửa danh sách tại chỗ (tải thêm, lưu mẫu) — chỉ khi danh sách đang hiện đúng thị trường hiện tại.
   const setAll = (fn: (l: Design[]) => Design[]) =>
     setLoaded((cur) => (cur && cur.market === market ? { market, list: fn(cur.list) } : cur));
-  // Ảnh thật (cộng đồng) + menu có giá: tải 1 lần cùng lúc với mẫu AI, truyền xuống 2 khối.
-  const [extras, setExtras] = useState<{ community: CommunityFirstPage; menu: MenuShowcaseItem[] } | null>(null);
+  // Ảnh thật (cộng đồng) + menu có giá: tải 1 lần cùng lúc với mẫu AI, truyền xuống 2 khối. `below`: về SAU khi trang
+  // đã hiện (quá hạn chờ) → đặt sau lưới.
+  const [extras, setExtras] = useState<{ community: CommunityFirstPage; menu: MenuShowcaseItem[]; below: boolean } | null>(null);
+  const shown = useRef(false);
   useEffect(() => {
     let live = true;
-    Promise.all([loadCommunityFirst(), loadMenuShowcase()]).then(([community, menu]) => { if (live) setExtras({ community, menu }); });
+    Promise.all([loadCommunityFirst(), loadMenuShowcase()]).then(([community, menu]) => { if (live) setExtras({ community, menu, below: shown.current }); });
     return () => { live = false; };
   }, []);
-  const ready = all !== null && extras !== null && !sessionLoading;
+  const hasList = all !== null;
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    if (!hasList) return;
+    const t = window.setTimeout(() => setLate(true), 1200);
+    return () => window.clearTimeout(t);
+  }, [hasList]);
+  const ready = hasList && ((extras !== null && !sessionLoading) || late);
+  // Đánh dấu "đã hiện" ngay khi DOM có nội dung (layout effect: trước mọi callback fetch kế tiếp).
+  useLayoutEffect(() => {
+    if (ready) shown.current = true;
+  }, [ready]);
   const showPro = ready && isPro;
   const [occ, setOcc] = useState<{ market: string; value: string } | null>(null);
   const occasion = occ?.market === market ? occ.value : null;
@@ -106,9 +121,14 @@ export default function DesignsPage() {
             {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-white/[0.04]" />)}
           </div>
         ) : (
-          <div key="content" className="space-y-5">
-            <CommunityDesigns pro={isPro} placement="top" initial={extras.community} />
-            <MenuShowcase items={extras.menu} />
+          // Fragment (không bọc div): các khối là con trực tiếp của <main> như trước — giữ đúng khoảng cách space-y-5.
+          <>
+            {extras && !extras.below && (
+              <>
+                <CommunityDesigns pro={isPro} placement="top" initial={extras.community} />
+                <MenuShowcase items={extras.menu} />
+              </>
+            )}
 
             <h2 className="flex items-center gap-2 pt-2 text-base font-black text-white"><Sparkles className="h-4 w-4 text-pink-300" />{tr("Ý tưởng mẫu PawNail", "PawNail design ideas")}</h2>
 
@@ -136,8 +156,14 @@ export default function DesignsPage() {
                 </button>
               </div>
             )}
-            <CommunityDesigns pro={isPro} placement="bottom" initial={extras.community} />
-          </div>
+            {extras?.below && (
+              <>
+                <CommunityDesigns pro={isPro} placement="top" initial={extras.community} />
+                <MenuShowcase items={extras.menu} />
+              </>
+            )}
+            {extras && <CommunityDesigns pro={isPro} placement="bottom" initial={extras.community} />}
+          </>
         )}
       </main>
       {open && <DesignSheet d={open} onClose={() => setOpen(null)} onSaved={(s, n) => update(open.id, s, n)} />}

@@ -36,10 +36,20 @@ export default function CustomRegisterPage() {
   const back = () => pickRole(null);
 
   // ?role= is read after mount: hold the column's space (top-aligned column → no layout shift when it fills).
-  if (!ready) return <div aria-hidden style={{ minHeight: 640 }} />;
-
-  if (role === "technician") return <TechnicianRegisterForm onBack={back} />;
-  if (role === "owner") return <OwnerRegisterForm onBack={back} />;
-  if (role === "client") return <ClientRegisterForm onBack={back} />;
-  return <RolePicker onPick={pickRole} />;
+  // .pn-authgate: a signed-in device never sees the guest form before the redirect (useAuthedRedirect, auth.css).
+  return (
+    <div className="pn-authgate">
+      {!ready ? (
+        <div aria-hidden style={{ minHeight: 640 }} />
+      ) : role === "technician" ? (
+        <TechnicianRegisterForm onBack={back} />
+      ) : role === "owner" ? (
+        <OwnerRegisterForm onBack={back} />
+      ) : role === "client" ? (
+        <ClientRegisterForm onBack={back} />
+      ) : (
+        <RolePicker onPick={pickRole} />
+      )}
+    </div>
+  );
 }

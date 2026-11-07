@@ -129,6 +129,23 @@ html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 
   .pn-auth-main:has(.pn-back) .pn-auth-top { position: absolute; top: 32px; right: 48px; }
   .pn-auth-main:has(.pn-back) .pn-auth-form { margin-top: 8px; }
 }
+/* A device that was signed in before (html[data-authed], <head> script) opening /auth/login|forgot|register: the page
+   content (.pn-authgate) stays invisible (visibility keeps the layout, so no shift) until useAuthedRedirect either
+   redirects or opens the gate (html[data-authok]); the guest form never flashes before the redirect. A still skeleton
+   fades in only when the check takes longer than 0.4 s. Guests never have data-authed, so they are never gated. */
+html[data-authed]:not([data-authok]) .pn-authgate,
+html[data-authed]:not([data-authok]) .pn-auth-main:has(.pn-authgate) [data-lang-hint] { visibility: hidden; }
+html[data-authed]:not([data-authok]) .pn-authgate { position: relative; }
+html[data-authed]:not([data-authok]) .pn-authgate::before,
+html[data-authed]:not([data-authok]) .pn-authgate::after {
+  content: ""; position: absolute; left: 0; visibility: visible; pointer-events: none;
+  background: rgb(255 240 246 / 0.06); animation: pnGateIn 0.3s ease 0.4s both;
+}
+/* title + subtitle */
+html[data-authed]:not([data-authok]) .pn-authgate::before { top: 0; width: 62%; height: 36px; border-radius: 10px; box-shadow: -8px 52px 0 -8px rgb(255 240 246 / 0.06); }
+/* two fields + the button */
+html[data-authed]:not([data-authok]) .pn-authgate::after { top: 108px; width: 100%; height: 48px; border-radius: 14px; box-shadow: 0 68px 0 rgb(255 240 246 / 0.06), 0 152px 0 rgb(245 155 190 / 0.10); }
+@keyframes pnGateIn { from { opacity: 0; } }
 .pn-auth-foot { max-width: 440px; margin: 40px auto 0; padding: 0 16px; font: 400 13px/18px var(--font-pn), system-ui, sans-serif; color: #a69ba4; }
 @media (min-width: 1024px) { .pn-auth-foot { padding: 0; } }
 .pn-auth-foot a { color: #c2b7bf; text-decoration: none; display: inline-flex; align-items: center; min-height: 24px; }

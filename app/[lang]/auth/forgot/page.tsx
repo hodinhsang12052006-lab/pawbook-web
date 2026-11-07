@@ -10,13 +10,13 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   });
 }
 
-// Đã đăng nhập → vào app (như /auth/register, /auth/login). /auth/reset KHÔNG chuyển: link trong email phải dùng được
-// cả khi máy còn phiên đăng nhập.
+// Đã đăng nhập → vào app (như /auth/register, /auth/login; .pn-authgate: không nháy form khách trước khi chuyển).
+// /auth/reset KHÔNG chuyển: link trong email phải dùng được cả khi máy còn phiên đăng nhập.
 export default function ForgotPasswordPage() {
   return (
-    <>
+    <div className="pn-authgate">
       <AuthedRedirect />
       <ForgotPasswordForm />
-    </>
+    </div>
   );
 }

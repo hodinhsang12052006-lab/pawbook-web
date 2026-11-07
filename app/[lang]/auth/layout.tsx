@@ -15,11 +15,11 @@ import { tr } from "@/lib/i18n/tr";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthPhotoStage from "@/components/auth/AuthPhotoStage";
-import LanguageHints from "@/components/i18n/LanguageHints";
 
 // Bảng thương hiệu chỉ nói điều kiểm chứng được (thử mẫu chạy trên máy, không thu phí thợ/tiệm, hai ngôn ngữ).
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const { t } = useLanguage();
+  // authHint = <LanguageHints placement="auth" /> from the root layout (LanguageProvider): not imported here on purpose.
+  const { t, authHint } = useLanguage();
   return (
     <div className={`pn-auth ${fraunces.variable}`}>
       <div className="pn-auth-grid">
@@ -55,7 +55,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           {/* Hàng trên của cột form: gợi ý ngôn ngữ (trong luồng, NGAY TRÊN form — thấy ở khung hình đầu, không bao giờ
               đè nút / ô nhập; components/i18n/LanguageHints.tsx) + nút EN·VI (≥ 1024; điện thoại có nút ở thanh đầu). */}
           <div className="pn-auth-top">
-            <LanguageHints placement="auth" />
+            {authHint}
             <LanguageToggle className="pn-auth-toggle" />
           </div>
           <div className="pn-auth-form">{children}</div>

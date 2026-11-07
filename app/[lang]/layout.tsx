@@ -6,7 +6,7 @@ import "../globals.css";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { brandOgImage, langFrom, openGraph } from "@/lib/i18n/server";
 import { SEASON_BOOT } from "@/lib/season";
-import { LANG_HINT_BOOT } from "@/lib/i18n/langHint";
+import { LANG_HINT_BOOT } from "@/lib/i18n/langHintBoot";
 
 // Layout GỐC nằm dưới segment [lang]: mỗi trang được prerender 1 lần cho mỗi ngôn
 // ngữ (/en/…, /vi/…) và edge rewrite trong next.config.ts chọn bản đúng theo
@@ -97,7 +97,7 @@ export default async function RootLayout({
     >
       <head>
         {/* Trước khi vẽ: html[data-surface] (landing khách "/" · /auth/*), data-authed…, mùa + thị trường (SEASON_BOOT,
-            lib/season.ts), gợi ý ngôn ngữ html[data-lh] (LANG_HINT_BOOT, lib/i18n/langHint.ts). Chrome có thể bắn
+            lib/season.ts), gợi ý ngôn ngữ html[data-lh] (LANG_HINT_BOOT, lib/i18n/langHintBoot.ts). Chrome có thể bắn
             "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app. */}
         <script
           dangerouslySetInnerHTML={{
@@ -111,7 +111,9 @@ export default async function RootLayout({
         <div aria-hidden className="app-backdrop">
           <span className="grain" />
         </div>
-        <LanguageProvider initialLocale={lang}>
+        {/* authHint: the /auth/* language hint, rendered by app/[lang]/auth/layout.tsx from context (keeps LanguageHints
+            in this layout's chunk only — see LanguageProvider). */}
+        <LanguageProvider initialLocale={lang} authHint={<LanguageHints placement="auth" />}>
           <SessionUserProvider>
             <CallManagerProvider>
               <UnreadMessagesProvider>

@@ -21,6 +21,8 @@ interface LanguageContextValue {
   // Nested-key lookup, e.g. t("messenger.title"), with {placeholder}
   // interpolation, e.g. t("messenger.replyingTo", { name: "Alice" }).
   t: (key: string, vars?: Record<string, string | number>) => string;
+  /** The /auth/* language hint (<LanguageHints placement="auth" />), handed down by the root layout — see below. */
+  authHint: React.ReactNode;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -69,7 +71,12 @@ export function reloadInLocale(next: Locale) {
  * nháy tiếng Việt rồi mới đổi sang tiếng Anh, không lệch hydration. Đổi VI/EN =
  * ghi cookie rồi tải lại trang (segment gốc đổi nên tải lại là đường đúng).
  */
-export function LanguageProvider({ initialLocale, children }: { initialLocale: Locale; children: React.ReactNode }) {
+// `authHint`: the root layout (server) passes <LanguageHints placement="auth" /> here and app/[lang]/auth/layout.tsx
+// renders it from this context instead of importing LanguageHints itself. A second import from the auth layout made
+// LanguageHints a module shared by two layout entries; /auth/register is already at webpack's 25 initial-chunk limit,
+// so that reshuffled the split chunks and shipped react-hot-toast twice (+15 KB raw JS). This way the module only
+// lives in the root layout's chunk, exactly like before the in-flow hint.
+export function LanguageProvider({ initialLocale, authHint = null, children }: { initialLocale: Locale; authHint?: React.ReactNode; children: React.ReactNode }) {
   const locale: Locale = isLocale(initialLocale) ? initialLocale : "en";
   // Biến toàn cục cho tr() phía trình duyệt — đặt ngay trong lúc render, trước khi
   // component con render. Máy chủ KHÔNG đụng biến này (tr() đọc LocaleContext).
@@ -146,7 +153,7 @@ export function LanguageProvider({ initialLocale, children }: { initialLocale: L
     [locale]
   );
 
-  const value = useMemo(() => ({ locale, setLocale, toggleLocale, t }), [locale, setLocale, toggleLocale, t]);
+  const value = useMemo(() => ({ locale, setLocale, toggleLocale, t, authHint }), [locale, setLocale, toggleLocale, t, authHint]);
 
   return (
     <LocaleContext.Provider value={locale}>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { langFrom, pageMetadata } from "@/lib/i18n/server";
 import { ForgotPasswordForm } from "@/components/auth/PasswordResetForms";
+import { AuthedRedirect } from "@/components/auth/useAuthedRedirect";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   return pageMetadata(await langFrom(params), "/auth/forgot", {
@@ -9,6 +10,13 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   });
 }
 
+// Đã đăng nhập → vào app (như /auth/register, /auth/login). /auth/reset KHÔNG chuyển: link trong email phải dùng được
+// cả khi máy còn phiên đăng nhập.
 export default function ForgotPasswordPage() {
-  return <ForgotPasswordForm />;
+  return (
+    <>
+      <AuthedRedirect />
+      <ForgotPasswordForm />
+    </>
+  );
 }

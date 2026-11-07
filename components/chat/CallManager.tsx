@@ -232,7 +232,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         startingRef.current = false;
       }
       if (enabled === false) {
-        toast.error(tr("Hiện chưa gọi được — dịch vụ gọi đang được bảo trì. Bạn nhắn tin trước nhé.", "Calling isn't available right now. Please send a message instead."), { id: "pn-call-off" });
+        toast.error(tr("Hiện chưa gọi được. Bạn nhắn tin trước nhé.", "Calling isn't available right now. Please send a message instead."), { id: "pn-call-off" });
         return;
       }
       if (stateRef.current.phase !== "idle") return;

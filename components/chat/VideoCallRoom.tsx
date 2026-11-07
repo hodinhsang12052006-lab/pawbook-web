@@ -83,6 +83,8 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     // Đã đăng nhập phòng ZEGOCLOUD (LOGINED) + mã lỗi đăng nhập gần nhất
     let loggedIn = false;
     let failCode = 0;
+    // Người dùng tự bấm nút cúp máy của UIKit (kể cả khi chưa đăng nhập xong phòng — mạng chậm) → cúp máy bình thường.
+    let userHungUp = false;
     let peerWatcher: MutationObserver | null = null;
     let showJoinFailure: (() => void) | null = null;
     const peerTimer = setTimeout(() => {
@@ -122,7 +124,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
           return;
         }
         if (media.camProblem) {
-          toast(tr("Máy ảnh không dùng được — vào cuộc gọi với máy ảnh tắt.", "Camera unavailable — joining with your camera off."), { icon: "📷", id: "pn-call-cam" });
+          toast(tr("Không mở được máy ảnh — bạn sẽ vào cuộc gọi với máy ảnh tắt.", "Camera unavailable — joining with your camera off."), { icon: "📷", id: "pn-call-cam" });
         }
         if (!tokenRes.ok) {
           const err = await tokenRes.json().catch(() => ({}));
@@ -141,7 +143,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         // UIKit gặp lỗi đăng nhập thì tự rời phòng (onLeaveRoom → trước đây cúp máy cả 2 bên, màn gọi biến mất) và để lại hộp
         // thoại tiếng Anh "Login room Failed" nằm đè trang chat. Giờ: giữ màn gọi + câu báo của app (EN / VI, có mã), ẩn hộp thoại đó.
         showJoinFailure = () => {
-          if (cancelled || peerSeen) return;
+          if (cancelled || peerSeen || userHungUp) return;
           clearTimeout(peerTimer);
           setCallError({ title: zegoJoinErrorText(failCode) });
           hideZegoLoginAlert(mountRef.current);
@@ -174,6 +176,15 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         mount.style.height = "100%";
         containerRef.current?.appendChild(mount);
         mountRef.current = mount;
+        // Nút cúp máy của UIKit có id cố định (điện thoại / máy tính). Bắt ở pha capture: biết là NGƯỜI DÙNG rời phòng trước khi
+        // SDK gọi onLeaveRoom (SDK cũng gọi onLeaveRoom khi tự bỏ cuộc vì lỗi đăng nhập).
+        mount.addEventListener(
+          "click",
+          (e) => {
+            if ((e.target as Element | null)?.closest?.("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton")) userHungUp = true;
+          },
+          true,
+        );
         peerWatcher?.observe(mount, { childList: true, subtree: true });
 
         zp.joinRoom({
@@ -207,9 +218,10 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
             cbRef.current.onPeerLeft?.();
           },
           onLeaveRoom: () => {
-            // Chưa từng vào được phòng (không có nút rời phòng trước khi vào) = SDK bỏ cuộc vì lỗi đăng nhập → không cúp máy
-            // im lặng; báo lỗi (mã tới trễ 1 nhịp: listener của SDK chạy qua setTimeout) để người dùng chọn Thử lại / Nhắn tin.
-            if (!loggedIn && !peerSeen) {
+            // Chưa vào được phòng mà người dùng KHÔNG bấm cúp máy = SDK bỏ cuộc vì lỗi đăng nhập → không cúp máy im lặng; báo lỗi
+            // (mã tới trễ 1 nhịp: listener của SDK chạy qua setTimeout) để người dùng chọn Thử lại / Nhắn tin.
+            // Người dùng bấm cúp máy khi phòng còn đang đăng nhập (mạng chậm) → cúp máy luôn, bên kia thôi đổ chuông.
+            if (!loggedIn && !peerSeen && !userHungUp) {
               setTimeout(() => showJoinFailure?.(), 400);
               return;
             }

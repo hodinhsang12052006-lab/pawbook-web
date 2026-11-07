@@ -70,7 +70,11 @@ export function mediaProblemText(problem: MediaProblem, video: boolean, platform
           ? tr(`Mở Cài đặt → PawNail → bật ${what}, rồi bấm Thử lại.`, `Open Settings → PawNail → turn on ${what}, then tap Try again.`)
           : platform === "ios-web"
             ? tr(`Chạm "aA" trên thanh địa chỉ → Cài đặt trang web → cho phép ${what}, rồi bấm Thử lại.`, `Tap "aA" in the address bar → Website Settings → allow ${what}, then tap Try again.`)
-            : tr(`Chạm biểu tượng ổ khoá cạnh địa chỉ trang → Quyền → cho phép ${what}, rồi bấm Thử lại.`, `Tap the lock icon next to the site address → Permissions → allow ${what}, then tap Try again.`);
+            : // Chrome 117+ (máy tính lẫn Android) thay ổ khoá bằng biểu tượng "tuỳ chỉnh" — nói chung "biểu tượng bên trái thanh địa chỉ"
+              tr(
+                `Chạm biểu tượng bên trái thanh địa chỉ → Quyền (Cài đặt trang web) → cho phép ${what}, rồi bấm Thử lại.`,
+                `Tap the icon at the left of the address bar → Permissions (Site settings) → allow ${what}, then tap Try again.`,
+              );
     return { title, hint };
   }
   if (problem === "nodevice") return { title: tr("Không tìm thấy micrô trên máy này.", "No microphone was found on this device.") };

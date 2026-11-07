@@ -5,6 +5,7 @@
 import { classifyMediaError, checkCallMedia, mediaProblemText, zegoJoinErrorText } from "../../lib/callMedia";
 import { setTrLocale } from "../../lib/i18n/tr";
 import { generateToken04 } from "../../lib/zegoServerAssistant";
+import { probeCalls } from "../../lib/callPreload";
 
 let pass = 0;
 let fail = 0;
@@ -30,10 +31,10 @@ for (const lang of ["en", "vi"] as const) {
 }
 const viOk = Object.entries(out).filter(([k]) => k.startsWith("vi:")).every(([, t]) => /[ăâđêôơưạảấầẩậắằẳặẹẻẽếềểệỉịọỏốồổộớờởợụủứừửựỳỵỷỹáàãéèíìóòõúùý]/i.test(t.title + (t.hint || "")));
 const enOk = Object.entries(out).filter(([k]) => k.startsWith("en:")).every(([, t]) => !/[ăâđêôơưạảấầẩậắằẳặẹẻẽếềểệỉịọỏốồổộớờởợụủứừửựỳỵỷỹ]/i.test(t.title + (t.hint || "")));
-check("CU2", "Bị chặn quyền: có hướng dẫn bật cho từng nơi (Android: Settings → Apps → PawNail → Permissions; iPhone app; Safari 'aA'; trình duyệt: ổ khoá) — EN không dấu, VI có dấu",
+check("CU2", "Bị chặn quyền: có hướng dẫn bật cho từng nơi (Android: Settings → Apps → PawNail → Permissions; iPhone app; Safari 'aA'; trình duyệt: biểu tượng bên trái thanh địa chỉ — Chrome 117+ không còn ổ khoá) — EN không dấu, VI có dấu",
   /Settings → Apps → PawNail → Permissions/.test(out["en:android-app:false"].hint || "") &&
     /Cài đặt → Ứng dụng → PawNail → Quyền/.test(out["vi:android-app:false"].hint || "") &&
-    /Settings → PawNail/.test(out["en:ios-app:false"].hint || "") && /aA/.test(out["en:ios-web:false"].hint || "") && /lock icon/.test(out["en:web:false"].hint || "") &&
+    /Settings → PawNail/.test(out["en:ios-app:false"].hint || "") && /aA/.test(out["en:ios-web:false"].hint || "") && /icon at the left of the address bar → Permissions \(Site settings\)/.test(out["en:web:false"].hint || "") && /biểu tượng bên trái thanh địa chỉ/.test(out["vi:web:false"].hint || "") &&
     /camera/i.test(out["en:web:true"].title) && !/camera/i.test(out["en:web:false"].title) && /Máy ảnh/.test(out["vi:android-app:true"].hint || "") &&
     viOk && enOk && Object.values(out).every((t) => t.title.length > 10),
   JSON.stringify({ a: out["en:android-app:false"], v: out["vi:android-app:true"], viOk, enOk }).slice(0, 300));
@@ -105,6 +106,38 @@ try {
   e31 = String(e);
 }
 check("CU5", "Token04: App ID số + secret 32 ký tự → token '04…'; secret 31 ký tự → lỗi (route báo 'chưa cấu hình' thay vì 500)", /^04/.test(t1) && /32 byte/.test(e31), JSON.stringify({ t1: t1.slice(0, 6), e31 }));
+
+// CU6 — "chưa cấu hình" chỉ nhớ 60 giây (app để nền lâu vẫn nhận ra khi chủ app thêm ZEGO_APP_ID + deploy lại); "có" nhớ cả phiên.
+{
+  const g = globalThis as unknown as { window?: unknown; fetch?: unknown };
+  const realNow = Date.now;
+  let now = 1_000_000;
+  Date.now = () => now;
+  let answer: unknown = { enabled: false };
+  let hits = 0;
+  Object.defineProperty(g, "window", { configurable: true, value: {} });
+  g.fetch = async () => {
+    hits++;
+    return { ok: true, json: async () => answer };
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const a = await probeCalls();
+  await tick();
+  now += 30_000;
+  const b = await probeCalls(); // còn trong 60 giây → không hỏi lại
+  const hitsB = hits;
+  answer = { enabled: true };
+  now += 31_000;
+  const c = await probeCalls(); // quá 60 giây → hỏi lại, giờ đã bật
+  await tick();
+  now += 10 * 60_000;
+  const d = await probeCalls(); // true nhớ cả phiên
+  const hitsD = hits;
+  Date.now = realNow;
+  delete g.window;
+  check("CU6", "probeCalls: 'chưa cấu hình' nhớ ≤ 60 giây rồi hỏi lại (thêm ZEGO_APP_ID không cần tải lại trang); 'có' nhớ cả phiên",
+    a === false && b === false && hitsB === 1 && c === true && d === true && hitsD === 2, JSON.stringify({ a, b, c, d, hitsB, hitsD }));
+}
 
 console.log(`\ncall_unit: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

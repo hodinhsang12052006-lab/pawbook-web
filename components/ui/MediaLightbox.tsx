@@ -13,7 +13,7 @@ export default function MediaLightbox({ urls, index, onIndex, onClose }: { urls:
   useTr(); // render lại khi đổi VI/EN
   const startX = useRef<number | null>(null);
   const [gifAnim] = useState(() => canAnimate());
-  const go =(d: number) => onIndex((index + d + urls.length) % urls.length);
+  const go = (d: number) => onIndex((index + d + urls.length) % urls.length);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

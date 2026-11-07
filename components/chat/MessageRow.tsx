@@ -10,7 +10,7 @@ import { isExtFluentId, loadFullStickerManifest, type StickerMeta } from "@/lib/
 import { canAnimate, makeSlots } from "@/lib/stickers/lottie";
 import LottieLayer from "./LottieLayer";
 import { gifAspect, gifMediaSrc, gifStill, isGifUrl, isGifVideo, corsSafeGif } from "@/lib/chat/gif";
-import { emojiGraphemes } from "@/lib/chat/emojiOnly";
+import { emojiGraphemes, isFlagEmoji } from "@/lib/chat/emojiOnly";
 import GifVideo from "./GifVideo";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
@@ -246,7 +246,8 @@ function MessageRowImpl({
         {noto ? (
           <StickerView id={noto} size={112} />
         ) : (
-          <div className={`m-emoji-big m-emoji-${emojiCount}`} role="img" aria-label={msg.content.trim()}>{bigEmoji!.join(emojiCount > 1 ? "\u2009" : "")}</div>
+          // 1 cờ: cỡ của 3 emoji (48px) — Windows không có hình cờ, cỡ 92px thành 2 chữ cái khổng lồ
+          <div className={`m-emoji-big m-emoji-${emojiCount === 1 && isFlagEmoji(bigEmoji![0]) ? 3 : emojiCount}`} role="img" aria-label={msg.content.trim()}>{bigEmoji!.join(emojiCount > 1 ? "\u2009" : "")}</div>
         )}
         <span className="m-meta-pill" aria-hidden>{time}{tick}</span>
       </div>

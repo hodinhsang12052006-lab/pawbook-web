@@ -18,7 +18,7 @@ import { NOTO_VERSION } from "../../lib/stickers/catalog.generated";
 import { isValidStickerId, lottieUrl, notoIdFor, stillUrl, thumbUrl, NOTO_BASE } from "../../lib/stickers/urls";
 import { isAllowedStickerId, serverStickerGlyph } from "../../lib/stickers/server";
 import { makeSlots } from "../../lib/stickers/lottie";
-import { bigEmojiCount, emojiGraphemes, isEmojiOnly, trailingEmoji } from "../../lib/chat/emojiOnly";
+import { bigEmojiCount, emojiGraphemes, isEmojiOnly, isFlagEmoji, trailingEmoji } from "../../lib/chat/emojiOnly";
 import { isGifUrl, gifAspect, gifContentOk, gifMediaSrc, gifStill, gifVideoContent, isGifVideo } from "../../lib/chat/gif";
 import { mapGiphyItems } from "../../lib/chat/giphy";
 import { suggestStickers } from "../../lib/stickers/suggest";
@@ -244,6 +244,8 @@ ok("E4", "Emoji cuối ô soạn tin: '😂' / 'hehe 😂' / 'cảm ơn 🙏 ' /
     trailingEmoji("hehe😂") === null && trailingEmoji("😂😂") === null && trailingEmoji("hi") === null && trailingEmoji("") === null);
 ok("E5", "Nhãn Noto cho emoji gõ tay: '❤' (không FE0F) → '❤️'; '😂' → '😂'; 👍🏽: tin emoji to giữ màu da → không có (vẽ chữ), gợi ý nhãn → '👍'; 🇻🇳 / 🐶 → không có",
   notoIdFor("❤") === "❤️" && notoIdFor("😂", true) === "😂" && notoIdFor("👍🏽", true) === null && notoIdFor("👍🏽") === "👍" && notoIdFor("🇻🇳") === null && notoIdFor("🐶") === null && isValidStickerId(notoIdFor("❤")!));
+ok("E5b", "Cờ (🇻🇳, 🇺🇸) nhận ra là cờ → 1 cờ vẽ cỡ nhỏ hơn (Windows không có hình cờ); 😂 / 🏴 / 'VN' → không",
+  isFlagEmoji("🇻🇳") && isFlagEmoji("🇺🇸") && !isFlagEmoji("😂") && !isFlagEmoji("🏴") && !isFlagEmoji("VN") && !isFlagEmoji("🇻"));
 // thời gian dựng / phân tích 1 tin (MessageRow gọi mỗi lần render tin chữ)
 const t0 = performance.now();
 for (let i = 0; i < 20000; i++) emojiGraphemes(i % 2 ? "😂 ❤️ 👍🏽" : "Hẹn chị 3h chiều mai nhé, cảm ơn chị nhiều 🙏");

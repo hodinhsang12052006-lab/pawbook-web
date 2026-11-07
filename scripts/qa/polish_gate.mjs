@@ -566,7 +566,7 @@ if (PERF) {
       // Cloudinary URLs — so an LCP on such an image says nothing about production: info only.
       if (rec.lcp > BUDGET.lcpMs && runs.some((x) => x.dataUrl)) info.push(`LCP ${key}/${vp} ${rec.lcp} ms on a data: URL image (local demo data, not representative; check with PageSpeed Insights on a preview)`);
       else if (rec.lcp > BUDGET.lcpMs) breach(`perf/${key}/${vp}`, `LCP ${rec.lcp} ms > ${BUDGET.lcpMs}`, runs.map((x) => x.el));
-      if (key !== "designs" && rec.cls > BUDGET.cls) breach(`perf/${key}/${vp}`, `CLS ${rec.cls} > ${BUDGET.cls}`);
+      if (rec.cls > BUDGET.cls) breach(`perf/${key}/${vp}`, `CLS ${rec.cls} > ${BUDGET.cls}`);
       // CSS: never above the baseline run (--compare); without one, the absolute budget (pre-v2 level, informational)
       if (key === "landing" && !COMPARE && rec.css > BUDGET.cssBytes) info.push(`CSS on '/' ${vp}: ${rec.css} bytes (absolute budget ${BUDGET.cssBytes}, measured before the v2 in-app CSS shipped)`);
       process.stdout.write("p");
@@ -582,6 +582,35 @@ if (PERF) {
     }
   }
 }
+// ---------------------------------------------------------------------------------------------------------------
+// Desktop auth: on a long form the brand column stays pinned (sticky top 0, exactly one viewport tall, never over the
+// footer) — scrolled to the very bottom, it must still fill the left column. Full-page screenshots cannot show this
+// (a sticky box is captured at its scroll-0 place), so it is measured on real scroll positions.
+const sticky = [];
+for (const [w, h] of [[1440, 900], [1280, 720], [1024, 768]]) {
+  for (const [key, p] of [["reg-owner", "/auth/register?role=owner"], ["reg-client", "/auth/register?role=client"]]) {
+    for (const lang of ["en", "vi"]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, locale: lang === "vi" ? "vi-VN" : "en-US" });
+      const page = await ctx.newPage();
+      try { await page.goto(urlFor(p, lang), { waitUntil: "load", timeout: 60000 }); } catch {}
+      await page.waitForTimeout(800);
+      const r = await page.evaluate(async () => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        window.scrollTo({ top: max, behavior: "instant" });
+        await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+        const pr = document.querySelector(".pn-auth-panel")?.getBoundingClientRect();
+        const fr = document.querySelector(".pn-auth-foot")?.getBoundingClientRect();
+        const plate = document.querySelector(".pn-auth-stage")?.getBoundingClientRect();
+        return { scrolled: Math.round(scrollY), max, top: pr ? Math.round(pr.top) : null, bottom: pr ? Math.round(pr.bottom) : null, vh: innerHeight, plateInView: !!(plate && plate.bottom > 0 && plate.top < innerHeight), overFooter: !!(pr && fr && fr.left < pr.right && fr.top < pr.bottom && fr.bottom > pr.top) };
+      }).catch((e) => ({ error: String(e).slice(0, 120) }));
+      sticky.push({ key, lang, w, h, ...r });
+      if (r.error || r.top !== 0 || r.bottom !== r.vh || !r.plateInView || r.overFooter) breach(`sticky/${key}/${lang}/${w}x${h}`, "desktop brand column is not pinned to the viewport at the bottom of the form", r);
+      await ctx.close();
+    }
+  }
+}
+process.stdout.write("s\n");
+
 await browser.close();
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -613,12 +642,13 @@ const summary = {
   base: BASE, label: LABEL, baseline: BASELINE, when: new Date().toISOString(), pages: results.length, breaches: breaches.length,
   byRule: Object.entries(breaches.reduce((m, x) => ((m[x.msg.replace(/[\d.]+/g, "#").slice(0, 60)] = (m[x.msg.replace(/[\d.]+/g, "#").slice(0, 60)] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]),
 };
-fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify({ summary, info, breaches, perf, toggle, results }, null, 1));
+fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify({ summary, info, breaches, perf, sticky, toggle, results }, null, 1));
 try { await sheet("d"); await sheet("m"); } catch (e) { console.log("contact sheet failed:", e.message); }
 for (const t of toggle) console.log(`toggle ${t.vp}: ${JSON.stringify(t.before)} -> ${JSON.stringify(t.after)} -> reload ${JSON.stringify(t.reload)}${t.error ? " ERROR " + t.error : ""}`);
 console.log(JSON.stringify(summary, null, 1));
 for (const i of info) console.log("info:", i);
 for (const p of perf) console.log(`perf ${p.key}/${p.vp}: LCP ${p.lcp} ms, CLS ${p.cls}, JS ${p.js}, CSS ${p.css}, font ${p.font}`);
+for (const t of sticky) console.log(`sticky ${t.key}/${t.lang} ${t.w}x${t.h}: scrolled ${t.scrolled}/${t.max}, panel ${t.top}..${t.bottom} of ${t.vh}, plate in view ${t.plateInView}, over footer ${t.overFooter}`);
 for (const x of breaches.slice(0, 40)) console.log("BREACH", x.key, "—", x.msg, x.extra ? JSON.stringify(x.extra).slice(0, 200) : "");
 console.log("report:", path.join(OUT, "report.json"));
 process.exit(breaches.length && !BASELINE ? 1 : 0);

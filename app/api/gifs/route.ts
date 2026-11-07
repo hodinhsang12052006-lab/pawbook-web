@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { marketFromHeaders } from "@/lib/market";
 import { gifQueryEn } from "@/lib/gifQueryVi";
-import { gifVideoContent } from "@/lib/chat/gif";
+import { mapGiphyItems, type GiphyItem } from "@/lib/chat/giphy";
 
 // GET /api/gifs?q=&lang=en|vi&next= — tìm GIF qua API hợp lệ (khoá nằm ở máy chủ, không lộ ra trình duyệt).
 // GET /api/gifs?probe=1 — chỉ báo { enabled } theo việc CÓ khoá hay không (không gọi nhà cung cấp, không tính lượt) —
@@ -39,8 +39,6 @@ let badKeyAt = 0;
 const BAD_KEY_MS = 10 * 60_000;
 
 const strip = (u: unknown) => (typeof u === "string" ? u.split("?")[0] : "");
-const GIPHY_MEDIA = /^https:\/\/media\d*\.giphy\.com\//;
-const GIPHY_MP4 = /^https:\/\/media\d*\.giphy\.com\/[^?#\s]+\.mp4$/;
 const TENOR_MEDIA = /^https:\/\/(media\.tenor\.com|[a-z0-9-]+\.tenor\.com)\//;
 
 function badKey(provider: Provider, status: number): Page {
@@ -65,28 +63,10 @@ async function giphyPage(key: string, q: string, lang: "vi" | "en", offset: numb
   }
   if (r.status === 401 || r.status === 403) return badKey("giphy", r.status);
   if (!r.ok) return { ok: false, reason: "upstream" };
-  type Img = { url?: string; webp?: string; mp4?: string; width?: string; height?: string };
-  const d = (await r.json().catch(() => null)) as { data?: { id?: string; title?: string; images?: Record<string, Img> }[]; pagination?: { total_count?: number; count?: number } } | null;
+  const d = (await r.json().catch(() => null)) as { data?: GiphyItem[]; pagination?: { total_count?: number; count?: number } } | null;
   if (!d || !Array.isArray(d.data)) return { ok: false, reason: "upstream" };
-  const results: Gif[] = [];
-  for (const g of d.data) {
-    const im = g.images || {};
-    // Gửi: fixed_height (cao 200px, rộng theo tỉ lệ — 16:9 ≈ 356px) để bong bóng 240px không bị phóng to ~3× trên màn
-    // hình 2,6–3× DPR như fixed_width (rộng 200px). Bản MP4 (nhẹ hơn WebP/GIF nhiều lần) + ảnh tĩnh fixed_height_still làm
-    // poster; thiếu MP4 → WebP / GIF như trước. Ô trong lưới: MP4 fixed_width (200px, mượt + nhẹ), thiếu → WebP downsampled.
-    const fh = im.fixed_height || {};
-    const w = Number(fh.width);
-    const h = Number(fh.height);
-    const mp4 = strip(fh.mp4);
-    const poster = strip(im.fixed_height_still?.url);
-    const legacy = strip(fh.webp || fh.url);
-    const send = GIPHY_MP4.test(mp4) ? gifVideoContent(mp4, w, h, GIPHY_MEDIA.test(poster) ? poster : null) : `${legacy}#wh=${w}x${h}`;
-    const tileMp4 = strip(im.fixed_width?.mp4);
-    const preview = GIPHY_MP4.test(tileMp4) ? tileMp4 : strip(im.fixed_width_downsampled?.webp || im.fixed_width_small?.webp) || legacy;
-    const still = strip(im.fixed_width_still?.url || im.fixed_height_still?.url);
-    if (!g.id || !GIPHY_MEDIA.test(send) || !GIPHY_MEDIA.test(preview) || !(w > 0) || !(h > 0)) continue;
-    results.push({ id: `g_${g.id}`, send, preview, ...(GIPHY_MEDIA.test(still) ? { still } : {}), w, h, title: String(g.title || "").slice(0, 120) });
-  }
+  // MP4 để gửi (+ poster) · MP4 nhỏ cho ô lưới · ảnh tĩnh cho ô — lib/chat/giphy.ts
+  const results: Gif[] = mapGiphyItems(d.data);
   const count = d.data.length;
   const total = Number(d.pagination?.total_count ?? 0);
   const nextOffset = offset + count;

@@ -1,7 +1,9 @@
 // Kiểm thử THUẦN (không mạng, không DB) cho nhãn dán / GIF / hình nền chat:
 //   danh mục (611 emoji động Noto + Fluent 3D) · id + tính duy nhất · URL ghim Noto 17.0 · bộ theo mùa (ngày + thị trường,
 //   bỏ trùng) · tìm EN / VI (CLDR) không dấu + bỏ trùng theo ký tự · kiểm id phía máy chủ · tin sticker cũ (emoji chữ) ·
-//   isGifUrl · chuyển hình nền cũ (pn_chat_wp → pn_wp:v2:<user>) · xoá ảnh nền · ChatKey · giới hạn số hình động cùng lúc.
+//   isGifUrl · chuyển hình nền cũ (pn_chat_wp → pn_wp:v2:<user>) · xoá ảnh nền · ChatKey · giới hạn số hình động cùng lúc ·
+//   (11/2026) emoji to: tách cụm emoji (ZWJ, màu da, cờ, mũ phím) · gợi ý nhãn theo emoji · tìm emoji EN/VI (xếp hạng, tốc độ) ·
+//   GIF dạng MP4 (nhận diện, poster, kiểm phía máy chủ, xem trước 'GIF', ánh xạ JSON GIPHY giả).
 //   npx tsx scripts/qa/stickers_unit.mts
 import { ALL_PACKS, ANIM_PACKS, SEASON_PACKS, THREE_D_PACKS, TET_ZODIAC, allStickerIds } from "../../lib/stickers/catalog";
 import { flId, LEGACY_IDS, MAX_STICKER_ID_LENGTH } from "../../lib/stickers/packs";
@@ -13,11 +15,14 @@ import { buildManifest, fluentPathFor, isExtFluentId } from "../../lib/stickers/
 import { NOTO_IDS, STICKER_GLYPH } from "../../lib/stickers/ids.generated";
 import { FLUENT_PATH } from "../../lib/stickers/paths.generated";
 import { NOTO_VERSION } from "../../lib/stickers/catalog.generated";
-import { isValidStickerId, lottieUrl, stillUrl, thumbUrl, NOTO_BASE } from "../../lib/stickers/urls";
+import { isValidStickerId, lottieUrl, notoIdFor, stillUrl, thumbUrl, NOTO_BASE } from "../../lib/stickers/urls";
 import { isAllowedStickerId, serverStickerGlyph } from "../../lib/stickers/server";
 import { makeSlots } from "../../lib/stickers/lottie";
-import { isEmojiOnly } from "../../lib/chat/emojiOnly";
-import { isGifUrl, gifAspect } from "../../lib/chat/gif";
+import { bigEmojiCount, emojiGraphemes, isEmojiOnly, trailingEmoji } from "../../lib/chat/emojiOnly";
+import { isGifUrl, gifAspect, gifContentOk, gifMediaSrc, gifStill, gifVideoContent, isGifVideo } from "../../lib/chat/gif";
+import { mapGiphyItems } from "../../lib/chat/giphy";
+import { suggestStickers } from "../../lib/stickers/suggest";
+import { buildEmojiIndex, parseEmojiWords, searchEmoji } from "../../lib/stickers/emojiSearch";
 import { gifQueryEn } from "../../lib/gifQueryVi";
 import { mediaPreview } from "../../lib/chat/preview";
 import { EMOJI_GROUPS } from "../../lib/chatStickers";
@@ -222,6 +227,125 @@ const s3 = started.join("");
 cancels[2]();
 cancels[3]();
 ok("L1", "Tối đa N hình động: 2 chỗ → a, b chạy; c, d chờ; a xong → c; b xong → d; huỷ hết → 0 chỗ", s1 === "ab" && s2 === "abc" && s3 === "abcd" && sl.size === 0, { s1, s2, s3, size: sl.size });
+
+// ---------- 8. Emoji to (1–3 emoji) · gợi ý nhãn dán · tìm emoji · GIF dạng MP4 (11/2026) ----------
+const eg = (s: string) => JSON.stringify(emojiGraphemes(s));
+const singles = ["😂", "👍🏽", "🙏🏻", "❤️‍🔥", "👨‍👩‍👧‍👦", "🫱🏻‍🫲🏿", "🏳️‍🌈", "🏴‍☠️", "🇻🇳", "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "1️⃣", "#️⃣", "*️⃣", "❤", "❤️", "☺️", " 😂 "];
+ok("E1", "1 emoji theo CỤM: ZWJ (gia đình, ❤️‍🔥, cờ cầu vồng / hải tặc), màu da (👍🏽, bắt tay 2 màu da), cờ (🇻🇳, England), mũ phím (1️⃣ #️⃣ *️⃣), ❤ không FE0F → đúng 1",
+  singles.every((s) => emojiGraphemes(s)?.length === 1 && bigEmojiCount(s) === 1), singles.map((s) => `${s}:${eg(s)}`));
+ok("E2", "2–3 emoji (có / không khoảng trắng, cờ liền nhau) → 2 / 3; 4 emoji → không phải emoji to",
+  bigEmojiCount("😂😂") === 2 && bigEmojiCount("😂 ❤️ 👍🏽") === 3 && bigEmojiCount("🇻🇳🇺🇸") === 2 && bigEmojiCount("👨‍👩‍👧‍👦👨‍👩‍👧‍👦") === 2 && bigEmojiCount("😂😂😂😂") === 0,
+  [eg("😂 ❤️ 👍🏽"), eg("🇻🇳🇺🇸"), eg("😂😂😂😂")]);
+const notEmoji = ["", " ", "hi", "😂hi", "hi😂", "1", "#", "©", "™", "‼", "↔", "▶", "☺︎", "🇻", "😂.", "<b>😂</b>"];
+ok("E3", "Không phải emoji: chữ, số, '#', ©/™/‼/↔/▶ dạng chữ, ☺︎ (FE0E ép dạng chữ), 1 ký tự vùng lẻ, emoji + dấu câu / HTML → null",
+  notEmoji.every((s) => emojiGraphemes(s) === null && bigEmojiCount(s) === 0), notEmoji.filter((s) => emojiGraphemes(s) !== null));
+ok("E4", "Emoji cuối ô soạn tin: '😂' / 'hehe 😂' / 'cảm ơn 🙏 ' / '👍🏽' → emoji đó; 'hehe😂' (dính chữ), '😂😂', 'hi', '' → null",
+  trailingEmoji("😂") === "😂" && trailingEmoji("hehe 😂") === "😂" && trailingEmoji("cảm ơn 🙏 ") === "🙏" && trailingEmoji("👍🏽") === "👍🏽" &&
+    trailingEmoji("hehe😂") === null && trailingEmoji("😂😂") === null && trailingEmoji("hi") === null && trailingEmoji("") === null);
+ok("E5", "Nhãn Noto cho emoji gõ tay: '❤' (không FE0F) → '❤️'; '😂' → '😂'; 👍🏽: tin emoji to giữ màu da → không có (vẽ chữ), gợi ý nhãn → '👍'; 🇻🇳 / 🐶 → không có",
+  notoIdFor("❤") === "❤️" && notoIdFor("😂", true) === "😂" && notoIdFor("👍🏽", true) === null && notoIdFor("👍🏽") === "👍" && notoIdFor("🇻🇳") === null && notoIdFor("🐶") === null && isValidStickerId(notoIdFor("❤")!));
+// thời gian dựng / phân tích 1 tin (MessageRow gọi mỗi lần render tin chữ)
+const t0 = performance.now();
+for (let i = 0; i < 20000; i++) emojiGraphemes(i % 2 ? "😂 ❤️ 👍🏽" : "Hẹn chị 3h chiều mai nhé, cảm ơn chị nhiều 🙏");
+const perMsg = ((performance.now() - t0) / 20000) * 1000;
+ok("E6", `Nhận ra emoji to rẻ: ${perMsg.toFixed(2)} µs / tin (< 20 µs)`, perMsg < 20, perMsg);
+
+// gợi ý nhãn dán theo emoji
+const sug = (g: string) => suggestStickers(g, STICKERS, 12);
+const sJoy = sug("😂");
+const sHeart = sug("❤");
+const sThumb = sug("👍🏽");
+ok("SG1", "Gợi ý: '😂' → 😂 động trước + 🤣 liên quan; '❤' → ❤️ động, rồi ❤️ 3D, rồi các tim khác; '👍🏽' → 👍 (bỏ màu da); 🇻🇳 / 👩‍💻 → không có thanh",
+  sJoy[0] === "😂" && sJoy.includes("🤣") && sHeart[0] === "❤️" && sHeart[1] === "fl:red_heart" && sHeart.slice(2).some((id) => ["💛", "💚", "💙", "💜"].includes(id)) &&
+    sThumb[0] === "👍" && sug("🇻🇳").length === 0 && sug("👩‍💻").length === 0,
+  { sJoy, sHeart, sThumb });
+const allSug = ["😂", "❤️", "👍", "🙏", "💅", "🎂", "🔥", "😭", "🥰", "🎉", "☕", "🐶"].flatMap(sug);
+ok("SG2", `Mọi nhãn gợi ý (${allSug.length}) là id máy chủ chấp nhận, ≤ 12 / thanh, không trùng ký tự trong 1 thanh; chưa có manifest → vẫn có nhãn cùng ký tự`,
+  allSug.every((id) => isAllowedStickerId(id)) &&
+    ["😂", "❤️", "🎂", "🥰"].every((g) => { const s = sug(g); return s.length <= 12 && new Set(s.map((id) => bare(STICKERS[id]?.glyph ?? id) + (id.startsWith("fl:") && bare(STICKERS[id].glyph) === bare(g) ? "3d" : ""))).size === s.length; }) &&
+    suggestStickers("😂", null).join() === "😂" && suggestStickers("❤", null).join() === "❤️,fl:red_heart",
+  allSug.filter((id) => !isAllowedStickerId(id)));
+ok("SG3", "Nhãn liên quan không ghép bừa: '🔥' không gợi ý 🛠️ / ⚙️ (chung từ 'tool'); '🐶' (không có bản Noto) → 🐕 nhờ từ khoá 'chó'",
+  !sug("🔥").some((id) => ["🛠️", "⚙️", "⚓"].includes(id)) && sug("🐶").includes("🐕"), { fire: sug("🔥"), dog: sug("🐶") });
+
+// tìm emoji (tab Emoji)
+const EW = parseEmojiWords(CORE.WORDS, EXT.WORDS_EXT);
+const kb = EMOJI_GROUPS.flatMap((g) => g.items);
+const EI = buildEmojiIndex(kb, EW);
+const kbUnique = [...new Set(kb.map(bare))];
+const noWords = kbUnique.filter((g) => !EW.get(g));
+ok("ES1", `Mọi emoji trên bàn phím (${kbUnique.length}) có tên + từ khoá CLDR EN/VI (manifest lõi + mở rộng)`, noWords.length === 0 && EI.entries.length === kbUnique.length, noWords);
+const se = (q: string, l: "vi" | "en" = "vi") => searchEmoji(q, EI, l);
+ok("ES2", "'cam on' / 'cảm ơn' / 'cám ơn' / 'thank' → 🙏 đứng đầu (VI + EN)",
+  ["cam on", "cảm ơn", "cám ơn", "thank"].every((q) => se(q)[0] === "🙏" && se(q, "en")[0] === "🙏"), ["cam on", "thank"].map((q) => se(q).slice(0, 5)));
+ok("ES3", "'tim' → ❤️ đầu + ≥ 10 tim; 'tim do' (không dấu, đủ từ) → ❤️; 'heart' → có ❤️ trong 3 đầu",
+  se("tim")[0] === "❤️" && se("tim").filter((g) => ["❤️", "🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💔", "💕", "💞", "💓", "💗", "💖"].includes(g)).length >= 10 && se("tim do")[0] === "❤️" && se("heart", "en").slice(0, 3).includes("❤️"),
+  { tim: se("tim").slice(0, 8), timDo: se("tim do"), heart: se("heart", "en").slice(0, 5) });
+ok("ES4", "'haha' / 'cuoi' → 😂 đầu, có 🤣; 'cho' / 'dog' → 🐶 đầu; 'meo' → 🐱; 'mong' / 'nail' → 💅 đầu; 'bia' → 🍺 🍻",
+  se("haha")[0] === "😂" && se("haha").includes("🤣") && se("cuoi")[0] === "😂" && se("cho")[0] === "🐶" && se("dog", "en")[0] === "🐶" && se("meo")[0] === "🐱" &&
+    se("mong")[0] === "💅" && se("nail", "en")[0] === "💅" && ["🍺", "🍻"].every((g) => se("bia").includes(g)),
+  { cuoi: se("cuoi").slice(0, 4), cho: se("cho").slice(0, 4) });
+ok("ES5", "Ngôn ngữ giao diện quyết định khi trùng chữ không dấu: 'cat' EN → 🐱 đầu, VI → 'cắt' (💇‍♀️) đầu; rỗng / chuỗi lạ → []",
+  se("cat", "en")[0] === "🐱" && se("cat", "vi")[0] === "💇‍♀️" && se("").length === 0 && se("   ").length === 0 && se("zzqxv").length === 0,
+  { en: se("cat", "en").slice(0, 3), vi: se("cat", "vi").slice(0, 3) });
+ok("ES6", "Kết quả không trùng (💅 / 💋 / 🎂 có ở 2 nhóm vẫn chỉ 1 lần)", ["mong", "son", "banh", "c", "a"].every((q) => new Set(se(q).map(bare)).size === se(q).length));
+// gõ từng phím (cả xoá lùi) — mỗi lần tìm lại toàn bộ
+const keys = ["c", "ca", "cam", "cam ", "cam o", "cam on", "cam o", "cam", "t", "ti", "tim", "h", "ha", "hah", "haha", "s", "sa", "sad", "d", "do", "dog", "chó", "mèo"];
+const t1 = performance.now();
+let worst = 0;
+for (let r = 0; r < 100; r++)
+  for (const k of keys) {
+    const a = performance.now();
+    se(k);
+    worst = Math.max(worst, performance.now() - a);
+  }
+const avgKey = (performance.now() - t1) / (100 * keys.length);
+const tb = performance.now();
+buildEmojiIndex(kb, parseEmojiWords(CORE.WORDS, EXT.WORDS_EXT));
+const buildMs = performance.now() - tb;
+ok("ES7", `Nhanh: ${avgKey.toFixed(3)} ms / phím (chậm nhất ${worst.toFixed(2)} ms; dựng chỉ mục 1 lần ${buildMs.toFixed(1)} ms) — máy này ≤ 2 ms / phím ⇒ điện thoại tầm trung (~5–8× chậm hơn) < 16 ms`,
+  avgKey < 2 && buildMs < 150, { avgKey, worst, buildMs });
+
+// GIF dạng MP4
+const MP4 = "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/abcDEF123/200.mp4";
+const STILL = "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/abcDEF123/200_s.gif";
+const mp4Msg = gifVideoContent(MP4, 356, 200, STILL);
+ok("G7", "Tin GIF MP4: 'mp4#wh=356x200&still=<URI>' → isGifUrl + isGifVideo, tỉ lệ 356/200, poster giải mã đúng, src bỏ phần #; tin cũ .webp/.gif/Tenor → GIF nhưng không phải video",
+  mp4Msg.startsWith(MP4 + "#wh=356x200&still=https%3A%2F%2Fmedia2.giphy.com") && isGifUrl(mp4Msg) && isGifVideo(mp4Msg) && Math.abs((gifAspect(mp4Msg) ?? 0) - 356 / 200) < 1e-9 &&
+    gifStill(mp4Msg) === STILL && gifMediaSrc(mp4Msg) === MP4 &&
+    !isGifVideo("https://media.giphy.com/media/a/200w.webp#wh=200x150") && !isGifVideo("https://media.tenor.com/x/tinygif.gif#wh=1x1") && isGifUrl("https://media.tenor.com/x/tinygif.gif") &&
+    !isGifVideo("https://res.cloudinary.com/x/video/upload/a.mp4") && !isGifVideo("https://evil.example/200.mp4"),
+  mp4Msg);
+const evilStill = `${MP4}#wh=356x200&still=${encodeURIComponent("https://evil.example/pixel.gif")}`;
+ok("G8", "Máy chủ kiểm phần #: MP4 + poster GIPHY, tin cũ (.webp#wh / .gif / Tenor, có hoặc không #wh) → nhận; poster host lạ / http / tham số lạ / ký tự lạ → từ chối; poster lạ không bao giờ được vẽ",
+  gifContentOk(mp4Msg) && gifContentOk(MP4) && gifContentOk(`${MP4}#wh=356x200`) && gifContentOk("https://media.giphy.com/media/a/200w.webp#wh=200x150") && gifContentOk("https://media.tenor.com/x/tinygif.gif#wh=220x124") &&
+    gifContentOk("https://res.cloudinary.com/x/image/upload/a.jpg") &&
+    !gifContentOk(evilStill) && gifStill(evilStill) === null && !gifContentOk(`${MP4}#wh=356x200&still=${encodeURIComponent("http://media.giphy.com/a.gif")}`) &&
+    !gifContentOk(`${MP4}#wh=356x200&x=1`) && !gifContentOk(`${MP4}#t=5`) && !gifContentOk(`https://media.giphy.com/a b.mp4`) && !gifContentOk(`${MP4}#wh=1x1&still=${encodeURIComponent(MP4)}`),
+  { evil: gifContentOk(evilStill) });
+setTrLocale("en");
+const pv = [mediaPreview("IMAGE", mp4Msg), mediaPreview("IMAGE", MP4)];
+setTrLocale("vi");
+pv.push(mediaPreview("IMAGE", mp4Msg), mediaPreview("TEXT", "😂") ?? "text");
+setTrLocale("en");
+ok("G9", "Xem trước danh sách: tin GIF MP4 → 'GIF' (EN + VI), không phải '🎬 Video' / '📷 Photo'; tin chữ '😂' vẫn là chữ", pv.join("|") === "GIF|GIF|GIF|text", pv);
+// GIPHY → kết quả của /api/gifs (JSON giả — không dùng khoá thật)
+const gimg = (base: string, w: number, h: number, kind = "200") => ({
+  url: `${base}/${kind}.gif?cid=abc&rid=${kind}.gif&ct=g`, webp: `${base}/${kind}.webp?cid=abc&rid=${kind}.webp&ct=g`, mp4: `${base}/${kind}.mp4?cid=abc&rid=${kind}.mp4&ct=g`, width: String(w), height: String(h),
+});
+const B1 = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjEx/xyz789";
+const giphy = mapGiphyItems([
+  { id: "xyz789", title: "Happy Dance", images: { fixed_height: gimg(B1, 356, 200), fixed_height_still: { url: `${B1}/200_s.gif?cid=abc` }, fixed_width: gimg(B1, 200, 112, "200w"), fixed_width_still: { url: `${B1}/200w_s.gif?cid=abc` }, fixed_width_downsampled: { webp: `${B1}/200w_d.webp?cid=abc` } } },
+  { id: "old1", title: "no mp4", images: { fixed_height: { url: `${B1}/200.gif?x`, webp: `${B1}/200.webp?x`, width: "200", height: "200" }, fixed_width_downsampled: { webp: `${B1}/200w_d.webp` } } },
+  { id: "bad", images: { fixed_height: { mp4: "https://evil.example/200.mp4", url: "https://evil.example/200.gif", width: "200", height: "100" } } },
+  { id: "nodims", images: { fixed_height: { mp4: `${B1}/200.mp4` } } },
+]);
+const [g0, g1] = giphy;
+ok("G10", "GIPHY → /api/gifs: gửi MP4 fixed_height + #wh + poster fixed_height_still (bỏ ?cid…); ô lưới = MP4 fixed_width + ảnh tĩnh; thiếu MP4 → WebP như cũ; host lạ / thiếu kích thước → bỏ",
+  giphy.length === 2 && g0.id === "g_xyz789" && g0.send === `${B1}/200.mp4#wh=356x200&still=${encodeURIComponent(`${B1}/200_s.gif`)}` && isGifVideo(g0.send) && gifContentOk(g0.send) &&
+    g0.preview === `${B1}/200w.mp4` && g0.still === `${B1}/200w_s.gif` && g0.w === 356 && g0.h === 200 && g0.title === "Happy Dance" &&
+    g1.send === `${B1}/200.webp#wh=200x200` && !isGifVideo(g1.send) && g1.preview === `${B1}/200w_d.webp` && gifContentOk(g1.send),
+  giphy);
 
 console.log(`\nstickers_unit: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

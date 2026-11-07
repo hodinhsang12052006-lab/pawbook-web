@@ -6,7 +6,7 @@ import { chatChannelName } from "@/lib/pusherChannel";
 import prisma from "@/lib/prisma";
 import { sendPush } from "@/lib/push";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
-import { CALL_ID_RE, newCallId, signCallToken, verifyCallToken, type CallClaims } from "@/lib/calls/callToken";
+import { CALL_ID_RE, CALL_TOKEN_TTL_MS, newCallId, signCallToken, verifyCallToken, type CallClaims } from "@/lib/calls/callToken";
 import { LEG_RE, chunkSerialized, isSeq, validateSignalData, type SignalEvent } from "@/lib/calls/signalWire";
 
 // Signaling relay for 1:1 WebRTC calls (media itself goes peer-to-peer or through TURN — never through here).
@@ -19,13 +19,23 @@ import { LEG_RE, chunkSerialized, isSeq, validateSignalData, type SignalEvent } 
 //                                                      seconds so a phone that opens PawNail from the push still rings)
 //   accept {targetId, callId, callToken, leg, socketId?} → "call-accepted" to the caller + "call-handled" to the
 //                                                      callee's OTHER devices (they stop ringing)
-//   reject {targetId, callId, callToken, reason}     → "call-rejected" (decline / cancel / hang-up / timeout / …)
-//   busy   {targetId, callId, callToken}             → "call-busy"
+//   answering {targetId, callId, callToken, leg}     → "call-answering" to the caller: the callee tapped Answer but its
+//                                                      camera/mic prompt is still open — the caller stops its ring timeout
+//   reject {targetId, callId, callToken, reason, leg?, toLeg?} → "call-rejected" {fromLeg, toLeg} (decline / cancel /
+//                                                      hang-up / timeout / …). fromLeg lets the caller ignore a stale
+//                                                      device of the callee once it is talking to another one; toLeg
+//                                                      ("answered-elsewhere") stops exactly one device of the callee.
+//   busy   {targetId, callId, callToken, leg?}       → "call-busy" {fromLeg}
 //   signal {targetId, callId, callToken, fromLeg, toLeg, seq, kind: sdp|ice|ctl, data} → "call-signal" parts
 // Every action except offer needs the call token minted by the offer: it binds caller, callee and callId, so a
 // stranger cannot inject hang-ups or SDP into somebody else's call.
-const ACTIONS = new Set(["offer", "ring", "accept", "reject", "busy", "signal"]);
-const REJECT_REASONS = new Set(["decline", "cancel", "hangup", "timeout", "media-error", "failed", "busy"]);
+const ACTIONS = new Set(["offer", "ring", "answering", "accept", "reject", "busy", "signal"]);
+const REJECT_REASONS = new Set(["decline", "cancel", "hangup", "timeout", "media-error", "failed", "busy", "answered-elsewhere"]);
+// The caller re-rings for at most ~45 s; a token older than this can no longer ring anybody (a modified client could
+// otherwise keep ringing a callee for the token's whole 3 h life without any push trail).
+const RING_WINDOW_MS = 50_000;
+// Answer must come while it can still ring (+ the time a first-time camera/mic prompt may take after "answering").
+const ACCEPT_WINDOW_MS = 120_000;
 const MAX_BODY = 64 * 1024;
 const MINUTE = 60_000;
 const SOCKET_ID_RE = /^\d{1,20}\.\d{1,20}$/;
@@ -87,6 +97,7 @@ export async function POST(req: Request) {
     const socketId = typeof body.socketId === "string" && SOCKET_ID_RE.test(body.socketId) ? body.socketId : undefined;
     // The caller's device ("leg"): the callee sends its WebRTC signals to exactly that tab / phone.
     const leg = typeof body.leg === "string" && LEG_RE.test(body.leg) ? body.leg : null;
+    const toLeg = typeof body.toLeg === "string" && LEG_RE.test(body.toLeg) ? body.toLeg : null;
 
     // ---------- offer (start ringing) ----------
     if (action === "offer") {
@@ -131,6 +142,7 @@ export async function POST(req: Request) {
     const claims: CallClaims | null = verifyCallToken(body.callToken, { userId, targetId, callId });
     if (!claims) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
     const iAmCaller = claims.c === userId;
+    const issuedAt = claims.x - CALL_TOKEN_TTL_MS;
 
     if (action === "signal") {
       if (limited(`call-signal:${userId}`, 240)) return err(429, "Quá nhiều tín hiệu cuộc gọi.", "Too many call signals.");
@@ -152,7 +164,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "ring") {
-      if (!iAmCaller) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
+      if (!iAmCaller || Date.now() > issuedAt + RING_WINDOW_MS) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
       if (limited(`call-ring:${userId}`, 20)) return err(429, "Bạn gọi quá nhiều lần, thử lại sau ít phút.", "Too many calls. Try again in a minute.");
       const caller = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, avatarUrl: true } });
       await pusher.trigger(target, "incoming-call", {
@@ -171,13 +183,26 @@ export async function POST(req: Request) {
 
     if (limited(`call-ctl:${userId}`, 60)) return err(429, "Thao tác quá nhanh, thử lại sau.", "Too many requests. Try again later.");
 
+    // "Stop ringing" on my OTHER devices is best effort: the call itself must not fail because of it.
+    const handledElsewhere = (how: string) =>
+      pusher.trigger(own, "call-handled", { fromId: userId, callId: claims.i, how }, socketId ? { socket_id: socketId } : undefined).catch((e: unknown) => {
+        console.warn("call-handled trigger failed:", e instanceof Error ? e.message : e);
+      });
+
+    if (action === "answering") {
+      if (iAmCaller || !leg || Date.now() > issuedAt + ACCEPT_WINDOW_MS) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
+      await pusher.trigger(target, "call-answering", { fromId: userId, callId: claims.i, leg });
+      return NextResponse.json({ success: true });
+    }
+
     if (action === "accept") {
-      if (iAmCaller) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
+      if (iAmCaller || Date.now() > issuedAt + ACCEPT_WINDOW_MS) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
       if (!leg) return err(400, "Thiếu hoặc sai thông tin cuộc gọi.", "Missing or invalid call fields.");
+      // Only call-accepted decides the answer: if it fails the callee is told; call-handled is best effort.
       await Promise.all([
         pusher.trigger(target, "call-accepted", { fromId: userId, callId: claims.i, leg }),
         // Các máy KHÁC của chính mình ngừng đổ chuông (máy vừa nghe bị loại trừ bằng socket_id).
-        pusher.trigger(own, "call-handled", { fromId: userId, callId: claims.i, how: "accepted" }, socketId ? { socket_id: socketId } : undefined),
+        handledElsewhere("accepted"),
       ]);
       return NextResponse.json({ success: true });
     }
@@ -186,11 +211,11 @@ export async function POST(req: Request) {
       const reason = action === "busy" ? "busy" : typeof body.reason === "string" && REJECT_REASONS.has(body.reason) ? body.reason : "hangup";
       const jobs: Promise<unknown>[] = [
         action === "busy"
-          ? pusher.trigger(target, "call-busy", { fromId: userId, callId: claims.i })
-          : pusher.trigger(target, "call-rejected", { fromId: userId, callId: claims.i, reason }),
+          ? pusher.trigger(target, "call-busy", { fromId: userId, callId: claims.i, fromLeg: leg })
+          : pusher.trigger(target, "call-rejected", { fromId: userId, callId: claims.i, reason, fromLeg: leg, toLeg }),
       ];
       // Người nhận từ chối / báo bận trên 1 máy → các máy khác của họ cũng ngừng đổ chuông.
-      if (!iAmCaller && (reason === "decline" || reason === "busy" || reason === "media-error")) jobs.push(pusher.trigger(own, "call-handled", { fromId: userId, callId: claims.i, how: reason }, socketId ? { socket_id: socketId } : undefined));
+      if (!iAmCaller && (reason === "decline" || reason === "busy" || reason === "media-error")) jobs.push(handledElsewhere(reason));
       await Promise.all(jobs);
       return NextResponse.json({ success: true });
     }

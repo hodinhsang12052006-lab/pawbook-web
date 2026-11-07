@@ -91,10 +91,10 @@ try {
     const r = await buildIceServers("u1", { env: { ...CF_ENV, CALL_STUN_URLS: "" }, log: (m) => logs.push(m) });
     const urls = allUrls(r);
     const h = hits[0];
-    ok("I7", "Cloudflare: gọi POST …/turn/keys/<id>/credentials/generate-ice-servers, Bearer token, ttl 7200", hits.length === 1 && h.url === `/turn/keys/${KEY}/credentials/generate-ice-servers` && h.auth === `Bearer ${TOKEN}` && JSON.parse(h.body).ttl === 7200, hits);
+    ok("I7", "Cloudflare: gọi POST …/turn/keys/<id>/credentials/generate-ice-servers, Bearer token, ttl 3600", hits.length === 1 && h.url === `/turn/keys/${KEY}/credentials/generate-ice-servers` && h.auth === `Bearer ${TOKEN}` && JSON.parse(h.body).ttl === 3600, hits);
     ok("I8", "Cloudflare: nhận TURN (udp/tcp/tls) + STUN, BỎ mọi URL cổng 53 và URL lạ", r.hasTurn && urls.includes("turns:turn.cloudflare.com:443?transport=tcp") && urls.includes("stun:stun.cloudflare.com:3478") && !urls.some((u) => /:53(\?|$)/.test(u)) && !urls.some((u) => u.startsWith("javascript")), urls);
     ok("I9", "Token API Cloudflare KHÔNG nằm trong kết quả gửi cho trình duyệt", !JSON.stringify(r).includes(TOKEN));
-    ok("I10", "Cloudflare: ttl 7200s (trình duyệt dùng lại ≤ ttl/2)", r.ttlSec === 7200, r.ttlSec);
+    ok("I10", "Cloudflare: ttl 3600s (trình duyệt làm mới danh sách trong cuộc gọi dài)", r.ttlSec === 3600, r.ttlSec);
 
     const r2 = await buildIceServers("u2", { env: { ...CF_ENV, CALL_STUN_URLS: "" } });
     ok("I11", "Cache 10 phút trên mỗi instance: lần 2 không gọi lại Cloudflare", hits.length === 1 && JSON.stringify(r2.iceServers) === JSON.stringify(r.iceServers), hits.length);
@@ -155,7 +155,7 @@ try {
     resetIceCache();
     mode = "array";
     const r = await buildIceServers("u1", { env: { ...CF_ENV, TURN_URLS: "turn:relay.example.com:3478", TURN_SECRET: "x" } });
-    ok("I20", "Cloudflare + coturn cùng lúc → gộp cả 2, ttl = nhỏ nhất (7200)", r.iceServers.filter((s) => s.username).length === 2 && r.ttlSec === 7200, r);
+    ok("I20", "Cloudflare + coturn cùng lúc → gộp cả 2, ttl = nhỏ nhất (3600)", r.iceServers.filter((s) => s.username).length === 2 && r.ttlSec === 3600, r);
   }
 } finally {
   server.close();

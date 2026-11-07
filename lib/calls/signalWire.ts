@@ -24,6 +24,8 @@ export interface WireCtl {
   facing?: "user" | "environment";
   bye?: string;
   video?: boolean;
+  /** the Android app went to the background (its microphone may be silenced by the OS) */
+  away?: boolean;
 }
 
 /** One Pusher "call-signal" event. `d` is a slice of JSON.stringify(data); parts are joined in order, then parsed. */
@@ -47,7 +49,7 @@ export const MAX_CTL_CHARS = 512;
 export const PART_CHARS = 4000;
 export const MAX_PARTS = 10;
 export const MAX_SEQ = 1_000_000;
-const CTL_KEYS = new Set(["mic", "cam", "facing", "bye", "video"]);
+const CTL_KEYS = new Set(["mic", "cam", "facing", "bye", "video", "away"]);
 
 export type ValidateResult = { ok: true; data: WireSdp | WireIce[] | WireCtl } | { ok: false; status: 400 | 413; reason: string };
 
@@ -81,7 +83,7 @@ export function validateSignalData(kind: unknown, data: unknown): ValidateResult
     const out: WireCtl = {};
     for (const [k, v] of Object.entries(o)) {
       if (!CTL_KEYS.has(k)) return { ok: false, status: 400, reason: "ctl key" };
-      if (k === "mic" || k === "video") {
+      if (k === "mic" || k === "video" || k === "away") {
         if (typeof v !== "boolean") return { ok: false, status: 400, reason: k };
         out[k] = v;
       } else if (k === "cam") {

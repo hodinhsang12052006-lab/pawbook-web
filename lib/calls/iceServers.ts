@@ -7,7 +7,7 @@
 // Sources, combined (none → STUN only, which still works on most home Wi-Fi):
 //   1. STUN: Google public STUN (CALL_STUN_URLS overrides; set it to "" to disable, e.g. offline tests).
 //   2. Cloudflare Realtime TURN: CLOUDFLARE_TURN_KEY_ID + CLOUDFLARE_TURN_API_TOKEN → short-lived credentials minted per
-//      instance (cached 10 min, credential ttl 2 h). The API token NEVER leaves the server.
+//      instance (cached 10 min, credential ttl 1 h). The API token NEVER leaves the server.
 //   3. Generic TURN (e.g. coturn): TURN_URLS (comma list) +
 //        TURN_SECRET (coturn "use-auth-secret": ephemeral HMAC credentials per user, recommended), or
 //        TURN_USERNAME / TURN_CREDENTIAL (static — visible to every signed-in user, so only for a dedicated relay).
@@ -38,7 +38,8 @@ export interface IceDeps {
 
 export const DEFAULT_STUN = ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"];
 const CF_BASE = "https://rtc.live.cloudflare.com/v1";
-const CF_TTL_SEC = 7200;
+// 1 h: enough for a call (the client refreshes its list during long calls) and limits what a harvested credential is worth.
+const CF_TTL_SEC = 3600;
 const CF_CACHE_MS = 10 * 60 * 1000;
 const CF_TIMEOUT_MS = 4000;
 const SECRET_TTL_SEC = 2 * 60 * 60;

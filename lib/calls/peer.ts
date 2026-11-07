@@ -20,16 +20,6 @@ import type { SignalKind, WireCtl, WireIce, WireSdp } from "./signalWire";
 export type NetState = "new" | "connecting" | "connected" | "reconnecting" | "failed" | "closed";
 export type Quality = "good" | "fair" | "poor";
 
-export const AUDIO_CONSTRAINTS: MediaTrackConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
-export function videoConstraints(facing: "user" | "environment" = "user", deviceId?: string): MediaTrackConstraints {
-  return {
-    width: { ideal: 1280, max: 1280 },
-    height: { ideal: 720, max: 720 },
-    frameRate: { ideal: 24, max: 30 },
-    ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: facing }),
-  };
-}
-
 const MAX_VIDEO_BITRATE = 1_200_000;
 const POOR_VIDEO_BITRATE = 450_000;
 
@@ -306,6 +296,16 @@ export class CallPeer {
     }
   }
 
+  /** User tapped "Retry" after the connection was lost: restart ICE and give it another full deadline. */
+  retry() {
+    if (this.closed) return;
+    this.net = "reconnecting";
+    this.o.onNetState("reconnecting");
+    this.clearDeadline();
+    this.armDeadline();
+    this.restart("manual");
+  }
+
   /** ICE restart (new ufrag/pwd, re-gathers candidates incl. TURN); the offer goes through onnegotiationneeded. */
   restart(why: string) {
     if (this.closed || !this.pc.remoteDescription) return;
@@ -493,11 +493,3 @@ export function stripCandidates(sdp: string): string {
     .join("\r\n");
 }
 
-export function stopStream(s: MediaStream | null | undefined) {
-  if (!s) return;
-  for (const t of s.getTracks()) {
-    try {
-      t.stop();
-    } catch {}
-  }
-}

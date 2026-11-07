@@ -34,7 +34,7 @@ function PrivacyVi() {
           <li><strong className={B}>Nội dung nhắn tin:</strong> tin nhắn văn bản, ảnh, video, tin nhắn thoại, GIF/sticker bạn gửi trong cuộc trò chuyện với người dùng khác.</li>
           <li><strong className={B}>Bài đăng:</strong> ảnh, video, bình luận và bình chọn bạn đăng lên bảng tin (bài ẩn danh được duyệt trước khi hiện).</li>
           <li><strong className={B}>Báo lỗi kỹ thuật:</strong> khi app gặp lỗi, thông tin lỗi (loại thiết bị, trình duyệt, trang đang mở, mã tài khoản) được gửi tới Sentry để chúng tôi sửa lỗi.</li>
-          <li><strong className={B}>Dữ liệu cuộc gọi:</strong> tín hiệu kết nối (không phải nội dung âm thanh/hình ảnh) được truyền qua Pusher và ZegoCloud để thiết lập cuộc gọi.</li>
+          <li><strong className={B}>Dữ liệu cuộc gọi:</strong> tín hiệu kết nối (không phải nội dung âm thanh/hình ảnh) được truyền qua Pusher để thiết lập cuộc gọi. Âm thanh và hình ảnh được trình duyệt mã hoá đầu-cuối (DTLS-SRTP) và đi thẳng giữa 2 thiết bị, hoặc qua máy chủ chuyển tiếp TURN của Cloudflare khi mạng không cho nối thẳng — máy chủ này chỉ chuyển gói tin đã mã hoá, không giải mã được. PawNail không ghi âm hay ghi hình cuộc gọi; chỉ lưu dòng nhật ký cuộc gọi (nhỡ / từ chối / thời lượng) trong đoạn chat.</li>
           <li><strong className={B}>Thông báo đẩy:</strong> nếu bạn bật thông báo, chúng tôi lưu mã thiết bị (do trình duyệt, Google Firebase hoặc Apple cấp) để gửi thông báo tới máy bạn.</li>
           <li><strong className={B}>Vị trí:</strong> ứng dụng <strong>không</strong> truy cập vị trí GPS. Khu vực chỉ là thông tin bạn tự nhập.</li>
         </ul>
@@ -58,7 +58,7 @@ function PrivacyVi() {
           <li><strong className={B}>Sentry</strong> — nhận báo lỗi kỹ thuật.</li>
           <li><strong className={B}>Resend</strong> — gửi email (ví dụ: email đặt lại mật khẩu).</li>
           <li><strong className={B}>Pusher</strong> — truyền tin nhắn/tín hiệu cuộc gọi thời gian thực.</li>
-          <li><strong className={B}>ZegoCloud</strong> — phòng gọi video.</li>
+          <li><strong className={B}>Cloudflare Realtime TURN</strong> — chuyển tiếp gói tin cuộc gọi đã mã hoá khi 2 máy không nối thẳng được (chỉ khi cần).</li>
           <li><strong className={B}>Twilio</strong> — gửi mã SMS khi bạn xác minh số điện thoại.</li>
           <li><strong className={B}>Google Firebase, Apple Push Notification service</strong> — gửi thông báo tới app trên điện thoại.</li>
           <li><strong className={B}>Google, Facebook, Apple</strong> — chỉ khi bạn chọn đăng nhập bằng tài khoản đó trên website.</li>
@@ -110,7 +110,7 @@ function PrivacyEn() {
           <li><strong className={B}>Messages:</strong> text, photos, videos, voice messages and GIFs/stickers you send to other users.</li>
           <li><strong className={B}>Posts:</strong> photos, videos, comments and poll votes you post to the feed (anonymous posts are reviewed before they appear).</li>
           <li><strong className={B}>Crash reports:</strong> when the app hits an error, error details (device type, browser, current page, account ID) are sent to Sentry so we can fix it.</li>
-          <li><strong className={B}>Call data:</strong> connection signals (not the audio or video itself) pass through Pusher and ZegoCloud to set up calls.</li>
+          <li><strong className={B}>Call data:</strong> connection signals (not the audio or video itself) pass through Pusher to set up calls. Audio and video are encrypted end-to-end by your browser (DTLS-SRTP) and travel directly between the two devices, or through Cloudflare's TURN relay when a network blocks a direct path — the relay only forwards encrypted packets it cannot decode. PawNail never records calls; only the call log line (missed / declined / duration) is kept in the chat.</li>
           <li><strong className={B}>Push notifications:</strong> if you turn on notifications, we store a device token (issued by your browser, Google Firebase or Apple) to deliver them.</li>
           <li><strong className={B}>Location:</strong> the app does <strong>not</strong> access GPS. Your area is only what you enter yourself.</li>
         </ul>
@@ -134,7 +134,7 @@ function PrivacyEn() {
           <li><strong className={B}>Sentry</strong> — receives crash reports.</li>
           <li><strong className={B}>Resend</strong> — sends email (for example, password reset emails).</li>
           <li><strong className={B}>Pusher</strong> — real-time messaging and call signaling.</li>
-          <li><strong className={B}>ZegoCloud</strong> — video call rooms.</li>
+          <li><strong className={B}>Cloudflare Realtime TURN</strong> — relays encrypted call packets when two devices can't connect directly (only when needed).</li>
           <li><strong className={B}>Twilio</strong> — sends SMS codes when you verify your phone.</li>
           <li><strong className={B}>Google Firebase, Apple Push Notification service</strong> — deliver notifications to the mobile app.</li>
           <li><strong className={B}>Google, Facebook, Apple</strong> — only if you choose to sign in with them on the website.</li>

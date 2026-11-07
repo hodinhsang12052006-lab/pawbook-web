@@ -37,6 +37,11 @@ function tone(freq: number, start: number, duration: number, volume: number) {
   osc.stop(t0 + duration + 0.02);
 }
 
+/** Gọi đồng bộ trong thao tác chạm (bấm gọi / nghe máy): mở khoá Web Audio cho tiếng chờ / chuông. */
+export function primeRingtone() {
+  audioCtx();
+}
+
 export function startRingtone(kind: "incoming" | "outgoing") {
   stopRingtone();
   const play = () => {

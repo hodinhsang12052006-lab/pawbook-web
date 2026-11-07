@@ -65,7 +65,10 @@ const nativeServerOn = () =>
     .then(async (d: PushServerInfo) => (Capacitor.getPlatform() === "ios" ? !!d.iosEnabled : !!d.nativeEnabled) && (await shellSupportsPush(d)))
     .catch(() => false));
 
-const plugin = async () => (await import("@capacitor/push-notifications")).PushNotifications;
+// Proxy plugin của Capacitor biến MỌI thuộc tính (kể cả "then") thành lời gọi native → KHÔNG được trả thẳng proxy từ hàm
+// async: `await` coi nó là thenable, gọi .then() → "PushNotifications.then() is not implemented" và promise treo mãi
+// (getPushState / nativeEnable không bao giờ xong). Bọc trong 1 object thường.
+const plugin = async () => ({ P: (await import("@capacitor/push-notifications")).PushNotifications });
 const savedToken = () => {
   try {
     return localStorage.getItem(TOKEN_KEY);
@@ -76,26 +79,31 @@ const savedToken = () => {
 
 export async function nativeGetState(): Promise<PushState> {
   if (!(await nativeServerOn())) return "unsupported";
-  const p = await (await plugin()).checkPermissions();
+  const p = await (await plugin()).P.checkPermissions();
   if (p.receive === "denied") return "denied";
   return p.receive === "granted" && savedToken() ? "on" : "off";
 }
 
 /** Đăng ký với Firebase → nhận token → gửi lên máy chủ. */
 async function registerToken(): Promise<boolean> {
-  const P = await plugin();
+  const { P } = await plugin();
+  // Gỡ listener sau mỗi lượt — trước đây mỗi lần mở app lại cộng thêm 1 cặp listener (gọi trùng nhiều lần).
+  const handles: Promise<{ remove: () => Promise<void> }>[] = [];
   const token = await new Promise<string | null>((resolve) => {
     const timer = setTimeout(() => resolve(null), 15_000);
-    P.addListener("registration", (t) => {
-      clearTimeout(timer);
-      resolve(t.value);
-    });
-    P.addListener("registrationError", () => {
-      clearTimeout(timer);
-      resolve(null);
-    });
+    handles.push(
+      P.addListener("registration", (t) => {
+        clearTimeout(timer);
+        resolve(t.value);
+      }),
+      P.addListener("registrationError", () => {
+        clearTimeout(timer);
+        resolve(null);
+      })
+    );
     P.register().catch(() => resolve(null));
   });
+  for (const h of handles) h.then((x) => x.remove()).catch(() => {});
   if (!token) return false;
   // build (versionCode Android / CFBundleVersion iOS): máy chủ chỉ gửi tin chat data-only (thông báo kiểu Messenger)
   // cho bản app có service tự vẽ (lib/fcm.ts richChatMinBuild) — bản cũ vẫn nhận dạng thông báo thường.
@@ -118,7 +126,7 @@ async function registerToken(): Promise<boolean> {
 
 export async function nativeEnable(): Promise<PushState> {
   if (!(await nativeServerOn())) return "unsupported";
-  const P = await plugin();
+  const { P } = await plugin();
   let perm = await P.checkPermissions();
   if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") perm = await P.requestPermissions();
   if (perm.receive !== "granted") return perm.receive === "denied" ? "denied" : "off";
@@ -142,7 +150,7 @@ export async function initNativePush() {
   // Bong bóng chat (WebView phụ) không đăng ký thông báo / không nghe bấm thông báo — app chính lo.
   if (initialized || !isNativeApp() || isBubbleMode()) return;
   initialized = true;
-  const P = await plugin();
+  const { P } = await plugin();
   P.addListener("pushNotificationActionPerformed", (a) => {
     const url = (a.notification.data as { url?: string } | undefined)?.url;
     if (url && url.startsWith("/")) window.location.href = url;

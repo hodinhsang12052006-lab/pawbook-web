@@ -1402,21 +1402,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           onRetry={retryConnection}
           onMessageInstead={messageInstead}
         />
-      ) : phase === "error" ? (
-        // keep WHICH call failed visible ABOVE the permission dialog (a compact header — the card covers the middle)
-        <div className="flex w-full flex-1 flex-col items-center px-6 pt-[max(2.5rem,env(safe-area-inset-top))]" aria-hidden>
-          <div className="flex max-w-full items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-4">
-            <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="h-12 w-12 shrink-0 ring-2 ring-white/10" />
-            <div className="min-w-0 text-left">
-              <p className="truncate text-base font-bold text-pn-text">{peer.name}</p>
-              <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-pn-text-2">
-                {callType === "video" ? <Video className="h-3 w-3" /> : <Phone className="h-3 w-3" />}
-                {typeLabel}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
+      ) : phase === "error" ? null : (
         <>
           <div className="flex flex-col items-center gap-1.5 pt-[max(2.5rem,env(safe-area-inset-top))]">
             <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-pn-text-2 backdrop-blur-md">
@@ -1529,6 +1515,21 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
       {mediaError && (
         <div data-call-error="media" data-call-error-kind={mediaError.kind} role="alertdialog" aria-modal="true" aria-labelledby="pn-call-err-title" aria-describedby="pn-call-err-hint" className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
+          {phase === "error" && (
+            // which call failed stays visible (sharp, above the backdrop) while the permission dialog is open
+            <div className="absolute inset-x-0 top-[max(2.5rem,env(safe-area-inset-top))] flex justify-center px-6" aria-hidden>
+              <div className="flex max-w-full items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-4">
+                <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="h-12 w-12 shrink-0 ring-2 ring-white/10" />
+                <div className="min-w-0 text-left">
+                  <p className="truncate text-base font-bold text-pn-text">{peer.name}</p>
+                  <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-pn-text-2">
+                    {callType === "video" ? <Video className="h-3 w-3" /> : <Phone className="h-3 w-3" />}
+                    {typeLabel}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="w-full max-w-sm rounded-pn-card bg-pn-surface p-6 text-center shadow-2xl ring-1 ring-pn-line motion-safe:animate-fadeIn">
             <ShieldAlert className="mx-auto h-9 w-9 text-pn-brand-ink" />
             <h3 id="pn-call-err-title" className="mt-3 text-lg font-bold text-pn-text">{mediaError.title}</h3>

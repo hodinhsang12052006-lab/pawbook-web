@@ -84,6 +84,10 @@ function measure() {
   if (Math.abs(sb.t - hb.b) > 1.5) P(`thread top ${sb.t} ≠ header bottom ${hb.b}`);
   if (Math.abs(sb.b - cb.t) > 1.5) P(`thread bottom ${sb.b} ≠ composer top ${cb.t}`);
   if (sb.h < 40) P(`thread squashed to ${sb.h}px`);
+  // cột chat không rộng hơn màn hình (nội dung rộng — thanh bộ nhãn dán, ảnh, link dài — không được kéo giãn cột rồi bị cắt)
+  const cr = col.getBoundingClientRect();
+  if (window.innerWidth < 768 && (Math.abs(cr.width - window.innerWidth) > 1 || cr.left < -1)) P(`chat column ${Math.round(cr.left)}..${Math.round(cr.right)} ≠ viewport ${window.innerWidth}`);
+  if (cb.r > window.innerWidth + 1 || hb.r > window.innerWidth + 1) P(`header/composer wider than the screen (${hb.r}/${cb.r} > ${window.innerWidth})`);
   if (sc.scrollWidth > sc.clientWidth + 1) P(`thread overflows sideways ${sc.scrollWidth}>${sc.clientWidth}`);
   // 3) bong bóng: chồng nhau / lệch hàng / transform sót
   const cs = getComputedStyle(sc);
@@ -281,7 +285,10 @@ for (const W of WIDTHS) {
   // bảng Nhãn dán (mở trong khung soạn tin) + bàn phím
   await p.getByRole("button", { name: "Emoji", exact: true }).click();
   await p.getByRole("dialog", { name: "Pick emoji" }).waitFor({ timeout: 15000 });
-  await add("emoji/sticker panel open");
+  await add("emoji panel open");
+  await p.getByRole("dialog", { name: "Pick emoji" }).getByRole("tab", { name: "Stickers" }).click();
+  await p.getByRole("dialog", { name: "Pick emoji" }).getByRole("textbox", { name: "Search stickers" }).waitFor({ timeout: 15000 });
+  await add("stickers tab open (wide pack bar)");
   steps.push({ ...(await check(p, `${W}px · panel open + keyboard`, await keyboard(p, true, W, FULL))) });
   await shot(p, `j${W}_03_panel_keyboard`);
   steps.push({ ...(await check(p, `${W}px · panel open, keyboard closed`, await keyboard(p, false, W, FULL))) });

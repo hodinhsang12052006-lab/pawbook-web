@@ -45,6 +45,11 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+    testOptions {
+        // Unit test thuần JVM (app/src/test): lớp Android dùng trong khởi tạo tĩnh (LruCache…)
+        // trả giá trị mặc định thay vì ném "not mocked".
+        unitTests.returnDefaultValues = true
+    }
     signingConfigs {
         release {
             if (hasReleaseKeystore) {

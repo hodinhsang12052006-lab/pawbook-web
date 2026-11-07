@@ -2,6 +2,8 @@
 // thử luồng duyệt. Nội dung thật, theo dịp lễ trong lịch Studio; minh hoạ do
 // app tự vẽ từ bảng màu + dáng móng + hiệu ứng (components/designs/NailArt).
 import type { Bi } from "@/lib/aiDesigns";
+import { occasionInWindow, type Market } from "@/lib/season";
+import { SEASONAL_THEMES } from "@/lib/studioThemes";
 
 export interface SampleDesign {
   occasion: string | null;
@@ -21,24 +23,6 @@ export interface SampleDesign {
 const BASE_TOP = { vi: "Base & top coat gel", en: "Gel base & top coat", qty: "1 bộ" };
 
 export const SAMPLE_DESIGNS: SampleDesign[] = [
-  {
-    occasion: "halloween",
-    title: { vi: "Đen nhám mạng nhện bạc", en: "Matte black silver web" },
-    description: { vi: "Nền đen nhám, mạng nhện bạc vẽ tay trên 2 ngón — mẫu Halloween được hỏi nhiều nhất, sang mà không “lố”.", en: "Matte black base with hand-drawn silver webs on two accent nails — the most-requested Halloween look, chic not costume-y." },
-    skills: ["Gel-X", "Design"], difficulty: 2, minutes: 60, priceHint: "$50–65",
-    palette: ["#111111", "#1f1f1f", "#c0c0c0"], shape: "almond", finish: "matte",
-    materials: [BASE_TOP, { vi: "Gel đen tuyền", en: "Jet black gel", qty: "1 lọ" }, { vi: "Gel vẽ nét bạc", en: "Silver liner gel", qty: "1 lọ" }, { vi: "Top nhám (matte top)", en: "Matte top coat", qty: "1 lọ" }, { vi: "Cọ nét mảnh 7mm", en: "7mm liner brush", qty: "1 cây" }],
-    steps: [{ vi: "Dũa form almond, sơn base", en: "Shape almond, apply base" }, { vi: "Sơn 2 lớp gel đen, hơ đèn mỗi lớp", en: "Two coats of black gel, cure each" }, { vi: "Vẽ mạng nhện bạc trên ngón áp út", en: "Draw silver webs on the ring fingers" }, { vi: "Phủ top nhám, chừa nét bạc bóng", en: "Matte top, keep the silver lines glossy" }],
-  },
-  {
-    occasion: "halloween",
-    title: { vi: "Mắt mèo cam bí ngô", en: "Pumpkin cat eye" },
-    description: { vi: "Gel mắt mèo cam cháy hút nam châm thành dải sáng — làm nhanh, khách chọn nhiều tuần cuối tháng 10.", en: "Burnt-orange cat-eye gel pulled into a bright magnetic band — quick to do, a late-October favorite." },
-    skills: ["Gel-X"], difficulty: 1, minutes: 45, priceHint: "$45–55",
-    palette: ["#c2410c", "#f97316", "#fdba74"], shape: "oval", finish: "cateye",
-    materials: [BASE_TOP, { vi: "Gel mắt mèo cam", en: "Orange cat-eye gel", qty: "1 lọ" }, { vi: "Nam châm mắt mèo", en: "Cat-eye magnet", qty: "1 cái" }, { vi: "Gel đen lót (tuỳ chọn)", en: "Black base gel (optional)", qty: "1 lọ" }],
-    steps: [{ vi: "Sơn base, 1 lớp đen lót cho màu sâu", en: "Base, one black layer for depth" }, { vi: "Sơn gel mắt mèo, hút nam châm 5 giây", en: "Cat-eye gel, hold the magnet 5 seconds" }, { vi: "Hơ đèn ngay khi dải sáng đẹp", en: "Cure as soon as the band looks right" }, { vi: "Lớp 2 + top bóng", en: "Second coat + glossy top" }],
-  },
   {
     occasion: "fall",
     title: { vi: "Đồi mồi caramel viền vàng", en: "Caramel tortoiseshell with gold" },
@@ -130,3 +114,10 @@ export const SAMPLE_DESIGNS: SampleDesign[] = [
     steps: [{ vi: "Đẩy da, dũa form vuông bo góc", en: "Push cuticles, file squoval" }, { vi: "Nhúng 2 lớp nude", en: "Two nude dips" }, { vi: "Activator, dũa mịn", en: "Activator, buff" }, { vi: "2 lớp top, dưỡng viền", en: "Two top coats, cuticle oil" }],
   },
 ];
+
+/** Mẫu gợi ý hợp mùa của thị trường hôm nay (ngày địa phương; mẫu quanh năm luôn có): dịp lễ đang diễn ra hoặc bắt đầu
+ *  trong ≤ 21 ngày (cần chuẩn bị trước); MÙA (thu / xuân / hè…) chỉ khi đã vào mùa ở bán cầu đó — tháng 2 ở Sydney chưa
+ *  ra mẫu thu. Không bao giờ có dịp đã nghỉ (Halloween). */
+export function samplesInSeason(market: Market, now: Date = new Date()): SampleDesign[] {
+  return SAMPLE_DESIGNS.filter((d) => occasionInWindow(d.occasion, market, now, d.occasion && SEASONAL_THEMES.has(d.occasion) ? 0 : 21));
+}

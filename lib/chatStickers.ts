@@ -14,8 +14,8 @@ export const STICKER_PACKS: StickerPack[] = [
   { id: "feel", label: ["Cảm xúc", "Feelings"], icon: "😂", items: ["😂", "🤣", "🥰", "😍", "😘", "😭", "🥺", "😡", "😱", "🤯", "🤩", "🥳", "😎", "🤔", "🙄", "😴", "🤗", "🤭", "😳", "😅", "😊", "😇", "🥲", "😮", "💀", "🙈", "👋"] },
   { id: "salon", label: ["Tiệm nail", "Salon"], icon: "💅", items: ["💅", "✨", "🔥", "💖", "💯", "👏", "🙏", "💸", "👍", "💪", "🎉", "🎁", "⭐", "🌈", "🌸"] },
   { id: "pets", label: ["Thú cưng", "Pets"], icon: "😺", items: ["😺", "😹", "😻", "🐕", "🦊", "🐼", "🦄", "🦁", "🐧", "🦉"] },
-  // Sau Halloween (đã lưu trữ 31/10): bộ lễ hội mở đầu bằng ✨ — mùa thu / cuối năm lên trước, 🎃 👻 xuống cuối.
-  { id: "party", label: ["Lễ hội", "Holidays"], icon: "✨", items: ["✨", "🍂", "❄️", "⛄", "🎁", "🎆", "🍾", "🥳", "🎉", "❤️", "💘", "🎂", "🎃", "👻"] },
+  // Bộ lễ hội mở đầu bằng ✨ — mùa thu / cuối năm lên trước. Halloween đã nghỉ (lib/season.ts): không còn sticker bí ngô / ma.
+  { id: "party", label: ["Lễ hội", "Holidays"], icon: "✨", items: ["✨", "🍂", "❄️", "⛄", "🎁", "🎆", "🍾", "🥳", "🎉", "❤️", "💘", "🎂"] },
 ];
 
 const ANIMATED = new Set(STICKER_PACKS.flatMap((p) => p.items));
@@ -46,6 +46,6 @@ export const EMOJI_GROUPS: { id: string; label: [string, string]; icon: string; 
   { id: "hearts", label: ["Tim", "Hearts"], icon: "❤️", items: "❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 🩷 🩵 🩶 💔 ❤️‍🔥 💕 💞 💓 💗 💖 💘 💝 💟 ❣️ 💋 💯 💢 💥 💫 ✨ 🌟 ⭐ 🔥".split(" ") },
   { id: "beauty", label: ["Nail & làm đẹp", "Nails & beauty"], icon: "💅", items: "💅 💄 💋 👄 🪞 🧴 🧼 🪮 💇‍♀️ 💆‍♀️ 👑 💍 💎 👜 👛 👠 👡 👗 👙 🎀 🌸 🌺 🌷 🌹 🌼 🦋 🫧 🧖‍♀️ 🛍️ 💐".split(" ") },
   { id: "food", label: ["Ăn uống", "Food"], icon: "🧋", items: "🧋 ☕ 🍵 🥤 🧃 🍹 🍺 🍻 🥂 🍾 🍜 🍲 🍛 🍣 🍱 🥟 🍤 🍙 🍚 🥖 🥪 🍕 🍔 🍟 🌮 🥗 🍓 🍉 🍌 🍑 🥭 🍰 🎂 🧁 🍩 🍪 🍫 🍦".split(" ") },
-  { id: "fun", label: ["Vui chơi & lễ", "Fun & holidays"], icon: "🎉", items: "🎉 🎊 🥳 🎁 🎈 🎂 🎃 👻 🎄 🎅 🧧 🏮 🎆 🎇 🧨 💘 💝 🌕 🏖️ ✈️ 🚗 🏠 🏪 💼 💰 💵 💸 📱 📸 🎵 🎶 🏆 🥇 ⚽ 🏀".split(" ") },
+  { id: "fun", label: ["Vui chơi & lễ", "Fun & holidays"], icon: "🎉", items: "🎉 🎊 🥳 🎁 🎈 🎂 👻 🎄 🎅 🧧 🏮 🎆 🎇 🧨 💘 💝 🌕 🏖️ ✈️ 🚗 🏠 🏪 💼 💰 💵 💸 📱 📸 🎵 🎶 🏆 🥇 ⚽ 🏀".split(" ") },
   { id: "animals", label: ["Động vật", "Animals"], icon: "🐶", items: "🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🙈 🙉 🙊 🐔 🐧 🐦 🐤 🦄 🐝 🦋 🐢 🐙 🐠 🐬 🐳".split(" ") },
 ];

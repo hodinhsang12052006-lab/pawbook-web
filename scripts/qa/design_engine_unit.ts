@@ -17,6 +17,7 @@ const DAY = 86_400_000;
 // Sinh mẫu cho 1 năm (mỗi 5 ngày, 2 thị trường) — giống cách cron chạy mỗi ngày.
 const all: { date: string; market: "US" | "AU"; d: EngineDesign; idx: number }[] = [];
 const batches: EngineDesign[][] = [];
+const occBatches = new Set<EngineDesign[]>(); // lô có dịp lễ đang / sắp diễn ra (Úc tháng 6–8 không có dịp nào)
 for (let t = Date.UTC(2026, 9, 1); t < Date.UTC(2027, 9, 1); t += 5 * DAY) {
   for (const market of ["US", "AU"] as const) {
     const date = new Date(t).toISOString().slice(0, 10);
@@ -31,6 +32,7 @@ for (let t = Date.UTC(2026, 9, 1); t < Date.UTC(2027, 9, 1); t += 5 * DAY) {
     }
     const b = generateEngineDesigns(6, { market, date, occasions: occ.slice(0, 4), risingTags: ["cateye", "frenchtip", "chromenails", "PawNailHalloween"], usedTitles: new Set() });
     batches.push(b);
+    if (occ.length) occBatches.add(b);
     b.forEach((d, idx) => all.push({ date, market, d, idx }));
   }
 }
@@ -70,10 +72,10 @@ check("DE16", "Lễ Tạ Ơn không xuất hiện ở Úc", !all.some((x) => x.m
 check("DE17", "Đa dạng: cả năm dùng ≥ 15 hoạ tiết, đủ 4 hệ móng và 5 hiệu ứng", new Set(all.map((x) => x.d.pattern)).size >= 15 && new Set(all.map((x) => x.d.spec.system)).size === 4 && new Set(all.map((x) => x.d.finish)).size === 5,
   `${new Set(all.map((x) => x.d.pattern)).size} hoạ tiết, ${new Set(all.map((x) => x.d.spec.system)).size} hệ, ${new Set(all.map((x) => x.d.finish)).size} hiệu ứng`);
 check("DE18", "Hoạ tiết riêng của dịp chỉ ra đúng dịp (mạng nhện = Halloween, bông tuyết = Noel/Năm mới, hoa mai/đào = Tết)", all.every((x) => (x.d.pattern !== "web" || x.d.occasion === "halloween") && (x.d.pattern !== "snow" || ["christmas", "newyear"].includes(x.d.occasion ?? "")) && (x.d.pattern !== "blossom" || x.d.occasion === "tet")));
-const again = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "halloween", title: "Mùa Halloween", startsIn: 0 }], risingTags: [], usedTitles: new Set() });
-const again2 = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "halloween", title: "Mùa Halloween", startsIn: 0 }], risingTags: [], usedTitles: new Set() });
+const again = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "fall", title: "Móng mùa thu", startsIn: 0 }], risingTags: [], usedTitles: new Set() });
+const again2 = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "fall", title: "Móng mùa thu", startsIn: 0 }], risingTags: [], usedTitles: new Set() });
 check("DE19", "Cùng ngày chạy lại ra cùng kết quả (có hạt giống)", JSON.stringify(again) === JSON.stringify(again2));
-const avoid = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "halloween", title: "Mùa Halloween", startsIn: 0 }], risingTags: [], usedTitles: new Set(again.map((d) => d.title.vi)) });
+const avoid = generateEngineDesigns(6, { market: "US", date: "2026-10-10", occasions: [{ id: "fall", title: "Móng mùa thu", startsIn: 0 }], risingTags: [], usedTitles: new Set(again.map((d) => d.title.vi)) });
 check("DE20", "Không lặp tên mẫu đã ra trước đó", avoid.length === 6 && !avoid.some((d) => again.some((a) => a.title.vi === d.title.vi)), avoid.map((d) => d.title.vi).join(" | "));
 
 const kor = all.filter((x) => /^Trend nail Hàn/.test(x.d.description.vi));
@@ -88,27 +90,29 @@ check("DE27", "Velvet: nam châm phẳng lướt đều khắp móng (không t�
   all.filter((x) => x.d.pattern === "milkbath").every((x) => x.d.palette[0] === COLORS.white.hex && x.d.steps.some((st) => /trùm lên hoa/.test(st.vi))) &&
   all.filter((x) => x.d.pattern === "negative").every((x) => x.d.steps.some((st) => /base trong/.test(st.vi)) && !x.d.steps.some((st) => /^Sơn 2 lớp gel/.test(st.vi))));
 check("DE28", "Cả năm dùng ≥ 30 hoạ tiết khác nhau", new Set(all.map((x) => x.d.pattern)).size >= 30, String(new Set(all.map((x) => x.d.pattern)).size));
-check("DE23", "Mỗi lô vừa có mẫu theo dịp lễ vừa có mẫu quanh năm (khi đang có dịp lễ)", batches.every((b) => b.some((d) => d.occasion) && b.some((d) => !d.occasion)));
+check("DE23", "Mỗi lô vừa có mẫu theo dịp lễ vừa có mẫu quanh năm (khi đang có dịp lễ)", batches.filter((b) => occBatches.has(b)).every((b) => b.some((d) => d.occasion) && b.some((d) => !d.occasion)) && occBatches.size >= batches.length * 0.6);
 check("DE24", "Hoạ tiết kiểu Hàn ra đúng chỗ (trend Hàn hoặc dịp được phép), baby boomer luôn hồng nude → trắng sữa", all.filter((x) => KOREAN_ONLY.includes(x.d.pattern)).every((x) => RADAR.test(x.d.description.vi) || /^Trend nail Hàn/.test(x.d.description.vi) || (x.d.occasion && (PATTERNS.find((p) => p.id === x.d.pattern)!.occasions as string[]).includes(x.d.occasion))) && all.filter((x) => x.d.pattern === "babyboomer").every((x) => x.d.palette[0] === COLORS.pinkNude.hex && x.d.palette[1] === COLORS.white.hex));
 check("DE25", "Charm/cụm đá: phủ top quanh viền, KHÔNG phủ lên mặt charm/đá", all.filter((x) => ["charm3d", "gemcluster"].includes(x.d.pattern)).every((x) => x.d.steps.some((st) => /không phủ lên mặt/.test(st.vi))));
 
 const dupWord = (t: string) => t.toLowerCase().split(/\s+/).some((w, i, a) => i > 0 && w === a[i - 1]);
 check("DE26", "Tên mẫu không lặp từ (VD 'thạch … thạch', 'sheer sheer')", !all.some((x) => dupWord(x.d.title.vi) || dupWord(x.d.title.en)), bad((x) => dupWord(x.d.title.vi) || dupWord(x.d.title.en)));
 
-// Bộ 100 mẫu Halloween
-const hb = generateOccasionBatch(100, { market: "US", date: "2026-10-10", occasion: { id: "halloween", title: "Mùa Halloween", emoji: "🎃", startsIn: 0 }, risingTags: [], usedTitles: new Set() });
+// Bộ 100 mẫu Giáng Sinh (Halloween đã nghỉ: bộ Halloween không còn tạo được — DE30)
+const hb = generateOccasionBatch(100, { market: "US", date: "2026-12-05", occasion: { id: "christmas", title: "Giáng Sinh", emoji: "🎄", startsIn: 0 }, risingTags: [], usedTitles: new Set() });
 const hbPat = new Set(hb.map((d) => d.pattern));
-const SPECIAL = PATTERNS.filter((p) => p.occasions !== "any" && (p.occasions as string[]).includes("halloween")).map((p) => p.id);
+const SPECIAL = PATTERNS.filter((p) => !p.retired && p.occasions !== "any" && (p.occasions as string[]).includes("christmas")).map((p) => p.id);
+const hwBatch = generateOccasionBatch(100, { market: "US", date: "2026-10-10", occasion: { id: "halloween", title: "Mùa Halloween", emoji: "🎃", startsIn: 0 }, risingTags: [], usedTitles: new Set() });
 const DARK = (["black", "chocolate", "smoke", "plum", "burgundy", "espresso", "navy", "pine"] as const).map((k) => COLORS[k].hex as string);
 const LIGHT = (["white", "pearl", "butter", "sheer"] as const).map((k) => COLORS[k].hex as string);
-check("DE29", "Bộ 100 mẫu Halloween: đủ 100, không trùng tên (VI + EN), tất cả là Halloween, ≥ 20 hoạ tiết, ≥ 60% hoạ tiết riêng của Halloween",
-  hb.length === 100 && new Set(hb.map((d) => d.title.vi)).size === 100 && new Set(hb.map((d) => d.title.en)).size === 100 && hb.every((d) => d.occasion === "halloween" && /mùa Halloween/.test(d.description.vi)) && hbPat.size >= 20 && hb.filter((d) => SPECIAL.includes(d.pattern)).length >= 60,
+check("DE29", "Bộ 100 mẫu Giáng Sinh: đủ 100, không trùng tên (VI + EN), tất cả là Giáng Sinh, ≥ 12 hoạ tiết, ≥ 40% hoạ tiết riêng của dịp",
+  hb.length === 100 && new Set(hb.map((d) => d.title.vi)).size === 100 && new Set(hb.map((d) => d.title.en)).size === 100 && hb.every((d) => d.occasion === "christmas") && hbPat.size >= 12 && hb.filter((d) => SPECIAL.includes(d.pattern)).length >= 40,
   `${hb.length} mẫu, ${new Set(hb.map((d) => d.title.vi)).size} tên, ${hbPat.size} hoạ tiết, riêng ${hb.filter((d) => SPECIAL.includes(d.pattern)).length}`);
-check("DE30", "Không ghép màu làm hoạ tiết chìm: mèo đen/khâu đen không trên nền tối, ma/xác ướp/đầu lâu không trên nền trắng, bí ngô không trên nền cam",
+check("DE30", "Halloween đã nghỉ: bộ mẫu Halloween = 0 mẫu, dịp Halloween bị bỏ khỏi lượt ngày; (mẫu cũ) không ghép mèo đen trên nền tối, ma trên nền trắng",
+  hwBatch.length === 0 && !liveOccasions([{ id: "halloween", title: "Halloween", startsIn: 0 }], "US", 10).length &&
   hb.every((d) => !(["blackcat", "stitches"].includes(d.pattern) && DARK.includes(d.palette[0])) && !(["ghost", "mummy", "skull"].includes(d.pattern) && LIGHT.includes(d.palette[0])) && !(d.pattern === "jackolantern" && [COLORS.pumpkin.hex, COLORS.burnt.hex, COLORS.caramel.hex].includes(d.palette[0] as never))),
   hb.filter((d) => ["blackcat", "stitches"].includes(d.pattern) && DARK.includes(d.palette[0])).map((d) => d.title.vi).join(" | "));
-check("DE31", "Bộ Halloween: tiếng Anh sạch, đủ vật tư & bước, mô tả ảnh không có chữ nhạy cảm (blood, gore, nude…)", hb.every((d) => ![d.title.en, d.description.en, d.imagePrompt, ...d.materials.map((m) => m.en), ...d.steps.map((x) => x.en)].some((t) => VI.test(t)) && d.materials.length >= 3 && d.steps.length >= 4 && !/(blood|gore|bloody|naked|nude skin|sexy)/i.test(d.imagePrompt)));
-const hb2 = generateOccasionBatch(100, { market: "US", date: "2026-10-10", occasion: { id: "halloween", title: "Mùa Halloween", startsIn: 0 }, risingTags: [], usedTitles: new Set(hb.map((d) => d.title.vi)) });
+check("DE31", "Bộ Giáng Sinh: tiếng Anh sạch, đủ vật tư & bước, mô tả ảnh không có chữ nhạy cảm (blood, gore, nude…)", hb.every((d) => ![d.title.en, d.description.en, d.imagePrompt, ...d.materials.map((m) => m.en), ...d.steps.map((x) => x.en)].some((t) => VI.test(t)) && d.materials.length >= 3 && d.steps.length >= 4 && !/(blood|gore|bloody|naked|nude skin|sexy)/i.test(d.imagePrompt)));
+const hb2 = generateOccasionBatch(100, { market: "US", date: "2026-12-05", occasion: { id: "christmas", title: "Giáng Sinh", startsIn: 0 }, risingTags: [], usedTitles: new Set(hb.map((d) => d.title.vi)) });
 check("DE32", "Tạo bộ lần 2 (đã có 100 mẫu) → chỉ ra mẫu MỚI, không trùng bộ trước", hb2.every((d) => !hb.some((x) => x.title.vi === d.title.vi)), String(hb2.length));
 
 
@@ -145,9 +149,9 @@ const RETIRED = RETIRED_PATTERNS();
 check("DE39", "Máy KHÔNG ra hoạ tiết đã nghỉ (mắt quỷ, khâu, kẹo bắp, sóng, phù thuỷ, giọt nước cũ) nhưng mẫu cũ vẫn ghép / vẽ được; 'droplet' → 'droplets'",
   ["eyeball", "stitches", "candycorn", "waves", "witchy", "droplet"].every((p) => RETIRED.includes(p) && PATTERN_IDS.includes(p)) && !all.some((x) => RETIRED.includes(x.d.pattern)) && !hb.some((d) => RETIRED.includes(d.pattern)) &&
   buildDesign({ occasion: null, system: "gelx", shape: "almond", finish: "glossy", pattern: "droplet", colors: ["black", "milky", "silver"] }).pattern === "droplets", bad((x) => RETIRED.includes(x.d.pattern)));
-check("DE40", "Halloween hết sau 31/10: từ tháng 11 tới tháng 8 không còn mẫu Halloween", !all.some((x) => x.d.occasion === "halloween" && !["09", "10"].includes(x.date.slice(5, 7))), bad((x) => x.d.occasion === "halloween" && !["09", "10"].includes(x.date.slice(5, 7))));
+check("DE40", "Halloween đã nghỉ: cả năm không còn mẫu Halloween / hoạ tiết riêng Halloween (ma, dơi, bí ngô, mạng nhện…)", !all.some((x) => x.d.occasion === "halloween" || ["web", "ghost", "jackolantern", "bats", "skull", "slimedrip", "moonstars", "blackcat", "mummy", "mix-halloween"].includes(x.d.pattern)), bad((x) => x.d.occasion === "halloween"));
 // né hoạ tiết của 3 lượt gần nhất (cron đưa vào 18 mẫu PawNail gần nhất)
-const occH = [{ id: "halloween", title: "Mùa Halloween", startsIn: 0 }];
+const occH = [{ id: "fall", title: "Móng mùa thu", startsIn: 0 }];
 const r1 = generateEngineDesigns(6, { market: "US", date: "2026-10-12", occasions: occH, risingTags: [], usedTitles: new Set() });
 const r2 = generateEngineDesigns(6, { market: "US", date: "2026-10-12", salt: "6", occasions: occH, risingTags: [], usedTitles: new Set(), recentPatterns: r1.map((d) => d.pattern) });
 const overlap = r2.filter((d) => r1.some((x) => x.pattern === d.pattern) && !d.pattern.startsWith("mix-"));
@@ -168,9 +172,9 @@ check("DE42", "Úc ngược mùa: tháng 10 Úc không có trend / mẫu mùa th
   liveOccasions([{ id: "fall", title: "fall", startsIn: 0 }], "AU", 10).some((o) => o.id === "spring") &&
   auXmas.length > 0 && auXmas.every((x) => !WINTER.includes(x.d.spec.colors[0]) && !["velvet", "plaid", "snow"].includes(x.d.pattern)) && usXmas.some((x) => WINTER.includes(x.d.spec.colors[0])),
   `AU tháng 10: ${auOct.filter((t) => t.startsWith("fall-")).join(",")} · Noel Úc: ${auXmas.filter((x) => WINTER.includes(x.d.spec.colors[0])).map((x) => x.d.title.vi).slice(0, 3).join(" | ")}`);
-const NEW_IDS = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-pinkwhite", "fr-halfmoon", "fr-skittle", "fr-glitter", "fr-santa", "fr-candycane", "fr-tortoise", "syrup", "blush", "cleanmilky", "colorchrome", "glitterfade", "holly", "ornament", "gelflower", "mix-halloween", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];
+const NEW_IDS = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-pinkwhite", "fr-halfmoon", "fr-skittle", "fr-glitter", "fr-santa", "fr-candycane", "fr-tortoise", "syrup", "blush", "cleanmilky", "colorchrome", "glitterfade", "holly", "ornament", "gelflower", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];
 const newUsed = new Set([...all.map((x) => x.d.pattern), ...hb.map((d) => d.pattern)]);
-check("DE43", "Đủ 24 hoạ tiết mới (French biến tấu, syrup, má hồng, clean, chrome màu, nhũ loang, holly, quả châu, hoa gel 3D, bộ phối theo dịp) — có bảng màu mặc định ghép được, tên chỉ nêu màu có trong bảng",
+check("DE43", "Đủ 23 hoạ tiết mới (French biến tấu, syrup, má hồng, clean, chrome màu, nhũ loang, holly, quả châu, hoa gel 3D, bộ phối theo dịp) — có bảng màu mặc định ghép được, tên chỉ nêu màu có trong bảng",
   NEW_IDS.every((id) => PATTERN_IDS.includes(id)) && NEW_IDS.filter((id) => !newUsed.has(id)).length <= 6 &&
   NEW_IDS.every((id) => { const p = PATTERNS.find((x) => x.id === id)!; const d = buildDesign({ occasion: null, system: "gelx", shape: "almond", finish: p.finishes[0], pattern: id, colors: ["sheer", "cherry", "gold"] }); return !!d.title.vi && !!d.title.en && d.steps.length >= 4; }),
   `chưa từng ra: ${NEW_IDS.filter((id) => !newUsed.has(id)).join(",")}`);

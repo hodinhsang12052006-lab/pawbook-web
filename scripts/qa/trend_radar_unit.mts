@@ -25,15 +25,15 @@ ok("T2", `Trend có số liệu ghi đúng nguồn (Pinterest Predicts 2026): ${
 
 const months = Array.from({ length: 12 }, (_, i) => activeTrends(new Date(Date.UTC(2026, i, 15))).length);
 const oct = activeTrends(new Date(Date.UTC(2026, 9, 25))).map((t) => t.id), jun = activeTrends(new Date(Date.UTC(2026, 5, 15))).map((t) => t.id), dec = activeTrends(new Date(Date.UTC(2026, 11, 10))).map((t) => t.id);
-ok("T3", `Trend theo mùa đúng mùa: tháng 10 có Halloween, tháng 6 không; tháng 12 có Giáng sinh; tháng nào cũng ≥ 20 trend (${months.join("/")})`,
-  oct.some((x) => x.startsWith("hw-")) && !jun.some((x) => x.startsWith("hw-") || x.startsWith("xmas-")) && dec.some((x) => x.startsWith("xmas-")) && months.every((n) => n >= 20));
+ok("T3", `Trend theo mùa đúng mùa: không còn trend Halloween (đã nghỉ), tháng 6 không Giáng sinh; tháng 12 có Giáng sinh; tháng nào cũng ≥ 20 trend (${months.join("/")})`,
+  !oct.some((x) => x.startsWith("hw-")) && !TREND_RADAR.some((t) => t.occasion === "halloween") && !jun.some((x) => x.startsWith("xmas-")) && dec.some((x) => x.startsWith("xmas-")) && months.every((n) => n >= 20));
 
-const day = (date: string, salt = "0", occ = true) => generateEngineDesigns(6, { market: "US", date, occasions: occ ? [{ id: "halloween", title: "Halloween", emoji: "🎃", startsIn: 0 }] : [], risingTags: [], usedTitles: new Set(), salt });
+const day = (date: string, salt = "0", occ = true) => generateEngineDesigns(6, { market: "US", date, occasions: occ ? [{ id: "fall", title: "Móng mùa thu", emoji: "🍂", startsIn: 0 }] : [], risingTags: [], usedTitles: new Set(), salt });
 const d1 = day("2026-10-25");
 const radarN = d1.filter((d) => /\(Pinterest|\(Trend thu|\(Halloween|\(Màu của năm/.test(d.description.vi)).length;
 const hw = d1.filter((d) => d.occasion === "halloween" || /Halloween/.test(d.description.vi)).length;
 ok("T4", `1 lượt 6 mẫu (25/10): ${radarN} mẫu từ radar trend có ghi nguồn, ${hw} mẫu Halloween, không trùng tên`,
-  radarN >= 2 && hw >= 1 && new Set(d1.map((d) => d.title.vi)).size === d1.length, d1.map((d) => d.title.vi).join(" | "));
+  radarN >= 2 && hw === 0 && new Set(d1.map((d) => d.title.vi)).size === d1.length, d1.map((d) => d.title.vi).join(" | "));
 
 const days = ["2026-10-20", "2026-10-21", "2026-10-22"].map((dt) => day(dt).map((d) => d.title.vi).join("|"));
 ok("T5", "Mỗi ngày ra bộ mẫu khác (xoay vòng theo ngày — chạy ngầm không lặp lại)", new Set(days).size === 3);
@@ -79,8 +79,8 @@ const at = (y: number, mo: number, mk: "US" | "AU") => activeTrends(new Date(Dat
 ok("T12", "Úc ngược mùa: tháng 10 Úc không có trend thu (Mỹ có), tháng 4 Úc có (Mỹ không); Giáng sinh mùa hè chỉ ở Úc, caro / tuyết / nơ nhung chỉ ở Mỹ",
   at(2026, 10, "US").includes("fall-micro-french") && !at(2026, 10, "AU").some((x) => x.startsWith("fall-")) && at(2027, 4, "AU").includes("fall-micro-french") && !at(2027, 4, "US").some((x) => x.startsWith("fall-")) &&
   at(2026, 12, "AU").includes("au-summer-xmas") && !at(2026, 12, "US").includes("au-summer-xmas") && !at(2026, 12, "AU").some((x) => ["xmas-tartan", "xmas-snow", "xmas-bow"].includes(x)) && at(2026, 12, "US").includes("xmas-tartan"));
-const CONTRACT = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-pinkwhite", "fr-halfmoon", "fr-skittle", "fr-glitter", "fr-santa", "fr-candycane", "fr-tortoise", "syrup", "blush", "cleanmilky", "colorchrome", "glitterfade", "holly", "ornament", "gelflower", "mix-halloween", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];
-ok("T13", "24 hoạ tiết mới đã đăng ký ở máy tạo mẫu (PATTERNS) và bộ máy vẽ (PROCEDURAL)", CONTRACT.every((p) => PATTERN_IDS.includes(p) && PROCEDURAL.has(p)), CONTRACT.filter((p) => !PATTERN_IDS.includes(p) || !PROCEDURAL.has(p)).join(","));
+const CONTRACT = ["fr-micro", "fr-deep", "fr-v", "fr-side", "fr-pinkwhite", "fr-halfmoon", "fr-skittle", "fr-glitter", "fr-santa", "fr-candycane", "fr-tortoise", "syrup", "blush", "cleanmilky", "colorchrome", "glitterfade", "holly", "ornament", "gelflower", "mix-christmas", "mix-valentine", "mix-fall", "mix-newyear"];
+ok("T13", "23 hoạ tiết mới (bộ phối Halloween đã nghỉ, chỉ còn bộ vẽ cho mẫu lưu trữ) đã đăng ký ở máy tạo mẫu (PATTERNS) và bộ máy vẽ (PROCEDURAL)", CONTRACT.every((p) => PATTERN_IDS.includes(p) && PROCEDURAL.has(p)), CONTRACT.filter((p) => !PATTERN_IDS.includes(p) || !PROCEDURAL.has(p)).join(","));
 
 console.log(`\n${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

@@ -206,7 +206,8 @@ const THEMES: Record<string, Theme> = {
     };
   },
 };
-export const THEME_SETS = Object.keys(THEMES);
+// "mix-halloween" stays in THEMES only so archived designs still render; it is never offered (Halloween retired).
+export const THEME_SETS = Object.keys(THEMES).filter((k) => k !== "mix-halloween");
 
 /**
  * Mẫu chung → bộ móng phối (look.nails theo vai). Giữ nguyên khi: đã có nails do nơi gọi tự ghép, hoạ tiết phủ mọi móng

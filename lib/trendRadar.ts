@@ -5,6 +5,9 @@
 // Số liệu tăng trưởng lấy đúng theo báo cáo đã công bố (ghi nguồn trong mô tả mẫu) — không tự bịa số.
 // Thêm trend mới: thêm 1 mục vào TREND_RADAR (hoạ tiết phải nằm trong PROCEDURAL của lib/tryon/patterns).
 
+import { activeOccasions, isRetiredOccasion, marketLocalDate } from "@/lib/season";
+import { THEMES } from "@/lib/studioThemes";
+
 export type Bi = { vi: string; en: string };
 export type TrendFinish = "glossy" | "matte" | "chrome" | "cateye" | "glitter";
 export interface TrendLook { pattern: string; finish: TrendFinish; colors: [string, string, string][]; shapes?: ("almond" | "coffin" | "square" | "oval" | "stiletto")[] }
@@ -28,7 +31,6 @@ export interface Trend {
 
 const PP = (stat: string, statEn: string): Bi => ({ vi: `Pinterest Predicts 2026: ${stat}`, en: `Pinterest Predicts 2026: ${statEn}` });
 const FALL = [9, 10, 11];
-const HALLOWEEN = [10];
 const XMAS = [11, 12];
 const NYE = [12, 1];
 const SPRING = [3, 4, 5];
@@ -105,21 +107,6 @@ export const TREND_RADAR: Trend[] = [
   { id: "spring-gel-flower", occasion: "spring", hemi: true, name: { vi: "Hoa gel 3D nhụy ngọc trai", en: "3D gel flowers with pearl centres" }, source: { vi: "Trend xuân 2026: hoa gel nổi 3D, syrup, má hồng kiểu Hàn", en: "Spring 2026: raised 3D gel flowers, syrup and Korean blush nails" }, months: SPRING, weight: 2,
     looks: [{ pattern: "gelflower", finish: "glossy", colors: [["sheer", "milky", "pearl"], ["milky", "babyPink", "pearl"]] }, { pattern: "blush", finish: "glossy", colors: [["sheer", "hotPink", "pearl"]] }, { pattern: "syrup", finish: "glossy", colors: [["raspberry", "sheer", "pearl"]] }] },
 
-  // ---- Halloween 2026: "moody luxe" — 1 hoạ tiết trên nền đen / đỏ rượu / tím cà, cam cháy thay cam chói ----
-  { id: "hw-web", occasion: "halloween", name: { vi: "Mạng nhện tối giản", en: "Minimal spiderweb" }, source: { vi: "Halloween 2026: \"moody luxe\" — 1 hoạ tiết trên nền đen bóng", en: "Halloween 2026: \"moody luxe\" — one motif on glossy black" }, months: HALLOWEEN, weight: 2,
-    looks: [{ pattern: "web", finish: "glossy", colors: [["black", "milky", "silver"], ["mulledWine", "milky", "silver"]] }] },
-  { id: "hw-bats", occasion: "halloween", name: { vi: "Dơi bạc", en: "Silver bats" }, source: { vi: "Halloween 2026: dơi / bí ngô / ma nhỏ trên nền trơn", en: "Halloween 2026: tiny bats, pumpkins, ghosts on a plain base" }, months: HALLOWEEN, weight: 2,
-    looks: [{ pattern: "bats", finish: "glossy", colors: [["aubergine", "milky", "silver"], ["black", "milky", "silver"]] }] },
-  { id: "hw-ghost", occasion: "halloween", name: { vi: "Ma nhỏ dễ thương", en: "Cute ghosts" }, source: { vi: "Halloween 2026: dơi / bí ngô / ma nhỏ trên nền trơn", en: "Halloween 2026: tiny bats, pumpkins, ghosts on a plain base" }, months: HALLOWEEN, weight: 2,
-    looks: [{ pattern: "ghost", finish: "glossy", colors: [["black", "milky", "silver"], ["plumNoir", "milky", "silver"]] }] },
-  { id: "hw-pumpkin", occasion: "halloween", name: { vi: "Bí ngô mini", en: "Mini pumpkins" }, source: { vi: "Halloween 2026: dơi / bí ngô / ma nhỏ trên nền trơn", en: "Halloween 2026: tiny bats, pumpkins, ghosts on a plain base" }, months: HALLOWEEN, weight: 1,
-    looks: [{ pattern: "jackolantern", finish: "glossy", colors: [["bone", "black", "gold"], ["black", "milky", "gold"]] }] },
-  { id: "hw-moon", occasion: "halloween", name: { vi: "Trăng & sao", en: "Moon & stars" }, source: { vi: "Halloween 2026: trăng khuyết trên nền đậm", en: "Halloween 2026: moon phases on a deep base" }, months: HALLOWEEN, weight: 1,
-    looks: [{ pattern: "moonstars", finish: "glossy", colors: [["navy", "milky", "gold"], ["mulledWine", "milky", "gold"]] }] },
-  { id: "hw-moody", occasion: "halloween", name: { vi: "Cam cháy / đỏ rượu ấm", en: "Burnt orange & mulled wine" }, source: { vi: "Halloween 2026: cam cháy, đỏ rượu ấm, tím cà thay cam chói", en: "Halloween 2026: burnt orange, mulled wine, aubergine replace traffic-cone orange" }, months: HALLOWEEN, weight: 1,
-    looks: [{ pattern: "solid", finish: "glossy", colors: [["burnt", "milky", "gold"], ["mulledWine", "milky", "gold"]] }, { pattern: "solid", finish: "cateye", colors: [["aubergine", "gold", "gold"]] },
-      { pattern: "colorchrome", finish: "chrome", colors: [["pumpkin", "pumpkin", "gold"], ["mulledWine", "mulledWine", "gold"]] }, { pattern: "fr-v", finish: "glossy", colors: [["sheer", "mulledWine", "gold"]] }] },
-
   // ---- Giáng sinh / năm mới 2026 (nhung, caro, tuyết chỉ ở Mỹ — Giáng sinh ở Úc là mùa hè) ----
   { id: "xmas-tartan", occasion: "christmas", markets: ["US"], name: { vi: "Caro tartan", en: "Tartan" }, source: { vi: "Giáng sinh 2026: caro tartan / bàn cờ là trend phải thử", en: "Christmas 2026: tartan and checkerboard are must-tries" }, months: XMAS, weight: 2,
     looks: [{ pattern: "plaid", finish: "glossy", colors: [["redVelvet", "pine", "gold"], ["cherry", "pine", "gold"]] }, { pattern: "checker", finish: "glossy", colors: [["milky", "cherry", "gold"]] }] },
@@ -144,7 +131,15 @@ export const TREND_RADAR: Trend[] = [
 /** Trend đang trong mùa của ngày đó ở thị trường đó: trend theo mùa (hemi) ở Úc lệch 6 tháng (thu Mỹ tháng 9–11 = thu Úc
  *  tháng 3–5); trend chỉ dành cho 1 thị trường (Giáng sinh mùa hè Úc, nhung / caro Mỹ) lọc theo thị trường. */
 export function activeTrends(date: Date, market: "US" | "AU" = "US"): Trend[] {
-  const m = date.getUTCMonth() + 1;
+  // tháng theo NGÀY ĐỊA PHƯƠNG của thị trường (New York / Sydney), không phải UTC
+  const m = marketLocalDate(market, date).m;
   const monthsOf = (t: Trend) => (market === "AU" && t.hemi && t.months ? t.months.map((x) => ((x + 5) % 12) + 1) : t.months);
-  return TREND_RADAR.filter((t) => (!t.markets || t.markets.includes(market)) && (!monthsOf(t) || monthsOf(t)!.includes(m)));
+  // trend gắn dịp lễ: dịp đó phải đang diễn ra hoặc bắt đầu trong ≤ 21 ngày ở thị trường này (Giáng sinh Mỹ từ sau Lễ Tạ Ơn)
+  const occ = activeOccasions(market, date, { upcomingDays: 21 });
+  const occOk = (id?: string) => !id || !THEMES.some((th) => th.id === id) || occ.active.includes(id) || occ.upcoming.some((u) => u.id === id);
+  const live = TREND_RADAR.filter((t) => (!t.markets || t.markets.includes(market)) && (!monthsOf(t) || monthsOf(t)!.includes(m)) && !isRetiredOccasion(t.occasion) && occOk(t.occasion));
+  // Úc tháng 11–2 là mùa hè (Giáng sinh mùa hè): bỏ các công thức nhung / caro / tuyết khỏi trend (như máy tạo mẫu, AU_SUMMER_NO)
+  if (market !== "AU" || !(m >= 11 || m <= 2)) return live;
+  return live.map((t) => ({ ...t, looks: t.looks.filter((l) => !AU_SUMMER_NO.has(l.pattern)) })).filter((t) => t.looks.length > 0);
 }
+const AU_SUMMER_NO = new Set(["velvet", "plaid", "snow"]);

@@ -388,7 +388,7 @@ const BASE_TOPICS: Topic[] = [
     when: between(1001, 1210),
     title: () => "🎄 Mùa lễ cuối năm: chủ tiệm nên tuyển thợ từ BÂY GIỜ",
     bullets: () => [
-      "Từ Halloween tới Năm Mới là mùa đông khách nhất — thợ giỏi được nhiều tiệm mời cùng lúc.",
+      "Từ giờ tới Năm Mới là mùa đông khách nhất — thợ giỏi được nhiều tiệm mời cùng lúc.",
       "Đăng tin sớm, ghi rõ lương, chia turn, bao ở (nếu có) — tin rõ ràng được nhắn nhiều hơn.",
       "Bán gift card mùa lễ (VD mua $100 tặng $15): có tiền trước, khách quay lại sau lễ.",
     ],

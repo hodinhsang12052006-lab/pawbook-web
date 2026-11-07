@@ -5,6 +5,7 @@
 import { buildDesign, COLORS, type EngineSpec, type Shape } from "@/lib/designEngine";
 import type { StudioLook } from "@/lib/studio";
 import type { HandProfile } from "./profile";
+import { activeOccasions } from "@/lib/season";
 
 export type { HandProfile };
 
@@ -47,7 +48,12 @@ export interface AdviceLook extends StudioLook { why: Bi; tag: Bi }
 
 /** 10 mẫu hợp tay + đang trend. `salt` đổi bộ ("Bộ khác"); `extension`: đang chọn đắp móng (giá theo Gel-X). */
 export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, extension = false, now = new Date()): AdviceLook[] {
-  const month = now.getUTCMonth() + 1;
+  // Mùa theo NGÀY ĐỊA PHƯƠNG của thị trường + bán cầu (lib/season.ts): dịp đang diễn ra hoặc bắt đầu trong 21 ngày.
+  const occ = activeOccasions(market, now, { upcomingDays: 21 });
+  const inSeason = (id: string) => occ.active.includes(id) || occ.upcoming.some((u) => u.id === id);
+  const xmas = inSeason("christmas");
+  // Úc tháng 12–2 (hè, Giáng sinh mùa hè) và xuân: không nhung, không đồi mồi / da hươu mùa thu
+  const auWarm = market === "AU" && (xmas || inSeason("summer") || occ.active.includes("spring"));
   let h = 2166136261;
   for (const c of salt) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0) % 1000) / 1000;
@@ -76,7 +82,7 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       why: { vi: "Micro French viền mảnh — sang, tối giản, móng mọc ra vẫn đẹp", en: "Micro French — a fine tip line, minimal and luxe, grows out gracefully" } },
     // HỌ MẮT MÈO — nhóm trend tăng mạnh nhất 2026 (Pinterest Predicts 2026): xoay vòng theo "Bộ khác"
     (() => {
-      const kind = pick(["velvet", "polka", "auroracat", "darkred", "twotone"] as const);
+      const kind = pick(auWarm ? (["polka", "auroracat", "darkred", "twotone"] as const) : (["velvet", "polka", "auroracat", "darkred", "twotone"] as const));
       const deepC = deep ? "plum" : pick(["burgundy", "espresso", "plum", "navy", "plumNoir"] as CK[]);
       if (kind === "polka") return { spec: { shape, finish: "cateye" as const, pattern: "polka", colors: [pick(["plumNoir", "black", "navy"] as CK[]), "white", metal === "pearl" ? "silver" : metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,
         why: { vi: "Mắt mèo chấm bi — tìm kiếm tăng 1.585% trên Pinterest, vừa sang vừa nghịch", en: "Polka dot cat eye — Pinterest searches up 1,585%, chic yet playful" } };
@@ -97,8 +103,8 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
       why: { vi: `Ombre dọc móng kéo dài ngón — ${slim.vi}`, en: `A vertical ombre draws the eye along the nail — ${slim.en}` } },
     // 2 mẫu "WOW" mỗi bộ (khách lướt thấy là muốn chụp): 1 mẫu chi tiết KIM LOẠI + 1 mẫu 3D — xoay vòng theo "Bộ khác"
     (() => {
-      const fallM = month >= 9 && month <= 11;
-      const kind = pick(["chromeline", "chromefrench", "lines", "marble", "tortoise", "foil", "leopard", "checker", "stripes", "polka", ...(fallM ? (["fawn", "tortoise"] as const) : [])] as const);
+      const fallM = occ.active.includes("fall");
+      const kind = pick(["chromeline", "chromefrench", "lines", "marble", ...(auWarm ? [] : (["tortoise"] as const)), "foil", "leopard", "checker", "stripes", "polka", ...(fallM ? (["fawn", "tortoise"] as const) : [])] as const);
       if (kind === "stripes") return { spec: { shape: shape === "square" ? "almond" : shape, finish: "glossy" as const, pattern: "stripes", colors: [pick([nude, "pinkNude", "cloudDancer"] as CK[]), pick(["white", "espresso", "black"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.slim,
         why: { vi: `Sọc mảnh dọc móng — kéo dài ngón tay, "almond nails stripes" +694% trên Pinterest`, en: `Fine vertical stripes — lengthen the fingers; "almond nails stripes" +694% on Pinterest` } };
       if (kind === "polka") return { spec: { shape, finish: "glossy" as const, pattern: "polka", colors: [pick([nude, "cloudDancer", "babyPink"] as CK[]), pick(["chocolate", "burgundy", "white"] as CK[]), metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.bold,
@@ -121,20 +127,26 @@ export function adviceLooks(p: HandProfile, market: "US" | "AU", salt: string, e
         why: { vi: `Nét ${COLORS[metal].vi} nổi mảnh — chi tiết nhỏ mà bắt sáng, hợp ${tone.vi}`, en: `A fine raised ${COLORS[metal].en} line — small but catches the light, suits ${tone.en}` } };
     })(),
     (() => {
-      // + hoạ tiết ĐÚNG MÙA (tháng 10: Halloween · 11–12: Giáng sinh · xuân: hoa · hè: cherry)
-      const seasonal = month === 10 ? (["ghost", "bats", "jackolantern", "web", "moonstars"] as const) : month >= 11 ? (["snow", "candy", "plaid", "charm3d"] as const) : month >= 3 && month <= 5 ? (["floral"] as const) : month >= 6 && month <= 8 ? (["cherry"] as const) : ([] as const);
+      // + hoạ tiết ĐÚNG MÙA của thị trường: Giáng sinh Mỹ (từ sau Lễ Tạ Ơn / sắp tới ≤ 21 ngày) = tuyết, kẹo gậy, caro;
+      // Giáng sinh ở Úc là MÙA HÈ = cherry, hoa, charm (san hô / ngọc / vàng) — không bao giờ tuyết, caro, nhung.
+      // Xuân = hoa · hè = cherry. Thu: đồi mồi / da hươu đã có ở mẫu "WOW" phía trên. Halloween đã nghỉ.
+      const seasonal: readonly ("snow" | "candy" | "plaid" | "charm3d" | "floral" | "cherry")[] =
+        xmas && market === "US" ? ["snow", "candy", "plaid", "charm3d"]
+        : xmas ? ["cherry", "floral", "charm3d"]
+        : inSeason("spring") ? ["floral"]
+        : inSeason("summer") ? ["cherry"]
+        : [];
       const kind = pick(["pearls", "droplets", "gemcluster", "chromedrops", "charm3d", "stars", "hearts", ...seasonal, ...seasonal] as const);
-      if (kind === "ghost" || kind === "bats" || kind === "web" || kind === "moonstars" || kind === "jackolantern") {
-        const base: CK = kind === "jackolantern" ? nude : pick(["black", "plumNoir", "aubergine", "navy"] as CK[]);
-        const label = { ghost: ["ma nhỏ dễ thương", "cute little ghosts"], bats: ["dơi bạc", "silver bats"], web: ["mạng nhện tối giản", "a minimal spiderweb"], moonstars: ["trăng khuyết & sao", "a crescent moon & stars"], jackolantern: ["bí ngô mini", "mini pumpkins"] }[kind];
-        return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: [base, "white", kind === "moonstars" ? "gold" : "silver"] as [CK, CK, CK], style: "trend" as const }, tag: { vi: "Halloween", en: "Halloween" },
-          why: { vi: `Halloween 2026 kiểu "moody luxe": ${label[0]} trên 2 ngón, nền trầm — đi làm vẫn hợp`, en: `Halloween 2026 "moody luxe": ${label[1]} on two nails over a deep base — still office-friendly` } };
-      }
-      if (kind === "snow" || kind === "candy" || kind === "plaid") {
+      if (market === "US" && (kind === "snow" || kind === "candy" || kind === "plaid")) {
         const cols: [CK, CK, CK] = kind === "snow" ? [pick(["coolBlue", "navy", "cherry"] as CK[]), "white", "silver"] : kind === "candy" ? ["white", "cherry", "gold"] : [pick(["velvet", "cherry"] as CK[]), "pine", "gold"];
         const label = { snow: ["bông tuyết", "snowflakes"], candy: ["sọc kẹo gậy", "candy-cane stripes"], plaid: ["caro tartan", "tartan"] }[kind];
         return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: cols, style: "trend" as const }, tag: { vi: "Giáng sinh", en: "Christmas" },
           why: { vi: `Giáng sinh 2026: ${label[0]} trên 2 ngón — vào mùa lễ là khách hỏi`, en: `Christmas 2026: ${label[1]} on two nails — the holiday request` } };
+      }
+      if ((kind === "floral" || kind === "cherry") && xmas && market === "AU") {
+        // Giáng sinh mùa hè (Úc): san hô / ngọc biển / vàng trên nền sáng
+        return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: [pick(["white", "sheer", "cloudDancer"] as CK[]), kind === "floral" ? pick(["coral", "aqua"] as CK[]) : "cherry", "gold"] as [CK, CK, CK], style: "trend" as const }, tag: { vi: "Giáng sinh mùa hè", en: "Summer Christmas" },
+          why: kind === "floral" ? { vi: "Hoa nhí san hô & vàng — Giáng sinh giữa mùa hè ở Úc, tươi và sang", en: "Coral florals with gold — Christmas in an Australian summer, bright and luxe" } : { vi: "Cherry vẽ tay viền vàng — đỏ lễ hội mà vẫn đúng mùa hè", en: "Hand-painted cherries with gold — festive red that still feels like summer" } };
       }
       if (kind === "floral" || kind === "cherry") {
         return { spec: { shape, finish: "glossy" as const, pattern: kind, colors: [pick(["white", "sheer", "cloudDancer"] as CK[]), kind === "floral" ? pick(["babyPink", "lavender", "coral"] as CK[]) : "cherry", metal] as [CK, CK, CK], style: "trend" as const }, tag: TAG.trend,

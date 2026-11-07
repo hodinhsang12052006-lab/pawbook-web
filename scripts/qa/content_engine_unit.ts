@@ -10,7 +10,7 @@ const check = (id: string, desc: string, ok: boolean, detail = "") => {
 const at = (s: string) => new Date(`${s}T12:00:00Z`);
 const ids = (d: string, m: "US" | "AU" = "US") => activeThemes(at(d), m).map((t) => t.id);
 
-check("CE1", "15/10 → Halloween là chủ đề chính, kèm Mùa thu", ids("2026-10-15")[0] === "halloween" && ids("2026-10-15").includes("fall"), ids("2026-10-15").join());
+check("CE1", "15/10 → Mùa thu (Halloween đã nghỉ hẳn — không bao giờ là chủ đề)", ids("2026-10-15")[0] === "fall" && !ids("2026-10-15").includes("halloween") && !ids("2026-10-31").includes("halloween"), ids("2026-10-15").join());
 check("CE2", "Lễ Tạ Ơn chỉ ở Mỹ (25/11)", ids("2026-11-25", "US").includes("thanksgiving") && !ids("2026-11-25", "AU").includes("thanksgiving"));
 check("CE3", "Năm mới vắt qua năm: 30/12 và 05/01 đều có", ids("2026-12-30").includes("newyear") && ids("2027-01-05").includes("newyear"));
 check("CE4", "Valentine 10/02", ids("2027-02-10")[0] === "valentine", ids("2027-02-10").join());

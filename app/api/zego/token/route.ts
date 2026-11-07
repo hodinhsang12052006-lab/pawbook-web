@@ -16,6 +16,22 @@ import { generateToken04 } from "@/lib/zegoServerAssistant";
 // nhãn "CUỘC GỌI VIDEO E2EE" trên UI thành vô nghĩa. Route này thay thế cách
 // làm đó: secret không bao giờ rời khỏi server, và token chỉ được cấp cho
 // đúng người dùng đang đăng nhập, đúng roomId họ có quyền tham gia.
+/** App ID + ServerSecret hợp lệ (đúng điều kiện generateToken04 chấp nhận) — null nếu thiếu / sai. Chỉ đọc trên máy chủ. */
+function zegoConfig(): { appId: number; secret: string } | null {
+  const appId = Number(process.env.ZEGO_APP_ID || process.env.NEXT_PUBLIC_ZEGO_APP_ID);
+  const secret = (process.env.ZEGO_SERVER_SECRET || "").trim();
+  return Number.isInteger(appId) && appId > 0 && secret.length === 32 ? { appId, secret } : null;
+}
+
+// GET /api/zego/token — chỉ báo dịch vụ gọi đã cấu hình chưa ({ enabled }); không sinh token, không lộ khoá. Máy khách hỏi
+// 1 lần / phiên khi mở chat (lib/callPreload.ts): chưa cấu hình (vd. production thiếu ZEGO_APP_ID) → bấm gọi báo ngay
+// "chưa gọi được", KHÔNG đổ chuông máy bên kia vào một cuộc gọi chắc chắn hỏng.
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ enabled: false }, { status: 401, headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ enabled: !!zegoConfig() }, { headers: { "cache-control": "no-store" } });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -63,12 +79,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Không thể gọi — một trong hai người đã chặn.", errorEn: "You can't call this person." }, { status: 403 });
     }
 
-    const appId = Number(process.env.ZEGO_APP_ID || process.env.NEXT_PUBLIC_ZEGO_APP_ID);
-    const secret = process.env.ZEGO_SERVER_SECRET || "";
-    if (!appId || !secret) {
-      console.error("ZEGO_APP_ID / ZEGO_SERVER_SECRET chưa cấu hình trên server.");
-      return NextResponse.json({ error: "Dịch vụ gọi video chưa được cấu hình.", errorEn: "Video calling isn't set up yet." }, { status: 503 });
+    const cfg = zegoConfig();
+    if (!cfg) {
+      console.error("ZEGO_APP_ID / ZEGO_SERVER_SECRET (32 ký tự) chưa cấu hình đúng trên server.");
+      return NextResponse.json({ error: "Dịch vụ gọi chưa được cấu hình.", errorEn: "Calling isn't set up yet." }, { status: 503 });
     }
+    const { appId, secret } = cfg;
 
     // 1 giờ là đủ cho 1 phiên gọi; token chỉ dùng để join phòng, không phải
     // phiên đăng nhập dài hạn.

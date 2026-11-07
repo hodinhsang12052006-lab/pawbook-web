@@ -12,7 +12,7 @@ import Avatar from "@/components/ui/Avatar";
 import { isPlaceholderAvatar } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
-import { preloadCallSdk } from "@/lib/callPreload";
+import { preloadCallSdk, probeCalls } from "@/lib/callPreload";
 
 const VideoCallRoom = dynamic(() => import("@/components/chat/VideoCallRoom"), {
   ssr: false,
@@ -84,6 +84,8 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const connectedAtRef = useRef<number | null>(null);
   const loggedRef = useRef(false);
   const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Đang hỏi máy chủ "gọi được chưa" (chạm 2 lần liền vào nút gọi không mở 2 cuộc gọi)
+  const startingRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = { phase, callType, peer, isCaller: isCallerRef.current };
@@ -215,11 +217,25 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   // ---------- Hành động của người dùng ----------
   const handleStartCall = useCallback(
     async (partner: CallPartner, type: CallType) => {
-      if (!partner || partner.isGroup) return;
+      if (!partner || partner.isGroup || startingRef.current) return;
       if (stateRef.current.phase !== "idle") {
         toast.error(tr("Bạn đang trong một cuộc gọi khác.", "You're already on another call."));
         return;
       }
+      // Máy chủ chưa cấu hình dịch vụ gọi (vd. thiếu ZEGO_APP_ID) → báo ngay, KHÔNG đổ chuông máy bên kia vào một cuộc gọi chắc
+      // chắn hỏng. Đã hỏi sẵn lúc mở chat; chưa có câu trả lời thì chờ tối đa 1,5s, quá thì cứ gọi như trước.
+      startingRef.current = true;
+      let enabled: boolean | null = null;
+      try {
+        enabled = await Promise.race([probeCalls(), new Promise<null>((r) => setTimeout(() => r(null), 1500))]);
+      } finally {
+        startingRef.current = false;
+      }
+      if (enabled === false) {
+        toast.error(tr("Hiện chưa gọi được — dịch vụ gọi đang được bảo trì. Bạn nhắn tin trước nhé.", "Calling isn't available right now. Please send a message instead."), { id: "pn-call-off" });
+        return;
+      }
+      if (stateRef.current.phase !== "idle") return;
       isCallerRef.current = true;
       loggedRef.current = false;
       const nextPeer = { id: partner.id, name: partner.name, avatarUrl: partner.avatarUrl || null };

@@ -2,9 +2,11 @@
 
 import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { WifiOff, MessageCircle, RefreshCw } from "lucide-react";
+import { WifiOff, MessageCircle, RefreshCw, MicOff } from "lucide-react";
+import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { callPlatform, checkCallMedia, mediaProblemText, zegoJoinErrorText } from "@/lib/callMedia";
 
 // Phòng gọi 1-1 qua ZEGOCLOUD cho CẢ gọi thoại lẫn video. Trước đây gọi thoại
 // dùng WebRTC tự dựng chỉ có STUN (không TURN) — mạng 4G/5G (NAT nhà mạng)
@@ -34,6 +36,11 @@ interface VideoCallRoomProps {
 // Không vào được phòng sau ngần này → coi như kết nối thất bại.
 const PEER_TIMEOUT_MS = 30_000;
 
+/** Lỗi hiện trên màn gọi: câu chính + hướng dẫn (bật quyền…); perm = lỗi quyền micro / camera (icon micro gạch). */
+type CallError = { title: string; hint?: string; perm?: boolean };
+/** Máy chủ trả lỗi khi xin token (chưa cấu hình, không có quyền vào phòng…) — câu của máy chủ đã đúng ngôn ngữ, hiện nguyên. */
+class TokenError extends Error {}
+
 export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, onConnected, onLeave, onPeerLeft, micOn = true, camOn = true }: VideoCallRoomProps) {
   useTr(); // render lại khi đổi VI/EN
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,7 +48,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
   const zpRef = useRef<any>(null);
   // Node DOM riêng cho SDK (React không quản lý) — xem cleanup bên dưới.
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const [callError, setCallError] = useState<string | null>(null);
+  const [callError, setCallError] = useState<CallError | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   // Callback mới nhất mà không phải join lại phòng khi component cha re-render.
@@ -57,7 +64,8 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     let peerSeen = false;
     let peerWatcher: MutationObserver | null = null;
     const peerTimer = setTimeout(() => {
-      if (!cancelled && !peerSeen) setCallError(tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again."));
+      // lỗi cụ thể hơn (quyền, đăng nhập phòng bị từ chối…) đã hiện thì giữ nguyên
+      if (!cancelled && !peerSeen) setCallError((e) => e ?? { title: tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again.") });
     }, PEER_TIMEOUT_MS);
     const markConnected = () => {
       if (cancelled) return;
@@ -72,19 +80,31 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         setCallError(null);
         // Token sinh phía server (app/api/zego/token) — chỉ cấp cho đúng người
         // trong đúng phòng, secret không bao giờ nằm trong bundle JS.
-        // Xin token SONG SONG với việc nạp SDK (trước đây làm lần lượt).
-        const [{ ZegoUIKitPrebuilt }, tokenRes] = await Promise.all([
+        // Xin token + nạp SDK + xin quyền micro / camera SONG SONG. Quyền xin TRƯỚC khi vào phòng: bị chặn thì nói rõ + chỉ chỗ
+        // bật (trước đây ZEGOCLOUD vẫn vào phòng — bên kia không nghe gì, không ai biết vì sao). App Android: lời xin này mở hộp
+        // thoại quyền của Android (BridgeWebChromeClient của Capacitor) trước khi SDK cần tới.
+        const wantVideo = mode === "video" && camOn;
+        const [{ ZegoUIKitPrebuilt }, tokenRes, media] = await Promise.all([
           import("@zegocloud/zego-uikit-prebuilt"),
           fetch("/api/zego/token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ roomId, userName }),
           }),
+          checkCallMedia(wantVideo),
         ]);
         if (cancelled) return;
+        if (media.problem) {
+          clearTimeout(peerTimer);
+          setCallError({ ...mediaProblemText(media.problem, wantVideo, callPlatform()), perm: media.problem === "denied" });
+          return;
+        }
+        if (media.camProblem) {
+          toast(tr("Máy ảnh không dùng được — vào cuộc gọi với máy ảnh tắt.", "Camera unavailable — joining with your camera off."), { icon: "📷", id: "pn-call-cam" });
+        }
         if (!tokenRes.ok) {
           const err = await tokenRes.json().catch(() => ({}));
-          throw new Error(apiError(err, "Không lấy được token cuộc gọi.", "Couldn't get a call token."));
+          throw new TokenError(apiError(err, "Không lấy được token cuộc gọi.", "Couldn't get a call token."));
         }
         const { token: kitToken } = await tokenRes.json();
 
@@ -94,6 +114,20 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
           return;
         }
         zpRef.current = zp;
+        // Đăng nhập phòng bị ZEGOCLOUD từ chối (token / App ID sai, dự án bị tạm dừng, mạng chặn…): SDK chỉ hiện hộp thoại
+        // tiếng Anh của nó và onJoinRoom vẫn bắn → trước đây phải chờ 30s mới có câu "kiểm tra mạng" (sai). Báo ngay kèm mã.
+        try {
+          // d.ts của UIKit khai `express` là {} — thực tế là ZegoExpressEngine (on() thêm 1 listener, không thay listener của UIKit)
+          const express = zp.express as unknown as { on?: (ev: string, cb: (room: string, reason: string, code: number) => void) => boolean } | undefined;
+          express?.on?.("roomStateChanged", (_room, reason, code) => {
+            if (cancelled || peerSeen) return;
+            if (reason === "LOGIN_FAILED" || reason === "RECONNECT_FAILED" || reason === "KICKOUT") {
+              console.warn("ZEGOCLOUD room", reason, code);
+              clearTimeout(peerTimer);
+              setCallError({ title: zegoJoinErrorText(Number(code) || 0) });
+            }
+          });
+        } catch {}
 
         // Khung media của đối phương: id dạng "<roomId>_<peerId>[_callId]_main".
         peerWatcher = new MutationObserver(() => {
@@ -114,7 +148,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         zp.joinRoom({
           container: mount,
           scenario: { mode: ZegoUIKitPrebuilt.OneONoneCall },
-          turnOnCameraWhenJoining: mode === "video" && camOn,
+          turnOnCameraWhenJoining: media.video,
           turnOnMicrophoneWhenJoining: micOn,
           showMyCameraToggleButton: mode === "video",
           showMyMicrophoneToggleButton: true,
@@ -147,7 +181,11 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         });
       } catch (err) {
         console.error("❌ Không khởi tạo được cuộc gọi ZEGOCLOUD:", err);
-        if (!cancelled) setCallError(tr("Không kết nối được dịch vụ gọi. Vui lòng thử lại hoặc chuyển sang nhắn tin.", "Couldn't reach the call service. Try again or switch to messaging."));
+        clearTimeout(peerTimer);
+        if (!cancelled)
+          setCallError({
+            title: err instanceof TokenError && err.message ? err.message : tr("Không kết nối được dịch vụ gọi. Vui lòng thử lại hoặc chuyển sang nhắn tin.", "Couldn't reach the call service. Try again or switch to messaging."),
+          });
       }
     })();
 
@@ -190,12 +228,13 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
       <div ref={containerRef} className="h-full w-full" />
 
       {callError && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-slate-950/95 p-8 text-center backdrop-blur-md">
+        <div role="alert" data-call-error={callError.perm ? "permission" : "other"} className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-slate-950/95 px-6 py-8 text-center backdrop-blur-md">
           <div className="flex h-14 w-14 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10">
-            <WifiOff className="h-6 w-6 text-rose-400" />
+            {callError.perm ? <MicOff className="h-6 w-6 text-rose-400" /> : <WifiOff className="h-6 w-6 text-rose-400" />}
           </div>
-          <p className="max-w-xs text-sm font-semibold text-slate-100">{callError}</p>
-          <div className="mt-2 flex items-center gap-3">
+          <p className="max-w-xs text-[15px] font-semibold leading-snug text-slate-100">{callError.title}</p>
+          {callError.hint && <p className="max-w-xs text-[13px] leading-relaxed text-slate-300">{callError.hint}</p>}
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={() => { setCallError(null); setRetryKey((k) => k + 1); }}
               className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2 text-xs font-bold text-slate-100 transition-all hover:bg-slate-700"

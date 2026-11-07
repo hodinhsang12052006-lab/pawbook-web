@@ -19,3 +19,21 @@ export function preloadCallSdkWhenIdle() {
   if (ric) ric(preloadCallSdk, { timeout: 4000 });
   else setTimeout(preloadCallSdk, 2500);
 }
+
+// Dịch vụ gọi đã cấu hình trên máy chủ chưa (GET /api/zego/token → { enabled }, không lộ khoá). Hỏi 1 lần / phiên (mở 1 chat
+// 1-1 là hỏi sẵn); lỗi mạng / chưa đăng nhập → null và lần sau hỏi lại. false = chắc chắn KHÔNG gọi được (thiếu App ID / secret).
+let callsEnabled: Promise<boolean | null> | null = null;
+export function probeCalls(): Promise<boolean | null> {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (!callsEnabled) {
+    const p: Promise<boolean | null> = fetch("/api/zego/token", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => (typeof d?.enabled === "boolean" ? d.enabled : null))
+      .catch(() => null);
+    callsEnabled = p;
+    p.then((v) => {
+      if (v === null && callsEnabled === p) callsEnabled = null;
+    });
+  }
+  return callsEnabled;
+}

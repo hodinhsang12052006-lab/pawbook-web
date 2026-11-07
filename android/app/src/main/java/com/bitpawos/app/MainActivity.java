@@ -4,7 +4,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -34,6 +36,10 @@ public class MainActivity extends BridgeActivity {
     /** false trong lúc super.onCreate (BridgeActivity.load() gọi onNewIntent với intent khởi động). */
     private boolean created = false;
 
+    /** Trình hiển thị WebView chết liên tiếp (tạo lại activity tối đa 2 lần / 30 s, quá thì đóng hẳn). */
+    private static long rendererGoneAt = 0;
+    private static int rendererGoneCount = 0;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         // Plugin cục bộ phải đăng ký TRƯỚC super.onCreate (lúc đó Bridge được tạo).
@@ -42,7 +48,11 @@ public class MainActivity extends BridgeActivity {
         // Mở nguội từ thông báo / lối tắt hội thoại / bong bóng (extra pn_url): cho Bridge tải
         // THẲNG trang đó (server.appStartPath) thay vì tải trang chủ rồi mới chuyển — nhanh
         // hơn và không huỷ giữa chừng lượt tải đầu.
-        String coldPath = takeLaunchPath(getIntent());
+        // savedInstanceState != null: hệ thống TẠO LẠI activity (tiến trình bị giết khi ở nền, đổi cấu hình...) với
+        // bản intent gốc nó đã lưu — removeExtra ở lần trước chỉ sửa bản trong bộ nhớ, nên mở lại từ biểu tượng app
+        // sẽ lại nhảy vào cuộc trò chuyện cũ. Chỉ xử lý pn_url ở lần tạo đầu tiên.
+        String coldPath = savedInstanceState == null ? takeLaunchPath(getIntent()) : null;
+        if (savedInstanceState != null) stripLaunchExtras(getIntent());
         if (coldPath != null) this.config = configWithStartPath(coldPath);
 
         super.onCreate(savedInstanceState);
@@ -75,12 +85,38 @@ public class MainActivity extends BridgeActivity {
                     AppState.setActiveConversation(null);
                     super.onPageStarted(view, url, favicon);
                 }
+
+                @Override
+                public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                    if (super.onRenderProcessGone(view, detail)) return true; // plugin nào đó đã xử lý
+                    // Mọi WebView của app dùng CHUNG 1 tiến trình hiển thị: bong bóng chat hết bộ nhớ cũng giết
+                    // trình hiển thị của app chính. Trả false (mặc định của Capacitor) = WebView giết luôn cả app →
+                    // thay vào đó tạo lại activity (WebView mới).
+                    onMainRendererGone();
+                    return true;
+                }
             }
         );
 
-        // Kênh thông báo (Tin nhắn / Cuộc gọi / Thông báo chung) — tên theo ngôn ngữ máy.
+        // Kênh thông báo (Tin nhắn / Cuộc gọi / Thông báo chung) — tên theo ngôn ngữ máy. Lưu sẵn User-Agent của
+        // WebView cho request native (trả lời nhanh, ảnh đại diện) lúc app đã tắt.
         Context app = getApplicationContext();
-        ChatNotifications.runAsync(() -> ChatNotifications.ensureChannels(app));
+        ChatNotifications.runAsync(() -> {
+            ChatNotifications.ensureChannels(app);
+            ChatApi.userAgent(app);
+        });
+    }
+
+    private void onMainRendererGone() {
+        long now = SystemClock.elapsedRealtime();
+        rendererGoneCount = now - rendererGoneAt < 30_000 ? rendererGoneCount + 1 : 1;
+        rendererGoneAt = now;
+        Log.w(TAG, "WebView renderer gone (" + rendererGoneCount + ")");
+        if (rendererGoneCount > 2) {
+            finish();
+            return;
+        }
+        recreate();
     }
 
     @Override
@@ -111,18 +147,38 @@ public class MainActivity extends BridgeActivity {
     /**
      * pn_url hợp lệ của intent (rồi xoá khỏi intent để không mở lại khi tạo lại activity), hoặc
      * null. Bỏ qua khi app được mở lại từ màn đa nhiệm (intent cũ được giao lại).
+     *
+     * MainActivity được export: app khác cũng gửi được pn_url. Chỉ intent mang khoá nội bộ (thông báo, bong bóng →
+     * app chính) được mở path tuỳ ý của bitpawos.com; không có khoá (lối tắt hội thoại do launcher lưu, app lạ) thì
+     * chỉ mở đúng trang một cuộc trò chuyện (/messages?c=<id>).
      */
     private String takeLaunchPath(Intent intent) {
         if (intent == null) return null;
-        if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return null;
+        if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+            stripLaunchExtras(intent);
+            return null;
+        }
         String path = intent.getStringExtra(AppLinks.EXTRA_URL);
         String cid = intent.getStringExtra(ChatNotifications.EXTRA_CID);
+        boolean trusted = AppLinks.hasValidKey(this, intent);
+        stripLaunchExtras(intent);
+        if (!AppLinks.isSafePath(path)) return null;
+        if (!trusted && !AppLinks.isConversationOpenPath(path)) {
+            Log.w(TAG, "ignored untrusted pn_url");
+            return null;
+        }
+        // Mở từ thông báo của một hội thoại: gỡ thông báo + quên lịch sử của nó (không khoá: chỉ đúng hội thoại đang mở).
+        if (AppLinks.isConversationId(cid) && (trusted || cid.equals(AppLinks.queryParam(path, "c")))) {
+            ChatNotifications.clearAsync(this, cid);
+        }
+        return path;
+    }
+
+    private static void stripLaunchExtras(Intent intent) {
+        if (intent == null) return;
         intent.removeExtra(AppLinks.EXTRA_URL);
         intent.removeExtra(ChatNotifications.EXTRA_CID);
-        if (!AppLinks.isSafePath(path)) return null;
-        // Mở từ thông báo của một hội thoại: gỡ thông báo + quên lịch sử của nó.
-        if (AppLinks.isConversationId(cid)) ChatNotifications.clearAsync(this, cid);
-        return path;
+        intent.removeExtra(AppLinks.EXTRA_KEY);
     }
 
     /** capacitor.config.json (assets) + server.appStartPath = path, hoặc null nếu không làm được. */

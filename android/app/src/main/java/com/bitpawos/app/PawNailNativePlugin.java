@@ -1,6 +1,5 @@
 package com.bitpawos.app;
 
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -43,7 +42,7 @@ public class PawNailNativePlugin extends Plugin {
         ret.put("bubbles", Build.VERSION.SDK_INT >= Build.VERSION_CODES.R);
         ret.put("bubblePref", bubblePreference(ctx));
         ret.put("notificationsEnabled", NotificationManagerCompat.from(ctx).areNotificationsEnabled());
-        ret.put("messagesChannel", messagesChannelEnabled(ctx));
+        ret.put("messagesChannel", ChatNotifications.messagesChannelEnabled(ctx));
         ret.put("chat", CHAT_RENDERER);
         call.resolve(ret);
     }
@@ -75,6 +74,22 @@ public class PawNailNativePlugin extends Plugin {
         }
         ChatNotifications.clear(getContext(), id);
         call.resolve();
+    }
+
+    /**
+     * Đăng xuất (web gọi TRƯỚC signOut): gỡ mọi thông báo, xoá lịch sử tin đã lưu, lối tắt hội thoại và ảnh đại diện
+     * cache — máy dùng chung không để lộ tin của tài khoản trước. Chạy nền, trả lời khi xong.
+     */
+    @PluginMethod
+    public void clearAll(PluginCall call) {
+        Context app = getContext().getApplicationContext();
+        ChatNotifications.runAsync(() -> {
+            try {
+                ChatNotifications.clearAll(app);
+            } finally {
+                call.resolve();
+            }
+        });
     }
 
     /** Màn cài đặt bong bóng của app (Android 11+); máy cũ hơn: cài đặt thông báo. */
@@ -137,11 +152,4 @@ public class PawNailNativePlugin extends Plugin {
         }
     }
 
-    private static boolean messagesChannelEnabled(Context ctx) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
-        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
-        if (nm == null) return true;
-        NotificationChannel ch = nm.getNotificationChannel(ChatNotifications.CHANNEL_MESSAGES);
-        return ch == null || ch.getImportance() != NotificationManager.IMPORTANCE_NONE;
-    }
 }

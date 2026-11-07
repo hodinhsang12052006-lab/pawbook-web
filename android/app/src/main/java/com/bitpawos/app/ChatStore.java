@@ -151,9 +151,43 @@ final class ChatStore {
         }
     }
 
+    /**
+     * "Đã đọc tới mốc readTs" (tin type=read từ máy chủ, giờ máy chủ): bỏ mọi tin có ts <= readTs. Tin đến SAU mốc đó
+     * (tin "đã đọc" tới trễ hơn tin chat mới — FCM không đảm bảo thứ tự) được giữ lại.
+     * @return hội thoại còn lại, hoặc null nếu không còn tin chưa đọc nào của người khác (gỡ hẳn thông báo).
+     */
+    static Conv markReadUpTo(Context ctx, String cid, long readTs) {
+        synchronized (LOCK) {
+            SharedPreferences p = prefs(ctx);
+            Conv c = read(p, cid);
+            if (c == null) return null;
+            List<Msg> keep = new ArrayList<>();
+            boolean unread = false;
+            for (Msg m : c.msgs) {
+                if (m.ts > readTs && m.seq > c.readSeq) {
+                    keep.add(m);
+                    if (!m.me) unread = true;
+                }
+            }
+            if (!unread) return null;
+            c.msgs.clear();
+            c.msgs.addAll(keep);
+            c.error = "";
+            write(p, c);
+            return c;
+        }
+    }
+
     static void remove(Context ctx, String cid) {
         synchronized (LOCK) {
             prefs(ctx).edit().remove(KEY_PREFIX + cid).commit();
+        }
+    }
+
+    /** Đăng xuất: xoá toàn bộ lịch sử tin đã lưu cho thông báo (máy dùng chung — người sau không đọc được). */
+    static void clearAll(Context ctx) {
+        synchronized (LOCK) {
+            prefs(ctx).edit().clear().commit();
         }
     }
 

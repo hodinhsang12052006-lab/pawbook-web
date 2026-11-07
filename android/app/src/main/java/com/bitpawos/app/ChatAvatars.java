@@ -25,8 +25,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Ảnh đại diện cho thông báo chat: tải qua https (chỉ host được phép), tối đa 2 MB, ~4 s,
@@ -49,7 +55,10 @@ final class ChatAvatars {
     static final int ADAPTIVE_PX = 216;
 
     private static final int MAX_BYTES = 2 * 1024 * 1024;
-    private static final int TIMEOUT_MS = 4000;
+    /** Tổng thời gian tải 1 ảnh (mọi lần chuyển hướng + đọc thân) — sau đó bỏ, dùng chữ cái đầu. */
+    private static final int TOTAL_BUDGET_MS = 6000;
+    /** Giải mã tối đa ~2 MP (≈8 MB ARGB): ảnh tỉ lệ cực đoan (300×60000) không làm phình bộ nhớ của service. */
+    private static final long MAX_DECODE_PIXELS = 2_000_000L;
     private static final long DISK_FRESH_MS = 3L * 24 * 60 * 60 * 1000;
     private static final long FAIL_BACKOFF_MS = 10L * 60 * 1000;
     private static final int DISK_MAX_FILES = 40;
@@ -77,6 +86,10 @@ final class ChatAvatars {
         }
     };
     private static final Map<String, Long> FAILED = new ConcurrentHashMap<>();
+    /** Tải ảnh chạy riêng: người gọi (service FCM) chỉ chờ có hạn, thông báo không bị giữ lại vì mạng chậm. */
+    private static final ExecutorService NET = Executors.newSingleThreadExecutor();
+    private static final Map<String, Future<Bitmap>> IN_FLIGHT = new ConcurrentHashMap<>();
+    private static final Pattern STATIC_IMAGE = Pattern.compile("^/[a-z0-9/_.-]+\\.(png|jpe?g|webp|gif|avif)$");
 
     private ChatAvatars() {}
 
@@ -96,11 +109,26 @@ final class ChatAvatars {
             if (u.getPort() != -1 && u.getPort() != 443) return false;
             if (u.getUserInfo() != null) return false;
             String host = u.getHost().toLowerCase(Locale.ROOT);
+            if (host.equals(AppLinks.BARE_HOST) || host.endsWith("." + AppLinks.BARE_HOST)) return isImagePathOnOwnSite(u.getPath());
             for (String h : ALLOWED_HOSTS) {
                 if (host.equals(h) || host.endsWith("." + h)) return true;
             }
         } catch (Exception ignored) {}
         return false;
+    }
+
+    /**
+     * Ảnh trên chính bitpawos.com: chỉ /_next/image, /uploads/… hoặc file ảnh tĩnh. Request tới bitpawos.com mang
+     * cookie phiên của người NHẬN (CapacitorCookies đặt CookieHandler mặc định cho cả tiến trình) — avatarUrl do người
+     * gửi tự đặt, nên không bao giờ để nó trỏ vào /api/… hay /auth/… (GET có tác dụng phụ dưới danh nghĩa người nhận).
+     */
+    static boolean isImagePathOnOwnSite(String path) {
+        if (path == null) return false;
+        String p = path.toLowerCase(Locale.ROOT);
+        if (p.contains("..") || p.contains("%") || p.contains("//")) return false;
+        if (p.startsWith("/api/") || p.startsWith("/auth/") || p.startsWith("/admin")) return false;
+        if (p.equals("/_next/image") || p.startsWith("/uploads/")) return true;
+        return STATIC_IMAGE.matcher(p).matches();
     }
 
     /**
@@ -125,10 +153,68 @@ final class ChatAvatars {
         if (!allowNetwork) return null;
         Long failedAt = FAILED.get(url);
         if (failedAt != null && SystemClock.elapsedRealtime() - failedAt < FAIL_BACKOFF_MS) return null;
+        return fetch(ctx, url, file);
+    }
 
+    /**
+     * Ảnh đã có trong cache (bộ nhớ / đĩa còn mới)? Chưa → bắt đầu tải nền và chờ tối đa waitMs.
+     * @return null nếu không cần chờ thêm (đã có ảnh, URL không dùng được, vừa lỗi); khác null = vẫn đang tải (dùng
+     *     whenDone để vẽ lại khi có ảnh).
+     */
+    static Future<Bitmap> prefetch(Context ctx, String rawUrl, long waitMs) {
+        String url = normalize(rawUrl);
+        if (url == null) return null;
+        if (MEMORY.get(url) != null || isFresh(ctx, url)) return null;
+        Long failedAt = FAILED.get(url);
+        if (failedAt != null && SystemClock.elapsedRealtime() - failedAt < FAIL_BACKOFF_MS) return null;
+        Future<Bitmap> f = start(ctx, url);
+        try {
+            f.get(waitMs, TimeUnit.MILLISECONDS);
+            return null;
+        } catch (Exception e) {
+            return f.isDone() ? null : f;
+        }
+    }
+
+    /** Lượt tải f xong VÀ có ảnh → chạy r (trên luồng tải). */
+    static void whenDone(Future<Bitmap> f, Runnable r) {
+        // NET chỉ có 1 luồng và lượt tải đã xếp hàng trước → tới lượt việc này thì f đã xong.
+        NET.execute(() -> {
+            try {
+                if (f.get() != null) r.run();
+            } catch (Throwable t) {
+                Log.w(TAG, "avatar refresh failed: " + t.getClass().getSimpleName());
+            }
+        });
+    }
+
+    private static boolean isFresh(Context ctx, String url) {
+        File file = cacheFile(ctx, url);
+        return file != null && file.exists() && System.currentTimeMillis() - file.lastModified() < DISK_FRESH_MS;
+    }
+
+    private static Future<Bitmap> start(Context ctx, String url) {
+        Context app = ctx.getApplicationContext();
+        synchronized (IN_FLIGHT) {
+            Future<Bitmap> f = IN_FLIGHT.get(url);
+            if (f != null) return f;
+            FutureTask<Bitmap> task = new FutureTask<>(() -> fetch(app, url, cacheFile(app, url)));
+            IN_FLIGHT.put(url, task);
+            NET.execute(() -> {
+                try {
+                    task.run();
+                } finally {
+                    IN_FLIGHT.remove(url, task);
+                }
+            });
+            return task;
+        }
+    }
+
+    private static Bitmap fetch(Context ctx, String url, File file) {
         Bitmap square = null;
         try {
-            byte[] bytes = download(url);
+            byte[] bytes = download(ctx, url);
             if (bytes != null) square = decodeSquare(bytes);
         } catch (Exception | OutOfMemoryError e) {
             Log.w(TAG, "avatar download failed: " + e.getClass().getSimpleName());
@@ -148,20 +234,23 @@ final class ChatAvatars {
         return square;
     }
 
-    private static byte[] download(String url) throws IOException {
-        long deadline = SystemClock.elapsedRealtime() + TIMEOUT_MS + 1500;
+    private static byte[] download(Context ctx, String url) throws IOException {
+        long deadline = SystemClock.elapsedRealtime() + TOTAL_BUDGET_MS;
         String current = url;
         for (int hop = 0; hop < 3; hop++) {
             // Mỗi lần chuyển hướng cũng phải tới host được phép.
             if (!isAllowedUrl(current)) return null;
+            int left = (int) (deadline - SystemClock.elapsedRealtime());
+            if (left < 300) return null;
             HttpURLConnection c = (HttpURLConnection) new URL(current).openConnection();
             try {
                 c.setInstanceFollowRedirects(false);
-                c.setConnectTimeout(TIMEOUT_MS);
-                c.setReadTimeout(TIMEOUT_MS);
+                c.setConnectTimeout(left);
+                c.setReadTimeout(left);
                 c.setUseCaches(false);
                 c.setRequestProperty("Accept", "image/webp,image/png,image/jpeg,image/*;q=0.8");
-                c.setRequestProperty("User-Agent", AppLinks.UA_APP + " (Android notification avatar)");
+                // UA của WebView (lưu khi mở app): /_next/image sau Cloudflare không bị coi là bot.
+                c.setRequestProperty("User-Agent", ChatApi.cachedUserAgent(ctx));
                 int code = c.getResponseCode();
                 if (code >= 300 && code < 400) {
                     String loc = c.getHeaderField("Location");
@@ -202,6 +291,8 @@ final class ChatAvatars {
         int min = Math.min(bounds.outWidth, bounds.outHeight);
         int sample = 1;
         while (min / (sample * 2) >= SRC_PX) sample *= 2;
+        // Tỉ lệ cực đoan (cạnh ngắn nhỏ, cạnh dài khổng lồ): thu tiếp tới khi số điểm ảnh vừa ngân sách.
+        while ((long) (bounds.outWidth / sample) * (bounds.outHeight / sample) > MAX_DECODE_PIXELS) sample *= 2;
         BitmapFactory.Options o = new BitmapFactory.Options();
         o.inSampleSize = sample;
         o.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -216,6 +307,16 @@ final class ChatAvatars {
         cv.drawBitmap(b, src, new Rect(0, 0, SRC_PX, SRC_PX), new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG));
         if (b != out) b.recycle();
         return out;
+    }
+
+    /** Đăng xuất: xoá ảnh đại diện đã cache (bộ nhớ + đĩa). */
+    static void clearCache(Context ctx) {
+        MEMORY.evictAll();
+        FAILED.clear();
+        File dir = new File(ctx.getCacheDir(), "pn_avatars");
+        File[] all = dir.listFiles();
+        if (all != null) for (File f : all) f.delete();
+        dir.delete();
     }
 
     private static File cacheFile(Context ctx, String url) {

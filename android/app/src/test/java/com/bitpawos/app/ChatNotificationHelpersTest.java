@@ -42,7 +42,7 @@ public class ChatNotificationHelpersTest {
     }
 
     @Test
-    public void chatPathsStayInsideTheBubble() {
+    public void chatPathDetection() {
         assertTrue(AppLinks.isChatPath("/messages"));
         assertTrue(AppLinks.isChatPath("/messages?c=abc&bubble=1"));
         assertTrue(AppLinks.isChatPath("/vi/messages?c=abc"));
@@ -52,6 +52,40 @@ public class ChatNotificationHelpersTest {
         assertFalse(AppLinks.isChatPath("/auth/signin?callbackUrl=/messages"));
         assertFalse(AppLinks.isChatPath("/vi/profile"));
         assertFalse(AppLinks.isChatPath(null));
+    }
+
+    @Test
+    public void onlyThisConversationStaysInsideTheBubble() {
+        // Đúng hội thoại của bong bóng (?c=<cid>) → ở lại.
+        assertTrue(AppLinks.staysInBubble("/messages?c=abc&bubble=1", "abc"));
+        assertTrue(AppLinks.staysInBubble("/vi/messages?c=abc", "abc"));
+        assertTrue(AppLinks.staysInBubble("/messages?bubble=1&c=abc#m1", "abc"));
+        // /messages trần (nút "Mở PawNail" của trang lỗi), ?to=, hội thoại khác, trang khác → app chính.
+        assertFalse(AppLinks.staysInBubble("/messages", "abc"));
+        assertFalse(AppLinks.staysInBubble("/vi/messages", "abc"));
+        assertFalse(AppLinks.staysInBubble("/messages?bubble=1", "abc"));
+        assertFalse(AppLinks.staysInBubble("/messages?to=u1", "abc"));
+        assertFalse(AppLinks.staysInBubble("/messages?c=other", "abc"));
+        assertFalse(AppLinks.staysInBubble("/messages?c=abcd", "abc"));
+        assertFalse(AppLinks.staysInBubble("/jobs?c=abc", "abc"));
+        assertFalse(AppLinks.staysInBubble("/messages?c=abc", null));
+    }
+
+    @Test
+    public void untrustedLaunchesOnlyOpenAConversation() {
+        assertTrue(AppLinks.isConversationOpenPath("/messages?c=cm0abc123"));
+        assertTrue(AppLinks.isConversationOpenPath("/vi/messages?c=a_b-C9"));
+        assertFalse(AppLinks.isConversationOpenPath("/messages"));
+        assertFalse(AppLinks.isConversationOpenPath("/messages?c="));
+        assertFalse(AppLinks.isConversationOpenPath("/messages?c=abc&x=1"));
+        assertFalse(AppLinks.isConversationOpenPath("/messages?c=abc#x"));
+        assertFalse(AppLinks.isConversationOpenPath("/messages?c=../x"));
+        assertFalse(AppLinks.isConversationOpenPath("/admin?c=abc"));
+        assertFalse(AppLinks.isConversationOpenPath("/api/messages?c=abc"));
+        assertFalse(AppLinks.isConversationOpenPath("//evil.com/messages?c=abc"));
+        assertEquals("/messages?c=abc", AppLinks.conversationPath("abc"));
+        assertEquals("abc", AppLinks.queryParam("/messages?x=1&c=abc#f", "c"));
+        assertEquals(null, AppLinks.queryParam("/messages", "c"));
     }
 
     @Test
@@ -68,6 +102,32 @@ public class ChatNotificationHelpersTest {
         // 😀 = 2 UTF-16 units: a cut at 3 keeps "a😀", a cut at 2 keeps only "a".
         assertEquals("a😀", ChatNotifications.clean("a😀b", 3));
         assertEquals("a", ChatNotifications.clean("a😀b", 2));
+    }
+
+    @Test
+    public void namesLoseBidiAndZeroWidthControls() {
+        // U+202E (RLO) đảo chiều hiển thị, U+200B / U+FEFF vô hình — tên giả mạo.
+        assertEquals("Admin", ChatNotifications.cleanName("Ad\u202Emin\u200B\uFEFF", 80));
+        assertEquals("Lan", ChatNotifications.cleanName("\u2066Lan\u2069", 80));
+        // Giữ ZWJ: emoji gia đình vẫn là 1 cụm.
+        assertEquals("Kim 👩\u200D👩\u200D👧", ChatNotifications.cleanName("Kim 👩\u200D👩\u200D👧", 80));
+        assertEquals("", ChatNotifications.cleanName(null, 80));
+    }
+
+    @Test
+    public void avatarsOnOwnSiteMustBeImages() {
+        // Request tới bitpawos.com mang cookie phiên của người nhận → chỉ đường dẫn ảnh.
+        assertTrue(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/uploads/a/b.jpg"));
+        assertTrue(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/icons/icon-192.webp"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/api/messages?x=1"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/api/auth/signout"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/auth/login"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/admin/users.png"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/profile/u1"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/uploads/../api/x.png"));
+        assertFalse(ChatAvatars.isAllowedUrl("https://www.bitpawos.com/x%2F..%2Fapi.png"));
+        assertEquals("https://www.bitpawos.com/uploads/a.png", ChatAvatars.normalize("/uploads/a.png"));
+        assertEquals(null, ChatAvatars.normalize("/api/profile"));
     }
 
     @Test

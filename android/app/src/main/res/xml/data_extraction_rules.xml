@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ (targetSdk 31+): android:allowBackup="false" chỉ tắt sao lưu đám mây, KHÔNG chặn chuyển dữ liệu sang
+  máy mới (device-to-device). Không mang theo:
+   - pn_chat_notifications.xml: nội dung vài tin nhắn gần nhất của các thông báo chat đang hiện (ChatStore);
+   - pn_app.xml: khoá mở app nội bộ của bản cài này (AppLinks.launchKey) + User-Agent đã lưu.
+  Ảnh đại diện nằm trong cache/ — không bao giờ được sao lưu / chuyển.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="pn_chat_notifications.xml" />
+        <exclude domain="sharedpref" path="pn_app.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="pn_chat_notifications.xml" />
+        <exclude domain="sharedpref" path="pn_app.xml" />
+    </device-transfer>
+</data-extraction-rules>

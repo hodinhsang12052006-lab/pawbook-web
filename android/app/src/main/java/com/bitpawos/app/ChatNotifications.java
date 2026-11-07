@@ -13,6 +13,7 @@ import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
 import android.service.notification.StatusBarNotification;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -34,8 +35,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Thông báo tin nhắn kiểu Messenger: MessagingStyle (avatar, nhiều tin nối nhau, tên nhóm),
@@ -68,6 +71,13 @@ final class ChatNotifications {
     private static final int BUBBLE_HEIGHT_DP = 600;
     private static final long SHORTCUT_REFRESH_MS = 6L * 60 * 60 * 1000;
     private static final int TEXT_MAX = 1000;
+    /** Chờ ảnh đại diện (lần đầu gặp người gửi) tối đa bấy nhiêu rồi hiện luôn bằng chữ cái đầu, có ảnh thì vẽ lại. */
+    private static final long AVATAR_WAIT_MS = 2500;
+    /** Tin tới trễ hơn bấy nhiêu (máy tắt mạng qua đêm, FCM giữ tới 24 h) → vào khay im lặng, không kêu từng tin. */
+    private static final long STALE_MS = 30L * 60 * 1000;
+    /** Cùng hội thoại vừa kêu trong khoảng này (tin dồn dập / backlog) → cập nhật im lặng. */
+    private static final long BURST_MS = 3000;
+    private static final Map<String, Long> LAST_ALERT = new ConcurrentHashMap<>();
 
     enum Mode {
         /** Tin mới: kêu, rung, hiện nổi (heads-up), bong bóng có chấm + chữ bay ra. */
@@ -165,6 +175,15 @@ final class ChatNotifications {
         return NotificationManagerCompat.from(ctx).areNotificationsEnabled();
     }
 
+    /** Kênh "Tin nhắn" chưa bị người dùng tắt riêng (chưa tạo → coi như bật). */
+    static boolean messagesChannelEnabled(Context ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        if (nm == null) return true;
+        NotificationChannel ch = nm.getNotificationChannel(CHANNEL_MESSAGES);
+        return ch == null || ch.getImportance() != NotificationManager.IMPORTANCE_NONE;
+    }
+
     // ---------------------------------------------------------------------------------
     // Tin đến (PawNailMessagingService, data.type == "chat")
     // ---------------------------------------------------------------------------------
@@ -173,9 +192,12 @@ final class ChatNotifications {
     static boolean onIncoming(Context ctx, Map<String, String> d) {
         String cid = d.get("cid");
         if (!AppLinks.isConversationId(cid)) return false;
+        ensureChannelsOnce(ctx);
+        // Thông báo / kênh "Tin nhắn" đang tắt: không lưu nội dung tin, không tải ảnh — không có gì để hiện.
+        if (!canPost(ctx) || !messagesChannelEnabled(ctx)) return true;
         boolean group = "1".equals(d.get("group")) || "true".equalsIgnoreCase(d.get("group"));
-        String sender = clean(d.get("sender"), 80);
-        String title = clean(d.get("title"), 80);
+        String sender = cleanName(d.get("sender"), 80);
+        String title = cleanName(d.get("title"), 80);
         if (sender.isEmpty()) sender = title.isEmpty() ? ctx.getString(R.string.app_name) : title;
         if (title.isEmpty()) title = group ? ctx.getString(R.string.chat_group_fallback) : sender;
         String url = d.get("url");
@@ -198,13 +220,40 @@ final class ChatNotifications {
             clear(ctx, cid);
             return true;
         }
-        // App đang mở (trang khác): web tự hiện toast + âm thanh → chỉ cập nhật khay, im lặng.
-        // Bong bóng của hội thoại đang mở: web trong bong bóng đã hiện tin.
-        Mode mode = (AppState.isMainResumed() || AppState.isBubbleOpen(cid)) ? Mode.SILENT : Mode.ALERT;
-        // Tải avatar người gửi trước (mạng, tối đa ~5 s); phần vẽ chỉ đọc cache.
-        ChatAvatars.loadSquare(ctx, m.avatar, true);
+        Mode mode = alertMode(cid, m.ts);
+        // Ảnh người gửi: đã cache → vẽ ngay; chưa → chờ tối đa AVATAR_WAIT_MS rồi hiện luôn bằng chữ cái đầu, tải xong
+        // thì vẽ lại im lặng (thông báo không bao giờ phải chờ mạng chậm).
+        Future<Bitmap> pending = ChatAvatars.prefetch(ctx, m.avatar, AVATAR_WAIT_MS);
         post(ctx, cid, mode);
+        if (pending != null) {
+            Context app = ctx.getApplicationContext();
+            ChatAvatars.whenDone(pending, () -> refreshIfShowing(app, cid));
+        }
         return true;
+    }
+
+    /**
+     * ALERT (kêu + hiện nổi) hay SILENT (chỉ cập nhật khay):
+     *  - app đang mở (trang khác): web tự hiện toast + âm thanh → im lặng;
+     *  - bong bóng của hội thoại này đang mở: web trong bong bóng đã hiện tin;
+     *  - tin cũ (tới trễ > 30 phút) hoặc hội thoại vừa kêu < 3 s trước (dồn dập / backlog sau khi có mạng lại).
+     */
+    private static Mode alertMode(String cid, long ts) {
+        if (AppState.isMainResumed() || AppState.isBubbleOpen(cid)) return Mode.SILENT;
+        if (ts > 0 && System.currentTimeMillis() - ts > STALE_MS) return Mode.SILENT;
+        Long last = LAST_ALERT.get(cid);
+        if (last != null && SystemClock.elapsedRealtime() - last < BURST_MS) return Mode.SILENT;
+        return Mode.ALERT;
+    }
+
+    /** Ảnh đại diện vừa tải xong: vẽ lại thông báo (im lặng) nếu nó vẫn đang hiện trong khay. */
+    static void refreshIfShowing(Context ctx, String cid) {
+        synchronized (POST_LOCK) {
+            if (AppState.isViewingInMain(cid)) return;
+            StatusBarNotification sbn = findActive(ctx, cid);
+            if (sbn == null || isSuppressedBubble(sbn)) return;
+            post(ctx, cid, Mode.SILENT);
+        }
     }
 
     // ---------------------------------------------------------------------------------
@@ -289,7 +338,7 @@ final class ChatNotifications {
         String shortcutId = SHORTCUT_PREFIX + cid;
         Person partnerPerson = !c.group && partner != null ? people.get(personKey(partner)) : null;
         if (!c.group && partner != null && partnerPerson == null) partnerPerson = buildPerson(partner, partnerSquare);
-        boolean hasShortcut = ensureShortcut(ctx, c, shortcutId, convIcon, partnerPerson, partner);
+        boolean hasShortcut = ensureShortcut(ctx, c, shortcutId, convIcon, partnerPerson, partner, partnerSquare != null);
 
         int accent = ContextCompat.getColor(ctx, R.color.pn_notification_accent);
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CHANNEL_MESSAGES)
@@ -313,6 +362,11 @@ final class ChatNotifications {
             .setSilent(mode != Mode.ALERT)
             .addAction(replyAction(ctx, cid))
             .addAction(markReadAction(ctx, cid));
+        // Android 7.x không có kênh: âm thanh / rung (và vì thế cả thông báo nổi) phải đặt trên chính thông báo. Từ 8.0
+        // hệ thống bỏ qua dòng này (kênh "messages" quyết định); SILENT/HIDDEN đã setSilent(true).
+        if (mode == Mode.ALERT && Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            b.setDefaults(NotificationCompat.DEFAULT_SOUND | NotificationCompat.DEFAULT_VIBRATE | NotificationCompat.DEFAULT_LIGHTS);
+        }
         if (!c.error.isEmpty()) b.setSubText(c.error);
         if (hasShortcut) {
             b.setShortcutId(shortcutId);
@@ -343,6 +397,7 @@ final class ChatNotifications {
             Log.w(TAG, "notify failed: " + e.getClass().getSimpleName());
             return;
         }
+        if (mode == Mode.ALERT) LAST_ALERT.put(cid, SystemClock.elapsedRealtime());
         updateSummary(ctx, cid, null);
     }
 
@@ -378,16 +433,19 @@ final class ChatNotifications {
         String shortcutId,
         IconCompat icon,
         Person partnerPerson,
-        ChatStore.Msg partner
+        ChatStore.Msg partner,
+        boolean hasPhoto
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false;
-        String sig = c.title + "|" + c.group + "|" + (partner != null ? partner.avatar + "|" + partner.sender : "") + "|" + c.url;
+        // hasPhoto: lần đầu vẽ bằng chữ cái đầu (ảnh chưa tải xong) → lần vẽ lại có ảnh phải cập nhật cả lối tắt.
+        String sig = c.title + "|" + c.group + "|" + (partner != null ? partner.avatar + "|" + partner.sender : "") + "|" + hasPhoto;
         boolean recent = sig.equals(c.shortcutSig) && System.currentTimeMillis() - c.shortcutAt < SHORTCUT_REFRESH_MS;
         if (recent && shortcutExists(ctx, shortcutId)) return true;
         try {
+            // Lối tắt do launcher lưu lâu dài → KHÔNG mang khoá nội bộ; MainActivity vẫn mở /messages?c=<id> khi không có khoá.
             Intent open = new Intent(ctx, MainActivity.class)
                 .setAction(Intent.ACTION_VIEW)
-                .putExtra(AppLinks.EXTRA_URL, c.url)
+                .putExtra(AppLinks.EXTRA_URL, AppLinks.conversationPath(c.cid))
                 .putExtra(EXTRA_CID, c.cid);
             ShortcutInfoCompat.Builder sb = new ShortcutInfoCompat.Builder(ctx, shortcutId)
                 .setShortLabel(c.title)
@@ -429,13 +487,17 @@ final class ChatNotifications {
     }
 
     static Intent openChatIntent(Context ctx, String cid, String url) {
+        // Data URI riêng cho từng hội thoại: Android < 10 không có setIdentifier, 2 hội thoại trùng requestCode (hash)
+        // sẽ dùng chung 1 PendingIntent → bấm thông báo cũ lại mở hội thoại mới. Action OPEN_CHAT (không phải VIEW) →
+        // plugin App không phát appUrlOpen.
         Intent i = new Intent(ctx, MainActivity.class)
             .setAction(ACTION_OPEN_CHAT)
+            .setData(Uri.parse("pawnail-open://chat/" + Uri.encode(cid)))
             .putExtra(AppLinks.EXTRA_URL, url)
             .putExtra(EXTRA_CID, cid)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) i.setIdentifier("chat:" + cid);
-        return i;
+        return AppLinks.withKey(ctx, i);
     }
 
     private static PendingIntent openIntent(Context ctx, ChatStore.Conv c) {
@@ -511,17 +573,73 @@ final class ChatNotifications {
      */
     static void clear(Context ctx, String cid) {
         if (!AppLinks.isConversationId(cid)) return;
-        StatusBarNotification sbn = findActive(ctx, cid);
-        if (sbn != null && isBubble(sbn)) {
-            ChatStore.Conv c = ChatStore.markRead(ctx, cid);
-            if (c != null && !c.msgs.isEmpty()) {
-                post(ctx, cid, Mode.HIDDEN);
+        // Cùng khoá với post(): một lần xoá (plugin / bấm thông báo / tin "đã đọc") chạy song song với một lần vẽ sẽ
+        // không làm thông báo vừa gỡ hiện lại, hay xoá lịch sử giữa lúc đang vẽ. Khoá re-entrant (post HIDDEN bên dưới).
+        synchronized (POST_LOCK) {
+            StatusBarNotification sbn = findActive(ctx, cid);
+            if (sbn != null && isBubble(sbn)) {
+                ChatStore.Conv c = ChatStore.markRead(ctx, cid);
+                if (c != null && !c.msgs.isEmpty()) {
+                    post(ctx, cid, Mode.HIDDEN);
+                    return;
+                }
+            }
+            NotificationManagerCompat.from(ctx).cancel(tagFor(cid), CHAT_ID);
+            ChatStore.remove(ctx, cid);
+            updateSummary(ctx, null, cid);
+        }
+    }
+
+    /**
+     * Tin "đã đọc" từ máy chủ (đọc ở máy khác) kèm mốc đọc readTs (giờ máy chủ, ms). FCM không giữ thứ tự giữa tin
+     * thường và tin ưu tiên cao → chỉ gỡ các tin cũ hơn mốc; tin tới SAU mốc vẫn ở lại. Không có mốc → gỡ hết.
+     */
+    static void onRead(Context ctx, String cid, long readTs) {
+        if (!AppLinks.isConversationId(cid)) return;
+        synchronized (POST_LOCK) {
+            if (readTs <= 0 || ChatStore.markReadUpTo(ctx, cid, readTs) == null) {
+                clear(ctx, cid);
                 return;
             }
+            StatusBarNotification sbn = findActive(ctx, cid);
+            if (sbn != null && !isSuppressedBubble(sbn)) post(ctx, cid, Mode.SILENT);
         }
-        NotificationManagerCompat.from(ctx).cancel(tagFor(cid), CHAT_ID);
-        ChatStore.remove(ctx, cid);
-        updateSummary(ctx, null, cid);
+    }
+
+    /**
+     * Đăng xuất: gỡ mọi thông báo của app, quên lịch sử tin, xoá lối tắt hội thoại (launcher / mục Cuộc trò chuyện)
+     * và ảnh đại diện đã cache — máy dùng chung ở tiệm, người dùng sau không được thấy tin của người trước.
+     */
+    static void clearAll(Context ctx) {
+        synchronized (POST_LOCK) {
+            try {
+                NotificationManagerCompat.from(ctx).cancelAll();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "cancelAll failed: " + e.getClass().getSimpleName());
+            }
+            ChatStore.clearAll(ctx);
+            LAST_ALERT.clear();
+            AppState.setActiveConversation(null);
+            removeConversationShortcuts(ctx);
+            ChatAvatars.clearCache(ctx);
+        }
+    }
+
+    private static void removeConversationShortcuts(Context ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return; // chỉ Android 11+ mới đẩy lối tắt hội thoại
+        try {
+            ShortcutManager sm = ctx.getSystemService(ShortcutManager.class);
+            if (sm != null) {
+                List<String> ids = new ArrayList<>();
+                for (ShortcutInfo s : sm.getShortcuts(ShortcutManager.FLAG_MATCH_DYNAMIC | ShortcutManager.FLAG_MATCH_CACHED)) {
+                    if (s.getId().startsWith(SHORTCUT_PREFIX)) ids.add(s.getId());
+                }
+                if (!ids.isEmpty()) ShortcutManagerCompat.removeLongLivedShortcuts(ctx, ids);
+            }
+            ShortcutManagerCompat.removeAllDynamicShortcuts(ctx);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "shortcut cleanup failed: " + e.getClass().getSimpleName());
+        }
     }
 
     static void clearAsync(Context ctx, String cid) {
@@ -537,6 +655,13 @@ final class ChatNotifications {
 
     private static boolean isBubble(StatusBarNotification sbn) {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && (sbn.getNotification().flags & Notification.FLAG_BUBBLE) != 0;
+    }
+
+    /** Đang là bong bóng VÀ đã ẩn khỏi khay (suppressNotification) — không tính là "đang hiện trong khay". */
+    private static boolean isSuppressedBubble(StatusBarNotification sbn) {
+        if (!isBubble(sbn)) return false;
+        Notification.BubbleMetadata md = sbn.getNotification().getBubbleMetadata();
+        return md != null && md.isNotificationSuppressed();
     }
 
     private static StatusBarNotification findActive(Context ctx, String cid) {
@@ -561,6 +686,7 @@ final class ChatNotifications {
                 String t = s.getTag();
                 if (t == null || s.getId() != CHAT_ID || !t.startsWith(TAG_PREFIX)) continue;
                 if (!GROUP_KEY.equals(s.getNotification().getGroup())) continue;
+                if (isSuppressedBubble(s)) continue; // chỉ còn là bong bóng, không nằm trong khay
                 cids.add(t.substring(TAG_PREFIX.length()));
             }
         } catch (RuntimeException e) {
@@ -591,10 +717,14 @@ final class ChatNotifications {
             lines++;
         }
         int accent = ContextCompat.getColor(ctx, R.color.pn_notification_accent);
-        Intent open = new Intent(ctx, MainActivity.class)
-            .setAction(ACTION_OPEN_CHAT)
-            .putExtra(AppLinks.EXTRA_URL, "/messages")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Intent open = AppLinks.withKey(
+            ctx,
+            new Intent(ctx, MainActivity.class)
+                .setAction(ACTION_OPEN_CHAT)
+                .setData(Uri.parse("pawnail-open://chat-summary"))
+                .putExtra(AppLinks.EXTRA_URL, "/messages")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        );
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) open.setIdentifier("chat-summary");
         Notification summary = new NotificationCompat.Builder(ctx, CHANNEL_MESSAGES)
             .setSmallIcon(R.drawable.ic_stat_pawnail)
@@ -625,6 +755,34 @@ final class ChatNotifications {
 
     private static String nonNull(String s) {
         return s == null ? "" : s;
+    }
+
+    /**
+     * Tên người gửi / tên nhóm: như clean() và bỏ thêm ký tự định hướng (bidi) / độ rộng 0 — tên tự đặt dùng chúng để
+     * đảo thứ tự hiển thị, giả làm người khác. Giữ ZWJ/ZWNJ (emoji ghép, chữ Ba Tư).
+     */
+    static String cleanName(String s, int max) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            if (!isSpoofFormatChar(cp)) sb.appendCodePoint(cp);
+            i += Character.charCount(cp);
+        }
+        return clean(sb.toString(), max);
+    }
+
+    static boolean isSpoofFormatChar(int cp) {
+        return (
+            cp == 0x061C ||
+            cp == 0x200B ||
+            cp == 0x200E ||
+            cp == 0x200F ||
+            (cp >= 0x202A && cp <= 0x202E) ||
+            (cp >= 0x2060 && cp <= 0x2064) ||
+            (cp >= 0x2066 && cp <= 0x2069) ||
+            cp == 0xFEFF
+        );
     }
 
     /** Bỏ ký tự điều khiển (trừ xuống dòng), cắt dài, không cắt đôi cặp surrogate. */

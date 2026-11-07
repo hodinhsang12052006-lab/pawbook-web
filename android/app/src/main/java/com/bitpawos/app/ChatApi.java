@@ -27,12 +27,23 @@ final class ChatApi {
     static final class Result {
         final int status; // mã HTTP; 0 = lỗi mạng
         final boolean ok;
+        /** Phản hồi là JSON của chính API (không phải trang HTML của Cloudflare / WAF / trang lỗi). */
+        final boolean json;
 
         Result(int status) {
+            this(status, false);
+        }
+
+        Result(int status, boolean json) {
             this.status = status;
             this.ok = status >= 200 && status < 300;
+            this.json = json;
         }
     }
+
+    private static final String PREFS = "pn_app";
+    private static final String KEY_UA = "webview_ua";
+    private static volatile String cachedUa;
 
     private ChatApi() {}
 
@@ -46,13 +57,39 @@ final class ChatApi {
         }
     }
 
-    /** User-Agent như WebView của app (Cloudflare không chặn), kèm "PawNailApp". */
+    /**
+     * User-Agent như WebView của app (Cloudflare không chặn), kèm "PawNailApp". Có thể nạp thư viện WebView (chậm vài
+     * trăm ms lần đầu) → nhớ lại trong bộ nhớ + SharedPreferences cho lần sau (service chạy khi app đã tắt).
+     */
     static String userAgent(Context ctx) {
+        String ua = cachedUa;
+        if (ua != null) return ua;
         try {
-            return WebSettings.getDefaultUserAgent(ctx) + " " + AppLinks.UA_APP;
+            ua = WebSettings.getDefaultUserAgent(ctx) + " " + AppLinks.UA_APP;
+            cachedUa = ua;
+            ctx.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_UA, ua).apply();
+            return ua;
         } catch (Throwable t) {
-            return "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") " + AppLinks.UA_APP;
+            return fallbackUserAgent();
         }
+    }
+
+    /** UA đã lưu (không nạp WebView — dùng trong service tải ảnh đại diện), hoặc UA dựng tay. */
+    static String cachedUserAgent(Context ctx) {
+        String ua = cachedUa;
+        if (ua != null) return ua;
+        try {
+            ua = ctx.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_UA, null);
+        } catch (RuntimeException ignored) {}
+        if (ua != null && !ua.isEmpty()) {
+            cachedUa = ua;
+            return ua;
+        }
+        return fallbackUserAgent();
+    }
+
+    private static String fallbackUserAgent() {
+        return "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") " + AppLinks.UA_APP;
     }
 
     /** POST /api/messages — tin nhắn văn bản vào hội thoại (cả 1-1 lẫn nhóm). */
@@ -103,9 +140,11 @@ final class ChatApi {
                 out.write(bytes);
             }
             int code = c.getResponseCode();
+            String type = c.getContentType();
+            boolean json = type != null && type.toLowerCase(java.util.Locale.ROOT).contains("application/json");
             drain(c, code);
             if (code >= 300) Log.w(TAG, "POST " + path + " -> " + code);
-            return new Result(code);
+            return new Result(code, json);
         } catch (IOException e) {
             Log.w(TAG, "POST " + path + " failed: " + e.getClass().getSimpleName());
             return new Result(0);

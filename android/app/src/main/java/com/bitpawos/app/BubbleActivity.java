@@ -43,8 +43,9 @@ import java.util.Locale;
  * đăng nhập) với app chính, mở đúng hội thoại với ?bubble=1 và UA có "PawNailBubble" để web
  * chỉ hiện khung chat (không header / thanh điều hướng / gọi điện / lời mời).
  *
- * Điều hướng: trang chat của bitpawos.com ở lại; trang khác của bitpawos.com mở app chính
- * (pn_url); host khác mở trình duyệt hệ thống; scheme lạ (intent:, file:, javascript:) bị chặn.
+ * Điều hướng: chỉ trang chat của ĐÚNG hội thoại này (?c=<cid>) ở lại; mọi trang khác của bitpawos.com (kể cả
+ * /messages trần) mở app chính (pn_url + khoá nội bộ); host khác mở trình duyệt hệ thống; scheme lạ (intent:, file:,
+ * javascript:) bị chặn.
  */
 public class BubbleActivity extends AppCompatActivity {
 
@@ -72,8 +73,13 @@ public class BubbleActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String id = intent.getStringExtra(ChatNotifications.EXTRA_CID);
         cid = AppLinks.isConversationId(id) ? id : null;
+        if (cid == null) {
+            // Bong bóng luôn thuộc về 1 hội thoại; không có id = không có gì để hiện (web không có danh sách trong bong bóng).
+            finish();
+            return;
+        }
         String path = intent.getStringExtra(AppLinks.EXTRA_URL);
-        if (!AppLinks.isSafePath(path)) path = cid != null ? AppLinks.conversationPath(cid) : "/messages";
+        if (!AppLinks.staysInBubble(path, cid)) path = AppLinks.conversationPath(cid);
         startUrl = AppLinks.absolute(withBubbleFlag(path));
 
         FrameLayout root = new FrameLayout(this);
@@ -209,7 +215,8 @@ public class BubbleActivity extends AppCompatActivity {
         String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(Locale.ROOT);
         if (AppLinks.isOwnHost(u)) {
             String path = AppLinks.pathOf(u);
-            if (path != null && AppLinks.isChatPath(path)) return false;
+            // Chỉ đúng hội thoại của bong bóng (?c=<cid>) ở lại; /messages trần, ?to=, hội thoại khác, trang khác → app chính.
+            if (path != null && AppLinks.staysInBubble(path, cid)) return false;
             if (path != null) openInMain(path);
             // Lần tải đầu đã bị chuyển đi (vd chưa đăng nhập → /auth): đừng để bong bóng trắng trơn.
             if (!pageCommitted && webView != null) webView.post(() -> showMessagePage(getString(R.string.bubble_continue_in_app)));
@@ -229,10 +236,13 @@ public class BubbleActivity extends AppCompatActivity {
     }
 
     private void openInMain(String path) {
-        Intent i = new Intent(this, MainActivity.class)
-            .setAction(Intent.ACTION_VIEW)
-            .putExtra(AppLinks.EXTRA_URL, path)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Intent i = AppLinks.withKey(
+            this,
+            new Intent(this, MainActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .putExtra(AppLinks.EXTRA_URL, path)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        );
         try {
             startActivity(i);
         } catch (RuntimeException e) {

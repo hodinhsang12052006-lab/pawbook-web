@@ -104,19 +104,23 @@ public class ChatActionReceiver extends BroadcastReceiver {
                 ChatApi.markSeen(cid, cookie, ua, t, t);
             }
         } else {
-            c = ChatStore.addOutgoing(app, cid, text, true, app.getString(errorText(r.status)));
+            c = ChatStore.addOutgoing(app, cid, text, true, app.getString(errorText(r)));
         }
         if (c != null) {
             ChatNotifications.post(app, cid, ChatNotifications.Mode.SILENT);
-        } else if (r.ok) {
-            // Không còn lịch sử (đã bị xoá): gỡ thông báo cho ô trả lời khỏi quay.
+        } else {
+            // Không còn lịch sử (đã bị xoá / quá 30 hội thoại) — gửi được hay không cũng phải gỡ thông báo, nếu không ô
+            // trả lời cứ quay vòng mãi.
             NotificationManagerCompat.from(app).cancel(ChatNotifications.tagFor(cid), ChatNotifications.CHAT_ID);
         }
     }
 
-    private static int errorText(int status) {
-        if (status == 401) return R.string.chat_error_signin;
-        if (status == 403) return R.string.chat_error_blocked;
+    static int errorText(ChatApi.Result r) {
+        int status = r.status;
+        // 3xx: chuyển hướng tới trang đăng nhập (phiên hết hạn) — không phải lỗi mạng.
+        if (status == 401 || (status >= 300 && status < 400)) return R.string.chat_error_signin;
+        // 403 của chính API (JSON: bị chặn / không còn trong nhóm). 403 trang HTML = Cloudflare / WAF → coi như lỗi kết nối.
+        if (status == 403 && r.json) return R.string.chat_error_blocked;
         if (status == 429) return R.string.chat_error_limit;
         return R.string.chat_error_network;
     }
@@ -124,6 +128,7 @@ public class ChatActionReceiver extends BroadcastReceiver {
     private static void repost(Context app, String cid) {
         ChatStore.Conv c = ChatStore.get(app, cid);
         if (c != null) ChatNotifications.post(app, cid, ChatNotifications.Mode.SILENT);
+        else NotificationManagerCompat.from(app).cancel(ChatNotifications.tagFor(cid), ChatNotifications.CHAT_ID);
     }
 
     private static void markRead(Context app, String cid, String cookie, String ua) {

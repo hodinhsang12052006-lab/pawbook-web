@@ -24,7 +24,8 @@ for (let i = 0; i < N; i++) {
   await b.page.evaluate((t) => { window.__seen = null; new MutationObserver((_, o) => { if (document.body.innerText.includes(t)) { window.__seen = performance.timeOrigin + performance.now(); o.disconnect(); } }).observe(document.body, { childList: true, subtree: true, characterData: true }); }, txt);
   await box.fill(txt);
   const t0 = await a.page.evaluate(() => performance.timeOrigin + performance.now());
-  await box.press("Enter");
+  // phones: Enter = new line (only a fine pointer sends with Enter) → tap Send like a user
+  await a.page.getByRole("button", { name: /^(Gửi tin nhắn|Send message)$/ }).filter({ visible: true }).first().click();
   await b.page.waitForFunction(() => window.__seen, null, { timeout: 15000 });
   const seenAt = await b.page.evaluate(() => window.__seen);
   recv.push(Math.round(seenAt - t0));

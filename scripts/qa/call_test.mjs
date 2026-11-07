@@ -973,6 +973,58 @@ if (want("shots")) {
   await B.page.setViewportSize(devices["Pixel 7"].viewport);
 }
 
+// ============================== Pusher auth fails once during a reconnect ==============================
+// Regression (real-services test 07/11): the phone's socket dropped and the ONE /api/pusher/auth request pusher-js makes
+// to re-subscribe failed → "private-chat-<me>" stayed unsubscribed → no ring, no realtime messages until a reload.
+// lib/pusherResilience.ts retries with backoff. Variants: HTTP 500, connection reset, and two failures in a row.
+if (want("authblip")) {
+  await openChat(A, B.me.id);
+  await openChat(B, A.me.id);
+  for (const [variant, fails] of [["500", ["500"]], ["reset", ["reset"]], ["twice", ["500", "reset"]]]) {
+    await step(`authblip-${variant}`, `Phone's Pusher socket drops, re-subscription auth fails (${fails.join(" + ")}) → without reload it re-subscribes, rings for the next call (once) and gets a chat message in realtime`, async () => {
+      const plan = [...fails];
+      let authCalls = 0;
+      let failed = 0;
+      const origin0 = await B.page.evaluate(() => performance.timeOrigin);
+      await B.page.route(/\/api\/pusher\/auth/, (r) => {
+        // only the phone's own private channel (calls + messages); presence channels re-subscribe untouched
+        if (!/channel_name=private-chat-/.test(r.request().postData() || "")) return r.continue();
+        authCalls++;
+        const f = plan.shift();
+        if (!f) return r.continue();
+        failed++;
+        return f === "500" ? r.fulfill({ status: 500, body: "Internal Server Error" }) : r.abort("connectionreset");
+      });
+      const ch = `private-chat-${B.me.id}`;
+      const t0 = Date.now();
+      const dropped = mock.dropSockets(ch);
+      await until(async () => (mock.subscribers(ch) === 0 ? true : null), 5000);
+      await until(async () => (failed >= fails.length ? true : null), 15000);
+      const back = await until(async () => (mock.subscribers(ch) >= 1 ? Date.now() - t0 : null), 25000).catch(() => null);
+      const keeper = await B.page.evaluate(() => window.__pnRealtime?.stats?.() ?? null);
+      await B.page.unrouteAll({ behavior: "ignoreErrors" });
+      if (!back) return { fail: `not re-subscribed (dropped ${dropped}, auth calls ${authCalls}, failed ${failed}) keeper=${JSON.stringify(keeper)}` };
+      // the phone rings for a new call — exactly one incoming UI, no reload
+      const before = incomingFor(B).length;
+      await dial(A, "audio");
+      await phaseIs(B, "incoming", 15000);
+      const ringing = await B.page.locator(sel("incoming")).count();
+      await ctl(B, "decline").click();
+      await idle(A, 10000);
+      await idle(B, 10000);
+      // realtime chat message A → B shows up in B's open thread without reload
+      const text = `authblip ${variant} ${Date.now() % 100000}`;
+      await A.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: text }, headers: A.h });
+      // visible match only: on the phone layout the (hidden) conversation-list preview comes first in the DOM
+      const got = await B.page.getByText(text).filter({ visible: true }).first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      const reloaded = (await B.page.evaluate(() => performance.timeOrigin)) !== origin0;
+      console.log(`   authblip ${variant}: re-subscribed after ${back} ms, auth calls ${authCalls} (failed ${failed}), incoming events ${incomingFor(B).length - before}, ringing UIs ${ringing}, realtime msg ${got}`);
+      return ringing === 1 && got && !reloaded ? true : { fail: JSON.stringify({ back, authCalls, failed, ringing, got, reloaded, keeper }) };
+    });
+    await reset(A, B);
+  }
+}
+
 // ============================== timeout ==============================
 if (want("timeout") && !process.env.CALL_SKIP_TIMEOUT) {
   await openChat(A, B.me.id);

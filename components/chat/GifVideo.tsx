@@ -18,6 +18,7 @@ export default function GifVideo({
   rootSelector,
   className = "",
   fit = "contain",
+  lazyPoster = false,
   onError,
 }: {
   src: string;
@@ -26,6 +27,9 @@ export default function GifVideo({
   rootSelector?: string;
   className?: string;
   fit?: "contain" | "cover";
+  /** Ô trong bảng GIF: chỉ tải ảnh tĩnh khi ô đã từng tới gần vùng nhìn thấy (cùng lúc với video) — đỡ tải ảnh tĩnh
+   *  cho mọi ô; sau đó ảnh tĩnh (đã trong cache) nằm dưới để cuộn đi rồi quay lại ô không trống trong lúc video dựng lại. */
+  lazyPoster?: boolean;
   onError?: () => void;
 }) {
   const boxRef = useRef<HTMLSpanElement>(null);
@@ -34,13 +38,29 @@ export default function GifVideo({
   // Trình duyệt quá cũ không có IntersectionObserver → coi như luôn thấy (dựng + chạy ngay)
   const [near, setNear] = useState(noIo);
   const [visible, setVisible] = useState(noIo);
+  const [seen, setSeen] = useState(noIo);
 
   useEffect(() => {
     const el = boxRef.current;
     if (!anim || !el || typeof IntersectionObserver === "undefined") return;
     const root = rootSelector ? el.closest(rootSelector) : null;
-    const nearIo = new IntersectionObserver(([e]) => setNear(!!e?.isIntersecting), { root, rootMargin: "300px 0px" });
-    const visIo = new IntersectionObserver(([e]) => setVisible(!!e?.isIntersecting && e.intersectionRatio >= 0.15), { root, threshold: [0, 0.15, 0.5, 1] });
+    // Máy lag: 1 lần gọi có thể mang NHIỀU mục cho cùng 1 ô (cũ → mới) — chỉ mục CUỐI là trạng thái hiện tại.
+    const last = (es: IntersectionObserverEntry[]) => es[es.length - 1];
+    const nearIo = new IntersectionObserver(
+      (es) => {
+        const n = !!last(es)?.isIntersecting;
+        setNear(n);
+        if (n) setSeen(true);
+      },
+      { root, rootMargin: "300px 0px" },
+    );
+    const visIo = new IntersectionObserver(
+      (es) => {
+        const e = last(es);
+        setVisible(!!e?.isIntersecting && e.intersectionRatio >= 0.15);
+      },
+      { root, threshold: [0, 0.15, 0.5, 1] },
+    );
     nearIo.observe(el);
     visIo.observe(el);
     return () => {
@@ -69,7 +89,7 @@ export default function GifVideo({
   const fitClass = fit === "cover" ? "object-cover" : "object-contain";
   return (
     <span ref={boxRef} className={`pn-gifv ${className}`} data-gif-video="" data-playing={mounted && visible && anim ? "1" : "0"}>
-      {poster && (
+      {poster && (!anim || !lazyPoster || seen) && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={poster} alt="" loading="lazy" decoding="async" draggable={false} className={`pn-gifv-media ${fitClass}`} />
       )}

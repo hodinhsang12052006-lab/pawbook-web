@@ -23,7 +23,6 @@ type Img = { url?: string; webp?: string; mp4?: string; width?: string | number;
 export type GiphyItem = { id?: string; title?: string; images?: Record<string, Img | undefined> };
 
 const strip = (u: unknown) => (typeof u === "string" ? u.split("?")[0] : "");
-export const GIPHY_MEDIA = /^https:\/\/media\d*\.giphy\.com\//;
 const GIPHY_MP4 = /^https:\/\/media\d*\.giphy\.com\/[^?#\s"'<>]+\.mp4$/;
 const GIPHY_FILE = /^https:\/\/media\d*\.giphy\.com\/[^?#\s"'<>]+$/;
 

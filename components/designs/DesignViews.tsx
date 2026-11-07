@@ -68,15 +68,16 @@ export const qtyEn = (q: string) =>
  *  ảnh do AI vẽ · mẫu của máy PawNail · ý tưởng AI + minh hoạ màu · mẫu gợi ý + minh hoạ màu. */
 export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "provider"> & { rendered?: boolean }; className?: string }) {
   useTr(); // render lại khi đổi VI/EN
+  // Short labels (≤ 18 chars): the chip sits on 2-column cards ~170 px wide and must never be clipped.
   const label = d?.imageUrl && d.rendered
-    ? tr(" Minh hoạ PawNail · thử trên tay mẫu", " PawNail try-on illustration")
+    ? tr(" Minh hoạ thử mẫu", " Try-on preview")
     : !d || d.imageUrl
     ? tr(" Ảnh minh hoạ AI", " AI illustration")
     : d.provider === "pawnail"
-      ? tr(" Mẫu PawNail · hình minh hoạ", " PawNail design · illustration")
+      ? tr(" Hình minh hoạ", " Illustration")
       : d.provider === "sample"
       ? tr(" Minh hoạ màu", " Color preview")
-      : tr(" Ý tưởng AI · minh hoạ màu", " AI idea · color preview");
+      : tr(" Minh hoạ màu AI", " AI color preview");
   return (
     <span className={`inline-flex h-[22px] items-center gap-1 whitespace-nowrap rounded-full bg-black/70 px-2 font-semibold text-white ${className}`} style={{ fontSize: 12, lineHeight: "16px" }}>
       <Wand2 className="h-3 w-3" />{label}
@@ -85,22 +86,25 @@ export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "
 }
 
 /** Ảnh AI nếu có, không thì minh hoạ tự vẽ từ bảng màu/dáng/hiệu ứng. */
-export function DesignVisual({ d, className = "", width = 480 }: { d: Design; className?: string; width?: number }) {
+export function DesignVisual({ d, className = "", width = 480, eager = false }: { d: Design; className?: string; width?: number; /** first cards of a list: never a blank slab */ eager?: boolean }) {
   if (d.imageUrl) {
     // Bản đúng cỡ từ Cloudinary (WebP/AVIF, ~30–60KB) thay vì ảnh gốc 1024px ~450KB.
+    // Nền = bảng màu của mẫu: ảnh lazy chưa tải hiện mảng màu đúng tông thay vì một ô trống phẳng.
+    const pal = (d.palette ?? []).filter((c) => /^#[0-9a-f]{6}$/i.test(c));
+    const ph = pal.length ? { backgroundImage: `linear-gradient(135deg, ${pal[0]}55, ${(pal[1] ?? pal[0])}33), linear-gradient(#2a2030, #2a2030)` } : { backgroundColor: "#2a2030" };
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={cdnImage(d.imageUrl, width)} alt={designTitle(d)} loading="lazy" decoding="async" className={`h-full w-full object-cover ${className}`} />;
+    return <img src={cdnImage(d.imageUrl, width)} alt={designTitle(d)} loading={eager ? "eager" : "lazy"} decoding="async" style={ph} className={`h-full w-full object-cover ${className}`} />;
   }
   return <NailArt palette={d.palette ?? []} shape={d.shape} finish={d.finish} pattern={d.pattern} uniform={d.provider === "pawnail"} seed={d.id} className={`h-full w-full ${className}`} />;
 }
 
-export function DesignCard({ d, onOpen, compact = false }: { d: Design; onOpen: () => void; compact?: boolean }) {
+export function DesignCard({ d, onOpen, compact = false, eager = false }: { d: Design; onOpen: () => void; compact?: boolean; eager?: boolean }) {
   useTr(); // render lại khi đổi VI/EN
   const occ = occasionLabel(d.occasion);
   return (
     <button type="button" onClick={onOpen} className={`group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 text-left transition-all hover:border-pink-400/40 ${compact ? "w-44 flex-shrink-0" : ""}`}>
       <span className="relative block aspect-square w-full overflow-hidden bg-slate-800">
-        <DesignVisual d={d} className="transition-transform duration-300 group-hover:scale-105" />
+        <DesignVisual d={d} eager={eager} className="transition-transform duration-300 group-hover:scale-105" />
         <AiBadge d={d} className="absolute left-2 top-2" />
         {d.saves > 0 && (
           <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-bold text-white">
@@ -373,7 +377,7 @@ export function DesignsStrip({ offset = 0 }: { offset?: number } = {}) {
         <Link href="/designs" className="flex items-center gap-0.5 text-xs font-bold text-pink-300 hover:underline">{tr("Xem tất cả", "See all")}<ChevronRight className="h-3.5 w-3.5" /></Link>
       </div>
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-        {items.map((d) => <DesignCard key={d.id} d={d} compact onOpen={() => setOpen(d)} />)}
+        {items.map((d, i) => <DesignCard key={d.id} d={d} compact eager={i < 4} onOpen={() => setOpen(d)} />)}
       </div>
       {open && <DesignSheet d={open} onClose={() => setOpen(null)} onSaved={(s, n) => update(open.id, s, n)} />}
     </section>

@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { verifyUnsub } from "@/lib/digest";
+import { EMAIL_COLORS as C, emailBrandRow } from "@/lib/email";
 import { localeFromRequest } from "@/lib/i18n/server";
 import { getUserLocale } from "@/lib/userLocale";
 import type { Locale } from "@/lib/i18n/config";
@@ -18,9 +19,9 @@ function parse(req: Request) {
 const page = (lang: Locale, body: string, status = 200) =>
   new Response(
     `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>PawNail</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b0b14;font-family:Arial,sans-serif;color:#e2e8f0;padding:16px">
-<div style="max-width:420px;background:#12121f;border:1px solid #2a2a40;border-radius:16px;padding:28px;text-align:center">
-<div style="font-size:20px;font-weight:800;color:#f472b6">PawNail</div>${body}</div></body></html>`,
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:${C.page};font-family:Arial,sans-serif;color:${C.body};padding:16px">
+<div style="max-width:420px;background:${C.card};border:1px solid ${C.line};border-radius:16px;padding:28px;text-align:center">
+<div style="display:flex;justify-content:center">${emailBrandRow()}</div>${body}</div></body></html>`,
     { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
   );
 const btn = "display:inline-block;margin-top:8px;border:0;cursor:pointer;background:#db2777;color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:12px 24px;border-radius:12px";

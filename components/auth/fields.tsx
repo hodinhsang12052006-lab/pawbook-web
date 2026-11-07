@@ -1,12 +1,18 @@
 "use client";
 
-// Shared building blocks for the auth forms (styles in components/marketing/marketing.css). One look for every
-// field, toggle and submit: 48 px inputs with 16 px text and a pink focus ring, SVG flags (never emoji flags),
-// one lacquer submit per form (the only glow on the page).
+// Shared building blocks for the auth forms (styles in components/auth/auth.css). One look for every field, toggle
+// and submit across login, client / technician / owner sign-up: 48 px inputs with 16 px text, a leading icon on
+// every text input, a pink focus ring, City then State (typing a city fills the state), ONE phone control
+// (SVG flag + country code chip that follows the US / AU toggle — never emoji flags, never a "+1 (US)" select),
+// one lacquer submit per form (the only glow on the page) and the same "Already have an account? Log in" line.
 import React from "react";
-import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, ArrowLeft, Loader2, MapPin, type LucideIcon } from "lucide-react";
 import Flag from "@/components/ui/Flag";
 import { tr } from "@/lib/i18n/tr";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { stateName } from "@/lib/stateNames";
+import { guessState } from "@/lib/cityState";
 
 export function AuthTitle({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode }) {
   return (
@@ -70,13 +76,78 @@ export function PhonePrefix({ market }: { market: "US" | "AU" }) {
   );
 }
 
-/** Country-code <select> — options read "+1 (US)" / "+61 (AU)" (a <select> cannot hold SVG flags). */
-export function CountryCodeSelect({ value, onChange }: { value: "+1" | "+61"; onChange: (v: "+1" | "+61") => void }) {
+/** Text input with its leading icon (every text input on the auth forms has one). */
+export function IconInput({ icon: Icon, className = "", ...props }: { icon: LucideIcon } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <select aria-label={tr("Mã quốc gia", "Country code")} value={value} onChange={(e) => onChange(e.target.value as "+1" | "+61")} className="pn-input" style={{ width: "auto", flex: "0 0 auto", minWidth: 128 }}>
-      <option value="+1">{tr("+1 (Mỹ)", "+1 (US)")}</option>
-      <option value="+61">{tr("+61 (Úc)", "+61 (AU)")}</option>
-    </select>
+    <div className="pn-field-icon">
+      <Icon aria-hidden />
+      <input {...props} className={`pn-input ${className}`} />
+    </div>
+  );
+}
+
+/** Phone number: flag + country-code chip (decided by the market toggle) + national number. */
+export function PhoneField({ id, market, value, onChange, label, optional }: { id: string; market: "US" | "AU"; value: string; onChange: (v: string) => void; label: React.ReactNode; optional?: React.ReactNode }) {
+  const { t } = useLanguage();
+  return (
+    <div>
+      <label htmlFor={id} className="pn-label">{label}{optional ? <> <span className="pn-opt">{optional}</span></> : null}</label>
+      <div className="flex items-center gap-2">
+        <PhonePrefix market={market} />
+        <input
+          id={id} type="tel" inputMode="tel" autoComplete="tel-national" value={value} onChange={(e) => onChange(e.target.value)}
+          placeholder={market === "AU" ? t("auth.common.phonePlaceholderAU") : t("auth.common.phonePlaceholder")}
+          className="pn-input" aria-describedby={`${id}-cc`}
+        />
+        <span id={`${id}-cc`} className="sr-only">{market === "US" ? tr("Mã vùng +1 (Mỹ)", "Country code +1 (US)") : tr("Mã vùng +61 (Úc)", "Country code +61 (Australia)")}</span>
+      </div>
+    </div>
+  );
+}
+
+/** City (leading pin) then State. Typing a known city fills the state; an empty state shows a muted "Select state". */
+export function CityStateFields({ idPrefix, market, city, onCity, state, onState, states }: {
+  idPrefix: string; market: "US" | "AU"; city: string; onCity: (v: string) => void; state: string; onState: (v: string) => void; states: readonly string[];
+}) {
+  const { t } = useLanguage();
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label htmlFor={`${idPrefix}-city`} className="pn-label">{t("auth.common.cityLabel")}</label>
+        <IconInput
+          icon={MapPin} id={`${idPrefix}-city`} autoComplete="address-level2" value={city}
+          onChange={(e) => { onCity(e.target.value); const g = guessState(market, e.target.value); if (g && states.includes(g)) onState(g); }}
+          placeholder={market === "AU" ? t("auth.common.cityPlaceholderAU") : t("auth.common.cityPlaceholder")}
+        />
+      </div>
+      <div>
+        <label htmlFor={`${idPrefix}-state`} className="pn-label">{t("auth.common.stateLabel")}</label>
+        <select id={`${idPrefix}-state`} value={state} onChange={(e) => onState(e.target.value)} className="pn-input" data-empty={state ? undefined : ""}>
+          <option value="">{t("auth.common.statePlaceholder")}</option>
+          {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+/** Thin segmented progress (sign-up steps, owner survey). */
+export function StepBar({ current, total, label }: { current: number; total: number; label: string }) {
+  return (
+    <div className="pn-progress pn-progress--steps" role="progressbar" aria-valuemin={1} aria-valuemax={total} aria-valuenow={current} aria-label={label}>
+      {Array.from({ length: total }, (_, i) => <span key={i} data-on={i < current ? "" : undefined} />)}
+    </div>
+  );
+}
+
+/** "Already have an account? Log in" — identical on every sign-up form. */
+export function HaveAccount() {
+  const { t } = useLanguage();
+  return (
+    <p className="pn-muted pn-center">
+      {t("auth.common.alreadyHaveAccount")}{" "}
+      <Link href="/auth/login" className="pn-a">{t("auth.common.loginNow")}</Link>
+    </p>
   );
 }
 

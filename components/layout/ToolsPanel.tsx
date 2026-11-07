@@ -108,7 +108,7 @@ function useTools(): Tool[] {
 
 // variant "list": khối dọc trong Sidebar desktop · "row": hàng thẻ vuốt
 // ngang trên trang chủ mobile (trước đây mobile không có lối tắt công cụ).
-export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
+export default function ToolsPanel({ variant, compact = false }: { variant: "list" | "row"; /** list: names only (guest sidebar) */ compact?: boolean }) {
   useTr(); // render lại khi đổi VI/EN
   // "Mẫu nail mới" có biểu tượng riêng — trước đây trùng ✨ với "Thử mẫu trên tay" ngay cạnh
   const tools = useTools().map((t) => (t.href === "/designs" ? { ...t, icon: Palette } : t));
@@ -145,9 +145,9 @@ export default function ToolsPanel({ variant }: { variant: "list" | "row" }) {
           <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-slate-200">
             <Icon className="h-[18px] w-[18px]" />
           </span>
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0 flex-1" title={compact ? stat : undefined}>
             <span className="block truncate text-[13px] font-semibold text-slate-100">{label}</span>
-            <span className="block truncate text-[11px] text-slate-500 group-hover:text-slate-400">{stat}</span>
+            {!compact && <span className="block truncate text-[11px] text-slate-500 group-hover:text-slate-400">{stat}</span>}
           </span>
           {!!badge && badge > 0 ? (
             <span className="rounded-full bg-pink-600 px-1.5 text-[10px] font-bold text-white">{badge > 9 ? "9+" : badge}</span>

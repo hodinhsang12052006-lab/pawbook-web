@@ -109,7 +109,7 @@ export default function InstallPrompt() {
         </button>
         <div className="flex items-start gap-3 pr-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-96.webp" alt="" className="h-12 w-12 shrink-0 rounded-xl ring-1 ring-white/10" />
+          <img src="/icons/icon-96.webp?v=b" alt="" className="h-12 w-12 shrink-0 rounded-xl ring-1 ring-white/10" />
           <div className="min-w-0">
             <p className="text-sm font-bold text-white">{tr("Cài PawNail lên điện thoại", "Install PawNail on your phone")}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-400">

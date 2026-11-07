@@ -14,8 +14,9 @@ self.addEventListener("push", (event) => {
   const title = data.title || "PawNail";
   const options = {
     body: data.body || "",
-    icon: data.icon || "/icons/icon-192.webp",
-    badge: "/icons/icon-96.webp",
+    icon: data.icon || "/icons/icon-192.webp?v=b",
+    // Android paints the badge from its ALPHA only — a full-colour icon became a white square; this is a white B on transparent.
+    badge: "/icons/badge-b-96.png",
     tag: data.tag || "pn",
     renotify: true,
     vibrate: data.tag === "pn-call" ? [300, 150, 300, 150, 300] : [60, 40, 60],

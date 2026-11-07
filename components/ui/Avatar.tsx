@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { tr } from "@/lib/i18n/tr";
-import { avatarGradient, avatarGradientClassic, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
+import { avatarGradient, avatarGradientClassic, displayAvatarUrl, initialsOf, isPlaceholderAvatar } from "@/lib/avatar";
 
 interface AvatarProps {
   src?: string | null;
@@ -31,7 +31,7 @@ export default function Avatar({ src, name, seed, className = "h-10 w-10", alt, 
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src!}
+        src={displayAvatarUrl(src)!}
         alt={alt ?? name ?? ""}
         loading={loading}
         onError={() => setBroken(true)}

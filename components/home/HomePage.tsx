@@ -236,7 +236,9 @@ export default function HomePage() {
           className={sessionLoading ? "[html[data-authed]_&]:hidden" : ""}
           onExploreJobs={() => {
             changeTab("jobs");
-            document.querySelector("[data-home-tabs]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            // phones: the sticky tab bar; ≥ md the guest tab bar is hidden (the sidebar is the nav) → the content column
+            const tabs = document.querySelector<HTMLElement>("[data-home-tabs]");
+            (tabs && tabs.offsetParent ? tabs : document.querySelector("[data-home-content]"))?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
         />
       )}
@@ -434,7 +436,8 @@ export default function HomePage() {
                 3px — bài viết cuộn qua lộ thành vệt phía trên thanh tab. Lớp nền
                 mờ bọc ngoài che luôn phần nội dung cuộn phía sau. */}
             {/* Điện thoại: lớp nền phủ tràn hết chiều ngang (không còn tấm nền vuông thò ra 2 bên thanh tab) */}
-            <div data-home-tabs className="sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:[mask-image:none] pn-glass pn-sticky-tabs">
+            {/* Khách ≥ md: thanh bên trái đã có Khám phá / Việc làm / Thợ sẵn sàng → ẩn thanh tab trong cột (không lặp 2 lần). */}
+            <div data-home-tabs className={`sticky top-[65px] z-30 -mx-1 px-1 pt-2 pb-2 max-sm:-mx-4 max-sm:px-4 bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 [mask-image:linear-gradient(to_bottom,black_85%,transparent)] refined:[mask-image:none] pn-glass pn-sticky-tabs ${guestView ? "md:hidden" : ""}`}>
               <div className="refined:max-md:flex refined:max-md:items-center refined:max-md:gap-2">
               <div role="tablist" aria-label={tr("Nội dung trang chủ", "Home sections")} className="relative grid grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-1 shadow-lg shadow-black/20 refined:max-md:min-w-0 refined:max-md:flex-1">
                 {/* Viên chọn trượt mượt sang tab đang mở */}
@@ -455,11 +458,12 @@ export default function HomePage() {
                     role="tab"
                     aria-selected={tab === t.id}
                     onClick={() => changeTab(t.id as HomeTab)}
-                    className={`relative z-10 flex items-center justify-center gap-1.5 rounded-lg py-3 text-xs font-bold transition-colors duration-200 active:scale-95 sm:text-sm ${
+                    className={`relative z-10 flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg py-3 text-xs font-bold transition-colors duration-200 active:scale-95 sm:text-sm ${
                       tab === t.id ? "text-white" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
-                    <t.icon className="h-4 w-4" />
+                    {/* < 400 px: label only — "Khám phá" no longer wraps to 2 lines next to the area filter */}
+                    <t.icon className="h-4 w-4 flex-shrink-0 max-[399px]:hidden" />
                     <span><span className="sm:hidden">{t.short}</span><span className="hidden sm:inline">{t.long}</span></span>
                   </button>
                 ))}
@@ -481,7 +485,7 @@ export default function HomePage() {
             </div>
 
             {/* Vuốt trái/phải trên điện thoại để chuyển tab; nội dung trượt vào theo hướng vuốt. */}
-            <div ref={contentRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="min-h-[50vh]">
+            <div ref={contentRef} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="min-h-[50vh] scroll-mt-20" data-home-content>
               <div key={tab} className={slideDir === "right" ? "tab-in-right" : slideDir === "left" ? "tab-in-left" : ""}>
             {tab === "feed" && guestView ? (
               <>

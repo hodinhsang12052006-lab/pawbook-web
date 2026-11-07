@@ -20,6 +20,7 @@ select.pn-input {
   background-repeat: no-repeat; background-position: right 14px center; background-size: 18px 18px;
 }
 select.pn-input option { background: #2e2433; color: #f6f0f5; }
+select.pn-input[data-empty] { color: #a69ba4; } /* "Select state" reads as a placeholder, not a value */
 textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 .pn-field-icon { position: relative; }
 .pn-field-icon > svg { position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: #a69ba4; pointer-events: none; }
@@ -91,9 +92,10 @@ textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 .pn-auth-stage { position: relative; width: 100%; max-width: 560px; container-type: inline-size; }
 .pn-auth-plate { --u: min(100cqw / 100, 52vh / 95); position: relative; height: calc(var(--u) * 95); perspective: 1400px; perspective-origin: 40% 30%; }
 @media (max-height: 680px) { .pn-auth-plate { --u: min(100cqw / 100, 44vh / 95); } }
+/* one soft halo behind the plate, tinted by the season (--s-halo*, globals.css) — the only festive cue next to a form */
 .pn-auth-plate::before {
   content: ""; position: absolute; inset: -14% -10% -10% -16%; z-index: 0; pointer-events: none;
-  background: radial-gradient(closest-side, rgb(219 39 119 / 0.26), rgb(219 39 119 / 0.09) 55%, transparent);
+  background: radial-gradient(closest-side, rgb(var(--s-halo) / var(--s-halo-o)), rgb(var(--s-halo2) / var(--s-halo2-o)) 58%, transparent);
 }
 .pn-auth-plate .pn-card { position: absolute; border-radius: 24px; }
 .pn-auth-plate .pn-card--a { z-index: 2; left: calc(var(--u) * 6); top: calc(var(--u) * 4); width: calc(var(--u) * 66); height: calc(var(--u) * 82.5); transform: rotateY(-8deg) rotateX(2deg); }
@@ -105,8 +107,8 @@ textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 .pn-auth-copy { max-width: 30em; }
 .pn-tagline { --pn-lh: 1.06; margin: 0; font-size: clamp(36px, 2.2vw + 14px, 46px); color: #f6f0f5; }
 html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 0.9); }
-.pn-auth-desc { margin: 14px 0 0; font: 400 17px/27px var(--font-pn), system-ui, sans-serif; color: #d8d0d6; }
-.pn-auth-trust { margin-top: 20px; font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
+.pn-auth-desc { margin: 14px 0 0; font: 400 17px/27px var(--font-pn), system-ui, sans-serif; color: #d8d0d6; text-wrap: pretty; }
+.pn-auth-trust { margin-top: 20px; font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; flex-direction: column; align-items: flex-start; gap: 6px; }
 @media (max-height: 760px) { .pn-auth-trust { display: none; } }
 
 .pn-auth-main { position: relative; min-width: 0; background: transparent; padding: 0 0 calc(32px + env(safe-area-inset-bottom)); }
@@ -119,7 +121,14 @@ html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 
 .pn-auth-hdr .pn-auth-brand { gap: 10px; }
 .pn-auth-hdr .pn-wordmark { font-size: 17px; line-height: 22px; }
 .pn-auth-form { max-width: 440px; margin: 20px auto 0; padding: 0 16px; }
-@media (min-width: 1024px) { .pn-auth-form { margin: clamp(32px, 9vh, 96px) auto 0; padding: 0; } }
+@media (min-width: 1024px) {
+  .pn-auth-form { margin: clamp(32px, 9vh, 96px) auto 0; padding: 0; }
+  /* a role form (has "All account types"): the language toggle floats top-right and the column starts high, so the
+     whole technician step 1 (title -> Continue) fits a 1440 x 900 screen */
+  .pn-auth-main:has(.pn-back) { position: relative; }
+  .pn-auth-main:has(.pn-back) .pn-auth-top { position: absolute; top: 32px; right: 48px; }
+  .pn-auth-main:has(.pn-back) .pn-auth-form { margin-top: 8px; }
+}
 .pn-auth-foot { max-width: 440px; margin: 40px auto 0; padding: 0 16px; font: 400 13px/18px var(--font-pn), system-ui, sans-serif; color: #a69ba4; }
 @media (min-width: 1024px) { .pn-auth-foot { padding: 0; } }
 .pn-auth-foot a { color: #c2b7bf; text-decoration: none; display: inline-flex; align-items: center; min-height: 24px; }
@@ -129,7 +138,7 @@ html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 
 .pn-h1 { --pn-lh: 1.2; margin: 0; font-size: 30px; color: #f6f0f5; }
 html[lang="vi"] .pn-h1.pn-display { line-height: 40px; }
 @media (min-width: 1024px) { .pn-h1 { font-size: 34px; --pn-lh: 1.1765; } html[lang="vi"] .pn-h1.pn-display { line-height: 44px; } }
-.pn-sub { margin: 8px 0 0; font: 400 16px/24px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
+.pn-sub { margin: 8px 0 0; font: 400 16px/24px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; text-wrap: pretty; }
 .pn-back {
   display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 12px; padding: 0; border: 0; background: none; cursor: pointer;
   font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; text-decoration: none;
@@ -138,6 +147,10 @@ html[lang="vi"] .pn-h1.pn-display { line-height: 40px; }
 .pn-back:focus-visible { outline: 2px solid #f59bbe; outline-offset: 2px; border-radius: 6px; }
 .pn-stack-16 > * + * { margin-top: 16px; }
 .pn-stack-24 > * + * { margin-top: 24px; }
+/* sign-up forms (client / technician / owner): one rhythm — 12 px between fields, 20 px between groups */
+.pn-form > * + * { margin-top: 20px; }
+.pn-form-group > * + * { margin-top: 12px; }
+.pn-form-group > legend + * { margin-top: 4px; }
 .pn-muted { font: 400 15px/22px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
 .pn-center { text-align: center; }
 .pn-strip3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 20px; }
@@ -168,6 +181,8 @@ html[lang="vi"] .pn-h1.pn-display { line-height: 40px; }
 .pn-choice > svg { flex-shrink: 0; width: 20px; height: 20px; color: #f59bbe; }
 .pn-choice:focus-visible { outline: 2px solid #f59bbe; outline-offset: 2px; }
 .pn-progress { display: flex; gap: 6px; }
+.pn-progress--steps { width: 132px; gap: 4px; margin: 2px 0 14px; }
+.pn-progress--steps > span { height: 3px; }
 .pn-progress > span { flex: 1 1 0; height: 4px; border-radius: 999px; background: rgb(255 240 246 / 0.10); }
 .pn-progress > span[data-on] { background: #f59bbe; }
 .pn-meta { font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
@@ -195,5 +210,5 @@ html[lang="vi"] .pn-h1.pn-display { line-height: 40px; }
 .pn-row-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; background: rgb(255 240 246 / 0.06); color: #f59bbe; }
 .pn-row-icon > svg { width: 20px; height: 20px; }
 .pn-row-title { display: block; font: 600 17px/22px var(--font-pn), system-ui, sans-serif; color: #f6f0f5; }
-.pn-row-desc { display: block; margin-top: 2px; font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
+.pn-row-desc { display: block; margin-top: 2px; font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; text-wrap: pretty; }
 .pn-row-chev { flex-shrink: 0; width: 18px; height: 18px; margin-left: auto; color: #a69ba4; }

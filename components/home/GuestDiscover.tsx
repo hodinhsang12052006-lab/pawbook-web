@@ -48,7 +48,10 @@ export default function GuestDiscover({ market, state }: { market: "US" | "AU"; 
           </div>
           <Link href="/salons" className="flex flex-shrink-0 items-center gap-0.5 text-xs font-bold text-pink-300 hover:underline">{tr("Tìm tiệm", "Find a salon")}<ArrowRight className="h-3.5 w-3.5" /></Link>
         </div>
-        <SalonDirectory market={market} state={state} limit={4} compact />
+        <SalonDirectory market={market} state={state} limit={4} compact phoneLimit={2} />
+        <Link href="/salons" className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl text-sm font-semibold text-[#f6f0f5] shadow-[inset_0_0_0_1px_var(--color-pn-line-strong)] sm:hidden">
+          {tr("Xem tất cả tiệm", "See all salons")}<ArrowRight className="h-4 w-4" />
+        </Link>
       </section>
 
       <DesignsStrip />

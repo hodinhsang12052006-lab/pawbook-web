@@ -14,10 +14,13 @@ import { useSeason } from "@/lib/useSeason";
 import { avifSrcSet, heroPickerScript, heroSet, webpSrc } from "@/lib/heroImagery";
 import { useTr } from "@/lib/i18n/useTr";
 
-const noop = () => () => {};
-const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
-// Phones only (the strip is display:none ≥ 1024, so desktop never downloads it): ~31vw tiles.
-const STRIP_SIZES = "(min-width:1024px) 1px, 31vw";
+// Phones only: ~31vw tiles. The strip is display:none ≥ 1024 and /auth/register renders this list on the client (the
+// server only sends a placeholder), so the inline picker never runs here — sources are set only below 1024 px, or a
+// desktop would still download one hidden 480 px tile.
+const STRIP_SIZES = "31vw";
+const PHONE_MQ = "(max-width: 1023px)";
+const subscribePhone = (cb: () => void) => { const m = window.matchMedia(PHONE_MQ); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); };
+const usePhoneStrip = () => useSyncExternalStore(subscribePhone, () => window.matchMedia(PHONE_MQ).matches, () => false);
 
 export type Role = "technician" | "owner" | "client" | null;
 
@@ -25,7 +28,7 @@ export default function RolePicker({ onPick }: { onPick: (role: Exclude<Role, nu
   const { t } = useLanguage();
   const { locale } = useTr();
   const set = heroSet(useSeason());
-  const mounted = useMounted();
+  const mounted = usePhoneStrip();
   const rows = [
     { role: "client" as const, icon: Hand, title: t("auth.rolePicker.clientTitle"), desc: t("auth.rolePicker.clientDesc") },
     { role: "technician" as const, icon: Paintbrush, title: t("auth.rolePicker.technicianTitle"), desc: t("auth.rolePicker.technicianDesc") },

@@ -6,10 +6,10 @@ import { apiError } from "@/lib/i18n/apiError";
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
-import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
-import { guessState } from "@/lib/cityState";
+import { Lock, Mail, User as UserIcon } from "lucide-react";
+import { US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import SocialLogin from "@/components/auth/SocialLogin";
-import { AuthTitle, BackToRoles, MarketSeg, PhonePrefix, Submit } from "@/components/auth/fields";
+import { AuthTitle, BackToRoles, CityStateFields, HaveAccount, IconInput, MarketSeg, PhoneField, Submit } from "@/components/auth/fields";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useViewerMarket } from "@/lib/useViewerMarket";
@@ -60,7 +60,7 @@ export default function ClientRegisterForm({ onBack }: { onBack?: () => void }) 
   };
 
   return (
-    <form onSubmit={submit} className="pn-stack-24">
+    <form onSubmit={submit} className="pn-form">
       <div>
         <BackToRoles onBack={onBack} />
         <AuthTitle
@@ -70,46 +70,28 @@ export default function ClientRegisterForm({ onBack }: { onBack?: () => void }) 
       </div>
       <SocialLogin divider heading={tr("Nhanh nhất: dùng tài khoản có sẵn", "Fastest: use an existing account")} />
 
-      <div className="pn-stack-16">
+      <div className="pn-form-group">
         <div>
           <label htmlFor="cl-name" className="pn-label">{tr("Tên của bạn", "Your name")}</label>
-          <input id="cl-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={tr("VD: Ngọc Anh", "e.g. Anna")} className="pn-input" />
+          <IconInput icon={UserIcon} id="cl-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={tr("VD: Ngọc Anh", "e.g. Anna")} />
         </div>
         <MarketSeg value={market} onChange={(m) => { setMarket(m); setState(""); }} label={tr("Bạn ở đâu?", "Where are you?")} />
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="cl-city" className="pn-label">{tr("Thành phố", "City")}</label>
-            <input id="cl-city" value={city} autoComplete="address-level2" onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && states.includes(g)) setState(g); }} placeholder={market === "AU" ? tr("VD: Parramatta", "e.g. Parramatta") : tr("VD: Houston", "e.g. Houston")} className="pn-input" />
-          </div>
-          <div>
-            <label htmlFor="cl-state" className="pn-label">{tr("Bang", "State")}</label>
-            <select id="cl-state" value={state} onChange={(e) => setState(e.target.value)} className="pn-input">
-              <option value="">{tr("— Chọn —", "— Select —")}</option>
-              {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
-            </select>
-          </div>
-        </div>
+        <CityStateFields idPrefix="cl" market={market} city={city} onCity={setCity} state={state} onState={setState} states={states} />
       </div>
 
-      <div className="pn-stack-16">
+      <div className="pn-form-group">
         <div>
           <label htmlFor="cl-email" className="pn-label">Email</label>
-          <input id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={tr("ban@email.com", "you@email.com")} className="pn-input" />
+          <IconInput icon={Mail} id="cl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={tr("ban@email.com", "you@email.com")} />
         </div>
         <div>
           <label htmlFor="cl-pass" className="pn-label">{tr("Mật khẩu", "Password")}</label>
-          <input id="cl-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder={tr("Tối thiểu 8 ký tự", "At least 8 characters")} className="pn-input" />
+          <IconInput icon={Lock} id="cl-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder={tr("Tối thiểu 8 ký tự", "At least 8 characters")} />
         </div>
-        <div>
-          <label htmlFor="cl-phone" className="pn-label">{tr("Số điện thoại", "Phone")} <span className="pn-opt">{tr("(không bắt buộc — để tiệm xác nhận lịch)", "(optional — for booking confirmations)")}</span></label>
-          <div className="flex items-center gap-2">
-            <PhonePrefix market={market} />
-            <input id="cl-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={market === "AU" ? "412 345 678" : "555 123 4567"} className="pn-input" aria-describedby="cl-phone-cc" />
-            <span id="cl-phone-cc" className="sr-only">{market === "US" ? tr("Mã vùng +1 (Mỹ)", "Country code +1 (US)") : tr("Mã vùng +61 (Úc)", "Country code +61 (Australia)")}</span>
-          </div>
-        </div>
+        <PhoneField id="cl-phone" market={market} value={phone} onChange={setPhone} label={tr("Số điện thoại", "Phone")} optional={tr("(không bắt buộc — để tiệm xác nhận lịch)", "(optional — for booking confirmations)")} />
       </div>
       <Submit busy={busy}>{tr("Tạo tài khoản", "Create account")}</Submit>
+      <HaveAccount />
     </form>
   );
 }

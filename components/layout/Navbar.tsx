@@ -22,31 +22,27 @@ export default function Navbar() {
   const { t } = useLanguage();
   const { user: sessionUser, loading: loadingSession } = useSessionUser();
   const { unreadCount, resetUnread } = useUnreadMessages();
-  // Khách chưa đăng nhập (kể cả lúc đang tải phiên trên máy chưa từng đăng nhập) → chrome marketing.
-  const guestChrome = !sessionUser;
+  // ONE brand block for guests and members (same 36 px logo tile + ivory wordmark, a real link home): it no longer
+  // flips from a guest lockup to a member lockup when /api/auth/session resolves (the first paint of every signed-in
+  // full load used to show the guest variant, then shift 4 px). prefetch={false}: the logo link is on every page and
+  // must not pull the "/" route bundle in the background.
+  const registerLabel = (
+    <>
+      <span className="min-[400px]:hidden">{t("menu.registerShort")}</span>
+      <span className="max-[399px]:hidden">{t("menu.register")}</span>
+    </>
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent refined:bg-pn-canvas refined:[backdrop-filter:none] refined:after:hidden">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left: Logo & Brand. Khách (landing): logo 36px viền mảnh + chữ ngà đặc (không chữ gradient — chữ foil duy nhất
-            của màn hình là H1). Thành viên: giữ nguyên kiểu trong app. */}
-        {guestChrome ? (
-          <Link href="/" className="flex items-center gap-2.5 rounded-xl" aria-label="PawNail">
-            <span className="pn-nav-logo">
-              <BrandLogo size={36} />
-            </span>
-            <span className="pn-wordmark hidden sm:inline">PawNail</span>
-          </Link>
-        ) : (
-        <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">
-          <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-pink-500/20 refined:shadow-none">
-            <BrandLogo size={40} alt="PawNail" />
-          </div>
-          <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-lg font-extrabold tracking-wide text-transparent hidden sm:inline refined:via-pink-400 refined:to-pink-400">
-            PawNail
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 min-[400px]:px-4 sm:px-6 lg:px-8">
+        {/* Left: logo + wordmark at every width (a bare "B" on a phone read as an anonymous app). */}
+        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 rounded-xl" aria-label="PawNail" data-brand>
+          <span className="pn-nav-logo">
+            <BrandLogo size={36} />
           </span>
-        </div>
-        )}
+          <span className="pn-wordmark">PawNail</span>
+        </Link>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4">
@@ -54,9 +50,9 @@ export default function Navbar() {
             <>
             {/* Đang tải phiên: khách thấy ngay nút Đăng nhập/Đăng ký (không nhảy), máy từng đăng nhập thấy khung chờ */}
             <div className="flex items-center gap-1.5 sm:gap-2 [html[data-authed]_&]:hidden">
-              <LanguageToggle />
+              <LanguageToggle className="max-[399px]:px-2.5" />
               <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
-              <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</IntentLink>
+              <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{registerLabel}</IntentLink>
             </div>
             <div className="hidden items-center gap-3 pl-4 border-l border-slate-800 animate-pulse [html[data-authed]_&]:flex">
               <div className="h-8 w-8 rounded-full bg-slate-800"></div>
@@ -130,13 +126,13 @@ export default function Navbar() {
                   {sessionUser.name}
                 </span>
               </div>
-              <LanguageToggle className="ml-1" />
+              <LanguageToggle className="ml-1 max-[399px]:ml-0 max-[399px]:px-2.5" />
             </>
           ) : (
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <LanguageToggle />
+              <LanguageToggle className="max-[399px]:px-2.5" />
               <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
-              <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{t("menu.register")}</IntentLink>
+              <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{registerLabel}</IntentLink>
             </div>
           )}
         </div>

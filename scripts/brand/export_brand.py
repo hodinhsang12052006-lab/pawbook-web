@@ -7,7 +7,12 @@ The source file is never modified: every output is a scaled copy (LANCZOS, sRGB,
 Writes
   public/brand/logo-b-{64,128,256}.webp   UI sizes (28-40 px chrome at DPR 2-3, 88-128 px official avatar)
   public/brand/logo-b-512.jpg             social/OG + anything that needs a JPEG
-  public/brand/pawnail-official.jpg       the official PawNail account avatar (prod rows already point here)
+  public/brand/pawnail-official.jpg       legacy URL of the official account avatar (prod rows point here; kept, B content)
+  public/brand/pawnail-official-b.jpg     versioned official avatar (lib/brand.ts maps the legacy URL here so a
+                                          stale image / service-worker cache can never show the retired mascot)
+  public/brand/logo-b-96.png              email header lockup (PNG: Outlook / Gmail do not render WebP)
+  public/icons/badge-b-96.png             push badge: white 'B' on transparent (Android masks the badge to its alpha;
+                                          a full-colour icon renders as a white square)
   native-shell/offline.html               144 px JPEG data URI inside <div class="logo">
   android/app/src/main/res/drawable*/splash.png, assets/splash.png, iOS Splash.imageset Default@*.png
                                           plum stage + soft key light + the logo tile, same pixel sizes as before
@@ -73,12 +78,32 @@ def splash(w, h, frac=0.26):
     return bg.convert("RGB")
 
 
+def badge(size):
+    """Monochrome alpha 'B' (white glyph, transparent ground) for the Android notification badge."""
+    from PIL import ImageFont
+    scale = 4
+    S = size * scale
+    font_path = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts", "seguibl.ttf")
+    font = ImageFont.truetype(font_path, int(S * 0.86))
+    m = Image.new("L", (S, S), 0)
+    d = ImageDraw.Draw(m)
+    x0, y0, x1, y1 = d.textbbox((0, 0), "B", font=font)
+    d.text(((S - (x1 - x0)) / 2 - x0, (S - (y1 - y0)) / 2 - y0), "B", font=font, fill=255)
+    m = m.resize((size, size), Image.LANCZOS)
+    out = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    out.putalpha(m)
+    return out
+
+
 def main():
     os.makedirs(os.path.join(ROOT, "public", "brand"), exist_ok=True)
     for s in (64, 128, 256):
         print(save_webp(s, f"logo-b-{s}.webp"))
     logo(512).save(os.path.join(ROOT, "public", "brand", "logo-b-512.jpg"), "JPEG", quality=86, optimize=True, progressive=True)
     logo(512).save(os.path.join(ROOT, "public", "brand", "pawnail-official.jpg"), "JPEG", quality=86, optimize=True, progressive=True)
+    logo(512).save(os.path.join(ROOT, "public", "brand", "pawnail-official-b.jpg"), "JPEG", quality=86, optimize=True, progressive=True)
+    logo(96).save(os.path.join(ROOT, "public", "brand", "logo-b-96.png"), "PNG", optimize=True)
+    badge(96).save(os.path.join(ROOT, "public", "icons", "badge-b-96.png"), "PNG", optimize=True)
 
     # native offline page: one self-contained data URI (hosted mode serves only that file from the app bundle)
     p = os.path.join(ROOT, "native-shell", "offline.html")

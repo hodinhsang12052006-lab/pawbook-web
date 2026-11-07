@@ -4,7 +4,7 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "../globals.css";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
-import { BRAND_OG_IMAGE, langFrom, openGraph } from "@/lib/i18n/server";
+import { brandOgImage, langFrom, openGraph } from "@/lib/i18n/server";
 import { SEASON_BOOT } from "@/lib/season";
 
 // Layout GỐC nằm dưới segment [lang]: mỗi trang được prerender 1 lần cho mỗi ngôn
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     manifest: "/manifest.json",
     applicationName: "PawNail",
     openGraph: openGraph(lang, { title: SITE_TITLE[lang], description: SITE_DESCRIPTION[lang] }),
-    twitter: { card: "summary", title: SITE_TITLE[lang], description: SITE_DESCRIPTION[lang], images: [BRAND_OG_IMAGE.url] },
+    twitter: { card: "summary_large_image", title: SITE_TITLE[lang], description: SITE_DESCRIPTION[lang], images: [{ url: brandOgImage(lang).url, alt: brandOgImage(lang).alt }] },
   };
 }
 

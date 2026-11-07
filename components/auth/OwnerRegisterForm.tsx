@@ -2,22 +2,20 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import {
-  Store, Phone, Lock, Mail, User as UserIcon, Loader2,
+  Store, Lock, Mail, User as UserIcon, Loader2, DollarSign,
   ArrowRight, Home, CheckCircle2, Check,
 } from "lucide-react";
-import { AuthTitle, BackToRoles, CountryCodeSelect, ErrorBox, MarketSeg, Submit } from "@/components/auth/fields";
+import { AuthTitle, BackToRoles, CityStateFields, ErrorBox, HaveAccount, IconInput, MarketSeg, PhoneField, Submit } from "@/components/auth/fields";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { POSITIONS } from "@/lib/nailVocab";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useViewerMarket } from "@/lib/useViewerMarket";
 import { SURVEY } from "@/lib/ownerSurvey";
-import { AU_ALL_CODES, stateName, US_ALL_CODES } from "@/lib/stateNames";
+import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
 import { dt } from "@/lib/i18n/dataEn";
 import { tr, currentLocale } from "@/lib/i18n/tr";
@@ -66,7 +64,6 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
   const [salonName, setSalonName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [countryCode, setCountryCode] = useState<"+1" | "+61">("+1");
   const [phone, setPhone] = useState("");
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [state, setState] = useState("CA");
@@ -86,7 +83,6 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
     if (marketTouched.current || viewerMarket === market) return;
     setMarket(viewerMarket);
     setState((viewerMarket === "US" ? US_STATES : AU_STATES)[0]);
-    setCountryCode(viewerMarket === "US" ? "+1" : "+61");
     setSalaryType((viewerMarket === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewerMarket]);
@@ -152,7 +148,7 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, email, password, role: "OWNER", locale: currentLocale(), market, state, city,
-          phone: `${countryCode} ${phone.trim()}`,
+          phone: `${market === "US" ? "+1" : "+61"} ${phone.trim()}`,
           salonName, urgentRole, salaryType, salaryAmount, hasHousing,
           diagnosedPains: nextPains,
           surveyAnswers: nextAnswers,
@@ -241,10 +237,10 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
     );
   }
 
-  const setMarketAll = (m: "US" | "AU") => { marketTouched.current = true; setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setCountryCode(m === "US" ? "+1" : "+61"); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]); };
+  const setMarketAll = (m: "US" | "AU") => { marketTouched.current = true; setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]); };
 
   return (
-    <div className="pn-stack-24">
+    <div className="pn-form">
       <div>
         <BackToRoles onBack={onBack} />
         <AuthTitle title={t("auth.owner.heading")} sub={t("auth.owner.subheading")} />
@@ -252,50 +248,24 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
-      <div className="pn-stack-16">
+      <div className="pn-form-group">
         <div>
           <label htmlFor="ow-name" className="pn-label">{t("auth.owner.nameLabel")}</label>
-          <div className="pn-field-icon">
-            <UserIcon aria-hidden />
-            <input id="ow-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.owner.namePlaceholder")} className="pn-input" />
-          </div>
+          <IconInput icon={UserIcon} id="ow-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.owner.namePlaceholder")} />
         </div>
         <div>
           <label htmlFor="ow-salon" className="pn-label">{t("auth.owner.salonLabel")}</label>
-          <div className="pn-field-icon">
-            <Store aria-hidden />
-            <input id="ow-salon" autoComplete="organization" value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder={t("auth.owner.salonPlaceholder")} className="pn-input" />
-          </div>
+          <IconInput icon={Store} id="ow-salon" autoComplete="organization" value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder={t("auth.owner.salonPlaceholder")} />
         </div>
       </div>
 
-      <div className="pn-stack-16">
+      <div className="pn-form-group">
         <MarketSeg value={market} onChange={setMarketAll} label={tr("Tiệm ở đâu?", "Where is your salon?")} />
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="ow-state" className="pn-label">{t("auth.common.stateLabel")}</label>
-            <select id="ow-state" value={state} onChange={(e) => setState(e.target.value)} className="pn-input">
-              {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="ow-city" className="pn-label">{t("auth.common.cityLabel")}</label>
-            <input id="ow-city" autoComplete="address-level2" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className="pn-input" />
-          </div>
-        </div>
-        <div>
-          <label htmlFor="ow-phone" className="pn-label">{t("auth.owner.phoneLabel")}</label>
-          <div className="flex gap-2">
-            <CountryCodeSelect value={countryCode} onChange={setCountryCode} />
-            <div className="pn-field-icon flex-1">
-              <Phone aria-hidden />
-              <input id="ow-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className="pn-input" />
-            </div>
-          </div>
-        </div>
+        <CityStateFields idPrefix="ow" market={market} city={city} onCity={setCity} state={state} onState={setState} states={states} />
+        <PhoneField id="ow-phone" market={market} value={phone} onChange={setPhone} label={t("auth.owner.phoneLabel")} />
       </div>
 
-      <div className="pn-stack-16">
+      <div className="pn-form-group">
         <fieldset>
           <legend className="pn-label">{t("auth.owner.urgentRoleLabel")}</legend>
           <div className="pn-pills" style={{ marginTop: 4 }}>
@@ -308,14 +278,14 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
           </div>
         </fieldset>
 
-        <fieldset className="pn-stack-16">
+        <fieldset className="pn-form-group">
           <legend className="pn-label">{t("auth.owner.salaryLabel")}</legend>
           <div className="pn-seg" role="group" aria-label={t("auth.owner.salaryLabel")}>
             {salaryTypes.map((st) => (
               <button key={st} type="button" aria-pressed={salaryType === st} onClick={() => setSalaryType(st)}>{valueLabel(st)}</button>
             ))}
           </div>
-          <input aria-label={t("auth.owner.salaryLabel")} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder={t("auth.owner.salaryPlaceholder")} className="pn-input" />
+          <IconInput icon={DollarSign} aria-label={t("auth.owner.salaryLabel")} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder={market === "AU" ? (salaryType === "Theo tuần AUD" ? tr("VD: A$1,300/tuần", "e.g. A$1,300/week") : tr("VD: A$35/giờ", "e.g. A$35/hour")) : t("auth.owner.salaryPlaceholder")} />
         </fieldset>
 
         <button type="button" aria-pressed={hasHousing} onClick={() => setHasHousing(!hasHousing)} className="pn-choice">
@@ -325,20 +295,14 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
         </button>
       </div>
 
-      <div className="pn-stack-16">
+      <div className="pn-form-group">
         <div>
           <label htmlFor="ow-email" className="pn-label">{t("auth.common.emailLoginLabel")}</label>
-          <div className="pn-field-icon">
-            <Mail aria-hidden />
-            <input id="ow-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className="pn-input" />
-          </div>
+          <IconInput icon={Mail} id="ow-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} />
         </div>
         <div>
           <label htmlFor="ow-pass" className="pn-label">{t("auth.common.passwordLabel")}</label>
-          <div className="pn-field-icon">
-            <Lock aria-hidden />
-            <input id="ow-pass" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className="pn-input" />
-          </div>
+          <IconInput icon={Lock} id="ow-pass" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} />
         </div>
       </div>
 
@@ -347,10 +311,7 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
         <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
       </Submit>
 
-      <p className="pn-muted pn-center">
-        {t("auth.common.alreadyHaveAccount")}{" "}
-        <Link href="/auth/login" className="pn-a">{t("auth.common.loginNow")}</Link>
-      </p>
+      <HaveAccount />
     </div>
   );
 }

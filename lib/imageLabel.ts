@@ -10,3 +10,10 @@ export function imageLabel(source: ImageSource, lang: "en" | "vi", handle?: stri
   }
   return lang === "vi" ? "Ảnh minh hoạ AI" : "AI illustration";
 }
+
+/** One chip / caption for a whole group of pictures from the same source (hero stack, auth plate, phone strips). */
+export function clusterLabel(source: ImageSource, lang: "en" | "vi"): string {
+  if (source === "render" || source === "engine") return lang === "vi" ? "Minh hoạ thử mẫu" : "Try-on previews";
+  if (source === "photo") return lang === "vi" ? "Tác phẩm thật" : "Real work";
+  return lang === "vi" ? "Ảnh minh hoạ AI" : "AI illustrations";
+}

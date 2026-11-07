@@ -33,8 +33,19 @@ export function alternates(path: string, lang: Locale, canonicalLang: Locale = l
   };
 }
 
-/** Ảnh chia sẻ mặc định = logo B (logo DUY NHẤT của PawNail; trang có ảnh riêng — mẫu nail, tin tuyển — tự ghi đè). */
-export const BRAND_OG_IMAGE = { url: "/brand/logo-b-512.jpg", width: 512, height: 512, alt: BRAND };
+/**
+ * Ảnh chia sẻ mặc định theo ngôn ngữ: thẻ 1200×630 (logo B + "PawNail" + câu chính của landing + 1 ảnh minh hoạ AI có
+ * nhãn) — iMessage / Facebook / Zalo hiện như thẻ thương hiệu, không như icon app. scripts/brand/make_og.mjs tạo ảnh.
+ * Trang có ảnh riêng (mẫu nail, tin tuyển) tự ghi đè.
+ */
+export function brandOgImage(lang: Locale) {
+  return {
+    url: `/brand/og-${lang === "vi" ? "vi" : "en"}.jpg`, width: 1200, height: 630, type: "image/jpeg",
+    alt: lang === "vi" ? "PawNail — Nền tảng cho ngành nail" : "PawNail — The platform for the nail industry",
+  };
+}
+/** @deprecated per-locale card: brandOgImage(lang). Kept for callers that have no locale (English card). */
+export const BRAND_OG_IMAGE = brandOgImage("en");
 
 /** openGraph ghi đè NGUYÊN object của layout cha — luôn kèm siteName + locale (+ logo khi trang không có ảnh). */
 export function openGraph(lang: Locale, og: NonNullable<Metadata["openGraph"]> = {}): NonNullable<Metadata["openGraph"]> {
@@ -43,7 +54,7 @@ export function openGraph(lang: Locale, og: NonNullable<Metadata["openGraph"]> =
     type: "website",
     locale: lang === "vi" ? "vi_VN" : "en_US",
     alternateLocale: lang === "vi" ? ["en_US", "en_AU"] : ["en_AU", "vi_VN"],
-    images: [BRAND_OG_IMAGE],
+    images: [brandOgImage(lang)],
     ...og,
   } as NonNullable<Metadata["openGraph"]>;
 }

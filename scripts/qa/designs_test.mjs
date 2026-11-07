@@ -257,8 +257,9 @@ try {
   const draftCount = await sec.locator("article").count();
   const svgPreviews = await sec.getByRole("img", { name: "Minh hoạ mẫu nail" }).count();
   const colorBadges = await sec.getByText("Minh hoạ màu", { exact: false }).count();
-  const aiTextBadges = await sec.getByText("Ý tưởng AI · minh hoạ màu").count();
-  const pawBadges = await sec.getByText("Mẫu PawNail · hình minh hoạ").count();
+  // short chip labels since 11/2026 (never clipped on 2-column cards): "Minh hoạ màu AI" / "Hình minh hoạ"
+  const aiTextBadges = await sec.getByText("Minh hoạ màu AI").count();
+  const pawBadges = await sec.getByText("Hình minh hoạ", { exact: true }).count();
   const motifs = await sec.locator("svg g[clip-path]").count();
   R.check("U10", "Nháp không có ảnh AI → minh hoạ tự vẽ + nhãn đúng nguồn (AI chữ / mẫu gợi ý / mẫu PawNail); mẫu có ảnh Cloudflare ghi 'Ảnh minh hoạ AI'", svgPreviews >= 8 && colorBadges >= 5 && aiTextBadges >= 1 && pawBadges === 11, svgPreviews + " svg, " + colorBadges + " nhãn màu, " + aiTextBadges + " AI chữ, " + pawBadges + " PawNail");
   const engBtn = sec.getByRole("button", { name: /Tạo 3 mẫu PawNail \(miễn phí\)/ });

@@ -121,7 +121,7 @@ export default function LoginForm() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t("auth.login.passwordPlaceholder")}
               aria-invalid={error && !password ? true : undefined}
               className="pn-input"
             />

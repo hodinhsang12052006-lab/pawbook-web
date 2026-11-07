@@ -68,14 +68,18 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
         )}
       </Link>
       <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-        <Link href={`/menu/${s.id}`} className="flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 text-sm font-black text-white">{tr("Xem menu & đặt lịch", "Menu & booking")}</Link>
-        <Link href={`/messages?to=${s.id}`} className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin", "Message")}</Link>
+        <Link href={`/menu/${s.id}`} className="flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white">{tr("Menu & đặt lịch", "Menu & booking")}</Link>
+        <Link href={`/messages?to=${s.id}`} className="flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin", "Message")}</Link>
       </div>
     </article>
   );
 }
 
-export default function SalonDirectory({ market = "US", state = "", limit = 24, compact = false }: { market?: "US" | "AU"; state?: string; limit?: number; compact?: boolean }) {
+/**
+ * compact: the guest landing — 2 columns from lg, and only the first `phoneLimit` cards on phones (< 640 px), where
+ * 4 near-identical 3-photo cards made the page ~10,000 px tall; the landing adds a "See all salons" link below.
+ */
+export default function SalonDirectory({ market = "US", state = "", limit = 24, compact = false, phoneLimit }: { market?: "US" | "AU"; state?: string; limit?: number; compact?: boolean; phoneLimit?: number }) {
   useTr();
   const [items, setItems] = useState<SalonItem[] | null>(null);
   // Mời tiệm quen: điện thoại → bảng chia sẻ (Zalo, Messenger, iMessage…); máy không hỗ trợ → chép lời mời để dán
@@ -97,7 +101,8 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
     return () => { off = true; };
   }, [market, state, limit]);
 
-  if (items === null) return <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>{Array.from({ length: compact ? 2 : 4 }).map((_, i) => <div key={i} className="h-64 animate-pulse rounded-3xl bg-white/[0.04]" />)}</div>;
+  const cols = compact ? "lg:grid-cols-2" : "sm:grid-cols-2";
+  if (items === null) return <div className={`grid gap-3 ${cols}`}>{Array.from({ length: compact ? 2 : 4 }).map((_, i) => <div key={i} className="h-64 animate-pulse rounded-3xl bg-white/[0.04]" />)}</div>;
   if (!items.length) {
     // Nói THẬT (chưa có tiệm nào lên menu ở đây) + 2 việc khách làm được ngay — không hứa "sẽ báo" khi chưa có
     return (
@@ -116,8 +121,12 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
   return (
     <div className="space-y-3">
       {state && !hasLocal && <p className="text-xs text-slate-400">{tr(`Chưa có tiệm tại ${stateName(market, state)} đăng menu — tiệm ở nơi khác:`, `No salons in ${stateName(market, state)} yet. Salons elsewhere:`)}</p>}
-      <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>
-        {items.map((s) => <SalonCard key={s.id} s={s} market={market} />)}
+      <div className={`grid gap-3 ${cols}`}>
+        {items.map((s, i) => (
+          <div key={s.id} className={phoneLimit != null && i >= phoneLimit ? "max-sm:hidden" : undefined}>
+            <SalonCard s={s} market={market} />
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -78,9 +78,10 @@ export default function Sidebar({ activeTab, setActiveTab, guest = false }: Side
               <div className="mb-4 rounded-xl bg-white/[0.03] p-3.5 ring-1 ring-inset ring-pn-line">
                 <p className="text-sm font-semibold text-white">{tr("Tham gia PawNail", "Join PawNail")}</p>
                 <p className="mt-0.5 text-[13px] leading-[18px] text-slate-400">{tr("Thử mẫu, tìm tiệm, tìm việc hoặc tuyển thợ — nhắn tin trực tiếp trong app.", "Try on looks, find a salon, find work or hire — message directly in the app.")}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <IntentLink href="/auth/register" className="flex min-h-9 items-center justify-center rounded-lg bg-white/[0.08] text-center text-[13px] font-semibold text-white ring-1 ring-inset ring-pn-line-strong hover:bg-white/[0.12]">{tr("Tạo tài khoản", "Create account")}</IntentLink>
-                  <IntentLink href="/auth/login" className="flex min-h-9 items-center justify-center rounded-lg text-center text-[13px] font-semibold text-slate-200 ring-1 ring-inset ring-pn-line hover:bg-white/5">{tr("Đăng nhập", "Log in")}</IntentLink>
+                {/* stacked full width: "Create account" / "Tạo tài khoản" never wraps or touches the button edges */}
+                <div className="mt-3 grid gap-2">
+                  <IntentLink href="/auth/register" className="flex min-h-10 items-center justify-center whitespace-nowrap rounded-xl bg-white/[0.08] px-4 text-center text-[14px] font-semibold text-white ring-1 ring-inset ring-pn-line-strong hover:bg-white/[0.12]">{tr("Tạo tài khoản", "Create account")}</IntentLink>
+                  <IntentLink href="/auth/login" className="flex min-h-10 items-center justify-center whitespace-nowrap rounded-xl px-4 text-center text-[14px] font-semibold text-slate-200 ring-1 ring-inset ring-pn-line hover:bg-white/5">{tr("Đăng nhập", "Log in")}</IntentLink>
                 </div>
               </div>
             ) : (
@@ -124,7 +125,8 @@ export default function Sidebar({ activeTab, setActiveTab, guest = false }: Side
             </nav>
 
             <p className="mt-5 mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">{tr("Công cụ", "Tools")}</p>
-            <ToolsPanel variant="list" />
+            {/* guests: tool names only (the one-line subtitles truncated mid-word in a 256 px sidebar) */}
+            <ToolsPanel variant="list" compact={guest} />
           </div>
 
           {completeness && <ProfileCompletenessCard completeness={completeness} compact role={userRole} />}

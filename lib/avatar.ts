@@ -11,6 +11,18 @@ const PLACEHOLDER_PATTERNS = [
   "/cho1.jpg", // linh vật cũ (đã gỡ khỏi mọi bề mặt 07/11/2026, file đã xoá) — URL cũ trong DB hiện chữ cái đầu
 ];
 
+// URL cũ → bản có phiên bản. /brand/pawnail-official.jpg (ảnh đại diện tài khoản PawNail chính thức, DB production
+// đang lưu) từng là linh vật; nội dung nay là logo B nhưng URL cũ có thể còn trong cache ảnh / service worker của
+// người dùng cũ → luôn trỏ sang file mới /brand/pawnail-official-b.jpg (lib/brand.ts OFFICIAL_AVATAR).
+const LEGACY_REMAP: Record<string, string> = { "/brand/pawnail-official.jpg": "/brand/pawnail-official-b.jpg" };
+
+/** URL ảnh đại diện để hiển thị: đổi URL cũ đã thay nội dung sang bản có phiên bản (không đổi ảnh người dùng). */
+export function displayAvatarUrl<T extends string | null | undefined>(url: T): T {
+  if (!url) return url;
+  const path = url.replace(/^https?:\/\/[^/]+/, "").split("?")[0];
+  return (LEGACY_REMAP[path] ?? url) as T;
+}
+
 /** true khi URL rỗng hoặc chỉ là ảnh giữ chỗ — không phải ảnh người dùng tự tải. */
 export function isPlaceholderAvatar(url?: string | null): boolean {
   if (!url) return true;
@@ -57,7 +69,7 @@ const GRADIENTS: [string, string][] = [
  * với component <Avatar>.
  */
 export function avatarSrc(url: string | null | undefined, name?: string | null, seed?: string | null): string {
-  if (!isPlaceholderAvatar(url)) return url!;
+  if (!isPlaceholderAvatar(url)) return displayAvatarUrl(url)!;
   const [from, to] = avatarGradient(seed || name);
   const text = initialsOf(name).replace(/[<>&"']/g, "");
   const svg =

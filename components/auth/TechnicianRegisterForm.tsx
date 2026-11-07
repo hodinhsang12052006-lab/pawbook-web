@@ -2,16 +2,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import {
-  Phone, Lock, Mail, User as UserIcon, Loader2,
+  Lock, Mail, User as UserIcon, Loader2, DollarSign,
   ArrowLeft, ArrowRight, Upload, X, Flame, CheckCircle2, RefreshCw, Check,
 } from "lucide-react";
-import { stateName } from "@/lib/stateNames";
-import { guessState } from "@/lib/cityState";
+import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { valueLabel } from "@/lib/i18n/valueLabel";
@@ -19,10 +17,11 @@ import { SIGNUP_SKILLS, techBenefits } from "@/lib/nailVocab";
 import { useViewerMarket } from "@/lib/useViewerMarket";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { apiError } from "@/lib/i18n/apiError";
-import { AuthTitle, BackToRoles, CountryCodeSelect, ErrorBox, MarketSeg, Submit } from "@/components/auth/fields";
+import { AuthTitle, BackToRoles, CityStateFields, ErrorBox, HaveAccount, IconInput, MarketSeg, PhoneField, StepBar, Submit } from "@/components/auth/fields";
 
-const US_STATES = ["CA", "TX", "FL", "NY", "WA", "GA", "NC", "VA", "AZ", "IL"];
-const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "ACT"];
+// Every state / territory (10 busiest first) — a tech in Ohio or Tasmania can sign up too (was a 10 / 6 short list).
+const US_STATES = US_ALL_CODES;
+const AU_STATES = AU_ALL_CODES;
 // Giá trị lưu DB (specialties/desiredSalaryType/desiredBenefits), hiển thị
 // cho MỌI người xem bất kể locale — cố tình giữ tiếng Việt, không qua t().
 // Bộ từ vựng chung với hồ sơ / bộ lọc / đăng tin (lib/nailVocab.ts) — trước đây form này lưu giá trị riêng
@@ -44,7 +43,6 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [countryCode, setCountryCode] = useState<"+1" | "+61">("+1");
   const [phone, setPhone] = useState("");
   const [market, setMarket] = useState<"US" | "AU">("US");
   const [state, setState] = useState("CA");
@@ -70,7 +68,6 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
     if (marketTouched.current || viewerMarket === market) return;
     setMarket(viewerMarket);
     setState((viewerMarket === "US" ? US_STATES : AU_STATES)[0]);
-    setCountryCode(viewerMarket === "US" ? "+1" : "+61");
     setBenefits([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewerMarket]);
@@ -92,7 +89,7 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, email, password, role: "TECHNICIAN", locale: currentLocale(), market, state, city,
-          phone: `${countryCode} ${phone.trim()}`,
+          phone: `${market === "US" ? "+1" : "+61"} ${phone.trim()}`,
         }),
       });
       const data = await res.json();
@@ -180,73 +177,40 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
     }
   };
 
-  const setMarketAll = (m: "US" | "AU") => { marketTouched.current = true; setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setCountryCode(m === "US" ? "+1" : "+61"); setBenefits([]); };
+  const setMarketAll = (m: "US" | "AU") => { marketTouched.current = true; setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setBenefits([]); };
 
   return (
-    <div className="pn-stack-24">
+    <div className="pn-form">
       <div>
         {step === 1 && <BackToRoles onBack={onBack} />}
-        <AuthTitle
-          title={step === 1 ? t("auth.technician.step1Heading") : step === 2 ? t("auth.technician.step2Heading") : t("auth.technician.step3Heading")}
-          sub={t("auth.technician.stepProgress", { current: step })}
-        />
+        <StepBar current={step} total={3} label={t("auth.technician.stepProgress", { current: step })} />
+        <AuthTitle title={step === 1 ? t("auth.technician.step1Heading") : step === 2 ? t("auth.technician.step2Heading") : t("auth.technician.step3Heading")} />
       </div>
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
       {/* STEP 1 */}
       {step === 1 && (
-        <div className="pn-stack-24">
-          <div className="pn-stack-16">
+        <div className="pn-form">
+          <div className="pn-form-group">
             <div>
               <label htmlFor="tr-name" className="pn-label">{t("auth.technician.nameLabel")}</label>
-              <div className="pn-field-icon">
-                <UserIcon aria-hidden />
-                <input id="tr-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.technician.namePlaceholder")} className="pn-input" />
-              </div>
+              <IconInput icon={UserIcon} id="tr-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.technician.namePlaceholder")} />
             </div>
-            <div>
-              <label htmlFor="tr-phone" className="pn-label">{t("auth.common.phoneLabel")}</label>
-              <div className="flex gap-2">
-                <CountryCodeSelect value={countryCode} onChange={setCountryCode} />
-                <div className="pn-field-icon flex-1">
-                  <Phone aria-hidden />
-                  <input id="tr-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("auth.common.phonePlaceholder")} className="pn-input" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pn-stack-16">
+            {/* US / AU first: it decides the state list, the city / phone examples and the +1 / +61 chip */}
             <MarketSeg value={market} onChange={setMarketAll} label={tr("Bạn làm ở đâu?", "Where do you work?")} />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="tr-state" className="pn-label">{t("auth.common.stateLabel")}</label>
-                <select id="tr-state" value={state} onChange={(e) => setState(e.target.value)} className="pn-input">
-                  {states.map((s) => <option key={s} value={s}>{stateName(market, s)}</option>)}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="tr-city" className="pn-label">{t("auth.common.cityLabel")}</label>
-                <input id="tr-city" autoComplete="address-level2" value={city} onChange={(e) => { setCity(e.target.value); const g = guessState(market, e.target.value); if (g && (states as readonly string[]).includes(g)) setState(g); }} placeholder={t("auth.common.cityPlaceholder")} className="pn-input" />
-              </div>
-            </div>
+            <CityStateFields idPrefix="tr" market={market} city={city} onCity={setCity} state={state} onState={setState} states={states} />
+            <PhoneField id="tr-phone" market={market} value={phone} onChange={setPhone} label={t("auth.common.phoneLabel")} />
           </div>
 
-          <div className="pn-stack-16">
+          <div className="pn-form-group">
             <div>
               <label htmlFor="tr-email" className="pn-label">{t("auth.common.emailLoginLabel")}</label>
-              <div className="pn-field-icon">
-                <Mail aria-hidden />
-                <input id="tr-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} className="pn-input" />
-              </div>
+              <IconInput icon={Mail} id="tr-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.common.emailPlaceholder")} />
             </div>
             <div>
               <label htmlFor="tr-pass" className="pn-label">{t("auth.common.passwordLabel")}</label>
-              <div className="pn-field-icon">
-                <Lock aria-hidden />
-                <input id="tr-pass" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} className="pn-input" />
-              </div>
+              <IconInput icon={Lock} id="tr-pass" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.common.passwordHint")} />
             </div>
           </div>
 
@@ -258,7 +222,7 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
 
       {/* STEP 2 */}
       {step === 2 && (
-        <div className="pn-stack-24">
+        <div className="pn-form">
           <fieldset>
             <legend className="pn-label">{t("auth.technician.specialtiesLabel")}</legend>
             <div className="pn-pills" style={{ marginTop: 4 }}>
@@ -278,12 +242,12 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
                 <button key={m} type="button" aria-pressed={salaryMode === m} onClick={() => setSalaryMode(m)}>{valueLabel(m)}</button>
               ))}
             </div>
-            <input
+            <IconInput
+              icon={DollarSign}
               aria-label={t("auth.technician.desiredSalaryLabel")}
               value={salaryAmount}
               onChange={(e) => setSalaryAmount(e.target.value)}
-              placeholder={salaryMode === "Bao lương" ? tr("VD: $1,200/tuần", "e.g. $1,200/week") : tr("VD: 60/40", "e.g. 60/40")}
-              className="pn-input"
+              placeholder={salaryMode === "Bao lương" ? (market === "AU" ? tr("VD: A$1,300/tuần", "e.g. A$1,300/week") : tr("VD: $1,200/tuần", "e.g. $1,200/week")) : tr("VD: 60/40", "e.g. 60/40")}
             />
           </fieldset>
 
@@ -314,7 +278,7 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
 
       {/* STEP 3 */}
       {step === 3 && (
-        <div className="pn-stack-24">
+        <div className="pn-form">
           <div>
             <p className="pn-label">{t("auth.technician.uploadLabel")}</p>
             <div className="pn-uploads">
@@ -365,10 +329,7 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
         </div>
       )}
 
-      <p className="pn-muted pn-center">
-        {t("auth.common.alreadyHaveAccount")}{" "}
-        <Link href="/auth/login" className="pn-a">{t("auth.common.loginNow")}</Link>
-      </p>
+      <HaveAccount />
     </div>
   );
 }

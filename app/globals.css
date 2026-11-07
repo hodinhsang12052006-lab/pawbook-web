@@ -1092,48 +1092,61 @@ html:not([data-ui-classic]) .pn-post-tag { line-height: 16px; }
   --s-bokeh: 0;
   --s-spark-o: 0.55;
   --s-flare: 0;
+  /* halo behind the hero stack / auth plate (centred on the front card): inner tint + outer ring. Base = brand pink. */
+  --s-halo: 219 39 119; --s-halo-o: 0.26;
+  --s-halo2: 219 39 119; --s-halo2-o: 0.09;
 }
+/* Mỗi mùa nhận ra được ngay (không kitsch) nhờ 4 thứ: bộ ảnh · quầng sáng sau ảnh (--s-halo: lõi + viền) · ánh rim
+   dưới trái (0.18) · đuôi chữ foil H1. US: harvest đồng/rượu vang → holiday champagne + lục bảo → NYE champagne/bạc.
+   AU: jacaranda tím → summer-festive vàng nắng + xanh biển (không tuyết, không bí ngô). */
 html[data-season="us-harvest"] {
-  --pn-rim: rgb(214 140 72 / 0.12);
+  --pn-rim: rgb(214 140 72 / 0.18);
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f2c9a0 50%, #e0a86a 100%);
   --s-a: 214 140 72; --s-b: 158 38 64; --s-spark: 252 214 168; --s-ink: #f2c9a0;
   --s-bokeh: 0.9; --s-spark-o: 0.45; --s-flare: 0.55;
+  --s-halo: 214 132 64; --s-halo-o: 0.26; --s-halo2: 150 36 62; --s-halo2-o: 0.14;
 }
 html[data-season="us-holiday"] {
-  --pn-rim: rgb(230 199 154 / 0.14);
-  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f6e3c3 50%, #e6c79a 100%);
-  --s-a: 230 199 154; --s-b: 178 34 60; --s-spark: 255 238 210; --s-ink: #f3dcb3;
-  --s-bokeh: 0.7; --s-spark-o: 1; --s-flare: 1;
+  --pn-rim: rgb(46 150 112 / 0.18);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f6e3c3 40%, #e8cf8a 72%, #a9d6b2 100%);
+  --s-a: 232 202 140; --s-b: 36 140 104; --s-spark: 255 238 210; --s-ink: #f3dcb3;
+  --s-bokeh: 0.75; --s-spark-o: 0.9; --s-flare: 0.9;
+  --s-halo: 232 200 136; --s-halo-o: 0.24; --s-halo2: 30 132 98; --s-halo2-o: 0.16;
 }
 html[data-season="nye"] {
-  --pn-rim: rgb(226 232 240 / 0.10);
+  --pn-rim: rgb(214 220 232 / 0.16);
   --pn-foil: linear-gradient(100deg, #f6e3c3 0%, #ffffff 45%, #d9dde6 100%);
   --s-a: 240 214 160; --s-b: 210 216 228; --s-spark: 255 242 220; --s-ink: #f6e3c3;
-  --s-bokeh: 0.45; --s-spark-o: 1; --s-flare: 0.8;
+  --s-bokeh: 0.5; --s-spark-o: 0.9; --s-flare: 0.8;
+  --s-halo: 240 214 160; --s-halo-o: 0.22; --s-halo2: 200 208 224; --s-halo2-o: 0.12;
 }
 html[data-season="us-winter"] {
-  --pn-rim: rgb(196 206 222 / 0.10);
+  --pn-rim: rgb(196 206 222 / 0.12);
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f1e6ef 50%, #cfd6e4 100%);
   --s-a: 203 213 225; --s-b: 219 39 119; --s-spark: 230 236 245; --s-ink: #e6e9f2;
   --s-bokeh: 0.35; --s-spark-o: 0.35; --s-flare: 0.5;
+  --s-halo: 196 208 226; --s-halo-o: 0.18; --s-halo2: 219 39 119; --s-halo2-o: 0.08;
 }
 html[data-season="au-jacaranda"] {
-  --pn-rim: rgb(167 139 250 / 0.12);
+  --pn-rim: rgb(167 139 250 / 0.18);
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #dccbff 50%, #b9a3f5 100%);
-  --s-a: 167 139 250; --s-b: 251 164 140; --s-spark: 237 233 254; --s-ink: #e2d8ff;
-  --s-bokeh: 0.85; --s-spark-o: 0.4; --s-flare: 0.5;
+  --s-a: 167 139 250; --s-b: 196 168 255; --s-spark: 237 233 254; --s-ink: #e2d8ff;
+  --s-bokeh: 0.9; --s-spark-o: 0.4; --s-flare: 0.5;
+  --s-halo: 150 120 246; --s-halo-o: 0.28; --s-halo2: 120 92 214; --s-halo2-o: 0.14;
 }
 html[data-season="au-summer-festive"] {
-  --pn-rim: rgb(94 214 196 / 0.10);
-  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #fbd5bf 45%, #e6c79a 100%);
-  --s-a: 230 199 154; --s-b: 94 214 196; --s-spark: 255 236 200; --s-ink: #fde1c4;
-  --s-bokeh: 0.8; --s-spark-o: 0.85; --s-flare: 1;
+  --pn-rim: rgb(94 214 196 / 0.18);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #fbd5bf 42%, #f3c27a 74%, #f0a860 100%);
+  --s-a: 246 190 120; --s-b: 94 214 196; --s-spark: 255 236 200; --s-ink: #fde1c4;
+  --s-bokeh: 0.85; --s-spark-o: 0.8; --s-flare: 0.9;
+  --s-halo: 246 184 112; --s-halo-o: 0.24; --s-halo2: 64 196 178; --s-halo2-o: 0.14;
 }
 html[data-season="au-summer"] {
-  --pn-rim: rgb(94 214 196 / 0.10);
+  --pn-rim: rgb(94 214 196 / 0.16);
   --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #ffc4b0 50%, #8fe3d8 100%);
   --s-a: 94 214 196; --s-b: 251 128 114; --s-spark: 255 247 230; --s-ink: #c9f4ec;
   --s-bokeh: 0.7; --s-spark-o: 0.3; --s-flare: 0.6;
+  --s-halo: 80 200 182; --s-halo-o: 0.22; --s-halo2: 251 128 114; --s-halo2-o: 0.10;
 }
 
 html[data-surface] { color-scheme: dark; }

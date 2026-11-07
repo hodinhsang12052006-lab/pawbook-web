@@ -181,8 +181,29 @@ function probe(ctx) {
     for (const [n, t] of texts) if (r.right > t.left + 1 && r.left < t.right - 1 && r.bottom > t.top + 1 && r.top < t.bottom - 1) out.seasonOverText.push(sel(fx) + " × " + n);
   }
 
-  // photo cards + label chips
+  // photo cards + label chips. Since 11/2026: ONE chip per photo cluster (hero stack / auth plate, on the front
+  // card) on desktop, ONE caption under a phone strip (hero strip .pn-stack-cap, register strip .pn-strip3-cap).
   out.cards = [];
+  out.clusters = [];
+  for (const cl of document.querySelectorAll(".pn-stack, .pn-auth-plate")) {
+    if (!visible(cl) || cl.closest("noscript")) continue;
+    const chips = [...cl.querySelectorAll(".pn-img-label")].filter(visible);
+    const cards = [...cl.querySelectorAll(".pn-card")].filter(visible);
+    const cap = cl.parentElement?.querySelector(":scope > .pn-stack-cap");
+    out.clusters.push({ cls: sel(cl), cards: cards.length, chips: chips.map((c) => c.innerText.trim()), chipOnFront: chips.every((c) => c.closest(".pn-card--front, .pn-card--a")), caption: cap && visible(cap) ? cap.textContent.trim() : null });
+  }
+  // fanned stack: share of each back card NOT covered by the front card (projected rects, >= 1024 only)
+  const fr = document.querySelector(".pn-stack .pn-card--front");
+  if (fr && visible(fr) && innerWidth >= 1024) {
+    const F = fr.getBoundingClientRect();
+    out.fan = {};
+    for (const k of ["mid", "back"]) {
+      const el = document.querySelector(".pn-stack .pn-card--" + k); if (!el || !visible(el)) continue;
+      const R = el.getBoundingClientRect();
+      const ix = Math.max(0, Math.min(R.right, F.right) - Math.max(R.left, F.left)), iy = Math.max(0, Math.min(R.bottom, F.bottom) - Math.max(R.top, F.top));
+      out.fan[k] = +(1 - (ix * iy) / (R.width * R.height)).toFixed(2);
+    }
+  }
   for (const fig of document.querySelectorAll(".pn-card, .pn-auth-card, [data-hero-slot]")) {
     if (!visible(fig) || fig.closest(".pn-strip3")) continue; // the register phone strip carries ONE caption below it
     const img = fig.querySelector("img"); if (!img) continue;
@@ -265,6 +286,21 @@ function probe(ctx) {
   out.flagsEmoji = /🇺🇸|🇦🇺/.test(document.body.innerText);
   out.areaFilterInTabs = !!document.querySelector("[data-home-tabs] [data-area-filter], [data-home-tabs] [aria-label*='market' i], [data-home-tabs] button[aria-haspopup]");
   out.scrollW = document.documentElement.scrollWidth;
+  // brand: the wordmark sits next to the B at every width
+  out.wordmark = [...document.querySelectorAll("[data-brand] .pn-wordmark, .pn-auth-hdr .pn-wordmark, .pn-auth-panel .pn-wordmark")].some((wm) => visible(wm) && wm.getBoundingClientRect().width > 0);
+  // season decoration next to a form: none (auth = tinted halo only); jacaranda petals retired
+  out.authSeasonFx = document.querySelectorAll(".pn-auth-stage .pn-season, .pn-auth-stage .fx-glint, .fx-petal").length;
+  // sign-up form facts: market toggle, state, phone chip, placeholders, primary action position
+  const pressed = [...document.querySelectorAll("main .pn-seg button[aria-pressed='true']")].map((b) => b.textContent.trim());
+  const stateSel = document.querySelector("main select[id$='-state']");
+  const city = document.querySelector("main input[id$='-city']");
+  const tel = document.querySelector("main input[type='tel']");
+  const cta = [...document.querySelectorAll("main .pn-cta")].filter(visible)[0];
+  out.form = {
+    market: pressed[0] || null, state: stateSel ? stateSel.value : null, prefix: (document.querySelector("main .pn-prefix")?.textContent || "").trim() || null,
+    cityPh: city?.placeholder || null, telPh: tel?.placeholder || null, ctaBottom: cta ? Math.round(cta.getBoundingClientRect().bottom) : null,
+    pwPh: document.querySelector("main input[type='password']")?.placeholder ?? null,
+  };
   return out;
 }
 
@@ -373,14 +409,33 @@ for (const r of results) {
   if (landing && r.lang === "en" && !r.reduce) b(r.fontBytes <= BUDGET.fontBytesLandingEn, `font bytes ${r.fontBytes}`);
   // season layer + photos
   b(r.seasonOverText.length === 0, "season layer intersects text", r.seasonOverText);
+  // ONE label per photo cluster: desktop = one chip on the front card; phone strip = no chips + one caption below
+  const CLUSTER_LABEL = /^(AI illustrations|Ảnh minh hoạ AI)$/;
+  for (const cl of r.clusters || []) {
+    if (!cl.cards) continue;
+    if (r.vp === "d") {
+      b(cl.chips.length === 1, `photo cluster ${cl.cls}: ${cl.chips.length} chips (want 1)`, cl.chips);
+      b(cl.chips.every((t) => CLUSTER_LABEL.test(t)), "cluster chip text", cl.chips);
+      b(cl.chipOnFront, `cluster chip not on the front card ${cl.cls}`);
+    } else if (landing) {
+      b(cl.chips.length === 0, `phone strip shows ${cl.chips.length} chips (want one caption)`, cl.chips);
+      b(cl.caption != null && CLUSTER_LABEL.test(cl.caption), `phone strip caption «${cl.caption}»`);
+    }
+  }
+  if (landing && r.vp === "d" && r.fan) {
+    b(r.fan.mid >= 0.4, `fanned stack: left card only ${Math.round(r.fan.mid * 100)}% visible (want >= 40%)`);
+    b(r.fan.back >= 0.3, `fanned stack: right card only ${Math.round(r.fan.back * 100)}% visible (want >= 30%)`);
+  }
+  b(r.wordmark, "PawNail wordmark not visible next to the logo");
+  b(r.authSeasonFx === 0, `season glints / petals present (${r.authSeasonFx})`);
   for (const c of r.cards.filter((c) => c.inView || (r.vp === "d"))) {
     if (!c.inView && r.vp === "m") continue;
-    b(!!c.chip, `photo without label chip ${c.cls}`);
     if (c.chip) {
-      b(/^(AI illustration|Ảnh minh hoạ AI)$/.test(c.chip.text), `label text «${c.chip.text}»`);
+      b(CLUSTER_LABEL.test(c.chip.text), `label text «${c.chip.text}»`);
       b(c.chip.fs === BUDGET.labelChipPx && c.chip.h <= 24, `label chip ${c.chip.fs}px h${c.chip.h}`);
       b(c.chip.cornerOk !== false, `label chip not at its corner (${c.chip.corner}) ${c.cls}`);
     }
+    if (landing) b(/ — (AI illustration|ảnh minh hoạ AI)$/.test(c.alt || ""), `hero photo alt without the AI label: «${c.alt}»`);
     if (r.vp === "d" && c.nat) b(c.ratio >= BUDGET.naturalWidthRatio, `image ${c.src} natural ${c.nat}px / rendered ${c.w}px = ${c.ratio}`);
     if (c.src) b(/\.avif$/.test(c.src), `image not AVIF: ${c.src}`);
   }
@@ -404,7 +459,19 @@ for (const r of results) {
     if (r.stripCaption != null) b(/^(AI illustrations|Ảnh minh hoạ AI)$/.test(r.stripCaption), `register strip caption «${r.stripCaption}»`);
     for (const i of r.inputs) b(i.fs >= 16 && i.h >= 44, `input ${i.fs}px h${i.h}`);
     b(r.submits.every(Boolean), "submit without .pn-cta", r.submits);
-    if (r.phoneOptions.length) b(r.phoneOptions.every((t) => /^\+(1|61) \((US|AU|Mỹ|Úc)\)$/.test(t)), "phone options", r.phoneOptions);
+    b(r.phoneOptions.length === 0, "country-code <select> present (one flag + code chip on every form)", r.phoneOptions);
+    if (r.key === "login") b(r.form.pwPh != null && !/•/.test(r.form.pwPh), `login password placeholder «${r.form.pwPh}» looks prefilled`);
+    // the viewer's market decides the form: an Australian owner opens on Australia · NSW · +61, every AU form uses
+    // AU examples (never "Los Angeles" / "555 ...")
+    if (/^reg-(owner|tech|client)$/.test(r.key)) {
+      const au = r.market === "AU";
+      b(r.form.market === (au ? (r.lang === "vi" ? "Úc" : "Australia") : (r.lang === "vi" ? "Mỹ" : "United States")), `${r.key}: market toggle opens on «${r.form.market}»`);
+      b(r.form.prefix === (au ? "+61" : "+1"), `${r.key}: phone chip «${r.form.prefix}»`);
+      if (r.key === "reg-owner" && au) b(r.form.state === "NSW", `reg-owner AU opens on state «${r.form.state}» (want NSW)`);
+      if (au) b(/Parramatta/.test(r.form.cityPh || "") && r.form.telPh === "412 345 678", `${r.key}: AU placeholders «${r.form.cityPh}» / «${r.form.telPh}»`);
+      else b(!/Parramatta/.test(r.form.cityPh || "") && r.form.telPh === "555 123 4567", `${r.key}: US placeholders «${r.form.cityPh}» / «${r.form.telPh}»`);
+    }
+    if (r.key === "reg-tech" && r.vp === "d") b(r.form.ctaBottom != null && r.form.ctaBottom <= 900, `technician step 1: Continue below the fold (bottom ${r.form.ctaBottom})`);
   }
   b(r.errors.length === 0, "page errors", r.errors);
 }

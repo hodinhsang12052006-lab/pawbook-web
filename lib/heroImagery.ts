@@ -87,19 +87,18 @@ export function heroSet(season: SeasonId | string | null | undefined): Record<He
 export const avifSrcSet = (i: HeroImage) => i.widths.map((w) => `/hero/${i.file}-${w}.avif ${w}w`).join(", ");
 export const webpSrc = (i: HeroImage) => `/hero/${i.file}-640.webp`;
 
-// Desktop front card: sizes = 1.5 × its 352 px layout width, so a DPR 1 screen still decodes the 640 file (the card
+// Desktop front card: sizes = 1.5 × its 320 px layout width, so a DPR 1 screen still decodes the 640 file (the card
 // is projected in 3D and the eye lands on it first; 480 px looked soft). mid/back already get ≥ 2× from the 480 file.
 export const HERO_SIZES = {
-  front: "(min-width:1024px) 528px, min(64vw, 300px)",
-  mid: "(min-width:1024px) 232px, min(64vw, 300px)",
-  back: "(min-width:1024px) 200px, min(64vw, 300px)",
+  front: "(min-width:1024px) 480px, min(64vw, 300px)",
+  mid: "(min-width:1024px) 216px, min(64vw, 300px)",
+  back: "(min-width:1024px) 188px, min(64vw, 300px)",
   strip: "min(64vw, 300px)",
 } as const;
 /**
- * Chip corner per position: in the 3D stack the mid card shows only its LEFT part (a "br" chip would hide behind
- * the front card → top-left, which is clear of the nails for every mid entry) and the back card only its bottom /
- * right edge (never "tl"); the auth plate's back card shows only its RIGHT part ("tr"). "a>b" = replace a by b,
- * "*>b" = always b. The pre-paint picker applies the same rule (data-chip-fix).
+ * Chip corner fix-ups ("a>b" = replace a by b, "*>b" = always b; the pre-paint picker applies the same rule via
+ * data-chip-fix). Since 11/2026 every photo cluster carries ONE chip on its front card (its own corner, away from
+ * the nails), so these are kept only for callers that still label a partly hidden card.
  */
 export const CHIP_FIX: Partial<Record<HeroSlot | "authBack", string>> = { mid: "br>tl", back: "tl>bl", authBack: "*>tr" };
 export function fixChip(chip: Chip, fix: string | undefined): Chip {

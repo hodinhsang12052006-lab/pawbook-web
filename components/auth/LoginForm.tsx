@@ -71,7 +71,8 @@ export default function LoginForm() {
         // vào đúng nơi.
         // ?callbackUrl= (VD: khách bấm "Muốn làm mẫu này" khi chưa đăng nhập) — chỉ nhận đường dẫn CÙNG trang web
         // (lib/safeRedirect.ts: "/<TAB>/evil.com", "//evil.com", "/\evil.com" → về trang chủ).
-        window.location.href = safeInternalPath(new URLSearchParams(window.location.search).get("callbackUrl")) || localeHref("/");
+        // Trang /vi/auth/login → đích giữ /vi (localeHref): người đọc tiếng Việt không bị đưa sang trang tiếng Anh.
+        window.location.href = localeHref(safeInternalPath(new URLSearchParams(window.location.search).get("callbackUrl")) || "/");
       }
     } catch {
       setError(t("auth.login.errorUnknown"));

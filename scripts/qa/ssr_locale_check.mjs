@@ -216,10 +216,10 @@ if (process.argv.includes("--browser")) {
   check(before === "en" && after.lang === "vi" && /bitpaw_locale=vi/.test(after.cookie) && after.ls === "vi" && after.url === "/designs", `toggle EN→VI on /designs: lang ${before}→${after.lang}, cookie+localStorage=vi, URL stays ${after.url}`);
   await page.goto(BASE_URL + "/auth/login", { waitUntil: "networkidle" });
   check((await page.evaluate(() => document.documentElement.lang)) === "vi", "next page load (/auth/login, server) is Vietnamese");
-  // Trang đăng nhập dùng ô chọn ngôn ngữ riêng (app/[lang]/auth/layout.tsx).
-  await Promise.all([page.waitForEvent("load"), page.locator("select[data-locale-select]").selectOption("en")]);
+  // /auth/* dùng cùng nút EN · VI như toàn app (header điện thoại / góc phải máy tính — app/[lang]/auth/layout.tsx).
+  await Promise.all([page.waitForEvent("load"), page.locator('button[data-locale-toggle="vi"]:visible').first().click()]);
   await page.waitForLoadState("networkidle").catch(() => {});
-  check((await page.evaluate(() => document.documentElement.lang)) === "en", "auth language select VI→EN reloads /auth/login in English");
+  check((await page.evaluate(() => document.documentElement.lang)) === "en", "auth language toggle VI→EN reloads /auth/login in English");
   await page.goto(BASE_URL + "/vi/designs", { waitUntil: "networkidle" });
   await Promise.all([page.waitForEvent("load"), page.locator('button[data-locale-toggle="vi"]:visible').first().click()]);
   await page.waitForLoadState("networkidle").catch(() => {});

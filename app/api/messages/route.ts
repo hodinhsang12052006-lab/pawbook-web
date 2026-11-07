@@ -11,7 +11,7 @@ import { sendPush } from "@/lib/push";
 import { coldDmBlocked } from "@/lib/abuseGuard";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
 import { STICKER_GLYPH } from "@/lib/stickers/ids.generated";
-import { MAX_STICKER_ID_LENGTH } from "@/lib/stickers/packs";
+import { isValidStickerId } from "@/lib/stickers/urls";
 import { isGifUrl } from "@/lib/chat/gif";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
@@ -345,7 +345,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nhật ký cuộc gọi không hợp lệ.", errorEn: "Invalid call log." }, { status: 400 });
     }
     // Sticker: CHỈ id có trong danh mục (lib/stickers/ids.generated.ts — Noto: ký tự emoji; Fluent 3D: "fl:<tên>").
-    if (msgType === "STICKER" && (messageText.length > MAX_STICKER_ID_LENGTH || !Object.prototype.hasOwnProperty.call(STICKER_GLYPH, messageText))) {
+    if (msgType === "STICKER" && !isValidStickerId(messageText)) {
       return NextResponse.json({ error: "Sticker không hợp lệ.", errorEn: "Invalid sticker." }, { status: 400 });
     }
 

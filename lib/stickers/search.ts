@@ -1,5 +1,6 @@
 // Tìm sticker theo chữ (EN + VI, không dấu). Tìm trên MỌI bộ, kể cả bộ theo mùa đang ngoài mùa.
-// Điểm: trùng nguyên từ 3 > đầu từ 2 > chuỗi con (≥ 3 ký tự) 1. Hoà điểm → độ phổ biến Noto → thứ tự bộ.
+// Điểm: trùng nguyên từ 3 > đầu từ 2 > chuỗi con (≥ 3 ký tự) 1 (+0,5 nếu trùng ở chính tên sticker).
+// Hoà điểm → độ phổ biến Noto → thứ tự bộ.
 import { foldVi } from "@/lib/chat/fold";
 import { ALL_PACKS, ANIM_PACKS, SEASON_PACKS, THREE_D_PACKS, TET_ZODIAC, type StickerId, type StickerPack } from "./packs";
 import { KEYWORDS_VI, type ViTarget } from "./keywordsVi";
@@ -60,7 +61,12 @@ export function searchStickers(query: string, manifest: Manifest, limit = 60): S
   };
   for (const [id, texts] of en) {
     let best = 0;
-    for (const t of texts) best = Math.max(best, scoreText(q, t));
+    // texts[0] = tên sticker: trùng ở TÊN xếp trên trùng ở từ khoá phụ cùng hạng ("heart" → ❤️ trước 😘)
+    texts.forEach((t, i) => {
+      const sc = scoreText(q, t);
+      // tên ngắn (ít từ) lên trước: "red heart" trước "smiling face with heart eyes"
+      if (sc) best = Math.max(best, sc + (i === 0 ? 0.5 + 0.2 / Math.max(1, t.split(" ").length) : 0));
+    });
     bump(id, best);
   }
   for (const [key, targets] of vi) {

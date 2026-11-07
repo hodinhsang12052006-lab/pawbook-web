@@ -3,7 +3,7 @@
 //  - Fluent 3D (id "fl:…"): PNG 256px trên jsDelivr, cố định theo commit (cache 1 năm, immutable).
 import { FLUENT_PATH, FLUENT_SHA } from "./paths.generated";
 import { STICKER_GLYPH } from "./ids.generated";
-import type { StickerId } from "./packs";
+import { MAX_STICKER_ID_LENGTH, type StickerId } from "./packs";
 
 export const NOTO_BASE = "https://fonts.gstatic.com/s/e/notoemoji/latest/";
 export const FLUENT_BASE = `https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@${FLUENT_SHA}/assets/`;
@@ -14,6 +14,8 @@ export function notoCodepoints(glyph: string): string {
 }
 
 export const isKnownSticker = (id: string): boolean => Object.prototype.hasOwnProperty.call(STICKER_GLYPH, id);
+/** Nội dung tin STICKER hợp lệ: id có trong danh mục, dài ≤ 48 ký tự (máy chủ kiểm bằng hàm này). */
+export const isValidStickerId = (id: unknown): id is string => typeof id === "string" && id.length > 0 && id.length <= MAX_STICKER_ID_LENGTH && isKnownSticker(id);
 export const stickerGlyph = (id: string): string | null => (isKnownSticker(id) ? STICKER_GLYPH[id] : null);
 export const isFluent = (id: string) => id.startsWith("fl:");
 

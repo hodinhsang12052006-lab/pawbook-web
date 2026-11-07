@@ -378,12 +378,13 @@ try {
 
   // ---------------- NC15: đăng xuất trong app Android ----------------
   {
+    // Máy thật: Firebase trả lại CÙNG token mỗi lần register → app giả cũng trả đúng token đã đăng ký.
     const tok = "fcmQAout" + crypto.randomBytes(24).toString("hex");
-    const relog = "fcmQArelog" + crypto.randomBytes(24).toString("hex");
     const reg = await tech.req("/api/push/native", { method: "POST", json: { token: tok, platform: "android", build: 3 } });
-    const { ctx, p } = await newPage({ android: { perm: "granted", build: 3, sdk: 34, bubblePref: "all", token: relog } });
+    const { ctx, p } = await newPage({ android: { perm: "granted", build: 3, sdk: 34, bubblePref: "all", token: tok } });
     await p.goto(BASE_URL + "/profile");
     await p.evaluate((t) => localStorage.setItem("pn_native_push_token", t), tok);
+    await sleep(2500); // initNativePush làm mới token (cùng token) xong rồi mới bấm Đăng xuất
     const signOutBtn = p.getByRole("button", { name: /Sign out/ });
     const hasBtn = await visible(signOutBtn, 20000);
     if (hasBtn) {
@@ -401,11 +402,11 @@ try {
     await p.goto(BASE_URL + "/messages");
     await p.locator(".m-list").first().waitFor({ timeout: 20000 }).catch(() => {});
     await sleep(2500);
-    const back = (await db.execute({ sql: `SELECT userId, p256dh FROM "PushSubscription" WHERE endpoint = ?`, args: ["fcm:" + relog] })).rows[0];
+    const back = (await db.execute({ sql: `SELECT userId, p256dh FROM "PushSubscription" WHERE endpoint = ?`, args: ["fcm:" + tok] })).rows[0];
     const ls2 = await p.evaluate(() => ({ token: localStorage.getItem("pn_native_push_token"), relogin: localStorage.getItem("pn_native_push_relogin") }));
     R.check("NC15", "App: Đăng xuất → token máy này bị gỡ khỏi tài khoản (DB), PawNailNative.clearAll() (thông báo / lịch sử / lối tắt), phiên hết; đăng nhập lại → tự đăng ký lại (native:3), cờ được xoá",
       reg.status === 200 && hasBtn && Number(row) === 0 && ls.token === null && ls.relogin === "1" && cleared === 1 && !session?.user &&
-        !!back && String(back.userId) === tech.userId && String(back.p256dh) === "native:3" && ls2.token === relog && ls2.relogin === null,
+        !!back && String(back.userId) === tech.userId && String(back.p256dh) === "native:3" && ls2.token === tok && ls2.relogin === null,
       JSON.stringify({ reg: reg.status, hasBtn, row, ls, cleared, session: !!session?.user, back, ls2 }).slice(0, 320));
     await ctx.close();
   }

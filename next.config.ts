@@ -72,6 +72,10 @@ const withPWA = withPWAInit({
   // vốn không dùng được. Gói đó tải khi có cuộc gọi (rồi trình duyệt tự cache).
   // Tổng tải trước giảm từ ~8.7MB xuống ~3.8MB.
   maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+  // Sentry bật source map ẩn (.js.map / .css.map) cho bản build trình duyệt rồi XOÁ chúng sau khi tải lên Sentry — nhưng
+  // danh sách tải trước của Workbox đã ghi 110 tệp .map đó → cài service worker lỗi 404 ("redundant"), SW không bao giờ chạy
+  // (không cache, không trang offline, không thông báo đẩy trên web). Không bao giờ tải trước source map.
+  buildExcludes: [/\.map$/],
   // Without this, a fully-offline visit to an uncached route showed the
   // browser's generic native offline error page instead of anything
   // PawNail-branded. Workbox serves this static, precached page for any

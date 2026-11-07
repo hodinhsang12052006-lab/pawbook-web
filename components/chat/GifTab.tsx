@@ -5,6 +5,8 @@ import { Loader2, RefreshCw, Search, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { corsSafeGif } from "@/lib/chat/gif";
+import { canAnimate } from "@/lib/stickers/lottie";
+import GifVideo from "./GifVideo";
 import { pushGifRecent, readGifRecent, type StoredGif } from "@/lib/stickers/store";
 import { setGifEnabled } from "@/lib/chat/gifAvailability";
 
@@ -13,6 +15,9 @@ import { setGifEnabled } from "@/lib/chat/gifAvailability";
 // Nhãn dán); lỗi tạm thời phía nhà cung cấp → "Không tải được GIF" + Thử lại.
 // Lưới so le 3 cột (bảng ≥ 340px) / 2 cột, khe 4px, mỗi ô giữ đúng tỉ lệ w/h (không nhảy bố cục), cuộn tới gần cuối thì
 // tải trang sau (tối đa 5 trang). Ghi công "Powered by GIPHY / Tenor": huy hiệu dính góc dưới phải, luôn hiện khi có kết quả.
+// Ô GIPHY là MP4 nhỏ (fixed_width, nhẹ hơn WebP cùng cỡ nhiều lần, đủ khung hình): chỉ dựng trình phát khi ô gần vùng nhìn
+// thấy, chạy khi thấy, dừng khi khuất (GifVideo). Tắt chuyển động / tiết kiệm dữ liệu → ảnh tĩnh của ô. Ô cũ (WebP — mục
+// Gần đây lưu trước 11/2026) vẫn là <img>.
 export type GifItem = StoredGif;
 type Provider = "giphy" | "tenor";
 type State = (
@@ -23,6 +28,13 @@ type State = (
 ) & { key?: string };
 
 const MAX_PAGES = 5;
+const isMp4 = (u: string) => /\.mp4$/i.test(u.split("#")[0].split("?")[0]);
+
+function TileMedia({ g, anim }: { g: GifItem; anim: boolean }) {
+  if (isMp4(g.preview)) return <GifVideo src={g.preview} poster={anim ? null : g.still} rootSelector=".pn-gif-scroll" fit="cover" className="h-full w-full" />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={g.preview} alt="GIF" loading="lazy" decoding="async" {...(corsSafeGif(g.preview) ? { crossOrigin: "anonymous" as const } : {})} className="h-full w-full object-cover" />;
+}
 // Chip: nhãn theo ngôn ngữ, nhưng TÌM bằng từ tiếng Anh (GIPHY gắn thẻ tiếng Anh là chính).
 const CHIPS = (): [label: string, term: string][] => [
   [tr("Cảm ơn", "Thank you"), "thank you"],
@@ -56,6 +68,7 @@ export default function GifTab({
   const [loaded, setState] = useState<State>({ kind: "loading" });
   const [recent, setRecent] = useState<GifItem[]>(() => (typeof window === "undefined" ? [] : readGifRecent(userId)));
   const [cols, setCols] = useState(2);
+  const [anim] = useState(() => canAnimate());
   const [retry, setRetry] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -242,9 +255,8 @@ export default function GifTab({
                 <p className="pn-stk-head !static !bg-transparent">{tr("Gần đây", "Recent")}</p>
                 <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-0.5">
                   {recent.map((g) => (
-                    <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} className="pn-gif-tile h-20 flex-shrink-0" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={g.preview} alt="" loading="lazy" decoding="async" {...(corsSafeGif(g.preview) ? { crossOrigin: "anonymous" as const } : {})} className="h-full w-full object-cover" />
+                    <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} data-gif-tile="recent" className="pn-gif-tile h-20 flex-shrink-0" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
+                      <TileMedia g={g} anim={anim} />
                     </button>
                   ))}
                 </div>
@@ -257,9 +269,8 @@ export default function GifTab({
                 {columns.map((c, ci) => (
                   <div key={ci} className="flex min-w-0 flex-col gap-1">
                     {c.items.map((g) => (
-                      <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} className="pn-gif-tile w-full" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={g.preview} alt="GIF" loading="lazy" decoding="async" {...(corsSafeGif(g.preview) ? { crossOrigin: "anonymous" as const } : {})} className="h-full w-full object-cover" />
+                      <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} data-gif-tile="" className="pn-gif-tile w-full" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
+                        <TileMedia g={g} anim={anim} />
                       </button>
                     ))}
                   </div>

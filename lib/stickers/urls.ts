@@ -4,7 +4,7 @@
 //  - Fluent 3D (id "fl:…"): PNG 256px trên jsDelivr, cố định theo commit (cache 1 năm, immutable). Fluent ngoài bộ: đường dẫn
 //    lấy từ manifest mở rộng (truyền `meta`).
 import { FLUENT_PATH, FLUENT_SHA } from "./paths.generated";
-import { STICKER_GLYPH } from "./ids.generated";
+import { NOTO_IDS, STICKER_GLYPH } from "./ids.generated";
 import { MAX_STICKER_ID_LENGTH, type StickerId } from "./packs";
 import type { StickerMeta } from "./manifest";
 
@@ -25,6 +25,29 @@ export const isKnownSticker = (id: string): boolean => typeof id === "string" &&
 export const isValidStickerId = (id: unknown): id is string => typeof id === "string" && id.length > 0 && id.length <= MAX_STICKER_ID_LENGTH && isKnownSticker(id);
 export const stickerGlyph = (id: string): string | null => (isKnownSticker(id) ? STICKER_GLYPH[id] : null);
 export const isFluent = (id: string) => id.startsWith("fl:");
+
+// Ký tự (bỏ FE0F) → id Noto động. Dựng 1 lần khi cần.
+let notoByBare: Map<string, StickerId> | null = null;
+const SKIN = /[\u{1F3FB}-\u{1F3FF}]/gu;
+const VS16 = /️/g;
+
+/**
+ * id nhãn động Noto cho 1 emoji gõ tay ("❤" / "❤️" → "❤️"). Noto không có biến thể màu da: `keepTone` = true (tin emoji
+ * to) → emoji có màu da trả null (giữ đúng màu người gửi chọn, vẽ bằng chữ); false (gợi ý nhãn dán) → bỏ màu da rồi tra.
+ */
+export function notoIdFor(glyph: string, keepTone = false): StickerId | null {
+  if (!glyph) return null;
+  if (!notoByBare) {
+    notoByBare = new Map();
+    for (const id of NOTO_IDS.split(" ")) if (id) notoByBare.set(id.replace(VS16, ""), id);
+  }
+  const bare = glyph.replace(VS16, "");
+  const hit = notoByBare.get(bare);
+  if (hit) return hit;
+  const toneless = bare.replace(SKIN, "");
+  if (keepTone || toneless === bare) return null;
+  return notoByBare.get(toneless) ?? null;
+}
 
 /** Chuỗi chỉ gồm emoji (tin STICKER cũ ngoài danh mục). */
 export { isEmojiOnly } from "@/lib/chat/emojiOnly";

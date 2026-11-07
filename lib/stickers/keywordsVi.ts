@@ -31,6 +31,8 @@ const ENTRIES: [keys: string[], targets: ViTarget[]][] = [
   [["phụ nữ", "8/3", "20/10"], ["pack:women"]],
   [["mẹ"], ["pack:mothers_day"]],
   [["thú cưng", "pet"], ["😺", "😻", "🐱", "🐕", "🐾", "🐹", "🐰", "🦜"]],
+  // CLDR tiếng Việt gọi 🐶 là "mặt cún" — "chó" cũng phải ra (tab Emoji: 🐶 có trên bàn phím; tab Nhãn dán: 🐕 động)
+  [["chó", "cún"], ["🐶", "🐕"]],
   [["ăn", "đói", "uống"], ["pack:food"]],
   [["tiệc", "party"], ["pack:party", "pack:celebrate"]],
   [["công việc", "làm việc"], ["pack:work"]],

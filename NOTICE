@@ -23,7 +23,9 @@ logos or exact geometry) are used anywhere in this product.
    loaded unmodified from fonts.gstatic.com, pinned to version 17.0 (/s/e/notoemoji/17.0/<codepoint>/…): the static
    emoji.svg first; the animation (lottie.json, played with lottie-web — item 9) for stickers on screen in the sheet,
    once when a sticker message scrolls into view, on tap and in the long-press preview. All 611 base animated emoji of
-   the catalogue are offered (skin-tone variants are not).
+   the catalogue are offered (skin-tone variants are not). The same files (still + animation, played once on view) draw
+   a text message that is exactly one emoji at a large size, and the stills appear in the sticker suggestions shown
+   above the message box when the typed text is an emoji.
 
 4. Sticker stills (the static frame of each animated sticker)
    Loaded from the same Noto Emoji Animation set on fonts.gstatic.com (/s/e/notoemoji/17.0/…/emoji.svg) and credited
@@ -35,6 +37,8 @@ logos or exact geometry) are used anywhere in this product.
    - GIPHY (when GIPHY_API_KEY is configured): "Powered by GIPHY" attribution is shown wherever GIF results appear,
      as required by the GIPHY API Terms.
    - Tenor (Google) when configured (TENOR_API_KEY): "Powered by Tenor".
+   - A picked GIPHY GIF is sent and shown as GIPHY's own MP4 rendition (with GIPHY's still frame as the poster), loaded
+     unmodified from GIPHY's media host; nothing is re-encoded or re-hosted by PawNail.
 
 6. Microsoft Fluent Emoji (3D) — static 3D chat stickers (lib/stickers/*, components/chat/StickerTab.tsx)
    Copyright (c) Microsoft Corporation, MIT License, https://github.com/microsoft/fluentui-emoji/blob/main/LICENSE
@@ -82,6 +86,8 @@ logos or exact geometry) are used anywhere in this product.
 8. Unicode CLDR emoji annotations — sticker names and search keywords (English + Vietnamese)
    Source: npm cldr-annotations-full@49.0.0 and cldr-annotations-derived-full@49.0.0 (https://github.com/unicode-org/cldr-json),
    processed at build time by scripts/stickers/build_manifest.mjs into lib/stickers/manifest*.generated.ts.
+   The same names and keywords power the emoji search in the chat Emoji tab (lib/stickers/emojiSearch.ts) and the
+   keyword-related sticker suggestions (lib/stickers/suggest.ts).
    Licence: Unicode License v3 (SPDX: Unicode-3.0) — https://www.unicode.org/license.txt
 
    UNICODE LICENSE V3

@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { isVideoUrl } from "@/lib/mediaUpload";
+import { gifAspect, gifMediaSrc, gifStill, isGifVideo } from "@/lib/chat/gif";
+import { canAnimate } from "@/lib/stickers/lottie";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -10,7 +12,8 @@ import { useTr } from "@/lib/i18n/useTr";
 export default function MediaLightbox({ urls, index, onIndex, onClose }: { urls: string[]; index: number; onIndex: (i: number) => void; onClose: () => void }) {
   useTr(); // render lại khi đổi VI/EN
   const startX = useRef<number | null>(null);
-  const go = (d: number) => onIndex((index + d + urls.length) % urls.length);
+  const [gifAnim] = useState(() => canAnimate());
+  const go =(d: number) => onIndex((index + d + urls.length) % urls.length);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -45,7 +48,23 @@ export default function MediaLightbox({ urls, index, onIndex, onClose }: { urls:
       }}
     >
       <div className="max-h-[88vh] max-w-[94vw]" onClick={(e) => e.stopPropagation()}>
-        {isVideoUrl(url) ? (
+        {isGifVideo(url) ? (
+          // GIF dạng MP4 (GIPHY): lặp, tắt tiếng, không thanh điều khiển — như GIF. Giảm chuyển động / tiết kiệm dữ liệu → có
+          // thanh điều khiển, không tự chạy (người xem tự bấm phát).
+          <video
+            key={url}
+            src={gifMediaSrc(url)}
+            poster={gifStill(url) ?? undefined}
+            autoPlay={gifAnim}
+            loop
+            muted
+            playsInline
+            controls={!gifAnim}
+            aria-label="GIF"
+            className="max-h-[88vh] max-w-[94vw] rounded-xl"
+            style={{ aspectRatio: String(gifAspect(url) ?? 1), width: "min(94vw, 480px)" }}
+          />
+        ) : isVideoUrl(url) ? (
           <video key={url} src={url} controls autoPlay playsInline className="max-h-[88vh] max-w-[94vw] rounded-xl" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element

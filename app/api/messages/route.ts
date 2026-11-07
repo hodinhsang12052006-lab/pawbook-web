@@ -12,7 +12,7 @@ import { chatPushAvatar, chatPushLegacyTitle, chatPushTitle, chatPushUrl, cleanD
 import { coldDmBlocked } from "@/lib/abuseGuard";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
 import { isAllowedStickerId, serverStickerGlyph } from "@/lib/stickers/server";
-import { isGifUrl } from "@/lib/chat/gif";
+import { gifContentOk, isGifUrl } from "@/lib/chat/gif";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -314,7 +314,10 @@ export async function POST(req: Request) {
     // xấu gửi type "SYSTEM" sẽ hiện thành dòng "thông báo hệ thống" 🤖 ở giữa
     // khung chat (dễ dùng để lừa đảo: "Tài khoản bị khoá, chuyển tiền…").
     const ALLOWED_TYPES = ["TEXT", "IMAGE", "VIDEO", "AUDIO", "STICKER", "CALL"];
-    const msgType = typeof type === "string" && ALLOWED_TYPES.includes(type) ? type : "TEXT";
+    let msgType = typeof type === "string" && ALLOWED_TYPES.includes(type) ? type : "TEXT";
+    // GIF (GIPHY / Tenor) luôn là tin IMAGE — kể cả bản MP4 (lib/chat/gif.ts): danh sách / thông báo ghi "GIF", không
+    // bao giờ "Video". Máy khách gửi nhầm VIDEO cho URL GIF → đổi về IMAGE.
+    if (msgType === "VIDEO" && isGifUrl(messageText)) msgType = "IMAGE";
 
     if (!messageText) {
       return NextResponse.json(
@@ -360,6 +363,10 @@ export async function POST(req: Request) {
           { error: "Chỉ chấp nhận ảnh/video tải lên qua ứng dụng.", errorEn: "Photos and videos must be uploaded through the app." },
           { status: 400 }
         );
+      }
+      // GIF: phần "#" chỉ được là "wh=WxH" (+ "&still=<ảnh tĩnh trên host GIF>") — poster không thể trỏ về máy chủ lạ.
+      if (!gifContentOk(messageText)) {
+        return NextResponse.json({ error: "GIF không hợp lệ.", errorEn: "Invalid GIF." }, { status: 400 });
       }
     }
 

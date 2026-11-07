@@ -92,20 +92,25 @@ export interface StoredGif {
   id: string;
   send: string;
   preview: string;
+  /** Ảnh tĩnh của ô (GIPHY MP4, 11/2026) — dùng khi tắt chuyển động / tiết kiệm dữ liệu */
+  still?: string;
   w: number;
   h: number;
   title?: string;
 }
 const okGif = (g: unknown): g is StoredGif => {
   const x = g as StoredGif;
-  return !!x && typeof x.id === "string" && typeof x.send === "string" && typeof x.preview === "string" && /^https:\/\//.test(x.send) && /^https:\/\//.test(x.preview) && x.w > 0 && x.h > 0;
+  return (
+    !!x && typeof x.id === "string" && typeof x.send === "string" && typeof x.preview === "string" && /^https:\/\//.test(x.send) && /^https:\/\//.test(x.preview) && x.w > 0 && x.h > 0 &&
+    (x.still === undefined || (typeof x.still === "string" && /^https:\/\//.test(x.still)))
+  );
 };
 export function readGifRecent(uid: string): StoredGif[] {
   const raw = readJson<unknown>(gifKey(uid), []);
   return (Array.isArray(raw) ? raw.filter(okGif) : []).slice(0, GIF_CAP);
 }
 export function pushGifRecent(uid: string, g: StoredGif): StoredGif[] {
-  const next = [{ id: g.id, send: g.send, preview: g.preview, w: g.w, h: g.h, ...(g.title ? { title: g.title } : {}) }, ...readGifRecent(uid).filter((x) => x.id !== g.id)].slice(0, GIF_CAP);
+  const next = [{ id: g.id, send: g.send, preview: g.preview, ...(g.still ? { still: g.still } : {}), w: g.w, h: g.h, ...(g.title ? { title: g.title } : {}) }, ...readGifRecent(uid).filter((x) => x.id !== g.id)].slice(0, GIF_CAP);
   writeJson(gifKey(uid), next);
   return next;
 }

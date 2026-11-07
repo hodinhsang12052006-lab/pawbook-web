@@ -13,7 +13,8 @@ import type { Manifest } from "./manifest";
 /** Thứ tự bộ khi hoà điểm: bộ hoạt hình → 3D → mùa (giống thanh bộ). */
 const PACK_ORDER: StickerPack[] = [...ANIM_PACKS, ...THREE_D_PACKS, ...SEASON_PACKS];
 
-function packItems(id: string): StickerId[] {
+/** Mục của 1 bộ (bộ Tết gồm cả con giáp các năm). */
+export function packItems(id: string): StickerId[] {
   const p = ALL_PACKS.find((x) => x.id === id);
   if (!p) return [];
   return p.id === "tet" ? [...p.items, ...Object.values(TET_ZODIAC)] : p.items;

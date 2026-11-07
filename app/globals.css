@@ -1108,7 +1108,7 @@ html[data-season="us-harvest"] {
 }
 html[data-season="us-holiday"] {
   --pn-rim: rgb(46 150 112 / 0.18);
-  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f6e3c3 40%, #e8cf8a 72%, #a9d6b2 100%);
+  --pn-foil: linear-gradient(100deg, #f7b0cc 0%, #f6e3c3 38%, #ead08c 68%, #bcd2a2 100%);
   --s-a: 232 202 140; --s-b: 36 140 104; --s-spark: 255 238 210; --s-ink: #f3dcb3;
   --s-bokeh: 0.75; --s-spark-o: 0.9; --s-flare: 0.9;
   --s-halo: 232 200 136; --s-halo-o: 0.24; --s-halo2: 30 132 98; --s-halo2-o: 0.16;

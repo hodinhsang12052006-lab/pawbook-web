@@ -111,7 +111,9 @@ export function CityStateFields({ idPrefix, market, city, onCity, state, onState
 }) {
   const { t } = useLanguage();
   return (
-    <div className="grid grid-cols-2 gap-3">
+    // side by side from 420 px (the 440 px desktop column); stacked on phones, where "e.g. Parramatta" and
+    // "New South Wales" were clipped in half-width fields
+    <div className="grid gap-3 min-[420px]:grid-cols-2">
       <div>
         <label htmlFor={`${idPrefix}-city`} className="pn-label">{t("auth.common.cityLabel")}</label>
         <IconInput

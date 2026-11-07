@@ -67,7 +67,11 @@
 }
 @media (hover: hover) { .pn-nav-login:hover { color: #fff; background: rgb(255 240 246 / 0.06); } }
 /* < 400 px: logo + wordmark + EN·VI + Log in + "Sign up" fit a 360 px phone (the CTA label is short there) */
-@media (max-width: 399px) { .pn-nav-login { padding: 0 6px; } .pn-cta--sm { padding: 0 12px; } .pn-wordmark { font-size: 17px; } }
+@media (max-width: 399px) {
+  .pn-nav-login { padding: 0 4px; font-size: 13px; }
+  header .pn-cta--sm { padding: 0 11px; font-size: 13px; }
+  header .pn-wordmark { font-size: 16px; }
+}
 
 /* =====================================================================
    Landing hero
@@ -114,8 +118,9 @@
   .pn-stack { --u: calc(100cqw / 520); height: calc(var(--u) * 560); perspective: 1400px; perspective-origin: 40% 30%; }
   .pn-stack::before {
     content: ""; position: absolute; z-index: 0; pointer-events: none;
-    left: calc(var(--u) * -8); top: calc(var(--u) * 12); width: calc(var(--u) * 560); height: calc(var(--u) * 520);
-    background: radial-gradient(closest-side, rgb(var(--s-halo) / var(--s-halo-o)), rgb(var(--s-halo2) / var(--s-halo2-o)) 58%, transparent);
+    /* centred on the front card (272, 272) and large enough that the tint shows AROUND the cards, not only behind them */
+    left: calc(var(--u) * -118); top: calc(var(--u) * -88); width: calc(var(--u) * 780); height: calc(var(--u) * 720);
+    background: radial-gradient(closest-side, rgb(var(--s-halo) / var(--s-halo-o)), rgb(var(--s-halo) / calc(var(--s-halo-o) * 0.75)) 34%, rgb(var(--s-halo2) / var(--s-halo2-o)) 64%, transparent);
   }
   .pn-card { position: absolute; border-radius: calc(var(--u) * 28); }
   .pn-card--front { z-index: 3; left: calc(var(--u) * 112); top: calc(var(--u) * 72); width: calc(var(--u) * 320); height: calc(var(--u) * 400); transform: rotateY(-9deg) rotateX(3deg); transition: transform 500ms var(--pn-ease-out, cubic-bezier(.23, 1, .32, 1)); }

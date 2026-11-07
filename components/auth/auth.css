@@ -94,8 +94,8 @@ textarea.pn-input { height: auto; min-height: 96px; padding: 12px 16px; }
 @media (max-height: 680px) { .pn-auth-plate { --u: min(100cqw / 100, 44vh / 95); } }
 /* one soft halo behind the plate, tinted by the season (--s-halo*, globals.css) — the only festive cue next to a form */
 .pn-auth-plate::before {
-  content: ""; position: absolute; inset: -14% -10% -10% -16%; z-index: 0; pointer-events: none;
-  background: radial-gradient(closest-side, rgb(var(--s-halo) / var(--s-halo-o)), rgb(var(--s-halo2) / var(--s-halo2-o)) 58%, transparent);
+  content: ""; position: absolute; inset: -30% -22% -26% -30%; z-index: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgb(var(--s-halo) / var(--s-halo-o)), rgb(var(--s-halo) / calc(var(--s-halo-o) * 0.75)) 34%, rgb(var(--s-halo2) / var(--s-halo2-o)) 64%, transparent);
 }
 .pn-auth-plate .pn-card { position: absolute; border-radius: 24px; }
 .pn-auth-plate .pn-card--a { z-index: 2; left: calc(var(--u) * 6); top: calc(var(--u) * 4); width: calc(var(--u) * 66); height: calc(var(--u) * 82.5); transform: rotateY(-8deg) rotateX(2deg); }

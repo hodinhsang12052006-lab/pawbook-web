@@ -37,7 +37,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#05040f]/[0.97] backdrop-blur-2xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-pink-500/40 after:to-transparent refined:bg-pn-canvas refined:[backdrop-filter:none] refined:after:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 min-[400px]:px-4 sm:px-6 lg:px-8">
         {/* Left: logo + wordmark at every width (a bare "B" on a phone read as an anonymous app). */}
-        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 rounded-xl" aria-label="PawNail" data-brand>
+        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2 rounded-xl min-[400px]:gap-2.5" aria-label="PawNail" data-brand>
           <span className="pn-nav-logo">
             <BrandLogo size={36} />
           </span>
@@ -49,8 +49,8 @@ export default function Navbar() {
           {loadingSession ? (
             <>
             {/* Đang tải phiên: khách thấy ngay nút Đăng nhập/Đăng ký (không nhảy), máy từng đăng nhập thấy khung chờ */}
-            <div className="flex items-center gap-1.5 sm:gap-2 [html[data-authed]_&]:hidden">
-              <LanguageToggle className="max-[399px]:px-2.5" />
+            <div className="flex items-center gap-1 min-[400px]:gap-1.5 sm:gap-2 [html[data-authed]_&]:hidden">
+              <LanguageToggle className="max-[399px]:gap-0.5 max-[399px]:px-2" />
               <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
               <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{registerLabel}</IntentLink>
             </div>
@@ -126,11 +126,11 @@ export default function Navbar() {
                   {sessionUser.name}
                 </span>
               </div>
-              <LanguageToggle className="ml-1 max-[399px]:ml-0 max-[399px]:px-2.5" />
+              <LanguageToggle className="ml-1 max-[399px]:ml-0 max-[399px]:gap-0.5 max-[399px]:px-2" />
             </>
           ) : (
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <LanguageToggle className="max-[399px]:px-2.5" />
+            <div className="flex items-center gap-1 min-[400px]:gap-1.5 sm:gap-2">
+              <LanguageToggle className="max-[399px]:gap-0.5 max-[399px]:px-2" />
               <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
               <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{registerLabel}</IntentLink>
             </div>

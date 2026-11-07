@@ -22,7 +22,7 @@
   background: radial-gradient(ellipse 22% 40% at 50% 50%, rgb(var(--s-a) / 0.18), transparent 70%); }
 /* glints: a soft round point with a faint cross — a highlight on lacquer, not a clip-art star (neutral warm white) */
 .pn-season .fx-glint { width: 18px; height: 18px; opacity: var(--s-spark-o);
-  background: radial-gradient(circle, #fff8ee, rgb(255 241 220 / .45) 24%, transparent 50%), linear-gradient(90deg, transparent, rgb(255 241 220 / .7), transparent) center / 100% 1px, linear-gradient(transparent, rgb(255 241 220 / .6), transparent) center / 1px 84%;
+  background: radial-gradient(circle, #fff8ee, rgb(255 241 220 / .45) 24%, transparent 50%), linear-gradient(90deg, transparent, rgb(255 241 220 / .45), transparent) center / 76% 1px, linear-gradient(transparent, rgb(255 241 220 / .4), transparent) center / 1px 60%;
   background-repeat: no-repeat; }
 .pn-season .g1 { left: 8%; top: 10%; }
 .pn-season .g2 { left: 62%; top: 4%; width: 22px; height: 22px; }

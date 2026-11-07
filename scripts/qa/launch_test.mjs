@@ -340,6 +340,85 @@ try {
     await t.client.req("/api/push/native", { method: "DELETE", json: { token: android } });
     const after = (await db.execute({ sql: `SELECT COUNT(*) n FROM "PushSubscription" WHERE userId = ?`, args: [t.client.userId] })).rows[0].n;
     R.check("NP6", "Tắt thông báo trên máy → xoá token", Number(after) === 1, after);
+
+    // ---- Thông báo chat kiểu Messenger cho app Android versionCode 3+ (lib/fcm.ts) ----
+    const rich = "fcm" + crypto.randomBytes(24).toString("hex") + ":APA91b" + crypto.randomBytes(20).toString("hex");
+    const legacy = "fcm" + crypto.randomBytes(24).toString("hex") + ":APA91b" + crypto.randomBytes(20).toString("hex");
+    const junkBuild = "fcm" + crypto.randomBytes(24).toString("hex") + ":APA91b" + crypto.randomBytes(20).toString("hex");
+    const regs2 = await Promise.all([
+      t.client.req("/api/push/native", { method: "POST", json: { token: rich, platform: "android", build: 3 } }),
+      t.client.req("/api/push/native", { method: "POST", json: { token: legacy, platform: "android", build: 2 } }),
+      t.client.req("/api/push/native", { method: "POST", json: { token: junkBuild, platform: "android", build: -7 } }),
+    ]);
+    const stored = Object.fromEntries((await db.execute({ sql: `SELECT endpoint, p256dh FROM "PushSubscription" WHERE userId = ?`, args: [t.client.userId] })).rows.map((r) => [String(r.endpoint), String(r.p256dh)]));
+    R.check("NP7", "Đăng ký token kèm build: lưu p256dh native:3 / native:2; build rác → native (chưa rõ build)",
+      regs2.every((r) => r.status === 200) && stored["fcm:" + rich] === "native:3" && stored["fcm:" + legacy] === "native:2" && stored["fcm:" + junkBuild] === "native",
+      JSON.stringify({ s: regs2.map((r) => r.status), stored }).slice(0, 240));
+
+    const text2 = `QA chat bong bóng ${Date.now()} 😀`;
+    fcm.sends.length = 0;
+    const dm = await owner.req("/api/messages", { method: "POST", json: { receiverId: t.client.userId, content: text2 } });
+    await sleep(3500);
+    const cid = dm.data?.message?.conversationId;
+    const rs = fcm.sends.find((x) => x.m.token === rich)?.m;
+    const KEYS = ["type", "v", "cid", "mid", "title", "sender", "senderId", "avatar", "group", "text", "ts", "url", "tag"];
+    R.check("NP8", "Build 3: tin chat DATA-ONLY (không notification) đủ 13 khoá, cid/mid/người gửi/nội dung đúng, mở ?c=<id>, ưu tiên cao, ttl 1 ngày, < 3.5 KB",
+      !!rs && !rs.notification && KEYS.every((k) => typeof rs.data?.[k] === "string") && Object.keys(rs.data).length === KEYS.length &&
+        rs.data.type === "chat" && rs.data.v === "1" && rs.data.cid === cid && rs.data.mid === dm.data?.message?.id && rs.data.senderId === owner.userId &&
+        rs.data.group === "0" && rs.data.text === text2 && rs.data.url === `/messages?c=${cid}` && rs.data.tag === `pn-chat-${cid}` && /^\d{13}$/.test(rs.data.ts) &&
+        rs.android?.priority === "high" && rs.android?.ttl === "86400s" && !rs.android?.collapse_key && !rs.android?.notification && JSON.stringify({ message: rs }).length < 3500,
+      JSON.stringify(rs).slice(0, 300));
+    const lg = [legacy, junkBuild].map((tok) => fcm.sends.find((x) => x.m.token === tok)?.m);
+    R.check("NP9", "Bản app cũ (build 2) / chưa rõ build → vẫn dạng notification như cũ + kênh 'general', link ?c=<id>",
+      lg.every((m) => m && m.notification?.body === text2 && m.android?.notification?.channel_id === "general" && m.data?.url === `/messages?c=${cid}` && !m.data?.type),
+      JSON.stringify(lg.map((m) => m && { n: m.notification, a: m.android, d: m.data })).slice(0, 300));
+
+    // Nhóm: link mở đúng NHÓM (trước đây ?to=<người gửi> → mở chat riêng), tiêu đề = tên nhóm.
+    const groupName = `QA Nhóm ${Date.now() % 100000}`;
+    const grp = await owner.req("/api/conversations", { method: "POST", json: { isGroup: true, name: groupName, participantIds: [t.client.userId] } });
+    const gid = grp.data?.id;
+    fcm.sends.length = 0;
+    apns.length = 0;
+    await owner.req("/api/messages", { method: "POST", json: { conversationId: gid, content: "QA nhóm xin chào", type: "TEXT", clientId: crypto.randomUUID() } });
+    await sleep(3500);
+    const gs = fcm.sends.find((x) => x.m.token === rich)?.m;
+    const gl = fcm.sends.find((x) => x.m.token === legacy)?.m;
+    const gi = apns.find((x) => x.path === `/3/device/${ios}`);
+    R.check("NP10", "Tin nhóm: data group=1, title = tên nhóm, sender = người gửi, url /messages?c=<nhóm>; bản cũ: tiêu đề 'Người gửi · Nhóm'; iPhone: thread-id theo nhóm",
+      !!gid && gs?.data?.group === "1" && gs.data.title === groupName && gs.data.sender && gs.data.sender !== groupName && gs.data.url === `/messages?c=${gid}` &&
+        gl?.notification?.title?.endsWith(` · ${groupName}`) && gl?.data?.url === `/messages?c=${gid}` && gi?.body?.aps?.["thread-id"] === `pn-chat-${gid}`,
+      JSON.stringify({ g: gs?.data, l: gl?.notification, i: gi?.body?.aps }).slice(0, 300));
+
+    // Đọc ở máy khác → máy Android (build 3) của chính mình nhận "đã đọc" để gỡ thông báo; bản cũ không nhận.
+    fcm.sends.length = 0;
+    const seen = await t.client.req("/api/messages/seen", { method: "POST", json: { conversationId: gid } });
+    await sleep(2500);
+    const rd = fcm.sends.filter((x) => x.m.data?.type === "read");
+    const seenAgain = await t.client.req("/api/messages/seen", { method: "POST", json: { conversationId: gid } });
+    await sleep(2000);
+    const rd2 = fcm.sends.filter((x) => x.m.data?.type === "read");
+    R.check("NP11", "Đánh dấu đã đọc → data-only {type:read, cid} tới máy build 3 của chính mình (không tới bản cũ, không notification); đọc lại khi không có tin mới → không gửi",
+      seen.status === 200 && seenAgain.status === 200 && rd.length === 1 && rd[0].m.token === rich && rd[0].m.data.cid === gid && !rd[0].m.notification && rd[0].m.android?.priority === "normal" && rd2.length === 1,
+      JSON.stringify(rd.map((x) => ({ tok: x.m.token.slice(0, 8), d: x.m.data, a: x.m.android })).concat([{ again: rd2.length }])).slice(0, 300));
+
+    // Cuộc gọi → kênh "calls" (dạng notification, kể cả máy build 3).
+    fcm.sends.length = 0;
+    await owner.req("/api/calls", { method: "POST", json: { targetId: t.client.userId, action: "offer", sdp: { type: "offer", sdp: "v=0" }, callType: "audio", callId: "qa" + Date.now().toString(36).slice(-6) } });
+    await sleep(3000);
+    const cs = fcm.sends.find((x) => x.m.token === rich)?.m;
+    R.check("NP12", "Cuộc gọi đến → thông báo kênh 'calls', link ?to=<người gọi>", cs?.notification && cs.android?.notification?.channel_id === "calls" && cs.data?.url === `/messages?to=${owner.userId}`, JSON.stringify(cs).slice(0, 240));
+
+    // ?c=<id> ngoài danh sách đã tải → app tải riêng cuộc trò chuyện đó (chỉ thành viên).
+    const outsider = new Client();
+    await outsider.login(SEED_TECH);
+    const [mine, notMine, bad] = await Promise.all([
+      t.client.req(`/api/conversations?id=${gid}`),
+      outsider.req(`/api/conversations?id=${gid}`),
+      t.client.req(`/api/conversations?id=${encodeURIComponent("../x")}`),
+    ]);
+    R.check("NP13", "GET /api/conversations?id=: thành viên 200 (đủ participants, isGroup, name); người ngoài 404; id rác 400",
+      mine.status === 200 && mine.data?.conversation?.id === gid && mine.data.conversation.isGroup === true && mine.data.conversation.name === groupName && mine.data.conversation.participants.length === 2 && notMine.status === 404 && bad.status === 400,
+      [mine.status, notMine.status, bad.status].join());
   }
 
   R.check("Z1", "Không lỗi JS / 5xx trong suốt các luồng", errors.length === 0, errors.slice(0, 4).join(" | "));

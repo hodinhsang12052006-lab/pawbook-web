@@ -92,9 +92,13 @@ try {
   // Tin nhắn
   const text = `QA push tin nhắn ${Date.now()}`;
   inbox.length = 0;
-  await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: text } });
+  const sentMsg = await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: text } });
+  const convId = sentMsg.data?.message?.conversationId;
   const msg = await waitPush(phone, (p) => p.body === text);
-  R.check("PU7", "Tin nhắn mới → push: tiêu đề = tên người gửi, mở đúng hội thoại", msg && msg.p.url === `/messages?to=${owner.userId}` && /^pn-chat-/.test(msg.p.tag), JSON.stringify(msg?.p));
+  // Link mở đúng CUỘC TRÒ CHUYỆN (?c=<id>, đúng cả cho nhóm) — trước đây ?to=<người gửi>. Web push không mang phần
+  // dành cho app native (chat / channel).
+  R.check("PU7", "Tin nhắn mới → push: mở đúng cuộc trò chuyện (?c=<id>), tag pn-chat-<id>, không mang dữ liệu riêng của app",
+    !!convId && msg && msg.p.url === `/messages?c=${convId}` && msg.p.tag === `pn-chat-${convId}` && !("chat" in msg.p) && !("channel" in msg.p), JSON.stringify(msg?.p));
   await new Promise((r) => setTimeout(r, 800));
   R.check("PU8", "Người gửi KHÔNG nhận push tin của chính mình", !inbox.some((m) => m.device === ownerPhone.name), inbox.map((m) => m.device).join());
 

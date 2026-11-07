@@ -52,6 +52,11 @@ export function emojiGraphemes(s: unknown, max = 3): string[] | null {
   return out.length ? out : null;
 }
 
+/** Cờ quốc gia (2 ký tự chỉ vùng, "🇻🇳"). Windows không có hình cờ (Segoe UI Emoji vẽ 2 chữ "VN") → 1 cờ không vẽ cỡ 92px. */
+export function isFlagEmoji(g: string): boolean {
+  return /^\p{Regional_Indicator}{2}$/u.test(g);
+}
+
 /** Tin chữ chỉ gồm 1–3 emoji → vẽ TO (kiểu Telegram). Trả về số emoji (1–3) hoặc 0. */
 export function bigEmojiCount(s: unknown): number {
   return emojiGraphemes(s, 3)?.length ?? 0;

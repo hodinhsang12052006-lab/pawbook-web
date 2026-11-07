@@ -33,11 +33,17 @@ import dynamic from "next/dynamic";
 // Thử mẫu PawNail (vẽ mẫu lên ảnh tay khách) — tải khi mở, không làm nặng Messenger lúc vào.
 const NailStudio = dynamic(() => import("@/components/studio/NailStudio"), { ssr: false });
 const HandConsult = dynamic(() => import("@/components/consult/HandConsult"), { ssr: false });
+// Bảng chọn hình nền: chỉ tải khi mở.
+const WallpaperSheet = dynamic(() => import("./WallpaperSheet"), { ssr: false });
 import { type Reaction, toggleReaction } from "@/lib/chatReactions";
 import MediaPicker from "./MediaPicker";
 import VoiceRecorder from "./VoiceRecorder";
 import { uploadMedia } from "@/lib/mediaUpload";
-import { CHAT_WALLPAPERS, getWallpaperId, saveWallpaper, wallpaperById } from "@/lib/chatWallpapers";
+import { chatKeyOf, migrateLegacyWallpaper, resolveChoice, type WpRender } from "@/lib/chatWallpapers";
+import { useWallpaperRender, useWpState } from "./useChatWallpaper";
+import { mediaPreview } from "@/lib/chat/preview";
+import { readMediaTab } from "@/lib/stickers/store";
+import { guessMarketInBrowser, readMarketCookie } from "@/lib/market";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useMounted } from "@/lib/useMounted";
@@ -175,6 +181,13 @@ export default function MessagesContent({
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGifs, setShowGifs] = useState(false);
   const [chatPanelTab, setChatPanelTab] = useState<"emoji" | "sticker" | "gif">("emoji");
+  const [gifHandoff, setGifHandoff] = useState<string | undefined>(undefined); // "Tìm GIF …" từ tab Nhãn dán
+  // Thị trường cho bộ nhãn dán theo mùa: tài khoản → cookie → đoán theo trình duyệt → Mỹ
+  const stickerMarket = useMemo<"US" | "AU">(() => {
+    const m = currentUser?.market;
+    if (m === "US" || m === "AU") return m;
+    return (typeof window !== "undefined" && (readMarketCookie() ?? guessMarketInBrowser())) || "US";
+  }, [currentUser?.market]);
   const [recording, setRecording] = useState(false);
 
   // Chặn/Báo cáo — bắt buộc theo App Store Guideline 1.2 cho app có nhắn tin
@@ -196,18 +209,38 @@ export default function MessagesContent({
   const [liveText, setLiveText] = useState("");
   const [assistOpen, setAssistOpen] = useState(false);
   const jumpShownRef = useRef(false);
-  // Hình nền khung chat — riêng từng cuộc trò chuyện, lưu trên thiết bị.
-  const [wallpaperId, setWallpaperId] = useState("default");
+  // Hình nền khung chat — riêng từng cuộc trò chuyện (ChatKey "u:<người kia>" / "g:<nhóm>"), lưu trên máy theo người
+  // (lib/chatWallpapers.ts). Đọc ĐỒNG BỘ → mở chat là đúng nền ngay (không nháy nền mặc định). Bảng chọn xem trước trực
+  // tiếp trên khung chat (wpPreview) và chỉ lưu khi bấm Áp dụng.
+  const wpState = useWpState(currentUser?.id);
+  const wpChoice = activeChat ? resolveChoice(wpState, chatKeyOf(activeChat), activeChat.conversationId) : "default";
+  const wpCommitted = useWallpaperRender(currentUser?.id, wpState, wpChoice);
+  const [wpPreview, setWpPreview] = useState<WpRender | null>(null);
+  const wp = wpPreview ?? wpCommitted;
+  // chấm nhỏ trên nút ⋮ cho tới khi mở bảng hình nền lần đầu
+  const [wpSeen, setWpSeen] = useState(true);
+  useEffect(() => {
+    try {
+      setWpSeen(!!localStorage.getItem(`pn_wp_seen:${currentUser?.id}`));
+    } catch {}
+  }, [currentUser?.id]);
   useEffect(() => {
     const el = document.documentElement;
     el.toggleAttribute("data-chat-open", !!activeChat);
     return () => el.removeAttribute("data-chat-open");
   }, [activeChat]);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
-  const [wallpaperForAll, setWallpaperForAll] = useState(false);
+  const openWallpaper = useCallback(() => {
+    setShowChatMenu(false);
+    setShowWallpaperPicker(true);
+    setWpSeen(true);
+  }, []);
+  const closeWallpaper = useCallback(() => setShowWallpaperPicker(false), []);
+  // Chuyển 1 lần lựa chọn cũ (pn_chat_wp, không theo người) sang khoá mới theo người.
+  const hasConversations = conversations.length > 0;
   useEffect(() => {
-    setWallpaperId(getWallpaperId(activeKey));
-  }, [activeKey]);
+    if (currentUser?.id) migrateLegacyWallpaper(currentUser.id, conversations);
+  }, [currentUser?.id, hasConversations]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [blockActionLoading, setBlockActionLoading] = useState(false);
@@ -901,7 +934,7 @@ export default function MessagesContent({
   // freshMessageIds/message-slide-up), request goes out in the background,
   // then the temp bubble is swapped for the confirmed one.
   // -------------------------------------------------------------------------
-  const handleSendMessage = useCallback(async (e: React.FormEvent | null, customContent?: string, customType?: string, reuseClientId?: string) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent | null, customContent?: string, customType?: string, reuseClientId?: string, opts?: { keepPanel?: boolean }) => {
     if (e) e.preventDefault();
     // Gửi liên tiếp như Zalo/Telegram: không chờ tin trước xong. Chỉ chặn khi
     // cuộc trò chuyện chưa tồn tại (tin đầu tiên tạo hội thoại → tránh tạo trùng).
@@ -912,8 +945,11 @@ export default function MessagesContent({
     if (!content) return;
 
     if (!customContent) setMessageText("");
-    setShowEmoji(false);
-    setShowGifs(false);
+    // Gửi nhãn dán / GIF: bảng VẪN MỞ (gửi liền nhiều cái như Telegram)
+    if (!opts?.keepPanel) {
+      setShowEmoji(false);
+      setShowGifs(false);
+    }
     setAttachOpen(false);
 
     const sendKey = chatKeyFor(activeChat)!;
@@ -1013,10 +1049,6 @@ export default function MessagesContent({
     patchBucket(key, (bucket) => ({ ...bucket, messages: bucket.messages.map((m) => (m.id === msg.id ? { ...m, sendError: false, isOptimistic: true } : m)) }));
     handleSendMessage(null, msg.content, msg.type, msg.clientId);
   }, [activeChat, patchBucket, handleSendMessage]);
-
-  const handleGifSelect = useCallback((url: string) => {
-    handleSendMessage(null, url, "IMAGE");
-  }, [handleSendMessage]);
 
   const handleCloseMediaPanel = useCallback(() => {
     setShowEmoji(false);
@@ -1334,8 +1366,39 @@ export default function MessagesContent({
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+  // Bảng Emoji / Nhãn dán / GIF trên điện thoại: thêm 1 mục lịch sử khi mở → nút Back (Android / trình duyệt) đóng
+  // bảng trước, không thoát cuộc trò chuyện. Đóng bằng X / Esc / chạm ra ngoài → tự bỏ mục đó.
+  const panelOpen = showEmoji || showGifs;
+  const panelPushedRef = useRef(false);
+  useEffect(() => {
+    if (panelOpen) {
+      if (panelPushedRef.current || window.matchMedia("(min-width: 768px)").matches) return;
+      try {
+        window.history.pushState({ ...((window.history.state || {}) as Record<string, unknown>), pnPanel: true }, "");
+        panelPushedRef.current = true;
+      } catch {}
+    } else if (panelPushedRef.current) {
+      panelPushedRef.current = false;
+      if ((window.history.state as { pnPanel?: boolean } | null)?.pnPanel) window.history.back();
+    }
+  }, [panelOpen]);
+  useEffect(() => {
+    const onPop = () => {
+      if (panelPushedRef.current && !(window.history.state as { pnPanel?: boolean } | null)?.pnPanel) {
+        panelPushedRef.current = false;
+        setShowEmoji(false);
+        setShowGifs(false);
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const closeThread = useCallback(() => {
-    if (pushedRef.current) window.history.back();
+    if (pushedRef.current && panelPushedRef.current) {
+      // bảng đang mở có mục lịch sử riêng → lùi 2 mục (bảng + cuộc trò chuyện)
+      panelPushedRef.current = false;
+      window.history.go(-2);
+    } else if (pushedRef.current) window.history.back();
     else setActiveChat(null);
   }, []);
   // Viên ngày nổi: ngày của đoạn đang đọc ở đỉnh khung (viên trong dòng tin đã cuộn qua); mờ đi sau 1,2 giây đứng yên.
@@ -1549,7 +1612,7 @@ export default function MessagesContent({
                 const isTyping = typingByConv[conv.id] !== undefined;
                 const txPreview = lastMsg && lastMsg.type === "TEXT" && !fromMe ? getTranslation(lastMsg.id, viewerLang) : undefined;
                 const preview = lastMsg
-                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${lastMsg.type === "IMAGE" ? tr("📷 Ảnh", "📷 Photo") : lastMsg.type === "VIDEO" ? "🎬 Video" : lastMsg.type === "AUDIO" ? tr("🎤 Tin nhắn thoại", "🎤 Voice message") : lastMsg.type === "STICKER" ? `${lastMsg.body} Sticker` : lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : txPreview?.status === "done" && txPreview.text ? txPreview.text : txPreview?.status === "loading" ? tr("Đang dịch…", "Translating…") : lastMsg.body}`
+                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${mediaPreview(lastMsg.type, lastMsg.body) ?? (lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : txPreview?.status === "done" && txPreview.text ? txPreview.text : txPreview?.status === "loading" ? tr("Đang dịch…", "Translating…") : lastMsg.body)}`
                   : isGroup
                   ? tr(`${conv.participants.length} thành viên`, `${conv.participants.length} members`)
                   : tr("Bắt đầu trò chuyện", "Start chatting");
@@ -1635,7 +1698,7 @@ export default function MessagesContent({
       </div>
 
       {/* RIGHT COLUMN: MAIN CHAT PANEL */}
-      <div data-wallpaper={wallpaperId} style={activeChat ? wallpaperById(wallpaperId).style : undefined} className={`chat-wallpaper isolate flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
+      <div data-wallpaper={activeChat ? wp.id : undefined} data-wp-tone={activeChat ? wp.tone : undefined} style={activeChat ? wp.style : undefined} className={`chat-wallpaper isolate flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
         {activeChat ? (
           <>
             <div className="pn-glass-bar relative flex flex-none items-center justify-between gap-3 px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:px-4 sm:py-3 z-10">
@@ -1702,76 +1765,90 @@ export default function MessagesContent({
                   lib/CallManagerContext.tsx) so it survives this header
                   disappearing entirely (e.g. mobile "Back" clears activeChat
                   mid-call, or navigating away from /messages altogether). */}
-              {!activeChat.isGroup && (
-                <div className="flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowWallpaperPicker(true)}
-                    className="hidden h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300 sm:flex"
-                    title={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
-                    aria-label={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
-                  >
-                    <Palette className="h-5 w-5" />
-                  </button>
-                  <button
-                    onPointerEnter={preloadCallSdk}
-                    onClick={() => callPartner && startCall(callPartner, "audio")}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
-                    title={tr("Cuộc gọi thoại bảo mật", "Secure voice call")}
-                  >
-                    <Phone className="h-5 w-5" />
-                  </button>
-                  <button
-                    onPointerEnter={preloadCallSdk}
-                    onClick={() => callPartner && startCall(callPartner, "video")}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
-                    title={tr("Cuộc gọi video thời gian thực", "Live video call")}
-                  >
-                    <Video className="h-[22px] w-[22px]" />
-                  </button>
-
-                  <div className="relative">
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={openWallpaper}
+                  className="hidden h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300 sm:flex"
+                  title={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
+                  aria-label={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
+                >
+                  <Palette className="h-5 w-5" />
+                </button>
+                {!activeChat.isGroup && (
+                  <>
                     <button
-                      onClick={() => setShowChatMenu((v) => !v)}
+                      onPointerEnter={preloadCallSdk}
+                      onClick={() => callPartner && startCall(callPartner, "audio")}
                       className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
-                      title={tr("Thêm tùy chọn", "More options")}
+                      title={tr("Cuộc gọi thoại bảo mật", "Secure voice call")}
                     >
-                      <MoreVertical className="h-5 w-5" />
+                      <Phone className="h-5 w-5" />
                     </button>
+                    <button
+                      onPointerEnter={preloadCallSdk}
+                      onClick={() => callPartner && startCall(callPartner, "video")}
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
+                      title={tr("Cuộc gọi video thời gian thực", "Live video call")}
+                    >
+                      <Video className="h-[22px] w-[22px]" />
+                    </button>
+                  </>
+                )}
 
-                    {showChatMenu && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
-                        <div className="absolute right-0 top-full mt-2 z-50 w-48 rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
-                          <button
-                            onClick={() => { setShowChatMenu(false); setShowWallpaperPicker(true); }}
-                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
-                          >
-                            <Palette className="h-4 w-4 text-pink-400" />{tr(" Hình nền đoạn chat", " Chat wallpaper")}
-                          </button>
-                          <button
-                            onClick={() => { setShowChatMenu(false); setShowReportModal(true); }}
-                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
-                          >
-                            <Flag className="h-4 w-4 text-amber-400" />{tr(" Báo cáo người dùng", " Report user")}
-                          </button>
-                          <button
-                            onClick={handleToggleBlock}
-                            disabled={blockActionLoading}
-                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-red-400 hover:bg-slate-850 transition-colors disabled:opacity-50"
-                          >
-                            {isActiveChatBlocked ? (
-                              <><ShieldCheck className="h-4 w-4" />{tr(" Bỏ chặn người dùng", " Unblock user")}</>
-                            ) : (
-                              <><ShieldOff className="h-4 w-4" />{tr(" Chặn người dùng", " Block user")}</>
-                            )}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                {/* ⋮ — cả chat 1-1 lẫn nhóm (nhóm: chỉ có Hình nền) */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowChatMenu((v) => !v)}
+                    className="relative flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
+                    title={tr("Thêm tùy chọn", "More options")}
+                    aria-label={tr("Thêm tùy chọn", "More options")}
+                    aria-haspopup="menu"
+                    aria-expanded={showChatMenu}
+                  >
+                    <MoreVertical className="h-5 w-5" />
+                    {!wpSeen && <span aria-hidden className="pn-menu-dot" />}
+                  </button>
+
+                  {showChatMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
+                      <div role="menu" className="absolute right-0 top-full mt-2 z-50 w-48 rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
+                        <button
+                          role="menuitem"
+                          onClick={openWallpaper}
+                          className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
+                        >
+                          <Palette className="h-4 w-4 text-pink-400" />{tr(" Hình nền đoạn chat", " Chat wallpaper")}
+                        </button>
+                        {!activeChat.isGroup && (
+                          <>
+                            <button
+                              role="menuitem"
+                              onClick={() => { setShowChatMenu(false); setShowReportModal(true); }}
+                              className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
+                            >
+                              <Flag className="h-4 w-4 text-amber-400" />{tr(" Báo cáo người dùng", " Report user")}
+                            </button>
+                            <button
+                              role="menuitem"
+                              onClick={handleToggleBlock}
+                              disabled={blockActionLoading}
+                              className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-red-400 hover:bg-slate-850 transition-colors disabled:opacity-50"
+                            >
+                              {isActiveChatBlocked ? (
+                                <><ShieldCheck className="h-4 w-4" />{tr(" Bỏ chặn người dùng", " Unblock user")}</>
+                              ) : (
+                                <><ShieldOff className="h-4 w-4" />{tr(" Chặn người dùng", " Block user")}</>
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             <p className="sr-only" aria-live="polite" aria-atomic="true">{liveText}</p>
@@ -1810,7 +1887,7 @@ export default function MessagesContent({
               {/* Đầu cuộc trò chuyện (đã cuộn tới tin đầu tiên): thẻ hồ sơ đối phương như Messenger —
                   biết đang nói chuyện với ai, và đoạn chat ngắn không còn trống trơn. */}
               {!activeChat.isGroup && !chatNextCursor && chatMessages.length > 0 && (
-                <div className="flex flex-none flex-col items-center gap-2 pb-4 pt-6 text-center">
+                <div className="m-intro flex flex-none flex-col items-center gap-2 pb-4 pt-6 text-center">
                   <span className="m-intro-avatar isolate">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-20 w-20 rounded-full object-cover ring-4 ring-white/5" />
@@ -1884,7 +1961,7 @@ export default function MessagesContent({
                   );
                 })
               ) : !loadingChatMessages ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 animate-fadeIn">
+                <div className="m-empty-thread flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 animate-fadeIn">
                   <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/20 to-fuchsia-500/20 ring-1 ring-pink-500/30 text-2xl">👋</span>
                   <p className="text-sm font-bold text-slate-200">{t("messenger.noMessagesYet")}</p>
                   {/* Có khách làm nail trong cuộc trò chuyện → nói về giá / lịch trống, không nói "chia turn" (chuyện giữa thợ và tiệm). */}
@@ -2018,13 +2095,17 @@ export default function MessagesContent({
                   onPhoto={handleUploadImage}
                 />
               )}
-              {(showEmoji || showGifs) && (
+              {(showEmoji || showGifs) && currentUser?.id && (
                 <MediaPicker
+                  userId={currentUser.id}
+                  market={stickerMarket}
+                  lang={viewerLang}
                   tab={chatPanelTab}
-                  onTab={(t) => { setChatPanelTab(t); setShowEmoji(true); setShowGifs(t === "gif"); }}
+                  gifQuery={gifHandoff}
+                  onTab={(t, q) => { setChatPanelTab(t); setGifHandoff(t === "gif" ? q : undefined); setShowEmoji(true); setShowGifs(t === "gif"); }}
                   onEmoji={(e) => setMessageText((prev) => prev + e)}
-                  onSticker={(e) => { handleSendMessage(null, e, "STICKER"); handleCloseMediaPanel(); }}
-                  onGif={(url) => { handleGifSelect(url); handleCloseMediaPanel(); }}
+                  onSticker={(id) => handleSendMessage(null, id, "STICKER", undefined, { keepPanel: true })}
+                  onGif={(g) => handleSendMessage(null, g.send, "IMAGE", undefined, { keepPanel: true })}
                   onClose={handleCloseMediaPanel}
                 />
               )}
@@ -2059,7 +2140,7 @@ export default function MessagesContent({
                         <span><ImageIcon className="h-[22px] w-[22px]" /></span>
                         {tr("Gửi ảnh hoặc video", "Send a photo or video")}
                       </button>
-                      <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); setShowEmoji(true); setChatPanelTab("gif"); setShowGifs(true); }}>
+                      <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); inputRef.current?.blur(); setGifHandoff(undefined); setShowEmoji(true); setChatPanelTab("gif"); setShowGifs(true); }}>
                         <span className="text-[13px] font-semibold">GIF</span>
                         {tr("Chèn ảnh động GIF", "Insert GIF")}
                       </button>
@@ -2107,14 +2188,20 @@ export default function MessagesContent({
                   />
                   <button
                     type="button"
+                    data-media-toggle=""
+                    aria-expanded={showEmoji}
                     onClick={() => {
-                      if (showEmoji && chatPanelTab !== "gif") { setShowEmoji(false); return; }
-                      setChatPanelTab(chatPanelTab === "gif" ? "emoji" : chatPanelTab);
+                      if (showEmoji) { handleCloseMediaPanel(); return; }
+                      // mở đúng tab dùng lần trước (theo người); đang gõ → ẩn bàn phím cho bảng hiện đủ
+                      const last = currentUser?.id ? readMediaTab(currentUser.id) : null;
+                      setChatPanelTab(last ?? "emoji");
+                      setGifHandoff(undefined);
+                      inputRef.current?.blur();
                       setShowEmoji(true);
-                      setShowGifs(false);
+                      setShowGifs(last === "gif");
                       setAttachOpen(false);
                     }}
-                    className={`m-cbtn m-emoji-btn ${showEmoji && chatPanelTab !== "gif" ? "!text-[var(--m-accent-ink)]" : ""}`}
+                    className={`m-cbtn m-emoji-btn ${showEmoji ? "!text-[var(--m-accent-ink)]" : ""}`}
                     title={tr("Chèn biểu tượng, nhãn dán", "Insert emoji or sticker")}
                     aria-label={tr("Biểu tượng cảm xúc", "Emoji")}
                   >
@@ -2233,49 +2320,20 @@ export default function MessagesContent({
         )}
       </div>
 
-      {showWallpaperPicker && activeChat && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setShowWallpaperPicker(false)}>
-          <div role="dialog" aria-label={tr("Chọn hình nền đoạn chat", "Choose chat wallpaper")} className="w-full max-w-md rounded-t-3xl border border-white/10 bg-slate-900 p-5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-            <span aria-hidden className="m-grabber" />
-            <p className="flex items-center gap-2 text-base font-black text-white"><Palette className="h-5 w-5 text-pink-400" />{tr(" Hình nền đoạn chat", " Chat wallpaper")}</p>
-            <p className="mt-1 text-xs text-slate-400">{tr("Chỉ đổi trên máy bạn — người kia không bị đổi theo.", "Only changes on your device — the other person isn't affected.")}</p>
-            <div className="mt-4 grid grid-cols-4 gap-2.5">
-              {CHAT_WALLPAPERS.map((w) => (
-                <button
-                  key={w.id}
-                  type="button"
-                  aria-pressed={wallpaperId === w.id}
-                  aria-label={tr(w.vi, w.en)}
-                  onClick={() => {
-                    setWallpaperId(w.id);
-                    saveWallpaper(activeKey, w.id, wallpaperForAll);
-                  }}
-                  className="group flex flex-col items-center gap-1.5"
-                >
-                  <span className={`relative block aspect-[3/4] w-full overflow-hidden rounded-xl ring-2 transition-all ${wallpaperId === w.id ? "ring-pink-500" : "ring-white/10 group-hover:ring-white/30"}`} style={w.pattern ? { background: w.swatch, backgroundSize: w.swatchSize ?? "60px 60px, auto" } : { background: w.swatch }}>
-                    <span className="absolute bottom-2 left-1.5 h-2 w-7 rounded-full bg-slate-700/90" />
-                    <span className="absolute bottom-5 right-1.5 h-2 w-6 rounded-full bg-pink-500/90" />
-                    {wallpaperId === w.id && <Check className="absolute right-1 top-1 h-4 w-4 rounded-full bg-pink-500 p-0.5 text-white" />}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-300">{tr(w.vi, w.en)}</span>
-                </button>
-              ))}
-            </div>
-            <label className="mt-4 flex items-center gap-2 text-xs font-semibold text-slate-300">
-              <input
-                type="checkbox"
-                checked={wallpaperForAll}
-                onChange={(e) => {
-                  setWallpaperForAll(e.target.checked);
-                  if (e.target.checked) saveWallpaper(activeKey, wallpaperId, true);
-                }}
-                className="h-4 w-4 accent-pink-500"
-              />
-              {tr("Áp dụng cho mọi đoạn chat", "Use for all chats")}
-            </label>
-            <button type="button" onClick={() => setShowWallpaperPicker(false)} className="mt-4 min-h-[44px] w-full rounded-2xl bg-white/[0.06] text-sm font-bold text-white ring-1 ring-white/10 hover:bg-white/10">{tr("Xong", "Done")}</button>
-          </div>
-        </div>
+      {showWallpaperPicker && activeChat && currentUser?.id && (
+        <WallpaperSheet
+          userId={currentUser.id}
+          chat={{ id: activeChat.id, isGroup: activeChat.isGroup, conversationId: activeChat.conversationId ?? null, name: activeChat.name }}
+          sampleSender={
+            activeChat.isGroup
+              ? conversations.find((c) => c.id === activeChat.conversationId)?.participants.find((p) => p.id !== currentUser.id)?.name || activeChat.name
+              : activeChat.name
+          }
+          state={wpState}
+          market={currentUser?.market ?? null}
+          onPreview={setWpPreview}
+          onClose={closeWallpaper}
+        />
       )}
 
       {lightbox && (

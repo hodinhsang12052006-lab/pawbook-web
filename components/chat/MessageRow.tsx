@@ -5,7 +5,8 @@ import { AlertCircle, Check, CheckCheck, Clock, Phone, PhoneMissed, Video, Refre
 import VoiceMessage from "./VoiceMessage";
 import toast from "react-hot-toast";
 import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
-import { stickerStill, stickerUrl } from "@/lib/chatStickers";
+import { animUrl, isFluent, isKnownSticker, stickerGlyph, stillUrl } from "@/lib/stickers/urls";
+import { gifAspect, isGifUrl, corsSafeGif } from "@/lib/chat/gif";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { CS } from "@/lib/i18n/chatStrings";
@@ -244,15 +245,17 @@ function MessageRowImpl({
   } else if (msg.type === "STICKER") {
     body = (
       <div className="m-bare">
-        {/* Sticker hoạt hình (Noto Emoji Animation, Google · CC BY 4.0) — chưa tải được thì hiện emoji to. */}
-        <StickerView emoji={msg.content} animate={fresh} />
+        {/* Sticker: Noto Emoji Animation (Google · CC BY 4.0) hoặc Fluent Emoji 3D (Microsoft · MIT) — lỗi tải thì hiện emoji to. */}
+        <StickerView id={msg.content} animate={fresh} />
         <span className="m-meta-pill" aria-hidden>{time}{tick}</span>
       </div>
     );
   } else if (isMedia) {
-    const ratio = mediaAspect(msg.content);
+    // GIF (GIPHY / Tenor): giữ ĐÚNG tỉ lệ từ "#wh" (không cắt); tin cũ không có #wh → khung vuông, ảnh "contain".
+    const gif = msg.type === "IMAGE" && isGifUrl(msg.content);
+    const ratio = gif ? gifAspect(msg.content) ?? 1 : mediaAspect(msg.content);
     body = (
-      <div className={`m-media ${corner}`} style={{ aspectRatio: String(ratio) }}>
+      <div className={`m-media ${gif ? "m-gif" : ""} ${corner}`} style={{ aspectRatio: String(ratio) }}>
         {mediaBroken ? (
           <span className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-[13px] text-slate-400">
             <ImageOff className="h-6 w-6" />
@@ -262,7 +265,16 @@ function MessageRowImpl({
           // Plain <img>: nội dung từ nhiều host ngoài (Tenor GIF, Cloudinary) — next/image sẽ chặn host lạ.
           <button type="button" onClick={() => onOpenMedia?.(msg.content)} aria-label={CS.openImage()} className="block h-full w-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={msg.content} alt={tr("Hình ảnh", "Image")} loading="lazy" decoding="async" onError={() => setMediaBroken(true)} className="h-full w-full object-cover" />
+            <img
+              src={msg.content}
+              alt={gif ? "GIF" : tr("Hình ảnh", "Image")}
+              loading="lazy"
+              decoding="async"
+              {...(gif && corsSafeGif(msg.content) ? { crossOrigin: "anonymous" as const } : {})}
+              onError={() => setMediaBroken(true)}
+              className={`h-full w-full ${gif ? "object-contain" : "object-cover"}`}
+            />
+            {gif && <span className="m-gif-chip" aria-hidden>GIF</span>}
           </button>
         ) : (
           <button type="button" onClick={() => onOpenMedia?.(msg.content)} aria-label={CS.openImage()} className="relative block h-full w-full bg-black">
@@ -408,26 +420,60 @@ function MessageRowImpl({
   );
 }
 
-function StickerView({ emoji, animate }: { emoji: string; animate: boolean }) {
-  // Ảnh tĩnh Noto (vài KB) cho mọi sticker trong lịch sử; chỉ sticker VỪA tới (hoặc khi chạm vào) mới tải bản
-  // hoạt hình (~0,5MB/cái) — trước đây mở 1 đoạn chat 10 sticker là tải ~5MB. Giảm chuyển động: luôn ảnh tĩnh.
+// Có nên tải bản động (~0,5 MB/cái)? Không khi người dùng bật giảm chuyển động / tiết kiệm dữ liệu / mạng 2G.
+function canAnimate(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (c?.saveData || c?.effectiveType === "2g" || c?.effectiveType === "slow-2g") return false;
+  return true;
+}
+
+function StickerView({ id, animate }: { id: string; animate: boolean }) {
+  // Noto: ảnh tĩnh SVG (vài KB) cho mọi sticker trong lịch sử; chỉ sticker VỪA tới (hoặc khi chạm) mới tải bản động.
+  // Fluent 3D: PNG 256px (tĩnh) — chạm thì "nảy" nhẹ 1 → 1.08 → 1 (180ms, tắt khi giảm chuyển động).
   const [play, setPlay] = React.useState(animate);
   const [animReady, setAnimReady] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
-  const still = stickerStill(emoji);
-  const url = stickerUrl(emoji);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+  const known = isKnownSticker(id);
+  const glyph = stickerGlyph(id);
+  const still = stillUrl(id);
+  const anim = animUrl(id);
+  const fluent = isFluent(id);
   React.useEffect(() => {
-    if (!url || !play) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!anim || !play || !canAnimate()) return;
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => setAnimReady(true);
-    img.src = url;
-  }, [url, play]);
-  if (!url || !still || failed) return <div className="my-1 select-none text-[64px] leading-none">{emoji}</div>;
+    img.src = anim;
+  }, [anim, play]);
+  if (!known) return <span className="m-sticker-chip">{tr("Nhãn dán", "Sticker")}</span>;
+  if (!still || failed) return <div className="my-1 select-none text-[64px] leading-none" role="img" aria-label={glyph ?? ""}>{glyph}</div>;
   return (
-    <button type="button" onClick={() => setPlay(true)} aria-label={emoji} className="block">
+    <button
+      type="button"
+      onClick={() => {
+        if (!fluent) return setPlay(true);
+        if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+        imgRef.current?.animate?.([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 180, easing: "cubic-bezier(.23,1,.32,1)" });
+      }}
+      aria-label={glyph ?? tr("Nhãn dán", "Sticker")}
+      className="block"
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={animReady ? url : still} alt={emoji} width={120} height={120} decoding="async" draggable={false} onError={() => setFailed(true)} className="my-1 h-[120px] w-[120px] select-none" />
+      <img
+        ref={imgRef}
+        src={animReady && anim ? anim : still}
+        alt={glyph ?? ""}
+        width={128}
+        height={128}
+        decoding="async"
+        crossOrigin="anonymous"
+        draggable={false}
+        onError={() => setFailed(true)}
+        className="m-sticker-img my-1 h-[128px] w-[128px] select-none"
+      />
     </button>
   );
 }

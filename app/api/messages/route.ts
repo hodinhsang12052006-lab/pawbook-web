@@ -10,6 +10,9 @@ import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
 import { sendPush } from "@/lib/push";
 import { coldDmBlocked } from "@/lib/abuseGuard";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
+import { STICKER_GLYPH } from "@/lib/stickers/ids.generated";
+import { MAX_STICKER_ID_LENGTH } from "@/lib/stickers/packs";
+import { isGifUrl } from "@/lib/chat/gif";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
 export async function GET(req: Request) {
@@ -335,13 +338,14 @@ export async function POST(req: Request) {
     // phép URL tùy ý, người gửi có thể nhét 1 URL trỏ về máy chủ của họ —
     // khi người nhận MỞ đoạn chat, trình duyệt tự tải URL đó, LỘ địa chỉ IP
     // và trạng thái online của người nhận cho người gửi (tracking beacon).
-    // Ảnh/GIF hợp lệ chỉ đến từ Cloudinary (upload) hoặc Tenor/Giphy (GifPicker)
+    // Ảnh/GIF hợp lệ chỉ đến từ Cloudinary (upload) hoặc GIPHY / Tenor (tab GIF, qua /api/gifs)
     // hoặc data URL ảnh (fallback khi chưa cấu hình Cloudinary) — chặn phần còn lại.
     // Nhật ký cuộc gọi do CallManager ghi: "missed:audio", "ended:video:125"…
     if (msgType === "CALL" && !/^(missed|declined|ended):(audio|video)(:\d{1,6})?$/.test(messageText)) {
       return NextResponse.json({ error: "Nhật ký cuộc gọi không hợp lệ.", errorEn: "Invalid call log." }, { status: 400 });
     }
-    if (msgType === "STICKER" && messageText.length > 16) {
+    // Sticker: CHỈ id có trong danh mục (lib/stickers/ids.generated.ts — Noto: ký tự emoji; Fluent 3D: "fl:<tên>").
+    if (msgType === "STICKER" && (messageText.length > MAX_STICKER_ID_LENGTH || !Object.prototype.hasOwnProperty.call(STICKER_GLYPH, messageText))) {
       return NextResponse.json({ error: "Sticker không hợp lệ.", errorEn: "Invalid sticker." }, { status: 400 });
     }
 
@@ -541,10 +545,12 @@ export async function POST(req: Request) {
     // qua nếu app đang mở). Tag theo hội thoại → nhiều tin chỉ 1 thông báo.
     const recipients = conversation.participants.map((p) => p.id).filter((id) => id && id !== userId);
     if (recipients.length && msgType !== "CALL") {
+      const gif = msgType === "IMAGE" && isGifUrl(messageText);
+      const glyph = msgType === "STICKER" ? STICKER_GLYPH[messageText] || "" : "";
       const preview =
-        msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : msgType === "AUDIO" ? "🎤 Đã gửi một tin nhắn thoại" : msgType === "STICKER" ? `${messageText} Sticker` : messageText;
+        gif ? "Đã gửi một GIF" : msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : msgType === "AUDIO" ? "🎤 Đã gửi một tin nhắn thoại" : msgType === "STICKER" ? `${glyph} Nhãn dán`.trim() : messageText;
       const previewEn =
-        msgType === "IMAGE" ? "📷 Sent a photo" : msgType === "VIDEO" ? "🎬 Sent a video" : msgType === "AUDIO" ? "🎤 Sent a voice message" : msgType === "STICKER" ? `${messageText} Sticker` : messageText;
+        gif ? "Sent a GIF" : msgType === "IMAGE" ? "📷 Sent a photo" : msgType === "VIDEO" ? "🎬 Sent a video" : msgType === "AUDIO" ? "🎤 Sent a voice message" : msgType === "STICKER" ? `${glyph} Sticker`.trim() : messageText;
       sendPush(recipients, {
         title: sender.name,
         body: preview,

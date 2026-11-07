@@ -8,6 +8,7 @@ import { playSound } from "@/lib/sounds";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { joinOwnPresence } from "@/lib/presence";
 import { tr } from "@/lib/i18n/tr";
+import { mediaPreview } from "@/lib/chat/preview";
 
 interface UnreadMessagesContextValue {
   unreadCount: number;
@@ -86,7 +87,7 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
         // Nhật ký cuộc gọi — không hiện chuỗi thô "missed:audio".
         if (/^(missed|declined)/.test(message.content || "")) toast(tr(`Cuộc gọi nhỡ từ ${who}`, `Missed call from ${who}`), { icon: "📞", position: "top-right" });
       } else {
-        const preview = message.type === "IMAGE" ? tr("Ảnh", "Photo") : (message.content || "").substring(0, 40);
+        const preview = mediaPreview(message.type, message.content) ?? (message.content || "").substring(0, 40);
         toast.success(tr(`Tin nhắn mới từ ${who}: ${preview}`, `New message from ${who}: ${preview}`), { icon: "💬", position: "top-right" });
       }
     };

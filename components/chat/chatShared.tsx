@@ -47,7 +47,7 @@ export interface MessageType {
 }
 
 // Bỏ dấu tiếng Việt để tìm "nguyen" ra "Nguyễn".
-export const foldVi = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+export { foldVi } from "@/lib/chat/fold";
 
 // Giờ ở danh sách chat (V2: lib/chat/chatTime — đúng ngôn ngữ + thị trường, "3:13 PM" / "15:13" / "Mon" / "Oct 30").
 export function shortChatTime(iso: string, market?: string | null) {

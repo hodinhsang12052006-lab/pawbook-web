@@ -1,43 +1,11 @@
-// Sticker hoạt hình cho tin nhắn — "Noto Emoji Animation" của Google (giấy phép CC BY 4.0, ghi công
-// trong bảng sticker). Tin sticker lưu CHỈ ký tự emoji (type STICKER, ≤ 16 ký tự) → máy nhận tự vẽ
-// bản hoạt hình; không có / không tải được thì hiện emoji to. Danh sách dưới đây đã kiểm tra tồn tại
-// trên fonts.gstatic.com (10/2026) — emoji không có bản hoạt hình (🐶, 🐰, 🎄…) không đưa vào.
-
-export interface StickerPack {
-  id: string;
-  label: [string, string]; // [vi, en]
-  icon: string;
-  items: string[];
-}
-
-export const STICKER_PACKS: StickerPack[] = [
-  { id: "feel", label: ["Cảm xúc", "Feelings"], icon: "😂", items: ["😂", "🤣", "🥰", "😍", "😘", "😭", "🥺", "😡", "😱", "🤯", "🤩", "🥳", "😎", "🤔", "🙄", "😴", "🤗", "🤭", "😳", "😅", "😊", "😇", "🥲", "😮", "💀", "🙈", "👋"] },
-  { id: "salon", label: ["Tiệm nail", "Salon"], icon: "💅", items: ["💅", "✨", "🔥", "💖", "💯", "👏", "🙏", "💸", "👍", "💪", "🎉", "🎁", "⭐", "🌈", "🌸"] },
-  { id: "pets", label: ["Thú cưng", "Pets"], icon: "😺", items: ["😺", "😹", "😻", "🐕", "🦊", "🐼", "🦄", "🦁", "🐧", "🦉"] },
-  // Sau Halloween (đã lưu trữ 31/10): bộ lễ hội mở đầu bằng ✨ — mùa thu / cuối năm lên trước, 🎃 👻 xuống cuối.
-  { id: "party", label: ["Lễ hội", "Holidays"], icon: "✨", items: ["✨", "🍂", "❄️", "⛄", "🎁", "🎆", "🍾", "🥳", "🎉", "❤️", "💘", "🎂", "🎃", "👻"] },
-];
-
-const ANIMATED = new Set(STICKER_PACKS.flatMap((p) => p.items));
-
-/** Mã điểm của emoji theo cách đặt tên của Noto ("❤️" → "2764_fe0f", "😂" → "1f602"). */
-function codepoints(emoji: string): string {
-  const cps = [...emoji].map((c) => c.codePointAt(0)!.toString(16));
-  // Noto bỏ FE0F ở emoji đơn (trừ vài ngoại lệ như ❤️) — giữ nguyên chuỗi đầy đủ cho các ký tự đã liệt kê.
-  return cps.join("_");
-}
-
-/** Ảnh tĩnh SVG (2–15KB) cùng bộ Noto — hiện ngay trong bảng chọn & làm ảnh chờ khi bản động đang tải. */
-export function stickerStill(emoji: string): string | null {
-  if (!ANIMATED.has(emoji)) return null;
-  return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codepoints(emoji)}/emoji.svg`;
-}
-
-/** URL bản hoạt hình (webp) — null nếu emoji không có trong bộ sticker. */
-export function stickerUrl(emoji: string): string | null {
-  if (!ANIMATED.has(emoji)) return null;
-  return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codepoints(emoji)}/512.webp`;
-}
+// Emoji + sticker cho tin nhắn.
+//  - EMOJI_GROUPS: bảng emoji chèn vào chữ (tab Emoji) — giữ nguyên.
+//  - Sticker (tab Nhãn dán): lib/stickers/* — Noto Emoji Animation (Google, CC BY 4.0) + Microsoft Fluent Emoji 3D (MIT).
+//    Tin STICKER lưu id sticker (Noto: chính ký tự emoji → tin cũ vẫn hợp lệ; Fluent: "fl:<tên>"). Máy chủ chỉ nhận id
+//    có trong lib/stickers/ids.generated.ts. Ghi công: NOTICE + dòng cuối bảng sticker.
+export { stillUrl, animUrl, thumbUrl, stickerGlyph, isKnownSticker, isFluent } from "@/lib/stickers/urls";
+export { ANIM_PACKS, THREE_D_PACKS, SEASON_PACKS, ALL_PACKS, flId, type StickerId, type StickerPack } from "@/lib/stickers/packs";
+export { activeSeasonPacks } from "@/lib/stickers/seasons";
 
 // Bảng emoji chèn vào chữ — chia nhóm như bàn phím điện thoại.
 export const EMOJI_GROUPS: { id: string; label: [string, string]; icon: string; items: string[] }[] = [

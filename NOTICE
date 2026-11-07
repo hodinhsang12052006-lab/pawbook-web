@@ -128,3 +128,11 @@ logos or exact geometry) are used anywhere in this product.
    SVG "light" build, loaded on demand)
    Copyright (c) 2015 Bodymovin
    Licence: MIT — https://github.com/airbnb/lottie-web/blob/master/LICENSE.md (same MIT terms as the text in item 6).
+
+10. Voice and video calls — no bundled call SDK
+   Calls use the browser's own WebRTC implementation (RTCPeerConnection / getUserMedia, part of every modern browser
+   and of the Android System WebView); the call code in lib/calls/* and components/chat/call/* is PawNail's own.
+   Network helpers, not bundled: Google's public STUN servers (stun.l.google.com), and — only when the operator
+   configures it — Cloudflare Realtime TURN (https://developers.cloudflare.com/realtime/turn/) or the operator's own
+   TURN server, which relay encrypted media they cannot decode. Signaling goes through Pusher Channels (pusher-js, MIT).
+   The ZEGOCLOUD UIKit SDK previously used for calls has been removed (11/2026).

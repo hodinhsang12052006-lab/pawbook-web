@@ -90,6 +90,10 @@ export default function NativeAppBridge() {
     // Android, tránh cảm giác "bấm Back là văng thẳng ra ngoài" mất luôn
     // form đang nhập dở.
     App.addListener("backButton", ({ canGoBack }) => {
+      // Đang đổ chuông / đang gọi: bỏ qua nút Back (thoát hay thu nhỏ app giữa cuộc gọi thì Android tắt micro của
+      // WebView chạy nền — người kia không nghe gì). Kết thúc bằng nút Từ chối / Kết thúc trên màn hình gọi.
+      const callPhase = document.querySelector("[data-call-phase]")?.getAttribute("data-call-phase");
+      if (callPhase && callPhase !== "error") return;
       if (canGoBack) {
         window.history.back();
       } else {

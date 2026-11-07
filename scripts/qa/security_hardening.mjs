@@ -49,8 +49,8 @@ const msgId = seed.data?.message?.id;
   // đây chỉ "offer" bị chặn → reject/candidate/camera vẫn lọt, có thể ngắt
   // cuộc gọi hợp lệ của nạn nhân).
   await owner.req("/api/block", { method: "POST", json: { userId: other.userId } });
-  for (const action of ["offer", "accept", "candidate-batch", "camera", "reject"]) {
-    const r = await other.req("/api/calls", { method: "POST", json: { targetId: owner.userId, action, sdp: {}, candidates: [], videoOff: true } });
+  for (const action of ["offer", "accept", "signal", "reject", "busy", "ring", "answering"]) {
+    const r = await other.req("/api/calls", { method: "POST", json: { targetId: owner.userId, action, callId: "blkcall1", callToken: "x.y", leg: "leg-aaaa", fromLeg: "leg-aaaa", toLeg: "leg-bbbb", seq: 0, kind: "ctl", data: { bye: "x" } } });
     R.check(`CALL-BLK-${action}`, `Bị chặn → calls action="${action}" bị từ chối (403)`, r.status === 403, `status=${r.status}`);
   }
   await owner.req(`/api/block?userId=${other.userId}`, { method: "DELETE" });

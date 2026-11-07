@@ -10,6 +10,9 @@
 
 let ctx: AudioContext | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
+// Each cycle schedules its notes ahead of time (up to ~1.5 s): stopRingtone() must stop those too, or the ring keeps
+// sounding after Answer / Decline and the ringback plays over the first "hello".
+const live = new Set<OscillatorNode>();
 
 function audioCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -33,8 +36,30 @@ function tone(freq: number, start: number, duration: number, volume: number) {
   gain.gain.setValueAtTime(volume, t0 + duration - 0.05);
   gain.gain.linearRampToValueAtTime(0, t0 + duration);
   osc.connect(gain).connect(c.destination);
+  live.add(osc);
+  osc.onended = () => {
+    live.delete(osc);
+    try {
+      osc.disconnect();
+      gain.disconnect();
+    } catch {}
+  };
   osc.start(t0);
   osc.stop(t0 + duration + 0.02);
+}
+
+function silence() {
+  for (const o of live) {
+    try {
+      o.stop();
+    } catch {}
+  }
+  live.clear();
+}
+
+/** Gọi đồng bộ trong thao tác chạm (bấm gọi / nghe máy): mở khoá Web Audio cho tiếng chờ / chuông. */
+export function primeRingtone() {
+  audioCtx();
 }
 
 export function startRingtone(kind: "incoming" | "outgoing") {
@@ -62,7 +87,23 @@ export function startRingtone(kind: "incoming" | "outgoing") {
 export function stopRingtone() {
   if (timer) clearInterval(timer);
   timer = null;
+  silence();
   try {
     navigator.vibrate?.(0);
+  } catch {}
+}
+
+/** Short tone when a call ends: "end" = two falling notes (hang-up), "busy" = three short beeps (busy / declined). */
+export function playEndTone(kind: "end" | "busy" = "end") {
+  stopRingtone();
+  try {
+    if (kind === "busy") {
+      tone(480, 0, 0.22, 0.08);
+      tone(480, 0.45, 0.22, 0.08);
+      tone(480, 0.9, 0.22, 0.08);
+    } else {
+      tone(620, 0, 0.16, 0.09);
+      tone(460, 0.2, 0.24, 0.09);
+    }
   } catch {}
 }

@@ -52,16 +52,22 @@ const runtimeCaching = [
   }),
 ];
 
+// LOCAL QA ONLY: a build made with NEXT_PUBLIC_PUSHER_TEST_WS=127.0.0.1:<port> (scripts/qa/call_test.mjs) may open a
+// WebSocket to the Pusher mock on loopback. Never on Vercel, never a non-loopback host.
+const PUSHER_TEST_WS = process.env.NEXT_PUBLIC_PUSHER_TEST_WS || "";
+const PUSHER_TEST_CONNECT =
+  !process.env.VERCEL && !process.env.VERCEL_ENV && /^(127\.0\.0\.1|localhost):\d{2,5}$/.test(PUSHER_TEST_WS) ? ` ws://${PUSHER_TEST_WS} http://${PUSHER_TEST_WS}` : "";
+
 const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
   runtimeCaching,
-  // Giữ giới hạn 2MB: KHÔNG tải trước gói gọi video ZegoCloud (~5MB) ngay lần
-  // mở app đầu tiên — tốn 4G của người dùng trong khi gọi video lúc offline
-  // vốn không dùng được. Gói đó tải khi có cuộc gọi (rồi trình duyệt tự cache).
-  // Tổng tải trước giảm từ ~8.7MB xuống ~3.8MB.
+  // Giữ giới hạn 2MB: không tải trước các gói JS lớn ngay lần mở app đầu tiên
+  // (tốn 4G của người dùng). Trước đây chủ yếu là gói gọi video ZegoCloud (~5MB) —
+  // đã bỏ (11/2026): cuộc gọi giờ dùng WebRTC có sẵn của trình duyệt, màn hình
+  // gọi chỉ vài chục KB và tải trước khi rảnh (lib/callPreload.ts).
   maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
   // Without this, a fully-offline visit to an uncached route showed the
   // browser's generic native offline error page instead of anything
@@ -175,10 +181,16 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             // NOTE: script-src still carries 'unsafe-eval'/'unsafe-inline' —
             // removing them would meaningfully strengthen XSS mitigation, but
-            // Next's inline hydration scripts and the ZegoCloud call SDK may
-            // depend on one or both. That needs a nonce-based CSP + a real
-            // build/runtime test before flipping, so it's left as-is here;
-            // object-src/base-uri/form-action below are safe, no-risk additions.
+            // Next's inline hydration scripts may depend on one or both. That
+            // needs a nonce-based CSP + a real build/runtime test before
+            // flipping, so it's left as-is here; object-src/base-uri/form-action
+            // below are safe, no-risk additions.
+            // Calls (11/2026): 1:1 voice/video use the browser's own WebRTC (lib/calls/peer.ts) — no third-party call
+            // SDK, no iframe. Signaling rides the existing Pusher socket (wss://*.pusher.com) + same-origin /api/calls;
+            // STUN/TURN traffic is not governed by connect-src. All ZEGOCLOUD hosts (*.zegocloud.com, *.zego.im and
+            // its coolb/coolg/coolz/coolf logging domains) were removed with the SDK; frame-src is back to 'self'.
+            // PUSHER_TEST_CONNECT adds ws://127.0.0.1:<port> ONLY for a local QA build made with
+            // NEXT_PUBLIC_PUSHER_TEST_WS (never on Vercel) — see scripts/qa/call_test.mjs.
             // Added res.cloudinary.com to media-src (video portfolio / tin
             // tuyển trước đây bị chặn phát) + api.cloudinary.com to connect-src
             // (video tải thẳng từ trình duyệt lên Cloudinary bằng chữ ký máy
@@ -186,13 +198,6 @@ const nextConfig: NextConfig = {
             // media.tenor.com / *.giphy.com in img-src: GIF tiles + GIF messages are raw <img> pointing at the
             // provider's media host (results come from /api/gifs). cdn.jsdelivr.net in img-src (11/2026): Fluent
             // Emoji 3D sticker PNGs (MIT), pinned to one commit of github.com/microsoft/fluentui-emoji.
-            // Added *.coolbcloud.com (wss+https) to connect-src — confirmed via
-            // live 2-browser video call testing that ZEGOCLOUD's SDK also opens
-            // WebSocket connections to its own logging/access-hub infra on this
-            // separate domain (weblogger-wss / accesshub-wss*.coolbcloud.com),
-            // outside *.zegocloud.com — CSP was silently blocking those,
-            // visible as repeated "violates Content Security Policy" console
-            // errors during a live call.
             // Added *.sentry.io to connect-src + worker-src blob: — phát hiện
             // qua regression scan: Sentry SDK (đã cài qua wizard, không phải do
             // phiên làm việc này thêm) bị CSP chặn cả envelope report (connect-src
@@ -206,10 +211,6 @@ const nextConfig: NextConfig = {
             // Added api.dicebear.com to img-src — avatar mặc định lúc đăng ký
             // đổi sang DiceBear fun-emoji (xem app/api/register/route.ts),
             // domain này chưa có sẵn nên ảnh sẽ bị CSP chặn nếu không thêm.
-            // Added *.coolfcloud.com + *.zego.im (connect-src) — ZEGOCLOUD cân bằng
-            // tải qua nhiều domain (coolb/coolg/coolz/coolf...). Thiếu domain nào thì
-            // cuộc gọi rơi vào domain đó kẹt "Joining Room" vĩnh viễn — lỗi ngẫu
-            // nhiên đã bắt được khi test 2 trình duyệt (CSP chặn accesshub-wss.coolfcloud.com).
             // Added cloudflareinsights.com (script-src + connect-src) —
             // Cloudflare tự chèn beacon Web Analytics vào mọi trang, CSP cũ
             // chặn nó nên console production báo lỗi ở mọi trang và analytics
@@ -217,18 +218,7 @@ const nextConfig: NextConfig = {
             // Added res.cloudinary.com + images.unsplash.com to connect-src —
             // "Thẻ portfolio" (components/profile/ShareCard) fetch ảnh mẫu móng
             // về dạng blob để vẽ lên canvas mà không làm canvas bị "bẩn".
-            // Added *.coolgcloud.com + *.coolzcloud.com to connect-src — test
-            // gọi video 2-browser thật phát hiện ZegoCloud SDK còn dùng CẢ 3
-            // domain logging khác nhau (coolbcloud/coolgcloud/coolzcloud —
-            // chỉ khác 1 chữ cái, trước đây chỉ thêm coolbcloud) nên vẫn còn
-            // bị CSP chặn. LƯU Ý: các domain này chỉ phục vụ log/telemetry
-            // nội bộ của SDK — không phải nguyên nhân cuộc gọi video thất bại.
-            // Nguyên nhân thật là App ID trong .env.local bị gõ sai 1 số
-            // (1829171707 thay vì 1829174707 thật trên console ZegoCloud) —
-            // đã sửa cả .env và .env.local, đã verify bằng Playwright 2 tài
-            // khoản thật kết nối thành công (xem log "appid invalid" 1001004
-            // biến mất sau khi sửa).
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://*.giphy.com https://*.tenor.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: `upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://*.giphy.com https://*.tenor.com${PUSHER_TEST_CONNECT}; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self'; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';`,
           },
         ],
       },

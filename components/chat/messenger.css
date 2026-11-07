@@ -663,7 +663,9 @@ html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-x:hover { background: rgb(2
      dọc — trước đây thanh chung + lề chiếm ~130px, mở bàn phím là ô soạn tin bị đẩy khỏi màn hình.
    ===================================================================== */
 .pn-msgr-page { height: 100vh; height: 100dvh; overflow: hidden; }
-.pn-msgr-frame, .pn-msgr, .pn-msgr .m-list, .pn-msgr .chat-wallpaper { overflow: hidden; }
+/* min-width / min-height 0: khung clip KHÔNG phải khung cuộn → "min-width: auto" của mục flex sẽ là bề rộng nội dung (thanh bộ
+   nhãn dán 750px từng kéo cả cột chat rộng 763px trong màn 412px, nút gửi / gọi bị cắt mất). */
+.pn-msgr-frame, .pn-msgr, .pn-msgr .m-list, .pn-msgr .chat-wallpaper { overflow: hidden; min-width: 0; min-height: 0; }
 @supports (overflow: clip) {
   .pn-msgr-page, .pn-msgr-frame, .pn-msgr, .pn-msgr .m-list, .pn-msgr .chat-wallpaper { overflow: clip; }
 }

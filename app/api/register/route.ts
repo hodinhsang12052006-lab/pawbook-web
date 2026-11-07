@@ -21,6 +21,7 @@ const REGISTER_LIMIT = 10;
 const REGISTER_WINDOW_MS = 15 * 60 * 1000;
 
 import { POSITION_SKILL, canonicalBenefits, canonicalSkills } from "@/lib/nailVocab";
+import { parseMarketPhone } from "@/lib/phoneFormat";
 
 function toCsv(val: unknown): string {
   if (Array.isArray(val)) return val.filter(Boolean).join(",");
@@ -232,7 +233,10 @@ export async function POST(req: Request) {
           salaryAmount: salaryAmount || "Thỏa thuận",
           skills: roleSkills.join(","),
           benefits: benefits.join(","),
-          phone,
+          // Số liên hệ của tin phải gọi được ở thị trường của tiệm (form đăng ký ghép "+1 " vào số gõ tay — tin New York
+          // từng mang số Việt Nam "+1 03xxxxxxxx"). Số không hợp lệ → tin vẫn tạo, chỉ không có số / nút Gọi (thợ nhắn
+          // tin trong app); chủ tiệm thêm số đúng khi đăng tin mới (form đăng tin kiểm tra số).
+          phone: parseMarketPhone(phone, marketEnum)?.display ?? "",
           isUrgent: true,
         },
       });

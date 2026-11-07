@@ -54,6 +54,7 @@ function toInput(p: SyncPost): IngestInput {
     skills: Array.isArray(p.skills) ? p.skills.filter((s): s is string => typeof s === "string").slice(0, 12) : undefined,
     sourceUrl: str(p.post_url),
     postedAt: str(p.posted_at),
+    country: str(p.country), // "UK" / "Anh" → bài ngoài Mỹ / Úc (prepareIngest bỏ qua, có lý do)
   };
 }
 

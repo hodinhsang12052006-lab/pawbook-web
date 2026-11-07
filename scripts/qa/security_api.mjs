@@ -107,7 +107,7 @@ let ownerJobId;
 {
   const r = await tech.req("/api/jobs", { method: "POST", json: { title: "x", salonName: "x", market: "US", state: "CA", city: "x", salaryType: "x", salaryAmount: "x", phone: "1" } });
   R.check("Z3", "Thợ không được đăng tin tuyển dụng → 403", r.status === 403, `status=${r.status}`);
-  const c = await owner.req("/api/jobs", { method: "POST", json: { title: "QA job", salonName: "QA Salon", market: "US", state: "CA", city: "San Jose", salaryType: "Bao lương tuần", salaryAmount: "$1000", phone: "5550100", skills: ["Gel-X"] } });
+  const c = await owner.req("/api/jobs", { method: "POST", json: { title: "QA job", salonName: "QA Salon", market: "US", state: "CA", city: "San Jose", salaryType: "Bao lương tuần", salaryAmount: "$1000", phone: "4085550100", skills: ["Gel-X"] } });
   ownerJobId = c.data?.id;
   R.check("Z4", "Chủ tiệm đăng tin → 201", c.status === 201, `status=${c.status}`);
   const d = await owner2.req(`/api/jobs/${ownerJobId}`, { method: "DELETE" });

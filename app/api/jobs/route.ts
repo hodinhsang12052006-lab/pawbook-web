@@ -13,6 +13,7 @@ import { notifyUrgentJob } from "@/lib/jobAlerts";
 import { notifyJobAlerts } from "@/lib/jobAlertRules";
 import { cleanJobMedia, getJobMedia, setJobMedia } from "@/lib/jobMedia";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
+import { marketPhoneError, parseMarketPhone } from "@/lib/phoneFormat";
 
 // GET /api/jobs?market=US&state=CA&city=...&q=...  — danh sách tin tuyển thợ
 //   q: tìm trong tiêu đề, tên tiệm, thành phố, kỹ năng, nội dung. Mới nhất / vừa được tiệm đăng lại lên đầu.
@@ -147,6 +148,15 @@ export async function POST(req: Request) {
     if (description !== undefined && (typeof description !== "string" || description.length > 5000)) {
       return NextResponse.json({ error: "Mô tả quá dài (tối đa 5000 ký tự).", errorEn: "The description can be up to 5,000 characters." }, { status: 400 });
     }
+    // SĐT phải là số gọi được ở ĐÚNG thị trường của tin (Mỹ: 10 số NANP; Úc: 04… / 02·03·07·08…). Tin New York từng
+    // mang số Việt Nam "+1 03xxxxxxxx". Lưu dạng hiển thị chuẩn "(713) 555-0123" / "0412 345 678" (khớp tin từ nhóm →
+    // chống trùng theo SĐT hoạt động).
+    const jobMarket = market === "AU" ? "AU" : "US";
+    const contact = parseMarketPhone(phone, jobMarket);
+    if (!contact) {
+      const msg = marketPhoneError(jobMarket);
+      return NextResponse.json({ error: msg.vi, errorEn: msg.en, code: "PHONE_INVALID" }, { status: 400 });
+    }
 
     const newJob = await prisma.job.create({
       data: {
@@ -161,7 +171,7 @@ export async function POST(req: Request) {
         salaryAmount,
         skills: Array.isArray(skills) ? skills.join(",") : (skills || ""),
         benefits: Array.isArray(benefits) ? benefits.join(",") : (benefits || ""),
-        phone,
+        phone: contact.display,
         isUrgent: isUrgent !== undefined ? !!isUrgent : true,
         // Tin tự đăng tự ẩn sau JOB_TTL_DAYS (mặc định 30) — chủ tiệm bấm "Vẫn đang tuyển? Gia hạn" để giữ tin.
         expiresAt: new Date(Date.now() + jobTtlDays() * 86_400_000),

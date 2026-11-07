@@ -144,7 +144,7 @@ try {
   await op.getByRole("button", { name: /Tiếp tục/ }).click();
   await op.locator("#job-title").fill(title);
   await op.getByPlaceholder(/VD: \$1,200|VD: \$28/).fill("$1,300/tuần");
-  await op.getByPlaceholder("(555) 123-4567").fill("4085550100");
+  await op.locator("#job-phone").fill("4085550100");
   await op.getByRole("button", { name: /Tiếp tục/ }).click();
   await op.locator('input[type="file"]').setInputFiles([
     { name: "tiem1.png", mimeType: "image/png", buffer: PNG },

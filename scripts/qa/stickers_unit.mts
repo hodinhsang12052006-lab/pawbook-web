@@ -267,6 +267,11 @@ ok("SG2", `Mọi nhãn gợi ý (${allSug.length}) là id máy chủ chấp nh�
   allSug.filter((id) => !isAllowedStickerId(id)));
 ok("SG3", "Nhãn liên quan không ghép bừa: '🔥' không gợi ý 🛠️ / ⚙️ (chung từ 'tool'); '🐶' (không có bản Noto) → 🐕 nhờ từ khoá 'chó'",
   !sug("🔥").some((id) => ["🛠️", "⚙️", "⚓"].includes(id)) && sug("🐶").includes("🐕"), { fire: sug("🔥"), dog: sug("🐶") });
+const glyphsOf = (ids: string[]) => ids.map((id) => bare(STICKERS[id]?.glyph ?? id));
+const opp: [string, string[]][] = [["👍", ["👎"]], ["👎", ["👍"]], ["😂", ["😩", "😭", "😢"]], ["🤣", ["😩", "😭"]], ["😭", ["😂", "🤣"]], ["❤", ["💔"]], ["✅", ["❌"]], ["🙂", ["🙁", "☹"]]];
+ok("SG4", "Không gợi ý nghĩa ngược (1 chạm vội = gửi nhầm cho khách): 👍 ↛ 👎, 😂 ↛ 😩 / 😭 / 😢 (chỉ chung từ chung 'crying' / 'feels'), 😭 ↛ 😂, ❤ ↛ 💔, ✅ ↛ ❌, 🙂 ↛ 🙁; 😂 vẫn có 🤣 / 😆, 👍 vẫn có 👌",
+  opp.every(([g, bad]) => !glyphsOf(sug(g)).some((x) => bad.includes(x))) && sug("😂").includes("🤣") && sug("😂").includes("😆") && sug("👍").includes("👌"),
+  Object.fromEntries(opp.map(([g]) => [g, sug(g).join(" ")])));
 
 // tìm emoji (tab Emoji)
 const EW = parseEmojiWords(CORE.WORDS, EXT.WORDS_EXT);
@@ -289,6 +294,9 @@ ok("ES5", "Ngôn ngữ giao diện quyết định khi trùng chữ không dấu
   se("cat", "en")[0] === "🐱" && se("cat", "vi")[0] === "💇‍♀️" && se("").length === 0 && se("   ").length === 0 && se("zzqxv").length === 0,
   { en: se("cat", "en").slice(0, 3), vi: se("cat", "vi").slice(0, 3) });
 ok("ES6", "Kết quả không trùng (💅 / 💋 / 🎂 có ở 2 nhóm vẫn chỉ 1 lần)", ["mong", "son", "banh", "c", "a"].every((q) => new Set(se(q).map(bare)).size === se(q).length));
+ok("ES6b", "'laugh' / 'lol' / 'lmao' (CLDR chỉ giữ 8 từ / emoji nên rơi mất) → 😂 trong 3 đầu (EN + VI)",
+  ["laugh", "lol", "lmao"].every((q) => se(q, "en").slice(0, 3).includes("😂") && se(q, "vi").slice(0, 3).includes("😂")),
+  ["laugh", "lol", "lmao"].map((q) => se(q, "en").slice(0, 4).join("")));
 // gõ từng phím (cả xoá lùi) — mỗi lần tìm lại toàn bộ
 const keys = ["c", "ca", "cam", "cam ", "cam o", "cam on", "cam o", "cam", "t", "ti", "tim", "h", "ha", "hah", "haha", "s", "sa", "sad", "d", "do", "dog", "chó", "mèo"];
 const t1 = performance.now();

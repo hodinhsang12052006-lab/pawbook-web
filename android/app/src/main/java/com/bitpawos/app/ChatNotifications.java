@@ -11,10 +11,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
-import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
-import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -103,6 +101,13 @@ final class ChatNotifications {
     // Mức quan trọng KHÔNG đổi được sau khi tạo: giữ nguyên id kênh.
     // ---------------------------------------------------------------------------------
 
+    private static volatile boolean channelsReady = false;
+
+    /** Lần đầu trong tiến trình (service / receiver) — MainActivity luôn gọi ensureChannels. */
+    static void ensureChannelsOnce(Context ctx) {
+        if (!channelsReady) ensureChannels(ctx);
+    }
+
     static void ensureChannels(Context ctx) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
@@ -120,13 +125,6 @@ final class ChatNotifications {
         messages.enableLights(true);
         messages.setLightColor(accent);
         messages.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-        messages.setSound(
-            Settings.System.DEFAULT_NOTIFICATION_URI,
-            new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION_COMMUNICATION_INSTANT)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        );
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) messages.setAllowBubbles(true);
 
         NotificationChannel calls = new NotificationChannel(
@@ -139,13 +137,6 @@ final class ChatNotifications {
         calls.enableVibration(true);
         calls.setVibrationPattern(new long[] { 0, 600, 400, 600, 400, 600 });
         calls.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-        calls.setSound(
-            Settings.System.DEFAULT_NOTIFICATION_URI,
-            new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION_COMMUNICATION_REQUEST)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        );
 
         NotificationChannel general = new NotificationChannel(
             CHANNEL_GENERAL,
@@ -161,6 +152,7 @@ final class ChatNotifications {
         all.add(general);
         // Tạo lại kênh đã có chỉ cập nhật tên/mô tả (đổi ngôn ngữ máy), không đè lựa chọn của người dùng.
         nm.createNotificationChannels(all);
+        channelsReady = true;
     }
 
     static boolean canPost(Context ctx) {
@@ -223,7 +215,7 @@ final class ChatNotifications {
      */
     static void post(Context ctx, ChatStore.Conv c, Mode mode, ChatStore.Msg fresh) {
         if (!canPost(ctx)) return;
-        ensureChannels(ctx);
+        ensureChannelsOnce(ctx);
         String cid = c.cid;
 
         List<ChatStore.Msg> shown = c.visible();

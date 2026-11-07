@@ -164,17 +164,22 @@ for (let i = 0; i < 6; i++) {
 }
 R.check("CM1d", `Nhãn dán động trong lưới (lottie): số ô đang chạy ${JSON.stringify(playing)} — có chạy, tối đa 12`, Math.max(...playing) >= 1 && Math.max(...playing) <= 12, JSON.stringify(playing));
 
-// cuộn hết vùng cuộn (từng đoạn ~ 2/3 khung) → ảnh của MỌI mục tải được thật (naturalWidth > 0)
+// cuộn hết vùng cuộn (từng đoạn ~ 0,9 khung; ~770 sticker) → mục xa được dựng khi tới gần, ảnh của MỌI mục tải được thật
 const sections = await panel(p).locator("[data-section]").evaluateAll((els) => els.map((e) => e.getAttribute("data-section")));
 const scroller = panel(p).getByTestId("sticker-scroll");
-for (let i = 0; i < 80; i++) {
+const lazyAtStart = await panel(p).locator(".pn-stk-ph").count();
+for (let i = 0; i < 400; i++) {
   const done = await scroller.evaluate((el) => {
-    el.scrollTop += Math.round(el.clientHeight * 0.66);
+    el.scrollTop += Math.round(el.clientHeight * 0.9);
     return el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
   });
-  await p.waitForTimeout(160);
+  await p.waitForTimeout(120);
   if (done) break;
 }
+await p.waitForTimeout(600);
+const lazyLeft = await panel(p).locator(".pn-stk-ph").count();
+const cellsNow = await panel(p).locator("[data-section] [data-sticker]").count();
+R.check("CM2c", `Mục xa dựng khi tới gần: lúc mở ${lazyAtStart} ô giữ chỗ → cuộn hết còn ${lazyLeft}, ${cellsNow} ô thật`, lazyAtStart > 300 && lazyLeft === 0 && cellsNow >= 700, JSON.stringify({ lazyAtStart, lazyLeft, cellsNow }));
 await p.waitForFunction(() => [...document.querySelectorAll("[data-testid=sticker-scroll] img")].every((i) => i.getAttribute("src") && i.complete), null, { timeout: 20000 }).catch(() => {});
 const perSection = {};
 for (const key of sections) {
@@ -215,9 +220,11 @@ await p.waitForTimeout(1200);
 const barImgs = await panel(p).locator("[data-pack] img").evaluateAll((imgs) => imgs.filter((i) => { const r = i.getBoundingClientRect(); const b = i.closest("[role=tablist]").getBoundingClientRect(); return r.right > b.left && r.left < b.right; }).map((i) => i.complete && i.naturalWidth > 0));
 R.check("CM3b", "Xoá ô tìm → thanh bộ hiện lại, icon trong tầm nhìn đều tải được (kể cả bộ 3D cuối thanh)", barImgs.length >= 6 && barImgs.every(Boolean), JSON.stringify(barImgs));
 const before = await p.locator(".m-row .m-sticker-img").count();
-const picks = ["😂", "👍", "fl:nail_polish"];
+const picks = [["😂", "feelings"], ["👍", "hands"], ["fl:nail_polish", "beauty"]];
 let stayed = true;
-for (const id of picks) {
+for (const [id, pack] of picks) {
+  await panel(p).locator(`[data-pack="${pack}"]`).click();
+  await p.waitForTimeout(900);
   const cell = panel(p).locator(`[data-section]:not([data-section="recent"]):not([data-section="fav"]) [data-sticker="${id}"]`).first();
   await cell.scrollIntoViewIfNeeded();
   await cell.click();
@@ -275,7 +282,7 @@ const probe = await p.evaluate(async () => {
 const live = probe.body?.enabled === true;
 await openPanel(p);
 const gifTab = await panel(p).getByRole("tab", { name: "GIF" }).count();
-const openedOn = await panel(p).getByRole("tab", { selected: true }).innerText().catch(() => "");
+const openedOn = (await panel(p).getByRole("tab", { name: "Stickers", exact: true }).getAttribute("aria-selected").catch(() => null)) === "true" ? "Stickers" : "other";
 await panel(p).getByRole("tab", { name: "Stickers" }).click().catch(() => {});
 await panel(p).getByRole("textbox", { name: "Search stickers" }).fill("zzqxv");
 await p.waitForTimeout(500);

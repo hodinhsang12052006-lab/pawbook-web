@@ -8,6 +8,7 @@
 //   NC4  mở cuộc trò chuyện → setActiveConversation(cid) + clearConversation(cid); ẩn app → null; hiện lại → cid; đóng → null
 //   NC5  Hồ sơ → hàng "Chat bubbles" hiện trạng thái + mở Cài đặt bong bóng
 //   NC6  bản app cũ (PawNailNative chỉ có getInfo): không lỗi, không mẹo bong bóng, không hàng
+//   NC6b đã bật nhưng người dùng tắt riêng kênh "Tin nhắn" → dải "Notifications are off" → mở Cài đặt thông báo
 //   NC7  bong bóng: chỉ khung chat (không Navbar / thanh dưới / danh sách / nút quay lại / nút gọi), html[data-bubble], gửi được tin
 //   NC8  bong bóng: link hồ sơ → tải trang thật (app native bắt được), không điều hướng phía client
 //   NC9  ?c=<id> khi đang mở chat khác → chuyển đúng cuộc trò chuyện
@@ -90,7 +91,11 @@ function fakeAndroid(cfg) {
           setTimeout(() => fire("registration", { value: cfg.token }), 50);
           return Promise.resolve();
         case "PawNailNative.getInfo":
-          return Promise.resolve(cfg.legacy ? { firebase: true } : { firebase: true, sdk: cfg.sdk, bubbles: cfg.sdk >= 30, bubblePref: cfg.bubblePref, notificationsEnabled: true });
+          return Promise.resolve(
+            cfg.legacy
+              ? { firebase: true }
+              : { firebase: true, sdk: cfg.sdk, bubbles: cfg.sdk >= 30, bubblePref: cfg.bubblePref, notificationsEnabled: true, messagesChannel: cfg.messagesChannel !== false, chat: 1 }
+          );
         default:
           return Promise.resolve({});
       }
@@ -232,6 +237,22 @@ try {
     await sleep(1500);
     const row = await p.getByText("Chat bubbles").count();
     R.check("NC6", "Bản app cũ (PawNailNative chỉ có getInfo): mở chat không lỗi JS, không mẹo bong bóng, không hàng 'Chat bubbles'", tip === 0 && row === 0 && errors.length === before, JSON.stringify({ tip, row, errs: errors.slice(before) }).slice(0, 260));
+    await ctx.close();
+  }
+
+  // ---------------- NC6b: kênh "Tin nhắn" bị tắt riêng ----------------
+  {
+    const { ctx, p } = await newPage({ android: { perm: "granted", build: 3, sdk: 34, bubblePref: "all", messagesChannel: false, token: "fcmQAch" + crypto.randomBytes(20).toString("hex") } });
+    await p.goto(BASE_URL + "/messages");
+    await p.locator(".m-list").first().waitFor({ timeout: 20000 });
+    await p.evaluate(() => localStorage.setItem("pn_native_push_token", "x".repeat(30))); // đã bật từ trước
+    await p.reload();
+    const off = p.locator(".m-notify", { hasText: "Notifications are off" });
+    const shown = await visible(off, 15000);
+    if (shown) await off.getByRole("button", { name: "Settings" }).click();
+    await sleep(500);
+    const opened = (await nativeCalls(p, "openNotificationSettings")).length;
+    R.check("NC6b", "Đã bật nhưng tắt riêng kênh 'Tin nhắn' → dải 'Notifications are off' → mở Cài đặt thông báo của app", shown && opened === 1, `${shown} ${opened}`);
     await ctx.close();
   }
 

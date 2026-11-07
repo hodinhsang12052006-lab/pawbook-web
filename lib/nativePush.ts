@@ -30,6 +30,8 @@ export interface NativeNotifInfo {
   bubblePref: BubblePref;
   /** NotificationManagerCompat.areNotificationsEnabled() */
   notificationsEnabled: boolean;
+  /** Kênh "Tin nhắn" chưa bị người dùng tắt riêng (quyền thông báo vẫn "granted" khi chỉ tắt kênh). */
+  messagesChannel: boolean;
 }
 interface PawNailNativePlugin {
   getInfo(): Promise<Partial<NativeNotifInfo>>;
@@ -192,7 +194,14 @@ export async function getBubbleInfo(): Promise<NativeNotifInfo | null> {
     const i = await PawNailNative.getInfo();
     if (typeof i.sdk !== "number") return null; // bản app cũ: getInfo chỉ có firebase
     const pref = i.bubblePref === "all" || i.bubblePref === "selected" || i.bubblePref === "none" ? i.bubblePref : null;
-    return { firebase: !!i.firebase, sdk: i.sdk, bubbles: !!i.bubbles && i.sdk >= 30, bubblePref: pref, notificationsEnabled: i.notificationsEnabled !== false };
+    return {
+      firebase: !!i.firebase,
+      sdk: i.sdk,
+      bubbles: !!i.bubbles && i.sdk >= 30,
+      bubblePref: pref,
+      notificationsEnabled: i.notificationsEnabled !== false,
+      messagesChannel: i.messagesChannel !== false,
+    };
   } catch {
     return null;
   }

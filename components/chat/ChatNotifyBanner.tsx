@@ -9,7 +9,7 @@ import { useTr } from "@/lib/i18n/useTr";
 
 // Dải mời gọn ở đầu danh sách Tin nhắn — CHỈ trong app Android (web / iPhone không bao giờ thấy):
 //  - chưa bật thông báo đẩy → "Nhận thông báo tin nhắn" (bật luôn tại chỗ; lời mời chung PushPrompt im lặng ở /messages);
-//  - đã chặn thông báo → mở Cài đặt thông báo của app;
+//  - đã chặn thông báo (hoặc chỉ tắt riêng kênh "Tin nhắn" của app) → mở Cài đặt thông báo của app;
 //  - đã bật, máy Android 11+ mà bong bóng chat chưa ở "Tất cả cuộc trò chuyện" → mẹo 1 lần "Bật bong bóng chat".
 // Đóng: lời mời bật thông báo hỏi lại sau 14 ngày; mẹo bong bóng chỉ hiện 1 lần.
 type Kind = "push" | "denied" | "bubbles";
@@ -36,8 +36,11 @@ async function pickKind(): Promise<Kind | null> {
   const state = await getPushState().catch(() => "unsupported" as const);
   if (state === "off") return dismissed("push") ? null : "push";
   if (state === "denied") return dismissed("denied") ? null : "denied";
-  if (state !== "on" || dismissed("bubbles")) return null;
+  if (state !== "on") return null;
   const info = await getBubbleInfo();
+  // Quyền vẫn "granted" nhưng người dùng tắt riêng kênh "Tin nhắn" (hoặc mọi thông báo) → tin nhắn im lặng.
+  if (info && (!info.messagesChannel || !info.notificationsEnabled)) return dismissed("denied") ? null : "denied";
+  if (dismissed("bubbles")) return null;
   return info && info.sdk >= 30 && info.bubbles && info.bubblePref !== "all" ? "bubbles" : null;
 }
 

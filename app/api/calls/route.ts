@@ -8,6 +8,7 @@ import { sendPush } from "@/lib/push";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { CALL_ID_RE, CALL_TOKEN_TTL_MS, newCallId, signCallToken, verifyCallToken, type CallClaims } from "@/lib/calls/callToken";
 import { LEG_RE, chunkSerialized, isSeq, validateSignalData, type SignalEvent } from "@/lib/calls/signalWire";
+import { callEndPush, followUpFor, incomingCallPush } from "@/lib/calls/callPush";
 
 // Signaling relay for 1:1 WebRTC calls (media itself goes peer-to-peer or through TURN — never through here).
 // Every event lands on the other person's private Pusher channel "private-chat-<id>" (only its owner can subscribe,
@@ -29,6 +30,9 @@ import { LEG_RE, chunkSerialized, isSeq, validateSignalData, type SignalEvent } 
 //   signal {targetId, callId, callToken, fromLeg, toLeg, seq, kind: sdp|ice|ctl, data} → "call-signal" parts
 // Every action except offer needs the call token minted by the offer: it binds caller, callee and callId, so a
 // stranger cannot inject hang-ups or SDP into somebody else's call.
+// Push: the offer sends a 60-second, per-call "incoming call" push; when the call ends without being taken on a device
+// (caller cancel / timeout, busy, answered or declined on another device) a follow-up push with the SAME tag replaces
+// it ("Missed call from X" …) — lib/calls/callPush.ts.
 const ACTIONS = new Set(["offer", "ring", "answering", "accept", "reject", "busy", "signal"]);
 const REJECT_REASONS = new Set(["decline", "cancel", "hangup", "timeout", "media-error", "failed", "busy", "answered-elsewhere"]);
 // The caller re-rings for at most ~45 s; a token older than this can no longer ring anybody (a modified client could
@@ -124,15 +128,9 @@ export async function POST(req: Request) {
         callToken,
         callerLeg: leg,
       });
-      // Cuộc gọi luôn 1-1 → ?to=<người gọi> đúng. Kênh Android "calls" (ưu tiên cao). after(): không bị Vercel cắt giữa chừng.
-      const push = {
-        title: callType === "video" ? "Cuộc gọi video đến" : "Cuộc gọi thoại đến",
-        body: `${callerName} đang gọi cho bạn — mở PawNail để trả lời`,
-        url: `/messages?to=${userId}`,
-        tag: "pn-call",
-        channel: "calls" as const,
-        en: { title: callType === "video" ? "Incoming video call" : "Incoming call", body: `${callerName} is calling you. Open PawNail to answer.` },
-      };
+      // Cuộc gọi luôn 1-1 → ?to=<người gọi> đúng. Kênh Android "calls" (ưu tiên cao), sống 60 s, tag riêng từng cuộc gọi.
+      // after(): không bị Vercel cắt giữa chừng.
+      const push = incomingCallPush({ callId, callType, callerId: userId, callerName });
       after(() => sendPush(targetId, push).catch(() => 0));
       return NextResponse.json({ success: true, callId, callToken });
     }
@@ -143,6 +141,21 @@ export async function POST(req: Request) {
     if (!claims) return err(403, "Cuộc gọi không hợp lệ hoặc đã kết thúc.", "This call is no longer valid.");
     const iAmCaller = claims.c === userId;
     const issuedAt = claims.x - CALL_TOKEN_TTL_MS;
+    // Thông báo đẩy "cuộc gọi đến" của cuộc gọi này được THAY bằng "Cuộc gọi nhỡ…" / "Đã trả lời trên thiết bị khác…".
+    const followUp = (action: string, reason: string | null) => {
+      const f = followUpFor(action, reason, iAmCaller);
+      if (!f) return;
+      after(async () => {
+        try {
+          const callerId = claims.c;
+          const caller = await prisma.user.findUnique({ where: { id: callerId }, select: { name: true } });
+          const payload = callEndPush({ callId: claims.i, callType: claims.t === "video" ? "video" : "audio", callerId, callerName: caller?.name || "PawNail", outcome: f.outcome });
+          await sendPush(f.to === "target" ? targetId : userId, payload);
+        } catch (e) {
+          console.warn("call follow-up push failed:", e instanceof Error ? e.message : e);
+        }
+      });
+    };
 
     if (action === "signal") {
       if (limited(`call-signal:${userId}`, 240)) return err(429, "Quá nhiều tín hiệu cuộc gọi.", "Too many call signals.");
@@ -204,6 +217,7 @@ export async function POST(req: Request) {
         // Các máy KHÁC của chính mình ngừng đổ chuông (máy vừa nghe bị loại trừ bằng socket_id).
         handledElsewhere("accepted"),
       ]);
+      followUp("accept", null);
       return NextResponse.json({ success: true });
     }
 
@@ -217,6 +231,7 @@ export async function POST(req: Request) {
       // Người nhận từ chối / báo bận trên 1 máy → các máy khác của họ cũng ngừng đổ chuông.
       if (!iAmCaller && (reason === "decline" || reason === "busy" || reason === "media-error")) jobs.push(handledElsewhere(reason));
       await Promise.all(jobs);
+      followUp(action, reason);
       return NextResponse.json({ success: true });
     }
 

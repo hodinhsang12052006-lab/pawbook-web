@@ -17,7 +17,7 @@ export interface PushPayload {
   tag?: string; // cùng tag → thay thế thông báo cũ thay vì chồng thêm
   icon?: string;
   /** Bản tiếng Anh — người nhận dùng EN (mặc định) thấy bản này; người dùng VI thấy title/body. */
-  en?: { title?: string; body?: string };
+  en?: { title?: string; body?: string; stale?: { title: string; body: string } };
   /** Kênh thông báo Android cho dạng tin thường ("general" mặc định; cuộc gọi: "calls"). */
   channel?: FcmChannel;
   /**
@@ -25,6 +25,31 @@ export interface PushPayload {
    * Messenger. Nội dung ("text") lấy từ body đã theo ngôn ngữ người nhận. Web push / iPhone bỏ qua trường này.
    */
   chat?: FcmChat;
+  /**
+   * Bao lâu dịch vụ đẩy được giữ tin cho máy đang offline (giây). Mặc định 24 h. Cuộc gọi đến: 60 s (lib/calls/callPush.ts)
+   * — trước đây FCM giữ tới 28 ngày, web push 24 h → "X đang gọi cho bạn" tới muộn hàng giờ.
+   */
+  ttlSec?: number;
+  /** Mã gộp theo sự kiện (FCM collapse_key · APNs apns-collapse-id · Web Push Topic): tin chưa giao cùng mã bị tin mới thay. */
+  collapseKey?: string;
+  /** Gợi ý cho service worker: "call" (cuộc gọi đến) / "call-end" (thay / đóng thông báo cuộc gọi đó, không kêu lại). */
+  kind?: "call" | "call-end";
+  /** Cuộc gọi đến: mốc (epoch ms) sau đó thông báo "đang gọi" đã cũ → service worker hiện bản `stale` thay vào. */
+  exp?: number;
+  /** Nội dung thay thế khi thông báo cuộc gọi tới muộn (quá exp) — "Cuộc gọi nhỡ từ X". */
+  stale?: { title: string; body: string };
+  /** call-end "đã trả lời / từ chối ở máy khác": chỉ thay thông báo đang có, không tự hiện nếu đang mở PawNail. */
+  quiet?: boolean;
+}
+
+/** Web Push "Topic" header: ≤ 32 ký tự base64url (RFC 8030). */
+const WEB_PUSH_TOPIC_RE = /^[A-Za-z0-9_-]{1,32}$/;
+const DEFAULT_TTL_SEC = 60 * 60 * 24;
+
+/** Tuỳ chọn gửi web push (thuần — scripts/qa/fcm_payload_unit.mts). */
+export function webPushOptions(p: Pick<PushPayload, "ttlSec" | "collapseKey">): { TTL: number; urgency: "high"; topic?: string } {
+  const ttl = Number.isInteger(p.ttlSec) && (p.ttlSec as number) >= 0 ? (p.ttlSec as number) : DEFAULT_TTL_SEC;
+  return { TTL: ttl, urgency: "high", ...(p.collapseKey && WEB_PUSH_TOPIC_RE.test(p.collapseKey) ? { topic: p.collapseKey } : {}) };
 }
 
 let configured: boolean | null = null;
@@ -63,7 +88,7 @@ export async function sendPush(userIds: string | string[], payload: PushPayload)
     const { en, ...vi } = payload;
     if (!en) return await sendToSubs(subsAll, vi, web, android, ios);
     const locales = await getUserLocales([...new Set(subsAll.map((s) => s.userId))]);
-    const enPayload: PushPayload = { ...vi, title: en.title ?? vi.title, body: en.body ?? vi.body };
+    const enPayload: PushPayload = { ...vi, title: en.title ?? vi.title, body: en.body ?? vi.body, stale: en.stale ?? vi.stale };
     const enSubs = subsAll.filter((s) => locales.get(s.userId) !== "vi");
     const viSubs = subsAll.filter((s) => locales.get(s.userId) === "vi");
     let sent = 0;
@@ -103,9 +128,17 @@ export async function sendChatReadSync(userId: string, cid: string, prevReadAt: 
 
 type Sub = { id: string; userId: string; endpoint: string; p256dh: string; auth: string };
 
-/** Web push giữ nguyên dạng cũ (worker/index.js chỉ đọc title/body/url/tag/icon) — bỏ phần chỉ dành cho app native. */
+/**
+ * Web push giữ nguyên dạng cũ (worker/index.js đọc title/body/url/tag/icon) — bỏ phần chỉ dành cho app native. Thông báo
+ * cuộc gọi thêm kind / exp / stale / quiet (service worker cũ bỏ qua các trường lạ).
+ */
 export function webPushBody(p: Omit<PushPayload, "en">): string {
-  return JSON.stringify({ icon: p.icon || "/icons/icon-192.webp?v=b", title: clipText(p.title, 80), body: clipText(p.body, 180), url: p.url, tag: p.tag });
+  const base: Record<string, unknown> = { icon: p.icon || "/icons/icon-192.webp?v=b", title: clipText(p.title, 80), body: clipText(p.body, 180), url: p.url, tag: p.tag };
+  if (p.kind) base.kind = p.kind;
+  if (typeof p.exp === "number") base.exp = p.exp;
+  if (p.stale) base.stale = { title: clipText(p.stale.title, 80), body: clipText(p.stale.body, 180) };
+  if (p.quiet) base.quiet = true;
+  return JSON.stringify(base);
 }
 
 async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boolean, android: boolean, ios: boolean): Promise<number> {
@@ -121,7 +154,7 @@ async function sendToSubs(all: Sub[], payload: Omit<PushPayload, "en">, web: boo
     await Promise.all(
       subs.map(async (s) => {
         try {
-          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 60 * 60 * 24, urgency: "high" });
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, webPushOptions(payload));
           sent++;
         } catch (err) {
           const code = (err as { statusCode?: number }).statusCode;

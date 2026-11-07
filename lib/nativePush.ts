@@ -185,6 +185,23 @@ export async function releaseNativePush(): Promise<void> {
   chatRenderer = 0;
 }
 
+/**
+ * Gỡ các thông báo đang nằm trong khay có tag thuộc `tags` (vd thông báo "đang gọi" của 1 cuộc gọi đã nghe / từ chối).
+ * Dùng API sẵn có của plugin push (mọi bản app, kể cả versionCode 3) — thông báo Firebase vẽ có id 0 + tag.
+ */
+export async function clearNativeNotificationsByTag(tags: string[]): Promise<number> {
+  if (!isNativeApp() || !tags.length) return 0;
+  try {
+    const { P } = await plugin();
+    const { notifications } = await P.getDeliveredNotifications();
+    const mine = notifications.filter((n) => typeof n.tag === "string" && tags.includes(n.tag));
+    if (mine.length) await P.removeDeliveredNotifications({ notifications: mine });
+    return mine.length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Chỉ dọn dữ liệu chat trên máy (xoá tài khoản — máy chủ đã tự xoá token). */
 export function clearAllNative(): void {
   if (isAndroidApp()) PawNailNative.clearAll().catch(() => {});

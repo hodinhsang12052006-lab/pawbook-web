@@ -31,7 +31,17 @@ function providerToken(c: NonNullable<ReturnType<typeof cfg>>): string {
   return jwtCache.token;
 }
 
-export interface ApnsPayload { title: string; body: string; url: string; tag?: string; chat?: { cid: string } }
+export interface ApnsPayload {
+  title: string;
+  body: string;
+  url: string;
+  tag?: string;
+  chat?: { cid: string };
+  /** apns-expiration = bây giờ + ttlSec (không đặt: Apple tự quyết, có thể giữ khá lâu). Cuộc gọi: 60 s. */
+  ttlSec?: number;
+  /** apns-collapse-id (mặc định: tag) */
+  collapseKey?: string;
+}
 
 /** Gửi tới các token iPhone. Trả về token đã hết hạn (410/BadDeviceToken) để dọn khỏi DB. */
 export async function sendApns(tokens: string[], p: ApnsPayload): Promise<{ sent: number; dead: string[] }> {
@@ -74,7 +84,8 @@ export async function sendApns(tokens: string[], p: ApnsPayload): Promise<{ sent
         "apns-topic": c.topic,
         "apns-push-type": "alert",
         "apns-priority": "10",
-        ...(p.tag ? { "apns-collapse-id": p.tag.slice(0, 64) } : {}),
+        ...((p.collapseKey || p.tag) ? { "apns-collapse-id": (p.collapseKey || p.tag || "").slice(0, 64) } : {}),
+        ...(Number.isInteger(p.ttlSec) && (p.ttlSec as number) >= 0 ? { "apns-expiration": String(Math.floor(Date.now() / 1000) + (p.ttlSec as number)) } : {}),
         "content-type": "application/json",
       });
       let status = 0;

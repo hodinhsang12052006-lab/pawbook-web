@@ -21,6 +21,7 @@ import type { CallPeer, NetState, Quality } from "@/lib/calls/peer";
 import type { SignalInbox, SignalOutbox, OutboundMessage } from "@/lib/calls/signalQueue";
 import type { SignalEvent, WireCtl, WireIce } from "@/lib/calls/signalWire";
 import { createIceClient, IN_CALL_MIN_VALID_MS, type IceClient } from "@/lib/calls/iceClient";
+import { clearCallNotice } from "@/lib/calls/callNotice";
 
 const CallScreen = dynamic(() => import("@/components/chat/call/CallScreen"), {
   ssr: false,
@@ -632,6 +633,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   // ---------- incoming ----------
   const answer = useCallback(
     async (call: ActiveCall, o: { audioOnly?: boolean } = {}) => {
+      clearCallNotice(call.callId); // "X is calling you" in the tray (shown while the app / tab was in the background)
       let stream: MediaStream | null = null;
       let firstErr: unknown = null;
       const wantVideo = call.type === "video" && !o.audioOnly;
@@ -719,8 +721,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     const call = callRef.current;
     if (!call) return;
     const ph = phaseRef.current;
-    if (ph === "incoming") endCall("decline");
-    else if (ph === "outgoing") endCall("cancel");
+    if (ph === "incoming") {
+      clearCallNotice(call.callId);
+      endCall("decline");
+    } else if (ph === "outgoing") endCall("cancel");
     else if (ph === "error") teardown();
     else endCall("hangup");
   }, [endCall, teardown]);
@@ -854,7 +858,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     handled: (d) => {
       // Máy khác của chính mình đã nghe / từ chối / báo bận → máy này ngừng đổ chuông, không ghi gì. Ghi nhớ callId
       // TRƯỚC (kể cả khi máy này chưa đổ chuông): lượt đổ chuông lại đến muộn của cuộc gọi đó sẽ bị bỏ qua.
-      if (typeof d.callId === "string") markEnded(d.callId);
+      if (typeof d.callId === "string") {
+        markEnded(d.callId);
+        clearCallNotice(d.callId);
+      }
       const call = callRef.current;
       if (!call || call.isCaller || d.callId !== call.callId || phaseRef.current !== "incoming") return;
       teardown();

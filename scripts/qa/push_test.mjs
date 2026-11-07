@@ -119,10 +119,17 @@ try {
     JSON.stringify({ gif: gifPush?.p && { body: gifPush.p.body, en: gifPush.p.en }, bodies: all.map((p) => p.body), vid: vidSent.data?.message?.type, emoji: emojiPush?.p?.body }));
 
   // Cuộc gọi
-  const offer = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "video", callId: "qapush1" } });
-  const call = await waitPush(phone, (p) => p.tag === "pn-call");
-  R.check("PU9", "Cuộc gọi đến → push 'Cuộc gọi video đến' / 'Incoming video call' (theo ngôn ngữ người nhận), mở chat với người gọi", call && /Cuộc gọi video|Incoming video call/.test(call.p.title) && call.p.url === `/messages?to=${owner.userId}`, JSON.stringify(call?.p));
+  const qaCallId = "qapush" + (Date.now() % 1e6);
+  const offer = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "video", callId: qaCallId } });
+  const call = await waitPush(phone, (p) => p.tag === `pn-call-${qaCallId}` && p.kind === "call");
+  R.check("PU9", "Cuộc gọi đến → push 'Cuộc gọi video đến' / 'Incoming video call' (theo ngôn ngữ người nhận), mở chat với người gọi; tag RIÊNG của cuộc gọi, TTL 60 s, Topic call-<id>",
+    call && /Cuộc gọi video|Incoming video call/.test(call.p.title) && call.p.url === `/messages?to=${owner.userId}` && Number(call.headers.ttl) === 60 && call.headers.topic === `call-${qaCallId}` && typeof call.p.exp === "number",
+    JSON.stringify({ p: call?.p, ttl: call?.headers?.ttl, topic: call?.headers?.topic }));
   await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject", reason: "cancel", callId: offer.data?.callId, callToken: offer.data?.callToken } });
+  const missed = await waitPush(phone, (p) => p.tag === `pn-call-${qaCallId}` && p.kind === "call-end");
+  R.check("PU9b", "Người gọi huỷ → push thứ 2 CÙNG tag thay thông báo cuộc gọi: 'Cuộc gọi video nhỡ từ …' / 'Missed video call from …', giữ 24 h, cùng Topic",
+    missed && /^(Cuộc gọi video nhỡ từ|Missed video call from) /.test(missed.p.title) && missed.p.url === `/messages?to=${owner.userId}` && Number(missed.headers.ttl) === 86400 && missed.headers.topic === `call-${qaCallId}` && !missed.p.quiet,
+    JSON.stringify({ p: missed?.p, ttl: missed?.headers?.ttl, topic: missed?.headers?.topic }));
 
   // Việc gấp cùng bang
   const me = (await tech.req("/api/profile")).data;

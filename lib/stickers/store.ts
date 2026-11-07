@@ -1,6 +1,7 @@
 // Dữ liệu riêng của TỪNG NGƯỜI trên máy này (localStorage, theo userId — máy dùng chung ở tiệm không lẫn tài khoản).
 // Không bao giờ gửi lên máy chủ. Mọi lần đọc / ghi đều bọc try/catch (chế độ riêng tư, bộ nhớ bị chặn…).
 import { isKnownSticker } from "./urls";
+import { isExtFluentId } from "./manifest";
 import type { StickerId } from "./packs";
 
 const RECENT_CAP = 30;
@@ -34,17 +35,31 @@ export interface StickerStore {
   f: StickerId[];
 }
 
+/** id lưu được: trong bộ, hoặc Fluent 3D ngoài bộ (tìm thấy qua ô tìm — vẽ bằng manifest mở rộng). */
+const storable = (id: string) => isKnownSticker(id) || isExtFluentId(id);
+
 /** Gần đây + Yêu thích (bỏ id lạ / không còn trong danh mục). */
 export function readStickerStore(uid: string): StickerStore {
   const raw = readJson<Partial<StickerStore>>(stkKey(uid), {});
   return {
-    r: strings(raw.r).filter(isKnownSticker).slice(0, RECENT_CAP),
-    f: strings(raw.f).filter(isKnownSticker).slice(0, FAV_CAP),
+    r: strings(raw.r).filter(storable).slice(0, RECENT_CAP),
+    f: strings(raw.f).filter(storable).slice(0, FAV_CAP),
   };
 }
 export function pushRecentSticker(uid: string, id: StickerId): StickerStore {
   const s = readStickerStore(uid);
   const next = { ...s, r: [id, ...s.r.filter((x) => x !== id)].slice(0, RECENT_CAP) };
+  writeJson(stkKey(uid), next);
+  return next;
+}
+export function removeRecentSticker(uid: string, id: StickerId): StickerStore {
+  const s = readStickerStore(uid);
+  const next = { ...s, r: s.r.filter((x) => x !== id) };
+  writeJson(stkKey(uid), next);
+  return next;
+}
+export function clearRecentStickers(uid: string): StickerStore {
+  const next = { ...readStickerStore(uid), r: [] };
   writeJson(stkKey(uid), next);
   return next;
 }

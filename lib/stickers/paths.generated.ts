@@ -1,5 +1,5 @@
-// ĐỪNG SỬA TAY — sinh bởi scripts/stickers/build_manifest.mjs (id Fluent → đường dẫn PNG 3D trong repo microsoft/fluentui-emoji).
-// Noto Emoji Animation (Google) · CC BY 4.0 · Microsoft Fluent Emoji (3D) · MIT — xem NOTICE.
+// ĐỪNG SỬA TAY — sinh bởi scripts/stickers/build_manifest.mjs (id Fluent TRONG BỘ → đường dẫn PNG 3D trong repo microsoft/fluentui-emoji).
+// Noto Emoji Animation (Google) · CC BY 4.0 · Microsoft Fluent Emoji (3D) · MIT · Unicode CLDR 49.0.0 · Unicode License v3 — xem NOTICE.
 export const FLUENT_SHA = "1ffb34c752ecf5d402f04cfb4b392c77f57c54bc";
 
 export const FLUENT_PATH: Record<string, string> = {
@@ -44,11 +44,9 @@ export const FLUENT_PATH: Record<string, string> = {
   "fl:door": "Door/3D/door_3d.png",
   "fl:dragon": "Dragon/3D/dragon_3d.png",
   "fl:dress": "Dress/3D/dress_3d.png",
-  "fl:ear_of_corn": "Ear of corn/3D/ear_of_corn_3d.png",
   "fl:envelope": "Envelope/3D/envelope_3d.png",
   "fl:face_blowing_a_kiss": "Face blowing a kiss/3D/face_blowing_a_kiss_3d.png",
   "fl:face_holding_back_tears": "Face holding back tears/3D/face_holding_back_tears_3d.png",
-  "fl:fallen_leaf": "Fallen leaf/3D/fallen_leaf_3d.png",
   "fl:firecracker": "Firecracker/3D/firecracker_3d.png",
   "fl:fireworks": "Fireworks/3D/fireworks_3d.png",
   "fl:flexed_biceps": "Flexed biceps/Default/3D/flexed_biceps_3d_default.png",
@@ -87,7 +85,6 @@ export const FLUENT_PATH: Record<string, string> = {
   "fl:lollipop": "Lollipop/3D/lollipop_3d.png",
   "fl:lotion_bottle": "Lotion bottle/3D/lotion_bottle_3d.png",
   "fl:love_letter": "Love letter/3D/love_letter_3d.png",
-  "fl:maple_leaf": "Maple leaf/3D/maple_leaf_3d.png",
   "fl:megaphone": "Megaphone/3D/megaphone_3d.png",
   "fl:memo": "Memo/3D/memo_3d.png",
   "fl:mirror": "Mirror/3D/mirror_3d.png",
@@ -96,13 +93,11 @@ export const FLUENT_PATH: Record<string, string> = {
   "fl:money_bag": "Money bag/3D/money_bag_3d.png",
   "fl:monkey": "Monkey/3D/monkey_3d.png",
   "fl:moon_cake": "Moon cake/3D/moon_cake_3d.png",
-  "fl:mushroom": "Mushroom/3D/mushroom_3d.png",
   "fl:mx_claus": "Mx claus/Default/3D/mx_claus_3d_default.png",
   "fl:nail_polish": "Nail polish/Default/3D/nail_polish_3d_default.png",
   "fl:ok_hand": "Ok hand/Default/3D/ok_hand_3d_default.png",
   "fl:party_popper": "Party popper/3D/party_popper_3d.png",
   "fl:partying_face": "Partying face/3D/partying_face_3d.png",
-  "fl:pie": "Pie/3D/pie_3d.png",
   "fl:pink_heart": "Pink heart/3D/pink_heart_3d.png",
   "fl:poultry_leg": "Poultry leg/3D/poultry_leg_3d.png",
   "fl:pushpin": "Pushpin/3D/pushpin_3d.png",
@@ -124,6 +119,7 @@ export const FLUENT_PATH: Record<string, string> = {
   "fl:santa_claus": "Santa claus/Default/3D/santa_claus_3d_default.png",
   "fl:scarf": "Scarf/3D/scarf_3d.png",
   "fl:shaved_ice": "Shaved ice/3D/shaved_ice_3d.png",
+  "fl:sheaf_of_rice": "Sheaf of rice/3D/sheaf_of_rice_3d.png",
   "fl:shopping_bags": "Shopping bags/3D/shopping_bags_3d.png",
   "fl:skull": "Skull/3D/skull_3d.png",
   "fl:sleeping_face": "Sleeping face/3D/sleeping_face_3d.png",

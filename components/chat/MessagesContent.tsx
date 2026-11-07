@@ -43,6 +43,7 @@ import { chatKeyOf, migrateLegacyWallpaper, resolveChoice, type WpRender } from 
 import { useWallpaperRender, useWpState } from "./useChatWallpaper";
 import { mediaPreview } from "@/lib/chat/preview";
 import { readMediaTab } from "@/lib/stickers/store";
+import { probeGifs, useGifEnabled } from "@/lib/chat/gifAvailability";
 import { guessMarketInBrowser, readMarketCookie } from "@/lib/market";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -182,6 +183,8 @@ export default function MessagesContent({
   const [showGifs, setShowGifs] = useState(false);
   const [chatPanelTab, setChatPanelTab] = useState<"emoji" | "sticker" | "gif">("emoji");
   const [gifHandoff, setGifHandoff] = useState<string | undefined>(undefined); // "Tìm GIF …" từ tab Nhãn dán
+  // GIF chỉ có khi máy chủ có khoá GIPHY / Tenor — chưa có thì ẩn MỌI lối vào GIF (tab, menu "+", "Tìm GIF …")
+  const gifOn = useGifEnabled();
   // Thị trường cho bộ nhãn dán theo mùa: tài khoản → cookie → đoán theo trình duyệt → Mỹ
   const stickerMarket = useMemo<"US" | "AU">(() => {
     const m = currentUser?.market;
@@ -1514,7 +1517,13 @@ export default function MessagesContent({
   useEffect(() => {
     const el = composerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => el.parentElement?.style.setProperty("--m-composer-h", `${el.offsetHeight}px`));
+    // Khung soạn tin cao thêm (bảng Emoji / Nhãn dán / GIF nằm TRONG khung trên điện thoại, ô nhập nhiều dòng…) → khung tin
+    // co lại; đang ở cuối đoạn chat thì giữ dính đáy để tin vừa gửi không bị khuất.
+    const ro = new ResizeObserver(() => {
+      el.parentElement?.style.setProperty("--m-composer-h", `${el.offsetHeight}px`);
+      const sc = scrollContainerRef.current;
+      if (sc && isNearBottomRef.current && !pendingScrollAdjustRef.current) sc.scrollTop = sc.scrollHeight;
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, [activeChat?.id, isActiveChatBlocked]);
@@ -1527,6 +1536,12 @@ export default function MessagesContent({
     setJump({ show: false, unseen: 0 });
   }, []);
   useEffect(() => { jumpShownRef.current = false; setJump({ show: false, unseen: 0 }); }, [activeKey]);
+
+  // Mở 1 cuộc trò chuyện → hỏi trước GIF có dùng được không (1 lần / phiên) để menu "+" và bảng biểu tượng hiện đúng ngay.
+  const hasActiveChat = !!activeChat;
+  useEffect(() => {
+    if (hasActiveChat) probeGifs();
+  }, [hasActiveChat]);
 
   // Đang mở chat 1-1 → tải sẵn bộ gọi lúc rảnh để bấm gọi là đổ chuông/thông ngay.
   useEffect(() => {
@@ -2078,12 +2093,13 @@ export default function MessagesContent({
               )}
               {/* đang gõ → ẩn thanh gợi ý cho ô nhập + bàn phím đủ chỗ (bấm gợi ý xong cũng ẩn: đã dùng).
                   Chờ tin MỚI của cuộc trò chuyện nạp xong (không dùng bản lưu trên máy) — không thì thoáng hiện gợi ý theo tin cũ rồi mới đổi. */}
-              {!recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && established && !assistOpen && (
+              {/* Bảng Emoji / Nhãn dán / GIF đang mở → ẩn hàng gợi ý (không chen giữa bảng và ô nhập, giữ chỗ cho tin nhắn) */}
+              {!panelOpen && !recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && established && !assistOpen && (
                 <button type="button" onClick={() => setAssistOpen(true)} aria-expanded={false} className="mb-2 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] font-semibold text-[var(--m-text-2)] ring-1 ring-white/[0.08]">
                   <SparklesIcon className="h-3.5 w-3.5" aria-hidden />{tr("Gợi ý", "Suggest")}
                 </button>
               )}
-              {!recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && (!established || assistOpen) && (
+              {!panelOpen && !recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && (!established || assistOpen) && (
                 <ChatAssist
                   me={{ id: currentUser.id, role: currentUser.role, market: currentUser.market }}
                   partner={{ id: activeChat.id, role: activeChat.role, isGroup: !!activeChat.isGroup }}
@@ -2127,7 +2143,7 @@ export default function MessagesContent({
                   onClick={() => { setAttachOpen((v) => !v); setShowEmoji(false); }}
                   aria-expanded={attachOpen}
                   aria-label={CS.attach()}
-                  title={tr("Ảnh, ghi âm, GIF", "Photo, voice, GIF")}
+                  title={gifOn === true ? tr("Ảnh, ghi âm, GIF", "Photo, voice, GIF") : tr("Ảnh, ghi âm", "Photo, voice")}
                   className="m-cbtn"
                 >
                   <PlusIcon className={`h-6 w-6 transition-transform duration-150 motion-reduce:transition-none ${attachOpen ? "rotate-45" : ""}`} />
@@ -2140,10 +2156,12 @@ export default function MessagesContent({
                         <span><ImageIcon className="h-[22px] w-[22px]" /></span>
                         {tr("Gửi ảnh hoặc video", "Send a photo or video")}
                       </button>
-                      <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); inputRef.current?.blur(); setGifHandoff(undefined); setShowEmoji(true); setChatPanelTab("gif"); setShowGifs(true); }}>
-                        <span className="text-[13px] font-semibold">GIF</span>
-                        {tr("Chèn ảnh động GIF", "Insert GIF")}
-                      </button>
+                      {gifOn === true && (
+                        <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); inputRef.current?.blur(); setGifHandoff(undefined); setShowEmoji(true); setChatPanelTab("gif"); setShowGifs(true); }}>
+                          <span className="text-[13px] font-semibold">GIF</span>
+                          {tr("Chèn ảnh động GIF", "Insert GIF")}
+                        </button>
+                      )}
                       {(["TECHNICIAN", "OWNER", "ADMIN"].includes(currentUser?.role) || clientChat) && !activeChat?.isGroup ? (
                         <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); handleCloseMediaPanel(); setStudioOpen(true); }}>
                           <span><SparklesIcon className="h-[22px] w-[22px]" /></span>
@@ -2193,7 +2211,9 @@ export default function MessagesContent({
                     onClick={() => {
                       if (showEmoji) { handleCloseMediaPanel(); return; }
                       // mở đúng tab dùng lần trước (theo người); đang gõ → ẩn bàn phím cho bảng hiện đủ
-                      const last = currentUser?.id ? readMediaTab(currentUser.id) : null;
+                      const saved = currentUser?.id ? readMediaTab(currentUser.id) : null;
+                      // tab nhớ là GIF nhưng GIF chưa dùng được → mở Nhãn dán
+                      const last = saved === "gif" && gifOn !== true ? "sticker" : saved;
                       setChatPanelTab(last ?? "emoji");
                       setGifHandoff(undefined);
                       inputRef.current?.blur();

@@ -1,4 +1,5 @@
-// Từ khoá tìm sticker tiếng Việt (viết tay). So khớp KHÔNG DẤU (foldVi): "cam on" = "cảm ơn" = "cám ơn".
+// Từ khoá tìm sticker tiếng Việt (viết tay) — BỔ SUNG cho tên + từ khoá Unicode CLDR tiếng Việt (manifest): cụm hay gõ trong
+// tiệm (cảm ơn, đặt lịch, lì xì…) và tên bộ. So khớp KHÔNG DẤU (foldVi): "cam on" = "cảm ơn" = "cám ơn".
 // Giá trị: id sticker, hoặc "pack:<id bộ>" = cả bộ (kể cả bộ theo mùa đang ngoài mùa).
 import { flId, type StickerId } from "./packs";
 
@@ -8,6 +9,7 @@ const ENTRIES: [keys: string[], targets: ViTarget[]][] = [
   [["cảm ơn", "cám ơn", "thank", "thanks"], ["pack:thanks", "🙏"]],
   [["yêu", "thương", "tim", "love"], ["pack:hearts", "pack:love"]],
   [["móng", "nail", "sơn", "sơn gel", "làm móng"], ["💅", flId("Nail polish"), "pack:beauty"]],
+  [["lấp lánh", "sang chảnh", "glam"], ["pack:glam"]],
   [["đẹp", "làm đẹp", "son", "môi"], ["pack:beauty"]],
   [["chúc mừng", "mừng", "congrats"], ["pack:celebrate", "pack:party"]],
   [["sinh nhật"], ["🎂", flId("Birthday cake"), flId("Cupcake")]],
@@ -28,7 +30,7 @@ const ENTRIES: [keys: string[], targets: ViTarget[]][] = [
   [["trung thu"], ["pack:midautumn"]],
   [["phụ nữ", "8/3", "20/10"], ["pack:women"]],
   [["mẹ"], ["pack:mothers_day"]],
-  [["thú cưng", "mèo", "chó"], ["pack:animals"]],
+  [["thú cưng", "pet"], ["😺", "😻", "🐱", "🐕", "🐾", "🐹", "🐰", "🦜"]],
   [["ăn", "đói", "uống"], ["pack:food"]],
   [["tiệc", "party"], ["pack:party", "pack:celebrate"]],
   [["công việc", "làm việc"], ["pack:work"]],

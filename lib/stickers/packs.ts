@@ -1,5 +1,7 @@
-// Bộ nhãn dán (sticker) của Messenger — viết tay. KHÔNG import gì: scripts/stickers/build_manifest.mjs nạp thẳng file
+// Bộ nhãn dán (sticker) của Messenger — phần VIẾT TAY. KHÔNG import gì: scripts/stickers/build_manifest.mjs nạp thẳng file
 // này bằng Node (type stripping) để kiểm từng mục có thật trên CDN trước khi sinh manifest.
+// Danh mục đầy đủ (mọi emoji động Noto, xếp theo độ phổ biến) do build_manifest.mjs nối thêm vào cuối các bộ hoạt hình
+// (lib/stickers/catalog.generated.ts); app dùng lib/stickers/catalog.ts (bộ viết tay + phần sinh) — KHÔNG dùng thẳng file này.
 //
 // Nguồn (chỉ 2 bộ có giấy phép mở, xem NOTICE):
 //  - Noto Emoji Animation (Google, CC BY 4.0): id = chính ký tự emoji ("😂") → mọi tin STICKER cũ vẫn hợp lệ.
@@ -51,13 +53,38 @@ const pack = (id: string, label: [string, string], kind: PackKind, items: Sticke
 });
 
 // ---- Hoạt hình (Noto) ----
-export const ANIM_PACKS: StickerPack[] = [
+// Phần đầu của mỗi bộ là tuyển chọn tay; build_manifest.mjs nối THÊM mọi emoji động còn lại của danh mục Noto (bỏ màu da,
+// xếp theo độ phổ biến) theo NOTO_FILL bên dưới → không bộ nào trùng mục, cả 611 emoji động đều có chỗ.
+// "Lấp lánh" (Glam) đứng đầu: bộ đúng chất tiệm nail, toàn hình động (mọi mục đã có trong danh mục Noto Emoji Animation).
+export const HAND_ANIM_PACKS: StickerPack[] = [
+  pack("glam", ["Lấp lánh", "Glam"], "anim", g("💅 💍 💎 👑 💋 🌹 💐 🌷 🌸 🦋 ✨ 🫧 💖 💃 📸 🎁 💸 ⏰"), "💅"),
   pack("feelings", ["Cảm xúc", "Feelings"], "anim", g("😂 🤣 🥹 🥰 😍 😘 😭 🥺 😡 😱 🤯 🤩 🥳 😎 🤔 🙄 😴 🤗 🤭 😳 😅 😊 😇 🥲 😮 💀 🙈 🫠 😉 😋 😜 🤪 😏 😬 🤤 🥱 😤 🫡 🫣 😵‍💫 🤧 😷 🥶 🥵 😈"), "😂"),
-  pack("hands", ["Cử chỉ", "Hands"], "anim", g("👍 👎 👏 🙌 🙏 🫶 👋 🤝 💪 🤌 ✌️ 🤞 👌 🫰 ✍️ 💅 🤙 👀 🫵 ☝️"), "👍"),
-  pack("hearts", ["Tim & lấp lánh", "Hearts & sparkle"], "anim", g("❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🩷 💔 ❤️‍🔥 💕 💞 💖 💘 💝 💯 ✨ 🔥 ⭐ 🌟 💫 🌈 💥"), "❤️"),
-  pack("party", ["Tiệc tùng", "Party"], "anim", g("🎉 🎊 🥳 🎁 🎈 🍾 🥂 🎂 🎆 🪩 🪅 🏆 🥇 🎓 🍀"), "🎉"),
-  pack("animals", ["Thú cưng", "Animals"], "anim", g("😺 😹 😻 🐱 🐕 🦊 🐼 🦄 🦁 🐧 🦉 🐻 🐣 🐥 🦋 🐾 🦘 🐉 🐢 🐙 🐬 🐳 🐝 🐌"), "😺"),
+  pack("hands", ["Cử chỉ & con người", "Hands & people"], "anim", g("👍 👎 👏 🙌 🙏 🫶 👋 🤝 💪 🤌 ✌️ 🤞 👌 🫰 ✍️ 🤙 👀 🫵 ☝️"), "👍"),
+  pack("hearts", ["Tim & lấp lánh", "Hearts & sparkle"], "anim", g("❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🩷 💔 ❤️‍🔥 💕 💞 💘 💝 💯 🔥 ⭐ 🌟 💫 🌈 💥"), "❤️"),
+  pack("party", ["Tiệc & hoạt động", "Party & activities"], "anim", g("🎉 🎊 🥳 🎈 🍾 🥂 🎂 🎆 🪩 🪅 🏆 🥇 🎓 🍀"), "🎉"),
+  pack("animals", ["Động vật & thiên nhiên", "Animals & nature"], "anim", g("😺 😹 😻 🐱 🐕 🦊 🐼 🦄 🦁 🐧 🦉 🐻 🐣 🐥 🐾 🦘 🐉 🐢 🐙 🐬 🐳 🐝 🐌"), "😺"),
   pack("food", ["Ăn uống", "Food & drink"], "anim", g("☕ 🧋 🍜 🍕 🍔 🍩 🍪 🍓 🍉 🥑 🌮 🍿 🍷 🍦"), "🧋"),
+  pack("travel", ["Du lịch & nơi chốn", "Travel & places"], "anim", g("✈️ 🚀 🏠 🚗"), "✈️"),
+  pack("objects", ["Đồ vật", "Objects"], "anim", g("💡 🎶"), "💡"),
+  pack("symbols", ["Biểu tượng", "Symbols"], "anim", g("💬 ✅ ❗ ❓ 🆗 🆒 🆕 ♾️"), "💬"),
+];
+
+/**
+ * Nối phần còn lại của danh mục Noto Emoji Animation vào bộ nào (build_manifest.mjs). Thứ tự xét: từ trên xuống, khớp
+ * đầu tiên thắng. cat = danh mục trong api.json của Noto; group = nhóm Unicode (theo metadata Fluent của cùng ký tự);
+ * name = tên CLDR tiếng Anh.
+ */
+export const NOTO_FILL: { pack: string; cat: string[]; group?: string; name?: RegExp }[] = [
+  { pack: "hearts", cat: ["Smileys and emotions"], name: /(^|\s)heart/ },
+  { pack: "hands", cat: ["Smileys and emotions"], group: "People & Body" },
+  { pack: "hands", cat: ["People"] },
+  { pack: "feelings", cat: ["Smileys and emotions"] },
+  { pack: "animals", cat: ["Animals and nature"] },
+  { pack: "food", cat: ["Food and drink"] },
+  { pack: "party", cat: ["Activities and events"] },
+  { pack: "travel", cat: ["Travel and places"] },
+  { pack: "objects", cat: ["Objects"] },
+  { pack: "symbols", cat: ["Symbols", "Flags"] },
 ];
 
 // ---- 3D (Fluent) ----
@@ -74,8 +101,10 @@ export const THREE_D_PACKS: StickerPack[] = [
 const WOMEN_ITEMS = [...g("💐 🌹 🌷"), ...fl("Bouquet", "Tulip", "Rose", "Sunflower", "Woman", "Crown", "Heart with ribbon", "Wrapped gift", "Smiling face with hearts", "Sparkles")];
 export const SEASON_PACKS: StickerPack[] = [
   pack("halloween", ["Halloween", "Halloween"], "season", [...g("🎃 👻"), ...fl("Jack-o-lantern", "Ghost", "Bat", "Spider web", "Candy", "Lollipop", "Skull", "Black cat")], undefined, "halloween"),
-  pack("thanksgiving_us", ["Lễ Tạ ơn", "Thanksgiving"], "season", fl("Turkey", "Fallen leaf", "Maple leaf", "Pie", "Ear of corn", "Poultry leg", "Folded hands", "Smiling face with hearts", "Leaf fluttering in wind"), undefined, "thanksgiving_us"),
-  pack("fall_us", ["Mùa thu", "Fall"], "season", [...g("🍂 🍁"), ...fl("Fallen leaf", "Maple leaf", "Hot beverage", "Chestnut", "Mushroom", "Scarf", "Pie", "Leaf fluttering in wind")], undefined, "fall_us"),
+  // Noto (hình động) đứng đầu; gà tây chỉ có bản 3D (Noto Emoji Animation không có 🦃)
+  pack("thanksgiving_us", ["Lễ Tạ ơn", "Thanksgiving"], "season", [...g("🥧 🌽 🍂 🍁"), ...fl("Turkey", "Poultry leg", "Leaf fluttering in wind", "Folded hands", "Smiling face with hearts")], undefined, "thanksgiving_us"),
+  // Mùa thu hiện SAU Lễ Tạ ơn (tháng 11 ở Mỹ) — mục đã có ở bộ trước tự ẩn (seasons.ts), nên giữ thêm vài mục riêng
+  pack("fall_us", ["Mùa thu", "Fall"], "season", [...g("🍂 🍁 🍄 🍎 ☕ 🦔"), ...fl("Chestnut", "Scarf", "Sheaf of rice", "Jack-o-lantern", "Leaf fluttering in wind")], undefined, "fall_us"),
   pack("spring_au", ["Mùa xuân", "Spring"], "season", [...g("🌸 🌷"), ...fl("Sunflower", "Blossom", "Tulip", "Hibiscus", "Sun", "Butterfly", "Honeybee", "Beach with umbrella", "Ice cream", "Tropical drink")], undefined, "spring_au"),
   pack("christmas_us", ["Giáng sinh", "Christmas"], "season", [...g("❄️ ⛄ ☃️"), ...fl("Christmas tree", "Santa claus", "Snowman", "Snowman without snow", "Snowflake", "Wrapped gift", "Bell", "Deer", "Gloves", "Candle", "Cookie", "Hot beverage", "Star", "Mx claus")], undefined, "christmas_us"),
   pack("christmas_au", ["Giáng sinh mùa hè", "Summer Christmas"], "season", fl("Christmas tree", "Santa claus", "Beach with umbrella", "Sun", "Watermelon", "Shaved ice", "Crab", "Kangaroo", "Koala", "Sunflower", "Tropical drink"), undefined, "christmas_au"),
@@ -96,15 +125,19 @@ export const TET_ZODIAC: Record<number, StickerId> = {
   2030: flId("Dog"),
 };
 
-/** Sticker của bộ cũ (trước 11/2026) không còn trong bộ nào — vẫn vẽ được tin cũ + tìm được, nhưng không hiện thành bộ. */
-export const LEGACY_IDS: StickerId[] = g("💸");
+/**
+ * Sticker của bộ cũ (MOCK_STICKERS, 05/07 → 12/10/2026) — tin cũ vẫn vẽ được + máy chủ vẫn nhận. Mục nào có trong danh mục
+ * Noto đã nằm trong 1 bộ; 🐶 và 💼 KHÔNG có bản động Noto → tin cũ vẽ bằng emoji chữ 64px (MessageRow, preview.ts).
+ */
+export const LEGACY_IDS: StickerId[] = g("💸 🚀 💎 🚗 🛠️");
 
-export const ALL_PACKS: StickerPack[] = [...SEASON_PACKS, ...ANIM_PACKS, ...THREE_D_PACKS];
+/** Bộ viết tay (chưa nối phần sinh) — build_manifest.mjs dùng để kiểm + sinh dữ liệu. App: lib/stickers/catalog.ts. */
+export const HAND_PACKS: StickerPack[] = [...SEASON_PACKS, ...HAND_ANIM_PACKS, ...THREE_D_PACKS];
 
-/** Mọi id có trong ít nhất 1 bộ (kể cả bộ mùa + con giáp) hoặc trong LEGACY_IDS — đây là danh sách máy chủ chấp nhận. */
-export function allStickerIds(): StickerId[] {
+/** Mọi id viết tay (mọi bộ + con giáp + LEGACY_IDS). */
+export function handStickerIds(): StickerId[] {
   const out = new Set<StickerId>();
-  for (const p of ALL_PACKS) {
+  for (const p of HAND_PACKS) {
     out.add(p.icon);
     for (const i of p.items) out.add(i);
   }

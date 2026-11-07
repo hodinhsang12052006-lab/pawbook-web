@@ -19,6 +19,7 @@ import {
   photoRender,
   presetRender,
   prunePhotos,
+  removePhoto,
   resolveChoice,
   validChoice,
   writeWpState,
@@ -26,12 +27,14 @@ import {
   type WpRender,
   type WpState,
 } from "@/lib/chatWallpapers";
-import { gcLocalImages, isAcceptableImage, processWallpaperImage, putLocalImage } from "@/lib/localImageStore";
+import { deleteLocalImage, gcLocalImages, isAcceptableImage, processWallpaperImage, putLocalImage } from "@/lib/localImageStore";
 import { cachePhotoUrl, cachedPhotoUrl, usePhotoUrl } from "./useChatWallpaper";
 
 // Bảng chọn hình nền đoạn chat. Thẻ xem trước THẬT (bong bóng thật của Messenger trên nền đang chọn) + khung chat phía
 // sau đổi ngay khi chạm 1 ô, nhưng chỉ LƯU khi bấm "Áp dụng" (Huỷ / đóng = trả lại như cũ). "Ảnh của bạn": ảnh trong máy,
 // xử lý trên máy (xoay đúng, ≤ 1600px, bỏ EXIF), lưu IndexedDB — không tải lên. Không phủ mờ / làm tối vùng chat phía trên.
+// Bố cục: khối trên (tiêu đề, thẻ xem trước, Độ tối / Làm mờ, Đoạn chat này | Mọi đoạn chat) đứng yên, chỉ các ô nền cuộn
+// → thẻ xem trước luôn thấy khi chọn. Ô "Thêm ảnh" + ảnh đã lưu (có nút × xoá) nằm đầu lưới 4 cột, cùng cỡ ô nền.
 type Mode = "this" | "all";
 
 export default function WallpaperSheet({
@@ -169,8 +172,27 @@ export default function WallpaperSheet({
     writeWpState(userId, s);
   };
   const cancel = () => {
+    // ảnh vừa chọn nhưng không Áp dụng → xoá khỏi máy ngay (không đợi lần Áp dụng sau)
+    if (Object.keys(draft).some((id) => !state.photos?.[id])) gcLocalImages(userId, new Set(Object.keys(state.photos ?? {})));
     onPreview(null);
     onClose();
+  };
+  // Xoá 1 ảnh đã lưu: khỏi máy + mọi chỗ đang dùng ảnh đó (về nền chung / mặc định)
+  const deletePhoto = (id: string) => {
+    const committed = !!state.photos?.[id];
+    const without = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== id));
+    setDraft(without);
+    setOriginals(without);
+    let next = state;
+    if (committed) {
+      next = removePhoto(state, id);
+      writeWpState(userId, next);
+    }
+    deleteLocalImage(userId, id);
+    if (selected === `photo:${id}`) {
+      const fallback = mode === "this" ? resolveChoice(next, chatKey, chat.conversationId) : validChoice(next, next.all) ? next.all! : "default";
+      setSelected(photoIdOf(fallback) === id ? "default" : fallback);
+    }
   };
   const canReset = mode === "this" ? hasOwnChoice(state, chatKey, chat.conversationId) : !!state.all;
 
@@ -259,18 +281,7 @@ export default function WallpaperSheet({
           ))}
         </div>
 
-        <div className="mt-3">
-          <div className="grid grid-cols-4 gap-2.5">
-            <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="pn-wp-tile" aria-label={tr("Ảnh của bạn", "Your photo")} data-testid="wp-photo-tile">
-              <span className="pn-wp-swatch flex items-center justify-center bg-white/[0.05]">
-                {busy ? <Loader2 className="h-6 w-6 animate-spin text-[#c0b2bc]" /> : <ImagePlus className="h-6 w-6 text-[#c0b2bc]" />}
-              </span>
-              <span className="pn-wp-label">{tr("Ảnh của bạn", "Your photo")}</span>
-            </button>
-            {photoIds.map((id, i) => (
-              <PhotoTile key={id} uid={userId} id={id} n={photoIds.length - i} selected={selected === `photo:${id}`} onPick={() => setSelected(`photo:${id}`)} />
-            ))}
-          </div>
+        <div className="pn-wp-scroll custom-scrollbar" data-testid="wp-scroll">
           <input
             ref={fileRef}
             type="file"
@@ -283,10 +294,21 @@ export default function WallpaperSheet({
               pickFile(f);
             }}
           />
-          {WALLPAPER_GROUPS.map((g) => (
-            <section key={g.id} className="mt-3">
+          {WALLPAPER_GROUPS.map((g, gi) => (
+            <section key={g.id} className={gi ? "mt-3" : ""}>
               <h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[#a69ba4]">{tr(g.vi, g.en)}</h4>
               <div className="grid grid-cols-4 gap-2.5">
+                {gi === 0 && (
+                  <>
+                    <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="pn-wp-tile" aria-label={tr("Thêm ảnh của bạn", "Add your photo")} data-testid="wp-photo-tile">
+                      <span className="pn-wp-swatch pn-wp-add">{busy ? <Loader2 className="h-7 w-7 animate-spin" /> : <ImagePlus className="h-7 w-7" />}</span>
+                      <span className="pn-wp-label">{tr("Thêm ảnh", "Add photo")}</span>
+                    </button>
+                    {photoIds.map((id, i) => (
+                      <PhotoTile key={id} uid={userId} id={id} n={photoIds.length - i} selected={selected === `photo:${id}`} onPick={() => setSelected(`photo:${id}`)} onDelete={() => deletePhoto(id)} />
+                    ))}
+                  </>
+                )}
                 {CHAT_WALLPAPERS.filter((w) => w.group === g.id).map((w) => (
                   <button key={w.id} type="button" aria-pressed={selected === w.id} aria-label={tr(w.vi, w.en)} data-wp={w.id} onClick={() => setSelected(w.id)} className="pn-wp-tile">
                     <span className={`pn-wp-swatch ${selected === w.id ? "pn-wp-on" : ""}`} style={w.pattern ? { background: w.swatch, backgroundSize: w.swatchSize ?? "60px 60px, auto" } : { background: w.swatch }}>
@@ -298,11 +320,11 @@ export default function WallpaperSheet({
               </div>
             </section>
           ))}
-        </div>
 
-        <p className="mt-4 text-[12px] leading-[18px] text-[#a69ba4]">
-          {tr("Chỉ đổi trên máy này — người kia không thấy. Ảnh của bạn không được tải lên.", "Only on this device — the other person won't see it. Your photo is never uploaded.")}
-        </p>
+          <p className="mt-4 text-[12px] leading-[18px] text-[#a69ba4]">
+            {tr("Chỉ đổi trên máy này — người kia không thấy. Ảnh của bạn không được tải lên.", "Only on this device — the other person won't see it. Your photo is never uploaded.")}
+          </p>
+        </div>
 
         <div className="pn-wp-actions">
           {canReset ? (
@@ -342,16 +364,23 @@ export default function WallpaperSheet({
   );
 }
 
-function PhotoTile({ uid, id, n, selected, onPick }: { uid: string; id: string; n: number; selected: boolean; onPick: () => void }) {
+function PhotoTile({ uid, id, n, selected, onPick, onDelete }: { uid: string; id: string; n: number; selected: boolean; onPick: () => void; onDelete: () => void }) {
   useTr();
   const url = usePhotoUrl(uid, id);
   const label = tr(`Ảnh ${n}`, `Photo ${n}`);
   return (
-    <button type="button" aria-pressed={selected} aria-label={label} onClick={onPick} className="pn-wp-tile" data-wp-photo={id}>
-      <span className={`pn-wp-swatch ${selected ? "pn-wp-on" : ""}`} style={url ? { backgroundImage: `url("${url}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
-        {selected && <Check className="pn-wp-check" />}
-      </span>
-      <span className="pn-wp-label">{label}</span>
-    </button>
+    <div className="pn-wp-tile" data-wp-photo={id}>
+      <button type="button" aria-pressed={selected} aria-label={label} onClick={onPick} className="flex w-full flex-col items-center gap-1">
+        <span className={`pn-wp-swatch ${selected ? "pn-wp-on" : ""}`} style={url ? { backgroundImage: `url("${url}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
+          {selected && <Check className="pn-wp-check" />}
+        </span>
+        <span className="pn-wp-label">{label}</span>
+      </button>
+      <button type="button" onClick={onDelete} aria-label={tr(`Xoá ${label.toLowerCase()}`, `Delete ${label.toLowerCase()}`)} className="pn-wp-del" data-testid="wp-photo-delete">
+        <span>
+          <X className="h-3.5 w-3.5" aria-hidden />
+        </span>
+      </button>
+    </div>
   );
 }

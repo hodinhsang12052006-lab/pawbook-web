@@ -9,10 +9,13 @@ import { pushEmojiRecent, readEmojiRecent, writeMediaTab } from "@/lib/stickers/
 import type { StickerMarket } from "@/lib/stickers/seasons";
 import StickerTab from "./StickerTab";
 import GifTab, { type GifItem } from "./GifTab";
+import { probeGifs, useGifEnabled } from "@/lib/chat/gifAvailability";
 
 // Bảng chèn biểu tượng (như Messenger / Telegram): Emoji (chia nhóm + "Gần đây") · Nhãn dán · GIF.
 // Bảng nằm trên ô nhập; gửi nhãn dán / GIF xong bảng VẪN MỞ. Đóng: X, Esc, chạm ra ngoài, nút Back (MessagesContent).
 // Tab đang dùng nhớ theo người (pn_media_tab:<userId>); emoji gần đây theo người (pn_emoji_recent:v1:<userId>).
+// GIF chỉ hiện khi máy chủ có khoá GIPHY / Tenor (lib/chat/gifAvailability.ts — hỏi 1 lần / phiên): chưa có → không có tab
+// GIF, không có nút "Tìm GIF …", tab nhớ là GIF thì mở Nhãn dán.
 export type MediaTab = "emoji" | "sticker" | "gif";
 
 export default function MediaPicker({
@@ -45,9 +48,17 @@ export default function MediaPicker({
   const [recent, setRecent] = useState<string[]>(() => (typeof window === "undefined" ? [] : readEmojiRecent(userId)));
   const [group, setGroup] = useState<string>(() => (recent.length ? "recent" : EMOJI_GROUPS[0].id));
   const scrollRef = useRef<HTMLDivElement>(null);
+  const gifOn = useGifEnabled();
   useEffect(() => {
-    writeMediaTab(userId, tab);
-  }, [userId, tab]);
+    if (gifOn === null) probeGifs();
+  }, [gifOn]);
+  // GIF tắt (hoặc vừa phát hiện khoá sai) mà đang ở tab GIF → sang Nhãn dán
+  useEffect(() => {
+    if (tab === "gif" && gifOn === false) onTab("sticker");
+  }, [tab, gifOn, onTab]);
+  useEffect(() => {
+    if (tab !== "gif" || gifOn === true) writeMediaTab(userId, tab);
+  }, [userId, tab, gifOn]);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || document.querySelector("[data-sticker-peek]")) return;
@@ -84,7 +95,7 @@ export default function MediaPicker({
       role="tab"
       aria-selected={tab === t}
       onClick={() => onTab(t)}
-      className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${tab === t ? "bg-[#f7eef3] text-[#1c1521]" : "text-[#c0b2bc] hover:bg-white/5 hover:text-white"}`}
+      className={`pn-hit rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${tab === t ? "bg-[#f7eef3] text-[#1c1521]" : "text-[#c0b2bc] hover:bg-white/5 hover:text-white"}`}
     >
       {label}
     </button>
@@ -96,9 +107,9 @@ export default function MediaPicker({
         <div role="tablist" className="flex items-center gap-1">
           {tabBtn("emoji", tr("Emoji", "Emoji"))}
           {tabBtn("sticker", tr("Nhãn dán", "Stickers"))}
-          {tabBtn("gif", "GIF")}
+          {gifOn === true && tabBtn("gif", "GIF")}
         </div>
-        <button type="button" onClick={onClose} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full text-[#c0b2bc] hover:bg-white/10 hover:text-white">
+        <button type="button" onClick={onClose} aria-label={tr("Đóng", "Close")} className="flex h-10 w-10 items-center justify-center rounded-full text-[#c0b2bc] hover:bg-white/10 hover:text-white">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -124,7 +135,7 @@ export default function MediaPicker({
                 }}
                 aria-label={tr(g.label[0], g.label[1])}
                 title={tr(g.label[0], g.label[1])}
-                className={`flex h-9 flex-1 items-center justify-center rounded-xl text-lg transition-colors ${shown.id === g.id ? "bg-white/10" : "opacity-60 hover:bg-white/5 hover:opacity-100"}`}
+                className={`pn-hit flex h-9 flex-1 items-center justify-center rounded-xl text-lg transition-colors ${shown.id === g.id ? "bg-white/10" : "opacity-60 hover:bg-white/5 hover:opacity-100"}`}
               >
                 {g.id === "recent" ? <Clock className="h-4 w-4 text-slate-300" /> : g.icon}
               </button>
@@ -133,9 +144,9 @@ export default function MediaPicker({
         </>
       )}
 
-      {tab === "sticker" && <StickerTab userId={userId} market={market} onSend={onSticker} onSearchGif={(q) => onTab("gif", q)} />}
+      {tab === "sticker" && <StickerTab userId={userId} market={market} onSend={onSticker} onSearchGif={gifOn === true ? (q) => onTab("gif", q) : undefined} />}
 
-      {tab === "gif" && <GifTab key={gifQuery ?? ""} userId={userId} lang={lang} initialQuery={gifQuery} onSend={onGif} onStickers={() => onTab("sticker")} />}
+      {tab === "gif" && gifOn !== false && <GifTab key={gifQuery ?? ""} userId={userId} lang={lang} initialQuery={gifQuery} onSend={onGif} onStickers={() => onTab("sticker")} />}
     </div>
   );
 }

@@ -53,6 +53,14 @@ export async function getLocalImage(uid: string, id: string): Promise<Blob | nul
     return null;
   }
 }
+export async function deleteLocalImage(uid: string, id: string): Promise<boolean> {
+  try {
+    await run("readwrite", (s) => s.delete(localImageKey(uid, id)));
+    return true;
+  } catch {
+    return false;
+  }
+}
 /** Xoá mọi ảnh của người này không còn trong `keep` (dọn rác khi lưu). */
 export async function gcLocalImages(uid: string, keep: Set<string>): Promise<number> {
   try {

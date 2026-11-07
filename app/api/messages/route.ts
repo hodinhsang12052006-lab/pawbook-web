@@ -10,8 +10,7 @@ import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
 import { sendPush } from "@/lib/push";
 import { coldDmBlocked } from "@/lib/abuseGuard";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
-import { STICKER_GLYPH } from "@/lib/stickers/ids.generated";
-import { isValidStickerId } from "@/lib/stickers/urls";
+import { isAllowedStickerId, serverStickerGlyph } from "@/lib/stickers/server";
 import { isGifUrl } from "@/lib/chat/gif";
 
 // GET conversations, messages (filtered by conversationId with cursor), and other system users
@@ -344,8 +343,8 @@ export async function POST(req: Request) {
     if (msgType === "CALL" && !/^(missed|declined|ended):(audio|video)(:\d{1,6})?$/.test(messageText)) {
       return NextResponse.json({ error: "Nhật ký cuộc gọi không hợp lệ.", errorEn: "Invalid call log." }, { status: 400 });
     }
-    // Sticker: CHỈ id có trong danh mục (lib/stickers/ids.generated.ts — Noto: ký tự emoji; Fluent 3D: "fl:<tên>").
-    if (msgType === "STICKER" && !isValidStickerId(messageText)) {
+    // Sticker: CHỈ id có trong danh mục (lib/stickers/server.ts — Noto: ký tự emoji; Fluent 3D: "fl:<tên thư mục>").
+    if (msgType === "STICKER" && !isAllowedStickerId(messageText)) {
       return NextResponse.json({ error: "Sticker không hợp lệ.", errorEn: "Invalid sticker." }, { status: 400 });
     }
 
@@ -546,7 +545,7 @@ export async function POST(req: Request) {
     const recipients = conversation.participants.map((p) => p.id).filter((id) => id && id !== userId);
     if (recipients.length && msgType !== "CALL") {
       const gif = msgType === "IMAGE" && isGifUrl(messageText);
-      const glyph = msgType === "STICKER" ? STICKER_GLYPH[messageText] || "" : "";
+      const glyph = msgType === "STICKER" ? serverStickerGlyph(messageText) || "" : "";
       const preview =
         gif ? "Đã gửi một GIF" : msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : msgType === "AUDIO" ? "🎤 Đã gửi một tin nhắn thoại" : msgType === "STICKER" ? `${glyph} Nhãn dán`.trim() : messageText;
       const previewEn =

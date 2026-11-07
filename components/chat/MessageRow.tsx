@@ -5,7 +5,10 @@ import { AlertCircle, Check, CheckCheck, Clock, Phone, PhoneMissed, Video, Refre
 import VoiceMessage from "./VoiceMessage";
 import toast from "react-hot-toast";
 import { REACTION_EMOJIS, summarize, type Reaction } from "@/lib/chatReactions";
-import { animUrl, isFluent, isKnownSticker, stickerGlyph, stillUrl } from "@/lib/stickers/urls";
+import { isEmojiOnly, isFluent, isKnownSticker, lottieUrl, stickerGlyph, stillUrl } from "@/lib/stickers/urls";
+import { isExtFluentId, loadFullStickerManifest, type StickerMeta } from "@/lib/stickers/manifest";
+import { canAnimate, makeSlots } from "@/lib/stickers/lottie";
+import LottieLayer from "./LottieLayer";
 import { gifAspect, isGifUrl, corsSafeGif } from "@/lib/chat/gif";
 import { avatarSrc } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
@@ -246,7 +249,7 @@ function MessageRowImpl({
     body = (
       <div className="m-bare">
         {/* Sticker: Noto Emoji Animation (Google · CC BY 4.0) hoặc Fluent Emoji 3D (Microsoft · MIT) — lỗi tải thì hiện emoji to. */}
-        <StickerView id={msg.content} animate={fresh} />
+        <StickerView id={msg.content} />
         <span className="m-meta-pill" aria-hidden>{time}{tick}</span>
       </div>
     );
@@ -420,51 +423,91 @@ function MessageRowImpl({
   );
 }
 
-// Có nên tải bản động (~0,5 MB/cái)? Không khi người dùng bật giảm chuyển động / tiết kiệm dữ liệu / mạng 2G.
-function canAnimate(): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
-  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  if (c?.saveData || c?.effectiveType === "2g" || c?.effectiveType === "slow-2g") return false;
-  return true;
-}
+// Sticker trong bong bóng: ảnh tĩnh (Noto SVG vài KB / Fluent PNG 256px) cho mọi sticker trong lịch sử. Noto: khi bong
+// bóng hiện ≥ 50% trong khung → chạy hình động (lottie.json) ĐÚNG 1 lượt rồi đứng; chạm = chạy lại 1 lượt. Tối đa 4 bong
+// bóng chạy cùng lúc; tắt khi giảm chuyển động / tiết kiệm dữ liệu / 2G. Fluent 3D: chạm thì "nảy" nhẹ 1 → 1.08 → 1.
+// Fluent ngoài bộ (tìm thấy qua ô tìm): đường dẫn ảnh lấy từ manifest mở rộng (tải động). Tin sticker cũ ngoài danh mục
+// mà chỉ là emoji (🐶, 💼 — bộ cũ 07–10/2026) → emoji chữ 64px như trước; chuỗi lạ khác → nhãn "Sticker".
+const bubbleSlots = makeSlots(4);
 
-function StickerView({ id, animate }: { id: string; animate: boolean }) {
-  // Noto: ảnh tĩnh SVG (vài KB) cho mọi sticker trong lịch sử; chỉ sticker VỪA tới (hoặc khi chạm) mới tải bản động.
-  // Fluent 3D: PNG 256px (tĩnh) — chạm thì "nảy" nhẹ 1 → 1.08 → 1 (180ms, tắt khi giảm chuyển động).
-  const [play, setPlay] = React.useState(animate);
-  const [animReady, setAnimReady] = React.useState(false);
-  const [failed, setFailed] = React.useState(false);
-  const imgRef = React.useRef<HTMLImageElement>(null);
+function StickerView({ id }: { id: string; animate?: boolean }) {
+  const key = React.useId();
   const known = isKnownSticker(id);
-  const glyph = stickerGlyph(id);
-  const still = stillUrl(id);
-  const anim = animUrl(id);
-  const fluent = isFluent(id);
+  const ext = !known && isExtFluentId(id);
+  // manifest mở rộng: undefined = đang tải, null = không có id này
+  const [extMeta, setExtMeta] = React.useState<StickerMeta | null | undefined>(undefined);
   React.useEffect(() => {
-    if (!anim || !play || !canAnimate()) return;
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => setAnimReady(true);
-    img.src = anim;
-  }, [anim, play]);
-  if (!known) return <span className="m-sticker-chip">{tr("Nhãn dán", "Sticker")}</span>;
+    if (!ext) return;
+    let alive = true;
+    loadFullStickerManifest()
+      .then((m) => alive && setExtMeta(m[id] ?? null))
+      .catch(() => alive && setExtMeta(null));
+    return () => {
+      alive = false;
+    };
+  }, [ext, id]);
+  const meta = ext ? extMeta ?? null : null;
+  const [failed, setFailed] = React.useState(false);
+  const [animOn] = React.useState(() => canAnimate());
+  const lottie = known && animOn ? lottieUrl(id) : null;
+  const boxRef = React.useRef<HTMLButtonElement>(null);
+  const [seen, setSeen] = React.useState(false);
+  const [asked, setAsked] = React.useState(0); // số lượt chạy đã yêu cầu (1 khi hiện lần đầu, +1 mỗi lần chạm)
+  const [played, setPlayed] = React.useState(0);
+  const [slot, setSlot] = React.useState(false);
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    const el = boxRef.current;
+    if (!lottie || !el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e?.isIntersecting) return;
+        setSeen(true);
+        io.disconnect();
+      },
+      { threshold: 0.5 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [lottie]);
+  const want = !!lottie && seen && played < Math.max(1, asked);
+  React.useEffect(() => {
+    if (!want) return;
+    const cancel = bubbleSlots.request(key, () => setSlot(true));
+    return () => {
+      cancel();
+      setSlot(false);
+    };
+  }, [want, key]);
+  const fluent = isFluent(id);
+  const glyph = stickerGlyph(id) ?? meta?.glyph ?? null;
+  const still = stillUrl(id, meta);
+
+  if (!known && !ext) {
+    if (isEmojiOnly(id)) return <div className="my-1 select-none text-[64px] leading-none" role="img" aria-label={id}>{id}</div>;
+    return <span className="m-sticker-chip">{tr("Nhãn dán", "Sticker")}</span>;
+  }
+  if (ext && extMeta === undefined) return <span className="m-sticker-img my-1 block h-[128px] w-[128px]" aria-hidden />;
+  if (ext && !meta) return <span className="m-sticker-chip">{tr("Nhãn dán", "Sticker")}</span>;
   if (!still || failed) return <div className="my-1 select-none text-[64px] leading-none" role="img" aria-label={glyph ?? ""}>{glyph}</div>;
   return (
     <button
+      ref={boxRef}
       type="button"
       onClick={() => {
-        if (!fluent) return setPlay(true);
-        if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-        imgRef.current?.animate?.([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 180, easing: "cubic-bezier(.23,1,.32,1)" });
+        if (lottie) {
+          setAsked((n) => Math.max(n, played) + 1);
+          return;
+        }
+        if (!fluent || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+        boxRef.current?.querySelector("img")?.animate?.([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 180, easing: "cubic-bezier(.23,1,.32,1)" });
       }}
       aria-label={glyph ?? tr("Nhãn dán", "Sticker")}
-      className="block"
+      className="pn-stk-box my-1 h-[128px] w-[128px]"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        ref={imgRef}
-        src={animReady && anim ? anim : still}
+        src={still}
         alt={glyph ?? ""}
         width={128}
         height={128}
@@ -472,8 +515,21 @@ function StickerView({ id, animate }: { id: string; animate: boolean }) {
         crossOrigin="anonymous"
         draggable={false}
         onError={() => setFailed(true)}
-        className="m-sticker-img my-1 h-[128px] w-[128px] select-none"
+        className="m-sticker-img h-[128px] w-[128px] select-none"
+        style={ready ? { opacity: 0 } : undefined}
       />
+      {lottie && (
+        <LottieLayer
+          url={lottie}
+          play={want && slot}
+          loops={1}
+          onReadyChange={setReady}
+          onDone={() => {
+            setPlayed((n) => n + 1);
+            bubbleSlots.release(key);
+          }}
+        />
+      )}
     </button>
   );
 }

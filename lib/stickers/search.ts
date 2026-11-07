@@ -1,12 +1,13 @@
-// Tìm sticker theo chữ (EN + VI, không dấu). Tìm trên MỌI bộ, kể cả bộ theo mùa đang ngoài mùa.
-// Điểm: trùng nguyên từ 3 > đầu từ 2 > chuỗi con (≥ 3 ký tự) 1 (+0,5 nếu trùng ở chính tên sticker).
-// Hoà điểm → độ phổ biến Noto → thứ tự bộ.
+// Tìm sticker theo chữ (EN + VI, không dấu). Tìm trên MỌI bộ, kể cả bộ theo mùa đang ngoài mùa, và — khi đã tải manifest
+// mở rộng — mọi thư mục Fluent 3D. Nguồn từ: tên + từ khoá Unicode CLDR (EN + VI), thẻ Noto, từ khoá Fluent, tên bộ,
+// từ khoá tiếng Việt viết tay (keywordsVi.ts).
+// Điểm: trùng nguyên từ 3 > đầu từ 2 > chuỗi con (≥ 3 ký tự) 1 (+0,5 nếu trùng ở chính TÊN sticker, EN hoặc VI).
+// Hoà điểm → độ phổ biến Noto → thứ tự bộ. Cuối cùng bỏ trùng theo KÝ TỰ: mỗi ký tự 1 lần (ưu tiên bản động Noto);
+// bản 3D trùng ký tự xếp SAU mọi kết quả khác.
 import { foldVi } from "@/lib/chat/fold";
-import { ALL_PACKS, ANIM_PACKS, SEASON_PACKS, THREE_D_PACKS, TET_ZODIAC, type StickerId, type StickerPack } from "./packs";
+import { ALL_PACKS, ANIM_PACKS, SEASON_PACKS, THREE_D_PACKS, TET_ZODIAC, type StickerId, type StickerPack } from "./catalog";
 import { KEYWORDS_VI, type ViTarget } from "./keywordsVi";
-import type { StickerMeta } from "./manifest.generated";
-
-type Manifest = Record<StickerId, StickerMeta>;
+import type { Manifest } from "./manifest";
 
 /** Thứ tự bộ khi hoà điểm: bộ hoạt hình → 3D → mùa (giống thanh bộ). */
 const PACK_ORDER: StickerPack[] = [...ANIM_PACKS, ...THREE_D_PACKS, ...SEASON_PACKS];
@@ -27,45 +28,79 @@ function scoreText(q: string, text: string): number {
   return 0;
 }
 
+interface Entry {
+  texts: string[]; // cụm từ đã bỏ dấu
+  names: number; // texts[0..names) là tên (EN, VI) → được cộng điểm
+}
 interface Index {
-  en: Map<StickerId, string[]>; // cụm từ EN đã bỏ dấu (từ khoá + tên bộ chứa nó)
-  vi: [string, ViTarget[]][]; // từ khoá VI đã bỏ dấu
+  entries: Map<StickerId, Entry>;
+  vi: [string, ViTarget[]][]; // từ khoá VI viết tay đã bỏ dấu
   order: Map<StickerId, number>;
 }
 let cached: { m: Manifest; idx: Index } | null = null;
 
 function buildIndex(m: Manifest): Index {
-  const en = new Map<StickerId, string[]>();
-  for (const [id, meta] of Object.entries(m)) en.set(id, meta.en.map(foldVi));
+  const entries = new Map<StickerId, Entry>();
+  for (const id of Object.keys(m)) {
+    const meta = m[id];
+    const names = [meta.en[0], meta.vi[0]].filter(Boolean).map(foldVi);
+    const rest = [...meta.en.slice(1), ...meta.vi.slice(1)].map(foldVi);
+    entries.set(id, { texts: [...names, ...rest], names: names.length });
+  }
   const order = new Map<StickerId, number>();
   let n = 0;
   for (const p of PACK_ORDER) {
+    const labels = [foldVi(p.label[1]), foldVi(p.label[0])];
     for (const id of p.id === "tet" ? packItems("tet") : p.items) {
       if (!order.has(id)) order.set(id, n++);
-      const labels = en.get(id);
-      if (labels) labels.push(foldVi(p.label[1]), foldVi(p.label[0]));
+      entries.get(id)?.texts.push(...labels);
     }
   }
   const vi = Object.entries(KEYWORDS_VI).map(([k, v]) => [foldVi(k), v] as [string, ViTarget[]]);
-  return { en, vi, order };
+  return { entries, vi, order };
+}
+
+const glyphKey = (m: Manifest, id: StickerId) => m[id].glyph.replace(/️/g, "");
+
+/** Bỏ trùng theo ký tự: giữ 1 bản / ký tự ở vị trí tốt nhất (ưu tiên Noto), bản trùng còn lại xếp cuối. */
+export function dedupeByGlyph(ranked: StickerId[], m: Manifest): StickerId[] {
+  const groups = new Map<string, StickerId[]>();
+  for (const id of ranked) {
+    const g = glyphKey(m, id);
+    const arr = groups.get(g);
+    if (arr) arr.push(id);
+    else groups.set(g, [id]);
+  }
+  const head: StickerId[] = [];
+  const tail: StickerId[] = [];
+  const done = new Set<string>();
+  for (const id of ranked) {
+    const g = glyphKey(m, id);
+    if (done.has(g)) continue;
+    done.add(g);
+    const group = groups.get(g)!;
+    const keep = group.find((x) => m[x].src === "noto") ?? group[0];
+    head.push(keep);
+    for (const x of group) if (x !== keep) tail.push(x);
+  }
+  return [...head, ...tail];
 }
 
 export function searchStickers(query: string, manifest: Manifest, limit = 60): StickerId[] {
   const q = foldVi(query).trim().replace(/\s+/g, " ");
   if (!q) return [];
   if (!cached || cached.m !== manifest) cached = { m: manifest, idx: buildIndex(manifest) };
-  const { en, vi, order } = cached.idx;
+  const { entries, vi, order } = cached.idx;
   const score = new Map<StickerId, number>();
   const bump = (id: StickerId, s: number) => {
     if (s > 0 && manifest[id] && (score.get(id) ?? 0) < s) score.set(id, s);
   };
-  for (const [id, texts] of en) {
+  for (const [id, { texts, names }] of entries) {
     let best = 0;
-    // texts[0] = tên sticker: trùng ở TÊN xếp trên trùng ở từ khoá phụ cùng hạng ("heart" → ❤️ trước 😘)
+    // trùng ở TÊN xếp trên trùng ở từ khoá phụ cùng hạng ("heart" → ❤️ trước 😘); tên ngắn (ít từ) lên trước
     texts.forEach((t, i) => {
       const sc = scoreText(q, t);
-      // tên ngắn (ít từ) lên trước: "red heart" trước "smiling face with heart eyes"
-      if (sc) best = Math.max(best, sc + (i === 0 ? 0.5 + 0.2 / Math.max(1, t.split(" ").length) : 0));
+      if (sc) best = Math.max(best, sc + (i < names ? 0.5 + 0.2 / Math.max(1, t.split(" ").length) : 0));
     });
     bump(id, best);
   }
@@ -77,7 +112,7 @@ export function searchStickers(query: string, manifest: Manifest, limit = 60): S
       else bump(t, s);
     }
   }
-  return [...score.entries()]
+  const ranked = [...score.entries()]
     .sort(
       ([a, sa], [b, sb]) =>
         sb - sa ||
@@ -85,6 +120,6 @@ export function searchStickers(query: string, manifest: Manifest, limit = 60): S
         (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9) ||
         (a < b ? -1 : a > b ? 1 : 0)
     )
-    .slice(0, limit)
     .map(([id]) => id);
+  return dedupeByGlyph(ranked, manifest).slice(0, limit);
 }

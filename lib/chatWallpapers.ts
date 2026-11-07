@@ -127,7 +127,7 @@ export const CHAT_WALLPAPERS: ChatWallpaper[] = [
   }),
   wp({
     id: "lagoon",
-    vi: "Đầm xanh",
+    vi: "Đầm phá",
     en: "Lagoon",
     tone: "dark",
     group: "gradient",
@@ -255,6 +255,16 @@ export function referencedPhotoIds(s: WpState): Set<string> {
     if (p) ids.add(p);
   }
   return ids;
+}
+
+/** Bỏ 1 ảnh: khỏi danh sách ảnh + mọi lựa chọn đang dùng ảnh đó (chung / từng cuộc trò chuyện → về nền chung / mặc định). */
+export function removePhoto(s: WpState, id: string): WpState {
+  const photos = { ...(s.photos ?? {}) };
+  delete photos[id];
+  const byChat = Object.fromEntries(Object.entries(s.byChat ?? {}).filter(([, c]) => photoIdOf(c) !== id));
+  const out: WpState = { ...s, photos, byChat };
+  if (photoIdOf(out.all) === id) delete out.all;
+  return out;
 }
 
 /** Giữ tối đa MAX_PHOTOS ảnh: bỏ ảnh dùng lâu nhất (ưu tiên giữ ảnh đang được dùng). */

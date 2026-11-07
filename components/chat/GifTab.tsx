@@ -6,11 +6,13 @@ import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { corsSafeGif } from "@/lib/chat/gif";
 import { pushGifRecent, readGifRecent, type StoredGif } from "@/lib/stickers/store";
+import { setGifEnabled } from "@/lib/chat/gifAvailability";
 
 // Tab GIF: chỉ GIF thật từ API hợp lệ (/api/gifs → GIPHY, hoặc Tenor). KHÔNG có bộ GIF dán cứng.
-// Chưa có khoá / khoá sai → không hiện ô GIF nào, chỉ báo "chưa dùng được" + nút sang Nhãn dán.
-// Lưới so le 2 cột (< 600px) / 3 cột, mỗi ô giữ đúng tỉ lệ w/h (không nhảy bố cục), cuộn tới gần cuối thì tải
-// trang sau (tối đa 5 trang). Ghi công "Powered by GIPHY / Tenor" luôn hiện khi có kết quả.
+// Chưa có khoá / khoá sai → báo tắt cho cả phiên (lib/chat/gifAvailability.ts: MediaPicker ẩn tab GIF + chuyển sang
+// Nhãn dán); lỗi tạm thời phía nhà cung cấp → "Không tải được GIF" + Thử lại.
+// Lưới so le 3 cột (bảng ≥ 340px) / 2 cột, khe 4px, mỗi ô giữ đúng tỉ lệ w/h (không nhảy bố cục), cuộn tới gần cuối thì
+// tải trang sau (tối đa 5 trang). Ghi công "Powered by GIPHY / Tenor": huy hiệu dính góc dưới phải, luôn hiện khi có kết quả.
 export type GifItem = StoredGif;
 type Provider = "giphy" | "tenor";
 type State = (
@@ -73,7 +75,7 @@ export default function GifTab({
     if (next) sp.set("next", next);
     const r = await fetch(`/api/gifs?${sp}`);
     if (!r.ok) throw new Error(String(r.status));
-    return (await r.json()) as { enabled: boolean; provider: Provider | null; results: GifItem[]; next: string | null };
+    return (await r.json()) as { enabled: boolean; provider: Provider | null; results: GifItem[]; next: string | null; reason?: "no_key" | "bad_key" | "upstream" };
   }, []);
 
   // Kết quả gắn với đúng lượt tìm (key) — đổi từ khoá thì tự về "đang tải" cho tới khi lượt mới về.
@@ -85,8 +87,11 @@ export default function GifTab({
     fetchPage(req.q, req.lang, null)
       .then((d) => {
         if (!alive) return;
-        if (!d.enabled || !d.provider) setState({ kind: "disabled", key });
-        else setState({ kind: "ready", provider: d.provider, items: d.results, next: d.next, pages: 1, more: false, key });
+        if (!d.enabled || !d.provider) {
+          if (d.reason === "upstream") return setState({ kind: "error", key });
+          setGifEnabled(false);
+          setState({ kind: "disabled", key });
+        } else setState({ kind: "ready", provider: d.provider, items: d.results, next: d.next, pages: 1, more: false, key });
       })
       .catch(() => alive && setState({ kind: "error", key }));
     return () => {
@@ -127,7 +132,7 @@ export default function GifTab({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(([e]) => setCols(e.contentRect.width >= 600 ? 3 : 2));
+    const ro = new ResizeObserver(([e]) => setCols(e.contentRect.width >= 340 ? 3 : 2));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -182,14 +187,8 @@ export default function GifTab({
               </button>
             )}
           </label>
-          {/* Ghi công nhà cung cấp: góc phải, ngay dưới ô tìm, luôn hiện khi có kết quả */}
-          <div className="flex h-4 items-center justify-end pr-1 pt-1">
-            {state.kind === "ready" && state.items.length > 0 && (
-              <span className="pn-gif-powered" data-testid="gif-attribution">Powered by {providerName}</span>
-            )}
-          </div>
-          <div className="mt-1 flex items-center">
-            <div className="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+          <div className="flex items-center">
+            <div className="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1.5">
               {CHIPS().map(([labelText, term]) => (
                 <button
                   key={term}
@@ -229,7 +228,7 @@ export default function GifTab({
         ) : state.kind === "loading" ? (
           <div className="pn-gif-cols" aria-hidden style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
             {Array.from({ length: cols }).map((_, c) => (
-              <div key={c} className="flex flex-col gap-1.5">
+              <div key={c} className="flex flex-col gap-1">
                 {[0.75, 1, 0.6, 0.9].map((r, i) => (
                   <div key={i} className="skeleton rounded-xl" style={{ aspectRatio: String(1 / r) }} />
                 ))}
@@ -256,7 +255,7 @@ export default function GifTab({
             ) : (
               <div className="pn-gif-cols" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
                 {columns.map((c, ci) => (
-                  <div key={ci} className="flex min-w-0 flex-col gap-1.5">
+                  <div key={ci} className="flex min-w-0 flex-col gap-1">
                     {c.items.map((g) => (
                       <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} className="pn-gif-tile w-full" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -272,6 +271,12 @@ export default function GifTab({
               <div className="flex justify-center py-3">
                 <Loader2 className="h-5 w-5 animate-spin text-[#a69ba4]" aria-label={tr("Đang tải", "Loading")} />
               </div>
+            )}
+            {/* Ghi công nhà cung cấp: huy hiệu dính góc dưới phải vùng cuộn, luôn hiện khi có kết quả */}
+            {state.items.length > 0 && (
+              <span className="pn-gif-powered" data-testid="gif-attribution">
+                Powered by {providerName}
+              </span>
             )}
           </>
         )}

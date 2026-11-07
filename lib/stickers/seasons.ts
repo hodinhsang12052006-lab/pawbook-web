@@ -1,6 +1,7 @@
 // Bộ sticker theo mùa: hiện theo NGÀY ĐỊA PHƯƠNG của người xem + thị trường (Mỹ / Úc — mùa ngược nhau).
 // Cửa sổ tính cả 2 đầu. THUẦN (không đọc giờ hệ thống) để kiểm thử được: truyền ngày vào.
 import { SEASON_PACKS, TET_ZODIAC, type Season, type StickerPack } from "./packs";
+import { STICKER_GLYPH } from "./ids.generated";
 
 export type StickerMarket = "US" | "AU";
 
@@ -90,13 +91,39 @@ export function tetPackFor(year: number | null, base: StickerPack): StickerPack 
   return { ...base, items };
 }
 
-/** Bộ mùa đang hiện (theo thứ tự hiển thị). */
+const glyphKey = (id: string) => (Object.prototype.hasOwnProperty.call(STICKER_GLYPH, id) ? STICKER_GLYPH[id] : id).replace(/️/g, "");
+
+/**
+ * Bỏ trùng giữa các bộ mùa đang hiện cùng lúc (VD tháng 11 ở Mỹ: Lễ Tạ ơn + Mùa thu): mục (theo KÝ TỰ) đã có ở bộ đứng trước
+ * thì ẩn; trong 1 bộ, bản 3D Fluent trùng ký tự với 1 mục Noto (hình động) cũng ẩn. Bộ rỗng sau khi lọc thì bỏ.
+ */
+export function dedupeSeasonPacks(packs: StickerPack[]): StickerPack[] {
+  const shown = new Set<string>();
+  const out: StickerPack[] = [];
+  for (const p of packs) {
+    const noto = new Set(p.items.filter((i) => !i.startsWith("fl:")).map(glyphKey));
+    const seen = new Set<string>();
+    const items = p.items.filter((i) => {
+      const g = glyphKey(i);
+      if (shown.has(g) || seen.has(g) || (i.startsWith("fl:") && noto.has(g))) return false;
+      seen.add(g);
+      return true;
+    });
+    items.forEach((i) => shown.add(glyphKey(i)));
+    if (items.length) out.push({ ...p, items, icon: items.includes(p.icon) ? p.icon : items[0] });
+  }
+  return out;
+}
+
+/** Bộ mùa đang hiện (theo thứ tự hiển thị), đã bỏ trùng. */
 export function activeSeasonPacks(date: Date, market: StickerMarket): StickerPack[] {
   const ymd = localYmd(date);
-  return activeSeasonsOn(ymd, market)
-    .map((s) => SEASON_PACKS.find((p) => p.season === s))
-    .filter((p): p is StickerPack => !!p)
-    .map((p) => (p.season === "tet" ? tetPackFor(tetYearFor(ymd), p) : p));
+  return dedupeSeasonPacks(
+    activeSeasonsOn(ymd, market)
+      .map((s) => SEASON_PACKS.find((p) => p.season === s))
+      .filter((p): p is StickerPack => !!p)
+      .map((p) => (p.season === "tet" ? tetPackFor(tetYearFor(ymd), p) : p))
+  );
 }
 
 /** Năm Tết đang tới (để chèn con giáp khi tìm kiếm bộ Tết ngoài mùa). */

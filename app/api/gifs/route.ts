@@ -6,6 +6,8 @@ import { marketFromHeaders } from "@/lib/market";
 import { gifQueryEn } from "@/lib/gifQueryVi";
 
 // GET /api/gifs?q=&lang=en|vi&next= — tìm GIF qua API hợp lệ (khoá nằm ở máy chủ, không lộ ra trình duyệt).
+// GET /api/gifs?probe=1 — chỉ báo { enabled } theo việc CÓ khoá hay không (không gọi nhà cung cấp, không tính lượt) —
+//   lib/chat/gifAvailability.ts hỏi 1 lần / phiên để ẩn mọi lối vào GIF khi chưa có khoá.
 //   GIPHY (GIPHY_API_KEY) → nếu không có thì Tenor v2 (TENOR_API_KEY) → không có khoá nào: { enabled:false }.
 // KHÔNG còn bộ GIF dán cứng: thiếu khoá / khoá sai / lỗi phía nhà cung cấp → { enabled:false, reason } (bảng GIF hiện
 // "chưa dùng được" + nút sang Nhãn dán). Chỉ trả URL media của GIPHY / Tenor — khớp danh sách nguồn ảnh khi gửi tin.
@@ -27,12 +29,16 @@ const LIMIT = 24;
 const MAX_OFFSET = 4999;
 const PER_MIN = 60;
 let loggedBadKey = false;
+// Nhà cung cấp vừa từ chối khoá (401/403) → probe của instance này báo tắt trong 10 phút (khỏi hiện tab GIF rồi lại ẩn)
+let badKeyAt = 0;
+const BAD_KEY_MS = 10 * 60_000;
 
 const strip = (u: unknown) => (typeof u === "string" ? u.split("?")[0] : "");
 const GIPHY_MEDIA = /^https:\/\/media\d*\.giphy\.com\//;
 const TENOR_MEDIA = /^https:\/\/(media\.tenor\.com|[a-z0-9-]+\.tenor\.com)\//;
 
 function badKey(provider: Provider, status: number): Page {
+  badKeyAt = Date.now();
   if (!loggedBadKey) {
     loggedBadKey = true;
     console.error(`[gifs] ${provider} rejected the API key (HTTP ${status}) — set a valid ${provider === "giphy" ? "GIPHY_API_KEY" : "TENOR_API_KEY"} on Vercel`);
@@ -59,11 +65,13 @@ async function giphyPage(key: string, q: string, lang: "vi" | "en", offset: numb
   const results: Gif[] = [];
   for (const g of d.data) {
     const im = g.images || {};
-    const fw = im.fixed_width || {};
-    const send = strip(fw.webp || fw.url);
+    // Gửi: fixed_height (cao 200px, rộng theo tỉ lệ — 16:9 ≈ 356px) để bong bóng 240px không bị phóng to ~3× trên màn
+    // hình 2,6–3× DPR như fixed_width (rộng 200px). Ô trong lưới: fixed_width_downsampled (nhẹ).
+    const fh = im.fixed_height || {};
+    const send = strip(fh.webp || fh.url);
     const preview = strip(im.fixed_width_downsampled?.webp || im.fixed_width_small?.webp) || send;
-    const w = Number(fw.width);
-    const h = Number(fw.height);
+    const w = Number(fh.width);
+    const h = Number(fh.height);
     if (!g.id || !GIPHY_MEDIA.test(send) || !GIPHY_MEDIA.test(preview) || !(w > 0) || !(h > 0)) continue;
     results.push({ id: `g_${g.id}`, send: `${send}#wh=${w}x${h}`, preview, w, h, title: String(g.title || "").slice(0, 120) });
   }
@@ -123,15 +131,21 @@ export async function GET(req: Request) {
   const giphyKey = process.env.GIPHY_API_KEY;
   const tenorKey = process.env.TENOR_API_KEY;
   const provider: Provider | null = giphyKey ? "giphy" : tenorKey ? "tenor" : null;
+  const sp = new URL(req.url).searchParams;
+  // Tắt (thiếu khoá / khoá sai / lỗi nhà cung cấp) → no-store: thêm khoá trên Vercel + redeploy là trình duyệt thấy ngay.
+  const off = { "Cache-Control": "no-store" };
   const headers = { "Cache-Control": "private, max-age=300" };
-  if (!provider) return NextResponse.json({ enabled: false, provider: null, results: [], reason: "no_key" satisfies Reason }, { headers });
+  if (sp.get("probe") === "1") {
+    const on = !!provider && Date.now() - badKeyAt > BAD_KEY_MS;
+    return NextResponse.json({ enabled: on, provider: on ? provider : null }, { headers: off });
+  }
+  if (!provider) return NextResponse.json({ enabled: false, provider: null, results: [], reason: "no_key" satisfies Reason }, { headers: off });
 
   // Giới hạn mềm theo người (bộ nhớ của 1 instance): 60 lượt / phút — giữ khoá beta (≈100 lượt/giờ) khỏi cạn.
   const rlKey = `gifs:${uid}`;
   if (isRateLimited(rlKey, PER_MIN, 60_000)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   recordAttempt(rlKey, 60_000);
 
-  const sp = new URL(req.url).searchParams;
   const q = (sp.get("q") || "").trim().replace(/\s+/g, " ").slice(0, 50);
   const lang: "vi" | "en" = sp.get("lang") === "vi" ? "vi" : "en";
   const rawNext = (sp.get("next") || "").slice(0, 200);
@@ -145,7 +159,7 @@ export async function GET(req: Request) {
     provider === "giphy" ? giphyPage(giphyKey!, term, l, Math.min(MAX_OFFSET, Math.max(0, Math.floor(Number(n)) || 0))) : tenorPage(tenorKey!, term, l, n, country);
 
   const first = enMode && enTerm ? await page(enTerm, "en", next) : await page(q, lang, next);
-  if (!first.ok) return NextResponse.json({ enabled: false, provider: null, results: [], reason: first.reason }, { headers });
+  if (!first.ok) return NextResponse.json({ enabled: false, provider: null, results: [], reason: first.reason }, { headers: off });
 
   let results = first.results;
   let nextOut = first.next ? (enMode ? `e:${first.next}` : first.next) : null;

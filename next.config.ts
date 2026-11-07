@@ -17,8 +17,17 @@ import defaultRuntimeCaching from "next-pwa/cache";
 // Sticker (Noto trên fonts.gstatic.com + Fluent 3D trên jsDelivr, cố định commit) và GIF GIPHY: quy tắc RIÊNG đặt TRƯỚC
 // quy tắc mặc định "google-fonts-webfonts" (CacheFirst, chỉ 4 mục — từng khớp mọi URL sticker trên fonts.gstatic.com nên
 // sticker gần như không được cache). Mọi <img> sticker / GIF dùng crossorigin="anonymous" (các host này gửi ACAO: *)
-// → phản hồi không "opaque", cache được đúng trạng thái 200.
+// → phản hồi không "opaque", cache được đúng trạng thái 200. Hình động sticker = lottie.json (8–90 KB, fetch CORS) cùng
+// quy tắc pn-stickers; Noto ghim /s/e/notoemoji/17.0/ nên URL không đổi nội dung. LƯU Ý: service worker tự fetch các URL
+// này → CSP connect-src (header dưới, cũng phục vụ /sw.js) PHẢI có fonts.gstatic.com, cdn.jsdelivr.net, *.giphy.com,
+// *.tenor.com — thiếu là mọi sticker / GIF lỗi net::ERR_FAILED ngay khi SW được cài.
 const mediaCaching = [
+  // Hình động sticker (lottie.json, tới ~90 KB/cái) — kho RIÊNG, tối đa 120 file (ảnh tĩnh vài KB dùng kho 500 mục bên dưới)
+  {
+    urlPattern: /^https:\/\/fonts\.gstatic\.com\/s\/e\/notoemoji\/[^/]+\/[0-9a-f_]+\/lottie\.json$/,
+    handler: "CacheFirst",
+    options: { cacheName: "pn-sticker-anim", expiration: { maxEntries: 120, maxAgeSeconds: 5184000 }, cacheableResponse: { statuses: [200] } },
+  },
   {
     urlPattern: /^https:\/\/(fonts\.gstatic\.com\/s\/e\/notoemoji\/|cdn\.jsdelivr\.net\/gh\/microsoft\/fluentui-emoji@)/,
     handler: "CacheFirst",
@@ -189,8 +198,11 @@ const nextConfig: NextConfig = {
             // phiên làm việc này thêm) bị CSP chặn cả envelope report (connect-src
             // thiếu *.sentry.io) lẫn worker nội bộ tải qua blob: (chưa có
             // worker-src riêng nên rơi về script-src, không cho phép blob:).
-            // Added fonts.gstatic.com to img-src (16/10/2026) — sticker Noto Emoji (ảnh tĩnh .svg + bản động .webp)
-            // nằm ở fonts.gstatic.com; thiếu là sticker bị chặn, rơi về emoji chữ của hệ điều hành.
+            // Added fonts.gstatic.com to img-src (16/10/2026) — sticker Noto Emoji (ảnh tĩnh .svg) nằm ở fonts.gstatic.com;
+            // thiếu là sticker bị chặn, rơi về emoji chữ của hệ điều hành.
+            // Added fonts.gstatic.com + cdn.jsdelivr.net + *.giphy.com + *.tenor.com to connect-src (11/2026): hình động
+            // sticker là lottie.json tải bằng fetch, VÀ service worker (cùng CSP này trên /sw.js) tự fetch ảnh sticker /
+            // GIF để cache — connect-src thiếu host nào thì SW trả net::ERR_FAILED cho mọi ảnh của host đó.
             // Added api.dicebear.com to img-src — avatar mặc định lúc đăng ký
             // đổi sang DiceBear fun-emoji (xem app/api/register/route.ts),
             // domain này chưa có sẵn nên ảnh sẽ bị CSP chặn nếu không thêm.
@@ -216,7 +228,7 @@ const nextConfig: NextConfig = {
             // đã sửa cả .env và .env.local, đã verify bằng Playwright 2 tài
             // khoản thật kết nối thành công (xem log "appid invalid" 1001004
             // biến mất sau khi sửa).
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://*.giphy.com https://*.tenor.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

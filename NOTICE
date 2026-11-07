@@ -19,14 +19,17 @@ logos or exact geometry) are used anywhere in this product.
    "Animated emoji: Noto Emoji Animation by Google, CC BY 4.0"
    Licence: Creative Commons Attribution 4.0 International — https://creativecommons.org/licenses/by/4.0/
    Project page: https://googlefonts.github.io/noto-emoji-animation/
-   The attribution line is shown at the end of the sticker sheet. Files are loaded from fonts.gstatic.com
-   (static SVG first; the animated WebP only on hover, in the long-press preview, for a newly arrived sticker or on tap).
+   The attribution line (with links to the project and the licence) is shown at the end of the sticker sheet. Files are
+   loaded unmodified from fonts.gstatic.com, pinned to version 17.0 (/s/e/notoemoji/17.0/<codepoint>/…): the static
+   emoji.svg first; the animation (lottie.json, played with lottie-web — item 9) for stickers on screen in the sheet,
+   once when a sticker message scrolls into view, on tap and in the long-press preview. All 611 base animated emoji of
+   the catalogue are offered (skin-tone variants are not).
 
 4. Sticker stills (the static frame of each animated sticker)
-   Loaded from the same Noto Emoji Animation set on fonts.gstatic.com (/s/e/notoemoji/…/emoji.svg), so they are
-   covered by item 3 (CC BY 4.0, same attribution line) — not by the Noto Emoji GitHub repository's Apache-2.0 terms.
-   (The separate Noto Emoji font / image repository, https://github.com/googlefonts/noto-emoji, is Apache 2.0 /
-   SIL OFL 1.1 and is not bundled.)
+   Loaded from the same Noto Emoji Animation set on fonts.gstatic.com (/s/e/notoemoji/17.0/…/emoji.svg) and credited
+   with the same line as item 3. Licence: CC BY 4.0 / Apache-2.0 (Noto) — the Noto emoji artwork is published by Google
+   under both the Noto Emoji Animation terms (CC BY 4.0) and the Noto Emoji repository terms
+   (https://github.com/googlefonts/noto-emoji, Apache 2.0 for the images / SIL OFL 1.1 for the font, not bundled).
 
 5. GIF search in chat (/api/gifs) — only through the providers' official APIs; no GIF files are bundled or hard-coded.
    - GIPHY (when GIPHY_API_KEY is configured): "Powered by GIPHY" attribution is shown wherever GIF results appear,
@@ -75,3 +78,53 @@ logos or exact geometry) are used anywhere in this product.
      design engine (lib/designRender.ts). Always shown with an "AI illustration" label. When a published PawNail
      design matches the season, its image (labelled the same way) is used instead.
    © PawNail.
+
+8. Unicode CLDR emoji annotations — sticker names and search keywords (English + Vietnamese)
+   Source: npm cldr-annotations-full@49.0.0 and cldr-annotations-derived-full@49.0.0 (https://github.com/unicode-org/cldr-json),
+   processed at build time by scripts/stickers/build_manifest.mjs into lib/stickers/manifest*.generated.ts.
+   Licence: Unicode License v3 (SPDX: Unicode-3.0) — https://www.unicode.org/license.txt
+
+   UNICODE LICENSE V3
+
+   COPYRIGHT AND PERMISSION NOTICE
+
+   Copyright © 2001–2026 Unicode, Inc.
+
+   NOTICE TO USER: Carefully read the following legal agreement. BY
+   DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+   SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+   TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+   DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of data files and any associated documentation (the "Data Files") or
+   software and any associated documentation (the "Software") to deal in the
+   Data Files or Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, and/or sell
+   copies of the Data Files or Software, and to permit persons to whom the
+   Data Files or Software are furnished to do so, provided that either (a)
+   this copyright and permission notice appear with all copies of the Data
+   Files or Software, or (b) this copyright and permission notice appear in
+   associated Documentation.
+
+   THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+   KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+   THIRD PARTY RIGHTS.
+
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+   BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+   OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+   WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+   ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+   FILES OR SOFTWARE.
+
+   Except as contained in this notice, the name of a copyright holder shall
+   not be used in advertising or otherwise to promote the sale, use or other
+   dealings in these Data Files or Software without prior written
+   authorization of the copyright holder.
+
+9. lottie-web (Airbnb / Bodymovin) — player for the Noto sticker animations (lib/stickers/lottie.ts; only the
+   SVG "light" build, loaded on demand)
+   Copyright (c) 2015 Bodymovin
+   Licence: MIT — https://github.com/airbnb/lottie-web/blob/master/LICENSE.md (same MIT terms as the text in item 6).

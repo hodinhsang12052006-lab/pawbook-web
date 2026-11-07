@@ -5,6 +5,10 @@
 // kéo khung camera nhỏ, cúp máy từ mỗi bên, từ chối, huỷ, máy bận, hết giờ (nhỡ), nhiều máy cùng tài khoản (máy mở
 // app muộn vẫn đổ chuông; nghe ở 1 máy → máy kia ngừng), tín hiệu của cuộc gọi cũ bị bỏ qua, rớt mạng → "Đang kết nối
 // lại…" → ICE restart, quyền micro/camera bị từ chối (cả 2 phía), bong bóng chat không đổ chuông, ảnh chụp 360/412px.
+// Thêm (vòng review): máy thứ 2 đổ chuông muộn / mất call-handled không được cúp cuộc gọi đang nói, chỉ camera bị chặn
+// vẫn vào được bằng âm thanh, "đã kết nối" chỉ khi DTLS xong (tín hiệu chậm + CPU chậm), mất cả bye lẫn reject → bên kia
+// vẫn tự kết thúc (kênh dữ liệu đóng), focus vào màn hình gọi, đồng hồ không phải vùng đọc liên tục, video ngang trên
+// màn dọc không bị cắt (contain) + chạm đúp đổi fill/fit.
 // Chạy với chính sách autoplay THẬT (cần chạm) để chứng minh mở khoá âm thanh khi bấm gọi / nghe hoạt động.
 //
 // Cần 1 server LOCAL build với Pusher giả (KHÔNG BAO GIỜ trỏ vào bitpawos.com; lib.mjs tự chặn):
@@ -247,7 +251,8 @@ let firstCall = null; // {callId, callToken} of the first A→B call (for the st
 // ============================== voice call ==============================
 if (want("audio")) {
   const t0 = mock.log.length;
-  await step("audio-1", "Voice: A dials → A 'Ringing', B rings (real name/photo), no Answer button for the caller", async () => {
+  await step("audio-1", "Voice: A dials → A 'Ringing', B rings (real name/photo), no Answer button for the caller; B's focus leaves the chat box for Answer", async () => {
+    await B.page.locator("[data-chat-input]").first().focus();
     await dial(A, "audio");
     await phaseIs(A, "outgoing", 10000);
     await A.page.locator('[data-call-ringing="1"]').waitFor({ timeout: 10000 });
@@ -258,7 +263,13 @@ if (want("audio")) {
     const name = await B.page.locator("[data-call-phase] h2").innerText();
     const ev = incomingFor(B).at(-1);
     firstCall = ev ? JSON.parse(ev.data) : null;
-    return callerAnswer === 0 && name.trim().length > 0 && !!firstCall?.callToken;
+    // the phone keyboard must close: focus is on Answer (inside the aria-modal call screen), not on the chat textarea
+    const focus = await until(async () => {
+      const f = await B.page.evaluate(() => ({ ctl: document.activeElement?.getAttribute("data-call-control") || document.activeElement?.tagName, modal: document.querySelector("[data-call-phase]")?.getAttribute("aria-modal") }));
+      return f.ctl === "answer" ? f : null;
+    }, 5000).catch(async () => B.page.evaluate(() => ({ ctl: document.activeElement?.getAttribute("data-call-control") || document.activeElement?.tagName })));
+    const counter = await B.page.locator("[data-call-status] .tabular-nums").count();
+    return callerAnswer === 0 && name.trim().length > 0 && !!firstCall?.callToken && focus.ctl === "answer" && focus.modal === "true" && counter === 0 ? true : { fail: JSON.stringify({ callerAnswer, focus, counter }) };
   });
 
   await step("audio-2", "Voice: B answers → both 'connected', ICE connected, remote audio bytes flowing BOTH ways (getStats)", async () => {
@@ -293,7 +304,13 @@ if (want("audio")) {
     const b2 = await read(B);
     await shot(B, "en_412_audio_connected");
     await shot(A, "en_desktop_audio_connected");
-    return /^\d{2}:\d{2}$/.test(a2) && a1 !== a2 && /^\d{2}:\d{2}$/.test(b2) ? true : { fail: `${a1} → ${a2} / ${b2}` };
+    // screen readers: the ticking timer is NOT a live region; one status region says "Connected"
+    const sr = await B.page.evaluate(() => {
+      const root = document.querySelector("[data-call-phase]");
+      return { timerRole: root?.querySelector("[data-call-status]")?.getAttribute("role") || null, live: [...(root?.querySelectorAll('[role="status"]') || [])].map((e) => e.textContent?.trim()) };
+    });
+    const srOk = sr.timerRole === null && sr.live.length === 1 && sr.live[0] === "Connected";
+    return /^\d{2}:\d{2}$/.test(a2) && a1 !== a2 && /^\d{2}:\d{2}$/.test(b2) && srOk ? true : { fail: `${a1} → ${a2} / ${b2} ${JSON.stringify(sr)}` };
   });
 
   await step("audio-5", "Mute: A mutes → B shows 'Muted' (data-peer-muted=1) + A's sender track disabled; unmute → back", async () => {
@@ -348,6 +365,8 @@ if (want("audio")) {
     await ctl(B, "end").click();
     await idle(B, 10000);
     await idle(A, 10000);
+    const card = await A.page.locator("[data-call-ended]").innerText({ timeout: 1500 }).catch(() => "");
+    if (!/Call ended · \d+:\d{2}/.test(card)) throw new Error("no 'Call ended · m:ss' card on A: " + JSON.stringify(card));
     const evs = mock.log.slice(t0).filter((e) => e.name && !e.refused);
     console.log(`   Pusher events for this call: ${evs.length} (${[...new Set(evs.map((e) => e.name))].map((n) => `${n}×${evs.filter((e) => e.name === n).length}`).join(", ")})`);
     const sa = await stats(A);
@@ -367,6 +386,11 @@ if (want("video")) {
     await dial(A, "video");
     await phaseIs(A, "outgoing", 10000);
     await phaseIs(B, "incoming", 15000);
+    // labels match what the user sees: camera on → "Stop video"; the red button says "Cancel" (= its accessible name start)
+    const camLabel = await ctl(A, "cam").getAttribute("aria-label");
+    const cancelText = (await ctl(A, "cancel").locator("xpath=..").innerText()).trim();
+    const cancelName = await ctl(A, "cancel").getAttribute("aria-label");
+    if (camLabel !== "Stop video" || cancelText !== "Cancel" || !cancelName.startsWith(cancelText)) throw new Error(`labels: cam=${camLabel} cancel=${cancelText}/${cancelName}`);
     await shot(A, "en_desktop_video_outgoing");
     await shot(B, "en_412_video_incoming");
     await ctl(B, "answer").click();
@@ -388,6 +412,24 @@ if (want("video")) {
     await shot(A, "en_desktop_video_connected");
     console.log(`   frames A ${fa.a}→${fa.b}, B ${fb.a}→${fb.b}`);
     return aa.ok && ab.ok;
+  });
+
+  await step("video-1b", "Landscape video on a portrait phone is FIT (not cropped to a sliver), on a landscape screen it fills; double-tap switches fill / fit", async () => {
+    const fitB = await B.page.locator("[data-remote-fit]").getAttribute("data-remote-fit");
+    const fitA = await A.page.locator("[data-remote-fit]").getAttribute("data-remote-fit");
+    const vp = B.page.viewportSize();
+    await B.page.mouse.click(vp.width / 2, vp.height / 2);
+    await sleep(90);
+    await B.page.mouse.click(vp.width / 2, vp.height / 2);
+    await sleep(300);
+    const fitB2 = await B.page.locator("[data-remote-fit]").getAttribute("data-remote-fit");
+    await shot(B, "en_412_video_fill_toggled");
+    await B.page.mouse.click(vp.width / 2, vp.height / 2);
+    await sleep(90);
+    await B.page.mouse.click(vp.width / 2, vp.height / 2);
+    await sleep(300);
+    const fitB3 = await B.page.locator("[data-remote-fit]").getAttribute("data-remote-fit");
+    return fitB === "contain" && fitA === "cover" && fitB2 === "cover" && fitB3 === "contain" ? true : { fail: JSON.stringify({ fitB, fitA, fitB2, fitB3 }) };
   });
 
   await step("video-2", "Camera off on A → B shows 'Camera off', A sends no video, B's decoded frames stall; camera on → frames resume", async () => {
@@ -539,6 +581,176 @@ if (want("flows")) {
   await reset(A, B);
 }
 
+// ============================== multi-device races (review) ==============================
+const watchRing = (u) =>
+  u.page.evaluate(() => {
+    window.__rang = false;
+    new MutationObserver(() => {
+      if (document.querySelector("[data-call-phase]")) window.__rang = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+const audioGrowsBoth = async () => {
+  const ga = await until(async () => {
+    const g = await growing(A, "aIn");
+    return g.ok ? g : null;
+  }, 10000);
+  const gb = await until(async () => {
+    const g = await growing(B, "aIn");
+    return g.ok ? g : null;
+  }, 10000);
+  return ga.ok && gb.ok;
+};
+if (want("multi")) {
+  await openChat(A, B.me.id);
+  await openChat(B, A.me.id);
+  const B2 = await userCtx("tech1.us@pawnailjobs.demo", { viewport: { width: 1280, height: 800 }, label: "B2 tech1 desktop" });
+  const chanB = `private-chat-${B.me.id}`;
+  await step("multi-4", "Late re-ring: B2 opens PawNail while a re-ring is still in flight, B answers → B2 must NOT ring for the answered call", async () => {
+    await B2.page.goto("about:blank");
+    let held = 0;
+    mock.setRewrite(async (evs) => {
+      if (evs.some((e) => e.name === "incoming-call" && /"ring":true/.test(String(e.data)))) {
+        held++;
+        await sleep(5500);
+      }
+      return evs;
+    });
+    try {
+      await dial(A, "audio");
+      await phaseIs(B, "incoming", 15000);
+      await B2.page.goto(BASE_URL + `/messages?to=${A.me.id}`);
+      await B2.page.locator("[data-chat-input]").waitFor({ timeout: 30000 });
+      await until(async () => mock.subscribers(chanB) >= 2 || null, 15000);
+      await watchRing(B2);
+      await until(async () => held > 0 || null, 12000); // a re-ring is being held back
+      await ctl(B, "answer").click();
+      await phaseIs(A, "connected", 30000);
+      await sleep(8000); // the held re-ring is delivered meanwhile
+      const rang = await B2.page.evaluate(() => window.__rang);
+      const stillOk = (await A.page.locator(sel("connected")).count()) === 1 && (await B.page.locator(sel("connected")).count()) === 1;
+      return !rang && stillOk ? true : { fail: JSON.stringify({ rang, stillOk, held }) };
+    } finally {
+      mock.setRewrite(null);
+      await ctl(A, "end").click().catch(() => {});
+      await idle(B, 10000).catch(() => {});
+    }
+  });
+  await reset(A, B, B2);
+
+  for (const how of ["decline", "answer"]) {
+    await step(`multi-5-${how}`, `call-handled LOST: B answers, B2 keeps ringing and then ${how === "decline" ? "DECLINES" : "ANSWERS late"} → the A↔B call survives (audio still flowing both ways)${how === "answer" ? ", B2 is told 'Answered on another device'" : ""}`, async () => {
+      await openChat(B2, A.me.id);
+      await until(async () => mock.subscribers(chanB) >= 2 || null, 15000);
+      mock.setRewrite((evs) => evs.filter((e) => e.name !== "call-handled"));
+      try {
+        await dial(A, "audio");
+        await phaseIs(B, "incoming", 15000);
+        await phaseIs(B2, "incoming", 15000);
+        await ctl(B, "answer").click();
+        await phaseIs(A, "connected", 30000);
+        await phaseIs(B, "connected", 30000);
+        await sleep(1000);
+        const b2Ringing = (await B2.page.locator(sel("incoming")).count()) === 1;
+        await ctl(B2, how).click();
+        await idle(B2, 12000);
+        if (how === "answer") await B2.page.getByText(/Answered on another device/).first().waitFor({ timeout: 5000 });
+        await sleep(2500);
+        const still = (await A.page.locator(sel("connected")).count()) === 1 && (await B.page.locator(sel("connected")).count()) === 1;
+        const grows = still && (await audioGrowsBoth());
+        return b2Ringing && still && grows ? true : { fail: JSON.stringify({ b2Ringing, still, grows }) };
+      } finally {
+        mock.setRewrite(null);
+        await ctl(A, "end").click().catch(() => {});
+        await idle(B, 10000).catch(() => {});
+      }
+    });
+    await reset(A, B, B2);
+  }
+  await B2.ctx.close();
+
+  await step("remote-close", "Hang-up whose reject is LOST (tab closed, beacon dropped): the other side still ends within seconds (its data channel closed) and logs the call", async () => {
+    await connect(A, B, "audio");
+    await sleep(1500);
+    mock.setRewrite((evs) => evs.filter((e) => e.name !== "call-rejected"));
+    try {
+      const t1 = Date.now();
+      await B.page.close();
+      await idle(A, 8000);
+      const ms = Date.now() - t1;
+      console.log(`   A ended ${ms} ms after B's tab closed (no reject delivered)`);
+      return ms < 8000;
+    } finally {
+      mock.setRewrite(null);
+      const page = await B.ctx.newPage();
+      page.on("pageerror", (e) => {
+        B.errors.push(e.message);
+        allErrors.push(`${B.label}: ${e.message}`);
+      });
+      B.page = page;
+    }
+  });
+  await openChat(B, A.me.id);
+  await reset(A, B);
+}
+
+// ============================== slow signaling + slow phone (review) ==============================
+if (want("slow")) {
+  await openChat(A, B.me.id);
+  await openChat(B, A.me.id);
+  const snap = () => {
+    window.__netSnap = null;
+    new MutationObserver(() => {
+      const el = document.querySelector('[data-call-net="connected"]');
+      if (el && !window.__netSnap) {
+        const pc = (window.__pcs || []).at(-1);
+        window.__netSnap = { cs: pc?.connectionState, ice: pc?.iceConnectionState, at: Date.now() };
+      }
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-call-net"] });
+  };
+  await step("slow-1", "Slow phone (2 s HTTP latency + 4× CPU + 1.6 s camera prompt): callee sends 'answering'; 'connected' only once ICE AND DTLS are up, and audio bytes arrive right after", async () => {
+    const cdp = await B.ctx.newCDPSession(B.page);
+    await cdp.send("Network.enable");
+    await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 2000, downloadThroughput: -1, uploadThroughput: -1 });
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    await B.page.evaluate(() => {
+      const md = navigator.mediaDevices;
+      const real = md.getUserMedia.bind(md);
+      md.getUserMedia = async (c) => {
+        await new Promise((r) => setTimeout(r, 1600));
+        return real(c);
+      };
+    });
+    await A.page.evaluate(snap);
+    await B.page.evaluate(snap);
+    const n0 = mock.log.length;
+    try {
+      await dial(A, "audio");
+      await phaseIs(B, "incoming", 25000);
+      await ctl(B, "answer").click();
+      await phaseIs(A, "connected", 45000);
+      await phaseIs(B, "connected", 45000);
+      const sa = await A.page.evaluate(() => window.__netSnap);
+      const sb = await B.page.evaluate(() => window.__netSnap);
+      const ga = await until(async () => {
+        const g = await growing(A, "aIn", 800);
+        return g.ok ? g : null;
+      }, 4000);
+      const answering = mock.log.slice(n0).some((e) => e.name === "call-answering");
+      console.log(`   snapshots A ${JSON.stringify(sa)} B ${JSON.stringify(sb)}; answering=${answering}`);
+      return sa?.cs === "connected" && sb?.cs === "connected" && ga.ok && answering ? true : { fail: JSON.stringify({ sa, sb, answering }) };
+    } finally {
+      await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 }).catch(() => {});
+      await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }).catch(() => {});
+      await cdp.detach().catch(() => {});
+      await ctl(A, "end").click().catch(() => {});
+      await idle(B, 15000).catch(() => {});
+    }
+  });
+  await B.page.reload();
+  await B.page.locator("[data-chat-input]").waitFor({ timeout: 30000 });
+  await reset(A, B);
+}
+
 // ============================== reconnect after a network drop ==============================
 if (want("reconnect")) {
   await openChat(A, B.me.id);
@@ -608,6 +820,9 @@ if (want("perm")) {
       const dlg = B.page.locator('[data-call-error="media"]');
       await dlg.waitFor({ timeout: 8000 });
       const text = await dlg.innerText();
+      await sleep(200);
+      const focusIn = await B.page.evaluate(() => !!document.activeElement?.closest('[data-call-error="media"]') && document.querySelector('[data-call-error="media"]')?.getAttribute("aria-describedby") === "pn-call-err-hint");
+      if (!focusIn) throw new Error("error dialog did not take focus / no aria-describedby");
       await shot(B, `${lang}_412_error_denied`);
       await B.page.setViewportSize({ width: 360, height: 740 });
       await sleep(300);
@@ -658,6 +873,39 @@ if (want("perm")) {
   });
   await A.page.reload();
   await A.page.locator("[data-chat-input]").waitFor({ timeout: 30000 });
+  await sleep(1200);
+  await step("perm-camera-denied", "Video call with ONLY the camera blocked (NotAllowedError, mic allowed) → 'Camera access is blocked' + 'Continue as voice call' → B rings with a voice call", async () => {
+    await failGum(A, "NotAllowedError", true);
+    await dial(A, "video");
+    const dlg = A.page.locator('[data-call-error="media"]');
+    await dlg.waitFor({ timeout: 8000 });
+    const t = await dlg.innerText();
+    await A.page.getByRole("button", { name: /Continue as voice call/ }).click();
+    await phaseIs(B, "incoming", 15000);
+    const type = await B.page.locator("[data-call-phase]").getAttribute("data-call-type");
+    await ctl(A, "cancel").click();
+    await idle(B, 10000);
+    return /Camera access is blocked/.test(t) && type === "audio" ? true : { fail: JSON.stringify({ t: t.slice(0, 160), type }) };
+  });
+  await A.page.reload();
+  await A.page.locator("[data-chat-input]").waitFor({ timeout: 30000 });
+  await sleep(1200);
+  await step("perm-callee-camera", "Callee allowed the mic but blocked ONLY the camera → answering a VIDEO call joins with audio (both connected, audio both ways), A sees 'Camera off'", async () => {
+    await failGum(B, "NotAllowedError", true);
+    await dial(A, "video");
+    await phaseIs(B, "incoming", 15000);
+    await ctl(B, "answer").click();
+    await phaseIs(A, "connected", 30000);
+    await phaseIs(B, "connected", 30000);
+    await B.page.getByText(/Camera blocked/).first().waitFor({ timeout: 5000 });
+    await A.page.locator('[data-peer-cam="0"]').waitFor({ timeout: 8000 });
+    const grows = await audioGrowsBoth();
+    await ctl(A, "end").click();
+    await idle(B, 10000);
+    return grows;
+  });
+  await B.page.reload();
+  await B.page.locator("[data-chat-input]").waitFor({ timeout: 30000 });
   await sleep(1200);
   await step("perm-callee", "Callee's microphone blocked after tapping Answer → B sees the dialog, A is told 'couldn't join' + 'Missed voice call' log", async () => {
     await failGum(B, "NotAllowedError");

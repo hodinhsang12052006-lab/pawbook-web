@@ -156,6 +156,10 @@ let convId;
   R.check("Z14e", "Calls: tự gọi chính mình → 400", self.status === 400, `status=${self.status}`);
   const ghost = await owner.req("/api/calls", { method: "POST", json: { targetId: "cnotarealuser000000000000", action: "offer", callType: "audio" } });
   R.check("Z14f", "Calls: gọi người không tồn tại → 404 (hoặc 503 khi server không có realtime)", ghost.status === 404 || ghost.status === 503, `status=${ghost.status}`);
+  // Người GỌI không được tự "nghe máy" / "đang nghe" thay người nhận (chỉ người nhận mới gửi được).
+  const selfAccept = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "accept", callId: "zz14call", callToken: tok, leg: "leg-aaaa" } });
+  const selfAnswering = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "answering", callId: "zz14call", callToken: tok, leg: "leg-aaaa" } });
+  R.check("Z14h", "Calls: người gọi tự gửi accept / answering → 403", selfAccept.status === 403 && selfAnswering.status === 403, `accept=${selfAccept.status} answering=${selfAnswering.status}`);
   await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject", callId: "zz14call", callToken: tok, reason: "cancel" } });
   const ice = await owner.req("/api/calls/ice");
   const iceJson = JSON.stringify(ice.data || {});

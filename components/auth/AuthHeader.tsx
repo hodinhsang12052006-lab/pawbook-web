@@ -10,7 +10,9 @@ import LanguageToggle from "@/components/layout/LanguageToggle";
 export default function AuthHeader() {
   return (
     <div className="pn-auth-hdr">
-      <Link href="/" className="pn-auth-brand" aria-label="PawNail">
+      {/* prefetch={false} (như Navbar): prefetch "/" kéo CSS hero mùa của trang chủ về → Chrome báo "preloaded but not
+          used", tốn băng thông lúc điện thoại chậm đang tải form. */}
+      <Link href="/" prefetch={false} className="pn-auth-brand" aria-label="PawNail">
         <span className="pn-auth-logo">
           <BrandLogo size={32} />
         </span>

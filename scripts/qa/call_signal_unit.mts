@@ -246,6 +246,26 @@ function inbox(o: { remoteLeg?: string } = {}) {
   const worst = Math.max(...parts.map((d) => Buffer.byteLength(JSON.stringify({ fromId: "c".repeat(25), callId: "x".repeat(24), fromLeg: "l".repeat(24), toLeg: "l".repeat(24), seq: 999999, kind: "sdp", part: 9, parts: 10, d }))));
   ok("V4", "Mỗi phần sau khi Pusher JSON hoá lần 2 vẫn < 10KB; tối đa 10 phần / lô", worst < 10240 && parts.length <= MAX_PARTS, { worst, n: parts.length });
   ok("V5", "Quá 10 phần → từ chối (413)", chunkSerialized("x".repeat(4000 * 10 + 1)) === null);
+  const v11 = validateSignalData("ctl", { away: true });
+  const v12 = validateSignalData("ctl", { away: "yes" });
+  ok("V6", "ctl.away (app Android chạy nền): chỉ nhận boolean", v11.ok && (v11.data as { away?: boolean }).away === true && !v12.ok && v12.status === 400, [v11, v12]);
+}
+
+// ================= Lỗi micro / camera (EN) =================
+{
+  const { setTrLocale } = await import("../../lib/i18n/tr");
+  setTrLocale("en");
+  const { describeMediaError, classifyMediaError } = await import("../../lib/calls/mediaErrors");
+  const camDenied = describeMediaError("denied", { video: true, cameraOnly: true, platform: "desktop" });
+  ok("E1", "Chỉ camera bị chặn (NotAllowedError, micro vẫn dùng được) → 'Camera access is blocked' + được 'Continue as voice call'", classifyMediaError({ name: "NotAllowedError" }) === "denied" && camDenied.canFallBackToVoice && camDenied.title === "Camera access is blocked" && /microphone works/.test(camDenied.hint), camDenied);
+  const micDenied = describeMediaError("denied", { video: false, platform: "desktop" });
+  ok("E2", "Micro bị chặn (máy tính) → hướng dẫn biểu tượng bên trái địa chỉ (không còn 'lock icon'), không có lối gọi thoại", micDenied.title === "Microphone access is blocked" && /icon left of the web address \(settings or lock icon\)/.test(micDenied.hint) && !micDenied.canFallBackToVoice, micDenied);
+  const app = describeMediaError("denied", { video: true, platform: "android-app", oldAppBuild: true });
+  ok("E3", "App Android: Settings › Apps › PawNail Jobs › Permissions + nhắc cập nhật bản cũ", /Apps › PawNail Jobs › Permissions/.test(app.hint) && /update PawNail on Google Play/.test(app.hint), app.hint);
+  const ios = describeMediaError("denied", { video: false, platform: "iphone" });
+  ok("E4", "iPhone Safari: nút trang (aA hoặc ☰) › Website Settings", /aA or ☰/.test(ios.hint) && /Website Settings/.test(ios.hint), ios.hint);
+  const inapp = describeMediaError("denied", { video: false, platform: "inapp" });
+  ok("E5", "Trình duyệt trong app (Facebook / Zalo…) → 'Open PawNail in Safari or Chrome'", /Safari or Chrome/.test(inapp.hint), inapp.hint);
 }
 
 // ================= Call token =================

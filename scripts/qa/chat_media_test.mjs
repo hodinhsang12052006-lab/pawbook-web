@@ -77,11 +77,25 @@ R.check("CM0", "API: sticker 'fl:nail_polish' và '💅' → 201; 'hello' → 40
 const p = A.page;
 await openThread(p, `to=${B.me.id}`);
 await openPanel(p);
+// ngân sách tải lần đầu (bộ nhớ đệm trình duyệt trống): ≤ 30 ảnh nhỏ, ≤ 350 KB, chưa tải bản động (512.webp)
+const firstLoad = [];
+const onResp = async (r) => {
+  const u = r.url();
+  if (!/fonts\.gstatic\.com\/s\/e\/notoemoji|cdn\.jsdelivr\.net\/gh\/microsoft|\/_next\/image\?url=/.test(u)) return;
+  const b = await r.body().catch(() => null);
+  firstLoad.push({ u: u.slice(-60), n: b ? b.length : Number(r.headers()["content-length"] || 0) });
+};
+p.on("response", onResp);
 await panel(p).getByRole("tab", { name: "Stickers" }).click();
 const search = panel(p).getByRole("textbox", { name: "Search stickers" });
 await search.waitFor({ timeout: 8000 });
+await p.waitForTimeout(3000);
+p.off("response", onResp);
 const packIcons = await panel(p).locator("[data-pack]").count();
 R.check("CM1", "Mở Nhãn dán: có ô tìm + ≥ 12 icon bộ trên thanh", (await search.isVisible()) && packIcons >= 12, String(packIcons));
+const kb = Math.round(firstLoad.reduce((a, x) => a + x.n, 0) / 1024);
+const animEarly = firstLoad.filter((x) => /512\.webp/.test(x.u)).length;
+R.check("CM1b", `Lần mở đầu: ${firstLoad.length} ảnh nhỏ, ${kb} KB (≤ 30 ảnh, ≤ 350 KB), không tải bản động`, firstLoad.length <= 30 && kb <= 350 && animEarly === 0, JSON.stringify({ n: firstLoad.length, kb, animEarly }));
 await shot(p, "t01_stickers");
 
 // cuộn qua mọi mục → ảnh tải được thật (naturalWidth > 0)
@@ -271,6 +285,8 @@ const reqs = [];
 const onReq = (r) => {
   const u = r.url();
   if (u.startsWith("data:") || u.startsWith("blob:")) return;
+  // Sentry (đo lỗi của app, đã chặn trong test) không liên quan tới ảnh — bỏ qua
+  if (/sentry\.io|cloudflareinsights\.com/.test(u)) return;
   reqs.push({ m: r.method(), u: u.slice(0, 120), n: (r.postDataBuffer() || Buffer.alloc(0)).length });
 };
 p.on("request", onReq);

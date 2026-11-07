@@ -18,7 +18,9 @@ import { CS } from "@/lib/i18n/chatStrings";
 // Tab "Nhãn dán": ô tìm · thanh bộ (Gần đây ⭐ Yêu thích · bộ theo mùa · 6 bộ hoạt hình Noto | 6 bộ 3D Fluent) ·
 // MỘT vùng cuộn liền chia mục (tiêu đề dính) · dòng ghi công ở cuối. Bấm = gửi ngay, bảng VẪN MỞ (như Telegram);
 // nhấn giữ 350ms / chuột phải / Shift+Enter = xem trước + Yêu thích. Manifest từ khoá chỉ tải (import động) khi mở bảng.
-// Ảnh: <img> thường + width/height cố định (không nhảy bố cục), loading=lazy; bản động chỉ tải khi rê chuột / xem trước.
+// Ảnh: <img> thường + width/height cố định (không nhảy bố cục). Chỉ gắn src khi ô sắp hiện trong VÙNG CUỘN của bảng
+// (IntersectionObserver, lề nửa hàng) — loading=lazy của trình duyệt tính theo cửa sổ với lề ~1250px nên tải cả trăm ảnh;
+// lần mở đầu ≤ 30 ảnh nhỏ. Bản động chỉ tải khi rê chuột / xem trước.
 
 type Manifest = Record<StickerId, StickerMeta>;
 let manifestPromise: Promise<Manifest> | null = null;
@@ -32,6 +34,51 @@ export function loadStickerManifest(): Promise<Manifest> {
 
 const CELL = 76; // chiều cao ô ~ (rộng bảng / 5 cột) — dùng cho contain-intrinsic-size
 const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+// Gắn src cho ảnh khi phần tử vào gần khung nhìn của 1 vùng cuộn (1 IntersectionObserver dùng chung cho mọi ô).
+type Observe = (el: Element, onNear: () => void) => () => void;
+const NearContext = React.createContext<{ grid: Observe | null; bar: Observe | null }>({ grid: null, bar: null });
+function useNearObserver(rootRef: React.RefObject<HTMLElement | null>, rootMargin: string): Observe {
+  const io = useRef<IntersectionObserver | null>(null);
+  const cbs = useRef(new Map<Element, () => void>());
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          cbs.current.get(e.target)?.();
+          cbs.current.delete(e.target);
+          obs.unobserve(e.target);
+        }
+      },
+      { root: rootRef.current, rootMargin }
+    );
+    io.current = obs;
+    cbs.current.forEach((_, el) => obs.observe(el));
+    return () => {
+      obs.disconnect();
+      io.current = null;
+    };
+  }, [rootRef, rootMargin]);
+  return useCallback((el: Element, onNear: () => void) => {
+    cbs.current.set(el, onNear);
+    io.current?.observe(el);
+    return () => {
+      cbs.current.delete(el);
+      io.current?.unobserve(el);
+    };
+  }, []);
+}
+function useNear(kind: "grid" | "bar") {
+  const observe = React.useContext(NearContext)[kind];
+  const ref = useRef<HTMLElement | null>(null);
+  const [near, setNear] = useState(!observe);
+  useEffect(() => {
+    if (!observe || !ref.current || near) return;
+    return observe(ref.current, () => setNear(true));
+  }, [observe, near]);
+  return [ref, near] as const;
+}
 
 interface Section {
   key: string;
@@ -62,6 +109,9 @@ export default function StickerTab({
   const [favHint, setFavHint] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const gridNear = useNearObserver(scrollRef, "0px 0px 40px 0px");
+  const barNear = useNearObserver(barRef, "0px 40px 0px 0px");
+  const near = useMemo(() => ({ grid: gridNear, bar: barNear }), [gridNear, barNear]);
 
   useEffect(() => {
     let alive = true;
@@ -180,6 +230,7 @@ export default function StickerTab({
   );
 
   return (
+    <NearContext.Provider value={near}>
     <div className="pn-stk flex min-h-0 flex-1 flex-col">
       {/* (1) Ô tìm */}
       <div className="px-3 pt-2">
@@ -222,8 +273,7 @@ export default function StickerTab({
                 ) : s.icon === "fav" ? (
                   <Star className="h-5 w-5" aria-hidden />
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumbUrl(s.icon) ?? ""} alt="" width={26} height={26} decoding="async" crossOrigin="anonymous" draggable={false} className="h-[26px] w-[26px]" />
+                  <PackIcon id={s.icon} />
                 )}
               </button>
             </React.Fragment>
@@ -296,6 +346,25 @@ export default function StickerTab({
         />
       )}
     </div>
+    </NearContext.Provider>
+  );
+}
+
+function PackIcon({ id }: { id: StickerId }) {
+  const [ref, near] = useNear("bar");
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={ref as React.RefObject<HTMLImageElement>}
+      src={near ? thumbUrl(id) ?? undefined : undefined}
+      alt=""
+      width={26}
+      height={26}
+      decoding="async"
+      crossOrigin="anonymous"
+      draggable={false}
+      className="h-[26px] w-[26px]"
+    />
   );
 }
 
@@ -303,6 +372,7 @@ export default function StickerTab({
 // Rê chuột 250ms (máy tính) → ảnh Noto chuyển sang bản động.
 const StickerCell = React.memo(function StickerCell({ id, name, onSend, onPeek }: { id: StickerId; name: string; onSend: (id: StickerId) => void; onPeek: (id: StickerId) => void }) {
   const [hover, setHover] = useState(false);
+  const [nearRef, near] = useNear("grid");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -388,11 +458,11 @@ const StickerCell = React.memo(function StickerCell({ id, name, onSend, onPeek }
       {thumb ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={hover && anim ? anim : thumb}
+          ref={nearRef as React.RefObject<HTMLImageElement>}
+          src={near ? (hover && anim ? anim : thumb) : undefined}
           alt=""
           width={60}
           height={60}
-          loading="lazy"
           decoding="async"
           crossOrigin="anonymous"
           draggable={false}

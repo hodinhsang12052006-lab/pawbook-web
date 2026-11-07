@@ -5,6 +5,7 @@ import { MapPin, DollarSign, Phone, MessageCircle, AlertCircle, Flame, Clock, Bo
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
 import { isVideoUrl } from "@/lib/mediaUpload";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import Link from "next/link";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
@@ -601,7 +602,7 @@ export default function JobBoard({ market, state, city, onShowAllStates }: JobBo
           saved={savedIds.has(job.id)}
           saveCount={(job.saveCount ?? 0) + (savedIds.has(job.id) ? 1 : 0) - (initialSaved.has(job.id) ? 1 : 0)}
           onToggleSave={() => toggleSave(job.id)}
-          onMessage={() => router.push(`/messages?to=${job.ownerId}`)}
+          onMessage={() => router.push(localeHref(`/messages?to=${job.ownerId}`))}
           nearYou={!!homeState && job.state === homeState}
         />
       ))}

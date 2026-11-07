@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import {
@@ -439,7 +440,7 @@ export default function AdminLeadsPage() {
         if (res.status === 401 || res.status === 403) {
           const data = await res.json().catch(() => ({}));
           toast.error(data.error || "Bạn không có quyền truy cập trang này.");
-          router.push("/");
+          router.push(localeHref("/"));
           return;
         }
         if (!res.ok) throw new Error("Không thể tải dữ liệu lead.");

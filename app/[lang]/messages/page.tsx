@@ -7,6 +7,8 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getConversationMeta } from "@/lib/conversationReads";
 import { isBubbleRequest } from "@/lib/bubbleMode";
+import { localePath } from "@/lib/i18n/config";
+import { langFrom } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +48,7 @@ function mapUser(user: any) {
   };
 }
 
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function MessagesPage({ params, searchParams }: { params: Promise<{ lang: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await getServerSession(authOptions);
   const sp = await searchParams;
   // Bong bóng chat Android (lib/bubbleMode.ts): chỉ khung chat của cuộc trò chuyện ?c=, không Navbar / danh sách.
@@ -55,7 +57,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const wantConvId = typeof sp.c === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(sp.c) ? sp.c : null;
 
   if (!session?.user?.id) {
-    redirect("/auth/login");
+    // Đăng nhập đúng ngôn ngữ của trang đang mở (/vi/messages → /vi/auth/login).
+    redirect(localePath("/auth/login", await langFrom(params)));
   }
 
   const userId = session.user.id;

@@ -4,6 +4,7 @@ import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock, Mail, MailCheck } from "lucide-react";
 import { AuthTitle, ErrorBox, OkBox, Submit } from "@/components/auth/fields";
 import { tr } from "@/lib/i18n/tr";
@@ -102,7 +103,7 @@ export function ResetPasswordForm() {
       if (!res.ok) setError(res.status === 410 ? tr("Link đã hết hạn hoặc đã được dùng. Hãy yêu cầu link mới.", "This link has expired or was already used. Please request a new one.") : apiError(r, "Không đặt lại được, vui lòng thử lại.", "Couldn't reset, please try again."));
       else {
         setDone(true);
-        setTimeout(() => router.push("/auth/login"), 2500);
+        setTimeout(() => router.push(localeHref("/auth/login")), 2500);
       }
     } catch {
       setError(tr("Lỗi kết nối, vui lòng thử lại.", "Network error, please try again."));

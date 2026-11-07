@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import toast from "react-hot-toast";
 import Navbar from "@/components/layout/Navbar";
 import { Wallet, Calendar, Plus, TrendingUp, Trash2, Loader2, ClipboardCheck, X } from "lucide-react";
@@ -86,7 +87,7 @@ export default function IncomeTrackerPage() {
         const session = res.ok ? await res.json() : null;
         if (!session?.user?.id) {
           toast.error(tr("Vui lòng đăng nhập để dùng Bảng tính thu nhập.", "Please sign in to use the income tracker."));
-          router.push("/auth/login");
+          router.push(localeHref("/auth/login"));
           return;
         }
         setUserId(session.user.id);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Bookmark, Clock, Sparkles, X, ShoppingBag, Camera, ListChecks, ChevronRight, Wand2, BookOpen, MapPin, MessageCircle, Share2, ExternalLink, Hand } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { dt } from "@/lib/i18n/dataEn";
@@ -156,7 +157,7 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
   const occ = occasionLabel(d.occasion);
 
   const save = async () => {
-    if (!user) return router.push("/auth/login");
+    if (!user) return router.push(localeHref("/auth/login"));
     setBusy(true);
     try {
       const res = await fetch(`/api/designs/${d.id}/save`, { method: "POST" });

@@ -10,6 +10,7 @@ import { AuthTitle, ErrorBox, Submit } from "@/components/auth/fields";
 import { tr } from "@/lib/i18n/tr";
 import { apiError } from "@/lib/i18n/apiError";
 import { safeInternalPath } from "@/lib/safeRedirect";
+import { localeHref } from "@/lib/i18n/localeHref";
 
 export default function LoginForm() {
   const { t } = useLanguage();
@@ -70,7 +71,7 @@ export default function LoginForm() {
         // vào đúng nơi.
         // ?callbackUrl= (VD: khách bấm "Muốn làm mẫu này" khi chưa đăng nhập) — chỉ nhận đường dẫn CÙNG trang web
         // (lib/safeRedirect.ts: "/<TAB>/evil.com", "//evil.com", "/\evil.com" → về trang chủ).
-        window.location.href = safeInternalPath(new URLSearchParams(window.location.search).get("callbackUrl")) || "/";
+        window.location.href = safeInternalPath(new URLSearchParams(window.location.search).get("callbackUrl")) || localeHref("/");
       }
     } catch {
       setError(t("auth.login.errorUnknown"));

@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import toast from "react-hot-toast";
 import { Heart, MessageCircle, Send, MapPin, Play, ArrowRight, Loader2, MoreHorizontal, Trash2, Flag, TrendingUp } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -515,7 +516,7 @@ export default function FeedPostCard({ post, onDeleted }: { post: FeedPost; onDe
         {!isOwnPost && !anon && (
           <button
             type="button"
-            onClick={() => router.push(`/messages?to=${post.author.id}`)}
+            onClick={() => router.push(localeHref(`/messages?to=${post.author.id}`))}
             aria-label={tr("Nhắn tin cho tác giả", "Message the author")}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-emerald-300 transition-colors ${PRESS}`}
           >

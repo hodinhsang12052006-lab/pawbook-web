@@ -13,6 +13,7 @@ import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { tr } from "@/lib/i18n/tr";
 import { apiError } from "@/lib/i18n/apiError";
 import { useTr } from "@/lib/i18n/useTr";
+import { localeHref } from "@/lib/i18n/localeHref";
 
 interface P { id: string; name: string; avatarUrl: string | null; market: "US" | "AU"; state: string | null; city: string | null; phone: string | null }
 
@@ -45,7 +46,7 @@ export default function ClientAccount({ profile }: { profile: P }) {
     if (!window.confirm(tr("Xoá tài khoản vĩnh viễn? Mẫu đã lưu và tin nhắn của bạn sẽ mất.", "Delete your account permanently? Saved looks and your messages will be lost."))) return;
     const res = await fetch("/api/profile", { method: "DELETE" });
     if (!res.ok) return toast.error(tr("Không xoá được, thử lại.", "Couldn't delete, try again."));
-    await appSignOut({ callbackUrl: "/" });
+    await appSignOut({ callbackUrl: localeHref("/") });
   };
 
   return (
@@ -90,7 +91,7 @@ export default function ClientAccount({ profile }: { profile: P }) {
       </section>
 
       <div className="grid grid-cols-2 gap-2.5">
-        <button type="button" onClick={() => appSignOut({ callbackUrl: "/" })} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-200 ring-1 ring-white/10"><LogOut className="h-4 w-4" />{tr("Đăng xuất", "Log out")}</button>
+        <button type="button" onClick={() => appSignOut({ callbackUrl: localeHref("/") })} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-200 ring-1 ring-white/10"><LogOut className="h-4 w-4" />{tr("Đăng xuất", "Log out")}</button>
         <button type="button" onClick={remove} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-red-500/10 text-sm font-bold text-red-300 ring-1 ring-red-500/25"><Trash2 className="h-4 w-4" />{tr("Xoá tài khoản", "Delete account")}</button>
       </div>
     </div>

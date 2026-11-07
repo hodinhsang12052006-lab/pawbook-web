@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { Package, MessageCircle, Store } from "lucide-react";
 import { currentLocale, tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -63,7 +64,7 @@ export default function SupplyProductCard({ product, compact = false }: { produc
         </div>
         <button
           type="button"
-          onClick={() => router.push(`/messages?to=${product.seller.id}`)}
+          onClick={() => router.push(localeHref(`/messages?to=${product.seller.id}`))}
           aria-label={tr("Nhắn tin người bán", "Message the seller")}
           className={`flex h-11 flex-shrink-0 items-center gap-1.5 rounded-xl bg-amber-500 px-3 text-xs font-bold text-amber-950 hover:bg-amber-400 ${PRESS}`}
         >
@@ -123,7 +124,7 @@ export default function SupplyProductCard({ product, compact = false }: { produc
         <div className="flex items-center gap-2 pt-1">
           <button
             type="button"
-            onClick={() => router.push(`/messages?to=${product.seller.id}`)}
+            onClick={() => router.push(localeHref(`/messages?to=${product.seller.id}`))}
             className={`flex-1 min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-sm font-bold text-amber-950 ${PRESS}`}
           >
             <MessageCircle className="h-4 w-4" />{tr(" Nhắn tin người bán", " Message the seller")}

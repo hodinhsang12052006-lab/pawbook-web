@@ -12,6 +12,7 @@ import SupplyProductCard, { SupplyProductType } from "@/components/feed/SupplyPr
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useViewerMarket } from "@/lib/useViewerMarket";
 
 const PRESS = "active:scale-[0.98] transition-transform duration-100";
@@ -175,7 +176,7 @@ export default function SupplyPage() {
   const router = useRouter();
   // Chợ vật tư là công cụ của TIỆM / THỢ — khách làm nail được đưa sang danh sách tiệm.
   useEffect(() => {
-    if (user?.role === "CLIENT") router.replace("/salons");
+    if (user?.role === "CLIENT") router.replace(localeHref("/salons"));
   }, [user?.role, router]);
   // Chỉ hàng ở thị trường của người xem (giá ghi US$ / A$ trên từng thẻ).
   const { market, setMarket } = useViewerMarket();

@@ -8,6 +8,7 @@ import {
   Smile, X, ArrowLeft, Check, CheckCheck, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playSound } from "@/lib/sounds";
@@ -450,7 +451,7 @@ export default function MessagesContent({
       if (!isSilent) setLoading(true);
       const res = await fetch("/api/messages");
       if (res.status === 401) {
-        router.replace("/auth/login");
+        router.replace(localeHref("/auth/login"));
         return;
       }
       if (!res.ok) throw new Error(tr("Không thể tải danh sách cuộc trò chuyện.", "Couldn't load conversations."));
@@ -2501,7 +2502,7 @@ export default function MessagesContent({
                   type="button"
                   // Tải trang THẬT (không router.push) — app native chỉ thấy điều hướng thật và chuyển sang app chính.
                   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                  onClick={() => window.location.assign(`${window.location.origin}/messages`)}
+                  onClick={() => window.location.assign(`${window.location.origin}${localeHref("/messages")}`)}
                   className="min-h-[44px] rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 text-sm font-bold text-white"
                 >
                   {tr("Mở PawNail", "Open PawNail")}

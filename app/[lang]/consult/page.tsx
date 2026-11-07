@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import Navbar from "@/components/layout/Navbar";
 import HandConsult from "@/components/consult/HandConsult";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -13,7 +14,7 @@ export default function ConsultPage() {
   const { user, loading } = useSessionUser();
   const pro = user?.role === "TECHNICIAN" || user?.role === "OWNER" || user?.role === "ADMIN";
   useEffect(() => {
-    if (!loading && !pro) router.replace("/tryon");
+    if (!loading && !pro) router.replace(localeHref("/tryon"));
   }, [loading, pro, router]);
   if (loading || !pro) return <div className="min-h-screen" aria-busy="true" />;
   return (

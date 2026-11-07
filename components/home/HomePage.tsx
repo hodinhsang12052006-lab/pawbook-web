@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import HeroLanding from "@/components/home/HeroLanding";
 import LandingFaq from "@/components/home/LandingFaq";
 import SiteFooter from "@/components/layout/SiteFooter";
@@ -96,7 +97,7 @@ export default function HomePage() {
     setSlideDir(TAB_ORDER.indexOf(next) > TAB_ORDER.indexOf(tab) ? "right" : "left");
     setTab(next);
     window.dispatchEvent(new CustomEvent("hometab-change", { detail: next }));
-    router.replace(`/?tab=${next}`, { scroll: false });
+    router.replace(localeHref(`/?tab=${next}`), { scroll: false });
   };
 
   const onTouchStart = (e: React.TouchEvent) => {

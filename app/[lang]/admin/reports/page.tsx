@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { Flag, ShieldAlert, Loader2, ExternalLink, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { timeAgo } from "@/lib/feedFormat";
@@ -27,7 +28,7 @@ export default function AdminReportsPage() {
     fetch("/api/admin/reports")
       .then(async (res) => {
         if (res.status === 401) {
-          router.push("/auth/login");
+          router.push(localeHref("/auth/login"));
           return;
         }
         const data = await res.json();

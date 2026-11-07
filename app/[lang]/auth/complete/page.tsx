@@ -9,6 +9,7 @@ import { stateName, US_ALL_CODES, AU_ALL_CODES } from "@/lib/stateNames";
 import { guessState } from "@/lib/cityState";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { localeHref } from "@/lib/i18n/localeHref";
 
 // Người đăng nhập Google/Apple lần đầu: chọn vai trò + khu vực + SĐT (1 màn,
 // ~20 giây) rồi vào app. Đã hoàn tất rồi mà vào lại đây → về trang chủ.
@@ -33,8 +34,8 @@ export default function CompleteProfilePage() {
     fetch("/api/auth/session")
       .then((r) => r.json())
       .then((s) => {
-        if (!s?.user?.id) return window.location.replace("/auth/login");
-        if (!s.user.needsOnboarding) return window.location.replace("/");
+        if (!s?.user?.id) return window.location.replace(localeHref("/auth/login"));
+        if (!s.user.needsOnboarding) return window.location.replace(localeHref("/"));
         // Đăng ký bằng SĐT: chưa có tên thật (tên tạm "PawNail member"; tài khoản cũ: "Thành viên PawNail") → để trống cho tự nhập.
         setName(s.user.name && s.user.name !== "PawNail member" && s.user.name !== "Thành viên PawNail" ? s.user.name : "");
         // Đã xác minh SĐT (đăng nhập bằng mã SMS) → điền sẵn số + quốc gia.
@@ -49,7 +50,7 @@ export default function CompleteProfilePage() {
           .catch(() => {});
         setReady(true);
       })
-      .catch(() => window.location.replace("/auth/login"));
+      .catch(() => window.location.replace(localeHref("/auth/login")));
   }, []);
 
   const submit = async () => {
@@ -69,7 +70,7 @@ export default function CompleteProfilePage() {
       if (!res.ok) throw new Error(apiError(d, "Không lưu được, thử lại.", "Couldn't save, try again."));
       await fetch("/api/auth/session"); // làm mới phiên với vai trò vừa chọn
       try { localStorage.removeItem("pn_role_hint"); } catch {}
-      window.location.href = role === "OWNER" ? "/jobs/create" : role === "CLIENT" ? "/" : "/?tab=jobs";
+      window.location.href = localeHref(role === "OWNER" ? "/jobs/create" : role === "CLIENT" ? "/" : "/?tab=jobs");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tr("Không lưu được, thử lại.", "Couldn't save, try again."));
       setBusy(false);

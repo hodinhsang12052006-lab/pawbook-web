@@ -11,6 +11,7 @@ import { isVideoUrl } from "@/lib/mediaUpload";
 import MediaLightbox from "@/components/ui/MediaLightbox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import toast from "react-hot-toast";
 import { stateName } from "@/lib/stateNames";
 import { timeAgo } from "@/lib/feedFormat";
@@ -134,7 +135,7 @@ export default function JobDetailPage({ params }: PageProps) {
 
   const toggleSave = async () => {
     if (!user?.id) {
-      router.push("/auth/login");
+      router.push(localeHref("/auth/login"));
       return;
     }
     const next = !saved;
@@ -417,7 +418,7 @@ export default function JobDetailPage({ params }: PageProps) {
               {!postedForSalon && <button
                 onClick={() => {
                   if (user?.id) trackJobContact(job.id);
-                  router.push(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login");
+                  router.push(localeHref(user?.id ? `/messages?to=${job.ownerId}` : "/auth/login"));
                 }}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] hover:bg-white/10 py-3.5 text-base font-bold text-slate-100 transition-colors"
                 aria-label={tr("Nhắn tin trong app", "Message in the app")}

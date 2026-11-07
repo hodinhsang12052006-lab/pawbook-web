@@ -8,6 +8,7 @@ import {
   CalendarCheck, Hand,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -164,11 +165,11 @@ export default function PublicProfilePage({ params }: PageProps) {
   }, [isOwnerViewingTechnician, profile?.id]);
 
 
-  const goToChat = () => router.push(`/messages?to=${profile.id}`);
+  const goToChat = () => router.push(localeHref(`/messages?to=${profile.id}`));
 
   const handleContactClick = () => {
     if (!viewer) {
-      router.push("/auth/login");
+      router.push(localeHref("/auth/login"));
       return;
     }
     // Chủ tiệm nhắn thợ NGAY — không còn "mở khoá"/khảo sát chặn giữa chừng

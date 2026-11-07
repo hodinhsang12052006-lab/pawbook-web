@@ -6,6 +6,7 @@ import IntentLink from "@/components/marketing/IntentLink";
 import { Briefcase, Users, Newspaper, Compass } from "lucide-react";
 import ToolsPanel from "@/components/layout/ToolsPanel";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName } from "@/lib/stateNames";
@@ -46,9 +47,9 @@ export default function Sidebar({ activeTab, setActiveTab, guest = false }: Side
   const handleNavigation = (id: string, route: string) => {
     if (pathname === "/" && setActiveTab) {
       setActiveTab(id);
-      router.push(route, { scroll: false });
+      router.push(localeHref(route), { scroll: false });
     } else {
-      router.push(route);
+      router.push(localeHref(route));
     }
   };
 

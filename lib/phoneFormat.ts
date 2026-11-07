@@ -83,12 +83,14 @@ export function marketPhoneError(market: string | null | undefined): { vi: strin
 export function hasCallableNumber(raw: string | null | undefined, market: string | null | undefined): boolean {
   const t = String(raw ?? "").normalize("NFKC");
   if (!t.trim()) return false;
+  // Không dùng lookbehind "(?<!…)": file này vào bundle trình duyệt (trang tin, form đăng tin) — Safari < 16.4 báo lỗi cú
+  // pháp cả chunk. Ký tự đứng trước số (không phải chữ số / "+") được bắt vào nhóm 1 thay cho lookbehind.
   const re = market === "AU"
-    ? /(?<![\d+])(\+?61[\s.-]?(?:\(0\)\s?)?|\(?0)[2-478]\)?(?:[\s.-]?\d){8}(?!\d)/g
-    : /(?<![\d+])(\+?1[\s.-]?)?\(?[2-9]\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
+    ? /(^|[^\d+])(\+?61[\s.-]?(?:\(0\)\s?)?|\(?0)[2-478]\)?(?:[\s.-]?\d){8}(?!\d)/g
+    : /(^|[^\d+])(\+?1[\s.-]?)?\(?[2-9]\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
   for (const m of t.matchAll(re)) {
     // "+44 747 333 5462": đúng hình dạng nhưng đứng sau mã nước khác → không tính
-    if (!m[1] && /(?:\+|\b00)\s?\d{1,3}[\s.-]?$/.test(t.slice(0, m.index))) continue;
+    if (!m[2] && /(?:\+|\b00)\s?\d{1,3}[\s.-]?$/.test(t.slice(0, (m.index ?? 0) + m[1].length))) continue;
     return true;
   }
   return false;

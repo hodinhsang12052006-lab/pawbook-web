@@ -6,6 +6,7 @@ import "../globals.css";
 import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { brandOgImage, langFrom, openGraph } from "@/lib/i18n/server";
 import { SEASON_BOOT } from "@/lib/season";
+import { BUBBLE_HEAD_JS } from "@/lib/bubbleMode";
 
 // Layout GỐC nằm dưới segment [lang]: mỗi trang được prerender 1 lần cho mỗi ngôn
 // ngữ (/en/…, /vi/…) và edge rewrite trong next.config.ts chọn bản đúng theo
@@ -78,6 +79,7 @@ import PusherStatusBanner from "@/components/PusherStatusBanner";
 import NativeAppBridge from "@/components/NativeAppBridge";
 import PushPrompt from "@/components/PushPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import NotInBubble from "@/components/NotInBubble";
 
 export default async function RootLayout({
   children,
@@ -99,7 +101,7 @@ export default async function RootLayout({
             lib/season.ts). Chrome có thể bắn "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,p=location.pathname;if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT}`,
+            __html: `try{var d=document.documentElement,p=location.pathname;${BUBBLE_HEAD_JS}if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT}`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: siteLd(lang) }} />
@@ -138,17 +140,26 @@ export default async function RootLayout({
                     loading: { iconTheme: { primary: "#f59bbe", secondary: "#2e2433" } },
                   }}
                 />
-                <PusherStatusBanner />
+                {/* Bong bóng chat Android (html[data-bubble], lib/bubbleMode.ts): ẩn mọi lớp phủ toàn app — chỉ còn khung chat */}
+                <div data-bubble-hide className="contents">
+                  <NotInBubble>
+                    <PusherStatusBanner />
+                  </NotInBubble>
+                </div>
                 <NativeAppBridge />
                 <ServiceWorkerRegister />
                 {children}
-                <FomoToast />
                 <RefCapture />
-                <InstallPrompt />
-                <PushPrompt />
-                <ScrollToTop />
-                <BottomNav />
-                <LanguageHints />
+                <div data-bubble-hide className="contents">
+                  <NotInBubble>
+                    <FomoToast />
+                    <InstallPrompt />
+                    <PushPrompt />
+                    <ScrollToTop />
+                    <BottomNav />
+                    <LanguageHints />
+                  </NotInBubble>
+                </div>
               </UnreadMessagesProvider>
             </CallManagerProvider>
           </SessionUserProvider>

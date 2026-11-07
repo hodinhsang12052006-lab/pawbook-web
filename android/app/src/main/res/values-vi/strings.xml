@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Kênh thông báo (Cài đặt > Ứng dụng > PawNail Jobs > Thông báo). -->
+    <string name="channel_messages_name">Tin nhắn</string>
+    <string name="channel_messages_desc">Tin nhắn chat mới. Hiện nổi trên màn hình và có thể hiện thành bong bóng chat.</string>
+    <string name="channel_calls_name">Cuộc gọi</string>
+    <string name="channel_calls_desc">Cuộc gọi thoại và video đến</string>
+    <string name="channel_general_name">Thông báo chung</string>
+    <string name="channel_general_desc">Báo việc và các cập nhật khác</string>
+
+    <!-- Thông báo tin nhắn -->
+    <string name="chat_you">Bạn</string>
+    <string name="chat_group_fallback">Nhóm chat</string>
+    <string name="chat_new_message">Tin nhắn mới</string>
+    <string name="chat_reply">Trả lời</string>
+    <string name="chat_reply_hint">Nhập tin nhắn…</string>
+    <string name="chat_mark_read">Đánh dấu đã đọc</string>
+    <string name="chat_not_sent">Chưa gửi được: %1$s</string>
+    <string name="chat_error_signin">Mở app và đăng nhập để trả lời</string>
+    <string name="chat_error_blocked">Bạn không thể gửi tin trong cuộc trò chuyện này</string>
+    <string name="chat_error_limit">Gửi quá nhiều tin. Thử lại sau nhé.</string>
+    <string name="chat_error_network">Không gửi được. Kiểm tra kết nối mạng.</string>
+    <plurals name="chat_summary_conversations">
+        <item quantity="other">%d cuộc trò chuyện</item>
+    </plurals>
+
+    <!-- Cửa sổ bong bóng chat -->
+    <string name="title_activity_bubble">Trò chuyện</string>
+    <string name="bubble_offline">Không có kết nối mạng. Kiểm tra lại kết nối.</string>
+    <string name="bubble_continue_in_app">Đã mở trong app</string>
+    <string name="bubble_retry">Thử lại</string>
+</resources>

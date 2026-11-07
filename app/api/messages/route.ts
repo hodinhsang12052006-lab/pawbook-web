@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
@@ -7,7 +7,8 @@ import { Prisma } from "@prisma/client";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
 import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
-import { sendPush } from "@/lib/push";
+import { sendPush, type PushPayload } from "@/lib/push";
+import { chatPushAvatar, chatPushLegacyTitle, chatPushTitle, chatPushUrl, cleanDisplayName, isUnnamedGroup } from "@/lib/chatPush";
 import { coldDmBlocked } from "@/lib/abuseGuard";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
 import { isAllowedStickerId, serverStickerGlyph } from "@/lib/stickers/server";
@@ -550,13 +551,36 @@ export async function POST(req: Request) {
         gif ? "Đã gửi một GIF" : msgType === "IMAGE" ? "📷 Đã gửi một ảnh" : msgType === "VIDEO" ? "🎬 Đã gửi một video" : msgType === "AUDIO" ? "🎤 Đã gửi một tin nhắn thoại" : msgType === "STICKER" ? `${glyph} Nhãn dán`.trim() : messageText;
       const previewEn =
         gif ? "Sent a GIF" : msgType === "IMAGE" ? "📷 Sent a photo" : msgType === "VIDEO" ? "🎬 Sent a video" : msgType === "AUDIO" ? "🎤 Sent a voice message" : msgType === "STICKER" ? `${glyph} Sticker`.trim() : messageText;
-      sendPush(recipients, {
-        title: sender.name,
+      // Tiêu đề hội thoại: tên nhóm (nhóm) / tên người gửi (1-1). Dạng thông báo cũ (web, iPhone, app Android cũ)
+      // ghi "Người gửi · Nhóm" để người nhận biết tin đến từ nhóm nào; app Android mới tự vẽ kiểu Messenger từ `chat`.
+      // Nhóm CHƯA đặt tên: tiêu đề ghép từ tên thành viên, bỏ chính người nhận → mỗi người nhận 1 bản riêng.
+      const avatar = chatPushAvatar(sender.avatarUrl);
+      const ts = new Date(createdMessage.createdAt).getTime();
+      const payloadFor = (viewerId?: string): PushPayload => ({
+        title: chatPushLegacyTitle(conversation, sender.name, userId, viewerId),
         body: preview,
-        url: `/messages?to=${userId}`,
+        url: chatPushUrl(activeConversationId),
         tag: `pn-chat-${activeConversationId}`,
         en: { body: previewEn },
-      }).catch(() => {});
+        chat: {
+          cid: activeConversationId,
+          mid: createdMessage.id,
+          senderId: userId,
+          senderName: cleanDisplayName(sender.name),
+          avatar,
+          group: !!conversation.isGroup,
+          title: chatPushTitle(conversation, sender.name, viewerId),
+          ts,
+        },
+      });
+      // after(): gửi SAU khi trả lời nhưng giữ hàm serverless sống tới khi xong (fire-and-forget có thể bị Vercel cắt
+      // giữa lượt lấy token / gọi FCM → mất thông báo).
+      after(() =>
+        (isUnnamedGroup(conversation)
+          ? Promise.all(recipients.map((r) => sendPush(r, payloadFor(r)))).then((n) => n.reduce((a, b) => a + b, 0))
+          : sendPush(recipients, payloadFor())
+        ).catch(() => 0)
+      );
     }
 
     // Every client call site (handleSendMessage, image upload, GPS check-in)

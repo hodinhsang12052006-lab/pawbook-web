@@ -49,6 +49,8 @@ import { guessMarketInBrowser, readMarketCookie } from "@/lib/market";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useMounted } from "@/lib/useMounted";
+import { clearConversation, nativeHandlesChatAlerts, setActiveConversation } from "@/lib/nativePush";
+import ChatNotifyBanner from "./ChatNotifyBanner";
 import { autoTranslates, getTranslation, requestTranslation, useMessageTranslation } from "./messageTranslation";
 // Messenger V2: CSS riêng (mọi quy tắc nằm dưới .pn-msgr). Import ở đây, không ở app/messages/layout.tsx — nhánh
 // đổi route sang app/[lang]/ xoá layout đó; CSS đi cùng component nên không thể bị rơi khi gộp nhánh.
@@ -87,6 +89,7 @@ export default function MessagesContent({
   initialConversations,
   initialMessages,
   initialSystemUsers,
+  bubble = false,
 }: MessagesContentProps) {
   useTr(); // render lại khi đổi VI/EN
   const router = useRouter();
@@ -819,8 +822,11 @@ export default function MessagesContent({
         if (m.senderId !== currentUser.id && m.conversationId && !document.hidden) {
           markSeen(m.conversationId);
         }
-        // Tin đến ngay trong khung chat đang mở — tiếng "bóp" nhẹ như Messenger.
-        if (m.senderId !== currentUser.id) playSound(document.hidden ? "message" : "messageInChat");
+        // Tin đến ngay trong khung chat đang mở — tiếng "bóp" nhẹ như Messenger. Trang bị ẩn mà app Android (hoặc bong
+        // bóng đã thu lại) tự báo bằng thông báo native → không kêu thêm lần nữa.
+        if (m.senderId !== currentUser.id && !(document.hidden && (bubble || nativeHandlesChatAlerts()))) {
+          playSound(document.hidden ? "message" : "messageInChat");
+        }
         const key = chatKeyFor(liveActiveChat);
         if (!liveActiveChat.conversationId && m.conversationId) {
           rekeyBucket(key, m.conversationId);
@@ -833,8 +839,9 @@ export default function MessagesContent({
         // Tin nhắn thuộc 1 cuộc hội thoại KHÁC cuộc đang mở — vẫn đang ở
         // /messages nên UnreadMessagesContext tự bỏ qua (coi như "đang đọc
         // tin nhắn"), nhưng người dùng thực ra không nhìn thấy tin này, nên
-        // tự phát âm thanh ở đây thay vì im lặng bỏ qua hoàn toàn.
-        playSound("message");
+        // tự phát âm thanh ở đây thay vì im lặng bỏ qua hoàn toàn. Bong bóng chat: tin của cuộc khác do app chính lo;
+        // trang ẩn trong app Android có thông báo native → không kêu trùng.
+        if (!bubble && !(document.hidden && nativeHandlesChatAlerts())) playSound("message");
       }
 
       setConversations((prev) => {
@@ -915,7 +922,7 @@ export default function MessagesContent({
       channel.unbind("user-typing", handleUserTyping);
       releaseUserChannel(currentUser.id);
     };
-  }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket, loadData, markSeen]);
+  }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket, loadData, markSeen, bubble]);
 
   useEffect(() => {
     if (activeChat?.conversationId) markSeen(activeChat.conversationId);
@@ -1341,7 +1348,7 @@ export default function MessagesContent({
   // Mở 1 cuộc trò chuyện trên điện thoại → thêm 1 mục lịch sử (pushState gốc, không tải lại RSC); Back → popstate → đóng.
   const pushedRef = useRef(false);
   useEffect(() => {
-    if (!activeChat) return;
+    if (!activeChat || bubble) return; // bong bóng chat: không có danh sách để quay lại
     if (window.matchMedia("(min-width: 768px)").matches || pushedRef.current) return;
     const q = activeChat.conversationId ? `c=${encodeURIComponent(activeChat.conversationId)}` : `to=${encodeURIComponent(activeChat.id)}`;
     try {
@@ -1450,16 +1457,72 @@ export default function MessagesContent({
   }, [attachOpen]);
   // Gợi ý trả lời thu gọn lại khi đổi cuộc trò chuyện
   useEffect(() => setAssistOpen(false), [activeChat?.id]);
-  // ?c=<conversationId> → mở đúng cuộc trò chuyện đó (link chia sẻ / quay lại trang)
+  // ?c=<conversationId> → mở đúng cuộc trò chuyện đó (link chia sẻ / quay lại trang / bấm thông báo / bong bóng chat).
+  // Bấm thông báo của cuộc trò chuyện B khi đang mở A → chuyển sang B (trước đây bỏ qua khi đã có chat đang mở). Chưa có
+  // trong danh sách đã tải (trang chỉ tải 50 cuộc) → tải riêng cuộc đó rồi mở.
   const directConvId = searchParams.get("c");
   const directConvDoneRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!directConvId || directConvDoneRef.current === directConvId || activeChat) return;
+  const directConvFetchRef = useRef<string | null>(null);
+  // id cuộc trò chuyện ?c= không tải được (không còn quyền / không tồn tại) — so với id hiện tại nên tự hết khi đổi id.
+  const [missingConvId, setMissingConvId] = useState<string | null>(null);
+  // Bong bóng chat luôn mở 1 cuộc trò chuyện (?c=): thiếu id, không tải được, hoặc chat 1-1 mà người kia đã xoá tài
+  // khoản → màn lỗi có nút mở app (bong bóng không có danh sách để quay về), không để vòng quay chạy mãi.
+  const directConvNoPartner = useMemo(() => {
+    if (!bubble || !directConvId) return false;
     const conv = conversations.find((c) => c.id === directConvId);
-    if (!conv) return;
+    return !!conv && !conv.isGroup && !conv.participants.some((p) => p.id !== currentUser?.id);
+  }, [bubble, directConvId, conversations, currentUser?.id]);
+  const bubbleMissing = bubble && (!directConvId || missingConvId === directConvId || directConvNoPartner);
+  // Bấm lại thông báo của cùng cuộc trò chuyện (điều hướng mềm từ app Android: window.__pawnailOpenUrl, URL có thể
+  // không đổi) → mở lại dù trước đó đã xử lý id này.
+  const [directConvNonce, setDirectConvNonce] = useState(0);
+  useEffect(() => {
+    // Rời ?c= (Back về danh sách) → lần sau cùng id vẫn được mở lại.
+    if (!directConvId) {
+      directConvDoneRef.current = null;
+      directConvFetchRef.current = null;
+    }
+  }, [directConvId]);
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const path = (e as CustomEvent<unknown>).detail;
+      if (typeof path !== "string") return;
+      let id: string | null = null;
+      try {
+        id = new URL(path, window.location.origin).searchParams.get("c");
+      } catch {}
+      if (!id) return;
+      directConvDoneRef.current = null;
+      directConvFetchRef.current = null;
+      setDirectConvNonce((n) => n + 1);
+    };
+    window.addEventListener("pn-open-url", onOpen);
+    return () => window.removeEventListener("pn-open-url", onOpen);
+  }, []);
+  useEffect(() => {
+    if (!directConvId || directConvDoneRef.current === directConvId) return;
+    // Chính component vừa ghi ?c=<id> của chat đang mở (pushState trên điện thoại) → chỉ ghi nhận.
+    if (activeChat?.conversationId === directConvId) {
+      directConvDoneRef.current = directConvId;
+      return;
+    }
+    const conv = conversations.find((c) => c.id === directConvId);
+    if (!conv) {
+      if (directConvFetchRef.current === directConvId) return;
+      directConvFetchRef.current = directConvId;
+      fetch(`/api/conversations?id=${encodeURIComponent(directConvId)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          const c = d?.conversation as ConversationType | undefined;
+          if (c?.id === directConvId) setConversations((prev) => (prev.some((x) => x.id === c.id) ? prev : [c, ...prev]));
+          else setMissingConvId(directConvId);
+        })
+        .catch(() => setMissingConvId(directConvId));
+      return;
+    }
     directConvDoneRef.current = directConvId;
     const partner = conv.isGroup ? null : conv.participants.find((p) => p.id !== currentUser?.id);
-    if (!conv.isGroup && !partner) return;
+    if (!conv.isGroup && !partner) return; // người kia đã xoá tài khoản (bong bóng: directConvNoPartner → màn lỗi)
     setActiveChat({
       id: conv.isGroup ? conv.id : partner!.id,
       name: conv.isGroup ? conv.name || tr("Nhóm trò chuyện", "Group chat") : partner!.name,
@@ -1470,7 +1533,50 @@ export default function MessagesContent({
       statusText: "",
       conversationId: conv.id,
     });
-  }, [directConvId, conversations, activeChat, currentUser?.id]);
+  }, [directConvId, directConvNonce, conversations, activeChat, currentUser?.id]);
+
+  // App Android (versionCode 3+) tự vẽ thông báo chat: báo cuộc trò chuyện đang mở + đang nhìn thấy → app không báo
+  // tin của chính cuộc đó (đã thấy trên màn hình) và gỡ thông báo cũ của nó. Ẩn app / đóng chat / rời trang → null.
+  // No-op trên web / iPhone / bản app cũ (lib/nativePush.ts).
+  const activeConvId = activeChat?.conversationId ?? null;
+  useEffect(() => {
+    if (bubble) return; // bong bóng chat: app native tự biết cuộc trò chuyện của bong bóng
+    const sync = () => {
+      const visible = document.visibilityState === "visible";
+      setActiveConversation(visible ? activeConvId : null);
+      if (visible && activeConvId) clearConversation(activeConvId);
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      setActiveConversation(null);
+    };
+  }, [activeConvId, bubble]);
+
+  // Bong bóng chat: link ra khỏi khung chat (hồ sơ, việc làm…) → tải trang THẬT để app native chuyển sang app chính
+  // (điều hướng phía client của Next.js không đi qua WebView nên app không bắt được). Bắt ở pha capture trên window —
+  // trước cả trình xử lý của <Link>.
+  useEffect(() => {
+    if (!bubble) return;
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.hasAttribute("download")) return;
+      let u: URL;
+      try {
+        u = new URL(a.href, window.location.href);
+      } catch {
+        return;
+      }
+      if (u.origin !== window.location.origin || /^\/(vi\/)?messages\/?$/.test(u.pathname)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.assign(u.href);
+    };
+    window.addEventListener("click", onClick, true);
+    return () => window.removeEventListener("click", onClick, true);
+  }, [bubble]);
 
   // ----- V2: đồng bộ lại sau khi mất kết nối / mở lại app (tin tới lúc socket rớt không bị mất tới khi mở lại chat)
   const [connLost, setConnLost] = useState(false);
@@ -1552,7 +1658,7 @@ export default function MessagesContent({
   return (
     <div className="pn-msgr flex w-full h-full overflow-hidden">
       {/* LEFT COLUMN: CONVERSATION LIST */}
-      <div className={`m-list relative isolate w-full md:w-[30%] border-r border-white/[0.06] flex flex-col h-full overflow-hidden ${activeChat ? "hidden md:flex" : "flex"}`}>
+      <div className={`m-list relative isolate w-full md:w-[30%] border-r border-white/[0.06] flex flex-col h-full overflow-hidden ${bubble ? "hidden" : activeChat ? "hidden md:flex" : "flex"}`}>
         <div className="pn-list-hero p-4 pb-3 flex items-center justify-between gap-3 flex-shrink-0">
           <div>
             <h2 className="bg-gradient-to-r from-white via-pink-100 to-fuchsia-200 bg-clip-text text-xl font-black tracking-tight text-transparent">{t("messenger.title")}</h2>
@@ -1581,6 +1687,8 @@ export default function MessagesContent({
               className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
             />
           </div>
+
+          {!bubble && <ChatNotifyBanner />}
 
           {showOfficialStub && (
             <div className="border-b border-slate-850/60 p-2">
@@ -1714,11 +1822,12 @@ export default function MessagesContent({
       </div>
 
       {/* RIGHT COLUMN: MAIN CHAT PANEL */}
-      <div data-wallpaper={activeChat ? wp.id : undefined} data-wp-tone={activeChat ? wp.tone : undefined} style={activeChat ? wp.style : undefined} className={`chat-wallpaper isolate flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat ? "hidden md:flex" : "flex"}`}>
+      <div data-wallpaper={activeChat ? wp.id : undefined} data-wp-tone={activeChat ? wp.tone : undefined} style={activeChat ? wp.style : undefined} className={`chat-wallpaper isolate flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat && !bubble ? "hidden md:flex" : "flex"}`}>
         {activeChat ? (
           <>
             <div className="pn-glass-bar relative flex flex-none items-center justify-between gap-3 px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:px-4 sm:py-3 z-10">
               <div className="flex items-center gap-3">
+                {!bubble && (
                 <button
                   onClick={closeThread}
                   aria-label={tr("Quay lại danh sách", "Back to chats")}
@@ -1726,6 +1835,7 @@ export default function MessagesContent({
                 >
                   <ArrowLeft className="h-4 w-4" /><span className="sr-only">{locale === "vi" ? tr("Quay lại", "Back") : "Back"}</span>
                 </button>
+                )}
                 <div className="relative flex-shrink-0">
                   {activeChat.isGroup ? (
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
@@ -1791,7 +1901,8 @@ export default function MessagesContent({
                 >
                   <Palette className="h-5 w-5" />
                 </button>
-                {!activeChat.isGroup && (
+                {/* Bong bóng chat: không gọi trong cửa sổ nhỏ (cuộc gọi đến / đi thuộc app chính) */}
+                {!activeChat.isGroup && !bubble && (
                   <>
                     <button
                       onPointerEnter={preloadCallSdk}
@@ -2259,6 +2370,28 @@ export default function MessagesContent({
             </div>
             )}
           </>
+        ) : bubble ? (
+          // Bong bóng chat đang tải cuộc trò chuyện (hoặc không còn quyền xem / URL thiếu ?c=) — không có danh sách để
+          // chọn nên không bao giờ để vòng quay chạy mãi.
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" aria-busy={!bubbleMissing}>
+            {bubbleMissing ? (
+              <>
+                <MessageSquare className="h-8 w-8 text-pink-300" strokeWidth={1.5} />
+                <p className="text-sm font-bold text-slate-200">{tr("Không mở được cuộc trò chuyện này", "Couldn't open this conversation")}</p>
+                <button
+                  type="button"
+                  // Tải trang THẬT (không router.push) — app native chỉ thấy điều hướng thật và chuyển sang app chính.
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                  onClick={() => window.location.assign(`${window.location.origin}/messages`)}
+                  className="min-h-[44px] rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 text-sm font-bold text-white"
+                >
+                  {tr("Mở PawNail", "Open PawNail")}
+                </button>
+              </>
+            ) : (
+              <Loader2 className="h-6 w-6 animate-spin text-pink-300" aria-label={tr("Đang tải", "Loading")} />
+            )}
+          </div>
         ) : (
           // Màn chào khi chưa chọn hội thoại — trước đây chỉ là 1 icon + 1 dòng
           // chữ giữa khoảng trống lớn. Giờ có lối tắt theo vai trò, liên hệ

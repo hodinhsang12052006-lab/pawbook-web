@@ -16,6 +16,13 @@
     </style>
 
 
+    <!-- Cửa sổ bong bóng chat: nền tối giống web trong lúc trang tải. -->
+    <style name="AppTheme.Bubble" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/pn_bubble_background</item>
+    </style>
+
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
         <!-- Android 12+: nền màn khởi động của hệ thống, tránh chớp trắng trước giao diện tối (canvas v2 #1c1521). -->

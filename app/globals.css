@@ -999,6 +999,11 @@ html:not([data-ui-classic]) .pn-profile-head { background: var(--color-pn-surfac
 /* /messages: thanh dưới chỉ ẩn khi đang mở 1 cuộc trò chuyện (danh sách chat vẫn có thanh dưới) */
 html[data-chat-open] .pn-bnav { display: none; }
 
+/* Bong bóng chat Android (lib/bubbleMode.ts — script đầu trang đặt html[data-bubble] trước khi vẽ): chỉ còn khung chat,
+   ẩn thanh dưới, lời mời cài app / bật thông báo, toast "việc mới", gợi ý ngôn ngữ, băng mất kết nối toàn app. */
+html[data-bubble] [data-bubble-hide],
+html[data-bubble] .pn-bnav { display: none !important; }
+
 /* ---- V2.2 ---- */
 /* Thông báo trên điện thoại: sheet cao gần hết màn hình (trượt lên từ dưới), danh sách cuộn bên trong, chừa vùng an toàn */
 @media (max-width: 639px) {

@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- dataExtractionRules: Android 12+ vẫn chuyển dữ liệu sang máy mới dù allowBackup="false" — loại nội dung tin
+         nhắn của thông báo chat + khoá nội bộ (res/xml/data_extraction_rules.xml). -->
     <application
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        tools:targetApi="31"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -51,6 +56,53 @@
             </intent-filter>
         </activity>
 
+        <!-- Cửa sổ bong bóng chat (Android 11+, ChatNotifications): hoạt động riêng, không phải
+             BridgeActivity (xem BubbleActivity.java). Hệ thống yêu cầu resizeable + allowEmbedded;
+             documentLaunchMode="always": mỗi bong bóng là một tác vụ riêng. Không export: chỉ
+             PendingIntent của app mở được. -->
+        <activity
+            android:name=".BubbleActivity"
+            android:label="@string/title_activity_bubble"
+            android:theme="@style/AppTheme.Bubble"
+            android:exported="false"
+            android:allowEmbedded="true"
+            android:resizeableActivity="true"
+            android:documentLaunchMode="always"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode|density" />
+
+        <!-- Nhận MỌI tin FCM: tự vẽ thông báo chat kiểu Messenger, tin khác giữ hành vi plugin
+             (PawNailMessagingService kế thừa service của plugin). -->
+        <service
+            android:name=".PawNailMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <!-- Gỡ service gốc của @capacitor/push-notifications: 2 service cùng nghe MESSAGING_EVENT
+             thì chỉ 1 cái (không đoán trước được) nhận tin. -->
+        <service
+            android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+            tools:node="remove" />
+
+        <!-- Nút "Trả lời" / "Đánh dấu đã đọc" / vuốt bỏ trên thông báo chat. -->
+        <receiver
+            android:name=".ChatActionReceiver"
+            android:exported="false" />
+
+        <!-- Tin "notification" do FCM tự vẽ (app ở nền: tin không phải chat, bản máy chủ cũ):
+             icon trắng thanh trạng thái, màu cam thương hiệu, kênh mặc định "general". -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_pawnail" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/pn_notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="general" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -66,6 +118,9 @@
     <!-- Android 13+: phải có quyền này thì thông báo đẩy (việc gấp, tin nhắn) mới hiện. Thư viện
          Firebase thường tự gộp vào, khai rõ ở đây cho chắc. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 7.x (không có kênh thông báo): thông báo tin nhắn tự đặt rung (DEFAULT_VIBRATE) để hiện nổi. Quyền
+         "normal": không hỏi người dùng, không cần tờ khai Play. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Tải ảnh portfolio: input[type=file accept="image/*,video/*"] mở
          camera hoặc thư viện qua bộ chọn file gốc của hệ điều hành. -->

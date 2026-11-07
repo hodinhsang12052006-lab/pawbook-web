@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
-import { fcmEnabled } from "@/lib/fcm";
+import { fcmEnabled, nativeP256dh, validNativeBuild } from "@/lib/fcm";
 import { apnsEnabled } from "@/lib/apns";
 import { getClientIp, isRateLimited, recordAttempt } from "@/lib/rateLimit";
 
-// POST   /api/push/native { token, platform }  — app Android/iOS đăng ký token FCM
-// DELETE /api/push/native { token }            — huỷ (đăng xuất / tắt thông báo)
+// POST   /api/push/native { token, platform, build? }  — app Android/iOS đăng ký token FCM / APNs
+// DELETE /api/push/native { token }                     — huỷ (đăng xuất / tắt thông báo)
 // Lưu chung bảng PushSubscription: Android "fcm:<token>", iPhone "apns:<token>" (không cần bảng mới).
+// build = App.getInfo().build (versionCode Android / CFBundleVersion iOS) → p256dh "native:<build>"; thiếu → "native"
+// (chưa biết build). lib/fcm.ts chỉ gửi tin chat data-only (thông báo kiểu Messenger) cho bản đủ mới.
 const MAX_PER_USER = 10;
 const validToken = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9:_\-.]{20,4096}$/.test(v);
 
@@ -23,17 +25,19 @@ export async function POST(req: Request) {
   const key = `push-native:${getClientIp(req)}`;
   if (isRateLimited(key, 20, 600_000)) return NextResponse.json({ error: "Thử lại sau.", errorEn: "Please try again later." }, { status: 429 });
   recordAttempt(key, 600_000);
-  const body = (await req.json().catch(() => ({}))) as { token?: unknown; platform?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { token?: unknown; platform?: unknown; build?: unknown };
   if (!validToken(body.token)) return NextResponse.json({ error: "Token không hợp lệ.", errorEn: "Invalid token." }, { status: 400 });
   const platform = body.platform === "ios" ? "ios" : "android";
   if (platform === "ios" ? !apnsEnabled() : !fcmEnabled()) return NextResponse.json({ error: "Thông báo app chưa bật trên máy chủ.", errorEn: "App notifications aren't set up on the server." }, { status: 503 });
   const endpoint = (platform === "ios" ? "apns:" : "fcm:") + body.token;
+  const p256dh = nativeP256dh(validNativeBuild(body.build));
   try {
     // Token gắn với THIẾT BỊ: người khác đăng nhập trên máy này → token chuyển chủ.
     await prisma.pushSubscription.upsert({
       where: { endpoint },
-      update: { userId, auth: platform },
-      create: { userId, endpoint, p256dh: "native", auth: platform },
+      // Cập nhật app (build mới) → lần mở sau đăng ký lại → build lưu theo bản đang cài.
+      update: { userId, auth: platform, p256dh },
+      create: { userId, endpoint, p256dh, auth: platform },
     });
     const extra = await prisma.pushSubscription.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, skip: MAX_PER_USER, select: { id: true } });
     if (extra.length) await prisma.pushSubscription.deleteMany({ where: { id: { in: extra.map((e) => e.id) } } });

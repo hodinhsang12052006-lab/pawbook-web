@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand orange sampled from the neon glow of public/logo_b.jpg
+         (scripts/android/make_notification_icon.py prints it). Tints the small icon and
+         app name in notification headers. -->
+    <color name="pn_notification_accent">#CE6D2C</color>
+    <!-- Background of the chat bubble window while the page loads (site dark theme). -->
+    <color name="pn_bubble_background">#020617</color>
+</resources>

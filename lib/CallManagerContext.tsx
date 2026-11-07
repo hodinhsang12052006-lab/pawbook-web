@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useRef } from "react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import CallManager, { CallManagerHandle, CallPartner } from "@/components/chat/CallManager";
+import { isBubbleMode } from "@/lib/bubbleMode";
 
 interface CallManagerContextValue {
   startCall: (partner: CallPartner, type: "audio" | "video") => void;
@@ -31,7 +32,9 @@ export function CallManagerProvider({ children }: { children: React.ReactNode })
       {children}
       <CallManager
         ref={callManagerRef}
-        currentUserId={user?.id}
+        // Bong bóng chat Android là WebView THỨ HAI cùng tài khoản: không nghe cuộc gọi đến ở đó (app chính đổ
+        // chuông) — tránh chuông kêu 2 nơi. CallManager không vẽ gì khi rảnh nên không lệch hydrate.
+        currentUserId={isBubbleMode() ? undefined : user?.id}
         currentUserName={user?.name}
         currentUserAvatar={user?.avatarUrl || null}
       />

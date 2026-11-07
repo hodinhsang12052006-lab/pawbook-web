@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { getPusherServer } from "@/lib/pusherServer";
-import { markConversationRead } from "@/lib/conversationReads";
+import { getReadMark, markConversationRead } from "@/lib/conversationReads";
+import { fcmEnabled } from "@/lib/fcm";
+import { sendChatReadSync } from "@/lib/push";
 import { chatChannelName } from "@/lib/pusherChannel";
 
 // Ephemeral (non-persisted) read receipts: broadcasts "message-seen" to the
@@ -40,9 +42,17 @@ export async function POST(req: Request) {
       .filter((p) => p.id !== userId)
       .map((p) => chatChannelName(p.id));
 
+    // Mốc đọc TRƯỚC lần này — để chỉ báo "đã đọc" sang điện thoại khi thật sự vừa có tin chưa đọc (chỉ khi đã bật FCM).
+    const prevReadAt = fcmEnabled() ? await getReadMark(userId, conversationId) : undefined;
     // Lưu mốc đã đọc (null nếu bảng chưa được tạo trên production — vẫn bắn
     // sự kiện realtime như cũ).
     const saved = await markConversationRead(userId, conversationId);
+    // Đọc ở đây → gỡ thông báo của cuộc trò chuyện này trên các máy Android khác của chính mình (app versionCode 3+).
+    // Kèm mốc đọc: điện thoại chỉ gỡ tin cũ hơn mốc này (tin "đã đọc" có thể tới sau 1 tin chat mới hơn).
+    if (prevReadAt !== undefined) {
+      const readAt = saved ?? new Date();
+      after(() => sendChatReadSync(userId, conversationId, prevReadAt, readAt).catch(() => 0));
+    }
     const seenAt = (saved ?? new Date()).toISOString();
     if (otherChannels.length > 0) {
       await getPusherServer()?.trigger(otherChannels, "message-seen", { conversationId, seenBy: userId, seenAt });

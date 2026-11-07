@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { getPusherServer } from "@/lib/pusherServer";
@@ -92,13 +92,16 @@ export async function POST(req: Request) {
 
     await getPusherServer()?.trigger(chatChannelName(String(targetId).trim()), eventName, payload);
     if (action === "offer") {
-      sendPush(String(targetId).trim(), {
+      // Cuộc gọi luôn 1-1 → ?to=<người gọi> đúng. Kênh Android "calls" (ưu tiên cao). after(): không bị Vercel cắt giữa chừng.
+      const push = {
         title: payload.callType === "video" ? "Cuộc gọi video đến" : "Cuộc gọi thoại đến",
         body: `${payload.callerName} đang gọi cho bạn — mở PawNail để trả lời`,
         url: `/messages?to=${userId}`,
         tag: "pn-call",
+        channel: "calls" as const,
         en: { title: payload.callType === "video" ? "Incoming video call" : "Incoming call", body: `${payload.callerName} is calling you. Open PawNail to answer.` },
-      }).catch(() => {});
+      };
+      after(() => sendPush(String(targetId).trim(), push).catch(() => 0));
     }
 
     return NextResponse.json({ success: true });

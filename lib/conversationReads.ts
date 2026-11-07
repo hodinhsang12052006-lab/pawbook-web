@@ -25,6 +25,17 @@ export async function markConversationRead(userId: string, conversationId: strin
   }
 }
 
+/** Mốc đã đọc hiện tại của 1 người trong 1 hội thoại (null: chưa đọc lần nào / bảng chưa có). */
+export async function getReadMark(userId: string, conversationId: string): Promise<Date | null> {
+  try {
+    const row = await prisma.conversationRead.findUnique({ where: { userId_conversationId: { userId, conversationId } }, select: { lastReadAt: true } });
+    return row?.lastReadAt ?? null;
+  } catch (err) {
+    if (!isMissingTable(err)) console.error("getReadMark error:", err);
+    return null;
+  }
+}
+
 // Mốc đọc của TẤT CẢ người tham gia trong các hội thoại cho trước.
 export async function getReadMarks(conversationIds: string[]) {
   if (conversationIds.length === 0) return [];

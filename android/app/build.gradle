@@ -8,6 +8,13 @@ def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('keystore.properties')
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+} else if (System.getenv('PAWNAIL_KEYSTORE_FILE')) {
+    // Không có keystore.properties: đọc từ biến môi trường (scripts/android/build-release.ps1
+    // hỏi mật khẩu rồi chỉ đặt biến cho tiến trình Gradle). KHÔNG in các giá trị này ra log.
+    keystoreProperties['storeFile'] = System.getenv('PAWNAIL_KEYSTORE_FILE')
+    keystoreProperties['storePassword'] = System.getenv('PAWNAIL_KEYSTORE_PASSWORD') ?: ''
+    keystoreProperties['keyAlias'] = System.getenv('PAWNAIL_KEY_ALIAS') ?: ''
+    keystoreProperties['keyPassword'] = System.getenv('PAWNAIL_KEY_PASSWORD') ?: (System.getenv('PAWNAIL_KEYSTORE_PASSWORD') ?: '')
 }
 def hasReleaseKeystore = keystoreProperties['storeFile'] ? true : false
 
@@ -19,10 +26,14 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode phải lớn hơn MỌI bản đã tải lên Play (mọi track) — xem App bundle
-        // explorer. Bản 1 / "1.0" đã nằm trong AAB 28/10/2026. Giữ versionName khớp
-        // MARKETING_VERSION bên iOS (ios/App/App.xcodeproj).
-        versionCode 2
-        versionName "1.1.0"
+        // explorer. Bản 1 / "1.0" đã nằm trong AAB 28/10/2026; bản 2 / "1.1.0" chưa có Firebase.
+        // Bản 3 / "1.2.0": thông báo tin nhắn kiểu Messenger (PawNailMessagingService, bong bóng
+        // chat, trả lời nhanh). Máy chủ chỉ gửi tin chat data-only cho build >= 3
+        // (NATIVE_RICH_CHAT_MIN_BUILD) — KHÔNG hạ versionCode của bản có service này.
+        // Giữ versionName khớp MARKETING_VERSION bên iOS (ios/App/App.xcodeproj, vẫn 1.1.0 —
+        // nâng lên 1.2.0 ở bản iOS kế tiếp).
+        versionCode 3
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -33,6 +44,11 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
+    }
+    testOptions {
+        // Unit test thuần JVM (app/src/test): lớp Android dùng trong khởi tạo tĩnh (LruCache…)
+        // trả giá trị mặc định thay vì ném "not mocked".
+        unitTests.returnDefaultValues = true
     }
     signingConfigs {
         release {
@@ -66,6 +82,10 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // PawNailMessagingService kế thừa FirebaseMessagingService (qua service của plugin
+    // push-notifications, plugin đó chỉ khai báo firebase-messaging là implementation nên app
+    // phải tự khai để biên dịch). Cùng phiên bản với plugin: variables.gradle.
+    implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

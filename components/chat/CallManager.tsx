@@ -9,13 +9,13 @@ import { useAudioOutput } from "@/lib/useAudioOutput";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { getPusherClient } from "@/lib/pusherClient";
-import { primeRingtone, startRingtone, stopRingtone } from "@/lib/ringtone";
+import { playEndTone, primeRingtone, startRingtone, stopRingtone } from "@/lib/ringtone";
 import Avatar from "@/components/ui/Avatar";
 import { isPlaceholderAvatar } from "@/lib/avatar";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { loadCallEngine, preloadCallSdk } from "@/lib/callPreload";
-import { androidAppBuild, classifyMediaError, describeMediaError, peerMediaReason, type MediaErrorText } from "@/lib/calls/mediaErrors";
+import { androidAppBuild, classifyMediaError, describeMediaError, detectCallPlatform, isPhoneLike, peerMediaReason, type MediaErrorText } from "@/lib/calls/mediaErrors";
 import { callAudioElement, countCameras, getCallMedia, getCameraTrack, playRemoteAudio, resetCallAudio, stopStream, unlockCallAudio, type Facing } from "@/lib/calls/media";
 import type { CallPeer, NetState, Quality } from "@/lib/calls/peer";
 import type { SignalInbox, SignalOutbox, OutboundMessage } from "@/lib/calls/signalQueue";
@@ -82,6 +82,24 @@ const RE_RING_MS = 6_000;
 const CONNECT_TIMEOUT_MS = 35_000;
 // "Mất kết nối" hiện tối đa ngần này rồi tự kết thúc nếu không bấm Thử lại.
 const FAILED_GRACE_MS = 15_000;
+// Callee tapped Answer but its first-time camera/mic prompt is still open: the caller keeps waiting this long.
+const ANSWERING_GRACE_MS = 60_000;
+// The first offer / answer is re-sent if nothing came back this long after the call was accepted.
+const OFFER_RESEND_MS = 6_000;
+// Fresh STUN/TURN list during a call (TURN credentials expire; an ICE restart uses the current list).
+const ICE_REFRESH_MS = 10 * 60_000;
+// The browser reuses a fetched ICE list at most this long (Cloudflare credentials live 1 h).
+const ICE_CLIENT_CACHE_MS = 5 * 60_000;
+// "Still connecting…" hint after this long on "Connecting…".
+const SLOW_CONNECT_MS = 10_000;
+// The other side's data channel closed (its connection closed) → treat as a hang-up after this grace, unless the
+// real "bye" / reject arrives first.
+const REMOTE_CLOSE_GRACE_MS = 1_500;
+// Keep the connection this long after hanging up so the "bye" on the data channel is really sent.
+const BYE_LINGER_MS = 250;
+const DEFAULT_ICE: RTCIceServer[] = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+
+const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
 const randomId = (n: number) => {
   const a = new Uint8Array(n);
@@ -119,6 +137,13 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const [camBusy, setCamBusy] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [mediaError, setMediaError] = useState<(MediaErrorText & { role: "caller" | "callee" | "camera" }) | null>(null);
+  // the dial tap is waiting for the browser's camera/mic prompt (nobody is rung yet)
+  const [mediaPending, setMediaPending] = useState(false);
+  const [slowConnect, setSlowConnect] = useState(false);
+  const [peerAway, setPeerAway] = useState(false);
+  const [hasTurn, setHasTurn] = useState(true);
+  // short "Call ended · m:ss" card after a call (rendered without [data-call-phase], so the call is already idle)
+  const [endedCard, setEndedCard] = useState<string | null>(null);
 
   const phaseRef = useRef<Phase>("idle");
   const callRef = useRef<ActiveCall | null>(null);
@@ -131,9 +156,22 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const fallbackAudioRef = useRef<MediaStream | null>(null);
   const camOnRef = useRef(false);
   const facingRef = useRef<Facing>("user");
-  const iceRef = useRef<{ servers: RTCIceServer[]; until: number } | null>(null);
+  const iceRef = useRef<{ servers: RTCIceServer[]; until: number; hasTurn: boolean } | null>(null);
+  const iceInflight = useRef<Promise<RTCIceServer[]> | null>(null);
+  const netRef = useRef<NetState>("new");
+  const wakeRef = useRef<{ release: () => Promise<void> } | null>(null);
   const endedRef = useRef<string[]>([]);
-  const timers = useRef<{ ring?: ReturnType<typeof setTimeout>; reRing?: ReturnType<typeof setInterval>; connect?: ReturnType<typeof setTimeout>; failed?: ReturnType<typeof setTimeout> }>({});
+  const endedCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timers = useRef<{
+    ring?: ReturnType<typeof setTimeout>;
+    reRing?: ReturnType<typeof setInterval>;
+    connect?: ReturnType<typeof setTimeout>;
+    failed?: ReturnType<typeof setTimeout>;
+    resend?: ReturnType<typeof setTimeout>;
+    iceRefresh?: ReturnType<typeof setInterval>;
+    remoteClose?: ReturnType<typeof setTimeout>;
+    mediaPending?: ReturnType<typeof setTimeout>;
+  }>({});
 
   const setPhase = useCallback((p: Phase) => {
     const ringingNow = p === "outgoing" || p === "incoming";
@@ -148,6 +186,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     if (t.reRing) clearInterval(t.reRing);
     if (t.connect) clearTimeout(t.connect);
     if (t.failed) clearTimeout(t.failed);
+    if (t.resend) clearTimeout(t.resend);
+    if (t.iceRefresh) clearInterval(t.iceRefresh);
+    if (t.remoteClose) clearTimeout(t.remoteClose);
+    if (t.mediaPending) clearTimeout(t.mediaPending);
     timers.current = {};
   }, []);
 
@@ -166,20 +208,31 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     });
   }, []);
 
-  const getIce = useCallback(async (): Promise<RTCIceServer[]> => {
+  // One fetch at a time (dial prefetch + engine start share it); on 429 / offline the last good list is reused, so a
+  // 4G user does not silently lose TURN.
+  const getIce = useCallback((force = false): Promise<RTCIceServer[]> => {
     const c = iceRef.current;
-    if (c && c.until > Date.now()) return c.servers;
-    try {
-      const r = await fetch("/api/calls/ice", { cache: "no-store" });
-      if (r.ok) {
-        const d = await r.json();
-        if (Array.isArray(d.iceServers)) {
-          iceRef.current = { servers: d.iceServers, until: Date.now() + Math.max(60, Number(d.ttlSec) || 600) * 500 };
-          return d.iceServers;
+    if (!force && c && c.until > Date.now()) return Promise.resolve(c.servers);
+    if (iceInflight.current) return iceInflight.current;
+    const p = (async () => {
+      try {
+        const r = await fetch("/api/calls/ice", { cache: "no-store" });
+        if (r.ok) {
+          const d = await r.json();
+          if (Array.isArray(d.iceServers)) {
+            const ttlMs = Math.max(60, Number(d.ttlSec) || 600) * 500;
+            iceRef.current = { servers: d.iceServers, until: Date.now() + Math.min(ttlMs, ICE_CLIENT_CACHE_MS), hasTurn: d.hasTurn !== false };
+            setHasTurn(d.hasTurn !== false);
+            return d.iceServers as RTCIceServer[];
+          }
         }
-      }
-    } catch {}
-    return c?.servers ?? [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+      } catch {}
+      return iceRef.current?.servers ?? DEFAULT_ICE;
+    })().finally(() => {
+      iceInflight.current = null;
+    });
+    iceInflight.current = p;
+    return p;
   }, []);
 
   // Nhật ký cuộc gọi trong khung chat ("Cuộc gọi nhỡ", "Cuộc gọi thoại · 2:05"). CHỈ người gọi ghi để không bị 2 dòng.
@@ -198,12 +251,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
   // Dọn sạch MỌI thứ của cuộc gọi (mọi lối thoát đều đi qua đây): chuông, hẹn giờ, kết nối, micro / camera.
   const teardown = useCallback(
-    (opts: { keepError?: boolean } = {}) => {
+    (opts: { keepError?: boolean; linger?: boolean } = {}) => {
       const call = callRef.current;
       if (call) markEnded(call.callId);
       stopRingtone();
       clearTimers();
-      peerRef.current?.close();
+      peerRef.current?.close(opts.linger ? BYE_LINGER_MS : 0);
       peerRef.current = null;
       inboxRef.current?.close();
       inboxRef.current = null;
@@ -231,6 +284,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setCamOn(false);
       setCamBusy(false);
       setAudioBlocked(false);
+      setMediaPending(false);
+      setSlowConnect(false);
+      setPeerAway(false);
+      netRef.current = "new";
       setFacing("user");
       facingRef.current = "user";
       if (opts.keepError) {
@@ -244,6 +301,15 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     [clearTimers, setPhase]
   );
 
+  // "Cuộc gọi đã kết thúc · 2:05" — a short card + hang-up tone on BOTH sides (call over, so it carries no data-call-phase).
+  const showEnded = useCallback((call: ActiveCall) => {
+    if (endedCardTimer.current) clearTimeout(endedCardTimer.current);
+    const sec = call.connectedAt ? Math.round((Date.now() - call.connectedAt) / 1000) : null;
+    setEndedCard(sec !== null ? tr(`Cuộc gọi đã kết thúc · ${fmtDuration(sec)}`, `Call ended · ${fmtDuration(sec)}`) : tr("Cuộc gọi đã kết thúc", "Call ended"));
+    endedCardTimer.current = setTimeout(() => setEndedCard(null), 1500);
+    playEndTone("end");
+  }, []);
+
   // Kết thúc chủ động (cúp máy / huỷ / từ chối / hết giờ / rớt mạng): báo bên kia + ghi nhật ký rồi dọn.
   const endCall = useCallback(
     (reason: "hangup" | "cancel" | "decline" | "timeout" | "failed", opts: { toast?: string; keepError?: boolean } = {}) => {
@@ -253,21 +319,24 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       try {
         peerRef.current?.sendCtl({ bye: reason });
       } catch {}
-      if (call.token) postCall(call, "reject", { reason, socketId: getPusherClient()?.connection?.socket_id }).catch(() => {});
+      // leg: the caller ignores a reject from a device of the callee other than the one it is talking to
+      if (call.token) postCall(call, "reject", { reason, leg, socketId: getPusherClient()?.connection?.socket_id }).catch(() => {});
       if (call.isCaller) {
         if (ph === "outgoing") logCall("missed");
-        else if (ph === "connecting" || ph === "connected") logCall(reason === "failed" && !call.connectedAt ? "missed" : "ended");
+        else if (ph === "connecting" || ph === "connected") logCall(call.connectedAt ? "ended" : "missed");
       }
       if (opts.toast) toast(opts.toast, { icon: "📞" });
-      teardown({ keepError: opts.keepError });
+      teardown({ keepError: opts.keepError, linger: true });
+      if (reason === "hangup" && (ph === "connecting" || ph === "connected")) showEnded(call);
     },
-    [logCall, postCall, teardown]
+    [leg, logCall, postCall, showEnded, teardown]
   );
 
   // ---------- call engine (RTCPeerConnection + signaling queues) ----------
   const handleNet = useCallback(
     (call: ActiveCall, s: NetState) => {
       if (callRef.current !== call) return;
+      netRef.current = s;
       setNet(s);
       if (s === "connected") {
         if (timers.current.connect) clearTimeout(timers.current.connect);
@@ -290,10 +359,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   );
 
   const handleRemoteBye = useRef<(call: ActiveCall, reason: string) => void>(() => {});
+  const startCallRef = useRef<(partner: CallPartner, type: CallType) => void>(() => {});
 
   const handleCtl = useCallback((call: ActiveCall, c: WireCtl) => {
     if (callRef.current !== call) return;
     if (typeof c.mic === "boolean") setRemoteMic(c.mic);
+    if (typeof c.away === "boolean") setPeerAway(c.away);
     if (c.cam !== undefined) {
       setRemoteCam(c.cam);
       if (c.cam === true) setVideoMode(true);
@@ -358,12 +429,27 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
             peerRef.current?.sendCtl({ mic: streamRef.current?.getAudioTracks()[0]?.enabled !== false, cam: camOnRef.current });
           }, 300);
         },
+        onRemoteClose: () => {
+          // their connection closed while ours was fine: a hang-up whose "bye" / reject got lost
+          if (callRef.current !== call || timers.current.remoteClose) return;
+          timers.current.remoteClose = setTimeout(() => {
+            timers.current.remoteClose = undefined;
+            if (callRef.current === call) handleRemoteBye.current(call, "hangup");
+          }, REMOTE_CLOSE_GRACE_MS);
+        },
         log: debug ? (...a: unknown[]) => console.info(...a) : undefined,
       });
       peerRef.current = peerConn;
       inboxRef.current = inbox;
       outboxRef.current = outbox;
       if (call.remoteLeg) outbox.open(call.remoteLeg);
+      // long calls: TURN credentials expire — keep the list fresh so an ICE restart can still use the relay
+      timers.current.iceRefresh = setInterval(() => {
+        if (callRef.current !== call) return;
+        getIce(true)
+          .then((servers) => callRef.current === call && peerRef.current?.setIceServers(servers))
+          .catch(() => {});
+      }, ICE_REFRESH_MS);
       return true;
     },
     [getIce, handleCtl, handleNet, leg, postCall]
@@ -376,6 +462,37 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setMediaError({ ...describeMediaError(kind, { video: o.video, cameraOnly: o.cameraOnly, oldAppBuild: build !== null && build < 3 }), role });
     },
     []
+  );
+
+  // Answered but not connected after CONNECT_TIMEOUT_MS: end it — with a reason that helps (no relay → try Wi-Fi), and
+  // one anonymous diagnostics event (candidate types only, never IPs or SDP) so the owner sees how often it happens.
+  const armConnectTimeout = useCallback(
+    (call: ActiveCall) => {
+      if (timers.current.connect) clearTimeout(timers.current.connect);
+      timers.current.connect = setTimeout(async () => {
+        if (callRef.current !== call || phaseRef.current === "connected") return;
+        const p = peerRef.current;
+        if (!call.isCaller && p && !p.hasRemoteDescription) {
+          // No offer ever arrived: the call was answered on another device (or the caller is gone). The reject carries
+          // our leg, so it cannot end the caller's call with that other device.
+          postCall(call, "reject", { reason: "failed", leg }).catch(() => {});
+          toast(tr("Cuộc gọi không còn nữa — có thể đã được nghe trên thiết bị khác.", "This call is no longer available. It may have been answered on another device."), { icon: "📞" });
+          teardown();
+          return;
+        }
+        const diag = p ? await connectDiagnostics(p.pc, iceRef.current?.hasTurn ?? null).catch(() => null) : null;
+        // (re-read after the await: the call may have connected or ended meanwhile)
+        if (callRef.current !== call || (phaseRef.current as Phase) === "connected") return;
+        const noRelay = iceRef.current ? !iceRef.current.hasTurn : false;
+        endCall("failed", {
+          toast: noRelay
+            ? tr("Mạng này không nối thẳng được — thử Wi-Fi.", "This network can't connect directly. Try Wi-Fi.")
+            : tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again."),
+        });
+        if (diag) reportConnectFail(diag);
+      }, CONNECT_TIMEOUT_MS);
+    },
+    [endCall, leg, postCall, teardown]
   );
 
   // ---------- outgoing ----------
@@ -420,26 +537,36 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       getIce().catch(() => {});
       let stream = audioOnlyStream || null;
       if (!stream) {
+        // "Allow microphone access to call" while the browser's prompt is open (not "Calling…": nobody rings yet)
+        if (timers.current.mediaPending) clearTimeout(timers.current.mediaPending);
+        timers.current.mediaPending = setTimeout(() => callRef.current === call && setMediaPending(true), 350);
         try {
           stream = await getCallMedia(call.type === "video", facingRef.current);
         } catch (err) {
           if (callRef.current !== call) return;
-          // Video call: is it only the camera? Then offer "continue as voice call".
-          if (call.type === "video" && classifyMediaError(err) !== "denied") {
+          // Video call: is it only the camera (missing, busy OR blocked — a camera-only block is also NotAllowedError
+          // on the combined request)? Then offer "continue as voice call".
+          if (call.type === "video") {
             try {
               const a = await getCallMedia(false);
               if (callRef.current !== call) return stopStream(a);
               fallbackAudioRef.current = a;
               await showMediaError(err, "caller", { video: true, cameraOnly: true });
+              setMediaPending(false);
               setPhase("error");
               return;
             } catch {}
           }
           await showMediaError(err, "caller", { video: call.type === "video" });
+          setMediaPending(false);
           setPhase("error");
           return;
+        } finally {
+          if (timers.current.mediaPending) clearTimeout(timers.current.mediaPending);
+          timers.current.mediaPending = undefined;
         }
       }
+      setMediaPending(false);
       if (callRef.current !== call) return stopStream(stream);
       streamRef.current = stream;
       const v = stream.getVideoTracks()[0] || null;
@@ -447,7 +574,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setCamOn(!!v);
       setPreview(v ? new MediaStream([v]) : null);
       setVideoMode(!!v);
-      countCameras().then((n) => callRef.current === call && setCanFlip(n > 1 || /Android|iPhone|iPad/i.test(navigator.userAgent)));
+      countCameras().then((n) => callRef.current === call && setCanFlip(n > 1 || isPhoneLike()));
       setMediaError(null);
       setPhase("outgoing");
       try {
@@ -477,6 +604,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       // Trong lúc chạm: mở khoá âm thanh (iPhone / Chrome chỉ cho phát tiếng sau 1 thao tác của người dùng).
       unlockCallAudio();
       primeRingtone();
+      setEndedCard(null);
       const call: ActiveCall = {
         callId: randomId(12),
         token: null,
@@ -501,26 +629,41 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
   // ---------- incoming ----------
   const answer = useCallback(
-    async (call: ActiveCall) => {
+    async (call: ActiveCall, o: { audioOnly?: boolean } = {}) => {
       let stream: MediaStream | null = null;
       let firstErr: unknown = null;
+      const wantVideo = call.type === "video" && !o.audioOnly;
+      // A first-time camera/mic prompt can take a while: tell the caller someone is answering, so its 45 s ring
+      // timeout does not end the call while the callee is still tapping "Allow".
+      const slowPrompt = setTimeout(() => {
+        if (callRef.current === call && phaseRef.current === "connecting") postCall(call, "answering", { leg }).catch(() => {});
+      }, 1200);
       try {
-        stream = await getCallMedia(call.type === "video", facingRef.current);
+        stream = await getCallMedia(wantVideo, facingRef.current);
       } catch (err) {
         firstErr = err;
-        if (call.type === "video" && classifyMediaError(err) !== "denied") {
+        // Camera missing / busy / blocked (a camera-only block is NotAllowedError on the combined request): join with
+        // audio only — no new prompt when the microphone is already allowed.
+        if (wantVideo) {
           try {
             stream = await getCallMedia(false);
-            toast(tr("Không mở được camera — bạn vào cuộc gọi chỉ với âm thanh.", "Camera unavailable — you joined with audio only."), { icon: "🎙️" });
+            toast(
+              classifyMediaError(err) === "denied"
+                ? tr("Camera bị chặn — bạn vào cuộc gọi chỉ với âm thanh.", "Camera blocked — you joined with audio only.")
+                : tr("Không mở được camera — bạn vào cuộc gọi chỉ với âm thanh.", "Camera unavailable — you joined with audio only."),
+              { icon: "🎙️" }
+            );
           } catch (e2) {
             firstErr = e2;
           }
         }
+      } finally {
+        clearTimeout(slowPrompt);
       }
       if (callRef.current !== call) return stopStream(stream);
       if (!stream) {
         // Bên gọi thấy "<tên> không vào được (micro bị chặn)" + ghi cuộc gọi nhỡ.
-        postCall(call, "reject", { reason: "media-error", socketId: getPusherClient()?.connection?.socket_id }).catch(() => {});
+        postCall(call, "reject", { reason: "media-error", leg, socketId: getPusherClient()?.connection?.socket_id }).catch(() => {});
         await showMediaError(firstErr, "callee", { video: call.type === "video" });
         teardown({ keepError: true });
         return;
@@ -531,7 +674,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setCamOn(!!v);
       setPreview(v ? new MediaStream([v]) : null);
       setVideoMode(call.type === "video");
-      countCameras().then((n) => callRef.current === call && setCanFlip(n > 1 || /Android|iPhone|iPad/i.test(navigator.userAgent)));
+      countCameras().then((n) => callRef.current === call && setCanFlip(n > 1 || isPhoneLike()));
       try {
         if (!(await startEngine(call, stream, true))) return;
       } catch {
@@ -549,24 +692,25 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         return;
       }
       call.accepted = true;
-      timers.current.connect = setTimeout(() => {
-        if (callRef.current === call && phaseRef.current !== "connected") endCall("failed", { toast: tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again.") });
-      }, CONNECT_TIMEOUT_MS);
+      armConnectTimeout(call);
     },
-    [endCall, leg, postCall, showMediaError, startEngine, teardown]
+    [armConnectTimeout, endCall, leg, postCall, showMediaError, startEngine, teardown]
   );
 
-  const handleAccept = useCallback(() => {
-    const call = callRef.current;
-    if (!call || phaseRef.current !== "incoming") return;
-    unlockCallAudio();
-    primeRingtone();
-    stopRingtone();
-    if (timers.current.ring) clearTimeout(timers.current.ring);
-    timers.current.ring = undefined;
-    setPhase("connecting");
-    void answer(call);
-  }, [answer, setPhase]);
+  const handleAccept = useCallback(
+    (audioOnly = false) => {
+      const call = callRef.current;
+      if (!call || phaseRef.current !== "incoming") return;
+      unlockCallAudio();
+      primeRingtone();
+      stopRingtone();
+      if (timers.current.ring) clearTimeout(timers.current.ring);
+      timers.current.ring = undefined;
+      setPhase("connecting");
+      void answer(call, { audioOnly });
+    },
+    [answer, setPhase]
+  );
 
   // Từ chối (máy đang đổ chuông), huỷ (đang gọi đi) hoặc cúp máy (đang nói).
   const handleHangUp = useCallback(() => {
@@ -583,8 +727,9 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const handlers = useRef<{
     incoming: (d: IncomingData) => void;
     accepted: (d: { fromId?: string; callId?: string; leg?: string }) => void;
-    rejected: (d: { fromId?: string; callId?: string; reason?: string }) => void;
-    busy: (d: { fromId?: string; callId?: string }) => void;
+    answering: (d: { fromId?: string; callId?: string; leg?: string }) => void;
+    rejected: (d: RejectData) => void;
+    busy: (d: { fromId?: string; callId?: string; fromLeg?: string | null }) => void;
     handled: (d: { callId?: string }) => void;
     signal: (d: SignalEvent) => void;
   } | null>(null);
@@ -598,18 +743,24 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       if (cur) {
         if (cur.callId === d.callId) return; // duplicate / re-ring of the call we already have
         // Both called each other at the same moment: the call with the smaller id wins, no "busy" for anyone.
-        if (phaseRef.current === "outgoing" && cur.peer.id === callerId && !cur.accepted) {
+        const ph = phaseRef.current;
+        if (ph === "outgoing" && cur.peer.id === callerId && !cur.accepted) {
           if (cur.callId > d.callId) {
-            if (cur.token) postCall(cur, "reject", { reason: "cancel" }).catch(() => {});
+            if (cur.token) postCall(cur, "reject", { reason: "cancel", leg }).catch(() => {});
             cur.logged = true;
             teardown();
           } else return;
+        } else if (cur.peer.id === callerId && (ph === "incoming" || ((ph === "connecting" || ph === "connected") && netRef.current !== "connected"))) {
+          // The SAME person calls again while our call with them is ringing / stuck (their tab crashed or reloaded
+          // without hanging up): they have left the old call — replace it instead of answering "busy".
+          if (cur.isCaller && cur.token) logCall(cur.connectedAt ? "ended" : "missed");
+          teardown();
         } else {
           // Đang trong cuộc gọi khác → báo bận cho người gọi thay vì để họ chờ mãi.
           fetch("/api/calls", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ targetId: callerId, action: "busy", callId: d.callId, callToken: d.callToken, socketId: getPusherClient()?.connection?.socket_id }),
+            body: JSON.stringify({ targetId: callerId, action: "busy", callId: d.callId, callToken: d.callToken, leg, socketId: getPusherClient()?.connection?.socket_id }),
           }).catch(() => {});
           return;
         }
@@ -630,6 +781,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setCallType(call.type);
       setRemoteCam(call.type === "video");
       setMediaError(null);
+      setEndedCard(null);
       setPhase("incoming");
       startRingtone("incoming");
       preloadCallSdk(); // tải màn hình gọi trong lúc đổ chuông
@@ -641,7 +793,13 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     },
     accepted: (d) => {
       const call = callRef.current;
-      if (!call || !call.isCaller || d.fromId !== call.peer.id || d.callId !== call.callId || phaseRef.current !== "outgoing" || !d.leg) return;
+      if (!call || !call.isCaller || d.fromId !== call.peer.id || d.callId !== call.callId || !d.leg) return;
+      if (call.accepted) {
+        // A SECOND device of the callee answered too (it rang late / missed call-handled): stop exactly that device.
+        if (d.leg !== call.remoteLeg && call.token) postCall(call, "reject", { reason: "answered-elsewhere", leg, toLeg: d.leg }).catch(() => {});
+        return;
+      }
+      if (phaseRef.current !== "outgoing") return;
       stopRingtone();
       if (timers.current.ring) clearTimeout(timers.current.ring);
       if (timers.current.reRing) clearInterval(timers.current.reRing);
@@ -651,13 +809,36 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       inboxRef.current?.setRemoteLeg(d.leg);
       outboxRef.current?.open(d.leg);
       setPhase("connecting");
-      timers.current.connect = setTimeout(() => {
-        if (callRef.current === call && phaseRef.current !== "connected") endCall("failed", { toast: tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again.") });
-      }, CONNECT_TIMEOUT_MS);
+      // Pusher delivers at most once: if the offer (or the answer) got lost, send the offer again — twice at most.
+      timers.current.resend = setTimeout(() => {
+        if (callRef.current !== call || !peerRef.current?.resendPendingOffer()) return;
+        timers.current.resend = setTimeout(() => callRef.current === call && peerRef.current?.resendPendingOffer(), OFFER_RESEND_MS + 2000);
+      }, OFFER_RESEND_MS);
+      armConnectTimeout(call);
+    },
+    answering: (d) => {
+      // The callee tapped Answer and its browser is still asking for camera/mic: wait longer than the ring timeout.
+      const call = callRef.current;
+      if (!call || !call.isCaller || d.fromId !== call.peer.id || d.callId !== call.callId || call.accepted || phaseRef.current !== "outgoing") return;
+      if (timers.current.ring) clearTimeout(timers.current.ring);
+      if (timers.current.reRing) clearInterval(timers.current.reRing);
+      timers.current.reRing = undefined;
+      timers.current.ring = setTimeout(() => {
+        if (callRef.current !== call || phaseRef.current !== "outgoing") return;
+        endCall("timeout", { toast: tr(`${call.peer.name} không nghe máy.`, `${call.peer.name} didn't answer.`) });
+      }, ANSWERING_GRACE_MS);
     },
     rejected: (d) => {
       const call = callRef.current;
+      // Remember the call is over even when this device has no part in it: a re-ring of it still in flight (or a
+      // lost call-handled) must not make this device ring for a call that was answered / cancelled elsewhere.
+      if (typeof d.callId === "string" && (!call || call.callId !== d.callId)) markEnded(d.callId);
       if (!call || d.fromId !== call.peer.id || d.callId !== call.callId) return;
+      // "answered-elsewhere" (and any reject aimed at one device) only stops that device.
+      if (d.toLeg && d.toLeg !== leg) return;
+      // Caller already talking to one device of the callee: a reject from ANOTHER device (a late ring declined there,
+      // its connect timeout) must not end the live call.
+      if (call.isCaller && call.accepted && call.remoteLeg && d.fromLeg && d.fromLeg !== call.remoteLeg) return;
       handleRemoteBye.current(call, d.reason || "hangup");
     },
     busy: (d) => {
@@ -666,9 +847,12 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       logCall("missed");
       toast.error(tr(`${call.peer.name || "Người nhận"} đang bận cuộc gọi khác.`, `${call.peer.name || "They"} are on another call.`));
       teardown();
+      playEndTone("busy");
     },
     handled: (d) => {
-      // Máy khác của chính mình đã nghe / từ chối / báo bận → máy này ngừng đổ chuông, không ghi gì.
+      // Máy khác của chính mình đã nghe / từ chối / báo bận → máy này ngừng đổ chuông, không ghi gì. Ghi nhớ callId
+      // TRƯỚC (kể cả khi máy này chưa đổ chuông): lượt đổ chuông lại đến muộn của cuộc gọi đó sẽ bị bỏ qua.
+      if (typeof d.callId === "string") markEnded(d.callId);
       const call = callRef.current;
       if (!call || call.isCaller || d.callId !== call.callId || phaseRef.current !== "incoming") return;
       teardown();
@@ -692,12 +876,56 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         logCall("declined");
         toast.error(tr(`${name} đã từ chối cuộc gọi.`, `${name} declined the call.`));
       }
-    } else if (ph === "incoming") {
-      // Người gọi huỷ / hết giờ trước khi mình nghe máy.
-      toast(tr(`Cuộc gọi nhỡ từ ${call.peer.name || "người dùng"}`, `Missed call from ${call.peer.name || "a user"}`), { icon: "📞" });
-    } else if (ph === "connecting" || ph === "connected") {
-      logCall(reason === "failed" && !call.connectedAt ? "missed" : "ended");
-      toast(reason === "failed" ? tr("Cuộc gọi đã ngắt do mất kết nối.", "Call dropped — connection lost.") : tr("Cuộc gọi đã kết thúc.", "Call ended."), { icon: "📞" });
+      teardown();
+      playEndTone("busy");
+      return;
+    }
+    if (ph === "incoming") {
+      // Người gọi huỷ / hết giờ trước khi mình nghe máy → "Cuộc gọi nhỡ" + nút Gọi lại.
+      const partner: CallPartner = { id: call.peer.id, name: call.peer.name, avatarUrl: call.peer.avatarUrl || "", isGroup: false };
+      const type = call.type;
+      teardown();
+      toast(
+        (t) => (
+          <span className="flex items-center gap-3">
+            <span>{tr(`Cuộc gọi nhỡ từ ${call.peer.name || "người dùng"}`, `Missed call from ${call.peer.name || "a user"}`)}</span>
+            <button
+              type="button"
+              data-call-back
+              onClick={() => {
+                toast.dismiss(t.id);
+                startCallRef.current(partner, type);
+              }}
+              className="min-h-10 shrink-0 rounded-full bg-pn-brand px-3 text-xs font-bold text-white"
+            >
+              {tr("Gọi lại", "Call back")}
+            </button>
+          </span>
+        ),
+        { icon: "📞", duration: 8000 }
+      );
+      return;
+    }
+    if (ph === "connecting" || ph === "connected") {
+      logCall(call.connectedAt ? "ended" : "missed");
+      if (reason === "answered-elsewhere") {
+        toast(tr("Cuộc gọi đã được nghe trên thiết bị khác.", "Answered on another device."), { icon: "📞" });
+        teardown();
+        return;
+      }
+      if (reason === "media-error") {
+        toast.error(tr(`${name} không vào được cuộc gọi (${peerMediaReason()}).`, `${name} couldn't join (${peerMediaReason()}).`));
+        teardown();
+        return;
+      }
+      if (reason === "failed") {
+        toast(tr("Cuộc gọi đã ngắt do mất kết nối.", "Call dropped — connection lost."), { icon: "📞" });
+        teardown();
+        return;
+      }
+      teardown();
+      showEnded(call);
+      return;
     }
     teardown();
   };
@@ -709,13 +937,15 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     const on = {
       incoming: (d: IncomingData) => handlers.current?.incoming(d),
       accepted: (d: { fromId?: string; callId?: string; leg?: string }) => handlers.current?.accepted(d),
-      rejected: (d: { fromId?: string; callId?: string; reason?: string }) => handlers.current?.rejected(d),
-      busy: (d: { fromId?: string; callId?: string }) => handlers.current?.busy(d),
+      answering: (d: { fromId?: string; callId?: string; leg?: string }) => handlers.current?.answering(d),
+      rejected: (d: RejectData) => handlers.current?.rejected(d),
+      busy: (d: { fromId?: string; callId?: string; fromLeg?: string | null }) => handlers.current?.busy(d),
       handled: (d: { callId?: string }) => handlers.current?.handled(d),
       signal: (d: SignalEvent) => handlers.current?.signal(d),
     };
     channel.bind("incoming-call", on.incoming);
     channel.bind("call-accepted", on.accepted);
+    channel.bind("call-answering", on.answering);
     channel.bind("call-rejected", on.rejected);
     channel.bind("call-busy", on.busy);
     channel.bind("call-handled", on.handled);
@@ -723,6 +953,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     return () => {
       channel.unbind("incoming-call", on.incoming);
       channel.unbind("call-accepted", on.accepted);
+      channel.unbind("call-answering", on.answering);
       channel.unbind("call-rejected", on.rejected);
       channel.unbind("call-busy", on.busy);
       channel.unbind("call-handled", on.handled);
@@ -751,7 +982,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       try {
         navigator.sendBeacon?.(
           "/api/calls",
-          new Blob([JSON.stringify({ targetId: call.peer.id, action: "reject", callId: call.callId, callToken: call.token, reason })], { type: "application/json" })
+          new Blob([JSON.stringify({ targetId: call.peer.id, action: "reject", callId: call.callId, callToken: call.token, reason, leg })], { type: "application/json" })
         );
       } catch {}
       if (call.isCaller) logCall(ph === "outgoing" ? "missed" : "ended", true);
@@ -765,36 +996,50 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       if (!call || (ph !== "connecting" && ph !== "connected")) return;
       const p = peerRef.current;
       const stream = streamRef.current;
-      const phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
+      const platform = detectCallPlatform();
+      const phone = isPhoneLike(platform);
+      // The Android app / iPhone lose the microphone in the background: tell the other person why they hear nothing.
+      const awayMatters = platform === "android-app" || platform === "iphone" || platform === "ios-app";
       if (document.visibilityState === "hidden") {
         // phones stop the camera in the background; a desktop tab keeps sending, so no "paused" there
         if (camOnRef.current && phone) p?.sendCtl({ cam: "paused" });
+        if (awayMatters) p?.sendCtl({ away: true });
         return;
       }
       if (!stream || !p) return;
+      if (awayMatters) p.sendCtl({ away: false });
+      // Every await below can outlive the call (hang-up while the camera / mic is opening): a track obtained for a
+      // call that is over is stopped at once — never left running with the camera light on.
+      const stale = () => callRef.current !== call || streamRef.current !== stream || peerRef.current !== p;
       const a = stream.getAudioTracks()[0];
       if (!a || a.readyState === "ended") {
         try {
           const s = await getCallMedia(false);
           const na = s.getAudioTracks()[0];
+          if (stale()) return stopStream(s);
           if (a) stream.removeTrack(a);
           na.enabled = a ? a.enabled : true;
           stream.addTrack(na);
           await p.replaceAudioTrack(na);
         } catch {}
       }
+      if (stale()) return;
       if (camOnRef.current) {
         const v = stream.getVideoTracks()[0];
         if (!v || v.readyState === "ended") {
           try {
             const nv = await getCameraTrack(facingRef.current);
+            if (stale() || !camOnRef.current) {
+              nv.stop();
+              return;
+            }
             if (v) stream.removeTrack(v);
             stream.addTrack(nv);
             await p.replaceVideoTrack(nv);
             setPreview(new MediaStream([nv]));
           } catch {}
         }
-        if (phone) p.sendCtl({ cam: true });
+        if (phone && !stale()) p.sendCtl({ cam: true });
       }
     };
     window.addEventListener("pagehide", onPageHide);
@@ -803,7 +1048,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       window.removeEventListener("pagehide", onPageHide);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [logCall, teardown]);
+  }, [leg, logCall, teardown]);
 
   useEffect(() => {
     if (phase !== "outgoing" && phase !== "incoming") return;
@@ -819,6 +1064,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   }, [rootEl]);
 
   useImperativeHandle(ref, () => ({ startCall: handleStartCall }), [handleStartCall]);
+  startCallRef.current = handleStartCall;
 
   const speaker = useAudioOutput(rootEl, phase !== "idle");
 
@@ -855,7 +1101,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         setVideoMode(true);
         setPreview(new MediaStream([v]));
         peerRef.current?.sendCtl({ cam: true });
-        countCameras().then((n) => setCanFlip(n > 1 || /Android|iPhone|iPad/i.test(navigator.userAgent)));
+        countCameras().then((n) => setCanFlip(n > 1 || isPhoneLike()));
       }
     } catch (err) {
       await showMediaError(err, "camera", { video: true, cameraOnly: true });
@@ -866,14 +1112,18 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
 
   const flipCamera = useCallback(async () => {
     const stream = streamRef.current;
-    if (!stream || camBusy || !camOnRef.current) return;
+    const call = callRef.current;
+    if (!stream || !call || camBusy || !camOnRef.current) return;
     setCamBusy(true);
     const old = stream.getVideoTracks()[0] || null;
     const next: Facing = facingRef.current === "user" ? "environment" : "user";
+    // The call may end while a camera is opening (~0.3–1 s): such a track is stopped at once, never left running.
+    const stale = () => callRef.current !== call || streamRef.current !== stream;
     try {
       // Nhiều điện thoại không mở được 2 camera cùng lúc → dừng camera cũ TRƯỚC.
       old?.stop();
       const v = await getCameraTrack(next, { switchFrom: old });
+      if (stale()) return v.stop();
       if (old) stream.removeTrack(old);
       stream.addTrack(v);
       await peerRef.current?.replaceVideoTrack(v);
@@ -883,14 +1133,24 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setPreview(new MediaStream([v]));
       peerRef.current?.sendCtl({ facing: facingRef.current });
     } catch (err) {
+      if (stale()) return;
       // could not open the other camera: try to get the previous one back
       try {
         const v = await getCameraTrack(facingRef.current);
+        if (stale()) return v.stop();
         if (old) stream.removeTrack(old);
         stream.addTrack(v);
         await peerRef.current?.replaceVideoTrack(v);
         setPreview(new MediaStream([v]));
       } catch {
+        if (stale()) return;
+        // no camera at all now: the old track is already stopped → camera OFF everywhere (not a frozen frame)
+        await peerRef.current?.replaceVideoTrack(null).catch(() => {});
+        if (old) stream.removeTrack(old);
+        camOnRef.current = false;
+        setCamOn(false);
+        setPreview(null);
+        peerRef.current?.sendCtl({ cam: false });
         await showMediaError(err, "camera", { video: true, cameraOnly: true });
       }
     } finally {
@@ -901,8 +1161,11 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const retryConnection = useCallback(() => {
     if (timers.current.failed) clearTimeout(timers.current.failed);
     timers.current.failed = undefined;
+    const call = callRef.current;
+    // never connected yet: Retry gets a fresh connect window too (not the one that is about to run out)
+    if (call && !call.connectedAt && call.accepted) armConnectTimeout(call);
     peerRef.current?.retry();
-  }, []);
+  }, [armConnectTimeout]);
 
   const messageInstead = useCallback(() => {
     const id = callRef.current?.peer.id;
@@ -914,11 +1177,14 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const handleBusyReply = useCallback(() => {
     const p = callRef.current?.peer;
     if (!p) return;
+    const content = tr("Mình đang bận chút, lát mình gọi lại nha 🙏", "I'm busy right now, I'll call you back soon 🙏");
     fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ receiverId: p.id, content: tr("Mình đang bận chút, lát mình gọi lại nha 🙏", "I'm busy right now, I'll call you back soon 🙏") }),
-    }).catch(() => {});
+      body: JSON.stringify({ receiverId: p.id, content }),
+    })
+      .then((r) => (r.ok ? toast.success(tr(`Đã gửi: “${content}”`, `Sent: “${content}”`)) : toast.error(tr("Không gửi được tin nhắn.", "Couldn't send the message."))))
+      .catch(() => toast.error(tr("Không gửi được tin nhắn.", "Couldn't send the message.")));
     handleHangUp();
   }, [handleHangUp]);
 
@@ -956,18 +1222,137 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     if (role !== "camera") teardown();
   }, [mediaError, teardown]);
 
-  if (phase === "idle" || !peer) return null;
+  // Screen stays on during a call (auto-lock would suspend the page: frozen video on iPhone, a silenced microphone in
+  // the Android app). Re-requested when the page is visible again (the lock is dropped while hidden).
+  const inCall = phase === "connecting" || phase === "connected";
+  useEffect(() => {
+    if (!inCall) return;
+    let cancelled = false;
+    const wl = (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void>; addEventListener?: (e: string, f: () => void) => void }> } }).wakeLock;
+    const request = async () => {
+      if (!wl || cancelled || wakeRef.current || document.visibilityState !== "visible") return;
+      try {
+        const lock = await wl.request("screen");
+        if (cancelled) {
+          lock.release().catch(() => {});
+          return;
+        }
+        wakeRef.current = lock;
+        lock.addEventListener?.("release", () => {
+          if (wakeRef.current === lock) wakeRef.current = null;
+        });
+      } catch {}
+    };
+    void request();
+    const onVis = () => document.visibilityState === "visible" && void request();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVis);
+      wakeRef.current?.release().catch(() => {});
+      wakeRef.current = null;
+    };
+  }, [inCall]);
+
+  // "Still connecting…" after SLOW_CONNECT_MS on Connecting… (until the owner sets TURN, mobile data often fails here).
+  useEffect(() => {
+    if (phase !== "connecting") return;
+    const t = setTimeout(() => setSlowConnect(true), SLOW_CONNECT_MS);
+    return () => {
+      clearTimeout(t);
+      setSlowConnect(false);
+    };
+  }, [phase]);
+
+  // Focus: the call screen takes focus (a phone keyboard open in the chat closes, screen readers land on Answer /
+  // Cancel / End), and Tab stays inside it — or inside an open error dialog.
+  const focusedFor = useRef("");
+  useEffect(() => {
+    if (phase === "idle" || !rootEl) {
+      focusedFor.current = "";
+      return;
+    }
+    const key = phase === "connecting" || phase === "connected" ? "room" : phase;
+    if (focusedFor.current === key) return;
+    const ae = document.activeElement as HTMLElement | null;
+    if (ae && ae !== document.body && !rootEl.contains(ae)) ae.blur?.();
+    const want = phase === "incoming" ? "answer" : phase === "outgoing" ? "cancel" : key === "room" ? "end" : null;
+    if (!want) {
+      focusedFor.current = key;
+      return;
+    }
+    let tries = 0;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const tick = () => {
+      const el = rootEl.querySelector<HTMLElement>(`[data-call-control="${want}"]`);
+      if (el) {
+        if (!rootEl.querySelector('[role="alertdialog"]')) el.focus({ preventScroll: true });
+        focusedFor.current = key;
+      } else if (tries++ < 40) t = setTimeout(tick, 100);
+    };
+    tick();
+    return () => clearTimeout(t);
+  }, [phase, rootEl]);
+
+  useEffect(() => {
+    if (phase === "idle" || !rootEl) return;
+    const focusables = (scope: HTMLElement) =>
+      Array.from(scope.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter((el) => !el.hasAttribute("disabled") && el.getClientRects().length > 0);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const dlg = rootEl.querySelector<HTMLElement>('[role="alertdialog"]');
+      const scope = dlg || rootEl;
+      const list = focusables(scope);
+      if (!list.length) return;
+      const ae = document.activeElement as HTMLElement | null;
+      const inside = !!ae && scope.contains(ae);
+      if (e.shiftKey ? !inside || ae === list[0] : !inside || ae === list[list.length - 1]) {
+        e.preventDefault();
+        (e.shiftKey ? list[list.length - 1] : list[0]).focus();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [phase, rootEl]);
+
+  // An error dialog takes focus on its main button.
+  useEffect(() => {
+    if (!mediaError || !rootEl) return;
+    const t = setTimeout(() => rootEl.querySelector<HTMLElement>('[data-call-error="media"] [data-primary]')?.focus({ preventScroll: true }), 30);
+    return () => clearTimeout(t);
+  }, [mediaError, rootEl]);
+
+  const endedCardEl = endedCard ? (
+    <div data-call-ended role="status" className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[2001] flex justify-center px-4">
+      <span className="flex items-center gap-2 rounded-full bg-pn-surface/95 px-4 py-2.5 text-sm font-semibold text-pn-text shadow-xl ring-1 ring-pn-line backdrop-blur motion-safe:animate-fadeIn">
+        <PhoneOff className="h-4 w-4 text-rose-400" />
+        {endedCard}
+      </span>
+    </div>
+  ) : null;
+
+  if (phase === "idle" || !peer) return endedCardEl;
 
   const hasPhoto = !isPlaceholderAvatar(peer.avatarUrl);
   const typeLabel = callType === "video" ? tr("Cuộc gọi video", "Video call") : tr("Cuộc gọi thoại", "Voice call");
   const inRoom = phase === "connecting" || phase === "connected";
   const showOutgoingPreview = phase === "outgoing" && camOn && !!preview;
+  const speakerName = speaker.isDefault ? tr("Loa", "Speaker") : outputName(speaker.label);
+  const pendingText = callType === "video" ? tr("Cho phép micro và camera để gọi", "Allow microphone and camera access to call") : tr("Cho phép micro để gọi", "Allow microphone access to call");
+  const connectHint = slowConnect
+    ? hasTurn
+      ? tr("Vẫn đang kết nối…", "Still connecting…")
+      : tr("Vẫn đang kết nối… mạng di động đôi khi chặn cuộc gọi — thử Wi-Fi.", "Still connecting… mobile networks sometimes block calls. Try Wi-Fi.")
+    : null;
 
   return (
+    <>
+    {endedCardEl}
     <div
       ref={setRootEl}
       className="fixed inset-0 z-[2000] flex h-[100dvh] flex-col items-center justify-between overflow-clip bg-pn-canvas text-pn-text motion-safe:animate-fadeIn"
       role="dialog"
+      aria-modal="true"
       aria-label={typeLabel}
       data-call-phase={phase}
       data-call-type={callType}
@@ -1006,7 +1391,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           connectedAt={connectedAt}
           canFlip={canFlip}
           busy={camBusy}
-          speaker={speaker}
+          speaker={{ ...speaker, label: speakerName, deviceLabel: speaker.label }}
+          connectHint={connectHint}
+          noRelay={!hasTurn}
+          peerAway={peerAway}
           onToggleMic={toggleMic}
           onToggleCam={toggleCam}
           onFlip={flipCamera}
@@ -1014,7 +1402,17 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           onRetry={retryConnection}
           onMessageInstead={messageInstead}
         />
-      ) : phase === "error" ? null : (
+      ) : phase === "error" ? (
+        // keep WHICH call failed visible behind the permission dialog
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 pb-24 text-center" aria-hidden>
+          <Avatar src={peer.avatarUrl} name={peer.name} seed={peer.id} loading="eager" className="h-28 w-28 ring-4 ring-white/10 shadow-2xl shadow-black/40" />
+          <p className="text-2xl font-black tracking-tight text-pn-text">{peer.name}</p>
+          <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-pn-text-2">
+            {callType === "video" ? <Video className="h-3 w-3" /> : <Phone className="h-3 w-3" />}
+            {typeLabel}
+          </span>
+        </div>
+      ) : (
         <>
           <div className="flex flex-col items-center gap-1.5 pt-[max(2.5rem,env(safe-area-inset-top))]">
             <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-pn-text-2 backdrop-blur-md">
@@ -1034,30 +1432,42 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                 <h2 className="text-[28px] font-black leading-tight tracking-tight text-pn-text">{peer.name}</h2>
                 <p className="flex items-center justify-center gap-2 text-sm font-medium text-pn-text-2" data-call-status>
                   {callType === "video" ? <Video className="h-4 w-4 text-pn-brand-ink" /> : <Phone className="h-4 w-4 text-pn-brand-ink" />}
-                  {phase === "incoming" ? tr(`${typeLabel} đến`, `Incoming ${typeLabel.toLowerCase()}`) : ringing ? tr("Đang đổ chuông", "Ringing") : tr("Đang gọi…", "Calling…")}
-                  <span className="tabular-nums text-pn-text-3">
-                    · {String(Math.floor(ringSecs / 60)).padStart(2, "0")}:{String(ringSecs % 60).padStart(2, "0")}
-                  </span>
+                  {phase === "incoming" ? tr(`${typeLabel} đến`, `Incoming ${typeLabel.toLowerCase()}`) : mediaPending ? pendingText : ringing ? tr("Đang đổ chuông", "Ringing") : tr("Đang gọi…", "Calling…")}
+                  {/* elapsed time only for the caller (as phone dialers do); never while the permission prompt is open */}
+                  {phase === "outgoing" && !mediaPending && (
+                    <span className="tabular-nums text-pn-text-3">
+                      · {String(Math.floor(ringSecs / 60)).padStart(2, "0")}:{String(ringSecs % 60).padStart(2, "0")}
+                    </span>
+                  )}
                 </p>
               </div>
 
               {phase === "outgoing" && (
                 // Điều khiển trước khi bên kia nghe máy — giữ nguyên khi vào cuộc gọi.
                 <div className="flex items-start justify-center gap-5 pt-2">
-                  <CallToggle on={micOn} onClick={toggleMic} label={micOn ? tr("Tắt tiếng", "Mute") : tr("Bật tiếng", "Unmute")} iconOn={<Mic className="h-6 w-6" />} iconOff={<MicOff className="h-6 w-6" />} data="mic" />
-                  {speaker.canSwitch && <CallToggle on={speaker.isDefault} onClick={speaker.next} label={tr("Loa", "Speaker")} iconOn={<Volume2 className="h-6 w-6" />} iconOff={<Volume2 className="h-6 w-6" />} data="speaker" />}
+                  <CallToggle on={micOn} onClick={toggleMic} label={micOn ? tr("Tắt mic", "Mute") : tr("Bật mic", "Unmute")} iconOn={<Mic className="h-6 w-6" />} iconOff={<MicOff className="h-6 w-6" />} data="mic" />
+                  {speaker.canSwitch && <CallToggle on onClick={speaker.next} label={speakerName} title={speaker.label || undefined} iconOn={<Volume2 className="h-6 w-6" />} iconOff={<Volume2 className="h-6 w-6" />} data="speaker" />}
                   {callType === "video" && (
-                    <CallToggle on={camOn} onClick={toggleCam} label={camOn ? tr("Tắt camera", "Camera off") : tr("Bật camera", "Camera on")} iconOn={<Video className="h-6 w-6" />} iconOff={<VideoOff className="h-6 w-6" />} data="cam" />
+                    <CallToggle on={camOn} onClick={toggleCam} label={camOn ? tr("Tắt camera", "Stop video") : tr("Bật camera", "Start video")} iconOn={<Video className="h-6 w-6" />} iconOff={<VideoOff className="h-6 w-6" />} data="cam" />
                   )}
                 </div>
               )}
 
               <div className="fixed inset-x-0 bottom-0 flex w-full flex-col items-center gap-5 px-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-4 motion-safe:animate-callSheetUp md:static md:mt-2 md:px-0 md:pb-0 md:pt-2">
                 {phase === "incoming" && (
-                  <button type="button" onClick={handleBusyReply} className="flex min-h-12 items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-pn-text ring-1 ring-white/10 backdrop-blur-md transition-colors hover:bg-white/15">
-                    <MessageCircle className="h-4 w-4" />
-                    {tr("Bận — nhắn lại", "Busy — send a message")}
-                  </button>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button type="button" onClick={handleBusyReply} className="flex min-h-12 items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-pn-text ring-1 ring-white/10 backdrop-blur-md transition-colors hover:bg-white/15">
+                      <MessageCircle className="h-4 w-4" />
+                      {tr("Bận — nhắn lại", "Busy — send a message")}
+                    </button>
+                    {callType === "video" && (
+                      // answer a video call without turning your own camera on (you still see theirs)
+                      <button type="button" data-call-control="answer-voice" onClick={() => handleAccept(true)} className="flex min-h-12 items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-pn-text ring-1 ring-white/10 backdrop-blur-md transition-colors hover:bg-white/15">
+                        <Phone className="h-4 w-4" />
+                        {tr("Nghe bằng thoại", "Answer with voice")}
+                      </button>
+                    )}
+                  </div>
                 )}
                 <div className="flex items-center justify-center gap-20">
                   <div className="flex flex-col items-center gap-2">
@@ -1066,18 +1476,19 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                       onClick={handleHangUp}
                       data-call-control={phase === "incoming" ? "decline" : "cancel"}
                       title={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
+                      // accessible name starts with the visible label ("Cancel" / "Huỷ") — voice control users say what they see
                       aria-label={phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ cuộc gọi", "Cancel call")}
                       className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-b from-rose-500 to-red-600 text-white shadow-xl shadow-red-600/40 motion-safe:transition-transform hover:scale-105 active:scale-90"
                     >
                       <PhoneOff className="h-7 w-7 stroke-[2.5px]" />
                     </button>
-                    <span className="text-xs font-semibold text-pn-text-2">{phase === "incoming" ? tr("Từ chối", "Decline") : tr("Kết thúc", "End")}</span>
+                    <span className="text-xs font-semibold text-pn-text-2">{phase === "incoming" ? tr("Từ chối", "Decline") : tr("Huỷ", "Cancel")}</span>
                   </div>
                   {phase === "incoming" && (
                     <div className="flex flex-col items-center gap-2">
                       <button
                         type="button"
-                        onClick={handleAccept}
+                        onClick={() => handleAccept(false)}
                         data-call-control="answer"
                         title={tr("Trả lời", "Answer")}
                         aria-label={tr("Trả lời", "Answer")}
@@ -1113,26 +1524,26 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       )}
 
       {mediaError && (
-        <div data-call-error="media" data-call-error-kind={mediaError.kind} role="alertdialog" aria-label={mediaError.title} className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
+        <div data-call-error="media" data-call-error-kind={mediaError.kind} role="alertdialog" aria-modal="true" aria-labelledby="pn-call-err-title" aria-describedby="pn-call-err-hint" className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-pn-card bg-pn-surface p-6 text-center shadow-2xl ring-1 ring-pn-line motion-safe:animate-fadeIn">
             <ShieldAlert className="mx-auto h-9 w-9 text-pn-brand-ink" />
-            <h3 className="mt-3 text-lg font-bold text-pn-text">{mediaError.title}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-pn-text-2">{mediaError.hint}</p>
+            <h3 id="pn-call-err-title" className="mt-3 text-lg font-bold text-pn-text">{mediaError.title}</h3>
+            <p id="pn-call-err-hint" className="mt-1.5 text-sm leading-relaxed text-pn-text-2">{mediaError.hint}</p>
             {mediaError.role === "callee" && <p className="mt-2 text-xs text-pn-text-3">{tr(`Đã báo cho ${peer.name} là bạn chưa vào được cuộc gọi.`, `${peer.name} was told you couldn't join.`)}</p>}
             <div className="mt-5 flex flex-col gap-2">
               {mediaError.canFallBackToVoice && mediaError.role === "caller" && (
-                <button type="button" onClick={continueAsVoice} className="flex h-12 items-center justify-center gap-2 rounded-full bg-pn-brand font-bold text-white hover:bg-pn-brand-hover active:bg-pn-brand-press">
+                <button type="button" data-primary onClick={continueAsVoice} className="flex h-12 items-center justify-center gap-2 rounded-full bg-pn-brand font-bold text-white hover:bg-pn-brand-hover active:bg-pn-brand-press">
                   <Phone className="h-4 w-4" />
                   {tr("Tiếp tục gọi thoại", "Continue as voice call")}
                 </button>
               )}
               {mediaError.role === "caller" && mediaError.kind !== "unsupported" && (
-                <button type="button" onClick={retryMedia} className={`flex h-12 items-center justify-center gap-2 rounded-full font-bold ${mediaError.canFallBackToVoice ? "bg-pn-raised text-pn-text ring-1 ring-pn-line hover:bg-pn-overlay" : "bg-pn-brand text-white hover:bg-pn-brand-hover"}`}>
+                <button type="button" data-primary={mediaError.canFallBackToVoice && mediaError.role === "caller" ? undefined : ""} onClick={retryMedia} className={`flex h-12 items-center justify-center gap-2 rounded-full font-bold ${mediaError.canFallBackToVoice ? "bg-pn-raised text-pn-text ring-1 ring-pn-line hover:bg-pn-overlay" : "bg-pn-brand text-white hover:bg-pn-brand-hover"}`}>
                   <RefreshCw className="h-4 w-4" />
                   {tr("Thử lại", "Try again")}
                 </button>
               )}
-              <button type="button" onClick={closeMediaError} className="h-12 rounded-full font-semibold text-pn-text-2 ring-1 ring-pn-line hover:text-pn-text">
+              <button type="button" data-primary={mediaError.role === "caller" && (mediaError.kind !== "unsupported" || mediaError.canFallBackToVoice) ? undefined : ""} onClick={closeMediaError} className="h-12 rounded-full font-semibold text-pn-text-2 ring-1 ring-pn-line hover:text-pn-text">
                 {tr("Đóng", "Close")}
               </button>
             </div>
@@ -1140,8 +1551,46 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         </div>
       )}
     </div>
+    </>
   );
 });
+
+interface RejectData {
+  fromId?: string;
+  callId?: string;
+  reason?: string;
+  /** the device of the sender that rejected (caller: ignore other devices of the callee once talking to one) */
+  fromLeg?: string | null;
+  /** only this device of the receiver must stop ("answered-elsewhere") */
+  toLeg?: string | null;
+}
+
+/** Friendly name of an audio output ("Speakers (Realtek…)" → "Speaker", "AirPods" → "Headphones"). */
+function outputName(label: string): string {
+  if (/head|ear|bluetooth|airpods|buds|hands-?free|tai nghe/i.test(label)) return tr("Tai nghe", "Headphones");
+  return tr("Loa", "Speaker");
+}
+
+/** Candidate types / states only — never IP addresses or SDP. */
+async function connectDiagnostics(pc: RTCPeerConnection, hasTurn: boolean | null) {
+  const out = { hasTurn, iceConnectionState: pc.iceConnectionState, connectionState: pc.connectionState, local: [] as string[], remote: [] as string[], pairs: 0, succeeded: 0 };
+  const stats = await pc.getStats();
+  stats.forEach((r) => {
+    if (r.type === "local-candidate" && r.candidateType && !out.local.includes(r.candidateType)) out.local.push(r.candidateType);
+    if (r.type === "remote-candidate" && r.candidateType && !out.remote.includes(r.candidateType)) out.remote.push(r.candidateType);
+    if (r.type === "candidate-pair") {
+      out.pairs++;
+      if (r.state === "succeeded") out.succeeded++;
+    }
+  });
+  return out;
+}
+
+function reportConnectFail(extra: Record<string, unknown>) {
+  import("@sentry/nextjs")
+    .then((S) => S.captureMessage("call_connect_failed", { level: "warning", extra }))
+    .catch(() => {});
+}
 
 interface IncomingData {
   fromId?: string;
@@ -1166,14 +1615,16 @@ function OutgoingPreview({ stream, mirror }: { stream: MediaStream | null; mirro
   return <video ref={ref} muted autoPlay playsInline data-local-preview="ringing" className="h-full w-full object-cover" style={mirror ? { transform: "scaleX(-1)" } : undefined} />;
 }
 
-function CallToggle({ on, onClick, label, iconOn, iconOff, data }: { on: boolean; onClick: () => void; label: string; iconOn: React.ReactNode; iconOff: React.ReactNode; data: string }) {
+// The visible caption IS the accessible name and says the action ("Mute" / "Unmute") — no aria-pressed on top of a
+// flipping label (screen readers would announce "Unmute, toggle button, pressed").
+function CallToggle({ on, onClick, label, title, iconOn, iconOff, data }: { on: boolean; onClick: () => void; label: string; title?: string; iconOn: React.ReactNode; iconOff: React.ReactNode; data: string }) {
   return (
     <div className="flex w-16 flex-col items-center gap-2">
       <button
         type="button"
         onClick={onClick}
         data-call-control={data}
-        aria-pressed={!on}
+        title={title || label}
         aria-label={label}
         className={`flex h-14 w-14 items-center justify-center rounded-full backdrop-blur-md motion-safe:transition-all active:scale-90 ${on ? "bg-white/12 text-white ring-1 ring-white/15 hover:bg-white/20" : "bg-white text-pn-canvas"}`}
       >

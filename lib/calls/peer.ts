@@ -11,9 +11,14 @@
 //   - a negotiated data channel "ctl" (id 0) carries in-call state (mic / camera / facing) peer-to-peer;
 //   - "perfect negotiation": the callee is polite, the caller impolite, so a simultaneous ICE-restart offer (glare)
 //     resolves itself.
-// Reconnects: 'disconnected' → Reconnecting… → ICE restart (caller after 2 s, callee after 5 s, both at once on
-// 'failed' or when the device comes back online); a restart offer without an answer for 6 s is rolled back and sent
-// again; 30 s without media → the call ends ('failed').
+// Connected = connectionState "connected" (ICE AND DTLS up — media can flow), not just ICE: the timer and the call
+// log never start before anyone can hear anything, and a DTLS failure under a live ICE path is not shown as a call.
+// Reconnects: 'disconnected' → Reconnecting… (shown after 1.2 s, so a 4G hand-over blip does not flash it) → ICE
+// restart (caller after 2 s, callee after 5 s, both at once on 'failed' or when the device comes back online); a
+// restart offer without an answer for 6 s is rolled back and sent again; 30 s without media → the call ends ('failed').
+// The first offer / answer are re-sent if the other side has not answered a few seconds after the call was accepted
+// (Pusher delivers at most once). The negotiated data channel closing while the transport is fine = the other side
+// closed its connection (a hang-up whose "bye" got lost).
 import { isOfferCollision, shouldIgnoreOffer } from "./signalQueue";
 import type { SignalKind, WireCtl, WireIce, WireSdp } from "./signalWire";
 
@@ -36,8 +41,10 @@ export interface CallPeerOptions {
   onQuality?: (q: Quality, relay: boolean) => void;
   /** media really flowing in both directions for the first time */
   onMediaUp?: () => void;
+  /** the other side closed its connection (its "ctl" channel closed while our transport was fine) */
+  onRemoteClose?: () => void;
   log?: (...a: unknown[]) => void;
-  timings?: Partial<{ callerRestartMs: number; calleeRestartMs: number; restartAnswerMs: number; deadlineMs: number; statsMs: number }>;
+  timings?: Partial<{ callerRestartMs: number; calleeRestartMs: number; restartAnswerMs: number; deadlineMs: number; statsMs: number; reconnectingUiMs: number }>;
 }
 
 export class CallPeer {
@@ -54,6 +61,7 @@ export class CallPeer {
   private net: NetState = "new";
   private everConnected = false;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectingUiTimer: ReturnType<typeof setTimeout> | null = null;
   private answerTimer: ReturnType<typeof setTimeout> | null = null;
   private deadline: ReturnType<typeof setTimeout> | null = null;
   private statsTimer: ReturnType<typeof setInterval> | null = null;
@@ -69,7 +77,7 @@ export class CallPeer {
 
   constructor(o: CallPeerOptions) {
     this.o = o;
-    this.t = { callerRestartMs: 2000, calleeRestartMs: 5000, restartAnswerMs: 6000, deadlineMs: 30_000, statsMs: 2000, ...(o.timings || {}) };
+    this.t = { callerRestartMs: 2000, calleeRestartMs: 5000, restartAnswerMs: 6000, deadlineMs: 30_000, statsMs: 2000, reconnectingUiMs: 1200, ...(o.timings || {}) };
     this.pc = new RTCPeerConnection({ iceServers: o.iceServers, bundlePolicy: "max-bundle", rtcpMuxPolicy: "require" });
     const pc = this.pc;
     if (!o.polite) {
@@ -121,6 +129,13 @@ export class CallPeer {
         const c = JSON.parse(String(e.data));
         if (c && typeof c === "object") this.o.onCtl(c as WireCtl);
       } catch {}
+    };
+    dc.onclose = () => {
+      // Our own close() clears this handler first. A close while our transport is still up means the other side
+      // closed its RTCPeerConnection; during a network drop the transport is 'disconnected' first, so that is not a
+      // hang-up (the reconnect logic handles it).
+      if (this.closed || !this.everConnected) return;
+      if (this.isUp()) this.o.onRemoteClose?.();
     };
     this.dc = dc;
   }
@@ -261,13 +276,30 @@ export class CallPeer {
     this.o.onNetState(s);
   }
 
+  /** Media can flow: ICE and DTLS are both up (older browsers without connectionState: ICE only). */
+  private isUp(): boolean {
+    const pc = this.pc;
+    const cs = (pc as { connectionState?: RTCPeerConnectionState }).connectionState;
+    if (typeof cs === "string") return cs === "connected";
+    const ice = pc.iceConnectionState;
+    return ice === "connected" || ice === "completed";
+  }
+
   private onConnState() {
     if (this.closed) return;
     const pc = this.pc;
     const cs = pc.connectionState;
     const ice = pc.iceConnectionState;
-    if (cs === "connected" || ice === "connected" || ice === "completed") {
+    if (cs === "failed" || ice === "failed") {
+      this.clearReconnectingUi();
+      if (this.everConnected) this.setNet("reconnecting");
+      this.restart("failed");
+      this.armDeadline();
+      return;
+    }
+    if (this.isUp()) {
       this.clearRestartTimer();
+      this.clearReconnectingUi();
       this.clearDeadline();
       if (!this.everConnected) {
         this.everConnected = true;
@@ -278,14 +310,13 @@ export class CallPeer {
       this.setNet("connected");
       return;
     }
-    if (cs === "failed" || ice === "failed") {
-      if (this.everConnected) this.setNet("reconnecting");
-      this.restart("failed");
-      this.armDeadline();
-      return;
-    }
     if (ice === "disconnected" || cs === "disconnected") {
-      if (this.everConnected) this.setNet("reconnecting");
+      if (this.everConnected && this.net === "connected" && !this.reconnectingUiTimer) {
+        this.reconnectingUiTimer = setTimeout(() => {
+          this.reconnectingUiTimer = null;
+          if (!this.closed && !this.isUp()) this.setNet("reconnecting");
+        }, this.t.reconnectingUiMs);
+      }
       this.armDeadline();
       if (!this.restartTimer) {
         this.restartTimer = setTimeout(() => {
@@ -294,6 +325,31 @@ export class CallPeer {
         }, this.o.polite ? this.t.calleeRestartMs : this.t.callerRestartMs);
       }
     }
+  }
+
+  /** Fresh STUN/TURN list (TURN credentials expire): used by the next ICE gathering, e.g. an ICE restart. */
+  setIceServers(iceServers: RTCIceServer[]) {
+    if (this.closed || !iceServers.length) return;
+    try {
+      this.pc.setConfiguration({ ...this.pc.getConfiguration(), iceServers });
+    } catch (err) {
+      this.log("setConfiguration", err);
+    }
+  }
+
+  /** Caller: the first offer is still unanswered after the call was accepted (a lost Pusher event) → send it again.
+   *  Idempotent: a callee that already answered just answers the same offer again. Returns true when re-sent. */
+  resendPendingOffer(): boolean {
+    const pc = this.pc;
+    if (this.closed || this.o.polite || this.everConnected || pc.signalingState !== "have-local-offer" || !pc.localDescription) return false;
+    this.log("re-sending the unanswered offer");
+    this.o.send("sdp", { type: "offer", sdp: stripCandidates(pc.localDescription.sdp) });
+    return true;
+  }
+
+  /** The callee has applied an offer (so it is talking to us). */
+  get hasRemoteDescription() {
+    return !!this.pc.remoteDescription;
   }
 
   /** User tapped "Retry" after the connection was lost: restart ICE and give it another full deadline. */
@@ -347,13 +403,17 @@ export class CallPeer {
     if (this.restartTimer) clearTimeout(this.restartTimer);
     this.restartTimer = null;
   }
+  private clearReconnectingUi() {
+    if (this.reconnectingUiTimer) clearTimeout(this.reconnectingUiTimer);
+    this.reconnectingUiTimer = null;
+  }
   /** No media for deadlineMs while (re)connecting → the call has failed. */
   private armDeadline() {
     if (this.deadline || this.closed) return;
     this.deadline = setTimeout(() => {
       this.deadline = null;
-      const ice = this.pc.iceConnectionState;
-      if (ice === "connected" || ice === "completed") return;
+      if (this.closed || this.isUp()) return;
+      this.clearReconnectingUi();
       this.setNet("failed");
     }, this.t.deadlineMs);
   }
@@ -459,27 +519,39 @@ export class CallPeer {
     } catch {}
   }
 
-  close() {
+  /** lingerMs: keep the connection open that long after everything else stopped, so a just-sent "bye" on the data
+   *  channel is flushed before the SCTP association is torn down (local tracks are already stopped by the owner). */
+  close(lingerMs = 0) {
     if (this.closed) return;
     this.setNet("closed");
     this.closed = true;
     this.clearRestartTimer();
+    this.clearReconnectingUi();
     this.clearAnswerTimer();
     this.clearDeadline();
     if (this.statsTimer) clearInterval(this.statsTimer);
     this.statsTimer = null;
     if (typeof window !== "undefined") window.removeEventListener("online", this.onOnline);
-    try {
-      this.dc?.close();
-    } catch {}
+    const dc = this.dc;
+    if (dc) {
+      dc.onclose = null;
+      dc.onmessage = null;
+    }
     this.pc.onnegotiationneeded = null;
     this.pc.onicecandidate = null;
     this.pc.ontrack = null;
     this.pc.onconnectionstatechange = null;
     this.pc.oniceconnectionstatechange = null;
-    try {
-      this.pc.close();
-    } catch {}
+    const shut = () => {
+      try {
+        dc?.close();
+      } catch {}
+      try {
+        this.pc.close();
+      } catch {}
+    };
+    if (lingerMs > 0 && dc?.readyState === "open") setTimeout(shut, lingerMs);
+    else shut();
     for (const t of this.remoteAudio.getTracks()) this.remoteAudio.removeTrack(t);
     for (const t of this.remoteVideo.getTracks()) this.remoteVideo.removeTrack(t);
   }

@@ -22,7 +22,7 @@ import { publicJob } from "../../lib/jobIngest/display";
 import { localeHref } from "../../lib/i18n/localeHref";
 
 let pass = 0, fail = 0;
-const ok = (id: string, d: string, c: boolean, x = "") => { c ? pass++ : fail++; console.log(`${c ? "✅" : "❌"} [${id}] ${d}${c ? "" : "  → " + x}`); };
+const ok = (id: string, d: string, c: boolean, x = "") => { if (c) pass++; else fail++; console.log(`${c ? "✅" : "❌"} [${id}] ${d}${c ? "" : "  → " + x}`); };
 
 // DB tạm đúng schema — đặt globalThis.prisma TRƯỚC khi nạp lib/prisma (qua ingest / route) → không đụng prisma/dev.db
 const dbFile = path.join(os.tmpdir(), `pawnail_badjobs_${Date.now()}.db`).replace(/\\/g, "/");

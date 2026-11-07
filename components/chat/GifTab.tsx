@@ -4,8 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, RefreshCw, Search, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
-import { corsSafeGif } from "@/lib/chat/gif";
-import { canAnimate } from "@/lib/stickers/lottie";
+import { corsSafeGif, isMp4Url } from "@/lib/chat/gif";
 import GifVideo from "./GifVideo";
 import { pushGifRecent, readGifRecent, type StoredGif } from "@/lib/stickers/store";
 import { setGifEnabled } from "@/lib/chat/gifAvailability";
@@ -28,10 +27,11 @@ type State = (
 ) & { key?: string };
 
 const MAX_PAGES = 5;
-const isMp4 = (u: string) => /\.mp4$/i.test(u.split("#")[0].split("?")[0]);
 
-function TileMedia({ g, anim }: { g: GifItem; anim: boolean }) {
-  if (isMp4(g.preview)) return <GifVideo src={g.preview} poster={anim ? null : g.still} rootSelector=".pn-gif-scroll" fit="cover" className="h-full w-full" />;
+// Ô có ảnh tĩnh (vài KB) dưới video từ lần đầu tới gần: cuộn xa (trình phát bị gỡ) rồi quay lại thì ô không trống trong lúc
+// video dựng lại. Tắt chuyển động → chỉ ảnh tĩnh.
+function TileMedia({ g }: { g: GifItem }) {
+  if (isMp4Url(g.preview)) return <GifVideo src={g.preview} poster={g.still ?? null} lazyPoster rootSelector=".pn-gif-scroll" fit="cover" className="h-full w-full" />;
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={g.preview} alt="GIF" loading="lazy" decoding="async" {...(corsSafeGif(g.preview) ? { crossOrigin: "anonymous" as const } : {})} className="h-full w-full object-cover" />;
 }
@@ -68,7 +68,6 @@ export default function GifTab({
   const [loaded, setState] = useState<State>({ kind: "loading" });
   const [recent, setRecent] = useState<GifItem[]>(() => (typeof window === "undefined" ? [] : readGifRecent(userId)));
   const [cols, setCols] = useState(2);
-  const [anim] = useState(() => canAnimate());
   const [retry, setRetry] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -256,7 +255,7 @@ export default function GifTab({
                 <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-0.5">
                   {recent.map((g) => (
                     <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} data-gif-tile="recent" className="pn-gif-tile h-20 flex-shrink-0" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
-                      <TileMedia g={g} anim={anim} />
+                      <TileMedia g={g} />
                     </button>
                   ))}
                 </div>
@@ -270,7 +269,7 @@ export default function GifTab({
                   <div key={ci} className="flex min-w-0 flex-col gap-1">
                     {c.items.map((g) => (
                       <button key={g.id} type="button" onClick={() => send(g)} aria-label={g.title || "GIF"} data-gif-tile="" className="pn-gif-tile w-full" style={{ aspectRatio: `${g.w} / ${g.h}` }}>
-                        <TileMedia g={g} anim={anim} />
+                        <TileMedia g={g} />
                       </button>
                     ))}
                   </div>

@@ -12,9 +12,12 @@ export function isGifUrl(u: string | null | undefined): boolean {
 /** Phần trước "#" và "?" (đường dẫn thật của tệp). */
 const pathOf = (u: string) => u.split("#")[0].split("?")[0];
 
+/** Đường dẫn tệp (bỏ "#…", "?…") kết thúc bằng .mp4 — không xét host. */
+export const isMp4Url = (u: string) => /\.mp4$/i.test(pathOf(u));
+
 /** GIF gửi bằng bản video (MP4 của GIPHY / Tenor) — vẽ bằng <video> thay cho <img>. */
 export function isGifVideo(u: string | null | undefined): boolean {
-  return isGifUrl(u) && /\.mp4$/i.test(pathOf(u as string));
+  return isGifUrl(u) && isMp4Url(u as string);
 }
 
 /** URL tệp để đặt vào src (bỏ "#wh=…&still=…"). */

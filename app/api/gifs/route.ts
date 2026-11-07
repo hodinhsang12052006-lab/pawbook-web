@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { marketFromHeaders } from "@/lib/market";
 import { gifQueryEn } from "@/lib/gifQueryVi";
-import { mapGiphyItems, type GiphyItem } from "@/lib/chat/giphy";
+import { mapGiphyItems, type GifResult, type GiphyItem } from "@/lib/chat/giphy";
 
 // GET /api/gifs?q=&lang=en|vi&next= — tìm GIF qua API hợp lệ (khoá nằm ở máy chủ, không lộ ra trình duyệt).
 // GET /api/gifs?probe=1 — chỉ báo { enabled } theo việc CÓ khoá hay không (không gọi nhà cung cấp, không tính lượt) —
@@ -14,18 +14,8 @@ import { mapGiphyItems, type GiphyItem } from "@/lib/chat/giphy";
 // "chưa dùng được" + nút sang Nhãn dán). Chỉ trả URL media của GIPHY / Tenor — khớp danh sách nguồn ảnh khi gửi tin.
 // Chủ app cần thêm GIPHY_API_KEY trên Vercel (project pawbook-web) — KHÔNG dùng tiền tố NEXT_PUBLIC_.
 
-export interface Gif {
-  id: string;
-  /** Nội dung tin khi gửi: GIPHY → MP4 "…/200.mp4#wh=WxH&still=<poster>" (lib/chat/gif.ts); Tenor → GIF "#wh=WxH" */
-  send: string;
-  /** Ô trong lưới: MP4 nhỏ (GIPHY fixed_width, rộng 200px) hoặc WebP / GIF */
-  preview: string;
-  /** Ảnh tĩnh của ô (khi tắt chuyển động / tiết kiệm dữ liệu) */
-  still?: string;
-  w: number;
-  h: number;
-  title: string;
-}
+// 1 GIF trả về: send (nội dung tin), preview (ô trong lưới), still (ảnh tĩnh), w/h, title — xem lib/chat/giphy.ts
+export type Gif = GifResult;
 type Provider = "giphy" | "tenor";
 type Reason = "no_key" | "bad_key" | "upstream";
 type Page = { ok: true; results: Gif[]; next: string | null } | { ok: false; reason: Reason };

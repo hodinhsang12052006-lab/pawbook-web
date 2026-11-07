@@ -213,7 +213,7 @@ if (SCENARIO === "off") {
     }
     R.check("CL3", `ZEGOCLOUD thật: ${res}${media2 ? " · media " + JSON.stringify(media2).slice(0, 160) : ""}`, res === "connected" && media2.every((l) => l.some((v) => !v.paused && v.t > 0)), JSON.stringify({ res, media2, logs: [...A.logs, ...B.logs].slice(-4) }).slice(0, 300));
     // cúp máy
-    await A.page.locator("[data-call-phase]").count() && A.page.keyboard.press("Escape");
+    if (await A.page.locator("[data-call-phase]").count()) await A.page.keyboard.press("Escape").catch(() => {});
   }
 }
 

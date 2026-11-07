@@ -19,8 +19,8 @@ const browser = await chromium.launch();
 async function login(email, { phone = true } = {}) {
   const ctx = await browser.newContext(
     phone
-      ? { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: ANDROID_UA, locale: "en-US", colorScheme: "dark" }
-      : { viewport: { width: 1280, height: 860 }, locale: "en-US" }
+      ? { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: ANDROID_UA, locale: "en-US", colorScheme: "dark", serviceWorkers: "block" }
+      : { viewport: { width: 1280, height: 860 }, locale: "en-US", serviceWorkers: "block" }
   );
   const h = { "cf-connecting-ip": fakeIp() };
   await ctx.route(BASE_URL + "/**", (r) => r.continue({ headers: { ...r.request().headers(), ...h } }));
@@ -60,12 +60,35 @@ async function openThread(page, query) {
 }
 
 const A = await login(EMAIL_A);
+const mockSvg = (i, w, h) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="hsl(${(i * 47) % 360} 45% 38%)"/><text x="50%" y="50%" fill="#fff" font-family="sans-serif" font-size="${Math.round(h / 7)}" text-anchor="middle" dominant-baseline="middle">mock GIF ${i}</text></svg>`;
+const dims = [[480, 270], [200, 200], [200, 300], [320, 180], [200, 250], [300, 200], [200, 150], [240, 320]];
+const mockResults = (q) => dims.map(([w, h], i) => ({ id: `g_mock${q}${i}`, send: `https://media.giphy.com/media/mock${i}/200w.webp#wh=${w}x${h}`, preview: `https://media.giphy.com/media/mock${i}/200w.webp`, w, h, title: `mock ${i}` }));
+// Ảnh GIF giả + /api/gifs giả: đăng ký NGAY khi tạo phiên (trước mọi request); /api/gifs chỉ giả khi mockGifs = true.
+let mockGifs = false;
+await A.ctx.route(/^https:\/\/media\.giphy\.com\/media\/mock\d+\//, (r) => {
+  const i = Number(/mock(\d+)/.exec(r.request().url())?.[1] || 0);
+  const [w, h] = dims[i] || [200, 200];
+  r.fulfill({ status: 200, headers: { "content-type": "image/svg+xml", "access-control-allow-origin": "*" }, body: mockSvg(i, w, h) });
+});
+await A.ctx.route(/\/api\/gifs(\?|$)/, (r) => {
+  if (!mockGifs) return r.fallback();
+  const q = new URL(r.request().url()).searchParams.get("q") || "";
+  r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ enabled: true, provider: "giphy", results: mockResults(q.replace(/\W/g, "")), next: null }) });
+});
 const B = await login(EMAIL_B, { phone: false });
 const stamp = Date.now().toString().slice(-6);
 const hello = await A.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: `Sticker test ${stamp}` }, headers: A.h });
 const conv1 = (await hello.json()).message?.conversationId;
 const grp = await A.ctx.request.post(BASE_URL + "/api/conversations", { data: { isGroup: true, name: `QA media ${stamp}`, participantIds: [B.me.id] }, headers: A.h });
-const groupId = (await grp.json().catch(() => ({})))?.id || (await grp.json().catch(() => ({})))?.conversation?.id;
+const grpBody = await grp.json().catch(() => ({}));
+let groupId = grpBody?.id || grpBody?.conversation?.id;
+if (!groupId) {
+  // giới hạn chống spam 5 nhóm / ngày (lib/abuseGuard) → dùng lại 1 nhóm QA đã có của 2 người này
+  const list = await (await A.ctx.request.get(BASE_URL + "/api/messages", { headers: A.h })).json();
+  groupId = (list.conversations || []).find((c) => c.isGroup && c.participants?.some((u) => u.id === B.me.id))?.id;
+}
+if (!groupId) throw new Error(`no group chat available (create → ${grp.status()})`);
 await A.ctx.request.post(BASE_URL + "/api/messages", { data: { conversationId: groupId, isGroup: true, content: `Group hello ${stamp}` }, headers: A.h });
 
 // ---------- Server: chỉ nhận id sticker có trong danh mục ----------
@@ -98,15 +121,21 @@ const animEarly = firstLoad.filter((x) => /512\.webp/.test(x.u)).length;
 R.check("CM1b", `Lần mở đầu: ${firstLoad.length} ảnh nhỏ, ${kb} KB (≤ 30 ảnh, ≤ 350 KB), không tải bản động`, firstLoad.length <= 30 && kb <= 350 && animEarly === 0, JSON.stringify({ n: firstLoad.length, kb, animEarly }));
 await shot(p, "t01_stickers");
 
-// cuộn qua mọi mục → ảnh tải được thật (naturalWidth > 0)
+// cuộn hết vùng cuộn (từng đoạn ~ 2/3 khung) → ảnh của MỌI mục tải được thật (naturalWidth > 0)
 const sections = await panel(p).locator("[data-section]").evaluateAll((els) => els.map((e) => e.getAttribute("data-section")));
+const scroller = panel(p).getByTestId("sticker-scroll");
+for (let i = 0; i < 80; i++) {
+  const done = await scroller.evaluate((el) => {
+    el.scrollTop += Math.round(el.clientHeight * 0.66);
+    return el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+  });
+  await p.waitForTimeout(160);
+  if (done) break;
+}
+await p.waitForFunction(() => [...document.querySelectorAll("[data-testid=sticker-scroll] img")].every((i) => i.getAttribute("src") && i.complete), null, { timeout: 20000 }).catch(() => {});
 const perSection = {};
 for (const key of sections) {
-  const sec = panel(p).locator(`[data-section="${key}"]`);
-  await sec.scrollIntoViewIfNeeded();
-  await p.waitForTimeout(450);
-  await p.waitForFunction((k) => [...document.querySelectorAll(`[data-section="${k}"] img`)].every((i) => i.complete), key, { timeout: 15000 }).catch(() => {});
-  perSection[key] = await sec.locator("img").evaluateAll((imgs) => `${imgs.filter((i) => i.complete && i.naturalWidth > 0).length}/${imgs.length}`);
+  perSection[key] = await panel(p).locator(`[data-section="${key}"] img`).evaluateAll((imgs) => `${imgs.filter((i) => i.complete && i.naturalWidth > 0).length}/${imgs.length}`);
 }
 const broken = Object.entries(perSection).filter(([, v]) => { const [a, b] = v.split("/").map(Number); return a !== b || !b; });
 R.check("CM2", `Cuộn qua ${sections.length} mục: mọi ảnh sticker tải được (Noto SVG + Fluent qua /_next/image)`, sections.length >= 12 && !broken.length, JSON.stringify(broken.length ? broken : perSection).slice(0, 280));
@@ -191,19 +220,12 @@ await shot(p, "t05_gif_disabled");
 await p.keyboard.press("Escape");
 
 // ---------- GIF có kết quả (API GIẢ LẬP + ảnh giả trên media.giphy.com) ----------
-const mockSvg = (i, w, h) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="hsl(${(i * 47) % 360} 45% 38%)"/><text x="50%" y="50%" fill="#fff" font-family="sans-serif" font-size="${Math.round(h / 7)}" text-anchor="middle" dominant-baseline="middle">mock GIF ${i}</text></svg>`;
-const dims = [[480, 270], [200, 200], [200, 300], [320, 180], [200, 250], [300, 200], [200, 150], [240, 320]];
-const mockResults = (q) => dims.map(([w, h], i) => ({ id: `g_mock${q}${i}`, send: `https://media.giphy.com/media/mock${i}/200w.webp#wh=${w}x${h}`, preview: `https://media.giphy.com/media/mock${i}/200w.webp`, w, h, title: `mock ${i}` }));
-await A.ctx.route("https://media.giphy.com/media/mock*/**", (r) => {
-  const i = Number(/mock(\d+)/.exec(r.request().url())?.[1] || 0);
-  const [w, h] = dims[i] || [200, 200];
-  r.fulfill({ status: 200, headers: { "content-type": "image/svg+xml", "access-control-allow-origin": "*" }, body: mockSvg(i, w, h) });
-});
-await A.ctx.route(BASE_URL + "/api/gifs**", (r) => {
-  const q = new URL(r.request().url()).searchParams.get("q") || "";
-  r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ enabled: true, provider: "giphy", results: mockResults(q.replace(/\W/g, "")), next: null }) });
-});
+mockGifs = true;
+const gifFails = [];
+const onFail = (r) => /giphy/.test(r.url()) && gifFails.push(`${r.url().slice(-40)} ${r.failure()?.errorText}`);
+const onGifResp = (r) => /media\.giphy/.test(r.url()) && r.status() !== 200 && gifFails.push(`${r.status()} ${r.url().slice(-40)}`);
+p.on("requestfailed", onFail);
+p.on("response", onGifResp);
 await openPanel(p);
 await panel(p).getByRole("tab", { name: "GIF" }).click();
 await panel(p).locator('img[alt="GIF"]').first().waitFor({ timeout: 8000 }).catch(() => {});
@@ -219,14 +241,14 @@ const gifBubble = await p.locator(".m-media.m-gif").last().evaluate((m) => {
   return { w: r.width, h: r.height, fit: img ? getComputedStyle(img).objectFit : null, chip: !!m.querySelector(".m-gif-chip") };
 }).catch(() => null);
 const ratioOk = gifBubble && Math.abs(gifBubble.w / gifBubble.h - 480 / 270) < 0.03 && gifBubble.w <= 241;
-R.check("CM10", "GIF (API giả lập): 'Powered by GIPHY' hiện, có ô GIF; gửi → bong bóng giữ đúng tỉ lệ 480×270 (≤ 240px, contain, nhãn GIF), bảng vẫn mở", powered && tilesN >= 4 && ratioOk && gifBubble.fit === "contain" && gifBubble.chip && gifStill, JSON.stringify({ powered, tilesN, gifBubble, gifStill }));
+R.check("CM10", "GIF (API giả lập): 'Powered by GIPHY' hiện, có ô GIF; gửi → bong bóng giữ đúng tỉ lệ 480×270 (≤ 240px, contain, nhãn GIF), bảng vẫn mở", powered && tilesN >= 4 && ratioOk && gifBubble.fit === "contain" && gifBubble.chip && gifStill, JSON.stringify({ powered, tilesN, gifBubble, gifStill, gifFails }));
 await shot(p, "t07_gif_sent");
 await p.keyboard.press("Escape");
 await p.goto(BASE_URL + "/messages");
 await p.locator(".m-conv").first().waitFor({ timeout: 30000 });
 const prevGif = await p.locator(".m-conv", { hasText: B.me.name }).first().locator(".m-preview").innerText().catch(() => "");
 R.check("CM11", "Danh sách chat: tin cuối là GIF → 'You: GIF' (không còn '📷 Photo')", /You: GIF/.test(prevGif), prevGif);
-await A.ctx.unroute(BASE_URL + "/api/gifs**");
+mockGifs = false;
 
 // ---------- Hình nền ----------
 const wpEl = p.locator(".pn-msgr > div > .chat-wallpaper, .pn-msgr .chat-wallpaper:not(.pn-wp-preview)").first();

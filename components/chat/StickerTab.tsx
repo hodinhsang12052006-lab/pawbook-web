@@ -253,8 +253,8 @@ export default function StickerTab({
       </div>
 
       {/* (2) Thanh bộ — icon, cuộn ngang */}
-      {!results && (
-        <div ref={barRef} role="tablist" aria-label={tr("Bộ nhãn dán", "Sticker packs")} className="pn-stk-bar no-scrollbar">
+      {/* luôn gắn (ẩn khi đang tìm) — IntersectionObserver của icon giữ nguyên khung gốc */}
+        <div ref={barRef} hidden={!!results} role="tablist" aria-label={tr("Bộ nhãn dán", "Sticker packs")} className="pn-stk-bar no-scrollbar">
           {barItems.map((s) => (
             <React.Fragment key={s.key}>
               {s.divider && <span aria-hidden className="pn-stk-divider" />}
@@ -279,7 +279,7 @@ export default function StickerTab({
             </React.Fragment>
           ))}
         </div>
-      )}
+
 
       {/* (3) Vùng cuộn */}
       <div ref={scrollRef} className="pn-stk-scroll custom-scrollbar" data-testid="sticker-scroll">

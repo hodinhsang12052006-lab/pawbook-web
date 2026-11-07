@@ -374,12 +374,15 @@ try {
       JSON.stringify(lg.map((m) => m && { n: m.notification, a: m.android, d: m.data })).slice(0, 300));
 
     // Nhóm: link mở đúng NHÓM (trước đây ?to=<người gửi> → mở chat riêng), tiêu đề = tên nhóm.
+    // Nhóm do 1 tài khoản MỚI tạo — chạy lại nhiều lần trong ngày không chạm trần "nhóm / ngày" của tài khoản mẫu.
     const groupName = `QA Nhóm ${Date.now() % 100000}`;
-    const grp = await owner.req("/api/conversations", { method: "POST", json: { isGroup: true, name: groupName, participantIds: [t.client.userId] } });
+    const hostReg = await registerUser({ name: "QA Group Host" });
+    await hostReg.client.login(hostReg.body.email, hostReg.body.password);
+    const grp = await hostReg.client.req("/api/conversations", { method: "POST", json: { isGroup: true, name: groupName, participantIds: [t.client.userId] } });
     const gid = grp.data?.id;
     fcm.sends.length = 0;
     apns.length = 0;
-    await owner.req("/api/messages", { method: "POST", json: { conversationId: gid, content: "QA nhóm xin chào", type: "TEXT", clientId: crypto.randomUUID() } });
+    await hostReg.client.req("/api/messages", { method: "POST", json: { conversationId: gid, content: "QA nhóm xin chào", type: "TEXT", clientId: crypto.randomUUID() } });
     await sleep(3500);
     const gs = fcm.sends.find((x) => x.m.token === rich)?.m;
     const gl = fcm.sends.find((x) => x.m.token === legacy)?.m;

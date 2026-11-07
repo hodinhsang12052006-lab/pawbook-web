@@ -89,20 +89,20 @@ export default function ChatNotifyBanner() {
       ? {
           icon: BellRing,
           title: tr("Nhận thông báo tin nhắn", "Get message notifications"),
-          text: tr("Biết ngay khi có tin nhắn mới, kể cả khi đã đóng PawNail.", "See new messages the moment they arrive, even when PawNail is closed."),
+          text: tr("Kể cả khi đã đóng PawNail.", "Even when PawNail is closed."),
           cta: busy ? tr("Đang bật…", "Turning on…") : tr("Bật", "Turn on"),
         }
       : kind === "denied"
       ? {
           icon: BellOff,
           title: tr("Thông báo đang tắt", "Notifications are off"),
-          text: tr("Cho phép thông báo của PawNail trong Cài đặt để không lỡ tin nhắn.", "Allow notifications for PawNail in Settings so you don't miss messages."),
+          text: tr("Bật lại trong Cài đặt để không lỡ tin nhắn.", "Allow them in Settings so you don't miss messages."),
           cta: tr("Cài đặt", "Settings"),
         }
       : {
           icon: MessageCircle,
           title: tr("Bật bong bóng chat", "Turn on chat bubbles"),
-          text: tr("Cuộc trò chuyện nổi trên mọi app — trả lời mà không cần chuyển app.", "Keep chats floating over other apps and reply without switching."),
+          text: tr("Trả lời ngay trên mọi app, như Messenger.", "Reply from any app, like Messenger."),
           cta: tr("Bật", "Turn on"),
         };
   const Icon = copy.icon;

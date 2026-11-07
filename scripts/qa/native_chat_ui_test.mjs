@@ -18,7 +18,7 @@
 import crypto from "node:crypto";
 import { createClient } from "@libsql/client";
 import { chromium, devices } from "playwright";
-import { BASE_URL, Client, Results, SEED_OWNER, SEED_TECH } from "./lib.mjs";
+import { BASE_URL, Client, Results, SEED_OWNER, SEED_TECH, registerUser } from "./lib.mjs";
 
 const R = new Results("Thông báo chat app Android + bong bóng chat (UI)");
 const TMP = process.env.TEMP || ".";
@@ -32,18 +32,21 @@ if (!cfgOk?.nativeEnabled) {
   process.exit(2);
 }
 
-// ---------- dữ liệu: chủ tiệm nhắn thợ (1-1) + 1 nhóm mới ----------
+// ---------- dữ liệu: chủ tiệm nhắn thợ (1-1) + nhóm mới do 1 tài khoản MỚI tạo (không chạm trần nhóm / ngày) ----------
 const owner = new Client();
 const tech = new Client();
 await owner.login(SEED_OWNER);
 await tech.login(SEED_TECH);
+const hostReg = await registerUser({ name: "QA Group Host" });
+const host = hostReg.client;
+await host.login(hostReg.body.email, hostReg.body.password);
 const stamp = Date.now() % 1_000_000;
 const dm = await owner.req("/api/messages", { method: "POST", json: { receiverId: tech.userId, content: `QA ui ${stamp}`, type: "TEXT", clientId: crypto.randomUUID() } });
 const dmId = dm.data?.message?.conversationId;
 const groupName = `QA Bubble ${stamp}`;
-const grp = await owner.req("/api/conversations", { method: "POST", json: { isGroup: true, name: groupName, participantIds: [tech.userId] } });
+const grp = await host.req("/api/conversations", { method: "POST", json: { isGroup: true, name: groupName, participantIds: [tech.userId] } });
 const gid = grp.data?.id;
-await owner.req("/api/messages", { method: "POST", json: { conversationId: gid, content: `QA nhóm ${stamp}`, type: "TEXT", clientId: crypto.randomUUID() } });
+await host.req("/api/messages", { method: "POST", json: { conversationId: gid, content: `QA nhóm ${stamp}`, type: "TEXT", clientId: crypto.randomUUID() } });
 if (!dmId || !gid) {
   console.error("❌ Không tạo được dữ liệu", dm.status, grp.status);
   process.exit(1);
@@ -53,7 +56,12 @@ const techCookies = Object.entries(tech.jar).map(([name, value]) => ({ name, val
 // ---------- "app Android" giả ----------
 function fakeAndroid(cfg) {
   window.androidBridge = { postMessage() {} };
-  const st = (window.__pn = { calls: [], listeners: {}, perm: cfg.perm });
+  // Quyền thông báo giữ qua các lần tải lại trang như máy thật.
+  let saved = null;
+  try {
+    saved = localStorage.getItem("__pnFakePerm");
+  } catch {}
+  const st = (window.__pn = { calls: [], listeners: {}, perm: saved || cfg.perm });
   const H = (name, promises, callbacks = []) => ({ name, methods: [...promises.map((n) => ({ name: n, rtype: "promise" })), ...callbacks.map((n) => ({ name: n, rtype: "callback" }))] });
   const nativeMethods = cfg.legacy ? ["getInfo"] : ["getInfo", "setActiveConversation", "clearConversation", "openBubbleSettings", "openNotificationSettings"];
   const fire = (ev, data) => (st.listeners["PushNotifications:" + ev] || []).forEach((cb) => cb(data));
@@ -74,6 +82,9 @@ function fakeAndroid(cfg) {
           return Promise.resolve({ receive: st.perm });
         case "PushNotifications.requestPermissions":
           st.perm = "granted";
+          try {
+            localStorage.setItem("__pnFakePerm", "granted");
+          } catch {}
           return Promise.resolve({ receive: "granted" });
         case "PushNotifications.register":
           setTimeout(() => fire("registration", { value: cfg.token }), 50);
@@ -276,7 +287,7 @@ try {
     R.check("NC9", "Đang mở chat 1-1 → link ?c=<nhóm> (bấm thông báo) → chuyển sang đúng nhóm", switched);
 
     const lateName = `QA Late ${stamp}`;
-    const late = await owner.req("/api/conversations", { method: "POST", json: { isGroup: true, name: lateName, participantIds: [tech.userId] } });
+    const late = await host.req("/api/conversations", { method: "POST", json: { isGroup: true, name: lateName, participantIds: [tech.userId] } });
     const lateId = late.data?.id;
     await p.evaluate((id) => window.history.pushState(null, "", `/messages?c=${id}`), lateId);
     const opened = await visible(p.locator("h3", { hasText: lateName }), 12000);

@@ -7,6 +7,8 @@
 //   - không khung bao nào bị cuộn (scrollTop / scrollLeft ≠ 0 — "lệch" khi WebView cuộn ô nhập vào tầm nhìn), trang không cuộn;
 //   - bong bóng không chồng nhau, mép phải tin mình / mép trái tin bạn thẳng hàng, không tràn ngang;
 //   - hết hiệu ứng thì không còn transform sót; đang ở đáy thì tin cuối thấy trọn (không bị khung soạn tin / thanh gợi ý che).
+// Tin đến: server local không có Pusher → test bắn sự kiện "online" của trình duyệt (đường đồng bộ lại có sẵn của app: tải lại
+// trang tin mới nhất rồi ghép vào) — tin THẬT phải hiện trong khung (kiểm tra, không bỏ qua) và chỗ đang đọc không được nhảy.
 // CHỈ chạy với server local (lib.mjs chặn bitpawos.com).
 //   BASE_URL=http://localhost:3147 [CPU=6] [WIDTHS=412,360] [SHOTS_DIR=…] node scripts/qa/chat_jank_test.mjs
 import fs from "node:fs";
@@ -286,6 +288,32 @@ for (const W of WIDTHS) {
   await p.getByRole("button", { name: "Emoji", exact: true }).click();
   await p.getByRole("dialog", { name: "Pick emoji" }).waitFor({ timeout: 15000 });
   await add("emoji panel open");
+  // Tab Emoji: tìm khi bàn phím mở (cửa sổ còn 58%) → lưới kết quả ≥ 2 hàng (bỏ dòng nhãn + thanh nhóm khi tìm), khung tin ≥ 40px
+  {
+    const dlg = p.getByRole("dialog", { name: "Pick emoji" });
+    await dlg.getByRole("tab", { name: "Emoji", exact: true }).click();
+    const es = dlg.getByRole("textbox", { name: "Search emoji" });
+    await es.waitFor({ timeout: 15000 });
+    await es.focus();
+    await p.setViewportSize({ width: W, height: Math.round(FULL * 0.58) });
+    await es.pressSequentially("heart", { delay: 40 });
+    const got = await dlg.locator('[data-emoji-grid="results"] [data-emoji]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const st = await check(p, `${W}px · emoji search with keyboard open`);
+    const g = await p.evaluate(() => {
+      const grid = document.querySelector("[data-emoji-grid]")?.getBoundingClientRect();
+      const cells = [...document.querySelectorAll('[data-emoji-grid="results"] [data-emoji]')].map((c) => c.getBoundingClientRect());
+      const full = grid ? cells.filter((c) => c.top >= grid.top - 0.5 && c.bottom <= grid.bottom + 0.5 && c.height > 20).length : 0;
+      return { gridH: grid ? Math.round(grid.height) : 0, full, first: document.querySelector('[data-emoji-grid="results"] [data-emoji]')?.getAttribute("data-emoji") };
+    });
+    if (!got) st.problems.push("emoji search 'heart' showed no results");
+    if (g.gridH < 80) st.problems.push(`emoji results grid only ${g.gridH}px tall with the keyboard open`);
+    if (g.full < 8) st.problems.push(`only ${g.full} emoji fully visible with the keyboard open`);
+    st.label += ` (grid ${g.gridH}px, ${g.full} visible, thread ${st.g.sc?.h}px)`;
+    steps.push(st);
+    await shot(p, `j${W}_03b_emoji_search_keyboard`);
+    await es.fill("");
+    await p.setViewportSize({ width: W, height: FULL });
+  }
   await p.getByRole("dialog", { name: "Pick emoji" }).getByRole("tab", { name: "Stickers" }).click();
   await p.getByRole("dialog", { name: "Pick emoji" }).getByRole("textbox", { name: "Search stickers" }).waitFor({ timeout: 15000 });
   await add("stickers tab open (wide pack bar)");
@@ -302,25 +330,50 @@ for (const W of WIDTHS) {
     sc.scrollTop = Math.max(0, sc.scrollHeight - sc.clientHeight - 700);
   });
   await p.waitForTimeout(300);
-  const before = await p.evaluate(() => document.querySelector(".m-scroll").scrollTop);
-  const incoming = [];
-  for (let i = 1; i <= 3; i++) incoming.push(send(B, A.me.id, `incoming ${i} ${stamp}`));
-  // vừa cuộn vừa nhận
+  const rowWith = (t) => p.locator(".m-scroll .m-row").filter({ hasText: t });
+  const arrive = async (texts) => {
+    for (const t of texts) {
+      const r = await send(B, A.me.id, t);
+      if (r.status() !== 201) return [`could not send "${t}" (${r.status()})`];
+    }
+    await p.evaluate(() => window.dispatchEvent(new Event("online"))); // = mạng có lại → app tải lại tin mới nhất
+    return [];
+  };
+  // (a) vừa cuộn vừa nhận: 3 tin tới trong lúc ngón tay đang cuộn lên
+  const recvA = await arrive([1, 2, 3].map((i) => `incoming ${i} ${stamp}`));
   for (let i = 0; i < 6; i++) {
     await p.mouse.move(W / 2, 400);
     await p.mouse.wheel(0, -40);
     await p.waitForTimeout(80);
   }
-  await Promise.all(incoming);
-  await p.waitForTimeout(2500);
-  const st = await check(p, `${W}px · messages arrive while scrolled up`);
-  const after = await p.evaluate(() => document.querySelector(".m-scroll").scrollTop);
-  if (after > before + 4) st.problems.push(`reading position jumped down ${before}→${after}`);
-  steps.push(st);
+  const gotA = await rowWith(`incoming 3 ${stamp}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
+  const nA = await p.evaluate((s) => [...document.querySelectorAll(".m-scroll .m-row")].filter((r) => /incoming [123] /.test(r.textContent || "") && (r.textContent || "").includes(s)).length, stamp);
+  const stA = await check(p, `${W}px · messages arrive while scrolling up`, [...recvA, ...(gotA && nA === 3 ? [] : [`incoming messages not in the thread (${nA}/3)`])]);
+  steps.push(stA);
+  // (b) đứng yên đọc: 2 tin nữa tới → dòng đang đọc giữ nguyên chỗ trên màn hình, hiện nút "xuống tin mới nhất"
+  const anchorBefore = await p.evaluate(() => {
+    const sc = document.querySelector(".m-scroll");
+    const r = sc.getBoundingClientRect();
+    const mid = (r.top + r.bottom) / 2;
+    const row = [...sc.querySelectorAll(".m-row")].find((x) => { const b = x.getBoundingClientRect(); return b.top <= mid && b.bottom >= mid; }) || sc.querySelector(".m-row");
+    window.__pnAnchor = row;
+    return { top: row.getBoundingClientRect().top, st: sc.scrollTop, dist: sc.scrollHeight - sc.scrollTop - sc.clientHeight };
+  });
+  const recvB = await arrive([4, 5].map((i) => `incoming ${i} ${stamp}`));
+  const gotB = await rowWith(`incoming 5 ${stamp}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
+  const stB = await check(p, `${W}px · messages arrive while reading older ones`, [...recvB, ...(gotB ? [] : ["incoming 4–5 not in the thread"])]);
+  const anchorAfter = await p.evaluate(() => ({ top: window.__pnAnchor?.isConnected ? window.__pnAnchor.getBoundingClientRect().top : null }));
+  if (anchorAfter.top === null || Math.abs(anchorAfter.top - anchorBefore.top) > 2) stB.problems.push(`reading position moved: row at ${Math.round(anchorBefore.top)} → ${anchorAfter.top === null ? "gone" : Math.round(anchorAfter.top)}`);
+  const jumpBtn = await p.getByRole("button", { name: "Jump to latest" }).isVisible().catch(() => false);
+  if (!jumpBtn) stB.problems.push("no 'Jump to latest' button after messages arrived below");
+  stB.label += ` (dist ${Math.round(anchorBefore.dist)}px)`;
+  steps.push(stB);
   // nút "xuống tin mới nhất" → về đáy, thấy tin đến
-  await p.evaluate(() => { const sc = document.querySelector(".m-scroll"); sc.scrollTop = sc.scrollHeight; });
-  await p.getByText(`incoming 3 ${stamp}`).last().waitFor({ timeout: 20000 }).catch(() => {});
-  await add("back at bottom with new messages");
+  if (jumpBtn) await p.getByRole("button", { name: "Jump to latest" }).click();
+  else await p.evaluate(() => { const sc = document.querySelector(".m-scroll"); sc.scrollTop = sc.scrollHeight; });
+  await settle(p);
+  const lastTxt = await p.evaluate(() => [...document.querySelectorAll(".m-scroll .m-row")].pop()?.textContent || "");
+  await add("back at bottom with new messages", lastTxt.includes(`incoming 5 ${stamp}`) ? [] : [`last row is not the newest message: "${lastTxt.slice(0, 40)}"`]);
 
   // xoay máy (ngang rồi dọc) — ô soạn tin + bàn phím ở màn ngang thấp
   await p.setViewportSize({ width: FULL, height: W });
@@ -348,8 +401,8 @@ for (const W of WIDTHS) {
     window.dispatchEvent(new Event("focus"));
     window.dispatchEvent(new Event("pageshow"));
   });
-  await p.getByText(`while away ${stamp}`).last().waitFor({ timeout: 20000 }).catch(() => {});
-  await add("returned from background");
+  const gotAway = await rowWith(`while away ${stamp}`).last().waitFor({ state: "attached", timeout: 25000 }).then(() => true).catch(() => false);
+  await add("returned from background", gotAway ? [] : ["message sent while in the background never appeared"]);
   await shot(p, `j${W}_05_back`);
 
   for (const s of steps) {

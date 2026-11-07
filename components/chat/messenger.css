@@ -170,7 +170,7 @@ html:not([data-ui-classic]) .pn-msgr .m-bubble {
 }
 @media (min-width: 768px) { html:not([data-ui-classic]) .pn-msgr .m-bubble { font-size: 15px; line-height: 21px; } }
 html:not([data-ui-classic]) .pn-msgr .m-out { background: var(--m-out-bg); color: var(--m-out-text); }
-html:not([data-ui-classic]) .pn-msgr .m-in { background: var(--m-in-bg); color: var(--m-in-text); box-shadow: inset 0 0 0 1px rgb(255 236 246 / 0.05); }
+html:not([data-ui-classic]) .pn-msgr .m-in { background: var(--m-in-bg); color: var(--m-in-text); }
 html:not([data-ui-classic]) .pn-msgr .m-text { margin: 0; }
 html:not([data-ui-classic]) .pn-msgr .m-meta-spacer { display: inline-block; width: 60px; height: 1px; }
 html:not([data-ui-classic]) .pn-msgr .m-meta-spacer.m-spacer-out { width: 76px; }
@@ -346,3 +346,166 @@ html:not([data-ui-classic]) .pn-msgr [data-established="1"] [data-testid="chat-a
 /* Sheet: thanh nắm kéo (grabber) ở đầu sheet trên điện thoại */
 html:not([data-ui-classic]) .pn-msgr .m-grabber { display: block; width: 36px; height: 4px; margin: -8px auto 12px; border-radius: 999px; background: rgb(255 240 246 / 0.22); }
 @media (min-width: 640px) { html:not([data-ui-classic]) .pn-msgr .m-grabber { display: none; } }
+
+/* =====================================================================
+   Bảng Emoji / Nhãn dán / GIF (11/2026) — nằm trên ô nhập, cao min(46dvh, 380px), tối thiểu 300px.
+   Ảnh sticker: Noto Emoji Animation (Google, CC BY 4.0) + Microsoft Fluent Emoji 3D (MIT) — ghi công ở cuối bảng + NOTICE.
+   ===================================================================== */
+html:not([data-ui-classic]) .pn-msgr .pn-media-panel {
+  position: absolute; left: 8px; right: 8px; bottom: calc(100% + 8px); z-index: 30;
+  display: flex; flex-direction: column; overflow: hidden;
+  height: min(46dvh, 380px); min-height: 300px;
+  border-radius: 24px; background: var(--m-surface); color: var(--m-text);
+  box-shadow: var(--m-shadow-float), inset 0 0 0 1px var(--m-line-strong);
+}
+@media (min-width: 640px) { html:not([data-ui-classic]) .pn-msgr .pn-media-panel { left: 16px; right: auto; width: 420px; } }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-search {
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 999px;
+  background: var(--m-raised); box-shadow: inset 0 0 0 1px var(--m-line);
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-search:focus-within { box-shadow: inset 0 0 0 1.5px var(--m-accent-ink); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-bar {
+  display: flex; align-items: center; gap: 2px; padding: 6px 8px 0; overflow-x: auto; overscroll-behavior-x: contain;
+  border-bottom: 1px solid var(--m-line); flex-shrink: 0;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-packbtn {
+  position: relative; flex-shrink: 0; width: 36px; height: 36px; margin-bottom: 4px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; color: var(--m-text-2); transition: background-color 120ms;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-packbtn:hover { background: rgb(255 255 255 / 0.06); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-packbtn[aria-selected="true"] { color: var(--m-text); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-packbtn[aria-selected="true"]::after {
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: -5px; height: 2px; border-radius: 2px; background: var(--m-accent);
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-divider { flex-shrink: 0; width: 1px; height: 22px; margin: 0 4px 4px; background: var(--m-line-strong); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-scroll {
+  position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 6px;
+  container-type: inline-size; container-name: stk;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-sec { content-visibility: auto; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-sec-3d { margin-top: 6px; border-top: 1px solid var(--m-line); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-head {
+  position: sticky; top: 0; z-index: 1; margin: 0; padding: 8px 6px 4px; background: var(--m-surface);
+  font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #a69ba4;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-stk-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
+@container stk (min-width: 481px) { html:not([data-ui-classic]) .pn-msgr .pn-stk-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-cell {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 16px;
+  touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+  transition: background-color 120ms, transform 120ms var(--m-ease);
+}
+@media (hover: hover) { html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:hover { background: rgb(255 255 255 / 0.06); } }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:active { transform: scale(.94); }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:focus-visible { outline: 2px solid var(--m-accent-ink); outline-offset: -2px; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-img { width: 60px; height: 60px; max-width: 80%; max-height: 80%; object-fit: contain; pointer-events: none; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-credit { margin: 12px 6px 4px; font-size: 12px; line-height: 18px; color: #a69ba4; text-align: center; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-credit a { text-decoration: underline; text-underline-offset: 2px; color: inherit; }
+html:not([data-ui-classic]) .pn-msgr .pn-stk-ghost {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: 999px;
+  background: rgb(255 240 246 / 0.08); box-shadow: inset 0 0 0 1px var(--m-line-strong); color: var(--m-text); font-size: 14px; font-weight: 600;
+}
+/* GIF */
+html:not([data-ui-classic]) .pn-msgr .pn-gif-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px; }
+html:not([data-ui-classic]) .pn-msgr .pn-gif-cols { display: grid; gap: 6px; align-items: start; }
+html:not([data-ui-classic]) .pn-msgr .pn-gif-tile { display: block; overflow: hidden; border-radius: 12px; background: var(--m-raised); transition: opacity 120ms; }
+html:not([data-ui-classic]) .pn-msgr .pn-gif-tile:active { opacity: .8; }
+html:not([data-ui-classic]) .pn-msgr .pn-gif-chip {
+  flex-shrink: 0; min-height: 30px; padding: 0 12px; border-radius: 999px; background: rgb(255 240 246 / 0.07);
+  font-size: 13px; font-weight: 600; color: var(--m-text-2); white-space: nowrap;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-gif-chip[aria-pressed="true"] { background: var(--m-accent); color: #fff; }
+html:not([data-ui-classic]) .pn-msgr .pn-gif-powered { flex-shrink: 0; font-size: 11px; line-height: 16px; font-weight: 600; color: #a69ba4; white-space: nowrap; }
+
+/* Tin sticker / GIF */
+html:not([data-ui-classic]) .pn-msgr .m-sticker-img { object-fit: contain; }
+html:not([data-ui-classic]) .pn-msgr .m-sticker-chip {
+  display: inline-flex; align-items: center; min-height: 32px; margin: 4px 0; padding: 0 12px; border-radius: 999px;
+  background: var(--m-raised); color: var(--m-text-2); font-size: 14px;
+}
+html:not([data-ui-classic]) .pn-msgr .m-media.m-gif { width: min(72vw, 240px); min-height: 80px; }
+html:not([data-ui-classic]) .pn-msgr .m-gif-chip {
+  position: absolute; left: 8px; top: 8px; padding: 1px 6px; border-radius: 6px; background: rgb(12 8 14 / 0.55);
+  color: #fff; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: .02em; pointer-events: none;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-menu-dot {
+  position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 999px; background: #db2777; box-shadow: 0 0 0 2px var(--chat-bar-bg, #241b29);
+}
+
+/* Xem trước sticker (gắn vào <body>, ngoài .pn-msgr) */
+html:not([data-ui-classic]) .pn-stk-peek { background: rgb(12 8 14 / 0.5); animation: m-fade 120ms linear both; }
+html:not([data-ui-classic]) .pn-stk-peek-card {
+  background: #2e2433; box-shadow: 0 18px 48px -12px rgb(10 4 14 / 0.75), inset 0 0 0 1px rgb(255 236 246 / 0.12);
+  animation: m-pop 200ms cubic-bezier(.23, 1, .32, 1) both;
+}
+html:not([data-ui-classic]) .pn-stk-peek-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 10px; border-radius: 14px;
+  background: rgb(255 240 246 / 0.08); color: #f7eef3; font-size: 13px; font-weight: 600; min-width: 0;
+}
+html:not([data-ui-classic]) .pn-stk-peek-primary { background: #c0406f; color: #fff; }
+@keyframes pn-breathe { from { transform: scale(1); } to { transform: scale(1.04); } }
+html:not([data-ui-classic]) .pn-stk-breathe { animation: pn-breathe 1.4s ease-in-out infinite alternate; }
+
+/* ---------- Bảng hình nền ---------- */
+html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet {
+  position: relative; width: 100%; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
+  padding: 16px 16px 0; border-radius: 24px 24px 0 0; background: var(--m-surface); color: var(--m-text);
+  box-shadow: 0 -12px 40px -12px rgb(10 4 14 / 0.7), inset 0 0 0 1px var(--m-line-strong);
+  animation: pn-sheet-in 220ms var(--m-ease) both;
+}
+@keyframes pn-sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 640px) { html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { max-width: 480px; max-height: min(92dvh, 860px); border-radius: 24px; } }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-preview {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; overflow: hidden;
+  height: 260px; aspect-ratio: 9 / 10; max-width: 100%; margin: 8px auto 0; padding: 10px; border-radius: 20px;
+  box-shadow: inset 0 0 0 1px var(--m-line-strong);
+}
+html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-bubble { font-size: 14px; line-height: 19px; padding: 6px 10px; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-col { max-width: 88%; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-gap { margin: 2px auto; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--m-raised); }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-seg > button { min-height: 40px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--m-text-2); }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-seg > button[aria-checked="true"] { background: var(--m-overlay); color: var(--m-text); box-shadow: 0 1px 3px rgb(10 4 14 / 0.4); }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-swatch {
+  position: relative; display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--m-line-strong); transition: box-shadow 120ms;
+}
+html:not([data-ui-classic]) .pn-msgr .pn-wp-swatch.pn-wp-on { box-shadow: 0 0 0 2px var(--m-surface), 0 0 0 4px var(--m-accent); }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-check { position: absolute; right: 4px; top: 4px; width: 18px; height: 18px; padding: 2px; border-radius: 999px; background: var(--m-accent); color: #fff; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--m-text-2); }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-actions {
+  position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; gap: 8px; margin: 12px -16px 0; padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+  background: var(--m-surface); border-top: 1px solid var(--m-line);
+}
+html:not([data-ui-classic]) .pn-msgr .pn-wp-btn { min-height: 44px; padding: 0 18px; border-radius: 14px; background: rgb(255 240 246 / 0.08); color: var(--m-text); font-size: 15px; font-weight: 600; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-primary { background: var(--m-accent); color: #fff; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-primary:disabled { opacity: .6; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-range { accent-color: var(--m-accent); height: 28px; }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-confirm { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgb(12 8 14 / 0.5); }
+html:not([data-ui-classic]) .pn-msgr .pn-wp-confirm-card { width: 100%; max-width: 340px; padding: 18px; border-radius: 20px; background: var(--m-overlay); box-shadow: var(--m-shadow-float); }
+
+/* ---------- Đọc rõ trên mọi hình nền (WCAG AA) ----------
+   Nền sáng / ảnh của bạn: chữ nằm thẳng trên nền (giờ cách quãng, tên người gửi trong nhóm, thẻ đầu cuộc trò chuyện)
+   được đặt trong viên / thẻ tối. #c0b2bc trên rgb(37 29 42 / .88) vẫn >= 5.5:1 kể cả khi nền phía sau là trắng. */
+html:not([data-ui-classic]) .pn-msgr .m-in { box-shadow: inset 0 0 0 1px rgb(255 236 246 / 0.10); }
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) .m-in { box-shadow: inset 0 0 0 1px rgb(255 236 246 / 0.10), 0 1px 2px rgb(20 10 20 / 0.22); }
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) .m-gap {
+  width: fit-content; margin-inline: auto; padding: 2px 8px; border-radius: 999px; background: rgb(37 29 42 / 0.88); color: #c0b2bc;
+}
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) .m-sender {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgb(37 29 42 / 0.88);
+}
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) .m-meta-pill:not(.m-meta-over) { background: rgb(28 21 33 / 0.85); }
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) :is(.m-intro, .m-empty-thread) {
+  align-self: center; margin: 8px auto; padding: 16px 20px; border-radius: 20px; background: rgb(37 29 42 / 0.9); max-width: 360px;
+}
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) .m-safety { background: rgb(37 29 42 / 0.92); }
+html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="photo"]) .m-scroll > section[aria-label] { background-color: rgb(37 29 42 / 0.94); }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-ui-classic]) .pn-stk-breathe { animation: none; }
+  html:not([data-ui-classic]) .pn-stk-peek-card,
+  html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { animation: m-fade 120ms linear both; }
+  html:not([data-ui-classic]) .pn-msgr .pn-stk-cell:active { transform: none; }
+}

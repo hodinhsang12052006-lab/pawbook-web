@@ -13,6 +13,7 @@ import { pushRecentSticker, readStickerStore, toggleFavoriteSticker, type Sticke
 import { searchStickers } from "@/lib/stickers/search";
 import type { StickerMeta } from "@/lib/stickers/manifest.generated";
 import StickerPeek from "./StickerPeek";
+import { CS } from "@/lib/i18n/chatStrings";
 
 // Tab "Nhãn dán": ô tìm · thanh bộ (Gần đây ⭐ Yêu thích · bộ theo mùa · 6 bộ hoạt hình Noto | 6 bộ 3D Fluent) ·
 // MỘT vùng cuộn liền chia mục (tiêu đề dính) · dòng ghi công ở cuối. Bấm = gửi ngay, bảng VẪN MỞ (như Telegram);
@@ -270,7 +271,7 @@ export default function StickerTab({
           </>
         )}
         {/* (4) Ghi công (CC BY 4.0 · MIT) — dòng cuối vùng cuộn */}
-        <p className="pn-stk-credit">
+        <p className="pn-stk-credit" title={CS.stickerCredit()}>
           {tr("Emoji động: ", "Animated emoji: ")}
           <a href="https://googlefonts.github.io/noto-emoji-animation/" target="_blank" rel="noopener noreferrer">Noto Emoji Animation</a>
           {" (Google) · CC BY 4.0 · "}

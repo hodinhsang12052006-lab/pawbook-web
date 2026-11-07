@@ -23,7 +23,11 @@ const safetyBody = () =>
   );
 const report = () => tr("Báo cáo", "Report");
 const dismiss = () => tr("Đóng", "Dismiss");
-const stickerCredit = () => tr("Emoji động: Noto Emoji Animation (Google) · CC BY 4.0", "Animated emoji: Noto Emoji Animation (Google) · CC BY 4.0");
+const stickerCredit = () =>
+  tr(
+    "Emoji động: Noto Emoji Animation (Google) · CC BY 4.0 · Emoji 3D: Microsoft Fluent Emoji · MIT",
+    "Animated emoji: Noto Emoji Animation (Google) · CC BY 4.0 · 3D emoji: Microsoft Fluent Emoji · MIT"
+  );
 
 export const CS = {
   unread,

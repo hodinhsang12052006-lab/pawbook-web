@@ -39,8 +39,6 @@
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
     "@faker-js/faker": "^10.5.0",
-    "@giphy/js-fetch-api": "^5.8.0",
-    "@giphy/react-components": "^10.1.2",
     "@google/generative-ai": "^0.24.1",
     "@libsql/client": "^0.17.4",
     "@prisma/adapter-libsql": "^6.2.0",

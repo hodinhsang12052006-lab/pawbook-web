@@ -14,8 +14,25 @@ import defaultRuntimeCaching from "next-pwa/cache";
 // xuất và đọc được qua DevTools. Thay quy tắc "apis" bằng NetworkOnly để các
 // phản hồi cần đăng nhập KHÔNG BAO GIỜ nằm trên đĩa; các asset tĩnh (ảnh,
 // JS, CSS, font) vẫn được cache bình thường cho tốc độ/offline.
-const runtimeCaching = (defaultRuntimeCaching as Array<{ options?: Record<string, unknown>; handler?: string }>).map(
-  (entry) => {
+// Sticker (Noto trên fonts.gstatic.com + Fluent 3D trên jsDelivr, cố định commit) và GIF GIPHY: quy tắc RIÊNG đặt TRƯỚC
+// quy tắc mặc định "google-fonts-webfonts" (CacheFirst, chỉ 4 mục — từng khớp mọi URL sticker trên fonts.gstatic.com nên
+// sticker gần như không được cache). Mọi <img> sticker / GIF dùng crossorigin="anonymous" (các host này gửi ACAO: *)
+// → phản hồi không "opaque", cache được đúng trạng thái 200.
+const mediaCaching = [
+  {
+    urlPattern: /^https:\/\/(fonts\.gstatic\.com\/s\/e\/notoemoji\/|cdn\.jsdelivr\.net\/gh\/microsoft\/fluentui-emoji@)/,
+    handler: "CacheFirst",
+    options: { cacheName: "pn-stickers", expiration: { maxEntries: 500, maxAgeSeconds: 5184000 }, cacheableResponse: { statuses: [200] } },
+  },
+  {
+    urlPattern: /^https:\/\/media\d*\.giphy\.com\//,
+    handler: "CacheFirst",
+    options: { cacheName: "pn-gifs", expiration: { maxEntries: 150, maxAgeSeconds: 604800 }, cacheableResponse: { statuses: [200] } },
+  },
+];
+const runtimeCaching = [
+  ...mediaCaching,
+  ...(defaultRuntimeCaching as Array<{ options?: Record<string, unknown>; handler?: string }>).map((entry) => {
     if (entry?.options?.cacheName !== "apis") return entry;
     // NetworkOnly (không bao giờ ghi phản hồi vào đĩa) không dùng chung được
     // với networkTimeoutSeconds (Workbox báo lỗi build) — bỏ key đó, giữ
@@ -23,8 +40,8 @@ const runtimeCaching = (defaultRuntimeCaching as Array<{ options?: Record<string
     const { networkTimeoutSeconds, ...keptOptions } = entry.options as Record<string, unknown>;
     void networkTimeoutSeconds;
     return { ...entry, handler: "NetworkOnly", options: keptOptions };
-  }
-);
+  }),
+];
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -104,17 +121,19 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.giphy.com" },
       { protocol: "https", hostname: "ui-avatars.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      // GifPicker's PERMANENT_GIFS all live on media.tenor.com — this host was
-      // missing here, so every GIF message rendered via <NextImage> 400'd at
-      // Next's image-optimizer (unlisted hostname), showing only the alt text
-      // ("Media Attachment") in a broken image box.
+      // GIF Tenor (tab GIF khi cấu hình TENOR_API_KEY)
       { protocol: "https", hostname: "media.tenor.com" },
       { protocol: "https", hostname: "*.tenor.com" },
       // Avatar mặc định lúc đăng ký (app/api/register) — đã có trong CSP
       // img-src nhưng thiếu ở đây, nên mọi <NextImage> avatar mặc định bị
       // image-optimizer trả 400 (ảnh vỡ) cho toàn bộ user mới.
       { protocol: "https", hostname: "api.dicebear.com" },
+      // Sticker 3D Microsoft Fluent Emoji (MIT) — CHỈ đúng repo + commit cố định (lib/stickers/paths.generated.ts);
+      // ô nhỏ trong bảng sticker đi qua /_next/image (WebP 96px ~3–6 KB thay cho PNG 256px ~33 KB).
+      { protocol: "https", hostname: "cdn.jsdelivr.net", pathname: "/gh/microsoft/fluentui-emoji@1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/**" },
     ],
+    // Next 16 chỉ nhận các mức chất lượng khai báo ở đây: 75 (mặc định) + 70 (ô sticker)
+    qualities: [70, 75],
   },
   async headers() {
     return [
@@ -155,9 +174,9 @@ const nextConfig: NextConfig = {
             // tuyển trước đây bị chặn phát) + api.cloudinary.com to connect-src
             // (video tải thẳng từ trình duyệt lên Cloudinary bằng chữ ký máy
             // chủ — Vercel giới hạn body ~4.5MB nên không đi qua /api/upload).
-            // Added media.tenor.com to img-src — the GifPicker's raw <img>
-            // thumbnails (components/chat/GifPicker.tsx) point there directly
-            // and were being silently CSP-blocked in the browser as well.
+            // media.tenor.com / *.giphy.com in img-src: GIF tiles + GIF messages are raw <img> pointing at the
+            // provider's media host (results come from /api/gifs). cdn.jsdelivr.net in img-src (11/2026): Fluent
+            // Emoji 3D sticker PNGs (MIT), pinned to one commit of github.com/microsoft/fluentui-emoji.
             // Added *.coolbcloud.com (wss+https) to connect-src — confirmed via
             // live 2-browser video call testing that ZEGOCLOUD's SDK also opens
             // WebSocket connections to its own logging/access-hub infra on this
@@ -197,7 +216,7 @@ const nextConfig: NextConfig = {
             // đã sửa cả .env và .env.local, đã verify bằng Playwright 2 tài
             // khoản thật kết nối thành công (xem log "appid invalid" 1001004
             // biến mất sau khi sửa).
-            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com https://fonts.gstatic.com; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://images.unsplash.com https://res.cloudinary.com https://ui-avatars.com https://api.dicebear.com https://*.basemaps.cartocdn.com https://*.openstreetmap.org https://*.giphy.com https://*.tenor.com https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://images.unsplash.com https://*.zegocloud.com wss://*.zegocloud.com https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolgcloud.com wss://*.coolgcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com https://*.zego.im wss://*.zego.im https://*.pusher.com wss://*.pusher.com https://api.giphy.com https://*.sentry.io https://cloudflareinsights.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.zegocloud.com; media-src 'self' blob: https://*.giphy.com https://res.cloudinary.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

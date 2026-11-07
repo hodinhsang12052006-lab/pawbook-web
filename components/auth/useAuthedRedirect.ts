@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { hasViPrefix } from "@/lib/i18n/config";
+import { safeInternalPath } from "@/lib/safeRedirect";
 
 // Đã đăng nhập mà mở /auth/register, /auth/login, /auth/forgot → đưa thẳng vào app (trang tĩnh, kiểm tra phía client).
 //
@@ -17,11 +18,13 @@ import { hasViPrefix } from "@/lib/i18n/config";
 //  • URL có ?error= — lỗi đăng nhập Google/Facebook/Apple phải hiện được (next-auth đưa về /auth/login?error=…, kể cả
 //    khi trình duyệt còn phiên cũ);
 //  • phiên cần "Hoàn tất" (needsOnboarding) — SessionUserProvider tự đưa tới /auth/complete.
-// Đích: ?callbackUrl= nếu là đường dẫn nội bộ ngoài /auth (cùng luật với LoginForm), nếu không thì trang chủ đúng ngôn
-// ngữ của trang đang mở ("/vi" cho /vi/auth/…).
-export function authedTarget(loc: Pick<Location, "pathname" | "search">): string {
-  const cb = new URLSearchParams(loc.search).get("callbackUrl") || "";
-  if (/^\/(?![/\\])/.test(cb) && !/^\/(?:(?:en|vi)\/)?auth(?:[/?#]|$)/.test(cb)) return cb;
+// Đích: ?callbackUrl= nếu là đường dẫn CÙNG trang web ngoài /auth (lib/safeRedirect.ts, dùng chung với LoginForm),
+// nếu không thì trang chủ đúng ngôn ngữ của trang đang mở ("/vi" cho /vi/auth/…).
+const AUTH_PATH = /^\/(?:(?:en|vi)\/)?auth(?:[/?#]|$)/;
+
+export function authedTarget(loc: Pick<Location, "pathname" | "search" | "origin">): string {
+  const cb = safeInternalPath(new URLSearchParams(loc.search).get("callbackUrl"), loc.origin);
+  if (cb && !AUTH_PATH.test(cb)) return cb;
   return hasViPrefix(loc.pathname) ? "/vi" : "/";
 }
 

@@ -11,7 +11,8 @@ import { activeThemes } from "../../lib/contentEngine";
 import { upcomingThemes } from "../../lib/aiDesigns";
 import { activeTrends } from "../../lib/trendRadar";
 import { adviceLooks, type HandProfile } from "../../lib/tryon/advice";
-import { STICKER_PACKS, EMOJI_GROUPS } from "../../lib/chatStickers";
+import { ANIM_PACKS } from "../../lib/chatStickers";
+import { activeSeasonsOn } from "../../lib/stickers/seasons";
 import { samplesInSeason, SAMPLE_DESIGNS } from "../../lib/designSamples";
 import { THEMES, designFitsMarket } from "../../lib/studioThemes";
 import { marketLocalDate, thanksgiving, type Market } from "../../lib/season";
@@ -86,9 +87,15 @@ check("C1", `Halloween / 🎃 / pumpkin / ghost / bats never offered (${days} da
 check("C2", "AU Dec–Feb: no fall, snow, velvet or plaid (themes, trends, advice motifs, samples)", auBad.length === 0, auBad.slice(0, 5).join(" | "));
 check("C3", "US Christmas only from Thanksgiving + 1, or as upcoming (startsIn > 0, ≤ 21 d)", usXmasEarly.length === 0, usXmasEarly.slice(0, 5).join(" | "));
 
-const party = STICKER_PACKS.find((p) => p.id === "party")!;
-const fun = EMOJI_GROUPS.find((g) => g.id === "fun")!;
-check("C4", "Sticker packs: no 🎃 / 👻 in 'party'; no 🎃 in emoji group 'fun'", !party.items.includes("🎃") && !party.items.includes("👻") && !fun.items.includes("🎃") && !STICKER_PACKS.some((p) => p.items.includes("🎃")));
+// Chat stickers are user expression (like a phone keyboard): the emoji keyboard keeps 🎃, and the Halloween
+// sticker pack only surfaces Oct 15–31. Outside that window no sticker season or everyday pack offers it.
+const party = ANIM_PACKS.find((p) => p.id === "party");
+let hwStk = 0;
+for (const m of ["US", "AU"] as const) for (let mo = 1; mo <= 12; mo++) for (const d of [1, 14, 28]) {
+  if (mo === 10 && d >= 15) continue;
+  if (activeSeasonsOn([2026, mo, d], m).includes("halloween")) hwStk++;
+}
+check("C4", "Stickers: no 🎃 / 👻 in the everyday 'party' pack; the Halloween sticker season is never active outside Oct 15–31", (!party || (!party.items.includes("🎃") && !party.items.includes("👻"))) && hwStk === 0);
 check("C5", "No Halloween sample, theme or market fit for a Halloween design", !SAMPLE_DESIGNS.some((d) => d.occasion === "halloween") && !THEMES.some((t) => t.id === "halloween") && !designFitsMarket({ occasion: "halloween", market: "US" }, "US"));
 
 // ---- UTC month/day season math is gone from the callers ----

@@ -254,7 +254,9 @@ export default function StickerTab({
     requestAnimationFrame(() => {
       const root = scrollRef.current;
       const el = root?.querySelector<HTMLElement>(`[data-section="${key}"]`);
-      if (root && el) root.scrollTo({ top: el.offsetTop, behavior: reducedMotion() ? "auto" : "smooth" });
+      // xa (> 3 khung) → nhảy thẳng: cuộn mượt qua cả chục bộ sẽ dựng hết các bộ giữa đường (giật trên máy yếu)
+      const far = !!root && !!el && Math.abs(el.offsetTop - root.scrollTop) > root.clientHeight * 3;
+      if (root && el) root.scrollTo({ top: el.offsetTop, behavior: reducedMotion() || far ? "auto" : "smooth" });
       setActive(key);
     });
   };

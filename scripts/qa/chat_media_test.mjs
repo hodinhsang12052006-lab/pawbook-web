@@ -136,6 +136,9 @@ await panel(p).getByRole("tab", { name: "Stickers" }).click();
 const search = panel(p).getByRole("textbox", { name: "Search stickers" });
 await search.waitFor({ timeout: 8000 });
 await p.waitForTimeout(3000);
+// lúc mở: chỉ các bộ đầu dựng ô thật, bộ xa là ô giữ chỗ cùng cỡ
+const mountedAtOpen = await panel(p).locator("[data-section] [data-sticker]").count();
+const lazyAtStart = await panel(p).locator(".pn-stk-ph").count();
 p.off("response", onResp);
 for (const k of ["hearts", "beauty", "feelings"]) {
   await panel(p).locator(`[data-pack="${k}"]`).click();
@@ -167,7 +170,6 @@ R.check("CM1d", `Nhãn dán động trong lưới (lottie): số ô đang chạy
 // cuộn hết vùng cuộn (từng đoạn ~ 0,9 khung; ~770 sticker) → mục xa được dựng khi tới gần, ảnh của MỌI mục tải được thật
 const sections = await panel(p).locator("[data-section]").evaluateAll((els) => els.map((e) => e.getAttribute("data-section")));
 const scroller = panel(p).getByTestId("sticker-scroll");
-const lazyAtStart = await panel(p).locator(".pn-stk-ph").count();
 for (let i = 0; i < 400; i++) {
   const done = await scroller.evaluate((el) => {
     el.scrollTop += Math.round(el.clientHeight * 0.9);
@@ -179,7 +181,7 @@ for (let i = 0; i < 400; i++) {
 await p.waitForTimeout(600);
 const lazyLeft = await panel(p).locator(".pn-stk-ph").count();
 const cellsNow = await panel(p).locator("[data-section] [data-sticker]").count();
-R.check("CM2c", `Mục xa dựng khi tới gần: lúc mở ${lazyAtStart} ô giữ chỗ → cuộn hết còn ${lazyLeft}, ${cellsNow} ô thật`, lazyAtStart > 300 && lazyLeft === 0 && cellsNow >= 700, JSON.stringify({ lazyAtStart, lazyLeft, cellsNow }));
+R.check("CM2c", `Mục xa dựng khi tới gần: lúc mở ${mountedAtOpen} ô thật + ${lazyAtStart} ô giữ chỗ → cuộn hết còn ${lazyLeft} ô giữ chỗ, ${cellsNow} ô thật`, mountedAtOpen <= 120 && lazyAtStart > 500 && lazyLeft === 0 && cellsNow >= 700, JSON.stringify({ mountedAtOpen, lazyAtStart, lazyLeft, cellsNow }));
 await p.waitForFunction(() => [...document.querySelectorAll("[data-testid=sticker-scroll] img")].every((i) => i.getAttribute("src") && i.complete), null, { timeout: 20000 }).catch(() => {});
 const perSection = {};
 for (const key of sections) {

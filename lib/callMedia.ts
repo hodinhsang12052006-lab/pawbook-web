@@ -10,7 +10,7 @@ export function classifyMediaError(e: unknown): MediaProblem {
   const n = (e as { name?: string } | null)?.name || "";
   if (n === "NotAllowedError" || n === "PermissionDeniedError" || n === "SecurityError") return "denied";
   if (n === "NotFoundError" || n === "DevicesNotFoundError" || n === "OverconstrainedError") return "nodevice";
-  if (n === "TypeError") return "unsupported"; // trang không an toàn (http) / constraint rỗng
+  if (n === "TypeError" || n === "NotSupportedError") return "unsupported"; // trang không an toàn (http) / WebView không hỗ trợ
   return "busy"; // NotReadableError / TrackStartError / AbortError: thiết bị đang bị ứng dụng khác giữ
 }
 
@@ -87,6 +87,7 @@ export function mediaProblemText(problem: MediaProblem, video: boolean, platform
 
 /** Mã lỗi đăng nhập phòng của ZEGOCLOUD → câu báo (kèm mã cho hỗ trợ). */
 export function zegoJoinErrorText(code: number): string {
+  if (!code) return tr("Không vào được cuộc gọi. Vui lòng thử lại sau.", "Couldn't join the call. Please try again later.");
   if ([1102016, 1102018, 1102020].includes(code))
     return tr(`Dịch vụ gọi từ chối phiên này (mã ${code}). Vui lòng thử lại sau.`, `The call service rejected this session (code ${code}). Please try again later.`);
   if ([1002031, 1002053].includes(code)) return tr(`Mạng đang có vấn đề (mã ${code}). Kiểm tra kết nối rồi thử lại.`, `Network problem (code ${code}). Check your connection and try again.`);

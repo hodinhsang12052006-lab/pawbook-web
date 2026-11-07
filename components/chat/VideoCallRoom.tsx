@@ -41,6 +41,24 @@ type CallError = { title: string; hint?: string; perm?: boolean };
 /** Máy chủ trả lỗi khi xin token (chưa cấu hình, không có quyền vào phòng…) — câu của máy chủ đã đúng ngôn ngữ, hiện nguyên. */
 class TokenError extends Error {}
 
+/** Ẩn hộp thoại "Login room Failed" của UIKit (gắn vào body trên điện thoại, vào khung phòng trên máy tính) — app tự báo lỗi. */
+function hideZegoLoginAlert(mount: HTMLElement | null) {
+  const RX = /Login room Failed|登录房间失败/;
+  const run = () => {
+    for (const el of Array.from(document.body.children) as HTMLElement[]) {
+      if (el === mount || el.querySelector("[data-call-phase]")) continue;
+      if (RX.test(el.textContent || "") && (el.textContent || "").length < 600) el.style.display = "none";
+    }
+    if (!mount) return;
+    const leaf = Array.from(mount.querySelectorAll<HTMLElement>("*")).find((d) => d.children.length === 0 && RX.test(d.textContent || ""));
+    let n: HTMLElement | null = leaf ?? null;
+    while (n && n.parentElement && n.parentElement !== mount && (n.parentElement.textContent || "").length < 600) n = n.parentElement;
+    if (n && n !== mount) n.style.display = "none";
+  };
+  // hộp thoại có thể hiện sau câu báo của app vài nhịp
+  [0, 150, 500, 1200].forEach((ms) => setTimeout(run, ms));
+}
+
 export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, onConnected, onLeave, onPeerLeft, micOn = true, camOn = true }: VideoCallRoomProps) {
   useTr(); // render lại khi đổi VI/EN
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +80,11 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     // StrictMode chạy effect 2 lần — cờ này chặn lần 1 (đã cleanup) join phòng.
     let cancelled = false;
     let peerSeen = false;
+    // Đã đăng nhập phòng ZEGOCLOUD (LOGINED) + mã lỗi đăng nhập gần nhất
+    let loggedIn = false;
+    let failCode = 0;
     let peerWatcher: MutationObserver | null = null;
+    let showJoinFailure: (() => void) | null = null;
     const peerTimer = setTimeout(() => {
       // lỗi cụ thể hơn (quyền, đăng nhập phòng bị từ chối…) đã hiện thì giữ nguyên
       if (!cancelled && !peerSeen) setCallError((e) => e ?? { title: tr("Không kết nối được cuộc gọi. Kiểm tra mạng rồi thử lại.", "Couldn't connect the call. Check your connection and try again.") });
@@ -116,15 +138,24 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
         zpRef.current = zp;
         // Đăng nhập phòng bị ZEGOCLOUD từ chối (token / App ID sai, dự án bị tạm dừng, mạng chặn…): SDK chỉ hiện hộp thoại
         // tiếng Anh của nó và onJoinRoom vẫn bắn → trước đây phải chờ 30s mới có câu "kiểm tra mạng" (sai). Báo ngay kèm mã.
+        // UIKit gặp lỗi đăng nhập thì tự rời phòng (onLeaveRoom → trước đây cúp máy cả 2 bên, màn gọi biến mất) và để lại hộp
+        // thoại tiếng Anh "Login room Failed" nằm đè trang chat. Giờ: giữ màn gọi + câu báo của app (EN / VI, có mã), ẩn hộp thoại đó.
+        showJoinFailure = () => {
+          if (cancelled || peerSeen) return;
+          clearTimeout(peerTimer);
+          setCallError({ title: zegoJoinErrorText(failCode) });
+          hideZegoLoginAlert(mountRef.current);
+        };
         try {
           // d.ts của UIKit khai `express` là {} — thực tế là ZegoExpressEngine (on() thêm 1 listener, không thay listener của UIKit)
           const express = zp.express as unknown as { on?: (ev: string, cb: (room: string, reason: string, code: number) => void) => boolean } | undefined;
           express?.on?.("roomStateChanged", (_room, reason, code) => {
+            if (reason === "LOGINED" || reason === "RECONNECTED") loggedIn = true;
             if (cancelled || peerSeen) return;
             if (reason === "LOGIN_FAILED" || reason === "RECONNECT_FAILED" || reason === "KICKOUT") {
               console.warn("ZEGOCLOUD room", reason, code);
-              clearTimeout(peerTimer);
-              setCallError({ title: zegoJoinErrorText(Number(code) || 0) });
+              failCode = Number(code) || 0;
+              showJoinFailure?.();
             }
           });
         } catch {}
@@ -176,6 +207,12 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
             cbRef.current.onPeerLeft?.();
           },
           onLeaveRoom: () => {
+            // Chưa từng vào được phòng (không có nút rời phòng trước khi vào) = SDK bỏ cuộc vì lỗi đăng nhập → không cúp máy
+            // im lặng; báo lỗi (mã tới trễ 1 nhịp: listener của SDK chạy qua setTimeout) để người dùng chọn Thử lại / Nhắn tin.
+            if (!loggedIn && !peerSeen) {
+              setTimeout(() => showJoinFailure?.(), 400);
+              return;
+            }
             cbRef.current.onLeave?.();
           },
         });
@@ -237,13 +274,13 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={() => { setCallError(null); setRetryKey((k) => k + 1); }}
-              className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2 text-xs font-bold text-slate-100 transition-all hover:bg-slate-700"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-100 transition-all hover:bg-slate-700"
             >
               <RefreshCw className="h-3.5 w-3.5" />{tr(" Thử lại", " Try again")}
             </button>
             <button
               onClick={() => cbRef.current.onLeave?.()}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white"
             >
               <MessageCircle className="h-3.5 w-3.5" />{tr(" Chuyển sang nhắn tin", " Switch to messaging")}
             </button>

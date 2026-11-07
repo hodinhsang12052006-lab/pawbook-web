@@ -874,10 +874,6 @@ export default function MessagesContent({
     const channel = acquireUserChannel(currentUser.id);
     if (!channel) return;
 
-    const handleSubscriptionError = (error: any) => {
-      console.error("Pusher subscription error:", error);
-    };
-
     const handleNewMessage = (data: any) => {
       if (!data || !data.message || !data.message.id) return;
       const m = data.message;
@@ -993,7 +989,6 @@ export default function MessagesContent({
       }, 4500);
     };
 
-    channel.bind("pusher:subscription_error", handleSubscriptionError);
     channel.bind("new-message", handleNewMessage);
     channel.bind("message-updated", handleMessageUpdated);
     channel.bind("message-seen", handleMessageSeen);
@@ -1001,7 +996,6 @@ export default function MessagesContent({
     channel.bind("user-typing", handleUserTyping);
 
     return () => {
-      channel.unbind("pusher:subscription_error", handleSubscriptionError);
       channel.unbind("new-message", handleNewMessage);
       channel.unbind("message-updated", handleMessageUpdated);
       channel.unbind("message-seen", handleMessageSeen);

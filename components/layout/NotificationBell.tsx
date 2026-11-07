@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { Bell, Heart, MessageCircle, Star, Bookmark, Unlock, CheckCheck, Flame, Volume2, VolumeX, Eye, Gift, CalendarCheck, Clock } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
-import { getPusherClient } from "@/lib/pusherClient";
+import { acquireChannel, releaseChannel } from "@/lib/pusherClient";
 import { jobAlertChannelName } from "@/lib/pusherChannel";
 import { playSound, getSoundPrefs, setSoundPrefs } from "@/lib/sounds";
 import { timeAgo } from "@/lib/feedFormat";
@@ -106,9 +106,8 @@ export default function NotificationBell() {
   const alertChannel = user?.role === "TECHNICIAN" && user?.market && user?.state ? jobAlertChannelName(user.market, user.state) : null;
   useEffect(() => {
     if (!alertChannel) return;
-    const pusher = getPusherClient();
-    if (!pusher) return;
-    const channel = pusher.subscribe(alertChannel);
+    const channel = acquireChannel(alertChannel);
+    if (!channel) return;
     const onJob = (data: { id?: string; text?: string; textEn?: string }) => {
       load();
       playSound("urgent");
@@ -127,7 +126,7 @@ export default function NotificationBell() {
     channel.bind("urgent-job", onJob);
     return () => {
       channel.unbind("urgent-job", onJob);
-      pusher.unsubscribe(alertChannel);
+      releaseChannel(alertChannel);
     };
   }, [alertChannel, load]);
 

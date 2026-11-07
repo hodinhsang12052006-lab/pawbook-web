@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { App } from "@capacitor/app";
-import { getPusherClient } from "@/lib/pusherClient";
+import { wakeRealtime } from "@/lib/pusherClient";
 import { isBubbleMode } from "@/lib/bubbleMode";
 import { isSafeAppPath } from "@/lib/nativePush";
 
@@ -107,11 +107,10 @@ export default function NativeAppBridge() {
     // dừng JS timer khi app vào nền khá lâu — ép reconnect ngay lúc quay lại
     // foreground để tin nhắn/cuộc gọi không bị trễ vài giây chờ pusher-js tự
     // phát hiện lại kết nối rớt.
+    // wakeRealtime cũng ping lại socket có thể đã "chết lặng" sau giấc ngủ dài và kiểm tra lại mọi kênh (kênh nào
+    // chưa subscribe — vd lần xin quyền lúc mạng chập chờn bị lỗi — được subscribe lại ngay).
     App.addListener("resume", () => {
-      const pusher = getPusherClient();
-      if (pusher && pusher.connection.state !== "connected") {
-        pusher.connect();
-      }
+      wakeRealtime("resume");
     }).then((handle) => {
       resumeHandle = handle;
     });

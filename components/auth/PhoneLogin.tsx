@@ -7,12 +7,15 @@ import { Smartphone } from "lucide-react";
 import Flag from "@/components/ui/Flag";
 import { Submit } from "@/components/auth/fields";
 import { tr } from "@/lib/i18n/tr";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 
 // Đăng nhập / đăng ký bằng SĐT: nhập số → nhận mã 6 số qua SMS → nhập mã.
 // Số đã xác minh → vào tài khoản cũ; số mới → tạo tài khoản rồi chọn vai trò + khu vực.
 export default function PhoneLogin() {
   const [open, setOpen] = useState(false);
-  const [market, setMarket] = useState<"US" | "AU">("US");
+  const { market: viewerMarket } = useViewerMarket();
+  const [picked, setMarket] = useState<"US" | "AU" | null>(null);
+  const market = picked ?? viewerMarket; // the viewer's market until they tap +1 / +61
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [code, setCode] = useState("");

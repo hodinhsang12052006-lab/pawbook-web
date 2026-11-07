@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -15,6 +15,7 @@ import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { POSITIONS } from "@/lib/nailVocab";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import { useViewerMarket } from "@/lib/useViewerMarket";
 import { SURVEY } from "@/lib/ownerSurvey";
 import { AU_ALL_CODES, stateName, US_ALL_CODES } from "@/lib/stateNames";
 import SalonDiagnosticModal from "@/components/auth/SalonDiagnosticModal";
@@ -77,6 +78,18 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
 
   const states = market === "US" ? US_STATES : AU_STATES;
   const salaryTypes = market === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU;
+  // Default market = the viewer's (account / cookie / timezone / IP, lib/useViewerMarket) until they tap US / AU —
+  // an Australian owner no longer starts on "United States · California · +1".
+  const { market: viewerMarket } = useViewerMarket();
+  const marketTouched = useRef(false);
+  useEffect(() => {
+    if (marketTouched.current || viewerMarket === market) return;
+    setMarket(viewerMarket);
+    setState((viewerMarket === "US" ? US_STATES : AU_STATES)[0]);
+    setCountryCode(viewerMarket === "US" ? "+1" : "+61");
+    setSalaryType((viewerMarket === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerMarket]);
 
   const toggleRole = (r: string) => setUrgentRole((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
 
@@ -228,7 +241,7 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
     );
   }
 
-  const setMarketAll = (m: "US" | "AU") => { setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setCountryCode(m === "US" ? "+1" : "+61"); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]); };
+  const setMarketAll = (m: "US" | "AU") => { marketTouched.current = true; setMarket(m); setState((m === "US" ? US_STATES : AU_STATES)[0]); setCountryCode(m === "US" ? "+1" : "+61"); setSalaryType((m === "US" ? SALARY_TYPES_US : SALARY_TYPES_AU)[0]); };
 
   return (
     <div className="pn-stack-24">

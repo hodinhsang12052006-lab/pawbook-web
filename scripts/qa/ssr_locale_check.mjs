@@ -146,6 +146,29 @@ console.log("\nSEO tags:");
   check(/<meta name="robots" content="noindex/.test(off.html), "/offline is noindex");
 }
 
+// /auth/register?role=… → trang tĩnh riêng của vai trò (edge rewrite, next.config.ts REG_ROLE): HTML máy chủ đã có
+// form (tiêu đề + nút "Tất cả loại tài khoản"), đúng ngôn ngữ; không ?role= / ?role lạ → danh sách vai trò.
+console.log("\nRegister: role form / role list in the server HTML:");
+for (const [path, al, cookie, want, kind] of [
+  ["/auth/register", "en-US", null, "en", "picker"],
+  ["/auth/register?role=bogus", "en-US", null, "en", "picker"],
+  ["/vi/auth/register", "en-US", null, "vi", "picker"],
+  ["/auth/register?role=client", "en-US", null, "en", "client"],
+  ["/auth/register?role=technician&callbackUrl=%2Fjobs", "es-ES", null, "en", "technician"],
+  ["/auth/register?role=owner", "vi-VN,vi;q=0.9", null, "vi", "owner"],
+  ["/auth/register?role=client", "en-US", "vi", "vi", "client"],
+  ["/auth/register?role=technician", "vi-VN", "en", "en", "technician"],
+  ["/vi/auth/register?role=owner", "en-US", null, "vi", "owner"],
+]) {
+  const r = await get(path, { al, cookie });
+  const picker = /data-role-picker/.test(r.html) && (r.html.match(/data-role="(?:client|technician|owner)"/g) || []).length === 3;
+  const form = /data-back-roles/.test(r.html) && !/data-role-picker/.test(r.html);
+  // each role form has its own first field id (ClientRegisterForm cl-*, owner/technician forms)
+  const roleOk = kind === "picker" ? picker : form && (kind !== "client" || /id="cl-name"/.test(r.html));
+  check(r.status === 200 && r.lang === want && roleOk && !!r.h1, `${path.padEnd(52)} AL=${(al ?? "-").padEnd(15)} cookie=${(cookie ?? "-").padEnd(2)} → ${r.lang} ${kind}`, `h1 "${r.h1}"${r.status !== 200 ? ` HTTP ${r.status}` : ""}`);
+  if (r.status === 200 && kind !== "picker") check(!!r.canonical?.replace(/^https?:\/\/[^/]+/, "").match(/^(?:\/vi)?\/auth\/register$/), `   canonical ${r.canonical}`);
+}
+
 // Cổng trước khi lên production: yêu cầu RSC / prefetch theo segment (Next 16) cũng phải đi đúng nhánh ngôn ngữ
 // theo cookie — router của Vercel áp has/missing cho cả request ?_rsc và next-router-segment-prefetch. Chạy cả
 // với BASE_URL=<preview>.vercel.app để kiểm tra bản preview trước khi promote.
@@ -163,10 +186,22 @@ for (const cookie of ["vi", "en"]) {
   const hasVi = /"n":"lang"[^}]*"k":"vi"|"lang","vi"|lang\|vi/.test(body), hasEn = /"n":"lang"[^}]*"k":"en"|"lang","en"|lang\|en/.test(body);
   check(res.status === 200 && (cookie === "vi" ? hasVi && !hasEn : hasEn && !hasVi), `/designs prefetch with cookie=${cookie} → ${res.status}, tree lang=${hasVi ? "vi" : hasEn ? "en" : "?"}`);
 }
+// Client navigation to /auth/register?role=… (RSC request): the role rewrite applies too — tree has the [role] segment.
+for (const cookie of ["vi", "en"]) {
+  const headers = { rsc: "1", cookie: `bitpaw_locale=${cookie}` };
+  let res = await fetch(`${BASE_URL}/auth/register?role=owner&_rsc=qa${cookie}`, { headers, redirect: "manual" });
+  const loc = res.headers.get("location") || "";
+  // (a plain RSC request hashes to an empty ?_rsc)
+  if ((res.status === 307 || res.status === 308) && /[?&]_rsc(?:=|&|$)/.test(loc)) res = await fetch(new URL(loc, BASE_URL), { headers, redirect: "manual" });
+  const body = res.status === 200 ? await res.text() : "";
+  const role = /"n":"role"[^}]*"k":"owner"|"role","owner"|role\|owner/.test(body);
+  const lang = /"n":"lang"[^}]*"k":"vi"|"lang","vi"|lang\|vi/.test(body) ? "vi" : /"n":"lang"[^}]*"k":"en"|"lang","en"|lang\|en/.test(body) ? "en" : "?";
+  check(res.status === 200 && role && lang === cookie, `/auth/register?role=owner RSC with cookie=${cookie} → ${res.status}, [role]=owner ${role}, lang=${lang}`);
+}
 
 console.log('\nVietnamese text left in English server HTML (scripts + lang="vi" blocks excluded):');
 let leakPages = 0;
-for (const path of ["/", "/designs", "/trends", "/salons", "/tryon", "/auth/login", "/auth/register", "/privacy", "/terms", "/support", "/data-deletion", "/offline", "/jobs/create"]) {
+for (const path of ["/", "/designs", "/trends", "/salons", "/tryon", "/auth/login", "/auth/register", "/auth/register?role=client", "/auth/register?role=owner", "/privacy", "/terms", "/support", "/data-deletion", "/offline", "/jobs/create"]) {
   const r = await get(path, { al: "en-US" });
   const leaks = r.status === 200 ? vietnameseLeaks(r.html) : [];
   if (leaks.length) leakPages++;
@@ -197,11 +232,12 @@ if (process.argv.includes("--browser")) {
     page.on("pageerror", (e) => {
       if (/hydrat|#418|#423|#425|did not match|mismatch/i.test(e.message)) errors.push(e.message.slice(0, 200));
     });
-    for (const path of ["/", "/designs", "/jobs/create", "/auth/login", "/support", "/vi/designs"]) {
+    const HYDRATE = ["/", "/designs", "/jobs/create", "/auth/login", "/support", "/vi/designs", "/auth/register", "/auth/register?role=technician"];
+    for (const path of HYDRATE) {
       await page.goto(BASE_URL + path, { waitUntil: "networkidle" }).catch(() => {});
       await page.waitForTimeout(600);
     }
-    check(errors.length === 0, `${locale}: 6 pages without hydration errors`, errors.slice(0, 2).join(" | "));
+    check(errors.length === 0, `${locale}: ${HYDRATE.length} pages without hydration errors`, errors.slice(0, 2).join(" | "));
     if (other.size) console.log(`   (other console errors, not hydration: ${[...other].slice(0, 3).join(" | ")})`);
     await ctx.close();
   }

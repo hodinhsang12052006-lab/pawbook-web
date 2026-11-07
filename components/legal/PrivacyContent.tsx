@@ -110,7 +110,7 @@ function PrivacyEn() {
           <li><strong className={B}>Messages:</strong> text, photos, videos, voice messages and GIFs/stickers you send to other users.</li>
           <li><strong className={B}>Posts:</strong> photos, videos, comments and poll votes you post to the feed (anonymous posts are reviewed before they appear).</li>
           <li><strong className={B}>Crash reports:</strong> when the app hits an error, error details (device type, browser, current page, account ID) are sent to Sentry so we can fix it.</li>
-          <li><strong className={B}>Call data:</strong> connection signals (not the audio or video itself) pass through Pusher to set up calls. Audio and video are encrypted end-to-end by your browser (DTLS-SRTP) and travel directly between the two devices, or through Cloudflare's TURN relay when a network blocks a direct path — the relay only forwards encrypted packets it cannot decode. PawNail never records calls; only the call log line (missed / declined / duration) is kept in the chat.</li>
+          <li><strong className={B}>Call data:</strong> connection signals (not the audio or video itself) pass through Pusher to set up calls. Audio and video are encrypted end-to-end by your browser (DTLS-SRTP) and travel directly between the two devices, or through Cloudflare’s TURN relay when a network blocks a direct path — the relay only forwards encrypted packets it cannot decode. PawNail never records calls; only the call log line (missed / declined / duration) is kept in the chat.</li>
           <li><strong className={B}>Push notifications:</strong> if you turn on notifications, we store a device token (issued by your browser, Google Firebase or Apple) to deliver them.</li>
           <li><strong className={B}>Location:</strong> the app does <strong>not</strong> access GPS. Your area is only what you enter yourself.</li>
         </ul>
@@ -134,7 +134,7 @@ function PrivacyEn() {
           <li><strong className={B}>Sentry</strong> — receives crash reports.</li>
           <li><strong className={B}>Resend</strong> — sends email (for example, password reset emails).</li>
           <li><strong className={B}>Pusher</strong> — real-time messaging and call signaling.</li>
-          <li><strong className={B}>Cloudflare Realtime TURN</strong> — relays encrypted call packets when two devices can't connect directly (only when needed).</li>
+          <li><strong className={B}>Cloudflare Realtime TURN</strong> — relays encrypted call packets when two devices can’t connect directly (only when needed).</li>
           <li><strong className={B}>Twilio</strong> — sends SMS codes when you verify your phone.</li>
           <li><strong className={B}>Google Firebase, Apple Push Notification service</strong> — deliver notifications to the mobile app.</li>
           <li><strong className={B}>Google, Facebook, Apple</strong> — only if you choose to sign in with them on the website.</li>

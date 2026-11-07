@@ -765,8 +765,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       if (!call || (ph !== "connecting" && ph !== "connected")) return;
       const p = peerRef.current;
       const stream = streamRef.current;
+      const phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
       if (document.visibilityState === "hidden") {
-        if (camOnRef.current) p?.sendCtl({ cam: "paused" });
+        // phones stop the camera in the background; a desktop tab keeps sending, so no "paused" there
+        if (camOnRef.current && phone) p?.sendCtl({ cam: "paused" });
         return;
       }
       if (!stream || !p) return;
@@ -792,7 +794,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
             setPreview(new MediaStream([nv]));
           } catch {}
         }
-        p.sendCtl({ cam: true });
+        if (phone) p.sendCtl({ cam: true });
       }
     };
     window.addEventListener("pagehide", onPageHide);

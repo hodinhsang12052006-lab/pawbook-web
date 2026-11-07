@@ -140,8 +140,7 @@ let convId;
   });
   R.check("Z13", "Pusher: nghe lén kênh chat của người khác → 403", r.status === 403, `status=${r.status}`);
   // Cuộc gọi WebRTC tự dựng: mọi tín hiệu sau "offer" phải mang call token của ĐÚNG cuộc gọi đó.
-  const sdp = { type: "offer", sdp: "v=0
-" };
+  const sdp = { type: "offer", sdp: "v=0\r\n" };
   const sig = (c, extra) => c.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "signal", callId: "zz14call", fromLeg: "leg-aaaa", toLeg: "leg-bbbb", seq: 0, kind: "sdp", data: sdp, ...extra } });
   const noTok = await sig(owner2, {});
   R.check("Z14", "Calls: gửi tín hiệu (SDP) không có call token → 403", noTok.status === 403, `status=${noTok.status}`);
@@ -151,8 +150,7 @@ let convId;
   R.check("Z14b", "Calls: dùng call token của cuộc gọi NGƯỜI KHÁC → 403", offer.status === 200 && !!tok && stolen.status === 403, `offer=${offer.status} stolen=${stolen.status}`);
   const wrongCall = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject", callId: "otherid1", callToken: tok, reason: "cancel" } });
   R.check("Z14c", "Calls: token đúng người nhưng sai callId → 403", wrongCall.status === 403, `status=${wrongCall.status}`);
-  const big = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "signal", callId: "zz14call", callToken: tok, fromLeg: "leg-aaaa", toLeg: "leg-bbbb", seq: 1, kind: "sdp", data: { type: "offer", sdp: "a=x
-".repeat(6000) } } });
+  const big = await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "signal", callId: "zz14call", callToken: tok, fromLeg: "leg-aaaa", toLeg: "leg-bbbb", seq: 1, kind: "sdp", data: { type: "offer", sdp: "a=x\r\n".repeat(6000) } } });
   R.check("Z14d", "Calls: SDP quá lớn (> 24KB) → 413", big.status === 413, `status=${big.status}`);
   const self = await owner.req("/api/calls", { method: "POST", json: { targetId: owner.userId, action: "offer", callType: "audio" } });
   R.check("Z14e", "Calls: tự gọi chính mình → 400", self.status === 400, `status=${self.status}`);

@@ -61,7 +61,7 @@ export const HAND_ANIM_PACKS: StickerPack[] = [
   pack("feelings", ["Cảm xúc", "Feelings"], "anim", g("😂 🤣 🥹 🥰 😍 😘 😭 🥺 😡 😱 🤯 🤩 🥳 😎 🤔 🙄 😴 🤗 🤭 😳 😅 😊 😇 🥲 😮 💀 🙈 🫠 😉 😋 😜 🤪 😏 😬 🤤 🥱 😤 🫡 🫣 😵‍💫 🤧 😷 🥶 🥵 😈"), "😂"),
   pack("hands", ["Cử chỉ & con người", "Hands & people"], "anim", g("👍 👎 👏 🙌 🙏 🫶 👋 🤝 💪 🤌 ✌️ 🤞 👌 🫰 ✍️ 🤙 👀 🫵 ☝️"), "👍"),
   pack("hearts", ["Tim & lấp lánh", "Hearts & sparkle"], "anim", g("❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🩷 💔 ❤️‍🔥 💕 💞 💘 💝 💯 🔥 ⭐ 🌟 💫 🌈 💥"), "❤️"),
-  pack("party", ["Tiệc & hoạt động", "Party & activities"], "anim", g("🎉 🎊 🥳 🎈 🍾 🥂 🎂 🎆 🪩 🪅 🏆 🥇 🎓 🍀"), "🎉"),
+  pack("party", ["Tiệc & hoạt động", "Party & activities"], "anim", g("🎉 🎊 🎈 🍾 🥂 🎂 🎆 🪩 🪅 🏆 🥇 🎓 🍀"), "🎉"),
   pack("animals", ["Động vật & thiên nhiên", "Animals & nature"], "anim", g("😺 😹 😻 🐱 🐕 🦊 🐼 🦄 🦁 🐧 🦉 🐻 🐣 🐥 🐾 🦘 🐉 🐢 🐙 🐬 🐳 🐝 🐌"), "😺"),
   pack("food", ["Ăn uống", "Food & drink"], "anim", g("☕ 🧋 🍜 🍕 🍔 🍩 🍪 🍓 🍉 🥑 🌮 🍿 🍷 🍦"), "🧋"),
   pack("travel", ["Du lịch & nơi chốn", "Travel & places"], "anim", g("✈️ 🚀 🏠 🚗"), "✈️"),

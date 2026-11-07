@@ -298,7 +298,8 @@ try {
     await p3.screenshot({ path: TMP + "/launch_oauth_error.png" });
     const reg = await page();
     await reg.goto(BASE_URL + "/auth/register");
-    R.check("OA10", "Trang đăng ký có 'Hoặc đăng ký nhanh bằng' + nút OAuth", await reg.getByText(/Hoặc đăng ký nhanh bằng/i).waitFor({ timeout: 10000 }).then(() => true).catch(() => false));
+    // Phase 1 (11/2026): dưới danh sách vai trò là vạch "hoặc / or" rồi các nút OAuth dạng viên trung tính (.pn-social).
+    R.check("OA10", "Trang đăng ký: vạch 'hoặc' + nút OAuth dưới danh sách vai trò", await reg.locator("[data-role-picker] .pn-social").first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && (await reg.locator("[data-role-picker] .pn-or").count()) === 1);
     await reg.screenshot({ path: TMP + "/launch_register_social.png" });
   }
 

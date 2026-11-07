@@ -3,6 +3,10 @@
 // vào GIF bị ẩn (tab GIF, mục GIF ở menu "+", nút "Search GIFs for …"); phần GIF có kết quả dùng /api/gifs GIẢ LẬP (route
 // intercept, kể cả ?probe=1) + ảnh giả trên media.giphy.com.
 // Bảng mở trên điện thoại nằm TRONG khung soạn tin: tin vừa gửi (bảng vẫn mở) phải thấy được, không bị bảng che.
+// 11/2026 (TG1–TG12): GIF gửi bằng MP4 của GIPHY (video giả tự vẽ scripts/qa/fixtures/gif_mock.webm) — chạy, giữ tỉ lệ,
+// dừng khi khuất, trình xem toàn màn hình, tin .gif cũ, giảm chuyển động; ô tìm trong tab Emoji ('cam on' → 🙏); thanh gợi ý
+// nhãn dán khi gõ 1 emoji; tin '😂' vẽ to + chạy 1 lượt; danh sách vẫn là chữ; tiếng Việt; bong bóng chat Android.
+// Ảnh chụp (SHOTS_DIR): t06–t20 (EN + VI, 412px).
 //   BASE_URL=http://localhost:3100 [QA_EMAIL_A=… QA_EMAIL_B=…] node scripts/qa/chat_media_test.mjs
 import fs from "node:fs";
 import path from "node:path";
@@ -77,14 +81,28 @@ const A = await login(EMAIL_A);
 const mockSvg = (i, w, h) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="hsl(${(i * 47) % 360} 45% 38%)"/><text x="50%" y="50%" fill="#fff" font-family="sans-serif" font-size="${Math.round(h / 7)}" text-anchor="middle" dominant-baseline="middle">mock GIF ${i}</text></svg>`;
 const dims = [[480, 270], [200, 200], [200, 300], [320, 180], [200, 250], [300, 200], [200, 150], [240, 320]];
-const mockResults = (q) => dims.map(([w, h], i) => ({ id: `g_mock${q}${i}`, send: `https://media.giphy.com/media/mock${i}/200w.webp#wh=${w}x${h}`, preview: `https://media.giphy.com/media/mock${i}/200w.webp`, w, h, title: `mock ${i}` }));
+// Như /api/gifs thật từ 11/2026 (lib/chat/giphy.ts): gửi = MP4 + #wh + &still=<poster>, ô = MP4 nhỏ + ảnh tĩnh; mỗi ô thứ 4 là
+// WebP kiểu cũ (mục Gần đây lưu trước 11/2026 / Tenor) — vẫn phải vẽ bằng <img>.
+const GM = "https://media.giphy.com/media";
+const mockResults = (q) =>
+  dims.map(([w, h], i) =>
+    i % 4 === 3
+      ? { id: `g_mock${q}${i}`, send: `${GM}/mock${i}/200w.webp#wh=${w}x${h}`, preview: `${GM}/mock${i}/200w.webp`, w, h, title: `mock ${i}` }
+      : { id: `g_mock${q}${i}`, send: `${GM}/mock${i}/200.mp4#wh=${w}x${h}&still=${encodeURIComponent(`${GM}/mock${i}/200_s.gif`)}`, preview: `${GM}/mock${i}/200w.mp4`, still: `${GM}/mock${i}/200w_s.gif`, w, h, title: `mock ${i}` }
+  );
+// "MP4" giả: video nhỏ tự vẽ (scripts/qa/fixtures/gif_mock.webm — Chromium của Playwright không có H.264; trình duyệt dò định
+// dạng theo nội dung, không theo đuôi .mp4). GIPHY thật trả H.264 MP4.
+const MOCK_VIDEO = fs.readFileSync(path.join(HERE, "fixtures", "gif_mock.webm"));
 // Ảnh GIF giả + /api/gifs giả: đăng ký NGAY khi tạo phiên (trước mọi request); /api/gifs chỉ giả khi mockGifs = true.
 let mockGifs = false;
-await A.ctx.route(/^https:\/\/media\.giphy\.com\/media\/mock\d+\//, (r) => {
-  const i = Number(/mock(\d+)/.exec(r.request().url())?.[1] || 0);
+const mockMedia = (r) => {
+  const u = r.request().url();
+  if (/\.mp4(?:[?#]|$)/.test(u)) return r.fulfill({ status: 200, headers: { "content-type": "video/mp4", "access-control-allow-origin": "*", "cache-control": "public, max-age=3600" }, body: MOCK_VIDEO });
+  const i = Number(/mock(\d+)/.exec(u)?.[1] || 0);
   const [w, h] = dims[i] || [200, 200];
   r.fulfill({ status: 200, headers: { "content-type": "image/svg+xml", "access-control-allow-origin": "*" }, body: mockSvg(i, w, h) });
-});
+};
+await A.ctx.route(/^https:\/\/media\.giphy\.com\/media\/mock\d+\//, mockMedia);
 await A.ctx.route(/\/api\/gifs(\?|$)/, (r) => {
   if (!mockGifs) return r.fallback();
   if (new URL(r.request().url()).searchParams.get("probe") === "1") return r.fulfill({ status: 200, contentType: "application/json", headers: { "cache-control": "no-store" }, body: JSON.stringify({ enabled: true, provider: "giphy" }) });
@@ -310,22 +328,55 @@ p.on("requestfailed", onFail);
 p.on("response", onGifResp);
 await openPanel(p);
 await panel(p).getByRole("tab", { name: "GIF" }).click();
-await panel(p).locator('img[alt="GIF"]').first().waitFor({ timeout: 8000 }).catch(() => {});
+await panel(p).locator("[data-gif-tile]").first().waitFor({ timeout: 8000 }).catch(() => {});
+await p.waitForTimeout(1500);
 const powered = await panel(p).getByTestId("gif-attribution").isVisible().catch(() => false);
-const tilesN = await panel(p).locator('img[alt="GIF"]').count();
+const tilesN = await panel(p).locator("[data-gif-tile]").count();
 const cols = await panel(p).locator(".pn-gif-cols").evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length).catch(() => 0);
 R.check("CM9b", `GIF có khoá (giả lập): mục 'Insert GIF' ở menu '+' hiện lại; lưới ${cols} cột ở màn 412px (3 khi bảng ≥ 340px)`, attachGifOn === 1 && cols === 3, JSON.stringify({ attachGifOn, cols }));
+// ô lưới: MP4 nhỏ chạy (ô đang thấy), ô WebP kiểu cũ vẫn là <img>
+const gridState = () =>
+  panel(p).locator("[data-gif-tile]").evaluateAll((tiles) =>
+    tiles.map((t) => {
+      const v = t.querySelector("video");
+      return { v: !!v, playing: !!v && !v.paused && v.readyState >= 2 && v.currentTime > 0, still: !!t.querySelector('img[src$="_s.gif"]'), webp: !!t.querySelector('img[src$=".webp"]') };
+    })
+  );
+const grid = await gridState();
+const playingTiles = grid.filter((x) => x.playing).length;
+R.check("TG1", `Lưới GIF: ô GIPHY là MP4 nhỏ (fixed_width) ĐANG CHẠY (${playingTiles}/${grid.length} ô), ô WebP cũ vẫn là <img>, 'Powered by GIPHY' vẫn hiện`,
+  playingTiles >= 2 && grid.some((x) => x.webp && !x.v) && powered, JSON.stringify(grid));
 await shot(p, "t06_gif_mock_trending");
-await panel(p).locator('img[alt="GIF"]').first().click(); // 480×270
-await p.waitForTimeout(1800);
+await panel(p).locator("[data-gif-tile]").first().click(); // 480×270, MP4
+await p.waitForTimeout(2200);
 const gifStill = await panel(p).isVisible();
-const gifBubble = await p.locator(".m-media.m-gif").last().evaluate((m) => {
-  const r = m.getBoundingClientRect();
-  const img = m.querySelector("img");
-  return { w: r.width, h: r.height, fit: img ? getComputedStyle(img).objectFit : null, chip: !!m.querySelector(".m-gif-chip") };
-}).catch(() => null);
+const bubbleState = () =>
+  p.locator(".m-media.m-gif").last().evaluate((m) => {
+    const r = m.getBoundingClientRect();
+    const v = m.querySelector("video");
+    const media = v || m.querySelector("img");
+    return {
+      w: r.width, h: r.height, fit: media ? getComputedStyle(media).objectFit : null, chip: !!m.querySelector(".m-gif-chip"),
+      playingAttr: m.querySelector("[data-gif-video]")?.getAttribute("data-playing") ?? null,
+      poster: !!m.querySelector('img[src$="_s.gif"]'),
+      video: v && { src: v.getAttribute("src"), poster: v.getAttribute("poster"), autoplay: v.hasAttribute("autoplay"), muted: v.muted && v.hasAttribute("muted"), loop: v.loop, inline: v.hasAttribute("playsinline"), preload: v.getAttribute("preload"), paused: v.paused, t: v.currentTime, rs: v.readyState },
+    };
+  }).catch(() => null);
+const gifBubble = await bubbleState();
 const ratioOk = gifBubble && Math.abs(gifBubble.w / gifBubble.h - 480 / 270) < 0.03 && gifBubble.w <= 241;
 R.check("CM10", "GIF (API giả lập): 'Powered by GIPHY' hiện, có ô GIF; gửi → bong bóng giữ đúng tỉ lệ 480×270 (≤ 240px, contain, nhãn GIF), bảng vẫn mở", powered && tilesN >= 4 && ratioOk && gifBubble.fit === "contain" && gifBubble.chip && gifStill, JSON.stringify({ powered, tilesN, gifBubble, gifStill, gifFails }));
+const gv = gifBubble?.video;
+R.check("TG2", "GIF gửi đi là MP4: bong bóng <video autoplay muted loop playsinline preload=metadata poster=…> ĐANG CHẠY (src bỏ phần #, poster = ảnh tĩnh 200_s), đúng tỉ lệ 480×270, nhãn GIF",
+  !!gv && /\/mock0\/200\.mp4$/.test(gv.src) && /\/mock0\/200_s\.gif$/.test(gv.poster || "") && gv.autoplay && gv.muted && gv.loop && gv.inline && gv.preload === "metadata" && !gv.paused && gv.t > 0 && gv.rs >= 2 && ratioOk && gifBubble.chip,
+  JSON.stringify(gifBubble));
+const thread = async () => (await (await A.ctx.request.get(BASE_URL + `/api/messages?partnerId=${B.me.id}`, { headers: A.h })).json()).messages || [];
+const savedGif = (await thread()).filter((m) => /\/mock0\/200\.mp4/.test(m.content || "")).pop();
+const evil = await post(`${GM}/mock1/200.mp4#wh=200x200&still=${encodeURIComponent("https://evil.example/pixel.gif")}`, "IMAGE");
+const asVideo = await post(`${GM}/mock2/200.mp4#wh=200x300&still=${encodeURIComponent(`${GM}/mock2/200_s.gif`)}`, "VIDEO");
+const asVideoBody = await asVideo.json().catch(() => ({}));
+R.check("TG2b", "Máy chủ: lưu tin IMAGE = 'mp4#wh=480x270&still=<URI ảnh tĩnh>'; poster trỏ host lạ → 400; gửi GIF MP4 với type VIDEO → lưu IMAGE (xem trước luôn là 'GIF')",
+  savedGif?.type === "IMAGE" && savedGif.content === `${GM}/mock0/200.mp4#wh=480x270&still=${encodeURIComponent(`${GM}/mock0/200_s.gif`)}` && evil.status() === 400 && asVideo.status() === 201 && asVideoBody.message?.type === "IMAGE",
+  JSON.stringify({ saved: savedGif?.content, type: savedGif?.type, evil: evil.status(), asVideo: asVideo.status(), asVideoType: asVideoBody.message?.type }));
 const gifVis = await p.evaluate(() => {
   const pnl = document.querySelector(".pn-media-panel")?.getBoundingClientRect();
   const g = [...document.querySelectorAll(".m-media.m-gif")].pop()?.getBoundingClientRect();
@@ -337,9 +388,305 @@ await p.keyboard.press("Escape");
 await p.goto(BASE_URL + "/messages");
 await p.locator(".m-conv").first().waitFor({ timeout: 30000 });
 const prevGif = await p.locator(".m-conv", { hasText: B.me.name }).first().locator(".m-preview").innerText().catch(() => "");
-R.check("CM11", "Danh sách chat: tin cuối là GIF → 'You: GIF' (không còn '📷 Photo')", /You: GIF/.test(prevGif), prevGif);
+R.check("CM11", "Danh sách chat: tin cuối là GIF (MP4) → 'You: GIF' (không phải '🎬 Video' / '📷 Photo')", /You: GIF/.test(prevGif), prevGif);
+
+// GIF khuất khỏi khung → không chạy (trình phát gỡ / dừng); cuộn tới → chạy lại
+for (let i = 0; i < 14; i++) await post(`QA filler ${stamp} #${i + 1}`, "TEXT");
+await openThread(p, `to=${B.me.id}`);
+await p.waitForTimeout(1200);
+const offscreen = await p.evaluate(() => {
+  const all = [...document.querySelectorAll(".m-gif [data-gif-video]")];
+  const sc = document.querySelector(".m-scroll").getBoundingClientRect();
+  return all.map((el) => {
+    const r = el.getBoundingClientRect();
+    const v = el.querySelector("video");
+    return { visible: r.bottom > sc.top && r.top < sc.bottom, attr: el.getAttribute("data-playing"), playing: !!v && !v.paused };
+  });
+});
+const hiddenOnes = offscreen.filter((x) => !x.visible);
+const lastGif = p.locator(".m-media.m-gif:has(video), .m-media.m-gif:has([data-gif-video])").last();
+await lastGif.scrollIntoViewIfNeeded();
+await p.waitForTimeout(1500);
+const back = await bubbleState();
+R.check("TG3", `GIF khuất khỏi khung tin (${hiddenOnes.length} cái) → không chạy (data-playing=0, không trình phát chạy); cuộn tới → chạy lại`,
+  hiddenOnes.length >= 1 && hiddenOnes.every((x) => x.attr === "0" && !x.playing) && back?.playingAttr === "1" && back?.video && !back.video.paused,
+  JSON.stringify({ offscreen, back: back?.video }));
+// chạm GIF → xem toàn màn hình: video lặp, tắt tiếng, đang chạy
+await lastGif.click();
+const viewer = p.getByRole("dialog", { name: "Photo / video viewer" });
+await viewer.waitFor({ timeout: 6000 }).catch(() => {});
+await p.waitForTimeout(1200);
+const lb = await viewer.locator("video").evaluate((v) => ({ loop: v.loop, muted: v.muted, controls: v.controls, paused: v.paused, t: v.currentTime, src: v.getAttribute("src") })).catch(() => null);
+await shot(p, "t07b_gif_lightbox");
+await p.keyboard.press("Escape");
+R.check("TG4", "Chạm GIF MP4 → trình xem toàn màn hình phát video lặp, tắt tiếng, không thanh điều khiển (như GIF)", !!lb && lb.loop && lb.muted && !lb.controls && !lb.paused && lb.t > 0 && !/#/.test(lb.src || "#"), JSON.stringify(lb));
+
+// tin GIF cũ (.gif, trước 11/2026) vẫn vẽ bằng <img>
+await post(`${GM}/mock3/200.gif#wh=320x180`, "IMAGE");
+await openThread(p, `to=${B.me.id}`);
+await p.waitForTimeout(1200);
+const legacy = await p.locator(".m-media.m-gif").last().evaluate((m) => {
+  const r = m.getBoundingClientRect();
+  const img = m.querySelector("img");
+  return { img: !!img && img.complete && img.naturalWidth > 0, src: img?.getAttribute("src"), video: !!m.querySelector("video, [data-gif-video]"), ratio: r.width / r.height, chip: !!m.querySelector(".m-gif-chip") };
+}).catch(() => null);
+R.check("TG5", "Tin GIF cũ ('….gif#wh=320x180') vẫn hiện bằng <img> (không thành video), đúng tỉ lệ 16:9, có nhãn GIF",
+  !!legacy && legacy.img && !legacy.video && Math.abs(legacy.ratio - 320 / 180) < 0.03 && legacy.chip, JSON.stringify(legacy));
+
+// giảm chuyển động: chỉ ảnh tĩnh (không tải video) — trong tin và trong lưới
+await p.emulateMedia({ reducedMotion: "reduce" });
+await openThread(p, `to=${B.me.id}`);
+const mp4Gif = p.locator(".m-media.m-gif:has([data-gif-video])").last();
+await mp4Gif.scrollIntoViewIfNeeded().catch(() => {});
+await p.waitForTimeout(1200);
+const calm = await mp4Gif.evaluate((m) => { const img = m.querySelector("img"); return { video: !!m.querySelector("video"), poster: !!img && img.complete && img.naturalWidth > 0 && /_s\.gif$/.test(img.getAttribute("src") || "") }; }).catch(() => null);
+await openPanel(p);
+await panel(p).getByRole("tab", { name: "GIF" }).click();
+await panel(p).locator("[data-gif-tile]").first().waitFor({ timeout: 8000 }).catch(() => {});
+await p.waitForTimeout(1200);
+const calmGrid = await gridState();
+await p.keyboard.press("Escape");
+await p.emulateMedia({ reducedMotion: "no-preference" });
+R.check("TG6", "Giảm chuyển động: GIF MP4 trong tin chỉ hiện ảnh tĩnh (không <video>); ô lưới MP4 hiện ảnh tĩnh của ô", !!calm && !calm.video && calm.poster && calmGrid.length >= 4 && !calmGrid.some((x) => x.v) && calmGrid.filter((x) => x.still).length >= 3,
+  JSON.stringify({ calm, calmGrid }));
 mockGifs = false;
 await p.evaluate(() => sessionStorage.removeItem("pn_gif_on"));
+
+// ---------- Tab Emoji: ô tìm (EN + VI, không dấu) ----------
+await openThread(p, `to=${B.me.id}`);
+await openPanel(p);
+await panel(p).getByRole("tab", { name: "Emoji", exact: true }).click();
+const emojiSearch = panel(p).getByRole("textbox", { name: "Search emoji" });
+await emojiSearch.waitFor({ timeout: 8000 });
+const geo = () => p.evaluate(() => {
+  const g = document.querySelector("[data-emoji-grid]")?.getBoundingClientRect();
+  const pn = document.querySelector(".pn-media-panel")?.getBoundingClientRect();
+  return { gridTop: g && Math.round(g.top), panelH: pn && Math.round(pn.height), panelTop: pn && Math.round(pn.top) };
+});
+const before0 = await geo();
+await p.evaluate(() => {
+  window.__evt2 = [];
+  try {
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__evt2.push({ n: e.name, d: Math.round(e.duration) }))).observe({ type: "event", durationThreshold: 16, buffered: false });
+  } catch {}
+});
+await emojiSearch.click();
+// từ khoá CLDR tải động khi chạm ô tìm — chờ nạp xong rồi mới đo từng phím
+await p.waitForTimeout(1500);
+await p.evaluate(() => (window.__evt2 = []));
+await p.keyboard.type("cam on", { delay: 90 });
+await p.waitForTimeout(500);
+const camOn = await panel(p).locator('[data-emoji-grid="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
+const after0 = await geo();
+const typeEvts = await p.evaluate(() => window.__evt2 || []);
+const keyEvts = typeEvts.filter((e) => /^(keydown|keyup|keypress|beforeinput|input)$/.test(e.n));
+const worstKey = keyEvts.reduce((m, e) => Math.max(m, e.d), 0);
+await shot(p, "t12_emoji_search_en");
+R.check("TG7", `Tab Emoji có ô tìm; gõ 'cam on' (không dấu) → 🙏 đầu (${camOn.slice(0, 6).join(" ")}); lưới không nhảy (đỉnh lưới ${before0.gridTop}→${after0.gridTop}, cao bảng ${before0.panelH}→${after0.panelH}); phím chậm nhất ${worstKey}ms (< 100ms trên máy này)`,
+  camOn[0] === "🙏" && before0.gridTop === after0.gridTop && before0.panelH === after0.panelH && worstKey < 100, JSON.stringify({ camOn: camOn.slice(0, 8), before0, after0, keyEvts }));
+await panel(p).locator('[data-emoji-grid="results"] [data-emoji="🙏"]').first().click();
+const composerVal = await p.locator("[data-chat-input]").inputValue();
+const recentStore = await p.evaluate((uid) => JSON.parse(localStorage.getItem(`pn_emoji_recent:v1:${uid}`) || "[]"), A.me.id);
+await panel(p).getByRole("button", { name: "Clear" }).click();
+await p.waitForTimeout(200);
+const recentTab = await panel(p).getByRole("button", { name: "Recent", exact: true }).count();
+const afterClear = await geo();
+R.check("TG7b", "Chọn 🙏 từ kết quả → chèn vào ô soạn tin + vào 'Gần đây' (lưu theo người); xoá ô tìm → lưới nhóm + nút 'Recent' vẫn còn, không nhảy",
+  composerVal.endsWith("🙏") && recentStore[0] === "🙏" && recentTab === 1 && afterClear.gridTop === before0.gridTop, JSON.stringify({ composerVal, recentStore: recentStore.slice(0, 4), recentTab, afterClear }));
+await emojiSearch.fill("tim");
+await p.waitForTimeout(300);
+const timRes = await panel(p).locator('[data-emoji-grid="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
+await emojiSearch.fill("zzqxv");
+await p.waitForTimeout(200);
+const noneMsg = await panel(p).getByText("No emoji found").isVisible().catch(() => false);
+R.check("TG7c", "'tim' → ❤️ đầu + các tim; chuỗi lạ → 'No emoji found'", timRes[0] === "❤️" && timRes.filter((e) => /[❤🧡💛💚💙💜🖤🤍💕💞💓💗💖]/u.test(e)).length >= 8 && noneMsg, JSON.stringify({ tim: timRes.slice(0, 10), noneMsg }));
+await emojiSearch.fill("");
+await p.keyboard.press("Escape"); // ô tìm rỗng → Esc đóng bảng
+await panel(p).waitFor({ state: "detached", timeout: 4000 }).catch(() => {});
+
+// ---------- Gợi ý nhãn dán khi ô soạn tin là 1 emoji ----------
+const input = p.locator("[data-chat-input]");
+const strip = p.locator("[data-sticker-suggest]");
+await input.fill("");
+const stripReqs = [];
+const onStripReq = (r) => {
+  const u = r.url();
+  if (u.startsWith("data:") || u.startsWith("blob:") || /sentry\.io|cloudflareinsights|\/_next\/static\//.test(u) || /\/api\/messages\/typing/.test(u)) return;
+  stripReqs.push(u.slice(0, 140));
+};
+p.on("request", onStripReq);
+await input.fill("😂");
+await strip.waitFor({ timeout: 6000 }).catch(() => {});
+await p.waitForTimeout(1500);
+p.off("request", onStripReq);
+const stripIds = await strip.locator("[data-sticker]").evaluateAll((b) => b.map((x) => x.getAttribute("data-sticker")));
+const stripLayout = await p.evaluate(() => {
+  const s = document.querySelector("[data-sticker-suggest]")?.getBoundingClientRect();
+  const inp = document.querySelector("[data-chat-input]")?.getBoundingClientRect();
+  const sc = document.querySelector(".m-scroll")?.getBoundingClientRect();
+  const rows = [...document.querySelectorAll(".m-scroll .m-row")];
+  const last = rows.pop()?.getBoundingClientRect();
+  return { stripTop: s && Math.round(s.top), stripBottom: s && Math.round(s.bottom), stripH: s && Math.round(s.height), inputTop: inp && Math.round(inp.top), scBottom: sc && Math.round(sc.bottom), lastBottom: last && Math.round(last.bottom), lastTop: last && Math.round(last.top) };
+});
+// ảnh nhỏ của nhãn = được phép; GIF giả của các tin GIF có sẵn trong khung (dựng lại khi khung tin co) không do thanh gây ra
+const badReqs = stripReqs.filter((u) => !/fonts\.gstatic\.com\/s\/e\/notoemoji\/17\.0\/[0-9a-f_]+\/emoji\.svg$|\/_next\/image\?url=|^https:\/\/media\.giphy\.com\/media\/mock\d+\//.test(u));
+await shot(p, "t13_sticker_strip_en");
+R.check("TG8", `Gõ '😂' → thanh nhãn dán phía trên ô soạn tin: ${stripIds.slice(0, 6).join(" ")} (😂 động đầu, có 🤣); không che tin cuối (thanh trong khung soạn tin); mạng chỉ ảnh nhỏ (${stripReqs.length} request)`,
+  stripIds[0] === "😂" && stripIds.includes("🤣") && stripIds.length <= 12 && stripLayout.stripBottom <= stripLayout.inputTop && stripLayout.lastBottom <= stripLayout.stripTop && stripLayout.lastBottom <= stripLayout.scBottom + 1 && stripLayout.lastTop >= 0 && badReqs.length === 0,
+  JSON.stringify({ stripIds, stripLayout, badReqs, stripReqs: stripReqs.slice(0, 8) }));
+const lastBefore = (await thread()).pop()?.id;
+await strip.locator('[data-sticker="😂"]').click();
+await p.waitForTimeout(1800);
+const newest = (await thread()).pop();
+const valAfter = await input.inputValue();
+const stripGone = (await strip.count()) === 0;
+const lastStkRow = await p.locator(".m-row").last().locator('.pn-stk-box img[alt="😂"]').count();
+R.check("TG8b", "Chạm nhãn 😂 trên thanh → gửi tin STICKER '😂' (hiện trong khung tin), ô soạn tin trống, thanh ẩn",
+  newest?.id !== lastBefore && newest?.type === "STICKER" && newest?.content === "😂" && valAfter === "" && stripGone && lastStkRow === 1, JSON.stringify({ newest: newest && [newest.type, newest.content], valAfter, stripGone, lastStkRow }));
+await input.fill("hehe 👍");
+await strip.waitFor({ timeout: 4000 }).catch(() => {});
+const thumbFirst = await strip.locator("[data-sticker]").first().getAttribute("data-sticker").catch(() => null);
+await p.getByRole("button", { name: "Hide sticker suggestions" }).click();
+await p.waitForTimeout(250);
+const dismissed = (await strip.count()) === 0 && (await input.inputValue()) === "hehe 👍";
+await input.fill("hehe 👍 ");
+await p.waitForTimeout(250);
+const stillHidden = (await strip.count()) === 0;
+await input.fill("🙏");
+await p.waitForTimeout(400);
+const backAgain = (await strip.count()) === 1 && (await strip.locator("[data-sticker]").first().getAttribute("data-sticker")) === "🙏";
+await input.fill("cảm ơn chị 🙏");
+await p.waitForTimeout(300);
+await strip.locator('[data-sticker="🙏"]').click();
+await p.waitForTimeout(1200);
+const keptText = await input.inputValue();
+await input.fill("");
+R.check("TG8c", "'hehe 👍' (từ cuối là 1 emoji) → thanh 👍; × ẩn (giữ chữ), gõ tiếp cùng emoji vẫn ẩn; emoji khác → hiện lại; chạm nhãn khi có chữ trước → chỉ bỏ emoji, giữ 'cảm ơn chị'",
+  thumbFirst === "👍" && dismissed && stillHidden && backAgain && keptText === "cảm ơn chị", JSON.stringify({ thumbFirst, dismissed, stillHidden, backAgain, keptText }));
+
+// ---------- Tin chỉ 1–3 emoji → hiện TO (1 emoji = nhãn động Noto chạy 1 lượt khi hiện rồi đứng) ----------
+const sendText = async (t) => {
+  await input.fill(t);
+  await p.getByRole("button", { name: "Send message" }).click();
+  await p.waitForTimeout(900);
+};
+await sendText("😂❤️");
+await sendText("👍🏽");
+const lottieSeen = [];
+await input.fill("😂");
+await p.getByRole("button", { name: "Send message" }).click();
+for (let i = 0; i < 40; i++) {
+  lottieSeen.push(await p.locator('.m-row [data-big-emoji="1"] .pn-lottie svg').count().catch(() => 0));
+  if (i === 6) await shot(p, "t14_big_emoji_en");
+  await p.waitForTimeout(250);
+}
+const big = await p.evaluate(() => {
+  const rows = [...document.querySelectorAll(".m-row")];
+  const info = (row) => {
+    const b = row?.querySelector("[data-big-emoji]");
+    if (!b) return null;
+    const box = b.querySelector(".pn-stk-box")?.getBoundingClientRect();
+    const txt = b.querySelector(".m-emoji-big");
+    return { n: b.getAttribute("data-big-emoji"), box: box && [Math.round(box.width), Math.round(box.height)], still: !!b.querySelector('img.m-sticker-img[src*="/notoemoji/17.0/1f602/emoji.svg"]'), font: txt ? getComputedStyle(txt).fontSize : null, bubble: !!row.querySelector(".m-bubble") };
+  };
+  return { last: info(rows[rows.length - 1]), tone: info(rows[rows.length - 2]), two: info(rows[rows.length - 3]) };
+});
+const animated = Math.max(...lottieSeen) >= 1;
+const endedStill = lottieSeen[lottieSeen.length - 1] === 0;
+R.check("TG9", `Tin '😂' → nhãn động Noto 112px, không bong bóng, CHẠY 1 lượt khi hiện (lottie ${JSON.stringify(lottieSeen.filter((_, i) => i % 4 === 0))}) rồi đứng ở ảnh tĩnh`,
+  big.last?.n === "1" && big.last.box?.join() === "112,112" && big.last.still && !big.last.bubble && animated && endedStill, JSON.stringify({ big, lottieSeen }));
+R.check("TG9b", "'😂❤️' → 2 emoji to tĩnh (60px), '👍🏽' (màu da, Noto không có bản này) → emoji chữ to 92px giữ màu da; không bong bóng",
+  big.two?.n === "2" && big.two.font === "60px" && !big.two.bubble && big.tone?.n === "1" && big.tone.font === "92px" && !big.tone.box && !big.tone.bubble, JSON.stringify(big));
+await p.goto(BASE_URL + "/messages");
+await p.locator(".m-conv").first().waitFor({ timeout: 30000 });
+const prevBig = await p.locator(".m-conv", { hasText: B.me.name }).first().locator(".m-preview").innerText().catch(() => "");
+R.check("TG10", "Danh sách chat: tin cuối là '😂' (chữ) → 'You: 😂' (không thành 'Sticker')", /You: 😂$/.test(prevBig.trim()), prevBig);
+
+// ---------- Tiếng Việt (412px) + bong bóng chat Android ----------
+// 1 GIF MP4 + 1 tin '😂' mới nhất (trang đầu của khung tin chỉ có 20 tin)
+await post(`${GM}/mock5/200.mp4#wh=300x200&still=${encodeURIComponent(`${GM}/mock5/200_s.gif`)}`, "IMAGE");
+await post("😂", "TEXT");
+{
+  const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: ANDROID_UA, locale: "vi-VN", colorScheme: "dark", serviceWorkers: "block" });
+  const h = { "cf-connecting-ip": fakeIp() };
+  await ctx.route(BASE_URL + "/**", (r) => r.continue({ headers: { ...r.request().headers(), ...h } }));
+  await ctx.route(/sentry\.io|cloudflareinsights\.com/, (r) => r.abort());
+  await ctx.route(/^https:\/\/media\.giphy\.com\/media\/mock\d+\//, mockMedia);
+  await ctx.addInitScript(() => {
+    try {
+      localStorage.setItem("pn_push_dismissed_at", String(Date.now()));
+      sessionStorage.setItem("pn_fomo_session", JSON.stringify({ shown: 99, closes: 9 }));
+    } catch {}
+  });
+  const csrf = await (await ctx.request.get(BASE_URL + "/api/auth/csrf", { headers: h })).json();
+  await ctx.request.post(BASE_URL + "/api/auth/callback/credentials", { form: { csrfToken: csrf.csrfToken, email: EMAIL_A, password: DEMO_PASSWORD, json: "true" }, headers: h });
+  const vp = await ctx.newPage();
+  vp.on("pageerror", (e) => A.errors.push(`[vi] ${e.message.slice(0, 160)}`));
+  await vp.goto(BASE_URL + `/vi/messages?to=${B.me.id}`);
+  await vp.locator("[data-chat-input]").waitFor({ timeout: 30000 });
+  await vp.waitForTimeout(1500);
+  await shot(vp, "t15_big_emoji_vi");
+  const vpanel = vp.getByRole("dialog", { name: "Chọn biểu tượng" });
+  await vp.getByRole("button", { name: "Biểu tượng cảm xúc", exact: true }).click();
+  await vpanel.waitFor({ timeout: 8000 });
+  await vpanel.getByRole("tab", { name: "Emoji", exact: true }).click();
+  const vSearch = vpanel.getByRole("textbox", { name: "Tìm emoji" });
+  await vSearch.fill("tim");
+  await vp.waitForTimeout(700);
+  const vTim = await vpanel.locator('[data-emoji-grid="results"] [data-emoji]').evaluateAll((b) => b.map((x) => x.getAttribute("data-emoji")));
+  const vLabel = await vpanel.locator("[aria-live=polite]").innerText().catch(() => "");
+  await shot(vp, "t16_emoji_search_vi");
+  await vSearch.fill("");
+  await vp.keyboard.press("Escape");
+  await vpanel.waitFor({ state: "detached", timeout: 4000 }).catch(() => {});
+  await vp.locator("[data-chat-input]").fill("😂");
+  const vStrip = vp.getByRole("group", { name: "Gợi ý nhãn dán" });
+  const vStripOn = await vStrip.waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+  await vp.waitForTimeout(800);
+  const vSendLabel = await vStrip.locator("[data-sticker]").first().getAttribute("aria-label").catch(() => "");
+  await shot(vp, "t17_sticker_strip_vi");
+  await vp.locator("[data-chat-input]").fill("");
+  const vGif = vp.locator(".m-media.m-gif:has([data-gif-video])").last();
+  await vGif.scrollIntoViewIfNeeded().catch(() => {});
+  await vp.waitForTimeout(1500);
+  const vGifPlaying = await vGif.evaluate((m) => { const v = m.querySelector("video"); return !!v && !v.paused && v.currentTime > 0; }).catch(() => false);
+  const vGifLabel = await vGif.locator("button").first().getAttribute("aria-label").catch(() => "");
+  await shot(vp, "t18_gif_mp4_vi");
+  await vp.goto(BASE_URL + "/vi/messages");
+  await vp.locator(".m-conv").first().waitFor({ timeout: 30000 });
+  const vPrev = await vp.locator(".m-conv", { hasText: B.me.name }).first().locator(".m-preview").innerText().catch(() => "");
+  await shot(vp, "t19_list_vi");
+  R.check("TG11", "Tiếng Việt: ô 'Tìm emoji' + 'tim' → ❤️ đầu, nhãn 'Kết quả'; thanh 'Gợi ý nhãn dán' với nút 'Gửi nhãn dán 😂'; GIF MP4 chạy, nút 'Mở GIF'; danh sách 'Bạn: 😂'",
+    vTim[0] === "❤️" && /Kết quả/i.test(vLabel) && vStripOn && vSendLabel === "Gửi nhãn dán 😂" && vGifPlaying && vGifLabel === "Mở GIF" && /Bạn: 😂$/.test(vPrev.trim()),
+    JSON.stringify({ vTim: vTim.slice(0, 6), vLabel, vStripOn, vSendLabel, vGifPlaying, vGifLabel, vPrev }));
+
+  // bong bóng chat Android (UA PawNailBubble): emoji to + GIF MP4 vẫn đúng
+  const bctx = await browser.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: ANDROID_UA + " PawNailApp PawNailBubble", locale: "en-US", colorScheme: "dark", serviceWorkers: "block" });
+  const bh = { "cf-connecting-ip": fakeIp() };
+  await bctx.route(BASE_URL + "/**", (r) => r.continue({ headers: { ...r.request().headers(), ...bh } }));
+  await bctx.route(/sentry\.io|cloudflareinsights\.com/, (r) => r.abort());
+  await bctx.route(/^https:\/\/media\.giphy\.com\/media\/mock\d+\//, mockMedia);
+  const bcsrf = await (await bctx.request.get(BASE_URL + "/api/auth/csrf", { headers: bh })).json();
+  await bctx.request.post(BASE_URL + "/api/auth/callback/credentials", { form: { csrfToken: bcsrf.csrfToken, email: EMAIL_A, password: DEMO_PASSWORD, json: "true" }, headers: bh });
+  const bp = await bctx.newPage();
+  bp.on("pageerror", (e) => A.errors.push(`[bubble] ${e.message.slice(0, 160)}`));
+  await bp.goto(BASE_URL + `/messages?c=${conv1}&bubble=1`);
+  await bp.locator("[data-chat-input]").waitFor({ timeout: 30000 });
+  await bp.waitForTimeout(2000);
+  const bState = await bp.evaluate(() => {
+    const rows = [...document.querySelectorAll(".m-row")];
+    const b = rows[rows.length - 1]?.querySelector('[data-big-emoji="1"] .pn-stk-box')?.getBoundingClientRect();
+    return { bubbleAttr: document.documentElement.hasAttribute("data-bubble"), big: b && [Math.round(b.width), Math.round(b.height)] };
+  });
+  await shot(bp, "t20_bubble_mode");
+  const bGif = bp.locator(".m-media.m-gif:has([data-gif-video])").last();
+  await bGif.scrollIntoViewIfNeeded().catch(() => {});
+  await bp.waitForTimeout(1500);
+  const bGifPlaying = await bGif.evaluate((m) => { const v = m.querySelector("video"); return !!v && !v.paused && v.currentTime > 0; }).catch(() => false);
+  R.check("TG12", "Bong bóng chat Android (UA PawNailBubble): emoji to 112px + GIF MP4 chạy như trong app", bState.bubbleAttr && bState.big?.join() === "112,112" && bGifPlaying, JSON.stringify({ bState, bGifPlaying }));
+  await bctx.close();
+  await ctx.close();
+}
 
 // ---------- Hình nền ----------
 const wpEl = p.locator(".pn-msgr > div > .chat-wallpaper, .pn-msgr .chat-wallpaper:not(.pn-wp-preview)").first();

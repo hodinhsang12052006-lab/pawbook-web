@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Search, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -104,8 +104,10 @@ export default function MediaPicker({
       });
   }, []);
   const index = useMemo(() => (words ? buildEmojiIndex(EMOJI_GROUPS.flatMap((g) => g.items), words) : null), [words]);
-  const searching = !!query.trim();
-  const found = useMemo(() => (searching && index ? searchEmoji(query, index, lang) : null), [searching, index, query, lang]);
+  // Ô tìm cập nhật ngay; lưới kết quả (tới 64 emoji màu, lần đầu vẽ khá tốn) dựng ở lượt ưu tiên thấp → gõ không khựng.
+  const deferredQuery = useDeferredValue(query);
+  const searching = !!deferredQuery.trim();
+  const found = useMemo(() => (searching && index ? searchEmoji(deferredQuery, index, lang, 64) : null), [searching, index, deferredQuery, lang]);
 
   const tabBtn = (t: MediaTab, label: string) => (
     <button

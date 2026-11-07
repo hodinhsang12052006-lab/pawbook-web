@@ -1414,6 +1414,15 @@ export default function MessagesContent({
   // Bảng Emoji / Nhãn dán / GIF trên điện thoại: thêm 1 mục lịch sử khi mở → nút Back (Android / trình duyệt) đóng
   // bảng trước, không thoát cuộc trò chuyện. Đóng bằng X / Esc / chạm ra ngoài → tự bỏ mục đó.
   const panelOpen = showEmoji || showGifs;
+  // Thanh gợi ý nhãn dán hiện / ẩn (và hàng gợi ý trả lời đổi theo ô trống ↔ có chữ) làm khung tin co / giãn. ResizeObserver
+  // của khung tin giữ dính đáy, NHƯNG 2 lần đổi ngược nhau trong cùng 1 khung hình (xoá ô rồi gõ emoji ngay) thì nó không báo
+  // gì (cỡ cuối = cỡ cũ) trong khi trình duyệt đã kéo scrollTop lùi lúc khung giãn → tin cuối bị thanh che. Đang ở sát đáy →
+  // dính lại đáy ngay sau mỗi lần đổi (trước khi vẽ).
+  const stripShown = !!stickerHint && stickerHint !== hintDismissed && !panelOpen && !recording;
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (el && isNearBottomRef.current && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+  }, [stripShown, hasText]);
   const panelPushedRef = useRef(false);
   useEffect(() => {
     if (panelOpen) {
@@ -2273,7 +2282,7 @@ export default function MessagesContent({
               )}
               {/* Gợi ý nhãn dán theo emoji đang gõ — trong khung soạn tin (khung tin co lại, tin cuối không bị che); bảng biểu tượng
                   đang mở thì ẩn (bảng đã có tab Nhãn dán) */}
-              {stickerHint && stickerHint !== hintDismissed && !panelOpen && !recording && currentUser?.id && (
+              {stripShown && stickerHint && currentUser?.id && (
                 <StickerSuggest glyph={stickerHint} onPick={pickSuggestedSticker} onDismiss={() => setHintDismissed(stickerHint)} />
               )}
               {/* 1 hàng như Messenger: [😊][GIF][📎] · ô nhập bo tròn · nút gửi tròn. Trước đây nút

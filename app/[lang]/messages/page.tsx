@@ -115,18 +115,21 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] text-slate-100 select-none overflow-hidden">
-      {/* Điện thoại: đang mở 1 cuộc trò chuyện (html[data-chat-open]) → ẩn thanh chung, chat toàn màn hình như app */}
+    // pn-msgr-page (components/chat/messenger.css): cao 100dvh (100vh cho WebView cũ), khung bao overflow: clip — WebView
+    // Android lag không "cuộn" được khung bao khi đưa ô nhập lên trên bàn phím (khung chat từng bị lệch lên, kẹt luôn).
+    <div className="pn-msgr-page flex flex-col text-slate-100 select-none">
+      {/* Điện thoại: đang mở 1 cuộc trò chuyện (html[data-chat-open]) → ẩn thanh chung, chat toàn màn hình như app.
+          Điện thoại xoay ngang (≥ 768px nhưng thấp) cũng vậy — pn-msgr-nav, messenger.css. */}
       {!bubble && (
-        <div className="flex-none max-md:[html[data-chat-open]_&]:hidden">
+        <div className="pn-msgr-nav flex-none max-md:[html[data-chat-open]_&]:hidden">
           <Navbar />
         </div>
       )}
       {/* Cùng khung max-w-7xl với Navbar — trước đây khung chat tràn sát 2 mép
           màn hình trong khi logo/nút phía trên nằm giữa, nhìn lệch hẳn. Desktop:
           khung bo góc nổi trên nền; mobile: full màn hình như app nhắn tin. */}
-      <main className={bubble ? "flex w-full flex-1 min-h-0" : "mx-auto flex w-full max-w-7xl flex-1 min-h-0 md:px-6 md:py-5 lg:px-8"}>
-        <div className={bubble ? "flex w-full min-h-0 overflow-hidden" : "flex w-full min-h-0 overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-slate-950/40 md:shadow-2xl md:shadow-black/50"}>
+      <main className={bubble ? "pn-msgr-main flex w-full flex-1 min-h-0" : "pn-msgr-main mx-auto flex w-full max-w-7xl flex-1 min-h-0 md:px-6 md:py-5 lg:px-8"}>
+        <div className={bubble ? "pn-msgr-frame flex w-full min-h-0 overflow-hidden" : "pn-msgr-frame flex w-full min-h-0 overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-slate-950/40 md:shadow-2xl md:shadow-black/50"}>
           <MessagesContent
             initialSessionUser={session.user}
             initialConversations={initialConversations}

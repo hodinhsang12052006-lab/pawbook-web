@@ -20,7 +20,7 @@ import { officialAvatarUrl } from "@/lib/brand";
 import { UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
 import MessageRow from "./MessageRow";
-import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
+import { preloadCallSdk, preloadCallSdkWhenIdle, probeCalls } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
 import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon, Sparkles as SparklesIcon, X as XIcon, ChevronDown, SendHorizontal } from "lucide-react";
 import MediaLightbox from "@/components/ui/MediaLightbox";
@@ -711,12 +711,44 @@ export default function MessagesContent({
     // và cao thêm → theo dõi riêng các khối đó (không theo dõi từng bong bóng: tin mới vẫn cuộn mượt như cũ).
     const isBlock = (n: Node): n is Element => n instanceof Element && !n.matches(".m-row, .m-sep, .m-gap");
     Array.from(el.children).filter(isBlock).forEach((c) => ro?.observe(c));
+    // 2 dòng tin CUỐI cao thêm sau khi đã hiện (bản dịch tự động về, cảm xúc mới, "Đã xem", ảnh / nhãn dán tải xong trên mạng
+    // chậm…): khung tin không đổi cỡ nên RO trên không báo → đang ở đáy mà tin cuối bị khung soạn tin che dần. Bỏ qua lần báo
+    // đầu tiên lúc mới theo dõi (tin vừa gửi / vừa đến vẫn cuộn mượt theo hiệu ứng ở dưới, không bị kéo giật xuống).
+    const rowH = new WeakMap<Element, number>();
+    let tail: Element[] = [];
+    const tailRo = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver((entries) => {
+          let grew = false;
+          for (const e of entries) {
+            const h = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
+            const was = rowH.get(e.target);
+            rowH.set(e.target, h);
+            if (was !== undefined && h > was + 0.5) grew = true; // chỉ khi CAO THÊM (thấp đi thì trình duyệt tự kẹp scrollTop)
+          }
+          if (grew && lastDist <= 80 && !pendingScrollAdjustRef.current) el.scrollTop = el.scrollHeight;
+          track();
+        })
+      : null;
+    const watchTail = () => {
+      if (!tailRo) return;
+      const rows = el.querySelectorAll(":scope > .m-row");
+      const next = Array.from(rows).slice(-2);
+      if (next.length === tail.length && next.every((r, i) => r === tail[i])) return;
+      tail.forEach((r) => { if (!next.includes(r)) tailRo.unobserve(r); });
+      next.forEach((r) => { if (!tail.includes(r)) tailRo.observe(r); });
+      tail = next;
+    };
+    watchTail();
     const mo = typeof MutationObserver !== "undefined"
-      ? new MutationObserver((muts) => { for (const m of muts) m.addedNodes.forEach((n) => { if (isBlock(n)) ro?.observe(n); }); })
+      ? new MutationObserver((muts) => {
+          for (const m of muts) m.addedNodes.forEach((n) => { if (isBlock(n)) ro?.observe(n); });
+          watchTail();
+        })
       : null;
     mo?.observe(el, { childList: true });
     return () => {
       mo?.disconnect();
+      tailRo?.disconnect();
       el.removeEventListener("scroll", handleScroll);
       el.removeEventListener("scroll", track);
       el.removeEventListener("load", keepPinned, true);
@@ -1695,7 +1727,10 @@ export default function MessagesContent({
 
   // Đang mở chat 1-1 → tải sẵn bộ gọi lúc rảnh để bấm gọi là đổ chuông/thông ngay.
   useEffect(() => {
-    if (activeChat && !activeChat.isGroup) preloadCallSdkWhenIdle();
+    if (activeChat && !activeChat.isGroup && !bubble) {
+      preloadCallSdkWhenIdle();
+      probeCalls(); // gọi được chưa (1 lần / phiên) — bấm gọi khi dịch vụ chưa cấu hình thì báo ngay, không đổ chuông bên kia
+    }
   }, [activeChat?.id, activeChat?.isGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

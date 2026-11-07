@@ -629,7 +629,7 @@ html:not([data-ui-classic]) .pn-msgr :is([data-wp-tone="light"], [data-wp-tone="
 html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest {
   display: flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 4px 4px 4px 6px; border-radius: 20px;
   background: var(--m-surface); box-shadow: inset 0 0 0 1px var(--m-line-strong);
-  animation: pn-suggest-in 160ms cubic-bezier(.23, 1, .32, 1) both;
+  animation: pn-suggest-in 160ms cubic-bezier(.23, 1, .32, 1) backwards; /* không giữ transform sau khi chạy */
 }
 @keyframes pn-suggest-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-row { display: flex; flex: 1; min-width: 0; gap: 2px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
@@ -650,4 +650,25 @@ html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-x:hover { background: rgb(2
 @media (prefers-reduced-motion: reduce) {
   html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest { animation: m-fade 120ms linear both; }
   html:not([data-ui-classic]) .pn-msgr .pn-stk-suggest-btn:active { transform: none; }
+}
+
+/* =====================================================================
+   Khung trang /messages bền khi máy lag (11/2026 — chủ app báo "khung chat bị lệch" trên Android).
+   - Cao 100dvh (WebView / trình duyệt cũ không có dvh → 100vh). Không đo bằng JS → không có chiều cao cũ / sai khi bàn phím
+     mở-đóng nhanh hay xoay máy giữa chừng.
+   - Các khung bao (trang, khung giữa, cột danh sách, cột chat) overflow: CLIP thay cho hidden: khung hidden vẫn là "khung cuộn"
+     — WebView đang lag đưa ô nhập lên trên bàn phím theo bố cục CŨ sẽ cuộn luôn các khung đó, cả khung chat trượt lên (mất
+     thanh trên, hở đáy) và KẸT như vậy vì người dùng không cuộn lại được khung hidden. Khung clip không cuộn được.
+   - Điện thoại xoay ngang (rộng ≥ 768px nhưng thấp): đang mở 1 cuộc trò chuyện thì ẩn thanh chung + bỏ lề như trên điện thoại
+     dọc — trước đây thanh chung + lề chiếm ~130px, mở bàn phím là ô soạn tin bị đẩy khỏi màn hình.
+   ===================================================================== */
+.pn-msgr-page { height: 100vh; height: 100dvh; overflow: hidden; }
+.pn-msgr-frame, .pn-msgr, .pn-msgr .m-list, .pn-msgr .chat-wallpaper { overflow: hidden; }
+@supports (overflow: clip) {
+  .pn-msgr-page, .pn-msgr-frame, .pn-msgr, .pn-msgr .m-list, .pn-msgr .chat-wallpaper { overflow: clip; }
+}
+@media (orientation: landscape) and (max-height: 560px) and (pointer: coarse) {
+  html[data-chat-open] .pn-msgr-nav { display: none; }
+  html[data-chat-open] .pn-msgr-main { padding: 0; max-width: none; }
+  html[data-chat-open] .pn-msgr-frame { border-radius: 0; border-width: 0; box-shadow: none; }
 }

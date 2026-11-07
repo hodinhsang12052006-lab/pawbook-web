@@ -52,12 +52,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <main id="main" className="pn-auth-main">
           <AuthHeader />
+          {/* Hàng trên của cột form: gợi ý ngôn ngữ (trong luồng, NGAY TRÊN form — thấy ở khung hình đầu, không bao giờ
+              đè nút / ô nhập; components/i18n/LanguageHints.tsx) + nút EN·VI (≥ 1024; điện thoại có nút ở thanh đầu). */}
           <div className="pn-auth-top">
-            <LanguageToggle />
+            <LanguageHints placement="auth" />
+            <LanguageToggle className="pn-auth-toggle" />
           </div>
           <div className="pn-auth-form">{children}</div>
-          {/* Gợi ý ngôn ngữ trong luồng, sau form — không bao giờ đè nút / ô nhập (components/i18n/LanguageHints.tsx). */}
-          <LanguageHints placement="auth" />
           <footer className="pn-auth-foot">
             <ul className="flex flex-wrap items-center gap-x-4 gap-y-1" role="list">
               <li>© 2026 PawNail</li>

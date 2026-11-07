@@ -16,7 +16,8 @@ import { dismissLangHint, type LangHintMode } from "@/lib/i18n/langHint";
 // /vi/auth/register?role=technician, ô nhập role=client/owner, link chân trang, thẻ ở landing / Mẫu nail / Tiệm).
 //  • placement="top"  (layout gốc, trước nội dung): thanh mảnh trên cùng trang — landing khách "/" + mọi trang trong app.
 //    Bỏ qua /auth/* (có chỗ riêng) và /messages (khung chat cao đúng 100dvh, thêm thanh là lòi cuộn).
-//  • placement="auth" (app/[lang]/auth/layout.tsx): viên ngay sau form, trước chân trang.
+//  • placement="auth" (app/[lang]/auth/layout.tsx): viên ở hàng trên cột form, NGAY TRÊN form (cạnh nút EN·VI khi
+//    ≥ 1024) — thấy ngay ở khung hình đầu như viên nổi cũ, nhưng nằm trong luồng nên không đè gì.
 // < 400 px: không globe, nút chữ ngắn — "This page is in Vietnamese." không bao giờ bị cắt trên máy 360 px.
 const COPY: Record<LangHintMode, { lang: "en" | "vi"; region: string; text: string; cta: string; ctaShort: string; dismiss: string; target: "en" | "vi" }> = {
   "to-en": { lang: "en", region: "Language", text: "This page is in Vietnamese.", cta: "View in English", ctaShort: "English", dismiss: "Dismiss", target: "en" },
@@ -67,8 +68,8 @@ export default function LanguageHints({ placement }: { placement: "top" | "auth"
             <div className="flex min-w-0 max-w-full items-center gap-2">{inner}</div>
           </div>
         ) : (
-          <div key={mode} role="region" aria-label={c.region} lang={c.lang} data-lang-hint={mode} className={`${SHOW[mode]} mt-8 justify-center px-4 lg:px-0`}>
-            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-full bg-pn-surface py-1.5 pl-3.5 pr-1.5 text-[13px] text-[#e8e0e6] shadow-[inset_0_0_0_1px_var(--color-pn-line-strong)]">
+          <div key={mode} role="region" aria-label={c.region} lang={c.lang} data-lang-hint={mode} className={`${SHOW[mode]} min-w-0 max-w-full`}>
+            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-full bg-pn-surface py-1 pl-3.5 pr-1 text-[13px] text-[#e8e0e6] shadow-[inset_0_0_0_1px_var(--color-pn-line-strong)]">
               {inner}
             </div>
           </div>

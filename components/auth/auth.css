@@ -113,8 +113,15 @@ html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 
 
 .pn-auth-main { position: relative; min-width: 0; background: transparent; padding: 0 0 calc(32px + env(safe-area-inset-bottom)); }
 @media (min-width: 1024px) { .pn-auth-main { padding: 32px 48px 48px; } }
+/* top row of the form column: language hint (in flow, right above the form) + EN·VI toggle. Phones: only when a hint is
+   showing (html[data-lh], <head> script), aligned with the form column under the 56 px header (which has the toggle). */
 .pn-auth-top { display: none; }
-@media (min-width: 1024px) { .pn-auth-top { display: flex; height: 40px; align-items: center; justify-content: flex-end; } }
+html[data-lh] .pn-auth-top { display: flex; max-width: 440px; margin: 0 auto; padding: 12px 16px 0; }
+.pn-auth-top .pn-auth-toggle { display: none; }
+@media (min-width: 1024px) {
+  .pn-auth-top, html[data-lh] .pn-auth-top { display: flex; min-height: 40px; max-width: none; margin: 0; padding: 0; align-items: center; justify-content: flex-end; gap: 12px; }
+  .pn-auth-top .pn-auth-toggle { display: flex; }
+}
 .pn-auth-hdr { display: flex; align-items: center; justify-content: space-between; height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; }
 @media (min-width: 1024px) { .pn-auth-hdr { display: none; } }
 .pn-auth-hdr .pn-auth-logo { width: 32px; height: 32px; border-radius: 9px; }
@@ -124,9 +131,10 @@ html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 
 @media (min-width: 1024px) {
   .pn-auth-form { margin: clamp(32px, 9vh, 96px) auto 0; padding: 0; }
   /* a role form (has "All account types"): the language toggle floats top-right and the column starts high, so the
-     whole technician step 1 (title -> Continue) fits a 1440 x 900 screen */
+     whole technician step 1 (title -> Continue) fits a 1440 x 900 screen. With a language hint the row stays in flow
+     (the hint must never sit over "All account types"). */
   .pn-auth-main:has(.pn-back) { position: relative; }
-  .pn-auth-main:has(.pn-back) .pn-auth-top { position: absolute; top: 32px; right: 48px; }
+  html:not([data-lh]) .pn-auth-main:has(.pn-back) .pn-auth-top { position: absolute; top: 32px; right: 48px; }
   .pn-auth-main:has(.pn-back) .pn-auth-form { margin-top: 8px; }
 }
 /* A device that was signed in before (html[data-authed], <head> script) opening /auth/login|forgot|register: the page

@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { tr } from "@/lib/i18n/tr";
+import { stripLocalePrefix } from "@/lib/i18n/config";
 import { ArrowUp } from "lucide-react";
 
 // Nút cuộn lên đầu — xuất hiện sau khi cuộn xuống đủ xa (feed/job board có
 // thể rất dài). Nổi phía trên BottomNav trên mobile, góc phải dưới desktop.
+// Không có ở /auth/*: form đăng ký ngắn, và nút nổi không được đè ô nhập / nút Tiếp tục / gợi ý ngôn ngữ.
 export default function ScrollToTop() {
   const [show, setShow] = useState(false);
+  const onAuth = stripLocalePrefix(usePathname() || "/").startsWith("/auth");
 
   useEffect(() => {
     const onScroll = () => setShow(window.scrollY > 800);
@@ -16,7 +20,7 @@ export default function ScrollToTop() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  if (!show) return null;
+  if (!show || onAuth) return null;
 
   return (
     <button

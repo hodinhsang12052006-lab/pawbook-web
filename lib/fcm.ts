@@ -12,7 +12,8 @@ import crypto from "crypto";
 //    thông báo kiểu Messenger (MessagingStyle, trả lời nhanh, bong bóng chat) bằng service riêng
 //    (android/.../PawNailMessagingService). FCM không tự hiện gì cho tin data-only.
 //  - Mọi thứ khác (bản app cũ / chưa rõ build, thông báo không phải chat) → tin "notification" như trước, kèm
-//    android.notification.channel_id ("general" hoặc "calls"); app cũ chưa có kênh đó thì FCM tự rơi về kênh mặc định.
+//    android.notification.channel_id ("messages" cho tin chat, "calls", hoặc "general"); app cũ chưa có kênh đó thì FCM
+//    tự rơi về kênh mặc định — app mới (build chưa ghi nhận) vẫn hiện nổi trên kênh "Tin nhắn" (ưu tiên cao).
 //    Bản app cũ KHÔNG BAO GIỜ được nhận data-only: plugin gốc không hiện gì cho loại tin này.
 
 interface ServiceAccount { project_id: string; client_email: string; private_key: string }
@@ -132,14 +133,14 @@ export interface FcmChat {
   ts: number; // epoch ms
 }
 
-export type FcmChannel = "general" | "calls";
+export type FcmChannel = "general" | "calls" | "messages";
 
 export interface FcmPayload {
   title: string;
   body: string; // đã theo ngôn ngữ người nhận — với chat đây chính là "text"
   url: string;
   tag?: string;
-  /** Kênh thông báo Android cho dạng tin "notification" (mặc định "general"; tag pn-call → "calls"). */
+  /** Kênh thông báo Android cho dạng tin "notification" (mặc định: chat → "messages", tag pn-call → "calls", còn lại "general"). */
   channel?: FcmChannel;
   chat?: FcmChat;
 }
@@ -151,7 +152,8 @@ export const CHAT_TEXT_MAX = 300;
 /** Ngân sách byte cho phần data (FCM giới hạn 4096 byte) — chừa chỗ cho token và phần bao. */
 export const CHAT_DATA_BUDGET = 3400;
 
-const channelFor = (p: FcmPayload): FcmChannel => p.channel ?? (p.tag === "pn-call" || p.tag?.startsWith("pn-call-") ? "calls" : "general");
+const channelFor = (p: FcmPayload): FcmChannel =>
+  p.channel ?? (p.tag === "pn-call" || p.tag?.startsWith("pn-call-") ? "calls" : p.chat ? "messages" : "general");
 
 /** Đường dẫn trong app: phải bắt đầu bằng 1 dấu "/" (không "//", không scheme) — app Android chỉ mở đúng dạng này. */
 export const safeAppPath = (u: string) => (typeof u === "string" && u.startsWith("/") && !u.startsWith("//") && !/[\s\\]/.test(u) ? u : "/messages");
@@ -207,10 +209,12 @@ export function isDeadTokenError(status: number, body: string): boolean {
 /**
  * "Đã đọc" — data-only tới các máy Android (bản đủ mới) của CHÍNH người vừa đọc: app gỡ thông báo của cuộc trò chuyện
  * đó (đọc trên máy tính / máy khác → điện thoại tự sạch thông báo, như Messenger). Ưu tiên thường: không cần đánh
- * thức máy ngay; app tự bỏ qua nếu không có thông báo nào.
+ * thức máy ngay; app tự bỏ qua nếu không có thông báo nào. ts = mốc đã đọc (ms, giờ máy chủ): FCM không giữ thứ tự giữa
+ * tin thường và tin ưu tiên cao → app chỉ gỡ các tin cũ hơn mốc, tin mới tới sau vẫn còn.
  */
-export function buildFcmReadMessage(token: string, cid: string): Record<string, unknown> {
-  return { token, data: { type: "read", v: "1", cid: String(cid) }, android: { priority: "normal", ttl: "21600s" } };
+export function buildFcmReadMessage(token: string, cid: string, readAt?: number): Record<string, unknown> {
+  const ts = Math.trunc(Number(readAt) || Date.now());
+  return { token, data: { type: "read", v: "1", cid: String(cid), ts: String(ts) }, android: { priority: "normal", ttl: "21600s" } };
 }
 
 /** Gửi tới các thiết bị Android. Trả về danh sách token đã hết hạn (để dọn khỏi DB). */
@@ -222,10 +226,10 @@ export async function sendFcm(targets: (FcmTarget | string)[], p: FcmPayload): P
 }
 
 /** Báo "đã đọc cuộc trò chuyện cid" tới các token (chỉ gọi với máy chạy bản app ≥ richChatMinBuild()). */
-export async function sendFcmRead(tokens: string[], cid: string): Promise<{ sent: number; dead: string[] }> {
+export async function sendFcmRead(tokens: string[], cid: string, readAt?: number): Promise<{ sent: number; dead: string[] }> {
   return sendEach(
     tokens.map((token) => ({ token, build: null })),
-    (target) => buildFcmReadMessage(target.token, cid)
+    (target) => buildFcmReadMessage(target.token, cid, readAt)
   );
 }
 

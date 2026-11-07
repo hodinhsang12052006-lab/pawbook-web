@@ -100,7 +100,7 @@ function BubbleRow() {
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-slate-200">{tr("Bong bóng chat", "Chat bubbles")}</span>
         <span className="block text-[11px] leading-snug text-slate-500">
-          {tr("Cuộc trò chuyện nổi trên mọi app, như Messenger", "Chats float over other apps, like Messenger")} · <span className={info.bubblePref === "all" ? "text-emerald-300" : "text-slate-400"}>{status}</span>
+          {tr("Trò chuyện nổi trên mọi app", "Chat on top of any app")} · <span className={info.bubblePref === "all" ? "text-emerald-300" : "text-slate-400"}>{status}</span>
         </span>
       </span>
       <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-500" aria-hidden />

@@ -105,7 +105,7 @@ export default function ChatNotifyBanner() {
       : {
           icon: MessageCircle,
           title: tr("Bật bong bóng chat", "Turn on chat bubbles"),
-          text: tr("Trả lời ngay trên mọi app, như Messenger.", "Reply from any app, like Messenger."),
+          text: tr("Trả lời ngay trên mọi app.", "Reply from any app."),
           cta: tr("Bật", "Turn on"),
         };
   const Icon = copy.icon;

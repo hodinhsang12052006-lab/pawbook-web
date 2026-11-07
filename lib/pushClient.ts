@@ -2,7 +2,7 @@
 
 // Phía trình duyệt của thông báo đẩy (xem lib/push.ts + worker/index.js).
 // Trong app native (Capacitor) tự chuyển sang Firebase — lib/nativePush.ts.
-import { isNativeApp, nativeDisable, nativeEnable, nativeGetState } from "@/lib/nativePush";
+import { isNativeApp, nativeDisable, nativeEnable, nativeGetState, releaseNativePush } from "@/lib/nativePush";
 
 export type PushState = "unsupported" | "ios-needs-install" | "denied" | "on" | "off";
 
@@ -67,4 +67,57 @@ export async function disablePush(): Promise<PushState> {
     }
   } catch {}
   return getPushState();
+}
+
+// ---------------------------------------------------------------------------
+// Đăng xuất / đăng nhập lại
+// ---------------------------------------------------------------------------
+const WEB_RELOGIN_KEY = "pn_web_push_relogin";
+
+/**
+ * Gọi TRƯỚC signOut (máy chủ cần phiên để gỡ): thiết bị này thôi nhận thông báo của tài khoản đang đăng xuất. Trước
+ * đây đăng xuất không gỡ gì → máy dùng chung (tiệm nail) vẫn nhận tin nhắn của người cũ. Web: chỉ gỡ bản ghi trên máy
+ * chủ, GIỮ đăng ký của trình duyệt để lần đăng nhập sau tự gắn lại (resumePushAfterLogin) mà không phải bật lại.
+ */
+export async function releasePushOnSignOut(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (isNativeApp()) return releaseNativePush();
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return;
+    try {
+      localStorage.setItem(WEB_RELOGIN_KEY, "1");
+    } catch {}
+    await fetch("/api/push/subscribe", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+  } catch {}
+}
+
+/** Mỗi lần tải trang (web): vừa đăng xuất → đăng nhập lại thì gắn đăng ký push sẵn có của trình duyệt cho tài khoản mới. */
+export async function resumePushAfterLogin(): Promise<void> {
+  if (typeof window === "undefined" || isNativeApp() || !PUBLIC_KEY) return;
+  let pending = false;
+  try {
+    pending = localStorage.getItem(WEB_RELOGIN_KEY) === "1";
+  } catch {}
+  if (!pending || !("serviceWorker" in navigator) || !("Notification" in window)) return;
+  const done = () => {
+    try {
+      localStorage.removeItem(WEB_RELOGIN_KEY);
+    } catch {}
+  };
+  if (Notification.permission !== "granted") return done();
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return done();
+    const json = sub.toJSON();
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
+    // 401 = chưa đăng nhập → giữ cờ, thử lại ở lần tải trang sau khi đã đăng nhập.
+    if (res.ok) done();
+  } catch {}
 }

@@ -48,7 +48,11 @@ export async function POST(req: Request) {
     // sự kiện realtime như cũ).
     const saved = await markConversationRead(userId, conversationId);
     // Đọc ở đây → gỡ thông báo của cuộc trò chuyện này trên các máy Android khác của chính mình (app versionCode 3+).
-    if (prevReadAt !== undefined) after(() => sendChatReadSync(userId, conversationId, prevReadAt).catch(() => 0));
+    // Kèm mốc đọc: điện thoại chỉ gỡ tin cũ hơn mốc này (tin "đã đọc" có thể tới sau 1 tin chat mới hơn).
+    if (prevReadAt !== undefined) {
+      const readAt = saved ?? new Date();
+      after(() => sendChatReadSync(userId, conversationId, prevReadAt, readAt).catch(() => 0));
+    }
     const seenAt = (saved ?? new Date()).toISOString();
     if (otherChannels.length > 0) {
       await getPusherServer()?.trigger(otherChannels, "message-seen", { conversationId, seenBy: userId, seenAt });

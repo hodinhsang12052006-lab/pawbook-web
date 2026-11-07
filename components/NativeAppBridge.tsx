@@ -6,6 +6,7 @@ import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { getPusherClient } from "@/lib/pusherClient";
 import { isBubbleMode } from "@/lib/bubbleMode";
+import { isSafeAppPath } from "@/lib/nativePush";
 
 // Link https://www.bitpawos.com/... mở app qua App Links (Android) / Universal
 // Links (iOS). Ở hosted mode Capacitor KHÔNG tự điều hướng tới link đó (chỉ mở
@@ -50,6 +51,17 @@ export default function NativeAppBridge() {
         sessionStorage.setItem(LAUNCH_KEY, url);
       } catch {}
       if (target !== window.location.pathname + window.location.search + window.location.hash) router.push(target);
+    };
+
+    // Bấm thông báo / lối tắt hội thoại khi app ĐANG CHẠY: MainActivity.loadPath gọi window.__pawnailOpenUrl(path)
+    // trước — chuyển trang mềm (giữ trạng thái, bản nháp đang gõ, không tải lại 1–2 s). Trả false (path lạ) → app tải
+    // cả trang. Sự kiện pn-open-url: /messages mở lại đúng cuộc trò chuyện kể cả khi URL không đổi (MessagesContent).
+    const w = window as Window & { __pawnailOpenUrl?: (p: unknown) => boolean };
+    w.__pawnailOpenUrl = (p: unknown) => {
+      if (!isSafeAppPath(p)) return false;
+      window.dispatchEvent(new CustomEvent("pn-open-url", { detail: p }));
+      if (p !== window.location.pathname + window.location.search) router.push(p);
+      return true;
     };
 
     // App đang chạy (hoặc vừa được mở) bằng một link.
@@ -104,6 +116,7 @@ export default function NativeAppBridge() {
       backHandle?.remove();
       resumeHandle?.remove();
       urlOpenHandle?.remove();
+      delete w.__pawnailOpenUrl;
     };
   }, [router]);
 

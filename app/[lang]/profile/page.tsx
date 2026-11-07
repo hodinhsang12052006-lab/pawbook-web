@@ -20,7 +20,7 @@ import ShareCardButton from "@/components/profile/ShareCard";
 import { JobAlertsManager } from "@/components/jobs/JobAlerts";
 import PhoneVerify from "@/components/profile/PhoneVerify";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { appSignOut } from "@/lib/appSignOut";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { placeLabel } from "@/lib/stateNames";
@@ -273,7 +273,7 @@ export default function ProfilePage() {
       const res = await fetch("/api/profile", { method: "DELETE" });
       if (res.ok) {
         toast.success(tr("Đã xóa tài khoản. Hẹn gặp lại bạn! 👋", "Account deleted. See you again! 👋"));
-        await signOut({ redirect: false });
+        await appSignOut({ redirect: false });
         // Trang chủ giờ mở cho khách → đi thẳng tới trang đăng ký (tải lại toàn trang để xoá phiên cũ).
         window.location.href = "/auth/register";
       } else {
@@ -656,7 +656,7 @@ export default function ProfilePage() {
         <FormSection icon={ShieldAlert} title={tr("Tài khoản", "Account")}>
           <button
             type="button"
-            onClick={async () => { await signOut({ redirect: false }); router.push("/auth/login"); }}
+            onClick={async () => { await appSignOut({ redirect: false }); router.push("/auth/login"); }}
             className="flex w-full items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 text-left text-sm font-semibold text-slate-200 ring-1 ring-white/10 transition-colors hover:ring-white/20"
           >
             <LogOut className="h-4 w-4 text-slate-400" />{tr(" Đăng xuất", " Sign out")}

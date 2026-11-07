@@ -80,7 +80,7 @@ html:not([data-ui-classic]) .pn-msgr .m-notify-copy { flex: 1; min-width: 0; dis
 html:not([data-ui-classic]) .pn-msgr .m-notify-title { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--m-text); }
 html:not([data-ui-classic]) .pn-msgr .m-notify-text { font-size: 12px; line-height: 16px; color: var(--m-text-3); }
 html:not([data-ui-classic]) .pn-msgr .m-notify-cta {
-  flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  flex: none; min-height: 44px; padding: 0 16px; border-radius: 999px;
   background: var(--m-accent); color: #fff; font-size: 13px; font-weight: 600;
   transition: background-color 150ms var(--m-ease), transform 150ms var(--m-ease);
 }
@@ -89,7 +89,7 @@ html:not([data-ui-classic]) .pn-msgr .m-notify-cta:active { transform: scale(0.9
 html:not([data-ui-classic]) .pn-msgr .m-notify-cta:disabled { opacity: 0.6; }
 html:not([data-ui-classic]) .pn-msgr .m-notify-x {
   flex: none; display: flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; border-radius: 999px; color: var(--m-text-3);
+  width: 44px; height: 44px; margin: -4px -6px -4px 0; border-radius: 999px; color: var(--m-text-3);
 }
 html:not([data-ui-classic]) .pn-msgr .m-notify-x:hover { color: var(--m-text); background: rgb(255 240 246 / 0.06); }
 html:not([data-ui-classic]) .pn-msgr :is(.m-notify-cta, .m-notify-x):focus-visible { outline: 2px solid var(--m-accent-ink); outline-offset: 2px; }

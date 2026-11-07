@@ -4,7 +4,7 @@
 // mẫu đã lưu / tiệm / tin nhắn, đăng xuất, xoá tài khoản (bắt buộc theo App Store / Google Play).
 import React, { useState } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { appSignOut } from "@/lib/appSignOut";
 import { Bookmark, CalendarCheck, LogOut, MessageCircle, Store, Trash2, Loader2 } from "lucide-react";
 import { ClientBookings } from "@/components/booking/BookingInbox";
 import toast from "react-hot-toast";
@@ -45,7 +45,7 @@ export default function ClientAccount({ profile }: { profile: P }) {
     if (!window.confirm(tr("Xoá tài khoản vĩnh viễn? Mẫu đã lưu và tin nhắn của bạn sẽ mất.", "Delete your account permanently? Saved looks and your messages will be lost."))) return;
     const res = await fetch("/api/profile", { method: "DELETE" });
     if (!res.ok) return toast.error(tr("Không xoá được, thử lại.", "Couldn't delete, try again."));
-    await signOut({ callbackUrl: "/" });
+    await appSignOut({ callbackUrl: "/" });
   };
 
   return (
@@ -90,7 +90,7 @@ export default function ClientAccount({ profile }: { profile: P }) {
       </section>
 
       <div className="grid grid-cols-2 gap-2.5">
-        <button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-200 ring-1 ring-white/10"><LogOut className="h-4 w-4" />{tr("Đăng xuất", "Log out")}</button>
+        <button type="button" onClick={() => appSignOut({ callbackUrl: "/" })} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white/[0.04] text-sm font-bold text-slate-200 ring-1 ring-white/10"><LogOut className="h-4 w-4" />{tr("Đăng xuất", "Log out")}</button>
         <button type="button" onClick={remove} className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-red-500/10 text-sm font-bold text-red-300 ring-1 ring-red-500/25"><Trash2 className="h-4 w-4" />{tr("Xoá tài khoản", "Delete account")}</button>
       </div>
     </div>

@@ -9,6 +9,8 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { joinOwnPresence } from "@/lib/presence";
 import { tr } from "@/lib/i18n/tr";
 import { mediaPreview } from "@/lib/chat/preview";
+import { isBubbleMode } from "@/lib/bubbleMode";
+import { nativeHandlesChatAlerts } from "@/lib/nativePush";
 
 interface UnreadMessagesContextValue {
   unreadCount: number;
@@ -72,6 +74,8 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
     const handler = (data: any) => {
       const message = data?.message || data;
       if (!message || message.senderId === sessionUser.id) return;
+      // Bong bóng chat Android (WebView phụ): app chính + thông báo native lo việc báo tin — không kêu / toast ở đây.
+      if (isBubbleMode()) return;
 
       const onMessagesPage = !!pathnameRef.current?.startsWith("/messages");
       const tabHidden = typeof document !== "undefined" && document.hidden;
@@ -81,6 +85,9 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
       if (onMessagesPage && !tabHidden) return;
 
       setUnreadCount((c) => c + 1);
+      // App Android ở nền: WebView vẫn chạy (Pusher còn nối) nhưng thông báo native đã kêu + rung + hiện nổi → không kêu
+      // trùng, không xếp toast chẳng ai thấy.
+      if (tabHidden && nativeHandlesChatAlerts()) return;
       playSound("message");
       const who = message.sender?.name || tr("ai đó", "someone");
       if (message.type === "CALL") {

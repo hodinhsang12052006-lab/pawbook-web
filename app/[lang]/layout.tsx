@@ -89,6 +89,7 @@ import PusherStatusBanner from "@/components/PusherStatusBanner";
 import NativeAppBridge from "@/components/NativeAppBridge";
 import PushPrompt from "@/components/PushPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import NotInBubble from "@/components/NotInBubble";
 
 export default async function RootLayout({
   children,
@@ -156,19 +157,23 @@ export default async function RootLayout({
                 />
                 {/* Bong bóng chat Android (html[data-bubble], lib/bubbleMode.ts): ẩn mọi lớp phủ toàn app — chỉ còn khung chat */}
                 <div data-bubble-hide className="contents">
-                  <PusherStatusBanner />
+                  <NotInBubble>
+                    <PusherStatusBanner />
+                  </NotInBubble>
                 </div>
                 <NativeAppBridge />
                 <ServiceWorkerRegister />
                 {children}
                 <RefCapture />
                 <div data-bubble-hide className="contents">
-                  <FomoToast />
-                  <InstallPrompt />
-                  <PushPrompt />
-                  <ScrollToTop />
-                  <BottomNav />
-                  <LanguageHints />
+                  <NotInBubble>
+                    <FomoToast />
+                    <InstallPrompt />
+                    <PushPrompt />
+                    <ScrollToTop />
+                    <BottomNav />
+                    <LanguageHints />
+                  </NotInBubble>
                 </div>
               </UnreadMessagesProvider>
             </CallManagerProvider>

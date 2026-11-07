@@ -12,6 +12,9 @@ import { isBubbleMode } from "@/lib/bubbleMode";
 // (+ google-services.json / APNs) VÀ máy chủ đã bật FIREBASE_SERVICE_ACCOUNT
 // (iOS: APNS_*) VÀ bản app đủ mới (shellSupportsPush bên dưới).
 const TOKEN_KEY = "pn_native_push_token";
+// Đăng xuất đã gỡ token khỏi tài khoản cũ (releaseNativePush) → lần mở app / đăng nhập sau tự đăng ký lại cho tài
+// khoản mới (quyền thông báo của máy vẫn còn), không bắt người dùng bật lại.
+const RELOGIN_KEY = "pn_native_push_relogin";
 
 export const isNativeApp = () => typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("PushNotifications");
 
@@ -34,9 +37,11 @@ export interface NativeNotifInfo {
   messagesChannel: boolean;
 }
 interface PawNailNativePlugin {
-  getInfo(): Promise<Partial<NativeNotifInfo>>;
+  getInfo(): Promise<Partial<NativeNotifInfo> & { chat?: number }>;
   setActiveConversation(o: { id: string | null }): Promise<void>;
   clearConversation(o: { id: string }): Promise<void>;
+  /** Đăng xuất: gỡ mọi thông báo + lịch sử tin + lối tắt hội thoại + ảnh đại diện đã cache (versionCode 3+). */
+  clearAll(): Promise<void>;
   openBubbleSettings(): Promise<void>;
   openNotificationSettings(): Promise<void>;
 }
@@ -78,6 +83,16 @@ const savedToken = () => {
     return null;
   }
 };
+const reloginPending = () => {
+  try {
+    return localStorage.getItem(RELOGIN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+/** Đường dẫn trong app: đúng 1 dấu "/" đầu (không "//host", không scheme), không khoảng trắng / dấu gạch ngược. */
+export const isSafeAppPath = (u: unknown): u is string => typeof u === "string" && u.length < 2048 && /^\/(?!\/)[^\s\\]*$/.test(u);
 
 export async function nativeGetState(): Promise<PushState> {
   if (!(await nativeServerOn())) return "unsupported";
@@ -122,6 +137,7 @@ async function registerToken(): Promise<boolean> {
   if (!res.ok) return false;
   try {
     localStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(RELOGIN_KEY);
   } catch {}
   return true;
 }
@@ -139,11 +155,39 @@ export async function nativeDisable(): Promise<PushState> {
   const token = savedToken();
   if (token) {
     await fetch("/api/push/native", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }).catch(() => {});
-    try {
-      localStorage.removeItem(TOKEN_KEY);
-    } catch {}
   }
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(RELOGIN_KEY);
+  } catch {}
   return "off";
+}
+
+/**
+ * Đăng xuất (gọi TRƯỚC signOut — DELETE cần phiên còn hiệu lực): gỡ token của máy này khỏi tài khoản đang đăng xuất
+ * (trước đây token vẫn gắn với tài khoản cũ → điện thoại tiếp tục hiện tin nhắn của người đó cho người dùng sau), gỡ
+ * thông báo đang hiện, và trên Android xoá cả lịch sử tin / lối tắt hội thoại / ảnh đại diện app đã lưu. Đã bật thông
+ * báo trước đó → đánh dấu để lần đăng nhập sau tự đăng ký lại (initNativePush).
+ */
+export async function releaseNativePush(): Promise<void> {
+  if (!isNativeApp()) return;
+  const token = savedToken();
+  try {
+    if (token) localStorage.setItem(RELOGIN_KEY, "1");
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {}
+  const jobs: Promise<unknown>[] = [];
+  if (token) jobs.push(fetch("/api/push/native", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }).catch(() => {}));
+  if (isAndroidApp()) jobs.push(PawNailNative.clearAll().catch(() => {}));
+  // Bản app cũ (chưa có clearAll) / iPhone: ít nhất gỡ thông báo đang nằm trong khay.
+  jobs.push(plugin().then(({ P }) => P.removeAllDeliveredNotifications()).catch(() => {}));
+  await Promise.all(jobs);
+  chatRenderer = 0;
+}
+
+/** Chỉ dọn dữ liệu chat trên máy (xoá tài khoản — máy chủ đã tự xoá token). */
+export function clearAllNative(): void {
+  if (isAndroidApp()) PawNailNative.clearAll().catch(() => {});
 }
 
 let initialized = false;
@@ -155,11 +199,20 @@ export async function initNativePush() {
   const { P } = await plugin();
   P.addListener("pushNotificationActionPerformed", (a) => {
     const url = (a.notification.data as { url?: string } | undefined)?.url;
-    if (url && url.startsWith("/")) window.location.href = url;
+    if (isSafeAppPath(url)) window.location.href = url;
   });
+  if (isAndroidApp()) {
+    PawNailNative.getInfo()
+      .then((i) => {
+        chatRenderer = Number(i.chat) || 0;
+      })
+      .catch(() => {});
+  }
   if (!(await nativeServerOn())) return;
   const perm = await P.checkPermissions();
-  if (perm.receive === "granted" && savedToken()) registerToken().catch(() => {});
+  // Đã bật từ trước (token đã lưu) → làm mới token; vừa đăng xuất rồi đăng nhập lại (RELOGIN_KEY) → đăng ký lại cho
+  // tài khoản mới. Chưa đăng nhập → máy chủ trả 401, cờ vẫn giữ cho lần sau.
+  if (perm.receive === "granted" && (savedToken() || reloginPending())) registerToken().catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +222,18 @@ export async function initNativePush() {
 /** Đang chạy trong app Android có plugin PawNailNative (không phải bong bóng chat). */
 export const isAndroidApp = () =>
   typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && Capacitor.isPluginAvailable("PawNailNative");
+
+// Phiên bản bộ vẽ thông báo chat native (PawNailNative.getInfo().chat — versionCode 3+); 0 = không có / chưa đọc.
+let chatRenderer = 0;
+
+/**
+ * App Android này TỰ báo tin nhắn mới (kêu + rung + hiện nổi) khi ở nền: có bộ vẽ native VÀ máy đã đăng ký thông báo.
+ * Khi đó web đừng phát thêm âm thanh / toast lúc trang bị ẩn (WebView của Capacitor vẫn chạy JS + Pusher ở nền → trước
+ * đây kêu 2 lần cùng lúc).
+ */
+export function nativeHandlesChatAlerts(): boolean {
+  return chatRenderer >= 1 && isAndroidApp() && !!savedToken();
+}
 
 let lastActive: string | null | undefined;
 /**

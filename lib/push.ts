@@ -81,7 +81,7 @@ export async function sendPush(userIds: string | string[], payload: PushPayload)
  * (app versionCode 3+) của CHÍNH họ. Chỉ gửi khi trước lần đọc này có tin của người khác chưa đọc (tức là có thể đang
  * có thông báo) — xem lại một cuộc trò chuyện đã đọc rồi không tốn lượt đẩy nào. Không bao giờ ném lỗi.
  */
-export async function sendChatReadSync(userId: string, cid: string, prevReadAt: Date | null): Promise<number> {
+export async function sendChatReadSync(userId: string, cid: string, prevReadAt: Date | null, readAt?: Date | null): Promise<number> {
   if (!fcmEnabled() || !userId || !cid) return 0;
   try {
     const subs = await prisma.pushSubscription.findMany({ where: { userId, endpoint: { startsWith: "fcm:" } }, select: { id: true, endpoint: true, p256dh: true }, take: 20 });
@@ -91,7 +91,7 @@ export async function sendChatReadSync(userId: string, cid: string, prevReadAt: 
     const since = prevReadAt ?? new Date(Date.now() - 7 * 86_400_000);
     const unread = await prisma.message.findFirst({ where: { conversationId: cid, senderId: { not: userId }, createdAt: { gt: since } }, select: { id: true } });
     if (!unread) return 0;
-    const r = await sendFcmRead(rich.map((s) => s.endpoint.slice(4)), cid);
+    const r = await sendFcmRead(rich.map((s) => s.endpoint.slice(4)), cid, (readAt ?? new Date()).getTime());
     const dead = rich.filter((s) => r.dead.includes(s.endpoint.slice(4))).map((s) => s.id);
     if (dead.length) await prisma.pushSubscription.deleteMany({ where: { id: { in: dead } } });
     return r.sent;

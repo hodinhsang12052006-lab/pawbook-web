@@ -21,7 +21,7 @@ const {
   CHAT_TEXT_MAX,
   RICH_CHAT_MIN_BUILD,
 } = await import("../../lib/fcm");
-const { APP_ORIGIN, chatPushAvatar, chatPushTitle, chatPushUrl } = await import("../../lib/chatPush");
+const { APP_ORIGIN, chatPushAvatar, chatPushLegacyTitle, chatPushTitle, chatPushUrl, cleanDisplayName, isUnnamedGroup } = await import("../../lib/chatPush");
 type FcmPayload = import("../../lib/fcm").FcmPayload;
 
 let pass = 0, fail = 0;
@@ -90,9 +90,9 @@ ok("F0", "Mốc build mặc định = 3 (versionCode 3 là bản đầu có serv
 {
   for (const [id, b] of [["F12a", null], ["F12b", 2], ["F12c", 0]] as const) {
     const m = build("tokOld", b, chatPayload());
-    ok(id, `Chat tới app build ${b} → dạng notification như cũ (title/body + data url/tag) + android.notification.channel_id "general" + tag`,
+    ok(id, `Chat tới app build ${b} → dạng notification như cũ (title/body + data url/tag) + android.notification.channel_id "messages" (app chưa có kênh → FCM tự về kênh mặc định) + tag`,
       m.notification?.title === "Lan Nguyen" && m.notification?.body === "Chị ơi mai 10h còn chỗ không?" && m.data.url === `/messages?c=${CID}` && m.data.tag === `pn-chat-${CID}` &&
-        m.android.priority === "high" && m.android.notification?.channel_id === "general" && m.android.notification?.tag === `pn-chat-${CID}` && m.android.notification?.sound === "default" && !("type" in m.data),
+        m.android.priority === "high" && m.android.notification?.channel_id === "messages" && m.android.notification?.tag === `pn-chat-${CID}` && m.android.notification?.sound === "default" && !("type" in m.data),
       m);
   }
   const other = build("tokNew", 3, { title: "PawNail", body: "Ai đó thích bài của bạn", url: "/profile", tag: "pn-notify" });
@@ -143,23 +143,42 @@ ok("F19", "Lỗi FCM: 404 / UNREGISTERED / INVALID_ARGUMENT về token → token
     "https://res.cloudinary.com/x/image/upload/v1/a.svg",
     "https://user:pw@res.cloudinary.com/x/image/upload/v1/a.jpg",
     "javascript:alert(1)",
+    // Trên chính bitpawos.com chỉ được là ĐƯỜNG DẪN ẢNH: điện thoại người nhận tải kèm cookie phiên của họ.
+    "/api/auth/signout",
+    "/api/messages?x=1",
+    "/auth/login",
+    "/profile/abc",
+    "/admin/a.png",
+    "/uploads/../api/x.png",
+    "https://www.bitpawos.com/api/messages",
+    "https://bitpawos.com/auth/x.png",
     "",
     null,
   ];
   const leaks = rejected.filter((u) => chatPushAvatar(u) !== "");
-  ok("F23", "data: / dicebear SVG / ui-avatars / host lạ / http / '//' / SVG / video / có user:pass / rỗng → \"\" (app tự vẽ chữ cái đầu)", leaks.length === 0, leaks);
+  ok("F23", "data: / dicebear SVG / ui-avatars / host lạ / http / '//' / SVG / video / có user:pass / /api /auth /profile của bitpawos / rỗng → \"\" (app tự vẽ chữ cái đầu)", leaks.length === 0, leaks);
   ok("F24", "Tiêu đề: 1-1 = tên người gửi; nhóm có tên = tên nhóm; nhóm chưa đặt tên = 'Lan, Mai, Hoa +1'",
     chatPushTitle({ isGroup: false }, "Lan") === "Lan" && chatPushTitle({ isGroup: true, name: " Thợ Q7 " }, "Lan") === "Thợ Q7" &&
       chatPushTitle({ isGroup: true, name: null, participants: [{ id: "1", name: "Lan Nguyen" }, { id: "2", name: "Mai" }, { id: "3", name: "Hoa Tran" }, { id: "4", name: "Kim" }] }, "Lan") === "Lan, Mai, Hoa +1" &&
       chatPushTitle({ isGroup: true, participants: [] }, "Lan") === "Lan");
   ok("F25", "Link chat: /messages?c=<id> (mã hoá ký tự lạ)", chatPushUrl("abc") === "/messages?c=abc" && chatPushUrl("a&b") === "/messages?c=a%26b");
+  const unnamed = { isGroup: true, name: null, participants: [{ id: "k", name: "Kim Le" }, { id: "a", name: "Ava" }, { id: "l", name: "Lan" }] };
+  ok("F28", "Nhóm chưa đặt tên nhìn từ người nhận: bỏ chính người nhận ('Kim, Lan' cho Ava); dạng cũ 'Kim Le · Lan' (không lặp người gửi, không có người nhận); nhóm có tên giữ 'Người gửi · Nhóm'",
+    chatPushTitle(unnamed, "Kim Le", "a") === "Kim, Lan" && chatPushLegacyTitle(unnamed, "Kim Le", "k", "a") === "Kim Le · Lan" &&
+      chatPushLegacyTitle({ isGroup: true, participants: [{ id: "k", name: "Kim" }, { id: "a", name: "Ava" }] }, "Kim", "k", "a") === "Kim" &&
+      chatPushLegacyTitle({ isGroup: true, name: "Saturday Crew" }, "Kim", "k", "a") === "Kim · Saturday Crew" && chatPushLegacyTitle({ isGroup: false }, "Kim", "k", "a") === "Kim" &&
+      isUnnamedGroup(unnamed) && !isUnnamedGroup({ isGroup: true, name: "X" }) && !isUnnamedGroup({ isGroup: false }),
+    [chatPushTitle(unnamed, "Kim Le", "a"), chatPushLegacyTitle(unnamed, "Kim Le", "k", "a")]);
+  ok("F29", "Tên tự đặt mất ký tự bidi / độ rộng 0 (giả mạo thứ tự hiển thị), giữ ZWJ của emoji ghép",
+    cleanDisplayName("Ad\u202Emin\u200B\uFEFF") === "Admin" && chatPushTitle({ isGroup: true, name: "\u2066Crew\u2069" }, "x") === "Crew" && cleanDisplayName("Kim 👩‍👩‍👧") === "Kim 👩‍👩‍👧",
+    cleanDisplayName("Ad\u202Emin"));
 }
 
 // ---------- 6. "Đã đọc" → gỡ thông báo trên máy Android khác của chính mình ----------
 {
-  const r = buildFcmReadMessage("tokR", CID) as unknown as Msg;
-  ok("F27", "Tin 'đã đọc': data-only {type:read, v:1, cid}, ưu tiên thường, ttl 6 giờ, không notification",
-    !("notification" in r) && r.data.type === "read" && r.data.v === "1" && r.data.cid === CID && Object.keys(r.data).length === 3 && r.android.priority === "normal" && r.android.ttl === "21600s", r);
+  const r = buildFcmReadMessage("tokR", CID, 1_762_500_000_123) as unknown as Msg;
+  ok("F27", "Tin 'đã đọc': data-only {type:read, v:1, cid, ts = mốc đọc ms}, ưu tiên thường, ttl 6 giờ, không notification",
+    !("notification" in r) && r.data.type === "read" && r.data.v === "1" && r.data.cid === CID && r.data.ts === "1762500000123" && Object.keys(r.data).length === 4 && r.android.priority === "normal" && r.android.ttl === "21600s", r);
 }
 
 // ---------- 7. Web push giữ nguyên dạng cũ ----------

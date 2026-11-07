@@ -5,6 +5,8 @@
 //
 // Liên quan = có chung từ khoá CLDR tiếng Anh, chấm theo IDF (từ hiếm như "haha", "tears" nặng hơn từ chung như "face"):
 // tổng IDF ≥ 6 mới tính (dưới ngưỡng này là ghép nhầm kiểu 🔥 → 🛠️ vì cùng "tool"); cùng nhóm viết tay ("cười" → 😂 🤣) +8.
+// Từ quá chung (GENERIC: "feels", "crying"…) không được tính — trước đây 😂 gợi ý 😩 chỉ vì chung "crying" + "feels".
+// KHÔNG BAO GIỜ gợi ý nghĩa ngược (OPPOSITE, 2 chiều): gõ 👍 mà thanh có 👎 thì 1 lần chạm vội là gửi 👎 cho khách.
 // Mỗi ký tự chỉ 1 nhãn (ưu tiên bản động Noto). Thứ tự: Noto cùng ký tự → 3D cùng ký tự → liên quan (điểm, độ phổ biến).
 import { STICKER_GLYPH } from "./ids.generated";
 import { KEYWORDS_VI } from "./keywordsVi";
@@ -13,9 +15,32 @@ import type { Manifest } from "./manifest";
 import type { StickerId } from "./packs";
 
 const VS16 = /️/g;
+/** Từ khoá CLDR quá chung — không cộng điểm liên quan. */
+const GENERIC = new Set(["feels", "crying", "face", "hand", "finger", "sign", "symbol", "outlined"]);
+/** Cặp nghĩa ngược nhau (khoá ký tự không FE0F) — loại khỏi gợi ý theo cả 2 chiều. */
+const OPPOSITE_PAIRS: [string, string[]][] = [
+  ["👍", ["👎"]],
+  ["❤", ["💔"]],
+  ["😂", ["😩", "😭", "😢"]],
+  ["🤣", ["😩", "😭"]],
+  ["😆", ["😩"]],
+  ["✅", ["❌", "❎"]],
+  ["☺", ["☹"]],
+  ["🙂", ["🙁", "☹"]],
+];
 const SKIN = /[\u{1F3FB}-\u{1F3FF}]/gu;
 /** Khoá so ký tự: bỏ FE0F + màu da (nhãn dán không có biến thể màu da). */
 const glyphKey = (g: string) => g.replace(VS16, "").replace(SKIN, "");
+const OPPOSITE = (() => {
+  const out = new Map<string, Set<string>>();
+  const add = (a: string, b: string) => (out.get(a) ?? out.set(a, new Set()).get(a)!).add(b);
+  for (const [a, bs] of OPPOSITE_PAIRS)
+    for (const b of bs) {
+      add(glyphKey(a), glyphKey(b));
+      add(glyphKey(b), glyphKey(a));
+    }
+  return out;
+})();
 
 let fluentByGlyph: Map<string, StickerId[]> | null = null;
 function fluentFor(key: string): StickerId[] {
@@ -77,12 +102,13 @@ export function relatedStickers(glyph: string, m: Manifest, limit = 12): Sticker
   const self = Object.keys(m).find((id) => glyphKey(m[id].glyph) === key && m[id].src === "noto") ?? Object.keys(m).find((id) => glyphKey(m[id].glyph) === key);
   const mine = new Set(self ? kw.get(self) ?? [] : []);
   const peers = handPeers(key);
+  const banned = OPPOSITE.get(key);
   const score = new Map<StickerId, number>();
   for (const [id, k] of kw) {
     const g = glyphKey(m[id].glyph);
-    if (g === key) continue;
+    if (g === key || banned?.has(g)) continue;
     let s = peers.has(g) ? 8 : 0;
-    for (const w of k) if (mine.has(w)) s += Math.log(n / (df.get(w) ?? n));
+    for (const w of k) if (mine.has(w) && !GENERIC.has(w)) s += Math.log(n / (df.get(w) ?? n));
     if (s >= 6) score.set(id, s);
   }
   const ranked = [...score.entries()].sort(([a, sa], [b, sb]) => sb - sa || (m[b].p ?? 0) - (m[a].p ?? 0) || (a < b ? -1 : 1)).map(([id]) => id);

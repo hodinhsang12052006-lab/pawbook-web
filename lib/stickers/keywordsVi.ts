@@ -14,6 +14,8 @@ const ENTRIES: [keys: string[], targets: ViTarget[]][] = [
   [["chúc mừng", "mừng", "congrats"], ["pack:celebrate", "pack:party"]],
   [["sinh nhật"], ["🎂", flId("Birthday cake"), flId("Cupcake")]],
   [["cười", "haha", "hihi"], ["😂", "🤣"]],
+  // CLDR chỉ giữ 8 từ / emoji — "laugh", "lol" rơi mất khỏi 😂 (tab Emoji tìm "laugh" không ra 😂)
+  [["laugh", "lol", "lmao"], ["😂", "🤣", "😆"]],
   [["khóc", "buồn"], ["😭", "🥺", "🥲"]],
   [["giận", "tức"], ["😡", "😤"]],
   [["ok", "được", "đồng ý"], ["👍", "👌", flId("Check mark button")]],

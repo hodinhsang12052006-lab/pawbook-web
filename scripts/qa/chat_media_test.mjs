@@ -109,11 +109,26 @@ const onResp = async (r) => {
   firstLoad.push({ u: u.slice(-60), n: b ? b.length : Number(r.headers()["content-length"] || 0) });
 };
 p.on("response", onResp);
+// Event Timing: thời lượng tương tác (≈ INP) khi đổi tab / đổi bộ
+await p.evaluate(() => {
+  window.__evt = [];
+  try {
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__evt.push({ n: e.name, d: Math.round(e.duration) }))).observe({ type: "event", durationThreshold: 16, buffered: false });
+  } catch {}
+});
 await panel(p).getByRole("tab", { name: "Stickers" }).click();
 const search = panel(p).getByRole("textbox", { name: "Search stickers" });
 await search.waitFor({ timeout: 8000 });
 await p.waitForTimeout(3000);
 p.off("response", onResp);
+for (const k of ["hearts", "beauty", "feelings"]) {
+  await panel(p).locator(`[data-pack="${k}"]`).click();
+  await p.waitForTimeout(500);
+}
+const evts = await p.evaluate(() => window.__evt || []);
+const worstEvt = evts.filter((e) => /pointer|click|key/.test(e.n)).reduce((m, e) => Math.max(m, e.d), 0);
+R.check("CM1c", `Đổi tab Nhãn dán + đổi bộ 3 lần: tương tác chậm nhất ${worstEvt}ms (mục tiêu < 100ms trên máy này)`, worstEvt < 100 || evts.length === 0, JSON.stringify(evts.slice(0, 12)));
+await panel(p).getByTestId("sticker-scroll").evaluate((el) => (el.scrollTop = 0));
 const packIcons = await panel(p).locator("[data-pack]").count();
 R.check("CM1", "Mở Nhãn dán: có ô tìm + ≥ 12 icon bộ trên thanh", (await search.isVisible()) && packIcons >= 12, String(packIcons));
 const kb = Math.round(firstLoad.reduce((a, x) => a + x.n, 0) / 1024);
@@ -167,6 +182,10 @@ R.check("CM4b", "Esc đóng xem trước nhưng bảng vẫn mở", !(await peek
 // gửi 3 sticker liền (1 Fluent 3D) — bảng KHÔNG đóng
 await search.fill("");
 await p.waitForTimeout(300);
+await panel(p).locator('[data-pack="beauty"]').scrollIntoViewIfNeeded();
+await p.waitForTimeout(1200);
+const barImgs = await panel(p).locator("[data-pack] img").evaluateAll((imgs) => imgs.filter((i) => { const r = i.getBoundingClientRect(); const b = i.closest("[role=tablist]").getBoundingClientRect(); return r.right > b.left && r.left < b.right; }).map((i) => i.complete && i.naturalWidth > 0));
+R.check("CM3b", "Xoá ô tìm → thanh bộ hiện lại, icon trong tầm nhìn đều tải được (kể cả bộ 3D cuối thanh)", barImgs.length >= 6 && barImgs.every(Boolean), JSON.stringify(barImgs));
 const before = await p.locator(".m-row .m-sticker-img").count();
 const picks = ["😂", "👍", "fl:nail_polish"];
 let stayed = true;

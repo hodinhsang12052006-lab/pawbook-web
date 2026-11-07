@@ -9,6 +9,8 @@ import {
   Briefcase, Palette, Receipt, TrendingUp, Clock, Globe2, CalendarDays, ChevronRight, Bot, MapPin, LayoutGrid,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
+import BrandLogo from "@/components/brand/BrandLogo";
+import { officialAvatarUrl } from "@/lib/brand";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import Flag from "@/components/ui/Flag";
 import FeedPostCard, { type FeedPost } from "@/components/feed/FeedPostCard";
@@ -112,8 +114,9 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
         <div className="relative h-32 overflow-hidden bg-gradient-to-br from-pink-600 via-fuchsia-600 to-indigo-700 sm:h-48 lg:h-56">
           <div className="absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.5)_1px,transparent_1px)] [background-size:28px_28px]" />
           <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cho1.jpg" alt="" aria-hidden className="absolute -right-6 -top-6 h-48 w-48 rotate-12 rounded-[2.5rem] object-cover opacity-25 sm:h-64 sm:w-64 lg:right-10 lg:h-72 lg:w-72" />
+          <span aria-hidden className="absolute -right-6 -top-6 h-48 w-48 rotate-12 overflow-hidden rounded-[2.5rem] opacity-25 sm:h-64 sm:w-64 lg:right-10 lg:h-72 lg:w-72">
+            <BrandLogo size={288} />
+          </span>
           <div className="absolute bottom-3 right-4 rounded-full bg-black/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/90 backdrop-blur sm:right-6 sm:text-[11px]">{tr("PawNail · Chính thức", "PawNail · Official")}</div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/80" />
         </div>
@@ -121,7 +124,7 @@ export default function OfficialProfile({ profile, isSelf }: Props) {
         <div className="relative px-4 pb-4 sm:px-6 lg:px-8">
           <div className="-mt-11 flex items-end justify-between gap-3 sm:-mt-14">
             <span className="relative">
-              <Avatar src={profile.avatarUrl || "/cho1.jpg"} name={profile.name} seed={profile.id} loading="eager" className="h-[88px] w-[88px] shadow-xl shadow-black/50 ring-4 ring-slate-950 sm:h-28 sm:w-28 lg:h-32 lg:w-32" />
+              <Avatar src={officialAvatarUrl(profile.avatarUrl)} name={profile.name} seed={profile.id} loading="eager" className="h-[88px] w-[88px] shadow-xl shadow-black/50 ring-4 ring-slate-950 sm:h-28 sm:w-28 lg:h-32 lg:w-32" />
               <span className="absolute bottom-1 right-1 rounded-full bg-slate-950 p-0.5"><VerifiedBadge className="h-7 w-7" /></span>
             </span>
             <div className="hidden items-center gap-2 pb-1 sm:flex">

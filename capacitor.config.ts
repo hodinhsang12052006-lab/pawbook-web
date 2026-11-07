@@ -45,7 +45,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1500,
       launchAutoHide: true,
-      backgroundColor: "#020617", // slate-950 — khớp nền tối thương hiệu hiện tại
+      backgroundColor: "#1c1521", // v2 plum canvas — khớp themeColor + splash (logo B)
       androidSplashResourceName: "splash",
       showSpinner: false,
       splashFullScreen: true,
@@ -55,7 +55,7 @@ const config: CapacitorConfig = {
     // bắt buộc edge-to-edge) — vẫn giữ cho iOS / Android cũ.
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#020617",
+      backgroundColor: "#1c1521",
     },
     // Capacitor 8 SystemBars (Android 15+ edge-to-edge): đệm vùng tai thỏ/thanh
     // điều hướng qua CSS safe-area, icon thanh trạng thái màu sáng trên nền tối.

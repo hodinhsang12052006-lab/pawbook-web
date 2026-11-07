@@ -6,7 +6,7 @@
 // < 1024: calm 56 px header + form. The form title is the page's only <h1>; 0 infinite animations.
 import "@/components/marketing/marketing.css";
 import React from "react";
-import Image from "next/image";
+import BrandLogo from "@/components/brand/BrandLogo";
 import Link from "next/link";
 import { fraunces } from "@/lib/fonts";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -24,7 +24,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <aside className="pn-auth-panel" aria-label="PawNail">
           <Link href="/" className="pn-auth-brand">
             <span className="pn-auth-logo">
-              <Image src="/cho1.jpg" alt="" fill sizes="36px" className="object-cover" />
+              <BrandLogo size={36} />
             </span>
             <span className="pn-wordmark">PawNail</span>
           </Link>

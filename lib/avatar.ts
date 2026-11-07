@@ -8,7 +8,7 @@ const PLACEHOLDER_PATTERNS = [
   "dicebear.com",
   "ui-avatars.com",
   "photo-1487412947147-5cebf100ffc2", // ảnh stock fallback cũ ở Navbar/Sidebar
-  "/cho1.jpg",
+  "/cho1.jpg", // linh vật cũ (đã gỡ khỏi mọi bề mặt 07/11/2026, file đã xoá) — URL cũ trong DB hiện chữ cái đầu
 ];
 
 /** true khi URL rỗng hoặc chỉ là ảnh giữ chỗ — không phải ảnh người dùng tự tải. */

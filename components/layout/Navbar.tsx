@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import BrandLogo from "@/components/brand/BrandLogo";
 import { Plus, MessageSquare, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -32,14 +32,14 @@ export default function Navbar() {
         {guestChrome ? (
           <Link href="/" className="flex items-center gap-2.5 rounded-xl" aria-label="PawNail">
             <span className="pn-nav-logo">
-              <Image src="/cho1.jpg" alt="" fill sizes="36px" className="object-cover" priority />
+              <BrandLogo size={36} />
             </span>
             <span className="pn-wordmark hidden sm:inline">PawNail</span>
           </Link>
         ) : (
         <div onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer">
           <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg shadow-pink-500/20 refined:shadow-none">
-            <Image src="/cho1.jpg" alt="PawNail" fill sizes="40px" className="object-cover" />
+            <BrandLogo size={40} alt="PawNail" />
           </div>
           <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-lg font-extrabold tracking-wide text-transparent hidden sm:inline refined:via-pink-400 refined:to-pink-400">
             PawNail

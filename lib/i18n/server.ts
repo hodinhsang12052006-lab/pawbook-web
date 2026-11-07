@@ -33,13 +33,17 @@ export function alternates(path: string, lang: Locale, canonicalLang: Locale = l
   };
 }
 
-/** openGraph ghi đè NGUYÊN object của layout cha — luôn kèm siteName + locale. */
+/** Ảnh chia sẻ mặc định = logo B (logo DUY NHẤT của PawNail; trang có ảnh riêng — mẫu nail, tin tuyển — tự ghi đè). */
+export const BRAND_OG_IMAGE = { url: "/brand/logo-b-512.jpg", width: 512, height: 512, alt: BRAND };
+
+/** openGraph ghi đè NGUYÊN object của layout cha — luôn kèm siteName + locale (+ logo khi trang không có ảnh). */
 export function openGraph(lang: Locale, og: NonNullable<Metadata["openGraph"]> = {}): NonNullable<Metadata["openGraph"]> {
   return {
     siteName: BRAND,
     type: "website",
     locale: lang === "vi" ? "vi_VN" : "en_US",
     alternateLocale: lang === "vi" ? ["en_US", "en_AU"] : ["en_AU", "vi_VN"],
+    images: [BRAND_OG_IMAGE],
     ...og,
   } as NonNullable<Metadata["openGraph"]>;
 }

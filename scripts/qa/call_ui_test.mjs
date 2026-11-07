@@ -221,6 +221,7 @@ if (SCENARIO === "off") {
       timeline.push(await B.page.evaluate(() => [!!document.querySelector("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton") ? "Z" : "-", !!document.querySelector("[data-call-hangup]") ? "H" : "-", !!document.querySelector("[data-call-error]") ? "E" : "-"].join("")));
       await B.page.waitForTimeout(500);
     }
+    await shot(B.page, "call_slow_login_end_button_412");
     const leaveBtn = B.page.locator("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton, [data-call-hangup]").first();
     const leaveShown = await leaveBtn.isVisible().catch(() => false);
     if (leaveShown) await leaveBtn.click();

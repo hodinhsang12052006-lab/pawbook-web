@@ -81,7 +81,8 @@ try {
   if (posts[0]) {
     if (posts[0].likedByMe) await owner.req(`/api/posts/${posts[0].id}/like`, { method: "POST" });
     await owner.req(`/api/posts/${posts[0].id}/like`, { method: "POST" });
-    const got = await waitPush(phone, (p) => /đã thích bài viết/.test(p.body));
+    // Người nhận đọc thông báo bằng ngôn ngữ của họ (lib/push.ts tách EN / VI) — tài khoản mẫu là EN.
+    const got = await waitPush(phone, (p) => /đã thích bài viết|liked your post/.test(p.body));
     R.check("PU5", "Có người thích bài → thông báo đẩy (giải mã đúng nội dung + link)", got && got.p.url === "/?tab=feed" && got.p.title === "PawNail", JSON.stringify(got?.p));
     R.check("PU6", "Gói tin chuẩn Web Push: mã hoá aes128gcm + chữ ký VAPID + TTL", got && got.headers["content-encoding"] === "aes128gcm" && /^vapid t=/.test(got.headers.authorization || "") && Number(got.headers.ttl) > 0, JSON.stringify(got?.headers));
   } else {
@@ -105,7 +106,7 @@ try {
   // Cuộc gọi
   await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "offer", callType: "video", callId: "qapush1" } });
   const call = await waitPush(phone, (p) => p.tag === "pn-call");
-  R.check("PU9", "Cuộc gọi đến → push '📹 Cuộc gọi video đến'", call && /Cuộc gọi video/.test(call.p.title), JSON.stringify(call?.p));
+  R.check("PU9", "Cuộc gọi đến → push 'Cuộc gọi video đến' / 'Incoming video call' (theo ngôn ngữ người nhận), mở chat với người gọi", call && /Cuộc gọi video|Incoming video call/.test(call.p.title) && call.p.url === `/messages?to=${owner.userId}`, JSON.stringify(call?.p));
   await owner.req("/api/calls", { method: "POST", json: { targetId: tech.userId, action: "reject" } });
 
   // Việc gấp cùng bang
@@ -113,7 +114,7 @@ try {
   const title = `QA push việc gấp ${Date.now() % 1e5}`;
   await owner.req("/api/jobs", { method: "POST", json: { title, salonName: "QA Push Nails", description: "", market: me.market, state: me.state, city: me.city || "LA", salaryType: "Bao lương tuần", salaryAmount: "$1,500/tuần", skills: [], benefits: [], phone: "4085550122", isUrgent: true } });
   const job = await waitPush(phone, (p) => p.body.includes(title));
-  R.check("PU10", "Việc gấp cùng bang → push '🔥 Việc gấp gần bạn' mở đúng tin", job && /Việc gấp/.test(job.p.title) && /^\/jobs\//.test(job.p.url), JSON.stringify(job?.p));
+  R.check("PU10", "Việc gấp cùng bang → push 'Việc gấp gần bạn' / 'Urgent job near you' mở đúng tin", job && /Việc (cần )?gấp|Urgent job/.test(job.p.title) && /^\/jobs\//.test(job.p.url), JSON.stringify(job?.p));
 
   // Thiết bị đã huỷ (410) → tự dọn khỏi DB
   const old = makeDevice(`gone-${Date.now()}`);

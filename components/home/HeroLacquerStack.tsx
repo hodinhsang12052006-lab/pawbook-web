@@ -72,8 +72,9 @@ export default function HeroLacquerStack() {
           );
         })}
       </div>
-      <p className="pn-stack-cap" aria-hidden="true">{label}</p>
+      {/* the picker reads document.currentScript.previousElementSibling = the stack: keep it RIGHT after the stack */}
       <script dangerouslySetInnerHTML={{ __html: heroPickerScript(lang) }} />
+      <p className="pn-stack-cap" aria-hidden="true">{label}</p>
       <noscript>
         <div className="pn-stack">
           {HERO_SLOTS.map((slot) => {

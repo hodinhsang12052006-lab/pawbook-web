@@ -3,7 +3,7 @@
 //   node scripts/qa/design_page_test.mjs
 import { chromium, devices } from "playwright";
 import { createClient } from "@libsql/client";
-import { BASE_URL, Client, Results, registerUser } from "./lib.mjs";
+import { BASE_URL, Client, Results, registerUser, PUSHER_CLIENT_MISSING } from "./lib.mjs";
 
 const R = new Results("Trang riêng mẫu nail");
 const db = createClient({ url: process.env.QA_DB_URL?.startsWith("file:") ? process.env.QA_DB_URL : "file:prisma/dev.db" }) /* DB QA local: scripts/qa/make-qa-db.sh */;
@@ -63,7 +63,8 @@ try {
   const page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e).slice(0, 120)));
-  page.on("console", (m) => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 120)); });
+  // a local build without NEXT_PUBLIC_PUSHER_* logs "Thiếu cấu hình Pusher Client" on every page (env, not this page)
+  page.on("console", (m) => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text()) && !PUSHER_CLIENT_MISSING.test(m.text())) errs.push(m.text().slice(0, 120)); });
   await page.goto(`${BASE_URL}/designs/${d.id}`, { waitUntil: "networkidle" });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   const rel = await page.locator('a[href^="/designs/"]').count();

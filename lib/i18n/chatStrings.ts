@@ -11,7 +11,8 @@ const seen = () => tr("Đã xem", "Seen");
 const sent = () => tr("Đã gửi", "Sent");
 const you = () => tr("Bạn", "You");
 const jumpToLatest = () => tr("Xuống tin mới nhất", "Jump to latest");
-const attach = () => tr("Đính kèm ảnh, GIF, ghi âm", "Attach photo, GIF, voice");
+/** gif = false khi máy chủ chưa có khoá GIPHY / Tenor (mục GIF bị ẩn khỏi menu "+") */
+const attach = (gif = true) => (gif ? tr("Đính kèm ảnh, GIF, ghi âm", "Attach photo, GIF, voice") : tr("Đính kèm ảnh, ghi âm", "Attach photo, voice"));
 const record = () => tr("Ghi âm tin nhắn thoại", "Record a voice message");
 const openImage = () => tr("Mở ảnh toàn màn hình", "Open image full screen");
 const joined = (when: string) => tr(`Tham gia ${when}`, `Joined ${when}`);

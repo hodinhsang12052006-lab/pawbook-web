@@ -1,6 +1,8 @@
 // Nhãn dán / GIF / hình nền trong Messenger — điện thoại Android 412×915 (cảm ứng, isMobile), tiếng Anh.
-// CHỈ chạy với server local (scripts/qa/lib.mjs chặn bitpawos.com). Không cần khoá GIPHY: tab GIF thật phải ở trạng
-// thái "chưa dùng được"; phần GIF có kết quả dùng /api/gifs GIẢ LẬP (route intercept) + ảnh giả trên media.giphy.com.
+// CHỈ chạy với server local (scripts/qa/lib.mjs chặn bitpawos.com). Không cần khoá GIPHY: máy chủ không có khoá → MỌI lối
+// vào GIF bị ẩn (tab GIF, mục GIF ở menu "+", nút "Search GIFs for …"); phần GIF có kết quả dùng /api/gifs GIẢ LẬP (route
+// intercept, kể cả ?probe=1) + ảnh giả trên media.giphy.com.
+// Bảng mở trên điện thoại nằm TRONG khung soạn tin: tin vừa gửi (bảng vẫn mở) phải thấy được, không bị bảng che.
 //   BASE_URL=http://localhost:3100 [QA_EMAIL_A=… QA_EMAIL_B=…] node scripts/qa/chat_media_test.mjs
 import fs from "node:fs";
 import path from "node:path";
@@ -49,6 +51,18 @@ async function longPress(page, x, y, ms = 520) {
   await cdp.detach().catch(() => {});
 }
 const panel = (page) => page.getByRole("dialog", { name: "Pick emoji" });
+// Menu "+" (đính kèm): có mục "Insert GIF" không — mở rồi đóng lại
+async function attachMenuHasGif(page) {
+  await page.getByRole("button", { name: /^(Attach|Đính kèm)/ }).first().click();
+  const menu = page.locator(".m-attach-sheet[role=menu]");
+  await menu.waitFor({ timeout: 4000 });
+  const n = await menu.getByRole("menuitem", { name: /Insert GIF/ }).count();
+  const label = await page.getByRole("button", { name: /^(Attach|Đính kèm)/ }).first().getAttribute("aria-label");
+  // đóng: chạm lớp phủ phía trên (cả màn hình, ngoài menu)
+  await page.mouse.click(206, 140);
+  await menu.waitFor({ state: "detached", timeout: 4000 }).catch(() => {});
+  return n + (n && !/GIF/.test(label || "") ? 100 : 0) + (!n && /GIF/.test(label || "") ? 1000 : 0);
+}
 async function openPanel(page) {
   if (!(await panel(page).isVisible().catch(() => false))) await page.getByRole("button", { name: "Emoji", exact: true }).click();
   await panel(page).waitFor({ timeout: 8000 });
@@ -73,6 +87,7 @@ await A.ctx.route(/^https:\/\/media\.giphy\.com\/media\/mock\d+\//, (r) => {
 });
 await A.ctx.route(/\/api\/gifs(\?|$)/, (r) => {
   if (!mockGifs) return r.fallback();
+  if (new URL(r.request().url()).searchParams.get("probe") === "1") return r.fulfill({ status: 200, contentType: "application/json", headers: { "cache-control": "no-store" }, body: JSON.stringify({ enabled: true, provider: "giphy" }) });
   const q = new URL(r.request().url()).searchParams.get("q") || "";
   r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ enabled: true, provider: "giphy", results: mockResults(q.replace(/\W/g, "")), next: null }) });
 });
@@ -100,13 +115,14 @@ R.check("CM0", "API: sticker 'fl:nail_polish' và '💅' → 201; 'hello' → 40
 const p = A.page;
 await openThread(p, `to=${B.me.id}`);
 await openPanel(p);
-// ngân sách tải lần đầu (bộ nhớ đệm trình duyệt trống): ≤ 30 ảnh nhỏ, ≤ 350 KB, chưa tải bản động (512.webp)
+// ngân sách tải lần đầu (bộ nhớ đệm trình duyệt trống): ≤ 30 ảnh nhỏ, ≤ 350 KB; hình động = lottie.json của Noto (ghim
+// /17.0/), tối đa 12 file cho mục đang xem; không còn 512.webp nặng
 const firstLoad = [];
 const onResp = async (r) => {
   const u = r.url();
   if (!/fonts\.gstatic\.com\/s\/e\/notoemoji|cdn\.jsdelivr\.net\/gh\/microsoft|\/_next\/image\?url=/.test(u)) return;
   const b = await r.body().catch(() => null);
-  firstLoad.push({ u: u.slice(-60), n: b ? b.length : Number(r.headers()["content-length"] || 0) });
+  firstLoad.push({ u: u.slice(-60), full: u, n: b ? b.length : Number(r.headers()["content-length"] || 0) });
 };
 p.on("response", onResp);
 // Event Timing: thời lượng tương tác (≈ INP) khi đổi tab / đổi bộ
@@ -131,10 +147,22 @@ R.check("CM1c", `Đổi tab Nhãn dán + đổi bộ 3 lần: tương tác chậ
 await panel(p).getByTestId("sticker-scroll").evaluate((el) => (el.scrollTop = 0));
 const packIcons = await panel(p).locator("[data-pack]").count();
 R.check("CM1", "Mở Nhãn dán: có ô tìm + ≥ 12 icon bộ trên thanh", (await search.isVisible()) && packIcons >= 12, String(packIcons));
-const kb = Math.round(firstLoad.reduce((a, x) => a + x.n, 0) / 1024);
-const animEarly = firstLoad.filter((x) => /512\.webp/.test(x.u)).length;
-R.check("CM1b", `Lần mở đầu: ${firstLoad.length} ảnh nhỏ, ${kb} KB (≤ 30 ảnh, ≤ 350 KB), không tải bản động`, firstLoad.length <= 30 && kb <= 350 && animEarly === 0, JSON.stringify({ n: firstLoad.length, kb, animEarly }));
+const stills = firstLoad.filter((x) => !/lottie\.json/.test(x.u));
+const lotties = firstLoad.filter((x) => /lottie\.json/.test(x.u));
+const kb = Math.round(stills.reduce((a, x) => a + x.n, 0) / 1024);
+const animKb = Math.round(lotties.reduce((a, x) => a + x.n, 0) / 1024);
+const heavy = firstLoad.filter((x) => /512\.webp|\/latest\//.test(x.full)).length;
+const unpinned = firstLoad.filter((x) => /fonts\.gstatic\.com/.test(x.full) && !/\/notoemoji\/17\.0\//.test(x.full)).length;
+R.check("CM1b", `Lần mở đầu: ${stills.length} ảnh nhỏ, ${kb} KB (≤ 30 ảnh, ≤ 350 KB) + ${lotties.length} hình động lottie (${animKb} KB giải nén, ≤ 12 file); không 512.webp, Noto ghim /17.0/`,
+  stills.length <= 30 && kb <= 350 && lotties.length <= 12 && heavy === 0 && unpinned === 0, JSON.stringify({ n: stills.length, kb, lotties: lotties.length, animKb, heavy, unpinned }));
 await shot(p, "t01_stickers");
+// hình động thật sự chạy trong lưới (lottie SVG), không quá 12 ô cùng lúc
+const playing = [];
+for (let i = 0; i < 6; i++) {
+  playing.push(await panel(p).locator(".pn-stk-cell .pn-lottie svg").count());
+  await p.waitForTimeout(250);
+}
+R.check("CM1d", `Nhãn dán động trong lưới (lottie): số ô đang chạy ${JSON.stringify(playing)} — có chạy, tối đa 12`, Math.max(...playing) >= 1 && Math.max(...playing) <= 12, JSON.stringify(playing));
 
 // cuộn hết vùng cuộn (từng đoạn ~ 2/3 khung) → ảnh của MỌI mục tải được thật (naturalWidth > 0)
 const sections = await panel(p).locator("[data-section]").evaluateAll((els) => els.map((e) => e.getAttribute("data-section")));
@@ -199,6 +227,17 @@ for (const id of picks) {
 await p.waitForTimeout(1500);
 const after = await p.locator(".m-row .m-sticker-img").count();
 R.check("CM5", "Gửi 3 nhãn dán liền nhau (😂 👍 💅 3D) — bảng vẫn mở sau mỗi lần", stayed && after - before >= 3, JSON.stringify({ stayed, before, after }));
+// tin vừa gửi nằm TRỌN phía trên bảng (bảng trong khung soạn tin, khung tin co lại + dính đáy); không còn hàng gợi ý chen giữa
+const layout = await p.evaluate(() => {
+  const pnl = document.querySelector(".pn-media-panel")?.getBoundingClientRect();
+  const sc = document.querySelector(".m-scroll")?.getBoundingClientRect();
+  const rows = [...document.querySelectorAll(".m-row .m-sticker-img")];
+  const last = rows.pop()?.getBoundingClientRect();
+  const suggest = [...document.querySelectorAll(".pn-composer button")].some((b) => /^(Suggest|Gợi ý)$/.test((b.textContent || "").trim()) && b.getBoundingClientRect().height > 0);
+  return { pnlTop: pnl && Math.round(pnl.top), scBottom: sc && Math.round(sc.bottom), lastTop: last && Math.round(last.top), lastBottom: last && Math.round(last.bottom), suggest };
+});
+R.check("CM5b", "Bảng mở: nhãn dán vừa gửi thấy trọn phía trên bảng (không bị che), không có nút 'Suggest' chen giữa bảng và ô nhập",
+  layout.pnlTop != null && layout.lastBottom != null && layout.lastBottom <= layout.pnlTop && layout.lastBottom <= layout.scBottom + 1 && layout.lastTop >= 0 && !layout.suggest, JSON.stringify(layout));
 await shot(p, "t04_sent_three");
 
 // Fluent 128px trong bong bóng
@@ -225,21 +264,36 @@ const row = p.locator(".m-conv", { hasText: B.me.name }).first();
 const prev = await row.locator(".m-preview").innerText().catch(() => "");
 R.check("CM8", "Danh sách chat: tin cuối là nhãn dán → 'You: 💅 Sticker'", /You: 💅 Sticker/.test(prev), prev);
 
-// ---------- GIF: không có khoá → không ô GIF nào ----------
+// ---------- GIF: không có khoá → MỌI lối vào GIF bị ẩn ----------
+// tab nhớ lần trước là GIF → vẫn mở Nhãn dán
+await p.evaluate((uid) => localStorage.setItem(`pn_media_tab:${uid}`, "gif"), A.me.id);
 await openThread(p, `to=${B.me.id}`);
+const probe = await p.evaluate(async () => {
+  const r = await fetch("/api/gifs?probe=1");
+  return { status: r.status, cc: r.headers.get("cache-control"), body: await r.json().catch(() => null) };
+});
+const live = probe.body?.enabled === true;
 await openPanel(p);
-await panel(p).getByRole("tab", { name: "GIF" }).click();
-const disabled = await panel(p).getByTestId("gif-disabled").waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
-const gifTiles = await panel(p).locator('img[alt="GIF"]').count();
-const disabledCopy = await panel(p).getByTestId("gif-disabled").innerText().catch(() => "");
-const apiState = await p.evaluate(async () => (await fetch("/api/gifs?lang=en")).json().catch(() => null));
-const live = apiState?.enabled === true;
-R.check("CM9", live ? "GIF: máy chủ có khoá GIPHY/Tenor → bỏ qua kiểm trạng thái tắt" : "GIF chưa có khoá: 0 ô GIF, chữ 'GIFs aren't available right now.' + nút 'Send a sticker'", live || (disabled && gifTiles === 0 && /GIFs aren.t available right now/.test(disabledCopy) && /Send a sticker/.test(disabledCopy)), JSON.stringify({ disabled, gifTiles, disabledCopy, apiState }));
+const gifTab = await panel(p).getByRole("tab", { name: "GIF" }).count();
+const openedOn = await panel(p).getByRole("tab", { selected: true }).innerText().catch(() => "");
+await panel(p).getByRole("tab", { name: "Stickers" }).click().catch(() => {});
+await panel(p).getByRole("textbox", { name: "Search stickers" }).fill("zzqxv");
+await p.waitForTimeout(500);
+const gifHandoff = await panel(p).getByRole("button", { name: /Search GIFs for/ }).count();
 await shot(p, "t05_gif_disabled");
+await panel(p).getByRole("textbox", { name: "Search stickers" }).fill("");
 await p.keyboard.press("Escape");
+const attachGif = await attachMenuHasGif(p);
+R.check("CM9", live ? "GIF: máy chủ có khoá GIPHY/Tenor → bỏ qua kiểm trạng thái tắt" : "GIF chưa có khoá: /api/gifs?probe=1 → enabled:false + no-store; không có tab GIF, không có 'Insert GIF' ở menu '+', không có nút 'Search GIFs for …'; tab nhớ là GIF → mở Nhãn dán",
+  live || (probe.status === 200 && probe.body?.enabled === false && /no-store/.test(probe.cc || "") && gifTab === 0 && attachGif === 0 && gifHandoff === 0 && /Stickers/.test(openedOn)),
+  JSON.stringify({ probe, gifTab, attachGif, gifHandoff, openedOn }));
 
 // ---------- GIF có kết quả (API GIẢ LẬP + ảnh giả trên media.giphy.com) ----------
 mockGifs = true;
+// khoá vừa được thêm (giả lập): phiên mới hỏi lại probe → tab GIF + mục 'Insert GIF' hiện
+await p.evaluate(() => sessionStorage.removeItem("pn_gif_on"));
+await openThread(p, `to=${B.me.id}`);
+const attachGifOn = await attachMenuHasGif(p);
 const gifFails = [];
 const onFail = (r) => /giphy/.test(r.url()) && gifFails.push(`${r.url().slice(-40)} ${r.failure()?.errorText}`);
 const onGifResp = (r) => /media\.giphy/.test(r.url()) && r.status() !== 200 && gifFails.push(`${r.status()} ${r.url().slice(-40)}`);
@@ -250,6 +304,8 @@ await panel(p).getByRole("tab", { name: "GIF" }).click();
 await panel(p).locator('img[alt="GIF"]').first().waitFor({ timeout: 8000 }).catch(() => {});
 const powered = await panel(p).getByTestId("gif-attribution").isVisible().catch(() => false);
 const tilesN = await panel(p).locator('img[alt="GIF"]').count();
+const cols = await panel(p).locator(".pn-gif-cols").evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length).catch(() => 0);
+R.check("CM9b", `GIF có khoá (giả lập): mục 'Insert GIF' ở menu '+' hiện lại; lưới ${cols} cột ở màn 412px (3 khi bảng ≥ 340px)`, attachGifOn === 1 && cols === 3, JSON.stringify({ attachGifOn, cols }));
 await shot(p, "t06_gif_mock_trending");
 await panel(p).locator('img[alt="GIF"]').first().click(); // 480×270
 await p.waitForTimeout(1800);
@@ -261,6 +317,12 @@ const gifBubble = await p.locator(".m-media.m-gif").last().evaluate((m) => {
 }).catch(() => null);
 const ratioOk = gifBubble && Math.abs(gifBubble.w / gifBubble.h - 480 / 270) < 0.03 && gifBubble.w <= 241;
 R.check("CM10", "GIF (API giả lập): 'Powered by GIPHY' hiện, có ô GIF; gửi → bong bóng giữ đúng tỉ lệ 480×270 (≤ 240px, contain, nhãn GIF), bảng vẫn mở", powered && tilesN >= 4 && ratioOk && gifBubble.fit === "contain" && gifBubble.chip && gifStill, JSON.stringify({ powered, tilesN, gifBubble, gifStill, gifFails }));
+const gifVis = await p.evaluate(() => {
+  const pnl = document.querySelector(".pn-media-panel")?.getBoundingClientRect();
+  const g = [...document.querySelectorAll(".m-media.m-gif")].pop()?.getBoundingClientRect();
+  return { pnlTop: pnl && Math.round(pnl.top), top: g && Math.round(g.top), bottom: g && Math.round(g.bottom) };
+});
+R.check("CM10b", "GIF vừa gửi (bảng vẫn mở) thấy trọn phía trên bảng", gifVis.pnlTop != null && gifVis.bottom != null && gifVis.bottom <= gifVis.pnlTop && gifVis.top >= 0, JSON.stringify(gifVis));
 await shot(p, "t07_gif_sent");
 await p.keyboard.press("Escape");
 await p.goto(BASE_URL + "/messages");
@@ -268,6 +330,7 @@ await p.locator(".m-conv").first().waitFor({ timeout: 30000 });
 const prevGif = await p.locator(".m-conv", { hasText: B.me.name }).first().locator(".m-preview").innerText().catch(() => "");
 R.check("CM11", "Danh sách chat: tin cuối là GIF → 'You: GIF' (không còn '📷 Photo')", /You: GIF/.test(prevGif), prevGif);
 mockGifs = false;
+await p.evaluate(() => sessionStorage.removeItem("pn_gif_on"));
 
 // ---------- Hình nền ----------
 const wpEl = p.locator(".pn-msgr > div > .chat-wallpaper, .pn-msgr .chat-wallpaper:not(.pn-wp-preview)").first();
@@ -283,7 +346,25 @@ await openThread(p, `to=${B.me.id}`);
 let sheet = await openSheet();
 const presets = await sheet.locator("button[data-wp]").count();
 const photoTile = await sheet.getByTestId("wp-photo-tile").count();
-R.check("CM12", "Chat 1-1: menu ⋮ → 'Chat wallpaper' → 16 nền + ô 'Your photo'", presets === 16 && photoTile === 1, JSON.stringify({ presets, photoTile }));
+const tileSize = await sheet.evaluate((d) => {
+  const add = d.querySelector("[data-testid=wp-photo-tile] .pn-wp-swatch")?.getBoundingClientRect();
+  const first = d.querySelector("button[data-wp] .pn-wp-swatch")?.getBoundingClientRect();
+  return { add: add && [Math.round(add.width), Math.round(add.height)], preset: first && [Math.round(first.width), Math.round(first.height)], sameRow: !!add && !!first && Math.abs(add.top - first.top) < 2 };
+});
+R.check("CM12", "Chat 1-1: menu ⋮ → 'Chat wallpaper' → 16 nền + ô 'Add photo' cùng cỡ, cùng hàng đầu với các ô nền", presets === 16 && photoTile === 1 && tileSize.sameRow && tileSize.add?.join() === tileSize.preset?.join(), JSON.stringify({ presets, photoTile, tileSize }));
+// chọn nền ở nhóm cuối (Gradients) → thẻ xem trước vẫn nằm trọn trong màn hình (chỉ các ô nền cuộn)
+const dusk = sheet.locator('button[data-wp="dusk"]');
+await dusk.scrollIntoViewIfNeeded();
+await dusk.click();
+await p.waitForTimeout(250);
+const pv = await sheet.getByTestId("wp-preview").evaluate((el) => {
+  const r = el.getBoundingClientRect();
+  return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight, id: el.getAttribute("data-wallpaper"), scrolled: document.querySelector("[data-testid=wp-scroll]")?.scrollTop ?? -1 };
+});
+R.check("CM12b", "Chọn 'Dusk' (nhóm Gradients, phải cuộn) → thẻ xem trước vẫn thấy trọn + đổi sang Dusk", pv.id === "dusk" && pv.top >= 0 && pv.bottom <= pv.vh && pv.scrolled > 0, JSON.stringify(pv));
+await shot(p, "t08b_wallpaper_dusk_preview");
+await sheet.getByRole("button", { name: "Cancel" }).click();
+sheet = await openSheet();
 await sheet.locator('button[data-wp="marble"]').click();
 await p.waitForTimeout(250);
 const prevCard = await sheet.getByTestId("wp-preview").getAttribute("data-wallpaper");
@@ -363,6 +444,28 @@ R.check("CM16", "Ảnh của bạn: xử lý trên máy, lưu IndexedDB (pn-loca
   idb.keys?.length >= 1 && idb.size > 0 && idb.size <= 400 * 1024 && !uploads.length && photoAttr.tone === "photo",
   JSON.stringify({ idb, photoAttr, uploads: uploads.slice(0, 5), reqs: reqs.length }));
 await shot(p, "t11_photo_applied");
+
+// xoá ảnh đã lưu (nút ×): khỏi IndexedDB + nền về như trước
+sheet = await openSheet();
+await sheet.getByTestId("wp-photo-delete").first().click();
+await p.waitForTimeout(400);
+const tilesLeft = await sheet.locator("[data-wp-photo]").count();
+await sheet.getByRole("button", { name: "Cancel" }).click();
+await p.waitForTimeout(400);
+const idbAfter = await p.evaluate(
+  (uid) =>
+    new Promise((res) => {
+      const rq = indexedDB.open("pn-local", 1);
+      rq.onsuccess = () => {
+        const k = rq.result.transaction("wallpapers", "readonly").objectStore("wallpapers").getAllKeys();
+        k.onsuccess = () => res(k.result.map(String).filter((x) => x.startsWith(uid + ":")).length);
+      };
+      rq.onerror = () => res(-1);
+    }),
+  A.me.id
+);
+const afterDel = await wpAttr();
+R.check("CM18", "Nút × trên ảnh đã lưu: xoá khỏi máy (IndexedDB) + bỏ khỏi bảng; nền không còn là ảnh", tilesLeft === 0 && idbAfter === 0 && afterDel.tone !== "photo", JSON.stringify({ tilesLeft, idbAfter, afterDel }));
 
 R.check("CM17", "Không có lỗi JS", !A.errors.length && !B.errors.length, JSON.stringify([...A.errors, ...B.errors]).slice(0, 300));
 await browser.close();

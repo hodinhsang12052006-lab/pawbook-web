@@ -2142,7 +2142,7 @@ export default function MessagesContent({
                   ref={attachBtnRef}
                   onClick={() => { setAttachOpen((v) => !v); setShowEmoji(false); }}
                   aria-expanded={attachOpen}
-                  aria-label={CS.attach()}
+                  aria-label={CS.attach(gifOn === true)}
                   title={gifOn === true ? tr("Ảnh, ghi âm, GIF", "Photo, voice, GIF") : tr("Ảnh, ghi âm", "Photo, voice")}
                   className="m-cbtn"
                 >

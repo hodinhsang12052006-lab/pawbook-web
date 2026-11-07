@@ -2,7 +2,7 @@
 
 import { apiError } from "@/lib/i18n/apiError";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { WifiOff, MessageCircle, RefreshCw, MicOff } from "lucide-react";
+import { WifiOff, MessageCircle, RefreshCw, MicOff, PhoneOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -68,6 +68,9 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [callError, setCallError] = useState<CallError | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  // Thanh điều khiển của UIKit (có nút cúp máy) chỉ hiện khi SDK dựng xong phòng — mạng chậm thì trước đó là màn tối KHÔNG có nút
+  // nào. Tới lúc đó app tự hiện 1 nút "Kết thúc" (data-call-hangup).
+  const [zegoUi, setZegoUi] = useState(false);
 
   // Callback mới nhất mà không phải join lại phòng khi component cha re-render.
   const cbRef = useRef({ onConnected, onLeave, onPeerLeft });
@@ -86,6 +89,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     // Người dùng tự bấm nút cúp máy của UIKit (kể cả khi chưa đăng nhập xong phòng — mạng chậm) → cúp máy bình thường.
     let userHungUp = false;
     let peerWatcher: MutationObserver | null = null;
+    let uiWatcher: MutationObserver | null = null;
     let showJoinFailure: (() => void) | null = null;
     const peerTimer = setTimeout(() => {
       // lỗi cụ thể hơn (quyền, đăng nhập phòng bị từ chối…) đã hiện thì giữ nguyên
@@ -102,6 +106,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
     (async () => {
       try {
         setCallError(null);
+        setZegoUi(false);
         // Token sinh phía server (app/api/zego/token) — chỉ cấp cho đúng người
         // trong đúng phòng, secret không bao giờ nằm trong bundle JS.
         // Xin token + nạp SDK + xin quyền micro / camera SONG SONG. Quyền xin TRƯỚC khi vào phòng: bị chặn thì nói rõ + chỉ chỗ
@@ -186,6 +191,12 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
           true,
         );
         peerWatcher?.observe(mount, { childList: true, subtree: true });
+        uiWatcher = new MutationObserver(() => {
+          if (!mount.querySelector("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton")) return;
+          uiWatcher?.disconnect();
+          if (!cancelled) setZegoUi(true);
+        });
+        uiWatcher.observe(mount, { childList: true, subtree: true });
 
         zp.joinRoom({
           container: mount,
@@ -242,6 +253,7 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
       cancelled = true;
       clearTimeout(peerTimer);
       peerWatcher?.disconnect();
+      uiWatcher?.disconnect();
     };
     // micOn/camOn chỉ đọc lúc vào phòng — đổi giữa chừng do thanh điều khiển của ZEGOCLOUD lo, không join lại.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -275,6 +287,19 @@ export default function VideoCallRoom({ roomId, userId, userName, mode, peerId, 
   return (
     <div className="relative h-full w-full overflow-clip bg-slate-950 md:rounded-[1.75rem] md:border md:border-white/10 md:shadow-2xl md:shadow-black/50">
       <div ref={containerRef} className="h-full w-full" />
+
+      {!zegoUi && !callError && (
+        <button
+          type="button"
+          data-call-hangup=""
+          onClick={() => cbRef.current.onLeave?.()}
+          aria-label={tr("Kết thúc cuộc gọi", "End call")}
+          title={tr("Kết thúc cuộc gọi", "End call")}
+          className="absolute bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.5rem))] left-1/2 z-20 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-950/50 transition-transform active:scale-95"
+        >
+          <PhoneOff className="h-7 w-7" />
+        </button>
+      )}
 
       {callError && (
         <div role="alert" data-call-error={callError.perm ? "permission" : "other"} className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-slate-950/95 px-6 py-8 text-center backdrop-blur-md">

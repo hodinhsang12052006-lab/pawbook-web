@@ -210,15 +210,25 @@ if (SCENARIO === "off") {
     await openChat(B, A.me.id);
     await dial(A, "video");
     const bIn2 = await phase(B, "incoming", 15000);
+    const zegoReqs = [];
+    const t0z = Date.now();
+    B.ctx.on("request", (r) => slow.test(r.url()) && zegoReqs.push(`${Date.now() - t0z}ms ${r.url().slice(0, 70)}`));
+    B.page.on("websocket", (w) => slow.test(w.url()) && zegoReqs.push(`${Date.now() - t0z}ms ws ${w.url().slice(0, 70)}`));
     await B.page.getByRole("button", { name: /^(Answer|Trả lời)$/ }).click();
-    const leaveBtn = B.page.locator("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton").first();
-    const leaveShown = await leaveBtn.waitFor({ state: "visible", timeout: 8000 }).then(() => true).catch(() => false);
+    // dòng thời gian 0–8s: nút cúp máy của UIKit / nút "Kết thúc" của app / lỗi
+    const timeline = [];
+    for (let i = 0; i < 16; i++) {
+      timeline.push(await B.page.evaluate(() => [!!document.querySelector("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton") ? "Z" : "-", !!document.querySelector("[data-call-hangup]") ? "H" : "-", !!document.querySelector("[data-call-error]") ? "E" : "-"].join("")));
+      await B.page.waitForTimeout(500);
+    }
+    const leaveBtn = B.page.locator("#ZegoRoomMobileLeaveButton, #ZegoRoomLeaveButton, [data-call-hangup]").first();
+    const leaveShown = await leaveBtn.isVisible().catch(() => false);
     if (leaveShown) await leaveBtn.click();
     const bEnded = await B.page.locator("[data-call-phase]").waitFor({ state: "detached", timeout: 6000 }).then(() => true).catch(() => false);
     const aEnded = await A.page.locator("[data-call-phase]").waitFor({ state: "detached", timeout: 8000 }).then(() => true).catch(() => false);
     const bErr = await B.page.locator("[data-call-error]").count();
-    R.check("CL7", `Mạng chậm (máy chủ ZEGOCLOUD trả lời sau 9s): nghe máy rồi bấm cúp máy của UIKit khi phòng còn đang đăng nhập → kết thúc ở cả 2 máy, không hiện lỗi 'Couldn't join' (nút cúp máy ${leaveShown ? "có" : "KHÔNG"} hiện trước khi đăng nhập xong)`,
-      bIn2 && leaveShown && bEnded && aEnded && bErr === 0, JSON.stringify({ bIn2, leaveShown, bEnded, aEnded, bErr }));
+    R.check("CL7", `Mạng chậm (máy chủ ZEGOCLOUD trả lời sau 9s): nghe máy, phòng còn đang đăng nhập (UIKit chưa dựng thanh điều khiển) → nút "Kết thúc" của app có sẵn, bấm → kết thúc ở cả 2 máy, không hiện lỗi 'Couldn't join' (nút cúp máy ${leaveShown ? "có" : "KHÔNG"} hiện trong lúc đăng nhập)`,
+      bIn2 && leaveShown && bEnded && aEnded && bErr === 0, JSON.stringify({ bIn2, leaveShown, bEnded, aEnded, bErr, timeline: timeline.join(" "), zegoReqs: zegoReqs.slice(0, 5) }));
     await B.ctx.unroute(slow).catch(() => {});
   } else {
     // real: ZEGOCLOUD thật — 2 bên thông, hoặc mã lỗi thật

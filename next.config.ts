@@ -39,6 +39,8 @@ const mediaCaching = [
   {
     urlPattern: /^https:\/\/media\d*\.giphy\.com\/[^?#]+\.mp4(?:[?#]|$)/,
     handler: "NetworkOnly",
+    // next-pwa gắn plugin trang dự phòng vào options của MỌI quy tắc — thiếu options là build lỗi (precacheFallback)
+    options: {},
   },
   {
     urlPattern: /^https:\/\/media\d*\.giphy\.com\//,

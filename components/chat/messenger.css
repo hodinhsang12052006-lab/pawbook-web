@@ -462,7 +462,8 @@ html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet {
 @media (min-width: 640px) { html:not([data-ui-classic]) .pn-msgr .pn-wp-sheet { max-width: 480px; max-height: min(92dvh, 860px); border-radius: 24px; } }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; overflow: hidden;
-  height: 260px; aspect-ratio: 9 / 10; max-width: 100%; margin: 8px auto 0; padding: 10px; border-radius: 20px;
+  /* 9:10, ~260px cao ở 412px; chữ dài hơn (tiếng Việt 3 dòng) → thẻ tự cao thêm thay vì cắt viên "Hôm nay" */
+  width: 234px; aspect-ratio: 9 / 10; height: auto; max-width: 100%; margin: 8px auto 0; padding: 10px; border-radius: 20px;
   box-shadow: inset 0 0 0 1px var(--m-line-strong);
 }
 html:not([data-ui-classic]) .pn-msgr .pn-wp-preview .m-bubble { font-size: 13px; line-height: 18px; padding: 6px 10px; }

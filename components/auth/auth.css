@@ -177,3 +177,23 @@ html[lang="vi"] .pn-h1.pn-display { line-height: 40px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; border: 1px dashed var(--color-pn-line-strong); border-radius: 14px;
   background: rgb(255 240 246 / 0.03); color: #c2b7bf; font: 600 13px/18px var(--font-pn), system-ui, sans-serif; cursor: pointer;
 }
+
+/* links, block ghost button and grouped-list rows (role picker) — auth only */
+.pn-ghost--block { width: 100%; }
+.pn-a { color: #f59bbe; font-weight: 600; text-decoration: none; }
+@media (hover: hover) { .pn-a:hover { text-decoration: underline; text-underline-offset: 3px; } }
+:is(.pn-a, .pn-seg button, .pn-pill, .pn-row, .pn-social):focus-visible { outline: 2px solid #f59bbe; outline-offset: 3px; }
+.pn-list .pn-row:focus-visible { outline-offset: -2px; } /* inside the clipped list (overflow hidden): ring drawn inward */
+.pn-row {
+  position: relative; display: flex; align-items: center; gap: 14px; width: 100%; min-height: 76px; padding: 16px;
+  border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+.pn-row + .pn-row::before { content: ""; position: absolute; top: 0; left: 70px; right: 0; height: 1px; background: var(--color-pn-line); }
+@media (hover: hover) { .pn-row:hover { background: rgb(255 240 246 / 0.04); } }
+.pn-row:active { background: rgb(255 240 246 / 0.06); }
+.pn-row-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; background: rgb(255 240 246 / 0.06); color: #f59bbe; }
+.pn-row-icon > svg { width: 20px; height: 20px; }
+.pn-row-title { display: block; font: 600 17px/22px var(--font-pn), system-ui, sans-serif; color: #f6f0f5; }
+.pn-row-desc { display: block; margin-top: 2px; font: 400 14px/20px var(--font-pn), system-ui, sans-serif; color: #c2b7bf; }
+.pn-row-chev { flex-shrink: 0; width: 18px; height: 18px; margin-left: auto; color: #a69ba4; }

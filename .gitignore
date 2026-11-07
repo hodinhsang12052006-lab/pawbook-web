@@ -61,6 +61,10 @@ android/capacitor-cordova-android-plugins/build
 *.jks
 # Mật khẩu khoá ký Android (mẫu: android/keystore.properties.example)
 android/keystore.properties
+# Firebase client config: repo is PUBLIC, never commit these. Drop the real file in
+# android/app/ (or ios/App/App/) on the build machine only; the build picks it up.
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
 ios/App/Pods
 ios/App/build
 ios/App/*.xcworkspace/xcuserdata

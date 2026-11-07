@@ -83,6 +83,12 @@ export default function MediaPicker({
     onEmoji(e);
     setRecent(pushEmojiRecent(userId, e));
   };
+  // Hàm ổn định cho lưới đã memo (EmojiGrid) — gõ vào ô tìm không vẽ lại cả lưới ở lượt ưu tiên cao
+  const pickRef = useRef(pickEmoji);
+  useEffect(() => {
+    pickRef.current = pickEmoji;
+  });
+  const onPickStable = useCallback((e: string) => pickRef.current(e), []);
 
   const groups = useMemo(
     () => [...(recent.length ? [{ id: "recent", label: ["Gần đây", "Recent"] as [string, string], icon: "🕘", items: recent }] : []), ...EMOJI_GROUPS],
@@ -107,7 +113,8 @@ export default function MediaPicker({
   // Ô tìm cập nhật ngay; lưới kết quả (tới 64 emoji màu, lần đầu vẽ khá tốn) dựng ở lượt ưu tiên thấp → gõ không khựng.
   const deferredQuery = useDeferredValue(query);
   const searching = !!deferredQuery.trim();
-  const found = useMemo(() => (searching && index ? searchEmoji(deferredQuery, index, lang, 64) : null), [searching, index, deferredQuery, lang]);
+  // 48 kết quả (6 hàng) — đủ cho mọi từ khoá, ít ô emoji màu phải vẽ lại mỗi phím hơn
+  const found = useMemo(() => (searching && index ? searchEmoji(deferredQuery, index, lang, 48) : null), [searching, index, deferredQuery, lang]);
 
   const tabBtn = (t: MediaTab, label: string) => (
     <button
@@ -181,11 +188,7 @@ export default function MediaPicker({
             {searching && found && !found.length ? (
               <p className="col-span-8 py-8 text-center text-[13px] text-[#c0b2bc]">{tr("Không tìm thấy emoji nào", "No emoji found")}</p>
             ) : (
-              (searching ? found ?? [] : shown.items).map((e, i) => (
-                <button key={`${e}-${i}`} type="button" onClick={() => pickEmoji(e)} aria-label={e} data-emoji={e} className="flex aspect-square items-center justify-center rounded-xl text-[26px] leading-none transition-transform hover:scale-110 hover:bg-white/10 active:scale-95 motion-reduce:transition-none motion-reduce:hover:scale-100">
-                  {e}
-                </button>
-              ))
+              <EmojiGrid items={searching ? found ?? NO_EMOJI : shown.items} onPick={onPickStable} />
             )}
           </div>
           <div className="flex items-center justify-between gap-0.5 border-t border-white/5 px-2 py-1.5">
@@ -215,3 +218,19 @@ export default function MediaPicker({
     </div>
   );
 }
+
+const NO_EMOJI: string[] = [];
+
+// Các ô emoji của lưới (nhóm hoặc kết quả tìm) — memo: chỉ vẽ lại khi danh sách đổi (lượt ưu tiên thấp của useDeferredValue),
+// không vẽ lại ở mỗi phím gõ vào ô tìm. Fragment: ô vẫn là con trực tiếp của lưới 8 cột.
+const EmojiGrid = React.memo(function EmojiGrid({ items, onPick }: { items: readonly string[]; onPick: (e: string) => void }) {
+  return (
+    <>
+      {items.map((e, i) => (
+        <button key={`${e}-${i}`} type="button" onClick={() => onPick(e)} aria-label={e} data-emoji={e} className="flex aspect-square items-center justify-center rounded-xl text-[26px] leading-none transition-transform hover:scale-110 hover:bg-white/10 active:scale-95 motion-reduce:transition-none motion-reduce:hover:scale-100">
+          {e}
+        </button>
+      ))}
+    </>
+  );
+});

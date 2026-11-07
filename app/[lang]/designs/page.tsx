@@ -21,8 +21,9 @@ const SKILLS = ["Bột/Acrylic", "Dip/SNS", "Gel-X", "Design", "Chân tay nướ
 // thợ) được CHỜ ĐỦ rồi hiện cùng 1 lần, thay cho lưới khung xương — trước đây "Menu có giá từ thợ" chen vào trên lưới
 // sau khi tải xong, đẩy lưới xuống ~300 px (CLS 0.24 trên điện thoại). Đổi thị trường sau đó: giữ danh sách cũ tới khi
 // danh sách mới về rồi thay tại chỗ (không quay lại khung xương).
-// Một API phụ chậm / treo không được giữ cả lưới: mẫu AI về rồi thì chờ thêm tối đa 1,2 s; quá hạn → hiện lưới, và
-// khối nào về muộn hơn thì nằm SAU lưới (không chen lên trên đẩy lưới xuống).
+// Một API phụ chậm / treo không được giữ cả lưới: tính từ lúc trang chạy (các request cùng bắt đầu lúc đó) chờ tối đa
+// 1,2 s; quá hạn thì lưới hiện ngay khi mẫu AI về, và khối nào về muộn hơn lúc lưới hiện thì nằm SAU lưới (không chen
+// lên trên đẩy lưới xuống).
 export default function DesignsPage() {
   useTr(); // render lại khi đổi VI/EN
   const { user, loading: sessionLoading } = useSessionUser();
@@ -47,12 +48,12 @@ export default function DesignsPage() {
     return () => { live = false; };
   }, []);
   const hasList = all !== null;
+  // Hạn chờ tính từ lúc trang chạy (không phải từ lúc mẫu AI về): lưới hiện chậm nhất max(mẫu AI về, 1,2 s).
   const [late, setLate] = useState(false);
   useEffect(() => {
-    if (!hasList) return;
     const t = window.setTimeout(() => setLate(true), 1200);
     return () => window.clearTimeout(t);
-  }, [hasList]);
+  }, []);
   const ready = hasList && ((extras !== null && !sessionLoading) || late);
   // Đánh dấu "đã hiện" ngay khi DOM có nội dung (layout effect: trước mọi callback fetch kế tiếp).
   useLayoutEffect(() => {

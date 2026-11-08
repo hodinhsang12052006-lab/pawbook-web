@@ -202,7 +202,7 @@ export function DesignDetail({ d, onSaved, standalone = false }: { d: Design; on
     try {
       sessionStorage.setItem("pn_compose_tag", hashtagFor(d).slice(1)); // composer tự thêm "#"
     } catch {}
-    router.push("/?tab=feed");
+    router.push(localeHref("/?tab=feed")); // /vi/designs/<id> → /vi?tab=feed (không rơi về trang chủ EN)
   };
 
   // Chia sẻ link trang mẫu (thợ gửi khách "mẫu này nè", khách gửi bạn) — trang có ảnh xem trước khi dán vào chat

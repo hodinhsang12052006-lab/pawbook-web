@@ -158,12 +158,14 @@ final class CallLogic {
      *  - cuộc gọi đã kết thúc (tin kết thúc tới TRƯỚC — FCM không giữ thứ tự; hoặc đã bấm Từ chối) → bỏ qua;
      *  - tới sau exp (máy offline lâu, cuộc gọi chắc chắn đã thôi đổ chuông) → hiện ngay "Cuộc gọi nhỡ";
      *  - app đang mở ở tiền cảnh → bỏ qua (web tự đổ chuông trong app, như bản cũ);
+     *  - đang trong một cuộc gọi khác (OngoingCallService) → bỏ qua: WebView đang sống báo "máy bận" cho người gọi, không
+     *    đổ chuông đè lên cuộc gọi đang nói;
      *  - còn lại → đổ chuông.
      */
-    static int onIncoming(long now, long exp, boolean alreadyEnded, boolean appInForeground) {
+    static int onIncoming(long now, long exp, boolean alreadyEnded, boolean appInForeground, boolean inCall) {
         if (alreadyEnded) return IN_IGNORE;
         if (exp > 0 && now >= exp) return IN_MISSED;
-        if (appInForeground) return IN_IGNORE;
+        if (appInForeground || inCall) return IN_IGNORE;
         return IN_RING;
     }
 
@@ -185,15 +187,15 @@ final class CallLogic {
      * Tin kết thúc cùng tag (shown = đang có thông báo của cuộc gọi đó trong khay):
      *  - answered / declined (đã nghe / từ chối, thường là trên máy khác) → gỡ thông báo (đang đổ chuông, hoặc "nhỡ" do
      *    tin tới muộn), không hiện gì thêm;
-     *  - missed → "Cuộc gọi nhỡ": IM LẶNG nếu máy vừa đổ chuông / đã hiện (người dùng đã nghe chuông) hoặc app đang mở;
-     *    kêu 1 lần nếu chưa từng hiện gì (tin "đang gọi" không tới);
+     *  - missed → "Cuộc gọi nhỡ": IM LẶNG nếu máy vừa đổ chuông / đã hiện (người dùng đã nghe chuông), app đang mở hoặc
+     *    đang trong cuộc gọi khác (máy bận); kêu 1 lần nếu chưa từng hiện gì (tin "đang gọi" không tới);
      *  - kết quả lạ → không làm gì.
      * Gỡ (cancel) TRƯỚC rồi mới đăng "nhỡ": cập nhật đè lên thông báo đang đổ chuông (FLAG_INSISTENT) không dừng tiếng
      * chuông đang lặp trên mọi bản Android.
      */
-    static int onCallEnd(String outcome, boolean shown, boolean appInForeground) {
+    static int onCallEnd(String outcome, boolean shown, boolean appInForeground, boolean inCall) {
         if ("answered".equals(outcome) || "declined".equals(outcome)) return shown ? END_CANCEL : END_NOTHING;
-        if ("missed".equals(outcome)) return shown || appInForeground ? END_MISSED_SILENT : END_MISSED_ALERT;
+        if ("missed".equals(outcome)) return shown || appInForeground || inCall ? END_MISSED_SILENT : END_MISSED_ALERT;
         return END_NOTHING;
     }
 

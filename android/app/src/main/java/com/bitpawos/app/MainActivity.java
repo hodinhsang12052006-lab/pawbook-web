@@ -140,6 +140,9 @@ public class MainActivity extends BridgeActivity {
         // Quay lại app đang mở sẵn một hội thoại: thông báo của hội thoại đó không còn cần.
         String active = AppState.getActiveConversation();
         if (active != null) ChatNotifications.clearAsync(this, active);
+        // Cuộc gọi đang đổ chuông: web đổ chuông trong app → thôi chuông của thông báo (không kêu 2 lần).
+        Context app = getApplicationContext();
+        ChatNotifications.runAsync(() -> CallNotifications.cancelRinging(app));
     }
 
     @Override

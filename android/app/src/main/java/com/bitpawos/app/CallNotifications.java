@@ -71,12 +71,12 @@ final class CallNotifications {
         long exp = CallLogic.parseLong(d.get("exp"), 0);
         String name = callerName(ctx, d);
         String url = safeUrl(d.get("url"), callerId);
-        int decision = CallLogic.onIncoming(now, exp, isEnded(ctx, callId), AppState.isMainResumed());
+        int decision = CallLogic.onIncoming(now, exp, isEnded(ctx, callId), AppState.isMainResumed(), OngoingCallService.isRunning());
         if (decision == CallLogic.IN_IGNORE) return;
         if (decision == CallLogic.IN_MISSED) {
             String title = ChatNotifications.clean(d.get("mtitle"), 120);
             String body = ChatNotifications.clean(d.get("mbody"), 200);
-            postMissed(ctx, callId, name, video, title, body, url, !AppState.isMainResumed() && !isShown(ctx, callId));
+            postMissed(ctx, callId, name, video, title, body, url, !AppState.isMainResumed() && !OngoingCallService.isRunning() && !isShown(ctx, callId));
             return;
         }
         // Ảnh người gọi: có cache → dùng ngay; chưa → chờ tối đa AVATAR_WAIT_MS (không vẽ lại sau: cập nhật thông báo đang
@@ -96,7 +96,7 @@ final class CallNotifications {
         if (!CallLogic.isCallId(callId) || !CallLogic.isUserId(callerId)) return;
         rememberEnded(ctx, callId);
         boolean shown = isShown(ctx, callId);
-        int action = CallLogic.onCallEnd(d.get("outcome"), shown, AppState.isMainResumed());
+        int action = CallLogic.onCallEnd(d.get("outcome"), shown, AppState.isMainResumed(), OngoingCallService.isRunning());
         switch (action) {
             case CallLogic.END_CANCEL:
                 cancel(ctx, callId);
@@ -228,6 +228,26 @@ final class CallNotifications {
     // ---------------------------------------------------------------------------------
     // Trạng thái
     // ---------------------------------------------------------------------------------
+
+    /**
+     * App vừa lên tiền cảnh: web đổ chuông trong app (cuộc gọi đang đổ chuông tới qua Pusher / lượt đổ chuông lại) → gỡ
+     * các thông báo ĐANG ĐỔ CHUÔNG (kênh "calls") để không kêu 2 lần; giữ thông báo "Cuộc gọi nhỡ".
+     */
+    static void cancelRinging(Context ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return; // không có kênh: không phân biệt được, để tự hết giờ
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        if (nm == null) return;
+        try {
+            for (StatusBarNotification s : nm.getActiveNotifications()) {
+                String tag = s.getTag();
+                if (s.getId() != ID || tag == null || !tag.startsWith(CallLogic.TAG_PREFIX)) continue;
+                if (!ChatNotifications.CHANNEL_CALLS.equals(s.getNotification().getChannelId())) continue;
+                nm.cancel(tag, ID);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "cancelRinging: " + e.getClass().getSimpleName());
+        }
+    }
 
     static void cancel(Context ctx, String callId) {
         if (!CallLogic.isCallId(callId)) return;

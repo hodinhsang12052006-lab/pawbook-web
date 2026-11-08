@@ -147,17 +147,19 @@ public class CallLogicTest {
     @Test
     public void incomingDecision() {
         long now = 1_800_000_000_000L;
-        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(now, now + 50_000, false, false));
+        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(now, now + 50_000, false, false, false));
         // app đang mở: web tự đổ chuông trong app
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, false, true));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, false, true, false));
+        // đang trong cuộc gọi khác: web báo bận, không đổ chuông đè lên cuộc gọi đang nói
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, false, false, true));
         // tin kết thúc đã tới trước / đã bấm Từ chối
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, true, false));
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now - 1, true, false));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, true, false, false));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now - 1, true, false, false));
         // tới sau khi cuộc gọi chắc chắn đã thôi đổ chuông → "Cuộc gọi nhỡ" ngay (kể cả khi app đang mở)
-        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(now, now - 1, false, false));
-        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(now, now, false, true));
+        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(now, now - 1, false, false, false));
+        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(now, now, false, true, false));
         // không có exp (tin lạ): vẫn đổ chuông, timeoutAfter chặn trên 60 s
-        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(now, 0, false, false));
+        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(now, 0, false, false, false));
     }
 
     @Test
@@ -172,17 +174,19 @@ public class CallLogicTest {
     @Test
     public void followUpCancelsOrReplaces() {
         // đã trả lời / từ chối (thường là máy khác): gỡ thông báo đang có, không hiện thêm gì
-        assertEquals(CallLogic.END_CANCEL, CallLogic.onCallEnd("answered", true, false));
-        assertEquals(CallLogic.END_CANCEL, CallLogic.onCallEnd("declined", true, true));
-        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd("answered", false, false));
-        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd("declined", false, false));
+        assertEquals(CallLogic.END_CANCEL, CallLogic.onCallEnd("answered", true, false, false));
+        assertEquals(CallLogic.END_CANCEL, CallLogic.onCallEnd("declined", true, true, false));
+        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd("answered", false, false, false));
+        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd("declined", false, false, false));
         // nhỡ: máy vừa đổ chuông → thay IM LẶNG (đã nghe chuông rồi); chưa hiện gì → kêu 1 lần; app đang mở → im lặng
-        assertEquals(CallLogic.END_MISSED_SILENT, CallLogic.onCallEnd("missed", true, false));
-        assertEquals(CallLogic.END_MISSED_ALERT, CallLogic.onCallEnd("missed", false, false));
-        assertEquals(CallLogic.END_MISSED_SILENT, CallLogic.onCallEnd("missed", false, true));
+        assertEquals(CallLogic.END_MISSED_SILENT, CallLogic.onCallEnd("missed", true, false, false));
+        assertEquals(CallLogic.END_MISSED_ALERT, CallLogic.onCallEnd("missed", false, false, false));
+        assertEquals(CallLogic.END_MISSED_SILENT, CallLogic.onCallEnd("missed", false, true, false));
+        // nhỡ trong lúc đang nói cuộc gọi khác (máy bận) → im lặng
+        assertEquals(CallLogic.END_MISSED_SILENT, CallLogic.onCallEnd("missed", false, false, true));
         // kết quả lạ
-        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd("hangup", true, false));
-        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd(null, true, false));
+        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd("hangup", true, false, false));
+        assertEquals(CallLogic.END_NOTHING, CallLogic.onCallEnd(null, true, false, false));
     }
 
     @Test

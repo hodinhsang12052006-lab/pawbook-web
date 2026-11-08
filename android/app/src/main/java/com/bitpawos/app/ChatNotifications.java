@@ -202,10 +202,15 @@ final class ChatNotifications {
 
     /** Kênh "Tin nhắn" chưa bị người dùng tắt riêng (chưa tạo → coi như bật). */
     static boolean messagesChannelEnabled(Context ctx) {
+        return channelEnabled(ctx, CHANNEL_MESSAGES);
+    }
+
+    /** Kênh chưa bị người dùng tắt riêng (chưa tạo / Android 7.x → coi như bật). */
+    static boolean channelEnabled(Context ctx, String channelId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return true;
-        NotificationChannel ch = nm.getNotificationChannel(CHANNEL_MESSAGES);
+        NotificationChannel ch = nm.getNotificationChannel(channelId);
         return ch == null || ch.getImportance() != NotificationManager.IMPORTANCE_NONE;
     }
 

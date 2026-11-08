@@ -1,5 +1,7 @@
 package com.bitpawos.app;
 
+import android.annotation.SuppressLint;
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -11,6 +13,7 @@ import android.media.AudioManager;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
@@ -23,8 +26,8 @@ import java.util.Map;
 /**
  * Thông báo cuộc gọi do app TỰ VẼ (versionCode 4+; máy chủ chỉ gửi tin data-only "call" / "call-end" cho token có build
  * ≥ 4 — lib/fcm.ts nativeCallMinBuild), như tin chat (ChatNotifications):
- *  - "call": thông báo đổ chuông trên kênh "calls" (hiện nổi, chuông LẶP — FLAG_INSISTENT — tới khi trả lời / từ chối /
- *    vuốt bỏ / hết giờ đổ chuông), nút "Từ chối" (CallActionReceiver: POST /api/calls reject bằng cookie WebView, như trả
+ *  - "call": thông báo đổ chuông trên kênh "calls" (hiện nổi, chuông LẶP — FLAG_INSISTENT, Android 8+ — tới khi trả lời /
+ *    từ chối / vuốt bỏ / hết giờ đổ chuông; Android 7.x kêu 1 lần và được gỡ bằng báo thức khi hết giờ), nút "Từ chối" (CallActionReceiver: POST /api/calls reject bằng cookie WebView, như trả
  *    lời nhanh tin chat) và "Trả lời" (mở app — MainActivity báo web tự nghe máy cuộc gọi đó). Chạm vào thông báo: mở
  *    app, web đổ chuông trong app (không tự nghe). KHÔNG full-screen intent (chính sách Play), KHÔNG ConnectionService.
  *  - "call-end" cùng tag: đã trả lời / từ chối (máy khác) → gỡ; nhỡ → "Cuộc gọi nhỡ từ X" (CallLogic.onCallEnd).
@@ -58,8 +61,8 @@ final class CallNotifications {
     // Tin đến
     // ---------------------------------------------------------------------------------
 
-    /** data.type == "call" */
-    static void onIncoming(Context ctx, Map<String, String> d) {
+    /** data.type == "call"; sentTime = RemoteMessage.getSentTime() (lúc FCM nhận tin, đồng hồ máy chủ; 0 = không rõ). */
+    static void onIncoming(Context ctx, Map<String, String> d, long sentTime) {
         String callId = d.get("callId");
         String callerId = d.get("callerId");
         String token = d.get("token");
@@ -71,7 +74,8 @@ final class CallNotifications {
         long exp = CallLogic.parseLong(d.get("exp"), 0);
         String name = callerName(ctx, d);
         String url = safeUrl(d.get("url"), callerId);
-        int decision = CallLogic.onIncoming(now, exp, isEnded(ctx, callId), AppState.isMainResumed(), OngoingCallService.isRunning());
+        long remaining = CallLogic.ringRemainingMs(now, sentTime, exp);
+        int decision = CallLogic.onIncoming(remaining, isEnded(ctx, callId), AppState.isMainResumed(), OngoingCallService.isRunning());
         if (decision == CallLogic.IN_IGNORE) return;
         if (decision == CallLogic.IN_MISSED) {
             String title = ChatNotifications.clean(d.get("mtitle"), 120);
@@ -86,7 +90,7 @@ final class CallNotifications {
         Bitmap square = ChatAvatars.loadSquare(ctx, avatar, false);
         String subtitle = ChatNotifications.clean(d.get("title"), 80);
         if (subtitle.isEmpty()) subtitle = ctx.getString(video ? R.string.call_incoming_video : R.string.call_incoming_voice);
-        postRinging(ctx, callId, callerId, token, name, subtitle, url, square, CallLogic.ringTimeoutMs(now, exp));
+        postRinging(ctx, callId, callerId, token, name, subtitle, url, square, CallLogic.ringTimeoutMs(remaining));
     }
 
     /** data.type == "call-end" */
@@ -150,9 +154,27 @@ final class CallNotifications {
             b.setVibrate(RING_VIBRATION);
         }
         Notification n = b.build();
-        // Chuông lặp tới khi thông báo bị gỡ (trả lời / từ chối / vuốt / timeoutAfter) — như điện thoại đổ chuông.
-        n.flags |= Notification.FLAG_INSISTENT;
+        // Chuông lặp tới khi thông báo bị gỡ (trả lời / từ chối / vuốt / timeoutAfter) — như điện thoại đổ chuông. Chỉ từ
+        // Android 8: trước đó timeoutAfter không có tác dụng → mất tin kết thúc (mất mạng, Doze) là máy kêu mãi.
+        if (CallLogic.insistentRing(Build.VERSION.SDK_INT)) n.flags |= Notification.FLAG_INSISTENT;
         notify(ctx, callId, n);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) scheduleRingTimeout(ctx, callId, timeoutMs);
+    }
+
+    /** Android 7.x (không có setTimeoutAfter): báo thức gỡ thông báo đổ chuông khi cuộc gọi chắc chắn đã thôi đổ chuông. */
+    private static void scheduleRingTimeout(Context ctx, String callId, long timeoutMs) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Intent i = new Intent(ctx, CallActionReceiver.class)
+            .setAction(CallActionReceiver.ACTION_RING_TIMEOUT)
+            .setData(Uri.parse("pawnail-call://timeout/" + Uri.encode(callId)))
+            .putExtra(EXTRA_CALL_ID, callId);
+        PendingIntent pi = PendingIntent.getBroadcast(ctx, requestCode(callId, 5), i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        try {
+            am.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + timeoutMs, pi);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "ring timeout: " + e.getClass().getSimpleName());
+        }
     }
 
     private static void postMissed(Context ctx, String callId, String name, boolean video, String title, String body, String url, boolean alert) {
@@ -186,6 +208,7 @@ final class CallNotifications {
         notify(ctx, callId, b.build());
     }
 
+    @SuppressLint("MissingPermission") // canPost() đã kiểm quyền; notify lỗi chỉ ghi log
     private static void notify(Context ctx, String callId, Notification n) {
         try {
             NotificationManagerCompat.from(ctx).notify(CallLogic.tagFor(callId), ID, n);
@@ -234,19 +257,42 @@ final class CallNotifications {
      * các thông báo ĐANG ĐỔ CHUÔNG (kênh "calls") để không kêu 2 lần; giữ thông báo "Cuộc gọi nhỡ".
      */
     static void cancelRinging(Context ctx) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return; // không có kênh: không phân biệt được, để tự hết giờ
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return;
         try {
             for (StatusBarNotification s : nm.getActiveNotifications()) {
                 String tag = s.getTag();
                 if (s.getId() != ID || tag == null || !tag.startsWith(CallLogic.TAG_PREFIX)) continue;
-                if (!ChatNotifications.CHANNEL_CALLS.equals(s.getNotification().getChannelId())) continue;
-                nm.cancel(tag, ID);
+                if (isRinging(s.getNotification())) nm.cancel(tag, ID);
             }
         } catch (RuntimeException e) {
             Log.w(TAG, "cancelRinging: " + e.getClass().getSimpleName());
         }
+    }
+
+    /** Báo thức hết giờ đổ chuông (Android 7.x): gỡ thông báo của cuộc gọi đó nếu nó VẪN đang đổ chuông (không gỡ "nhỡ"). */
+    static void cancelIfRinging(Context ctx, String callId) {
+        if (!CallLogic.isCallId(callId)) return;
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        if (nm == null) return;
+        String tag = CallLogic.tagFor(callId);
+        try {
+            for (StatusBarNotification s : nm.getActiveNotifications()) {
+                if (s.getId() == ID && tag.equals(s.getTag()) && isRinging(s.getNotification())) nm.cancel(tag, ID);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "cancelIfRinging: " + e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Thông báo "đang gọi": của app (category CALL — mọi bản Android) hoặc FCM tự vẽ cho token còn ghi build cũ (kênh
+     * "calls", Android 8+). "Cuộc gọi nhỡ" (kênh "general", category MISSED_CALL) thì không.
+     */
+    private static boolean isRinging(Notification n) {
+        if (n == null) return false;
+        if (Notification.CATEGORY_CALL.equals(n.category)) return true;
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && ChatNotifications.CHANNEL_CALLS.equals(n.getChannelId());
     }
 
     static void cancel(Context ctx, String callId) {

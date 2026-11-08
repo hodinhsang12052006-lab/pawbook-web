@@ -31,7 +31,11 @@ final class CallLogic {
     static final int DEVICE_WIRED_HEADSET = 3;
     static final int DEVICE_WIRED_HEADPHONES = 4;
     static final int DEVICE_BLUETOOTH_SCO = 7;
+    /** Bộ chuyển âm thanh USB-C / DAC USB (nhiều máy báo loại này thay vì USB_HEADSET). */
+    static final int DEVICE_USB_DEVICE = 11;
     static final int DEVICE_USB_HEADSET = 22;
+    /** Máy trợ thính ASHA (Bluetooth LE). */
+    static final int DEVICE_HEARING_AID = 23;
     static final int DEVICE_BLE_HEADSET = 26;
 
     /** Route của một loại thiết bị âm thanh (đầu ra), hoặc null nếu cuộc gọi không dùng loại đó. */
@@ -43,14 +47,89 @@ final class CallLogic {
                 return ROUTE_SPEAKER;
             case DEVICE_WIRED_HEADSET:
             case DEVICE_WIRED_HEADPHONES:
+            case DEVICE_USB_DEVICE:
             case DEVICE_USB_HEADSET:
                 return ROUTE_HEADSET;
             case DEVICE_BLUETOOTH_SCO:
+            case DEVICE_HEARING_AID:
             case DEVICE_BLE_HEADSET:
                 return ROUTE_BLUETOOTH;
             default:
                 return null;
         }
+    }
+
+    /**
+     * [loa trong, tai nghe cắm dây / USB, Bluetooth / máy trợ thính] dùng được cho cuộc gọi, từ danh sách loại thiết bị.
+     * Bluetooth CHỈ từ Android 12 (API 31, setCommunicationDevice): máy cũ hơn liệt kê tai nghe Bluetooth (HFP) ngay khi
+     * nối, nhưng setSpeakerphoneOn(false) không mở đường SCO (cần startBluetoothSco + quyền BLUETOOTH) → tiếng thật ra
+     * loa trong, trong khi nút Loa ghi "Bluetooth" và cuộc gọi video bị đẩy khỏi loa ngoài.
+     */
+    static boolean[] availableRoutes(int sdk, int[] deviceTypes) {
+        boolean[] out = new boolean[3];
+        if (deviceTypes == null) return out;
+        for (int type : deviceTypes) {
+            String r = routeOfDevice(type);
+            if (ROUTE_EARPIECE.equals(r)) out[0] = true;
+            else if (ROUTE_HEADSET.equals(r)) out[1] = true;
+            else if (ROUTE_BLUETOOTH.equals(r) && sdk >= 31) out[2] = true;
+        }
+        return out;
+    }
+
+    /**
+     * Thiết bị thay đổi giữa cuộc gọi: vừa nối thêm tai nghe / Bluetooth → bỏ lựa chọn cũ của nút Loa (thiết bị mới thắng,
+     * như app Điện thoại); còn lại giữ lựa chọn (chooseRoute tự bỏ thiết bị đã rút).
+     */
+    static String requestAfterDevicesChanged(String requested, boolean[] before, boolean[] after) {
+        if (before == null || after == null) return requested;
+        boolean newPrivate = (after[1] && !before[1]) || (after[2] && !before[2]);
+        return newPrivate ? null : requested;
+    }
+
+    /** API < 31: đường đang dùng thật (setSpeakerphoneOn là của cả máy — mã âm thanh của WebView cũng bật / tắt nó). */
+    static String legacyRoute(boolean speakerOn, boolean hasEarpiece, boolean hasHeadset) {
+        if (speakerOn) return ROUTE_SPEAKER;
+        if (hasHeadset) return ROUTE_HEADSET;
+        return hasEarpiece ? ROUTE_EARPIECE : ROUTE_SPEAKER;
+    }
+
+    // android.media.AudioManager.MODE_* (hằng số lúc biên dịch)
+    static final int AUDIO_MODE_NORMAL = 0;
+    static final int AUDIO_MODE_RINGTONE = 1;
+    static final int AUDIO_MODE_IN_CALL = 2;
+    static final int AUDIO_MODE_IN_COMMUNICATION = 3;
+    static final int AUDIO_MODE_CALL_SCREENING = 4;
+    static final int AUDIO_MODE_CALL_REDIRECT = 5;
+    static final int AUDIO_MODE_COMMUNICATION_REDIRECT = 6;
+
+    /**
+     * Chế độ âm thanh trả lại khi cuộc gọi kết thúc: KHÔNG BAO GIỜ trả lại một chế độ cuộc gọi / đổ chuông. Mã âm thanh
+     * của WebView (Chromium) đã tự bật MODE_IN_COMMUNICATION khi getUserMedia mở micro, TRƯỚC khi web gọi
+     * startOngoingCall → prevMode thường chính là MODE_IN_COMMUNICATION; trả lại nó làm app (trước Android 11: cả máy)
+     * kẹt ở chế độ gọi sau cuộc gọi (phím âm lượng chỉnh âm lượng cuộc gọi, tiếng khác đi sai đường).
+     */
+    static int modeToRestore(int prevMode) {
+        if (prevMode < 0) return AUDIO_MODE_NORMAL; // MODE_INVALID / MODE_CURRENT
+        switch (prevMode) {
+            case AUDIO_MODE_RINGTONE:
+            case AUDIO_MODE_IN_CALL:
+            case AUDIO_MODE_IN_COMMUNICATION:
+            case AUDIO_MODE_CALL_SCREENING:
+            case AUDIO_MODE_CALL_REDIRECT:
+            case AUDIO_MODE_COMMUNICATION_REDIRECT:
+                return AUDIO_MODE_NORMAL;
+            default:
+                return prevMode;
+        }
+    }
+
+    /** Ít giây sau khi kết thúc: Chromium có thể trả lại chế độ nó đã lưu SAU end() → kiểm lại một lần. */
+    static final long MODE_RECHECK_MS = 2000;
+
+    /** Kiểm lại sau MODE_RECHECK_MS: không có cuộc gọi, vẫn ở MODE_IN_COMMUNICATION, không ai đang ghi âm → về NORMAL. */
+    static boolean resetModeLater(boolean callActive, int mode, boolean recording) {
+        return !callActive && mode == AUDIO_MODE_IN_COMMUNICATION && !recording;
     }
 
     /**
@@ -74,9 +153,12 @@ final class CallLogic {
         return ROUTE_SPEAKER.equals(currentRoute) ? ROUTE_EARPIECE : ROUTE_SPEAKER;
     }
 
-    /** Cảm biến tiệm cận (tắt màn hình khi áp máy vào tai): chỉ cuộc gọi THOẠI đang nghe bằng loa trong. */
-    static boolean useProximity(boolean video, String route, boolean supported) {
-        return supported && !video && ROUTE_EARPIECE.equals(route);
+    /**
+     * Cảm biến tiệm cận (tắt màn hình khi áp máy vào tai): chỉ cuộc gọi THOẠI đang nghe bằng loa trong, và chỉ khi app
+     * đang hiện trên màn hình (uiVisible — như app Điện thoại; đang ở app khác thì che cảm biến không được tắt màn hình).
+     */
+    static boolean useProximity(boolean video, String route, boolean supported, boolean uiVisible) {
+        return supported && uiVisible && !video && ROUTE_EARPIECE.equals(route);
     }
 
     /** Giữ màn hình sáng (FLAG_KEEP_SCREEN_ON): cuộc gọi đang hiện video. */
@@ -88,29 +170,21 @@ final class CallLogic {
     // Foreground service "đang trong cuộc gọi"
     // ---------------------------------------------------------------------------------
 
-    // android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_* (API 30)
-    static final int FGS_CAMERA = 0x40;
+    // android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE (API 30)
     static final int FGS_MICROPHONE = 0x80;
 
     /**
      * Loại foreground service cho startForeground:
      *  - -1: không chạy (chưa có quyền micro — không có cuộc gọi nào để giữ);
-     *  - API < 30: 0 (startForeground không loại; giới hạn "while-in-use" của micro / camera chỉ có từ Android 11);
-     *  - micro, thêm camera khi camera của CHÍNH MÌNH đang bật và đã có quyền (Android 14 ném SecurityException nếu khai
-     *    camera mà chưa có quyền).
+     *  - API < 30: 0 (startForeground không loại; giới hạn "while-in-use" của micro chỉ có từ Android 11);
+     *  - còn lại: CHỈ microphone. KHÔNG khai camera: rời app thì Android dừng camera và web tắt track video, báo bên kia
+     *    "Tạm dừng video" — không bao giờ gửi hình khi người dùng không thấy app.
      * KHÔNG dùng phoneCall (chỉ cho app gọi điện mặc định / ConnectionService) hay mediaPlayback (không phải phát nhạc).
      */
-    static int serviceTypes(int sdk, boolean micGranted, boolean cameraOn, boolean cameraGranted) {
+    static int serviceTypes(int sdk, boolean micGranted) {
         if (!micGranted) return -1;
         if (sdk < 30) return 0;
-        return FGS_MICROPHONE | (cameraOn && cameraGranted ? FGS_CAMERA : 0);
-    }
-
-    /** Các loại sẽ thử lần lượt nếu lần trước bị từ chối (camera bị từ chối → giữ ít nhất micro). */
-    static int[] serviceTypeAttempts(int types) {
-        if (types <= 0) return new int[] { types };
-        if ((types & FGS_CAMERA) != 0) return new int[] { types, FGS_MICROPHONE };
-        return new int[] { types };
+        return FGS_MICROPHONE;
     }
 
     static final String STATE_CALLING = "calling";
@@ -154,28 +228,53 @@ final class CallLogic {
     static final int IN_MISSED = 2;
 
     /**
-     * Tin "đang gọi" tới:
+     * Tin "đang gọi" tới (remainingMs: còn bao lâu cuộc gọi thôi đổ chuông — ringRemainingMs):
      *  - cuộc gọi đã kết thúc (tin kết thúc tới TRƯỚC — FCM không giữ thứ tự; hoặc đã bấm Từ chối) → bỏ qua;
-     *  - tới sau exp (máy offline lâu, cuộc gọi chắc chắn đã thôi đổ chuông) → hiện ngay "Cuộc gọi nhỡ";
+     *  - hết giờ đổ chuông (tin tới quá muộn) → hiện ngay "Cuộc gọi nhỡ";
      *  - app đang mở ở tiền cảnh → bỏ qua (web tự đổ chuông trong app, như bản cũ);
      *  - đang trong một cuộc gọi khác (OngoingCallService) → bỏ qua: WebView đang sống báo "máy bận" cho người gọi, không
      *    đổ chuông đè lên cuộc gọi đang nói;
      *  - còn lại → đổ chuông.
      */
-    static int onIncoming(long now, long exp, boolean alreadyEnded, boolean appInForeground, boolean inCall) {
+    static int onIncoming(long remainingMs, boolean alreadyEnded, boolean appInForeground, boolean inCall) {
         if (alreadyEnded) return IN_IGNORE;
-        if (exp > 0 && now >= exp) return IN_MISSED;
+        if (remainingMs <= 0) return IN_MISSED;
         if (appInForeground || inCall) return IN_IGNORE;
         return IN_RING;
     }
 
     static final long RING_MIN_MS = 5_000;
     static final long RING_MAX_MS = 60_000;
+    /** FCM giữ tin cuộc gọi tối đa 60 s (TTL): "trễ" dài hơn chừng này (hoặc âm quá) = đồng hồ máy lệch, không phải trễ thật. */
+    static final long DELIVERY_MAX_MS = 65_000;
+    static final long DELIVERY_EARLY_MS = 5_000;
 
-    /** Thông báo đổ chuông tự gỡ (timeoutAfter) khi cuộc gọi chắc chắn đã thôi đổ chuông: exp − now, kẹp 5–60 s. */
-    static long ringTimeoutMs(long now, long exp) {
+    /**
+     * Còn bao lâu cuộc gọi thôi đổ chuông. exp theo đồng hồ MÁY CHỦ, now theo đồng hồ ĐIỆN THOẠI: đồng hồ máy nhanh hơn
+     * 60 s từng biến mọi cuộc gọi đến thành "Cuộc gọi nhỡ" ngay lúc người gọi vẫn đang chờ. Đo từ lúc FCM nhận tin
+     * (sentTime — RemoteMessage.getSentTime(), đồng hồ máy chủ): còn lại = exp − sentTime − thời gian giao tin; thời gian
+     * giao tin (now − sentTime) vô lý (âm quá 5 s, hoặc dài hơn TTL) → đồng hồ máy lệch → coi như giao ngay, đổ chuông đủ.
+     * exp không rõ → RING_MAX_MS; không có sentTime → exp − now (cách cũ).
+     */
+    static long ringRemainingMs(long now, long sentTime, long exp) {
         if (exp <= 0) return RING_MAX_MS;
-        return Math.max(RING_MIN_MS, Math.min(RING_MAX_MS, exp - now));
+        if (sentTime <= 0) return exp - now;
+        long delay = now - sentTime;
+        if (delay < -DELIVERY_EARLY_MS || delay > DELIVERY_MAX_MS) delay = 0;
+        return exp - sentTime - Math.max(0, delay);
+    }
+
+    /** Thông báo đổ chuông tự gỡ (timeoutAfter) khi cuộc gọi chắc chắn đã thôi đổ chuông: kẹp 5–60 s. */
+    static long ringTimeoutMs(long remainingMs) {
+        return Math.max(RING_MIN_MS, Math.min(RING_MAX_MS, remainingMs));
+    }
+
+    /**
+     * Chuông LẶP (FLAG_INSISTENT) chỉ từ Android 8 (API 26): trước đó setTimeoutAfter không có tác dụng → mất tin kết thúc
+     * là máy kêu mãi. Android 7.x kêu 1 lần (như bản 3), thông báo được gỡ bằng báo thức (CallNotifications).
+     */
+    static boolean insistentRing(int sdk) {
+        return sdk >= 26;
     }
 
     static final int END_NOTHING = 0;

@@ -152,6 +152,19 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        // Cảm biến tiệm cận của cuộc gọi thoại (loa trong) chỉ khi app đang hiện — như app Điện thoại.
+        CallAudio.get().setUiVisible(this, true);
+    }
+
+    @Override
+    public void onStop() {
+        CallAudio.get().setUiVisible(this, false);
+        super.onStop();
+    }
+
+    @Override
     public void onDestroy() {
         // WebView (và cuộc gọi WebRTC trong nó) bị huỷ: thôi giữ foreground service / chế độ âm thanh cuộc gọi. Plugin cũng
         // làm việc này (handleOnDestroy) — ở đây cho chắc khi Bridge không được tạo.
@@ -258,7 +271,14 @@ public class MainActivity extends BridgeActivity {
         }
         AtomicBoolean done = new AtomicBoolean(false);
         Runnable hard = () -> {
-            if (done.compareAndSet(false, true)) wv.loadUrl(target);
+            if (!done.compareAndSet(false, true)) return;
+            // Đang trong cuộc gọi (WebRTC trong chính WebView này): tải lại trang = rớt cuộc gọi. Chạm thông báo chat lúc
+            // đó chỉ đưa app lên trước; JS chậm / không điều hướng mềm được thì KHÔNG tải cứng.
+            if (OngoingCallService.isRunning() || CallAudio.get().isActive()) {
+                Log.w(TAG, "in a call: hard navigation skipped");
+                return;
+            }
+            wv.loadUrl(target);
         };
         try {
             String js =

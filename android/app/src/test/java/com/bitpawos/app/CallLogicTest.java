@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.pm.ServiceInfo;
 import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import org.junit.Test;
 
 /**
@@ -25,10 +26,18 @@ public class CallLogicTest {
         assertEquals(AudioDeviceInfo.TYPE_WIRED_HEADSET, CallLogic.DEVICE_WIRED_HEADSET);
         assertEquals(AudioDeviceInfo.TYPE_WIRED_HEADPHONES, CallLogic.DEVICE_WIRED_HEADPHONES);
         assertEquals(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, CallLogic.DEVICE_BLUETOOTH_SCO);
+        assertEquals(AudioDeviceInfo.TYPE_USB_DEVICE, CallLogic.DEVICE_USB_DEVICE);
         assertEquals(AudioDeviceInfo.TYPE_USB_HEADSET, CallLogic.DEVICE_USB_HEADSET);
+        assertEquals(AudioDeviceInfo.TYPE_HEARING_AID, CallLogic.DEVICE_HEARING_AID);
         assertEquals(AudioDeviceInfo.TYPE_BLE_HEADSET, CallLogic.DEVICE_BLE_HEADSET);
         assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE, CallLogic.FGS_MICROPHONE);
-        assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA, CallLogic.FGS_CAMERA);
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.AUDIO_MODE_NORMAL);
+        assertEquals(AudioManager.MODE_RINGTONE, CallLogic.AUDIO_MODE_RINGTONE);
+        assertEquals(AudioManager.MODE_IN_CALL, CallLogic.AUDIO_MODE_IN_CALL);
+        assertEquals(AudioManager.MODE_IN_COMMUNICATION, CallLogic.AUDIO_MODE_IN_COMMUNICATION);
+        assertEquals(AudioManager.MODE_CALL_SCREENING, CallLogic.AUDIO_MODE_CALL_SCREENING);
+        assertEquals(AudioManager.MODE_CALL_REDIRECT, CallLogic.AUDIO_MODE_CALL_REDIRECT);
+        assertEquals(AudioManager.MODE_COMMUNICATION_REDIRECT, CallLogic.AUDIO_MODE_COMMUNICATION_REDIRECT);
     }
 
     // ---------- âm thanh ----------
@@ -40,8 +49,12 @@ public class CallLogicTest {
         assertEquals("headset", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_WIRED_HEADSET));
         assertEquals("headset", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_WIRED_HEADPHONES));
         assertEquals("headset", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_USB_HEADSET));
+        // bộ chuyển USB-C / DAC USB: nghe riêng như tai nghe (không bị loa trong / loa ngoài giành mất)
+        assertEquals("headset", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_USB_DEVICE));
         assertEquals("bluetooth", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_BLUETOOTH_SCO));
         assertEquals("bluetooth", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_BLE_HEADSET));
+        // máy trợ thính ASHA: thiết bị nghe riêng như Bluetooth
+        assertEquals("bluetooth", CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_HEARING_AID));
         // A2DP (nghe nhạc) / HDMI / loa "an toàn" không dùng cho cuộc gọi
         assertEquals(null, CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP));
         assertEquals(null, CallLogic.routeOfDevice(AudioDeviceInfo.TYPE_HDMI));
@@ -73,6 +86,67 @@ public class CallLogicTest {
     }
 
     @Test
+    public void bluetoothIsOnlyOfferedWhereItCanReallyBeRouted() {
+        int[] phoneWithBtEarbuds = { AudioDeviceInfo.TYPE_BUILTIN_EARPIECE, AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP };
+        // Android 7–11 (API 24–30): tai nghe Bluetooth nối (HFP) nhưng setSpeakerphoneOn(false) không mở SCO → KHÔNG báo / chọn
+        // Bluetooth; gọi video vẫn ra loa ngoài như bản 3, gọi thoại ra loa trong (đúng chỗ tiếng thật sự ra)
+        boolean[] api30 = CallLogic.availableRoutes(30, phoneWithBtEarbuds);
+        assertArrayEquals(new boolean[] { true, false, false }, api30);
+        assertEquals("speaker", CallLogic.chooseRoute(null, true, api30[0], api30[1], api30[2]));
+        assertEquals("earpiece", CallLogic.chooseRoute(null, false, api30[0], api30[1], api30[2]));
+        assertArrayEquals(new boolean[] { true, false, false }, CallLogic.availableRoutes(24, new int[] { 1, 2, AudioDeviceInfo.TYPE_HEARING_AID }));
+        // Android 12+ (setCommunicationDevice định tuyến thật vào Bluetooth): có
+        boolean[] api31 = CallLogic.availableRoutes(31, phoneWithBtEarbuds);
+        assertArrayEquals(new boolean[] { true, false, true }, api31);
+        assertEquals("bluetooth", CallLogic.chooseRoute(null, true, api31[0], api31[1], api31[2]));
+        // tai nghe cắm dây / USB: mọi bản Android
+        assertArrayEquals(new boolean[] { true, true, false }, CallLogic.availableRoutes(24, new int[] { 1, 2, AudioDeviceInfo.TYPE_WIRED_HEADSET }));
+        assertArrayEquals(new boolean[] { false, true, false }, CallLogic.availableRoutes(33, new int[] { 2, AudioDeviceInfo.TYPE_USB_DEVICE }));
+        assertArrayEquals(new boolean[] { false, false, false }, CallLogic.availableRoutes(33, null));
+    }
+
+    @Test
+    public void newHeadsetMidCallWinsOverTheSpeakerChoice() {
+        boolean[] phone = { true, false, false };
+        boolean[] wired = { true, true, false };
+        boolean[] bt = { true, false, true };
+        // bấm Loa rồi cắm tai nghe / nối Bluetooth → bỏ lựa chọn, tai nghe thắng (như app Điện thoại)
+        assertEquals(null, CallLogic.requestAfterDevicesChanged("speaker", phone, wired));
+        assertEquals(null, CallLogic.requestAfterDevicesChanged("speaker", phone, bt));
+        // rút tai nghe / thiết bị khác thay đổi → giữ lựa chọn (chooseRoute tự bỏ thiết bị đã rút)
+        assertEquals("speaker", CallLogic.requestAfterDevicesChanged("speaker", wired, phone));
+        assertEquals("earpiece", CallLogic.requestAfterDevicesChanged("earpiece", wired, wired));
+        assertEquals("speaker", CallLogic.requestAfterDevicesChanged("speaker", null, wired));
+        // đường thật trên máy cũ (WebView có thể tự bật / tắt loa ngoài)
+        assertEquals("speaker", CallLogic.legacyRoute(true, true, true));
+        assertEquals("headset", CallLogic.legacyRoute(false, true, true));
+        assertEquals("earpiece", CallLogic.legacyRoute(false, true, false));
+        assertEquals("speaker", CallLogic.legacyRoute(false, false, false)); // máy tính bảng
+    }
+
+    @Test
+    public void callAudioModeIsNeverRestored() {
+        // WebView đã bật MODE_IN_COMMUNICATION trước begin() → kết thúc trả về NORMAL, không kẹt ở chế độ gọi
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_IN_COMMUNICATION));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_IN_CALL));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_RINGTONE));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_CALL_SCREENING));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_CALL_REDIRECT));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_COMMUNICATION_REDIRECT));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_NORMAL));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_INVALID));
+        assertEquals(AudioManager.MODE_NORMAL, CallLogic.modeToRestore(AudioManager.MODE_CURRENT));
+        // WebView trả lại MODE_IN_COMMUNICATION nó đã lưu SAU end(): kiểm lại 2 s sau → về NORMAL, trừ khi đã có cuộc gọi
+        // mới hoặc app đang ghi âm
+        assertTrue(CallLogic.resetModeLater(false, AudioManager.MODE_IN_COMMUNICATION, false));
+        assertFalse(CallLogic.resetModeLater(true, AudioManager.MODE_IN_COMMUNICATION, false));
+        assertFalse(CallLogic.resetModeLater(false, AudioManager.MODE_IN_COMMUNICATION, true));
+        assertFalse(CallLogic.resetModeLater(false, AudioManager.MODE_NORMAL, false));
+        assertFalse(CallLogic.resetModeLater(false, AudioManager.MODE_IN_CALL, false)); // cuộc gọi điện thoại thật: không đụng
+        assertEquals(2000, CallLogic.MODE_RECHECK_MS);
+    }
+
+    @Test
     public void speakerButtonToggles() {
         assertEquals("earpiece", CallLogic.nextRequest("speaker"));
         assertEquals("speaker", CallLogic.nextRequest("earpiece"));
@@ -82,12 +156,14 @@ public class CallLogicTest {
 
     @Test
     public void proximityOnlyForVoiceOnTheEarpiece() {
-        assertTrue(CallLogic.useProximity(false, "earpiece", true));
-        assertFalse(CallLogic.useProximity(true, "earpiece", true)); // video: màn hình phải sáng
-        assertFalse(CallLogic.useProximity(false, "speaker", true));
-        assertFalse(CallLogic.useProximity(false, "headset", true));
-        assertFalse(CallLogic.useProximity(false, "earpiece", false)); // máy không có cảm biến
-        assertFalse(CallLogic.useProximity(false, null, true));
+        assertTrue(CallLogic.useProximity(false, "earpiece", true, true));
+        assertFalse(CallLogic.useProximity(true, "earpiece", true, true)); // video: màn hình phải sáng
+        assertFalse(CallLogic.useProximity(false, "speaker", true, true));
+        assertFalse(CallLogic.useProximity(false, "headset", true, true));
+        assertFalse(CallLogic.useProximity(false, "earpiece", false, true)); // máy không có cảm biến
+        assertFalse(CallLogic.useProximity(false, null, true, true));
+        // đang ở app khác (MainActivity onStop): che cảm biến không tắt màn hình ở đó
+        assertFalse(CallLogic.useProximity(false, "earpiece", true, false));
         assertTrue(CallLogic.keepScreenOn(true));
         assertFalse(CallLogic.keepScreenOn(false));
     }
@@ -95,23 +171,14 @@ public class CallLogicTest {
     // ---------- foreground service ----------
 
     @Test
-    public void serviceTypesFollowPermissionsAndCamera() {
-        assertEquals(-1, CallLogic.serviceTypes(34, false, true, true)); // không có quyền micro: không chạy
-        assertEquals(0, CallLogic.serviceTypes(29, true, true, true)); // Android 10: startForeground không loại
-        assertEquals(0, CallLogic.serviceTypes(24, true, false, false));
-        assertEquals(CallLogic.FGS_MICROPHONE, CallLogic.serviceTypes(30, true, false, true));
-        assertEquals(CallLogic.FGS_MICROPHONE | CallLogic.FGS_CAMERA, CallLogic.serviceTypes(34, true, true, true));
-        // camera đang bật nhưng chưa có quyền camera: chỉ micro (Android 14 ném SecurityException nếu khai camera)
-        assertEquals(CallLogic.FGS_MICROPHONE, CallLogic.serviceTypes(34, true, true, false));
-        // gọi thoại (camera tắt): không khai camera
-        assertEquals(CallLogic.FGS_MICROPHONE, CallLogic.serviceTypes(35, true, false, true));
-    }
-
-    @Test
-    public void cameraRefusedFallsBackToMicrophone() {
-        assertArrayEquals(new int[] { 0xC0, 0x80 }, CallLogic.serviceTypeAttempts(0xC0));
-        assertArrayEquals(new int[] { 0x80 }, CallLogic.serviceTypeAttempts(0x80));
-        assertArrayEquals(new int[] { 0 }, CallLogic.serviceTypeAttempts(0));
+    public void serviceIsMicrophoneOnlyNeverCamera() {
+        assertEquals(-1, CallLogic.serviceTypes(34, false)); // không có quyền micro: không chạy
+        assertEquals(0, CallLogic.serviceTypes(29, true)); // Android 10: startForeground không loại
+        assertEquals(0, CallLogic.serviceTypes(24, true));
+        // gọi thoại lẫn gọi video: CHỈ microphone — camera dừng khi rời app (không gửi hình lúc bên kia thấy "Tạm dừng")
+        assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE, CallLogic.serviceTypes(30, true));
+        assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE, CallLogic.serviceTypes(34, true));
+        assertEquals(0, CallLogic.serviceTypes(36, true) & ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA);
     }
 
     @Test
@@ -146,29 +213,54 @@ public class CallLogicTest {
 
     @Test
     public void incomingDecision() {
-        long now = 1_800_000_000_000L;
-        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(now, now + 50_000, false, false, false));
+        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(50_000, false, false, false));
         // app đang mở: web tự đổ chuông trong app
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, false, true, false));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(50_000, false, true, false));
         // đang trong cuộc gọi khác: web báo bận, không đổ chuông đè lên cuộc gọi đang nói
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, false, false, true));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(50_000, false, false, true));
         // tin kết thúc đã tới trước / đã bấm Từ chối
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now + 50_000, true, false, false));
-        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(now, now - 1, true, false, false));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(50_000, true, false, false));
+        assertEquals(CallLogic.IN_IGNORE, CallLogic.onIncoming(-1, true, false, false));
         // tới sau khi cuộc gọi chắc chắn đã thôi đổ chuông → "Cuộc gọi nhỡ" ngay (kể cả khi app đang mở)
-        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(now, now - 1, false, false, false));
-        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(now, now, false, true, false));
-        // không có exp (tin lạ): vẫn đổ chuông, timeoutAfter chặn trên 60 s
-        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(now, 0, false, false, false));
+        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(-1, false, false, false));
+        assertEquals(CallLogic.IN_MISSED, CallLogic.onIncoming(0, false, true, false));
+    }
+
+    @Test
+    public void ringWindowIsMeasuredFromTheServerClock() {
+        long sent = 1_800_000_000_000L; // RemoteMessage.getSentTime() (đồng hồ máy chủ FCM)
+        long exp = sent + 60_000; // máy chủ: hết đổ chuông sau 60 s
+        // đồng hồ máy đúng, tin tới sau 3 s → còn 57 s
+        assertEquals(57_000, CallLogic.ringRemainingMs(sent + 3_000, sent, exp));
+        // tới thật muộn (Doze) 61 s → nhỡ
+        assertTrue(CallLogic.ringRemainingMs(sent + 61_000, sent, exp) <= 0);
+        // đồng hồ máy NHANH 90 s: trước đây mọi cuộc gọi thành "nhỡ" ngay — giờ đổ chuông đủ 60 s
+        assertEquals(60_000, CallLogic.ringRemainingMs(sent + 90_000, sent, exp));
+        assertEquals(CallLogic.IN_RING, CallLogic.onIncoming(CallLogic.ringRemainingMs(sent + 90_000, sent, exp), false, false, false));
+        // đồng hồ máy CHẬM 10 phút: đổ chuông đủ 60 s (trước đây cũng vậy nhưng nhờ kẹp)
+        assertEquals(60_000, CallLogic.ringRemainingMs(sent - 600_000, sent, exp));
+        // lệch nhỏ (đồng hồ nhanh 40 s, tin tới sau 2 s) không phân biệt được với trễ thật: rút ngắn, không "nhỡ"
+        assertEquals(18_000, CallLogic.ringRemainingMs(sent + 42_000, sent, exp));
+        // không có exp (tin lạ): 60 s; không có sentTime: cách cũ (exp − now)
+        assertEquals(60_000, CallLogic.ringRemainingMs(sent, sent, 0));
+        assertEquals(42_000, CallLogic.ringRemainingMs(exp - 42_000, 0, exp));
     }
 
     @Test
     public void ringStopsWhenTheCallCannotRingAnyMore() {
-        long now = 1_800_000_000_000L;
-        assertEquals(42_000, CallLogic.ringTimeoutMs(now, now + 42_000));
-        assertEquals(60_000, CallLogic.ringTimeoutMs(now, now + 600_000)); // đồng hồ máy lệch: tối đa 60 s
-        assertEquals(5_000, CallLogic.ringTimeoutMs(now, now + 1_000)); // ít nhất 5 s để kịp thấy
-        assertEquals(60_000, CallLogic.ringTimeoutMs(now, 0));
+        assertEquals(42_000, CallLogic.ringTimeoutMs(42_000));
+        assertEquals(60_000, CallLogic.ringTimeoutMs(600_000)); // tối đa 60 s
+        assertEquals(5_000, CallLogic.ringTimeoutMs(1_000)); // ít nhất 5 s để kịp thấy
+        assertEquals(5_000, CallLogic.ringTimeoutMs(-3_000));
+    }
+
+    @Test
+    public void ringtoneLoopsOnlyWhereTheTimeoutWorks() {
+        // Android 7.x: setTimeoutAfter không có tác dụng → FLAG_INSISTENT + mất tin kết thúc = kêu mãi → chỉ kêu 1 lần
+        assertFalse(CallLogic.insistentRing(24));
+        assertFalse(CallLogic.insistentRing(25));
+        assertTrue(CallLogic.insistentRing(26));
+        assertTrue(CallLogic.insistentRing(36));
     }
 
     @Test

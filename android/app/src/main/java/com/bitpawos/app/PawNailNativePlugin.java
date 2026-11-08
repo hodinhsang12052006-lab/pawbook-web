@@ -28,9 +28,10 @@ import java.lang.ref.WeakReference;
 // hỗ trợ thông báo đẩy native.
 //
 // Cuộc gọi (versionCode 4+, getInfo().calls = 1): startOngoingCall / updateOngoingCall / stopOngoingCall (foreground
-// service giữ micro / camera khi rời app, giữ màn hình sáng khi gọi video, cảm biến tiệm cận khi nghe bằng loa trong),
-// setAudioRoute / getAudioState (nút Loa), takeCallAction + sự kiện "callAction" ({action: "hangup" | "answer" |
-// "declined", callId?}) từ thông báo. Web dò từng hàm (lib/calls/nativeCallBridge.ts): bản app cũ giữ hành vi cũ.
+// service giữ micro khi rời app, giữ màn hình sáng khi gọi video, cảm biến tiệm cận khi nghe bằng loa trong),
+// setAudioRoute / getAudioState (nút Loa) + sự kiện "callAudio" (cắm / rút tai nghe giữa cuộc gọi), takeCallAction + sự
+// kiện "callAction" ({action: "hangup" | "answer" | "declined", callId?}) từ thông báo. Web dò từng hàm
+// (lib/calls/nativeCallBridge.ts): bản app cũ giữ hành vi cũ.
 @CapacitorPlugin(name = "PawNailNative")
 public class PawNailNativePlugin extends Plugin {
 
@@ -39,6 +40,7 @@ public class PawNailNativePlugin extends Plugin {
     /** Phiên bản phần cuộc gọi native (foreground service + âm thanh + thông báo cuộc gọi data-only, versionCode 4). */
     private static final int CALLS_VERSION = 1;
     static final String EVENT_CALL_ACTION = "callAction";
+    static final String EVENT_CALL_AUDIO = "callAudio";
 
     /** Plugin của WebView chính đang sống (thông báo → web). */
     private static volatile WeakReference<PawNailNativePlugin> current = new WeakReference<>(null);
@@ -75,9 +77,19 @@ public class PawNailNativePlugin extends Plugin {
         }
     }
 
+    /** Native → web: đường âm thanh của cuộc gọi vừa đổi vì cắm / rút / nối thiết bị (CallAudio) — nhãn nút Loa. */
+    static void emitAudioState(JSObject state) {
+        PawNailNativePlugin p = current.get();
+        if (p == null || state == null || !p.hasListeners(EVENT_CALL_AUDIO)) return;
+        try {
+            p.notifyListeners(EVENT_CALL_AUDIO, state);
+        } catch (RuntimeException ignored) {}
+    }
+
     /**
      * { firebase, sdk, bubbles (API 30+), bubblePref ("all"|"selected"|"none", API 31+, khác:
-     * null), notificationsEnabled, messagesChannel (kênh "Tin nhắn" chưa bị tắt), chat (1) }
+     * null), notificationsEnabled, messagesChannel (kênh "Tin nhắn" chưa bị tắt), chat (1),
+     * calls (1, versionCode 4+), callsChannel (kênh "Cuộc gọi" chưa bị tắt) }
      */
     @PluginMethod
     public void getInfo(PluginCall call) {
@@ -94,6 +106,7 @@ public class PawNailNativePlugin extends Plugin {
         ret.put("messagesChannel", ChatNotifications.messagesChannelEnabled(ctx));
         ret.put("chat", CHAT_RENDERER);
         ret.put("calls", CALLS_VERSION);
+        ret.put("callsChannel", ChatNotifications.channelEnabled(ctx, ChatNotifications.CHANNEL_CALLS));
         call.resolve(ret);
     }
 
@@ -102,9 +115,9 @@ public class PawNailNativePlugin extends Plugin {
     // ---------------------------------------------------------------------------------
 
     /**
-     * { peerName, video (bố cục video), camera (camera của mình đang bật), state: "calling" | "connecting" |
-     * "connected", since (ms, lúc thông) } → { started, audio }. Gọi khi app đang ở tiền cảnh (vừa bấm gọi / nghe máy):
-     * Android 12+ không cho bật foreground service micro / camera từ nền.
+     * { peerName, video (bố cục video), state: "calling" | "connecting" | "connected", since (ms, lúc thông) } →
+     * { started, audio }. Gọi khi app đang ở tiền cảnh (vừa bấm gọi / nghe máy): Android 12+ không cho bật foreground
+     * service micro từ nền. (camera: web vẫn gửi, bỏ qua — service không khai loại camera.)
      */
     @PluginMethod
     public void startOngoingCall(PluginCall call) {
@@ -117,14 +130,7 @@ public class PawNailNativePlugin extends Plugin {
             call.resolve(ret);
             return;
         }
-        boolean started = OngoingCallService.start(
-            ctx,
-            call.getString("peerName", ""),
-            video,
-            Boolean.TRUE.equals(call.getBoolean("camera", false)),
-            call.getString("state"),
-            longArg(call, "since")
-        );
+        boolean started = OngoingCallService.start(ctx, call.getString("peerName", ""), video, call.getString("state"), longArg(call, "since"));
         CallAudio.get().begin(ctx, video);
         keepScreenOn(CallLogic.keepScreenOn(video));
         ret.put("started", started);
@@ -132,22 +138,15 @@ public class PawNailNativePlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /** Cùng tham số với startOngoingCall: đổi chữ của thông báo (đang gọi → đã thông + đồng hồ), thoại ↔ video. */
+    /**
+     * Cùng tham số với startOngoingCall: đổi chữ của thông báo (đang gọi → đã thông + đồng hồ), thoại ↔ video. Chỉ đăng
+     * lại thông báo (không startForeground lại — app thường đang ở nền).
+     */
     @PluginMethod
     public void updateOngoingCall(PluginCall call) {
         Context ctx = getContext();
         boolean video = Boolean.TRUE.equals(call.getBoolean("video", false));
-        boolean running = OngoingCallService.isRunning();
-        if (running) {
-            running = OngoingCallService.start(
-                ctx,
-                call.getString("peerName", ""),
-                video,
-                Boolean.TRUE.equals(call.getBoolean("camera", false)),
-                call.getString("state"),
-                longArg(call, "since")
-            );
-        }
+        boolean running = OngoingCallService.update(ctx, call.getString("peerName", ""), video, call.getString("state"), longArg(call, "since"));
         if (CallAudio.get().isActive()) CallAudio.get().setVideo(ctx, video);
         keepScreenOn(CallLogic.keepScreenOn(video));
         JSObject ret = new JSObject();

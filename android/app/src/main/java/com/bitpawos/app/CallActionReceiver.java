@@ -21,13 +21,20 @@ public class CallActionReceiver extends BroadcastReceiver {
     private static final String TAG = "PawNailCallAction";
 
     static final String ACTION_DECLINE = "com.bitpawos.app.action.CALL_DECLINE";
+    /** Android 7.x: báo thức hết giờ đổ chuông (CallNotifications.scheduleRingTimeout) — gỡ thông báo nếu vẫn đổ chuông. */
+    static final String ACTION_RING_TIMEOUT = "com.bitpawos.app.action.CALL_RING_TIMEOUT";
     private static final long BUDGET_MS = 9000;
 
     private static final ExecutorService EXEC = Executors.newSingleThreadExecutor();
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent == null || !ACTION_DECLINE.equals(intent.getAction())) return;
+        if (intent == null) return;
+        if (ACTION_RING_TIMEOUT.equals(intent.getAction())) {
+            CallNotifications.cancelIfRinging(context.getApplicationContext(), intent.getStringExtra(CallNotifications.EXTRA_CALL_ID));
+            return;
+        }
+        if (!ACTION_DECLINE.equals(intent.getAction())) return;
         String callId = intent.getStringExtra(CallNotifications.EXTRA_CALL_ID);
         String callerId = intent.getStringExtra(CallNotifications.EXTRA_CALLER_ID);
         String token = intent.getStringExtra(CallNotifications.EXTRA_CALL_TOKEN);

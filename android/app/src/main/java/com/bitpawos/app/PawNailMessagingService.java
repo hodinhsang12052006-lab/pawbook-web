@@ -42,6 +42,11 @@ public class PawNailMessagingService extends MessagingService {
         Map<String, String> data = remoteMessage.getData();
         String type = data.get("type");
         boolean dataOnly = remoteMessage.getNotification() == null;
+        // FCM hạ ưu tiên tin "high" của app nếu chúng thường không hiện thông báo (vd "call-end" đã nghe / từ chối chỉ gỡ
+        // thông báo) — ghi lại để thấy trên máy thử nghiệm (adb logcat -s PawNailFCM) trước khi nó làm cuộc gọi đến tới muộn.
+        if (remoteMessage.getPriority() != remoteMessage.getOriginalPriority()) {
+            Log.w(TAG, "priority lowered: " + type + " " + remoteMessage.getOriginalPriority() + " -> " + remoteMessage.getPriority());
+        }
 
         if (dataOnly && "chat".equals(type)) {
             try {
@@ -56,7 +61,7 @@ public class PawNailMessagingService extends MessagingService {
         // "Cuộc gọi nhỡ" (CallNotifications). Không chuyển cho JS (cùng lý do với tin chat).
         if (dataOnly && "call".equals(type)) {
             try {
-                CallNotifications.onIncoming(getApplicationContext(), data);
+                CallNotifications.onIncoming(getApplicationContext(), data, remoteMessage.getSentTime());
             } catch (Throwable t) {
                 Log.w(TAG, "call notification failed: " + t.getClass().getSimpleName());
             }

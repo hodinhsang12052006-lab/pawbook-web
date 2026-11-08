@@ -91,20 +91,22 @@
             android:name=".ChatActionReceiver"
             android:exported="false" />
 
-        <!-- versionCode 4: nút "Từ chối" trên thông báo cuộc gọi đến (CallNotifications) → POST /api/calls reject. -->
+        <!-- versionCode 4: nút "Từ chối" trên thông báo cuộc gọi đến (CallNotifications) → POST /api/calls reject; Android
+             7.x: báo thức gỡ thông báo đổ chuông khi hết giờ. -->
         <receiver
             android:name=".CallActionReceiver"
             android:exported="false" />
 
-        <!-- versionCode 4: "đang trong cuộc gọi" — giữ micro (và camera khi đang bật) của cuộc gọi WebRTC trong WebView
-             khi rời app / tắt màn hình. Loại microphone|camera (Android 11+; Android 14 cần thêm quyền
-             FOREGROUND_SERVICE_MICROPHONE / _CAMERA bên dưới). KHÔNG phoneCall (chỉ cho app gọi điện mặc định /
-             ConnectionService) hay mediaPlayback. Play Console: khai báo "Foreground service" loại Microphone + Camera
-             (cuộc gọi thoại / video giữa chủ tiệm và thợ). Không export. -->
+        <!-- versionCode 4: "đang trong cuộc gọi" — giữ micro của cuộc gọi WebRTC trong WebView khi rời app / tắt màn hình.
+             CHỈ loại microphone (Android 11+; Android 14 cần thêm quyền FOREGROUND_SERVICE_MICROPHONE bên dưới). KHÔNG
+             camera: rời app thì camera dừng, web tắt track video và báo bên kia "Tạm dừng video" — không gửi hình khi
+             người dùng không thấy app. KHÔNG phoneCall (chỉ cho app gọi điện mặc định / ConnectionService) hay
+             mediaPlayback. Play Console: khai báo "Foreground service permissions" loại Microphone (cuộc gọi thoại / video
+             giữa chủ tiệm và thợ). Không export. -->
         <service
             android:name=".OngoingCallService"
             android:exported="false"
-            android:foregroundServiceType="microphone|camera" />
+            android:foregroundServiceType="microphone" />
 
         <!-- Tin "notification" do FCM tự vẽ (app ở nền: tin không phải chat, bản máy chủ cũ):
              icon trắng thanh trạng thái, màu cam thương hiệu, kênh mặc định "general". -->
@@ -151,10 +153,10 @@
          mic. Quyền "normal": không hiện hộp thoại, không cần tờ khai Play. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- versionCode 4 — cuộc gọi tiếp tục khi rời app (OngoingCallService). Đều là quyền "normal" (không hỏi người dùng);
-         Android 14+ cần quyền theo LOẠI service, và chỉ bật được khi đã có RECORD_AUDIO / CAMERA. -->
+         Android 14+ cần quyền theo LOẠI service, và chỉ bật được khi đã có RECORD_AUDIO. Play Console: tờ khai
+         "Foreground service permissions" cho FOREGROUND_SERVICE_MICROPHONE. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <!-- Cảm biến tiệm cận khi gọi thoại bằng loa trong (PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK — CallAudio). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 13+ KHÔNG cần READ_MEDIA_IMAGES/VIDEO: chọn ảnh qua bộ chọn file/Photo Picker

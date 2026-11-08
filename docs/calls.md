@@ -119,4 +119,4 @@ BASE_URL=http://localhost:3210 node scripts/qa/call_test.mjs
 
 `call_test.mjs` starts its own Pusher mock (`scripts/qa/lib/pusher_mock.mjs`) and UDP network simulator
 (`scripts/qa/lib/udp_netsim.mjs`) and checks real `getStats()` numbers (audio bytes, decoded video frames, ICE ufrag after
-a simulated network drop). `CALL_ONLY=audio,video,flows,multi,slow,reconnect,perm,shots,timeout` runs a subset.
+a simulated network drop). `CALL_ONLY=audio,video,flows,multi,slow,reconnect,perm,shots,native,timeout` runs a subset (`native`: fake Android app shell, versionCode 4 vs 3).

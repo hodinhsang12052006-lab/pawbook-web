@@ -97,9 +97,61 @@ const auStateFromPostcode = (pc: string) => {
 const strip = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 const titleCase = (s: string) => s.replace(/\s+/g, " ").trim().replace(/\b([a-z])/g, (m) => m.toUpperCase());
 
-/** Tìm SĐT Mỹ/Úc đầu tiên trong bài. */
-export function findPhone(text: string): { e164: string; display: string; market: "US" | "AU" } | null {
+// ===== Số doanh nghiệp Úc: 1300 / 1800 xxx xxx, 13 xx xx (11/2026) =====
+// Tiệm / chuỗi tiệm ở Úc hay chỉ ghi số 1300 / 1800 (không có số 0 trung kế, không gọi được từ nước ngoài) → bài nhóm Úc
+// chỉ có số đó từng bị bỏ "không có SĐT Mỹ/Úc". Các số này CHỈ có ở Úc nên chỉ nhận khi bài (hoặc tool) nói là Úc, và
+// KHÔNG BAO GIỜ thành số Mỹ (số miễn cước Mỹ 1-800-xxx-xxxx có 7 số sau 800, không khớp mẫu 1800 + 6 số).
+const AU_BIZ = /(^|[^\d+])(1[38]00(?:[ .-]?\d){6}|13(?:[ -]?\d){4})(?!\d)/g;
+// "13 xx xx" chỉ có 6 số (dễ trùng ngày "13-12-26", mã, giá…) → chỉ nhận khi đứng ngay sau chữ báo số điện thoại.
+const PHONE_CUE = /(?:g[ọo]i|call|phone|ph|tel|lh|li[êe]n h[ệe]|s[đd]t|[đd]t|hotline|ring|text|nh[ắa]n|☎️?|📞|📱)\s*[:.-]?\s*$/iu;
+// Tên nước (không dùng "ức": "ức chế" ≠ Úc)
+const AU_COUNTRY = /(?<![\p{L}\p{N}])(?:[úÚ]c|australia|aussie)(?![\p{L}\p{N}])/iu;
+
+/**
+ * Bài có dấu hiệu ở Úc: chữ "Úc" / Australia, mã bang NSW / VIC / QLD / TAS (viết hoa), bang + postcode 4 số
+ * ("WA 6000"), tên bang Úc viết đầy đủ, địa chỉ / thành phố Úc.
+ */
+export function hasAuContext(text: string | null | undefined): boolean {
+  const t = String(text ?? "").normalize("NFKC");
+  if (!t.trim()) return false;
+  if (AU_COUNTRY.test(t)) return true;
+  if (/\b(?:NSW|VIC|QLD|TAS)\b|\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s+\d{4}\b/.test(t)) return true;
+  if (findAddress(t)?.market === "AU") return true;
+  return findPlace(t, null).market === "AU";
+}
+
+/** Số 1300 / 1800 xxx xxx hoặc 13 xx xx đầu tiên (không đứng sau mã nước khác) — chỉ gọi khi đã biết là bài Úc. */
+function findAuBusinessPhone(t: string): { e164: string; display: string; market: "AU" } | null {
+  for (const m of t.matchAll(AU_BIZ)) {
+    const before = t.slice(0, (m.index ?? 0) + m[1].length);
+    const cc = /(?:\+|\b00)\s?(\d{1,3})[\s.-]?$/.exec(before);
+    if (cc && cc[1] !== "61") continue; // "+44 1300 …": số nước khác
+    const d = m[2].replace(/\D/g, "");
+    // Ô SĐT riêng của tool / admin (chỉ có đúng số đó) thì không cần chữ báo.
+    const alone = !before.trim() && !t.slice((m.index ?? 0) + m[0].length).trim();
+    if (d.length === 6 && !alone && !PHONE_CUE.test(before.slice(-24))) continue;
+    const display = d.length === 10 ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : `${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4)}`;
+    return { e164: `+61${d}`, display, market: "AU" };
+  }
+  return null;
+}
+
+/**
+ * Tìm SĐT Mỹ/Úc đầu tiên trong bài. opts.market: thị trường tool / admin đã biết ("AU" → nhận cả số 1300 / 1800 / 13
+ * khi bài không ghi gì về Úc; "US" → không bao giờ nhận các số đó).
+ */
+export function findPhone(text: string, opts: { market?: string | null } = {}): { e164: string; display: string; market: "US" | "AU" } | null {
   const t = String(text || "").normalize("NFKC").replace(/\(0([2378])\)\s?/g, "0$1 ").replace(/[‐-―]/g, "-");
+  const regular = findRegularPhone(t);
+  if (regular !== undefined) return regular;
+  // Không có số di động / số bàn nào: số doanh nghiệp Úc, chỉ khi chắc là bài Úc.
+  if (opts.market === "US") return null;
+  if (opts.market !== "AU" && !hasAuContext(t)) return null;
+  return findAuBusinessPhone(t);
+}
+
+/** Số di động / số bàn Úc, số Mỹ; undefined = không thấy số nào (null = thấy nhưng không dùng được). */
+function findRegularPhone(t: string): { e164: string; display: string; market: "US" | "AU" } | null | undefined {
   // Úc: +61 4xx / 04xx xxx xxx (di động) hoặc 02/03/07/08 xxxx xxxx (bàn)
   const au = t.match(/(?:\+?61[\s.-]?|\b0)([2-478](?:[\s.-]?\d){8})\b/);
   // Mỹ: (713) 555-0123 · 713-555-0123 · 713.555.0123 · 7135550123 · +1 713 555 0123
@@ -108,6 +160,7 @@ export function findPhone(text: string): { e164: string; display: string; market
     if (au && us) return (au.index ?? 0) <= (us.index ?? 0) ? "AU" : "US";
     return au ? "AU" : us ? "US" : null;
   })();
+  if (!pick) return undefined;
   if (pick === "US" && us) {
     const [a, b, c] = [us[1], us[2], us[3]];
     if (a === "555" && b === "555") return null;
@@ -423,10 +476,11 @@ export function stripDiscriminatoryRequirements(text: string): string {
     .replace(/^[ \t]+|[ \t]+$/gm, "");
 }
 
-export function parseJobPost(raw: string): ParsedJob {
+/** opts.market: thị trường tool đã biết — chỉ dùng để nhận số doanh nghiệp Úc 1300 / 1800 / 13 (findPhone). */
+export function parseJobPost(raw: string, opts: { market?: string | null } = {}): ParsedJob {
   const text = String(raw || "").normalize("NFKC").slice(0, 6000);
   const sale = isSalonSale(text);
-  const ph = findPhone(text);
+  const ph = findPhone(text, { market: opts.market });
   const addr = findAddress(text);
   const place = addr ? { state: addr.state, city: addr.city, market: addr.market } : findPlace(text, ph?.market ?? null);
   const market = addr?.market ?? ph?.market ?? place.market ?? null;

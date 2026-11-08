@@ -95,10 +95,10 @@ export async function POST(req: Request) {
   }
 
   if (b.action === "resolve" && b.requestId) {
-    const r = await prisma.jobRequest.findUnique({ where: { id: b.requestId }, include: { job: { select: { id: true, phone: true } } } });
+    const r = await prisma.jobRequest.findUnique({ where: { id: b.requestId }, include: { job: { select: { id: true, phone: true, market: true } } } });
     if (!r) return NextResponse.json({ error: "Không tìm thấy yêu cầu." }, { status: 404 });
     if (b.decision === "remove") {
-      const e164 = findPhone(r.job.phone)?.e164;
+      const e164 = findPhone(r.job.phone, { market: r.job.market })?.e164;
       if (e164) await blockPhone(e164); // không đăng lại số này
       await prisma.jobRequest.updateMany({ where: { jobId: r.jobId, handledAt: null }, data: { handledAt: new Date() } });
       // Giữ dòng tin (lịch sử JobRequest còn tham chiếu) nhưng XOÁ hết dữ liệu công khai của tiệm (SĐT, mô tả, địa chỉ,

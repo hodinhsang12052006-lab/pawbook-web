@@ -105,6 +105,64 @@ ok("IN4", "Bài Mỹ / Úc thật vẫn nhận như cũ (SĐT dạng chuẩn); '
   r7.status === "ok" && r7.data.phone === "(281) 555-0142" && r7.data.market === "US" && r7.data.state === "TX" && r8.status === "ok" && r8.data.phone === "0412 555 019" && r8.data.market === "AU" && r9.status === "ok" && r9.data.state === "NC",
   JSON.stringify([r7.status, r8.status, r9.status === "skipped" ? r9.reason : r9.data.state]));
 
+// ---------- Số doanh nghiệp Úc 1300 / 1800 xxx xxx, 13 xx xx (bài nhóm Úc chỉ có số đó từng bị bỏ "không có SĐT Mỹ/Úc") ----------
+{
+  const { hasAuContext } = await import("../../lib/jobIngest/parse");
+  const F = (t: string, market?: string | null) => {
+    const r = findPhone(t, { market });
+    return r ? `${r.market} ${r.e164} ${r.display}` : null;
+  };
+  const AU_POSTS: [string, string][] = [
+    ["Tiệm ở Bankstown NSW cần thợ bột, gọi 1300 975 707", "AU +611300975707 1300 975 707"],
+    ["Cần thợ nail ở Sydney, LH 1800-975-708 giờ hành chính", "AU +611800975708 1800 975 708"],
+    ["Tiệm bên Úc cần thợ everything, call 1300975707", "AU +611300975707 1300 975 707"],
+    ["Hiring nail tech in Melbourne VIC, ph: 13 19 75", "AU +61131975 13 19 75"],
+    ["Cần thợ ở Brisbane. Gọi 131975", "AU +61131975 13 19 75"],
+    ["Nail salon in Perth WA 6000 needs a tech, call +61 1300 975 707", "AU +611300975707 1300 975 707"],
+    ["Tiệm ở Canberra cần thợ. Hotline: 1300.975.707", "AU +611300975707 1300 975 707"],
+  ];
+  const auBad = AU_POSTS.filter(([t, want]) => F(t) !== want).map(([t]) => [t, F(t)]);
+  ok("AUB1", "Bài Úc (NSW / Sydney / 'bên Úc' / VIC / Brisbane / WA 6000 / Canberra) chỉ có số 1300 / 1800 / 13 xx xx → nhận đúng số, hiển thị '1300 975 707' / '13 19 75', thị trường AU",
+    auBad.length === 0, JSON.stringify(auBad));
+  const NOT_AU = [
+    "Cần thợ bột gấp, gọi 1300 975 707", // không có dấu hiệu Úc
+    "Tiệm ở Houston TX cần thợ, gọi 1300 975 707", // bài Mỹ
+    "Cần thợ ở Dallas, call 1-800-555-0199 ext 2 hoặc 1800 975 708", // số miễn cước Mỹ không bao giờ thành số Úc / số 1800 trong bài Mỹ
+    "Tiệm ở Sydney NSW khai trương 13-12-26, inbox mình", // 13 xx xx không có chữ báo SĐT = ngày tháng
+    "Tiệm ở Sydney NSW, giảm giá tới 13.12.26", // dấu chấm
+    "Tiệm ở Sydney NSW cần thợ, gọi +44 1300 975 707", // sau mã nước khác
+    "Tiệm ở Sydney NSW cần thợ, mức lương $1,300-1,800/tuần", // tiền
+    "Tiệm nail ở London cần thợ, 1300 975 707", // Anh
+    "Tiệm ức chế quá, cần thợ gấp 1300 975 707", // "ức" ≠ Úc
+  ];
+  const notBad = NOT_AU.filter((t) => F(t) !== null && !F(t)?.startsWith("US +18005550199")).map((t) => [t, F(t)]);
+  ok("AUB2", "Không có dấu hiệu Úc / bài Mỹ / ngày tháng / số sau mã nước khác / tiền / bài Anh / 'ức chế' → KHÔNG nhận số 1300 / 1800 / 13 (số miễn cước Mỹ 1-800-xxx-xxxx vẫn là số Mỹ như trước)",
+    notBad.length === 0 && F(NOT_AU[2]) === "US +18005550199 (800) 555-0199", JSON.stringify(notBad.concat([[NOT_AU[2], F(NOT_AU[2])]])));
+  ok("AUB3", "Tool / admin đã biết thị trường: market AU → nhận số 1300 / 13 dù bài không ghi Úc (ô SĐT riêng '13 19 75' không cần chữ báo); market US → không bao giờ",
+    F("Cần thợ bột gấp, gọi 1300 975 707", "AU") === "AU +611300975707 1300 975 707" && F("13 19 75", "AU") === "AU +61131975 13 19 75" && F("1300975707", "AU") === "AU +611300975707 1300 975 707" &&
+      F("Tiệm ở Sydney NSW, gọi 1300 975 707", "US") === null && F("1300 975 707", "US") === null && F("1300 975 707") === null,
+    JSON.stringify([F("Cần thợ bột gấp, gọi 1300 975 707", "AU"), F("13 19 75", "AU"), F("Tiệm ở Sydney NSW, gọi 1300 975 707", "US")]));
+  ok("AUB4", "Số di động / số bàn Úc vẫn được ưu tiên hơn số 1300 (giữ như cũ); số Mỹ trong bài Mỹ không đổi",
+    F("Tiệm ở Sydney NSW, gọi 1300 975 707 hoặc 0412 555 019") === "AU +61412555019 0412 555 019" && F("Tiệm ở Houston TX, gọi 713-555-0123") === "US +17135550123 (713) 555-0123");
+  ok("AUB5", "hasAuContext: Úc / Australia / NSW / 'WA 6000' / địa chỉ Úc / Sydney → có; Seattle WA / Houston / 'ức chế' / rỗng → không",
+    ["Tiệm bên Úc", "Nails in Australia", "Bankstown NSW", "Perth WA 6000", "Shop 4/112 Station St, Bankstown NSW 2200", "Cần thợ ở Sydney"].every(hasAuContext) &&
+      !["Tiệm ở Seattle WA", "Houston TX", "Tiệm ức chế quá", "", "WA"].some(hasAuContext));
+  const a1 = prepareIngest({ text: "Tiệm Lucky Nails ở Bankstown NSW cần gấp 2 thợ bột, bao lương. Gọi 1300 975 707", postedAt: now }, none);
+  const a2 = prepareIngest({ text: "Cần thợ bột gấp, bao lương. Gọi 1300 975 707", market: "AU", state: "VIC", postedAt: now }, none);
+  const a3 = prepareIngest({ text: "Cần thợ chân tay nước gấp, tiệm đông khách", phone: "13 19 75", market: "AU", state: "QLD", postedAt: now }, none);
+  const a4 = prepareIngest({ text: "Cần thợ bột gấp ở Houston TX. Gọi 1300 975 707", postedAt: now }, none);
+  const a5 = prepareIngest({ text: "Cần thợ bột gấp ở Sydney NSW, bao lương", phone: "1300975707", market: "US", postedAt: now }, none);
+  ok("AUB6", "prepareIngest: bài Úc chỉ có số 1300 → tin AU (NSW, '1300 975 707'); tool market AU + bang → nhận; ô SĐT '13 19 75' → nhận; bài Mỹ có 1300 / tool ghi US → vẫn bỏ 'không có SĐT Mỹ/Úc'",
+    a1.status === "ok" && a1.data.market === "AU" && a1.data.state === "NSW" && a1.data.phone === "1300 975 707" &&
+      a2.status === "ok" && a2.data.market === "AU" && a2.data.state === "VIC" && a2.data.phone === "1300 975 707" &&
+      a3.status === "ok" && a3.data.phone === "13 19 75" && a3.data.state === "QLD" &&
+      a4.status === "skipped" && /không có SĐT/.test(a4.reason) && a5.status === "skipped",
+    JSON.stringify([a1, a2, a3, a4, a5].map((r) => (r.status === "ok" ? `${r.data.market} ${r.data.state} ${r.data.phone}` : r.reason))));
+  // Số đã lưu phải gọi được / hiển thị đúng ở trang tin (lib/phoneFormat — dùng chung với form đăng tin)
+  ok("AUB7", "Số 1300 / 13 tách được → parseMarketPhone(AU) chấp nhận, nút Gọi quay số trong nước (tel:1300975707)",
+    parseMarketPhone("+611300975707", "AU")?.display === "1300 975 707" && parseMarketPhone("+61131975", "AU")?.display === "13 19 75" && telHref("1300 975 707", "AU") === "tel:1300975707" && hasCallableNumber("1300 975 707", "AU"));
+}
+
 // ---------- publicJob: dữ liệu cũ đã lưu ----------
 type J = Parameters<typeof publicJob>[0];
 const base = { sourceUrl: null, sourceKey: null, sourceFbHash: null, salonName: "x", city: "New York", state: "NY", salaryAmount: "Thỏa thuận" };

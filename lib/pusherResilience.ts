@@ -22,8 +22,9 @@ import type { Channel } from "pusher-js";
 
 export const RESUB_BASE_MS = 1_000;
 export const RESUB_CAP_MS = 30_000;
-/** One /api/pusher/auth request may take this long, then it counts as failed (status 0). */
-export const AUTH_TIMEOUT_MS = 10_000;
+/** One /api/pusher/auth request may take this long, then it counts as failed (status 0). 15 s: a cold Vercel function
+ * + database on a poor 3G link can take more than 10 s, and a timed-out request only costs one more retry. */
+export const AUTH_TIMEOUT_MS = 15_000;
 /** A subscription still pending after this long (auth answered but no subscription_succeeded) is redone. */
 export const PENDING_STUCK_MS = 20_000;
 /** After a (re)connect pusher-js subscribes everything itself; we verify this long afterwards. */
@@ -273,7 +274,8 @@ export function createChannelKeeper(pusher: PusherLike, deps: KeeperDeps = {}): 
       }
     }
     warn(`[realtime] ${e.name}: subscription failed (${status ?? "?"}), retrying`);
-    if (e.failures >= 4 && !e.reported && /^private-chat-/.test(e.name)) {
+    // Not for 401/403/…: a signed-out tab is not an outage (and its failure count is not reset on wake).
+    if (e.failures >= 4 && !e.reported && /^private-chat-/.test(e.name) && !isPermanentAuthStatus(status)) {
       e.reported = true;
       deps.report?.("Pusher private channel keeps failing to subscribe", { status: status ?? null, failures: e.failures });
     }

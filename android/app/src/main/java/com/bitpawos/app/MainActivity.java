@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.WindowManager;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -83,6 +84,9 @@ public class MainActivity extends BridgeActivity {
                     // Tải trang mới = JS cũ (và hội thoại đang mở nó báo) không còn: trang
                     // mới sẽ tự gọi PawNailNative.setActiveConversation lại nếu mở chat.
                     AppState.setActiveConversation(null);
+                    // ... và cuộc gọi WebRTC của trang cũ cũng đã mất (tải lại / điều hướng cứng giữa cuộc gọi): trang
+                    // không kịp gọi stopOngoingCall → tắt foreground service / chế độ âm thanh / giữ màn hình ở đây.
+                    endNativeCall();
                     super.onPageStarted(view, url, favicon);
                 }
 
@@ -148,9 +152,17 @@ public class MainActivity extends BridgeActivity {
     public void onDestroy() {
         // WebView (và cuộc gọi WebRTC trong nó) bị huỷ: thôi giữ foreground service / chế độ âm thanh cuộc gọi. Plugin cũng
         // làm việc này (handleOnDestroy) — ở đây cho chắc khi Bridge không được tạo.
-        OngoingCallService.stop(this);
-        CallAudio.get().end(this);
+        endNativeCall();
         super.onDestroy();
+    }
+
+    /** Cuộc gọi của WebView chính đã mất: tắt "đang trong cuộc gọi", trả chế độ âm thanh, thôi giữ màn hình sáng. */
+    private void endNativeCall() {
+        if (OngoingCallService.isRunning()) OngoingCallService.stop(this);
+        CallAudio.get().end(this);
+        try {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } catch (RuntimeException ignored) {}
     }
 
     /**

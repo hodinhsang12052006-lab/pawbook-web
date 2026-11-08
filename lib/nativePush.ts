@@ -4,6 +4,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import type { PushState } from "@/lib/pushClient";
 import { isBubbleMode } from "@/lib/bubbleMode";
+import { createNativeCallBridge, type NativeCallPluginLike, type PluginHeader } from "@/lib/calls/nativeCallBridge";
 
 // Thông báo đẩy trong APP NATIVE (Android/iOS) qua Firebase — lib/pushClient.ts
 // tự chuyển sang đây khi đang chạy trong app, nên lời mời bật thông báo, công
@@ -44,6 +45,7 @@ interface PawNailNativePlugin {
   clearAll(): Promise<void>;
   openBubbleSettings(): Promise<void>;
   openNotificationSettings(): Promise<void>;
+  // versionCode 4+ (cuộc gọi) — gọi qua nativeCall bên dưới, KHÔNG gọi thẳng (bản cũ ném "not implemented").
 }
 const PawNailNative = registerPlugin<PawNailNativePlugin>("PawNailNative");
 
@@ -310,4 +312,23 @@ export async function openBubbleSettings(): Promise<boolean> {
 export async function openNotificationSettings(): Promise<boolean> {
   if (!isAndroidApp()) return false;
   return PawNailNative.openNotificationSettings().then(() => true, () => false);
+}
+
+// ---------------------------------------------------------------------------
+// Cuộc gọi native (versionCode 4+): foreground service "đang trong cuộc gọi", loa trong / loa ngoài, nút trên thông báo.
+// Dò từng hàm (lib/calls/nativeCallBridge.ts) — web / iPhone / bản app cũ: no-op.
+// ---------------------------------------------------------------------------
+
+export const nativeCall = createNativeCallBridge({
+  isAndroidApp,
+  headers: () => (typeof window === "undefined" ? null : (window as unknown as { Capacitor?: { PluginHeaders?: PluginHeader[] } }).Capacitor?.PluginHeaders),
+  plugin: () => PawNailNative as unknown as NativeCallPluginLike,
+});
+
+/**
+ * App Android này TỰ đổ chuông cuộc gọi đến khi ở nền (thông báo native, versionCode 4+, máy đã đăng ký thông báo — máy
+ * chủ gửi tin cuộc gọi data-only cho build ≥ 4): trang bị ẩn thì web không phát thêm chuông (tránh 2 tiếng chuông).
+ */
+export function nativeHandlesCallAlerts(): boolean {
+  return nativeCall.supported() && !!savedToken();
 }

@@ -73,22 +73,44 @@ TURN traffic only when a direct path is impossible: roughly 0.5–1 MB/min for v
 
 - The call token lives 3 h: a call longer than that can no longer signal (mute state, ICE restart, hang-up over
   Pusher); hanging up still ends it on both sides through the data channel.
-- No native incoming-call screen (Android ConnectionService / iOS CallKit): a killed app shows the high-priority
-  `calls` notification; opening it rings in the app within ~6 s (re-ring).
-- Android app: no foreground service yet — when the app goes to the background Android may silence its microphone;
-  the other person then sees *<name> left the app — they may not hear you*. The hardware Back button is ignored while
-  ringing or in a call (end it with Decline / End).
+- No native incoming-call screen (Android ConnectionService / iOS CallKit, no full-screen intent — Play policy): a
+  killed app shows the high-priority `calls` notification; opening it rings in the app within ~6 s (re-ring).
+- Android app versionCode ≤ 3: no foreground service — when the app goes to the background Android may silence its
+  microphone; the other person then sees *<name> left the app — they may not hear you*. The hardware Back button is
+  ignored while ringing or in a call (end it with Decline / End).
 
 ## Android app
 
 The camera/microphone prompt inside the app needs versionCode 3+ (Capacitor's `BridgeWebChromeClient`). Older installs
 get *Microphone access is blocked* with a hint to update PawNail on Google Play. The chat-bubble WebView never rings.
 
+versionCode 4 (1.3.0) — everything is feature-detected by the web (`lib/calls/nativeCallBridge.ts`: the methods must be in
+`window.Capacitor.PluginHeaders`), so older installs keep the behaviour above:
+
+- **Ongoing call** (`OngoingCallService`): from the dial / Answer tap until the call ends, `CallManager` runs a foreground
+  service of type `microphone` (+ `camera` while your own camera is on; never `phoneCall` / `mediaPlayback`) with the
+  notification *Call with X · Tap to return to the call* + **Hang up** (→ the page hangs up properly). Android then keeps
+  the microphone / camera when you leave the app or turn the screen off, so the other side no longer gets *left the app*.
+  Video calls keep the screen on; voice calls on the earpiece use the proximity sensor.
+- **Speaker button** in the app: earpiece ↔ loudspeaker (`setCommunicationDevice` on Android 12+, `setSpeakerphoneOn`
+  below); voice calls start on the earpiece, video calls on the loudspeaker, headphones / Bluetooth win. The previous
+  audio mode is restored when the call ends.
+- **Call pushes**: for push tokens registered by build ≥ 4 (`NATIVE_CALL_MIN_BUILD`, like the chat data-only gate) the
+  server sends data-only `call` / `call-end` messages and the app draws the ringing notification itself (channel
+  `calls`, ringtone looping until answered / declined / the ring ends): **Answer** opens the app and the page answers
+  that call when it rings (≤ 6 s, re-ring), **Decline** posts `/api/calls` reject with the WebView session. The follow-up
+  removes it (answered / declined elsewhere) or turns it into a silent *Missed call from X*. Builds ≤ 3 keep the
+  `notification` payloads.
+- Play Console: declare the foreground service types Microphone + Camera (Policy › App content › Foreground service
+  permissions; a short video of a call continuing in the background).
+
 ## Tests (local only)
 
 ```
 env -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN npx tsx scripts/qa/call_signal_unit.mts   # queue, negotiation, token, wire, error texts
 env -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN npx tsx scripts/qa/call_ice_unit.mts      # STUN/TURN list, mock Cloudflare
+npx tsx scripts/qa/native_call_unit.mts                                                  # Android app bridge feature-detect
+(cd android && ./gradlew :app:testDebugUnitTest)                                         # CallLogicTest (routes, FGS, pushes)
 # in a throwaway copy (no .env, .env.production.local pins TURSO_DATABASE_URL=""), built with
 # NEXT_PUBLIC_PUSHER_APP_KEY=qa-key NEXT_PUBLIC_PUSHER_CLUSTER=mt1 NEXT_PUBLIC_PUSHER_TEST_WS=127.0.0.1:6001
 bash scripts/qa/start-call-server.sh &        # refuses to run next to a .env or without the Turso pin

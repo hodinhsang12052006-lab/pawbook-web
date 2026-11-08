@@ -22,6 +22,8 @@ import type { SignalInbox, SignalOutbox, OutboundMessage } from "@/lib/calls/sig
 import type { SignalEvent, WireCtl, WireIce } from "@/lib/calls/signalWire";
 import { createIceClient, IN_CALL_MIN_VALID_MS, type IceClient } from "@/lib/calls/iceClient";
 import { clearCallNotice, ownPushTokenField } from "@/lib/calls/callNotice";
+import { nativeCall, nativeHandlesCallAlerts } from "@/lib/nativePush";
+import { canSwitchNativeAudio, nextAudioRequest, type AudioRoute, type CallAction, type NativeAudioState, type OngoingState } from "@/lib/calls/nativeCallBridge";
 
 const CallScreen = dynamic(() => import("@/components/chat/call/CallScreen"), {
   ssr: false,
@@ -98,6 +100,8 @@ const SLOW_CONNECT_MS = 10_000;
 const REMOTE_CLOSE_GRACE_MS = 1_500;
 // Keep the connection this long after hanging up so the "bye" on the data channel is really sent.
 const BYE_LINGER_MS = 250;
+// "Answer" tapped on the Android app's notification: answer that call if it rings here within this time.
+const PENDING_ANSWER_MS = 90_000;
 
 const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
@@ -144,6 +148,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const [hasTurn, setHasTurn] = useState(true);
   // short "Call ended · m:ss" card after a call (rendered without [data-call-phase], so the call is already idle)
   const [endedCard, setEndedCard] = useState<string | null>(null);
+  // Android app versionCode 4+ (lib/calls/nativeCallBridge.ts): this call's microphone stream is open → the native
+  // "ongoing call" foreground service keeps it alive when the app leaves the screen; nativeAudio drives the Speaker button.
+  const [mediaLive, setMediaLive] = useState(false);
+  const [nativeAudio, setNativeAudio] = useState<NativeAudioState | null>(null);
 
   const phaseRef = useRef<Phase>("idle");
   const callRef = useRef<ActiveCall | null>(null);
@@ -160,6 +168,11 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const iceClientRef = useRef<{ user: string; client: IceClient } | null>(null);
   const netRef = useRef<NetState>("new");
   const wakeRef = useRef<{ release: () => Promise<void> } | null>(null);
+  // native ongoing call: start sent for the current call / the foreground service really runs (mic kept in background)
+  const ongoingRef = useRef(false);
+  const nativeKeepsMediaRef = useRef(false);
+  // "Answer" tapped on the app's incoming-call notification: answer this call as soon as it rings here
+  const pendingAnswerRef = useRef<{ callId: string; at: number } | null>(null);
   const endedRef = useRef<string[]>([]);
   const endedCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timers = useRef<{
@@ -290,6 +303,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setMediaPending(false);
       setSlowConnect(false);
       setPeerAway(false);
+      setMediaLive(false); // → the native ongoing-call service stops (effect below)
       netRef.current = "new";
       setFacing("user");
       facingRef.current = "user";
@@ -583,6 +597,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setMediaPending(false);
       if (callRef.current !== call) return stopStream(stream);
       streamRef.current = stream;
+      setMediaLive(true);
       const v = stream.getVideoTracks()[0] || null;
       camOnRef.current = !!v;
       setCamOn(!!v);
@@ -684,6 +699,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         return;
       }
       streamRef.current = stream;
+      setMediaLive(true);
       const v = stream.getVideoTracks()[0] || null;
       camOnRef.current = !!v;
       setCamOn(!!v);
@@ -739,6 +755,52 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     else if (ph === "error") teardown();
     else endCall("hangup");
   }, [endCall, teardown]);
+
+  // ---------- Android app versionCode 4+: buttons of the app's own call notifications ----------
+  // "Answer" on the incoming-call notification opens the app on this call: answer it as soon as it rings here (the caller
+  // re-rings every few seconds, so a cold start gets it too). "Hang up" on the ongoing-call notification hangs up.
+  const autoAnswerRef = useRef<() => void>(() => {});
+  autoAnswerRef.current = () => {
+    const p = pendingAnswerRef.current;
+    if (!p) return;
+    if (Date.now() - p.at > PENDING_ANSWER_MS) {
+      pendingAnswerRef.current = null;
+      return;
+    }
+    const call = callRef.current;
+    if (!call || call.isCaller || call.callId !== p.callId || phaseRef.current !== "incoming") return;
+    pendingAnswerRef.current = null;
+    handleAccept(false);
+  };
+  const hangUpRef = useRef(handleHangUp);
+  hangUpRef.current = handleHangUp;
+  const endCallRef = useRef(endCall);
+  endCallRef.current = endCall;
+
+  useEffect(() => {
+    if (!nativeCall.supported()) return;
+    const onAction = (a: CallAction, fromEvent: boolean) => {
+      if (a.action === "hangup") {
+        if (callRef.current) hangUpRef.current();
+        return;
+      }
+      if (!a.callId) return;
+      if (a.action === "answer") {
+        pendingAnswerRef.current = { callId: a.callId, at: Date.now() };
+        if (fromEvent) void nativeCall.takeAction(); // the same action also waits for a cold start: consume it
+        autoAnswerRef.current();
+        return;
+      }
+      // "Decline" on the notification (the app already posted the reject): stop ringing, ignore its late re-rings. The
+      // page posts its own reject too — harmless if it is a duplicate, and it covers an app request that failed.
+      markEnded(a.callId);
+      const call = callRef.current;
+      if (call && !call.isCaller && call.callId === a.callId && phaseRef.current === "incoming") endCallRef.current("decline");
+    };
+    const off = nativeCall.onAction((a) => onAction(a, true));
+    void nativeCall.takeAction().then((a) => a && onAction(a, false));
+    return off;
+  }, []);
 
   // ---------- incoming Pusher events ----------
   const handlers = useRef<{
@@ -800,13 +862,16 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setMediaError(null);
       setEndedCard(null);
       setPhase("incoming");
-      startRingtone("incoming");
+      // App Android 4+ in the background: its own notification is ringing (insistent ringtone) — no second ring from
+      // the page; the page rings as soon as it is visible again (visibilitychange below).
+      if (!(document.visibilityState === "hidden" && nativeHandlesCallAlerts())) startRingtone("incoming");
       preloadCallSdk(); // tải màn hình gọi trong lúc đổ chuông
       getIce().catch(() => {});
       clearTimers();
       timers.current.ring = setTimeout(() => {
         if (callRef.current === call && phaseRef.current === "incoming") teardown();
       }, RING_TIMEOUT_MS + 2000);
+      autoAnswerRef.current(); // "Answer" was tapped on the app's notification for this call
     },
     accepted: (d) => {
       const call = callRef.current;
@@ -987,6 +1052,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     () => () => {
       if (callRef.current) endCall(phaseRef.current === "incoming" ? "decline" : phaseRef.current === "outgoing" ? "cancel" : "hangup");
       stopRingtone();
+      if (ongoingRef.current) {
+        ongoingRef.current = false;
+        void nativeCall.stop();
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
@@ -1013,13 +1082,16 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     const onVisibility = async () => {
       const call = callRef.current;
       const ph = phaseRef.current;
+      // Rang while hidden with the Android app's own notification ringing (no page ringtone then): ring here now.
+      if (call && ph === "incoming" && document.visibilityState === "visible" && nativeHandlesCallAlerts()) startRingtone("incoming");
       if (!call || (ph !== "connecting" && ph !== "connected")) return;
       const p = peerRef.current;
       const stream = streamRef.current;
       const platform = detectCallPlatform();
       const phone = isPhoneLike(platform);
       // The Android app / iPhone lose the microphone in the background: tell the other person why they hear nothing.
-      const awayMatters = platform === "android-app" || platform === "iphone" || platform === "ios-app";
+      // Not when the Android app (versionCode 4+) runs its "ongoing call" foreground service: the microphone keeps going.
+      const awayMatters = (platform === "android-app" && !nativeKeepsMediaRef.current) || platform === "iphone" || platform === "ios-app";
       if (document.visibilityState === "hidden") {
         // phones stop the camera in the background; a desktop tab keeps sending, so no "paused" there
         if (camOnRef.current && phone) p?.sendCtl({ cam: "paused" });
@@ -1086,7 +1158,49 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   useImperativeHandle(ref, () => ({ startCall: handleStartCall }), [handleStartCall]);
   startCallRef.current = handleStartCall;
 
-  const speaker = useAudioOutput(rootEl, phase !== "idle");
+  // Speaker button: the browser's output picker (setSinkId — desktop Chrome / Edge); in the Android app versionCode 4+
+  // the phone's earpiece ↔ loudspeaker (headphones / Bluetooth win automatically) through the app.
+  const webSpeaker = useAudioOutput(rootEl, phase !== "idle");
+  const nativeRoute = nativeAudio?.route ?? null;
+  const switchNativeAudio = useCallback(() => {
+    void nativeCall.setRoute(nextAudioRequest(nativeRoute)).then((s) => {
+      if (s && ongoingRef.current) setNativeAudio(s);
+    });
+  }, [nativeRoute]);
+  const nativeSpeakerOn = canSwitchNativeAudio(nativeAudio);
+  const speaker = nativeSpeakerOn
+    ? {
+        canSwitch: true,
+        next: switchNativeAudio,
+        label: nativeRouteLabel(nativeRoute),
+        // tooltip: what a tap does
+        deviceLabel: nativeRoute === "speaker" ? tr("Chuyển về loa trong", "Switch to phone") : tr("Chuyển sang loa ngoài", "Switch to speaker"),
+        isDefault: false,
+      }
+    : { ...webSpeaker, deviceLabel: webSpeaker.label };
+
+  // Android app versionCode 4+: native "ongoing call" foreground service while this call's microphone is open — the call
+  // keeps its microphone / camera when the person leaves the app or the screen turns off (older apps: unchanged, the
+  // other side is told "X left the app"). It also keeps the screen on for video calls and owns the audio route.
+  const ongoingState: OngoingState | null = !mediaLive ? null : phase === "outgoing" ? "calling" : phase === "connecting" ? "connecting" : phase === "connected" ? "connected" : null;
+  useEffect(() => {
+    if (!nativeCall.supported()) return;
+    if (!ongoingState || !peer) {
+      if (!ongoingRef.current) return;
+      ongoingRef.current = false;
+      nativeKeepsMediaRef.current = false;
+      void nativeCall.stop().then(() => setNativeAudio(null));
+      return;
+    }
+    const params = { peerName: peer.name, video: videoMode, camera: camOn, state: ongoingState, since: connectedAt };
+    const first = !ongoingRef.current;
+    ongoingRef.current = true;
+    void (first ? nativeCall.start(params) : nativeCall.update(params)).then((r) => {
+      if (!ongoingRef.current) return;
+      nativeKeepsMediaRef.current = r.started;
+      setNativeAudio(r.audio);
+    });
+  }, [ongoingState, peer, videoMode, camOn, connectedAt]);
 
   // ---------- in-call controls ----------
   const toggleMic = useCallback(() => {
@@ -1357,7 +1471,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const typeLabel = callType === "video" ? tr("Cuộc gọi video", "Video call") : tr("Cuộc gọi thoại", "Voice call");
   const inRoom = phase === "connecting" || phase === "connected";
   const showOutgoingPreview = phase === "outgoing" && camOn && !!preview;
-  const speakerName = speaker.isDefault ? tr("Loa", "Speaker") : outputName(speaker.label);
+  const speakerName = nativeSpeakerOn ? speaker.label : speaker.isDefault ? tr("Loa", "Speaker") : outputName(speaker.label);
   const pendingText = callType === "video" ? tr("Cho phép micro và camera để gọi", "Allow microphone and camera access to call") : tr("Cho phép micro để gọi", "Allow microphone access to call");
   const connectHint = slowConnect
     ? hasTurn
@@ -1411,7 +1525,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
           connectedAt={connectedAt}
           canFlip={canFlip}
           busy={camBusy}
-          speaker={{ ...speaker, label: speakerName, deviceLabel: speaker.label }}
+          speaker={{ ...speaker, label: speakerName }}
           connectHint={connectHint}
           noRelay={!hasTurn}
           peerAway={peerAway}
@@ -1456,7 +1570,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                 // Điều khiển trước khi bên kia nghe máy — giữ nguyên khi vào cuộc gọi.
                 <div className="flex items-start justify-center gap-5 pt-2">
                   <CallToggle on={micOn} onClick={toggleMic} label={micOn ? tr("Tắt mic", "Mute") : tr("Bật mic", "Unmute")} iconOn={<Mic className="h-6 w-6" />} iconOff={<MicOff className="h-6 w-6" />} data="mic" />
-                  {speaker.canSwitch && <CallToggle on onClick={speaker.next} label={speakerName} title={speaker.label || undefined} iconOn={<Volume2 className="h-6 w-6" />} iconOff={<Volume2 className="h-6 w-6" />} data="speaker" />}
+                  {speaker.canSwitch && <CallToggle on onClick={speaker.next} label={speakerName} title={speaker.deviceLabel || undefined} iconOn={<Volume2 className="h-6 w-6" />} iconOff={<Volume2 className="h-6 w-6" />} data="speaker" />}
                   {callType === "video" && (
                     <CallToggle on={camOn} onClick={toggleCam} label={camOn ? tr("Tắt camera", "Stop video") : tr("Bật camera", "Start video")} iconOn={<Video className="h-6 w-6" />} iconOff={<VideoOff className="h-6 w-6" />} data="cam" />
                   )}
@@ -1588,6 +1702,14 @@ interface RejectData {
   fromLeg?: string | null;
   /** only this device of the receiver must stop ("answered-elsewhere") */
   toLeg?: string | null;
+}
+
+/** Android app (versionCode 4+): the call's current audio route, as the Speaker button shows it. */
+function nativeRouteLabel(route: AudioRoute | null): string {
+  if (route === "speaker") return tr("Loa ngoài", "Speaker");
+  if (route === "headset") return tr("Tai nghe", "Headphones");
+  if (route === "bluetooth") return "Bluetooth";
+  return tr("Loa trong", "Phone");
 }
 
 /** Friendly name of an audio output ("Speakers (Realtek…)" → "Speaker", "AirPods" → "Headphones"). */

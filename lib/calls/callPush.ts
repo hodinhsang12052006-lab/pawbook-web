@@ -8,8 +8,13 @@
 //
 // Follow-up when the call ends without this device answering — same tag, so it REPLACES the incoming-call notification:
 //   missed   (caller cancelled / nobody answered / the callee was busy) → "Missed call from X" (kept 24 h)
-//   answered (answered on another device of the callee)                → "Call with X · answered on another device"
-//   declined (declined on another device of the callee)                 → "Call from X · declined on another device"
+//   answered (the callee answered on one of its devices)                → "Call with X · Answered." (quiet)
+//   declined (the callee declined on one of its devices)                → "Call from X · Declined." (quiet)
+// The answered / declined text is device-neutral: the follow-up goes to the callee's OTHER devices (the server leaves out
+// the native push token of the device that acted, when it sent one), but a web tab or an app without a saved token can
+// still get it, and then "on another device" would be false.
+// One follow-up per (call, recipient, outcome), and only while the call could still ring / be answered:
+// createFollowUpGate below (a caller holding a valid call token must not be able to re-send "Missed call" pushes).
 // Android app (any build, incl. versionCode 3): when the app is in the background the Firebase SDK draws "notification"
 // messages with NotificationManager.notify(android.notification.tag, 0) — a message with the same tag replaces the shown
 // one (firebase-messaging 25.0.1 CommonNotificationBuilder.getTag / DisplayNotification). In the foreground nothing is
@@ -81,20 +86,59 @@ export function callEndPush(o: { callId: string; callType: CallType; callerId: s
     return {
       ...base,
       title: `Cuộc gọi với ${n}`,
-      body: "Đã trả lời trên thiết bị khác.",
+      body: "Đã trả lời.",
       ttlSec: HANDLED_ELSEWHERE_TTL_SEC,
       quiet: true,
-      en: { title: `Call with ${n}`, body: "Answered on another device." },
+      en: { title: `Call with ${n}`, body: "Answered." },
     };
   }
   return {
     ...base,
     title: `Cuộc gọi từ ${n}`,
-    body: "Đã từ chối trên thiết bị khác.",
+    body: "Đã từ chối.",
     ttlSec: HANDLED_ELSEWHERE_TTL_SEC,
     quiet: true,
-    en: { title: `Call from ${n}`, body: "Declined on another device." },
+    en: { title: `Call from ${n}`, body: "Declined." },
   };
+}
+
+/** Follow-ups are only sent while the call could still ring or be answered (= /api/calls ACCEPT_WINDOW_MS). */
+export const FOLLOW_UP_WINDOW_MS = 120_000;
+const FOLLOW_UP_KEEP_MS = 10 * 60_000;
+const FOLLOW_UP_MAX_KEYS = 5_000;
+
+/**
+ * Per-instance gate for follow-up pushes: true at most once per (callId, recipient, outcome), and never after the call's
+ * window. Without it a caller holding a valid call token (3 h) could POST reject/cancel 60 times a minute and every one
+ * sent the callee a "Missed call" push (each replacement plays the "general" channel sound on Android).
+ */
+export function createFollowUpGate(opts: { windowMs?: number; now?: () => number } = {}) {
+  const windowMs = opts.windowMs ?? FOLLOW_UP_WINDOW_MS;
+  const now = opts.now ?? Date.now;
+  const sent = new Map<string, number>();
+  return (o: { callId: string; to: "target" | "self"; outcome: CallEndOutcome; issuedAt: number }): boolean => {
+    const t = now();
+    if (!(t <= o.issuedAt + windowMs)) return false;
+    // insertion order = time order: drop the expired head
+    for (const [k, at] of sent) {
+      if (t - at <= FOLLOW_UP_KEEP_MS) break;
+      sent.delete(k);
+    }
+    const key = `${o.callId}:${o.to}:${o.outcome}`;
+    if (sent.has(key)) return false;
+    sent.set(key, t);
+    if (sent.size > FOLLOW_UP_MAX_KEYS) {
+      const oldest = sent.keys().next().value;
+      if (oldest !== undefined) sent.delete(oldest);
+    }
+    return true;
+  };
+}
+
+/** Push endpoints of the device that answered / declined itself ("fcm:<token>" / "apns:<token>"), left out of the follow-up. */
+export function ownDeviceEndpoints(pushToken: unknown): string[] {
+  if (typeof pushToken !== "string" || !pushToken || pushToken.length > 4096 || !/^[!-~]+$/.test(pushToken)) return [];
+  return ["fcm:" + pushToken, "apns:" + pushToken];
 }
 
 /**

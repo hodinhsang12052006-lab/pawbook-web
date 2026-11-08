@@ -21,7 +21,7 @@ import type { CallPeer, NetState, Quality } from "@/lib/calls/peer";
 import type { SignalInbox, SignalOutbox, OutboundMessage } from "@/lib/calls/signalQueue";
 import type { SignalEvent, WireCtl, WireIce } from "@/lib/calls/signalWire";
 import { createIceClient, IN_CALL_MIN_VALID_MS, type IceClient } from "@/lib/calls/iceClient";
-import { clearCallNotice } from "@/lib/calls/callNotice";
+import { clearCallNotice, ownPushTokenField } from "@/lib/calls/callNotice";
 
 const CallScreen = dynamic(() => import("@/components/chat/call/CallScreen"), {
   ssr: false,
@@ -323,7 +323,8 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         peerRef.current?.sendCtl({ bye: reason });
       } catch {}
       // leg: the caller ignores a reject from a device of the callee other than the one it is talking to
-      if (call.token) postCall(call, "reject", { reason, leg, socketId: getPusherClient()?.connection?.socket_id }).catch(() => {});
+      // decline: this phone's own push token → its tray gets no "Declined." follow-up (only the user's other devices)
+      if (call.token) postCall(call, "reject", { reason, leg, socketId: getPusherClient()?.connection?.socket_id, ...(reason === "decline" ? ownPushTokenField() : {}) }).catch(() => {});
       if (call.isCaller) {
         if (ph === "outgoing") logCall("missed");
         else if (ph === "connecting" || ph === "connected") logCall(call.connectedAt ? "ended" : "missed");
@@ -687,7 +688,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         endCall("hangup");
         return;
       }
-      const res = await postCall(call, "accept", { leg, socketId: getPusherClient()?.connection?.socket_id }).catch(() => null);
+      const res = await postCall(call, "accept", { leg, socketId: getPusherClient()?.connection?.socket_id, ...ownPushTokenField() }).catch(() => null);
       if (callRef.current !== call) return;
       if (!res || !res.ok) {
         const data = res ? await res.json().catch(() => ({})) : {};

@@ -1,7 +1,13 @@
 "use client";
 
 import { callTag } from "./callPush";
-import { clearNativeNotificationsByTag } from "@/lib/nativePush";
+import { clearNativeNotificationsByTag, ownNativePushToken } from "@/lib/nativePush";
+
+/** Body field for /api/calls accept / decline: this device's native push token, so its own tray gets no follow-up. */
+export function ownPushTokenField(): { pushToken?: string } {
+  const t = ownNativePushToken();
+  return t && t.length <= 4096 ? { pushToken: t } : {};
+}
 
 // This device answered / declined a call, or another device of the same account did (call-handled): remove the call's
 // "X is calling you" notification from the tray right away — the follow-up push (lib/calls/callPush.ts) only replaces it

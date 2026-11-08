@@ -83,6 +83,17 @@ const savedToken = () => {
     return null;
   }
 };
+/**
+ * This app's own push token (native app only; null on the web / without a saved token). /api/calls leaves this device
+ * out of the "Answered." / "Declined." follow-up push after it answered / declined the call itself.
+ */
+export const ownNativePushToken = (): string | null => {
+  try {
+    return isNativeApp() ? savedToken() : null;
+  } catch {
+    return null;
+  }
+};
 const reloginPending = () => {
   try {
     return localStorage.getItem(RELOGIN_KEY) === "1";

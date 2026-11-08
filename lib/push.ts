@@ -74,15 +74,19 @@ function isMissingTable(err: unknown) {
   return /no such table|does not exist|P2021/i.test(String((err as { message?: string })?.message || err));
 }
 
-/** Gửi tới mọi thiết bị của 1 hoặc nhiều người. Không bao giờ ném lỗi. */
-export async function sendPush(userIds: string | string[], payload: PushPayload): Promise<number> {
+/**
+ * Gửi tới mọi thiết bị của 1 hoặc nhiều người. Không bao giờ ném lỗi.
+ * opts.exceptEndpoints: bỏ qua các thiết bị này (vd. máy vừa tự trả lời / từ chối cuộc gọi — lib/calls/callPush.ts).
+ */
+export async function sendPush(userIds: string | string[], payload: PushPayload, opts: { exceptEndpoints?: string[] } = {}): Promise<number> {
   const ids = (Array.isArray(userIds) ? userIds : [userIds]).filter(Boolean);
   const web = ready();
   const android = fcmEnabled();
   const ios = apnsEnabled();
   if ((!web && !android && !ios) || ids.length === 0) return 0;
   try {
-    const subsAll = await prisma.pushSubscription.findMany({ where: { userId: { in: ids } }, take: 2000 });
+    const except = new Set(opts.exceptEndpoints ?? []);
+    const subsAll = (await prisma.pushSubscription.findMany({ where: { userId: { in: ids } }, take: 2000 })).filter((s) => !except.has(s.endpoint));
     if (!subsAll.length) return 0;
     // Mỗi người nhận đọc thông báo bằng ngôn ngữ của họ: chia thiết bị theo ngôn ngữ đã lưu.
     const { en, ...vi } = payload;

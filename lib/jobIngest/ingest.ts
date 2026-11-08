@@ -18,7 +18,8 @@ import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
 import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
-import { cleanCity, cleanSalonName, findPhone, isAdPost, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
+import { cleanCity, cleanSalonName, findPhone, foreignMarketSignal, isAdPost, isForeignCountry, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
+import { parseMarketPhone } from "@/lib/phoneFormat";
 import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
 
 export const INGEST_SOURCE = "ingest";
@@ -96,11 +97,14 @@ export interface IngestInput {
   phone?: string; salonName?: string; address?: string; city?: string; state?: string; zip?: string; market?: "US" | "AU"; salary?: string;
   title?: string; skills?: string[];
   fbUrl?: string; // Facebook người đăng — CHỈ dùng để nhận ra cùng 1 tiệm đăng lại (lưu dạng mã băm)
+  country?: string; // ô quốc gia của bot (/api/jobs/sync): "UK" / "Anh" → bài ngoài Mỹ / Úc, không đăng
 }
 export interface IngestOpts {
   /** Admin đăng hộ THEO YÊU CẦU tiệm: chỉ bỏ qua bộ đoán "có phải bài tuyển" (SĐT bị chặn / bài bán tiệm / thợ tìm việc vẫn chặn). */
   assisted?: boolean;
 }
+/** Tiền tố lý do "bỏ qua" của bài ở ngoài Mỹ / Úc (ingestBatch ghi log tổng số theo tiền tố này). */
+export const OUT_OF_MARKET_REASON = "bài ở ngoài Mỹ/Úc";
 // created = tin mới · bumped = tiệm ĐĂNG LẠI (đẩy lên đầu, repostCount+1) · updated = tool gửi lại đúng bài cũ
 export type IngestResult = { status: "created" | "bumped" | "updated" | "skipped"; reason?: string; jobId?: string; repostCount?: number };
 
@@ -180,8 +184,14 @@ export function prepareIngest(input: IngestInput, blocked: Set<string>, opts: In
   // Tool gửi kèm tên tiệm nhưng thật ra là bài THỢ TÌM VIỆC ("chủ shop nào cần thợ để lại sđt") → bỏ.
   if (text && isJobSeeking(text)) return { status: "skipped", reason: "bài thợ tìm việc, không phải tiệm tuyển", parsed: p };
   if (text && isAdPost(text)) return { status: "skipped", reason: "quảng cáo dịch vụ đăng tin, không phải tiệm tuyển", parsed: p };
+  // Bài ở NGOÀI Mỹ / Úc (nhóm nail ở Anh: số 07… / +44, Shenfield, Stratford DLR, postcode…) — không đăng vào thị trường
+  // Mỹ / Úc dù tool gửi kèm market / SĐT đã "chuẩn hoá" (tool từng cắt số 0 của số Anh thành số Mỹ của người lạ).
+  const foreign = isForeignCountry(input.country) ? `quốc gia "${clean(input.country, 30)}"` : foreignMarketSignal(text) ?? (input.phone ? foreignMarketSignal(String(input.phone)) : null);
+  if (foreign) return { status: "skipped", reason: `${OUT_OF_MARKET_REASON} (${foreign})`, parsed: p };
   if (!phone || !phoneDisplay) return { status: "skipped", reason: "không có SĐT Mỹ/Úc", parsed: p };
   if (!market || !state) return { status: "skipped", reason: "không xác định được bang", parsed: p };
+  // SĐT phải gọi được ở ĐÚNG thị trường của tin: số Úc trong tin Mỹ (tool ghi market sai), mã vùng / đầu số N11… → bỏ.
+  if (!parseMarketPhone(phone, market)) return { status: "skipped", reason: `SĐT ${phoneDisplay} không phải số ${market === "AU" ? "Úc" : "Mỹ"} hợp lệ`, parsed: p };
   if (blocked.has(phone)) return { status: "skipped", reason: "tiệm đã yêu cầu gỡ tin", parsed: p };
 
   const postedMs = input.postedAt ? new Date(typeof input.postedAt === "number" ? input.postedAt : String(input.postedAt)).getTime() : Date.now();
@@ -282,6 +292,9 @@ export async function ingestBatch(items: IngestInput[], opts: IngestOpts = {}) {
     catch (e) { results.push({ i, status: "skipped", reason: `lỗi: ${String((e as Error).message).slice(0, 80)}` }); }
   }
   const count = (s: string) => results.filter((r) => r.status === s).length;
+  // Log máy chủ (Vercel): bài ngoài Mỹ / Úc bị bỏ — chủ thấy được nhóm nào đang đẩy bài nước khác vào bot.
+  const foreign = results.filter((r) => r.reason?.startsWith(OUT_OF_MARKET_REASON));
+  if (foreign.length) console.info(`[ingest] skipped ${foreign.length} out-of-market post(s):`, foreign.slice(0, 10).map((r) => r.reason).join(" | "));
   if (!opts.assisted) await recordIngestHeartbeat(results); // admin đăng hộ không tính là nguồn tin tổng hợp
   return { created: count("created"), bumped: count("bumped"), updated: count("updated"), skipped: count("skipped"), results };
 }

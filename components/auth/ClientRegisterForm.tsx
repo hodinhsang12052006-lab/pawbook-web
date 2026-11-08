@@ -12,6 +12,7 @@ import SocialLogin from "@/components/auth/SocialLogin";
 import { AuthTitle, BackToRoles, CityStateFields, HaveAccount, IconInput, MarketSeg, PhoneField, Submit } from "@/components/auth/fields";
 import { tr, currentLocale } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useViewerMarket } from "@/lib/useViewerMarket";
 
 export default function ClientRegisterForm({ onBack }: { onBack?: () => void }) {
@@ -52,7 +53,7 @@ export default function ClientRegisterForm({ onBack }: { onBack?: () => void }) 
       if (!res.ok) throw new Error(apiError(d, "Không đăng ký được, thử lại.", "Couldn't sign up, try again."));
       const r = await signIn("credentials", { redirect: false, email: email.trim(), password });
       if (!r?.ok) throw new Error(tr("Đã tạo tài khoản — hãy đăng nhập.", "Account created — please log in."));
-      window.location.href = "/";
+      window.location.href = localeHref("/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tr("Không đăng ký được, thử lại.", "Couldn't sign up, try again."));
       setBusy(false);

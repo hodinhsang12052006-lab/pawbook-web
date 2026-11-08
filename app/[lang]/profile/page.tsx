@@ -20,6 +20,7 @@ import ShareCardButton from "@/components/profile/ShareCard";
 import { JobAlertsManager } from "@/components/jobs/JobAlerts";
 import PhoneVerify from "@/components/profile/PhoneVerify";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { appSignOut } from "@/lib/appSignOut";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
@@ -105,7 +106,7 @@ export default function ProfilePage() {
         const sessionRes = await fetch("/api/auth/session");
         const session = sessionRes.ok ? await sessionRes.json() : null;
         if (!session?.user) {
-          router.push("/auth/login");
+          router.push(localeHref("/auth/login"));
           return;
         }
         const res = await fetch("/api/profile");
@@ -275,7 +276,7 @@ export default function ProfilePage() {
         toast.success(tr("Đã xóa tài khoản. Hẹn gặp lại bạn! 👋", "Account deleted. See you again! 👋"));
         await appSignOut({ redirect: false });
         // Trang chủ giờ mở cho khách → đi thẳng tới trang đăng ký (tải lại toàn trang để xoá phiên cũ).
-        window.location.href = "/auth/register";
+        window.location.href = localeHref("/auth/register");
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error(apiError(data, "Không thể xóa tài khoản.", "Couldn't delete the account."));
@@ -602,7 +603,7 @@ export default function ProfilePage() {
             icon={Briefcase}
             title={tr("Tin tuyển dụng đã đăng", "Your job posts")}
             action={
-              <button type="button" onClick={() => router.push("/jobs/create")} className="flex items-center gap-1 rounded-lg bg-pink-500/10 px-2.5 py-1.5 text-xs font-bold text-pink-200 ring-1 ring-pink-500/25 hover:bg-pink-500/20">
+              <button type="button" onClick={() => router.push(localeHref("/jobs/create"))} className="flex items-center gap-1 rounded-lg bg-pink-500/10 px-2.5 py-1.5 text-xs font-bold text-pink-200 ring-1 ring-pink-500/25 hover:bg-pink-500/20">
                 <Plus className="h-3.5 w-3.5" />{tr(" Đăng tin mới", " New post")}
               </button>
             }
@@ -656,7 +657,7 @@ export default function ProfilePage() {
         <FormSection icon={ShieldAlert} title={tr("Tài khoản", "Account")}>
           <button
             type="button"
-            onClick={async () => { await appSignOut({ redirect: false }); router.push("/auth/login"); }}
+            onClick={async () => { await appSignOut({ redirect: false }); router.push(localeHref("/auth/login")); }}
             className="flex w-full items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 text-left text-sm font-semibold text-slate-200 ring-1 ring-white/10 transition-colors hover:ring-white/20"
           >
             <LogOut className="h-4 w-4 text-slate-400" />{tr(" Đăng xuất", " Sign out")}

@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from "react";
 import { stripLocalePrefix } from "@/lib/i18n/config";
+import { localeHref } from "@/lib/i18n/localeHref";
 
 interface SessionUserContextValue {
   user: any;
@@ -34,7 +35,7 @@ export function SessionUserProvider({ children }: { children: React.ReactNode })
         const session = await res.json();
         // Đăng nhập Google/Apple lần đầu: phải chọn vai trò + khu vực trước khi dùng app.
         if (session?.user?.needsOnboarding && !stripLocalePrefix(window.location.pathname).startsWith("/auth/complete")) {
-          window.location.replace("/auth/complete");
+          window.location.replace(localeHref("/auth/complete"));
           return;
         }
         if (session?.user?.id) {

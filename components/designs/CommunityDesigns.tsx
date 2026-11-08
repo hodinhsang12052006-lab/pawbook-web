@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { Camera, Heart, Images, Plus } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import { useSessionUser } from "@/lib/SessionUserContext";
@@ -39,9 +40,9 @@ export default function CommunityDesigns({ pro = true, placement, initial }: { p
     fetch(`/api/designs/community?limit=12&offset=${items.length}`).then((r) => r.json()).then((j) => { setItems((l) => [...(l ?? []), ...(j.items ?? [])]); setHasMore(!!j.hasMore); }).finally(() => setBusy(false));
   };
   const post = () => {
-    if (!user) { router.push("/auth/register"); return; }
+    if (!user) { router.push(localeHref("/auth/register")); return; }
     try { sessionStorage.setItem("pn_compose", "1"); sessionStorage.setItem("pn_compose_type", "SHOWCASE"); } catch {}
-    router.push("/?tab=feed");
+    router.push(localeHref("/?tab=feed"));
   };
 
   if (placement === "top" && !items?.length) return null;

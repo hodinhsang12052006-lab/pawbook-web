@@ -24,7 +24,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className={`pn-auth ${fraunces.variable}`}>
       <div className="pn-auth-grid">
         <aside className="pn-auth-panel" aria-label="PawNail">
-          <Link href="/" className="pn-auth-brand">
+          {/* prefetch={false}: xem components/auth/AuthHeader.tsx (prefetch "/" = CSS hero trang chủ không dùng tới). */}
+          <Link href="/" prefetch={false} className="pn-auth-brand">
             <span className="pn-auth-logo">
               <BrandLogo size={36} />
             </span>

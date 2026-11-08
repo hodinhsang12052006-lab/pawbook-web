@@ -14,9 +14,9 @@ import { useSeason } from "@/lib/useSeason";
 import { avifSrcSet, heroPickerScript, heroSet, webpSrc } from "@/lib/heroImagery";
 import { useTr } from "@/lib/i18n/useTr";
 
-// Phones only: ~31vw tiles. The strip is display:none ≥ 1024 and /auth/register renders this list on the client (the
-// server only sends a placeholder), so the inline picker never runs here — sources are set only below 1024 px, or a
-// desktop would still download one hidden 480 px tile.
+// Phones only: ~31vw tiles. The strip is display:none ≥ 1024 — sources are set only below 1024 px (the inline picker
+// in the static HTML is guarded by the same media query; after hydration usePhoneStrip), or a desktop would still
+// download the hidden 480 px tiles.
 const STRIP_SIZES = "31vw";
 const PHONE_MQ = "(max-width: 1023px)";
 const subscribePhone = (cb: () => void) => { const m = window.matchMedia(PHONE_MQ); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); };
@@ -51,7 +51,7 @@ export default function RolePicker({ onPick }: { onPick: (role: Exclude<Role, nu
           </div>
         ))}
       </div>
-      <script dangerouslySetInnerHTML={{ __html: heroPickerScript(locale === "vi" ? "vi" : "en", false) }} />
+      <script dangerouslySetInnerHTML={{ __html: `matchMedia(${JSON.stringify(PHONE_MQ)}).matches&&${heroPickerScript(locale === "vi" ? "vi" : "en", false)}` }} />
       <p className="pn-strip3-cap" aria-hidden="true">{tr("Ảnh minh hoạ AI", "AI illustrations")}</p>
 
       <div className="pn-list" style={{ marginTop: 24 }} role="list">

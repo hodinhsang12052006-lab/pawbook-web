@@ -15,6 +15,8 @@ import { guessState } from "@/lib/cityState";
 import { valueLabel } from "@/lib/i18n/valueLabel";
 import { SKILLS, jobBenefits } from "@/lib/nailVocab";
 import { uploadMedia, MAX_VIDEO_MB } from "@/lib/mediaUpload";
+import { marketPhoneError, parseMarketPhone } from "@/lib/phoneFormat";
+import { localeHref } from "@/lib/i18n/localeHref";
 
 // Đủ 50 bang + DC / 8 bang Úc (10 bang đông thợ lên đầu) — trước đây chỉ 10 / 6 nên tiệm ở OH, PA, MI, TAS… không chọn được bang thật.
 const US_STATES = US_ALL_CODES;
@@ -42,6 +44,8 @@ export default function CreateJobPage() {
   const [salonName, setSalonName] = useState("");
   const [title, setTitle] = useState("");
   const [phone, setPhone] = useState("");
+  // Số không gọi được ở thị trường đã chọn (VD số Việt Nam cho tin ở Mỹ) → báo ngay dưới ô, không cho đi tiếp / đăng.
+  const [phoneError, setPhoneError] = useState(false);
   const [salaryType, setSalaryType] = useState(SALARY_TYPES_US[0][0]);
   const [salaryAmount, setSalaryAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -58,12 +62,12 @@ export default function CreateJobPage() {
         const session = res.ok ? await res.json() : null;
         if (!session?.user) {
           toast.error(tr("Vui lòng đăng nhập bằng tài khoản Chủ tiệm.", "Please sign in with a salon owner account."));
-          router.push("/auth/login");
+          router.push(localeHref("/auth/login"));
           return;
         }
         if (session.user.role !== "OWNER") {
           toast.error(tr("Chỉ tài khoản Chủ tiệm mới đăng được tin tuyển thợ.", "Only salon owner accounts can post jobs."));
-          router.push("/");
+          router.push(localeHref("/"));
           return;
         }
         // Điền sẵn từ hồ sơ chủ tiệm (thị trường / bang / thành phố / SĐT / tên tiệm ở tin gần nhất) — vẫn sửa được.
@@ -76,7 +80,9 @@ export default function CreateJobPage() {
           const st = String(p.state || "").trim().toUpperCase();
           setState(codes.includes(st) ? st : codes[0]);
           if (typeof p.city === "string" && p.city.trim() && p.city.trim() !== "—") setCity((c) => c || p.city.trim().slice(0, 60));
-          if (typeof p.phone === "string" && p.phone.trim()) setPhone((v) => v || p.phone.trim());
+          // Chỉ điền sẵn số hợp lệ ở thị trường của tiệm (hồ sơ cũ có thể là "+1 03xxxxxxxx").
+          const pp = parseMarketPhone(p.phone, m);
+          if (pp) setPhone((v) => v || pp.display);
           const lastSalon = Array.isArray(p.jobs) ? p.jobs.find((j: { salonName?: string }) => j?.salonName)?.salonName : null;
           if (lastSalon) setSalonName((v) => v || String(lastSalon).slice(0, 60));
         }
@@ -116,8 +122,23 @@ export default function CreateJobPage() {
   };
   const removeMedia = (key: string) => setMedia((prev) => prev.filter((m) => m.key !== key));
 
+  /** Số hợp lệ ở thị trường đang chọn → viết lại dạng chuẩn "(713) 555-0123" / "0412 345 678"; không → hiện lỗi. */
+  const checkPhone = () => {
+    const ok = parseMarketPhone(phone, market);
+    setPhoneError(!ok);
+    if (ok) setPhone(ok.display);
+    return !!ok;
+  };
+  const phoneMsg = marketPhoneError(market);
+
   const handleSubmit = async () => {
     if (submitting || uploading) return;
+    // Quay lại bước 1 đổi thị trường sau khi đã nhập số → kiểm tra lại trước khi đăng.
+    if (!checkPhone()) {
+      setStep(2);
+      toast.error(tr(phoneMsg.vi, phoneMsg.en));
+      return;
+    }
     setSubmitting(true);
     const toastId = toast.loading(tr("Đang đăng tin tuyển thợ...", "Posting your job..."));
     try {
@@ -133,7 +154,7 @@ export default function CreateJobPage() {
       if (res.ok) {
         toast.success(tr("Đăng tin tuyển thợ thành công! 💅", "Job posted! 💅"), { id: toastId });
         playSound("success");
-        router.push(`/jobs/${data.id}`);
+        router.push(localeHref(`/jobs/${data.id}`));
       } else {
         toast.error(apiError(data, "Không thể đăng tin.", "Couldn't post the job."), { id: toastId });
       }
@@ -249,7 +270,15 @@ export default function CreateJobPage() {
                 </div>
                 <div>
                   <label htmlFor="job-phone" className="field-label">{tr("Số điện thoại liên hệ *", "Contact phone *")}</label>
-                  <input id="job-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" className="input-field" />
+                  <input
+                    id="job-phone" type="tel" inputMode="tel" autoComplete="tel" value={phone}
+                    onChange={(e) => { setPhone(e.target.value); if (phoneError) setPhoneError(false); }}
+                    onBlur={() => { if (phone.trim()) checkPhone(); }}
+                    placeholder={market === "AU" ? "0412 345 678" : "(713) 555-0123"}
+                    aria-invalid={phoneError || undefined} aria-describedby={phoneError ? "job-phone-err" : undefined}
+                    className="input-field"
+                  />
+                  {phoneError && <p id="job-phone-err" role="alert" className="mt-1.5 text-xs font-semibold text-rose-300">{tr(phoneMsg.vi, phoneMsg.en)}</p>}
                 </div>
               </div>
               <div>
@@ -258,7 +287,7 @@ export default function CreateJobPage() {
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setStep(1)} aria-label={tr("Quay lại", "Back")} className={back}><ArrowLeft className="h-4 w-4" /></button>
-                <button type="button" disabled={!title.trim() || !salaryAmount.trim() || !phone.trim()} onClick={() => setStep(3)} className={next}>{tr("Tiếp tục", "Continue")} <ArrowRight className="h-4 w-4" /></button>
+                <button type="button" disabled={!title.trim() || !salaryAmount.trim() || !phone.trim()} onClick={() => { if (checkPhone()) setStep(3); }} className={next}>{tr("Tiếp tục", "Continue")} <ArrowRight className="h-4 w-4" /></button>
               </div>
             </div>
           )}

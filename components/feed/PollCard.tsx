@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { Check, Loader2 } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { tr } from "@/lib/i18n/tr";
@@ -16,7 +17,7 @@ export default function PollCard({ postId, poll }: { postId: string; poll: PollD
   const [busy, setBusy] = useState<number | null>(null);
   const voted = p.myVote !== null;
   const vote = async (i: number) => {
-    if (!user) { router.push("/auth/register"); return; }
+    if (!user) { router.push(localeHref("/auth/register")); return; }
     if (busy !== null) return;
     setBusy(i);
     // Hiện kết quả ngay (lạc quan), đồng bộ lại theo máy chủ

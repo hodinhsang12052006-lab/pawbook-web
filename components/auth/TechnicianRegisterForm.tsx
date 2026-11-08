@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
@@ -170,7 +171,7 @@ export default function TechnicianRegisterForm({ onBack }: { onBack?: () => void
       refreshSession();
       toast.success(tr("Chào mừng bạn! Đang mở việc làm gần bạn…", "Welcome! Opening jobs near you…"), { duration: 3000, icon: "🎉" });
       // router.push (client-side, không full-page reload) — zero flash trắng màn hình
-      router.push("/?tab=jobs");
+      router.push(localeHref("/?tab=jobs"));
     } catch {
       setError(t("auth.common.networkError"));
       setLoading(false);

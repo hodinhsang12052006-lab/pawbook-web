@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { ArrowDown, ArrowUp, BookOpen, CalendarCheck, Clock, Eye, EyeOff, Images, Link2, Loader2, MessageCircle, Pencil, Plus, QrCode, ScanLine, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { currentLocale, tr } from "@/lib/i18n/tr";
@@ -98,8 +99,8 @@ export default function NailMenu({ userId, header = false }: { userId: string; h
     const text = tr(`Chào ${owner.name ?? "bạn"}, mình muốn làm mẫu "${it.name}" (${priceLabel(it.priceFrom, it.priceTo)}). Bạn còn lịch trống khi nào?`,
       `Hi ${owner.name ?? "there"}, I'd like the "${it.name}" design (${priceLabel(it.priceFrom, it.priceTo)}). When are you available?`);
     try { sessionStorage.setItem("pn_chat_draft", JSON.stringify({ to: owner.id, text })); } catch {}
-    const dest = `/messages?to=${owner.id}`;
-    router.push(viewer?.id ? dest : `/auth/login?callbackUrl=${encodeURIComponent(dest)}`);
+    const dest = localeHref(`/messages?to=${owner.id}`);
+    router.push(viewer?.id ? dest : localeHref(`/auth/login?callbackUrl=${encodeURIComponent(dest)}`));
   };
 
   const toggleActive = async (it: PublicMenuItem) => {

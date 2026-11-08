@@ -3,6 +3,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Newspaper, Briefcase, Users, MessageCircle, Plus, Home, Sparkles, Store, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -91,15 +92,15 @@ export default function BottomNav() {
   const goToTab = (nextTab: HomeTab) => {
     setTab(nextTab);
     if (isHome) window.dispatchEvent(new CustomEvent("hometab-change", { detail: nextTab }));
-    router.push(`/?tab=${nextTab}`, { scroll: false });
+    router.push(localeHref(`/?tab=${nextTab}`), { scroll: false });
   };
 
   // Mục thứ 2 theo vai trò: thợ cần VIỆC, chủ tiệm cần THỢ.
   const secondTab: HomeTab = isOwner ? "portfolio" : "jobs";
 
   const clientItems: NavItem[] = [
-    { id: "feed", label: tr("Trang chủ", "Home"), icon: Home, onClick: () => router.push("/"), active: isHome },
-    { id: "second", label: tr("Mẫu nail", "Designs"), icon: Sparkles, onClick: () => router.push("/designs"), active: pathname?.startsWith("/designs") ?? false },
+    { id: "feed", label: tr("Trang chủ", "Home"), icon: Home, onClick: () => router.push(localeHref("/")), active: isHome },
+    { id: "second", label: tr("Mẫu nail", "Designs"), icon: Sparkles, onClick: () => router.push(localeHref("/designs")), active: pathname?.startsWith("/designs") ?? false },
   ];
   const items: NavItem[] = [
     ...(isClient ? clientItems : []),
@@ -123,14 +124,14 @@ export default function BottomNav() {
       id: "messages",
       label: tr("Tin nhắn", "Messages"),
       icon: MessageCircle,
-      onClick: () => router.push("/messages"),
+      onClick: () => router.push(localeHref("/messages")),
       active: pathname?.startsWith("/messages") ?? false,
       badge: unreadCount,
     },
     {
       id: "profile",
       label: isClient ? tr("Tài khoản", "Account") : tr("Hồ sơ", "Profile"),
-      onClick: () => router.push("/profile"),
+      onClick: () => router.push(localeHref("/profile")),
       active: pathname?.startsWith("/profile") ?? false,
     },
   ];
@@ -138,11 +139,11 @@ export default function BottomNav() {
   if (isClient) items.splice(2, 2); // bỏ "Bảng tin" + "Việc làm" của thợ
   const createAction = () => {
     if (isClient) {
-      router.push("/salons");
+      router.push(localeHref("/salons"));
       return;
     }
     if (isOwner) {
-      router.push("/jobs/create");
+      router.push(localeHref("/jobs/create"));
       return;
     }
     // Đặt cờ trước: nếu ô soạn bài chưa có trên màn hình (đang ở tab khác /
@@ -154,7 +155,7 @@ export default function BottomNav() {
       goToTab("feed");
       window.dispatchEvent(new Event("compose-post"));
     } else {
-      router.push("/?tab=feed");
+      router.push(localeHref("/?tab=feed"));
     }
   };
 

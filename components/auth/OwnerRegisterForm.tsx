@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import {
@@ -171,7 +172,7 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
         else handleFinishDiagnostic();
       } else {
         setLoading(false);
-        router.push("/auth/login");
+        router.push(localeHref("/auth/login"));
       }
     } catch {
       setError(t("auth.common.networkError"));
@@ -185,7 +186,7 @@ export default function OwnerRegisterForm({ onBack }: { onBack?: () => void }) {
     toast.success(tr("Chào mừng bạn! Đang mở danh sách thợ gần tiệm…", "Welcome! Opening techs near your salon…"), { duration: 3000, icon: "🎉" });
     // Việc đầu tiên của chủ tiệm là nhắn thợ → mở thẳng tab Thợ rảnh.
     const params = new URLSearchParams({ tab: "portfolio", market, state });
-    router.push(`/?${params.toString()}`);
+    router.push(localeHref(`/?${params.toString()}`));
   };
 
   if (phase === "diagnostic") {

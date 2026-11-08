@@ -322,7 +322,7 @@ Android kiểm tra bản build có Firebase (plugin `PawNailNative` trong MainAc
 4. Nếu số build TestFlight đầu tiên có entitlement lớn hơn 2: đặt Vercel `NATIVE_PUSH_MIN_BUILD_IOS` = số build đó (bản cũ hơn sẽ không hiện nút bật thông báo).
 
 **Link mở thẳng trong app (App Links / Universal Links):**
-- Android: Vercel `ANDROID_APP_LINK_SHA256` = SHA-256 của **App signing key** (Play Console → Test and release → App integrity). Kiểm tra: https://www.bitpawos.com/.well-known/assetlinks.json
+- Android: SHA-256 của **App signing key** của Play (08:01:AD:…:2D:64) và upload key đã nằm sẵn trong `app/.well-known/assetlinks.json/route.ts`. Chỉ cần Vercel `ANDROID_APP_LINK_SHA256` khi Play đổi / thêm khoá ký (Play Console → Test and release → App integrity). Kiểm tra: https://www.bitpawos.com/.well-known/assetlinks.json
 - iOS: Vercel `APPLE_TEAM_ID` (hoặc dùng `APNS_TEAM_ID` ở trên). Kiểm tra: https://www.bitpawos.com/.well-known/apple-app-site-association (trả 404 khi chưa có Team ID).
 
 ---

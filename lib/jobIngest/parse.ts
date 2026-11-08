@@ -122,6 +122,37 @@ export function findPhone(text: string): { e164: string; display: string; market
   return null;
 }
 
+// ===== Bài ở NGOÀI Mỹ / Úc (11/2026) =====
+// Các nhóm Facebook nail người Việt có cả nhóm ở Anh. Bot từng đăng bài "Shop mình ở Shenfield cách Stratford 20p tàu …
+// gọi 07xxx xxxxxx" / "Shop gần bến tàu Stratford DLR … 07xxx xxxxxx" thành tin Mỹ (CA / NV): số di động Anh bị cắt số 0
+// đầu thành số Mỹ (747) … / (775) … — số của người lạ. Dấu hiệu CHẮC CHẮN là Anh → không đăng vào Mỹ / Úc.
+// SĐT Anh: +44 / 0044, di động 07xxx xxxxxx (11 số — số Úc chỉ có 10, số bàn Úc "07 xxxx xxxx" không khớp).
+const UK_PHONE = /(?:(?<![\d+])(?:\+|00)\s?44[\s.-]?(?:\(0\)\s?)?[1-9]|(?<![\d+])07\d{3}[\s.-]?(?:\d{6}|\d{3}[\s.-]?\d{3})(?![\d])|(?<![\d+])07\d{2}[\s.-]?\d{3}[\s.-]?\d{4}(?![\d]))/;
+// Postcode Anh đầy đủ (viết hoa): "E15 1AZ", "CM15 8AA", "SW1A 1AA".
+const UK_POSTCODE = /\b(?:[A-Z]{1,2}\d[A-Z\d]?|GIR)\s?\d[ABD-HJLNP-UW-Z]{2}\b/;
+// Tên nước / vùng / địa danh chỉ có ở Anh (không trùng thành phố Mỹ / Úc hay gặp trong bài nail). Không dùng chữ "Anh"
+// đứng riêng (anh = ngôi xưng hô; "tiếng Anh" = English) — chỉ "nước Anh", "Anh Quốc", "Vương quốc Anh".
+// KHÔNG đưa vào tên có trùng nơi ở Mỹ / Úc: Chelmsford (MA), Lewisham (NSW), Hackney (SA), Ilford (NSW), "Wales"
+// (Wales WI, bệnh viện Prince of Wales ở Sydney) — bài Mỹ / Úc không ghi số trong bài từng bị bỏ nhầm là "ở Anh".
+const UK_PLACE = /\b(?:united kingdom|(?<!new\s)england|scotland|great britain|(?<!new\s)london(?!\s*,?\s*(?:ky|kentucky|oh|ohio|on|ontario)\b)|shenfield|stratford\s+dlr|dlr|romford|walthamstow|peckham|dagenham|basildon|leytonstone|southend[\s-]on[\s-]sea)\b|\bUK\b|n[ưu][ớo]c anh\b|anh qu[ốo]c|v[ưu][ơo]ng qu[ốo]c anh/iu;
+/** "UK", "Anh", "England", "United Kingdom"… trong ô quốc gia của bot (/api/jobs/sync "country"). */
+export const isForeignCountry = (country: string | null | undefined) =>
+  /^\s*(?:uk|u\.k\.?|gb|great britain|britain|united kingdom|england|scotland|wales|anh|anh qu[ốo]c|n[ưu][ớo]c anh|v[ưu][ơo]ng qu[ốo]c anh)\s*$/iu.test(String(country ?? ""));
+
+/** Bài / số điện thoại có dấu hiệu chắc chắn ở ngoài Mỹ / Úc → lý do ngắn (ghi vào kết quả "bỏ qua"), không thì null.
+ *  SĐT Anh luôn quyết định. Địa danh / postcode chỉ tính khi bài KHÔNG có số Mỹ / Úc của chính nó ("Hiring … Charlotte
+ *  NC 704-… UK trained welcome" vẫn là tin Mỹ); số mà tool gửi kèm không được tính (tool từng cắt số 0 của số Anh). */
+export function foreignMarketSignal(text: string | null | undefined): string | null {
+  const t = String(text ?? "").normalize("NFKC");
+  if (!t.trim()) return null;
+  if (UK_PHONE.test(t)) return "SĐT Anh (07… / +44)";
+  if (findPhone(t)) return null;
+  if (UK_POSTCODE.test(t)) return "postcode Anh";
+  const place = t.match(UK_PLACE);
+  if (place) return `địa danh ở Anh (${place[0].trim()})`;
+  return null;
+}
+
 /** Số bàn Úc → bang theo mã vùng: 02 → NSW, 03 → VIC, 07 → QLD (08 = WA/SA/NT, không chắc → null). Di động → null. */
 export function stateFromAuPhone(e164: string | null | undefined): string | null {
   const m = String(e164 || "").match(/^\+61([2378])\d{8}$/);

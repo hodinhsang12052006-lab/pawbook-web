@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertCircle, Play, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { stateName, placeLabel } from "@/lib/stateNames";
 import Avatar from "@/components/ui/Avatar";
@@ -294,7 +295,7 @@ export default function TechnicianGrid({ market, state, city }: TechnicianGridPr
     <div className="animate-fadeIn">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
         {techs.map((tech) => (
-          <TechnicianCard key={tech.id} tech={tech} onClick={() => router.push(`/profile/${tech.userId}`)} />
+          <TechnicianCard key={tech.id} tech={tech} onClick={() => router.push(localeHref(`/profile/${tech.userId}`))} />
         ))}
       </div>
     </div>

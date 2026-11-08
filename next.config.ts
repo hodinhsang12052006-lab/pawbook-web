@@ -108,6 +108,11 @@ const VI_FIRST = { type: "header" as const, key: "accept-language", value: "\\s*
 // Đường dẫn trang (không phải API, asset của Next/Vercel/Cloudflare, .well-known,
 // tệp có đuôi trong /public, hay URL đã có tiền tố ngôn ngữ).
 const PAGE_PATH = "/:path((?!(?:api|_next|_vercel|cdn-cgi|vi|en|\\.well-known)(?:/|$))(?!__next)(?!.*\\.[A-Za-z0-9]{1,6}$).+)";
+// /auth/register?role=client|technician|owner → its own prerendered page per language (app/[lang]/auth/register/[[...role]],
+// roles: lib/registerRoles.ts): the role form is in the static HTML instead of an empty placeholder filled after
+// hydration (CLS + LCP). Same locale rules as below; the browser keeps the ?role= URL. Checked by
+// scripts/qa/ssr_locale_check.mjs.
+const REG_ROLE = { type: "query" as const, key: "role", value: "(?<role>client|technician|owner)" };
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -127,6 +132,10 @@ const nextConfig: NextConfig = {
         { source: "/", has: [VI_COOKIE], destination: "/vi" },
         { source: "/", has: [VI_FIRST], missing: [ANY_LOCALE_COOKIE], destination: "/vi" },
         { source: "/", destination: "/en" },
+        { source: "/auth/register", has: [REG_ROLE, VI_COOKIE], destination: "/vi/auth/register/:role" },
+        { source: "/auth/register", has: [REG_ROLE, VI_FIRST], missing: [ANY_LOCALE_COOKIE], destination: "/vi/auth/register/:role" },
+        { source: "/auth/register", has: [REG_ROLE], destination: "/en/auth/register/:role" },
+        { source: "/vi/auth/register", has: [REG_ROLE], destination: "/vi/auth/register/:role" },
         { source: PAGE_PATH, has: [VI_COOKIE], destination: "/vi/:path" },
         { source: PAGE_PATH, has: [VI_FIRST], missing: [ANY_LOCALE_COOKIE], destination: "/vi/:path" },
         { source: PAGE_PATH, destination: "/en/:path" },
@@ -171,6 +180,11 @@ const nextConfig: NextConfig = {
       // zone bật "Cache Everything". Chỉ Cloudflare đọc header này.
       { source: "/", headers: [{ key: "Cloudflare-CDN-Cache-Control", value: "no-store" }] },
       { source: PAGE_PATH, headers: [{ key: "Cloudflare-CDN-Cache-Control", value: "no-store" }] },
+      // /designs is ISR (revalidate 300, app/[lang]/designs/page.tsx) and its unprefixed URL is EN or VI by cookie. Vercel
+      // sends browsers "public, max-age=0, must-revalidate" for every prerendered page; a local / self-hosted `next start`
+      // would pass "stale-while-revalidate" through, and the PWA service worker's fetch then reuses the other language's
+      // copy once after a language switch. Same browser rule as on Vercel (not set there: Vercel owns that header).
+      ...(process.env.VERCEL ? [] : [{ source: "/designs", headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }] }]),
       {
         source: "/(.*)",
         headers: [

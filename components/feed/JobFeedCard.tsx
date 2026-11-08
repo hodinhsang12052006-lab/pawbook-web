@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { Briefcase, DollarSign, Flame, MapPin, MessageCircle, Phone, Sparkles } from "lucide-react";
 import type { JobType } from "@/components/jobs/JobBoard";
 import { trackJobContact, trackJobView } from "@/lib/viewTracker";
@@ -93,7 +94,7 @@ export default function JobFeedCard({ job }: { job: JobType }) {
         ) : (
           <button
             type="button"
-            onClick={() => { trackJobContact(job.id); router.push(`/messages?to=${job.ownerId}`); }}
+            onClick={() => { trackJobContact(job.id); router.push(localeHref(`/messages?to=${job.ownerId}`)); }}
             className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 ${PRESS}`}
           >
             <MessageCircle className="h-4 w-4" />{tr("Nhắn tin", "Message")}

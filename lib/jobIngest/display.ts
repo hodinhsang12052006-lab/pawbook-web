@@ -3,7 +3,8 @@
 // thành phố thừa chữ cái đầu. Tin chủ tiệm tự đăng giữ nguyên.
 // 17/10/2026 (soi dữ liệu thật): tên tiệm kiểu lời khen ("Salon Sạch Sẽ") → lấy tên thật trong bài ("Dorado Nail
 // Bar"); thiếu thành phố → lấy từ "thành phố Billings, bang Montana"; bỏ chữ "Xem thêm" / "Ẩn bớt" của Facebook.
-import { cityFromText, cleanCity, cleanSalonName, findSalary, findSalonName, safeToolSalary, zipStateInText } from "@/lib/jobIngest/parse";
+import { cityFromText, cleanCity, cleanSalonName, findSalary, findSalonName, foreignMarketSignal, safeToolSalary, zipStateInText } from "@/lib/jobIngest/parse";
+import { hasCallableNumber } from "@/lib/phoneFormat";
 
 const FB_TAIL = /\s*(?:…|\.{3})?\s*(?:Xem thêm|Ẩn bớt|See more|See less)\s*$/i;
 
@@ -60,5 +61,9 @@ export function publicJob<T extends PublicJobInput>(job: T): Omit<T, "sourceUrl"
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { sourceUrl, sourceKey, sourceFbHash, ...rest } = job;
   const tidy = tidyIngestJob(rest);
-  return { ...tidy, sourceLink: job.source === "ingest" ? sourceLinkOf(sourceUrl) : null };
+  // SĐT không gọi được ở thị trường của tin (dữ liệu lưu trước khi có kiểm tra 11/2026: tin New York mang số Việt Nam
+  // "+1 03xxxxxxxx"; tin từ nhóm ở Anh mang số Anh bị tool cắt số 0 thành số Mỹ của người lạ) → không hiện số / nút Gọi.
+  // Dữ liệu gốc không đổi; số hợp lệ (kể cả kèm ghi chú) vẫn hiện như cũ.
+  const callable = hasCallableNumber(job.phone, job.market) && !(job.source === "ingest" && foreignMarketSignal(job.description));
+  return { ...tidy, ...(callable ? {} : { phone: "" }), sourceLink: job.source === "ingest" ? sourceLinkOf(sourceUrl) : null };
 }

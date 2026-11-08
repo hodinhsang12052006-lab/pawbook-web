@@ -4,6 +4,7 @@ import React from "react";
 import BrandLogo from "@/components/brand/BrandLogo";
 import { Plus, MessageSquare, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import Link from "next/link";
 import IntentLink from "@/components/marketing/IntentLink";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -63,7 +64,7 @@ export default function Navbar() {
             <>
               {sessionUser.role === "ADMIN" ? (
                 <button
-                  onClick={() => router.push("/admin/reports")}
+                  onClick={() => router.push(localeHref("/admin/reports"))}
                   className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all duration-200 cursor-pointer"
                   title={tr("Trang quản trị", "Admin dashboard")}
                 >
@@ -72,7 +73,7 @@ export default function Navbar() {
                 </button>
               ) : sessionUser.role === "OWNER" ? (
                 <button
-                  onClick={() => router.push("/jobs/create")}
+                  onClick={() => router.push(localeHref("/jobs/create"))}
                   className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
                   title={tr("Đăng tin tuyển", "Post a job")}
                 >
@@ -81,7 +82,7 @@ export default function Navbar() {
                 </button>
               ) : (
                 <button
-                  onClick={() => router.push(sessionUser.role === "CLIENT" ? "/salons" : "/profile")}
+                  onClick={() => router.push(localeHref(sessionUser.role === "CLIENT" ? "/salons" : "/profile"))}
                   className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
                   title={sessionUser.role === "CLIENT" ? tr("Tìm tiệm", "Find a salon") : tr("Đăng tác phẩm", "Share your work")}
                 >
@@ -113,14 +114,14 @@ export default function Navbar() {
               <div className="flex items-center gap-1.5 sm:gap-3 border-l border-slate-850 pl-2 sm:pl-4">
                 <button
                   type="button"
-                  onClick={() => router.push("/profile")}
+                  onClick={() => router.push(localeHref("/profile"))}
                   aria-label={tr("Hồ sơ của tôi", "My profile")}
                   className="rounded-full ring-1 ring-slate-700 hover:ring-2 hover:ring-pink-500 transition-all"
                 >
                   <Avatar src={sessionUser.avatarUrl} name={sessionUser.name} seed={sessionUser.id} className="h-8 w-8" loading="eager" />
                 </button>
                 <span
-                  onClick={() => router.push("/profile")}
+                  onClick={() => router.push(localeHref("/profile"))}
                   className="hidden lg:inline text-xs font-semibold text-slate-200 cursor-pointer hover:text-white transition-colors"
                 >
                   {sessionUser.name}

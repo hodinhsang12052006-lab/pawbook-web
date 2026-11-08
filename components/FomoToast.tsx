@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { localeHref } from "@/lib/i18n/localeHref";
 import { useAppPathname } from "@/lib/i18n/useAppPathname";
 import { X, ArrowRight, Briefcase, Sparkles, Heart } from "lucide-react";
 import { timeAgo } from "@/lib/feedFormat";
@@ -185,7 +186,7 @@ export default function FomoToast() {
   const open = () => {
     if (!current.href) return;
     dismiss(false);
-    router.push(current.href);
+    router.push(localeHref(current.href));
   };
 
   return (

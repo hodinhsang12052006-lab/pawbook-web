@@ -132,7 +132,9 @@ const UK_PHONE = /(?:(?<![\d+])(?:\+|00)\s?44[\s.-]?(?:\(0\)\s?)?[1-9]|(?<![\d+]
 const UK_POSTCODE = /\b(?:[A-Z]{1,2}\d[A-Z\d]?|GIR)\s?\d[ABD-HJLNP-UW-Z]{2}\b/;
 // Tên nước / vùng / địa danh chỉ có ở Anh (không trùng thành phố Mỹ / Úc hay gặp trong bài nail). Không dùng chữ "Anh"
 // đứng riêng (anh = ngôi xưng hô; "tiếng Anh" = English) — chỉ "nước Anh", "Anh Quốc", "Vương quốc Anh".
-const UK_PLACE = /\b(?:united kingdom|(?<!new\s)england|scotland|(?<!(?:new\s)?south\s)wales|great britain|(?<!new\s)london(?!\s*,?\s*(?:ky|kentucky|oh|ohio|on|ontario)\b)|shenfield|stratford\s+dlr|dlr|romford|ilford|walthamstow|hackney|lewisham|peckham|dagenham|basildon|chelmsford|leytonstone|southend[\s-]on[\s-]sea)\b|\bUK\b|n[ưu][ớo]c anh\b|anh qu[ốo]c|v[ưu][ơo]ng qu[ốo]c anh/iu;
+// KHÔNG đưa vào tên có trùng nơi ở Mỹ / Úc: Chelmsford (MA), Lewisham (NSW), Hackney (SA), Ilford (NSW), "Wales"
+// (Wales WI, bệnh viện Prince of Wales ở Sydney) — bài Mỹ / Úc không ghi số trong bài từng bị bỏ nhầm là "ở Anh".
+const UK_PLACE = /\b(?:united kingdom|(?<!new\s)england|scotland|great britain|(?<!new\s)london(?!\s*,?\s*(?:ky|kentucky|oh|ohio|on|ontario)\b)|shenfield|stratford\s+dlr|dlr|romford|walthamstow|peckham|dagenham|basildon|leytonstone|southend[\s-]on[\s-]sea)\b|\bUK\b|n[ưu][ớo]c anh\b|anh qu[ốo]c|v[ưu][ơo]ng qu[ốo]c anh/iu;
 /** "UK", "Anh", "England", "United Kingdom"… trong ô quốc gia của bot (/api/jobs/sync "country"). */
 export const isForeignCountry = (country: string | null | undefined) =>
   /^\s*(?:uk|u\.k\.?|gb|great britain|britain|united kingdom|england|scotland|wales|anh|anh qu[ốo]c|n[ưu][ớo]c anh|v[ưu][ơo]ng qu[ốo]c anh)\s*$/iu.test(String(country ?? ""));

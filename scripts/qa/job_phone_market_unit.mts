@@ -1,6 +1,6 @@
 // SĐT đúng thị trường + bài ngoài Mỹ / Úc + file SQL ẩn 3 tin lỗi (soát production 07/11/2026) + điều hướng giữ /vi.
-//   - parseMarketPhone: Mỹ NANP 10 số (mã vùng / đầu số không bắt đầu 0/1, không N11), Úc 04… / 02·03·07·08…
-//   - hasCallableNumber (lúc hiển thị dữ liệu cũ): "+1 0901234567" → ẩn; số mẫu / số kèm ghi chú → giữ
+//   - parseMarketPhone: Mỹ NANP 10 số (mã vùng / đầu số không bắt đầu 0/1, không N11), Úc 04… / 02·03·07·08… / 1300·1800·13
+//   - hasCallableNumber (lúc hiển thị dữ liệu cũ): "+1 0901234567" → ẩn; số mẫu / số kèm ghi chú / gạch Unicode / 1300 Úc → giữ
 //   - foreignMarketSignal + prepareIngest: 2 bài nhóm nail ở Anh có thật (Shenfield / Stratford DLR, 07…) bị bỏ có lý do,
 //     kể cả khi tool gửi kèm market US + SĐT đã "chuẩn hoá" (cắt số 0); ô quốc gia "UK"; số Úc trong tin Mỹ
 //   - /api/ingest/jobs + /api/jobs/sync (gọi thẳng hàm route trên SQLite TẠM): bài Anh bị bỏ, bài Mỹ cùng lô vẫn nhận
@@ -16,7 +16,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
-import { hasCallableNumber, marketPhoneError, parseMarketPhone } from "../../lib/phoneFormat";
+import { formatPhone, hasCallableNumber, marketPhoneError, parseMarketPhone, telHref } from "../../lib/phoneFormat";
 import { findPhone, foreignMarketSignal, isForeignCountry } from "../../lib/jobIngest/parse";
 import { publicJob } from "../../lib/jobIngest/display";
 import { localeHref } from "../../lib/i18n/localeHref";
@@ -44,6 +44,12 @@ ok("PH3", "Úc: 0412 345 678 · +61 412 345 678 · +61 (0)412 345 678 · 6141234
   ["0412 345 678", "+61 412 345 678", "+61 (0)412 345 678", "61412345678"].every((r) => P(r, "AU") === "0412 345 678") && ["(02) 9123 4567", "0291234567", "+61 2 9123 4567"].every((r) => P(r, "AU") === "(02) 9123 4567") && parseMarketPhone("0412 345 678", "AU")?.e164 === "+61412345678");
 ok("PH4", "Úc: số Mỹ / số thiếu chữ số / đầu 05 / 01 / số Anh 11 chữ số → từ chối; thị trường lạ → từ chối",
   ["(713) 555-0123", "+1 713 555 0123", "041234567", "0512345678", "0112345678", "07475550142", "+44 7475 550142"].every((r) => P(r, "AU") === null) && P("0412 345 678", "VN") === null);
+ok("PH4b", "Úc: số doanh nghiệp 1300 / 1800 xxx xxx, 13 xx xx (viết liền / cách / gạch) → nhận, hiển thị \"1300 975 707\" / \"13 19 75\", tel: quay số trong nước; tin Mỹ / 1900 / thiếu số → từ chối",
+  ["1300 975 707", "1300975707", "1300-975-707"].every((r) => P(r, "AU") === "1300 975 707") && P("1800 975 708", "AU") === "1800 975 708" && ["13 19 75", "131975"].every((r) => P(r, "AU") === "13 19 75") &&
+    ["1300 975 707", "13 19 75"].every((r) => P(r, "US") === null) && ["1900 975 707", "1300 97570", "13 1975 0"].every((r) => P(r, "AU") === null) &&
+    telHref("1300 975 707", "AU") === "tel:1300975707" && telHref("13 19 75", "AU") === "tel:131975" && formatPhone("1800975708", "AU") === "1800 975 708" && formatPhone("0412345678", "AU") === "0412 345 678",
+  JSON.stringify([P("1300 975 707", "AU"), P("13 19 75", "AU"), P("1900 975 707", "AU"), telHref("1300 975 707", "AU")]));
+ok("PH4c", "Gạch nối Unicode (– — ‑) giữa các nhóm số Mỹ → vẫn nhận (713) 555-0123", ["713–555–0123", "713—555—0123", "713‑555‑0123"].every((r) => P(r, "US") === "(713) 555-0123"));
 const eUS = marketPhoneError("US"), eAU = marketPhoneError("AU");
 ok("PH5", "Lời nhắc rõ ràng EN + VI theo thị trường (form + API dùng chung)", /US phone number/.test(eUS.en) && /số Mỹ/.test(eUS.vi) && /\(713\) 555-0123/.test(eUS.en) && /Australian phone number/.test(eAU.en) && /số Úc/.test(eAU.vi) && /0412 345 678/.test(eAU.en));
 
@@ -53,6 +59,11 @@ ok("CN1", "Gọi được: (713) 555-0123, \"713-555-0123 (chị Lan)\", số m�
   hasCallableNumber("0412 345 678", "AU") && hasCallableNumber("(02) 9123 4567", "AU") && hasCallableNumber("+61 2 5550 1234", "AU") && hasCallableNumber("0410000001", "AU"));
 ok("CN2", "Không gọi được: \"+1 0901234567\" (tin Mỹ), \"+44 747 555 0142\" (tin Mỹ), số Mỹ trong tin Úc, số Anh 0747 555 0142 trong tin Úc, rỗng",
   !hasCallableNumber("+1 0901234567", "US") && !hasCallableNumber("+44 747 555 0142", "US") && !hasCallableNumber("(713) 555-0123", "AU") && !hasCallableNumber("0747 555 0142", "AU") && !hasCallableNumber("", "US") && !hasCallableNumber(null, "US"));
+ok("CN3", "Dữ liệu cũ: số Mỹ viết bằng gạch Unicode (713–555–0123, 713—555—0123, 713‑555‑0123) và số Úc 1300 / 1800 / 13 xx xx vẫn gọi được; '+44 1300 …' (tin Úc), 1300 trong tin Mỹ, 1900 → không",
+  ["713–555–0123", "713—555—0123", "713‑555‑0123", "+1 713−555−0123"].every((r) => hasCallableNumber(r, "US")) &&
+    ["1300 975 707", "1800-975-708", "13 19 75", "1300975707 (chị Mai)", "Gọi 1800 975 708"].every((r) => hasCallableNumber(r, "AU")) &&
+    !hasCallableNumber("+44 1300 975 707", "AU") && !hasCallableNumber("0044 1300 975 707", "AU") && !hasCallableNumber("1300 975 707", "US") && !hasCallableNumber("1900 975 707", "AU"),
+  JSON.stringify([hasCallableNumber("713–555–0123", "US"), hasCallableNumber("1300 975 707", "AU"), hasCallableNumber("13 19 75", "AU"), hasCallableNumber("+44 1300 975 707", "AU"), hasCallableNumber("1900 975 707", "AU")]));
 
 // ---------- Bài ngoài Mỹ / Úc ----------
 const UK1 = "Shop mình ở shenfield cách Stratford 20p tàu cần tìm thợ cgt,tay nghề khá, có chỗ đậu xe. Shop làm khách book lên hết khách thì về sớm, không làm muộn. Nếu bạn nào muốn thay đổi chỗ làm thì goi số 07475550142\nMany thanks";
@@ -63,7 +74,10 @@ ok("FM2", "Số Anh đủ kiểu viết (07475 550142 · 0747 555 0142 · +44 74
   JSON.stringify(["Gọi 07475 550142", "Shop ở Romford RM1 3AB cần thợ"].map(foreignMarketSignal)));
 const US_OK = ["Tiệm ở London, KY cần thợ, 606-555-0101", "Tiệm ở New London CT cần thợ bột 860-555-0101", "Cần thợ biết tiếng Anh, tiệm ở Houston 713-555-0101", "Tiệm khu New England cần thợ, 617-555-0100", "Hiring nail tech in Charlotte NC 704-555-0115. UK trained welcome", "Cần thợ anh Tuấn 713-555-0100 ở Dallas"];
 const AU_OK = ["Tiệm ở Bankstown NSW, LH 0412 345 678 1 tuần $1200", "Cần thợ ở Brisbane, gọi (07) 3123 4567", "Cần thợ, gọi 0731234567", "Tiệm ở New South Wales cần thợ 0412 555 019"];
-ok("FM3", "Không bắt nhầm bài Mỹ / Úc: London KY, New London CT, 'tiếng Anh', New England, 'UK trained' có số Mỹ, 'anh Tuấn'; số bàn QLD 07 xxxx xxxx, New South Wales",
+// Địa danh trùng tên nơi ở Anh — bài KHÔNG có số trong bài (đường địa danh mới quyết định)
+US_OK.push("Chelmsford MA", "Wales, Wisconsin", "Tiệm ở Chelmsford MA cần thợ bột", "Cần thợ nail ở Wales, Wisconsin, inbox");
+AU_OK.push("Lewisham NSW", "Hackney SA", "Prince of Wales Hospital", "Tiệm ở Lewisham NSW cần thợ, inbox", "Tiệm gần Prince of Wales Hospital (Randwick) cần thợ", "Tiệm ở Ilford NSW cần thợ");
+ok("FM3", "Không bắt nhầm bài Mỹ / Úc: London KY, New London CT, 'tiếng Anh', New England, 'UK trained' có số Mỹ, 'anh Tuấn'; số bàn QLD 07 xxxx xxxx, New South Wales; Chelmsford MA, Wales WI, Lewisham NSW, Hackney SA, Prince of Wales Hospital, Ilford NSW",
   [...US_OK, ...AU_OK].every((t) => foreignMarketSignal(t) === null), JSON.stringify([...US_OK, ...AU_OK].filter((t) => foreignMarketSignal(t)).map((t) => [t, foreignMarketSignal(t)])));
 ok("FM4", "Ô quốc gia của bot: UK / Anh / England / United Kingdom → ngoài; Mỹ / USA / Úc / rỗng → không",
   ["UK", "Anh", "England", "United Kingdom", "anh quốc"].every(isForeignCountry) && !["Mỹ", "USA", "Úc", "Australia", "", undefined].some((c) => isForeignCountry(c as string)));
@@ -102,6 +116,12 @@ const au = publicJob({ ...base, source: null, phone: "0412 345 678", market: "AU
 ok("PJ1", "Tin 'Xuân xanh' (+1 0901234567) và tin Anh đã lưu (747) 555-0142 → không còn hiện số / nút Gọi; tin đúng giữ nguyên số",
   xuan.phone === "" && uk.phone === "" && good.phone === "4085550100" && goodIngest.phone === "(832) 555-0178" && au.phone === "0412 345 678",
   JSON.stringify([xuan.phone, uk.phone, good.phone, goodIngest.phone, au.phone]));
+const au1300 = publicJob({ ...base, source: null, phone: "1300 975 707", market: "AU", state: "NSW", description: "Cần thợ" } as J);
+const usDash = publicJob({ ...base, source: null, phone: "713–555–0123", market: "US", description: "Cần thợ" } as J);
+const auLewisham = publicJob({ ...base, source: "ingest", phone: "0412 555 019", market: "AU", state: "NSW", description: "Tiệm ở Lewisham NSW cần thợ bột, inbox" } as J);
+ok("PJ2", "Tin cũ ĐÚNG vẫn giữ số / nút Gọi: Úc 1300 975 707, Mỹ 713–555–0123 (gạch Unicode), tin nhóm ở Lewisham NSW",
+  au1300.phone === "1300 975 707" && usDash.phone === "713–555–0123" && auLewisham.phone === "0412 555 019",
+  JSON.stringify([au1300.phone, usDash.phone, auLewisham.phone]));
 
 // ---------- localeHref ----------
 ok("LH1", "Trên /vi/*: /auth/login → /vi/auth/login, /?tab=jobs → /vi?tab=jobs, / → /vi, /messages?to=1#x → /vi/messages?to=1#x, /vi/jobs/1 giữ nguyên",

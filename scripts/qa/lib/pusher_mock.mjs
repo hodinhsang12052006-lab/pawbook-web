@@ -4,7 +4,9 @@
 //                              unsubscribe, ping/pong, presence member_added/removed
 //   - POST /apps/:id/events      auth_signature + body_md5 checked; 10 KB data → 413; socket_id excluded
 //   - POST /apps/:id/batch_events  ≤ 10 events, same checks
-// Test hooks: log (every delivered/refused event), pauseDelivery(ms), setRewrite(fn), subscribers(channel).
+// Test hooks: log (every delivered/refused event), pauseDelivery(ms), setRewrite(fn), subscribers(channel),
+//   dropSockets(channel?) (network drop: the server closes the sockets → pusher-js reconnects),
+//   ignoreSubscribes(channel, n) (the next n subscribe requests get NO answer — a lost confirmation).
 //
 // Library:   import { startPusherMock } from "./lib/pusher_mock.mjs"; const m = await startPusherMock({ port: 6001 });
 // Standalone (e.g. for launch_test/push_test servers): node scripts/qa/lib/pusher_mock.mjs [port]
@@ -29,6 +31,7 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
   let pausedQueue = [];
   let rewrite = null;
   let counter = 0;
+  const ignoreSub = new Map(); // channel -> remaining subscribe requests to leave unanswered
 
   const send = (ws, msg) => {
     if (ws.readyState === 1) ws.send(JSON.stringify(msg));
@@ -67,6 +70,11 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
   function handleSubscribe(sid, s, data) {
     const channel = data?.channel;
     if (typeof channel !== "string") return;
+    if (ignoreSub.get(channel) > 0) {
+      ignoreSub.set(channel, ignoreSub.get(channel) - 1);
+      log.push({ t: Date.now(), ignored: "subscribe", channel });
+      return;
+    }
     if (channel.startsWith("private-") || channel.startsWith("presence-")) {
       const auth = String(data.auth || "");
       const [k, sig] = auth.split(":");
@@ -200,6 +208,22 @@ export async function startPusherMock({ port = 6001, host = "127.0.0.1", key = "
     },
     subscribers(channel) {
       return [...sockets.values()].filter((s) => s.channels.has(channel)).length;
+    },
+    /** Close (server side, code 4200 = "reconnect immediately") every socket — or only those on `channel`. */
+    dropSockets(channel) {
+      let n = 0;
+      for (const s of sockets.values()) {
+        if (channel && !s.channels.has(channel)) continue;
+        try {
+          s.ws.close(4200, "qa drop");
+        } catch {}
+        n++;
+      }
+      return n;
+    },
+    /** Leave the next `n` subscribe requests for `channel` unanswered. */
+    ignoreSubscribes(channel, n = 1) {
+      ignoreSub.set(channel, n);
     },
     /** Push an event to a channel directly (no REST) — for injecting stale/forged signals in tests. */
     inject(channel, name, data) {

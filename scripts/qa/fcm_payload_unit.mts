@@ -188,5 +188,86 @@ ok("F19", "Lỗi FCM: 404 / UNREGISTERED / INVALID_ARGUMENT về token → token
   ok("F26", "Web push: chỉ icon/title/body/url/tag — không mang chat/channel", Object.keys(w).sort().join() === "body,icon,tag,title,url" && w.url === `/messages?c=${CID}` && w.tag === `pn-chat-${CID}`, w);
 }
 
+// ---------- 8. Cuộc gọi: TTL ngắn, tag + mã gộp riêng từng cuộc gọi, tin kết thúc THAY tin "đang gọi" ----------
+{
+  const { incomingCallPush, callEndPush, followUpFor, createFollowUpGate, ownDeviceEndpoints, CALL_PUSH_TTL_SEC, FOLLOW_UP_WINDOW_MS } = await import("../../lib/calls/callPush");
+  const { webPushBody, webPushOptions } = await import("../../lib/push");
+  type AnyMsg = Msg & { apns: { headers?: Record<string, string>; payload: unknown } };
+  const NOW = 1_800_000_000_000;
+  const inc = incomingCallPush({ callId: "abc123xyz", callType: "video", callerId: "u_caller", callerName: "Lan  Nguyen", now: NOW });
+  const t0 = Math.floor(Date.now() / 1000);
+  const m = buildFcmMessage({ token: "tokC", build: 3 }, inc) as unknown as AnyMsg;
+  const exp = Number(m.apns.headers?.["apns-expiration"]);
+  ok("F30", "Cuộc gọi đến → FCM: notification (mọi build), kênh calls, tag pn-call-<callId>, android.ttl 60s, collapse_key call-<callId>, APNs hết hạn sau 60 s",
+    !!m.notification && m.android.ttl === "60s" && m.android.collapse_key === "call-abc123xyz" && m.android.notification?.tag === "pn-call-abc123xyz" &&
+      m.android.notification?.channel_id === "calls" && exp >= t0 + 59 && exp <= t0 + 62 && m.apns.headers?.["apns-collapse-id"] === "call-abc123xyz" && CALL_PUSH_TTL_SEC === 60, m);
+  const w = webPushOptions(inc);
+  const wb = JSON.parse(webPushBody(inc));
+  ok("F31", "Cuộc gọi đến → web push TTL 60, Topic call-<callId> (RFC 8030 ≤ 32 ký tự base64url), thân có kind=call + exp + bản 'nhỡ' khi tới muộn",
+    w.TTL === 60 && w.topic === "call-abc123xyz" && w.urgency === "high" && wb.kind === "call" && wb.exp === NOW + 60_000 && wb.tag === "pn-call-abc123xyz" &&
+      wb.stale?.title === "Cuộc gọi video nhỡ từ Lan Nguyen" && inc.en?.stale?.title === "Missed video call from Lan Nguyen", { w, wb });
+  const missed = callEndPush({ callId: "abc123xyz", callType: "audio", callerId: "u_caller", callerName: "Lan", outcome: "missed" });
+  const mm = buildFcmMessage({ token: "tokC", build: 3 }, missed) as unknown as AnyMsg;
+  ok("F32", "Cuộc gọi nhỡ → CÙNG tag + collapse_key (thay thông báo 'đang gọi'), kênh general (không đổ chuông lại), giữ 24 h, mở lại đúng cuộc trò chuyện",
+    mm.android.notification?.tag === "pn-call-abc123xyz" && mm.android.collapse_key === "call-abc123xyz" && mm.android.notification?.channel_id === "general" && mm.android.ttl === "86400s" &&
+      mm.notification?.title === "Cuộc gọi nhỡ từ Lan" && missed.en?.title === "Missed call from Lan" && missed.en?.body === "Tap to call back." && mm.data.url === "/messages?to=u_caller", mm);
+  const ans = callEndPush({ callId: "abc123xyz", callType: "audio", callerId: "u_caller", callerName: "Lan", outcome: "answered" });
+  const dec = callEndPush({ callId: "abc123xyz", callType: "audio", callerId: "u_caller", callerName: "Lan", outcome: "declined" });
+  const ansWeb = JSON.parse(webPushBody(ans));
+  // Device-neutral text: the device that acted can still get it (web tab, app without a saved token) — "on another
+  // device" would then be false.
+  ok("F33", "Đã trả lời / từ chối → cùng tag, lặng lẽ (quiet), TTL 1 h; chữ không nói 'máy khác' (EN + VI)",
+    ans.tag === "pn-call-abc123xyz" && ansWeb.kind === "call-end" && ansWeb.quiet === true && webPushOptions(ans).TTL === 3600 && webPushOptions(missed).TTL === 86400 &&
+      ans.en?.title === "Call with Lan" && ans.en?.body === "Answered." && ans.title === "Cuộc gọi với Lan" && ans.body === "Đã trả lời." &&
+      dec.en?.title === "Call from Lan" && dec.en?.body === "Declined." && dec.title === "Cuộc gọi từ Lan" && dec.body === "Đã từ chối." &&
+      !/another device|thiết bị khác/.test(JSON.stringify([ans, dec])), { ans, dec });
+  const F = (a: string, r: string | null, caller: boolean) => JSON.stringify(followUpFor(a, r, caller));
+  ok("F34", "Ai nhận tin kết thúc: người gọi huỷ / hết giờ → người nhận 'nhỡ'; người nhận nghe / từ chối → các máy khác của họ; bận / lỗi micro → 'nhỡ'; cúp máy khi đang nói → không gì",
+    F("reject", "cancel", true) === '{"outcome":"missed","to":"target"}' && F("reject", "timeout", true) === '{"outcome":"missed","to":"target"}' &&
+      F("reject", "hangup", true) === "null" && F("reject", "answered-elsewhere", true) === "null" && F("accept", null, false) === '{"outcome":"answered","to":"self"}' &&
+      F("reject", "decline", false) === '{"outcome":"declined","to":"self"}' && F("busy", "busy", false) === '{"outcome":"missed","to":"self"}' &&
+      F("reject", "media-error", false) === '{"outcome":"missed","to":"self"}' && F("reject", "hangup", false) === "null" && F("reject", "failed", false) === "null");
+  // F36 — one follow-up per (call, recipient, outcome), only inside the call's window (a caller with a valid 3 h token
+  //       cannot re-send "Missed call" pushes by POSTing reject/cancel again and again)
+  {
+    let t = NOW;
+    const gate = createFollowUpGate({ now: () => t });
+    const issuedAt = NOW - 5_000;
+    const k = { callId: "abc123xyz", to: "target" as const, outcome: "missed" as const, issuedAt };
+    const first = gate(k);
+    const second = gate(k); // the same cancel again
+    t += 10_000;
+    const third = gate({ ...k }); // and again, 10 s later
+    const otherOutcome = gate({ ...k, to: "self", outcome: "answered" }); // a different follow-up of the same call
+    const otherCall = gate({ ...k, callId: "zzz999" });
+    t = issuedAt + FOLLOW_UP_WINDOW_MS + 1;
+    const late = gate({ ...k, callId: "late01" }); // first follow-up of a call, but after its window
+    const lateGate = createFollowUpGate({ now: () => NOW + 3 * 3600_000 });
+    const veryLate = lateGate({ ...k, callId: "tok3h", issuedAt: NOW }); // token still valid (3 h), call long over
+    ok("F36", "Tin kết thúc: đúng 1 lần cho mỗi (cuộc gọi, người nhận, kết quả); huỷ lần 2, lần 3 → không gửi; sau cửa sổ 120 s → không gửi",
+      first && !second && !third && otherOutcome && otherCall && !late && !veryLate && FOLLOW_UP_WINDOW_MS === 120_000,
+      { first, second, third, otherOutcome, otherCall, late, veryLate });
+    // many calls: memory stays bounded (old keys expire)
+    let t2 = NOW;
+    const g2 = createFollowUpGate({ now: () => t2 });
+    let okAll = true;
+    for (let i = 0; i < 20_000; i++) {
+      t2 += 50;
+      okAll = g2({ callId: "c" + i, to: "target", outcome: "missed", issuedAt: t2 }) && okAll;
+    }
+    ok("F37", "Nhiều cuộc gọi liên tục → cuộc nào cũng gửi được tin kết thúc của nó (bộ nhớ chặn trên, không chặn nhầm)", okAll);
+  }
+  // F38 — the device that answered / declined is left out of its own "Answered." / "Declined." follow-up
+  ok("F38", "Token đẩy của chính máy vừa nghe / từ chối → loại 'fcm:<token>' + 'apns:<token>'; giá trị lạ / quá dài → không loại gì",
+    JSON.stringify(ownDeviceEndpoints("tok:ABC_123-x")) === '["fcm:tok:ABC_123-x","apns:tok:ABC_123-x"]' && ownDeviceEndpoints(undefined).length === 0 &&
+      ownDeviceEndpoints("").length === 0 && ownDeviceEndpoints("a b").length === 0 && ownDeviceEndpoints("x".repeat(4097)).length === 0 && ownDeviceEndpoints(42).length === 0);
+
+  // other notifications keep their old shape (no TTL → FCM default, web 24 h, no topic)
+  const other = buildFcmMessage({ token: "t", build: 3 }, { title: "x", body: "y", url: "/", tag: "pn-like" }) as unknown as AnyMsg;
+  ok("F35", "Thông báo khác giữ nguyên: không android.ttl / collapse_key / apns headers; web push TTL 24 h, không Topic",
+    !("ttl" in other.android) && !("collapse_key" in other.android) && !other.apns.headers && webPushOptions({}).TTL === 86400 && !("topic" in webPushOptions({})) &&
+      !("topic" in webPushOptions({ collapseKey: "has space" })), other);
+}
+
 console.log(`\nfcm payload unit: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

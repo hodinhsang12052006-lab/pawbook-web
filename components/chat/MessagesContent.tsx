@@ -875,10 +875,6 @@ export default function MessagesContent({
     const channel = acquireUserChannel(currentUser.id);
     if (!channel) return;
 
-    const handleSubscriptionError = (error: any) => {
-      console.error("Pusher subscription error:", error);
-    };
-
     const handleNewMessage = (data: any) => {
       if (!data || !data.message || !data.message.id) return;
       const m = data.message;
@@ -994,20 +990,32 @@ export default function MessagesContent({
       }, 4500);
     };
 
-    channel.bind("pusher:subscription_error", handleSubscriptionError);
+    // Tin tới trong lúc kênh CHƯA đăng ký lại (socket vừa nối lại nhưng /api/pusher/auth lỗi → lib/pusherResilience.ts
+    // thử lại sau 1–30 s) không bao giờ tới qua Pusher → mỗi lần kênh đăng ký lại xong thì tải lại danh sách + khung chat
+    // đang mở. Lần đăng ký ĐẦU (lúc mở trang) bỏ qua: trang vừa tự tải dữ liệu rồi.
+    let primed = !!channel.subscribed;
+    const handleResubscribed = () => {
+      if (primed) {
+        setSyncTick((n) => n + 1);
+        loadData(true);
+      }
+      primed = true;
+    };
+
     channel.bind("new-message", handleNewMessage);
     channel.bind("message-updated", handleMessageUpdated);
     channel.bind("message-seen", handleMessageSeen);
     channel.bind("message-recalled", handleMessageRecalled);
     channel.bind("user-typing", handleUserTyping);
+    channel.bind("pusher:subscription_succeeded", handleResubscribed);
 
     return () => {
-      channel.unbind("pusher:subscription_error", handleSubscriptionError);
       channel.unbind("new-message", handleNewMessage);
       channel.unbind("message-updated", handleMessageUpdated);
       channel.unbind("message-seen", handleMessageSeen);
       channel.unbind("message-recalled", handleMessageRecalled);
       channel.unbind("user-typing", handleUserTyping);
+      channel.unbind("pusher:subscription_succeeded", handleResubscribed);
       releaseUserChannel(currentUser.id);
     };
   }, [currentUser?.id, rekeyBucket, mergeIntoBucket, removeFromBucket, loadData, markSeen, bubble]);
@@ -1690,7 +1698,9 @@ export default function MessagesContent({
     return () => window.removeEventListener("click", onClick, true);
   }, [bubble]);
 
-  // ----- V2: đồng bộ lại sau khi mất kết nối / mở lại app (tin tới lúc socket rớt không bị mất tới khi mở lại chat)
+  // ----- V2: đồng bộ lại khi mở lại app / có mạng lại (tin tới lúc socket rớt không bị mất tới khi mở lại chat).
+  // Socket nối lại: KHÔNG đồng bộ ở "connected" (lúc đó kênh riêng chưa đăng ký lại → tin tới giữa chừng vẫn mất) — việc
+  // đó làm ở "pusher:subscription_succeeded" của kênh (effect kênh realtime phía trên).
   const [connLost, setConnLost] = useState(false);
   useEffect(() => {
     const resync = () => {
@@ -1702,15 +1712,12 @@ export default function MessagesContent({
     window.addEventListener("online", resync);
     const pusher = getPusherClient();
     let lostTimer: ReturnType<typeof setTimeout> | null = null;
-    let wasDown = false;
     const onState = ({ current }: { previous: string; current: string }) => {
       if (current === "connected") {
         if (lostTimer) clearTimeout(lostTimer);
+        lostTimer = null;
         setConnLost(false);
-        if (wasDown) resync();
-        wasDown = false;
       } else if (current === "unavailable" || current === "disconnected" || current === "connecting") {
-        wasDown = true;
         if (!lostTimer) lostTimer = setTimeout(() => { setConnLost(true); lostTimer = null; }, 2000);
       }
     };

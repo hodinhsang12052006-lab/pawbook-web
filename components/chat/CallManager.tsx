@@ -20,6 +20,8 @@ import { callAudioElement, countCameras, getCallMedia, getCameraTrack, playRemot
 import type { CallPeer, NetState, Quality } from "@/lib/calls/peer";
 import type { SignalInbox, SignalOutbox, OutboundMessage } from "@/lib/calls/signalQueue";
 import type { SignalEvent, WireCtl, WireIce } from "@/lib/calls/signalWire";
+import { createIceClient, IN_CALL_MIN_VALID_MS, type IceClient } from "@/lib/calls/iceClient";
+import { clearCallNotice, ownPushTokenField } from "@/lib/calls/callNotice";
 
 const CallScreen = dynamic(() => import("@/components/chat/call/CallScreen"), {
   ssr: false,
@@ -86,10 +88,9 @@ const FAILED_GRACE_MS = 15_000;
 const ANSWERING_GRACE_MS = 60_000;
 // The first offer / answer is re-sent if nothing came back this long after the call was accepted.
 const OFFER_RESEND_MS = 6_000;
-// Fresh STUN/TURN list during a call (TURN credentials expire; an ICE restart uses the current list).
+// During a call the STUN/TURN list is re-checked this often (TURN credentials expire; an ICE restart uses the current
+// list). lib/calls/iceClient.ts only fetches when less than IN_CALL_MIN_VALID_MS of validity is left.
 const ICE_REFRESH_MS = 10 * 60_000;
-// The browser reuses a fetched ICE list at most this long (Cloudflare credentials live 1 h).
-const ICE_CLIENT_CACHE_MS = 5 * 60_000;
 // "Still connecting…" hint after this long on "Connecting…".
 const SLOW_CONNECT_MS = 10_000;
 // The other side's data channel closed (its connection closed) → treat as a hang-up after this grace, unless the
@@ -97,7 +98,6 @@ const SLOW_CONNECT_MS = 10_000;
 const REMOTE_CLOSE_GRACE_MS = 1_500;
 // Keep the connection this long after hanging up so the "bye" on the data channel is really sent.
 const BYE_LINGER_MS = 250;
-const DEFAULT_ICE: RTCIceServer[] = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
 
 const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
@@ -156,8 +156,8 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const fallbackAudioRef = useRef<MediaStream | null>(null);
   const camOnRef = useRef(false);
   const facingRef = useRef<Facing>("user");
-  const iceRef = useRef<{ servers: RTCIceServer[]; until: number; hasTurn: boolean } | null>(null);
-  const iceInflight = useRef<Promise<RTCIceServer[]> | null>(null);
+  const iceRef = useRef<{ hasTurn: boolean } | null>(null);
+  const iceClientRef = useRef<{ user: string; client: IceClient } | null>(null);
   const netRef = useRef<NetState>("new");
   const wakeRef = useRef<{ release: () => Promise<void> } | null>(null);
   const endedRef = useRef<string[]>([]);
@@ -208,32 +208,35 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     });
   }, []);
 
-  // One fetch at a time (dial prefetch + engine start share it); on 429 / offline the last good list is reused, so a
-  // 4G user does not silently lose TURN.
-  const getIce = useCallback((force = false): Promise<RTCIceServer[]> => {
-    const c = iceRef.current;
-    if (!force && c && c.until > Date.now()) return Promise.resolve(c.servers);
-    if (iceInflight.current) return iceInflight.current;
-    const p = (async () => {
-      try {
-        const r = await fetch("/api/calls/ice", { cache: "no-store" });
-        if (r.ok) {
-          const d = await r.json();
-          if (Array.isArray(d.iceServers)) {
-            const ttlMs = Math.max(60, Number(d.ttlSec) || 600) * 500;
-            iceRef.current = { servers: d.iceServers, until: Date.now() + Math.min(ttlMs, ICE_CLIENT_CACHE_MS), hasTurn: d.hasTurn !== false };
-            setHasTurn(d.hasTurn !== false);
-            return d.iceServers as RTCIceServer[];
-          }
-        }
-      } catch {}
-      return iceRef.current?.servers ?? DEFAULT_ICE;
-    })().finally(() => {
-      iceInflight.current = null;
-    });
-    iceInflight.current = p;
-    return p;
-  }, []);
+  // STUN/TURN list (lib/calls/iceClient.ts): cached per user until shortly before the TURN credentials expire, one
+  // request per call at most (dial prefetch + engine start share it), one retry + a Sentry warning when TURN is
+  // configured but could not be fetched — a 4G user never silently loses the relay.
+  const getIce = useCallback(
+    (inCall = false): Promise<RTCIceServer[]> => {
+      const user = currentUserId || "anon";
+      if (!iceClientRef.current || iceClientRef.current.user !== user) {
+        let storage: Storage | null = null;
+        try {
+          storage = window.sessionStorage;
+        } catch {}
+        iceClientRef.current = {
+          user,
+          client: createIceClient(user, {
+            storage,
+            report: (msg, extra) => {
+              import("@sentry/nextjs").then((S) => S.captureMessage(msg, { level: "warning", extra })).catch(() => {});
+            },
+          }),
+        };
+      }
+      return iceClientRef.current.client.get(inCall ? { minValidMs: IN_CALL_MIN_VALID_MS } : {}).then((r) => {
+        iceRef.current = { hasTurn: r.hasTurn };
+        setHasTurn(r.hasTurn);
+        return r.servers;
+      });
+    },
+    [currentUserId]
+  );
 
   // Nhật ký cuộc gọi trong khung chat ("Cuộc gọi nhỡ", "Cuộc gọi thoại · 2:05"). CHỈ người gọi ghi để không bị 2 dòng.
   const logCall = useCallback((outcome: "missed" | "declined" | "ended", beacon = false) => {
@@ -320,7 +323,8 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         peerRef.current?.sendCtl({ bye: reason });
       } catch {}
       // leg: the caller ignores a reject from a device of the callee other than the one it is talking to
-      if (call.token) postCall(call, "reject", { reason, leg, socketId: getPusherClient()?.connection?.socket_id }).catch(() => {});
+      // decline: this phone's own push token → its tray gets no "Declined." follow-up (only the user's other devices)
+      if (call.token) postCall(call, "reject", { reason, leg, socketId: getPusherClient()?.connection?.socket_id, ...(reason === "decline" ? ownPushTokenField() : {}) }).catch(() => {});
       if (call.isCaller) {
         if (ph === "outgoing") logCall("missed");
         else if (ph === "connecting" || ph === "connected") logCall(call.connectedAt ? "ended" : "missed");
@@ -446,8 +450,18 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       // long calls: TURN credentials expire — keep the list fresh so an ICE restart can still use the relay
       timers.current.iceRefresh = setInterval(() => {
         if (callRef.current !== call) return;
+        const hadTurn = !!iceRef.current?.hasTurn;
         getIce(true)
-          .then((servers) => callRef.current === call && peerRef.current?.setIceServers(servers))
+          .then((servers) => {
+            if (callRef.current !== call) return;
+            // never swap the call's TURN list for a STUN-only one (Cloudflare blip / failed refresh): keep the relay
+            if (hadTurn && !iceRef.current?.hasTurn) {
+              iceRef.current = { hasTurn: true };
+              setHasTurn(true);
+              return;
+            }
+            peerRef.current?.setIceServers(servers);
+          })
           .catch(() => {});
       }, ICE_REFRESH_MS);
       return true;
@@ -630,6 +644,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   // ---------- incoming ----------
   const answer = useCallback(
     async (call: ActiveCall, o: { audioOnly?: boolean } = {}) => {
+      clearCallNotice(call.callId); // "X is calling you" in the tray (shown while the app / tab was in the background)
       let stream: MediaStream | null = null;
       let firstErr: unknown = null;
       const wantVideo = call.type === "video" && !o.audioOnly;
@@ -683,7 +698,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         endCall("hangup");
         return;
       }
-      const res = await postCall(call, "accept", { leg, socketId: getPusherClient()?.connection?.socket_id }).catch(() => null);
+      const res = await postCall(call, "accept", { leg, socketId: getPusherClient()?.connection?.socket_id, ...ownPushTokenField() }).catch(() => null);
       if (callRef.current !== call) return;
       if (!res || !res.ok) {
         const data = res ? await res.json().catch(() => ({})) : {};
@@ -717,8 +732,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     const call = callRef.current;
     if (!call) return;
     const ph = phaseRef.current;
-    if (ph === "incoming") endCall("decline");
-    else if (ph === "outgoing") endCall("cancel");
+    if (ph === "incoming") {
+      clearCallNotice(call.callId);
+      endCall("decline");
+    } else if (ph === "outgoing") endCall("cancel");
     else if (ph === "error") teardown();
     else endCall("hangup");
   }, [endCall, teardown]);
@@ -852,7 +869,10 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
     handled: (d) => {
       // Máy khác của chính mình đã nghe / từ chối / báo bận → máy này ngừng đổ chuông, không ghi gì. Ghi nhớ callId
       // TRƯỚC (kể cả khi máy này chưa đổ chuông): lượt đổ chuông lại đến muộn của cuộc gọi đó sẽ bị bỏ qua.
-      if (typeof d.callId === "string") markEnded(d.callId);
+      if (typeof d.callId === "string") {
+        markEnded(d.callId);
+        clearCallNotice(d.callId);
+      }
       const call = callRef.current;
       if (!call || call.isCaller || d.callId !== call.callId || phaseRef.current !== "incoming") return;
       teardown();

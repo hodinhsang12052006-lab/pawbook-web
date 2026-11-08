@@ -11,6 +11,9 @@
 //   3. Generic TURN (e.g. coturn): TURN_URLS (comma list) +
 //        TURN_SECRET (coturn "use-auth-secret": ephemeral HMAC credentials per user, recommended), or
 //        TURN_USERNAME / TURN_CREDENTIAL (static — visible to every signed-in user, so only for a dedicated relay).
+// Never silently TURN-less: when TURN is configured but Cloudflare does not answer, the request is retried once (short
+// timeouts, <= ~6.5 s in total), then the result says turnConfigured=true + hasTurn=false (the browser keeps such a list
+// only briefly) and a Sentry warning is sent (at most once per 10 min per instance).
 // Test hook (local only, refused on Vercel): CLOUDFLARE_TURN_ALLOW_TEST=1 + CLOUDFLARE_TURN_TEST_BASE=http://127.0.0.1:PORT.
 import { createHmac } from "node:crypto";
 
@@ -25,6 +28,8 @@ export interface IceResult {
   /** how long the client may reuse this list (seconds) */
   ttlSec: number;
   hasTurn: boolean;
+  /** a TURN source is configured on the server (hasTurn=false then means it could not be reached) */
+  turnConfigured: boolean;
 }
 
 type Env = Record<string, string | undefined>;
@@ -34,6 +39,10 @@ export interface IceDeps {
   fetch?: typeof fetch;
   now?: () => number;
   log?: (msg: string) => void;
+  /** monitoring hook (Sentry warning in production) - called at most once per 10 min per instance */
+  report?: (msg: string, extra: Record<string, unknown>) => void;
+  /** wait between the two Cloudflare attempts (tests pass a shorter one) */
+  retryDelayMs?: number;
 }
 
 export const DEFAULT_STUN = ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"];
@@ -41,9 +50,21 @@ const CF_BASE = "https://rtc.live.cloudflare.com/v1";
 // 1 h: enough for a call (the client refreshes its list during long calls) and limits what a harvested credential is worth.
 const CF_TTL_SEC = 3600;
 const CF_CACHE_MS = 10 * 60 * 1000;
-const CF_TIMEOUT_MS = 4000;
+// Two attempts (first + one retry), each with its own timeout: <= ~6.5 s in total when Cloudflare hangs.
+const CF_TIMEOUT_MS = 3000;
+const CF_RETRY_DELAY_MS = 400;
 const SECRET_TTL_SEC = 2 * 60 * 60;
-const STUN_ONLY_TTL_SEC = 3600;
+// A list WITHOUT TURN (none configured yet, or Cloudflare down) is reused by the browser only this long: when the TURN
+// keys are added later (or Cloudflare comes back) the very next call gets the relay — never a STUN-only list kept for an
+// hour in a phone's sessionStorage.
+const TURNLESS_TTL_SEC = 60;
+
+/** TURN is configured on this server (Cloudflare keys or a generic TURN with credentials). */
+export function turnSourceConfigured(env: Env): boolean {
+  const cf = !!(env.CLOUDFLARE_TURN_KEY_ID && env.CLOUDFLARE_TURN_API_TOKEN);
+  const generic = cleanUrls((env.TURN_URLS || "").split(",")).some((u) => /^turns?:/i.test(u)) && !!(env.TURN_SECRET || (env.TURN_USERNAME && env.TURN_CREDENTIAL));
+  return cf || generic;
+}
 
 const URL_RE = /^(stun|stuns|turn|turns):[^\s]{3,200}$/i;
 // Cloudflare also lists alternate port-53 URLs; browsers block port 53, so they only slow ICE down.
@@ -103,19 +124,11 @@ export function resetIceCache() {
   lastErrorLogAt = 0;
 }
 
-async function cloudflareServers(env: Env, deps: Required<Pick<IceDeps, "fetch" | "now" | "log">>): Promise<{ servers: IceServer[]; ttlSec: number } | null> {
-  const keyId = env.CLOUDFLARE_TURN_KEY_ID;
-  const token = env.CLOUDFLARE_TURN_API_TOKEN;
-  if (!keyId || !token) return null;
-  const now = deps.now();
-  if (cfCache && now - cfCache.at < CF_CACHE_MS) {
-    return { servers: cfCache.servers, ttlSec: Math.max(60, CF_TTL_SEC - Math.round((now - cfCache.at) / 1000)) };
-  }
-  const url = `${cloudflareBase(env, deps.log)}/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`;
+async function cloudflareOnce(url: string, token: string, f: typeof fetch): Promise<IceServer[]> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), CF_TIMEOUT_MS);
   try {
-    const res = await deps.fetch(url, {
+    const res = await f(url, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ ttl: CF_TTL_SEC }),
@@ -125,18 +138,48 @@ async function cloudflareServers(env: Env, deps: Required<Pick<IceDeps, "fetch" 
     if (!res.ok) throw new Error(`Cloudflare TURN HTTP ${res.status}`);
     const servers = parseCloudflareIce(await res.json());
     if (!servers.some((s) => s.username)) throw new Error("Cloudflare TURN: no TURN entry in response");
-    cfCache = { at: now, servers };
-    return { servers, ttlSec: CF_TTL_SEC };
-  } catch (err) {
-    if (now - lastErrorLogAt > CF_CACHE_MS) {
-      lastErrorLogAt = now;
-      // Never log the token or the response body (it carries credentials).
-      deps.log(`Cloudflare TURN unavailable, falling back to STUN only: ${err instanceof Error ? err.name + " " + err.message.slice(0, 80) : "error"}`);
-    }
-    return null;
+    return servers;
   } finally {
     clearTimeout(timer);
   }
+}
+
+const describe = (err: unknown) => (err instanceof Error ? `${err.name} ${err.message.slice(0, 80)}` : "error");
+
+async function cloudflareServers(
+  env: Env,
+  deps: Required<Pick<IceDeps, "fetch" | "now" | "log">> & Pick<IceDeps, "report" | "retryDelayMs">
+): Promise<{ servers: IceServer[]; ttlSec: number } | null> {
+  const keyId = env.CLOUDFLARE_TURN_KEY_ID;
+  const token = env.CLOUDFLARE_TURN_API_TOKEN;
+  if (!keyId || !token) return null;
+  const now = deps.now();
+  if (cfCache && now - cfCache.at < CF_CACHE_MS) {
+    return { servers: cfCache.servers, ttlSec: Math.max(60, CF_TTL_SEC - Math.round((now - cfCache.at) / 1000)) };
+  }
+  const url = `${cloudflareBase(env, deps.log)}/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`;
+  let firstErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      if (attempt) await new Promise((r) => setTimeout(r, deps.retryDelayMs ?? CF_RETRY_DELAY_MS));
+      const servers = await cloudflareOnce(url, token, deps.fetch);
+      cfCache = { at: now, servers };
+      if (attempt) deps.log(`Cloudflare TURN answered on retry (first attempt: ${describe(firstErr)})`);
+      return { servers, ttlSec: CF_TTL_SEC };
+    } catch (err) {
+      if (!attempt) {
+        firstErr = err;
+        continue;
+      }
+      if (now - lastErrorLogAt > CF_CACHE_MS) {
+        lastErrorLogAt = now;
+        // Never log the token or the response body (it carries credentials).
+        deps.log(`Cloudflare TURN unavailable after a retry, calls fall back to STUN only: ${describe(err)}`);
+        deps.report?.("Cloudflare TURN credentials could not be fetched (calls are STUN-only)", { first: describe(firstErr), retry: describe(err) });
+      }
+    }
+  }
+  return null;
 }
 
 function genericTurn(env: Env, userId: string, nowMs: number): { servers: IceServer[]; ttlSec: number } | null {
@@ -160,6 +203,8 @@ export async function buildIceServers(userId: string, deps: IceDeps = {}): Promi
     fetch: deps.fetch ?? fetch,
     now: deps.now ?? Date.now,
     log: deps.log ?? ((m: string) => console.warn(m)),
+    report: deps.report,
+    retryDelayMs: deps.retryDelayMs,
   };
   const iceServers: IceServer[] = [...stunServers(env)];
   let ttlSec = Infinity;
@@ -173,7 +218,10 @@ export async function buildIceServers(userId: string, deps: IceDeps = {}): Promi
     iceServers.push(...gen.servers);
     ttlSec = Math.min(ttlSec, gen.ttlSec);
   }
-  if (!Number.isFinite(ttlSec)) ttlSec = STUN_ONLY_TTL_SEC;
   const hasTurn = iceServers.some((s) => (Array.isArray(s.urls) ? s.urls : [s.urls]).some((u) => /^turns?:/i.test(u)));
-  return { iceServers, ttlSec, hasTurn };
+  const turnConfigured = turnSourceConfigured(env);
+  // No TURN in the list (not configured, or configured but unavailable): the browser asks again on the next call.
+  // (with TURN, ttlSec is the TURN credentials' lifetime; without, it is still Infinity here)
+  if (!hasTurn) ttlSec = Math.min(ttlSec, TURNLESS_TTL_SEC);
+  return { iceServers, ttlSec, hasTurn, turnConfigured };
 }

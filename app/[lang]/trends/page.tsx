@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -49,10 +49,19 @@ function Section({ icon: Icon, title, hint, tone, children }: { icon: typeof Sta
   );
 }
 
+// Chờ tối đa ngần này để mọi phần (xu hướng, thử thách tuần, radar mẫu, khảo sát) cùng về rồi hiện MỘT lần.
+const REVEAL_TIMEOUT_MS = 4000;
+
+// Khung chờ cao hơn màn hình: khi nội dung thật thay vào, mọi thứ bên dưới vốn đã nằm ngoài màn hình → không có gì
+// đang nhìn thấy bị xô đi (trước đây khung chờ ngắn + radar / thử thách / khảo sát chen vào lần lượt: CLS 0.14–0.60).
 function Skeleton() {
   useTr(); // render lại khi đổi VI/EN
   return (
-    <div className="space-y-6">
+    <div className="min-h-[115svh] space-y-6" aria-busy="true" aria-label={tr("Đang tải xu hướng", "Loading trends")} data-trends-skeleton>
+      <div className="space-y-3">
+        <div className="skeleton h-7 w-56 rounded-lg" />
+        <div className="grid gap-3 sm:grid-cols-2">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="skeleton h-44 rounded-2xl" />)}</div>
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}</div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton aspect-[4/5] rounded-2xl" />)}</div>
       <div className="skeleton h-40 rounded-2xl" />
@@ -71,12 +80,25 @@ export default function TrendsPage() {
   const [error, setError] = useState(false);
   const studio = useStudio(market, user?.role);
   const [radar, setRadar] = useState<RadarPublic | null>(null);
+  const [radarFor, setRadarFor] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    fetch(`/api/radar?market=${market}`).then((r) => (r.ok ? r.json() : null)).then((d) => alive && setRadar(d)).catch(() => {});
+    fetch(`/api/radar?market=${market}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => alive && setRadar(d))
+      .catch(() => {})
+      .finally(() => alive && setRadarFor(market));
     return () => {
       alive = false;
     };
+  }, [market]);
+  const [nailRadarDone, setNailRadarDone] = useState(false);
+  const onNailRadar = useCallback(() => setNailRadarDone(true), []);
+  // Hết giờ chờ (mạng chậm): hiện những gì đã có.
+  const [timedOutFor, setTimedOutFor] = useState<string | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOutFor(market), REVEAL_TIMEOUT_MS);
+    return () => clearTimeout(t);
   }, [market]);
 
   // Thị trường theo người xem (tài khoản → lựa chọn đã nhớ → IP / ngôn ngữ / múi giờ), trừ khi đã tự chọn.
@@ -101,6 +123,9 @@ export default function TrendsPage() {
   const empty = data && (clientView
     ? !data.hotPosts.length && !tags.length
     : !studio?.challenge && !data.pulse.length && !data.hotPosts.length && !tags.length && !data.salaries.length && !data.risingTechs.length);
+  // Mọi phần tải riêng đã về → hiện cùng lúc (không phần nào chen vào sau đẩy phần đã hiện).
+  const settled = (!!data || error) && (clientView || studio !== undefined) && nailRadarDone && radarFor === market;
+  const ready = settled || timedOutFor === market;
 
   return (
     <div className="flex min-h-screen flex-col text-slate-100">
@@ -138,12 +163,15 @@ export default function TrendsPage() {
           </div>
         </header>
 
+        {!ready && <Skeleton />}
+        {/* Tải ngầm (ẩn, không chiếm chỗ) rồi hiện MỘT lần khi mọi phần đã về — xem Skeleton. */}
+        <div className={ready ? "space-y-7" : "hidden"} data-trends-ready={ready ? "1" : "0"}>
         {studio?.challenge && !clientView && <ChallengeBoard studio={studio} />}
 
-        <NailTrendRadar />
+        <NailTrendRadar onSettled={onNailRadar} />
 
         {error && <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{tr("Không tải được xu hướng. Vui lòng thử lại sau.", "Couldn't load trends. Please try again later.")}</p>}
-        {!data && !error && <Skeleton />}
+        {ready && !data && !error && <Skeleton />}
 
         {empty && (
           <div className="rounded-3xl border border-dashed border-white/10 px-6 py-14 text-center">
@@ -351,6 +379,7 @@ export default function TrendsPage() {
             <Users className="h-3 w-3" />{tr(" Dựa trên hoạt động của thành viên PawNail.", " Based on member activity on PawNail.")}
           </p>
         )}
+        </div>
       </main>
     </div>
   );

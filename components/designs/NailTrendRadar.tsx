@@ -9,8 +9,11 @@ import { useTr } from "@/lib/i18n/useTr";
 
 interface RadarTrend { id: string; name: { vi: string; en: string }; source: { vi: string; en: string }; occasion: string | null; designs: { id: string; title: string; titleEn: string; imageUrl: string | null }[] }
 
-/** "Xu hướng mẫu nail đang lên" (trang /trends): trend có nguồn + mẫu PawNail làm theo → trang riêng từng mẫu. */
-export default function NailTrendRadar() {
+/**
+ * "Xu hướng mẫu nail đang lên" (trang /trends): trend có nguồn + mẫu PawNail làm theo → trang riêng từng mẫu.
+ * onSettled: gọi 1 lần khi đã có dữ liệu (hoặc lỗi) — trang /trends chờ mọi phần tải xong rồi mới hiện cùng lúc (CLS).
+ */
+export default function NailTrendRadar({ onSettled }: { onSettled?: () => void } = {}) {
   useTr(); // render lại khi đổi VI/EN
   const [trends, setTrends] = useState<RadarTrend[] | null>(null);
   useEffect(() => {
@@ -19,6 +22,9 @@ export default function NailTrendRadar() {
       .then((d) => setTrends(d.trends || []))
       .catch(() => setTrends([]));
   }, []);
+  useEffect(() => {
+    if (trends !== null) onSettled?.();
+  }, [trends, onSettled]);
   const shown = (trends ?? []).filter((t) => t.designs.length);
   if (!shown.length) return null;
   return (

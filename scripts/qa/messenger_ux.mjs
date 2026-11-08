@@ -49,7 +49,8 @@ R.check("M2", "Bên kia gõ → hiện 'Đang soạn tin' ≤ 3s", typingSeen >=
 
 // M3: gửi → thợ nhận; thợ đang mở chat → chủ tiệm thấy 'Đã xem'
 t0 = Date.now();
-await oBox.press("Enter");
+// phones: Enter = new line (only a fine pointer sends with Enter) → tap Send like a user
+await owner.page.getByRole("button", { name: /^(Gửi tin nhắn|Send message)$/ }).filter({ visible: true }).first().click();
 const got = await tech.page.getByText("Mai em ghé").last().waitFor({ timeout: 8000 }).then(() => Date.now() - t0).catch(() => -1);
 R.check("M3", "Tin tới máy bên kia ≤ 2s", got >= 0 && got <= 2000, got + "ms");
 const seen = await owner.page.getByText(/Đã xem/).last().waitFor({ timeout: 8000 }).then(() => Date.now() - t0).catch(() => -1);
@@ -79,7 +80,7 @@ await tech.page.goto(BASE_URL + `/messages?to=${owner.me.id}`);
 await tBox.waitFor({ timeout: 15000 });
 await tech.ctx.setOffline(true);
 await tBox.fill(`Mất mạng ${stamp}`);
-await tBox.press("Enter");
+await tech.page.getByRole("button", { name: /^(Gửi tin nhắn|Send message)$/ }).filter({ visible: true }).first().click();
 const failed = await tech.page.getByText(/Gửi thất bại/).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
 await tech.ctx.setOffline(false);
 let retried = false;

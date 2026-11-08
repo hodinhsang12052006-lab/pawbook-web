@@ -49,6 +49,21 @@ try {
   await cls(ctx); // phiên không còn → xoá gợi ý
   const after = await cls(ctx);
   R.check("C4", "Sau khi đăng xuất: trang khách hiện đầy đủ, không giật", after.v < 0.1 && after.hero > 0, `${after.v} hero=${after.hero}`);
+  // /trends: các phần (xu hướng, thử thách tuần, radar mẫu, khảo sát) về lệch giờ nhau như trên production → trước đây
+  // CLS 0.14–0.60. Giả lập độ trễ API so le; mục tiêu < 0.05 cả điện thoại lẫn máy tính.
+  for (const [id, dev] of [["C6", { ...devices["Pixel 7"], locale: "vi-VN" }], ["C7", { viewport: { width: 1440, height: 900 }, locale: "en-US" }]]) {
+    const tctx = await browser.newContext(dev);
+    const delays = [[/\/api\/trends\/nail-radar/, 900], [/\/api\/trends\?/, 500], [/\/api\/studio/, 1300], [/\/api\/radar/, 1700]];
+    await tctx.route(/\/api\/(trends|radar|studio)/, async (r) => {
+      const d = delays.find(([re]) => re.test(r.request().url()));
+      await new Promise((res) => setTimeout(res, d ? d[1] : 0));
+      return r.continue();
+    });
+    const t1 = await cls(tctx, "/trends");
+    const t2 = await cls(tctx, "/vi/trends");
+    R.check(id, `/trends ${id === "C6" ? "điện thoại" : "máy tính"} (API chậm, về lệch nhau): CLS < 0.05`, t1.v < 0.05 && t2.v < 0.05, `${t1.v} / ${t2.v}`);
+    await tctx.close();
+  }
   R.check("C5", "Không lỗi JS (kể cả lỗi hydrate)", errors.length === 0, errors.join(" | "));
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);

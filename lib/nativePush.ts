@@ -83,6 +83,17 @@ const savedToken = () => {
     return null;
   }
 };
+/**
+ * This app's own push token (native app only; null on the web / without a saved token). /api/calls leaves this device
+ * out of the "Answered." / "Declined." follow-up push after it answered / declined the call itself.
+ */
+export const ownNativePushToken = (): string | null => {
+  try {
+    return isNativeApp() ? savedToken() : null;
+  } catch {
+    return null;
+  }
+};
 const reloginPending = () => {
   try {
     return localStorage.getItem(RELOGIN_KEY) === "1";
@@ -183,6 +194,23 @@ export async function releaseNativePush(): Promise<void> {
   jobs.push(plugin().then(({ P }) => P.removeAllDeliveredNotifications()).catch(() => {}));
   await Promise.all(jobs);
   chatRenderer = 0;
+}
+
+/**
+ * Gỡ các thông báo đang nằm trong khay có tag thuộc `tags` (vd thông báo "đang gọi" của 1 cuộc gọi đã nghe / từ chối).
+ * Dùng API sẵn có của plugin push (mọi bản app, kể cả versionCode 3) — thông báo Firebase vẽ có id 0 + tag.
+ */
+export async function clearNativeNotificationsByTag(tags: string[]): Promise<number> {
+  if (!isNativeApp() || !tags.length) return 0;
+  try {
+    const { P } = await plugin();
+    const { notifications } = await P.getDeliveredNotifications();
+    const mine = notifications.filter((n) => typeof n.tag === "string" && tags.includes(n.tag));
+    if (mine.length) await P.removeDeliveredNotifications({ notifications: mine });
+    return mine.length;
+  } catch {
+    return 0;
+  }
 }
 
 /** Chỉ dọn dữ liệu chat trên máy (xoá tài khoản — máy chủ đã tự xoá token). */

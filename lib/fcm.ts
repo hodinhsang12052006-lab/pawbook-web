@@ -143,6 +143,10 @@ export interface FcmPayload {
   /** Kênh thông báo Android cho dạng tin "notification" (mặc định: chat → "messages", tag pn-call → "calls", còn lại "general"). */
   channel?: FcmChannel;
   chat?: FcmChat;
+  /** android.ttl (giây) cho dạng tin "notification" — không đặt: FCM giữ tới 28 ngày. Cuộc gọi: 60. */
+  ttlSec?: number;
+  /** android.collapse_key + apns-collapse-id: tin chưa giao cùng mã bị tin mới thay (cuộc gọi: "call-<callId>"). */
+  collapseKey?: string;
 }
 
 /** Một thiết bị Android: token FCM + build app (null = chưa biết). */
@@ -191,12 +195,26 @@ export function buildFcmMessage(target: FcmTarget, p: FcmPayload): Record<string
     // KHÔNG đặt collapse_key: mỗi tin là 1 dòng trong khung chat của thông báo, không đè nhau.
     return { token: target.token, data: chatData(p as FcmPayload & { chat: FcmChat }), android: { priority: "high", ttl: "86400s" } };
   }
+  // Cùng android.notification.tag → app (mọi build, kể cả versionCode 3) THAY thông báo đang hiện thay vì thêm 1 cái:
+  // Firebase SDK vẽ tin "notification" bằng NotificationManager.notify(tag, 0) khi app ở nền.
+  const ttl = Number.isInteger(p.ttlSec) && (p.ttlSec as number) >= 0 ? (p.ttlSec as number) : null;
+  const collapse = p.collapseKey && /^[A-Za-z0-9_-]{1,64}$/.test(p.collapseKey) ? p.collapseKey : null;
   return {
     token: target.token,
     notification: { title: clipText(p.title, 80), body: clipText(p.body, 180) },
     data: { url: safeAppPath(p.url), tag: p.tag ?? "" },
-    android: { priority: "high", notification: { ...(p.tag ? { tag: p.tag } : {}), sound: "default", channel_id: channelFor(p) } },
-    apns: { payload: { aps: { sound: "default", "thread-id": p.tag ?? "pawnail" } } },
+    android: {
+      priority: "high",
+      ...(ttl !== null ? { ttl: `${ttl}s` } : {}),
+      ...(collapse ? { collapse_key: collapse } : {}),
+      notification: { ...(p.tag ? { tag: p.tag } : {}), sound: "default", channel_id: channelFor(p) },
+    },
+    apns: {
+      ...(ttl !== null || collapse
+        ? { headers: { ...(ttl !== null ? { "apns-expiration": String(Math.floor(Date.now() / 1000) + ttl) } : {}), ...(collapse ? { "apns-collapse-id": collapse } : {}) } }
+        : {}),
+      payload: { aps: { sound: "default", "thread-id": p.tag ?? "pawnail" } },
+    },
   };
 }
 

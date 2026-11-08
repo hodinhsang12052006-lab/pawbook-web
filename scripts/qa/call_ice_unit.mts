@@ -24,7 +24,7 @@ const TOKEN = "cf-secret-token-DO-NOT-LEAK-123";
 const KEY = "key123";
 
 // ---- Máy chủ Cloudflare giả ----
-let mode: "array" | "object" | "500" | "slow" = "array";
+let mode: "array" | "object" | "500" | "slow" | "500-once" = "array";
 const hits: { url: string; auth: string; body: string }[] = [];
 const server = http.createServer((req, res) => {
   let body = "";
@@ -32,6 +32,10 @@ const server = http.createServer((req, res) => {
   req.on("end", () => {
     hits.push({ url: req.url || "", auth: String(req.headers.authorization || ""), body });
     if (mode === "500") return void res.writeHead(500).end("{}");
+    if (mode === "500-once") {
+      mode = "array";
+      return void res.writeHead(502).end("{}");
+    }
     if (mode === "slow") return void setTimeout(() => res.writeHead(201, { "content-type": "application/json" }).end("{}"), 6000);
     const turn = {
       urls: [
@@ -57,7 +61,7 @@ try {
   // 1. Không cấu hình gì → STUN Google, không TURN.
   {
     const r = await buildIceServers("u1", { env: {} });
-    ok("I1", "Không cấu hình → chỉ STUN Google, hasTurn=false, ttl 1h", JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r.hasTurn && r.ttlSec === 3600, r);
+    ok("I1", "Không cấu hình → chỉ STUN Google, hasTurn=false, ttl 60 s (thêm khoá TURN sau đó → cuộc gọi kế tiếp có TURN ngay)", JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r.hasTurn && r.ttlSec === 60, r);
     const r2 = await buildIceServers("u1", { env: { CALL_STUN_URLS: "" } });
     ok("I2", "CALL_STUN_URLS=\"\" → danh sách rỗng (test offline)", r2.iceServers.length === 0 && !r2.hasTurn, r2);
     const r3 = await buildIceServers("u1", { env: { CALL_STUN_URLS: "stun:a.example:3478, turn:x.example:3478, http://evil" } });
@@ -112,25 +116,49 @@ try {
     ok("I14", "parseCloudflareIce: TURN thiếu username/credential bị bỏ; rác → []", parseCloudflareIce({ iceServers: [{ urls: ["turn:a:3478"] }] }).length === 0 && parseCloudflareIce(null).length === 0 && parseCloudflareIce({ iceServers: "x" }).length === 0);
   }
 
-  // 6. Lỗi 5xx → STUN, log đúng 1 lần, không lộ token.
+  // 6. Lỗi 5xx → thử lại 1 lần → STUN, log + báo Sentry đúng 1 lần, không lộ token; danh sách thiếu TURN chỉ giữ 60 s.
   {
     resetIceCache();
     mode = "500";
+    hits.length = 0;
     const logs: string[] = [];
-    const r = await buildIceServers("u1", { env: CF_ENV, log: (m) => logs.push(m) });
-    const r2 = await buildIceServers("u1", { env: CF_ENV, log: (m) => logs.push(m) });
-    ok("I15", "Cloudflare 5xx → vẫn trả STUN Google, hasTurn=false", !r.hasTurn && JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r2.hasTurn, r);
-    ok("I16", "Lỗi chỉ log 1 lần / 10 phút và không chứa token", logs.length === 1 && !logs[0].includes(TOKEN), logs);
+    const reports: { msg: string; extra: Record<string, unknown> }[] = [];
+    const report = (msg: string, extra: Record<string, unknown>) => reports.push({ msg, extra });
+    const r = await buildIceServers("u1", { env: CF_ENV, log: (m) => logs.push(m), report, retryDelayMs: 50 });
+    const r2 = await buildIceServers("u1", { env: CF_ENV, log: (m) => logs.push(m), report, retryDelayMs: 50 });
+    ok("I15", "Cloudflare 5xx → thử lại 1 lần rồi mới trả STUN Google (hasTurn=false, turnConfigured=true, ttl 60 s để trình duyệt hỏi lại sớm)",
+      !r.hasTurn && r.turnConfigured && r.ttlSec === 60 && JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r2.hasTurn && hits.length === 4, { r, hits: hits.length });
+    ok("I16", "Lỗi chỉ log + báo Sentry 1 lần / 10 phút, không chứa token", logs.length === 1 && reports.length === 1 && !JSON.stringify([logs, reports]).includes(TOKEN) && /STUN-only/.test(reports[0].msg), { logs, reports });
   }
 
-  // 7. Quá giờ (4s) → STUN.
+  // 6b. Lỗi 1 lần rồi được → lần thử lại cứu được TURN, không báo động.
+  {
+    resetIceCache();
+    mode = "500-once";
+    hits.length = 0;
+    const reports: string[] = [];
+    const r = await buildIceServers("u1", { env: CF_ENV, log: () => {}, report: (m) => reports.push(m), retryDelayMs: 50 });
+    ok("I15b", "Cloudflare 502 một lần → thử lại → có TURN, ttl 3600, không báo Sentry", r.hasTurn && r.turnConfigured && r.ttlSec === 3600 && hits.length === 2 && reports.length === 0, { hits: hits.length, reports, r });
+  }
+
+  // 7. Quá giờ (3 s mỗi lần, thử lại 1 lần) → STUN sau ≤ ~6.5 s.
   {
     resetIceCache();
     mode = "slow";
+    hits.length = 0;
     const t0 = Date.now();
-    const r = await buildIceServers("u1", { env: CF_ENV, log: () => {} });
+    const r = await buildIceServers("u1", { env: CF_ENV, log: () => {}, retryDelayMs: 100 });
     const ms = Date.now() - t0;
-    ok("I17", "Cloudflare treo → bỏ sau ~4s, trả STUN", !r.hasTurn && ms >= 3500 && ms < 5800, { ms, r });
+    ok("I17", "Cloudflare treo → 2 lần × 3 s rồi trả STUN (≤ ~6.5 s, không treo cuộc gọi)", !r.hasTurn && hits.length === 2 && ms >= 5800 && ms < 7500, { ms, hits: hits.length });
+  }
+
+  // 7b. turnConfigured chỉ đúng khi thật sự có cấu hình TURN.
+  {
+    const a = await buildIceServers("u1", { env: {} });
+    const b = await buildIceServers("u1", { env: { TURN_URLS: "turn:relay.example.com:3478" } });
+    const c = await buildIceServers("u1", { env: { TURN_URLS: "turn:relay.example.com:3478", TURN_SECRET: "x" } });
+    ok("I17b", "turnConfigured: không cấu hình → false (ttl 60 s); TURN_URLS thiếu thông tin đăng nhập → false (ttl 60 s); TURN_URLS + TURN_SECRET → true",
+      !a.turnConfigured && a.ttlSec === 60 && !b.turnConfigured && b.ttlSec === 60 && c.turnConfigured && c.hasTurn && c.ttlSec === 7200, { a: [a.turnConfigured, a.ttlSec], b: [b.turnConfigured, b.ttlSec], c: [c.turnConfigured, c.ttlSec] });
   }
 
   // 8. Cờ test bị bỏ qua trên Vercel (luôn gọi máy chủ Cloudflare thật).

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PresenceChannel } from "pusher-js";
-import { getPusherClient } from "./pusherClient";
+import { acquireChannel, releaseChannel } from "./pusherClient";
 import { tr } from "@/lib/i18n/tr";
 
 // Trạng thái online THẬT qua Pusher presence channel "presence-user-<id>":
@@ -19,21 +19,24 @@ interface Entry {
   channel: PresenceChannel;
   refCount: number;
   listeners: Set<() => void>;
+  notify: () => void;
 }
 const entries = new Map<string, Entry>();
 
 function acquire(userId: string): Entry | null {
-  const pusher = getPusherClient();
-  if (!pusher || !userId) return null;
+  if (!userId) return null;
   const name = presenceName(userId);
   const existing = entries.get(name);
   if (existing) {
     existing.refCount += 1;
     return existing;
   }
-  const channel = pusher.subscribe(name) as PresenceChannel;
-  const entry: Entry = { channel, refCount: 1, listeners: new Set() };
-  const notify = () => entry.listeners.forEach((fn) => fn());
+  // Qua bộ giữ kênh (lib/pusherResilience.ts): tự subscribe lại khi xin quyền thất bại / mạng chập chờn.
+  const channel = acquireChannel(name) as PresenceChannel | null;
+  if (!channel) return null;
+  const listeners = new Set<() => void>();
+  const notify = () => listeners.forEach((fn) => fn());
+  const entry: Entry = { channel, refCount: 1, listeners, notify };
   channel.bind("pusher:subscription_succeeded", notify);
   channel.bind("pusher:member_added", notify);
   channel.bind("pusher:member_removed", notify);
@@ -48,7 +51,11 @@ function release(userId: string) {
   entry.refCount -= 1;
   if (entry.refCount <= 0) {
     entries.delete(name);
-    getPusherClient()?.unsubscribe(name);
+    const notify = entry.notify;
+    entry.channel.unbind("pusher:subscription_succeeded", notify);
+    entry.channel.unbind("pusher:member_added", notify);
+    entry.channel.unbind("pusher:member_removed", notify);
+    releaseChannel(name);
   }
 }
 

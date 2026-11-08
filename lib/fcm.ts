@@ -15,6 +15,9 @@ import crypto from "crypto";
 //    android.notification.channel_id ("messages" cho tin chat, "calls", hoặc "general"); app cũ chưa có kênh đó thì FCM
 //    tự rơi về kênh mặc định — app mới (build chưa ghi nhận) vẫn hiện nổi trên kênh "Tin nhắn" (ưu tiên cao).
 //    Bản app cũ KHÔNG BAO GIỜ được nhận data-only: plugin gốc không hiện gì cho loại tin này.
+//  - Cuộc gọi tới app Android build ≥ nativeCallMinBuild() (versionCode 4) → cũng DATA-ONLY (type "call" / "call-end"):
+//    app tự vẽ thông báo "đang gọi" (nút Trả lời / Từ chối, chuông lặp) và tự gỡ / thay nó khi có tin kết thúc cùng tag.
+//    Build ≤ 3 / chưa rõ build: dạng "notification" như trước (lib/calls/callPush.ts).
 
 interface ServiceAccount { project_id: string; client_email: string; private_key: string }
 
@@ -121,6 +124,13 @@ export function clipText(input: string | null | undefined, max: number, ellipsis
 // Dạng tin
 // ---------------------------------------------------------------------------
 
+/** Bản app Android đầu tiên tự vẽ thông báo cuộc gọi (versionCode 4). Đổi được qua NATIVE_CALL_MIN_BUILD. */
+export const NATIVE_CALL_MIN_BUILD = 4;
+export function nativeCallMinBuild(): number {
+  const n = Number(process.env.NATIVE_CALL_MIN_BUILD);
+  return Number.isInteger(n) && n > 0 ? n : NATIVE_CALL_MIN_BUILD;
+}
+
 /** Thông tin tin nhắn chat — chỉ app Android đủ mới dùng (lib/push.ts PushPayload.chat). */
 export interface FcmChat {
   cid: string; // conversationId
@@ -135,6 +145,26 @@ export interface FcmChat {
 
 export type FcmChannel = "general" | "calls" | "messages";
 
+/**
+ * Cuộc gọi 1-1 (lib/calls/callPush.ts) — chỉ app Android build ≥ nativeCallMinBuild() dùng (tin data-only, app tự vẽ
+ * thông báo). Web push / iPhone / bản app cũ bỏ qua trường này.
+ */
+export interface FcmCall {
+  kind: "incoming" | "end";
+  callId: string;
+  callType: "audio" | "video";
+  callerId: string;
+  callerName: string;
+  /** Ảnh người gọi đã lọc an toàn (lib/chatPush chatPushAvatar), hoặc "". */
+  avatar?: string;
+  /** incoming: call token — nút "Từ chối" của app gửi /api/calls reject (cùng phiên đăng nhập WebView). */
+  token?: string;
+  /** incoming: mốc (epoch ms) sau đó cuộc gọi chắc chắn đã thôi đổ chuông → app hiện "Cuộc gọi nhỡ" thay vì đổ chuông. */
+  exp?: number;
+  /** end: kết quả — missed thay thông báo đang gọi bằng "Cuộc gọi nhỡ"; answered / declined gỡ nó. */
+  outcome?: "missed" | "answered" | "declined";
+}
+
 export interface FcmPayload {
   title: string;
   body: string; // đã theo ngôn ngữ người nhận — với chat đây chính là "text"
@@ -147,6 +177,10 @@ export interface FcmPayload {
   ttlSec?: number;
   /** android.collapse_key + apns-collapse-id: tin chưa giao cùng mã bị tin mới thay (cuộc gọi: "call-<callId>"). */
   collapseKey?: string;
+  /** Cuộc gọi: app Android build ≥ nativeCallMinBuild() nhận tin data-only (callData). */
+  call?: FcmCall;
+  /** Cuộc gọi đến tới muộn: nội dung "Cuộc gọi nhỡ từ X" (lib/push.ts PushPayload.stale). */
+  stale?: { title: string; body: string };
 }
 
 /** Một thiết bị Android: token FCM + build app (null = chưa biết). */
@@ -188,8 +222,66 @@ export function chatData(p: FcmPayload & { chat: FcmChat }): Record<string, stri
   return d;
 }
 
+const CALL_ID_RE = /^[a-z0-9]{4,24}$/;
+const CALL_TOKEN_RE = /^[A-Za-z0-9_-]{8,1500}\.[A-Za-z0-9_-]{8,200}$/;
+const USER_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+/** Dữ liệu cuộc gọi đủ cho app tự vẽ (incoming cần token + exp để nút Từ chối gọi được API và biết lúc hết đổ chuông). */
+export function isNativeCallPayload(c: FcmCall | undefined): c is FcmCall {
+  if (!c || !CALL_ID_RE.test(c.callId) || !USER_ID_RE.test(c.callerId) || (c.callType !== "audio" && c.callType !== "video")) return false;
+  if (c.kind === "incoming") return typeof c.token === "string" && CALL_TOKEN_RE.test(c.token) && Number.isFinite(c.exp);
+  return c.kind === "end" && (c.outcome === "missed" || c.outcome === "answered" || c.outcome === "declined");
+}
+
+/**
+ * Phần `data` của tin cuộc gọi data-only (app Android build ≥ nativeCallMinBuild()) — mọi giá trị là chuỗi, < 3.4 KB.
+ *   type "call":     callId, callType, callerId, name, avatar, token, exp, title (vd "Incoming video call"),
+ *                    body, mtitle / mbody ("Missed call from X" — hiện thay khi tin tới sau exp), url, tag
+ *   type "call-end": callId, callType, callerId, name, outcome, title / body ("Missed call from X" · "Tap to call back."),
+ *                    url, tag
+ */
+export function callData(p: FcmPayload & { call: FcmCall }): Record<string, string> {
+  const c = p.call;
+  const d: Record<string, string> = {
+    type: c.kind === "incoming" ? "call" : "call-end",
+    v: "1",
+    callId: c.callId,
+    callType: c.callType,
+    callerId: c.callerId,
+    name: clipText(String(c.callerName || "").replace(/\s+/g, " ").trim(), 60),
+    title: clipText(p.title, 80),
+    body: clipText(p.body, 180),
+    url: safeAppPath(p.url),
+    tag: p.tag || `pn-call-${c.callId}`,
+  };
+  if (c.kind === "incoming") {
+    d.avatar = c.avatar && c.avatar.length <= 1024 && /^https:\/\//.test(c.avatar) ? c.avatar : "";
+    d.token = String(c.token);
+    d.exp = String(Math.trunc(Number(c.exp)));
+    if (p.stale) {
+      d.mtitle = clipText(p.stale.title, 80);
+      d.mbody = clipText(p.stale.body, 180);
+    }
+    if (dataBytes(d) > CHAT_DATA_BUDGET) d.avatar = "";
+  } else {
+    d.outcome = String(c.outcome);
+  }
+  return d;
+}
+
 /** Thân `message` gửi lên FCM HTTP v1 cho 1 thiết bị (hàm thuần — scripts/qa/fcm_payload_unit.mts). */
 export function buildFcmMessage(target: FcmTarget, p: FcmPayload): Record<string, unknown> {
+  if (p.call && target.build !== null && target.build >= nativeCallMinBuild() && isNativeCallPayload(p.call)) {
+    // Data-only + ưu tiên cao: app tự vẽ thông báo cuộc gọi (đổ chuông / nhỡ) và tự gỡ khi đã nghe / từ chối ở máy khác.
+    // Giữ TTL + collapse_key của từng cuộc gọi: tin kết thúc chưa giao thay luôn tin "đang gọi" chưa giao.
+    const ttl = Number.isInteger(p.ttlSec) && (p.ttlSec as number) >= 0 ? (p.ttlSec as number) : null;
+    const collapse = p.collapseKey && /^[A-Za-z0-9_-]{1,64}$/.test(p.collapseKey) ? p.collapseKey : null;
+    return {
+      token: target.token,
+      data: callData(p as FcmPayload & { call: FcmCall }),
+      android: { priority: "high", ...(ttl !== null ? { ttl: `${ttl}s` } : {}), ...(collapse ? { collapse_key: collapse } : {}) },
+    };
+  }
   if (p.chat && target.build !== null && target.build >= richChatMinBuild()) {
     // Data-only + ưu tiên cao: tới được cả khi app đã tắt; app tự vẽ (MessagingStyle / bong bóng / trả lời nhanh).
     // KHÔNG đặt collapse_key: mỗi tin là 1 dòng trong khung chat của thông báo, không đè nhau.

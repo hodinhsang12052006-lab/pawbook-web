@@ -9,6 +9,7 @@ import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { CALL_ID_RE, CALL_TOKEN_TTL_MS, newCallId, signCallToken, verifyCallToken, type CallClaims } from "@/lib/calls/callToken";
 import { LEG_RE, chunkSerialized, isSeq, validateSignalData, type SignalEvent } from "@/lib/calls/signalWire";
 import { callEndPush, createFollowUpGate, followUpFor, incomingCallPush, ownDeviceEndpoints } from "@/lib/calls/callPush";
+import { chatPushAvatar } from "@/lib/chatPush";
 
 // Signaling relay for 1:1 WebRTC calls (media itself goes peer-to-peer or through TURN — never through here).
 // Every event lands on the other person's private Pusher channel "private-chat-<id>" (only its owner can subscribe,
@@ -135,7 +136,9 @@ export async function POST(req: Request) {
       });
       // Cuộc gọi luôn 1-1 → ?to=<người gọi> đúng. Kênh Android "calls" (ưu tiên cao), sống 60 s, tag riêng từng cuộc gọi.
       // after(): không bị Vercel cắt giữa chừng.
-      const push = incomingCallPush({ callId, callType, callerId: userId, callerName });
+      // Android app build ≥ 4 draws the ringing notification itself: Decline there needs the call token (data-only push
+      // to the callee's own devices — the same token the callee's Pusher channel already carries).
+      const push = incomingCallPush({ callId, callType, callerId: userId, callerName, callToken, callerAvatar: chatPushAvatar(caller?.avatarUrl) });
       after(() => sendPush(targetId, push).catch(() => 0));
       return NextResponse.json({ success: true, callId, callToken });
     }

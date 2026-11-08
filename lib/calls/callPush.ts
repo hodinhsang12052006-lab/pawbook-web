@@ -19,7 +19,11 @@
 // messages with NotificationManager.notify(android.notification.tag, 0) — a message with the same tag replaces the shown
 // one (firebase-messaging 25.0.1 CommonNotificationBuilder.getTag / DisplayNotification). In the foreground nothing is
 // drawn (no presentationOptions) and the app clears the call's notification itself (lib/calls/callNotice.ts).
-// Web: worker/index.js replaces / closes by tag. versionCode 4 could cancel silently instead (data-only "call-end").
+// Web: worker/index.js replaces / closes by tag.
+// Android app versionCode 4+ (lib/fcm.ts nativeCallMinBuild, per push token like the chat data-only gate): both pushes
+// are DATA-ONLY ("call" / "call-end", built from the `call` field below) and the app draws them itself
+// (android/.../CallNotifications.java): a ringing notification with Answer / Decline (Decline posts reject with the
+// call token below), and the follow-up cancels it (answered / declined) or turns it into "Missed call from X" silently.
 import type { PushPayload } from "@/lib/push";
 
 export const CALL_PUSH_TTL_SEC = 60;
@@ -43,12 +47,25 @@ export function missedCallText(callerName: string, callType: CallType) {
   };
 }
 
-/** "X is calling you" — TTL 60 s, per-call tag + collapse id, Android channel "calls". */
-export function incomingCallPush(o: { callId: string; callType: CallType; callerId: string; callerName: string; now?: number }): PushPayload {
+/**
+ * "X is calling you" — TTL 60 s, per-call tag + collapse id, Android channel "calls".
+ * callToken / callerAvatar (already sanitised — lib/chatPush chatPushAvatar) only go to Android app builds that draw the
+ * call notification themselves (data-only, lib/fcm.ts callData): Decline there posts /api/calls reject with this token.
+ */
+export function incomingCallPush(o: {
+  callId: string;
+  callType: CallType;
+  callerId: string;
+  callerName: string;
+  callToken?: string;
+  callerAvatar?: string;
+  now?: number;
+}): PushPayload {
   const n = clean(o.callerName);
   const now = o.now ?? Date.now();
   const missed = missedCallText(n, o.callType);
   return {
+    call: { kind: "incoming", callId: o.callId, callType: o.callType, callerId: o.callerId, callerName: n, avatar: o.callerAvatar || "", token: o.callToken, exp: now + CALL_PUSH_TTL_SEC * 1000 },
     title: o.callType === "video" ? "Cuộc gọi video đến" : "Cuộc gọi thoại đến",
     body: `${n} đang gọi cho bạn — mở PawNail để trả lời`,
     url: `/messages?to=${o.callerId}`,
@@ -71,6 +88,7 @@ export function incomingCallPush(o: { callId: string; callType: CallType; caller
 export function callEndPush(o: { callId: string; callType: CallType; callerId: string; callerName: string; outcome: CallEndOutcome }): PushPayload {
   const n = clean(o.callerName);
   const base = {
+    call: { kind: "end" as const, callId: o.callId, callType: o.callType, callerId: o.callerId, callerName: n, outcome: o.outcome },
     url: `/messages?to=${o.callerId}`,
     tag: callTag(o.callId),
     // Not the high-importance "calls" channel: replacing must not ring again (default importance, no heads-up).

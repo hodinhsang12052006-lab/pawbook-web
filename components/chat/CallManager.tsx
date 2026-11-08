@@ -1189,7 +1189,9 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       if (!ongoingRef.current) return;
       ongoingRef.current = false;
       nativeKeepsMediaRef.current = false;
-      void nativeCall.stop().then(() => setNativeAudio(null));
+      void nativeCall.stop().then(() => {
+        if (!ongoingRef.current) setNativeAudio(null); // (not if the next call has started meanwhile)
+      });
       return;
     }
     const params = { peerName: peer.name, video: videoMode, camera: camOn, state: ongoingState, since: connectedAt };

@@ -48,9 +48,16 @@ Sentry event `call_connect_failed` (candidate types and states only, no IPs or S
 
 | Option | Variables | Notes |
 | --- | --- | --- |
-| Cloudflare Realtime TURN (recommended) | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` | dash.cloudflare.com → Realtime → TURN Server → Create. 1,000 GB/month free (shared with Cloudflare SFU), then $0.05/GB. The API token stays on the server; signed-in browsers get 1-hour credentials from `GET /api/calls/ice` (30 requests/hour per user). |
+| Cloudflare Realtime TURN (recommended) | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` | dash.cloudflare.com → Realtime → TURN Server → Create. 1,000 GB/month free (shared with Cloudflare SFU), then $0.05/GB. The API token stays on the server; signed-in browsers get 1-hour credentials from `GET /api/calls/ice` (120 requests/hour + 20/minute per user; the browser caches the list until 5 min before it expires, so about one request per call at most). |
 | Own coturn | `TURN_URLS`, `TURN_SECRET` | coturn `use-auth-secret` + `static-auth-secret=<TURN_SECRET>`; per-user credentials valid 2 h. |
 | Static TURN | `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` | Visible to every signed-in user — only for a dedicated relay. |
+
+Set the variables on the Vercel project that serves bitpawos.com (**pawbook-web**, see `.vercel/project.json`), for
+Production, then redeploy. A list WITHOUT TURN is only cached by the browser for 60 s, so the first call after the
+redeploy already asks again. Check, signed in: `GET /api/calls/ice` must answer `hasTurn: true`, `turnConfigured: true`
+and `turn:` / `turns:` URLs. `hasTurn: false` with `turnConfigured: true` means Cloudflare refused the key / token
+(Sentry warning *Cloudflare TURN credentials could not be fetched*); `turnConfigured: false` means the variables did not
+reach this deployment.
 
 Optional: `CALL_STUN_URLS` (default Google public STUN), `CALL_SIGNING_SECRET` (default: derived from
 `NEXTAUTH_SECRET`). Never set `PUSHER_ALLOW_TEST`, `CALL_RATE_ALLOW_TEST`, `CLOUDFLARE_TURN_ALLOW_TEST` or any other

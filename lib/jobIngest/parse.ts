@@ -102,8 +102,9 @@ const titleCase = (s: string) => s.replace(/\s+/g, " ").trim().replace(/\b([a-z]
 // chỉ có số đó từng bị bỏ "không có SĐT Mỹ/Úc". Các số này CHỈ có ở Úc nên chỉ nhận khi bài (hoặc tool) nói là Úc, và
 // KHÔNG BAO GIỜ thành số Mỹ (số miễn cước Mỹ 1-800-xxx-xxxx có 7 số sau 800, không khớp mẫu 1800 + 6 số).
 const AU_BIZ = /(^|[^\d+])(1[38]00(?:[ .-]?\d){6}|13(?:[ -]?\d){4})(?!\d)/g;
-// "13 xx xx" chỉ có 6 số (dễ trùng ngày "13-12-26", mã, giá…) → chỉ nhận khi đứng ngay sau chữ báo số điện thoại.
-const PHONE_CUE = /(?:g[ọo]i|call|phone|ph|tel|lh|li[êe]n h[ệe]|s[đd]t|[đd]t|hotline|ring|text|nh[ắa]n|☎️?|📞|📱)\s*[:.-]?\s*$/iu;
+// "13 xx xx" chỉ có 6 số (dễ trùng ngày "13-12-26", mã, giá…) → chỉ nhận khi đứng ngay sau chữ báo số điện thoại. Chữ báo
+// phải là một TỪ riêng: "hiring 13 12 34" (ring), "Spring 13-12-24" (ngày), "hotel" (tel), "graph" (ph) không phải SĐT.
+const PHONE_CUE = /(?<![\p{L}\p{N}])(?:g[ọo]i|call|phone|ph|tel|lh|li[êe]n h[ệe]|s[đd]t|[đd]t|hotline|ring|text|nh[ắa]n|☎️?|📞|📱)\s*[:.-]?\s*$/iu;
 // Tên nước (không dùng "ức": "ức chế" ≠ Úc)
 const AU_COUNTRY = /(?<![\p{L}\p{N}])(?:[úÚ]c|australia|aussie)(?![\p{L}\p{N}])/iu;
 
@@ -117,7 +118,29 @@ export function hasAuContext(text: string | null | undefined): boolean {
   if (AU_COUNTRY.test(t)) return true;
   if (/\b(?:NSW|VIC|QLD|TAS)\b|\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s+\d{4}\b/.test(t)) return true;
   if (findAddress(t)?.market === "AU") return true;
+  // Chỉ có tên thành phố: "Melbourne FL" / "Richmond, VA 23220" / "… TX 75165" là bài MỸ dù tên trùng thành phố Úc.
+  if (hasUsStateSignal(t)) return false;
   return findPlace(t, null).market === "AU";
+}
+
+/**
+ * Bang Mỹ ghi rõ: mã bang Mỹ VIẾT HOA ngay sau một thành phố trùng tên thành phố Úc ("Melbourne FL", "Richmond, VA";
+ * WA cũng là bang Úc → không tính; "Sydney OK" / "Perth OR …" không dấu phẩy là chữ thường gặp, không phải bang), hoặc
+ * bang + ZIP Mỹ ("TX 75165", "Florida 32901").
+ */
+const US_CODE_WORDS = new Set(["OK", "OR", "IN", "ME", "HI", "OH", "ID"]);
+function hasUsStateSignal(t: string): boolean {
+  if (zipStateInText(t)) return true;
+  for (const [city, , mk] of CITY_STATE) {
+    if (mk !== "AU") continue;
+    const re = new RegExp(String.raw`(?<![\p{L}\p{N}])${city.replace(/ /g, String.raw`\s+`)}\s*(,?)\s+([A-Za-z]{2})(?![\p{L}\p{N}])`, "giu");
+    for (const m of t.matchAll(re)) {
+      const code = m[2];
+      if (code !== code.toUpperCase() || !US_CODES.has(code) || AU_CODES.has(code)) continue;
+      if (m[1] || !US_CODE_WORDS.has(code)) return true;
+    }
+  }
+  return false;
 }
 
 /** Số 1300 / 1800 xxx xxx hoặc 13 xx xx đầu tiên (không đứng sau mã nước khác) — chỉ gọi khi đã biết là bài Úc. */
@@ -126,6 +149,10 @@ function findAuBusinessPhone(t: string): { e164: string; display: string; market
     const before = t.slice(0, (m.index ?? 0) + m[1].length);
     const cc = /(?:\+|\b00)\s?(\d{1,3})[\s.-]?$/.exec(before);
     if (cc && cc[1] !== "61") continue; // "+44 1300 …": số nước khác
+    // Một phần của dãy số dài hơn ("1300 123 456 789", "mã 12 1300 123 456", "13 12 34 56") → không phải số này.
+    // (!cc: trong "+61 1300 975 707" số 61 đứng trước là mã nước, không phải dãy số.)
+    const after = t.slice((m.index ?? 0) + m[0].length);
+    if (/^[ .-]?\d/.test(after) || (!cc && /\d[ .-]$/.test(before))) continue;
     const d = m[2].replace(/\D/g, "");
     // Ô SĐT riêng của tool / admin (chỉ có đúng số đó) thì không cần chữ báo.
     const alone = !before.trim() && !t.slice((m.index ?? 0) + m[0].length).trim();

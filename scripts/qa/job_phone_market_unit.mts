@@ -120,6 +120,11 @@ ok("IN4", "Bài Mỹ / Úc thật vẫn nhận như cũ (SĐT dạng chuẩn); '
     ["Cần thợ ở Brisbane. Gọi 131975", "AU +61131975 13 19 75"],
     ["Nail salon in Perth WA 6000 needs a tech, call +61 1300 975 707", "AU +611300975707 1300 975 707"],
     ["Tiệm ở Canberra cần thợ. Hotline: 1300.975.707", "AU +611300975707 1300 975 707"],
+    // dấu câu / chữ ngay sau số vẫn nhận; "Perth WA" (WA cũng là bang Úc), "Sydney OK" (chữ thường gặp) vẫn là Úc
+    ["Tiệm ở Sydney NSW, gọi 13 12 34.", "AU +61131234 13 12 34"],
+    ["Tiệm ở Footscray, LH 13 19 75 (giờ hành chính)", "AU +61131975 13 19 75"],
+    ["Tiệm ở Perth WA cần thợ, gọi 1300 975 707", "AU +611300975707 1300 975 707"],
+    ["Tiệm ở Sydney OK lắm, gọi 1300 975 707", "AU +611300975707 1300 975 707"],
   ];
   const auBad = AU_POSTS.filter(([t, want]) => F(t) !== want).map(([t]) => [t, F(t)]);
   ok("AUB1", "Bài Úc (NSW / Sydney / 'bên Úc' / VIC / Brisbane / WA 6000 / Canberra) chỉ có số 1300 / 1800 / 13 xx xx → nhận đúng số, hiển thị '1300 975 707' / '13 19 75', thị trường AU",
@@ -134,9 +139,21 @@ ok("IN4", "Bài Mỹ / Úc thật vẫn nhận như cũ (SĐT dạng chuẩn); '
     "Tiệm ở Sydney NSW cần thợ, mức lương $1,300-1,800/tuần", // tiền
     "Tiệm nail ở London cần thợ, 1300 975 707", // Anh
     "Tiệm ức chế quá, cần thợ gấp 1300 975 707", // "ức" ≠ Úc
+    // một phần của dãy số dài hơn
+    "Tiệm ở Sydney NSW cần thợ, gọi 1300 123 456 789",
+    "Tiệm ở Sydney NSW cần thợ, mã 12 1300 123 456",
+    "Tiệm ở Sydney NSW cần thợ, gọi 13 12 34 56",
+    // chữ báo SĐT nằm trong một từ khác (hiring → ring, Spring, hotel → tel)
+    "Tiệm ở Sydney NSW, now hiring 13 12 34",
+    "Tiệm ở Sydney NSW, Spring 13-12-24 khai trương",
+    "Tiệm ở Sydney NSW, gần hotel 13 12 34",
+    // thành phố trùng tên thành phố Úc nhưng ghi rõ bang Mỹ
+    "Melbourne FL nail salon call 1300 123 456",
+    "Tiệm ở Melbourne FL cần thợ, call 13 12 34",
+    "Tiệm ở Richmond, VA 23220 cần thợ, gọi 1300 975 707",
   ];
   const notBad = NOT_AU.filter((t) => F(t) !== null && !F(t)?.startsWith("US +18005550199")).map((t) => [t, F(t)]);
-  ok("AUB2", "Không có dấu hiệu Úc / bài Mỹ / ngày tháng / số sau mã nước khác / tiền / bài Anh / 'ức chế' → KHÔNG nhận số 1300 / 1800 / 13 (số miễn cước Mỹ 1-800-xxx-xxxx vẫn là số Mỹ như trước)",
+  ok("AUB2", "Không có dấu hiệu Úc / bài Mỹ / ngày tháng / số sau mã nước khác / tiền / bài Anh / 'ức chế' / dãy số dài hơn / chữ báo nằm trong từ khác (hiring, Spring, hotel) / Melbourne FL → KHÔNG nhận số 1300 / 1800 / 13 (số miễn cước Mỹ 1-800-xxx-xxxx vẫn là số Mỹ như trước)",
     notBad.length === 0 && F(NOT_AU[2]) === "US +18005550199 (800) 555-0199", JSON.stringify(notBad.concat([[NOT_AU[2], F(NOT_AU[2])]])));
   ok("AUB3", "Tool / admin đã biết thị trường: market AU → nhận số 1300 / 13 dù bài không ghi Úc (ô SĐT riêng '13 19 75' không cần chữ báo); market US → không bao giờ",
     F("Cần thợ bột gấp, gọi 1300 975 707", "AU") === "AU +611300975707 1300 975 707" && F("13 19 75", "AU") === "AU +61131975 13 19 75" && F("1300975707", "AU") === "AU +611300975707 1300 975 707" &&
@@ -144,9 +161,9 @@ ok("IN4", "Bài Mỹ / Úc thật vẫn nhận như cũ (SĐT dạng chuẩn); '
     JSON.stringify([F("Cần thợ bột gấp, gọi 1300 975 707", "AU"), F("13 19 75", "AU"), F("Tiệm ở Sydney NSW, gọi 1300 975 707", "US")]));
   ok("AUB4", "Số di động / số bàn Úc vẫn được ưu tiên hơn số 1300 (giữ như cũ); số Mỹ trong bài Mỹ không đổi",
     F("Tiệm ở Sydney NSW, gọi 1300 975 707 hoặc 0412 555 019") === "AU +61412555019 0412 555 019" && F("Tiệm ở Houston TX, gọi 713-555-0123") === "US +17135550123 (713) 555-0123");
-  ok("AUB5", "hasAuContext: Úc / Australia / NSW / 'WA 6000' / địa chỉ Úc / Sydney → có; Seattle WA / Houston / 'ức chế' / rỗng → không",
+  ok("AUB5", "hasAuContext: Úc / Australia / NSW / 'WA 6000' / địa chỉ Úc / Sydney → có; Seattle WA / Houston / 'ức chế' / rỗng / Melbourne FL / Richmond, VA / bang + ZIP Mỹ → không",
     ["Tiệm bên Úc", "Nails in Australia", "Bankstown NSW", "Perth WA 6000", "Shop 4/112 Station St, Bankstown NSW 2200", "Cần thợ ở Sydney"].every(hasAuContext) &&
-      !["Tiệm ở Seattle WA", "Houston TX", "Tiệm ức chế quá", "", "WA"].some(hasAuContext));
+      !["Tiệm ở Seattle WA", "Houston TX", "Tiệm ức chế quá", "", "WA", "Melbourne FL nail salon", "Tiệm ở Richmond, VA", "Sydney, Florida 32901"].some(hasAuContext));
   const a1 = prepareIngest({ text: "Tiệm Lucky Nails ở Bankstown NSW cần gấp 2 thợ bột, bao lương. Gọi 1300 975 707", postedAt: now }, none);
   const a2 = prepareIngest({ text: "Cần thợ bột gấp, bao lương. Gọi 1300 975 707", market: "AU", state: "VIC", postedAt: now }, none);
   const a3 = prepareIngest({ text: "Cần thợ chân tay nước gấp, tiệm đông khách", phone: "13 19 75", market: "AU", state: "QLD", postedAt: now }, none);

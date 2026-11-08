@@ -10,6 +10,8 @@
     <string name="channel_messages_desc">New chat messages. Pops up on screen and can show as a chat bubble.</string>
     <string name="channel_calls_name">Calls</string>
     <string name="channel_calls_desc">Incoming voice and video calls</string>
+    <string name="channel_call_ongoing_name">Ongoing calls</string>
+    <string name="channel_call_ongoing_desc">Shown while you\'re on a call, so it keeps going when you leave the app</string>
     <string name="channel_general_name">General</string>
     <string name="channel_general_desc">Job alerts and other updates</string>
 
@@ -29,6 +31,23 @@
         <item quantity="one">%d conversation</item>
         <item quantity="other">%d conversations</item>
     </plurals>
+
+    <!-- Calls (versionCode 4) -->
+    <string name="call_incoming_voice">Incoming call</string>
+    <string name="call_incoming_video">Incoming video call</string>
+    <string name="call_answer">Answer</string>
+    <string name="call_decline">Decline</string>
+    <string name="call_missed_title">Missed call from %1$s</string>
+    <string name="call_missed_video_title">Missed video call from %1$s</string>
+    <string name="call_missed_body">Tap to call back.</string>
+    <string name="call_missed_public">Missed call</string>
+    <string name="call_ongoing_title">Call with %1$s</string>
+    <string name="call_ongoing_video_title">Video call with %1$s</string>
+    <string name="call_ongoing_calling">Calling %1$s…</string>
+    <string name="call_ongoing_connecting">Connecting to %1$s…</string>
+    <string name="call_ongoing_text">Tap to return to the call</string>
+    <string name="call_ongoing_public">Ongoing call</string>
+    <string name="call_hang_up">Hang up</string>
 
     <!-- Chat bubble window -->
     <string name="title_activity_bubble">Chat</string>

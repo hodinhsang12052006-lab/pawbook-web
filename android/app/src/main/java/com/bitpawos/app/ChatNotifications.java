@@ -11,6 +11,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Bitmap;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
@@ -55,6 +57,8 @@ final class ChatNotifications {
 
     static final String CHANNEL_MESSAGES = "messages";
     static final String CHANNEL_CALLS = "calls";
+    /** Thông báo "đang trong cuộc gọi" của OngoingCallService (versionCode 4). */
+    static final String CHANNEL_CALL_ONGOING = "call_ongoing";
     static final String CHANNEL_GENERAL = "general";
 
     static final String TAG_PREFIX = "pn-chat-";
@@ -147,6 +151,26 @@ final class ChatNotifications {
         calls.enableVibration(true);
         calls.setVibrationPattern(new long[] { 0, 600, 400, 600, 400, 600 });
         calls.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        // Nhạc chuông của máy (versionCode 4: app tự vẽ thông báo đổ chuông, lặp bằng FLAG_INSISTENT — CallNotifications).
+        // Âm thanh của kênh KHÔNG đổi được sau khi tạo: máy đã có kênh "calls" từ bản 3 giữ âm báo cũ (vẫn lặp tới khi
+        // trả lời / từ chối), máy cài mới có nhạc chuông.
+        calls.setSound(
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+            new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        );
+
+        // Thông báo bắt buộc của foreground service "đang trong cuộc gọi" (OngoingCallService): không kêu, không hiện nổi.
+        NotificationChannel ongoing = new NotificationChannel(
+            CHANNEL_CALL_ONGOING,
+            ctx.getString(R.string.channel_call_ongoing_name),
+            NotificationManager.IMPORTANCE_LOW
+        );
+        ongoing.setDescription(ctx.getString(R.string.channel_call_ongoing_desc));
+        ongoing.setShowBadge(false);
+        ongoing.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
 
         NotificationChannel general = new NotificationChannel(
             CHANNEL_GENERAL,
@@ -159,6 +183,7 @@ final class ChatNotifications {
         List<NotificationChannel> all = new ArrayList<>();
         all.add(messages);
         all.add(calls);
+        all.add(ongoing);
         all.add(general);
         // Tạo lại kênh đã có chỉ cập nhật tên/mô tả (đổi ngôn ngữ máy), không đè lựa chọn của người dùng.
         nm.createNotificationChannels(all);
@@ -618,6 +643,7 @@ final class ChatNotifications {
                 Log.w(TAG, "cancelAll failed: " + e.getClass().getSimpleName());
             }
             ChatStore.clearAll(ctx);
+            CallNotifications.clearAll(ctx);
             LAST_ALERT.clear();
             AppState.setActiveConversation(null);
             removeConversationShortcuts(ctx);

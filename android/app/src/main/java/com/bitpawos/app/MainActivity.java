@@ -144,6 +144,15 @@ public class MainActivity extends BridgeActivity {
         super.onPause();
     }
 
+    @Override
+    public void onDestroy() {
+        // WebView (và cuộc gọi WebRTC trong nó) bị huỷ: thôi giữ foreground service / chế độ âm thanh cuộc gọi. Plugin cũng
+        // làm việc này (handleOnDestroy) — ở đây cho chắc khi Bridge không được tạo.
+        OngoingCallService.stop(this);
+        CallAudio.get().end(this);
+        super.onDestroy();
+    }
+
     /**
      * pn_url hợp lệ của intent (rồi xoá khỏi intent để không mở lại khi tạo lại activity), hoặc
      * null. Bỏ qua khi app được mở lại từ màn đa nhiệm (intent cũ được giao lại).
@@ -160,8 +169,20 @@ public class MainActivity extends BridgeActivity {
         }
         String path = intent.getStringExtra(AppLinks.EXTRA_URL);
         String cid = intent.getStringExtra(ChatNotifications.EXTRA_CID);
+        String answerCall = intent.getStringExtra(CallNotifications.EXTRA_ANSWER);
+        String openCall = intent.getStringExtra(CallNotifications.EXTRA_OPEN);
         boolean trusted = AppLinks.hasValidKey(this, intent);
         stripLaunchExtras(intent);
+        // Thông báo cuộc gọi đến (CallNotifications, chỉ intent có khoá nội bộ): gỡ thông báo (dừng chuông — web đổ chuông
+        // trong app); nút "Trả lời" → web tự nghe máy đúng cuộc gọi đó (lấy bằng takeCallAction lúc mở nguội, hoặc sự
+        // kiện callAction khi app đang chạy).
+        if (trusted && CallLogic.isCallId(answerCall)) {
+            CallNotifications.cancel(this, answerCall);
+            AppState.setPendingCallAction("answer", answerCall);
+            PawNailNativePlugin.emitCallAction("answer", answerCall);
+        } else if (trusted && CallLogic.isCallId(openCall)) {
+            CallNotifications.cancel(this, openCall);
+        }
         if (!AppLinks.isSafePath(path)) return null;
         if (!trusted && !AppLinks.isConversationOpenPath(path)) {
             Log.w(TAG, "ignored untrusted pn_url");
@@ -178,6 +199,8 @@ public class MainActivity extends BridgeActivity {
         if (intent == null) return;
         intent.removeExtra(AppLinks.EXTRA_URL);
         intent.removeExtra(ChatNotifications.EXTRA_CID);
+        intent.removeExtra(CallNotifications.EXTRA_ANSWER);
+        intent.removeExtra(CallNotifications.EXTRA_OPEN);
         intent.removeExtra(AppLinks.EXTRA_KEY);
     }
 

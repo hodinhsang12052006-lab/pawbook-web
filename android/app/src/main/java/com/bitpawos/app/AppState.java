@@ -49,4 +49,31 @@ final class AppState {
     static boolean isBubbleOpen(String cid) {
         return cid != null && openBubbles.contains(cid);
     }
+
+    // ---------------------------------------------------------------------------------
+    // Cuộc gọi: nút "Trả lời" của thông báo mở app → web tự nghe máy đúng cuộc gọi đó (PawNailNative.takeCallAction).
+    // ---------------------------------------------------------------------------------
+
+    /** Quá ngần này mà web chưa lấy → bỏ (cuộc gọi đã thôi đổ chuông). */
+    static final long CALL_ACTION_MAX_AGE_MS = 90_000;
+    private static String pendingCallAction = null;
+    private static String pendingCallId = null;
+    private static long pendingCallAt = 0;
+
+    static synchronized void setPendingCallAction(String action, String callId) {
+        pendingCallAction = action;
+        pendingCallId = callId;
+        pendingCallAt = android.os.SystemClock.elapsedRealtime();
+    }
+
+    /** {action, callId} rồi xoá, hoặc null (không có / quá hạn). */
+    static synchronized String[] takePendingCallAction() {
+        String a = pendingCallAction;
+        String id = pendingCallId;
+        long at = pendingCallAt;
+        pendingCallAction = null;
+        pendingCallId = null;
+        if (a == null || id == null || android.os.SystemClock.elapsedRealtime() - at > CALL_ACTION_MAX_AGE_MS) return null;
+        return new String[] { a, id };
+    }
 }

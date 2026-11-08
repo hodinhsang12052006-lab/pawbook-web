@@ -5,6 +5,8 @@
     <string name="channel_messages_desc">Tin nhắn chat mới. Hiện nổi trên màn hình và có thể hiện thành bong bóng chat.</string>
     <string name="channel_calls_name">Cuộc gọi</string>
     <string name="channel_calls_desc">Cuộc gọi thoại và video đến</string>
+    <string name="channel_call_ongoing_name">Cuộc gọi đang diễn ra</string>
+    <string name="channel_call_ongoing_desc">Hiện trong lúc bạn đang gọi, để cuộc gọi vẫn tiếp tục khi bạn rời app</string>
     <string name="channel_general_name">Thông báo chung</string>
     <string name="channel_general_desc">Báo việc và các cập nhật khác</string>
 
@@ -23,6 +25,23 @@
     <plurals name="chat_summary_conversations">
         <item quantity="other">%d cuộc trò chuyện</item>
     </plurals>
+
+    <!-- Cuộc gọi (versionCode 4) -->
+    <string name="call_incoming_voice">Cuộc gọi thoại đến</string>
+    <string name="call_incoming_video">Cuộc gọi video đến</string>
+    <string name="call_answer">Trả lời</string>
+    <string name="call_decline">Từ chối</string>
+    <string name="call_missed_title">Cuộc gọi nhỡ từ %1$s</string>
+    <string name="call_missed_video_title">Cuộc gọi video nhỡ từ %1$s</string>
+    <string name="call_missed_body">Chạm để gọi lại.</string>
+    <string name="call_missed_public">Cuộc gọi nhỡ</string>
+    <string name="call_ongoing_title">Đang gọi với %1$s</string>
+    <string name="call_ongoing_video_title">Đang gọi video với %1$s</string>
+    <string name="call_ongoing_calling">Đang gọi %1$s…</string>
+    <string name="call_ongoing_connecting">Đang kết nối với %1$s…</string>
+    <string name="call_ongoing_text">Chạm để quay lại cuộc gọi</string>
+    <string name="call_ongoing_public">Đang trong cuộc gọi</string>
+    <string name="call_hang_up">Kết thúc</string>
 
     <!-- Cửa sổ bong bóng chat -->
     <string name="title_activity_bubble">Trò chuyện</string>

@@ -61,7 +61,7 @@ try {
   // 1. Không cấu hình gì → STUN Google, không TURN.
   {
     const r = await buildIceServers("u1", { env: {} });
-    ok("I1", "Không cấu hình → chỉ STUN Google, hasTurn=false, ttl 1h", JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r.hasTurn && r.ttlSec === 3600, r);
+    ok("I1", "Không cấu hình → chỉ STUN Google, hasTurn=false, ttl 60 s (thêm khoá TURN sau đó → cuộc gọi kế tiếp có TURN ngay)", JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r.hasTurn && r.ttlSec === 60, r);
     const r2 = await buildIceServers("u1", { env: { CALL_STUN_URLS: "" } });
     ok("I2", "CALL_STUN_URLS=\"\" → danh sách rỗng (test offline)", r2.iceServers.length === 0 && !r2.hasTurn, r2);
     const r3 = await buildIceServers("u1", { env: { CALL_STUN_URLS: "stun:a.example:3478, turn:x.example:3478, http://evil" } });
@@ -157,8 +157,8 @@ try {
     const a = await buildIceServers("u1", { env: {} });
     const b = await buildIceServers("u1", { env: { TURN_URLS: "turn:relay.example.com:3478" } });
     const c = await buildIceServers("u1", { env: { TURN_URLS: "turn:relay.example.com:3478", TURN_SECRET: "x" } });
-    ok("I17b", "turnConfigured: không cấu hình → false (ttl 1 h); TURN_URLS thiếu thông tin đăng nhập → false; TURN_URLS + TURN_SECRET → true",
-      !a.turnConfigured && a.ttlSec === 3600 && !b.turnConfigured && c.turnConfigured && c.hasTurn, { a: a.turnConfigured, b: b.turnConfigured, c: c.turnConfigured });
+    ok("I17b", "turnConfigured: không cấu hình → false (ttl 60 s); TURN_URLS thiếu thông tin đăng nhập → false (ttl 60 s); TURN_URLS + TURN_SECRET → true",
+      !a.turnConfigured && a.ttlSec === 60 && !b.turnConfigured && b.ttlSec === 60 && c.turnConfigured && c.hasTurn && c.ttlSec === 7200, { a: [a.turnConfigured, a.ttlSec], b: [b.turnConfigured, b.ttlSec], c: [c.turnConfigured, c.ttlSec] });
   }
 
   // 8. Cờ test bị bỏ qua trên Vercel (luôn gọi máy chủ Cloudflare thật).

@@ -450,8 +450,18 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       // long calls: TURN credentials expire — keep the list fresh so an ICE restart can still use the relay
       timers.current.iceRefresh = setInterval(() => {
         if (callRef.current !== call) return;
+        const hadTurn = !!iceRef.current?.hasTurn;
         getIce(true)
-          .then((servers) => callRef.current === call && peerRef.current?.setIceServers(servers))
+          .then((servers) => {
+            if (callRef.current !== call) return;
+            // never swap the call's TURN list for a STUN-only one (Cloudflare blip / failed refresh): keep the relay
+            if (hadTurn && !iceRef.current?.hasTurn) {
+              iceRef.current = { hasTurn: true };
+              setHasTurn(true);
+              return;
+            }
+            peerRef.current?.setIceServers(servers);
+          })
           .catch(() => {});
       }, ICE_REFRESH_MS);
       return true;

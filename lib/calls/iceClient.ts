@@ -9,7 +9,9 @@
 //   • a failed fetch (network, 5xx, 429) is retried ONCE; if TURN is configured on the server but the list came back
 //     without it (or could not be fetched at all) a Sentry warning is sent — never a silent fallback. The last good
 //     list is reused while it is still valid; otherwise STUN only;
-//   • a TURN-less list from a server that HAS TURN configured is reused only briefly (the next call asks again).
+//   • a TURN-less list is reused only briefly (≤ 60 s, whatever ttl the server sent): when the TURN keys are added (or
+//     Cloudflare comes back) the next call asks again instead of keeping STUN only for an hour (sessionStorage outlives
+//     a redeploy and lives as long as the Capacitor WebView).
 // Pure module (no React): scripts/qa/call_ice_client_unit.mts.
 
 export interface IceListResponse {
@@ -39,6 +41,8 @@ export const IN_CALL_MIN_VALID_MS = 15 * 60_000;
 export const RETRY_DELAY_MS = 1_500;
 /** A list fetched this recently is reused whatever its remaining validity. */
 export const FRESH_MS = 30_000;
+/** A list without TURN is never kept longer than this, whatever the server said. */
+export const TURNLESS_MAX_TTL_SEC = 60;
 const STORE_KEY = "pn_ice_v1";
 const STORE_TTL_CAP_MS = 2 * 60 * 60_000;
 
@@ -59,7 +63,8 @@ const validServers = (v: unknown): v is RTCIceServer[] =>
 /** Turn an /api/calls/ice answer into a cache entry (null if malformed). */
 export function toCached(d: IceListResponse, now: number): CachedIce | null {
   if (!validServers(d.iceServers)) return null;
-  const ttlMs = Math.max(30, Number(d.ttlSec) || 600) * 1000;
+  const ttlSec = Math.max(30, Number(d.ttlSec) || 600);
+  const ttlMs = (d.hasTurn === false ? Math.min(TURNLESS_MAX_TTL_SEC, ttlSec) : ttlSec) * 1000;
   // Keep the margin proportional for short lists (a 60 s TURN-less list is reusable for ~45 s, not "already expired").
   const margin = Math.min(EXPIRY_MARGIN_MS, ttlMs / 4);
   return {

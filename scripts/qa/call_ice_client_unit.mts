@@ -166,11 +166,24 @@ const good = (ttlSec = 3600) => ({ status: 200, body: { iceServers: [STUN, TURN]
   ok("C10", "Two failing calls back to back → one warning (not a flood)", h.reports.length === 1, h.reports.length);
 }
 
-// C11 — malformed answers are not cached
+// C11 — malformed answers are not cached; a TURN-less list is never kept longer than 60 s (even if a server says 3600)
 {
-  ok("C11", "toCached rejects malformed lists; STUN-only server (no TURN configured) list kept ~55 min",
-    toCached({ iceServers: "x" }, 0) === null && toCached({ iceServers: [{ nope: 1 }] }, 0) === null &&
-      toCached({ iceServers: [STUN], ttlSec: 3600, hasTurn: false, turnConfigured: false }, 0)!.expiresAt === 3600_000 - EXPIRY_MARGIN_MS);
+  const stunOnly = toCached({ iceServers: [STUN], ttlSec: 3600, hasTurn: false, turnConfigured: false }, 0);
+  ok("C11", "toCached rejects malformed lists; a STUN-only list (no TURN configured, server ttl 3600) expires within 60 s",
+    toCached({ iceServers: "x" }, 0) === null && toCached({ iceServers: [{ nope: 1 }] }, 0) === null && !!stunOnly && stunOnly.expiresAt > 0 && stunOnly.expiresAt <= 60_000,
+    stunOnly);
+}
+
+// C12 — deploy order: a call happens BEFORE the TURN keys are added (STUN-only list), the keys go live, the page is
+//       reloaded (sessionStorage survives) → the next call 2 minutes later fetches again and gets TURN
+{
+  const store = new Map<string, string>();
+  const h = harness([{ status: 200, body: { iceServers: [STUN], ttlSec: 3600, hasTurn: false, turnConfigured: false } }, good()], store);
+  const r1 = await h.make().get();
+  h.advance(2 * 60_000);
+  const r2 = await h.make().get(); // a new client on the same sessionStorage (= reload / redeploy, same WebView)
+  ok("C12", "STUN-only list cached before the TURN keys went live → the next call (2 min later, after a reload) fetches again and has TURN; no warning (TURN was not configured)",
+    !r1.hasTurn && r2.hasTurn && r2.source === "network" && h.calls.length === 2 && h.reports.length === 0, { r1: r1.source, r2: r2.source, calls: h.calls.length, reports: h.reports.length });
 }
 
 console.log(`\nICE client cache: ${pass}/${pass + fail} PASS`);

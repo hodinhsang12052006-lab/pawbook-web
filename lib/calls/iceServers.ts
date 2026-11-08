@@ -54,8 +54,9 @@ const CF_CACHE_MS = 10 * 60 * 1000;
 const CF_TIMEOUT_MS = 3000;
 const CF_RETRY_DELAY_MS = 400;
 const SECRET_TTL_SEC = 2 * 60 * 60;
-const STUN_ONLY_TTL_SEC = 3600;
-// A list WITHOUT the TURN the server is configured for (Cloudflare down) - reused by the browser only this long.
+// A list WITHOUT TURN (none configured yet, or Cloudflare down) is reused by the browser only this long: when the TURN
+// keys are added later (or Cloudflare comes back) the very next call gets the relay — never a STUN-only list kept for an
+// hour in a phone's sessionStorage.
 const TURNLESS_TTL_SEC = 60;
 
 /** TURN is configured on this server (Cloudflare keys or a generic TURN with credentials). */
@@ -217,10 +218,10 @@ export async function buildIceServers(userId: string, deps: IceDeps = {}): Promi
     iceServers.push(...gen.servers);
     ttlSec = Math.min(ttlSec, gen.ttlSec);
   }
-  if (!Number.isFinite(ttlSec)) ttlSec = STUN_ONLY_TTL_SEC;
   const hasTurn = iceServers.some((s) => (Array.isArray(s.urls) ? s.urls : [s.urls]).some((u) => /^turns?:/i.test(u)));
   const turnConfigured = turnSourceConfigured(env);
-  // TURN expected but missing: the browser must ask again soon instead of keeping a STUN-only list for an hour.
-  if (turnConfigured && !hasTurn) ttlSec = Math.min(ttlSec, TURNLESS_TTL_SEC);
+  // No TURN in the list (not configured, or configured but unavailable): the browser asks again on the next call.
+  // (with TURN, ttlSec is the TURN credentials' lifetime; without, it is still Infinity here)
+  if (!hasTurn) ttlSec = Math.min(ttlSec, TURNLESS_TTL_SEC);
   return { iceServers, ttlSec, hasTurn, turnConfigured };
 }

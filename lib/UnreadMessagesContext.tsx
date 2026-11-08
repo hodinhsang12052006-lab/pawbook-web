@@ -99,10 +99,27 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
       }
     };
 
+    // Kênh vừa đăng ký lại sau khi rớt (lib/pusherResilience.ts): tin tới trong khoảng đó không qua Pusher → lấy lại số tin
+    // chưa đọc thật từ máy chủ (trang /messages tự đồng bộ — xem MessagesContent).
+    let primed = !!channel.subscribed;
+    const onResubscribed = () => {
+      const again = primed;
+      primed = true;
+      if (!again || pathnameRef.current?.startsWith("/messages")) return;
+      fetch("/api/messages/unread")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (typeof d?.unread === "number") setUnreadCount(d.unread);
+        })
+        .catch(() => {});
+    };
+
     channel.bind("new-message", handler);
+    channel.bind("pusher:subscription_succeeded", onResubscribed);
 
     return () => {
       channel.unbind("new-message", handler);
+      channel.unbind("pusher:subscription_succeeded", onResubscribed);
       releaseUserChannel(String(sessionUser.id).trim());
     };
     // pathname deliberately omitted — read via pathnameRef so this doesn't

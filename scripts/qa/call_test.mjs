@@ -977,6 +977,9 @@ if (want("shots")) {
 // Regression (real-services test 07/11): the phone's socket dropped and the ONE /api/pusher/auth request pusher-js makes
 // to re-subscribe failed → "private-chat-<me>" stayed unsubscribed → no ring, no realtime messages until a reload.
 // lib/pusherResilience.ts retries with backoff. Variants: HTTP 500, connection reset, and two failures in a row.
+// A message A sends WHILE the phone's channel is down (after the failed auth, before the re-subscription — the
+// successful auth is held until it was sent) never comes over Pusher: the open thread must still show it without a
+// reload (MessagesContent re-syncs on the channel's subscription_succeeded, not on the socket's "connected").
 if (want("authblip")) {
   await openChat(A, B.me.id);
   await openChat(B, A.me.id);
@@ -985,13 +988,18 @@ if (want("authblip")) {
       const plan = [...fails];
       let authCalls = 0;
       let failed = 0;
+      let releaseGap;
+      const gapSent = new Promise((r) => (releaseGap = r));
       const origin0 = await B.page.evaluate(() => performance.timeOrigin);
-      await B.page.route(/\/api\/pusher\/auth/, (r) => {
+      await B.page.route(/\/api\/pusher\/auth/, async (r) => {
         // only the phone's own private channel (calls + messages); presence channels re-subscribe untouched
         if (!/channel_name=private-chat-/.test(r.request().postData() || "")) return r.continue();
         authCalls++;
         const f = plan.shift();
-        if (!f) return r.continue();
+        if (!f) {
+          await Promise.race([gapSent, sleep(8000)]); // the gap message goes out first (well inside the 15 s auth timeout)
+          return r.continue().catch(() => {});
+        }
         failed++;
         return f === "500" ? r.fulfill({ status: 500, body: "Internal Server Error" }) : r.abort("connectionreset");
       });
@@ -1000,10 +1008,21 @@ if (want("authblip")) {
       const dropped = mock.dropSockets(ch);
       await until(async () => (mock.subscribers(ch) === 0 ? true : null), 5000);
       await until(async () => (failed >= fails.length ? true : null), 15000);
+      // A writes while B's channel is still down → Pusher drops it for B (no subscriber); B must get it by re-sync
+      const gapText = `authblip gap ${variant} ${Date.now() % 100000}`;
+      const gapSubs = mock.subscribers(ch);
+      const gapRes = await A.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: gapText }, headers: A.h });
+      releaseGap();
       const back = await until(async () => (mock.subscribers(ch) >= 1 ? Date.now() - t0 : null), 25000).catch(() => null);
       const keeper = await B.page.evaluate(() => window.__pnRealtime?.stats?.() ?? null);
       await B.page.unrouteAll({ behavior: "ignoreErrors" });
       if (!back) return { fail: `not re-subscribed (dropped ${dropped}, auth calls ${authCalls}, failed ${failed}) keeper=${JSON.stringify(keeper)}` };
+      // the message sent in the gap shows up in B's open thread (no reload)
+      const gapGot = await B.page.getByText(gapText).filter({ visible: true }).first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      if (!gapGot || gapSubs !== 0 || gapRes.status() !== 201) {
+        await shot(B, `authblip_${variant}_gap_missing`);
+        return { fail: `message sent while the channel was down not shown after re-subscription: ${JSON.stringify({ gapGot, gapSubs, status: gapRes.status(), back })}` };
+      }
       // the phone rings for a new call — exactly one incoming UI, no reload
       const before = incomingFor(B).length;
       await dial(A, "audio");
@@ -1030,7 +1049,7 @@ if (want("authblip")) {
       // visible match only: on the phone layout the (hidden) conversation-list preview comes first in the DOM
       const got = await B.page.getByText(text).filter({ visible: true }).first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
       const reloaded = (await B.page.evaluate(() => performance.timeOrigin)) !== origin0;
-      console.log(`   authblip ${variant}: re-subscribed after ${back} ms, auth calls ${authCalls} (failed ${failed}), incoming events ${incomingFor(B).length - before}, ringing UIs ${ringing}, realtime msg ${got}`);
+      console.log(`   authblip ${variant}: re-subscribed after ${back} ms, auth calls ${authCalls} (failed ${failed}), gap message shown, incoming events ${incomingFor(B).length - before}, ringing UIs ${ringing}, realtime msg ${got}`);
       return ringing === 1 && got && !reloaded ? true : { fail: JSON.stringify({ back, authCalls, failed, ringing, got, reloaded, keeper }) };
     });
     await reset(A, B);

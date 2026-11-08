@@ -3,8 +3,9 @@
 //   BASE_URL=http://localhost:3710 node scripts/qa/call_push_sw_test.mjs
 // Checks: incoming call → ringing notification with the call's own tag (stays on screen); "missed" follow-up with the
 // SAME tag replaces it (one notification, missed text, quiet); a late incoming for an ended call shows the missed
-// text, not a ring; an expired incoming shows its stale (missed) text; quiet "answered elsewhere" with PawNail in front
-// only closes the call's notification; another call's notification is never touched.
+// text, not a ring; an incoming long past its expiry shows its stale (missed) text, but one whose exp is slightly in the
+// past (device clock ahead of the server) still rings; quiet "Answered." replaces it silently; another call's
+// notification is never touched.
 import { chromium } from "playwright";
 import { BASE_URL, Results } from "./lib.mjs";
 
@@ -80,15 +81,23 @@ if (reg) {
   R.check("SW3", "An 'incoming' push for that call arriving LATE (after its end) shows the missed text, never rings again", a3?.title === "Missed call from Lan" && a3?.ri === false && s3.length === 2, JSON.stringify(s3));
 
   await closeAll();
-  await push(incoming("ccc3", { exp: now - 1000 }));
+  await push(incoming("ccc3", { exp: now - 10 * 60_000 }));
   const s4 = await shown();
-  R.check("SW4", "Incoming call delivered after its 60 s expiry → shows 'Missed call from …' instead of a fake ring", s4.length === 1 && s4[0].title === "Missed call from Lan" && s4[0].ri === false, JSON.stringify(s4));
+  R.check("SW4", "Incoming call delivered long after its expiry (10 min) → shows 'Missed call from …' instead of a fake ring", s4.length === 1 && s4[0].title === "Missed call from Lan" && s4[0].ri === false, JSON.stringify(s4));
+
+  // The phone's clock runs ~90 s ahead of the server: exp (server time + 60 s) is already "past" on the device while the
+  // call is still ringing → must still ring (the push service enforces the 60 s TTL; exp is only a safety net).
+  await closeAll();
+  await push(incoming("ccc4", { exp: Date.now() - 30_000 }));
+  const s4b = await shown();
+  R.check("SW4b", "Device clock ahead of the server (exp 30 s in the past on this device) → still an incoming, ringing notification (not 'Missed call')",
+    s4b.length === 1 && s4b[0].title === "Incoming call" && s4b[0].ri === true, JSON.stringify(s4b));
 
   await closeAll();
   await push(incoming("ddd4"));
-  await push(ended("ddd4", { title: "Call with Lan", body: "Answered on another device.", quiet: true }));
+  await push(ended("ddd4", { title: "Call with Lan", body: "Answered.", quiet: true }));
   const s5 = await shown();
-  R.check("SW5", "Answered on another device → the incoming notification is replaced QUIETLY (silent) by 'Answered on another device'", s5.length === 1 && s5[0].body === "Answered on another device." && s5[0].silent === true && s5[0].ri === false, JSON.stringify(s5));
+  R.check("SW5", "Answered on another device → the incoming notification is replaced QUIETLY (silent) by 'Call with Lan · Answered.'", s5.length === 1 && s5[0].body === "Answered." && s5[0].silent === true && s5[0].ri === false, JSON.stringify(s5));
 
   await closeAll();
   await push({ title: "Old app", body: "x", url: "/", tag: "pn-call" });

@@ -8,6 +8,8 @@ const rememberEnded = (tag, content) => {
   endedCalls.set(tag, content);
   if (endedCalls.size > 30) endedCalls.delete(endedCalls.keys().next().value);
 };
+// Cho phép đồng hồ máy lệch so với máy chủ tới 5 phút (xem bên dưới).
+const EXP_SKEW_MS = 5 * 60 * 1000;
 const isCallTag = (tag) => tag === "pn-call" || (typeof tag === "string" && tag.indexOf("pn-call-") === 0);
 
 // Nhận thông báo đẩy. Nếu người dùng ĐANG mở PawNail và nhìn màn hình thì bỏ
@@ -26,9 +28,11 @@ self.addEventListener("push", (event) => {
   let body = data.body || "";
   let ringing = kind === "call";
   // Tin "đang gọi" tới muộn (quá hạn, hoặc cuộc gọi đã có tin kết thúc) → hiện "Cuộc gọi nhỡ…" thay vì chuông giả.
+  // exp là giờ MÁY CHỦ, Date.now() là giờ của máy này: đồng hồ máy chạy nhanh vài phút không được biến cuộc gọi đang đổ
+  // chuông thành "Cuộc gọi nhỡ" → chừa EXP_SKEW_MS. Dịch vụ đẩy đã tự bỏ tin quá TTL 60 s; exp chỉ là lưới an toàn.
   if (ringing) {
     const ended = endedCalls.get(tag);
-    const stale = ended || ((typeof data.exp === "number" && Date.now() > data.exp && data.stale) || null);
+    const stale = ended || ((typeof data.exp === "number" && Date.now() > data.exp + EXP_SKEW_MS && data.stale) || null);
     if (stale) {
       title = stale.title || title;
       body = stale.body || "";

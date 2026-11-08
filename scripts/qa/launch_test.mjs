@@ -336,9 +336,9 @@ try {
     await owner.req("/api/messages", { method: "POST", json: { receiverId: t.client.userId, content: text } });
     await sleep(3500);
     const a = fcm.sends.find((s) => s.m.token === android);
-    R.check("NP3", "Android: FCM nhận đúng token + tiêu đề/nội dung + link mở khung chat; access token ký RS256 hợp lệ", a && a.m.notification.body === text && a.m.data.url.startsWith("/messages") && a.auth === "Bearer ya29.test" && fcm.tokens.every((x) => x.ok && x.claims.scope.includes("firebase.messaging")), JSON.stringify(a?.m).slice(0, 200));
+    R.check("NP3", "Android: FCM nhận đúng token + tiêu đề/nội dung + link mở khung chat; access token ký RS256 hợp lệ", a && a.m.notification.body === text && a.m.data.url.startsWith("/messages") && a.auth === "Bearer ya29.test" && fcm.tokens.every((x) => x.ok && x.claims.scope.includes("firebase.messaging")), String(JSON.stringify(a?.m)).slice(0, 200));
     const i = apns.find((x) => x.path === `/3/device/${ios}`);
-    R.check("NP4", "iPhone: APNs nhận đúng token, topic com.bitpawos.app, JWT ES256 hợp lệ, có link", i && i.topic === "com.bitpawos.app" && i.type === "alert" && i.sigOk && i.body.aps.alert.body === text && i.body.url.startsWith("/messages"), JSON.stringify(i).slice(0, 220));
+    R.check("NP4", "iPhone: APNs nhận đúng token, topic com.bitpawos.app, JWT ES256 hợp lệ, có link", i && i.topic === "com.bitpawos.app" && i.type === "alert" && i.sigOk && i.body.aps.alert.body === text && i.body.url.startsWith("/messages"), String(JSON.stringify(i)).slice(0, 220));
     await sleep(500);
     const left = (await db.execute({ sql: `SELECT endpoint FROM "PushSubscription" WHERE userId = ?`, args: [t.client.userId] })).rows.map((r) => String(r.endpoint));
     R.check("NP5", "Token chết (app đã gỡ) tự được dọn khỏi DB, token sống giữ lại", left.length === 2 && left.includes("fcm:" + android) && left.includes("apns:" + ios), left.join(" | ").slice(0, 160));
@@ -415,7 +415,7 @@ try {
     await owner.req("/api/calls", { method: "POST", json: { targetId: t.client.userId, action: "offer", sdp: { type: "offer", sdp: "v=0" }, callType: "audio", callId: "qa" + Date.now().toString(36).slice(-6) } });
     await sleep(3000);
     const cs = fcm.sends.find((x) => x.m.token === rich)?.m;
-    R.check("NP12", "Cuộc gọi đến → thông báo kênh 'calls', link ?to=<người gọi>", cs?.notification && cs.android?.notification?.channel_id === "calls" && cs.data?.url === `/messages?to=${owner.userId}`, JSON.stringify(cs).slice(0, 240));
+    R.check("NP12", "Cuộc gọi đến → thông báo kênh 'calls', link ?to=<người gọi>", cs?.notification && cs.android?.notification?.channel_id === "calls" && cs.data?.url === `/messages?to=${owner.userId}`, String(JSON.stringify(cs)).slice(0, 240));
 
     // ?c=<id> ngoài danh sách đã tải → app tải riêng cuộc trò chuyện đó (chỉ thành viên).
     const outsider = new Client();

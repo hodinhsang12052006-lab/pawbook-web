@@ -1038,40 +1038,8 @@ html[data-bubble] .pn-bnav { display: none !important; }
   html:not([data-ui-classic]) .pn-notif-scrim + [role="dialog"][aria-label] > div:first-child { padding-top: 18px; }
   /* sheet đang mở: dock ẩn đi (thanh trên là 1 lớp cô lập nên dock từng nổi đè lên sheet) */
   html:not([data-ui-classic]) body:has(.pn-notif-scrim) .pn-bnav { display: none; }
-
-  /* Chi tiết việc: thanh Gọi / Nhắn dính đáy màn hình (kiểu Indeed / Fresha), tôn trọng vùng an toàn.
-     Khách (không có dock): sát đáy, đệm vùng an toàn bên trong thanh. Thành viên (html[data-authed] — script đầu trang
-     đặt trước khi vẽ, SessionUserProvider đồng bộ sau khi tải phiên; BottomNav chỉ hiện cho người đã đăng nhập): ngay
-     trên dock. Trước đây thanh luôn chừa 82 px cho dock → với khách nó lơ lửng ~95 px trên đáy, đè lên nội dung (nút
-     "Show original (Tiếng Việt)"). */
-  html:not([data-ui-classic]) .pn-job-cta {
-    position: sticky;
-    bottom: 0;
-    z-index: 30;
-    flex-direction: row;
-    gap: 8px;
-    margin: 0 -20px -20px;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--color-pn-line);
-    border-radius: 0 0 16px 16px;
-    background: var(--pn-glass-dock);
-    -webkit-backdrop-filter: var(--pn-glass-filter);
-    backdrop-filter: var(--pn-glass-filter);
-  }
-  html:not([data-ui-classic]) .pn-job-cta > * { padding-block: 12px; font-size: 15px; }
-  html:not([data-ui-classic]) .pn-job-cta > a { flex: 1.25 1 0; }
-  html:not([data-ui-classic]) .pn-job-cta .pn-cta-num { display: none; }
-  /* EN-first nhãn dài ("Message in the app") — trên thanh dính ở điện thoại chỉ giữ "Message", 1 dòng */
-  html:not([data-ui-classic]) .pn-job-cta .pn-cta-long { display: none; }
-  html:not([data-ui-classic]) .pn-job-cta > * { white-space: nowrap; }
-  html[data-authed]:not([data-ui-classic]):not([data-bubble]) .pn-job-cta {
-    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 72px);
-    padding-bottom: 12px;
-  }
-  /* dock luôn hiện trên trang chi tiết việc để thanh hành động nằm đúng chỗ */
-  html:not([data-ui-classic]) body:has(.pn-job-cta) .pn-bnav { transform: none !important; opacity: 1 !important; }
 }
-html[data-lowmem]:not([data-ui-classic]) .pn-job-cta { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--color-pn-surface); }
+/* Thanh Gọi / Nhắn dính đáy (.pn-job-cta): CSS riêng của trang chi tiết việc (JOB_CTA_CSS trong app/[lang]/jobs/[id]/page.tsx) */
 
 /* Thẻ bài: nhãn "Khoe tay nghề" nhỏ, nằm cùng hàng tên */
 html:not([data-ui-classic]) .pn-post-tag { line-height: 16px; }

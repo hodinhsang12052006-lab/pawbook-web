@@ -80,7 +80,7 @@ export default function GlobalNotFound() {
               <Home aria-hidden className="h-4 w-4" />
               <span data-vi={VI.home} suppressHydrationWarning>Back to home</span>
             </a>
-            <nav aria-label="Go to" data-vi-label={VI.nav} className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+            <nav aria-label="Go to" data-vi-label={VI.nav} className="flex flex-wrap items-center justify-center text-sm" style={{ columnGap: 24, rowGap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a href="/?tab=jobs" data-vi-href="/vi?tab=jobs" className="pn-link" data-vi={VI.jobs} suppressHydrationWarning>Nail jobs</a>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}

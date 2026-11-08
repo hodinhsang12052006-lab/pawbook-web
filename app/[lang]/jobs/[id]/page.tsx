@@ -28,6 +28,22 @@ import { formatPhone, telHref } from "@/lib/phoneFormat";
 import VietnameseChip from "@/components/common/LangChip";
 import { PostedForSalonBanner, SalonRequestLinks } from "@/components/jobs/PostedForSalon";
 
+// Thanh Gọi / Nhắn (.pn-job-cta) trên điện thoại: dính đáy màn hình kiểu Indeed / Fresha, tôn trọng vùng an toàn.
+// Khách (không có dock): sát đáy, đệm vùng an toàn bên trong thanh. Thành viên (html[data-authed] — script đầu trang đặt
+// trước khi vẽ, SessionUserProvider đồng bộ sau khi tải phiên; BottomNav chỉ hiện cho người đã đăng nhập): ngay trên
+// dock. Trước đây thanh luôn chừa 82 px cho dock → với khách nó lơ lửng ~95 px trên đáy, đè lên nội dung ("Show original
+// (Tiếng Việt)"). CSS này chỉ trang chi tiết việc cần nên nằm ở đây (thẻ <style> trong trang, không lớp @layer → vẫn thắng
+// utility Tailwind như khi ở globals.css), stylesheet chung mà trang chủ tải không phình thêm.
+const JOB_CTA_CSS = `@media (max-width:639px){
+html:not([data-ui-classic]) .pn-job-cta{position:sticky;bottom:0;z-index:30;flex-direction:row;gap:8px;margin:0 -20px -20px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--color-pn-line);border-radius:0 0 16px 16px;background:var(--pn-glass-dock);-webkit-backdrop-filter:var(--pn-glass-filter);backdrop-filter:var(--pn-glass-filter)}
+html:not([data-ui-classic]) .pn-job-cta>*{padding-block:12px;font-size:15px;white-space:nowrap}
+html:not([data-ui-classic]) .pn-job-cta>a{flex:1.25 1 0}
+html:not([data-ui-classic]) .pn-job-cta .pn-cta-num,html:not([data-ui-classic]) .pn-job-cta .pn-cta-long{display:none}
+html[data-authed]:not([data-ui-classic]):not([data-bubble]) .pn-job-cta{bottom:calc(max(10px, env(safe-area-inset-bottom)) + 72px);padding-bottom:12px}
+html:not([data-ui-classic]) body:has(.pn-job-cta) .pn-bnav{transform:none!important;opacity:1!important}
+}
+html[data-lowmem]:not([data-ui-classic]) .pn-job-cta{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--color-pn-surface)}`;
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -82,6 +98,8 @@ export default function JobDetailPage({ params }: PageProps) {
   const articleRef = useRef<HTMLElement>(null);
   const [viewer, setViewer] = useState<number | null>(null);
   const [descOriginal, setDescOriginal] = useState(false);
+  // Giờ tải tin (đặt trong effect) — nhãn "Cần gấp" chỉ trong 72 giờ đầu; render không gọi Date.now() (react-hooks/purity)
+  const [loadedAt, setLoadedAt] = useState(0);
 
   useEffect(() => {
     params.then((p) => setJobId(p.id));
@@ -99,6 +117,7 @@ export default function JobDetailPage({ params }: PageProps) {
         if (!res.ok) throw new Error(tr("Tin tuyển dụng không tồn tại hoặc đã bị gỡ bỏ.", "This job doesn't exist or has been removed."));
         const data: JobDetail = await res.json();
         if (cancelled) return;
+        setLoadedAt(Date.now());
         setJob(data);
         // Tin tương tự cùng bang — giữ người dùng tiếp tục khám phá thay vì
         // "đọc xong 1 tin là hết đường".
@@ -236,6 +255,7 @@ export default function JobDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col min-h-screen text-slate-100">
+      {!isOwnJob && <style>{JOB_CTA_CSS}</style>}
       <Navbar />
 
       <main className="mx-auto flex-1 w-full max-w-3xl px-4 py-6 pb-28 md:pb-10 sm:px-6 space-y-4">
@@ -254,7 +274,7 @@ export default function JobDetailPage({ params }: PageProps) {
                     <Zap className="h-3.5 w-3.5 fill-white" />{tr(" Nổi bật", " Popular")}
                   </span>
                 )}
-                {job.isUrgent && Date.now() - new Date(job.createdAt).getTime() < 72 * 3600_000 && (
+                {job.isUrgent && loadedAt - new Date(job.createdAt).getTime() < 72 * 3600_000 && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-400 border border-red-500/30">
                     <Flame className="h-3.5 w-3.5" />{tr(" Cần gấp", " Urgent")}
                   </span>
@@ -439,7 +459,6 @@ export default function JobDetailPage({ params }: PageProps) {
             href={`/profile/${job.owner.id}`}
             className="glass-card group flex items-center gap-3 rounded-2xl p-4 hover:border-pink-500/30 transition-colors"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <Avatar src={job.owner.avatarUrl} name={job.owner.name} seed={job.owner.id} className="h-12 w-12 ring-2 ring-pink-500/30" />
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{tr("Đăng bởi chủ tiệm", "Posted by salon owner")}</p>

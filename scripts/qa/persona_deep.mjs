@@ -3,7 +3,7 @@
 // CHỈ chạy với server local (dev.db).   node scripts/qa/persona_deep.mjs
 import fs from "node:fs";
 import { chromium, devices } from "playwright";
-import { BASE_URL, DEMO_PASSWORD, SEED_TECH, fakeIp } from "./lib.mjs";
+import { BASE_URL, DEMO_PASSWORD, SEED_TECH, fakeIp, sendChat } from "./lib.mjs";
 
 const OUT = (process.env.TEMP || ".") + "/deep";
 fs.rmSync(OUT, { recursive: true, force: true });
@@ -82,7 +82,13 @@ const stamp = Date.now();
   await step("THO", "Nhắn tin cho tiệm", p, async () => {
     const b = p.getByRole("button", { name: /Nhắn tin qua App|Nhắn tin trong app/ }).or(p.getByRole("link", { name: /Nhắn tin qua App|Nhắn tin trong app/ })).first();
     await b.click({ timeout: 8000 }); await p.locator("[data-chat-input]").waitFor({ timeout: 20000 });
-    await p.locator("[data-chat-input]").fill("Dạ chào anh chị, tiệm còn tuyển thợ không ạ?"); await p.keyboard.press("Enter"); await p.waitForTimeout(1200);
+    // Điện thoại (chạm): Enter = xuống dòng → gửi bằng nút Gửi; bước chỉ ✓ khi tin thật sự tới server.
+    const posted = p.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/messages", { timeout: 15000 });
+    await sendChat(p, "Dạ chào anh chị, tiệm còn tuyển thợ không ạ?");
+    const res = await posted;
+    if (!res.ok()) throw new Error(`gửi tin: HTTP ${res.status()}`);
+    await p.waitForTimeout(1200);
+    return "đã gửi";
   });
   await step("THO", "Hồ sơ của tôi", p, async () => { await p.goto(BASE_URL + "/profile"); await settle(p); }, { full: true });
   await step("THO", "Bật báo việc gần tôi", p, async () => { await p.goto(BASE_URL + "/?tab=jobs"); await settle(p); const b = p.getByRole("button", { name: /Báo tôi khi có việc/ }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(1000); return "có nút báo việc"; } return "KHÔNG thấy nút báo việc"; });

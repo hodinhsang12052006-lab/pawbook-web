@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { langFrom, pageMetadata } from "@/lib/i18n/server";
+import { signInProviderIds } from "@/lib/signInProviders";
+import { SignInProviders } from "@/components/auth/SocialLogin";
 
 // Tiêu đề tab riêng (layout cha app/auth/layout.tsx là client component nên
 // không khai báo metadata được ở đó).
@@ -13,6 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   });
 }
 
+// Nút Google/Facebook/SĐT có sẵn khi form hiện (env đọc lúc build) — xem lib/signInProviders.ts.
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <SignInProviders ids={signInProviderIds()}>{children}</SignInProviders>;
 }

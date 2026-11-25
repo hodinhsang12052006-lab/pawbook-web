@@ -64,8 +64,9 @@ export default function CustomRegisterPage() {
   };
   const back = () => pickRole(null);
 
-  // ?role= is read after mount: hold the column's space (top-aligned column → no layout shift when it fills).
-  if (!ready) return <div aria-hidden style={{ minHeight: 640 }} />;
+  // ?role= is read after mount: hold the column's space (top-aligned column → no layout shift when it fills). With a
+  // ?role= the placeholder already takes the role-form layout (html[data-reg-role], components/auth/auth.css).
+  if (!ready) return <div aria-hidden data-reg-pending="" />;
 
   if (role === "technician") return <TechnicianRegisterForm onBack={back} />;
   if (role === "owner") return <OwnerRegisterForm onBack={back} />;

@@ -124,11 +124,19 @@ html[lang="vi"] .pn-tagline { font-size: calc(clamp(36px, 2.2vw + 14px, 46px) * 
 @media (min-width: 1024px) {
   .pn-auth-form { margin: clamp(32px, 9vh, 96px) auto 0; padding: 0; }
   /* a role form (has "All account types"): the language toggle floats top-right and the column starts high, so the
-     whole technician step 1 (title -> Continue) fits a 1440 x 900 screen */
-  .pn-auth-main:has(.pn-back) { position: relative; }
-  .pn-auth-main:has(.pn-back) .pn-auth-top { position: absolute; top: 32px; right: 48px; }
-  .pn-auth-main:has(.pn-back) .pn-auth-form { margin-top: 8px; }
+     whole technician step 1 (title -> Continue) fits a 1440 x 900 screen. Its placeholder on /auth/register?role=…
+     (?role= is read after hydration; html[data-reg-role] from the head script) takes the same layout, or the column
+     jumps 113 px up when the form arrives. */
+  .pn-auth-main:has(.pn-back),
+  html[data-reg-role] .pn-auth-main:has([data-reg-pending]) { position: relative; }
+  .pn-auth-main:has(.pn-back) .pn-auth-top,
+  html[data-reg-role] .pn-auth-main:has([data-reg-pending]) .pn-auth-top { position: absolute; top: 32px; right: 48px; }
+  .pn-auth-main:has(.pn-back) .pn-auth-form,
+  html[data-reg-role] .pn-auth-main:has([data-reg-pending]) .pn-auth-form { margin-top: 8px; }
 }
+/* the register placeholder holds the column; a role form runs past the fold on phones, so keep the footer below it too */
+[data-reg-pending] { min-height: 640px; }
+@media (max-width: 1023px) { html[data-reg-role] [data-reg-pending] { min-height: 100vh; } }
 .pn-auth-foot { max-width: 440px; margin: 40px auto 0; padding: 0 16px; font: 400 13px/18px var(--font-pn), system-ui, sans-serif; color: #a69ba4; }
 @media (min-width: 1024px) { .pn-auth-foot { padding: 0; } }
 .pn-auth-foot a { color: #c2b7bf; text-decoration: none; display: inline-flex; align-items: center; min-height: 24px; }

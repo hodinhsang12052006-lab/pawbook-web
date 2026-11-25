@@ -49,6 +49,7 @@ export const authOptions: NextAuthOptions & { trustHost?: boolean } = {
     maxAge: 30 * 24 * 60 * 60, // Ép thời gian sống của thẻ VIP là 30 ngày
   },
 
+  // Thêm/bớt provider ở đây → sửa cả lib/signInProviders.ts (nút đăng nhập có sẵn trong HTML tĩnh của /auth/*).
   providers: [
     CredentialsProvider({
       name: "credentials",

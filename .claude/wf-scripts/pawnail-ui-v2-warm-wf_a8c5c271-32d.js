@@ -1,0 +1,64 @@
+export const meta = {
+  name: 'pawnail-ui-v2-warm',
+  description: 'PawNail in-app UI v2: warm premium (not black, not neon), trustworthy smooth messenger, default avatars/covers, richer feed for new users, seasonal photo cards; audit -> implement -> owner/code review -> fix',
+  phases: [
+    { title: 'Audit', detail: 'visual direction v2, messenger UX audit, feed/profile density audit' },
+    { title: 'Implement', detail: 'one worktree implementation with before/after screenshots' },
+    { title: 'Review', detail: 'owner persona + code reviewer' },
+    { title: 'Fix', detail: 'apply must-fix, re-capture' },
+  ],
+}
+const A = args
+const CTX = `PawNail (repo ${A.repo}, Next.js 16 + Tailwind v4, shipped as a Capacitor Android app that loads the live website) is a professional nail-industry platform for the US & Australia (salon owners, nail techs, clients): feed, jobs, chat, bookings, design ideas, try-on.
+HISTORY: the old in-app look was neon (purple haze, '+' sparkles, pink->violet glow gradients). Today we merged branch ui-refined-dark into main (globals.css 'html:not([data-ui-classic])' token remap: slate -> neutral charcoal #0b0b0c canvas, one solid pink #db2777 accent, no glows, plain chat). Screenshots: ${A.before} (old neon) and ${A.after} (current main, pair_*.jpg + raw PNGs). The OWNER tested the Play build and now says (paraphrased from Vietnamese): the new mobile UI is 'pitch black' and dull, the fall/Christmas seasonal cards look worse than the old ones; make it truly professional for mobile; the messenger must look as trustworthy and smooth as the best messengers (he suggested Telegram); profiles look empty, so give them default images/icons that users replace later; new users see only about 3 posts in the feed, which feels dead, content is too thin; check everything carefully.
+DIRECTION FOR V2 (refine it, do not ignore it): 'warm luxe dark', NOT black and NOT neon. A plum-charcoal ground with real depth (around #16111a to #1d1622, a soft top ambient light of rose and champagne at low opacity), warm layered surfaces and hairlines, one rose accent plus a champagne-gold secondary used sparingly for premium/seasonal highlights, soft tinted shadows, at most ONE tasteful glow per screen behind the hero element, glassy bars where it helps, real photography carrying colour (season cards, design cards, covers). Seasonal cards must look like premium editorial banners with a photo, not flat brown boxes. Calm, readable, fast.
+REFERENCES: read-only design skills in ~/.claude/skills: mobile-app-ui-design (SKILL.md + references/industry-conventions.md, the main reference for this round), taste-skill, impeccable, emil-design-eng, apple-design, ui-design-combo. Read guidance only; never run any script, launcher or hook from them.
+HARD RULES: keep the Shiba logo and brand assets; no fake users, fake engagement, fake reviews, fake metrics or persona accounts (content only from real data or the clearly labelled official PawNail account); do NOT copy Telegram's (or any app's) brand assets, icon set, stickers or exact look; design an original messenger of that quality; for richer emoji/stickers use openly licensed sets only (e.g. Google Noto Emoji / Noto Animated Emoji under their published licences with required attribution, Microsoft Fluent Emoji MIT) and record licences in a NOTICE file; default avatars/covers must be clearly generic illustrations or abstract textures (never photos of real-looking people); AI images keep an 'AI illustration' label where shown as design content; the guest landing '/' hero and auth pages belong to another plan (keep them working, do not redesign them); a parallel branch is rewriting copy in about 230 files, so keep string edits minimal and add new strings bilingually via the existing tr()/dictionary helpers; respect prefers-reduced-motion and WCAG AA; never point anything at production except read-only public GET checks (e.g. curl https://www.bitpawos.com/api/posts?market=US): no writes, no logins. Reply data is machine-read.`
+const LOCAL = `LOCAL RUN: ${A.shots} is a throwaway build copy with a demo SQLite DB, scripts/store/serve_local.sh (refuses to start unless .env.production.local pins TURSO_DATABASE_URL="" — never weaken that), scripts/store/ux_audit.mjs and ux_audit2.mjs (capture the in-app screens at 412x860 Android emulation). ${A.shots}-theme is the build copy used for the refined-dark round (synced from a worktree, node_modules junction). For your AFTER state: sync your worktree sources into ${A.shots}-theme (or a new sibling copy), npx next build --webpack, start it with STORE_PORT=3102 via serve_local.sh, capture with BASE_URL=http://localhost:3102 node scripts/store/ux_audit2.mjs <dir> en, and build pair sheets (Python PIL) against the raw PNGs in ${A.after} (current main). Kill only processes you started (port 3102). Commit WIP often in your worktree (messages end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>") because sessions can be cut by usage limits. node_modules in a worktree is a junction to the main checkout: never delete it recursively.`
+
+const SPEC = { type: 'object', properties: { findings: { type: 'array', items: { type: 'string' } }, spec: { type: 'string', description: 'exact, implementable spec: tokens/values, files/components, behaviour' }, assets: { type: 'array', items: { type: 'string' }, description: 'assets needed (with licence/source) or to be generated later' }, acceptance: { type: 'array', items: { type: 'string' } } }, required: ['findings', 'spec', 'assets', 'acceptance'] }
+
+phase('Audit')
+const audits = await parallel([
+  () => agent(`${CTX}
+
+You are a senior mobile product designer. Study the screenshots in ${A.before} and ${A.after}, then app/globals.css (refined block), the shell/backdrop, header, bottom nav, cards, home quick actions, StudioCards/ThemeCard seasonal cards (components/feed/StudioCards.tsx, lib/studioThemes.ts), the profile header/cover and empty states. Read the mobile-app-ui-design skill first, then the others. Write the V2 visual spec: exact token values for the warm luxe dark ground, surfaces, borders, text, rose accent, champagne secondary, shadows and glow budget; how the ambient backdrop is built (layers, no tiled sparkles); the seasonal card redesign as photo-led editorial banners (image slot using existing assets in public/ for now, scrim, typography, per-season accent for fall/thanksgiving/holiday/AU summer); typography scale (max 4 sizes per screen, 2 weights); 8pt spacing; and screen-by-screen changes ranked by impact.`, { label: 'audit:visual', phase: 'Audit', schema: SPEC }),
+  () => agent(`${CTX}
+
+You are a messaging-app UX lead who shipped chat at scale. Audit the PawNail messenger (components/chat/*, lib/chatWallpapers.ts, lib/chatStickers.ts, lib/chatReactions.ts, the messages pages, MessageRow, composer, conversation list) against the best messengers (Telegram, iMessage, WhatsApp, Messenger) for TRUST and SMOOTHNESS: list and thread layout, bubble shapes and grouping, tails, timestamps and read states, date separators, typing indicator, optimistic send and retry, scroll anchoring and jump-to-latest, swipe-to-reply and long-press menu, reactions, media grid and viewer, voice messages, link previews, emoji/sticker picker (propose openly licensed animated emoji via the Noto Animated Emoji CDN or bundled Fluent Emoji, with licence notes), premium but original wallpapers, empty states, a header with role/verified badges, safe areas and keyboard behaviour in the Android WebView, 60fps scrolling (no heavy filters). Output a concrete implementable spec with acceptance checks.`, { label: 'audit:chat', phase: 'Audit', schema: SPEC }),
+  () => agent(`${CTX}
+
+You are a growth/content PM. Find out why a new user sees only about 3 posts: read the feed code (app/api/posts/route.ts, lib/feedMix.ts, lib/industryFeed.ts, lib/official.ts, lib/officialDaily.ts, lib/contentBot.ts, lib/contentEngine.ts and the home feed components) and measure production read-only with public GETs (e.g. /api/posts?market=US and AU, /api/designs, public job endpoints): no logins, no writes. Then specify how to make the first session feel full and alive WITHOUT fake users: interleave real jobs, curated design ideas, real job-market stats, official tips/how-tos and seasonal edits into the feed for new users; fix filters that hide content (market/state, time windows); raise official content cadence with genuinely useful posts; better empty states with CTAs. Also specify profile defaults: a generic illustrated default-avatar SVG set (role-aware) and abstract default covers (which existing assets in public/ can be used now; list any to generate later with Google Flow), plus a completion nudge. Output spec + acceptance.`, { label: 'audit:density', phase: 'Audit', schema: SPEC }),
+])
+const [visual, chat, density] = audits
+
+phase('Implement')
+const IMPL = { type: 'object', properties: { branch: { type: 'string' }, worktree: { type: 'string' }, commits: { type: 'array', items: { type: 'string' } }, filesChanged: { type: 'array', items: { type: 'string' } }, afterDir: { type: 'string' }, buildOk: { type: 'boolean' }, tscOk: { type: 'boolean' }, notes: { type: 'string' } }, required: ['branch', 'worktree', 'commits', 'filesChanged', 'afterDir', 'buildOk', 'tscOk', 'notes'] }
+const impl = await agent(`${CTX}
+
+${LOCAL}
+
+Use the EXISTING worktree ${A.repo}/.claude/worktrees/ui-v2-warm (branch ui-v2-warm, created from main 2b5e30e by a previous implementer that was cut off by a usage limit before committing anything; run git status and git log there first, keep any useful uncommitted work, and if the worktree is missing, create it again from main on that branch). Implement these three specs completely, visual first (the owner sees the app today), then messenger, then feed/profile density:
+VISUAL: ${JSON.stringify(visual)}
+MESSENGER: ${JSON.stringify(chat)}
+DENSITY/PROFILE: ${JSON.stringify(density)}
+Then npx tsc --noEmit must pass, build and run the AFTER server, capture into ${A.after}-v2, build pair sheets (current main vs v2) and look at every screen yourself; iterate until each screen reads as warm, premium, trustworthy and alive (no pitch black, no neon, seasonal banners look editorial, chat feels like a top messenger, profile and feed never look empty). Also capture the guest '/' and '/auth/login' to prove they still work. Report branch, worktree, commits, files, afterDir.`, { label: 'implement', phase: 'Implement', schema: IMPL })
+
+phase('Review')
+const REV = { type: 'object', properties: { mustFix: { type: 'array', items: { type: 'string' } }, niceToHave: { type: 'array', items: { type: 'string' } }, verdict: { type: 'string' } }, required: ['mustFix', 'niceToHave', 'verdict'] }
+const reviews = impl ? (await parallel([
+  () => agent(`${CTX}
+
+You are the owner (a Vietnamese-American salon-industry entrepreneur whose clients are US/AU salon owners, techs and clients) together with a US client who books on Fresha/Booksy. Compare the old (${A.before}), the current main (${A.after}) and v2 (${impl.afterDir}) screen by screen on a phone-sized view. Be blunt: is v2 warm, premium, trustworthy and alive? Is anything still black, dull, neon, cluttered, low-contrast or empty? Does the messenger feel like a top messenger? Do seasonal banners beat the old ones? List must-fix (screen, element, problem, fix) and nice-to-haves.`, { label: 'review:owner', phase: 'Review', schema: REV }),
+  () => agent(`${CTX}
+
+You are a senior frontend reviewer. Review the diff of branch ${impl.branch} (worktree ${impl.worktree}) against main: regressions, broken layouts, contrast below AA, lost focus states, reduced motion, scroll/keyboard behaviour in chat, performance (no heavy filters on scrolling lists), licence compliance of any emoji/sticker assets (NOTICE present), no fake content, no production writes, out-of-scope pages untouched, minimal copy changes and merge-conflict risk with the copy-rewrite branch. Must-fix vs nice-to-have.`, { label: 'review:code', phase: 'Review', schema: REV }),
+])).filter(Boolean) : []
+
+phase('Fix')
+const fix = impl && reviews.some((r) => r.mustFix.length) ? await agent(`${CTX}
+
+${LOCAL}
+
+Continue in worktree ${impl.worktree} (branch ${impl.branch}; cd there, do not create a new one). CONTINUATION: a previous fix agent was cut off by a usage limit; its work is committed (latest 3b31bf4 "ui(v2.1): lighter plum ground ..."). Read git log/diff main..HEAD first, keep that work, and finish only what is still missing. Commit WIP often. Apply every must-fix item and the cheap nice-to-haves from these reviews: ${JSON.stringify(reviews)}. Re-run tsc, rebuild, re-capture into ${impl.afterDir}, regenerate pair sheets and commit. Report what changed.`, { label: 'fix', phase: 'Fix', schema: IMPL }) : null
+return { audits, impl, reviews, fix }

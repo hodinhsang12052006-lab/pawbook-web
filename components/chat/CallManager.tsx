@@ -1094,12 +1094,23 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       const awayMatters = (platform === "android-app" && !nativeKeepsMediaRef.current) || platform === "iphone" || platform === "ios-app";
       if (document.visibilityState === "hidden") {
         // phones stop the camera in the background; a desktop tab keeps sending, so no "paused" there
-        if (camOnRef.current && phone) p?.sendCtl({ cam: "paused" });
+        if (camOnRef.current && phone) {
+          // Android app 4+ keeps the call alive in the background (microphone-only service): switch the camera track off
+          // ourselves too — never send a frame while the other side is told "Video paused".
+          if (nativeKeepsMediaRef.current) for (const t of stream?.getVideoTracks() ?? []) t.enabled = false;
+          p?.sendCtl({ cam: "paused" });
+        }
         if (awayMatters) p?.sendCtl({ away: true });
         return;
       }
       if (!stream || !p) return;
       if (awayMatters) p.sendCtl({ away: false });
+      // Android app 4+: the route may have changed while away (headphones plugged in, the WebView's own audio code).
+      if (ongoingRef.current) {
+        void nativeCall.audioState().then((s) => {
+          if (s && ongoingRef.current) setNativeAudio(s);
+        });
+      }
       // Every await below can outlive the call (hang-up while the camera / mic is opening): a track obtained for a
       // call that is over is stopped at once — never left running with the camera light on.
       const stale = () => callRef.current !== call || streamRef.current !== stream || peerRef.current !== p;
@@ -1130,6 +1141,8 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
             await p.replaceVideoTrack(nv);
             setPreview(new MediaStream([nv]));
           } catch {}
+        } else if (!v.enabled) {
+          v.enabled = true; // switched off while hidden (Android app 4+)
         }
         if (phone && !stale()) p.sendCtl({ cam: true });
       }
@@ -1203,6 +1216,13 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setNativeAudio(r.audio);
     });
   }, [ongoingState, peer, videoMode, camOn, connectedAt]);
+  // Headphones / Bluetooth plugged in or removed mid-call: the app re-routes and reports the new route (Speaker label).
+  useEffect(() => {
+    if (!mediaLive || !nativeCall.supported()) return;
+    return nativeCall.onAudio((s) => {
+      if (ongoingRef.current) setNativeAudio(s);
+    });
+  }, [mediaLive]);
 
   // ---------- in-call controls ----------
   const toggleMic = useCallback(() => {

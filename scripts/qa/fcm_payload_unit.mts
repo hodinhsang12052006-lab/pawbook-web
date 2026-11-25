@@ -320,6 +320,14 @@ ok("F19", "Lỗi FCM: 404 / UNREGISTERED / INVALID_ARGUMENT về token → token
     ends.every(({ legacy: m }) => !!m.notification && m.android.notification?.channel_id === "general" && m.android.notification?.tag === "pn-call-abc123xyz"), ends[0].legacy);
   const w = JSON.parse(webPushBody(inc));
   ok("F48", "Web push của cuộc gọi đến không mang call token / phần native (call)", !("call" in w) && !JSON.stringify(w).includes(TOKEN), w);
+  // the VI recipient's payload (lib/push.ts sends the base payload = Vietnamese, with stale = missed.vi)
+  const dv = (build("tok4vi", 4, inc) as unknown as AnyMsg).data;
+  const missVi = callEndPush({ callId: "abc123xyz", callType: "video", callerId: "u_caller", callerName: "Lan  Nguyen", outcome: "missed" });
+  const mv = (build("tok4vi", 4, missVi) as unknown as AnyMsg).data;
+  ok("F49", "Người nhận tiếng Việt, build 4: title 'Cuộc gọi video đến', body '… đang gọi cho bạn', mtitle 'Cuộc gọi video nhỡ từ Lan Nguyen' / 'Chạm để gọi lại.'; tin nhỡ: 'Cuộc gọi video nhỡ từ Lan Nguyen'",
+    dv.type === "call" && dv.title === "Cuộc gọi video đến" && dv.body.startsWith("Lan Nguyen đang gọi cho bạn") && dv.mtitle === "Cuộc gọi video nhỡ từ Lan Nguyen" &&
+      dv.mbody === "Chạm để gọi lại." && dv.token === TOKEN && mv.type === "call-end" && mv.outcome === "missed" && mv.title === "Cuộc gọi video nhỡ từ Lan Nguyen" && mv.body === "Chạm để gọi lại.",
+    { dv, mv });
 }
 
 console.log(`\nfcm payload unit: ${pass} passed, ${fail} failed`);

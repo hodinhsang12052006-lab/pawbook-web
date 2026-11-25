@@ -38,7 +38,8 @@ export interface NativeNotifInfo {
   messagesChannel: boolean;
 }
 interface PawNailNativePlugin {
-  getInfo(): Promise<Partial<NativeNotifInfo> & { chat?: number }>;
+  /** calls / callsChannel: versionCode 4+ (cuộc gọi native; kênh "Cuộc gọi" chưa bị tắt riêng). */
+  getInfo(): Promise<Partial<NativeNotifInfo> & { chat?: number; calls?: number; callsChannel?: boolean }>;
   setActiveConversation(o: { id: string | null }): Promise<void>;
   clearConversation(o: { id: string }): Promise<void>;
   /** Đăng xuất: gỡ mọi thông báo + lịch sử tin + lối tắt hội thoại + ảnh đại diện đã cache (versionCode 3+). */
@@ -232,11 +233,9 @@ export async function initNativePush() {
     if (isSafeAppPath(url)) window.location.href = url;
   });
   if (isAndroidApp()) {
-    PawNailNative.getInfo()
-      .then((i) => {
-        chatRenderer = Number(i.chat) || 0;
-      })
-      .catch(() => {});
+    void refreshAndroidInfo();
+    // Quay lại app (có thể vừa bật / tắt thông báo trong Cài đặt): đọc lại.
+    App.addListener("resume", () => void refreshAndroidInfo()).catch(() => {});
   }
   if (!(await nativeServerOn())) return;
   const perm = await P.checkPermissions();
@@ -255,6 +254,17 @@ export const isAndroidApp = () =>
 
 // Phiên bản bộ vẽ thông báo chat native (PawNailNative.getInfo().chat — versionCode 3+); 0 = không có / chưa đọc.
 let chatRenderer = 0;
+// Máy cho app hiện thông báo VÀ kênh "Cuộc gọi" chưa bị tắt riêng (getInfo, đọc lại mỗi lần quay lại app). Chưa đọc được
+// → false: trang tự đổ chuông như bản cũ (thà kêu 2 lần còn hơn im lặng).
+let callAlertsAllowed = false;
+
+async function refreshAndroidInfo(): Promise<void> {
+  try {
+    const i = await PawNailNative.getInfo();
+    chatRenderer = Number(i.chat) || 0;
+    callAlertsAllowed = i.notificationsEnabled === true && i.callsChannel !== false;
+  } catch {}
+}
 
 /**
  * App Android này TỰ báo tin nhắn mới (kêu + rung + hiện nổi) khi ở nền: có bộ vẽ native VÀ máy đã đăng ký thông báo.
@@ -327,8 +337,9 @@ export const nativeCall = createNativeCallBridge({
 
 /**
  * App Android này TỰ đổ chuông cuộc gọi đến khi ở nền (thông báo native, versionCode 4+, máy đã đăng ký thông báo — máy
- * chủ gửi tin cuộc gọi data-only cho build ≥ 4): trang bị ẩn thì web không phát thêm chuông (tránh 2 tiếng chuông).
+ * chủ gửi tin cuộc gọi data-only cho build ≥ 4 — VÀ thông báo / kênh "Cuộc gọi" đang bật): trang bị ẩn thì web không
+ * phát thêm chuông (tránh 2 tiếng chuông). Người dùng tắt thông báo của app → app không kêu được → trang tự đổ chuông.
  */
 export function nativeHandlesCallAlerts(): boolean {
-  return nativeCall.supported() && !!savedToken();
+  return nativeCall.supported() && callAlertsAllowed && !!savedToken();
 }

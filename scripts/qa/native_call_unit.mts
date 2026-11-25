@@ -1,7 +1,8 @@
 // Kiểm thử THUẦN (không trình duyệt, không mạng) cho cầu nối cuộc gọi native của app Android (lib/calls/nativeCallBridge.ts):
 //   dò từng hàm qua window.Capacitor.PluginHeaders (web / bản app cũ ≤ 3 / bản thiếu hàm → no-op, KHÔNG BAO GIỜ gọi hàm
-//   "not implemented"), chuẩn hoá tham số gửi xuống + kết quả trả về, lỗi của plugin không lọt ra, sự kiện callAction
-//   (lọc dữ liệu lạ, huỷ đăng ký trước / sau khi addListener xong), không đụng "then" của proxy plugin Capacitor.
+//   "not implemented"), chuẩn hoá tham số gửi xuống + kết quả trả về, lỗi của plugin không lọt ra, sự kiện callAction /
+//   callAudio (lọc dữ liệu lạ, đúng tên sự kiện, huỷ đăng ký trước / sau khi addListener xong), không đụng "then" của proxy
+//   plugin Capacitor.
 //   npx tsx scripts/qa/native_call_unit.mts
 import {
   canSwitchNativeAudio,
@@ -27,7 +28,7 @@ type Call = { method: string; args: unknown[] };
 /** Plugin giả kiểu proxy Capacitor: ghi mọi lời gọi; truy cập "then" bị ghi lại (proxy thật biến nó thành lời gọi native). */
 function fakePlugin(impl: Partial<Record<string, (...a: unknown[]) => unknown>> = {}) {
   const calls: Call[] = [];
-  const listeners: ((d: unknown) => void)[] = [];
+  const listeners: { event: string; cb: (d: unknown) => void }[] = [];
   let thenTouched = 0;
   let removed = 0;
   const base: Record<string, (...a: unknown[]) => unknown> = {
@@ -37,8 +38,8 @@ function fakePlugin(impl: Partial<Record<string, (...a: unknown[]) => unknown>> 
     setAudioRoute: async (o: unknown) => ({ active: true, route: (o as { route: string }).route === "speaker" ? "speaker" : "earpiece", earpiece: true, headset: false, bluetooth: false, ongoing: true }),
     getAudioState: async () => ({ active: true, route: "earpiece", earpiece: true, headset: false, bluetooth: false, ongoing: true }),
     takeCallAction: async () => ({}),
-    addListener: (_e: unknown, cb: unknown) => {
-      listeners.push(cb as (d: unknown) => void);
+    addListener: (e: unknown, cb: unknown) => {
+      listeners.push({ event: String(e), cb: cb as (d: unknown) => void });
       const p = Promise.resolve({ remove: async () => void removed++ });
       return p;
     },
@@ -58,7 +59,8 @@ function fakePlugin(impl: Partial<Record<string, (...a: unknown[]) => unknown>> 
       };
     },
   });
-  return { proxy, calls, emit: (d: unknown) => listeners.forEach((cb) => cb(d)), listeners, stats: () => ({ thenTouched, removed }) };
+  const emit = (d: unknown, event = "callAction") => listeners.filter((l) => l.event === event).forEach((l) => l.cb(d));
+  return { proxy, calls, emit, listeners, stats: () => ({ thenTouched, removed }) };
 }
 const OLD_METHODS = ["getInfo", "setActiveConversation", "clearConversation", "clearAll", "openBubbleSettings", "openNotificationSettings", "addListener", "removeListener"];
 const NEW_METHODS = [...OLD_METHODS, ...NATIVE_CALL_METHODS];
@@ -79,7 +81,8 @@ const bridge = (o: { android?: boolean; headers?: () => PluginHeader[] | null | 
   const act = await b.takeAction();
   const off = b.onAction(() => {});
   off();
-  ok("N1", "Web / iPhone (không phải app Android) → không hỗ trợ; start = {started:false}, stop / setRoute / takeAction / onAction không gọi plugin",
+  b.onAudio(() => {})();
+  ok("N1", "Web / iPhone (không phải app Android) → không hỗ trợ; start = {started:false}, stop / setRoute / takeAction / onAction / onAudio không gọi plugin",
     !b.supported() && r.started === false && r.audio === null && route === null && act === null && web.calls.length === 0, web.calls);
 }
 {
@@ -90,6 +93,7 @@ const bridge = (o: { android?: boolean; headers?: () => PluginHeader[] | null | 
   await b.stop();
   const s = await b.audioState();
   b.onAction(() => {});
+  b.onAudio(() => {});
   ok("N2", "App Android bản cũ (≤ 3: PawNailNative chỉ có getInfo / chat) → không hỗ trợ, KHÔNG gọi hàm nào (tránh 'not implemented'), không lỗi",
     !b.supported() && r.started === false && s === null && old.calls.length === 0, old.calls);
 }
@@ -142,6 +146,7 @@ const bridge = (o: { android?: boolean; headers?: () => PluginHeader[] | null | 
     a = await b.takeAction();
     st = await b.audioState();
     b.onAction(() => {})();
+    b.onAudio(() => {})();
   } catch {
     threw = true;
   }
@@ -200,6 +205,30 @@ const bridge = (o: { android?: boolean; headers?: () => PluginHeader[] | null | 
       !canSwitchNativeAudio(null));
   ok("N11", "normAudioState: route lạ → null, cờ chỉ true khi đúng true",
     JSON.stringify(normAudioState({ active: "yes", route: "laser", earpiece: 1, headset: true })) === '{"active":false,"route":null,"earpiece":false,"headset":true,"bluetooth":false}' && normAudioState("x") === null);
+}
+
+// ---------- 6. Sự kiện callAudio (cắm / rút tai nghe giữa cuộc gọi) ----------
+{
+  const p = fakePlugin();
+  const b = bridge({ plugin: p.proxy });
+  const audio: unknown[] = [];
+  const actions: unknown[] = [];
+  const offA = b.onAudio((x) => audio.push(x));
+  const offC = b.onAction((x) => actions.push(x));
+  await tick();
+  p.emit({ active: true, route: "headset", earpiece: true, headset: true, bluetooth: false }, "callAudio");
+  p.emit({ active: true, route: "laser", earpiece: true, headset: false, bluetooth: false }, "callAudio");
+  p.emit("garbage", "callAudio");
+  p.emit({ action: "hangup" }); // callAction: không lọt sang onAudio
+  offA();
+  await tick();
+  p.emit({ active: true, route: "speaker", earpiece: true, headset: false, bluetooth: false }, "callAudio"); // sau khi huỷ
+  offC();
+  await tick();
+  ok("N12", "onAudio nghe đúng sự kiện 'callAudio' (không lẫn callAction), chuẩn hoá trạng thái (route lạ → null, dữ liệu hỏng bị bỏ), huỷ → không nhận nữa",
+    JSON.stringify(audio) === '[{"active":true,"route":"headset","earpiece":true,"headset":true,"bluetooth":false},{"active":true,"route":null,"earpiece":true,"headset":false,"bluetooth":false}]' &&
+      JSON.stringify(actions) === '[{"action":"hangup"}]' && p.listeners.map((l) => l.event).sort().join() === "callAction,callAudio" && p.stats().removed === 2,
+    { audio, actions, removed: p.stats().removed });
 }
 
 console.log(`\nnative call bridge unit: ${pass} passed, ${fail} failed`);

@@ -1,7 +1,8 @@
 // Web ↔ phần cuộc gọi native của app Android (versionCode 4+, android/.../PawNailNativePlugin.java):
 //   - startOngoingCall / updateOngoingCall / stopOngoingCall: foreground service "đang trong cuộc gọi" (micro / camera chạy
 //     tiếp khi rời app hay tắt màn hình), giữ màn hình sáng khi gọi video, cảm biến tiệm cận khi nghe bằng loa trong;
-//   - setAudioRoute / getAudioState: nút Loa (loa trong ↔ loa ngoài; tai nghe / Bluetooth tự được ưu tiên);
+//   - setAudioRoute / getAudioState + sự kiện "callAudio": nút Loa (loa trong ↔ loa ngoài; tai nghe / Bluetooth tự được
+//     ưu tiên; cắm / rút tai nghe giữa cuộc gọi → app chọn lại đường và báo trạng thái mới);
 //   - takeCallAction + sự kiện "callAction": nút Kết thúc của thông báo đang gọi, nút Trả lời / Từ chối của thông báo
 //     cuộc gọi đến.
 // DÒ TỪNG HÀM trong danh sách plugin mà app tiêm vào trang (window.Capacitor.PluginHeaders) — bản app cũ (≤ 3) không có
@@ -48,7 +49,7 @@ export interface NativeCallPluginLike {
   setAudioRoute(o: { route: "speaker" | "earpiece" | "auto" }): Promise<Raw>;
   getAudioState(): Promise<Raw>;
   takeCallAction(): Promise<Raw>;
-  addListener(event: "callAction", cb: (data: Raw) => void): Promise<{ remove: () => Promise<void> | void }> | { remove: () => Promise<void> | void };
+  addListener(event: "callAction" | "callAudio", cb: (data: Raw) => void): Promise<{ remove: () => Promise<void> | void }> | { remove: () => Promise<void> | void };
 }
 export interface PluginHeader {
   name: string;
@@ -111,6 +112,32 @@ export function createNativeCallBridge(deps: {
   };
   const supported = () => NATIVE_CALL_METHODS.every(has);
   const plugin = () => (supported() ? deps.plugin() : null);
+  /** addListener an toàn: bản cũ / lỗi → no-op; huỷ trước khi addListener xong vẫn gỡ được. */
+  const listen = <T,>(event: "callAction" | "callAudio", norm: (raw: unknown) => T | null, cb: (x: T) => void): (() => void) => {
+    const pl = plugin();
+    if (!pl) return () => {};
+    let removed = false;
+    let handle: { remove: () => Promise<void> | void } | null = null;
+    try {
+      const res = pl.addListener(event, (data) => {
+        if (removed) return;
+        const x = norm(data);
+        if (x) cb(x);
+      });
+      Promise.resolve(res)
+        .then((h) => {
+          handle = h;
+          if (removed) void Promise.resolve(h?.remove?.()).catch(() => {});
+        })
+        .catch(() => {});
+    } catch {
+      return () => {};
+    }
+    return () => {
+      removed = true;
+      if (handle) void Promise.resolve(handle.remove?.()).catch(() => {});
+    };
+  };
   const ongoing = async (method: "startOngoingCall" | "updateOngoingCall", p: OngoingCallParams): Promise<OngoingResult> => {
     const pl = plugin();
     if (!pl) return { started: false, audio: null };
@@ -165,31 +192,9 @@ export function createNativeCallBridge(deps: {
       }
     },
     /** Nghe sự kiện "callAction" của app; trả hàm huỷ. Bản cũ: không làm gì. */
-    onAction(cb: (a: CallAction) => void): () => void {
-      const pl = plugin();
-      if (!pl) return () => {};
-      let removed = false;
-      let handle: { remove: () => Promise<void> | void } | null = null;
-      try {
-        const res = pl.addListener("callAction", (data) => {
-          if (removed) return;
-          const a = normCallAction(data);
-          if (a) cb(a);
-        });
-        Promise.resolve(res)
-          .then((h) => {
-            handle = h;
-            if (removed) void Promise.resolve(h?.remove?.()).catch(() => {});
-          })
-          .catch(() => {});
-      } catch {
-        return () => {};
-      }
-      return () => {
-        removed = true;
-        if (handle) void Promise.resolve(handle.remove?.()).catch(() => {});
-      };
-    },
+    onAction: (cb: (a: CallAction) => void): (() => void) => listen("callAction", normCallAction, cb),
+    /** Nghe sự kiện "callAudio" (đường âm thanh đổi vì cắm / rút / nối thiết bị giữa cuộc gọi); trả hàm huỷ. */
+    onAudio: (cb: (s: NativeAudioState) => void): (() => void) => listen("callAudio", normAudioState, cb),
   };
 }
 

@@ -1006,6 +1006,10 @@ html[data-chat-open] .pn-bnav { display: none; }
 html[data-bubble] [data-bubble-hide],
 html[data-bubble] .pn-bnav { display: none !important; }
 
+/* App native (User-Agent "PawNailApp" — script đầu trang đặt html[data-native] trước khi vẽ): ẩn phần chỉ dành cho web
+   có sẵn trong HTML tĩnh (nút Google/Facebook/Apple — Google chặn đăng nhập trong WebView), không để lại khoảng trống. */
+html[data-native] [data-native-hide] { display: none !important; }
+
 /* ---- V2.2 ---- */
 /* Thông báo trên điện thoại: sheet cao gần hết màn hình (trượt lên từ dưới), danh sách cuộn bên trong, chừa vùng an toàn */
 @media (max-width: 639px) {

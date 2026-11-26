@@ -98,12 +98,13 @@ export default async function RootLayout({
       className={`${beVietnam.variable} h-full antialiased scroll-smooth`}
     >
       <head>
-        {/* Trước khi vẽ: html[data-surface] (landing khách "/" · /auth/*), data-authed…, mùa + thị trường (SEASON_BOOT,
+        {/* Trước khi vẽ: html[data-surface] (landing khách "/" · /auth/*), data-native (User-Agent app Capacitor
+            "PawNailApp": ẩn [data-native-hide] như nút Google/Facebook có sẵn trong HTML tĩnh), data-authed…, mùa + thị trường (SEASON_BOOT,
             lib/season.ts), gợi ý ngôn ngữ html[data-lh] (LANG_HINT_BOOT, lib/i18n/langHintBoot.ts). Chrome có thể bắn
             "beforeinstallprompt" trước khi React chạy — bắt sớm cho nút Cài app. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,p=location.pathname;${BUBBLE_HEAD_JS}if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT};${LANG_HINT_BOOT}`,
+            __html: `try{var d=document.documentElement,p=location.pathname;${BUBBLE_HEAD_JS}if(p==="/vi"||p==="/en")p="/";else if(p.indexOf("/vi/")===0||p.indexOf("/en/")===0)p=p.slice(3);if(p.indexOf("/auth")===0)d.setAttribute("data-surface","auth");else if(p==="/"&&!localStorage.getItem("pn_authed"))d.setAttribute("data-surface","landing");if(navigator.userAgent.indexOf("PawNailApp")>=0)d.setAttribute("data-native","");if(localStorage.getItem("pn_authed"))d.setAttribute("data-authed","");if(localStorage.getItem("pn_onb"))d.setAttribute("data-onb","");if(localStorage.getItem("pn_mn"))d.setAttribute("data-mn","");var pv=localStorage.getItem("pn_pv_h");if(pv){d.setAttribute("data-pv","");d.style.setProperty("--pv-h",pv+"px")}if(localStorage.getItem("pn_cmp"))d.setAttribute("data-cmp","");var th=localStorage.getItem("pn_th_h");if(th){d.setAttribute("data-th","");d.style.setProperty("--th-h",th+"px")}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pnBIP=e;window.dispatchEvent(new Event("pn-bip"))});${SEASON_BOOT};${LANG_HINT_BOOT}`,
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: siteLd(lang) }} />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { getProviders, signIn } from "next-auth/react";
 import { Capacitor } from "@capacitor/core";
 import { KeyRound, Loader2 } from "lucide-react";
@@ -13,6 +13,21 @@ import { useTr } from "@/lib/i18n/useTr";
 // native thì App Store cũng không bắt buộc "Sign in with Apple". Kiểu: viên trung tính (không khối màu thương hiệu),
 // logo 20px: Google nhiều màu, Facebook #1877F2, Apple trắng.
 const ORDER = ["apple", "google", "facebook", "test-oauth"];
+// Đăng nhập SĐT trong app native: ẩn cho tới khi Twilio hết bản dùng thử (bản thử chỉ gửi mã tới số đã xác minh —
+// người duyệt App Store/CH Play bấm vào không nhận được mã = bị từ chối). Bật lại: NEXT_PUBLIC_NATIVE_PHONE_LOGIN=1.
+const NATIVE_PHONE = process.env.NEXT_PUBLIC_NATIVE_PHONE_LOGIN === "1";
+
+/** Nút hiện được: bỏ "credentials" (form email); app native (Google/Facebook chặn đăng nhập trong WebView) chỉ còn SĐT khi bật. */
+const shown = (ids: string[], native: boolean) =>
+  ids.filter((id) => id !== "credentials" && (!native || (NATIVE_PHONE && id === "phone-otp"))).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
+
+// Danh sách provider máy chủ đã bật, đọc lúc dựng HTML tĩnh (lib/signInProviders.ts, layout /auth/login + /auth/register)
+// → khối nút có sẵn trong HTML, không còn chèn vào trên form email sau khi getProviders() trả về (giật bố cục).
+const ProvidersContext = createContext<string[] | null>(null);
+const noopSubscribe = () => () => {};
+export function SignInProviders({ ids, children }: { ids: string[]; children: React.ReactNode }) {
+  return <ProvidersContext.Provider value={ids}>{children}</ProvidersContext.Provider>;
+}
 
 function GoogleLogo() {
   return (
@@ -45,17 +60,21 @@ function AppleLogo() {
  */
 export default function SocialLogin({ divider = true, heading, lead }: { divider?: boolean; heading?: string; lead?: string }) {
   useTr(); // render lại khi đổi VI/EN
-  const [providers, setProviders] = useState<string[]>([]);
+  const initial = useContext(ProvidersContext);
+  const [ids, setIds] = useState<string[]>(() => shown(initial ?? [], false));
+  // HTML tĩnh không biết app native: hydrate như web rồi lọc — trước đó CSS đã ẩn (html[data-native] từ script đầu
+  // trang + data-native-hide bên dưới) nên không giật.
+  const native = useSyncExternalStore(noopSubscribe, () => Capacitor.isNativePlatform(), () => false);
+  const providers = shown(ids, native);
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    // App native: Google/Facebook chặn đăng nhập trong WebView → ẩn. Đăng nhập SĐT cũng ẩn trong app
-    // native cho tới khi Twilio hết bản dùng thử (bản thử chỉ gửi mã tới số đã xác minh — người duyệt
-    // App Store/CH Play bấm vào không nhận được mã = bị từ chối). Bật lại: NEXT_PUBLIC_NATIVE_PHONE_LOGIN=1.
-    const native = Capacitor.isNativePlatform();
-    const nativePhone = process.env.NEXT_PUBLIC_NATIVE_PHONE_LOGIN === "1";
+    // Vẫn hỏi máy chủ: sửa lại nếu server chạy với env khác lúc build (VD `next start` local với env QA).
     getProviders()
-      .then((p) => setProviders(Object.keys(p || {}).filter((id) => id !== "credentials" && (!native || (nativePhone && id === "phone-otp"))).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))))
+      .then((p) => {
+        const next = shown(Object.keys(p || {}), false);
+        setIds((cur) => (cur.join() === next.join() ? cur : next));
+      })
       .catch(() => {});
   }, []);
 
@@ -68,14 +87,15 @@ export default function SocialLogin({ divider = true, heading, lead }: { divider
   };
 
   return (
-    <div className="space-y-2.5">
+    // App native chỉ còn nút SĐT (nếu bật) → không có thì ẩn cả khối, kể cả vạch "hoặc".
+    <div className="space-y-2.5" data-native-hide={hasPhone && NATIVE_PHONE ? undefined : ""}>
       {lead && <div className="pn-or" style={{ marginBottom: 16 }}>{lead}</div>}
       {heading && <p className="pn-social-head">{heading}</p>}
       {social.map((id) => {
         const label =
           id === "google" ? tr("Tiếp tục với Google", "Continue with Google") : id === "apple" ? tr("Tiếp tục với Apple", "Continue with Apple") : id === "facebook" ? tr("Tiếp tục với Facebook", "Continue with Facebook") : tr("Tiếp tục với Test OAuth", "Continue with Test OAuth");
         return (
-          <button key={id} type="button" disabled={!!busy} onClick={() => go(id)} className="pn-social">
+          <button key={id} type="button" disabled={!!busy} onClick={() => go(id)} className="pn-social" data-native-hide="">
             {busy === id ? <Loader2 className="animate-spin" aria-hidden /> : id === "google" ? <GoogleLogo /> : id === "apple" ? <AppleLogo /> : id === "facebook" ? <FacebookLogo /> : <KeyRound aria-hidden />}
             {label}
           </button>

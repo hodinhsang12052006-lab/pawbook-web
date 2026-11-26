@@ -1,7 +1,16 @@
 // Public "real work" blocks of /designs, shared by their GET routes and the server-rendered first paint of /designs
 // (lib/designsFirstPaint.ts): one query each, so the static page and the client's later pages agree.
+import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { realOnly, realUserWhere } from "@/lib/demo";
+
+/** /designs is ISR (300 s): after a menu item changes, rebuild it on the next visit instead of showing the old strip for
+ *  up to 5 minutes. No-op outside a request (scripts, tests). */
+export function refreshDesignsPage() {
+  try {
+    revalidatePath("/[lang]/designs", "page");
+  } catch {}
+}
 import { toPublicMenuItem } from "@/lib/menu";
 import { menuI18nFor } from "@/lib/menuI18n";
 

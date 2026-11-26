@@ -109,7 +109,7 @@ await form.getByRole("button", { name: "Ngày mai" }).click();
 await form.getByRole("button", { name: "Buổi tối" }).click();
 await form.getByPlaceholder(/muốn đổi màu hồng/).fill("Có tháo gel cũ");
 await form.getByRole("button", { name: "Gửi yêu cầu đặt lịch" }).click();
-const badPhone = await form.getByRole("alert").filter({ hasText: /Số điện thoại chưa đúng/ }).waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
+const badPhone = await form.getByRole("alert").filter({ hasText: /Số điện thoại chưa đúng|Check your phone number/ }).waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
 await form.getByPlaceholder("(214) 555-0123").fill("972 555 0188");
 await form.getByRole("button", { name: "Gửi yêu cầu đặt lịch" }).click();
 const sent = await form.getByText("Đã gửi yêu cầu!").waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
@@ -147,20 +147,24 @@ R.check("B9", "Thợ: lối tắt \"Lịch hẹn\" có số khách mới; thẻ 
 
 await card.getByRole("button", { name: "Xác nhận giờ" }).click();
 const dlg = tp.getByRole("dialog", { name: "Xác nhận giờ hẹn" });
-await dlg.getByPlaceholder("2:30 PM").fill("6:00 PM");
+// Ô giờ tự do "2:30 PM" đã thay bằng ô ngày + giờ thật (lưu ISO "YYYY-MM-DDTHH:mm"): chọn ngày mai, 18:00
+const tmr = new Date(Date.now() + 86_400_000);
+const ymd = `${tmr.getFullYear()}-${String(tmr.getMonth() + 1).padStart(2, "0")}-${String(tmr.getDate()).padStart(2, "0")}`;
+await dlg.locator('input[type="date"]').fill(ymd);
+await dlg.locator('input[type="time"]').fill("18:00");
 await dlg.getByRole("button", { name: "Xác nhận lịch" }).click();
 const confirmSms = await dlg.getByRole("link", { name: "Nhắn xác nhận cho khách" }).getAttribute("href", { timeout: 8000 }).catch(() => "");
 await dlg.getByRole("link", { name: "Nhắn xác nhận cho khách" }).evaluate((a) => a.removeAttribute("href")).catch(() => {}); // không mở app SMS trong test
 await dlg.getByRole("button", { name: "Để sau" }).click().catch(() => {});
 await tp.getByRole("button", { name: /Đã hẹn/ }).click();
-const confirmedCard = await tp.getByRole("listitem", { name: "Lịch của Thu Trang" }).filter({ hasText: "6:00 PM" }).waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+const confirmedCard = await tp.getByRole("listitem", { name: "Lịch của Thu Trang" }).filter({ hasText: /6:00\s?(PM|pm|CH)|18:00/ }).waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
 const ov2 = await tp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 R.check("B10", "Thợ xác nhận giờ → có ngay tin SMS xác nhận soạn sẵn (kèm giờ); lịch chuyển sang tab \"Đã hẹn\"; điện thoại không tràn ngang",
-  /6%3A00%20PM/.test(confirmSms || "") && confirmedCard && ov2 <= 1, JSON.stringify({ confirmSms: confirmSms?.slice(0, 160), confirmedCard, ov2 }));
+  /6%3A00(%20|%E2%80%AF)?(PM|pm|CH)|18%3A00/.test(confirmSms || "") && confirmedCard && ov2 <= 1, JSON.stringify({ confirmSms: confirmSms?.slice(0, 160), confirmedCard, ov2 }));
 
 // ---------- Đánh giá sau buổi làm ----------
 await db.execute({ sql: `DELETE FROM "ClientReview" WHERE techId = ?`, args: [tech.me.id] });
-const doneCard = tp.getByRole("listitem", { name: "Lịch của Thu Trang" }).filter({ hasText: "6:00 PM" });
+const doneCard = tp.getByRole("listitem", { name: "Lịch của Thu Trang" }).filter({ hasText: /6:00\s?(PM|pm|CH)|18:00/ });
 await doneCard.getByRole("button", { name: "Đã làm xong" }).click();
 const ask = tp.getByRole("dialog", { name: "Xin khách đánh giá" });
 const askSms = await ask.getByRole("link", { name: "Nhắn xin đánh giá" }).getAttribute("href", { timeout: 8000 }).catch(() => "");

@@ -72,6 +72,9 @@ async function harvest(p) {
       if (t) out.push(t);
     }
     for (const el of document.querySelectorAll("[placeholder],[aria-label],[title],img[alt]")) {
+      // như chữ ở trên: phần tử khai báo ngôn ngữ riêng (VD gợi ý "Bạn đọc tiếng Việt?" lang="vi" trên trang EN) là cố ý
+      const own = el.closest("[lang]")?.getAttribute("lang");
+      if (own && own !== document.documentElement.lang) continue;
       for (const a of ["placeholder", "aria-label", "title", "alt"]) {
         const v = el.getAttribute(a);
         if (v && v.trim()) out.push(`[${a}] ${v.trim()}`);

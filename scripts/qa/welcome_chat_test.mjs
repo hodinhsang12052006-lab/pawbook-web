@@ -48,7 +48,7 @@ for (let i = 0; i < 16 && trows.length < 2; i++) {
   trows = (await db.execute({ sql: `SELECT m.body FROM "Message" m JOIN "_UserConversations" a ON a.A = m.conversationId AND a.B = ? JOIN "_UserConversations" b ON b.A = m.conversationId AND b.B = ? ORDER BY m.createdAt ASC`, args: [official.id, regT.data?.user?.id] })).rows;
 }
 const tinfo = String(trows[0]?.body || "");
-R.check("W5", "Thợ đăng ký: tin 📋 có kỹ năng, lương mong muốn, tình trạng 'Cần việc gấp', khu vực Úc", regT.status === 201 && trows.length === 2 && ["Thợ nail", "Gel-X, Dip/SNS", "$30", "Cần việc gấp", "Sydney, New South Wales (Úc)"].every((x) => tinfo.includes(x)), tinfo.slice(0, 300));
+R.check("W5", "Thợ đăng ký: tin 📋 có kỹ năng, lương mong muốn, tình trạng 'Sẵn sàng nhận việc ngay', khu vực Úc", regT.status === 201 && trows.length === 2 && ["Thợ nail", "Gel-X, Dip/SNS", "$30", "Sẵn sàng nhận việc ngay", "Sydney, New South Wales (Úc)"].every((x) => tinfo.includes(x)), tinfo.slice(0, 300));
 
 // 3) Giao diện: admin mở Tin nhắn thấy cuộc trò chuyện + tin nhiều dòng giữ xuống dòng; người mới cũng thấy
 const browser = await chromium.launch();

@@ -6,6 +6,7 @@ import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { MAX_MENU_ITEMS, parseMenuItem, parseMenuItemEn, toPublicMenuItem } from "@/lib/menu";
 import { menuI18nFor, menuI18nOne, translateMenuItemOnSave, translateMissingMenu } from "@/lib/menuI18n";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
+import { refreshDesignsPage } from "@/lib/designsShowcase";
 
 // GET /api/menu?userId=… — menu mẫu nail của 1 thợ / tiệm (công khai: chỉ mẫu đang hiện, không có
 // giá vật tư; chủ menu: tất cả + vật tư + chi phí).
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
   // Tên tiếng Anh cho khách: thợ tự nhập thì lưu ngay; còn lại dịch máy sau khi trả lời (không làm chậm nút Lưu).
   const en = parseMenuItemEn(body);
   if (en.nameEn || en.descriptionEn) await translateMenuItemOnSave(row, en).catch(() => {});
-  else after(() => translateMenuItemOnSave(row).catch(() => {}));
+  else after(() => translateMenuItemOnSave(row).catch(() => {}).then(refreshDesignsPage)); // tên EN xong → trang Mẫu nail cập nhật
+  refreshDesignsPage(); // ảnh thật mới hiện ngay ở /designs (trang ISR 300 s)
   return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) }, { status: 201 });
 }

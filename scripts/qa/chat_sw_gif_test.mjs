@@ -81,6 +81,8 @@ const failedUrls = [];
 page.on("requestfailed", (r) => failedUrls.push(`${r.failure()?.errorText} ${r.url().slice(0, 120)}`));
 page.on("console", (m) => {
   const t = m.text();
+  // Sentry / Cloudflare beacons are aborted by this test on purpose (ctx.route above) → not a GIF / SW error
+  if (/sentry.io|cloudflareinsights.com/.test(m.location()?.url || "")) return;
   if (m.type() === "error" && /giphy|Refused to|ERR_FAILED|no-response|workbox/i.test(t)) errors.push(t.slice(0, 200));
 });
 await page.goto(BASE_URL + "/messages");

@@ -61,9 +61,9 @@ try {
   await sec.getByText("Tiệm Ảnh Thật").first().waitFor({ timeout: 15000 });
   await p.screenshot({ path: `${process.env.TEMP || "."}/designs_community.png` }).catch(() => {});
   R.check("A7", "Trang Mẫu nail: mục 'Ảnh thật từ thợ & tiệm' có ảnh vừa đăng + mục ý tưởng PawNail", (await sec.locator("img").count()) > 0 && (await p.getByText("Ý tưởng mẫu PawNail").count()) > 0);
-  await sec.getByRole("button", { name: /Đăng mẫu của bạn/ }).click();
+  await sec.getByRole("button", { name: /Đăng mẫu của bạn|Post your work/ }).click();
   await p.waitForURL(/tab=feed/, { timeout: 15000 });
-  const pressed = p.getByRole("button", { name: /Khoe tay nghề/, pressed: true });
+  const pressed = p.getByRole("button", { name: /Khoe tay nghề|Chia sẻ tác phẩm|Showcase work/, pressed: true });
   await pressed.first().waitFor({ timeout: 15000 });
   R.check("A8", "Bấm 'Đăng mẫu của bạn' → mở ô đăng bài, chọn sẵn loại 'Khoe tay nghề'", (await pressed.count()) > 0);
   R.check("A9", "Không lỗi JS", errors.length === 0, errors.join(" | "));

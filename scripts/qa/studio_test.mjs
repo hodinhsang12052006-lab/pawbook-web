@@ -71,21 +71,20 @@ try {
 
   // Bộ lọc gọn trên mobile
   await p.goto(BASE_URL + "/?tab=feed");
-  const allStates = p.getByRole("button", { name: "Tất cả bang" });
-  await allStates.waitFor({ timeout: 10000 });
-  const filterBox = await allStates.evaluate((el) => el.closest(".glass-card").getBoundingClientRect().height);
-  await p.getByRole("button", { name: "Tìm theo thành phố" }).click();
-  const searchShown = await p.getByPlaceholder("Thành phố… (VD: Houston, Sydney)").isVisible();
-  R.check("ST11", "Bộ lọc mobile gọn 1 hàng (<70px) + nút 🔍 mở ô tìm", filterBox < 70 && searchShown, `h=${filterBox}`);
+  // V2: bộ lọc cũ (thẻ kính "Tất cả bang" + 🔍) đã thay bằng 1 nút "Lọc theo khu vực" (components/home/AreaFilter.tsx)
+  const area = p.getByRole("button", { name: /^(Lọc theo khu vực|Filter by area)/ }).first();
+  const areaShown = await area.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+  const filterBox = areaShown ? await area.evaluate((el) => el.getBoundingClientRect().height) : 999;
+  R.check("ST11", "Bộ lọc khu vực trên điện thoại gọn 1 nút (<70px)", areaShown && filterBox < 70, `h=${filterBox}`);
   R.check("ST12", "Nút ＋ trùng lặp ở thanh trên đã ẩn trên mobile", (await p.getByTitle("Đăng ảnh portfolio").isVisible()) === false);
 
   // Thẻ chủ đề tuần → Tham gia → ô soạn bài có hashtag
-  const theme = p.getByRole("region", { name: /Chủ đề tuần/ });
+  const theme = p.getByRole("region", { name: /Chủ đề tuần|Theme of the week/ });
   const themeShown = await theme.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   R.check("ST13", "Bảng tin có thẻ 'PawNail Studio · Chủ đề tuần'", themeShown && (await theme.getByText("PawNail Studio").count()) > 0);
   await p.screenshot({ path: `${OUT}/st_theme.png` });
   if (themeShown) {
-    await theme.getByRole("button", { name: /Tham gia #/ }).click();
+    await theme.getByRole("button", { name: /Tham gia #|Join #/ }).click();
     await p.waitForTimeout(1200);
     const val = await p.locator("textarea").first().inputValue();
     R.check("ST14", "Bấm 'Tham gia #…' → ô soạn bài điền sẵn hashtag thử thách", val.includes(`#${st.data.theme.hashtag}`), val);
@@ -94,7 +93,7 @@ try {
     R.check("ST15", "Chip gợi ý hashtag hiện & đánh dấu đã dùng", (await chip.count()) > 0 && (await chip.first().isDisabled()));
     await p.locator("textarea").first().fill("");
     // Nút ✕ "Ẩn chủ đề hôm nay" phải bấm được (không bị nội dung thẻ đè lên).
-    await theme.getByRole("button", { name: "Ẩn chủ đề hôm nay" }).click({ timeout: 5000 });
+    await theme.getByRole("button", { name: /^(Ẩn chủ đề hôm nay|Hide today.s theme)$/ }).click({ timeout: 5000 });
     R.check("ST13b", "Nút ✕ trên thẻ chủ đề bấm được và ẩn thẻ trong hôm nay", (await theme.count()) === 0);
     await p.evaluate(() => localStorage.removeItem("pn_studio_hide"));
   }
@@ -112,14 +111,20 @@ try {
   const ch = await p.getByRole("heading", { name: new RegExp(`Thử thách #${st.data.theme.hashtag}`) }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   R.check("ST17", "Trang Xu hướng có bảng 'Thử thách #…'", ch);
 
-  // Nền: có lớp aurora; mobile đứng yên
-  const anim = await p.evaluate(() => getComputedStyle(document.querySelector(".app-backdrop .aurora-1")).animationName);
-  R.check("ST18", "Nền aurora tồn tại, đứng yên trên mobile", anim === "none", anim);
+  // Nền V2 (11/2026): .app-backdrop là quầng sáng TĨNH (lớp aurora chuyển động của giao diện cũ đã bỏ — chỉ còn ở trang
+  // 404). Không có animation nào trên nền, cả điện thoại lẫn máy tính.
+  const bgAnims = () => {
+    const bd = document.querySelector(".app-backdrop");
+    if (!bd) return "missing";
+    return [bd, ...bd.querySelectorAll("*")].map((e) => getComputedStyle(e)).filter((cs) => cs.display !== "none" && cs.animationName !== "none").map((cs) => cs.animationName).join(",") || "none";
+  };
+  const anim = await p.evaluate(bgAnims);
+  R.check("ST18", "Nền app tĩnh trên điện thoại (không animation)", anim === "none", anim);
   const dctx = await browser.newContext({ viewport: { width: 1366, height: 860 }, locale: "vi-VN" });
   const dp = await dctx.newPage();
   await dp.goto(BASE_URL + "/auth/login");
-  const danim = await dp.evaluate(() => getComputedStyle(document.querySelector(".app-backdrop .aurora-1")).animationName);
-  R.check("ST19", "Nền aurora chuyển động chậm trên desktop", danim === "bgDrift1", danim);
+  const danim = await dp.evaluate(bgAnims);
+  R.check("ST19", "Nền app tĩnh trên máy tính (không animation vô hạn)", danim === "none", danim);
 } finally {
   await browser.close();
 }

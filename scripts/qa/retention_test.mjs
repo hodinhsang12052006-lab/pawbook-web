@@ -79,7 +79,7 @@ try {
   await sleep(1500);
   let st = (await tech.req("/api/profile/views")).data;
   R.check("PV3", "Tiệm xem hồ sơ → thợ thấy 1 người xem, 1 tiệm, đúng tên tiệm", st.viewers === 1 && st.salons === 1 && st.recentSalons[0]?.id === owner.userId, JSON.stringify(st).slice(0, 200));
-  const pv = await waitPush(phone, (p) => /xem hồ sơ bạn/.test(p.title));
+  const pv = await waitPush(phone, (p) => /xem hồ sơ (của )?bạn|viewed your profile/.test(p.title));
   R.check("PV4", "Thợ nhận thông báo đẩy 'Có tiệm vừa xem hồ sơ bạn' (mở đúng mục)", pv && pv.url === "/profile#ai-da-xem", JSON.stringify(pv));
 
   await owner.req("/api/profile/views", { method: "POST", json: { profileId: tech.userId } });
@@ -90,7 +90,7 @@ try {
   st = (await tech.req("/api/profile/views")).data;
   R.check("PV5", "Cùng tiệm xem lại trong ngày không cộng thêm; tự xem không tính", st.week === 3 && st.viewers === 3, JSON.stringify(st).slice(0, 120));
   R.check("PV6", "Thợ khác xem → chỉ được ĐẾM, không lộ danh tính", st.salons === 2 && !st.recentSalons.some((s) => s.id === tech2.userId), JSON.stringify(st.recentSalons.map((s) => s.id)));
-  R.check("PV7", "Tối đa 1 thông báo 'tiệm xem hồ sơ'/ngày (không spam)", pushesFor(phone).filter((p) => /xem hồ sơ bạn/.test(p.title)).length === 1, pushesFor(phone).length);
+  R.check("PV7", "Tối đa 1 thông báo 'tiệm xem hồ sơ'/ngày (không spam)", pushesFor(phone).filter((p) => /xem hồ sơ (của )?bạn|viewed your profile/.test(p.title)).length === 1, pushesFor(phone).length);
   R.check("PV8", "Không lộ email/SĐT người xem", !/"(email|phone|password)"/.test(JSON.stringify(st)));
 
   // ================= (2) BÁO VIỆC THEO TIÊU CHÍ =================
@@ -113,7 +113,7 @@ try {
   inbox.length = 0;
   const j1 = await job(`QA alert khớp ${Date.now() % 1e5}`, "TX", ["Gel-X", "Design"]);
   const got = await waitPush(phone, (p) => p.url === `/jobs/${j1.data.id}`);
-  R.check("JA4", "Tin mới khớp (TX + Gel-X) → thợ nhận thông báo, mở đúng tin", got && /đúng tiêu chí/.test(got.title), JSON.stringify(got));
+  R.check("JA4", "Tin mới khớp (TX + Gel-X) → thợ nhận thông báo, mở đúng tin", got && /đúng tiêu chí|matching your alert/.test(got.title), JSON.stringify(got));
   const j2 = await job(`QA alert lệch ${Date.now() % 1e5}`, "FL", ["Dip/SNS"]);
   await sleep(2500);
   R.check("JA5", "Tin KHÔNG khớp (FL + Dip) → không báo", !pushesFor(phone).some((p) => p.url === `/jobs/${j2.data.id}`));
@@ -154,24 +154,29 @@ try {
   }
 
   const tp = await login(t.body.email, t.body.password);
+  // Điện thoại chỉ hiện 1 thẻ gợi ý (.pn-nudges, V2.1): người mới thấy thẻ "Bắt đầu" trước → kiểm thẻ "Ai đã xem" ở màn
+  // rộng (mọi thẻ đều hiện), rồi trả lại khổ điện thoại cho các bước sau.
+  const phoneVp = tp.viewportSize();
+  await tp.setViewportSize({ width: 1280, height: 900 });
   await tp.goto(BASE_URL + "/?tab=feed");
-  const card = tp.getByRole("region", { name: "Ai đã xem hồ sơ bạn" });
+  const card = tp.getByRole("region", { name: /^(Ai đã xem hồ sơ bạn|Who viewed your profile)$/ });
   const cardOk = await card.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-  R.check("UI1", "Trang chủ: thẻ 'Ai đã xem hồ sơ bạn' có số người + tên tiệm", cardOk && /3 người/.test(await card.innerText()) && (await card.getByRole("link").count()) >= 2);
+  R.check("UI1", "Trang chủ: thẻ 'Ai đã xem hồ sơ bạn' có số người + tên tiệm", cardOk && /3 người|3 people/.test(await card.innerText()) && (await card.getByRole("link").count()) >= 2);
   await tp.screenshot({ path: `${OUT}/ret_home_views.png` });
+  await tp.setViewportSize(phoneVp);
 
   await tp.goto(BASE_URL + "/profile");
-  await tp.getByText("Thông báo việc mới").waitFor({ timeout: 15000 });
-  await tp.getByRole("button", { name: "Xoá thông báo này" }).first().waitFor({ timeout: 10000 }).catch(() => {});
-  const alertRows = await tp.getByRole("button", { name: "Xoá thông báo này" }).count();
+  await tp.getByText(/^(Thông báo việc mới|Job alerts)$/).first().waitFor({ timeout: 15000 });
+  await tp.getByRole("button", { name: /^(Xoá thông báo này|Delete this alert)$/ }).first().waitFor({ timeout: 10000 }).catch(() => {});
+  const alertRows = await tp.getByRole("button", { name: /^(Xoá thông báo này|Delete this alert)$/ }).count();
   R.check("UI2", "Trang Tài khoản: mục 'Thông báo việc mới' liệt kê đúng 2 thông báo", alertRows === 2, alertRows);
 
   await tp.goto(BASE_URL + "/?tab=jobs");
-  await tp.getByRole("button", { name: /Báo tôi khi có việc như này/ }).first().click();
-  const dlg = tp.getByRole("dialog", { name: "Thông báo việc mới" });
+  await tp.getByRole("button", { name: /Báo tôi khi có việc (như này|tương tự)|Alert me for jobs like this/ }).first().click();
+  const dlg = tp.getByRole("dialog", { name: /^(Thông báo việc mới|New job alert)$/ });
   await dlg.waitFor({ timeout: 5000 });
-  await dlg.getByRole("button", { name: "Dip/SNS" }).click();
-  await dlg.getByRole("button", { name: /Bật thông báo việc/ }).click();
+  await dlg.getByRole("button", { name: /Dip/ }).click();
+  await dlg.getByRole("button", { name: /Bật thông báo việc|Turn on job alerts/ }).click();
   await dlg.waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
   const nowAlerts = (await tech.req("/api/job-alerts")).data.alerts;
   R.check("UI3", "Bảng việc: 'Báo tôi khi có việc như này' → lưu thông báo Dip/SNS", nowAlerts.length === 3 && nowAlerts.some((a) => a.skill === "Dip/SNS"), JSON.stringify(nowAlerts));

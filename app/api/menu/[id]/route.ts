@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { parseMenuItem, parseMenuItemEn, toPublicMenuItem } from "@/lib/menu";
 import { menuI18nOne, translateMenuItemOnSave } from "@/lib/menuI18n";
 import { errorEn } from "@/lib/i18n/apiErrorsEn";
+import { refreshDesignsPage } from "@/lib/designsShowcase";
 
 // PATCH /api/menu/:id — sửa mẫu (cả bản đầy đủ, hoặc chỉ { active } để ẩn/hiện) · DELETE — xoá. Chỉ chủ menu.
 async function mine(id: string) {
@@ -24,6 +25,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // Chỉ bật/tắt hiển thị
   if (Object.keys(body).length === 1 && typeof body.active === "boolean") {
     const row = await prisma.menuItem.update({ where: { id }, data: { active: body.active } });
+    refreshDesignsPage();
     return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) });
   }
   const parsed = parseMenuItem(body);
@@ -34,7 +36,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // tự hết hiệu lực (mã băm bản gốc đổi) và được dịch lại sau khi trả lời.
   const en = parseMenuItemEn(body);
   if (en.nameEn || en.descriptionEn) await translateMenuItemOnSave(row, en).catch(() => {});
-  else after(() => translateMenuItemOnSave(row).catch(() => {}));
+  else after(() => translateMenuItemOnSave(row).catch(() => {}).then(refreshDesignsPage));
+  refreshDesignsPage(); // /designs (ISR 300 s) hiện ngay ảnh / giá mới
   return NextResponse.json({ item: toPublicMenuItem(row, true, await menuI18nOne(row)) });
 }
 
@@ -43,5 +46,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const r = await mine(id);
   if ("error" in r) return r.error;
   await prisma.menuItem.delete({ where: { id } });
+  refreshDesignsPage();
   return NextResponse.json({ ok: true });
 }

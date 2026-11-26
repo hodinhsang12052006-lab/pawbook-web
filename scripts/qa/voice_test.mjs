@@ -69,15 +69,15 @@ R.check("V5", "Hộp thư: xem trước ghi '🎤 Tin nhắn thoại'", preview)
 // V6: nhật ký cuộc gọi là bong bóng gọn phía người gọi + "Gọi lại"
 await A.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: "missed:audio", type: "CALL" }, headers: A.h });
 await B.page.goto(BASE_URL + `/messages?to=${A.me.id}`);
-await B.page.getByRole("button", { name: "Gọi lại" }).first().waitFor({ timeout: 15000 }).catch(() => {});
-const missed = B.page.locator("p", { hasText: /^Cuộc gọi thoại nhỡ$/ }).last();
+await B.page.getByRole("button", { name: /^(Gọi lại|Call back)$/ }).first().waitFor({ timeout: 15000 }).catch(() => {});
+const missed = B.page.locator("p", { hasText: /^(Cuộc gọi thoại nhỡ|Missed voice call)$/ }).last();
 const okMissed = await missed.waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-const card = okMissed ? await missed.evaluate((e) => { let n = e; while (n && !(n.className || "").toString().includes("rounded-[20px]")) n = n.parentElement; const r = n?.getBoundingClientRect(); return r ? { w: Math.round(r.width), left: Math.round(r.left) } : null; }) : null;
-const callBack = await B.page.getByRole("button", { name: "Gọi lại" }).count();
+const card = okMissed ? await missed.evaluate((e) => { let n = e; n = e.closest(".m-call"); const r = n?.getBoundingClientRect(); return r ? { w: Math.round(r.width), left: Math.round(r.left) } : null; }) : null;
+const callBack = await B.page.getByRole("button", { name: /^(Gọi lại|Call back)$/ }).count();
 R.check("V6", "Cuộc gọi nhỡ: bong bóng gọn (≤ 240px) nằm phía người gọi, có 'Gọi lại'", okMissed && card && card.w <= 240 && callBack > 0, JSON.stringify({ card, callBack }));
 
 // V7: nút đính kèm nhận cả ảnh lẫn video
-const [chooser] = await Promise.all([B.page.waitForEvent("filechooser", { timeout: 8000 }).catch(() => null), B.page.getByRole("button", { name: "Gửi ảnh hoặc video" }).click()]);
+const [chooser] = await Promise.all([B.page.waitForEvent("filechooser", { timeout: 8000 }).catch(() => null), (async () => { await B.page.locator(".m-cbtn[aria-expanded]").filter({ visible: true }).first().click(); await B.page.getByRole("menuitem", { name: /^(Gửi ảnh hoặc video|Send a photo or video)$/ }).click(); })() /* ảnh / video nằm trong menu ＋ (đính kèm) */]);
 const accept = chooser ? await chooser.element().getAttribute("accept") : null;
 R.check("V7", "Nút đính kèm chọn được cả ảnh và video", accept === "image/*,video/*", String(accept));
 

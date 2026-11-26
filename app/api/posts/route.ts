@@ -12,6 +12,7 @@ import { isLocale, type Locale } from "@/lib/i18n/config";
 import { localeFromRequest } from "@/lib/i18n/server";
 import { Market, PostType } from "@prisma/client";
 import { dropStaleOfficial, officialPostNot } from "@/lib/feedFreshness";
+import { refreshDesignsPage } from "@/lib/designsShowcase";
 
 const PAGE_SIZE = 12;
 const VALID_POST_TYPES = ["GENERAL", "SHOWCASE", "JOB"];
@@ -270,6 +271,9 @@ export async function POST(req: NextRequest) {
     if (author?.role === "ADMIN" && !anonymous && typeof body.contentEn === "string" && body.contentEn.trim()) {
       await savePostEn(post.id, body.contentEn.slice(0, 4000));
     }
+
+    // Bài kèm ảnh tay nghề → "Ảnh thật từ thợ & tiệm" ở /designs (trang ISR 300 s) hiện ngay
+    if (!anonymous && safeMediaUrls.length) refreshDesignsPage();
 
     if (anonymous) {
       const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });

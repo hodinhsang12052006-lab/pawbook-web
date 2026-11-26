@@ -108,11 +108,20 @@ try {
   await tp.evaluate(() => sessionStorage.removeItem("pn_fomo_session"));
   await tp.goto(BASE_URL + "/?tab=feed");
   const toast = tp.locator('[role="status"]').filter({ has: tp.getByRole("button", { name: /^(Ẩn thông báo|Dismiss)$/ }) });
+  // Toast chỉ kể hoạt động THẬT 14 ngày qua (/api/activity) — DB không có hoạt động nào thì toast phải im lặng
+  const activity = await tp.request.get(BASE_URL + "/api/activity").then((r) => r.json()).catch(() => []);
+  const hasActivity = Array.isArray(activity) && activity.length > 0;
   const appeared = await toast.waitFor({ timeout: 34000 }).then(() => true).catch(() => false);
   const label = appeared ? await toast.locator("p").first().innerText() : "";
-  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /VIỆC MỚI|TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG|TỪ NHÓM CỘNG ĐỒNG|ĐĂNG HỘ TIỆM|NEW JOB|COMMUNITY GROUPS|POSTED FOR SALON|TECH UPDATE|POST/i.test(label), label);
+  if (!hasActivity) {
+    R.check("M8", "Không có hoạt động thật → không hiện toast (không bịa)", !appeared, label);
+    R.check("M9", "Đóng toast", true, "không có hoạt động — bỏ qua");
+  } else
+  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared &&/VIỆC MỚI|TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG|TỪ NHÓM CỘNG ĐỒNG|ĐĂNG HỘ TIỆM|NEW JOB|COMMUNITY GROUPS|POSTED FOR SALON|TECH UPDATE|POST/i.test(label), label);
   await tp.screenshot({ path: `${OUT}/m_fomo.png` });
-  if (appeared) {
+  if (!hasActivity) {
+    // đã kiểm ở trên
+  } else if (appeared) {
     await toast.getByRole("button", { name: /^(Ẩn thông báo|Dismiss)$/ }).click();
     await tp.waitForTimeout(400);
     const gone = (await toast.count()) === 0;

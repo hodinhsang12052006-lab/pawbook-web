@@ -24,7 +24,7 @@ try {
   const pid = `cqa${t}`;
   await db.execute({ sql: `INSERT INTO "Post" (id, authorId, content, postType, mediaUrls, createdAt) VALUES (?, ?, ?, 'GENERAL', '[]', ?)`, args: [pid, adminId, `💬 Tiệm bạn chia turn kiểu nào? ${t}`, Date.now()] });
   await db.execute({ sql: `INSERT INTO "PostPoll" (postId, question, options) VALUES (?, ?, ?)`, args: [pid, "Tiệm bạn chia turn kiểu nào?", JSON.stringify(["Xoay vòng", "Theo tiền", "Chủ chia", "Khách chọn"])] });
-  const feed = await fetch(BASE_URL + "/api/posts").then((r) => r.json());
+  const feed = await fetch(BASE_URL + "/api/posts?lang=vi") /* bài chính thức chỉ có tiếng Việt: bảng tin EN bỏ qua (chưa dịch) */.then((r) => r.json());
   const fp = feed.posts.find((p) => p.id === pid);
   R.check("V1", "Bảng tin trả thăm dò: câu hỏi + 4 lựa chọn, 0 phiếu", fp?.poll?.options?.length === 4 && fp.poll.total === 0 && fp.poll.myVote === null);
   const u1 = await registerUser({ name: "Thợ Bình Chọn" }); await u1.client.login(u1.body.email, u1.body.password);
@@ -43,7 +43,7 @@ try {
   const sec = `Chủ tiệm bắt mình làm 7 ngày không nghỉ, mình nên làm sao? ${t}`;
   const ap = await w.client.req("/api/posts", { method: "POST", json: { content: sec, anonymous: true } });
   const anonId = ap.data.id;
-  const before = await fetch(BASE_URL + "/api/posts").then((r) => r.json());
+  const before = await fetch(BASE_URL + "/api/posts?lang=vi") /* bài chính thức chỉ có tiếng Việt: bảng tin EN bỏ qua (chưa dịch) */.then((r) => r.json());
   R.check("A1", "Gửi tâm sự ẩn danh → chờ duyệt, CHƯA hiện trên bảng tin", ap.status === 201 && ap.data.pending === true && !before.posts.some((p) => p.id === anonId));
   const extra = [];
   for (let i = 0; i < 3; i++) extra.push((await w.client.req("/api/posts", { method: "POST", json: { content: `Tâm sự thêm ${i} ${t}`, anonymous: true } })).status);
@@ -54,7 +54,7 @@ try {
   const pendItem = pend.data.pending?.find((p) => p.id === anonId);
   R.check("A3", "Admin thấy bài chờ duyệt — chỉ vai trò + bang, KHÔNG thấy tên người gửi", !!pendItem && pendItem.state === "TX" && !JSON.stringify(pend.data).includes("Bí Mật") && !JSON.stringify(pend.data).includes(wid));
   await a.client.req("/api/admin/anon", { method: "POST", json: { postId: anonId, decision: "approve" } });
-  const after = await fetch(BASE_URL + "/api/posts").then((r) => r.json());
+  const after = await fetch(BASE_URL + "/api/posts?lang=vi") /* bài chính thức chỉ có tiếng Việt: bảng tin EN bỏ qua (chưa dịch) */.then((r) => r.json());
   const shown = after.posts.find((p) => p.id === anonId);
   const raw = JSON.stringify(shown || {});
   R.check("A4", "Duyệt → lên bảng tin dưới tên 'Thợ ẩn danh', KHÔNG có id/tên/thành phố người đăng", !!shown && /^(Thợ ẩn danh|Anonymous nail tech)$/.test(shown.author.name) && shown.author.id === null && shown.city === null && !raw.includes("Bí Mật") && !raw.includes(wid) && !raw.includes("Houston"), raw.slice(0, 200));

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { deletePostEn } from "@/lib/postEn";
+import { refreshDesignsPage } from "@/lib/designsShowcase";
 
 // DELETE /api/posts/[id] — tác giả tự xóa bài của mình, hoặc ADMIN gỡ bài vi
 // phạm (yêu cầu kiểm duyệt nội dung người dùng của App Store 1.2). Like và
@@ -32,6 +33,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
     await prisma.post.delete({ where: { id } });
     await deletePostEn(id); // bản tiếng Anh của bài chính thức (nếu có)
+    refreshDesignsPage(); // bài có ảnh bị xoá → /designs (ISR) không còn hiện ảnh đó
     return NextResponse.json({ deleted: true });
   } catch (error) {
     console.error("DELETE /api/posts/[id] error:", error);

@@ -16,6 +16,8 @@ import java.util.Map;
  *    lại mọi sự kiện chưa ai nghe (retainUntilConsumed) → nội dung từng tin nằm mãi trong bộ nhớ.
  *  - data.type == "read" (+ ts = mốc đọc, ms): hội thoại đã được đọc ở thiết bị khác → gỡ các
  *    tin cũ hơn mốc đó khỏi thông báo.
+ *  - data.type == "call" / "call-end" (DATA-ONLY, build ≥ 4 — lib/fcm.ts nativeCallMinBuild): thông báo cuộc gọi đến
+ *    (Trả lời / Từ chối, chuông lặp) và tin kết thúc cùng tag (gỡ / "Cuộc gọi nhỡ") — CallNotifications.
  *  - Mọi tin khác: giữ nguyên hành vi của plugin (FCM tự hiện tin "notification" khi app ở
  *    nền, kênh theo android.notification.channel_id hoặc mặc định "general"; app đang mở →
  *    sự kiện JS).
@@ -40,6 +42,11 @@ public class PawNailMessagingService extends MessagingService {
         Map<String, String> data = remoteMessage.getData();
         String type = data.get("type");
         boolean dataOnly = remoteMessage.getNotification() == null;
+        // FCM hạ ưu tiên tin "high" của app nếu chúng thường không hiện thông báo (vd "call-end" đã nghe / từ chối chỉ gỡ
+        // thông báo) — ghi lại để thấy trên máy thử nghiệm (adb logcat -s PawNailFCM) trước khi nó làm cuộc gọi đến tới muộn.
+        if (remoteMessage.getPriority() != remoteMessage.getOriginalPriority()) {
+            Log.w(TAG, "priority lowered: " + type + " " + remoteMessage.getOriginalPriority() + " -> " + remoteMessage.getPriority());
+        }
 
         if (dataOnly && "chat".equals(type)) {
             try {
@@ -47,6 +54,24 @@ public class PawNailMessagingService extends MessagingService {
             } catch (Throwable t) {
                 // Không bao giờ để một payload lạ làm sập tiến trình.
                 Log.w(TAG, "chat notification failed: " + t.getClass().getSimpleName());
+            }
+            return;
+        }
+        // Cuộc gọi (data-only, máy chủ chỉ gửi cho build ≥ 4): app tự vẽ thông báo đổ chuông / tự gỡ hoặc thay bằng
+        // "Cuộc gọi nhỡ" (CallNotifications). Không chuyển cho JS (cùng lý do với tin chat).
+        if (dataOnly && "call".equals(type)) {
+            try {
+                CallNotifications.onIncoming(getApplicationContext(), data, remoteMessage.getSentTime());
+            } catch (Throwable t) {
+                Log.w(TAG, "call notification failed: " + t.getClass().getSimpleName());
+            }
+            return;
+        }
+        if (dataOnly && "call-end".equals(type)) {
+            try {
+                CallNotifications.onEnd(getApplicationContext(), data);
+            } catch (Throwable t) {
+                Log.w(TAG, "call end failed: " + t.getClass().getSimpleName());
             }
             return;
         }

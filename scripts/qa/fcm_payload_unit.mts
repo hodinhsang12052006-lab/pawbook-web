@@ -1,6 +1,6 @@
 // Kiểm thử THUẦN (không mạng, không DB) cho thông báo đẩy app native:
 //   dạng tin FCM (chat data-only cho app Android build ≥ 3 · dạng notification + kênh cho bản cũ / thông báo khác ·
-//   cuộc gọi → kênh "calls") · ngân sách byte · cắt chuỗi không vỡ emoji · build lưu trong p256dh ("native:<build>") ·
+//   cuộc gọi → kênh "calls"; app build ≥ 4: cuộc gọi data-only "call" / "call-end", build ≤ 3 giữ nguyên) · ngân sách byte · cắt chuỗi không vỡ emoji · build lưu trong p256dh ("native:<build>") ·
 //   ảnh đại diện an toàn · tiêu đề / link mở đúng cuộc trò chuyện · web push không mang phần dành cho app.
 //   env -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN npx tsx scripts/qa/fcm_payload_unit.mts
 if (process.env.TURSO_DATABASE_URL || process.env.TURSO_AUTH_TOKEN) {
@@ -267,6 +267,67 @@ ok("F19", "Lỗi FCM: 404 / UNREGISTERED / INVALID_ARGUMENT về token → token
   ok("F35", "Thông báo khác giữ nguyên: không android.ttl / collapse_key / apns headers; web push TTL 24 h, không Topic",
     !("ttl" in other.android) && !("collapse_key" in other.android) && !other.apns.headers && webPushOptions({}).TTL === 86400 && !("topic" in webPushOptions({})) &&
       !("topic" in webPushOptions({ collapseKey: "has space" })), other);
+}
+
+// ---------- 9. Cuộc gọi tới app Android build ≥ 4: data-only, app tự vẽ (Trả lời / Từ chối) — build ≤ 3 giữ nguyên ----------
+{
+  const { incomingCallPush, callEndPush } = await import("../../lib/calls/callPush");
+  const { webPushBody } = await import("../../lib/push");
+  const { NATIVE_CALL_MIN_BUILD, nativeCallMinBuild, isNativeCallPayload } = await import("../../lib/fcm");
+  type AnyMsg = Msg & { apns?: unknown };
+  const NOW = 1_800_000_000_000;
+  const TOKEN = "eyJjIjoidV9jYWxsZXIiLCJlIjoidV9jYWxsZWUiLCJpIjoiYWJjMTIzeHl6In0.c2lnbmF0dXJlLXNpZ25hdHVyZS1zaWduYXR1cmU";
+  const AVATAR = "https://res.cloudinary.com/demo/image/upload/c_fill,g_face,w_256,h_256,q_auto,f_jpg/v1/a.jpg";
+  const inc = incomingCallPush({ callId: "abc123xyz", callType: "video", callerId: "u_caller", callerName: "Lan  Nguyen", callToken: TOKEN, callerAvatar: AVATAR, now: NOW });
+  // sendPush splits by locale exactly like this (lib/push.ts) — the EN recipient's payload
+  const incEn = { ...inc, title: inc.en!.title!, body: inc.en!.body!, stale: inc.en!.stale };
+  const m4 = build("tok4", 4, incEn) as unknown as AnyMsg;
+  const d = m4.data;
+  const KEYS = ["type", "v", "callId", "callType", "callerId", "name", "title", "body", "url", "tag", "avatar", "token", "exp", "mtitle", "mbody"];
+  ok("F40", "Mốc build cuộc gọi native = 4 (versionCode 4); build 4 + cuộc gọi đến → DATA-ONLY (không notification), đủ 15 khoá, mọi giá trị là chuỗi",
+    NATIVE_CALL_MIN_BUILD === 4 && nativeCallMinBuild() === 4 && !("notification" in m4) && !("notification" in m4.android) && !("apns" in m4) &&
+      KEYS.every((k) => k in d) && Object.keys(d).length === KEYS.length && Object.values(d).every((v) => typeof v === "string"), m4);
+  ok("F41", "type=call: callId / callType / callerId / tên đã gọn / token / exp = gửi + 60 s / ảnh an toàn; title = 'Incoming video call' (theo ngôn ngữ người nhận), mtitle = 'Missed video call from …'; mở ?to=<người gọi>; tag pn-call-<callId>",
+    d.type === "call" && d.v === "1" && d.callId === "abc123xyz" && d.callType === "video" && d.callerId === "u_caller" && d.name === "Lan Nguyen" && d.token === TOKEN &&
+      d.exp === String(NOW + 60_000) && d.avatar === AVATAR && d.title === "Incoming video call" && d.mtitle === "Missed video call from Lan Nguyen" && d.mbody === "Tap to call back." &&
+      d.url === "/messages?to=u_caller" && d.tag === "pn-call-abc123xyz", d);
+  ok("F42", "android: priority high, ttl 60s, collapse_key call-<callId> (tin kết thúc chưa giao thay tin 'đang gọi' chưa giao)",
+    m4.android.priority === "high" && m4.android.ttl === "60s" && m4.android.collapse_key === "call-abc123xyz", m4.android);
+  // builds ≤ 3 / unknown: exactly today's payload — and the call token never leaves in it
+  const legacy = [3, 2, null].map((b) => build("tokOld", b, inc) as unknown as AnyMsg);
+  ok("F43", "Build 3 / 2 / chưa rõ build → dạng notification như hôm nay (kênh calls, tag, ttl 60s, collapse_key), data chỉ url + tag — KHÔNG mang call token / exp",
+    legacy.every((m) => !!m.notification && m.android.notification?.channel_id === "calls" && m.android.notification?.tag === "pn-call-abc123xyz" && m.android.ttl === "60s" &&
+      m.android.collapse_key === "call-abc123xyz" && Object.keys(m.data).sort().join() === "tag,url" && !JSON.stringify(m).includes(TOKEN)), legacy[0]);
+  const noToken = incomingCallPush({ callId: "abc123xyz", callType: "audio", callerId: "u_caller", callerName: "Lan", now: NOW });
+  const badId = { ...inc, call: { ...inc.call!, callId: "../x" } };
+  ok("F44", "Thiếu call token / callId lạ → build 4 vẫn nhận dạng notification cũ (không bao giờ data-only thiếu dữ liệu cho nút Từ chối)",
+    !!(build("tok4", 4, noToken) as unknown as AnyMsg).notification && !!(build("tok4", 4, badId) as unknown as AnyMsg).notification && !isNativeCallPayload(noToken.call) && isNativeCallPayload(inc.call));
+  process.env.NATIVE_CALL_MIN_BUILD = "5";
+  const gated = build("tok4", 4, inc) as unknown as AnyMsg;
+  const gated5 = build("tok5", 5, inc) as unknown as AnyMsg;
+  delete process.env.NATIVE_CALL_MIN_BUILD;
+  ok("F45", "NATIVE_CALL_MIN_BUILD=5 → build 4 nhận dạng notification, build 5 data-only (nâng mốc không cần build lại)", !!gated.notification && gated5.data.type === "call" && !gated5.notification);
+  const ends = (["missed", "answered", "declined"] as const).map((outcome) => {
+    const p = callEndPush({ callId: "abc123xyz", callType: "audio", callerId: "u_caller", callerName: "Lan", outcome });
+    return { p, m: build("tok4", 4, { ...p, title: p.en!.title!, body: p.en!.body! }) as unknown as AnyMsg, legacy: build("tok3", 3, p) as unknown as AnyMsg };
+  });
+  ok("F46", "Tin kết thúc → build 4: data-only type=call-end + outcome (missed / answered / declined), cùng tag + collapse_key; missed giữ 24 h + 'Missed call from Lan' / 'Tap to call back.'; answered / declined 1 h",
+    ends.every(({ m }, i) => !m.notification && m.data.type === "call-end" && m.data.outcome === ["missed", "answered", "declined"][i] && m.data.tag === "pn-call-abc123xyz" &&
+      m.android.collapse_key === "call-abc123xyz" && m.android.priority === "high" && m.data.callId === "abc123xyz" && m.data.callerId === "u_caller" && !("token" in m.data)) &&
+      ends[0].m.android.ttl === "86400s" && ends[0].m.data.title === "Missed call from Lan" && ends[0].m.data.body === "Tap to call back." && ends[1].m.android.ttl === "3600s" && ends[2].m.android.ttl === "3600s",
+    ends.map((e) => e.m));
+  ok("F47", "Tin kết thúc → build 3: dạng notification như hôm nay (kênh general, cùng tag)",
+    ends.every(({ legacy: m }) => !!m.notification && m.android.notification?.channel_id === "general" && m.android.notification?.tag === "pn-call-abc123xyz"), ends[0].legacy);
+  const w = JSON.parse(webPushBody(inc));
+  ok("F48", "Web push của cuộc gọi đến không mang call token / phần native (call)", !("call" in w) && !JSON.stringify(w).includes(TOKEN), w);
+  // the VI recipient's payload (lib/push.ts sends the base payload = Vietnamese, with stale = missed.vi)
+  const dv = (build("tok4vi", 4, inc) as unknown as AnyMsg).data;
+  const missVi = callEndPush({ callId: "abc123xyz", callType: "video", callerId: "u_caller", callerName: "Lan  Nguyen", outcome: "missed" });
+  const mv = (build("tok4vi", 4, missVi) as unknown as AnyMsg).data;
+  ok("F49", "Người nhận tiếng Việt, build 4: title 'Cuộc gọi video đến', body '… đang gọi cho bạn', mtitle 'Cuộc gọi video nhỡ từ Lan Nguyen' / 'Chạm để gọi lại.'; tin nhỡ: 'Cuộc gọi video nhỡ từ Lan Nguyen'",
+    dv.type === "call" && dv.title === "Cuộc gọi video đến" && dv.body.startsWith("Lan Nguyen đang gọi cho bạn") && dv.mtitle === "Cuộc gọi video nhỡ từ Lan Nguyen" &&
+      dv.mbody === "Chạm để gọi lại." && dv.token === TOKEN && mv.type === "call-end" && mv.outcome === "missed" && mv.title === "Cuộc gọi video nhỡ từ Lan Nguyen" && mv.body === "Chạm để gọi lại.",
+    { dv, mv });
 }
 
 console.log(`\nfcm payload unit: ${pass} passed, ${fail} failed`);

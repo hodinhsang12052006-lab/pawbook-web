@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import prisma from "@/lib/prisma";
-import { clipText, fcmEnabled, parseNativeBuild, richChatMinBuild, sendFcm, sendFcmRead, type FcmChannel, type FcmChat } from "@/lib/fcm";
+import { clipText, fcmEnabled, parseNativeBuild, richChatMinBuild, sendFcm, sendFcmRead, type FcmCall, type FcmChannel, type FcmChat } from "@/lib/fcm";
 import { apnsEnabled, sendApns } from "@/lib/apns";
 import { getUserLocales } from "@/lib/userLocale";
 
@@ -40,6 +40,11 @@ export interface PushPayload {
   stale?: { title: string; body: string };
   /** call-end "đã trả lời / từ chối ở máy khác": chỉ thay thông báo đang có, không tự hiện nếu đang mở PawNail. */
   quiet?: boolean;
+  /**
+   * Cuộc gọi: app Android build ≥ 4 (lib/fcm.ts nativeCallMinBuild) nhận tin data-only và tự vẽ thông báo (Trả lời /
+   * Từ chối, chuông lặp; tin kết thúc gỡ / thay đúng thông báo đó). Web push / iPhone / app cũ bỏ qua trường này.
+   */
+  call?: FcmCall;
 }
 
 /** Web Push "Topic" header: ≤ 32 ký tự base64url (RFC 8030). */

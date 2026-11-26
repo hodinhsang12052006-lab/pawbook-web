@@ -417,6 +417,30 @@ try {
     const cs = fcm.sends.find((x) => x.m.token === rich)?.m;
     R.check("NP12", "Cuộc gọi đến → thông báo kênh 'calls', link ?to=<người gọi>", cs?.notification && cs.android?.notification?.channel_id === "calls" && cs.data?.url === `/messages?to=${owner.userId}`, String(JSON.stringify(cs)).slice(0, 240));
 
+    // App versionCode 4: cuộc gọi data-only (app tự vẽ: Trả lời / Từ chối) — build 3 vẫn dạng notification như trên.
+    const v4 = "fcm" + crypto.randomBytes(24).toString("hex") + ":APA91b" + crypto.randomBytes(20).toString("hex");
+    await t.client.req("/api/push/native", { method: "POST", json: { token: v4, platform: "android", build: 4 } });
+    fcm.sends.length = 0;
+    const callId4 = "qa" + Date.now().toString(36).slice(-8);
+    const offer4 = await owner.req("/api/calls", { method: "POST", json: { targetId: t.client.userId, action: "offer", callType: "video", callId: callId4 } });
+    await sleep(3000);
+    const c4 = fcm.sends.find((x) => x.m.token === v4)?.m;
+    const c3 = fcm.sends.find((x) => x.m.token === rich)?.m;
+    R.check("NP12b", "Build 4 → cuộc gọi đến DATA-ONLY type=call (callId, video, người gọi, call token = token của cuộc gọi, exp, tag pn-call-<id>, ttl 60s); build 3 cùng lúc vẫn notification, không có token",
+      !!c4 && !c4.notification && c4.data?.type === "call" && c4.data.callId === callId4 && c4.data.callType === "video" && c4.data.callerId === owner.userId && c4.data.token === offer4.data?.callToken &&
+        Number(c4.data.exp) > Date.now() && c4.data.tag === `pn-call-${callId4}` && c4.android?.ttl === "60s" && c4.android?.priority === "high" &&
+        !!c3?.notification && !JSON.stringify(c3).includes(String(offer4.data?.callToken)),
+      String(JSON.stringify({ c4: c4 && { d: { ...c4.data, token: c4.data?.token?.slice(0, 8) }, a: c4.android }, c3: c3 && c3.android })).slice(0, 300));
+    fcm.sends.length = 0;
+    await owner.req("/api/calls", { method: "POST", json: { targetId: t.client.userId, action: "reject", callId: callId4, callToken: offer4.data?.callToken, reason: "cancel" } });
+    await sleep(3000);
+    const e4 = fcm.sends.find((x) => x.m.token === v4)?.m;
+    const e3 = fcm.sends.find((x) => x.m.token === rich)?.m;
+    R.check("NP12c", "Người gọi huỷ → build 4: data-only type=call-end outcome=missed (cùng tag, collapse_key); build 3: notification 'Cuộc gọi nhỡ' cùng tag",
+      !!e4 && !e4.notification && e4.data?.type === "call-end" && e4.data.outcome === "missed" && e4.data.tag === `pn-call-${callId4}` && e4.android?.collapse_key === `call-${callId4}` &&
+        !!e3?.notification && e3.android?.notification?.tag === `pn-call-${callId4}`,
+      String(JSON.stringify({ e4: e4 && { d: e4.data, a: e4.android }, e3: e3 && e3.android })).slice(0, 300));
+
     // ?c=<id> ngoài danh sách đã tải → app tải riêng cuộc trò chuyện đó (chỉ thành viên).
     const outsider = new Client();
     await outsider.login(SEED_TECH);

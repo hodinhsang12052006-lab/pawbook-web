@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.WindowManager;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -83,6 +84,9 @@ public class MainActivity extends BridgeActivity {
                     // Tải trang mới = JS cũ (và hội thoại đang mở nó báo) không còn: trang
                     // mới sẽ tự gọi PawNailNative.setActiveConversation lại nếu mở chat.
                     AppState.setActiveConversation(null);
+                    // ... và cuộc gọi WebRTC của trang cũ cũng đã mất (tải lại / điều hướng cứng giữa cuộc gọi): trang
+                    // không kịp gọi stopOngoingCall → tắt foreground service / chế độ âm thanh / giữ màn hình ở đây.
+                    endNativeCall();
                     super.onPageStarted(view, url, favicon);
                 }
 
@@ -136,12 +140,45 @@ public class MainActivity extends BridgeActivity {
         // Quay lại app đang mở sẵn một hội thoại: thông báo của hội thoại đó không còn cần.
         String active = AppState.getActiveConversation();
         if (active != null) ChatNotifications.clearAsync(this, active);
+        // Cuộc gọi đang đổ chuông: web đổ chuông trong app → thôi chuông của thông báo (không kêu 2 lần).
+        Context app = getApplicationContext();
+        ChatNotifications.runAsync(() -> CallNotifications.cancelRinging(app));
     }
 
     @Override
     public void onPause() {
         AppState.setMainResumed(false);
         super.onPause();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        // Cảm biến tiệm cận của cuộc gọi thoại (loa trong) chỉ khi app đang hiện — như app Điện thoại.
+        CallAudio.get().setUiVisible(this, true);
+    }
+
+    @Override
+    public void onStop() {
+        CallAudio.get().setUiVisible(this, false);
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        // WebView (và cuộc gọi WebRTC trong nó) bị huỷ: thôi giữ foreground service / chế độ âm thanh cuộc gọi. Plugin cũng
+        // làm việc này (handleOnDestroy) — ở đây cho chắc khi Bridge không được tạo.
+        endNativeCall();
+        super.onDestroy();
+    }
+
+    /** Cuộc gọi của WebView chính đã mất: tắt "đang trong cuộc gọi", trả chế độ âm thanh, thôi giữ màn hình sáng. */
+    private void endNativeCall() {
+        if (OngoingCallService.isRunning()) OngoingCallService.stop(this);
+        CallAudio.get().end(this);
+        try {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } catch (RuntimeException ignored) {}
     }
 
     /**
@@ -160,8 +197,20 @@ public class MainActivity extends BridgeActivity {
         }
         String path = intent.getStringExtra(AppLinks.EXTRA_URL);
         String cid = intent.getStringExtra(ChatNotifications.EXTRA_CID);
+        String answerCall = intent.getStringExtra(CallNotifications.EXTRA_ANSWER);
+        String openCall = intent.getStringExtra(CallNotifications.EXTRA_OPEN);
         boolean trusted = AppLinks.hasValidKey(this, intent);
         stripLaunchExtras(intent);
+        // Thông báo cuộc gọi đến (CallNotifications, chỉ intent có khoá nội bộ): gỡ thông báo (dừng chuông — web đổ chuông
+        // trong app); nút "Trả lời" → web tự nghe máy đúng cuộc gọi đó (lấy bằng takeCallAction lúc mở nguội, hoặc sự
+        // kiện callAction khi app đang chạy).
+        if (trusted && CallLogic.isCallId(answerCall)) {
+            CallNotifications.cancel(this, answerCall);
+            AppState.setPendingCallAction("answer", answerCall);
+            PawNailNativePlugin.emitCallAction("answer", answerCall);
+        } else if (trusted && CallLogic.isCallId(openCall)) {
+            CallNotifications.cancel(this, openCall);
+        }
         if (!AppLinks.isSafePath(path)) return null;
         if (!trusted && !AppLinks.isConversationOpenPath(path)) {
             Log.w(TAG, "ignored untrusted pn_url");
@@ -178,6 +227,8 @@ public class MainActivity extends BridgeActivity {
         if (intent == null) return;
         intent.removeExtra(AppLinks.EXTRA_URL);
         intent.removeExtra(ChatNotifications.EXTRA_CID);
+        intent.removeExtra(CallNotifications.EXTRA_ANSWER);
+        intent.removeExtra(CallNotifications.EXTRA_OPEN);
         intent.removeExtra(AppLinks.EXTRA_KEY);
     }
 
@@ -220,7 +271,14 @@ public class MainActivity extends BridgeActivity {
         }
         AtomicBoolean done = new AtomicBoolean(false);
         Runnable hard = () -> {
-            if (done.compareAndSet(false, true)) wv.loadUrl(target);
+            if (!done.compareAndSet(false, true)) return;
+            // Đang trong cuộc gọi (WebRTC trong chính WebView này): tải lại trang = rớt cuộc gọi. Chạm thông báo chat lúc
+            // đó chỉ đưa app lên trước; JS chậm / không điều hướng mềm được thì KHÔNG tải cứng.
+            if (OngoingCallService.isRunning() || CallAudio.get().isActive()) {
+                Log.w(TAG, "in a call: hard navigation skipped");
+                return;
+            }
+            wv.loadUrl(target);
         };
         try {
             String js =

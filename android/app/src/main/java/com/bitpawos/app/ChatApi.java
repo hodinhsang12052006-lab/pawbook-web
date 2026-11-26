@@ -117,6 +117,24 @@ final class ChatApi {
         }
     }
 
+    /**
+     * POST /api/calls reject (nút "Từ chối" của thông báo cuộc gọi — CallActionReceiver): giống endCall("decline") của
+     * web (components/chat/CallManager.tsx). callToken lấy từ tin đẩy của chính cuộc gọi đó.
+     */
+    static Result declineCall(String callerId, String callId, String callToken, String cookie, String ua, int connectMs, int readMs) {
+        try {
+            JSONObject body = new JSONObject();
+            body.put("action", "reject");
+            body.put("targetId", callerId);
+            body.put("callId", callId);
+            body.put("callToken", callToken);
+            body.put("reason", "decline");
+            return post("/api/calls", body, cookie, ua, connectMs, readMs);
+        } catch (JSONException e) {
+            return new Result(0);
+        }
+    }
+
     private static Result post(String path, JSONObject body, String cookie, String ua, int connectMs, int readMs) {
         if (cookie == null) return new Result(401);
         HttpURLConnection c = null;

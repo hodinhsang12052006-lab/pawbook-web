@@ -18,7 +18,7 @@ import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
 import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
-import { cleanCity, cleanSalonName, findPhone, foreignMarketSignal, isAdPost, isForeignCountry, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
+import { cleanCity, cleanSalonName, findPhone, foreignMarketSignal, hasAuContext, isAdPost, isForeignCountry, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
 import { parseMarketPhone } from "@/lib/phoneFormat";
 import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
 
@@ -163,10 +163,15 @@ export type PreparedIngest =
 export function prepareIngest(input: IngestInput, blocked: Set<string>, opts: IngestOpts = {}): PreparedIngest {
   // NFKC: chữ in đậm kiểu Facebook ("𝗖𝗔̂̀𝗡 𝗧𝗛𝗢̛̣") / tiếng Việt tổ hợp (NFD) → chữ thường — lưu luôn bản NFKC để bộ lọc hiển thị khớp.
   const text = clean(input.text, 4000) ? String(input.text).normalize("NFKC").replace(/[<>]/g, "").slice(0, 4000) : "";
-  const p: ParsedJob = parseJobPost(text);
+  // Thị trường tool gửi kèm: "AU" cho phép nhận số doanh nghiệp Úc 1300 / 1800 / 13 dù bài không ghi gì về Úc; "US" thì
+  // không bao giờ (findPhone).
+  const toolMarket = input.market === "AU" || input.market === "US" ? input.market : null;
+  const p: ParsedJob = parseJobPost(text, { market: toolMarket });
   const assisted = !!opts.assisted;
-  // Ưu tiên trường tool đã tách
-  const ph = input.phone ? findPhone(String(input.phone)) ?? findPhone(String(input.phone).replace(/^\+?1?/, "")) : null;
+  // Ưu tiên trường tool đã tách (số 1300 trong ô SĐT: Úc khi tool hoặc nội dung bài nói là Úc)
+  const phoneHint = toolMarket ?? (hasAuContext(text) ? "AU" : null);
+  // (lần thử 2 cắt "1" / "+1" đầu cho số Mỹ viết lạ — không bao giờ dò số 1300 trên chuỗi đã cắt: market "US")
+  const ph = input.phone ? findPhone(String(input.phone), { market: phoneHint }) ?? findPhone(String(input.phone).replace(/^\+?1?/, ""), { market: "US" }) : null;
   const phone = ph?.e164 ?? p.phone;
   const phoneDisplay = ph?.display ?? p.phoneDisplay;
   const market0 = (input.market === "AU" || input.market === "US" ? input.market : null) ?? ph?.market ?? p.market;

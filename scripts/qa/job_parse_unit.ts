@@ -205,5 +205,18 @@ ok("G-hire-sale-words", "Bài tuyển có chữ \"sang tiệm / cần bán ghế
 ok("G-au-landline", "Số bàn Úc (02)/(03)/(07) được nhận; 02 → NSW, 03 → VIC, 07 → QLD, 08 / di động → không đoán",
   findPhone("Gọi (02) 5550 1234")?.e164 === "+61255501234" && stateFromAuPhone("+61255501234") === "NSW" && stateFromAuPhone("+61355501234") === "VIC" && stateFromAuPhone("+61755501234") === "QLD" && stateFromAuPhone("+61855501234") === null && stateFromAuPhone("+61412555019") === null);
 
+{
+  // Số doanh nghiệp Úc 1300 / 1800 / 13 xx xx: chỉ trong bài Úc (hoặc khi tool nói AU), không bao giờ thành số Mỹ.
+  const au1 = parseJobPost("Tiệm Lotus Nails ở Cabramatta NSW cần gấp thợ bột, $1,200/tuần. Gọi 1300 975 707");
+  const au2 = parseJobPost("Cần thợ chân tay nước ở Footscray, LH 13 19 75");
+  const au3 = parseJobPost("Cần thợ bột gấp, bao lương. Gọi 1800 975 708", { market: "AU" });
+  const us1 = parseJobPost("Cần thợ bột gấp ở Houston TX. Gọi 1300 975 707");
+  const us2 = parseJobPost("Cần thợ bột gấp ở Sydney. Gọi 1300 975 707", { market: "US" });
+  ok("G-au-business", "Bài Úc chỉ có số 1300 / 13 xx xx → SĐT +61…, AU, đúng bang; tool nói AU → nhận; bài Mỹ / tool nói US → không có SĐT",
+    au1.isHiring && au1.phone === "+611300975707" && au1.phoneDisplay === "1300 975 707" && au1.market === "AU" && au1.state === "NSW" &&
+      au2.phone === "+61131975" && au2.phoneDisplay === "13 19 75" && au2.state === "VIC" && au3.phone === "+611800975708" && us1.phone === null && us2.phone === null,
+    JSON.stringify([au1, au2, au3, us1, us2].map((p) => [p.phone, p.phoneDisplay, p.market, p.state])));
+}
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

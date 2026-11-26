@@ -163,6 +163,7 @@ async function stats(u) {
       if (k === "audio") out.micEnabled = tx.sender.track ? tx.sender.track.enabled : null;
       if (k === "video") {
         out.videoSending = !!tx.sender.track && tx.sender.track.readyState === "live";
+        out.videoEnabled = tx.sender.track ? tx.sender.track.enabled : null;
         out.videoTrackId = tx.sender.track?.id || null;
       }
     }
@@ -1054,6 +1055,274 @@ if (want("authblip")) {
     });
     await reset(A, B);
   }
+}
+
+// ============================== Android app shell (fake Capacitor bridge) ==============================
+// The page runs inside a FAKE Android app (window.androidBridge + Capacitor.PluginHeaders, as scripts/qa/
+// native_chat_ui_test.mjs): versionCode 4 exposes the PawNailNative call methods, versionCode 3 does not. Checks that
+// CallManager drives the native ongoing-call service / Speaker route / notification buttons — and that an old app keeps
+// today's behaviour (no native call, "left the app" when hidden).
+function fakeAndroidShell(cfg) {
+  window.androidBridge = { postMessage() {} };
+  const st = (window.__pn = { calls: [], listeners: {}, route: null, pending: cfg.pending || null, vibes: [] });
+  // the page's own ringtone vibrates [400, 200, 400] each ring cycle (lib/ringtone.ts): count it
+  try {
+    navigator.vibrate = (p) => {
+      st.vibes.push(p);
+      return true;
+    };
+  } catch {}
+  // cfg.token: this app already registered for push (lib/nativePush.ts savedToken) → the server sends it call pushes
+  if (cfg.token) {
+    try {
+      localStorage.setItem("pn_native_push_token", "qa-native-push-token");
+    } catch {}
+  }
+  const H = (name, promises, callbacks = []) => ({ name, methods: [...promises.map((n) => ({ name: n, rtype: "promise" })), ...callbacks.map((n) => ({ name: n, rtype: "callback" }))] });
+  const callMethods = ["startOngoingCall", "updateOngoingCall", "stopOngoingCall", "setAudioRoute", "getAudioState", "takeCallAction"];
+  const nativeMethods = ["getInfo", "setActiveConversation", "clearConversation", "clearAll", "openBubbleSettings", "openNotificationSettings", ...(cfg.build >= 4 ? callMethods : [])];
+  const audio = () => ({ active: true, route: st.route, earpiece: true, headset: false, bluetooth: false, ongoing: true });
+  window.Capacitor = {
+    PluginHeaders: [
+      H("App", ["getInfo", "getLaunchUrl", "getState", "minimizeApp", "exitApp", "removeAllListeners"], ["addListener", "removeListener"]),
+      H("PushNotifications", ["register", "unregister", "checkPermissions", "requestPermissions", "removeAllListeners", "getDeliveredNotifications", "removeDeliveredNotifications", "removeAllDeliveredNotifications"], ["addListener", "removeListener"]),
+      H("PawNailNative", nativeMethods, ["addListener", "removeListener"]),
+    ],
+    nativePromise(plugin, method, options) {
+      st.calls.push({ plugin, method, options: options ?? null, t: Date.now() });
+      switch (plugin + "." + method) {
+        case "App.getInfo":
+          return Promise.resolve({ name: "PawNail", id: "com.bitpawos.app", build: String(cfg.build), version: cfg.build >= 4 ? "1.3.0" : "1.2.0" });
+        case "App.getLaunchUrl":
+          return Promise.resolve({});
+        case "PushNotifications.checkPermissions":
+          return Promise.resolve({ receive: "prompt" });
+        case "PushNotifications.getDeliveredNotifications":
+          return Promise.resolve({ notifications: [] });
+        case "PawNailNative.getInfo":
+          return Promise.resolve({ firebase: true, sdk: 34, bubbles: true, bubblePref: "all", notificationsEnabled: !cfg.notifOff, messagesChannel: true, chat: 1, ...(cfg.build >= 4 ? { calls: 1, callsChannel: true } : {}) });
+        case "PawNailNative.startOngoingCall":
+          if (st.route === null) st.route = options?.video ? "speaker" : "earpiece";
+          return Promise.resolve({ started: true, audio: audio() });
+        case "PawNailNative.updateOngoingCall":
+          return Promise.resolve({ started: true, audio: audio() });
+        case "PawNailNative.stopOngoingCall":
+          st.route = null;
+          return Promise.resolve();
+        case "PawNailNative.setAudioRoute":
+          st.route = options?.route === "speaker" ? "speaker" : "earpiece";
+          return Promise.resolve(audio());
+        case "PawNailNative.getAudioState":
+          return Promise.resolve(audio());
+        case "PawNailNative.takeCallAction": {
+          const p = st.pending;
+          st.pending = null;
+          return Promise.resolve(p || {});
+        }
+        default:
+          return Promise.resolve({});
+      }
+    },
+    nativeCallback(plugin, method, options, cb) {
+      st.calls.push({ plugin, method, options: options ?? null, t: Date.now() });
+      if (method === "addListener" && cb) (st.listeners[plugin + ":" + options.eventName] ||= []).push(cb);
+      return "cb" + Math.random().toString(36).slice(2);
+    },
+  };
+  // what the app's notification buttons do: PawNailNative "callAction" event
+  window.__pnEmit = (data) => (st.listeners["PawNailNative:callAction"] || []).forEach((cb) => cb(data));
+}
+async function androidCtx(email, build, label, pending = null, extra = {}) {
+  const u = await userCtx(email, { device: "Pixel 7", label });
+  await u.ctx.addInitScript(fakeAndroidShell, { build, pending, ...extra });
+  return u;
+}
+const ringVibes = (u) => u.page.evaluate(() => (window.__pn?.vibes || []).filter((p) => Array.isArray(p) && p.length === 3).length);
+const nativeCalls = (u, method) => u.page.evaluate((m) => (window.__pn?.calls || []).filter((c) => c.plugin === "PawNailNative" && c.method === m).map((c) => c.options), method);
+const setHidden = (u, hidden) =>
+  u.page.evaluate((h) => {
+    Object.defineProperty(document, "visibilityState", { value: h ? "hidden" : "visible", configurable: true });
+    Object.defineProperty(document, "hidden", { value: h, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, hidden);
+const lastCallId = (u) => {
+  const d = incomingFor(u).at(-1)?.data;
+  try {
+    return (typeof d === "string" ? JSON.parse(d) : d)?.callId;
+  } catch {
+    return undefined;
+  }
+};
+
+if (want("native")) {
+  const N = await androidCtx("tech1.us@pawnailjobs.demo", 4, "B tech1 Android app v4");
+  await openChat(A, B.me.id);
+  await openChat(N, A.me.id);
+  await B.page.goto("about:blank"); // only the app rings for tech1
+  await step("native-1", "App v4: voice call answered → startOngoingCall {state connecting, video false, caller's name}, then updateOngoingCall {connected, since}; the desktop caller makes no native call", async () => {
+    await dial(A, "audio");
+    await phaseIs(N, "incoming", 20000);
+    await ctl(N, "answer").click();
+    await phaseIs(A, "connected", 30000);
+    await phaseIs(N, "connected", 30000);
+    const r = await until(async () => {
+      const s = await nativeCalls(N, "startOngoingCall");
+      const u = await nativeCalls(N, "updateOngoingCall");
+      return s.length === 1 && u.some((x) => x.state === "connected" && x.since > 0) ? { s, u } : null;
+    }, 10000);
+    const s = r.s[0];
+    const aNative = await A.page.evaluate(() => !!window.__pn);
+    return s.state === "connecting" && s.video === false && s.camera === false && /\S/.test(s.peerName) && !aNative ? true : { fail: JSON.stringify(r) };
+  });
+  await step("native-2", "App v4: Speaker button = the app's earpiece ↔ loudspeaker (setAudioRoute), label follows the route", async () => {
+    const btn = N.page.locator('[data-call-control="speaker"]').first();
+    await btn.waitFor({ timeout: 8000 });
+    const before = (await btn.innerText()).trim();
+    await btn.click();
+    await until(async () => ((await btn.innerText()).trim() === "Speaker" ? true : null), 5000);
+    const routes = (await nativeCalls(N, "setAudioRoute")).map((o) => o.route);
+    await btn.click();
+    await until(async () => ((await btn.innerText()).trim() === "Phone" ? true : null), 5000);
+    const routes2 = (await nativeCalls(N, "setAudioRoute")).map((o) => o.route);
+    return before === "Phone" && routes[0] === "speaker" && routes2[1] === "earpiece" ? true : { fail: JSON.stringify({ before, routes2 }) };
+  });
+  await step("native-3", "App v4 hidden during the call (service keeps the mic) → the other side does NOT get 'left the app'; audio still flows", async () => {
+    await setHidden(N, true);
+    await sleep(2500);
+    const away = await A.page.locator("[data-peer-away]").count();
+    await setHidden(N, false);
+    const g = await until(async () => {
+      const x = await growing(A, "aIn");
+      return x.ok ? x : null;
+    }, 10000);
+    return away === 0 && g.ok ? true : { fail: JSON.stringify({ away, g }) };
+  });
+  await step("native-4", "App v4: 'Hang up' on the ongoing-call notification (callAction hangup) → the call ends on both sides, stopOngoingCall", async () => {
+    await N.page.evaluate(() => window.__pnEmit({ action: "hangup" }));
+    await idle(N, 10000);
+    await idle(A, 10000);
+    const stops = await until(async () => ((await nativeCalls(N, "stopOngoingCall")).length >= 1 ? true : null), 8000);
+    return stops;
+  });
+  await reset(A, N);
+  await step("native-4b", "App v4 places the call: startOngoingCall {state calling} once the mic is open (while it rings), {connected} after the answer; caller hangs up → stopOngoingCall", async () => {
+    const stops0 = (await nativeCalls(N, "stopOngoingCall")).length;
+    const starts0 = (await nativeCalls(N, "startOngoingCall")).length;
+    const updates0 = (await nativeCalls(N, "updateOngoingCall")).length;
+    await dial(N, "audio");
+    await phaseIs(A, "incoming", 20000);
+    const s = await until(async () => (await nativeCalls(N, "startOngoingCall"))[starts0] || null, 8000);
+    await ctl(A, "answer").click();
+    await phaseIs(N, "connected", 30000);
+    const u = await until(async () => ((await nativeCalls(N, "updateOngoingCall")).slice(updates0).some((x) => x.state === "connected" && x.since > 0) ? true : null), 8000);
+    await ctl(N, "end").click();
+    await idle(A, 10000);
+    const stopped = await until(async () => ((await nativeCalls(N, "stopOngoingCall")).length > stops0 ? true : null), 8000);
+    return s.state === "calling" && u && stopped ? true : { fail: JSON.stringify(s) };
+  });
+  await reset(A, N);
+  await step("native-5","App v4: 'Answer' on the incoming-call notification (callAction answer + callId) → the ringing call is answered by itself; video call → startOngoingCall {video, camera}; hidden → its camera track is switched OFF while the other side sees 'Video paused', back on when visible", async () => {
+    await dial(A, "video");
+    await phaseIs(N, "incoming", 20000);
+    const callId = lastCallId(N);
+    await N.page.evaluate((id) => window.__pnEmit({ action: "answer", callId: id }), callId);
+    await phaseIs(N, "connected", 30000);
+    await phaseIs(A, "connected", 30000);
+    const s = (await nativeCalls(N, "startOngoingCall")).at(-1);
+    // the app keeps the call in the background with a microphone-only service: no frame may leave while A shows "paused"
+    await until(async () => ((await stats(N)).videoEnabled === true ? true : null), 8000);
+    await setHidden(N, true);
+    const paused = await until(async () => ((await A.page.locator('[data-peer-cam="paused"]').count()) ? true : null), 8000).then(() => true, () => false);
+    const hiddenEnabled = (await stats(N)).videoEnabled;
+    await setHidden(N, false);
+    const back = await until(async () => ((await stats(N)).videoEnabled === true && !(await A.page.locator('[data-peer-cam="paused"]').count()) ? true : null), 8000).then(() => true, () => false);
+    await ctl(A, "end").click();
+    await idle(N, 10000);
+    return s?.video === true && s?.camera === true && paused && hiddenEnabled === false && back ? true : { fail: JSON.stringify({ s, paused, hiddenEnabled, back }) };
+  });
+  await reset(A, N);
+  await step("native-6", "App v4: 'Decline' on the notification (callAction declined) → stops ringing here, the caller is told 'declined'", async () => {
+    await dial(A, "audio");
+    await phaseIs(N, "incoming", 20000);
+    await N.page.evaluate((id) => window.__pnEmit({ action: "declined", callId: id }), lastCallId(N));
+    await idle(N, 10000);
+    await A.page.getByText(/declined the call/).first().waitFor({ timeout: 10000 });
+    await idle(A, 10000);
+  });
+  await reset(A, N);
+  await N.ctx.close();
+  await step("native-7", "App v4 cold start from 'Answer' (takeCallAction → answer + callId): the page opens, the re-ring arrives and is answered by itself", async () => {
+    const seen = incomingFor(B).length;
+    await dial(A, "audio");
+    await until(async () => (incomingFor(B).length > seen && lastCallId(B) ? true : null), 15000);
+    const callId = lastCallId(B);
+    const N2 = await androidCtx("tech1.us@pawnailjobs.demo", 4, "B tech1 Android app v4 (cold)", { action: "answer", callId });
+    await N2.page.goto(BASE_URL + `/messages?to=${A.me.id}`);
+    try {
+      const ok = await phaseIs(N2, "connected", 35000).then(() => true).catch(() => false);
+      if (!ok) {
+        const diag = await N2.page.evaluate(() => ({
+          phase: document.querySelector("[data-call-phase]")?.getAttribute("data-call-phase") || "none",
+          calls: (window.__pn.calls || []).filter((c) => c.plugin === "PawNailNative").map((c) => c.method),
+        }));
+        return { fail: JSON.stringify({ callId, diag, aPhase: await A.page.locator("[data-call-phase]").getAttribute("data-call-phase").catch(() => "none"), incomings: incomingFor(B).length }) };
+      }
+      await phaseIs(A, "connected", 30000);
+      const taken = (await N2.page.evaluate(() => (window.__pn.calls || []).filter((c) => c.method === "takeCallAction").length)) >= 1;
+      await ctl(A, "end").click();
+      await idle(N2, 10000);
+      return taken;
+    } finally {
+      await reset(A, N2);
+      await N2.ctx.close();
+    }
+  });
+  const O = await androidCtx("tech1.us@pawnailjobs.demo", 3, "B tech1 Android app v3 (old)");
+  await openChat(O, A.me.id);
+  await step("native-8", "Old app (versionCode 3, no call methods): call works, no native call method is ever called (no 'not implemented'), hidden → the other side still sees 'left the app'", async () => {
+    const before = allErrors.length;
+    await connect(A, O, "audio");
+    await setHidden(O, true);
+    const away = await A.page.locator("[data-peer-away]").first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    await setHidden(O, false);
+    await ctl(A, "end").click();
+    await idle(O, 10000);
+    const called = await O.page.evaluate(() => (window.__pn.calls || []).filter((c) => c.plugin === "PawNailNative" && /Ongoing|Audio|CallAction/.test(c.method)).map((c) => c.method));
+    return away && called.length === 0 && allErrors.length === before ? true : { fail: JSON.stringify({ away, called, errs: allErrors.slice(before) }) };
+  });
+  await reset(A, O);
+  await O.ctx.close();
+  // The app's own notification rings while it is in the background (versionCode 4, push registered, notifications
+  // allowed): the hidden page must not ring a second time, and rings as soon as it is visible again. Notifications turned
+  // off for the app → the app cannot ring → the hidden page rings itself, as before.
+  for (const [id, notifOff] of [["native-9", false], ["native-10", true]]) {
+    const H = await androidCtx("tech1.us@pawnailjobs.demo", 4, `B tech1 Android app v4 (push on, notifications ${notifOff ? "OFF" : "on"})`, null, { token: true, notifOff });
+    await openChat(H, A.me.id);
+    await step(
+      id,
+      notifOff
+        ? "App v4 with its notifications turned OFF, in the background: the app cannot ring → the hidden page rings itself (as before)"
+        : "App v4 in the background with notifications on: the app's own notification rings → the hidden page does NOT ring too, and rings as soon as it is visible again",
+      async () => {
+        await sleep(1500); // PawNailNative.getInfo() read at start-up
+        await setHidden(H, true);
+        const v0 = await ringVibes(H);
+        await dial(A, "audio");
+        await phaseIs(H, "incoming", 20000);
+        await sleep(3500); // more than one ring cycle (2.5 s)
+        const hidden = (await ringVibes(H)) - v0;
+        await setHidden(H, false);
+        const shown = await until(async () => ((await ringVibes(H)) - v0 > hidden ? true : null), 6000).then(() => true, () => false);
+        await ctl(A, "cancel").click();
+        await idle(H, 10000);
+        if (notifOff) return hidden >= 1 ? true : { fail: JSON.stringify({ hidden, shown }) };
+        return hidden === 0 && shown ? true : { fail: JSON.stringify({ hidden, shown }) };
+      }
+    );
+    await reset(A, H);
+    await H.ctx.close();
+  }
+  await openChat(B, A.me.id);
 }
 
 // ============================== timeout ==============================

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { prismaCode, runExternalJobsSync } from "@/lib/jobFeeds/sync";
+import { alertIfIngestStale } from "@/lib/jobIngest/staleAlert";
 
 // Vercel Cron mỗi ngày (vercel.json) → lấy tin việc nail từ Adzuna (US + AU) vào bảng ExternalJob.
 // Bảo vệ bằng CRON_SECRET: Vercel tự gửi "Authorization: Bearer <CRON_SECRET>"; không có CRON_SECRET → từ chối.
@@ -23,6 +24,11 @@ function authed(req: Request) {
 export async function GET(req: Request) {
   if (!authed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const start = Date.now();
+  // Cùng cron hằng ngày: bot nhóm Facebook ngừng gửi > 24 giờ → email chủ (lib/jobIngest/staleAlert.ts). Lỗi ở đây không
+  // chặn việc đồng bộ Adzuna bên dưới.
+  await alertIfIngestStale()
+    .then((r) => console.log(`[ingest-alert] ${r}`))
+    .catch((e) => console.error(`[ingest-alert] failed: ${String((e as Error)?.message || e).slice(0, 120)}`));
   try {
     const s = await runExternalJobsSync({ deadline: start + FETCH_BUDGET_MS, workDeadline: start + WRITE_BUDGET_MS });
     const a = s.adzuna;

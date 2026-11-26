@@ -832,7 +832,8 @@ if (want("perm")) {
       await B.page.setViewportSize(devices["Pixel 7"].viewport);
       await sleep(2500);
       const rang = incomingFor(A).length - n0 + (await A.page.locator("[data-call-phase]").count());
-      await B.page.getByRole("button", { name: /^(Close|Đóng)$/ }).click();
+      // the dialog's own button: in VI the chat's notification banner "Dismiss" is also labelled "Đóng"
+      await dlg.getByRole("button", { name: /^(Close|Đóng)$/ }).click();
       await idle(B, 5000);
       const okText = lang === "en" ? /Microphone access is blocked/.test(text) && /Permissions|lock icon/.test(text) : /Micro đang bị chặn/.test(text) && /Quyền|ổ khoá/.test(text);
       return okText && rang === 0 && !lay.overflow && !lay.small.length ? true : { fail: JSON.stringify({ text: text.slice(0, 120), rang, lay }) };
@@ -916,7 +917,7 @@ if (want("perm")) {
     await B.page.locator('[data-call-error="media"]').waitFor({ timeout: 8000 });
     await A.page.getByText(/couldn't join/).first().waitFor({ timeout: 8000 });
     await idle(A, 8000);
-    await B.page.getByRole("button", { name: /^(Close|Đóng)$/ }).click();
+    await B.page.locator('[data-call-error="media"]').getByRole("button", { name: /^(Close|Đóng)$/ }).click();
     await idle(B, 5000);
     await A.page.getByText(/Missed voice call/).last().waitFor({ timeout: 15000 });
   });

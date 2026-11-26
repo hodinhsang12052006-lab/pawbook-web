@@ -11,7 +11,9 @@ import { dtEn } from "@/lib/i18n/dtEn";
 // thích. Chỉ dùng thông tin vốn đã công khai trên job board / lưới thợ /
 // bảng tin (không SĐT, không email). Social proof giả bị FTC (Mỹ) và ACCC
 // (Úc) coi là quảng cáo gây hiểu lầm — nên ở đây không có sự kiện bịa nào.
-export const revalidate = 60;
+// Không prerender lúc build: build đọc prisma/dev.db trong git (schema cũ → P2022 "Post.anonymous", 500 tới lần
+// revalidate đầu). Cache 60 s vẫn có qua header s-maxage bên dưới (CDN Vercel).
+export const dynamic = "force-dynamic";
 
 const WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const FRESH_MS = 24 * 60 * 60 * 1000;

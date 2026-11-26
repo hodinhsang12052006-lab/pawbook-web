@@ -111,6 +111,15 @@ export const THEMES: Theme[] = [
     ownerTip: "Ưu đãi sinh viên giờ vắng (thứ 2–4) — lấp lịch trống, tạo khách quen dài hạn.",
     colors: ["#2563eb", "#f43f5e"], from: [8, 10], to: [9, 10],
   },
+  {
+    // Úc 1/6–31/8: trước 26/11/2026 không có chủ đề nào (thu kết thúc 31/5, xuân bắt đầu 1/9) → 92 ngày không thử
+    // thách / gợi ý mẫu. Chỉ Úc: tháng 12–2 ở Mỹ đã kín Giáng Sinh, Năm Mới, Tết, Valentine.
+    id: "winter", title: "Móng mùa đông", emoji: "❄️", hashtag: "PawNailWinter", priority: 1, markets: ["AU"],
+    blurb: "Đỏ rượu vang, xanh navy, nhung cat-eye và chrome bạc — tông sâu ấm áp cho những tháng lạnh.",
+    ideas: ["Đỏ rượu vang bóng", "Nhung cat-eye xanh navy", "Chrome bạc lạnh", "Nâu socola + viền vàng"],
+    ownerTip: "Mùa lạnh khách ít đi biển, làm tay nhiều hơn chân — đẩy dịch vụ dưỡng da tay (paraffin) kèm bộ móng.",
+    colors: ["#1e3a8a", "#7f1d1d"], from: [6, 1], to: [8, 31],
+  },
 ];
 
 /** Mùa theo bán cầu: chủ đề có khung ngày riêng ở Nam bán cầu (Úc). */

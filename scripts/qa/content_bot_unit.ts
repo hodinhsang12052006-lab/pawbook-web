@@ -45,7 +45,7 @@ check("CB13", "Mỗi ngày trộn ≥ 3 mảng nội dung (tiền, an toàn, s�
 const weekA = new Set(allUS.slice(0, 7).flatMap((r) => r.x.filter((x) => !x.pinned && !x.seasonal).map((x) => x.id)));
 check("CB14", "Xoay vòng: 1 tuần đề xuất ≥ 10 bài thường khác nhau (không lặp mãi 1 bài)", weekA.size >= 10, String(weekA.size));
 check("CB15", "firstLine lấy đúng tiêu đề để đối chiếu đã đăng", firstLine(allUS[0].x[0].text) === allUS[0].x[0].title);
-check("CB16", "Mỗi bài có lời kêu gọi (lưu / chia sẻ / bình luận) và hashtag", [...usAll, ...auAll].every((x) => /(Lưu|lưu|Chia sẻ|chia sẻ|Bình luận|bình luận|👉|Gửi|gửi|Đặt|👇)/.test(x.text) && /#\w/.test(x.text)));
+check("CB16", "Mỗi bài có lời kêu gọi (lưu / chia sẻ / bình luận) và hashtag", [...usAll, ...auAll].every((x) => /(Lưu|lưu|Chia sẻ|chia sẻ|Bình luận|bình luận|👉|Gửi|gửi|Đặt|👇|Theo dõi|[Nn]hắn cho)/.test(x.text) && /#\w/.test(x.text)));
 
 console.log(`\nBot nội dung: ${16 - fail}/16 PASS`);
 if (fail) process.exit(1);

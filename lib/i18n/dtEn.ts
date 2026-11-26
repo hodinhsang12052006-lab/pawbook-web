@@ -80,6 +80,13 @@ const EN: Record<string, string> = {
   "Kẻ caro nhỏ": "Mini plaid",
   "Nude bền màu": "Long-wear nude",
   "Ưu đãi sinh viên giờ vắng (thứ 2–4) — lấp lịch trống, tạo khách quen dài hạn.": "Student deals on slow days (Mon–Wed) — fills the schedule and builds regulars.",
+  "Móng mùa đông": "Winter nails",
+  "Đỏ rượu vang, xanh navy, nhung cat-eye và chrome bạc — tông sâu ấm áp cho những tháng lạnh.": "Wine red, navy, velvet cat-eye and silver chrome — deep, cozy tones for the cold months.",
+  "Đỏ rượu vang bóng": "Glossy wine red",
+  "Nhung cat-eye xanh navy": "Navy velvet cat-eye",
+  "Chrome bạc lạnh": "Icy silver chrome",
+  "Nâu socola + viền vàng": "Chocolate brown + gold trim",
+  "Mùa lạnh khách ít đi biển, làm tay nhiều hơn chân — đẩy dịch vụ dưỡng da tay (paraffin) kèm bộ móng.": "In the cold months clients book more manis than pedis — add a paraffin hand treatment to every set.",
   // Mẹo Studio
   "Chụp ảnh móng dưới ánh sáng tự nhiên gần cửa sổ — lên đúng màu, chuyên nghiệp hơn đèn vàng.": "Shoot nails in natural light near a window — colors look true and more professional than under warm lamps.",
   "Đăng ít nhất 3 ảnh tay nghề rõ nét — chủ tiệm xem ảnh trước khi nhắn tin.": "Post at least 3 sharp photos of your work — salons look at your photos before they message.",

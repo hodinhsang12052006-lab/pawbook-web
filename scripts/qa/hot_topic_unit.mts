@@ -1,6 +1,7 @@
 // Chủ đề nóng: chấm điểm theo tín hiệu tool → đăng bài thảo luận + thăm dò; không trùng trong ngày / 10 ngày.
-//   DATABASE_URL="file:./prisma/dev.db" npx tsx scripts/qa/hot_topic_unit.mts
+//   TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= npx tsx scripts/qa/hot_topic_unit.mts   (SQLite tạm đúng schema: scripts/qa/lib/temp_db.mts)
 if (process.env.TURSO_DATABASE_URL) throw new Error("Bài test chỉ chạy trên DB local — bỏ TURSO_DATABASE_URL");
+import "./lib/temp_db.mts"; // trước lib/prisma
 import prismaMod from "../../lib/prisma";
 import { publishHotTopicPost, recordTopicSignals, TOPIC_BANK } from "../../lib/hotTopics";
 const prisma = ((prismaMod as unknown as { default?: typeof prismaMod }).default ?? prismaMod);

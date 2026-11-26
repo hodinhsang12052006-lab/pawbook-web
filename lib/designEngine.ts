@@ -108,6 +108,8 @@ const PALETTES: Record<string, [CK, CK, CK][]> = {
   wedding: [["milky", "pearl", "pearl"], ["nude", "milky", "pearl"], ["pinkNude", "milky", "silver"], ["sheer", "champagne", "gold"], ["bone", "pearl", "gold"]],
   summer: [["coral", "milky", "gold"], ["teal", "milky", "silver"], ["aqua", "milky", "gold"], ["hotPink", "persimmon", "gold"], ["lemon", "milky", "gold"], ["sheer", "coral", "gold"], ["cobalt", "milky", "silver"]],
   backtoschool: [["navy", "milky", "silver"], ["cherry", "navy", "gold"], ["olive", "butter", "gold"], ["nude", "chocolate", "gold"]],
+  // Mùa đông Úc (tháng 6–8): tông sâu, ấm — rượu vang, navy, xám thiếc, ngọc lục bảo, socola
+  winter: [["mulledWine", "milky", "gold"], ["navy", "milky", "silver"], ["plumNoir", "champagne", "gold"], ["pewter", "milky", "silver"], ["emerald", "bone", "gold"], ["chocolate", "nude", "gold"]],
   // Nail Hàn / nude tối giản: nền trong, hồng nude, trắng sữa, xám be, nâu socola + thạch màu (syrup)
   korean: [["sheer", "milky", "silver"], ["pinkNude", "milky", "silver"], ["milky", "pinkNude", "silver"], ["greige", "milky", "silver"], ["chocolate", "nude", "gold"], ["nude", "milky", "pearl"],
     ["mocha", "pinkNude", "gold"], ["sheer", "babyPink", "pearl"], ["raspberry", "sheer", "pearl"], ["sheer", "hotPink", "pearl"], ["coffee", "nude", "gold"]],
@@ -300,7 +302,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ metal }) => `glossy caramel and dark brown tortoiseshell pattern with thin ${metal.en} outlines on two accent nails`,
   },
   {
-    id: "marble", occasions: ["any", "newyear", "wedding", "christmas"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true,
+    id: "marble", occasions: ["any", "newyear", "wedding", "christmas", "winter"], finishes: ["glossy"], systems: ["gelx", "acrylic", "gel"], minutes: 20, price: 12, difficulty: 2, design: true,
     title: ({ c1, metal }) => s(`Vân đá ${c1.vi} chỉ ${metal.vi}`, `${cap(c1.en)} marble with ${metal.en} veins`),
     why: s("vân đá chỉ kim loại nhìn cao cấp, giá bán tốt", "metallic-veined marble looks luxe and sells at a premium"),
     materials: ({ metal }) => [m("Gel loang (blooming gel)", "Blooming gel"), m("Gel đen hoặc xám (vẽ vân)", "Black or grey gel (veins)"), LINER(metal), LINER_BRUSH],
@@ -348,7 +350,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c1, metal }) => `${c1.en} nails with delicate thin ${metal.en} spider web line art (only the web lines, no spiders) on two accent nails`,
   },
   {
-    id: "snow", occasions: ["christmas", "newyear"], finishes: ["glossy", "matte"], minutes: 15, price: 8, difficulty: 2, design: true,
+    id: "snow", occasions: ["christmas", "newyear", "winter"], finishes: ["glossy", "matte"], minutes: 15, price: 8, difficulty: 2, design: true,
     title: ({ c1 }) => s(`Bông tuyết trên nền ${c1.vi}`, `Snowflakes on ${c1.en}`),
     why: s("bông tuyết vẽ tay là mẫu Noel được lưu nhiều nhất", "hand-painted snowflakes are the most-saved holiday look"),
     materials: () => [LINER(COLORS.white), LINER_BRUSH, m("Nhũ bạc mịn (tuỳ chọn)", "Fine silver glitter (optional)", "1 hũ")],
@@ -616,7 +618,7 @@ export const PATTERNS: Pattern[] = [
     image: ({ c2, metal }) => `negative space nails: clear natural base with ${c2.en} geometric half-moon shapes outlined in thin ${metal.en}`,
   },
   {
-    id: "velvet", occasions: ["trend", "fall", "christmas", "korean"], finishes: ["cateye"], systems: ["gelx", "gel", "acrylic"], minutes: 5, price: 5, difficulty: 2, design: false,
+    id: "velvet", occasions: ["trend", "fall", "christmas", "korean", "winter"], finishes: ["cateye"], systems: ["gelx", "gel", "acrylic"], minutes: 5, price: 5, difficulty: 2, design: false,
     // nền "đỏ nhung" (red velvet) → "Velvet đỏ nhung", không "Velvet nhung đỏ nhung"
     title: ({ c1 }) => (/nhung/.test(c1.vi) ? s(`Velvet ${c1.vi}`, `${cap(c1.en)} nails`) : s(`Velvet nhung ${c1.vi}`, `${cap(c1.en)} velvet nails`)),
     why: s("móng velvet (mắt mèo rải đều như nhung) đang thay mắt mèo dải sáng — nhìn sang, lấp lánh dưới đèn", "velvet nails (cat-eye spread evenly like velvet) are replacing the classic cat-eye stripe — luxe and sparkly"),
@@ -842,7 +844,7 @@ export const PATTERNS: Pattern[] = [
 
   // ---------------- Chrome màu & nhũ loang ----------------
   {
-    id: "colorchrome", occasions: ["fall", "trend", "newyear", "christmas"], finishes: ["chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 2, design: false, keepHue: true,
+    id: "colorchrome", occasions: ["fall", "trend", "newyear", "christmas", "winter"], finishes: ["chrome"], systems: ["gelx", "gel", "acrylic"], minutes: 10, price: 6, difficulty: 2, design: false, keepHue: true,
     title: ({ c1 }) => s(`Chrome ${c1.vi} giữ màu`, `${cap(c1.en)} colour chrome`),
     why: s("chrome màu (nâu, caramel, xám thiếc, đỏ cherry…) giữ nguyên sắc màu nền mà vẫn bóng gương — trend thu đông 2026", "colour chrome (brown, caramel, pewter, cherry…) keeps the base hue with a mirror shine — the fall/winter 2026 trend"),
     materials: () => [],
@@ -1289,12 +1291,12 @@ export function buildDesign(spec: EngineSpec, market: "US" | "AU" = "US", occ?: 
 
 const OCC_EN: Record<string, string> = {
   halloween: "Halloween", fall: "Fall", thanksgiving: "Thanksgiving & Black Friday", christmas: "Christmas", newyear: "New Year", tet: "Lunar New Year",
-  valentine: "Valentine's Day", spring: "Spring pastel", prom: "Prom", mothersday: "Mother's Day", wedding: "Wedding", summer: "Summer", backtoschool: "Back to school",
+  valentine: "Valentine's Day", spring: "Spring pastel", prom: "Prom", mothersday: "Mother's Day", wedding: "Wedding", summer: "Summer", backtoschool: "Back to school", winter: "Winter",
 };
 const occTitleEn = (id: string) => OCC_EN[id];
 const OCC_VI: Record<string, string> = {
   halloween: "mùa Halloween", fall: "mùa thu", thanksgiving: "Lễ Tạ Ơn", christmas: "mùa Giáng Sinh", newyear: "dịp Năm Mới", tet: "Tết Nguyên Đán",
-  valentine: "Valentine", spring: "mùa xuân", prom: "mùa Prom", mothersday: "Ngày của Mẹ", wedding: "mùa cưới", summer: "mùa hè", backtoschool: "mùa tựu trường",
+  valentine: "Valentine", spring: "mùa xuân", prom: "mùa Prom", mothersday: "Ngày của Mẹ", wedding: "mùa cưới", summer: "mùa hè", backtoschool: "mùa tựu trường", winter: "mùa đông",
 };
 
 // Ngẫu nhiên có hạt giống (mulberry32)
@@ -1334,8 +1336,8 @@ const wpick = <T,>(r: () => number, arr: readonly T[], w: (x: T) => number): T =
 // MÙA THEO BÁN CẦU: Úc ngược mùa (tháng 9–11 xuân, 12–2 hè, 3–5 thu). Lịch chủ đề chung (thu / xuân / hè / tựu trường)
 // là mùa của Mỹ → ở Úc đổi sang đúng mùa Úc (tháng 10 ở Úc là mùa xuân, không phải mùa thu nâu caramel).
 // Dịp đã nghỉ (Halloween, lib/season.ts RETIRED_OCCASIONS) không bao giờ ra mẫu nữa, dù lịch còn sót.
-const SEASONAL = new Set(["fall", "spring", "summer", "backtoschool"]);
-const AU_SEASON: Record<number, string> = { 9: "spring", 10: "spring", 11: "spring", 12: "summer", 1: "summer", 2: "summer", 3: "fall", 4: "fall", 5: "fall" };
+const SEASONAL = new Set(["fall", "spring", "summer", "backtoschool", "winter"]);
+const AU_SEASON: Record<number, string> = { 9: "spring", 10: "spring", 11: "spring", 12: "summer", 1: "summer", 2: "summer", 3: "fall", 4: "fall", 5: "fall", 6: "winter", 7: "winter", 8: "winter" };
 // Úc tháng 11–2 là mùa hè (Giáng sinh mùa hè): không nhung, caro, bông tuyết
 const AU_SUMMER_NO = new Set(["velvet", "plaid", "snow"]);
 export function liveOccasions(occs: OccasionInfo[], market: "US" | "AU", month: number): OccasionInfo[] {

@@ -44,6 +44,7 @@ const BY_ID: Record<string, SeasonArt> = {
   wedding: { accent: "#b88f6a", ink: "#ead3bc", image: "/hands/white.jpg", position: "50% 55%" },
   prom: { accent: "#9b5fd0", ink: "#d5b8f2", position: "50% 50%", paint: lacquer("#3e2463", "rgb(196 150 240 / 0.45)", "#150b24", "rgb(230 210 255 / 0.6)") },
   summer: { accent: "#1f8f86", ink: "#8fe3d8", position: "50% 50%", paint: lacquer("#0f5c63", "rgb(255 150 120 / 0.42)", "#082629", "rgb(255 240 200 / 0.55)") },
+  winter: { accent: "#4a6fb8", ink: "#b9cbef", position: "50% 50%", paint: lacquer("#1b2a52", "rgb(150 180 240 / 0.4)", "#0a0f22", "rgb(225 232 250 / 0.55)") },
   backtoschool: { accent: "#3d6fc4", ink: "#a9c4f2", position: "50% 50%", paint: lacquer("#1d3766", "rgb(240 110 130 / 0.35)", "#0b1326", "rgb(220 230 255 / 0.5)") },
 };
 

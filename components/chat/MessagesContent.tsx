@@ -55,7 +55,7 @@ import { useTr } from "@/lib/i18n/useTr";
 import { useMounted } from "@/lib/useMounted";
 import { clearConversation, nativeHandlesChatAlerts, setActiveConversation } from "@/lib/nativePush";
 import ChatNotifyBanner from "./ChatNotifyBanner";
-import { autoTranslates, getTranslation, requestTranslation, useMessageTranslation } from "./messageTranslation";
+import { autoTranslates, getTranslation, requestTranslation, useMessageTranslation, useTranslationVersion } from "./messageTranslation";
 // Messenger V2: CSS riêng (mọi quy tắc nằm dưới .pn-msgr). Import ở đây, không ở app/messages/layout.tsx — nhánh
 // đổi route sang app/[lang]/ xoá layout đó; CSS đi cùng component nên không thể bị rơi khi gộp nhánh.
 import "./messenger.css";
@@ -1324,6 +1324,7 @@ export default function MessagesContent({
   const mounted = useMounted();
   const viewerLang = locale === "vi" ? "vi" : "en";
   useMessageTranslation("", "", viewerLang, { enabled: false, auto: false }); // đăng ký render lại khi có bản dịch
+  const txVersion = useTranslationVersion();
   useEffect(() => {
     conversationRows.slice(0, 12).forEach(({ lastMsg }) => {
       if (lastMsg && lastMsg.type === "TEXT" && lastMsg.senderId !== currentUser?.id && autoTranslates(lastMsg.body, viewerLang)) requestTranslation(lastMsg.id, viewerLang);
@@ -1776,6 +1777,87 @@ export default function MessagesContent({
     }
   }, [activeChat?.id, activeChat?.isGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Danh sách cuộc trò chuyện (cột trái — ẩn trên điện thoại khi đang mở 1 chat) chỉ vẽ lại khi dữ liệu CỦA NÓ đổi.
+  // Trước đây mỗi phím gõ / tin gửi / đổi trạng thái khung chat vẽ lại cả danh sách (chat_perf: gửi ~700 ms ở CPU chậm 4x).
+  const conversationList = useMemo(() =>
+    conversationRows.map(({ conv, partner, displayName, lastMsg }) => {
+      const isGroup = conv.isGroup;
+      const avatarUrl = isGroup ? "" : partner!.avatarUrl || "";
+      const isActive = activeChat?.conversationId === conv.id;
+      const fromMe = lastMsg?.senderId === currentUser?.id;
+      const unread = isActive ? 0 : conv.unreadCount || 0;
+      const isTyping = typingByConv[conv.id] !== undefined;
+      const txPreview = lastMsg && lastMsg.type === "TEXT" && !fromMe ? getTranslation(lastMsg.id, viewerLang) : undefined;
+      const preview = lastMsg
+        ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${mediaPreview(lastMsg.type, lastMsg.body) ?? (lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : txPreview?.status === "done" && txPreview.text ? txPreview.text : txPreview?.status === "loading" ? tr("Đang dịch…", "Translating…") : lastMsg.body)}`
+        : isGroup
+        ? tr(`${conv.participants.length} thành viên`, `${conv.participants.length} members`)
+        : tr("Bắt đầu trò chuyện", "Start chatting");
+
+      return (
+        <button
+          type="button"
+          key={conv.id}
+          onPointerEnter={() => prefetchChat(conv.id)}
+          onTouchStart={() => prefetchChat(conv.id)}
+          onClick={() => setActiveChat({
+            id: isGroup ? conv.id : partner!.id,
+            name: displayName,
+            avatarUrl,
+            role: isGroup ? "GROUP" : partner!.role,
+            isGroup,
+            isOnline: false,
+            statusText: "",
+            conversationId: conv.id,
+          })}
+          aria-current={isActive ? "true" : undefined}
+          className={`m-conv relative flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors duration-150 ${isActive ? "pn-conv-active" : unread > 0 ? "bg-white/[0.035] hover:bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+        >
+          {isGroup ? (
+            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
+              <Users className="h-5 w-5 text-fuchsia-300" />
+            </span>
+          ) : (
+            <PresenceAvatar userId={partner!.id} src={avatarSrc(avatarUrl, displayName, partner!.id)} alt={displayName} />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className={`m-name flex min-w-0 items-center gap-1 text-[13px] ${unread > 0 ? "font-black text-white" : "font-bold text-slate-100"}`}>
+                <span className="truncate">{displayName}</span>
+                {!isGroup && isVerifiedRole(partner!.role) && <VerifiedBadge className="h-3.5 w-3.5" />}
+                {!isGroup && partner!.id === official?.id && <Pin className="h-3 w-3 flex-shrink-0 rotate-45 text-slate-500" aria-label={tr("Đã ghim", "Pinned")} />}
+                {!isGroup && (
+                <span className={`flex-shrink-0 rounded px-1.5 py-px text-[9px] font-bold ${isVerifiedRole(partner!.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-400"}`}>{isVerifiedRole(partner!.role) ? tr("Chính thức", "Official") : ROLE_VI()[partner!.role] || tr("Thành viên", "Member")}</span>
+                )}
+              </p>
+              {lastMsg && <span className={`m-time flex-shrink-0 ${unread > 0 ? "m-time-unread" : ""}`}>{mounted ? shortChatTime(lastMsg.createdAt, currentUser?.market) : ""}</span>}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5">
+              {fromMe && !isTyping && lastMsg && !isGroup && (
+                seenByConv[conv.id] && new Date(seenByConv[conv.id]).getTime() >= new Date(lastMsg.createdAt).getTime()
+                  ? <CheckCheck aria-label={CS.seen()} className="m-own-tick m-seen h-4 w-4 flex-shrink-0" />
+                  : <Check aria-label={CS.sent()} className="m-own-tick h-4 w-4 flex-shrink-0" />
+              )}
+              {isTyping ? (
+                <p className="m-typing flex items-center gap-1.5 truncate">
+                  {tr("Đang soạn tin ", "Typing ")}<TypingDots />
+                </p>
+              ) : (
+                <p className={`m-preview min-w-0 flex-1 truncate ${unread > 0 ? "m-preview-unread" : ""}`}>{preview}</p>
+              )}
+              {unread > 0 && (
+                <span className="m-badge ml-auto flex flex-shrink-0 items-center justify-center">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </div>
+          </div>
+        </button>
+      );
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- tr()/CS/mediaPreview đọc ngôn ngữ hiện tại: viewerLang đã nằm trong deps
+  , [conversationRows, activeChat?.conversationId, currentUser?.id, currentUser?.market, typingByConv, seenByConv, viewerLang, txVersion, official?.id, mounted, prefetchChat]);
+
   return (
     <div className="pn-msgr flex w-full h-full overflow-hidden">
       {/* LEFT COLUMN: CONVERSATION LIST */}
@@ -1848,81 +1930,7 @@ export default function MessagesContent({
               {conversationRows.length === 0 && (
                 <p className="px-4 py-8 text-center text-xs text-slate-500">{tr("Không tìm thấy cuộc trò chuyện nào khớp “", "No conversations match “")}{listQuery}&rdquo;.</p>
               )}
-              {conversationRows.map(({ conv, partner, displayName, lastMsg }) => {
-                const isGroup = conv.isGroup;
-                const avatarUrl = isGroup ? "" : partner!.avatarUrl || "";
-                const isActive = activeChat?.conversationId === conv.id;
-                const fromMe = lastMsg?.senderId === currentUser?.id;
-                const unread = isActive ? 0 : conv.unreadCount || 0;
-                const isTyping = typingByConv[conv.id] !== undefined;
-                const txPreview = lastMsg && lastMsg.type === "TEXT" && !fromMe ? getTranslation(lastMsg.id, viewerLang) : undefined;
-                const preview = lastMsg
-                  ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${mediaPreview(lastMsg.type, lastMsg.body) ?? (lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : txPreview?.status === "done" && txPreview.text ? txPreview.text : txPreview?.status === "loading" ? tr("Đang dịch…", "Translating…") : lastMsg.body)}`
-                  : isGroup
-                  ? tr(`${conv.participants.length} thành viên`, `${conv.participants.length} members`)
-                  : tr("Bắt đầu trò chuyện", "Start chatting");
-
-                return (
-                  <button
-                    type="button"
-                    key={conv.id}
-                    onPointerEnter={() => prefetchChat(conv.id)}
-                    onTouchStart={() => prefetchChat(conv.id)}
-                    onClick={() => setActiveChat({
-                      id: isGroup ? conv.id : partner!.id,
-                      name: displayName,
-                      avatarUrl,
-                      role: isGroup ? "GROUP" : partner!.role,
-                      isGroup,
-                      isOnline: false,
-                      statusText: "",
-                      conversationId: conv.id,
-                    })}
-                    aria-current={isActive ? "true" : undefined}
-                    className={`m-conv relative flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors duration-150 ${isActive ? "pn-conv-active" : unread > 0 ? "bg-white/[0.035] hover:bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
-                  >
-                    {isGroup ? (
-                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
-                        <Users className="h-5 w-5 text-fuchsia-300" />
-                      </span>
-                    ) : (
-                      <PresenceAvatar userId={partner!.id} src={avatarSrc(avatarUrl, displayName, partner!.id)} alt={displayName} />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className={`m-name flex min-w-0 items-center gap-1 text-[13px] ${unread > 0 ? "font-black text-white" : "font-bold text-slate-100"}`}>
-                          <span className="truncate">{displayName}</span>
-                          {!isGroup && isVerifiedRole(partner!.role) && <VerifiedBadge className="h-3.5 w-3.5" />}
-                          {!isGroup && partner!.id === official?.id && <Pin className="h-3 w-3 flex-shrink-0 rotate-45 text-slate-500" aria-label={tr("Đã ghim", "Pinned")} />}
-                          {!isGroup && (
-                          <span className={`flex-shrink-0 rounded px-1.5 py-px text-[9px] font-bold ${isVerifiedRole(partner!.role) ? "bg-sky-500/15 text-sky-300" : "bg-slate-800/80 text-slate-400"}`}>{isVerifiedRole(partner!.role) ? tr("Chính thức", "Official") : ROLE_VI()[partner!.role] || tr("Thành viên", "Member")}</span>
-                          )}
-                        </p>
-                        {lastMsg && <span className={`m-time flex-shrink-0 ${unread > 0 ? "m-time-unread" : ""}`}>{mounted ? shortChatTime(lastMsg.createdAt, currentUser?.market) : ""}</span>}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        {fromMe && !isTyping && lastMsg && !isGroup && (
-                          seenByConv[conv.id] && new Date(seenByConv[conv.id]).getTime() >= new Date(lastMsg.createdAt).getTime()
-                            ? <CheckCheck aria-label={CS.seen()} className="m-own-tick m-seen h-4 w-4 flex-shrink-0" />
-                            : <Check aria-label={CS.sent()} className="m-own-tick h-4 w-4 flex-shrink-0" />
-                        )}
-                        {isTyping ? (
-                          <p className="m-typing flex items-center gap-1.5 truncate">
-                            {tr("Đang soạn tin ", "Typing ")}<TypingDots />
-                          </p>
-                        ) : (
-                          <p className={`m-preview min-w-0 flex-1 truncate ${unread > 0 ? "m-preview-unread" : ""}`}>{preview}</p>
-                        )}
-                        {unread > 0 && (
-                          <span className="m-badge ml-auto flex flex-shrink-0 items-center justify-center">
-                            {unread > 99 ? "99+" : unread}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+              {conversationList}
               {conversations.length < 4 && !listQuery && <ChatSuggestions role={currentUser?.role ?? null} market={currentUser?.market ?? null} excludeIds={suggestExclude} />}
             </div>
           ) : (

@@ -61,6 +61,8 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 const snap = () => version;
+/** Số phiên bản kho bản dịch — dùng làm phụ thuộc useMemo cho phần giao diện đọc getTranslation(). */
+export const useTranslationVersion = () => useSyncExternalStore(subscribe, snap, () => 0);
 
 export function getTranslation(id: string, lang: Locale): Entry | undefined {
   return store.get(k(lang, id));

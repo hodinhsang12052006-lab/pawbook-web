@@ -549,5 +549,18 @@ function StickerView({ id, size = 128 }: { id: string; size?: number }) {
   );
 }
 
-const MessageRow = React.memo(MessageRowImpl);
+// `fresh` (hiệu ứng xuất hiện 180 ms, chạy 1 lần) đổi true → false ở lần cập nhật kế tiếp của khung chat: KHÔNG vẽ lại
+// dòng chỉ vì thế (class hiệu ứng ở lại vô hại — animation không chạy lại). Trước đây tin đầu tiên gửi sau khi mở chat
+// vẽ lại cả loạt tin vừa tải (41/46 dòng, ~130 ms ở CPU chậm 4x — chat_perf CP3 / CP6b).
+function sameRow(a: MessageRowProps, b: MessageRowProps): boolean {
+  for (const k of Object.keys(b) as (keyof MessageRowProps)[]) {
+    if (k === "fresh") {
+      if (b.fresh && !a.fresh) return false;
+      continue;
+    }
+    if (a[k] !== b[k]) return false;
+  }
+  return Object.keys(a).length === Object.keys(b).length;
+}
+const MessageRow = React.memo(MessageRowImpl, sameRow);
 export default MessageRow;

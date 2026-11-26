@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { prismaCode, runExternalJobsSync } from "@/lib/jobFeeds/sync";
 import { alertIfIngestStale } from "@/lib/jobIngest/staleAlert";
+import { alertIfDesignsStalled } from "@/lib/designsStallAlert";
 
 // Vercel Cron mỗi ngày (vercel.json) → lấy tin việc nail từ Adzuna (US + AU) vào bảng ExternalJob.
 // Bảo vệ bằng CRON_SECRET: Vercel tự gửi "Authorization: Bearer <CRON_SECRET>"; không có CRON_SECRET → từ chối.
@@ -29,6 +30,10 @@ export async function GET(req: Request) {
   await alertIfIngestStale()
     .then((r) => console.log(`[ingest-alert] ${r}`))
     .catch((e) => console.error(`[ingest-alert] failed: ${String((e as Error)?.message || e).slice(0, 120)}`));
+  // … và trang Mẫu nail 48 giờ không có mẫu mới (lib/designsStallAlert.ts)
+  await alertIfDesignsStalled()
+    .then((r) => console.log(`[designs-alert] ${r}`))
+    .catch((e) => console.error(`[designs-alert] failed: ${String((e as Error)?.message || e).slice(0, 120)}`));
   try {
     const s = await runExternalJobsSync({ deadline: start + FETCH_BUDGET_MS, workDeadline: start + WRITE_BUDGET_MS });
     const a = s.adzuna;

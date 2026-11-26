@@ -26,6 +26,8 @@ for (const sql of [
   } catch {}
 }
 const isData = (s) => [...data].some((d) => d && (d === s || (d.length > 12 && (s.includes(d) || d.includes(s)))));
+// Tên bang / vùng Mỹ – Úc là danh từ riêng (giữ nguyên ở trang tiếng Việt), không phải chữ tiếng Anh sót
+const PLACE = /^(New (York|Jersey|Mexico|Hampshire|South Wales)|North (Carolina|Dakota)|South (Carolina|Dakota|Australia)|West Virginia|Rhode Island|Western Australia|Northern Territory|Australian Capital Territory)$/;
 
 const browser = await chromium.launch();
 async function ctx(locale) {
@@ -95,7 +97,7 @@ function record(page, strings) {
       if (!VN.test(s.replace(/Tiếng Việt/g, "")) || isData(s)) continue;
     } else {
       // VI: cụm tiếng Anh thuần (không dấu, ≥2 từ hoặc từ UI phổ biến) — bỏ thương hiệu/tên riêng.
-      if (VN.test(s) || isData(s) || !EN_WORDS.test(s) || /PawNail|Nail Radar|Gel-X|Dip\/SNS|Acrylic|Design|Wax|Studio|Portfolio|GIF|POS|Supply|Halloween|TikTok|Facebook|Instagram|iPhone|Android|Google|Apple|App Store|Zalo|Live|Demo|OK|US|AU/.test(s)) continue;
+      if (VN.test(s) || isData(s) || PLACE.test(s) || !EN_WORDS.test(s) || /PawNail|Nail Radar|Gel-X|Dip\/SNS|Acrylic|Design|Wax|Studio|Portfolio|GIF|POS|Supply|Halloween|TikTok|Facebook|Instagram|iPhone|Android|Google|Apple|App Store|Zalo|Live|Demo|OK|US|AU/.test(s)) continue;
     }
     if (!found.has(raw)) found.set(raw, new Set());
     found.get(raw).add(page);

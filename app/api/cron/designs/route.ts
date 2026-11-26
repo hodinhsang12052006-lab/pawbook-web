@@ -46,7 +46,15 @@ export async function GET(req: Request) {
         : already >= CRON_ENGINE_PER_DAY
         ? { created: [] as string[], skipped: CRON_ENGINE_COUNT, errors: ["Hôm nay đã đủ mẫu mới."] }
         : await generateEngine("US", Math.min(CRON_ENGINE_COUNT, CRON_ENGINE_PER_DAY - already), deadline);
-    // NỘI DUNG MỖI NGÀY từ tài khoản chính thức (trước phần vẽ bù ảnh để không bị hết giờ):
+    // Vẽ ảnh cho mẫu MỚI (và mẫu còn thiếu ảnh từ lượt trước) TRƯỚC phần đăng bài: catalog chỉ hiện mẫu đã có ảnh, nên
+    // nếu bước này luôn bị đẩy ra cuối 60 s thì mẫu mới không bao giờ lộ ra (catalog production đứng từ 06/11/2026).
+    // Chừa 20 s cho bài chính thức / bộ ảnh hôm nay (bộ ảnh cũng cần mẫu đã có ảnh).
+    if (!useGemini) {
+      const b = await backfillImages(deadline - 20_000);
+      r.backfilled = b.drawn;
+      r.errors.push(...b.errors);
+    }
+    // NỘI DUNG MỖI NGÀY từ tài khoản chính thức:
     //   1 bài kiến thức (thuế/tip/an toàn/mẹo) · 1 bài ảnh "4 mẫu nail hôm nay" · ≤ 2 tin ngành Mỹ/Úc viết lại
     const fail = (e: unknown) => ({ posted: false, reason: String((e as Error).message).slice(0, 120) });
     r.official = await publishDailyOfficialPost().catch(fail);
@@ -58,10 +66,10 @@ export async function GET(req: Request) {
     await prisma.bookingRequest.deleteMany({
       where: { OR: [{ status: { in: ["done", "declined"] }, updatedAt: { lt: new Date(Date.now() - 90 * 86_400_000) } }, { status: { in: ["new", "confirmed"] }, createdAt: { lt: new Date(Date.now() - 60 * 86_400_000) } }] },
     }).catch(() => {});
-    // Vẽ bù ảnh cho mẫu hôm nay còn thiếu (lần trước lỗi/quá giờ) nếu còn thời gian + lượt.
+    // Còn giờ: vẽ nốt mẫu thiếu ảnh (nếu lượt đầu chưa kịp)
     if (!useGemini) {
       const b = await backfillImages(deadline);
-      r.backfilled = b.drawn;
+      r.backfilled = (r.backfilled ?? 0) + b.drawn;
       r.errors.push(...b.errors);
       // thay dần ảnh AI cũ bằng ảnh máy PawNail vẽ trên tay mẫu (ảnh cũ giữ link để khôi phục)
       const rr = await rerenderAiImages(deadline, 20); // còn giờ thì vẽ tới 20 ảnh / lượt (hết giờ tự dừng)

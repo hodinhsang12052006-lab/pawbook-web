@@ -253,7 +253,8 @@ export default function HomePage() {
                 đúng kích thước thật → bảng tin không bị đẩy xuống khi tải xong (CLS). */}
             {sessionLoading && (
               <div aria-hidden className="hidden space-y-5 [html[data-authed]_&]:block">
-                <div className="h-[50px] px-1 pt-1 md:h-[54px]"><div className="h-6 w-56 rounded-lg bg-white/[0.05]" /><div className="mt-2 h-3.5 w-40 rounded bg-white/[0.04]" /></div>
+                {/* điện thoại: lời chào chỉ còn h1 22/28px (dòng phụ ẩn — globals.css .pn-greet > p) → giữ đúng 28px */}
+                <div className="h-[28px] px-1 md:h-[54px] md:pt-1"><div className="h-6 w-56 rounded-lg bg-white/[0.05]" /><div className="mt-2 hidden h-3.5 w-40 rounded bg-white/[0.04] md:block" /></div>
                 {tab === "feed" && <div className="h-[98px] rounded-2xl bg-white/[0.03] md:hidden" />}
                 <div className="hidden h-[246px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-onb]_&]:block" />
               </div>
@@ -287,9 +288,12 @@ export default function HomePage() {
                 "Hoàn thiện hồ sơ". Thiếu chỗ cho thẻ "Ai xem hồ sơ" (thợ ~246px) từng đẩy bảng tin xuống khi phiên
                 tải xong (CLS 0.17 — cls_test 25/10). */}
             {sessionLoading && tab === "feed" && (
-              <div aria-hidden className="hidden space-y-5 [html[data-authed][data-pv]_&]:block [html[data-authed][data-cmp]_&]:block">
+              // khối bọc chỉ hiện khi có ít nhất 1 ô con hiện (khối rỗng vẫn ăn khoảng cách space-y của cột → nhảy 16px)
+              <div aria-hidden className="hidden space-y-5 [html[data-authed][data-pv]_&]:block [html[data-authed][data-cmp]:not([data-onb])_&]:block max-md:[html[data-mn]:not([data-pv])_&]:!hidden md:[html:not([data-pv])_&]:!hidden">
                 <div className="hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/5 [html[data-pv]_&]:block" style={{ height: "var(--pv-h, 0px)" }} />
-                <div className="hidden h-[128px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 md:!hidden [html[data-cmp]:not([data-onb])_&]:block" />
+                {/* điện thoại chỉ hiện 1 thẻ gợi ý (.pn-nudges): thẻ menu (html[data-mn]) đứng trước → thẻ hoàn thiện hồ sơ
+                    sẽ không hiện, đừng giữ chỗ cho nó (từng là ~165px nhảy lên khi phiên tải xong, cls_test C2/C3) */}
+                <div className="hidden h-[128px] rounded-2xl bg-white/[0.03] ring-1 ring-white/5 md:!hidden [html[data-cmp]:not([data-onb])_&]:block [html[data-mn]_&]:!hidden" />
               </div>
             )}
 

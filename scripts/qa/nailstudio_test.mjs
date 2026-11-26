@@ -95,7 +95,7 @@ try {
   const profileCard = await p.getByTestId("hand-profile").innerText().catch(() => "");
   await p.screenshot({ path: path.join(OUT, "tryon_marked.png") });
   R.check("S0", "Chụp ảnh → máy TỰ NHẬN móng chắc chắn (Web Worker, không chạm gì) ≥ 2/4; chạm 1 lần vào móng sót → đủ 4; mọi viền trùng đáp án (IoU ≥ 0.75); thẻ \"Soi tay của bạn\" (tông da, độ dài móng, dáng hợp nhất)",
-    auto >= 2 && total === 4 && jump < 1 && ious.every((x) => x >= 0.75) && shapes.every((x) => x.byColor === "1") && /Soi tay/.test(profileCard) && /tông/.test(profileCard) && /Dáng hợp nhất/.test(profileCard) && techUi.workers.length >= 1,
+    auto >= 2 && total === 4 && jump < 1 && ious.every((x) => x >= 0.75) && shapes.every((x) => x.byColor === "1") && /Soi tay|Your hand/.test(profileCard) && /tông|undertone/.test(profileCard) && /Dáng hợp nhất|Most flattering shape/.test(profileCard) && techUi.workers.length >= 1,
     JSON.stringify({ auto, total, found, ious, profileCard: profileCard.replace(/\n/g, " · "), workers: techUi.workers.length }));
   // chạm vào nền (áo len, góc trên trái) → KHÔNG thêm móng; chạm vào viền 1 móng → bỏ; chạm lại giữa móng → nhận lại
   const idle = () => p.waitForFunction(() => document.querySelector("[data-busy]")?.getAttribute("data-busy") === "0", null, { timeout: 20000 }).catch(() => {});

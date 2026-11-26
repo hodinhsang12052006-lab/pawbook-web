@@ -377,11 +377,18 @@ const asVideoBody = await asVideo.json().catch(() => ({}));
 R.check("TG2b", "Máy chủ: lưu tin IMAGE = 'mp4#wh=480x270&still=<URI ảnh tĩnh>'; poster trỏ host lạ → 400; gửi GIF MP4 với type VIDEO → lưu IMAGE (xem trước luôn là 'GIF')",
   savedGif?.type === "IMAGE" && savedGif.content === `${GM}/mock0/200.mp4#wh=480x270&still=${encodeURIComponent(`${GM}/mock0/200_s.gif`)}` && evil.status() === 400 && asVideo.status() === 201 && asVideoBody.message?.type === "IMAGE",
   JSON.stringify({ saved: savedGif?.content, type: savedGif?.type, evil: evil.status(), asVideo: asVideo.status(), asVideoType: asVideoBody.message?.type }));
-const gifVis = await p.evaluate(() => {
+// The last GIF arrives over realtime as the sender's own message → the thread scrolls to it SMOOTHLY: read the end state
+// (up to 3 s), not the first frame of the scroll.
+const readGifVis = () => p.evaluate(() => {
   const pnl = document.querySelector(".pn-media-panel")?.getBoundingClientRect();
   const g = [...document.querySelectorAll(".m-media.m-gif")].pop()?.getBoundingClientRect();
   return { pnlTop: pnl && Math.round(pnl.top), top: g && Math.round(g.top), bottom: g && Math.round(g.bottom) };
 });
+let gifVis = await readGifVis();
+for (let i = 0; i < 15 && !(gifVis.bottom != null && gifVis.pnlTop != null && gifVis.bottom <= gifVis.pnlTop); i++) {
+  await p.waitForTimeout(200);
+  gifVis = await readGifVis();
+}
 R.check("CM10b", "GIF vừa gửi (bảng vẫn mở) thấy trọn phía trên bảng", gifVis.pnlTop != null && gifVis.bottom != null && gifVis.bottom <= gifVis.pnlTop && gifVis.top >= 0, JSON.stringify(gifVis));
 await shot(p, "t07_gif_sent");
 await p.keyboard.press("Escape");

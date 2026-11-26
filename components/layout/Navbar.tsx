@@ -55,7 +55,8 @@ export default function Navbar() {
               <IntentLink href="/auth/login" className="pn-nav-login">{t("menu.login")}</IntentLink>
               <IntentLink href="/auth/register" className="pn-btn pn-cta pn-cta--sm">{registerLabel}</IntentLink>
             </div>
-            <div className="hidden items-center gap-3 pl-4 border-l border-slate-800 animate-pulse [html[data-authed]_&]:flex">
+            {/* cao 40px = hàng nút thật (chuông, tin nhắn h-10): khung chờ 32px làm cả cụm nhảy 4px khi phiên tải xong (CLS) */}
+            <div className="hidden h-10 items-center gap-3 animate-pulse [html[data-authed]_&]:flex">
               <div className="h-8 w-8 rounded-full bg-slate-800"></div>
               <div className="h-3 w-16 bg-slate-800 rounded hidden md:block"></div>
             </div>
@@ -121,6 +122,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => router.push(localeHref("/profile"))}
                 aria-label={tr("Hồ sơ của tôi", "My profile")}
+                data-nav-profile=""
                 className="flex items-center gap-2.5 rounded-full p-0.5 lg:pr-3.5 transition-colors duration-150 hover:bg-white/[0.06] active:scale-[0.97]"
               >
                 <Avatar src={sessionUser.avatarUrl} name={sessionUser.name} seed={sessionUser.id} className="h-8 w-8 ring-1 ring-pn-line-strong" loading="eager" />

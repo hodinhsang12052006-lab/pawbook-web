@@ -77,6 +77,8 @@ R.check("SW0", "Gửi tin GIF MP4 (+poster) và GIF cũ .webp", s1.status() === 
 const page = await A.ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message.slice(0, 160)));
+const failedUrls = [];
+page.on("requestfailed", (r) => failedUrls.push(`${r.failure()?.errorText} ${r.url().slice(0, 120)}`));
 page.on("console", (m) => {
   const t = m.text();
   if (m.type() === "error" && /giphy|Refused to|ERR_FAILED|no-response|workbox/i.test(t)) errors.push(t.slice(0, 200));
@@ -133,7 +135,7 @@ const after = { still: media.filter((m) => m.kind === "still").length, webp: med
 R.check("SW4", `Mở lại cuộc trò chuyện: poster / GIF cũ lấy từ kho (request mạng mới: poster ${after.still - before.still}, webp ${after.webp - before.webp}), MP4 vẫn phát (t=${second.video?.t}s)`,
   after.still === before.still && after.webp === before.webp && !!second.video && second.video.readyState >= 2 && !second.video.paused && !!second.still?.ok && !!second.webp?.ok,
   JSON.stringify({ before, after, second }));
-R.check("SW5", "Không có lỗi JS / CSP / SW liên quan GIF", !errors.length, errors.join(" | "));
+R.check("SW5", "Không có lỗi JS / CSP / SW liên quan GIF", !errors.length, errors.join(" | ") + " || failed: " + [...new Set(failedUrls)].slice(0, 8).join(" | "));
 
 async function shot(name) {
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${name}.png`) }).catch(() => {});

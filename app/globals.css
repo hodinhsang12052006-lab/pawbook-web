@@ -906,7 +906,7 @@ html:not([data-ui-classic]) .pn-qa-tile.pn-qa-primary {
   html:not([data-ui-classic]) .pn-nudges > * { margin-block: 0 !important; }
   /* Thanh trên: Tin nhắn + avatar đã có ở dock → chỉ giữ chuông + VI/EN */
   html:not([data-ui-classic]) header.sticky.top-0 a[href="/messages"],
-  html:not([data-ui-classic]) header.sticky.top-0 div.border-l:has(> span.lg\:inline) { display: none; }
+  html:not([data-ui-classic]) header.sticky.top-0 [data-nav-profile] { display: none; }
 }
 html:not([data-ui-classic]) .pn-nudges:empty { display: none; }
 /* Nhãn lối tắt: luôn cao 2 dòng → hàng ô thẳng nhau dù nhãn 1 hay 2 dòng */

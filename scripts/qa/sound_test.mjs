@@ -3,11 +3,12 @@
 // bắt sự kiện "pn-sound" mà lib/sounds.ts phát ra mỗi khi thật sự phát âm.
 // CHỈ chạy với server local trỏ vào dev.db.   node scripts/qa/sound_test.mjs
 import { chromium } from "playwright";
-import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_TECH } from "./lib.mjs";
+import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, SEED_TECH, sendChat, pusherConfigured, PUSHER_CLIENT_MISSING } from "./lib.mjs";
 
 const R = new Results("Âm thanh");
 const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
 const errors = [];
+let pusherClientMissing = false; // trình duyệt báo thiếu khoá Pusher (build không có NEXT_PUBLIC_PUSHER_*)
 
 const owner = new Client();
 await owner.login(SEED_OWNER);
@@ -21,6 +22,7 @@ async function techPage() {
   });
   const p = await ctx.newPage();
   p.on("pageerror", (e) => errors.push(e.message));
+  p.on("console", (m) => { if (PUSHER_CLIENT_MISSING.test(m.text())) pusherClientMissing = true; });
   await p.goto(BASE_URL + "/auth/login");
   await p.locator("#email").fill(SEED_TECH);
   await p.locator("#password").fill(DEMO_PASSWORD);
@@ -39,31 +41,40 @@ try {
   await p.goto(BASE_URL + "/?tab=feed");
   await p.waitForTimeout(3000);
   await p.mouse.click(5, 300); // tương tác đầu tiên → mở khoá âm thanh
+  // Âm báo tin nhắn / chuông / việc gấp chỉ kêu khi sự kiện tới qua Pusher. Không có khoá (máy local) → các bước đó
+  // in "SKIP (no Pusher keys)"; âm do chính người dùng gây ra (thả tim, đăng bài, gửi tin, nghe thử) vẫn kiểm tra.
+  const realtime = !pusherClientMissing && (await pusherConfigured(p.context().request));
 
   // 1. Tin nhắn mới khi đang ở trang khác
-  await clear(p);
-  await owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA âm thanh ${Date.now()}` } });
-  R.check("SD1", "Tin nhắn mới (đang ở trang chủ) → âm 'message'", await waitSound(p, "message"), JSON.stringify(await sounds(p)));
+  if (realtime) {
+    await clear(p);
+    await owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA âm thanh ${Date.now()}` } });
+    R.check("SD1", "Tin nhắn mới (đang ở trang chủ) → âm 'message'", await waitSound(p, "message"), JSON.stringify(await sounds(p)));
+  } else R.skip("SD1", "Tin nhắn mới (đang ở trang chủ) → âm 'message'", "no Pusher keys");
 
   // 2. Thông báo (chủ tiệm thích bài của thợ) → chuông
-  await clear(p);
-  const myPost = await owner.req("/api/posts", { method: "POST", json: { content: "x" } }); // không dùng — chỉ để có quyền
-  const posts = (await owner.req(`/api/posts?authorId=${techId}`)).data.posts || [];
-  if (posts[0]) {
-    if (posts[0].likedByMe) await owner.req(`/api/posts/${posts[0].id}/like`, { method: "POST" });
-    await owner.req(`/api/posts/${posts[0].id}/like`, { method: "POST" });
-    R.check("SD2", "Có người thích bài → âm chuông 'notify'", await waitSound(p, "notify"), JSON.stringify(await sounds(p)));
-  } else R.check("SD2", "Chuông thông báo", false, "thợ seed không có bài");
-  if (myPost.data?.id) await owner.req(`/api/posts/${myPost.data.id}`, { method: "DELETE" });
+  if (realtime) {
+    await clear(p);
+    const myPost = await owner.req("/api/posts", { method: "POST", json: { content: "x" } }); // không dùng — chỉ để có quyền
+    const posts = (await owner.req(`/api/posts?authorId=${techId}`)).data.posts || [];
+    if (posts[0]) {
+      if (posts[0].likedByMe) await owner.req(`/api/posts/${posts[0].id}/like`, { method: "POST" });
+      await owner.req(`/api/posts/${posts[0].id}/like`, { method: "POST" });
+      R.check("SD2", "Có người thích bài → âm chuông 'notify'", await waitSound(p, "notify"), JSON.stringify(await sounds(p)));
+    } else R.check("SD2", "Chuông thông báo", false, "thợ seed không có bài");
+    if (myPost.data?.id) await owner.req(`/api/posts/${myPost.data.id}`, { method: "DELETE" });
+  } else R.skip("SD2", "Có người thích bài → âm chuông 'notify'", "no Pusher keys");
 
   // 3. Việc gấp cùng bang → âm 'urgent'
-  await clear(p);
-  const me = await p.evaluate(() => fetch("/api/profile").then((r) => r.json()));
-  await owner.req("/api/jobs", {
-    method: "POST",
-    json: { title: `QA âm việc gấp ${Date.now() % 1e5}`, salonName: "QA Sound Nails", description: "", market: me.market, state: me.state, city: me.city || "LA", salaryType: "Bao lương tuần", salaryAmount: "$1,400/tuần", skills: [], benefits: [], phone: "4085550111", isUrgent: true },
-  });
-  R.check("SD3", "Việc gấp cùng bang → âm 'urgent'", await waitSound(p, "urgent", 15000), JSON.stringify(await sounds(p)));
+  if (realtime) {
+    await clear(p);
+    const me = await p.evaluate(() => fetch("/api/profile").then((r) => r.json()));
+    await owner.req("/api/jobs", {
+      method: "POST",
+      json: { title: `QA âm việc gấp ${Date.now() % 1e5}`, salonName: "QA Sound Nails", description: "", market: me.market, state: me.state, city: me.city || "LA", salaryType: "Bao lương tuần", salaryAmount: "$1,400/tuần", skills: [], benefits: [], phone: "4085550111", isUrgent: true },
+    });
+    R.check("SD3", "Việc gấp cùng bang → âm 'urgent'", await waitSound(p, "urgent", 15000), JSON.stringify(await sounds(p)));
+  } else R.skip("SD3", "Việc gấp cùng bang → âm 'urgent'", "no Pusher keys");
 
   // 4. Thả tim → 'like'; đăng bài → 'success'
   await clear(p);
@@ -71,7 +82,9 @@ try {
   await likeBtn.click();
   R.check("SD4", "Thả tim → âm 'like'", await waitSound(p, "like", 4000), JSON.stringify(await sounds(p)));
   await clear(p);
-  await p.locator("textarea").first().fill(`QA bài có âm thanh ${Date.now() % 1e5}`);
+  // Bảng tin V2: ô soạn bài thu gọn 1 hàng ("Khoe mẫu mới, tin tiệm…") — bấm vào mới mở ô soạn đầy đủ (như ui_flows openComposer).
+  await p.getByRole("button", { name: /Khoe mẫu mới, tin tiệm/ }).click();
+  await p.getByPlaceholder(/Khoe tác phẩm móng mới/).fill(`QA bài có âm thanh ${Date.now() % 1e5}`);
   await p.getByRole("button", { name: /Đăng bài/ }).last().click();
   R.check("SD5", "Đăng bài thành công → âm 'success'", await waitSound(p, "success", 8000), JSON.stringify(await sounds(p)));
 
@@ -80,32 +93,39 @@ try {
   const box = p.locator("[data-chat-input]").filter({ visible: true }).first();
   await box.waitFor({ timeout: 15000 });
   await p.waitForTimeout(1500);
+  if (realtime) {
+    await clear(p);
+    await owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA trong khung chat ${Date.now()}` } });
+    R.check("SD6", "Tin đến trong khung chat đang mở → âm 'messageInChat' (không phải 'message')", (await waitSound(p, "messageInChat")) && !(await sounds(p)).includes("message"), JSON.stringify(await sounds(p)));
+  } else R.skip("SD6", "Tin đến trong khung chat đang mở → âm 'messageInChat' (không phải 'message')", "no Pusher keys");
   await clear(p);
-  await owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA trong khung chat ${Date.now()}` } });
-  R.check("SD6", "Tin đến trong khung chat đang mở → âm 'messageInChat' (không phải 'message')", (await waitSound(p, "messageInChat")) && !(await sounds(p)).includes("message"), JSON.stringify(await sounds(p)));
-  await clear(p);
-  await box.fill("QA gửi có âm vút");
-  await box.press("Enter");
+  // Bước này kiểm tra ÂM gửi, không kiểm tra phím Enter → gửi bằng nút Gửi như ở mọi máy (điện thoại: Enter = xuống dòng).
+  await sendChat(p, "QA gửi có âm vút");
   R.check("SD7", "Gửi tin thành công → âm 'sent'", await waitSound(p, "sent", 8000), JSON.stringify(await sounds(p)));
 
   // 6. Chống phát dồn dập: 3 tin liên tiếp → 1 âm
   await p.goto(BASE_URL + "/?tab=feed");
   await p.waitForTimeout(2500);
-  await clear(p);
-  await Promise.all([1, 2, 3].map((i) => owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA dồn dập ${i} ${Date.now()}` } })));
-  await p.waitForTimeout(2500);
-  const burst = (await sounds(p)).filter((k) => k === "message").length;
-  R.check("SD8", "3 tin đến dồn dập → chỉ kêu 1 lần (không ồn)", burst === 1, `kêu ${burst} lần`);
+  if (realtime) {
+    await clear(p);
+    await Promise.all([1, 2, 3].map((i) => owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA dồn dập ${i} ${Date.now()}` } })));
+    await p.waitForTimeout(2500);
+    const burst = (await sounds(p)).filter((k) => k === "message").length;
+    R.check("SD8", "3 tin đến dồn dập → chỉ kêu 1 lần (không ồn)", burst === 1, `kêu ${burst} lần`);
+  } else R.skip("SD8", "3 tin đến dồn dập → chỉ kêu 1 lần (không ồn)", "no Pusher keys");
 
   // 7. Tắt tiếng nhanh từ bảng thông báo → tin mới không kêu
   await p.getByRole("button", { name: /^Thông báo/ }).click();
   await p.getByRole("button", { name: "Tắt âm thanh" }).click();
   await p.keyboard.press("Escape");
   await p.waitForTimeout(800);
-  await clear(p);
-  await owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA khi tắt tiếng ${Date.now()}` } });
-  await p.waitForTimeout(4000);
-  R.check("SD9", "Đã tắt tiếng → tin nhắn mới KHÔNG kêu", !(await sounds(p)).includes("message"), JSON.stringify(await sounds(p)));
+  // Không realtime thì tin mới vốn không kêu → "không kêu" không chứng minh được gì → SKIP thay vì PASS oan.
+  if (realtime) {
+    await clear(p);
+    await owner.req("/api/messages", { method: "POST", json: { receiverId: techId, content: `QA khi tắt tiếng ${Date.now()}` } });
+    await p.waitForTimeout(4000);
+    R.check("SD9", "Đã tắt tiếng → tin nhắn mới KHÔNG kêu", !(await sounds(p)).includes("message"), JSON.stringify(await sounds(p)));
+  } else R.skip("SD9", "Đã tắt tiếng → tin nhắn mới KHÔNG kêu", "no Pusher keys");
 
   // 8. Trang cài đặt: công tắc đồng bộ + Nghe thử vẫn phát khi đang tắt nhóm
   await p.goto(BASE_URL + "/profile");

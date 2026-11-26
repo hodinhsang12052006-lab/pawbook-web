@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { chromium, devices } from "playwright";
-import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, fakeIp, registerUser } from "./lib.mjs";
+import { BASE_URL, Client, DEMO_PASSWORD, Results, SEED_OWNER, fakeIp, registerUser, sendChat } from "./lib.mjs";
 
 if (!/localhost|127\.0\.0\.1/.test(BASE_URL)) throw new Error("chat_assist_test chỉ chạy với server local");
 const OUT = process.env.TEMP || ".";
@@ -79,13 +79,15 @@ try {
 
   const n0 = (await msgs()).length;
   await priceChip.first().click();
-  const input = p.locator(".pn-composer input[type=text]");
+  // Ô soạn V2 là textarea [data-chat-input] (không còn input[type=text]).
+  const input = p.locator("[data-chat-input]").filter({ visible: true }).first();
   const filled = await input.inputValue();
   const sendOn = await p.getByRole("button", { name: "Gửi tin nhắn" }).isEnabled();
   await p.waitForTimeout(800);
   const n1 = (await msgs()).length;
   R.check("P2", "Bấm gợi ý → câu ĐIỀN SẴN vào ô nhập để thợ sửa (nút Gửi bật), KHÔNG tự gửi thay thợ", filled.startsWith("Dạ giá bên em:") && sendOn && n1 === n0, JSON.stringify({ filled: filled.slice(0, 80), sendOn, n0, n1 }));
-  await input.press("Enter");
+  // iPhone (chạm): Enter = xuống dòng → thợ gửi câu điền sẵn bằng nút Gửi.
+  await sendChat(p, filled);
   await p.waitForTimeout(1500);
   const sent = (await msgs()).find((m) => m.senderId === tech.userId && /Gel-X ombre \$55–70/.test(bodyOf(m)));
   R.check("P3", "Thợ bấm Gửi → khách nhận đúng bảng giá + link menu đặt lịch của thợ", !!sent && bodyOf(sent).includes(`/menu/${tech.userId}`), bodyOf(sent || {}).slice(0, 140));
@@ -222,7 +224,7 @@ try {
   R.check("H2", "Chủ tiệm hỏi \"làm được bột/dip không\" → thợ có gợi ý trả lời bằng kỹ năng THẬT trong hồ sơ + link ảnh tay nghề", /Bột\/Acrylic/.test(skillTitle || "") && (skillTitle || "").includes(`/profile/${tech.userId}`), skillTitle);
   if (await skillChip.count()) {
     await skillChip.first().click();
-    const v = await p.locator(".pn-composer input[type=text]").inputValue();
+    const v = await p.locator("[data-chat-input]").filter({ visible: true }).first().inputValue();
     R.check("H3", "Thợ bấm gợi ý → câu điền sẵn vào ô nhập (không tự gửi)", v === skillTitle, v.slice(0, 80));
   } else R.check("H3", "Thợ bấm gợi ý tay nghề", false, "không có chip");
 

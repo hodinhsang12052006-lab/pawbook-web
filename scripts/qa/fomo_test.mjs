@@ -109,9 +109,9 @@ try {
   await p.screenshot({ path: process.env.TEMP + "/fomo_job.png", fullPage: true });
 
   await p.goto(`${BASE_URL}/trends`);
-  const h1 = await p.getByRole("heading", { name: "Xu hướng tuần này" }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-  const pulse = await p.getByText("Nơi đang tuyển nhiều nhất", { exact: true }).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-  R.check("FM20", "Trang /trends hiển thị tiêu đề + 'Nơi đang tuyển nhiều nhất'", h1 && pulse);
+  const h1 = await p.getByRole("heading", { name: /^(Xu hướng tuần này|This week's trends)$/ }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+  const pulse = await p.getByText(/^(Nơi đang tuyển nhiều nhất|Nơi tiệm đang tuyển nhiều|Where salons are hiring)$/).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  R.check("FM20", "Trang /trends hiển thị tiêu đề + mục 'Nơi tiệm đang tuyển nhiều'", h1 && pulse);
   await p.screenshot({ path: process.env.TEMP + "/fomo_trends.png", fullPage: true });
 
   // Thợ đang mở app → chủ tiệm đăng tin gấp cùng bang → toast realtime

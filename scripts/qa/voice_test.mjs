@@ -33,7 +33,7 @@ await A.page.waitForTimeout(1500);
 
 // V1: bấm 🎤 → thanh ghi âm (đồng hồ chạy, sóng âm)
 const nVoiceBefore = await B.page.getByRole("button", { name: "Phát tin nhắn thoại" }).count();
-await A.page.getByRole("button", { name: "Ghi âm" }).click();
+await A.page.getByRole("button", { name: /^(Ghi âm|Record voice)$/ }).filter({ visible: true }).first().click();
 const bar = A.page.getByRole("group", { name: "Đang ghi âm" });
 const shown = await bar.waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
 // Đồng hồ chỉ chạy khi micro đã bật thật (xin quyền mất ~1 giây) → chờ đủ
@@ -48,7 +48,7 @@ const backToInput = await A.page.locator("[data-chat-input]").first().isVisible(
 R.check("V2", "Bấm 🗑 → huỷ, quay về ô nhập, không gửi tin", backToInput && (await B.page.getByRole("button", { name: "Phát tin nhắn thoại" }).count()) === nVoiceBefore);
 
 // V3: ghi 2 giây → gửi → 2 bên thấy bong bóng thoại có nút phát + thời lượng
-await A.page.getByRole("button", { name: "Ghi âm" }).click();
+await A.page.getByRole("button", { name: /^(Ghi âm|Record voice)$/ }).filter({ visible: true }).first().click();
 await A.page.getByRole("group", { name: "Đang ghi âm" }).waitFor({ timeout: 6000 });
 await A.page.waitForTimeout(2300);
 await A.page.getByRole("button", { name: "Gửi tin nhắn thoại" }).click();

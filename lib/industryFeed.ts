@@ -33,11 +33,12 @@ export const TOPIC_LABEL: Record<NewsTopic, string> = {
 const gnSite = (site: string, hl = "en-US", gl = "US") =>
   `https://news.google.com/rss/search?q=site:${site}+when:30d&hl=${hl}&gl=${gl}&ceid=${gl}:${hl.split("-")[0]}`;
 
-const FEEDS: { url: string; source?: string; trade?: boolean; lang: "en" | "vi"; market: "US" | "AU" | "VN" }[] = [
+// mixed: báo làm đẹp / spa chung (tiêm filler, hội nghị phần mềm salon…) — tiêu đề vẫn phải nhắc tới nghề nail
+const FEEDS: { url: string; source?: string; trade?: boolean; mixed?: boolean; lang: "en" | "vi"; market: "US" | "AU" | "VN" }[] = [
   { url: gnSite("nailpro.com"), trade: true, lang: "en", market: "US" },
-  { url: gnSite("americanspa.com"), trade: true, lang: "en", market: "US" },
+  { url: gnSite("americanspa.com"), trade: true, mixed: true, lang: "en", market: "US" },
   { url: gnSite("scratchmagazine.co.uk"), trade: true, lang: "en", market: "US" },
-  { url: gnSite("professionalbeauty.com.au", "en-AU", "AU"), trade: true, lang: "en", market: "AU" },
+  { url: gnSite("professionalbeauty.com.au", "en-AU", "AU"), trade: true, mixed: true, lang: "en", market: "AU" },
   { url: "https://news.google.com/rss/search?q=%22nail+salon%22+OR+%22nail+technician%22+when:14d&hl=en-US&gl=US&ceid=US:en", lang: "en", market: "US" },
   { url: "https://news.google.com/rss/search?q=%22nail+salon%22+australia+when:30d&hl=en-AU&gl=AU&ceid=AU:en", lang: "en", market: "AU" },
   { url: "https://news.google.com/rss/search?q=%22nail+technician%22+OR+%22nail+tech%22+australia+when:30d&hl=en-AU&gl=AU&ceid=AU:en", lang: "en", market: "AU" },
@@ -87,7 +88,7 @@ function parse(xml: string, feed: (typeof FEEDS)[number]): NewsItem[] {
     let title = decode(tag(item, "title") || "");
     const link = decode(tag(item, "link") || "");
     if (!title || !/^https:\/\//.test(link)) return [];
-    if (!feed.trade && !RELEVANT.test(title)) return [];
+    if ((!feed.trade || feed.mixed) && !RELEVANT.test(title)) return [];
     // Google News: "Tiêu đề - Nguồn"
     let source = feed.source || decode(tag(item, "source") || "");
     if (!feed.source && !source) {

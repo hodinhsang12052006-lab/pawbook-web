@@ -166,7 +166,7 @@ try {
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(e.message.slice(0, 160)));
   await page.goto(BASE_URL + "/designs");
-  const strip = page.getByRole("region", { name: "Menu có giá từ thợ" });
+  const strip = page.getByRole("region", { name: /^(Menu có giá từ thợ|Priced menus from techs)$/ });
   const vis = await strip.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
   const link = vis ? await strip.getByRole("link", { name: /QA Ảnh thật mắt mèo/ }).getAttribute("href") : null;
   const ov = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

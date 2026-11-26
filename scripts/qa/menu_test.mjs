@@ -259,22 +259,22 @@ await db.execute({ sql: `DELETE FROM "Post" WHERE id = ?`, args: [postId] });
 await owner2.page.goto(BASE_URL + "/?tab=feed");
 await owner2.page.waitForTimeout(4000);
 const onbFirst = (await owner2.page.locator("[data-nudge]").count()) > 0;
-const nudgeWithOnb = await owner2.page.getByRole("link", { name: /Tạo menu mẫu có giá/ }).isVisible().catch(() => false);
+const nudgeWithOnb = await owner2.page.getByRole("link", { name: /Tạo menu mẫu (có|kèm) giá|Build a priced menu/ }).isVisible().catch(() => false);
 R.check("M22", "Đang có thẻ \"Bắt đầu\" → thẻ menu không chồng lên (chỉ 1 thẻ gợi ý)", !onbFirst || !nudgeWithOnb, JSON.stringify({ onbFirst, nudgeWithOnb }));
 // Người dùng đã ẩn thẻ "Bắt đầu" → thẻ menu phải hiện
 await owner2.page.evaluate(() => { try { localStorage.setItem("pn_onboarding_hide", "1"); localStorage.removeItem("pn_menu_nudge_hide"); } catch {} });
 await owner2.page.reload();
 await owner2.page.waitForTimeout(4000);
 const hasOnb = (await owner2.page.locator("[data-nudge]").count()) > 0;
-const nudge = owner2.page.getByRole("link", { name: /Tạo menu mẫu có giá/ });
+const nudge = owner2.page.getByRole("link", { name: /Tạo menu mẫu (có|kèm) giá|Build a priced menu/ });
 const nudgeVis = await nudge.isVisible().catch(() => false);
 let hiddenAfter = true;
 if (nudgeVis) {
   const href = await nudge.getAttribute("href");
-  await owner2.page.getByRole("button", { name: "Ẩn gợi ý tạo menu" }).click();
+  await owner2.page.getByRole("button", { name: /^(Ẩn gợi ý tạo menu|Hide menu tip)$/ }).click();
   await owner2.page.reload();
   await owner2.page.waitForTimeout(4000);
-  hiddenAfter = !(await owner2.page.getByRole("link", { name: /Tạo menu mẫu có giá/ }).isVisible().catch(() => false));
+  hiddenAfter = !(await owner2.page.getByRole("link", { name: /Tạo menu mẫu (có|kèm) giá|Build a priced menu/ }).isVisible().catch(() => false));
   R.check("M21", "Bảng tin: chủ tiệm chưa có menu thấy thẻ \"Tạo menu mẫu có giá\" (dẫn tới tab Menu); bấm ✕ → ẩn, tải lại vẫn ẩn", href === `/profile/${owner2.me.id}?tab=menu` && hiddenAfter, JSON.stringify({ href, hiddenAfter }));
 } else {
   R.check("M21", "Bảng tin: đang có thẻ \"Bắt đầu\" → thẻ menu tự ẩn (không chồng thẻ)", hasOnb, JSON.stringify({ hasOnb, nudgeVis }));

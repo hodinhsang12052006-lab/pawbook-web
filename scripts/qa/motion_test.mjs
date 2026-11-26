@@ -107,13 +107,13 @@ try {
   // FOMO toast xuất hiện (điện thoại: lần đầu sau ~25 giây), có nhãn loại + đóng được
   await tp.evaluate(() => sessionStorage.removeItem("pn_fomo_session"));
   await tp.goto(BASE_URL + "/?tab=feed");
-  const toast = tp.locator('[role="status"]').filter({ has: tp.getByRole("button", { name: "Ẩn thông báo" }) });
+  const toast = tp.locator('[role="status"]').filter({ has: tp.getByRole("button", { name: /^(Ẩn thông báo|Dismiss)$/ }) });
   const appeared = await toast.waitFor({ timeout: 34000 }).then(() => true).catch(() => false);
   const label = appeared ? await toast.locator("p").first().innerText() : "";
-  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /VIỆC MỚI|TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG/i.test(label), label);
+  R.check("M8", "FOMO toast xuất hiện với nhãn loại sự kiện", appeared && /VIỆC MỚI|TIN TUYỂN|THỢ CẬP NHẬT|BÀI ĐĂNG|NHỊP THỊ TRƯỜNG|TỪ NHÓM CỘNG ĐỒNG|ĐĂNG HỘ TIỆM|NEW JOB|COMMUNITY GROUPS|POSTED FOR SALON|TECH UPDATE|POST/i.test(label), label);
   await tp.screenshot({ path: `${OUT}/m_fomo.png` });
   if (appeared) {
-    await toast.getByRole("button", { name: "Ẩn thông báo" }).click();
+    await toast.getByRole("button", { name: /^(Ẩn thông báo|Dismiss)$/ }).click();
     await tp.waitForTimeout(400);
     const gone = (await toast.count()) === 0;
     await tp.waitForTimeout(12000);

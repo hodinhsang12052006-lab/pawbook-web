@@ -57,7 +57,7 @@ try {
   const after = await fetch(BASE_URL + "/api/posts").then((r) => r.json());
   const shown = after.posts.find((p) => p.id === anonId);
   const raw = JSON.stringify(shown || {});
-  R.check("A4", "Duyệt → lên bảng tin dưới tên 'Thợ ẩn danh', KHÔNG có id/tên/thành phố người đăng", !!shown && shown.author.name === "Thợ ẩn danh" && shown.author.id === null && shown.city === null && !raw.includes("Bí Mật") && !raw.includes(wid) && !raw.includes("Houston"), raw.slice(0, 200));
+  R.check("A4", "Duyệt → lên bảng tin dưới tên 'Thợ ẩn danh', KHÔNG có id/tên/thành phố người đăng", !!shown && /^(Thợ ẩn danh|Anonymous nail tech)$/.test(shown.author.name) && shown.author.id === null && shown.city === null && !raw.includes("Bí Mật") && !raw.includes(wid) && !raw.includes("Houston"), raw.slice(0, 200));
   const prof = await u1.client.req(`/api/posts?authorId=${wid}`);
   R.check("A5", "Trang hồ sơ của người đó KHÔNG liệt kê bài ẩn danh (không suy ra được ai viết)", !(prof.data.posts || []).some((p) => p.id === anonId));
   await w.client.req(`/api/posts/${anonId}/comments`, { method: "POST", json: { content: "Cảm ơn mọi người đã góp ý" } });
@@ -90,7 +90,9 @@ try {
   const atxt = await anonCard.innerText().catch(() => "");
   R.check("U2", "Thẻ tâm sự: nhãn 'Tâm sự ẩn danh', không có nút xem hồ sơ / nhắn tác giả", /Tâm sự ẩn danh/.test(atxt) && (await anonCard.getByRole("link", { name: /Xem Tay Nghề|Xem Tiệm|Xem hồ sơ/ }).count()) === 0 && (await anonCard.getByRole("button", { name: /Nhắn tin cho tác giả/ }).count()) === 0, atxt.slice(0, 160));
   await anonCard.screenshot({ path: `${process.env.TEMP || "."}/community_anon.png` }).catch(() => {});
-  R.check("U3", "Ô soạn bài có nút '🤫 Ẩn danh'", (await p.getByRole("button", { name: /Ẩn danh/ }).count()) > 0);
+  // ô soạn bài thu gọn mặc định (1 dòng) → mở ra mới có các nút
+  await p.getByRole("button", { name: /Khoe mẫu mới, tin tiệm|Share your latest work/ }).first().click().catch(() => {});
+  R.check("U3", "Ô soạn bài (mở ra) có nút '🤫 Ẩn danh'", (await p.getByRole("button", { name: /Ẩn danh|Anonymous/ }).count()) > 0);
   R.check("U4", "Không lỗi JS", errors.length === 0, errors.join(" | "));
 } catch (e) {
   R.check("FATAL", String(e?.message || e).slice(0, 200), false);

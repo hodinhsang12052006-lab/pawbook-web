@@ -58,8 +58,8 @@ try {
   const toTech = mails.find((m) => m.to?.[0] === `lan.${stamp}@example.com`);
   const toOwner = mails.find((m) => m.to?.[0] === `kim.${stamp}@example.com`);
   R.check("D2", "Cron gửi đúng 2 thư (thợ + chủ tiệm), bỏ qua email @qa.test", r1.status === 200 && r1.data.sent === 2 && mails.length === 2 && !!toTech && !!toOwner, JSON.stringify(r1.data));
-  R.check("D3", "Thư thợ: tiêu đề nói số tiệm đã xem hồ sơ, có tên, có link /jobs + link hủy nhận", !!toTech && /tiệm đã xem hồ sơ bạn/.test(toTech.subject) && /Chào Lan Nguyen/.test(toTech.html) && toTech.html.includes("/api/email/unsubscribe?u=" + techId) && toTech.text.includes("Hủy nhận"), toTech?.subject);
-  R.check("D4", "Thư chủ tiệm: có thợ đang rảnh tại California + link hồ sơ thợ", !!toOwner && /thợ đang rảnh tại California/.test(toOwner.subject) && (toOwner.html.match(/\/profile\/[a-z0-9]{10,}/g) || []).length >= 1, toOwner?.subject); // (5 thợ MỚI nhất trong bang — chạy sau bộ test khác thì thợ test có thể không nằm trong top 5)
+  R.check("D3", "Thư thợ: tiêu đề nói số tiệm đã xem hồ sơ, có tên, có link /jobs + link hủy nhận", !!toTech && /tiệm đã xem hồ sơ (của )?bạn|salons? viewed your profile/.test(toTech.subject) && /(Chào|Hi) Lan Nguyen/.test(toTech.html) && toTech.html.includes("/api/email/unsubscribe?u=" + techId) && toTech.text.includes("Hủy nhận"), toTech?.subject);
+  R.check("D4", "Thư chủ tiệm: có thợ đang rảnh tại California + link hồ sơ thợ", !!toOwner && /(thợ đang rảnh|thợ sẵn sàng nhận việc) tại California|technicians? available in California/.test(toOwner.subject) && (toOwner.html.match(/\/profile\/[a-z0-9]{10,}/g) || []).length >= 1, toOwner?.subject); // (5 thợ MỚI nhất trong bang — chạy sau bộ test khác thì thợ test có thể không nằm trong top 5)
   for (const [k, m] of [["tech", toTech], ["owner", toOwner]]) if (m) (await import("node:fs")).writeFileSync(`${process.env.TEMP || "."}/digest_${k}.html`, m.html);
   const demoIds = (await db.execute(`SELECT id FROM "User" WHERE email LIKE '%pawnailjobs.demo'`)).rows.map((r) => r.id);
   const demoJobIds = (await db.execute(`SELECT j.id FROM "Job" j JOIN "User" u ON u.id = j.ownerId WHERE u.email LIKE '%pawnailjobs.demo'`)).rows.map((r) => r.id);
@@ -84,7 +84,7 @@ try {
   const bad = await fetch(local.replace(/s=[^&]+/, "s=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
   R.check("D9", "Chữ ký sai → 400, vẫn nhận email", bad.status === 400 && Number((await digestOf(techId)).emailDigest) === 1);
   const good = await fetch(local, { method: "POST" });
-  R.check("D10", "Link hủy (one-click POST) → tắt email tóm tắt, trang xác nhận tiếng Việt", good.status === 200 && /Đã hủy nhận/.test(await good.text()) && Number((await digestOf(techId)).emailDigest) === 0);
+  R.check("D10", "Link hủy (one-click POST) → tắt email tóm tắt, trang xác nhận đúng ngôn ngữ người nhận", good.status === 200 && /Đã hủy nhận|been unsubscribed/.test(await good.text()) && Number((await digestOf(techId)).emailDigest) === 0);
 
   // API tùy chọn
   const g1 = await tech.client.req("/api/email/prefs");

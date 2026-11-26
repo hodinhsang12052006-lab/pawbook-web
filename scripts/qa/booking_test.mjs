@@ -83,14 +83,14 @@ R.check("B5", "Xem lịch: chưa đăng nhập 401; thợ chỉ thấy lịch C�
 const bId = String(r1?.id);
 const skip = await api(tech, "PATCH", `/api/bookings/${bId}`, { status: "done" });
 const steal = await api(owner, "PATCH", `/api/bookings/${bId}`, { status: "confirmed" });
-const conf = await api(tech, "PATCH", `/api/bookings/${bId}`, { status: "confirmed", scheduledFor: "Thứ 7, 18/10 · 2:30 PM" });
+const conf = await api(tech, "PATCH", `/api/bookings/${bId}`, { status: "confirmed", scheduledFor: "2026-10-18T14:30" });
 const fin = await api(tech, "PATCH", `/api/bookings/${bId}`, { status: "done" });
 const reopen = await api(tech, "PATCH", `/api/bookings/${bId}`, { status: "confirmed" });
 const delOther = await api(owner, "DELETE", `/api/bookings/${String(r2?.id)}`);
 const del = await api(tech, "DELETE", `/api/bookings/${String(r2?.id)}`);
 const left = await rowsFor(tech.me.id);
 R.check("B6", "Trạng thái: chưa xác nhận không cho \"đã làm\"; tiệm khác sửa/xoá → 403; xác nhận (kèm giờ) → đã làm; không mở lại lịch đã xong; thợ xoá được (xoá luôn SĐT)",
-  skip.status() === 400 && steal.status() === 403 && conf.ok() && (await conf.json()).booking.scheduledFor === "Thứ 7, 18/10 · 2:30 PM" && fin.ok() && reopen.status() === 400 && delOther.status() === 403 && del.ok() && !left.some((r) => r.id === r2?.id) && left.find((r) => r.id === bId)?.status === "done",
+  skip.status() === 400 && steal.status() === 403 && conf.ok() && (await conf.json()).booking.scheduledFor === "2026-10-18T14:30" && fin.ok() && reopen.status() === 400 && delOther.status() === 403 && del.ok() && !left.some((r) => r.id === r2?.id) && left.find((r) => r.id === bId)?.status === "done",
   [skip.status(), steal.status(), conf.status(), fin.status(), reopen.status(), delOther.status(), del.status()].join(" "));
 
 // ---------- Giao diện: khách trên điện thoại ----------

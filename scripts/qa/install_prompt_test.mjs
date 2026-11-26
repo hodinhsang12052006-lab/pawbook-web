@@ -41,9 +41,9 @@ try {
       await fireBIP(p);
       await banner(p).waitFor({ timeout: WAIT + 3000 });
       const txt = await banner(p).innerText();
-      R.check("I2", "Android, khách quay lại: hiện thẻ 'Cài PawNail lên điện thoại' + nút Cài app / Để sau", /Cài PawNail/.test(txt) && /Cài app/.test(txt) && /Để sau/.test(txt), txt);
+      R.check("I2", "Android, khách quay lại: hiện thẻ 'Cài PawNail lên điện thoại' + nút Cài app / Để sau", /Cài PawNail/.test(txt) && /Cài app|Cài ứng dụng/.test(txt) && /Để sau/.test(txt), txt);
       await p.screenshot({ path: `${process.env.TEMP || "."}/install_android.png` }).catch(() => {});
-      await banner(p).getByRole("button", { name: /Cài app/ }).click();
+      await banner(p).getByRole("button", { name: /Cài app|Cài ứng dụng/ }).click();
       await p.waitForTimeout(500);
       const st = await p.evaluate(() => ({ prompted: window.__prompted, s: JSON.parse(localStorage.getItem("pn_install") || "{}") }));
       R.check("I3", "Bấm Cài app → mở hộp cài của Chrome, đã cài thì thôi hiện", st.prompted === 1 && st.s.installed === true && (await banner(p).count()) === 0, JSON.stringify(st));

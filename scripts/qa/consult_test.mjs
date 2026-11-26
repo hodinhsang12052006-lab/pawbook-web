@@ -194,7 +194,7 @@ geminiMode = "ok"; cfMode = "ok";
 await guest.page.goto(BASE_URL + "/consult");
 const gate = await guest.page.getByRole("link", { name: "Đăng nhập" }).last().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
 await p.goto(BASE_URL + "/?tab=feed");
-const entry = await p.getByRole("navigation", { name: "Công cụ" }).getByRole("link", { name: /Soi tay tư vấn/ }).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+const entry = await p.getByRole("navigation", { name: /^(Công cụ|Tools)$/ }).getByRole("link", { name: /Soi tay tư vấn|Phân tích (tay & )?móng|Hand & nail analysis|Nail analysis/ }).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
 R.check("C17", "Người chưa đăng nhập vào /consult → mời đăng nhập; thợ có lối tắt “Soi tay tư vấn” ở trang chủ", gate && entry, JSON.stringify({ gate, entry }));
 
 const errs = [...tech.errors, ...owner.errors, ...guest.errors];

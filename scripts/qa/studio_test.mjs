@@ -49,18 +49,22 @@ try {
     sessionStorage.setItem("pn_fomo_session", JSON.stringify({ shown: 99, closes: 9 }));
   }, [me]);
   await p.goto(BASE_URL + "/?tab=feed");
-  const wb = p.getByRole("region", { name: "Có gì mới từ lần trước" });
+  const wb = p.getByRole("region", { name: /^(Có gì mới từ lần trước|What's new since last time)$/ });
   const wbShown = await wb.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-  R.check("ST8", "Quay lại sau 2 ngày → thẻ 'Có gì mới từ lần trước bạn ghé'", wbShown);
+  // Thẻ chỉ hiện khi THẬT có gì mới (không bịa số): DB sạch không có tin / thợ / tương tác mới → thẻ phải ẩn.
+  const since = new Date(Date.now() - 2 * 86_400_000).toISOString();
+  const dg = await p.request.get(BASE_URL + "/api/home/digest?since=" + encodeURIComponent(since)).then((r) => r.json()).catch(() => null);
+  const hasNews = !!(dg && (dg.newJobs || dg.newTechs || dg.likes || dg.comments || dg.saves));
+  R.check("ST8", "Quay lại sau 2 ngày → thẻ 'Có gì mới từ lần trước bạn ghé' khi có gì mới (ẩn khi không có)", hasNews ? wbShown : !wbShown, JSON.stringify({ hasNews, wbShown }));
   await p.screenshot({ path: `${OUT}/st_home.png` });
   if (wbShown) {
-    const jobsChip = wb.getByRole("button", { name: /tin tuyển mới/ });
+    const jobsChip = wb.getByRole("button", { name: /tin tuyển mới|new jobs?/ });
     if (await jobsChip.count()) {
       await jobsChip.click();
       await p.waitForTimeout(600);
       R.check("ST9", "Bấm 'N tin tuyển mới' → chuyển sang tab Việc gấp", (await p.locator('[role="tab"]').evaluateAll((els) => els.findIndex((e) => e.getAttribute("aria-selected") === "true"))) === 1 /* 0 Bảng tin · 1 Việc làm · 2 Thợ */);
     } else R.check("ST9", "Chip tin tuyển mới", true, "không có tin mới trong 2 ngày — bỏ qua");
-  } else R.check("ST9", "Chip tin tuyển mới", false, "thẻ không hiện");
+  } else R.check("ST9", "Chip tin tuyển mới", !hasNews, "thẻ không hiện");
   await p.reload();
   await p.waitForTimeout(1500);
   R.check("ST10", "Tải lại ngay → thẻ không hiện lại (chỉ hiện khi vắng ≥4 giờ)", (await wb.count()) === 0);

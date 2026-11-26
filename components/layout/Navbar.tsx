@@ -63,18 +63,22 @@ export default function Navbar() {
           ) : sessionUser ? (
             <>
               {sessionUser.role === "ADMIN" ? (
+                // Thanh trên lùi lại: lối vào quản trị là viên trung tính (cùng họ với nút EN · VI), chỉ icon mang màu
+                // champagne của brand — viên vàng cam cũ là mảng màu duy nhất trên thanh, giành chỗ với logo.
                 <button
+                  type="button"
                   onClick={() => router.push(localeHref("/admin/reports"))}
-                  className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all duration-200 cursor-pointer"
+                  className="flex h-9 items-center gap-1.5 rounded-full px-2.5 md:px-3.5 text-[13px] font-semibold text-slate-200 ring-1 ring-inset ring-pn-line-strong transition-colors duration-150 hover:bg-white/[0.06] hover:text-white active:scale-[0.97] cursor-pointer"
                   title={tr("Trang quản trị", "Admin dashboard")}
+                  aria-label={tr("Trang quản trị", "Admin dashboard")}
                 >
-                  <ShieldAlert className="h-4 w-4" />
+                  <ShieldAlert className="h-4 w-4 text-pn-champagne" aria-hidden />
                   <span className="hidden md:inline">{tr("Quản trị", "Admin")}</span>
                 </button>
               ) : sessionUser.role === "OWNER" ? (
                 <button
                   onClick={() => router.push(localeHref("/jobs/create"))}
-                  className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
+                  className="hidden md:flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-[13px] font-semibold text-white hover:from-pink-500 hover:to-fuchsia-500 active:scale-[0.97] transition-colors duration-150 cursor-pointer"
                   title={tr("Đăng tin tuyển", "Post a job")}
                 >
                   <Plus className="h-4 w-4" />
@@ -83,7 +87,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push(localeHref(sessionUser.role === "CLIENT" ? "/salons" : "/profile"))}
-                  className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-pink-600/25 hover:from-pink-500 hover:to-fuchsia-500 transition-all duration-200 cursor-pointer"
+                  className="hidden md:flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-[13px] font-semibold text-white hover:from-pink-500 hover:to-fuchsia-500 active:scale-[0.97] transition-colors duration-150 cursor-pointer"
                   title={sessionUser.role === "CLIENT" ? tr("Tìm tiệm", "Find a salon") : tr("Đăng tác phẩm", "Share your work")}
                 >
                   <Plus className="h-4 w-4" />
@@ -91,13 +95,14 @@ export default function Navbar() {
                 </button>
               )}
 
-              <div className="flex items-center gap-1 sm:gap-2 border-l border-slate-850 pl-2 sm:pl-4">
+              {/* không vạch ngăn dọc: 2 vạch cũ cắt cụm bên phải thành 3 mảnh rời — khoảng cách nhóm là đủ */}
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <NotificationBell />
                 <Link
                   href="/messages"
                   prefetch={true}
                   onClick={resetUnread}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-100"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-100"
                   title={t("menu.messages")}
                 >
                   <div className="relative">
@@ -111,22 +116,16 @@ export default function Navbar() {
                 </Link>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-3 border-l border-slate-850 pl-2 sm:pl-4">
-                <button
-                  type="button"
-                  onClick={() => router.push(localeHref("/profile"))}
-                  aria-label={tr("Hồ sơ của tôi", "My profile")}
-                  className="rounded-full ring-1 ring-slate-700 hover:ring-2 hover:ring-pink-500 transition-all"
-                >
-                  <Avatar src={sessionUser.avatarUrl} name={sessionUser.name} seed={sessionUser.id} className="h-8 w-8" loading="eager" />
-                </button>
-                <span
-                  onClick={() => router.push(localeHref("/profile"))}
-                  className="hidden lg:inline text-xs font-semibold text-slate-200 cursor-pointer hover:text-white transition-colors"
-                >
-                  {sessionUser.name}
-                </span>
-              </div>
+              {/* ảnh + tên = 1 nút (tên trước đây là <span onClick>: không bấm được bằng bàn phím) */}
+              <button
+                type="button"
+                onClick={() => router.push(localeHref("/profile"))}
+                aria-label={tr("Hồ sơ của tôi", "My profile")}
+                className="flex items-center gap-2.5 rounded-full p-0.5 lg:pr-3.5 transition-colors duration-150 hover:bg-white/[0.06] active:scale-[0.97]"
+              >
+                <Avatar src={sessionUser.avatarUrl} name={sessionUser.name} seed={sessionUser.id} className="h-8 w-8 ring-1 ring-pn-line-strong" loading="eager" />
+                <span className="hidden lg:inline max-w-[10rem] truncate text-[13px] font-semibold text-slate-100">{sessionUser.name}</span>
+              </button>
               <LanguageToggle className="ml-1 max-[399px]:ml-0 max-[399px]:gap-0.5 max-[399px]:px-2" />
             </>
           ) : (

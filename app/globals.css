@@ -619,8 +619,20 @@ html:not([data-ui-classic]) :is(.pn-glass, header.sticky.top-0)::before {
   -webkit-backdrop-filter: var(--pn-glass-filter);
   backdrop-filter: var(--pn-glass-filter);
 }
+/* Thanh trên mang cùng ánh sáng với nền trang (.app-backdrop: 2 quầng hồng / champagne ở mép trên, nền canvas-top):
+   trước đây kính đặc 1 màu (canvas) che quầng sáng → dải tối phẳng bị "dán" lên trên phần trang sáng hơn ngay dưới
+   nó. Cùng gradient, cùng toạ độ (thanh dính ở top 0 = đỉnh nền) → liền mạch khi ở đầu trang; vẫn đặc ≥ .93 nên bài
+   cuộn bên dưới không xuyên qua. */
+html:not([data-ui-classic]) :is(header.sticky.top-0, .pn-sticky-tabs)::before {
+  background:
+    radial-gradient(110% 26rem at 12% -8rem, rgb(219 39 119 / 0.12), transparent 70%),
+    radial-gradient(80% 22rem at 92% -6rem, rgb(230 199 154 / 0.09), transparent 72%),
+    rgb(36 27 41 / 0.93);
+  /* neo theo màn hình: tab dính (top 65px) tiếp đúng phần quầng sáng của thanh trên → 1 khối liền */
+  background-attachment: fixed;
+}
 /* thanh trên + tab dính = 1 khối: vạch 1px giữa 2 lớp tô cùng màu kính (trước: trong suốt → chữ bài cuộn lộ qua khe 1px) */
-html:not([data-ui-classic]) body:has(.pn-sticky-tabs) header.sticky.top-0 { border-bottom-color: var(--pn-glass-bg); }
+html:not([data-ui-classic]) body:has(.pn-sticky-tabs) header.sticky.top-0 { border-bottom-color: rgb(36 27 41 / 0.93); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   html:not([data-ui-classic]) :is(.pn-glass, header.sticky.top-0)::before { background: var(--color-pn-canvas); }
 }

@@ -83,3 +83,7 @@ ios/App/App/public
 
 # Ảnh nộp App Store / Google Play (scripts/store/make_screenshots.mjs)
 store-assets/
+
+# @playwright/test output (npx playwright test)
+/playwright-report/
+/test-results/

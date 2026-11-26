@@ -55,7 +55,7 @@ await page.addInitScript(() => {
   window.__perf = { long: [], events: [] };
   try {
     new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__perf.long.push(e.duration))).observe({ type: "longtask", buffered: true });
-    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__perf.events.push({ name: e.name, d: e.duration }))).observe({ type: "event", durationThreshold: 16, buffered: true });
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__perf.events.push({ name: e.name, d: e.duration, t: Math.round(e.startTime), tgt: e.target ? (e.target.tagName + "." + String(e.target.className || "").split(" ")[0]) : "" }))).observe({ type: "event", durationThreshold: 16, buffered: true });
   } catch {}
 });
 const resetPerf = () => page.evaluate(() => { window.__perf.long = []; window.__perf.events = []; });
@@ -86,18 +86,21 @@ await page.keyboard.type("Dạ em cảm ơn anh, mai 10h em ghé tiệm thử ta
 await page.waitForTimeout(400);
 let p = await readPerf();
 const keyEv = p.events.filter((e) => /key|input|beforeinput/.test(e.name)).map((e) => e.d);
+if (process.env.CHAT_PERF_VERBOSE) { const t0k = Math.min(...p.events.map((e) => e.t)); console.log("   slow typing events:", p.events.filter((e) => /key|input/.test(e.name) && e.d > 50).map((e) => `${e.name}@+${e.t - t0k}ms ${Math.round(e.d)}ms ${e.tgt}`).join(" | ")); }
 out.typing = { worstMs: Math.round(Math.max(0, ...keyEv)), p95Ms: Math.round(pct(keyEv, 0.95)), slowKeys: keyEv.filter((d) => d > 50).length, longTaskMs: Math.round(p.long.reduce((a, b) => a + b, 0)) };
 // 1 lần gõ = 3–4 sự kiện (keydown/beforeinput/input/keyup) → ≤ 8 sự kiện chậm ≈ 2 phím trên ~50 phím.
 R.check("CP2", "Gõ phím mượt: phím chậm nhất ≤ 100ms, ≤ 8 sự kiện phím > 50ms (trước khi sửa: 63)", out.typing.worstMs <= 100 && out.typing.slowKeys <= 8, JSON.stringify(out.typing));
 
-// 3) Gửi: bấm Enter → bong bóng hiện (tin hiện ngay, không chờ server).
+// 3) Gửi: bấm nút Gửi (điện thoại: Enter = xuống dòng) → bong bóng hiện (tin hiện ngay, không chờ server).
 t0 = await page.evaluate(() => performance.now());
 const shown = page.evaluate((txt) => new Promise((res) => {
   const tick = () => ([...document.querySelectorAll("p,div,span")].some((n) => n.childElementCount === 0 && n.textContent?.includes(txt)) ? res(performance.now()) : requestAnimationFrame(tick));
   tick();
+  setTimeout(() => res(null), 10000); // không hiện trong 10 s → ghi lỗi thay vì treo cả bài đo
 }), "thử tay nghề nha");
-await page.keyboard.press("Enter");
-out.sendMs = Math.round((await shown) - t0);
+await page.getByRole("button", { name: /^(Gửi tin nhắn|Send message)$/ }).filter({ visible: true }).first().click();
+const shownAt = await shown;
+out.sendMs = shownAt == null ? 99999 : Math.round(shownAt - t0);
 R.check("CP3", "Gửi tin → hiện bong bóng ≤ 150ms", out.sendMs <= 150, out.sendMs + "ms");
 await page.waitForTimeout(1500);
 

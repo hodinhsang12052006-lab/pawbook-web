@@ -53,7 +53,10 @@ R.check("M1", "Ô nhập tin trên điện thoại chữ ≥ 16px (dễ gõ, kh�
 await owner.page.waitForTimeout(1500);
 let t0 = Date.now();
 await oBox.click();
-await oBox.pressSequentially("Mai em ghé", { delay: 60 });
+// Nội dung riêng cho từng lượt chạy: chạy lại trên cùng DB thì "Mai em ghé" / "Đã xem" của lượt trước đã nằm sẵn trong
+// khung → M3/M4 khớp tin CŨ ngay lập tức và M5 kiểm tra trước khi tin mới tới (trượt giả).
+const MSG = `Mai em ghé ${stamp}`;
+await oBox.pressSequentially(MSG, { delay: 60 });
 if (realtime) {
   const typingSeen = await tech.page.getByText(/Đang soạn tin/).locator("visible=true").first().waitFor({ timeout: 6000 }).then(() => Date.now() - t0).catch(() => -1);
   R.check("M2", "Bên kia gõ → hiện 'Đang soạn tin' ≤ 3s", typingSeen >= 0 && typingSeen <= 3000, typingSeen + "ms");
@@ -62,18 +65,23 @@ if (realtime) {
 // M3: gửi (nút Gửi) → thợ nhận; thợ đang mở chat → chủ tiệm thấy 'Đã xem'
 const posted = messagePosted(owner.page);
 t0 = Date.now();
-await sendChat(owner.page, "Mai em ghé");
+await sendChat(owner.page, MSG);
 if (realtime) {
-  const got = await tech.page.getByText("Mai em ghé").last().waitFor({ timeout: 8000 }).then(() => Date.now() - t0).catch(() => -1);
+  const got = await tech.page.getByText(MSG).last().waitFor({ timeout: 8000 }).then(() => Date.now() - t0).catch(() => -1);
   R.check("M3", "Tin tới máy bên kia ≤ 2s", got >= 0 && got <= 2000, got + "ms");
-  const seen = await owner.page.getByText(/Đã xem/).last().waitFor({ timeout: 8000 }).then(() => Date.now() - t0).catch(() => -1);
+  // "Đã xem" của CHÍNH tin vừa gửi: nhãn đọc màn hình của bong bóng chứa MSG ("Bạn, 20:05, Đã xem") — không khớp nhãn
+  // "Đã xem" của lượt trước.
+  const seen = await owner.page
+    .waitForFunction((msg) => [...document.querySelectorAll(".sr-only")].some((s) => (s.textContent || "").includes("Đã xem") && (s.parentElement?.textContent || "").includes(msg)), MSG, { timeout: 8000 })
+    .then(() => Date.now() - t0)
+    .catch(() => -1);
   R.check("M4", "Người gửi thấy 'Đã xem' khi bên kia đang mở chat ≤ 4s", seen >= 0 && seen <= 4000, seen + "ms");
   const typingGone = await tech.page.getByText(/Đang soạn tin/).locator("visible=true").count();
   R.check("M5", "Gửi xong → tắt 'Đang soạn tin' ngay", typingGone === 0, String(typingGone));
 } else {
   const res = await posted;
   await tech.page.reload();
-  const got = await tech.page.getByText("Mai em ghé").last().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+  const got = await tech.page.getByText(MSG).last().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
   R.check("M3a", "Điện thoại bấm nút Gửi → tin tới server; máy bên kia tải lại trang thấy tin", !!res?.ok() && got, JSON.stringify({ status: res?.status() ?? null, got }));
   R.skip("M3", "Tin tới máy bên kia ≤ 2s", "no Pusher keys");
   R.skip("M4", "Người gửi thấy 'Đã xem' khi bên kia đang mở chat ≤ 4s", "no Pusher keys");

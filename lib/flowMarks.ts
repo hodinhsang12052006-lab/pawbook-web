@@ -20,6 +20,14 @@ const MARKS_MAX = 1500;
 export const FLOW_WHERE = { prompt: { contains: "[flow:" } } as const;
 export const isFlowPrompt = (p: string | null | undefined): boolean => !!p && p.includes("[flow:");
 
+/**
+ * Chỗ KHÁCH nhìn thấy mẫu (catalog, sitemap, mẫu liên quan, gợi ý soi tay, radar, đếm trong email) chỉ dùng mẫu có ẢNH
+ * GOOGLE FLOW (11/2026, chủ app: ảnh máy PawNail tự vẽ / AI cũ "nhìn gai", ảnh Flow đẹp). Mẫu máy vẽ vẫn ở admin làm brief
+ * cho Flow ("Xuất brief cho Flow"). Bật lại ảnh máy vẽ: env CATALOG_SHOW_RENDERED=1.
+ */
+export const PUBLIC_IMAGE_WHERE = (): { prompt?: { contains: string } } =>
+  process.env.CATALOG_SHOW_RENDERED === "1" ? {} : { prompt: { contains: "[flow:" } };
+
 // Mã ảnh: D001…D999 (lô brief 2026-11) hoặc id mẫu (cuid) — lô sau dùng thẳng id mẫu làm mã.
 export const D_CODE_RE = /^D\d{3}$/;
 export const DESIGN_ID_RE = /^c[a-z0-9]{20,31}$/;

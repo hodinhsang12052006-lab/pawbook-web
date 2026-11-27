@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { PUBLIC_IMAGE_WHERE } from "@/lib/flowMarks";
 import { activeTrends } from "@/lib/trendRadar";
 
 // GET /api/trends/nail-radar — XU HƯỚNG MẪU NAIL ĐANG LÊN (radar có nguồn: Pinterest Predicts 2026, xu hướng mùa / lễ)
@@ -13,7 +14,7 @@ export async function GET() {
   try {
     const rows = await Promise.all(trends.map(async (t) => {
       const designs = await prisma.nailDesign.findMany({
-        where: { status: "published", imageUrl: { not: null }, OR: [{ description: { contains: `${t.name.vi} (` } }, { descriptionEn: { contains: `${t.name.en} (` } }] },
+        where: { status: "published", imageUrl: { not: null }, ...PUBLIC_IMAGE_WHERE(), OR: [{ description: { contains: `${t.name.vi} (` } }, { descriptionEn: { contains: `${t.name.en} (` } }] },
         select: { id: true, title: true, titleEn: true, imageUrl: true },
         orderBy: { publishedAt: "desc" },
         take: 4,

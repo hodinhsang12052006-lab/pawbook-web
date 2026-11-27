@@ -10,6 +10,7 @@ import type { Design } from "@/components/designs/DesignViews";
 import { localePath } from "@/lib/i18n/config";
 import { alternates, langFrom, openGraph, trL } from "@/lib/i18n/server";
 import { RETIRED_OCCASIONS, isRetiredOccasion } from "@/lib/season";
+import { PUBLIC_IMAGE_WHERE, isFlowPrompt } from "@/lib/flowMarks";
 
 // TRANG RIÊNG TỪNG MẪU NAIL (/designs/[id]): link chia sẻ được (thợ gửi khách "mẫu này nè", khách gửi bạn — dán vào
 // chat có ảnh xem trước), Google tìm thấy (mỗi ngày ~18 mẫu mới: tên mẫu, vật tư, các bước, thời gian, giá gợi ý),
@@ -27,6 +28,8 @@ const SELECT = {
 async function load(id: string) {
   try {
     const r = await prisma.nailDesign.findFirst({ where: { id, status: { in: ["published", "archived"] } }, select: SELECT });
+    // Ảnh máy vẽ / AI cũ không còn hiện cho khách (lib/flowMarks PUBLIC_IMAGE_WHERE) → 404 như mẫu nháp.
+    if (r && PUBLIC_IMAGE_WHERE().prompt && !isFlowPrompt(r.prompt)) return null;
     return r ? (toPublic(r) as unknown as Design) : null;
   } catch {
     return null;
@@ -34,7 +37,8 @@ async function load(id: string) {
 }
 const isArchived = (d: Design) => (d as unknown as { status?: string }).status === "archived" || isRetiredOccasion(d.occasion);
 // mẫu liên quan: chỉ mẫu đang đăng, không bao giờ mẫu của dịp đã nghỉ
-const LIVE: Prisma.NailDesignWhereInput = { status: "published", imageUrl: { not: null }, OR: [{ occasion: null }, { occasion: { notIn: [...RETIRED_OCCASIONS] } }] };
+// Mẫu liên quan: chỉ ảnh Google Flow (lib/flowMarks PUBLIC_IMAGE_WHERE).
+const LIVE: Prisma.NailDesignWhereInput = { status: "published", imageUrl: { not: null }, ...PUBLIC_IMAGE_WHERE(), OR: [{ occasion: null }, { occasion: { notIn: [...RETIRED_OCCASIONS] } }] };
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string; id: string }> }): Promise<Metadata> {
   const { id } = await params;

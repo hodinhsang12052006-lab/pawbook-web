@@ -1,4 +1,5 @@
 // Mẫu nail KHÔNG cần duyệt (mặc định giai đoạn đầu) + ảnh thật thợ/tiệm hiện ở trang Mẫu nail.
+// Server cho bài này: bật CATALOG_SHOW_RENDERED=1 (bài kiểm mẫu MÁY VẼ lên thẳng trang — mặc định từ 11/2026 trang chỉ hiện ảnh Google Flow, xem catalog_read_test R4b/R10b).
 // CHỈ chạy với server local.   node scripts/qa/designs_autopublish_test.mjs
 import { chromium, devices } from "playwright";
 import { createClient } from "@libsql/client";

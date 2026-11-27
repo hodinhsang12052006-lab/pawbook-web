@@ -12,7 +12,7 @@ import prisma from "@/lib/prisma";
 import { toPublic } from "@/lib/aiDesigns";
 import { SEASONAL_THEMES, THEMES } from "@/lib/studioThemes";
 import { RETIRED_OCCASIONS, activeOccasions, type Market } from "@/lib/season";
-import { FLOW_WHERE } from "@/lib/flowMarks";
+import { FLOW_WHERE, PUBLIC_IMAGE_WHERE } from "@/lib/flowMarks";
 
 export interface CatalogQuery {
   occasion?: string | null;
@@ -58,7 +58,8 @@ export async function queryCatalog(q: CatalogQuery) {
   const flowCount = await prisma.nailDesign.count({ where: flowWhere });
   const want = q.limit + 1; // +1 để biết còn trang sau
   let rows = q.offset < flowCount ? await prisma.nailDesign.findMany({ where: flowWhere, orderBy: order, skip: q.offset, take: want, include }) : [];
-  if (rows.length < want) {
+  // Ảnh máy vẽ / AI cũ chỉ hiện khi bật CATALOG_SHOW_RENDERED (lib/flowMarks PUBLIC_IMAGE_WHERE) — mặc định chỉ ảnh Flow.
+  if (rows.length < want && !PUBLIC_IMAGE_WHERE().prompt) {
     rows = rows.concat(await prisma.nailDesign.findMany({ where: restWhere, orderBy: order, skip: Math.max(0, q.offset - flowCount), take: want - rows.length, include }));
   }
   return { designs: rows.slice(0, q.limit).map(toPublic), hasMore: rows.length > q.limit };

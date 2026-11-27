@@ -37,8 +37,13 @@ const r3 = await alertIfDesignsStalled(now);
 ok("DS3", "Mẫu đã đăng nhưng chưa có ảnh + máy vẽ TẮT → thư nói bật vẽ ảnh (không nhắc duyệt)", r3 === "sent" && /máy vẽ ảnh đang TẮT/.test(sent[1]?.text ?? "") && !/chờ duyệt/.test(sent[1]?.text ?? ""), sent[1]?.text);
 
 await setSetting(DESIGNS_ALERT_SENT_AT_KEY, "");
+// Mẫu máy vẽ (không phải ảnh Flow) không còn lên trang (lib/flowMarks PUBLIC_IMAGE_WHERE) → vẫn tính là "đứng"
 await design({ status: "published", imageUrl: "data:image/jpeg;base64,AA", createdAt: ago(2), publishedAt: ago(2) });
-ok("DS4", "Có ít nhất 1 mẫu mới đã lên trang trong 48 giờ → không gửi thư", (await alertIfDesignsStalled(now)) === "fresh" && sent.length === 2);
+await setSetting(DESIGNS_ALERT_SENT_AT_KEY, "");
+const rRendered = await alertIfDesignsStalled(now);
+await design({ status: "published", imageUrl: "data:image/jpeg;base64,AB", prompt: "qa [flow:D001:2026-11-26]", createdAt: ago(2), publishedAt: ago(2) });
+await setSetting(DESIGNS_ALERT_SENT_AT_KEY, "");
+ok("DS4", "Chỉ mẫu có ảnh Google Flow mới tính là 'đã lên trang': mẫu máy vẽ → vẫn gửi thư (nhắc nhập ảnh Flow); có 1 mẫu Flow mới → không gửi", rRendered === "sent" && /Google Flow/.test(JSON.stringify(sent.at(-1) || {})) && (await alertIfDesignsStalled(now)) === "fresh", JSON.stringify({ rRendered, n: sent.length }));
 
 server.close();
 await db.$disconnect();

@@ -73,6 +73,8 @@ const allPages = async (q) => {
 const at = (iso) => new Date(iso);
 
 // ---------------------------------------------------------------- /api/designs
+// R1–R7 kiểm luật mùa / thứ tự trên CẢ mẫu máy vẽ → bật CATALOG_SHOW_RENDERED; R4b kiểm mặc định (chỉ ảnh Flow).
+process.env.CATALOG_SHOW_RENDERED = "1";
 const auNov = await allPages({ market: "AU", now: at("2026-11-06T12:00:00Z") });
 check("R1", `AU on 2026-11-06: 0 fall / thanksgiving / halloween rows (${auNov.length} rows)`, auNov.length > 0 && !auNov.some((d) => ["fall", "thanksgiving", "halloween"].includes(d.occasion)), auNov.map((d) => d.occasion).join(","));
 const usDec = await allPages({ market: "US", now: at("2026-12-05T17:00:00Z") });
@@ -93,6 +95,10 @@ const noMarket = await allPages({ now: at("2026-11-06T17:00:00Z") });
 check("R7", "No ?market= → union of both markets' windows (fall US + spring AU), still no halloween, non-theme occasions pass",
   noMarket.some((d) => d.occasion === "fall") && noMarket.some((d) => d.occasion === "spring") && noMarket.some((d) => d.occasion === "dragonboat") && !noMarket.some((d) => d.occasion === "halloween"));
 
+delete process.env.CATALOG_SHOW_RENDERED;
+const flowOnly = await allPages({ market: "US", now: at("2026-11-06T17:00:00Z") });
+check("R4b", `Mặc định (chủ app 11/2026): catalog CHỈ trả mẫu có ảnh Google Flow (${flowOnly.length} dòng)`, flowOnly.length > 0 && flowOnly.every((d) => d.imageSource === "flow") && flowIds.every((id) => flowOnly.some((d) => d.id === id)), flowOnly.map((d) => d.imageSource).join(","));
+
 // ---------------------------------------------------------------- sitemap
 const sitemap = (await import("../../app/sitemap.ts")).default;
 const sm = (await sitemap()).map((e) => e.url).join("\n");
@@ -100,6 +106,7 @@ check("R8", "sitemap.xml lists published designs only — no halloween, archived
   sm.includes(`/designs/${flowIds[0]}`) && ![lingeringHw, archivedHw, archivedFall, draft, rejected].some((id) => sm.includes(id)));
 
 // ---------------------------------------------------------------- design page
+process.env.CATALOG_SHOW_RENDERED = "1"; // R9–R10: luật lưu trữ / 404 trên cả mẫu máy vẽ; R10b: mặc định
 const page = await import("../../app/[lang]/designs/[id]/page.tsx");
 const params = (id) => Promise.resolve({ lang: "en", id });
 const metaArchived = await page.generateMetadata({ params: params(archivedHw) });
@@ -113,6 +120,9 @@ check("R9", "Archived design (incl. retired Halloween) renders: robots noindex,f
   !view.props.related.some((r) => [lingeringHw, archivedHw, archivedFall].includes(r.id) || r.occasion === "halloween") && liveView?.props?.archived === false,
   JSON.stringify({ robots: metaArchived?.robots, archived: view?.props?.archived }));
 check("R10", "Draft and rejected design ids still 404", (await is404(draft)) && (await is404(rejected)));
+delete process.env.CATALOG_SHOW_RENDERED;
+const renderId = usNov.find((d) => d.imageSource !== "flow")?.id;
+check("R10b", "Mặc định: trang mẫu ảnh máy vẽ (không phải Flow) → 404; mẫu ảnh Flow vẫn mở", !!renderId && (await is404(renderId)) && !(await is404(flowIds[0])), String(renderId));
 
 // ---------------------------------------------------------------- feed freshness
 const NOW = at("2026-11-06T17:00:00Z");

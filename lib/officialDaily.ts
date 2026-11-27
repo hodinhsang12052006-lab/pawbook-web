@@ -3,6 +3,7 @@
 // xen kẽ Mỹ / Úc theo ngày. Tắt: đặt OFFICIAL_DAILY_POST=0 trên Vercel.
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
+import { PUBLIC_IMAGE_WHERE } from "@/lib/flowMarks";
 import { buildBotDrafts, firstLine } from "@/lib/contentBot";
 import { upcomingThemes } from "@/lib/aiDesigns";
 import { GALLERY_PREFIX } from "@/lib/designGallery";
@@ -46,7 +47,7 @@ export async function publishDailyOfficialPost(now = new Date()): Promise<{ post
     // Quảng bá bộ mẫu dịp lễ chỉ khi đã có ≥ 10 mẫu đăng (nói đúng sự thật)
     let theme: { title: string; emoji: string } | null = null;
     const t = upcomingThemes(market, now)[0];
-    if (t && (await prisma.nailDesign.count({ where: { status: "published", occasion: t.id } }).catch(() => 0)) >= 10) theme = { title: t.title, emoji: t.emoji };
+    if (t && (await prisma.nailDesign.count({ where: { status: "published", occasion: t.id, ...PUBLIC_IMAGE_WHERE() } }).catch(() => 0)) >= 10) theme = { title: t.title, emoji: t.emoji };
     const draft = buildBotDrafts({ market, now, theme, publishedTitles: published }).find((d) => !d.pinned && !published.has(firstLine(d.text)) && !recentShape(d.text));
     if (!draft) continue;
     const id = "c" + crypto.randomBytes(12).toString("hex");

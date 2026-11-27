@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { PUBLIC_IMAGE_WHERE } from "@/lib/flowMarks";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 import { geminiEnabled, geminiVisionJson } from "@/lib/gemini";
 import { cfTextEnabled, cfVisionJson } from "@/lib/cfText";
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
 
   const [rows, mine] = await Promise.all([
     prisma.nailDesign.findMany({
-      where: { status: "published", imageUrl: { not: null } },
+      where: { status: "published", imageUrl: { not: null }, ...PUBLIC_IMAGE_WHERE() },
       orderBy: { publishedAt: "desc" },
       take: 400,
       include: { _count: { select: { saves: true } } },

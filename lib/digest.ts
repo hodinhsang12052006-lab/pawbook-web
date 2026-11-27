@@ -5,6 +5,7 @@
 // Mọi số đều là số đếm thật. Có link hủy nhận (ký HMAC) + header List-Unsubscribe.
 import crypto from "node:crypto";
 import prisma from "@/lib/prisma";
+import { PUBLIC_IMAGE_WHERE } from "@/lib/flowMarks";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
 import { weeklyPay } from "@/lib/trends";
 import { stateName } from "@/lib/stateNames";
@@ -71,7 +72,7 @@ export async function buildDigest(u: DigestUser, now = new Date()): Promise<Dige
         select: { id: true, title: true, salonName: true, city: true, salaryAmount: true, salaryType: true },
       }),
       prisma.profileView.count({ where: { profileId: u.id, createdAt: { gte: since }, viewer: { role: "OWNER", ...realUserWhere } } }).catch(() => 0),
-      prisma.nailDesign.count({ where: { status: "published", publishedAt: { gte: since } } }).catch(() => 0),
+      prisma.nailDesign.count({ where: { status: "published", publishedAt: { gte: since }, ...PUBLIC_IMAGE_WHERE() } }).catch(() => 0),
     ]);
     if (!jobs.length && !views) return null;
     const pays = jobs.map((j) => weeklyPay(j.salaryAmount || "", j.salaryType || "")).filter((x): x is number => !!x).sort((a, b) => a - b);

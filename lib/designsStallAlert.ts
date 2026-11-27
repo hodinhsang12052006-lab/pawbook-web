@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { getSetting, setSetting } from "@/lib/settings";
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { storageReady } from "@/lib/aiDesigns";
+import { PUBLIC_IMAGE_WHERE } from "@/lib/flowMarks";
 
 export const DESIGNS_ALERT_SENT_AT_KEY = "designs_stall_alert_at";
 // Tóm tắt lượt cron /api/cron/designs gần nhất (ghi ở route) — log Vercel chỉ giữ vài phút, nên thư cảnh báo trích từ đây.
@@ -19,7 +20,7 @@ export type DesignsStall = { live: number; drafts: number; noImage: number; crea
 export async function designsStall(now = new Date()): Promise<DesignsStall> {
   const since = new Date(now.getTime() - WINDOW_MS);
   const [live, drafts, noImage, created, review, render] = await Promise.all([
-    prisma.nailDesign.count({ where: { status: "published", imageUrl: { not: null }, publishedAt: { gte: since } } }),
+    prisma.nailDesign.count({ where: { status: "published", imageUrl: { not: null }, publishedAt: { gte: since }, ...PUBLIC_IMAGE_WHERE() } }),
     prisma.nailDesign.count({ where: { status: "draft", createdAt: { gte: since } } }),
     prisma.nailDesign.count({ where: { status: "published", imageUrl: null, createdAt: { gte: since } } }),
     prisma.nailDesign.count({ where: { createdAt: { gte: since } } }),
@@ -42,6 +43,8 @@ async function lastRunText(): Promise<string[]> {
 /** Lý do + việc cần làm, theo thứ tự chắc chắn nhất. */
 export function stallCause(s: DesignsStall): string[] {
   const out: string[] = [];
+  // Trang chỉ hiện ảnh Google Flow (lib/flowMarks PUBLIC_IMAGE_WHERE): mẫu mới chỉ lộ ra khi được nhập ảnh Flow.
+  if (PUBLIC_IMAGE_WHERE().prompt) out.push("Trang Mẫu nail chỉ hiện ảnh Google Flow: vào /admin/studio → \"Xuất brief cho Flow\" → vẽ trong Google Flow → kéo thư mục ảnh vào \"Ảnh từ Google Flow\".");
   if (s.review && s.drafts) out.push(`${s.drafts} mẫu đang chờ duyệt (công tắc "duyệt mẫu" đang BẬT): vào /admin/studio → tắt duyệt, hoặc duyệt các mẫu nháp.`);
   if (!s.render && s.noImage) out.push(`${s.noImage} mẫu chưa có ảnh vì máy vẽ ảnh đang TẮT (design_render = 0): vào /admin/studio → bật vẽ ảnh.`);
   if (!s.storage) out.push("Chưa có kho ảnh: thiếu CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET trên Vercel.");

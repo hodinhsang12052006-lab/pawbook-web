@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Volume2, VolumeX, Play, MessageCircle, Bell, Sparkles, Smartphone, BellRing, MessagesSquare, ChevronRight } from "lucide-react";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/pushClient";
-import { getBubbleInfo, openBubbleSettings, type NativeNotifInfo } from "@/lib/nativePush";
+import { getBubbleInfo, isAndroidApp, nativeAutoEnable, openBubbleSettings, openNotificationSettings, type NativeNotifInfo } from "@/lib/nativePush";
 import { DEFAULT_PREFS, getSoundPrefs, playSound, setSoundPrefs, type SoundKind, type SoundPrefs } from "@/lib/sounds";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
@@ -36,10 +36,40 @@ function PushRow() {
   useTr(); // render lại khi đổi VI/EN
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
+  // App Android: thông báo luôn bật (lib/nativePush.ts nativeAutoEnable) — bật / tắt bằng công tắc của điện thoại; quay
+  // lại từ Cài đặt của máy → đọc lại trạng thái.
+  const android = isAndroidApp();
   useEffect(() => {
-    getPushState().then(setState);
-  }, []);
+    // Vừa bật lại trong Cài đặt của máy → đăng ký luôn (không bắt bấm thêm), rồi đọc trạng thái.
+    const load = () => (android ? nativeAutoEnable() : Promise.resolve()).then(getPushState).then(setState);
+    load();
+    const onVis = () => document.visibilityState === "visible" && load();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [android]);
   if (state === null || state === "unsupported") return null;
+  if (android) {
+    const on = state === "on";
+    return (
+      <button
+        type="button"
+        onClick={() => void openNotificationSettings()}
+        className="flex w-full items-center gap-3 rounded-xl bg-slate-950/50 px-3.5 py-3 text-left ring-1 ring-pink-500/20"
+      >
+        <BellRing className="h-4 w-4 flex-shrink-0 text-pink-300" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-slate-200">{tr("Thông báo đẩy", "Push notifications")}</span>
+          <span className="block text-[11px] leading-snug text-slate-500">
+            {on
+              ? tr("Đang bật: tin nhắn, cuộc gọi, việc gấp — kể cả khi đã tắt app. Muốn tắt: bấm để mở cài đặt thông báo của điện thoại.", "On: messages, calls, urgent jobs — even with the app closed. To turn off, tap to open your phone's notification settings.")
+              : tr("Đang tắt — cuộc gọi sẽ không đổ chuông khi app đóng. Bấm để bật trong cài đặt điện thoại.", "Off — calls won't ring while the app is closed. Tap to turn them on in your phone's settings.")}
+          </span>
+        </span>
+        <span className={`text-xs font-bold ${on ? "text-emerald-300" : "text-amber-300"}`}>{on ? tr("Bật", "On") : tr("Tắt", "Off")}</span>
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-500" />
+      </button>
+    );
+  }
   const hint =
     state === "ios-needs-install"
       ? tr("iPhone: bấm Chia sẻ → \"Thêm vào màn hình chính\", mở PawNail từ đó rồi bật.", "iPhone: tap Share → \"Add to Home Screen\", open PawNail from there, then turn this on.")

@@ -16,10 +16,6 @@ const TOKEN_KEY = "pn_native_push_token";
 // Đăng xuất đã gỡ token khỏi tài khoản cũ (releaseNativePush) → lần mở app / đăng nhập sau tự đăng ký lại cho tài
 // khoản mới (quyền thông báo của máy vẫn còn), không bắt người dùng bật lại.
 const RELOGIN_KEY = "pn_native_push_relogin";
-// Người dùng tự TẮT thông báo trong Cài đặt → không tự bật lại (initNativePush). Bật lại bằng tay thì xoá cờ.
-const OPTOUT_KEY = "pn_native_push_off";
-// Android 13+: đã tự hỏi quyền thông báo 1 lần sau khi đăng nhập (không hỏi lại mỗi lần mở app).
-const ASKED_KEY = "pn_native_push_asked";
 
 export const isNativeApp = () => typeof window !== "undefined" && Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("PushNotifications");
 
@@ -108,19 +104,6 @@ const reloginPending = () => {
     return false;
   }
 };
-const flag = (k: string) => {
-  try {
-    return localStorage.getItem(k) === "1";
-  } catch {
-    return true; // không đọc được bộ nhớ → coi như đã hỏi / đã tắt: không làm phiền
-  }
-};
-const setFlag = (k: string, on: boolean) => {
-  try {
-    if (on) localStorage.setItem(k, "1");
-    else localStorage.removeItem(k);
-  } catch {}
-};
 const signedIn = () =>
   fetch("/api/auth/session")
     .then((r) => r.json())
@@ -184,12 +167,10 @@ export async function nativeEnable(): Promise<PushState> {
   let perm = await P.checkPermissions();
   if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") perm = await P.requestPermissions();
   if (perm.receive !== "granted") return perm.receive === "denied" ? "denied" : "off";
-  setFlag(OPTOUT_KEY, false);
   return (await registerToken()) ? "on" : "off";
 }
 
 export async function nativeDisable(): Promise<PushState> {
-  setFlag(OPTOUT_KEY, true);
   const token = savedToken();
   if (token) {
     await fetch("/api/push/native", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }).catch(() => {});
@@ -271,22 +252,20 @@ export async function initNativePush() {
 let autoEnabling: Promise<void> | null = null;
 /**
  * Người dùng đã đăng nhập mà máy chưa có token → cuộc gọi đến KHÔNG đổ chuông khi app ở nền / đã đóng (11/2026: chủ app
- * gọi bạn, máy bạn im lặng — trước đây phải tự tìm nút "Bật thông báo"). Chưa tự tắt trong Cài đặt → tự đăng ký:
- * Android < 13 có sẵn quyền; Android 13+ hỏi quyền 1 lần (như Messenger / Zalo). Gọi lúc mở app VÀ ngay sau khi đăng
- * nhập (đăng nhập không tải lại trang) — components/ServiceWorkerRegister.tsx.
+ * gọi bạn, máy bạn im lặng — trước đây phải tự tìm nút "Bật thông báo"). Chủ app: BẬT cho mọi người, ai muốn tắt thì
+ * dùng công tắc thông báo của điện thoại (Cài đặt → Ứng dụng → PawNail) — trong app không còn công tắc tắt riêng.
+ * Android < 13 có sẵn quyền; Android 13+ hỏi quyền mỗi lần mở app cho tới khi người dùng chọn (Android tự thôi hiện hộp
+ * hỏi sau 2 lần "Không cho phép" → "denied", không làm phiền thêm). Gọi lúc mở app VÀ ngay sau khi đăng nhập (đăng nhập
+ * không tải lại trang) — components/ServiceWorkerRegister.tsx.
  */
 export function nativeAutoEnable(): Promise<void> {
   return (autoEnabling ??= (async () => {
-    if (!isNativeApp() || isBubbleMode() || savedToken() || flag(OPTOUT_KEY)) return;
+    if (!isNativeApp() || isBubbleMode() || savedToken()) return;
     if (!(await nativeServerOn()) || !(await signedIn())) return;
     const { P } = await plugin();
     let perm = await P.checkPermissions();
     if (perm.receive === "denied") return;
-    if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
-      if (flag(ASKED_KEY)) return;
-      setFlag(ASKED_KEY, true);
-      perm = await P.requestPermissions().catch(() => perm);
-    }
+    if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") perm = await P.requestPermissions().catch(() => perm);
     if (perm.receive === "granted") await registerToken();
   })()
     .catch(() => {})

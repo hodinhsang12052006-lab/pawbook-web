@@ -160,18 +160,21 @@ try {
   const token = "fcmQA" + crypto.randomBytes(24).toString("hex") + ":APA91b" + crypto.randomBytes(16).toString("hex");
   {
     const { ctx, p } = await newPage({ android: { perm: "prompt", build: 3, sdk: 33, bubblePref: "none", token } });
+    // 11/2026 (chủ app): thông báo BẬT SẴN — đã đăng nhập mà chưa có token → app tự xin quyền + đăng ký, KHÔNG chờ người
+    // dùng bấm "Turn on" (trước đây máy bạn của chủ app không đổ chuông vì chưa ai bấm). Dải mời chỉ còn là đường dự phòng.
     await p.goto(BASE_URL + "/messages");
     const banner = p.locator(".m-notify");
-    const shown = await visible(banner.filter({ hasText: "Get message notifications" }), 15000);
+    let row = null;
+    for (let i = 0; i < 30 && !row; i++) {
+      await sleep(500);
+      row = (await db.execute({ sql: `SELECT userId, p256dh FROM "PushSubscription" WHERE endpoint = ?`, args: ["fcm:" + token] })).rows[0] || null;
+    }
     await p.screenshot({ path: TMP + "/native_chat_banner_push.png" });
-    R.check("NC2a", "App Android chưa bật thông báo → dải 'Get message notifications' ở đầu danh sách", shown);
-    if (shown) await banner.getByRole("button", { name: "Turn on" }).click();
-    await banner.waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
-    await sleep(800);
-    const row = (await db.execute({ sql: `SELECT userId, p256dh FROM "PushSubscription" WHERE endpoint = ?`, args: ["fcm:" + token] })).rows[0];
     const calls = await p.evaluate(() => window.__pn.calls.map((c) => c.plugin + "." + c.method));
-    R.check("NC2b", "Bấm Bật → xin quyền → register → máy chủ lưu token với build (p256dh native:3); dải biến mất",
-      row && String(row.userId) === tech.userId && String(row.p256dh) === "native:3" && calls.includes("PushNotifications.requestPermissions") && calls.includes("PushNotifications.register") && (await banner.count()) === 0,
+    R.check("NC2a", "App Android đã đăng nhập, chưa bật → TỰ xin quyền + register (không cần bấm)", calls.includes("PushNotifications.requestPermissions") && calls.includes("PushNotifications.register"), JSON.stringify(calls.filter((c) => c.startsWith("Push"))));
+    await sleep(800);
+    R.check("NC2b", "Máy chủ lưu token với build (p256dh native:3); không còn dải 'Get message notifications'",
+      row && String(row.userId) === tech.userId && String(row.p256dh) === "native:3" && (await banner.filter({ hasText: "Get message notifications" }).count()) === 0,
       JSON.stringify({ row, calls: calls.filter((c) => c.startsWith("Push")) }).slice(0, 260));
 
     // Đã bật → lần sau: mẹo bong bóng (Android 13, cài đặt bong bóng "none")

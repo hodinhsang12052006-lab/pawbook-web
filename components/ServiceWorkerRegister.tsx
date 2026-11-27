@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { initNativePush, nativeAutoEnable } from "@/lib/nativePush";
-import { resumePushAfterLogin } from "@/lib/pushClient";
+import { autoEnableWebPush, resumePushAfterLogin } from "@/lib/pushClient";
 import { isBubbleMode } from "@/lib/bubbleMode";
 import { useSessionUser } from "@/lib/SessionUserContext";
 
@@ -19,10 +19,13 @@ export default function ServiceWorkerRegister() {
     initNativePush().catch(() => {});
     if (!isBubbleMode()) resumePushAfterLogin().catch(() => {});
   }, []);
-  // App native, đã đăng nhập (kể cả vừa đăng nhập — không tải lại trang): máy chưa nhận thông báo → tự bật, để cuộc gọi
-  // đến đổ chuông khi app ở nền / đã đóng (lib/nativePush.ts nativeAutoEnable).
+  // Đã đăng nhập (kể cả vừa đăng nhập — không tải lại trang): máy chưa nhận thông báo → tự bật, để cuộc gọi đến đổ
+  // chuông khi app / trang đã đóng. App: lib/nativePush.ts nativeAutoEnable. Web: lib/pushClient.ts autoEnableWebPush
+  // (hỏi quyền ở lần chạm đầu tiên — trình duyệt bắt buộc).
   useEffect(() => {
-    if (userId) void initNativePush().catch(() => {}).then(() => nativeAutoEnable());
+    if (!userId || isBubbleMode()) return;
+    void initNativePush().catch(() => {}).then(() => nativeAutoEnable());
+    autoEnableWebPush().catch(() => {});
   }, [userId]);
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator) || isBubbleMode()) return;

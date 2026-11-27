@@ -40,6 +40,9 @@ export async function enablePush(): Promise<PushState> {
   if (isNativeApp()) return nativeEnable().catch(() => "off" as PushState);
   const state = await getPushState();
   if (state === "unsupported" || state === "ios-needs-install" || state === "denied") return state;
+  try {
+    localStorage.removeItem("pn_web_push_off");
+  } catch {}
   const perm = await Notification.requestPermission();
   if (perm !== "granted") return perm === "denied" ? "denied" : "off";
   const reg = await navigator.serviceWorker.ready;
@@ -58,6 +61,9 @@ export async function enablePush(): Promise<PushState> {
 
 export async function disablePush(): Promise<PushState> {
   if (isNativeApp()) return nativeDisable();
+  try {
+    localStorage.setItem("pn_web_push_off", "1"); // autoEnableWebPush (cuối file) không tự bật lại
+  } catch {}
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = await reg?.pushManager.getSubscription();
@@ -120,4 +126,36 @@ export async function resumePushAfterLogin(): Promise<void> {
     // 401 = chưa đăng nhập → giữ cờ, thử lại ở lần tải trang sau khi đã đăng nhập.
     if (res.ok) done();
   } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// Bật sẵn cho mọi người đã đăng nhập (chủ app, 11/2026: cuộc gọi phải đổ chuông kể cả khi đã đóng trang / app)
+// ---------------------------------------------------------------------------
+// Web: trình duyệt chỉ hiện hộp "Cho phép thông báo" khi người dùng CHẠM → hỏi ở lần chạm đầu tiên vào trang; đã cho
+// phép từ trước (nhưng chưa đăng ký / đăng ký cũ mất) → đăng ký ngay, không cần chạm. Người dùng web tự tắt trong
+// Cài đặt (disablePush) → không tự bật lại (web không có công tắc của hệ điều hành như app).
+const WEB_OFF_KEY = "pn_web_push_off";
+let armed = false;
+
+export async function autoEnableWebPush(): Promise<void> {
+  if (typeof window === "undefined" || isNativeApp() || armed) return;
+  try {
+    if (localStorage.getItem(WEB_OFF_KEY) === "1") return;
+  } catch {
+    return;
+  }
+  if ((await getPushState()) !== "off") return; // đã bật / bị chặn / iPhone chưa cài / không hỗ trợ
+  armed = true;
+  if (Notification.permission === "granted") {
+    await enablePush().catch(() => "off");
+    return;
+  }
+  const onTap = () => {
+    window.removeEventListener("click", onTap, true);
+    // Gọi requestPermission NGAY trong lượt chạm (Safari đòi đúng lượt chạm), rồi đăng ký.
+    Notification.requestPermission()
+      .then((p) => (p === "granted" ? enablePush() : null))
+      .catch(() => {});
+  };
+  window.addEventListener("click", onTap, true);
 }

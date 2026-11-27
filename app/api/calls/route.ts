@@ -114,9 +114,12 @@ export async function POST(req: Request) {
       if (limited(`call-offer:${userId}`, 12) || limited(`call-offer:${userId}:${targetId}`, 6)) {
         return err(429, "Bạn gọi quá nhiều lần, thử lại sau ít phút.", "Too many calls. Try again in a minute.");
       }
-      const [callee, caller] = await Promise.all([
+      // devices: máy của người nhận có nhận thông báo đẩy (web / app). 0 → chỉ đổ chuông khi họ đang mở PawNail —
+      // người gọi được báo thẳng thay vì thấy "Đang đổ chuông" mà bên kia im lặng.
+      const [callee, caller, devices] = await Promise.all([
         prisma.user.findUnique({ where: { id: targetId }, select: { id: true } }),
         prisma.user.findUnique({ where: { id: userId }, select: { name: true, avatarUrl: true } }),
+        prisma.pushSubscription.count({ where: { userId: targetId } }).catch(() => -1),
       ]);
       if (!callee) return err(404, "Không tìm thấy người nhận.", "That person wasn't found.");
       const callType = body.callType === "video" ? "video" : "audio";
@@ -140,7 +143,8 @@ export async function POST(req: Request) {
       // to the callee's own devices — the same token the callee's Pusher channel already carries).
       const push = incomingCallPush({ callId, callType, callerId: userId, callerName, callToken, callerAvatar: chatPushAvatar(caller?.avatarUrl) });
       after(() => sendPush(targetId, push).catch(() => 0));
-      return NextResponse.json({ success: true, callId, callToken });
+      // Chỉ trả có / không (không lộ số máy); lỗi đếm → coi như có, không báo nhầm.
+      return NextResponse.json({ success: true, callId, callToken, notify: devices !== 0 });
     }
 
     // ---------- every other action needs the call token ----------

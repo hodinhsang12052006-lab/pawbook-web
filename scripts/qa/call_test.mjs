@@ -270,7 +270,11 @@ if (want("audio")) {
       return f.ctl === "answer" ? f : null;
     }, 5000).catch(async () => B.page.evaluate(() => ({ ctl: document.activeElement?.getAttribute("data-call-control") || document.activeElement?.tagName })));
     const counter = await B.page.locator("[data-call-status] .tabular-nums").count();
-    return callerAnswer === 0 && name.trim().length > 0 && !!firstCall?.callToken && focus.ctl === "answer" && focus.modal === "true" && counter === 0 ? true : { fail: JSON.stringify({ callerAnswer, focus, counter }) };
+    // B has no push device here (service workers blocked, no app token) → A is told B's phone only rings while PawNail is
+    // open, and the status says "Calling…", not "Ringing" (11/2026: owner's friend never heard the call).
+    const noPush = await A.page.locator("[data-call-nopush]").count();
+    const status = (await A.page.locator("[data-call-status]").first().innerText()).trim();
+    return callerAnswer === 0 && name.trim().length > 0 && !!firstCall?.callToken && focus.ctl === "answer" && focus.modal === "true" && counter === 0 && noPush === 1 && !/Ringing|Đang đổ chuông/.test(status) ? true : { fail: JSON.stringify({ callerAnswer, focus, counter, noPush, status }) };
   });
 
   await step("audio-2", "Voice: B answers → both 'connected', ICE connected, remote audio bytes flowing BOTH ways (getStats)", async () => {

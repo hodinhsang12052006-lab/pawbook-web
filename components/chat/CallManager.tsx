@@ -121,6 +121,8 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
   const [callType, setCallType] = useState<CallType>("audio");
   const [peer, setPeer] = useState<Peer | null>(null);
   const [ringing, setRinging] = useState(false);
+  // Người nhận chưa bật thông báo trên máy nào → chỉ đổ chuông nếu họ đang mở PawNail (/api/calls offer → notify).
+  const [peerNoPush, setPeerNoPush] = useState(false);
   const [ringSecs, setRingSecs] = useState(0);
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
   // media + connection
@@ -296,6 +298,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
       setRelay(false);
       setConnectedAt(null);
       setRinging(false);
+      setPeerNoPush(false);
       setMicOn(true);
       setCamOn(false);
       setCamBusy(false);
@@ -546,6 +549,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
         return;
       }
       call.token = d.callToken;
+      setPeerNoPush(d.notify === false);
       setRinging(true);
       timers.current.ring = setTimeout(() => {
         if (callRef.current !== call || phaseRef.current !== "outgoing") return;
@@ -1578,7 +1582,7 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                 <h2 className="text-[28px] font-black leading-tight tracking-tight text-pn-text">{peer.name}</h2>
                 <p className="flex items-center justify-center gap-2 text-sm font-medium text-pn-text-2" data-call-status>
                   {callType === "video" ? <Video className="h-4 w-4 text-pn-brand-ink" /> : <Phone className="h-4 w-4 text-pn-brand-ink" />}
-                  {phase === "incoming" ? tr(`${typeLabel} đến`, `Incoming ${typeLabel.toLowerCase()}`) : mediaPending ? pendingText : ringing ? tr("Đang đổ chuông", "Ringing") : tr("Đang gọi…", "Calling…")}
+                  {phase === "incoming" ? tr(`${typeLabel} đến`, `Incoming ${typeLabel.toLowerCase()}`) : mediaPending ? pendingText : ringing && !peerNoPush ? tr("Đang đổ chuông", "Ringing") : tr("Đang gọi…", "Calling…")}
                   {/* elapsed time only for the caller (as phone dialers do); never while the permission prompt is open */}
                   {phase === "outgoing" && !mediaPending && (
                     <span className="tabular-nums text-pn-text-3">
@@ -1586,6 +1590,14 @@ const CallManager = forwardRef<CallManagerHandle, CallManagerProps>(function Cal
                     </span>
                   )}
                 </p>
+                {phase === "outgoing" && ringing && peerNoPush && (
+                  <p className="mx-auto max-w-xs text-xs leading-relaxed text-pn-text-3" data-call-nopush>
+                    {tr(
+                      `${peer.name} chưa bật thông báo PawNail — máy chỉ đổ chuông khi đang mở app. Hãy nhắn tin để họ mở app nghe máy.`,
+                      `${peer.name} hasn't turned on PawNail notifications — their phone only rings while the app is open. Send a message so they open it.`
+                    )}
+                  </p>
+                )}
               </div>
 
               {phase === "outgoing" && (

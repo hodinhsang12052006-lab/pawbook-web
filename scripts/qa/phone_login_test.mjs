@@ -115,7 +115,12 @@ try {
   await p.locator("#pl-code").fill("123456"); // đủ 6 số → tự gửi
   await p.waitForURL(/\/auth\/complete/, { timeout: 20000 });
   await p.getByText(/Chào mừng bạn đến với PawNail|Welcome to PawNail/).waitFor({ timeout: 15000 });
-  const pre = await p.locator("#c-phone").inputValue().catch(() => "");
+  // Số điền sẵn tới SAU tiêu đề (trang gọi /api/phone/verify sau khi đọc phiên) → chờ tới 5 giây thay vì đọc ngay.
+  let pre = "";
+  for (let i = 0; i < 20 && !pre; i++) {
+    pre = await p.locator("#c-phone").inputValue().catch(() => "");
+    if (!pre) await p.waitForTimeout(250);
+  }
   const nameVal = await p.locator("#c-name").inputValue();
   R.check("P14", "Giao diện: nhập số → mã → trang Hoàn tất, SĐT điền sẵn, tên để trống cho tự nhập", pre.replace(/\D/g, "") === uiNum && nameVal === "", `phone=${pre} name=${nameVal}`);
   await p.locator("#c-name").fill("Thảo Vy");

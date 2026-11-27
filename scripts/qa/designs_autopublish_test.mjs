@@ -2,6 +2,7 @@
 // CHỈ chạy với server local.   node scripts/qa/designs_autopublish_test.mjs
 import { chromium, devices } from "playwright";
 import { createClient } from "@libsql/client";
+import fs from "node:fs";
 import { BASE_URL, Client, Results, SEED_TECH, registerUser } from "./lib.mjs";
 
 const R = new Results("Mẫu nail lên thẳng + ảnh thật");
@@ -75,7 +76,9 @@ try {
   const old = (await db.execute(`SELECT id, pattern FROM "NailDesign" WHERE provider = 'pawnail' AND status = 'published' LIMIT 0`)).rows;
   const cr = await fetch(BASE_URL + "/api/cron/designs?count=3", { headers: { authorization: "Bearer test-cron" } }).then((r) => r.json());
   const made = (await db.execute({ sql: `SELECT id, pattern, imageUrl, prompt FROM "NailDesign" WHERE id IN (${cr.created.map(() => "?").join(",") || "''"})`, args: cr.created })).rows;
-  const procedural = ["solid", "french", "ombre", "aura", "tortoise", "marble", "lines", "dots", "gems", "pearls", "jelly", "babyboomer", "chromefrench", "droplets", "gemcluster", "chromeline", "mixmatch", "doublefrench", "velvet", "leopard", "checker", "foil", "stars", "hearts", "charm3d", "chromedrops"];
+  // Hoạ tiết máy PawNail vẽ được = đúng bộ PROCEDURAL trong code (lib/tryon/patterns.ts) — danh sách ghi cứng cũ thiếu
+  // lá / chấm bi / sọc… nên mẫu mới hợp lệ bị coi là "không vẽ được" (A10/A11 trượt giả).
+  const procedural = [...fs.readFileSync(new URL("../../lib/tryon/patterns.ts", import.meta.url), "utf8").match(/export const PROCEDURAL = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
   const mine = made.filter((r) => procedural.includes(String(r.pattern)));
   const api = await fetch(BASE_URL + "/api/designs?limit=60").then((r) => r.json());
   const pub = api.designs.filter((d) => mine.some((m) => m.id === d.id));

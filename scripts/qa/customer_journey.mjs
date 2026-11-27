@@ -102,7 +102,7 @@ try {
   // ===== A. Khách lạ → đăng ký bằng Google =====
   const p = await phone();
   await step("A1 Khách mở trang chủ", p, async () => { await p.goto(BASE_URL + "/"); await settle(p); });
-  await step("A2 Bấm Đăng ký", p, async () => { await p.getByRole("button", { name: /^Đăng ký$/ }).first().click(); await p.waitForURL(/\/auth\/register/); await settle(p); });
+  await step("A2 Bấm Đăng ký", p, async () => { /* Navbar V2: "Đăng ký" là link (trước là nút) */ await p.getByRole("link", { name: /^Đăng ký$/ }).or(p.getByRole("button", { name: /^Đăng ký$/ })).first().click(); await p.waitForURL(/\/auth\/register/); await settle(p); });
   await step("A3 Trang đăng nhập (nút Google)", p, async () => { await p.goto(BASE_URL + "/auth/login"); await settle(p); const n = await p.getByRole("button", { name: /Tiếp tục với/ }).count(); return `${n} nút đăng nhập mạng xã hội`; });
   const gEmail = `khach.g.${stamp}@gmail.test`;
   nextIdentity = { sub: "g-" + stamp, email: gEmail, name: "Ngọc Trâm", email_verified: true };

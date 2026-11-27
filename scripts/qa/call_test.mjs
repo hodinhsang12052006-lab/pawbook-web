@@ -254,6 +254,7 @@ if (want("audio")) {
   const t0 = mock.log.length;
   await step("audio-1", "Voice: A dials → A 'Ringing', B rings (real name/photo), no Answer button for the caller; B's focus leaves the chat box for Answer", async () => {
     await B.page.locator("[data-chat-input]").first().focus();
+    const offerRes = A.page.waitForResponse((r) => r.url().includes("/api/calls") && /"action":"offer"/.test(r.request().postData() || ""), { timeout: 15000 }).then((r) => r.json()).catch(() => null);
     await dial(A, "audio");
     await phaseIs(A, "outgoing", 10000);
     await A.page.locator('[data-call-ringing="1"]').waitFor({ timeout: 10000 });
@@ -270,11 +271,15 @@ if (want("audio")) {
       return f.ctl === "answer" ? f : null;
     }, 5000).catch(async () => B.page.evaluate(() => ({ ctl: document.activeElement?.getAttribute("data-call-control") || document.activeElement?.tagName })));
     const counter = await B.page.locator("[data-call-status] .tabular-nums").count();
-    // B has no push device here (service workers blocked, no app token) → A is told B's phone only rings while PawNail is
-    // open, and the status says "Calling…", not "Ringing" (11/2026: owner's friend never heard the call).
+    // B without any push device (fresh QA DB: service workers blocked, no app token) → A is told B's phone only rings
+    // while PawNail is open and sees "Calling…", not "Ringing" (11/2026: owner's friend never heard the call). B with a
+    // push device (a DB other suites registered tokens in) → "Ringing", no hint. The server's answer decides which.
+    const notify = (await offerRes)?.notify;
     const noPush = await A.page.locator("[data-call-nopush]").count();
     const status = (await A.page.locator("[data-call-status]").first().innerText()).trim();
-    return callerAnswer === 0 && name.trim().length > 0 && !!firstCall?.callToken && focus.ctl === "answer" && focus.modal === "true" && counter === 0 && noPush === 1 && !/Ringing|Đang đổ chuông/.test(status) ? true : { fail: JSON.stringify({ callerAnswer, focus, counter, noPush, status }) };
+    const ringingShown = /Ringing|Đang đổ chuông/.test(status);
+    const hintOk = notify === false ? noPush === 1 && !ringingShown : notify === true ? noPush === 0 && ringingShown : false;
+    return callerAnswer === 0 && name.trim().length > 0 && !!firstCall?.callToken && focus.ctl === "answer" && focus.modal === "true" && counter === 0 && hintOk ? true : { fail: JSON.stringify({ callerAnswer, focus, counter, notify, noPush, status }) };
   });
 
   await step("audio-2", "Voice: B answers → both 'connected', ICE connected, remote audio bytes flowing BOTH ways (getStats)", async () => {

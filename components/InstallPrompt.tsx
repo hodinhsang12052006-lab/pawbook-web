@@ -6,6 +6,7 @@ import { useSessionUser } from "@/lib/SessionUserContext";
 import { Capacitor } from "@capacitor/core";
 import { Download, PlusSquare, Share, X } from "lucide-react";
 import { tr } from "@/lib/i18n/tr";
+import { localeHref } from "@/lib/i18n/localeHref";
 
 // "CÀI APP" — mời cài PawNail lên màn hình chính, mở nhanh như app thật + nhận báo việc mới.
 //   Android/Chrome: dùng beforeinstallprompt (1 chạm cài).
@@ -126,6 +127,12 @@ export default function InstallPrompt() {
               <Download className="h-4 w-4" />{tr(" Cài ứng dụng", " Install app")}
             </button>
           </div>
+        )}
+        {/* App Android thật đang thử nghiệm khép kín trên Google Play (cần người thử thật) → mời từ chính thẻ cài app */}
+        {mode === "android" && (
+          <a href={localeHref("/android-beta")} className="mt-2 block text-center text-xs font-semibold text-pink-300 underline">
+            {tr("Hoặc thử app PawNail bản Google Play", "Or test the PawNail app from Google Play")}
+          </a>
         )}
         {mode === "ios" && (
           <ol className="mt-3 space-y-1.5 rounded-xl bg-white/[0.03] p-3 text-xs text-slate-300 ring-1 ring-white/10">

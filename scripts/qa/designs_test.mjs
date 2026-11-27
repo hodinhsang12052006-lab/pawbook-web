@@ -1,4 +1,5 @@
 // Kiểm thử "Mẫu nail AI mỗi ngày" với máy chủ Gemini GIẢ (:4993).
+// Server: bật CATALOG_SHOW_RENDERED=1 — bài dùng mẫu máy vẽ / AI; mặc định (11/2026) trang chỉ hiện ảnh Google Flow.
 // Server: bash scripts/qa/start-launch-server.sh   →   node scripts/qa/designs_test.mjs
 import http from "node:http";
 import { createClient } from "@libsql/client";

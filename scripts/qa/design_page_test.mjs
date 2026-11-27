@@ -1,4 +1,5 @@
 // TRANG RIÊNG TỪNG MẪU NAIL (/designs/[id]): link chia sẻ có ảnh xem trước, Google đọc được (HowTo: vật tư + các
+// Server: bật CATALOG_SHOW_RENDERED=1 — bài dùng mẫu máy vẽ / AI; mặc định (11/2026) trang chỉ hiện ảnh Google Flow.
 // bước), mẫu liên quan, nút chia sẻ / lưu, sitemap; mẫu nháp / không có → 404. CHỈ chạy với server local.
 //   node scripts/qa/design_page_test.mjs
 import { chromium, devices } from "playwright";

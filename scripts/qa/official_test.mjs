@@ -105,8 +105,13 @@ try {
   const adminEmail = String(adminRow.email);
   await db.execute({ sql: `UPDATE "User" SET password = (SELECT password FROM "User" WHERE email = ?) WHERE email = ?`, args: [SEED_TECH, adminEmail] });
   await admin.login(adminEmail);
-  const convs = (await admin.req("/api/messages")).data;
-  const conv = Array.isArray(convs) ? convs : convs?.conversations || [];
+  // Máy chủ bắn tin realtime TRƯỚC khi ghi DB (tin tới nhanh) → hộp thư có thể chậm vài trăm ms: đọc lại tới 5 giây.
+  let conv = [];
+  for (let i = 0; i < 10 && !JSON.stringify(conv).includes(msg); i++) {
+    if (i) await new Promise((r) => setTimeout(r, 500));
+    const convs = (await admin.req("/api/messages")).data;
+    conv = Array.isArray(convs) ? convs : convs?.conversations || [];
+  }
   R.check("OF9", "Tin nhắn tới tài khoản chính thức thật sự đến hộp thư admin", JSON.stringify(conv).includes(msg), JSON.stringify(conv).slice(0, 160));
   await tp.screenshot({ path: `${OUT}/of_official_chat.png` });
 

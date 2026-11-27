@@ -9,6 +9,9 @@ import { chatChannelName } from "@/lib/pusherChannel";
 // trong hội thoại. Client tự giới hạn ~1 lần/3 giây; server chỉ kiểm tra
 // thành viên + chặn 2 chiều rồi bắn sự kiện realtime (không ghi DB).
 export async function POST(req: Request) {
+  // Lúc nhận yêu cầu: sự kiện "đang gõ" có thể tới máy bên kia SAU tin nhắn được gửi ngay sau đó (tin đi đường nhanh,
+  // còn đây phải đọc DB) → client bỏ sự kiện cũ hơn tin cuối cùng của người này (MessagesContent handleUserTyping).
+  const at = Date.now();
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -49,6 +52,7 @@ export async function POST(req: Request) {
         conversationId,
         userId,
         name: session.user.name || "",
+        at,
       });
     }
     return NextResponse.json({ success: true });

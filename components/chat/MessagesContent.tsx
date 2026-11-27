@@ -128,6 +128,8 @@ export default function MessagesContent({
     )
   );
   const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Giờ máy chủ của tin cuối cùng người kia gửi, theo từng cuộc trò chuyện: bỏ sự kiện "đang gõ" cũ hơn (handleUserTyping).
+  const lastPeerMsgAtRef = useRef<Record<string, number>>({});
   const lastTypingSentRef = useRef(0);
   // ref, không phải state: chỉ dùng để chặn gửi trùng tin ĐẦU TIÊN (chưa có hội thoại) — đổi nó không cần vẽ lại gì
   // (trước đây mỗi lần gửi vẽ lại cả màn hình thêm 2 lần: sending = true / false).
@@ -572,6 +574,9 @@ export default function MessagesContent({
         setSeenByConv((prev) =>
           !prev[m.conversationId] || prev[m.conversationId] < repliedAt ? { ...prev, [m.conversationId]: repliedAt } : prev
         );
+        const sentAt = Date.parse(repliedAt);
+        if (Number.isFinite(sentAt) && sentAt > (lastPeerMsgAtRef.current[m.conversationId] || 0)) lastPeerMsgAtRef.current[m.conversationId] = sentAt;
+        clearTimeout(typingTimersRef.current[m.conversationId]);
         setTypingByConv((prev) => {
           if (!prev[m.conversationId]) return prev;
           const next = { ...prev };
@@ -657,6 +662,9 @@ export default function MessagesContent({
     const handleUserTyping = (data: any) => {
       if (!data?.conversationId || data.userId === currentUser.id) return;
       const convId = data.conversationId as string;
+      // "Đang gõ" gửi TRƯỚC tin vừa tới nhưng tới sau (máy chủ đọc DB chậm hơn đường gửi tin) → bỏ, không hiện lại
+      // "Đang soạn tin…" thêm 4,5 giây sau khi tin đã tới.
+      if (typeof data.at === "number" && data.at <= (lastPeerMsgAtRef.current[convId] || 0)) return;
       setTypingByConv((prev) => ({ ...prev, [convId]: data.name || "" }));
       clearTimeout(typingTimersRef.current[convId]);
       typingTimersRef.current[convId] = setTimeout(() => {

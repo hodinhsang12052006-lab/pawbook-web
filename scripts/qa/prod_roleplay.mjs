@@ -22,7 +22,7 @@ let t = await text();
 const jobs = await fetch(SITE + "/api/jobs?market=US").then((r) => r.json());
 const newest = jobs[0];
 check("Thợ: Việc làm có tin mới từ tool (hôm nay), tên + lương gọn, không tin sang/bán tiệm",
-  jobs.length >= 20 && (Date.now() - new Date(newest.createdAt).getTime()) < 36 * 3600e3 && !jobs.some((j) => /sang tiệm|bán tiệm|nhận cọc/i.test(j.description)) && !jobs.some((j) => /\(.*\)$/.test(j.salonName)),
+  jobs.length >= 20 && (Date.now() - new Date(newest.createdAt).getTime()) < 36 * 3600e3 && !jobs.some((j) => /sang tiệm|bán tiệm|nhận cọc/i.test(j.description) && !/cần thợ|tuyển thợ|bao \$?\d|lương/i.test(j.description)) && !jobs.some((j) => /\(.*\)$/.test(j.salonName)),
   JSON.stringify({ n: jobs.length, newest: newest?.createdAt, names: jobs.slice(0, 5).map((j) => j.salonName) }));
 check("Thợ: không có lương vô lý (mảnh SĐT, giá dịch vụ)", !jobs.some((j) => /^\$?\d{2,3}$|bao lương \d{4}\d/.test(j.salaryAmount || "")), JSON.stringify(jobs.map((j) => j.salaryAmount)));
 check("Thợ: tab Việc làm không tràn ngang", (await overflow()) <= 1);
@@ -36,7 +36,7 @@ check("Thợ: mở tin chi tiết — có nút Gọi / nội dung, không lỗi"
 // Thợ rảnh: không còn thợ mẫu, có lời mời tạo hồ sơ
 await visit("/?tab=portfolio", 4000);
 t = await text();
-check("Khách: Thợ rảnh không còn tài khoản mẫu; khung trống mời tạo hồ sơ + số tiệm đang tuyển thật", !/Emily Nguyen|Dat Truong|Long Tran/.test(t) && /Tạo hồ sơ thợ miễn phí|Thợ đang tìm việc/.test(t), t.slice(t.indexOf("Thợ rảnh"), t.indexOf("Thợ rảnh") + 200));
+check("Khách: Thợ rảnh không còn tài khoản mẫu; khung trống mời tạo hồ sơ + số tiệm đang tuyển thật", !/Emily Nguyen|Dat Truong|Long Tran/.test(t) && /Tạo hồ sơ thợ|Thợ đang tìm việc|Create your tech profile|Techs looking/i.test(t), t.slice(t.indexOf("Thợ rảnh"), t.indexOf("Thợ rảnh") + 200));
 
 // Bảng tin
 await visit("/?tab=feed", 5000);

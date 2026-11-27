@@ -150,7 +150,7 @@ async function store(img: { mimeType: string; base64: string }): Promise<string>
   throw new Error("Cần cấu hình Cloudinary để lưu ảnh mẫu AI.");
 }
 
-export interface GenerateResult { created: string[]; skipped: number; errors: string[] }
+export interface GenerateResult { created: string[]; skipped: number; errors: string[]; /** vẽ ảnh AI dừng (AI chấm lỗi / hết hạn mức) */ halted?: boolean }
 
 /** Tạo tối đa `count` mẫu nháp (không vượt giới hạn/ngày). */
 export async function generateDesigns(market: "US" | "AU", count: number): Promise<GenerateResult> {
@@ -273,8 +273,9 @@ export async function generateEngine(market: "US" | "AU", count: number, deadlin
   });
   const errors: string[] = list.length < n ? ["Hết tổ hợp mới cho hôm nay — mai máy sẽ ra mẫu khác."] : [];
   const { created, jobs } = await saveEngineDesigns(list, market);
-  await drawImages(jobs, deadline, errors);
-  return { created, skipped: count - list.length, errors };
+  const state: { halted?: boolean } = {};
+  await drawImages(jobs, deadline, errors, state);
+  return { created, skipped: count - list.length, errors, halted: !!state.halted };
 }
 
 type ImageJob = { id: string; subject: string; prompt: string };
@@ -335,8 +336,9 @@ export async function generateOccasion(market: "US" | "AU", occasionId: string, 
   });
   const errors: string[] = list.length < n ? [`Chỉ còn ${list.length} mẫu ${theme.title} chưa trùng — đã tạo hết.`] : [];
   const { created, jobs } = await saveEngineDesigns(list, market);
-  await drawImages(jobs, deadline, errors);
-  return { created, skipped: count - list.length, errors };
+  const state: { halted?: boolean } = {};
+  await drawImages(jobs, deadline, errors, state);
+  return { created, skipped: count - list.length, errors, halted: !!state.halted };
 }
 
 /** Vẽ ảnh thật (Cloudflare, gói miễn phí) cho các mẫu: tối đa 2 ảnh cùng lúc (gửi
@@ -376,19 +378,25 @@ async function takeCandidate(): Promise<boolean> {
 interface Best { img: { mimeType: string; base64: string }; verdict: Verdict | null; tried: number }
 /** Vẽ tối đa `max` ảnh cho 1 mẫu, chấm từng ảnh, trả ảnh đẹp nhất (null: hết hạn mức ứng viên / hết giờ).
  *  Hết lượt miễn phí Cloudflare → ném lỗi (QUOTA) cho nơi gọi dừng hẳn. */
-async function drawBest(subject: string, seed: string, deadline: number, max = candidatesPer()): Promise<Best | null> {
+// Lý do drawBest dừng mà không có ảnh — ghi vào errors của cron (trước đây "AI chấm không trả lời" dừng cả lượt vẽ mà
+// không để lại dấu vết gì: catalog đứng từ 06/11/2026 mà log / email cảnh báo không nói được vì sao).
+type DrawStop = { why?: "time" | "quota" | "judge" };
+async function drawBest(subject: string, seed: string, deadline: number, max = candidatesPer(), stop: DrawStop = {}): Promise<Best | null> {
   let best: Best | null = null;
   for (let k = 0; k < max; k++) {
     const budget = deadline - Date.now() - 4000;
     // mỗi ảnh cần đủ giờ VẼ + CHẤM (~10s) — không đủ thì để lượt sau, KHÔNG vẽ rồi đăng mà chưa chấm
-    if (budget < (k === 0 ? 18_000 : 22_000)) break;
-    if (!(await takeCandidate())) break;
+    if (budget < (k === 0 ? 18_000 : 22_000)) { stop.why = "time"; break; }
+    if (!(await takeCandidate())) { stop.why = "quota"; break; }
     // Mỗi ảnh ứng viên một bối cảnh khác → thêm cơ hội ra ảnh đẹp.
     const img = await cfImage(`${subject}. ${photoStyle(k ? `${seed}:${k}` : seed)}`, Math.min(30_000, budget - 10_000));
     const verdict = await judgeImage(img, subject).catch(() => null);
     // Không chấm được (máy chấm lỗi / hết giờ) → KHÔNG nhận ảnh này. Từng nhận ảnh chưa chấm (23/10/2026: 4 ảnh
     // lọt qua, 2 ảnh lỗi — chữ lạ trên ảnh, sai mô tả "mắt mèo"). Giữ ảnh đã chấm tốt nhất (nếu có), mai vẽ lại.
-    if (!verdict) return best;
+    if (!verdict) {
+      stop.why = "judge";
+      return best;
+    }
     if (!best || !best.verdict || verdict.score > best.verdict.score) best = { img, verdict, tried: k + 1 };
     else best.tried = k + 1;
     if (verdict.score >= PASS_SCORE) break;
@@ -461,7 +469,8 @@ export async function rerenderAiImages(deadline: number, max = 8): Promise<{ don
   return { done, errors };
 }
 
-async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]): Promise<number> {
+// halted: lượt vẽ AI dừng vì AI chấm không trả lời / hết hạn mức — nơi gọi đừng thử lại ngay trong cùng lượt cron.
+async function drawImages(jobs: ImageJob[], deadline: number, errors: string[], state: { halted?: boolean } = {}): Promise<number> {
   let rendered = 0;
   jobs = jobs.filter((j) => !isFlowPrompt(j.prompt)); // ảnh Google Flow: máy không tự vẽ đè
   // 1) hoạ tiết máy PawNail tự vẽ được → vẽ bằng máy PawNail (không tốn lượt AI, không lỗi giải phẫu)
@@ -494,8 +503,17 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
       const job = queue.shift()!;
       left--;
       try {
-        const best = await drawBest(job.subject, job.id, deadline);
-        if (!best) { left++; queue.length = 0; return; } // hết hạn mức ảnh ứng viên hôm nay / hết giờ
+        const stop: DrawStop = {};
+        const best = await drawBest(job.subject, job.id, deadline, undefined, stop);
+        if (!best) {
+          // hết hạn mức ảnh ứng viên hôm nay / hết giờ / AI chấm không trả lời → dừng lượt vẽ, GHI LÝ DO
+          if (stop.why === "judge") errors.push("AI chấm ảnh (Cloudflare / Gemini) không trả lời — chưa đăng ảnh nào, lượt sau vẽ lại. Kiểm tra CF_AI_TOKEN / model chấm ảnh.");
+          else if (stop.why === "quota") errors.push(`Hết hạn mức ảnh ứng viên hôm nay (AI_IMAGES_DAILY = ${cfDailyImages()}) — lượt sau vẽ bù.`);
+          if (stop.why === "judge" || stop.why === "quota") state.halted = true;
+          left++;
+          queue.length = 0;
+          return;
+        }
         const score = best.verdict?.score;
         if (score === undefined || score < KEEP_SCORE) {
           // Ảnh tốt nhất vẫn xấu → không đăng; đánh dấu đã thử hôm nay, mai vẽ lại.
@@ -514,6 +532,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
         if (QUOTA.test(msg)) {
           left = 0;
           queue.length = 0;
+          state.halted = true;
           // Kèm nguyên văn lỗi Cloudflare để chẩn đoán (10/2026: báo hết lượt trong khi trang Usage ghi 0/10k).
           errors.push(`Đã hết lượt vẽ ảnh miễn phí hôm nay của Cloudflare — các mẫu còn lại sẽ được vẽ bù ở lượt sau (không tốn tiền). [${msg.slice(0, 220)}]`);
           return;
@@ -530,7 +549,7 @@ async function drawImages(jobs: ImageJob[], deadline: number, errors: string[]):
 /** Vẽ bù ảnh cho mẫu PawNail nháp (14 ngày gần đây) còn thiếu ảnh — lỗi/quá giờ, hoặc
  *  bộ mẫu lớn đang vẽ dần. Mỗi lượt vẽ được bao nhiêu thì vẽ, trong hạn mức ngày. */
 export const backfillWhere = () => ({ provider: "pawnail", imageUrl: null, status: { in: ["draft", "published"] }, createdAt: { gte: new Date(Date.now() - 14 * DAY_MS) }, NOT: [FLOW_WHERE] });
-export async function backfillImages(deadline: number): Promise<{ drawn: number; errors: string[] }> {
+export async function backfillImages(deadline: number): Promise<{ drawn: number; errors: string[]; halted: boolean }> {
   const rows = await prisma.nailDesign.findMany({
     where: backfillWhere(),
     select: { id: true, prompt: true },
@@ -540,8 +559,9 @@ export async function backfillImages(deadline: number): Promise<{ drawn: number;
   // Mẫu đã vẽ hôm nay mà ảnh chưa đạt → để mai vẽ lại (không đốt hạn mức miễn phí vào 1 mẫu khó).
   const jobs = rows.filter((r) => !r.prompt.includes(tryMark())).map((r) => ({ id: r.id, subject: subjectOf(r.prompt), prompt: r.prompt })).filter((j) => j.subject);
   const errors: string[] = [];
-  const drawn = await drawImages(jobs, deadline, errors);
-  return { drawn, errors };
+  const state: { halted?: boolean } = {};
+  const drawn = await drawImages(jobs, deadline, errors, state);
+  return { drawn, errors, halted: !!state.halted };
 }
 
 export const MAX_REDRAWS = 3;

@@ -8,6 +8,8 @@ import { publishDailyOfficialPost } from "@/lib/officialDaily";
 import { publishDesignGallery } from "@/lib/designGallery";
 import { publishNewsPosts } from "@/lib/newsPosts";
 import { publishJobDigest } from "@/lib/jobDigestPost";
+import { setSetting } from "@/lib/settings";
+import { DESIGNS_LAST_RUN_KEY } from "@/lib/designsStallAlert";
 
 // Vercel Cron gọi mỗi sáng (vercel.json) → tạo loạt mẫu nháp, báo admin vào duyệt.
 // Mặc định dùng MÁY TẠO MẪU PAWNAIL (0đ, không phụ thuộc AI ngoài). Muốn dùng
@@ -37,7 +39,7 @@ export async function GET(req: Request) {
     if (isRetiredOccasion(occasion)) return NextResponse.json({ error: "Retired occasion" }, { status: 400 });
     const extra = Math.min(occasion ? 150 : 8, Math.max(0, Math.round(Number(sp.get("count")) || 0)));
     const already = useGemini ? 0 : await prisma.nailDesign.count({ where: { day, provider: "pawnail" } });
-    const r: { created: string[]; skipped: number; errors: string[]; backfilled?: number; rerendered?: number; official?: unknown; gallery?: unknown; news?: unknown; digest?: unknown } = useGemini
+    const r: { created: string[]; skipped: number; errors: string[]; halted?: boolean; backfilled?: number; rerendered?: number; official?: unknown; gallery?: unknown; news?: unknown; digest?: unknown } = useGemini
       ? await generateDesigns("US", Math.ceil(dailyLimit() / 2))
       : occasion && extra
         ? await generateOccasion("US", occasion, extra, deadline)
@@ -49,10 +51,13 @@ export async function GET(req: Request) {
     // Vẽ ảnh cho mẫu MỚI (và mẫu còn thiếu ảnh từ lượt trước) TRƯỚC phần đăng bài: catalog chỉ hiện mẫu đã có ảnh, nên
     // nếu bước này luôn bị đẩy ra cuối 60 s thì mẫu mới không bao giờ lộ ra (catalog production đứng từ 06/11/2026).
     // Chừa 20 s cho bài chính thức / bộ ảnh hôm nay (bộ ảnh cũng cần mẫu đã có ảnh).
-    if (!useGemini) {
+    // AI chấm ảnh không trả lời / hết hạn mức → không vẽ thêm trong lượt này (mỗi ảnh vẽ ra mà không chấm được là bỏ phí).
+    let halted = !!r.halted;
+    if (!useGemini && !halted) {
       const b = await backfillImages(deadline - 20_000);
       r.backfilled = b.drawn;
       r.errors.push(...b.errors);
+      halted = b.halted;
     }
     // NỘI DUNG MỖI NGÀY từ tài khoản chính thức:
     //   1 bài kiến thức (thuế/tip/an toàn/mẹo) · 1 bài ảnh "4 mẫu nail hôm nay" · ≤ 2 tin ngành Mỹ/Úc viết lại
@@ -68,7 +73,7 @@ export async function GET(req: Request) {
     }).catch(() => {});
     // Còn giờ: vẽ nốt mẫu thiếu ảnh (nếu lượt đầu chưa kịp)
     if (!useGemini) {
-      const b = await backfillImages(deadline);
+      const b = halted ? { drawn: 0, errors: [] as string[] } : await backfillImages(deadline);
       r.backfilled = (r.backfilled ?? 0) + b.drawn;
       r.errors.push(...b.errors);
       // thay dần ảnh AI cũ bằng ảnh máy PawNail vẽ trên tay mẫu (ảnh cũ giữ link để khôi phục)
@@ -87,6 +92,7 @@ export async function GET(req: Request) {
       });
     }
     // Ghi tóm tắt vào log Vercel (lỗi vẽ ảnh chỉ nằm trong phản hồi — không ai đọc được khi cron tự chạy).
+    await setSetting(DESIGNS_LAST_RUN_KEY, JSON.stringify({ at: new Date().toISOString(), created: r.created.length, backfilled: r.backfilled ?? 0, rerendered: r.rerendered ?? 0, errors: r.errors.slice(0, 4).map((e) => e.slice(0, 200)) })).catch(() => {});
     console.log("cron designs:", JSON.stringify({ created: r.created.length, backfilled: r.backfilled, rerendered: r.rerendered, gallery: r.gallery, official: r.official, digest: r.digest, errors: r.errors.slice(0, 5) }).slice(0, 1500));
     return NextResponse.json(r);
   } catch (err) {

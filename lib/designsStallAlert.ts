@@ -8,6 +8,8 @@ import { emailEnabled, sendEmail } from "@/lib/email";
 import { storageReady } from "@/lib/aiDesigns";
 
 export const DESIGNS_ALERT_SENT_AT_KEY = "designs_stall_alert_at";
+// Tóm tắt lượt cron /api/cron/designs gần nhất (ghi ở route) — log Vercel chỉ giữ vài phút, nên thư cảnh báo trích từ đây.
+export const DESIGNS_LAST_RUN_KEY = "designs_last_run";
 const WINDOW_MS = 48 * 3_600_000;
 const RESEND_EVERY_MS = 23 * 3_600_000;
 const alertTo = () => process.env.OPS_ALERT_EMAIL || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
@@ -25,6 +27,16 @@ export async function designsStall(now = new Date()): Promise<DesignsStall> {
     getSetting("design_render").then((v) => v !== "0").catch(() => true),
   ]);
   return { live, drafts, noImage, created, review, render, storage: storageReady() };
+}
+
+async function lastRunText(): Promise<string[]> {
+  try {
+    const r = JSON.parse((await getSetting(DESIGNS_LAST_RUN_KEY)) || "null") as { at?: string; created?: number; backfilled?: number; errors?: string[] } | null;
+    if (!r?.at) return [];
+    return [`Lượt cron gần nhất (${r.at}): tạo ${r.created ?? 0} mẫu, vẽ ${r.backfilled ?? 0} ảnh.${r.errors?.length ? ` Lỗi: ${r.errors.join(" | ")}` : ""}`];
+  } catch {
+    return [];
+  }
 }
 
 /** Lý do + việc cần làm, theo thứ tự chắc chắn nhất. */
@@ -49,6 +61,7 @@ export async function alertIfDesignsStalled(now = new Date()): Promise<"fresh" |
     "Trang Mẫu nail (bitpawos.com/designs) không có mẫu mới nào trong 48 giờ qua.",
     `48 giờ qua: ${s.created} mẫu được tạo · ${s.drafts} bản nháp · ${s.noImage} mẫu chưa có ảnh.`,
     ...causes.map((c) => `• ${c}`),
+    ...(await lastRunText()),
     "(Thư này gửi tối đa 1 lần / ngày cho tới khi có mẫu mới lên trang.)",
   ].join("\n\n");
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

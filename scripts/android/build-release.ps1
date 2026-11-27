@@ -87,7 +87,8 @@ function Find-Jdk21 {
         $candidates += (Get-ChildItem -LiteralPath $gradleJdks -Directory | Where-Object { $_.Name -match "21" } | ForEach-Object { $_.FullName })
     }
     $candidates += "C:\Program Files\Android\Android Studio\jbr"
-    foreach ($root in @("C:\Program Files\Eclipse Adoptium", "C:\Program Files\Java", "C:\Program Files\Microsoft")) {
+    # C:\buildtools\jdk21: Microsoft OpenJDK 21 zip unpacked there on the owner's machine (no installer, 11/2026)
+    foreach ($root in @("C:\Program Files\Eclipse Adoptium", "C:\Program Files\Java", "C:\Program Files\Microsoft", "C:\buildtools\jdk21")) {
         if (Test-Path $root) {
             $candidates += (Get-ChildItem -LiteralPath $root -Directory | Where-Object { $_.Name -match "21" } | ForEach-Object { $_.FullName })
         }

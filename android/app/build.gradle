@@ -36,10 +36,12 @@ android {
         // tự vẽ (CallNotifications: Trả lời / Từ chối, chuông lặp, tin kết thúc gỡ / "Cuộc gọi
         // nhỡ"). Máy chủ chỉ gửi tin cuộc gọi data-only cho build >= 4 (NATIVE_CALL_MIN_BUILD) —
         // KHÔNG hạ versionCode của bản có các phần này.
+        // Bản 5 / "1.3.1": như 1.3.0 nhưng TẠM BỎ OngoingCallService + 2 quyền FOREGROUND_SERVICE* (Play bắt tờ khai
+        // kèm video minh hoạ — bản 4 đã tải lên nhưng không phát hành được). Đổ chuông native vẫn giữ (build >= 4).
         // Giữ versionName khớp MARKETING_VERSION bên iOS (ios/App/App.xcodeproj, vẫn 1.1.0 —
         // nâng lên ở bản iOS kế tiếp; các phần trên chỉ có trên Android).
-        versionCode 4
-        versionName "1.3.0"
+        versionCode 5
+        versionName "1.3.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

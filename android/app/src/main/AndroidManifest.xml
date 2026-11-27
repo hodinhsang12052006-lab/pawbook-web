@@ -102,11 +102,13 @@
              camera: rời app thì camera dừng, web tắt track video và báo bên kia "Tạm dừng video" — không gửi hình khi
              người dùng không thấy app. KHÔNG phoneCall (chỉ cho app gọi điện mặc định / ConnectionService) hay
              mediaPlayback. Play Console: khai báo "Foreground service permissions" loại Microphone (cuộc gọi thoại / video
-             giữa chủ tiệm và thợ). Không export. -->
+             giữa chủ tiệm và thợ). Không export.
+             versionCode 5: TẠM BỎ (Play bắt video minh hoạ cho tờ khai; OngoingCallService.ENABLED = false). Bật lại:
         <service
             android:name=".OngoingCallService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        -->
 
         <!-- Tin "notification" do FCM tự vẽ (app ở nền: tin không phải chat, bản máy chủ cũ):
              icon trắng thanh trạng thái, màu cam thương hiệu, kênh mặc định "general". -->
@@ -154,9 +156,11 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- versionCode 4 — cuộc gọi tiếp tục khi rời app (OngoingCallService). Đều là quyền "normal" (không hỏi người dùng);
          Android 14+ cần quyền theo LOẠI service, và chỉ bật được khi đã có RECORD_AUDIO. Play Console: tờ khai
-         "Foreground service permissions" cho FOREGROUND_SERVICE_MICROPHONE. -->
+         "Foreground service permissions" cho FOREGROUND_SERVICE_MICROPHONE.
+         versionCode 5: TẠM BỎ cùng OngoingCallService (chưa có video cho tờ khai Play). Bật lại:
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    -->
     <!-- Cảm biến tiệm cận khi gọi thoại bằng loa trong (PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK — CallAudio). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 13+ KHÔNG cần READ_MEDIA_IMAGES/VIDEO: chọn ảnh qua bộ chọn file/Photo Picker

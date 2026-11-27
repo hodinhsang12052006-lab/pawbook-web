@@ -61,6 +61,14 @@ public class OngoingCallService extends Service {
 
     private final Handler main = new Handler(Looper.getMainLooper());
 
+    /**
+     * TẮT từ versionCode 5 (11/2026): Play Console bắt tờ khai "Foreground service permissions" (Microphone) KÈM video
+     * minh hoạ, chưa có video → bản 1.3.1 bỏ service khỏi manifest (cùng 2 quyền FOREGROUND_SERVICE*), cuộc gọi khi rời
+     * app chạy như 1.2.0. Bật lại: ENABLED = true + trả lại thẻ service và 2 quyền trong AndroidManifest + nộp tờ khai.
+     * start() trả false → web coi như không có "đang trong cuộc gọi" native (lib/calls/nativeCallBridge).
+     */
+    static final boolean ENABLED = false;
+
     static boolean isRunning() {
         return running;
     }
@@ -70,6 +78,7 @@ public class OngoingCallService extends Service {
      * 1 lần chạm), rồi chờ service báo startForeground có được không (tối đa 1.5 s). Đang chạy → chỉ cập nhật thông báo.
      */
     static boolean start(Context ctx, String peer, boolean video, String state, long since) {
+        if (!ENABLED) return false;
         if (running) return update(ctx, peer, video, state, since);
         Context app = ctx.getApplicationContext();
         Intent i = new Intent(app, OngoingCallService.class)

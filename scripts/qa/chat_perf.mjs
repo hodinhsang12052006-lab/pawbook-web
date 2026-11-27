@@ -40,7 +40,8 @@ for (let i = 0; i < HISTORY; i++) {
   const from = i % 3 === 0 ? tech.me.id : owner.me.id;
   await db.execute({
     sql: `INSERT INTO "Message" (id, body, type, senderId, conversationId, createdAt) VALUES (?, ?, 'TEXT', ?, ?, ?)`,
-    args: [`perf_${Date.now()}_${i}`, `${lines[i % lines.length]} (#${i})`, from, convId, base + i * 60_000],
+    // ISO text như Prisma (adapter libsql) tự ghi — số mili-giây làm groupBy của trang /messages lỗi P2023
+    args: [`perf_${Date.now()}_${i}`, `${lines[i % lines.length]} (#${i})`, from, convId, new Date(base + i * 60_000).toISOString()],
   });
 }
 
@@ -92,16 +93,29 @@ out.typing = { worstMs: Math.round(Math.max(0, ...keyEv)), p95Ms: Math.round(pct
 R.check("CP2", "Gõ phím mượt: phím chậm nhất ≤ 100ms, ≤ 8 sự kiện phím > 50ms (trước khi sửa: 63)", out.typing.worstMs <= 100 && out.typing.slowKeys <= 8, JSON.stringify(out.typing));
 
 // 3) Gửi: bấm nút Gửi (điện thoại: Enter = xuống dòng) → bong bóng hiện (tin hiện ngay, không chờ server).
+// Đo từ lúc CHẠM (thời điểm của sự kiện click trong trang) tới khung hình ĐÃ VẼ có bong bóng mới (2 khung sau khi bong bóng vào
+// DOM — cận trên). Trước đây: (1) tìm "thử tay nghề nha" — lịch sử mẫu có sẵn "Ok em, mai ghé tiệm thử tay nghề nha (#n)" nên
+// khớp ngay tin CŨ; (2) bộ dò gắn song song với cú bấm (không chờ); (3) tính cả thời gian Playwright chờ nút "ổn định / bấm
+// được" trước khi bấm (hàng trăm ms ở CPU chậm 4x — người dùng không chịu). sendHarnessMs giữ số đo kiểu cũ để so.
+const SENT = "Dạ em cảm ơn anh, mai 10h em ghé tiệm thử tay nghề nha";
+await page.evaluate((txt) => {
+  window.__send = { click: 0, shown: 0 };
+  document.addEventListener("click", (e) => { if (!window.__send.click) window.__send.click = e.timeStamp; }, { capture: true, once: true });
+  const has = () => [...document.querySelectorAll(".m-row")].slice(-3).some((n) => n.textContent?.includes(txt));
+  const mo = new MutationObserver(() => {
+    if (!has()) return;
+    mo.disconnect();
+    requestAnimationFrame(() => requestAnimationFrame(() => { window.__send.shown = performance.now(); }));
+  });
+  mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+  setTimeout(() => mo.disconnect(), 10000); // không hiện trong 10 s → ghi lỗi thay vì treo cả bài đo
+}, SENT);
 t0 = await page.evaluate(() => performance.now());
-const shown = page.evaluate((txt) => new Promise((res) => {
-  const tick = () => ([...document.querySelectorAll("p,div,span")].some((n) => n.childElementCount === 0 && n.textContent?.includes(txt)) ? res(performance.now()) : requestAnimationFrame(tick));
-  tick();
-  setTimeout(() => res(null), 10000); // không hiện trong 10 s → ghi lỗi thay vì treo cả bài đo
-}), "thử tay nghề nha");
 await page.getByRole("button", { name: /^(Gửi tin nhắn|Send message)$/ }).filter({ visible: true }).first().click();
-const shownAt = await shown;
-out.sendMs = shownAt == null ? 99999 : Math.round(shownAt - t0);
-R.check("CP3", "Gửi tin → hiện bong bóng ≤ 150ms", out.sendMs <= 150, out.sendMs + "ms");
+const sendT = await page.waitForFunction(() => window.__send.shown && window.__send, null, { timeout: 10000 }).then((h) => h.jsonValue()).catch(() => null);
+out.sendMs = sendT ? Math.round(sendT.shown - sendT.click) : 99999;
+out.sendHarnessMs = sendT ? Math.round(sendT.shown - t0) : 99999;
+R.check("CP3", "Chạm Gửi → bong bóng hiện (đã vẽ) ≤ 150ms", out.sendMs <= 150, `${out.sendMs}ms (kể cả Playwright chờ nút: ${out.sendHarnessMs}ms)`);
 await page.waitForTimeout(1500);
 
 // 4) Nhận: tiệm gửi → hiện trên máy thợ.

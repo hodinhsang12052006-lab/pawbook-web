@@ -2,35 +2,32 @@
 
 import { apiError } from "@/lib/i18n/apiError";
 import Link from "next/link";
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from "react";
-import {
-  Send, Search, MessageSquare, Loader2, Plus, Users,
-  Smile, X, ArrowLeft, Check, CheckCheck, Phone, Video, MoreVertical, Flag, ShieldOff, ShieldCheck, RefreshCw,
-} from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Search, MessageSquare, Loader2, Plus, Users, Check, CheckCheck, ShieldOff, ShieldCheck } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { localeHref } from "@/lib/i18n/localeHref";
 import toast from "react-hot-toast";
 import { acquireUserChannel, releaseUserChannel } from "@/lib/pusherUserChannel";
 import { playSound } from "@/lib/sounds";
-import { useIsOnline, lastActiveLabel } from "@/lib/presence";
-import { prepareFileForUpload, FileTooLargeError } from "@/lib/compressImage";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useCallManager } from "@/lib/CallManagerContext";
 import { avatarSrc } from "@/lib/avatar";
 import { officialAvatarUrl } from "@/lib/brand";
 import { UserType, MessageType, foldVi, shortChatTime, PresenceAvatar, TypingDots, describeCall, ROLE_VI, ConversationType, ActiveChatType, MessagesContentProps, ChatBucket, chatKeyFor, mergeSorted, mapServerMessage } from "./chatShared";
 import { ReportUserModal, CreateGroupModal } from "./ChatModals";
-import MessageRow from "./MessageRow";
-import { preloadCallSdk, preloadCallSdkWhenIdle } from "@/lib/callPreload";
+import { preloadCallSdkWhenIdle } from "@/lib/callPreload";
 import VerifiedBadge, { isVerifiedRole } from "@/components/ui/VerifiedBadge";
-import { Pin, Palette, Image as ImageIcon, Mic, Plus as PlusIcon, Sparkles as SparklesIcon, X as XIcon, ChevronDown, SendHorizontal } from "lucide-react";
+import { Pin, Sparkles as SparklesIcon, X as XIcon } from "lucide-react";
 import MediaLightbox from "@/components/ui/MediaLightbox";
 import { getPusherClient } from "@/lib/pusherClient";
 import { CS } from "@/lib/i18n/chatStrings";
 import ChatSuggestions from "./ChatSuggestions";
-import ChatContextCard from "./ChatContextCard";
-import ChatAssist from "./ChatAssist";
-import { replyInVietnamese, starters } from "@/lib/chatAssist";
+import { replyInVietnamese } from "@/lib/chatAssist";
+// Khung chat chia 3 phần memo, mỗi phần giữ state riêng: gõ phím chỉ vẽ lại khung soạn tin; tin mới / gửi tin chỉ vẽ lại
+// khung tin (trước đây cả màn hình ~2.600 dòng vẽ lại ở mỗi lần đổi — chat_perf: gửi ~700 ms ở CPU chậm 4x).
+import ChatHeader from "./ChatHeader";
+import ChatThread, { type PartnerTrust, type ThreadMemory } from "./ChatThread";
+import ChatComposer, { type ComposerApi, type SendFn, type Unanswered } from "./ChatComposer";
 import dynamic from "next/dynamic";
 // Thử mẫu PawNail (vẽ mẫu lên ảnh tay khách) — tải khi mở, không làm nặng Messenger lúc vào.
 const NailStudio = dynamic(() => import("@/components/studio/NailStudio"), { ssr: false });
@@ -38,18 +35,12 @@ const HandConsult = dynamic(() => import("@/components/consult/HandConsult"), { 
 // Bảng chọn hình nền: chỉ tải khi mở.
 const WallpaperSheet = dynamic(() => import("./WallpaperSheet"), { ssr: false });
 import { type Reaction, toggleReaction } from "@/lib/chatReactions";
-import MediaPicker from "./MediaPicker";
-import VoiceRecorder from "./VoiceRecorder";
 import { uploadMedia } from "@/lib/mediaUpload";
 import { chatKeyOf, migrateLegacyWallpaper, resolveChoice, type WpRender } from "@/lib/chatWallpapers";
 import { useWallpaperRender, useWpState } from "./useChatWallpaper";
 import { mediaPreview } from "@/lib/chat/preview";
 import { isGifUrl } from "@/lib/chat/gif";
-import { trailingEmoji } from "@/lib/chat/emojiOnly";
-import StickerSuggest from "./StickerSuggest";
-import { pushRecentSticker, readMediaTab } from "@/lib/stickers/store";
-import { probeGifs, useGifEnabled } from "@/lib/chat/gifAvailability";
-import { guessMarketInBrowser, readMarketCookie } from "@/lib/market";
+import { probeGifs } from "@/lib/chat/gifAvailability";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 import { useMounted } from "@/lib/useMounted";
@@ -60,19 +51,10 @@ import { autoTranslates, getTranslation, requestTranslation, useMessageTranslati
 // đổi route sang app/[lang]/ xoá layout đó; CSS đi cùng component nên không thể bị rơi khi gộp nhánh.
 import "./messenger.css";
 
-// Ô soạn tin tự cao theo nội dung (tối đa 6 dòng = 152px rồi cuộn trong). Trình duyệt có `field-sizing: content`
-// thì CSS tự lo; còn lại đặt chiều cao theo scrollHeight.
-function growInput(el: HTMLTextAreaElement | null) {
-  if (!el || (typeof CSS !== "undefined" && CSS.supports?.("field-sizing", "content"))) return;
-  el.style.height = "auto";
-  el.style.height = `${Math.min(152, el.scrollHeight)}px`;
-}
-const finePointer = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: fine)").matches;
-/** "smooth" trừ khi người dùng bật giảm chuyển động */
-const scrollBehavior = (): ScrollBehavior => (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
+// Chưa có tin: CÙNG 1 mảng rỗng (mảng mới mỗi lần render làm khung tin memo vẽ lại vô ích)
+const NO_MESSAGES: MessageType[] = [];
 
 // Thông tin tin cậy THẬT của đối phương (1 lần / người / phiên): thành phố, ngày tham gia, SĐT đã xác minh.
-type PartnerTrust = { city?: string | null; state?: string | null; createdAt?: string; phoneVerified?: boolean };
 const trustCache = new Map<string, Promise<PartnerTrust | null>>();
 function loadTrust(id: string): Promise<PartnerTrust | null> {
   if (!trustCache.has(id)) {
@@ -86,7 +68,6 @@ function loadTrust(id: string): Promise<PartnerTrust | null> {
   }
   return trustCache.get(id)!;
 }
-const SAFETY_KEY = "pn_safety_dismissed";
 
 export default function MessagesContent({
   initialSessionUser,
@@ -121,85 +102,21 @@ export default function MessagesContent({
 
   const activeKey = chatKeyFor(activeChat);
   const activeBucket = activeKey ? chatBuckets[activeKey] : undefined;
-  const chatMessages = activeBucket?.messages ?? [];
+  const chatMessages = activeBucket?.messages ?? NO_MESSAGES;
   const chatNextCursor = activeBucket?.nextCursor ?? null;
   const chatMessagesRef = useRef(chatMessages);
   chatMessagesRef.current = chatMessages;
 
   const [loadingChatMessages, setLoadingChatMessages] = useState(false);
-  // Khung tin mờ chỉ hiện nếu sau 250ms vẫn chưa có gì — mở chat đã có sẵn
-  // tin (cache / tải trước) thì không bao giờ thấy trạng thái "đang tải".
-  const [showChatSkeleton, setShowChatSkeleton] = useState(false);
-  useEffect(() => {
-    if (!loadingChatMessages) {
-      setShowChatSkeleton(false);
-      return;
-    }
-    const t = setTimeout(() => setShowChatSkeleton(true), 250);
-    return () => clearTimeout(t);
-  }, [loadingChatMessages]);
-  const [loadingMoreChatMessages, setLoadingMoreChatMessages] = useState(false);
 
-  // Ô nhập KHÔNG điều khiển bằng state: mỗi phím gõ mà setState ở component
-  // 1.900 dòng này là render lại cả danh sách tin + hội thoại → gõ bị khựng
-  // trên điện thoại. Chữ nằm trong DOM (inputRef); state chỉ đổi khi ô chuyển
-  // rỗng ↔ có chữ (để bật/tắt nút Gửi).
+  // Ô nhập KHÔNG điều khiển bằng state: chữ nằm trong DOM (inputRef), mọi trạng thái của khung soạn tin (ô rỗng ↔ có chữ,
+  // gợi ý nhãn dán, bảng biểu tượng…) nằm trong ChatComposer. Component này chỉ đọc chữ lúc gửi và điều khiển khung qua
+  // composerApi (điền câu gợi ý / bản nháp, xoá sau khi gửi) — không bao giờ vẽ lại vì gõ phím.
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [hasText, setHasTextState] = useState(false);
-  // Đang gõ → 3 nút (ảnh / ghi âm / GIF) thu vào 1 nút "+" cho ô nhập rộng ra (như Messenger)
-  const [toolsOpen, setToolsOpen] = useState(false);
+  const composerApi = useRef<ComposerApi>(null);
+  const setMessageText = useCallback((v: string) => composerApi.current?.setText(v), []);
   const [studioOpen, setStudioOpen] = useState(false);
   const [consult, setConsult] = useState<{ image: string | null } | null>(null); // Soi tay tư vấn ngay trong chat
-  const hasTextRef = useRef(false);
-  // Chỉ gọi setState khi THẬT SỰ đổi (gọi với cùng giá trị React vẫn có thể chạy lại thân component).
-  const setHasText = useCallback((v: boolean) => {
-    if (hasTextRef.current === v) return;
-    hasTextRef.current = v;
-    setHasTextState(v);
-    if (!v) setToolsOpen(false); // xoá hết chữ → hiện lại các nút ảnh / ghi âm / GIF
-  }, []);
-  // Gợi ý nhãn dán: ô soạn tin là đúng 1 emoji (hoặc "từ" cuối là 1 emoji) → thanh nhãn khớp phía trên ô (StickerSuggest).
-  // Chỉ setState khi emoji gợi ý ĐỔI (gõ chữ thường không render lại component lớn này). Đóng (×) → ẩn cho tới khi đổi emoji.
-  const [stickerHint, setStickerHint] = useState<string | null>(null);
-  const [hintDismissed, setHintDismissed] = useState<string | null>(null);
-  const stickerHintRef = useRef<string | null>(null);
-  // Cả ô là 1 emoji → hiện NGAY; chỉ "từ" cuối là emoji (đang gõ câu: "ok 😂", "😂" → "😂😂") → chờ 200ms gõ yên mới hiện,
-  // thanh không bật / tắt liên tục (mỗi lần ~72px khung tin co / giãn). Ẩn thì luôn ngay (không để thanh gợi ý emoji cũ).
-  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const updateStickerHint = useCallback((v: string) => {
-    const g = trailingEmoji(v);
-    if (hintTimerRef.current) {
-      clearTimeout(hintTimerRef.current);
-      hintTimerRef.current = null;
-    }
-    const apply = () => {
-      if (g === stickerHintRef.current) return;
-      stickerHintRef.current = g;
-      setStickerHint(g);
-      if (!g) setHintDismissed(null);
-    };
-    if (!g || g === stickerHintRef.current || v.trim() === g) return apply();
-    // đổi sang emoji cuối KHÁC: thanh của emoji cũ ẩn ngay (chạm nhầm sẽ gửi nhãn của emoji cũ), thanh mới chờ 200ms
-    if (stickerHintRef.current) {
-      stickerHintRef.current = null;
-      setStickerHint(null);
-    }
-    hintTimerRef.current = setTimeout(() => {
-      hintTimerRef.current = null;
-      apply();
-    }, 200);
-  }, []);
-  useEffect(() => () => {
-    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
-  }, []);
-  const setMessageText = useCallback((v: string | ((prev: string) => string)) => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.value = typeof v === "function" ? v(el.value) : v;
-    setHasText(!!el.value.trim());
-    updateStickerHint(el.value);
-    growInput(el);
-  }, [setHasText, updateStickerHint]);
   // Realtime: ai đang soạn tin (theo hội thoại, hết hạn sau 4s) và mốc "đã
   // xem" của đối phương (theo hội thoại).
   const [typingByConv, setTypingByConv] = useState<Record<string, string>>({});
@@ -212,7 +129,9 @@ export default function MessagesContent({
   );
   const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const lastTypingSentRef = useRef(0);
-  const [sending, setSending] = useState(false);
+  // ref, không phải state: chỉ dùng để chặn gửi trùng tin ĐẦU TIÊN (chưa có hội thoại) — đổi nó không cần vẽ lại gì
+  // (trước đây mỗi lần gửi vẽ lại cả màn hình thêm 2 lần: sending = true / false).
+  const sendingRef = useRef(false);
 
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -222,20 +141,6 @@ export default function MessagesContent({
   // Cảm xúc đã đổi trong phiên (realtime / vừa bấm) — đè lên msg.reactions tải từ máy chủ.
   const [messageReactions, setMessageReactions] = useState<{ [msgId: string]: Reaction[] }>({});
 
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [showGifs, setShowGifs] = useState(false);
-  const [chatPanelTab, setChatPanelTab] = useState<"emoji" | "sticker" | "gif">("emoji");
-  const [gifHandoff, setGifHandoff] = useState<string | undefined>(undefined); // "Tìm GIF …" từ tab Nhãn dán
-  // GIF chỉ có khi máy chủ có khoá GIPHY / Tenor — chưa có thì ẩn MỌI lối vào GIF (tab, menu "+", "Tìm GIF …")
-  const gifOn = useGifEnabled();
-  // Thị trường cho bộ nhãn dán theo mùa: tài khoản → cookie → đoán theo trình duyệt → Mỹ
-  const stickerMarket = useMemo<"US" | "AU">(() => {
-    const m = currentUser?.market;
-    if (m === "US" || m === "AU") return m;
-    return (typeof window !== "undefined" && (readMarketCookie() ?? guessMarketInBrowser())) || "US";
-  }, [currentUser?.market]);
-  const [recording, setRecording] = useState(false);
-
   // Chặn/Báo cáo — bắt buộc theo App Store Guideline 1.2 cho app có nhắn tin
   // giữa người dùng với nhau.
   const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
@@ -244,17 +149,9 @@ export default function MessagesContent({
   useEffect(() => {
     fetch("/api/official").then((r) => (r.ok ? r.json() : null)).then((d) => d?.account && setOfficial(d.account)).catch(() => {});
   }, []);
-  const [showChatMenu, setShowChatMenu] = useState(false);
-  // V2: ảnh toàn màn hình, bảng đính kèm "+", lượt đồng bộ lại (mạng quay lại / mở lại app), nút xuống tin mới nhất
+  // V2: ảnh toàn màn hình, lượt đồng bộ lại (mạng quay lại / mở lại app)
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
-  const [attachOpen, setAttachOpen] = useState(false);
   const [syncTick, setSyncTick] = useState(0);
-  const [jump, setJump] = useState<{ show: boolean; unseen: number }>({ show: false, unseen: 0 });
-  // V2.1: MỘT viên ngày nổi khi cuộn (thay cho các viên sticky chồng lên nhau) + vùng đọc màn hình chỉ cho tin MỚI đến
-  const [floatDate, setFloatDate] = useState<{ label: string; idle: boolean } | null>(null);
-  const [liveText, setLiveText] = useState("");
-  const [assistOpen, setAssistOpen] = useState(false);
-  const jumpShownRef = useRef(false);
   // Hình nền khung chat — riêng từng cuộc trò chuyện (ChatKey "u:<người kia>" / "g:<nhóm>"), lưu trên máy theo người
   // (lib/chatWallpapers.ts). Đọc ĐỒNG BỘ → mở chat là đúng nền ngay (không nháy nền mặc định). Bảng chọn xem trước trực
   // tiếp trên khung chat (wpPreview) và chỉ lưu khi bấm Áp dụng.
@@ -277,7 +174,6 @@ export default function MessagesContent({
   }, [activeChat]);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const openWallpaper = useCallback(() => {
-    setShowChatMenu(false);
     setShowWallpaperPicker(true);
     setWpSeen(true);
   }, []);
@@ -292,17 +188,18 @@ export default function MessagesContent({
   const [blockActionLoading, setBlockActionLoading] = useState(false);
 
   const { startCall } = useCallManager();
-  const chatObserverTarget = useRef<HTMLDivElement>(null);
   // ?to= ngoài danh sách systemUsers → tra hồ sơ 1 lần duy nhất mỗi partner.
   const directPartnerLookupRef = useRef<string | null>(null);
+  // Khung cuộn tin (ChatThread gắn vào) + "đang ở sát đáy" — dùng chung giữa khung tin, khung soạn tin (giữ dính đáy khi
+  // khung soạn cao thêm) và việc đánh dấu đã xem khi mở lại app.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
-  const prevChatKeyRef = useRef<string | null>(null);
-  const prevMessageCountRef = useRef(0);
-  // Bù vị trí cuộn khi chèn tin cũ lên trên: chụp chiều cao NGAY TRƯỚC khi chèn
-  // + id tin đầu tiên, chỉ bù ở đúng lần render có tin cũ mới vào.
-  const pendingScrollAdjustRef = useRef<{ prevScrollHeight: number; firstId: string | undefined } | null>(null);
-  const animatedMessageIdsRef = useRef<Set<string>>(new Set());
+  // Ô chứa nút "xuống tin mới nhất" (ChatThread) — khung soạn tin đặt chiều cao của nó lên đây (biến CSS).
+  const jumpSlotRef = useRef<HTMLDivElement>(null);
+  // Mốc cuộn + các tin đã chạy hiệu ứng xuất hiện: sống suốt phiên (khung tin bị gỡ khi đóng chat trên điện thoại).
+  const threadMemory = useRef<ThreadMemory>({ prevChatKey: null, prevCount: 0, animated: new Set() });
+  // Bảng biểu tượng trên điện thoại có mục lịch sử riêng (ChatComposer ghi) — closeThread cần biết để lùi đúng số mục.
+  const panelPushedRef = useRef(false);
 
   // Live mirror of activeChat for the Pusher handler below, which is bound
   // once per session (deps: [currentUser?.id] only) and would otherwise read
@@ -312,16 +209,8 @@ export default function MessagesContent({
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
-  // Reset ephemeral input UI on chat switch. This must NOT remount the whole
-  // component (that would tear down the Pusher subscription and — before the
-  // Call/message split — interrupt an active call); it's a targeted reset.
-  useEffect(() => {
-    setMessageText("");
-    updateStickerHint("");
-    setShowEmoji(false);
-    setShowGifs(false);
-    setChatPanelTab("emoji");
-  }, [activeChat?.id]);
+  // (Đổi cuộc trò chuyện → ChatComposer tự xoá chữ đang soạn + đóng bảng biểu tượng; không remount component này —
+  // làm vậy sẽ gỡ kênh Pusher.)
 
   // -------------------------------------------------------------------------
   // Cache write helpers
@@ -510,7 +399,6 @@ export default function MessagesContent({
   const handleToggleBlock = useCallback(async () => {
     if (!activeChat || activeChat.isGroup || blockActionLoading) return;
     setBlockActionLoading(true);
-    setShowChatMenu(false);
     const wasBlocked = blockedUserIds.has(activeChat.id);
     try {
       const res = await fetch(`/api/block${wasBlocked ? `?userId=${activeChat.id}` : ""}`, {
@@ -640,216 +528,6 @@ export default function MessagesContent({
     // this must only re-run when the active chat itself changes (or a catch-up sync is requested).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChat?.id, syncTick]);
-
-  // -------------------------------------------------------------------------
-  // Smooth infinite scroll (Telegram-style "load ahead" on scroll-to-top),
-  // preserving scroll position — the container never jumps.
-  // -------------------------------------------------------------------------
-  const loadingMoreRef = useRef(false);
-
-  const loadMoreChatMessages = useCallback(async () => {
-    if (!activeChat?.conversationId || !chatNextCursor || loadingMoreRef.current) return;
-    const key = activeChat.conversationId;
-    try {
-      loadingMoreRef.current = true;
-      setLoadingMoreChatMessages(true);
-
-      const res = await fetch(`/api/messages?conversationId=${key}&cursor=${chatNextCursor}`);
-      if (res.ok) {
-        const data = await res.json();
-        const safeMsgs = (data.messages || []).map(mapServerMessage);
-        const container = scrollContainerRef.current;
-        // chỉ khi vẫn đang mở đúng cuộc trò chuyện này (đổi chat giữa chừng → không để lại "đang chỉnh vị trí" cho chat mới)
-        if (container && safeMsgs.length && activeChatRef.current?.conversationId === key) {
-          pendingScrollAdjustRef.current = { prevScrollHeight: container.scrollHeight, firstId: chatMessagesRef.current[0]?.id };
-        }
-        // Việc nền: React chia nhỏ việc dựng vài chục bong bóng → cuộn không khựng.
-        startTransition(() => prependIntoBucket(key, safeMsgs, data.nextCursor || null));
-      } else {
-        pendingScrollAdjustRef.current = null;
-      }
-    } catch (err: any) {
-      // "TypeError: Failed to fetch" fires here whenever the browser cancels
-      // in-flight requests on navigation/unload — expected, not a bug.
-      if (err?.name !== "AbortError") {
-        console.error("Failed to load older messages on scroll-up:", err);
-      }
-      pendingScrollAdjustRef.current = null;
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMoreChatMessages(false);
-    }
-  }, [activeChat?.conversationId, chatNextCursor, prependIntoBucket]);
-
-  useEffect(() => {
-    const el = chatObserverTarget.current;
-    if (!el || !chatNextCursor) return;
-    const obs = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) loadMoreChatMessages(); },
-      // Tải trước khi người dùng còn cách đỉnh ~800px (kiểu Telegram) → cuộn lên
-      // không phải đứng chờ "đang tải lịch sử".
-      { root: scrollContainerRef.current, rootMargin: "800px 0px 0px 0px", threshold: 0 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [chatNextCursor, loadMoreChatMessages]);
-
-  // Track whether the user is scrolled near the bottom, to decide whether a
-  // newly arrived message should auto-scroll or leave them where they are.
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      isNearBottomRef.current = dist < 150;
-      // Nút "xuống tin mới nhất": chỉ setState khi vượt ngưỡng (hiện > 400px, ẩn < 120px)
-      if (!jumpShownRef.current && dist > 400) { jumpShownRef.current = true; setJump((j) => ({ ...j, show: true })); }
-      else if (jumpShownRef.current && dist < 120) { jumpShownRef.current = false; setJump({ show: false, unseen: 0 }); }
-    };
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    // Đang ở cuối đoạn chat mà ảnh / GIF / sticker / video tải xong (làm nội dung cao thêm) → giữ dính
-    // đáy như Messenger. Trước đây mở cuộc trò chuyện có ảnh thì dừng lửng lơ cách đáy vài trăm px,
-    // tin mới nhất bị khuất. Đang kéo lên đọc tin cũ thì không kéo xuống.
-    const keepPinned = (e: Event) => {
-      const t = e.target as HTMLElement | null;
-      if (!t || !/^(IMG|VIDEO)$/.test(t.tagName) || !isNearBottomRef.current) return;
-      // GIF có khung cố định theo #wh (không đổi chiều cao khi tải) và trình phát MP4 dựng / gỡ theo vị trí cuộn → không kéo xuống
-      if (t.closest(".m-gif")) return;
-      el.scrollTop = el.scrollHeight;
-    };
-    el.addEventListener("load", keepPinned, true);
-    el.addEventListener("loadedmetadata", keepPinned, true);
-    // Bàn phím mở (WebView co lại), hàng gợi ý hiện/ẩn, ô nhập cao thêm, ảnh giải mã xong… → khung cuộn đổi cỡ.
-    // Đang ở sát đáy (≤ 80px) trước khi đổi → giữ dính đáy để tin mới nhất không bị khung soạn tin che.
-    let lastDist = 0;
-    const track = () => { lastDist = el.scrollHeight - el.scrollTop - el.clientHeight; };
-    el.addEventListener("scroll", track, { passive: true });
-    // Giữ dính đáy KHÔNG phụ thuộc việc đang nạp trang tin cũ (pendingScrollAdjustRef): đang ở đáy thì kéo xuống đáy là đúng,
-    // và bước giữ chỗ khi trang cũ chèn lên đầu (useLayoutEffect bên dưới) cộng thêm phần cao mới → bị kẹp ở đáy, vẫn đúng.
-    // Trước đây máy lag (trang cũ nạp lâu) là các lần giữ dính đáy bị bỏ → tin cuối cao thêm nằm khuất dưới khung soạn tin.
-    const ro = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(() => {
-          if (lastDist <= 80) el.scrollTop = el.scrollHeight;
-          track();
-        })
-      : null;
-    ro?.observe(el);
-    // Khối không phải bong bóng (thẻ đầu cuộc trò chuyện, thẻ an toàn, thẻ menu/việc, "đang soạn") tải dữ liệu sau
-    // và cao thêm → theo dõi riêng các khối đó (không theo dõi từng bong bóng: tin mới vẫn cuộn mượt như cũ).
-    const isBlock = (n: Node): n is Element => n instanceof Element && !n.matches(".m-row, .m-sep, .m-gap");
-    Array.from(el.children).filter(isBlock).forEach((c) => ro?.observe(c));
-    // 2 dòng tin CUỐI cao thêm sau khi đã hiện (bản dịch tự động về, cảm xúc mới, "Đã xem", ảnh / nhãn dán tải xong trên mạng
-    // chậm…): khung tin không đổi cỡ nên RO trên không báo → đang ở đáy mà tin cuối bị khung soạn tin che dần. Bỏ qua lần báo
-    // đầu tiên lúc mới theo dõi (tin vừa gửi / vừa đến vẫn cuộn mượt theo hiệu ứng ở dưới, không bị kéo giật xuống).
-    const rowH = new WeakMap<Element, number>();
-    let tail: Element[] = [];
-    const tailRo = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver((entries) => {
-          let grew = false;
-          for (const e of entries) {
-            const h = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
-            const was = rowH.get(e.target);
-            rowH.set(e.target, h);
-            if (was !== undefined && h > was + 0.5) grew = true; // chỉ khi CAO THÊM (thấp đi thì trình duyệt tự kẹp scrollTop)
-          }
-          if (grew && lastDist <= 80) el.scrollTop = el.scrollHeight;
-          track();
-        })
-      : null;
-    const watchTail = () => {
-      if (!tailRo) return;
-      const rows = el.querySelectorAll(":scope > .m-row");
-      const next = Array.from(rows).slice(-2);
-      if (next.length === tail.length && next.every((r, i) => r === tail[i])) return;
-      tail.forEach((r) => { if (!next.includes(r)) tailRo.unobserve(r); });
-      next.forEach((r) => {
-        if (tail.includes(r)) return;
-        // mốc chiều cao lấy NGAY lúc bắt đầu theo dõi (không chờ lần báo đầu của RO): máy lag, dòng có thể cao thêm trước lần
-        // báo đầu → trước đây lần báo đó thành mốc, không bao giờ được tính là "cao thêm". offsetHeight (không tính transform):
-        // dòng mới đang chạy hiệu ứng vào (scale .98) — đo theo khung đã co sẽ thành "cao thêm" giả, kéo giật mất cuộn mượt.
-        if (!rowH.has(r)) rowH.set(r, (r as HTMLElement).offsetHeight);
-        tailRo.observe(r);
-      });
-      tail = next;
-    };
-    watchTail();
-    const mo = typeof MutationObserver !== "undefined"
-      ? new MutationObserver((muts) => {
-          for (const m of muts) m.addedNodes.forEach((n) => { if (isBlock(n)) ro?.observe(n); });
-          watchTail();
-        })
-      : null;
-    mo?.observe(el, { childList: true });
-    return () => {
-      mo?.disconnect();
-      tailRo?.disconnect();
-      el.removeEventListener("scroll", handleScroll);
-      el.removeEventListener("scroll", track);
-      el.removeEventListener("load", keepPinned, true);
-      el.removeEventListener("loadedmetadata", keepPinned, true);
-      ro?.disconnect();
-    };
-    // Khung cuộn chỉ có khi đang mở 1 cuộc trò chuyện → gắn lại mỗi lần mở / đổi cuộc trò chuyện
-    // (trước đây gắn 1 lần lúc vào trang: vào hộp thư rồi mới bấm mở thì không bao giờ gắn).
-  }, [activeKey]);
-
-  // Single scroll-management effect covering all three cases: restoring
-  // position after prepending history, jumping to bottom on chat switch, and
-  // smooth-scrolling down for a genuinely new message (own message, or the
-  // user was already near the bottom).
-  useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-
-    // Đổi cuộc trò chuyện xét TRƯỚC: việc chỉnh vị trí của trang tin cũ (nếu còn treo) thuộc chat trước, bỏ đi — trước đây nó
-    // chạy trên chat mới (tin đầu khác) → cộng nhầm scrollTop và bỏ qua bước về đáy.
-    if (prevChatKeyRef.current !== activeKey) {
-      prevChatKeyRef.current = activeKey;
-      prevMessageCountRef.current = chatMessages.length;
-      pendingScrollAdjustRef.current = null;
-      el.scrollTop = el.scrollHeight;
-      isNearBottomRef.current = true; // vừa mở cuộc trò chuyện = đang ở đáy (ảnh tải sau vẫn giữ dính đáy)
-      return;
-    }
-
-    if (pendingScrollAdjustRef.current && chatMessages[0]?.id !== pendingScrollAdjustRef.current.firstId) {
-      const { prevScrollHeight } = pendingScrollAdjustRef.current;
-      // Giữ nguyên chỗ đang đọc (kể cả khi người dùng vẫn đang cuộn).
-      el.scrollTop = el.scrollTop + (el.scrollHeight - prevScrollHeight);
-      pendingScrollAdjustRef.current = null;
-      prevMessageCountRef.current = chatMessages.length;
-      return;
-    }
-
-    const prevCount = prevMessageCountRef.current;
-    prevMessageCountRef.current = chatMessages.length;
-    if (chatMessages.length <= prevCount) return;
-
-    const lastMsg = chatMessages[chatMessages.length - 1];
-    const isOwn = lastMsg?.senderId === currentUser?.id;
-    if (isOwn || isNearBottomRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: scrollBehavior() });
-    } else if (!isOwn) {
-      setJump((j) => ({ show: true, unseen: j.unseen + (chatMessages.length - prevCount) }));
-      jumpShownRef.current = true;
-    }
-  }, [chatMessages, activeKey, currentUser?.id]);
-
-  // Which message ids are appearing in the DOM for the first time this
-  // session — only these get the entrance animation, so revisiting an
-  // already-seen chat doesn't replay it for the whole history.
-  const freshMessageIds = useMemo(() => {
-    const fresh = new Set<string>();
-    chatMessages.forEach((m) => {
-      const k = m.clientId || m.id;
-      if (!animatedMessageIdsRef.current.has(k)) {
-        fresh.add(k);
-        animatedMessageIdsRef.current.add(k);
-      }
-      animatedMessageIdsRef.current.add(m.id);
-    });
-    return fresh;
-  }, [chatMessages]);
 
   // Đánh dấu đã đọc: lưu mốc trên server (bắn "message-seen" cho đối phương)
   // + xoá badge chưa đọc của hội thoại ngay trên giao diện.
@@ -1045,19 +723,15 @@ export default function MessagesContent({
     if (e) e.preventDefault();
     // Gửi liên tiếp như Zalo/Telegram: không chờ tin trước xong. Chỉ chặn khi
     // cuộc trò chuyện chưa tồn tại (tin đầu tiên tạo hội thoại → tránh tạo trùng).
-    if (!activeChat || (sending && !activeChat.conversationId)) return;
+    if (!activeChat || (sendingRef.current && !activeChat.conversationId)) return;
 
     const content = customContent || (inputRef.current?.value ?? "").trim();
     const type = customType || "TEXT";
     if (!content) return;
 
-    if (!customContent) setMessageText("");
-    // Gửi nhãn dán / GIF: bảng VẪN MỞ (gửi liền nhiều cái như Telegram)
-    if (!opts?.keepPanel) {
-      setShowEmoji(false);
-      setShowGifs(false);
-    }
-    setAttachOpen(false);
+    // Xoá ô soạn tin (tin gõ tay) + đóng bảng biểu tượng (gửi nhãn dán / GIF: bảng VẪN MỞ) + bảng "+". Khung soạn tin
+    // vẽ lại SAU bong bóng tin (việc nền) — lần vẽ ngay bây giờ chỉ là khung tin.
+    composerApi.current?.onSending({ clearText: !customContent, keepPanel: !!opts?.keepPanel });
 
     const sendKey = chatKeyFor(activeChat)!;
     const clientId = reuseClientId || (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
@@ -1083,7 +757,7 @@ export default function MessagesContent({
     };
 
     mergeIntoBucket(sendKey, [optimisticMessage]);
-    setSending(true);
+    sendingRef.current = true;
 
     try {
       const isGroup = activeChat.isGroup;
@@ -1144,9 +818,9 @@ export default function MessagesContent({
         messages: bucket.messages.map((m) => (m.id === tempId ? { ...m, sendError: true } : m)),
       }));
     } finally {
-      setSending(false);
+      sendingRef.current = false;
     }
-  }, [activeChat, sending, currentUser, loadData, mergeIntoBucket, removeFromBucket, rekeyBucket, setMessageText, patchBucket]);
+  }, [activeChat, currentUser, loadData, mergeIntoBucket, rekeyBucket, patchBucket]);
 
   // Bấm "Thử lại" trên 1 tin nhắn gửi lỗi — bỏ bong bóng lỗi cũ, gửi lại y
   // nguyên nội dung như 1 lần gửi mới (tạo bong bóng optimistic mới).
@@ -1157,23 +831,6 @@ export default function MessagesContent({
     handleSendMessage(null, msg.content, msg.type, msg.clientId);
   }, [activeChat, patchBucket, handleSendMessage]);
 
-  const handleCloseMediaPanel = useCallback(() => {
-    setShowEmoji(false);
-    setShowGifs(false);
-  }, []);
-
-  // Chạm 1 nhãn trên thanh gợi ý: gửi nhãn đó + bỏ emoji vừa gõ khỏi ô soạn tin (cả ô chỉ là emoji → ô trống; "hehe 😂" →
-  // còn "hehe", không mất chữ đã gõ). Bàn phím vẫn mở (nút chặn pointerdown).
-  const pickSuggestedSticker = (id: string) => {
-    const el = inputRef.current;
-    const g = stickerHintRef.current;
-    if (el && g) {
-      const t = el.value.trimEnd();
-      setMessageText(t.endsWith(g) ? t.slice(0, t.length - g.length).trimEnd() : t);
-    }
-    if (currentUser?.id) pushRecentSticker(currentUser.id, id);
-    handleSendMessage(null, id, "STICKER", undefined, { keepPanel: true });
-  };
 
   // Thả / đổi / gỡ cảm xúc: hiện ngay (đoán trước như máy chủ), rồi lấy bản đã lưu từ máy chủ.
   const handleAddReaction = useCallback(async (messageId: string, icon: string, current?: Reaction[]) => {
@@ -1336,11 +993,8 @@ export default function MessagesContent({
     official &&
     setActiveChat({ id: official.id, name: official.name, avatarUrl: officialAvatarUrl(official.avatarUrl), role: "ADMIN", isGroup: false, isOnline: false, statusText: "" });
 
-  // Vị trí tin cuối cùng của mình trong đoạn chat (gắn Đã gửi/Đã xem).
-  const lastSelfIndex = useMemo(
-    () => chatMessages.reduce((acc, m, i) => (m.senderId === currentUser?.id ? i : acc), -1),
-    [chatMessages, currentUser?.id]
-  );
+  // ----- Dữ liệu cho hàng gợi ý trả lời (ChatAssist trong khung soạn tin): chỉ truyền GIÁ TRỊ (boolean / chuỗi) → gửi /
+  // nhận tin bình thường không vẽ lại khung soạn tin.
   // Đoạn chat đã qua lại vài lượt (mỗi bên ≥ 3 tin) → hàng "Gợi ý" thu thành 1 nút nhỏ, nhường chỗ cho tin nhắn
   const established = useMemo(() => {
     let mine = 0, theirs = 0;
@@ -1352,19 +1006,25 @@ export default function MessagesContent({
     }
     return false;
   }, [chatMessages, currentUser?.id]);
-  const lastIncoming = chatMessages.length ? chatMessages[chatMessages.length - 1] : null;
-  const lastIncomingKey = lastIncoming && lastIncoming.senderId !== currentUser?.id ? lastIncoming.clientId || lastIncoming.id : null;
-  useEffect(() => {
-    // chỉ tin vừa đến (≤ 60 giây) — không đọc tin cũ khi mở cuộc trò chuyện / tải thêm trang cũ
-    if (!lastIncomingKey || !lastIncoming || !freshMessageIds.has(lastIncomingKey) || Date.now() - new Date(lastIncoming.createdAt).getTime() > 60_000) return;
-    const who = activeChat?.isGroup ? lastIncoming.sender?.name ?? "" : activeChat?.name ?? "";
-    const body = lastIncoming.type === "TEXT" || !lastIncoming.type ? String(lastIncoming.content || "").slice(0, 200) : lastIncoming.type === "IMAGE" ? (isGifUrl(lastIncoming.content) ? "GIF" : "📷") : lastIncoming.type === "AUDIO" ? "🎤" : "";
-    setLiveText(`${who}: ${body}`);
-  }, [lastIncomingKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Tin của đối phương mà mình CHƯA trả lời (để Trợ lý PawNail gợi ý đúng câu cần trả lời). Vòng lặp dừng ngay
+  // ở tin đầu tiên của mình tính từ cuối lên — rẻ; đối tượng giữ danh tính theo nội dung (memo của khung soạn tin).
+  let unansweredType: "TEXT" | "IMAGE" | null = null;
+  let unansweredContent = "";
+  for (let i = chatMessages.length - 1; i >= 0; i--) {
+    const m = chatMessages[i];
+    if (m.senderId === currentUser?.id) break;
+    // GIF (GIPHY / Tenor, có khi là MP4) không phải ảnh tay / mẫu móng → bỏ qua, xét tin trước đó
+    if (m.type === "IMAGE" && isGifUrl(m.content)) continue;
+    if (m.type === "IMAGE" || !m.type || m.type === "TEXT") { unansweredContent = String(m.content || ""); unansweredType = m.type === "IMAGE" ? "IMAGE" : "TEXT"; break; }
+  }
+  const unanswered = useMemo<Unanswered>(
+    () => (unansweredType ? { content: unansweredContent, type: unansweredType } : null),
+    [unansweredType, unansweredContent]
+  );
+  const partnerWrote = chatMessages.some((m) => m.senderId !== currentUser?.id && m.type !== "SYSTEM");
+  // Chờ tin MỚI của cuộc trò chuyện nạp xong (không dùng bản lưu trên máy) mới hiện hàng gợi ý
+  const assistReady = !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk;
 
-  // Trạng thái THẬT của đối phương đang chat.
-  // Chỉ theo dõi online khi đã có cuộc trò chuyện chung (server từ chối người lạ).
-  const partnerOnline = useIsOnline(activeChat && !activeChat.isGroup && activeChat.conversationId ? activeChat.id : null);
   const partnerLastActiveAt = useMemo(() => {
     if (!activeChat || activeChat.isGroup) return null;
     for (const c of conversations) {
@@ -1381,23 +1041,8 @@ export default function MessagesContent({
 
   // Khách đang nhắn với tiệm / thợ → ✨ là "Thử mẫu trên tay mình rồi gửi tiệm"
   const clientChat = currentUser?.role === "CLIENT" && !activeChat?.isGroup && (activeChat?.role === "TECHNICIAN" || activeChat?.role === "OWNER");
-  // Tin của đối phương mà mình CHƯA trả lời (để Trợ lý PawNail gợi ý đúng câu cần trả lời). Vòng lặp dừng ngay
-  // ở tin đầu tiên của mình tính từ cuối lên — rẻ, không cần useMemo; ChatAssist tự memo theo nội dung.
-  let unanswered: { content: string; type: "TEXT" | "IMAGE" } | null = null;
-  for (let i = chatMessages.length - 1; i >= 0; i--) {
-    const m = chatMessages[i];
-    if (m.senderId === currentUser?.id) break;
-    // GIF (GIPHY / Tenor, có khi là MP4) không phải ảnh tay / mẫu móng → bỏ qua, xét tin trước đó
-    if (m.type === "IMAGE" && isGifUrl(m.content)) continue;
-    if (m.type === "IMAGE" || !m.type || m.type === "TEXT") { unanswered = { content: String(m.content || ""), type: m.type === "IMAGE" ? "IMAGE" : "TEXT" }; break; }
-  }
-  const partnerWrote = chatMessages.some((m) => m.senderId !== currentUser?.id && m.type !== "SYSTEM");
   // Props ỔN ĐỊNH cho MessageRow (React.memo): đối tượng/hàm giữ nguyên danh
   // tính giữa các lần render, gọi bản mới nhất qua ref.
-  const rowChat = useMemo(
-    () => ({ isGroup: !!activeChat?.isGroup, avatarUrl: activeChat?.avatarUrl, name: activeChat?.name ?? "" }),
-    [activeChat?.isGroup, activeChat?.avatarUrl, activeChat?.name]
-  );
   const openMedia = useCallback((url: string) => {
     const urls = chatMessagesRef.current.filter((m) => m.type === "IMAGE" || m.type === "VIDEO").map((m) => m.content);
     const i = Math.max(0, urls.indexOf(url));
@@ -1414,7 +1059,7 @@ export default function MessagesContent({
     retry: (m: MessageType) => rowLatest.current.retrySendMessage(m),
   }), []);
 
-  // ----- V2: tin cậy của đối phương (thẻ đầu cuộc trò chuyện) + thẻ "Nhắn tin an toàn" lần đầu liên hệ
+  // ----- V2: tin cậy của đối phương (thẻ đầu cuộc trò chuyện + dấu SĐT đã xác minh trên thanh đầu)
   const [partnerTrust, setPartnerTrust] = useState<PartnerTrust | null>(null);
   useEffect(() => {
     setPartnerTrust(null);
@@ -1423,28 +1068,8 @@ export default function MessagesContent({
     loadTrust(activeChat.id).then((t) => alive && setPartnerTrust(t));
     return () => { alive = false; };
   }, [activeChat?.id, activeChat?.isGroup]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [safetyHidden, setSafetyHidden] = useState<Record<string, true>>(() => {
-    try { return JSON.parse(localStorage.getItem(SAFETY_KEY) || "{}"); } catch { return {}; }
-  });
-  const activeConv = activeChat?.conversationId ? conversations.find((c) => c.id === activeChat.conversationId) : undefined;
-  const iSentAny = chatMessages.some((m) => m.senderId === currentUser?.id);
-  const convYoung = !activeConv || Date.now() - new Date(activeConv.createdAt).getTime() < 7 * 86_400_000;
-  const showSafety =
-    !!activeChat && !activeChat.isGroup && activeChat.role !== "ADMIN" && !isVerifiedRole(activeChat.role) &&
-    (convYoung || !iSentAny) && !safetyHidden[activeKey || ""];
-  // Thẻ đầu cuộc trò chuyện cao thêm khi thông tin tin cậy / thẻ an toàn tải xong → vẫn giữ dính đáy nếu đang ở đáy
-  useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (el && isNearBottomRef.current) el.scrollTop = el.scrollHeight;
-  }, [partnerTrust, showSafety]);
-  const dismissSafety = () => {
-    const k = activeKey || "";
-    setSafetyHidden((prev) => {
-      const next = { ...prev, [k]: true as const };
-      try { localStorage.setItem(SAFETY_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
+  // Thẻ "Nhắn tin an toàn" chỉ hiện ở cuộc trò chuyện mới (ChatThread tự tính theo ngày tạo)
+  const convCreatedAt = (activeChat?.conversationId ? conversations.find((c) => c.id === activeChat.conversationId)?.createdAt : undefined) ?? null;
 
   // ----- V2: mốc "đã xem" dạng số (MessageRow nhận boolean → memo giữ được)
   const seenAtMs = activeChat?.conversationId && seenByConv[activeChat.conversationId] ? new Date(seenByConv[activeChat.conversationId]).getTime() : 0;
@@ -1482,44 +1107,7 @@ export default function MessagesContent({
       if (pushedRef.current && !(window.history.state && window.history.state.pnChat)) {
         pushedRef.current = false;
         setActiveChat(null);
-        setAttachOpen(false);
-        setShowEmoji(false);
-      }
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-  // Bảng Emoji / Nhãn dán / GIF trên điện thoại: thêm 1 mục lịch sử khi mở → nút Back (Android / trình duyệt) đóng
-  // bảng trước, không thoát cuộc trò chuyện. Đóng bằng X / Esc / chạm ra ngoài → tự bỏ mục đó.
-  const panelOpen = showEmoji || showGifs;
-  // Thanh gợi ý nhãn dán hiện / ẩn (và hàng gợi ý trả lời đổi theo ô trống ↔ có chữ) làm khung tin co / giãn. ResizeObserver
-  // của khung tin giữ dính đáy, NHƯNG 2 lần đổi ngược nhau trong cùng 1 khung hình (xoá ô rồi gõ emoji ngay) thì nó không báo
-  // gì (cỡ cuối = cỡ cũ) trong khi trình duyệt đã kéo scrollTop lùi lúc khung giãn → tin cuối bị thanh che. Đang ở sát đáy →
-  // dính lại đáy ngay sau mỗi lần đổi (trước khi vẽ).
-  const stripShown = !!stickerHint && stickerHint !== hintDismissed && !panelOpen && !recording;
-  useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (el && isNearBottomRef.current) el.scrollTop = el.scrollHeight;
-  }, [stripShown, hasText]);
-  const panelPushedRef = useRef(false);
-  useEffect(() => {
-    if (panelOpen) {
-      if (panelPushedRef.current || window.matchMedia("(min-width: 768px)").matches) return;
-      try {
-        window.history.pushState({ ...((window.history.state || {}) as Record<string, unknown>), pnPanel: true }, "");
-        panelPushedRef.current = true;
-      } catch {}
-    } else if (panelPushedRef.current) {
-      panelPushedRef.current = false;
-      if ((window.history.state as { pnPanel?: boolean } | null)?.pnPanel) window.history.back();
-    }
-  }, [panelOpen]);
-  useEffect(() => {
-    const onPop = () => {
-      if (panelPushedRef.current && !(window.history.state as { pnPanel?: boolean } | null)?.pnPanel) {
-        panelPushedRef.current = false;
-        setShowEmoji(false);
-        setShowGifs(false);
+        composerApi.current?.closeSheets();
       }
     };
     window.addEventListener("popstate", onPop);
@@ -1533,51 +1121,6 @@ export default function MessagesContent({
     } else if (pushedRef.current) window.history.back();
     else setActiveChat(null);
   }, []);
-  // Viên ngày nổi: ngày của đoạn đang đọc ở đỉnh khung (viên trong dòng tin đã cuộn qua); mờ đi sau 1,2 giây đứng yên.
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    let raf = 0;
-    let idle: ReturnType<typeof setTimeout> | undefined;
-    const run = () => {
-      raf = 0;
-      const top = el.getBoundingClientRect().top;
-      let label: string | null = null;
-      for (const sep of el.querySelectorAll<HTMLElement>(".m-sep")) {
-        if (sep.getBoundingClientRect().top - top < 8) label = sep.textContent;
-        else break;
-      }
-      setFloatDate((p) => (label ? (p?.label === label && !p.idle ? p : { label, idle: false }) : null));
-      clearTimeout(idle);
-      idle = setTimeout(() => setFloatDate((p) => (p ? { ...p, idle: true } : p)), 1200);
-    };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(run);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(raf);
-      clearTimeout(idle);
-      setFloatDate(null);
-    };
-  }, [activeChat?.id]);
-  // Bảng đính kèm: Esc đóng + trả focus về nút "+"; mở ra thì focus mục đầu
-  const attachBtnRef = useRef<HTMLButtonElement>(null);
-  const attachSheetRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!attachOpen) return;
-    attachSheetRef.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setAttachOpen(false);
-      attachBtnRef.current?.focus();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [attachOpen]);
-  // Gợi ý trả lời thu gọn lại khi đổi cuộc trò chuyện
-  useEffect(() => setAssistOpen(false), [activeChat?.id]);
   // ?c=<conversationId> → mở đúng cuộc trò chuyện đó (link chia sẻ / quay lại trang / bấm thông báo / bong bóng chat).
   // Bấm thông báo của cuộc trò chuyện B khi đang mở A → chuyển sang B (trước đây bỏ qua khi đã có chat đang mở). Chưa có
   // trong danh sách đã tải (trang chỉ tải 50 cuộc) → tải riêng cuộc đó rồi mở.
@@ -1739,30 +1282,73 @@ export default function MessagesContent({
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [markSeen]);
 
-  // ----- V2: chiều cao khung soạn tin → vị trí nút "xuống tin mới nhất"
-  const composerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = composerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    // Khung soạn tin cao thêm (bảng Emoji / Nhãn dán / GIF nằm TRONG khung trên điện thoại, ô nhập nhiều dòng…) → khung tin
-    // co lại; đang ở cuối đoạn chat thì giữ dính đáy để tin vừa gửi không bị khuất.
-    const ro = new ResizeObserver(() => {
-      el.parentElement?.style.setProperty("--m-composer-h", `${el.offsetHeight}px`);
-      const sc = scrollContainerRef.current;
-      if (sc && isNearBottomRef.current) sc.scrollTop = sc.scrollHeight;
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [activeChat?.id, isActiveChatBlocked]);
-  const jumpToLatest = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight > el.clientHeight * 3) el.scrollTop = el.scrollHeight - el.clientHeight - 600;
-    el.scrollTo({ top: el.scrollHeight, behavior: scrollBehavior() });
-    jumpShownRef.current = false;
-    setJump({ show: false, unseen: 0 });
-  }, []);
-  useEffect(() => { jumpShownRef.current = false; setJump({ show: false, unseen: 0 }); }, [activeKey]);
+  // ----- Hàm ỔN ĐỊNH cho khung tin / khung soạn tin (React.memo): gọi bản mới nhất qua ref → 2 khung đó không vẽ lại chỉ
+  // vì các hàm này được tạo lại (activeChat / danh sách hội thoại đổi).
+  const latest = useRef({ handleSendMessage, handleUploadImage, notifyTyping });
+  latest.current = { handleSendMessage, handleUploadImage, notifyTyping };
+  const send = useCallback<SendFn>((content, type, reuseClientId, opts) => latest.current.handleSendMessage(null, content, type, reuseClientId, opts), []);
+  const sendText = useCallback((text: string) => { latest.current.handleSendMessage(null, text); }, []);
+  const uploadPhoto = useCallback(() => latest.current.handleUploadImage(), []);
+  const typingPing = useCallback(() => latest.current.notifyTyping(), []);
+  const openStudio = useCallback(() => setStudioOpen(true), []);
+  const openConsult = useCallback((image: string | null) => setConsult({ image }), []);
+  const openReport = useCallback(() => setShowReportModal(true), []);
+  const fillStarter = useCallback((text: string) => composerApi.current?.setText(text), []);
+  // Hộp thoại Thử mẫu / Soi tay (vẫn nằm trong khung soạn tin như trước) — chỉ dựng lại khi đang mở.
+  const composerOverlay = useMemo(() => (!studioOpen && !consult) || !activeChat ? null : (
+    <>
+      {studioOpen && activeChat && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setStudioOpen(false)}>
+          <div role="dialog" aria-label={clientChat ? tr("Thử mẫu PawNail — thử mẫu trên tay bạn", "PawNail Try-On — looks on your hand") : tr("Thử mẫu PawNail — tạo mẫu trên tay khách", "PawNail Try-On — looks on the client's hand")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{clientChat ? tr("Thử mẫu trên tay bạn", "Try looks on your hand") : tr("Tạo mẫu trên tay khách", "Try-on looks")}</p>
+              <button type="button" onClick={() => setStudioOpen(false)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
+            </div>
+            <NailStudio
+              market={currentUser?.market === "AU" ? "AU" : "US"}
+              // Thợ: ảnh KHÁCH gửi · Khách: ảnh tay của CHÍNH MÌNH đã gửi (hoặc chụp mới trong Studio)
+              photos={chatMessages.filter((m) => m.type === "IMAGE" && (clientChat ? m.senderId === currentUser?.id : m.senderId !== currentUser?.id) && /^(https:\/\/|data:image\/)/.test(m.content) && !isGifUrl(m.content)).map((m) => m.content).reverse()}
+              sendLabel={clientChat ? tr("Gửi cho tiệm", "Send to the salon") : tr("Gửi cho khách", "Send to client")}
+              onSend={async ({ blobs, looks }) => {
+                for (let i = 0; i < blobs.length; i++) {
+                  const url = await uploadMedia(new File([blobs[i]], `pawnail-studio-${i + 1}.jpg`, { type: "image/jpeg" }));
+                  await send(url, "IMAGE");
+                }
+                const lines = looks.map((l, i) => `${i + 1}. ${tr(l.title.vi, l.title.en)}${clientChat ? "" : ` — ${l.priceHint}`}`);
+                await send((clientChat
+                  ? [tr(`✨ Em thử ${looks.length} mẫu trên tay mình (PawNail):`, `✨ I tried ${looks.length} looks on my hand (PawNail):`), ...lines, tr("Tiệm làm được mẫu này không ạ? Giá bao nhiêu và khi nào còn lịch ạ?", "Can you do one of these? How much, and when do you have an opening?")]
+                  : [tr(`✨ ${looks.length} mẫu thử trên tay chị/anh (PawNail):`, `✨ ${looks.length} try-on looks on your hand (PawNail):`), ...lines, tr("Chị/anh thích mẫu nào nhắn em nhé — giá chính xác theo menu tiệm.", "Tell me which one you like — exact price per our menu.")]
+                ).join("\n"));
+                setStudioOpen(false);
+                toast.success(clientChat ? tr("Đã gửi mẫu cho tiệm.", "Sent to the salon.") : tr("Đã gửi mẫu cho khách.", "Looks sent."));
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {consult && activeChat && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setConsult(null)}>
+          <div role="dialog" aria-label={tr("Soi tay tư vấn cho khách", "Hand consult for the client")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()} data-testid="chat-consult">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{tr("Soi tay tư vấn", "Hand consult")}</p>
+              <button type="button" onClick={() => setConsult(null)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
+            </div>
+            <HandConsult
+              embedded
+              chatImage={consult.image ?? undefined}
+              vi={unanswered?.type === "TEXT" ? replyInVietnamese(unanswered.content, locale === "vi") : locale === "vi"}
+              onShare={async (text) => {
+                await send(text);
+                setConsult(null);
+                toast.success(tr("Đã gửi tư vấn cho khách.", "Advice sent."));
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- ảnh trong cuộc trò chuyện chỉ cần khi đang mở Thử mẫu
+  ), [studioOpen, consult, activeChat, studioOpen ? chatMessages : null, clientChat, currentUser, unanswered, locale, send]);
 
   // Mở 1 cuộc trò chuyện → hỏi trước GIF có dùng được không (1 lần / phiên) để menu "+" và bảng biểu tượng hiện đúng ngay.
   const hasActiveChat = !!activeChat;
@@ -1954,319 +1540,50 @@ export default function MessagesContent({
       <div data-wallpaper={activeChat ? wp.id : undefined} data-wp-tone={activeChat ? wp.tone : undefined} style={activeChat ? wp.style : undefined} className={`chat-wallpaper isolate flex-1 flex flex-col h-full overflow-hidden relative ${!activeChat && !bubble ? "hidden md:flex" : "flex"}`}>
         {activeChat ? (
           <>
-            <div className="pn-glass-bar relative flex flex-none items-center justify-between gap-3 px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:px-4 sm:py-3 z-10">
-              <div className="flex items-center gap-3">
-                {!bubble && (
-                <button
-                  onClick={closeThread}
-                  aria-label={tr("Quay lại danh sách", "Back to chats")}
-                  className="m-back -ml-1 mr-0.5 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-slate-200 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white md:hidden"
-                >
-                  <ArrowLeft className="h-4 w-4" /><span className="sr-only">{locale === "vi" ? tr("Quay lại", "Back") : "Back"}</span>
-                </button>
-                )}
-                <div className="relative flex-shrink-0">
-                  {activeChat.isGroup ? (
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
-                      <Users className="h-5 w-5 text-fuchsia-300" />
-                    </span>
-                  ) : (
-                    <PresenceAvatar watch={!!activeChat.conversationId} userId={activeChat.id} src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt={activeChat.name} size="h-10 w-10" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="flex min-w-0 items-center gap-1 text-sm font-bold text-slate-100">
-                    {/* Điện thoại: chạm vào tên để xem hồ sơ (chỗ chật, ẩn chữ "Xem hồ sơ" để không đè nút gọi). */}
-                    {activeChat.isGroup ? (
-                      <span className="truncate">{activeChat.name}</span>
-                    ) : (
-                      <Link href={`/profile/${activeChat.id}`} className="truncate hover:text-pink-200">{activeChat.name}</Link>
-                    )}
-                    {!activeChat.isGroup && isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
-                    {!activeChat.isGroup && partnerTrust?.phoneVerified && <ShieldCheck aria-label={tr(" SĐT đã xác minh", " Phone verified").trim()} className="h-3.5 w-3.5 flex-shrink-0 text-emerald-300" />}
-                  </h3>
-                  {/* Trước đây chấm xanh "đang hoạt động" hiện cứng cho MỌI người
-                      (app không theo dõi online) — bỏ, thay bằng thông tin thật. */}
-                  <div className="mt-0.5 flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[11px] text-slate-400">
-                    {activeChatTyping ? (
-                      <span className="flex items-center gap-1.5 font-semibold text-pink-300">
-                        {tr("Đang soạn tin ", "Typing ")}<TypingDots />
-                      </span>
-                    ) : activeChat.isGroup ? (
-                      <span>{tr("Nhóm trò chuyện", "Group chat")}</span>
-                    ) : (
-                      <>
-                        {partnerOnline ? (
-                          <span className="flex items-center gap-1.5 font-semibold text-emerald-300">
-                            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" />{tr(" Đang hoạt động", " Active now")}
-                          </span>
-                        ) : connLost ? (
-                          <span>{CS.connecting()}</span>
-                        ) : (
-                          <span>{lastActiveLabel(partnerLastActiveAt) || ROLE_VI()[activeChat.role] || tr("Thành viên", "Member")}</span>
-                        )}
-                        <span className="hidden text-slate-600 sm:inline">·</span>
-                        <Link href={`/profile/${activeChat.id}`} className="hidden font-semibold text-pink-300 hover:text-pink-200 sm:inline">
-                          {tr("Xem hồ sơ", "View profile")}
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+            <ChatHeader
+              chat={activeChat}
+              bubble={bubble}
+              locale={locale}
+              typing={activeChatTyping}
+              connLost={connLost}
+              partnerLastActiveAt={partnerLastActiveAt}
+              phoneVerified={!!partnerTrust?.phoneVerified}
+              wpSeen={wpSeen}
+              blocked={isActiveChatBlocked}
+              blockBusy={blockActionLoading}
+              onBack={closeThread}
+              onWallpaper={openWallpaper}
+              onReport={openReport}
+              onToggleBlock={handleToggleBlock}
+            />
 
-              {/* Trigger buttons only — the CallManager instance itself is
-                  mounted once, globally, at the root layout (see
-                  lib/CallManagerContext.tsx) so it survives this header
-                  disappearing entirely (e.g. mobile "Back" clears activeChat
-                  mid-call, or navigating away from /messages altogether). */}
-              <div className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={openWallpaper}
-                  className="hidden h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300 sm:flex"
-                  title={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
-                  aria-label={tr("Đổi chủ đề đoạn chat", "Change chat theme")}
-                >
-                  <Palette className="h-5 w-5" />
-                </button>
-                {/* Bong bóng chat: không gọi trong cửa sổ nhỏ (cuộc gọi đến / đi thuộc app chính) */}
-                {!activeChat.isGroup && !bubble && (
-                  <>
-                    <button
-                      onPointerEnter={preloadCallSdk}
-                      onClick={() => callPartner && startCall(callPartner, "audio")}
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
-                      title={tr("Cuộc gọi thoại bảo mật", "Secure voice call")}
-                    >
-                      <Phone className="h-5 w-5" />
-                    </button>
-                    <button
-                      onPointerEnter={preloadCallSdk}
-                      onClick={() => callPartner && startCall(callPartner, "video")}
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
-                      title={tr("Cuộc gọi video thời gian thực", "Live video call")}
-                    >
-                      <Video className="h-[22px] w-[22px]" />
-                    </button>
-                  </>
-                )}
-
-                {/* ⋮ — cả chat 1-1 lẫn nhóm (nhóm: chỉ có Hình nền) */}
-                <div className="relative">
-                  <button
-                    onClick={() => setShowChatMenu((v) => !v)}
-                    className="relative flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300"
-                    title={tr("Thêm tùy chọn", "More options")}
-                    aria-label={tr("Thêm tùy chọn", "More options")}
-                    aria-haspopup="menu"
-                    aria-expanded={showChatMenu}
-                  >
-                    <MoreVertical className="h-5 w-5" />
-                    {!wpSeen && <span aria-hidden className="pn-menu-dot" />}
-                  </button>
-
-                  {showChatMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
-                      <div role="menu" className="absolute right-0 top-full mt-2 z-50 w-48 rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
-                        <button
-                          role="menuitem"
-                          onClick={openWallpaper}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
-                        >
-                          <Palette className="h-4 w-4 text-pink-400" />{tr(" Hình nền đoạn chat", " Chat wallpaper")}
-                        </button>
-                        {!activeChat.isGroup && (
-                          <>
-                            <button
-                              role="menuitem"
-                              onClick={() => { setShowChatMenu(false); setShowReportModal(true); }}
-                              className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-slate-300 hover:bg-slate-850 transition-colors"
-                            >
-                              <Flag className="h-4 w-4 text-amber-400" />{tr(" Báo cáo người dùng", " Report user")}
-                            </button>
-                            <button
-                              role="menuitem"
-                              onClick={handleToggleBlock}
-                              disabled={blockActionLoading}
-                              className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-xs font-bold text-red-400 hover:bg-slate-850 transition-colors disabled:opacity-50"
-                            >
-                              {isActiveChatBlocked ? (
-                                <><ShieldCheck className="h-4 w-4" />{tr(" Bỏ chặn người dùng", " Unblock user")}</>
-                              ) : (
-                                <><ShieldOff className="h-4 w-4" />{tr(" Chặn người dùng", " Block user")}</>
-                              )}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <p className="sr-only" aria-live="polite" aria-atomic="true">{liveText}</p>
-            <div ref={scrollContainerRef} className="m-scroll flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] px-3 py-4 sm:px-6 custom-scrollbar flex flex-col min-w-0 relative">
-              {floatDate && (
-                <div aria-hidden className="m-float-date" data-idle={floatDate.idle ? "1" : "0"}>
-                  <span className="pn-date-pill">{floatDate.label}</span>
-                </div>
-              )}
-              <div ref={chatObserverTarget} className="h-2 w-full flex-none" />
-
-              {/* Nhãn nổi (cao 0, dính đỉnh) — KHÔNG chiếm chỗ, nên hiện/ẩn không đẩy
-                  chỗ đang đọc lên xuống. */}
-              {loadingMoreChatMessages && (
-                <div className="sticky top-0 z-10 !my-0 flex h-0 flex-none justify-center overflow-visible">
-                  <div className="mt-1 flex items-center gap-1.5 rounded-full bg-slate-900/90 px-3 py-1 text-4xs font-bold text-slate-400 shadow-lg ring-1 ring-white/10 animate-fadeIn">
-                    <Loader2 className="h-3 w-3 animate-spin text-pink-500" />
-                    <span>{t("messenger.loadingHistory")}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Chưa có tin nào để hiện (hiếm — đã có cache + tải trước): khung
-                  bong bóng mờ thay cho dòng chữ "đang nạp", giống Messenger. */}
-              {showChatSkeleton && chatMessages.length === 0 && (
-                <div className="space-y-3 py-2" aria-busy="true" aria-label={t("messenger.loadingMessages")}>
-                  {[56, 40, 64, 32, 48].map((w, i) => (
-                    <div key={i} className={`flex items-end gap-2 ${i % 2 ? "justify-end" : ""}`}>
-                      {i % 2 === 0 && <div className="skeleton h-7 w-7 flex-shrink-0 rounded-full" />}
-                      <div className={`skeleton h-9 rounded-2xl ${i % 2 ? "rounded-br-sm" : "rounded-bl-sm"}`} style={{ width: `${w}%` }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Đầu cuộc trò chuyện (đã cuộn tới tin đầu tiên): thẻ hồ sơ đối phương như Messenger —
-                  biết đang nói chuyện với ai, và đoạn chat ngắn không còn trống trơn. */}
-              {!activeChat.isGroup && !chatNextCursor && chatMessages.length > 0 && (
-                <div className="m-intro flex flex-none flex-col items-center gap-2 pb-4 pt-6 text-center">
-                  <span className="m-intro-avatar isolate">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-20 w-20 rounded-full object-cover ring-4 ring-white/5" />
-                  </span>
-                  <p className="flex items-center gap-1 text-base font-black text-white">
-                    {activeChat.name}
-                    {isVerifiedRole(activeChat.role) && <VerifiedBadge className="h-4 w-4" />}
-                  </p>
-                  <p className="text-xs text-slate-400">{ROLE_VI()[activeChat.role] || tr("Thành viên PawNail", "PawNail member")}</p>
-                  {(partnerTrust?.city || partnerTrust?.state) && <p className="text-[13px] text-[var(--m-text-2)]">{[partnerTrust.city, partnerTrust.state].filter(Boolean).join(", ")}</p>}
-                  {partnerTrust?.createdAt && (
-                    <p className="text-[12px] text-[var(--m-text-3)]">
-                      {CS.joined(new Date(partnerTrust.createdAt).toLocaleDateString(locale === "vi" ? "vi-VN" : currentUser?.market === "AU" ? "en-AU" : "en-US", { month: "short", year: "numeric" }))}
-                    </p>
-                  )}
-                  <Link href={`/profile/${activeChat.id}`} className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12] sm:hidden">
-                    {tr("Xem hồ sơ", "View profile")}
-                  </Link>
-                </div>
-              )}
-
-              {showSafety && !chatNextCursor && (
-                <div className="m-safety flex-none" role="note">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--m-champagne)]" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-semibold text-[var(--m-text)]">{CS.safetyTitle()}</p>
-                    <p className="mt-0.5">{CS.safetyBody()}</p>
-                    <button type="button" onClick={() => setShowReportModal(true)} className="mt-1.5 min-h-8 text-[14px] font-semibold text-[var(--m-accent-ink)]">{CS.report()}</button>
-                  </div>
-                  <button type="button" onClick={dismissSafety} aria-label={CS.dismiss()} className="-mr-1 -mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[var(--m-text-3)]">
-                    <XIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-
-              {!activeChat.isGroup && !chatNextCursor && currentUser?.id && (
-                <ChatContextCard
-                  meRole={currentUser.role}
-                  meId={currentUser.id}
-                  partner={{ id: activeChat.id, name: activeChat.name, role: activeChat.role, isGroup: activeChat.isGroup }}
-                  onStudio={() => setStudioOpen(true)}
-                  onSendText={(text) => handleSendMessage(null, text)}
-                  compact={chatMessages.length > 0}
-                />
-              )}
-
-              {chatMessages.length > 0 ? (
-                chatMessages.map((msg, idx) => {
-                  const isLastSelf = idx === lastSelfIndex;
-                  return (
-                    <MessageRow
-                      key={msg.clientId || msg.id || idx}
-                      msg={msg}
-                      idx={idx}
-                      prevMsg={idx > 0 ? chatMessages[idx - 1] : null}
-                      nextMsg={idx < chatMessages.length - 1 ? chatMessages[idx + 1] : null}
-                      currentUser={currentUser}
-                      activeChat={rowChat}
-                      fresh={freshMessageIds.has(msg.clientId || msg.id)}
-                      isLastSelf={isLastSelf}
-                      seen={msg.senderId === currentUser?.id && seenAtMs > 0 && seenAtMs >= new Date(msg.createdAt).getTime()}
-                      reactions={messageReactions[msg.id] ?? msg.reactions}
-                      locale={locale}
-                      market={currentUser?.market ?? null}
-                      t={t}
-                      onCallBack={!activeChat.isGroup ? rowHandlers.callBack : undefined}
-                      onReact={rowHandlers.react}
-                      onRetry={rowHandlers.retry}
-                      onOpenMedia={openMedia}
-                    />
-                  );
-                })
-              ) : !loadingChatMessages ? (
-                <div className="m-empty-thread flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 animate-fadeIn">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500/20 to-fuchsia-500/20 ring-1 ring-pink-500/30 text-2xl">👋</span>
-                  <p className="text-sm font-bold text-slate-200">{t("messenger.noMessagesYet")}</p>
-                  {/* Có khách làm nail trong cuộc trò chuyện → nói về giá / lịch trống, không nói "chia turn" (chuyện giữa thợ và tiệm). */}
-                  <p className="text-xs text-slate-500 max-w-[260px] leading-relaxed">{currentUser?.role === "CLIENT" || activeChat.role === "CLIENT" ? tr("Gửi lời chào, hoặc hỏi về giá và lịch còn trống.", "Say hi, or ask about prices and openings.") : t("messenger.noMessagesHint")}</p>
-                  {/* Gợi ý câu mở đầu theo vai trò — bấm để điền sẵn vào ô nhập. */}
-                  <div className="mt-1 flex max-w-md flex-wrap justify-center gap-2">
-                    {/* đúng cặp vai trò: khách hỏi tiệm (lịch, giá) khác hẳn thợ hỏi việc — trước đây khách cũng thấy "tiệm còn tuyển thợ không" */}
-                    {starters(currentUser?.role, activeChat.role, tr).map((starter) => (
-                      <button
-                        key={starter}
-                        type="button"
-                        onClick={() => setMessageText(starter)}
-                        className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-100 ring-1 ring-white/[0.08] hover:bg-white/[0.1] transition-colors"
-                      >
-                        {starter}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Bong bóng "đang soạn tin" của đối phương — realtime qua Pusher. */}
-              {activeChatTyping && (
-                <div className="flex items-end gap-2 animate-fadeIn">
-                  {activeChat.isGroup && (
-                    <div className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
-                      <img src={avatarSrc(activeChat.avatarUrl, activeChat.name, activeChat.id)} alt="" className="h-full w-full object-cover" />
-                    </div>
-                  )}
-                  <div className="m-typing-bubble pn-bubble-them rounded-2xl rounded-bl-sm px-4 py-3 text-slate-300">
-                    <TypingDots />
-                    <span className="sr-only">{tr("Đối phương đang soạn tin", "The other person is typing")}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {jump.show && (
-              <button
-                type="button"
-                onClick={jumpToLatest}
-                aria-label={CS.jumpToLatest()}
-                className="m-jump"
-                style={{ bottom: "calc(var(--m-composer-h, 64px) + 12px)" }}
-              >
-                <ChevronDown className="h-[22px] w-[22px]" />
-                {jump.unseen > 0 && <span>{jump.unseen > 99 ? "99+" : jump.unseen}</span>}
-              </button>
-            )}
+            <ChatThread
+              scrollRef={scrollContainerRef}
+              nearBottomRef={isNearBottomRef}
+              jumpSlotRef={jumpSlotRef}
+              memory={threadMemory}
+              activeChatRef={activeChatRef}
+              chat={activeChat}
+              chatKey={activeKey}
+              messages={chatMessages}
+              nextCursor={chatNextCursor}
+              loading={loadingChatMessages}
+              currentUser={currentUser}
+              locale={locale}
+              t={t}
+              seenAtMs={seenAtMs}
+              reactions={messageReactions}
+              partnerTrust={partnerTrust}
+              convCreatedAt={convCreatedAt}
+              typing={activeChatTyping}
+              rowHandlers={rowHandlers}
+              onOpenMedia={openMedia}
+              onPrepend={prependIntoBucket}
+              onReport={openReport}
+              onStudio={openStudio}
+              onSendText={sendText}
+              onStarter={fillStarter}
+            />
 
             {isActiveChatBlocked ? (
               <div className="p-4 border-t border-white/5 bg-slate-950/70 backdrop-blur-md flex-none z-10 flex items-center justify-between gap-3">
@@ -2282,227 +1599,28 @@ export default function MessagesContent({
                 </button>
               </div>
             ) : (
-            <div ref={composerRef} className="pn-composer relative flex-none z-10 border-t border-white/[0.06] px-2.5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
-              {studioOpen && activeChat && (
-                <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setStudioOpen(false)}>
-                  <div role="dialog" aria-label={clientChat ? tr("Thử mẫu PawNail — thử mẫu trên tay bạn", "PawNail Try-On — looks on your hand") : tr("Thử mẫu PawNail — tạo mẫu trên tay khách", "PawNail Try-On — looks on the client's hand")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{clientChat ? tr("Thử mẫu trên tay bạn", "Try looks on your hand") : tr("Tạo mẫu trên tay khách", "Try-on looks")}</p>
-                      <button type="button" onClick={() => setStudioOpen(false)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
-                    </div>
-                    <NailStudio
-                      market={currentUser?.market === "AU" ? "AU" : "US"}
-                      // Thợ: ảnh KHÁCH gửi · Khách: ảnh tay của CHÍNH MÌNH đã gửi (hoặc chụp mới trong Studio)
-                      photos={chatMessages.filter((m) => m.type === "IMAGE" && (clientChat ? m.senderId === currentUser?.id : m.senderId !== currentUser?.id) && /^(https:\/\/|data:image\/)/.test(m.content) && !isGifUrl(m.content)).map((m) => m.content).reverse()}
-                      sendLabel={clientChat ? tr("Gửi cho tiệm", "Send to the salon") : tr("Gửi cho khách", "Send to client")}
-                      onSend={async ({ blobs, looks }) => {
-                        for (let i = 0; i < blobs.length; i++) {
-                          const url = await uploadMedia(new File([blobs[i]], `pawnail-studio-${i + 1}.jpg`, { type: "image/jpeg" }));
-                          await handleSendMessage(null, url, "IMAGE");
-                        }
-                        const lines = looks.map((l, i) => `${i + 1}. ${tr(l.title.vi, l.title.en)}${clientChat ? "" : ` — ${l.priceHint}`}`);
-                        await handleSendMessage(null, (clientChat
-                          ? [tr(`✨ Em thử ${looks.length} mẫu trên tay mình (PawNail):`, `✨ I tried ${looks.length} looks on my hand (PawNail):`), ...lines, tr("Tiệm làm được mẫu này không ạ? Giá bao nhiêu và khi nào còn lịch ạ?", "Can you do one of these? How much, and when do you have an opening?")]
-                          : [tr(`✨ ${looks.length} mẫu thử trên tay chị/anh (PawNail):`, `✨ ${looks.length} try-on looks on your hand (PawNail):`), ...lines, tr("Chị/anh thích mẫu nào nhắn em nhé — giá chính xác theo menu tiệm.", "Tell me which one you like — exact price per our menu.")]
-                        ).join("\n"));
-                        setStudioOpen(false);
-                        toast.success(clientChat ? tr("Đã gửi mẫu cho tiệm.", "Sent to the salon.") : tr("Đã gửi mẫu cho khách.", "Looks sent."));
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-              {consult && activeChat && (
-                <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setConsult(null)}>
-                  <div role="dialog" aria-label={tr("Soi tay tư vấn cho khách", "Hand consult for the client")} className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()} data-testid="chat-consult">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="flex items-center gap-2 text-base font-black text-white"><SparklesIcon className="h-5 w-5 text-pink-300" />{tr("Soi tay tư vấn", "Hand consult")}</p>
-                      <button type="button" onClick={() => setConsult(null)} aria-label={tr("Đóng", "Close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-slate-300"><XIcon className="h-4 w-4" /></button>
-                    </div>
-                    <HandConsult
-                      embedded
-                      chatImage={consult.image ?? undefined}
-                      vi={unanswered?.type === "TEXT" ? replyInVietnamese(unanswered.content, locale === "vi") : locale === "vi"}
-                      onShare={async (text) => {
-                        await handleSendMessage(null, text);
-                        setConsult(null);
-                        toast.success(tr("Đã gửi tư vấn cho khách.", "Advice sent."));
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-              {/* đang gõ → ẩn thanh gợi ý cho ô nhập + bàn phím đủ chỗ (bấm gợi ý xong cũng ẩn: đã dùng).
-                  Chờ tin MỚI của cuộc trò chuyện nạp xong (không dùng bản lưu trên máy) — không thì thoáng hiện gợi ý theo tin cũ rồi mới đổi. */}
-              {/* Bảng Emoji / Nhãn dán / GIF đang mở → ẩn hàng gợi ý (không chen giữa bảng và ô nhập, giữ chỗ cho tin nhắn) */}
-              {!panelOpen && !recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && established && !assistOpen && (
-                <button type="button" onClick={() => setAssistOpen(true)} aria-expanded={false} data-assist-toggle="" className="mb-2 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] font-semibold text-[var(--m-text-2)] ring-1 ring-white/[0.08]">
-                  <SparklesIcon className="h-3.5 w-3.5" aria-hidden />{tr("Gợi ý", "Suggest")}
-                </button>
-              )}
-              {!panelOpen && !recording && !hasText && !!activeBucket && !(activeBucket as { fromDisk?: boolean }).fromDisk && currentUser && activeChat && !activeChat.isGroup && (!established || assistOpen) && (
-                <ChatAssist
-                  me={{ id: currentUser.id, role: currentUser.role, market: currentUser.market }}
-                  partner={{ id: activeChat.id, role: activeChat.role, isGroup: !!activeChat.isGroup }}
-                  last={unanswered}
-                  partnerWrote={partnerWrote}
-                  onFill={(text) => { setMessageText(text); setToolsOpen(false); inputRef.current?.focus(); }}
-                  onStudio={() => { handleCloseMediaPanel(); setStudioOpen(true); }}
-                  onConsult={(image) => { handleCloseMediaPanel(); setConsult({ image }); }}
-                  onPhoto={handleUploadImage}
-                />
-              )}
-              {(showEmoji || showGifs) && currentUser?.id && (
-                <MediaPicker
-                  userId={currentUser.id}
-                  market={stickerMarket}
-                  lang={viewerLang}
-                  tab={chatPanelTab}
-                  gifQuery={gifHandoff}
-                  onTab={(t, q) => { setChatPanelTab(t); setGifHandoff(t === "gif" ? q : undefined); setShowEmoji(true); setShowGifs(t === "gif"); }}
-                  onEmoji={(e) => setMessageText((prev) => prev + e)}
-                  onSticker={(id) => handleSendMessage(null, id, "STICKER", undefined, { keepPanel: true })}
-                  onGif={(g) => handleSendMessage(null, g.send, "IMAGE", undefined, { keepPanel: true })}
-                  onClose={handleCloseMediaPanel}
-                />
-              )}
-              {/* Gợi ý nhãn dán theo emoji đang gõ — trong khung soạn tin (khung tin co lại, tin cuối không bị che); bảng biểu tượng
-                  đang mở thì ẩn (bảng đã có tab Nhãn dán) */}
-              {stripShown && stickerHint && currentUser?.id && (
-                <StickerSuggest glyph={stickerHint} onPick={pickSuggestedSticker} onDismiss={() => setHintDismissed(stickerHint)} />
-              )}
-              {/* 1 hàng như Messenger: [😊][GIF][📎] · ô nhập bo tròn · nút gửi tròn. Trước đây nút
-                  biểu tượng nằm riêng 1 hàng phía trên, tốn chỗ và nhìn rời rạc. */}
-              {recording ? (
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <VoiceRecorder
-                    onCancel={() => setRecording(false)}
-                    onSend={(url, secs) => { setRecording(false); handleSendMessage(null, `${url}#d=${secs}`, "AUDIO"); }}
-                  />
-                </div>
-              ) : (
-              <form onSubmit={(e) => handleSendMessage(e)} className="relative flex items-end gap-1 sm:gap-1.5">
-                {/* 1 nút "+" duy nhất mở bảng đính kèm (ảnh/video, GIF, thử mẫu) — thay cho 4 nút chen chúc ở 360px */}
-                <button
-                  type="button"
-                  ref={attachBtnRef}
-                  onClick={() => { setAttachOpen((v) => !v); setShowEmoji(false); }}
-                  aria-expanded={attachOpen}
-                  aria-label={CS.attach(gifOn === true)}
-                  title={gifOn === true ? tr("Ảnh, ghi âm, GIF", "Photo, voice, GIF") : tr("Ảnh, ghi âm", "Photo, voice")}
-                  className="m-cbtn"
-                >
-                  <PlusIcon className={`h-6 w-6 transition-transform duration-150 motion-reduce:transition-none ${attachOpen ? "rotate-45" : ""}`} />
-                </button>
-                {attachOpen && (
-                  <>
-                    <div aria-hidden className="fixed inset-0 z-20" onClick={() => setAttachOpen(false)} />
-                    <div ref={attachSheetRef} role="menu" className="m-attach-sheet">
-                      <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); handleUploadImage(); }}>
-                        <span><ImageIcon className="h-[22px] w-[22px]" /></span>
-                        {tr("Gửi ảnh hoặc video", "Send a photo or video")}
-                      </button>
-                      {gifOn === true && (
-                        <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); inputRef.current?.blur(); setGifHandoff(undefined); setShowEmoji(true); setChatPanelTab("gif"); setShowGifs(true); }}>
-                          <span className="text-[13px] font-semibold">GIF</span>
-                          {tr("Chèn ảnh động GIF", "Insert GIF")}
-                        </button>
-                      )}
-                      {(["TECHNICIAN", "OWNER", "ADMIN"].includes(currentUser?.role) || clientChat) && !activeChat?.isGroup ? (
-                        <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); handleCloseMediaPanel(); setStudioOpen(true); }}>
-                          <span><SparklesIcon className="h-[22px] w-[22px]" /></span>
-                          {tr("Tạo mẫu", "Try-on looks")}
-                        </button>
-                      ) : (
-                        <button type="button" role="menuitem" onClick={() => { setAttachOpen(false); handleCloseMediaPanel(); setRecording(true); }}>
-                          <span><Mic className="h-[22px] w-[22px]" /></span>
-                          {tr("Ghi âm", "Record voice")}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                <div className="pn-input-wrap relative flex min-w-0 flex-1 items-end">
-                  <textarea
-                    ref={inputRef}
-                    rows={1}
-                    defaultValue=""
-                    onChange={(e) => {
-                      const has = !!e.target.value.trim();
-                      setHasText(has); // chỉ render lại khi ô chuyển rỗng ↔ có chữ
-                      updateStickerHint(e.target.value); // … hoặc khi emoji gợi ý nhãn dán đổi
-                      growInput(e.target);
-                      if (has) notifyTyping();
-                    }}
-                    onKeyDown={(e) => {
-                      // Điện thoại (chạm): Enter = xuống dòng, gửi bằng nút. Máy tính: Enter gửi, Shift+Enter xuống dòng.
-                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
-                        e.preventDefault();
-                        if (inputRef.current?.value.trim()) handleSendMessage(null);
-                      }
-                    }}
-                    onFocus={() => setAttachOpen(false)}
-                    enterKeyHint="enter"
-                    autoComplete="off"
-                    // QA chọn ô nhập bằng thuộc tính này, không theo chữ gợi ý (đã đổi "Viết tin nhắn..." → "Nhắn tin").
-                    data-chat-input=""
-                    placeholder={t("messenger.inputPlaceholder")}
-                    aria-label={t("messenger.inputPlaceholder")}
-                    className="m-input"
-                  />
-                  <button
-                    type="button"
-                    data-media-toggle=""
-                    aria-expanded={showEmoji}
-                    onClick={() => {
-                      if (showEmoji) { handleCloseMediaPanel(); return; }
-                      // mở đúng tab dùng lần trước (theo người); đang gõ → ẩn bàn phím cho bảng hiện đủ
-                      const saved = currentUser?.id ? readMediaTab(currentUser.id) : null;
-                      // tab nhớ là GIF nhưng GIF chưa dùng được → mở Nhãn dán
-                      const last = saved === "gif" && gifOn !== true ? "sticker" : saved;
-                      setChatPanelTab(last ?? "emoji");
-                      setGifHandoff(undefined);
-                      inputRef.current?.blur();
-                      setShowEmoji(true);
-                      setShowGifs(last === "gif");
-                      setAttachOpen(false);
-                    }}
-                    className={`m-cbtn m-emoji-btn ${showEmoji ? "!text-[var(--m-accent-ink)]" : ""}`}
-                    title={tr("Chèn biểu tượng, nhãn dán", "Insert emoji or sticker")}
-                    aria-label={tr("Biểu tượng cảm xúc", "Emoji")}
-                  >
-                    <Smile className="h-[22px] w-[22px]" />
-                  </button>
-                </div>
-                {/* Ô trống → micro (ghi âm); có chữ → nút gửi (đổi qua lại bằng mờ + thu phóng 140ms) */}
-                <span className="m-send" data-has={hasText ? "1" : "0"}>
-                  <button
-                    type="button"
-                    tabIndex={hasText ? -1 : 0}
-                    aria-hidden={hasText}
-                    onClick={() => { handleCloseMediaPanel(); setRecording(true); }}
-                    title={tr("Ghi âm tin nhắn thoại", "Record a voice message")}
-                    aria-label={tr("Ghi âm", "Record voice")}
-                    className="m-mic"
-                  >
-                    <Mic className="h-[22px] w-[22px]" />
-                  </button>
-                  <button
-                    type="submit"
-                    tabIndex={hasText ? 0 : -1}
-                    aria-hidden={!hasText}
-                    aria-label={tr("Gửi tin nhắn", "Send message")}
-                    disabled={!hasText}
-                    onPointerDown={(e) => e.preventDefault() /* giữ bàn phím mở khi bấm Gửi */}
-                    className="m-send-on"
-                  >
-                    <SendHorizontal className="h-5 w-5" />
-                  </button>
-                </span>
-              </form>
-              )}
-            </div>
+              <ChatComposer
+                apiRef={composerApi}
+                inputRef={inputRef}
+                scrollRef={scrollContainerRef}
+                nearBottomRef={isNearBottomRef}
+                jumpSlotRef={jumpSlotRef}
+                panelPushedRef={panelPushedRef}
+                chat={activeChat}
+                currentUser={currentUser}
+                viewerLang={viewerLang}
+                t={t}
+                assistReady={assistReady}
+                established={established}
+                unanswered={unanswered}
+                partnerWrote={partnerWrote}
+                onSend={send}
+                onPhoto={uploadPhoto}
+                onTyping={typingPing}
+                onStudio={openStudio}
+                onConsult={openConsult}
+                overlay={composerOverlay}
+              />
             )}
           </>
         ) : bubble ? (

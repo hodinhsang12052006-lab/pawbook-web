@@ -54,11 +54,12 @@ html:not([data-ui-classic]) .pn-msgr .pn-list-hero button {
   font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; box-shadow: none;
 }
 html:not([data-ui-classic]) .pn-msgr .m-search {
-  height: 40px; margin: 0 16px 8px; padding: 0 14px; border-radius: 999px;
+  /* min-height (không phải height): chữ to (Android "Largest") thì khung cao theo; ô nhập lấp kín khung để chạm đâu cũng gõ được */
+  min-height: 40px; margin: 0 16px 8px; padding: 0 14px; border-radius: 999px;
   background: var(--m-raised); box-shadow: inset 0 0 0 1px var(--m-line); --tw-ring-shadow: 0 0 #0000;
 }
 html:not([data-ui-classic]) .pn-msgr .m-search:focus-within { box-shadow: inset 0 0 0 1.5px var(--m-accent-ink); }
-html:not([data-ui-classic]) .pn-msgr .m-search input { font-size: 16px; color: var(--m-text); }
+html:not([data-ui-classic]) .pn-msgr .m-search input { font-size: 16px; color: var(--m-text); align-self: stretch; min-height: 40px; }
 html:not([data-ui-classic]) .pn-msgr .m-search input::placeholder { color: var(--m-text-3); }
 /* Dải mời bật thông báo / bong bóng chat (components/chat/ChatNotifyBanner.tsx — chỉ app Android) */
 html:not([data-ui-classic]) .pn-msgr .m-notify {

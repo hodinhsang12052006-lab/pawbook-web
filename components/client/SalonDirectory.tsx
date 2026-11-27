@@ -68,8 +68,8 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
         )}
       </Link>
       <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-        <Link href={`/menu/${s.id}`} className="flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-4 text-sm font-black text-white">{tr("Menu & đặt lịch", "Menu & booking")}</Link>
-        <Link href={`/messages?to=${s.id}`} className="flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-white/[0.06] px-4 text-sm font-bold text-white ring-1 ring-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin", "Message")}</Link>
+        <Link href={`/menu/${s.id}`} className="flex min-h-[44px] min-w-0 items-center justify-center rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-2 text-center text-sm font-black leading-tight text-white">{tr("Menu & đặt lịch", "Menu & booking")}</Link>
+        <Link href={`/messages?to=${s.id}`} className="flex min-h-[44px] min-w-0 items-center justify-center gap-1.5 rounded-2xl bg-white/[0.06] px-2 text-center text-sm font-bold leading-tight text-white ring-1 ring-white/10"><MessageCircle className="h-4 w-4" />{tr("Nhắn tin", "Message")}</Link>
       </div>
     </article>
   );

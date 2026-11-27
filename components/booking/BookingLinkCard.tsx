@@ -47,7 +47,7 @@ export default function BookingLinkCard({ userId, name }: { userId: string; name
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold leading-5 text-pn-text">{tr("Link đặt lịch của bạn", "Your booking link")}</p>
             <p className="mt-1 truncate text-[13px] text-pn-text-2">{url.replace(/^https?:\/\//, "") || "…"}</p>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={copy} className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/[0.06] px-3 text-sm font-semibold text-pn-text ring-1 ring-white/10 active:scale-[.97]">
                 <Copy className="h-4 w-4" />{tr("Chép", "Copy")}
               </button>

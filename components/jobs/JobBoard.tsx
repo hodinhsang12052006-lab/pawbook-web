@@ -333,7 +333,7 @@ function JobCard({
           <a
             href={`tel:${job.phone}`}
             onClick={() => trackJobContact(job.id)}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
+            className={`flex min-h-[48px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-2 text-center leading-tight bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-600 refined:bg-pink-600 refined:hover:bg-pn-brand-hover ${PRESS}`}
           >
             <Phone className="h-5 w-5" />{tr(" Gọi cho tiệm", " Call the salon")}
           </a>
@@ -342,14 +342,14 @@ function JobCard({
           // Tin đăng hộ / từ nhóm: tiệm chưa dùng app → nhắn trong app sẽ không ai đọc; xem chi tiết (địa chỉ, gọi tiệm).
           <Link
             href={`/jobs/${job.id}`}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
+            className={`flex min-h-[48px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-2 text-center leading-tight border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
           >
             <MapPin className="h-5 w-5" />{tr(" Xem chi tiết", " View details")}
           </Link>
         ) : (
           <button
             onClick={() => { trackJobContact(job.id); onMessage(); }}
-            className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
+            className={`flex min-h-[48px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-2 text-center leading-tight border border-slate-700 bg-slate-800 text-sm font-bold text-slate-100 hover:bg-slate-700 refined:border-white/10 refined:bg-white/[0.06] refined:hover:bg-white/10 ${PRESS}`}
           >
             <MessageCircle className="h-5 w-5" />{tr(" Nhắn tin", " Message")}
           </button>

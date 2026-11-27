@@ -92,6 +92,13 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   min-height: 100vh;
 }
+/* Lưới an toàn cho khách để CHỮ TO (Android "Font size: Largest", chủ tiệm lớn tuổi): một hàng lỡ rộng hơn màn hình
+   không biến cả trang thành cuộn ngang. `clip` (không phải hidden) không tạo khung cuộn → sticky / fixed vẫn đúng.
+   Hàng nút cụ thể vẫn phải tự xuống dòng (scripts/qa/elder_large_text_test.mjs E1 đo trước lớp này). */
+html,
+body {
+  overflow-x: clip;
+}
 
 /* Custom scrollbars for a premium look */
 ::-webkit-scrollbar {

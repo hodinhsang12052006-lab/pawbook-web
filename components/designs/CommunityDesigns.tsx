@@ -49,8 +49,8 @@ export default function CommunityDesigns({ pro = true, placement, initial }: { p
   if (placement === "bottom" && (items === null || items.length > 0)) return null;
   return (
     <section className="space-y-3" aria-labelledby="community-designs" data-testid="community-designs">
-      <div className="flex items-end justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h2 id="community-designs" className="flex items-center gap-2 text-base font-black text-white"><Camera className="h-4 w-4 text-pink-300" />{tr("Ảnh thật từ thợ & tiệm", "Real work from techs & salons")}</h2>
           <p className="text-xs text-slate-400">{pro ? tr("Bài “Chia sẻ tác phẩm” có ảnh tự hiện ở đây — tiệm đang tìm thợ cũng xem mục này.", "Showcase posts with photos appear here. Salons that are hiring browse this page too.") : tr("Bộ móng thật do thợ và tiệm trên PawNail làm.", "Real sets done by techs and salons on PawNail.")}</p>
         </div>

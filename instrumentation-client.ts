@@ -8,7 +8,9 @@ Sentry.init({
   dsn: "https://ae19c5b7cf64789cb818f180b8e280b1@o4512136448376832.ingest.us.sentry.io/4512136510963712",
 
   // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
+  // Replay KHÔNG ghi khung chat (nội dung tin nhắn riêng tư + rrweb tuần tự hoá mọi thay đổi DOM của luồng tin:
+  // ~180 ms mỗi lần mở chat ở CPU chậm 4x, kể cả ở chế độ đệm chờ lỗi). Vùng bị chặn hiện là ô trống trong bản ghi.
+  integrations: [Sentry.replayIntegration({ block: [".m-scroll", ".m-list-scroll", "[data-chat-input]"] })],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   // 100% trace mọi request làm cạn quota Sentry + tốn overhead khi đông user.

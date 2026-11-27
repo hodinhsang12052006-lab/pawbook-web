@@ -129,12 +129,12 @@ try {
 
   // 8. Trang cài đặt: công tắc đồng bộ + Nghe thử vẫn phát khi đang tắt nhóm
   await p.goto(BASE_URL + "/profile");
-  const master = p.getByRole("switch", { name: "Bật âm thanh" });
+  const master = p.getByRole("switch", { name: /^(Bật âm thanh|Sound on)$/ });
   await master.waitFor({ timeout: 10000 });
   const synced = (await master.getAttribute("aria-checked")) === "false";
   await master.click();
   await clear(p);
-  await p.getByRole("button", { name: "Nghe thử âm thông báo" }).click();
+  await p.getByRole("button", { name: /^(Nghe thử âm thông báo|Preview notifications sound)$/ }).click();
   await p.waitForTimeout(300);
   R.check("SD10", "Cài đặt đồng bộ với nút tắt nhanh + 'Nghe thử' phát đúng âm", synced && (await sounds(p)).includes("notify") && (await master.getAttribute("aria-checked")) === "true", JSON.stringify(await sounds(p)));
 } finally {

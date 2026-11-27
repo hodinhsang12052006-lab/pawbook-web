@@ -182,7 +182,9 @@ R.check("CP6", "Bấm 1 cuộc trò chuyện trong hộp thư → mở ≤ 800ms
 await page.getByRole("button", { name: /Quay lại|Back/ }).first().click().catch(() => page.goto(BASE_URL + "/messages"));
 await page.waitForTimeout(800);
 t0 = Date.now();
-await page.getByText(/Ok em \d+/).first().click();
+// Chạm hàng theo TÊN tiệm, không theo xem trước "Ok em …": máy chậm (CPU chậm 4x + máy bận) thì tin thợ gửi ở CP3 có thể được
+// máy chủ ghi SAU tin "Ok em" của CP4 → xem trước là tin của thợ → bài đo chờ 30 s rồi văng (gặp 2026-11-27).
+await page.locator(".m-conv").filter({ hasText: owner.me.name }).first().click();
 await page.getByText(`(#${HISTORY - 1})`).last().waitFor({ timeout: 20000 });
 out.switchBackMs = Date.now() - t0;
 R.check("CP6b", "Quay lại cuộc trò chuyện dài (đã có sẵn) ≤ 800ms", out.switchBackMs <= 800, out.switchBackMs + "ms");

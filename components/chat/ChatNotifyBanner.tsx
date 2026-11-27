@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BellRing, BellOff, MessageCircle, X } from "lucide-react";
 import { enablePush, getPushState } from "@/lib/pushClient";
-import { getBubbleInfo, isAndroidApp, openBubbleSettings, openNotificationSettings } from "@/lib/nativePush";
+import { getBubbleInfo, isAndroidApp, openBubbleSettings, openNotificationSettings, PUSH_CHANGED_EVENT } from "@/lib/nativePush";
 import { tr } from "@/lib/i18n/tr";
 import { useTr } from "@/lib/i18n/useTr";
 
@@ -59,7 +59,12 @@ export default function ChatNotifyBanner() {
     // Quay lại từ Cài đặt Android (bật thông báo / bong bóng) → cập nhật ngay.
     const onVis = () => document.visibilityState === "visible" && refresh();
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    // App vừa tự đăng ký thông báo (lib/nativePush.ts nativeAutoEnable) → bỏ dải "Bật thông báo" ngay.
+    window.addEventListener(PUSH_CHANGED_EVENT, refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener(PUSH_CHANGED_EVENT, refresh);
+    };
   }, [refresh]);
 
   if (!kind) return null;

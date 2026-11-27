@@ -158,8 +158,11 @@ async function registerToken(): Promise<boolean> {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.removeItem(RELOGIN_KEY);
   } catch {}
+  // Tự bật (nativeAutoEnable) xong → dải "Bật thông báo" / công tắc đang hiện đọc lại trạng thái ngay.
+  window.dispatchEvent(new Event(PUSH_CHANGED_EVENT));
   return true;
 }
+export const PUSH_CHANGED_EVENT = "pn-push-changed";
 
 export async function nativeEnable(): Promise<PushState> {
   if (!(await nativeServerOn())) return "unsupported";

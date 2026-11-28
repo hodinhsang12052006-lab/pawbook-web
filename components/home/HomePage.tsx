@@ -279,6 +279,9 @@ export default function HomePage() {
             {/* V2.1 — 1 ô gợi ý duy nhất trên điện thoại (trong app): các thẻ gợi ý xếp theo ưu tiên trong .pn-nudges, CSS chỉ
                 hiện thẻ THẬT đầu tiên (globals.css). Đóng thẻ đó thì thẻ kế tiếp hiện. Máy tính vẫn hiện đủ như cũ. */}
             <NudgeSlot on={!!sessionUser}>
+            {/* "Có gì mới từ lần trước" đứng ĐẦU: điện thoại chỉ hiện 1 thẻ gợi ý, thẻ này chỉ có khi THẬT có tin mới
+                (vắng ≥4 giờ) và đã đánh dấu "đã ghé" — đứng sau thẻ menu thì người dùng không bao giờ thấy. */}
+            {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
             {sessionUser && <GettingStarted compact={tab !== "feed"} />}
 
             {/* Render cả khi phiên đang tải: thẻ tự giữ chỗ (html[data-mn]) để không giật bố cục */}
@@ -297,7 +300,6 @@ export default function HomePage() {
               </div>
             )}
 
-            {sessionUser && tab === "feed" && <WelcomeBack onGoTab={changeTab} />}
 
             {sessionUser && tab === "feed" && sessionUser.role !== "ADMIN" && <ProfileViewsCard compact role={sessionUser.role} />}
 

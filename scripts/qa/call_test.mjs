@@ -235,8 +235,9 @@ const failGum = (u, name, onlyVideo = false) =>
   );
 
 // ============================== setup ==============================
-const A = await userCtx("owner1.us@pawnailjobs.demo", { label: "A owner1 desktop" });
-const B = await userCtx("tech1.us@pawnailjobs.demo", { device: "Pixel 7", label: "B tech1 Pixel7" });
+// Cặp gọi đổi được (VD khách làm nail ↔ chủ tiệm): CALL_EMAIL_A=jessica.client@pawnailjobs.demo CALL_EMAIL_B=owner1.us@… CALL_ONLY=audio,video
+const A = await userCtx(process.env.CALL_EMAIL_A || "owner1.us@pawnailjobs.demo", { label: `A ${process.env.CALL_EMAIL_A ? process.env.CALL_EMAIL_A.split("@")[0] : "owner1"} desktop` });
+const B = await userCtx(process.env.CALL_EMAIL_B || "tech1.us@pawnailjobs.demo", { device: "Pixel 7", label: `B ${process.env.CALL_EMAIL_B ? process.env.CALL_EMAIL_B.split("@")[0] : "tech1"} Pixel7` });
 const C = await userCtx("owner2.us@pawnailjobs.demo", { label: "C owner2 desktop" });
 await B.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: A.me.id, content: "Call test" }, headers: B.h });
 await C.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: "Busy test" }, headers: C.h });

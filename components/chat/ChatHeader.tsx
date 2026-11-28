@@ -61,8 +61,9 @@ function ChatHeader({ chat, bubble, locale, typing, connLost, partnerLastActiveA
         )}
         <div className="relative flex-shrink-0">
           {chat.isGroup ? (
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
-              <Users className="h-5 w-5 text-fuchsia-300" />
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-900 ring-1 ring-white/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {chat.avatarUrl ? <img src={chat.avatarUrl} alt="" className="h-full w-full object-cover" data-group-avatar /> : <Users className="h-5 w-5 text-fuchsia-300" />}
             </span>
           ) : (
             <PresenceAvatar watch={!!chat.conversationId} userId={chat.id} src={avatarSrc(chat.avatarUrl, chat.name, chat.id)} alt={chat.name} size="h-10 w-10" />

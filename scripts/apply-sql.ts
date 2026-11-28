@@ -3,10 +3,15 @@
 // chạy thẳng được với URL libsql://.
 //   npx tsx scripts/apply-sql.ts prisma/sql/2026-10-03_add_indexes.sql
 import fs from "fs";
+import path from "path";
 import { createClient } from "@libsql/client";
 
+// .env ở thư mục đang đứng, hoặc thư mục cha (chạy từ worktree .claude/worktrees/… → .env của bản chính).
 // Không ghi đè biến đã có sẵn trong môi trường.
-process.loadEnvFile?.(".env");
+for (let dir = process.cwd(), i = 0; i < 5; i++, dir = path.dirname(dir)) {
+  const f = path.join(dir, ".env");
+  if (fs.existsSync(f)) { process.loadEnvFile?.(f); break; }
+}
 
 async function main() {
   const file = process.argv[2];

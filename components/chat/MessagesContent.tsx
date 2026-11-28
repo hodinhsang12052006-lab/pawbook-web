@@ -359,6 +359,7 @@ export default function MessagesContent({
         })),
         unreadCount: conv.unreadCount || 0,
         partnerLastReadAt: conv.partnerLastReadAt || null,
+        groupAvatarUrl: conv.groupAvatarUrl || null,
         messages: (conv.messages || []).map((m: any) => ({
           id: m.id, body: m.body, type: m.type || "TEXT", senderId: m.senderId,
           conversationId: m.conversationId,
@@ -1198,7 +1199,7 @@ export default function MessagesContent({
     setActiveChat({
       id: conv.isGroup ? conv.id : partner!.id,
       name: conv.isGroup ? conv.name || tr("Nhóm trò chuyện", "Group chat") : partner!.name,
-      avatarUrl: conv.isGroup ? "" : partner!.avatarUrl || "",
+      avatarUrl: conv.isGroup ? conv.groupAvatarUrl || "" : partner!.avatarUrl || "",
       role: conv.isGroup ? "GROUP" : partner!.role,
       isGroup: conv.isGroup,
       isOnline: false,
@@ -1376,7 +1377,7 @@ export default function MessagesContent({
   const conversationList = useMemo(() =>
     conversationRows.map(({ conv, partner, displayName, lastMsg }) => {
       const isGroup = conv.isGroup;
-      const avatarUrl = isGroup ? "" : partner!.avatarUrl || "";
+      const avatarUrl = isGroup ? conv.groupAvatarUrl || "" : partner!.avatarUrl || "";
       const isActive = activeChat?.conversationId === conv.id;
       const fromMe = lastMsg?.senderId === currentUser?.id;
       const unread = isActive ? 0 : conv.unreadCount || 0;
@@ -1408,8 +1409,9 @@ export default function MessagesContent({
           className={`m-conv relative flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors duration-150 ${isActive ? "pn-conv-active" : unread > 0 ? "bg-white/[0.035] hover:bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
         >
           {isGroup ? (
-            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 ring-1 ring-white/10">
-              <Users className="h-5 w-5 text-fuchsia-300" />
+            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 ring-1 ring-white/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {conv.groupAvatarUrl ? <img src={conv.groupAvatarUrl} alt="" className="h-full w-full object-cover" /> : <Users className="h-5 w-5 text-fuchsia-300" />}
             </span>
           ) : (
             <PresenceAvatar userId={partner!.id} src={avatarSrc(avatarUrl, displayName, partner!.id)} alt={displayName} />
@@ -1680,7 +1682,7 @@ export default function MessagesContent({
                         onClick={() => setActiveChat({
                           id: conv.isGroup ? conv.id : partner!.id,
                           name: displayName,
-                          avatarUrl: conv.isGroup ? "" : partner!.avatarUrl || "",
+                          avatarUrl: conv.isGroup ? conv.groupAvatarUrl || "" : partner!.avatarUrl || "",
                           role: conv.isGroup ? "GROUP" : partner!.role,
                           isGroup: conv.isGroup,
                           isOnline: false,
@@ -1690,7 +1692,7 @@ export default function MessagesContent({
                         className="group flex w-16 flex-col items-center gap-1.5"
                       >
                         <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/10 transition group-hover:ring-pink-500/60">
-                          {conv.isGroup ? <Users className="h-5 w-5 text-fuchsia-300" /> : (
+                          {conv.isGroup ? (conv.groupAvatarUrl ? <img src={conv.groupAvatarUrl} alt="" className="h-full w-full object-cover" /> : <Users className="h-5 w-5 text-fuchsia-300" />) : (
                             <img src={avatarSrc(partner!.avatarUrl, displayName, partner!.id)} alt="" className="h-full w-full object-cover" />
                           )}
                         </span>

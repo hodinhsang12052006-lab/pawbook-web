@@ -102,6 +102,8 @@ export interface ConversationType {
   messages: { id: string; body: string; type: string; senderId: string; conversationId: string; createdAt: string }[];
   unreadCount?: number;
   partnerLastReadAt?: string | null;
+  /** Ảnh nhóm (VD logo công ty cho nhóm nhân viên) — lib/conversationReads GROUP_AVATARS_KEY */
+  groupAvatarUrl?: string | null;
 }
 
 export interface ActiveChatType {

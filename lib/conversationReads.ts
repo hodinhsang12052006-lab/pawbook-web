@@ -1,4 +1,17 @@
 import prisma from "@/lib/prisma";
+import { getSetting } from "@/lib/settings";
+
+/** Ảnh đại diện NHÓM chat (VD nhóm nhân viên mang logo công ty) — AppSetting "group_avatars" = { convId: url }.
+ *  Không thêm cột vào bảng Conversation (DB production chưa có cột thì mọi truy vấn tin nhắn sẽ hỏng). */
+export const GROUP_AVATARS_KEY = "group_avatars";
+async function groupAvatars(): Promise<Record<string, string>> {
+  try {
+    const m = JSON.parse((await getSetting(GROUP_AVATARS_KEY)) || "{}");
+    return m && typeof m === "object" ? m : {};
+  } catch {
+    return {};
+  }
+}
 
 // Bảng ConversationRead được tạo bằng file SQL chạy tay trên production
 // (prisma/sql/2026-10-03_conversation_reads.sql). Nếu code deploy TRƯỚC khi
@@ -62,7 +75,7 @@ export async function getConversationMeta(
   conversations: { id: string; participants: { id: string }[]; messages?: { senderId: string; createdAt: Date }[] }[]
 ) {
   const convIds = conversations.map((c) => c.id);
-  const marks = await getReadMarks(convIds);
+  const [marks, avatars] = await Promise.all([getReadMarks(convIds), groupAvatars()]);
   const myMark = new Map(marks.filter((m) => m.userId === userId).map((m) => [m.conversationId, m.lastReadAt]));
   const otherMarks = marks.filter((m) => m.userId !== userId);
 
@@ -107,6 +120,7 @@ export async function getConversationMeta(
       id,
       {
         unreadCount: unreadCounts[i],
+        groupAvatarUrl: typeof avatars[id] === "string" && /^(https:\/\/|\/)/.test(avatars[id]) ? avatars[id] : null,
         partnerLastReadAt:
           otherMarks
             .filter((m) => m.conversationId === id)
@@ -117,7 +131,7 @@ export async function getConversationMeta(
     ])
   );
   return {
-    conv: (id: string) => byConv.get(id) ?? { unreadCount: 0, partnerLastReadAt: null },
+    conv: (id: string) => byConv.get(id) ?? { unreadCount: 0, groupAvatarUrl: null, partnerLastReadAt: null },
     lastActiveAt: (uid: string) => lastActive.get(uid)?.toISOString() ?? null,
   };
 }

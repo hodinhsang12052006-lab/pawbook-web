@@ -1023,6 +1023,7 @@ html[data-chat-open] .pn-bnav { display: none; }
 /* Bong bóng chat Android (lib/bubbleMode.ts — script đầu trang đặt html[data-bubble] trước khi vẽ): chỉ còn khung chat,
    ẩn thanh dưới, lời mời cài app / bật thông báo, toast "việc mới", gợi ý ngôn ngữ, băng mất kết nối toàn app. */
 html[data-bubble] [data-bubble-hide],
+html[data-bubble] [data-bubble-chrome],
 html[data-bubble] .pn-bnav { display: none !important; }
 
 /* App native (User-Agent "PawNailApp" — script đầu trang đặt html[data-native] trước khi vẽ): ẩn phần chỉ dành cho web

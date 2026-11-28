@@ -7,22 +7,26 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium, devices } from "playwright";
-import { BASE_URL, Client, Results, SEED_TECH } from "./lib.mjs";
+import { BASE_URL, Client, Results, SEED_TECH, registerUser } from "./lib.mjs";
 
 const R = new Results("Nhóm chat nhân viên BitPaw");
 const DB = process.env.QA_DB_URL || "";
 if (!DB.startsWith("file:")) throw new Error("Cần QA_DB_URL=file:… (DB QA local)");
 const OUT = path.join(os.tmpdir(), `qa-staff-${Date.now()}.txt`);
-const run = () =>
-  execFileSync(process.execPath, [path.join("node_modules", "tsx", "dist", "cli.mjs"), "scripts/staff/create-staff-group.mts", "--yes", "--out", OUT], {
+const run = (...extra) =>
+  execFileSync(process.execPath, [path.join("node_modules", "tsx", "dist", "cli.mjs"), "scripts/staff/create-staff-group.mts", "--yes", "--out", OUT, ...extra], {
     env: { ...process.env, TURSO_DATABASE_URL: DB, TURSO_AUTH_TOKEN: "", DATABASE_URL: DB },
     encoding: "utf8",
   });
 let browser;
 try {
-  const out1 = run();
+  // Tài khoản "admin" có sẵn (đăng ký thường) + 1 email nhân viên MỚI chưa có tài khoản
+  const boss = await registerUser({ name: "QA Chủ BitPaw", role: "OWNER" });
+  const newStaff = `qa.staff.${Date.now()}@gmail.test`;
+  const out1 = run("--add", boss.body.email, "--add", newStaff);
   const file = fs.readFileSync(OUT, "utf8");
   const creds = [...file.matchAll(/^(Bitpaw \d+)\s*\| (\S+)\s*\| (\S+)/gm)].map((m) => ({ name: m[1], email: m[2], pw: m[3] }));
+  const newPw = file.split("\n").find((l) => l.includes(newStaff))?.split("|")[2]?.trim().split(/\s+/)[0];
   R.check("T1", "Script tạo đủ 10 tài khoản Bitpaw 1–10 (email nội bộ) + ghi file tài khoản / mật khẩu, KHÔNG in mật khẩu ra màn hình",
     creds.length === 10 && creds[0].name === "Bitpaw 1" && creds[9].name === "Bitpaw 10" && creds.every((c) => /@staff\.pawnailjobs\.demo$/.test(c.email) && /^Bp\S{4}-\S{4}-\S{4}$/.test(c.pw)) && !creds.some((c) => out1.includes(c.pw)),
     JSON.stringify({ n: creds.length, out: out1.slice(0, 200) }));
@@ -32,9 +36,9 @@ try {
   const lb = await b.login(creds[1].email, creds[1].pw);
   await outsider.login(SEED_TECH);
   const list = await a.req("/api/messages");
-  const g = (list.data.conversations || []).find((c) => c.isGroup && c.name === "Nhóm nhân viên BitPaw");
-  R.check("T2", "Bitpaw 1 đăng nhập được, thấy nhóm 'Nhóm nhân viên BitPaw' gồm đúng 10 nhân viên, ảnh nhóm = logo B",
-    la.ok && lb.ok && !!g && g.participants.length === 10 && g.participants.every((p) => /^Bitpaw \d+$/.test(p.name)) && g.groupAvatarUrl === "/logo_b.jpg",
+  const g = (list.data.conversations || []).find((c) => c.isGroup && c.name === "Họp Nội Bộ BitPaw");
+  R.check("T2", "Bitpaw 1 đăng nhập được, thấy nhóm 'Họp Nội Bộ BitPaw' gồm đúng 10 Bitpaw + tài khoản chủ + nhân viên mới (12), ảnh nhóm = logo B",
+    la.ok && lb.ok && !!g && g.participants.length === 12 && g.participants.filter((p) => /^Bitpaw \d+$/.test(p.name)).length === 10 && g.participants.some((p) => p.id === boss.client.userId) && g.groupAvatarUrl === "/logo_b.jpg",
     JSON.stringify({ ok: [la.ok, lb.ok], g: g && { n: g.participants.length, av: g.groupAvatarUrl } }));
 
   const peek = await outsider.req(`/api/conversations?id=${g?.id}`);
@@ -51,12 +55,23 @@ try {
   const feed = await outsider.req("/api/posts?limit=50");
   R.check("T5", "Tài khoản nhân viên không hiện ở danh sách công khai (thợ / bảng tin)", !JSON.stringify(techs.data).includes("Bitpaw ") && !JSON.stringify(feed.data).includes("Bitpaw "), "");
 
-  const out2 = run();
+  const bossLogin = await boss.client.login(boss.body.email, boss.body.password);
+  const bossSees = (await boss.client.req("/api/messages")).data.conversations?.some((c) => c.id === g?.id);
+  const ns = new Client();
+  const nsLogin = newPw ? await ns.login(newStaff, newPw) : { ok: false };
+  const nsSees = nsLogin.ok && (await ns.req("/api/messages")).data.conversations?.some((c) => c.id === g?.id);
+  R.check("T2b", "Tài khoản chủ (có sẵn, giữ mật khẩu của mình) vào nhóm; email nhân viên mới được tạo tài khoản + mật khẩu trong file, đăng nhập thấy nhóm",
+    bossLogin.ok && bossSees && !!newPw && nsSees, JSON.stringify({ bossSees, newPw: !!newPw, nsSees }));
+  const fake = await outsider.req("/api/conversations", { method: "POST", json: { isGroup: true, name: "Họp Nội Bộ BitPaw", participantIds: [a.client.userId] } });
+  R.check("T2c", "Người thường không tạo được nhóm giả tên 'Họp Nội Bộ BitPaw' (tên giữ chỗ)", fake.status === 400, fake.status);
+
+  const out2 = run("--remove", newStaff);
   const file2 = fs.readFileSync(OUT, "utf8");
   const list2 = await a.req("/api/messages");
-  const groups = (list2.data.conversations || []).filter((c) => c.isGroup && c.name === "Nhóm nhân viên BitPaw");
-  R.check("T6", "Chạy lại script: không tạo trùng tài khoản / nhóm, giữ mật khẩu cũ (đăng nhập lại được)",
-    /0 tài khoản mới/.test(out2) && /giữ mật khẩu cũ/.test(file2) && groups.length === 1 && groups[0].participants.length === 10 && (await new Client().login(creds[2].email, creds[2].pw)).ok,
+  const groups = (list2.data.conversations || []).filter((c) => c.isGroup && c.name === "Họp Nội Bộ BitPaw");
+  const nsAfter = await ns.req(`/api/conversations?id=${g?.id}`);
+  R.check("T6", "Chạy lại với --remove: không tạo trùng tài khoản / nhóm, giữ mật khẩu cũ; người bị bỏ quyền rời nhóm (không mở được nhóm nữa)",
+    /0 tài khoản mới/.test(out2) && /giữ mật khẩu cũ/.test(file2) && groups.length === 1 && groups[0].participants.length === 11 && nsAfter.status === 404 && (await new Client().login(creds[2].email, creds[2].pw)).ok,
     JSON.stringify({ out2: out2.slice(0, 160), groups: groups.length }));
 
   browser = await chromium.launch();

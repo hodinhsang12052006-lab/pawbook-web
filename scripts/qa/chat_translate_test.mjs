@@ -19,8 +19,10 @@ try {
   await b.client.req("/api/messages", { method: "POST", json: { receiverId: c.client.userId, content: "Dạ được em, mai qua tiệm nhé" } });
 
   browser = await chromium.launch();
-  const open = async (u, locale) => {
-    const ctx = await browser.newContext({ ...devices["Desktop Chrome"], locale });
+  // langs = navigator.languages của máy; giao diện luôn TIẾNG ANH (Accept-Language en-US, URL không tiền tố /vi)
+  const open = async (u, langs) => {
+    const ctx = await browser.newContext({ ...devices["Desktop Chrome"], locale: "en-US" });
+    await ctx.addInitScript((l) => { Object.defineProperty(navigator, "languages", { get: () => l }); Object.defineProperty(navigator, "language", { get: () => l[0] }); }, langs);
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(e.message));
     const tx = [];
@@ -37,11 +39,11 @@ try {
     await ctx.close();
     return { tx: tx.length, see };
   };
-  const en = await open(a, "en-US");
+  const en = await open(a, ["en-US", "en"]);
   R.check("X1", "Người xem tiếng Anh (máy chỉ có tiếng Anh) nhận tin tiếng Việt → vẫn tự dịch như trước", en.tx >= 1, JSON.stringify(en));
-  const vi = await open(a, "vi-VN");
-  R.check("X2", "Giao diện tiếng Anh nhưng máy có tiếng Việt → KHÔNG tự dịch, chỉ có nút 'See translation'", vi.tx === 0 && vi.see >= 1, JSON.stringify(vi));
-  const writer = await open(c, "en-US");
+  const vi = await open(a, ["en-US", "vi-VN", "vi"]);
+  R.check("X2", "Giao diện tiếng Anh, máy có cài tiếng Việt → KHÔNG tự dịch, chỉ có nút 'See translation'", vi.tx === 0 && vi.see >= 1, JSON.stringify(vi));
+  const writer = await open(c, ["en-US", "en"]);
   R.check("X3", "Người xem tự nhắn tiếng Việt trong cuộc trò chuyện → KHÔNG tự dịch tin tiếng Việt của người kia", writer.tx === 0 && writer.see >= 1, JSON.stringify(writer));
   R.check("X4", "Không lỗi JS", errors.length === 0, errors.slice(0, 3).join(" | "));
 } catch (e) {

@@ -118,6 +118,10 @@ export async function POST(req: Request) {
       }
     }
 
+    // Tên nhóm mang thương hiệu (VD giả "Họp Nội Bộ BitPaw" để lừa nhân viên) — chỉ ADMIN được đặt.
+    if (isGroup && typeof name === "string" && /bit\s*paw|paw\s*nail/i.test(name) && (session.user as { role?: string }).role !== "ADMIN") {
+      return NextResponse.json({ error: "Tên nhóm này đã được PawNail giữ chỗ.", errorEn: "This group name is reserved." }, { status: 400 });
+    }
     // Chống spam: nhóm chat kéo hàng trăm người vào rồi rải tin (lib/abuseGuard).
     if (isGroup || uniqueIds.length > 2) {
       const capped = await groupCreateBlocked(currentUserId, uniqueIds.length);

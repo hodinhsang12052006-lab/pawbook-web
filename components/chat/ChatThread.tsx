@@ -540,14 +540,15 @@ function ChatThread({
                 {CS.joined(new Date(partnerTrust.createdAt).toLocaleDateString(locale === "vi" ? "vi-VN" : currentUser?.market === "AU" ? "en-AU" : "en-US", { month: "short", year: "numeric" }))}
               </p>
             )}
-            <Link href={`/profile/${chat.id}`} className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12] sm:hidden">
+            <Link href={`/profile/${chat.id}`} data-bubble-chrome className="mt-1 rounded-full bg-white/[0.07] px-4 py-1.5 text-xs font-bold text-slate-100 ring-1 ring-white/10 transition-colors hover:bg-white/[0.12] sm:hidden">
               {tr("Xem hồ sơ", "View profile")}
             </Link>
           </div>
         )}
 
         {showSafety && !chatNextCursor && !limited && (
-          <div className="m-safety flex-none" role="note">
+          // Bong bóng chat (khung nhỏ nổi trên app khác): không thẻ an toàn to — đã hiện trong app khi mới liên hệ.
+          <div className="m-safety flex-none" role="note" data-bubble-chrome>
             <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--m-champagne)]" />
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-semibold text-[var(--m-text)]">{CS.safetyTitle()}</p>

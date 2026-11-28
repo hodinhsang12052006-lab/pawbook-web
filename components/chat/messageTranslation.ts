@@ -77,11 +77,12 @@ export const viewerReadsVi = () => {
   if (readsVi === null) readsVi = typeof navigator !== "undefined" && (navigator.languages || [navigator.language]).some((l) => /^vi(-|_|$)/i.test(l || ""));
   return readsVi;
 };
-/** Gọi khi thấy người xem tự nhắn tiếng Việt → từ đó không tự dịch tin tiếng Việt cho họ nữa. */
-export const markViewerReadsVi = () => {
+/** Gọi khi thấy người xem tự nhắn tiếng Việt → từ đó không tự dịch tin tiếng Việt cho họ nữa.
+ *  silent = gọi TRONG lúc vẽ (trước khi các dòng tin chạy effect xin dịch) — không phát sự kiện giữa lúc vẽ. */
+export const markViewerReadsVi = (silent = false) => {
   if (viewerReadsVi()) return;
   readsVi = true;
-  emit();
+  if (!silent) emit();
 };
 export const autoTranslates = (text: string | null | undefined, viewer: Locale) => viewer === "en" && !viewerReadsVi() && detectTextLang(text) === "vi";
 /** Tin này có thể dịch theo yêu cầu (ngôn ngữ đoán được khác ngôn ngữ người xem). */

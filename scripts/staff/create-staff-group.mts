@@ -31,7 +31,12 @@ if (!flag("--yes")) {
   process.exit(1);
 }
 const COUNT = Math.min(50, Math.max(1, Number(opt("--count", "10")) || 10));
-const GROUP = opt("--group", "Nhóm nhân viên BitPaw").slice(0, 60);
+const GROUP = opt("--group", "Họp Nội Bộ BitPaw").slice(0, 60);
+// --add <email> (lặp lại được): nâng tài khoản thành NHÂN VIÊN + vào nhóm (chưa có tài khoản → tạo, mật khẩu ghi vào file).
+// --remove <email>: bỏ quyền nhân viên + rời nhóm. Nhóm luôn = đúng danh sách nhân viên (không ai khác).
+const listOpt = (k: string) => args.flatMap((a, i) => (a === k && args[i + 1] ? [args[i + 1].trim().toLowerCase()] : [])).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+const ADD = listOpt("--add");
+const REMOVE = new Set(listOpt("--remove"));
 const OUT = opt("--out", path.join(os.homedir(), "Desktop", "BitPaw-tai-khoan-nhan-vien.txt"));
 const LOGO = "/logo_b.jpg";
 const DOMAIN = "staff.pawnailjobs.demo";
@@ -79,15 +84,44 @@ for (let n = 1; n <= COUNT; n++) {
   }
 }
 
-// Nhóm chat nhân viên: tạo 1 lần (id lưu ở AppSetting staff_group_id); chạy lại → thêm nhân viên mới (nếu --count lớn hơn).
+// Tài khoản được nâng thành nhân viên (email thật: admin, nhân viên mới…)
+for (const email of ADD) {
+  if (REMOVE.has(email)) continue;
+  const u = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true } });
+  if (u) {
+    ids.push(u.id);
+    rows.push({ name: u.name || email, email, password: null, status: "nâng thành nhân viên (giữ mật khẩu của họ)" });
+  } else {
+    const pw = password();
+    const name = email.split("@")[0].slice(0, 40);
+    const c = await prisma.user.create({ data: { name, email, password: await bcrypt.hash(pw, 10), role: "OWNER", market: "US", state: "CA", city: "BitPaw" }, select: { id: true } });
+    ids.push(c.id);
+    rows.push({ name, email, password: pw, status: "tạo mới (đổi mật khẩu bằng Quên mật khẩu)" });
+  }
+}
+// Danh sách nhân viên (AppSetting staff_user_ids) = cũ + mới − bỏ. Nhóm luôn đúng bằng danh sách này.
+let staff: string[] = [];
+try { staff = JSON.parse((await getSetting("staff_user_ids").catch(() => null)) || "[]"); } catch {}
+const removedIds = REMOVE.size ? (await prisma.user.findMany({ where: { email: { in: [...REMOVE] } }, select: { id: true } })).map((u) => u.id) : [];
+const staffIds = [...new Set([...staff, ...ids])].filter((id) => !removedIds.includes(id));
+const exist = new Set((await prisma.user.findMany({ where: { id: { in: staffIds } }, select: { id: true } })).map((u) => u.id));
+const members = staffIds.filter((id) => exist.has(id));
+await setSetting("staff_user_ids", JSON.stringify(members));
+
+// Nhóm: tạo 1 lần (id ở AppSetting staff_group_id); chạy lại → đổi tên theo --group, thêm / bớt cho khớp danh sách nhân viên.
 let groupId = (await getSetting("staff_group_id").catch(() => null)) || "";
 const group = groupId ? await prisma.conversation.findUnique({ where: { id: groupId }, select: { id: true, participants: { select: { id: true } } } }) : null;
 if (group) {
   const have = new Set(group.participants.map((p) => p.id));
-  const add = ids.filter((id) => !have.has(id));
-  if (add.length) await prisma.conversation.update({ where: { id: group.id }, data: { participants: { connect: add.map((id) => ({ id })) } } });
+  const add = members.filter((id) => !have.has(id));
+  const drop = [...have].filter((id) => !members.includes(id));
+  await prisma.conversation.update({
+    where: { id: group.id },
+    data: { name: GROUP, isGroup: true, participants: { connect: add.map((id) => ({ id })), disconnect: drop.map((id) => ({ id })) } },
+  });
+  if (drop.length) console.log(`Đã cho ${drop.length} tài khoản không còn là nhân viên rời nhóm.`);
 } else {
-  const c = await prisma.conversation.create({ data: { isGroup: true, name: GROUP, participants: { connect: ids.map((id) => ({ id })) } }, select: { id: true } });
+  const c = await prisma.conversation.create({ data: { isGroup: true, name: GROUP, participants: { connect: members.map((id) => ({ id })) } }, select: { id: true } });
   groupId = c.id;
   await setSetting("staff_group_id", groupId);
   // Tin đầu tiên để nhóm hiện ngay trong danh sách tin nhắn của mọi người
@@ -109,6 +143,6 @@ const lines = [
   "Giữ file này kín. Đổi mật khẩu: chạy lại script với --reset-passwords.",
 ];
 fs.writeFileSync(OUT, lines.join("\n") + "\n", "utf8");
-console.log(`Xong: ${rows.filter((r) => r.status === "tạo mới").length} tài khoản mới, nhóm "${GROUP}" (${ids.length} người, ảnh nhóm logo B).`);
+console.log(`Xong: ${rows.filter((r) => r.status.startsWith("tạo mới")).length} tài khoản mới, nhóm "${GROUP}" (${members.length} người, ảnh nhóm logo B).`);
 console.log(`Danh sách tài khoản + mật khẩu: ${OUT}`);
 await prisma.$disconnect();

@@ -74,9 +74,10 @@ final class ChatAvatars {
         "tenor.com"
     };
 
+    // Tông trang nhã hợp thương hiệu (hồng đậm, mận, chàm, ngọc, hổ phách…) — vẽ thành gradient 2 tông.
     private static final int[] PALETTE = {
-        0xFFE91E63, 0xFF9C27B0, 0xFF5E35B1, 0xFF3949AB, 0xFF1E88E5, 0xFF00897B,
-        0xFF43A047, 0xFFF4511E, 0xFF6D4C41, 0xFF546E7A, 0xFFD81B60, 0xFF8E24AA
+        0xFFC2185B, 0xFF7B3F8C, 0xFF4A4FB0, 0xFF2F6FA8, 0xFF0F7A6E, 0xFF3D8B5A,
+        0xFFB06A1E, 0xFFC0504D, 0xFF8A5A44, 0xFF55657A, 0xFFA8326E, 0xFF6A4BA8
     };
 
     private static final LruCache<String, Bitmap> MEMORY = new LruCache<String, Bitmap>(4 * 1024 * 1024) {
@@ -365,27 +366,46 @@ final class ChatAvatars {
     }
 
     /**
-     * Ảnh vuông → bitmap adaptive (lối tắt, bong bóng): cả ảnh nằm trong vùng an toàn 72/108
-     * ở giữa nên mặt nạ tròn/squircle của launcher không cắt mất mặt; phần viền ngoài là
-     * chính ảnh đó phóng to (chỉ lộ ra khi có hiệu ứng chuyển động).
+     * Ảnh vuông → bitmap adaptive (lối tắt, bong bóng chat): MỘT lớp ảnh, phóng nhẹ (vùng 90/108 ở giữa) để vòng
+     * tròn bong bóng (72/108) đầy ảnh như Messenger; viền ngoài là MÀU CHỦ ĐẠO của ảnh (trước đây là chính ảnh phóng
+     * to vẽ chồng — máy hiện rộng hơn vùng an toàn thấy "ảnh lồng trong ảnh", nhìn rất rẻ tiền).
      */
     static Bitmap adaptive(Bitmap square, int px) {
         Bitmap out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(out);
+        cv.drawColor(dominant(square));
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        cv.drawBitmap(square, null, new Rect(0, 0, px, px), p);
-        int inset = Math.round(px * 18f / 108f);
+        int inset = Math.round(px * 9f / 108f);
         cv.drawBitmap(square, null, new Rect(inset, inset, px - inset, px - inset), p);
         return out;
+    }
+
+    /** Màu trung bình của ảnh (thu về 1×1), làm tối nhẹ để viền không chói. */
+    private static int dominant(Bitmap b) {
+        try {
+            int c = Bitmap.createScaledBitmap(b, 1, 1, true).getPixel(0, 0);
+            return Color.rgb(Math.round(Color.red(c) * 0.85f), Math.round(Color.green(c) * 0.85f), Math.round(Color.blue(c) * 0.85f));
+        } catch (Throwable t) {
+            return 0xFF1C1521;
+        }
+    }
+
+    /** Nền gradient 2 tông của màu gốc (sáng góc trên trái → đậm góc dưới phải) thay cho màu phẳng. */
+    private static Paint gradientPaint(int base, float size) {
+        float[] hsv = new float[3];
+        Color.colorToHSV(base, hsv);
+        float[] light = { hsv[0], Math.max(0f, hsv[1] * 0.85f), Math.min(1f, hsv[2] * 1.12f + 0.06f) };
+        float[] dark = { (hsv[0] + 18f) % 360f, Math.min(1f, hsv[1] * 1.05f), hsv[2] * 0.72f };
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setShader(new android.graphics.LinearGradient(0, 0, size, size, Color.HSVToColor(light), Color.HSVToColor(dark), Shader.TileMode.CLAMP));
+        return p;
     }
 
     /** Hình tròn màu + chữ cái đầu (không có ảnh). */
     static Bitmap initialsCircle(String name, String key, int px) {
         Bitmap out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(out);
-        Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bg.setColor(colorFor(key));
-        cv.drawCircle(px / 2f, px / 2f, px / 2f, bg);
+        cv.drawCircle(px / 2f, px / 2f, px / 2f, gradientPaint(colorFor(key), px));
         drawInitials(cv, initials(name), new RectF(0, 0, px, px));
         return out;
     }
@@ -394,7 +414,7 @@ final class ChatAvatars {
     static Bitmap initialsAdaptive(String name, String key, int px) {
         Bitmap out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(out);
-        cv.drawColor(colorFor(key));
+        cv.drawRect(0, 0, px, px, gradientPaint(colorFor(key), px));
         float inset = px * 18f / 108f;
         drawInitials(cv, initials(name), new RectF(inset, inset, px - inset, px - inset));
         return out;
@@ -403,9 +423,10 @@ final class ChatAvatars {
     private static void drawInitials(Canvas cv, String text, RectF box) {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setColor(Color.WHITE);
-        p.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        p.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        p.setShadowLayer(box.height() * 0.02f, 0, box.height() * 0.01f, 0x33000000);
         p.setTextAlign(Paint.Align.CENTER);
-        p.setTextSize(box.height() * (text.codePointCount(0, text.length()) > 1 ? 0.38f : 0.46f));
+        p.setTextSize(box.height() * (text.codePointCount(0, text.length()) > 1 ? 0.36f : 0.42f));
         Paint.FontMetrics fm = p.getFontMetrics();
         float y = box.centerY() - (fm.ascent + fm.descent) / 2f;
         cv.drawText(text, box.centerX(), y, p);

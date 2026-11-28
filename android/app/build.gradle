@@ -40,8 +40,8 @@ android {
         // kèm video minh hoạ — bản 4 đã tải lên nhưng không phát hành được). Đổ chuông native vẫn giữ (build >= 4).
         // Giữ versionName khớp MARKETING_VERSION bên iOS (ios/App/App.xcodeproj, vẫn 1.1.0 —
         // nâng lên ở bản iOS kế tiếp; các phần trên chỉ có trên Android).
-        versionCode 5
-        versionName "1.3.1"
+        versionCode 6
+        versionName "1.3.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

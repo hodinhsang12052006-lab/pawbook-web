@@ -1007,9 +1007,9 @@ export default function MessagesContent({
   // nhận tin bình thường không vẽ lại khung soạn tin.
   // Đoạn chat đã qua lại vài lượt (mỗi bên ≥ 3 tin) → hàng "Gợi ý" thu thành 1 nút nhỏ, nhường chỗ cho tin nhắn
   // Mình nhắn tiếng Việt → mình đọc được tiếng Việt: không tự dịch tin tiếng Việt của người khác sang tiếng Anh nữa.
-  useEffect(() => {
-    if (chatMessages.some((m) => m.senderId === currentUser?.id && m.type === "TEXT" && detectTextLang(m.content) === "vi")) markViewerReadsVi();
-  }, [chatMessages, currentUser?.id]);
+  // Đánh dấu NGAY lúc vẽ (các dòng tin bên dưới xin dịch trong effect của chúng — chạy trước effect của component cha).
+  const iWriteVi = useMemo(() => chatMessages.some((m) => m.senderId === currentUser?.id && m.type === "TEXT" && detectTextLang(m.content) === "vi"), [chatMessages, currentUser?.id]);
+  if (iWriteVi) markViewerReadsVi(true);
   const established = useMemo(() => {
     let mine = 0, theirs = 0;
     for (const m of chatMessages) {

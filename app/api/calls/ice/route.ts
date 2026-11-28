@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import * as Sentry from "@sentry/nextjs";
 import { authOptions } from "@/lib/authOptions";
 import { buildIceServers } from "@/lib/calls/iceServers";
+import { trimmedEnvNames } from "@/lib/envTrim";
 import { isRateLimited, recordAttempt } from "@/lib/rateLimit";
 
 // GET /api/calls/ice — STUN/TURN list for one call (see lib/calls/iceServers.ts). Signed-in users only; TURN
@@ -45,5 +46,6 @@ export async function GET() {
   const { turnError, ...ice } = await buildIceServers(userId, { report: reportTurnOutage });
   // Lý do TURN hỏng (VD "Cloudflare TURN HTTP 401" = sai token) chỉ cho ADMIN xem — không lộ khoá, giúp chủ sửa đúng biến Vercel.
   const admin = (session?.user as { role?: string } | undefined)?.role === "ADMIN";
-  return NextResponse.json(admin && turnError ? { ...ice, turnError } : ice, { headers: NO_STORE });
+  // Admin: thêm tên các biến môi trường bị dính khoảng trắng lúc khởi động (lib/envTrim) — chỉ tên, không giá trị.
+  return NextResponse.json(admin ? { ...ice, ...(turnError ? { turnError } : {}), envTrimmed: trimmedEnvNames() } : ice, { headers: NO_STORE });
 }

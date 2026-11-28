@@ -192,7 +192,7 @@ export default function CreateJobPage() {
     <div className="flex min-h-screen flex-col text-slate-100">
       <Navbar />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 pb-28 md:pb-8">
-        <Link href="/" className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200">
+        <Link href="/" className="mb-4 inline-flex min-h-[40px] items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200">
           <ArrowLeft className="h-4 w-4" /> {tr("Quay lại Trang chủ", "Back to home")}
         </Link>
 

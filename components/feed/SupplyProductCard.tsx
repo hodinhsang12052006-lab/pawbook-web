@@ -112,7 +112,7 @@ export default function SupplyProductCard({ product, compact = false }: { produc
 
         <Link
           href={`/profile/${product.seller.id}`}
-          className="flex items-center gap-2 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+          className="flex min-h-[32px] min-w-0 items-center gap-2 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
         >
           <Store className="h-3.5 w-3.5" />
           {product.seller.name}

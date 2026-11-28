@@ -397,7 +397,7 @@ export default function ProfilePage() {
         {/* Công cụ hằng ngày — gọn 2 cột thay vì 2 banner to chiếm chỗ. */}
         <div className={`grid gap-3 ${isTechnician ? "sm:grid-cols-2" : ""}`}>
           {isTechnician && (
-            <Link href="/tools/income-tracker" className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-white/[0.16]">
+            <Link href="/tools/income-tracker" className="glass-card group flex min-w-0 items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-white/[0.16]">
               <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
                 <Wallet className="h-5 w-5 text-slate-200" />
               </span>
@@ -408,7 +408,7 @@ export default function ProfilePage() {
               <ArrowRight className="h-4 w-4 flex-shrink-0 text-slate-600 transition-colors group-hover:text-slate-300" />
             </Link>
           )}
-          <Link href="/tools/radar" className="glass-card group flex items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-white/[0.16]">
+          <Link href="/tools/radar" className="glass-card group flex min-w-0 items-center gap-3 rounded-2xl p-3.5 transition-colors hover:border-white/[0.16]">
             <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.06] ring-1 ring-white/[0.08]">
               <Radar className="h-5 w-5 text-slate-200" />
             </span>

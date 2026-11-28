@@ -135,7 +135,7 @@ export function ChallengeBoard({ studio }: { studio: Studio }) {
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3 px-1">
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="flex items-center gap-2 text-base font-black tracking-tight text-white">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-pink-500/15 text-pink-300"><Trophy className="h-4 w-4" /></span>
             {tr("Thử thách #", "Challenge #")}{c.hashtag}

@@ -25,7 +25,7 @@ export function SalonCard({ s, market }: { s: SalonItem; market: "US" | "AU" }) 
   useTr();
   const where = [s.city, stateName(market, s.state)].filter(Boolean).join(", ");
   return (
-    <article className="overflow-hidden rounded-3xl bg-white/[0.04] ring-1 ring-white/10 transition hover:ring-pink-400/40">
+    <article className="min-w-0 overflow-hidden rounded-3xl bg-white/[0.04] ring-1 ring-white/10 transition hover:ring-pink-400/40">
       <Link href={`/menu/${s.id}`} className="block">
         {s.photos.length > 0 ? (
           <div className="grid grid-cols-3 gap-0.5 bg-black/30">

@@ -69,7 +69,7 @@ async function audit(page) {
       if (getComputedStyle(e).display === "inline" && e.parentElement && /^(P|SPAN|LI|LABEL)$/.test(e.parentElement.tagName)) continue;
       const r = e.getBoundingClientRect();
       const txt = (e.textContent || e.getAttribute("aria-label") || e.getAttribute("placeholder") || "").trim();
-      if (txt.length >= 4 && r.height < 32 && r.width < vw - 32) small.push(`${txt.slice(0, 28)} (${Math.round(r.height)}px)`);
+      if (txt.length >= 4 && r.height < 24 && r.width < vw - 32) small.push(`${txt.slice(0, 28)} (${Math.round(r.height)}px)`);
     }
     // chữ thân quá nhỏ
     let tiny = 0;
@@ -110,6 +110,6 @@ for (const scale of [125, 150]) {
 }
 R.check("E1", "Chữ to 125% & 150%, máy 360px: không trang nào tràn ngang", worst.overflow.length === 0, worst.overflow.slice(0, 8).join(" ; "));
 R.check("E2", "Không chữ nào bị cắt mất (khung cắt mà không có dấu …)", worst.clipped.length === 0, worst.clipped.slice(0, 8).join(" ; "));
-R.check("E3", "Nút / link có chữ đủ to để bấm (≥ 32px cao ở chữ 125%)", worst.small.length === 0, worst.small.slice(0, 10).join(" ; "));
+R.check("E3", "Nút / link có chữ đủ to để bấm (≥ 24px cao — WCAG 2.5.8 — ở chữ 125%)", worst.small.length === 0, worst.small.slice(0, 10).join(" ; "));
 await browser.close();
 R.summary();

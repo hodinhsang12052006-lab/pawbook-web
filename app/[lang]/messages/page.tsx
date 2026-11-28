@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getConversationMeta } from "@/lib/conversationReads";
+import { inIdOrder, recentConversationIds } from "@/lib/conversationOrder";
 import { isBubbleRequest } from "@/lib/bubbleMode";
 import { localePath } from "@/lib/i18n/config";
 import { langFrom } from "@/lib/i18n/server";
@@ -76,17 +77,9 @@ export default async function MessagesPage({ params, searchParams }: { params: P
       participants: { select: { id: true, name: true, avatarUrl: true, role: true } },
       messages: { orderBy: { createdAt: "desc" as const }, take: 1 },
     };
-    const conversationsData = await prisma.conversation.findMany({
-      where: {
-        participants: {
-          some: { id: userId },
-        },
-      },
-      include,
-      orderBy: { createdAt: "desc" },
-      // Trước đây không giới hạn — người dùng nhiều hội thoại phải tải hết.
-      take: 50,
-    });
+    // 50 cuộc HOẠT ĐỘNG gần nhất (tin mới nhất), không phải 50 cuộc mới tạo nhất (lib/conversationOrder).
+    const ids = await recentConversationIds(userId, 50);
+    const conversationsData = inIdOrder(await prisma.conversation.findMany({ where: { id: { in: ids }, participants: { some: { id: userId } } }, include }), ids);
     if (wantConvId && !conversationsData.some((c) => c.id === wantConvId)) {
       const wanted = await prisma.conversation.findFirst({ where: { id: wantConvId, participants: { some: { id: userId } } }, include });
       if (wanted) conversationsData.unshift(wanted);

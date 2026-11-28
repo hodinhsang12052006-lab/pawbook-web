@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { getPusherServer } from "@/lib/pusherServer";
 import { chatChannelName } from "@/lib/pusherChannel";
 import { getReadMarks, getConversationMeta } from "@/lib/conversationReads";
+import { inIdOrder, recentConversationIds } from "@/lib/conversationOrder";
 import { sendPush, type PushPayload } from "@/lib/push";
 import { chatPushAvatar, chatPushLegacyTitle, chatPushTitle, chatPushUrl, cleanDisplayName, isUnnamedGroup } from "@/lib/chatPush";
 import { coldDmBlocked } from "@/lib/abuseGuard";
@@ -165,13 +166,15 @@ export async function GET(req: Request) {
 
     // Default list fetch (backward-compatible dashboard payload with conversation previews)
     // Fetch conversations involving the user
-    const conversations = await prisma.conversation.findMany({
+    // 50 cuộc HOẠT ĐỘNG gần nhất (tin mới nhất) — trước đây 20 cuộc mới TẠO nhất: tin mới trong cuộc cũ không hiện.
+    const recentIds = await recentConversationIds(userId, 50);
+    const conversationsRaw = await prisma.conversation.findMany({
       where: {
+        id: { in: recentIds },
         participants: {
           some: { id: userId },
         },
       },
-      take: 20,
       include: {
         participants: {
           select: {
@@ -198,10 +201,8 @@ export async function GET(req: Request) {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
     });
+    const conversations = inIdOrder(conversationsRaw, recentIds);
 
     // Chưa đọc / đã xem / hoạt động gần nhất — dữ liệu thật (lib/conversationReads).
     const meta = await getConversationMeta(userId, conversations);

@@ -42,6 +42,8 @@ export async function GET() {
   }
   recordAttempt(hourKey, HOUR);
   recordAttempt(minuteKey, MINUTE);
-  const ice = await buildIceServers(userId, { report: reportTurnOutage });
-  return NextResponse.json(ice, { headers: NO_STORE });
+  const { turnError, ...ice } = await buildIceServers(userId, { report: reportTurnOutage });
+  // Lý do TURN hỏng (VD "Cloudflare TURN HTTP 401" = sai token) chỉ cho ADMIN xem — không lộ khoá, giúp chủ sửa đúng biến Vercel.
+  const admin = (session?.user as { role?: string } | undefined)?.role === "ADMIN";
+  return NextResponse.json(admin && turnError ? { ...ice, turnError } : ice, { headers: NO_STORE });
 }

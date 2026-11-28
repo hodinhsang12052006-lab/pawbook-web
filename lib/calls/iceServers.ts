@@ -30,6 +30,9 @@ export interface IceResult {
   hasTurn: boolean;
   /** a TURN source is configured on the server (hasTurn=false then means it could not be reached) */
   turnConfigured: boolean;
+  /** why Cloudflare TURN failed on this instance (e.g. "Error Cloudflare TURN HTTP 401") — no secrets; the route
+   *  only shows it to ADMIN accounts so the owner can fix the Vercel keys */
+  turnError?: string | null;
 }
 
 type Env = Record<string, string | undefined>;
@@ -117,11 +120,13 @@ export function parseCloudflareIce(body: unknown): IceServer[] {
 
 let cfCache: { at: number; servers: IceServer[] } | null = null;
 let lastErrorLogAt = 0;
+let lastCfError: string | null = null;
 
 /** Test helper: forget the per-instance Cloudflare cache. */
 export function resetIceCache() {
   cfCache = null;
   lastErrorLogAt = 0;
+  lastCfError = null;
 }
 
 async function cloudflareOnce(url: string, token: string, f: typeof fetch): Promise<IceServer[]> {
@@ -150,8 +155,9 @@ async function cloudflareServers(
   env: Env,
   deps: Required<Pick<IceDeps, "fetch" | "now" | "log">> & Pick<IceDeps, "report" | "retryDelayMs">
 ): Promise<{ servers: IceServer[]; ttlSec: number } | null> {
-  const keyId = env.CLOUDFLARE_TURN_KEY_ID;
-  const token = env.CLOUDFLARE_TURN_API_TOKEN;
+  // trim: a key pasted into Vercel with a trailing space / newline made every request fail (calls STUN-only)
+  const keyId = env.CLOUDFLARE_TURN_KEY_ID?.trim();
+  const token = env.CLOUDFLARE_TURN_API_TOKEN?.trim();
   if (!keyId || !token) return null;
   const now = deps.now();
   if (cfCache && now - cfCache.at < CF_CACHE_MS) {
@@ -164,6 +170,7 @@ async function cloudflareServers(
       if (attempt) await new Promise((r) => setTimeout(r, deps.retryDelayMs ?? CF_RETRY_DELAY_MS));
       const servers = await cloudflareOnce(url, token, deps.fetch);
       cfCache = { at: now, servers };
+      lastCfError = null;
       if (attempt) deps.log(`Cloudflare TURN answered on retry (first attempt: ${describe(firstErr)})`);
       return { servers, ttlSec: CF_TTL_SEC };
     } catch (err) {
@@ -171,6 +178,7 @@ async function cloudflareServers(
         firstErr = err;
         continue;
       }
+      lastCfError = describe(err);
       if (now - lastErrorLogAt > CF_CACHE_MS) {
         lastErrorLogAt = now;
         // Never log the token or the response body (it carries credentials).
@@ -223,5 +231,5 @@ export async function buildIceServers(userId: string, deps: IceDeps = {}): Promi
   // No TURN in the list (not configured, or configured but unavailable): the browser asks again on the next call.
   // (with TURN, ttlSec is the TURN credentials' lifetime; without, it is still Infinity here)
   if (!hasTurn) ttlSec = Math.min(ttlSec, TURNLESS_TTL_SEC);
-  return { iceServers, ttlSec, hasTurn, turnConfigured };
+  return { iceServers, ttlSec, hasTurn, turnConfigured, turnError: hasTurn ? null : lastCfError };
 }

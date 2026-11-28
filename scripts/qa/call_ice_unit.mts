@@ -107,6 +107,17 @@ try {
     ok("I12", "Hết 10 phút → lấy thông tin đăng nhập mới", hits.length === 2 && r3.iceServers.some((s) => s.username === "cf-user-2"), hits.length);
   }
 
+  // 4b. Khoá dán vào Vercel dính dấu cách / xuống dòng → vẫn gọi đúng URL + Bearer (trước đây mọi cuộc gọi chỉ còn STUN).
+  {
+    resetIceCache();
+    mode = "array";
+    hits.length = 0;
+    const r = await buildIceServers("u1", { env: { ...CF_ENV, CLOUDFLARE_TURN_KEY_ID: ` ${KEY}
+`, CLOUDFLARE_TURN_API_TOKEN: `${TOKEN} 
+`, CALL_STUN_URLS: "" } });
+    ok("I12b", "Khoá / token có khoảng trắng thừa → cắt bỏ, vẫn nhận TURN", r.hasTurn && hits[0]?.url === `/turn/keys/${KEY}/credentials/generate-ice-servers` && hits[0]?.auth === `Bearer ${TOKEN}` && !r.turnError, hits[0]);
+  }
+
   // 5. Cloudflare dạng object (endpoint cũ /credentials/generate).
   {
     resetIceCache();
@@ -128,6 +139,7 @@ try {
     const r2 = await buildIceServers("u1", { env: CF_ENV, log: (m) => logs.push(m), report, retryDelayMs: 50 });
     ok("I15", "Cloudflare 5xx → thử lại 1 lần rồi mới trả STUN Google (hasTurn=false, turnConfigured=true, ttl 60 s để trình duyệt hỏi lại sớm)",
       !r.hasTurn && r.turnConfigured && r.ttlSec === 60 && JSON.stringify(allUrls(r)) === JSON.stringify(DEFAULT_STUN) && !r2.hasTurn && hits.length === 4, { r, hits: hits.length });
+    ok("I16b", "Lỗi Cloudflare có lý do ngắn (turnError — route chỉ cho ADMIN xem), không chứa token", /HTTP 500/.test(String(r.turnError)) && !String(r.turnError).includes(TOKEN), r.turnError);
     ok("I16", "Lỗi chỉ log + báo Sentry 1 lần / 10 phút, không chứa token", logs.length === 1 && reports.length === 1 && !JSON.stringify([logs, reports]).includes(TOKEN) && /STUN-only/.test(reports[0].msg), { logs, reports });
   }
 

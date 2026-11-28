@@ -11,7 +11,10 @@ import { DIGEST_PREFIX } from "@/lib/jobDigestPost";
 import { savePostEn } from "@/lib/postEn";
 
 export const KNOWLEDGE_PER_DAY = 2;
-const SHAPE_COOLDOWN_MS = 60 * 86_400_000;
+// Chủ đề đã đăng được đăng LẠI sau 21 ngày (11/2026: kho ~37 bài, 2 bài/ngày → trước đây cạn sau ~2 tuần rồi bảng tin
+// đứng hẳn — "hết bài mới trong kho nội dung"). Người mới vào chưa từng đọc; 21 ngày đủ xa để người cũ không thấy lặp.
+export const RECYCLE_DAYS = 21;
+const SHAPE_COOLDOWN_MS = RECYCLE_DAYS * 86_400_000;
 /** Dòng đầu bỏ mọi chữ số — "còn 12 ngày" và "còn 11 ngày" là cùng 1 bài. */
 export const titleShape = (content: string) => firstLine(content).replace(/\d+/g, "#");
 
@@ -31,8 +34,9 @@ export async function publishDailyOfficialPost(now = new Date()): Promise<{ post
   if (knowledgeToday >= KNOWLEDGE_PER_DAY) return { posted: false, reason: "hôm nay đã có bài" };
   if (recent) return { posted: false, reason: "vừa đăng, chờ lượt sau" };
 
-  const mine = await prisma.post.findMany({ where: { authorId: officialId }, select: { content: true, createdAt: true }, take: 1000 });
-  const published = new Set(mine.map((p) => firstLine(p.content)));
+  const mine = await prisma.post.findMany({ where: { authorId: officialId }, select: { content: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1000 });
+  const recycleFrom = now.getTime() - RECYCLE_DAYS * 86_400_000;
+  const published = new Set(mine.filter((p) => p.createdAt.getTime() > recycleFrom).map((p) => firstLine(p.content)));
   // Tiêu đề có số thay đổi theo ngày (VD "⏰ … hạn đóng thuế quý … (còn 12 ngày)") → so dòng đầu đã bỏ số: cùng chủ đề
   // đăng trong 60 ngày qua thì không đăng lại (trước đây mỗi ngày 1 bài gần y hệt suốt 3 tuần trước hạn thuế).
   const lastByShape = new Map<string, number>();

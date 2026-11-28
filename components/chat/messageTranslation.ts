@@ -73,8 +73,13 @@ export function getTranslation(id: string, lang: Locale): Entry | undefined {
 /** Tin này nên dịch tự động cho người xem không (tiếng Việt → người xem tiếng Anh). */
 let readsVi: boolean | null = null;
 /** Người xem đọc được tiếng Việt: trình duyệt / điện thoại có tiếng Việt trong danh sách ngôn ngữ, hoặc đã nhắn tiếng Việt. */
+const READS_VI_KEY = "pn_reads_vi";
 export const viewerReadsVi = () => {
-  if (readsVi === null) readsVi = typeof navigator !== "undefined" && (navigator.languages || [navigator.language]).some((l) => /^vi(-|_|$)/i.test(l || ""));
+  if (readsVi === null) {
+    let remembered = false;
+    try { remembered = typeof localStorage !== "undefined" && localStorage.getItem(READS_VI_KEY) === "1"; } catch {}
+    readsVi = remembered || (typeof navigator !== "undefined" && (navigator.languages || [navigator.language]).some((l) => /^vi(-|_|$)/i.test(l || "")));
+  }
   return readsVi;
 };
 /** Gọi khi thấy người xem tự nhắn tiếng Việt → từ đó không tự dịch tin tiếng Việt cho họ nữa.
@@ -82,6 +87,7 @@ export const viewerReadsVi = () => {
 export const markViewerReadsVi = (silent = false) => {
   if (viewerReadsVi()) return;
   readsVi = true;
+  try { localStorage.setItem(READS_VI_KEY, "1"); } catch {} // nhớ cho các lần mở sau
   if (!silent) emit();
 };
 export const autoTranslates = (text: string | null | undefined, viewer: Locale) => viewer === "en" && !viewerReadsVi() && detectTextLang(text) === "vi";

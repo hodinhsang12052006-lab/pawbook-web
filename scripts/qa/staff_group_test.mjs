@@ -35,8 +35,15 @@ try {
   const la = await a.login(creds[0].email, creds[0].pw);
   const lb = await b.login(creds[1].email, creds[1].pw);
   await outsider.login(SEED_TECH);
-  const list = await a.req("/api/messages");
-  const g = (list.data.conversations || []).find((c) => c.isGroup && c.name === "Họp Nội Bộ BitPaw");
+  const bossLogin = await boss.client.login(boss.body.email, boss.body.password);
+  // Máy chủ nhớ cài đặt 30 s (lib/settings) → ảnh nhóm vừa đặt có thể hiện sau tối đa 30 s
+  let g = null;
+  for (let i = 0; i < 9; i++) {
+    const list = await a.req("/api/messages");
+    g = (list.data.conversations || []).find((c) => c.isGroup && c.name === "Họp Nội Bộ BitPaw") || null;
+    if (g?.groupAvatarUrl) break;
+    await new Promise((r) => setTimeout(r, 5000));
+  }
   R.check("T2", "Bitpaw 1 đăng nhập được, thấy nhóm 'Họp Nội Bộ BitPaw' gồm đúng 10 Bitpaw + tài khoản chủ + nhân viên mới (12), ảnh nhóm = logo B",
     la.ok && lb.ok && !!g && g.participants.length === 12 && g.participants.filter((p) => /^Bitpaw \d+$/.test(p.name)).length === 10 && g.participants.some((p) => p.id === boss.client.userId) && g.groupAvatarUrl === "/logo_b.jpg",
     JSON.stringify({ ok: [la.ok, lb.ok], g: g && { n: g.participants.length, av: g.groupAvatarUrl } }));
@@ -55,14 +62,13 @@ try {
   const feed = await outsider.req("/api/posts?limit=50");
   R.check("T5", "Tài khoản nhân viên không hiện ở danh sách công khai (thợ / bảng tin)", !JSON.stringify(techs.data).includes("Bitpaw ") && !JSON.stringify(feed.data).includes("Bitpaw "), "");
 
-  const bossLogin = await boss.client.login(boss.body.email, boss.body.password);
   const bossSees = (await boss.client.req("/api/messages")).data.conversations?.some((c) => c.id === g?.id);
   const ns = new Client();
   const nsLogin = newPw ? await ns.login(newStaff, newPw) : { ok: false };
   const nsSees = nsLogin.ok && (await ns.req("/api/messages")).data.conversations?.some((c) => c.id === g?.id);
   R.check("T2b", "Tài khoản chủ (có sẵn, giữ mật khẩu của mình) vào nhóm; email nhân viên mới được tạo tài khoản + mật khẩu trong file, đăng nhập thấy nhóm",
     bossLogin.ok && bossSees && !!newPw && nsSees, JSON.stringify({ bossSees, newPw: !!newPw, nsSees }));
-  const fake = await outsider.req("/api/conversations", { method: "POST", json: { isGroup: true, name: "Họp Nội Bộ BitPaw", participantIds: [a.client.userId] } });
+  const fake = await outsider.req("/api/conversations", { method: "POST", json: { isGroup: true, name: "Họp Nội Bộ BitPaw", participantIds: [a.userId] } });
   R.check("T2c", "Người thường không tạo được nhóm giả tên 'Họp Nội Bộ BitPaw' (tên giữ chỗ)", fake.status === 400, fake.status);
 
   const out2 = run("--remove", newStaff);

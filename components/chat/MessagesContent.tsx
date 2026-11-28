@@ -47,7 +47,7 @@ import { useMounted } from "@/lib/useMounted";
 import { clearConversation, nativeHandlesChatAlerts, setActiveConversation } from "@/lib/nativePush";
 import ChatNotifyBanner from "./ChatNotifyBanner";
 import { detectTextLang } from "@/lib/i18n/detectLang";
-import { autoTranslates, getTranslation, markViewerReadsVi, requestTranslation, useMessageTranslation, useTranslationVersion } from "./messageTranslation";
+import { autoTranslates, getTranslation, markViewerReadsVi, useMessageTranslation, useTranslationVersion } from "./messageTranslation";
 // Messenger V2: CSS riêng (mọi quy tắc nằm dưới .pn-msgr). Import ở đây, không ở app/messages/layout.tsx — nhánh
 // đổi route sang app/[lang]/ xoá layout đó; CSS đi cùng component nên không thể bị rơi khi gộp nhánh.
 import "./messenger.css";
@@ -992,11 +992,9 @@ export default function MessagesContent({
   const viewerLang = locale === "vi" ? "vi" : "en";
   useMessageTranslation("", "", viewerLang, { enabled: false, auto: false }); // đăng ký render lại khi có bản dịch
   const txVersion = useTranslationVersion();
-  useEffect(() => {
-    conversationRows.slice(0, 12).forEach(({ lastMsg }) => {
-      if (lastMsg && lastMsg.type === "TEXT" && lastMsg.senderId !== currentUser?.id && autoTranslates(lastMsg.body, viewerLang)) requestTranslation(lastMsg.id, viewerLang);
-    });
-  }, [conversationRows, viewerLang, currentUser?.id]);
+  // Dòng xem trước ở danh sách KHÔNG tự xin dịch nữa: danh sách tải trước khi biết người xem có viết tiếng Việt không
+  // (chủ tiệm Việt để giao diện tiếng Anh từng thấy tin tiếng Việt của bạn bị dịch ngay ở danh sách). Bản dịch đã có
+  // (đã mở cuộc trò chuyện) vẫn hiện ở dòng xem trước — chỉ với người không đọc được tiếng Việt.
   const hasOfficialConv = !!official && conversations.some((c) => !c.isGroup && c.participants.some((p) => p.id === official.id));
   const showOfficialStub = !!official && official.id !== currentUser?.id && !hasOfficialConv && !listQuery.trim();
   const openOfficialChat = () =>
@@ -1387,7 +1385,7 @@ export default function MessagesContent({
       const fromMe = lastMsg?.senderId === currentUser?.id;
       const unread = isActive ? 0 : conv.unreadCount || 0;
       const isTyping = typingByConv[conv.id] !== undefined;
-      const txPreview = lastMsg && lastMsg.type === "TEXT" && !fromMe ? getTranslation(lastMsg.id, viewerLang) : undefined;
+      const txPreview = lastMsg && lastMsg.type === "TEXT" && !fromMe && autoTranslates(lastMsg.body, viewerLang) ? getTranslation(lastMsg.id, viewerLang) : undefined;
       const preview = lastMsg
         ? `${fromMe ? tr("Bạn: ", "You: ") : ""}${mediaPreview(lastMsg.type, lastMsg.body) ?? (lastMsg.type === "CALL" ? `📞 ${describeCall(lastMsg.body).text}` : txPreview?.status === "done" && txPreview.text ? txPreview.text : txPreview?.status === "loading" ? tr("Đang dịch…", "Translating…") : lastMsg.body)}`
         : isGroup

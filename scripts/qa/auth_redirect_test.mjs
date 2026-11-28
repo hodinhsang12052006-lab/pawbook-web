@@ -61,6 +61,9 @@ async function visit(ctx, path, settle = 2500) {
   const p = await ctx.newPage();
   p.on("pageerror", (e) => errors.push(`${path}: ${e.message.slice(0, 120)}`));
   await p.goto(BASE_URL + path, { waitUntil: "load", timeout: 60000 }).catch(() => {});
+  // Trang đầu của 1 phiên (JS chưa cache, máy bận) có thể cần > settle mới hydrate + hỏi phiên: chờ tới khi trang
+  // tự chuyển đi hoặc mở cổng form (html[data-authok]), tối đa 10 giây — rồi mới đếm settle.
+  await p.waitForFunction(() => !/\/auth(?:[/?#]|$)/.test(location.pathname) || document.documentElement.hasAttribute("data-authok"), null, { timeout: 10000 }).catch(() => {});
   await p.waitForTimeout(settle);
   const u = new URL(p.url());
   const seen = u.origin === ORIGIN ? await p.evaluate(() => sessionStorage.getItem("__qaFormSeen")).catch(() => null) : null;

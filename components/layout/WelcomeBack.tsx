@@ -24,6 +24,10 @@ interface Digest {
 // chuyện mới đang chờ mình" là lý do mạnh nhất để mở app thường xuyên.
 const KEY = "pn_last_visit";
 const MIN_GAP_MS = 4 * 60 * 60 * 1000;
+// One digest request per visit, shared across remounts: the "last visit" mark is only moved AFTER the digest arrived,
+// and a remount within a minute (session refetch, tab re-render) reuses it, so the card is never lost to a remount.
+const pending = new Map<string, { at: number; p: Promise<Digest | null> }>();
+const REUSE_MS = 60_000;
 
 export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs" | "portfolio") => void }) {
   useTr(); // render lại khi đổi VI/EN
@@ -39,21 +43,42 @@ export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs
       last = Number(localStorage.getItem(key) || 0);
     } catch {}
     const now = Date.now();
-    if (!last) {
-      try {
-        localStorage.setItem(key, String(now));
-      } catch {}
-      return;
+    let req = pending.get(user.id);
+    if (req && now - req.at > REUSE_MS) {
+      pending.delete(user.id);
+      req = undefined;
     }
-    if (now - last < MIN_GAP_MS) return;
-    try {
-      localStorage.setItem(key, String(now));
-    } catch {}
-    fetch(`/api/home/digest?since=${encodeURIComponent(new Date(last).toISOString())}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: Digest | null) => d && setDigest(d))
-      .catch(() => {});
+    if (!req) {
+      if (!last) {
+        try {
+          localStorage.setItem(key, String(now));
+        } catch {}
+        return;
+      }
+      if (now - last < MIN_GAP_MS) return;
+      const p = fetch(`/api/home/digest?since=${encodeURIComponent(new Date(last).toISOString())}`)
+        .then((r) => (r.ok ? (r.json() as Promise<Digest>) : null))
+        .catch(() => null);
+      p.then((d) => {
+        if (!d) return;
+        try {
+          localStorage.setItem(key, String(Date.now()));
+        } catch {}
+      });
+      req = { at: now, p };
+      pending.set(user.id, req);
+    }
+    let live = true;
+    req.p.then((d) => live && d && setDigest(d));
+    return () => {
+      live = false;
+    };
   }, [user?.id]);
+
+  const close = () => {
+    if (user?.id) pending.delete(user.id);
+    setClosed(true);
+  };
 
   if (!digest || closed) return null;
   const area = digest.state ? stateName(digest.market ?? "US", digest.state) || digest.state : digest.market === "AU" ? tr("Úc", "Australia") : tr("Mỹ", "the US");
@@ -67,7 +92,7 @@ export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs
 
   return (
     <section aria-label={tr("Có gì mới từ lần trước", "What's new since last time")} className="relative animate-fadeIn rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-900/50 p-4">
-      <button onClick={() => setClosed(true)} aria-label={tr("Đóng", "Close")} className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
+      <button onClick={close} aria-label={tr("Đóng", "Close")} className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-slate-500 hover:bg-white/10 hover:text-slate-200">
         <X className="h-4 w-4" />
       </button>
       <p className="text-sm font-black text-white">{tr("Có gì mới từ lần trước bạn ghé", "What's new since your last visit")}</p>
@@ -77,7 +102,7 @@ export default function WelcomeBack({ onGoTab }: { onGoTab: (tab: "feed" | "jobs
           <button
             key={it.text}
             onClick={() => {
-              setClosed(true);
+              close();
               onGoTab(it.tab);
             }}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ring-1 transition-transform active:scale-95 ${it.tone}`}

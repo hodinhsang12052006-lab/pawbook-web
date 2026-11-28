@@ -29,8 +29,9 @@ export default function Navbar() {
   // must not pull the "/" route bundle in the background.
   const registerLabel = (
     <>
-      <span className="min-[400px]:hidden">{t("menu.registerShort")}</span>
-      <span className="max-[399px]:hidden">{t("menu.register")}</span>
+      {/* Nhãn ngắn tới 440px: Pixel 7 / Galaxy (412px) với nhãn dài "Tạo tài khoản" làm chữ PawNail bị cắt còn "P.." */}
+      <span className="min-[440px]:hidden">{t("menu.registerShort")}</span>
+      <span className="max-[439px]:hidden">{t("menu.register")}</span>
     </>
   );
 

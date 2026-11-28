@@ -38,7 +38,8 @@ ok("SS5", "moneyValue / formatMoney", moneyValue("1.2", "M") === 1200000 && mone
 // Bot gửi bài sang tiệm → không còn bị bỏ: chuẩn bị thành tin Sang tiệm (đủ bang / SĐT / số liệu), tin tuyển vẫn là tin tuyển.
 const prep = prepareIngest({ text: indiana, sourceUrl: "https://www.facebook.com/groups/1/posts/99", postedAt: new Date().toISOString() }, new Set());
 ok("SS6", "Bot gửi bài sang tiệm → 'sale' (IN từ mã vùng 317, SĐT, giá $120k, tiêu đề 'Sang tiệm nail'), không phải tin tuyển",
-  prep.status === "sale" && prep.sale.state === "IN" && prep.sale.market === "US" && prep.sale.phone === "(317) 555-0150" && prep.sale.askingPrice === 120000 && /Sang tiệm/.test(prep.sale.title) && prep.sale.source === "ingest",
+  prep.status === "sale" && prep.sale.state === "IN" && prep.sale.market === "US" && prep.sale.phone === "(317) 555-0150" && prep.sale.askingPrice === 120000 && /Sang tiệm/.test(prep.sale.title) && prep.sale.source === "ingest" &&
+    !/Mua Bán Tiệm Nail Tại Mỹ/.test(prep.sale.description) && /^SANG TIỆM NAIL/.test(prep.sale.description),
   prep.status === "sale" ? { ...prep.sale, description: "…" } : prep);
 const hire = prepareIngest({ text: "Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ\nTiệm ở Indianapolis cần gấp 2 thợ bột, bao lương $1,000/tuần. Gọi 317-555-0153" }, new Set());
 ok("SS7", "Bài tuyển cùng nhóm vẫn là tin tuyển", hire.status === "ok", hire.status);

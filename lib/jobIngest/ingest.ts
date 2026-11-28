@@ -18,7 +18,7 @@ import prisma from "@/lib/prisma";
 import { OAUTH_PASSWORD_PREFIX } from "@/lib/oauthUsers";
 import { getSetting, setSetting } from "@/lib/settings";
 import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
-import { cleanCity, cleanSalonName, findPhone, foreignMarketSignal, hasAuContext, isAdPost, isForeignCountry, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
+import { cleanCity, cleanSalonName, findPhone, stripGroupNameLine, foreignMarketSignal, hasAuContext, isAdPost, isForeignCountry, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
 import { parseMarketPhone } from "@/lib/phoneFormat";
 import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
 import { parseSaleDetails } from "@/lib/salonSale/parse";
@@ -221,7 +221,7 @@ export function prepareIngest(input: IngestInput, blocked: Set<string>, opts: In
         title: `Sang tiệm nail${p.isUrgent ? " gấp" : ""}`,
         // Tên tiệm chỉ khi bài ghi rõ (không lấy tên người đăng / "Tiệm nail ở …")
         salonName: p.salonName ? clean(p.salonName, 60) : "",
-        description: text,
+        description: stripGroupNameLine(text) || text,
         market, state, city,
         address: clean(input.address, 160) || p.address,
         zip: clean(input.zip, 10) || p.zip,

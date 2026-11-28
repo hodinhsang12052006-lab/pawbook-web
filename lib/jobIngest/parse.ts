@@ -353,6 +353,8 @@ const HIRE_EXPLICIT = /(c[ầa]n (g[ấa]p )?(\d+ )?th[ợo]|tuy[ểe]n (g[ấa]
 // Dòng tên nhóm Facebook mà bot dán đầu bài ("Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ"): chữ "Cần Thợ" trong tên nhóm
 // không phải lời tuyển — bỏ dòng đó trước khi xét, nếu không bài SANG TIỆM bị coi là bài tuyển (lỗi thật 28/11/2026).
 const GROUP_NAME_LINE = /^[^\n]*mua\s*b[áa]n\s*ti[ệe]m[^\n]*$/gim;
+/** Bỏ dòng tên nhóm Facebook ("Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ") khỏi nội dung bài — chữ thừa khi hiển thị. */
+export const stripGroupNameLine = (text: string) => text.replace(GROUP_NAME_LINE, "").trim();
 /** Bài sang / bán tiệm (có thể kèm "cần gấp") — không đưa vào mục Việc làm. */
 export const isSalonSale = (text: string) => {
   const t = text.replace(GROUP_NAME_LINE, " ");

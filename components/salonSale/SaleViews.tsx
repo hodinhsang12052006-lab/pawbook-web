@@ -71,9 +71,9 @@ export function SaleCard({ s }: { s: PublicSale }) {
             ))}
           </span>
         )}
-        <span className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-xs text-slate-500">
+        <span className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs text-slate-500">
           <span>{timeAgo(s.createdAt)}</span>
-          {s.fromGroup && <><span aria-hidden>·</span><span className="inline-flex items-center gap-1"><Users2 className="h-3.5 w-3.5" /> {tr("Từ nhóm cộng đồng PawNail", "From PawNail community groups")}</span></>}
+          {s.fromGroup && <span className="inline-flex items-center gap-1"><Users2 className="h-3.5 w-3.5" /> {tr("Từ nhóm cộng đồng PawNail", "From PawNail community groups")}</span>}
         </span>
       </span>
     </Link>

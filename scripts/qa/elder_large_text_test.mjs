@@ -81,11 +81,14 @@ async function audit(page) {
   });
 }
 
+// Mục Sang tiệm: danh sách + 1 trang tin có thật (nếu DB QA có tin) + form đăng
+const firstSale = await fetch(BASE_URL + "/api/salon-sales?market=US").then((r) => r.json()).then((d) => d.sales?.[0]?.id).catch(() => null);
+const salePages = ["/salons-for-sale", ...(firstSale ? [`/salons-for-sale/${firstSale}`] : [])];
 const PAGES = {
-  owner: ["/", "/?tab=jobs", "/jobs/create", "/messages", "/profile", "/designs", "/bookings", "/supply", "/salons"],
-  tech: ["/", "/?tab=jobs", "/messages", "/profile", "/designs", "/trends", "/tryon"],
+  owner: ["/", "/?tab=jobs", "/jobs/create", "/messages", "/profile", "/designs", "/bookings", "/supply", "/salons", ...salePages, "/salons-for-sale/new"],
+  tech: ["/", "/?tab=jobs", "/messages", "/profile", "/designs", "/trends", "/tryon", "/salons-for-sale"],
   client: ["/", "/designs", "/salons", "/tryon", "/consult", "/messages", "/profile"],
-  guest: ["/", "/auth/register?role=owner", "/auth/register?role=technician", "/auth/login", "/designs", "/android-beta", "/support"],
+  guest: ["/", "/auth/register?role=owner", "/auth/register?role=technician", "/auth/login", "/designs", "/android-beta", "/support", ...salePages],
 };
 const WHO = { owner: SEED_OWNER, tech: SEED_TECH, client: SEED_CLIENT, guest: null };
 

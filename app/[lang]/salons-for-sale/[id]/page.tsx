@@ -137,7 +137,7 @@ export default function SalonSalePage() {
                   <h1 className="text-xl font-black leading-snug text-white sm:text-2xl">{saleTitle(s)}</h1>
                   {s.salonName && <p className="truncate font-semibold text-slate-400">{s.salonName}</p>}
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <p className="text-xs font-semibold text-slate-400">{tr("Giá sang", "Asking price")}</p>
                   <SalePrice s={s} className="text-2xl text-pink-200" />
                 </div>

@@ -18,6 +18,27 @@ export const GALLERY_PREFIX = "✨ 4 mẫu nail";
 // mỗi bài 1 góc khác nhau để bảng tin không lặp: theo mùa → dễ làm cho thợ mới → quanh năm dễ bán.
 export const GALLERY_PER_DAY = 3;
 const GALLERY_GAP_MS = 4 * 3600_000;
+/** Hết mẫu chưa giới thiệu → chỉ tránh N mẫu giới thiệu gần nhất (~10 ngày × 3 bài × 4 ảnh). */
+const RECENT_AVOID = 120;
+/** …và không bao giờ lặp mẫu của ngày gần nhất (3 bài × 4 ảnh). */
+const NEVER_REPEAT = GALLERY_PER_DAY * 4;
+
+/** n mẫu Flow đã đăng, có ảnh https, không thuộc `avoid` / `skip`, dịp hợp lệ (chung Mỹ + Úc hoặc quanh năm). */
+async function pickWith(avoid: string[], shared: string[], extra: object, n: number, skip: string[] = []) {
+  if (n <= 0) return [];
+  const not = [...avoid, ...skip];
+  return prisma.nailDesign.findMany({
+    where: {
+      status: "published", imageUrl: { startsWith: "https://" }, ...FLOW_WHERE,
+      OR: [{ occasion: null }, { occasion: { in: shared } }, { occasion: { notIn: [...THEMES.map((t) => t.id), ...RETIRED_OCCASIONS] } }],
+      ...(not.length ? { id: { notIn: not } } : {}),
+      ...extra,
+    },
+    orderBy: [{ saves: { _count: "desc" } }, { publishedAt: "desc" }],
+    take: n,
+    select: { id: true, title: true, titleEn: true, imageUrl: true, occasion: true },
+  });
+}
 
 export async function publishDesignGallery(now = new Date()): Promise<{ posted: boolean; ids?: string[]; reason?: string }> {
   const officialId = process.env.OFFICIAL_ACCOUNT_ID;
@@ -37,18 +58,18 @@ export async function publishDesignGallery(now = new Date()): Promise<{ posted: 
   const us = inWin("US"), au = inWin("AU");
   const shared = THEMES.map((t) => t.id).filter((id) => us.has(id) && au.has(id));
   const theme = upcomingThemes("US", now).find((t) => shared.includes(t.id)) ?? null;
-  const base = {
-    status: "published", imageUrl: { startsWith: "https://" }, id: { notIn: featured }, ...FLOW_WHERE,
-    OR: [{ occasion: null }, { occasion: { in: shared } }, { occasion: { notIn: [...THEMES.map((t) => t.id), ...RETIRED_OCCASIONS] } }],
-  };
-  const pick = async (extra: object, n: number, skip: string[] = []) =>
-    prisma.nailDesign.findMany({ where: { ...base, ...extra, ...(skip.length ? { AND: [{ id: { notIn: skip } }] } : {}) }, orderBy: [{ saves: { _count: "desc" } }, { publishedAt: "desc" }], take: n, select: { id: true, title: true, titleEn: true, imageUrl: true, occasion: true } });
-
-  // Góc của bài hôm nay theo thứ tự lượt.
-  const variant = todayCount % GALLERY_PER_DAY;
+  // Mẫu đã giới thiệu: tránh lặp — nhưng ảnh Flow được nhập lên CHÍNH các mẫu cũ (đã giới thiệu từ 10/2026), nên
+  // loại hết "đã giới thiệu" làm hết mẫu → bài ảnh ngừng từ 12/11/2026 ("chưa đủ 4 mẫu Flow"). Hết mẫu chưa giới
+  // thiệu thì quay vòng: chỉ tránh mẫu của ~10 ngày gần nhất, ít nhất KHÔNG BAO GIỜ lặp mẫu của ngày gần nhất.
+  const layers = [featured, featured.slice(-RECENT_AVOID), featured.slice(-NEVER_REPEAT)];
+  let list: Awaited<ReturnType<typeof pickWith>> = [];
+  const variant = todayCount % GALLERY_PER_DAY; // góc của bài hôm nay theo thứ tự lượt
   const focus: object | null = variant === 0 ? (theme ? { occasion: theme.id } : { occasion: null }) : variant === 1 ? { difficulty: 1 } : { occasion: null };
-  let list = focus ? await pick(focus, variant === 0 ? 2 : 4) : [];
-  list = [...list, ...(await pick({}, 4 - list.length, list.map((d) => d.id)))];
+  for (const avoid of layers) {
+    list = focus ? await pickWith(avoid, shared, focus, variant === 0 ? 2 : 4) : [];
+    list = [...list, ...(await pickWith(avoid, shared, {}, 4 - list.length, list.map((d) => d.id)))];
+    if (list.length >= 4) break;
+  }
   if (list.length < 4) return { posted: false, reason: "chưa đủ 4 mẫu Flow" };
 
   const seasonal = variant === 0 && theme && list.some((d) => d.occasion === theme.id);

@@ -80,8 +80,10 @@ export function AiBadge({ d, className = "" }: { d?: Pick<Design, "imageUrl" | "
       ? tr(" Minh hoạ màu", " Color preview")
       : tr(" Minh hoạ màu AI", " AI color preview");
   return (
-    <span className={`inline-flex h-[22px] items-center gap-1 whitespace-nowrap rounded-full bg-black/70 px-2 font-semibold text-white ${className}`} style={{ fontSize: 12, lineHeight: "16px" }}>
-      <Wand2 className="h-3 w-3" />{label}
+    // px sizes (not rem): the chip keeps its size when the phone uses large system text, so it never overflows a narrow card.
+    <span className={`inline-flex h-[22px] max-w-[calc(100%-16px)] items-center whitespace-nowrap rounded-full bg-black/70 font-semibold text-white ${className}`} style={{ fontSize: 12, lineHeight: "16px", padding: "0 8px", gap: 4 }}>
+      <Wand2 style={{ width: 12, height: 12, flexShrink: 0 }} />
+      <span className="truncate">{label.trim()}</span>
     </span>
   );
 }

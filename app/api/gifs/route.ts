@@ -110,8 +110,11 @@ export async function GET(req: Request) {
   const uid = (session?.user as { id?: string } | undefined)?.id;
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const giphyKey = process.env.GIPHY_API_KEY;
-  const tenorKey = process.env.TENOR_API_KEY;
+  // trim: khoá dán vào Vercel dính dấu cách / xuống dòng → Giphy 401 ("bad_key", ô GIF trống). Có 2 biến Giphy trên
+  // Vercel (GIPHY_API_KEY, NEXT_PUBLIC_GIPHY_API_KEY) → khoá thứ nhất bị từ chối thì thử khoá thứ hai.
+  const giphyKeys = [...new Set([process.env.GIPHY_API_KEY, process.env.NEXT_PUBLIC_GIPHY_API_KEY].map((k) => (k || "").trim()).filter(Boolean))];
+  const giphyKey = giphyKeys[0];
+  const tenorKey = process.env.TENOR_API_KEY?.trim();
   const provider: Provider | null = giphyKey ? "giphy" : tenorKey ? "tenor" : null;
   const sp = new URL(req.url).searchParams;
   // Tắt (thiếu khoá / khoá sai / lỗi nhà cung cấp) → no-store: thêm khoá trên Vercel + redeploy là trình duyệt thấy ngay.
@@ -137,8 +140,17 @@ export async function GET(req: Request) {
   const enTerm = q && lang === "vi" ? gifQueryEn(q) : null;
   const country = marketFromHeaders((n) => req.headers.get(n)).market === "AU" ? "AU" : "US";
 
-  const page = (term: string, l: "vi" | "en", n: string) =>
-    provider === "giphy" ? giphyPage(giphyKey!, term, l, Math.min(MAX_OFFSET, Math.max(0, Math.floor(Number(n)) || 0))) : tenorPage(tenorKey!, term, l, n, country);
+  const page = async (term: string, l: "vi" | "en", n: string): Promise<Page> => {
+    if (provider !== "giphy") return tenorPage(tenorKey!, term, l, n, country);
+    const offset = Math.min(MAX_OFFSET, Math.max(0, Math.floor(Number(n)) || 0));
+    let res: Page = { ok: false, reason: "bad_key" };
+    for (const k of giphyKeys) {
+      res = await giphyPage(k, term, l, offset);
+      if (res.ok || res.reason !== "bad_key") break;
+    }
+    if (res.ok) badKeyAt = 0; // khoá dự phòng dùng được → không báo "tắt GIF" ở probe
+    return res;
+  };
 
   const first = enMode && enTerm ? await page(enTerm, "en", next) : await page(q, lang, next);
   if (!first.ok) return NextResponse.json({ enabled: false, provider: null, results: [], reason: first.reason }, { headers: off });

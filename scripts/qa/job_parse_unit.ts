@@ -218,5 +218,25 @@ ok("G-au-landline", "Số bàn Úc (02)/(03)/(07) được nhận; 02 → NSW, 0
     JSON.stringify([au1, au2, au3, us1, us2].map((p) => [p.phone, p.phoneDisplay, p.market, p.state])));
 }
 
+{
+  // Lỗi thật 28/11/2026: bot dán tên nhóm "Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ" lên đầu bài SANG TIỆM → chữ "Cần Thợ"
+  // của tên nhóm làm bài bán tiệm thành tin tuyển, lương "$500" cắt từ "Income $500k/năm".
+  const sale = `Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ
+SANG TIỆM NAIL: Lucky nail
+Do move đi bang khác, em muốn sang gấp tiệm nails đang hoạt động ổn định, khách quen nhiều.
+In Come: $500k/ năm
+Rent: $1,950 / tháng
+Giá sang: $120k
+Liên hệ: 317-555-0150`;
+  const hire = `Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ
+Tiệm ở Indianapolis cần gấp 2 thợ bột, bao lương $1,000/tuần. Gọi 317-555-0151`;
+  ok("S-group-name", "Tên nhóm 'Cần Thợ Nails/Mua Bán Tiệm' đầu bài: bài SANG TIỆM vẫn là bài bán tiệm; bài tuyển cùng nhóm vẫn là tuyển",
+    isSalonSale(sale) && parseJobPost(sale).isSale && !isSalonSale(hire) && parseJobPost(hire).isHiring && parseJobPost(hire).salaryAmount === "$1,000/tuần",
+    JSON.stringify([isSalonSale(sale), isSalonSale(hire), parseJobPost(hire).salaryAmount]));
+  ok("S-k-income", "Lương tool '$500' cắt từ 'Income $500k/năm' bị bỏ; '$500/tuần' thật vẫn giữ",
+    safeToolSalary("$500", sale) === null && safeToolSalary("$1,000/tuần", hire) === "$1,000/tuần" && safeToolSalary("$500/tuần", "bao lương $500/tuần part-time") === "$500/tuần",
+    JSON.stringify([safeToolSalary("$500", sale), safeToolSalary("$1,000/tuần", hire), safeToolSalary("$500/tuần", "bao lương $500/tuần part-time")]));
+}
+
 console.log(`\nTách tin tuyển thợ: ${pass}/${pass + fail} PASS`);
 process.exit(fail ? 1 : 0);

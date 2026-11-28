@@ -350,8 +350,14 @@ const BENEFITS: [RegExp, string][] = [
 // Bài SANG / BÁN tiệm (không phải tuyển thợ) — tool hay gửi kèm vì có chữ "cần gấp".
 const SALE = /(c[ầa]n sang|sang (l[ạa]i )?ti[ệe]m|sang nh[ượư][ợơ]ng|b[áa]n ti[ệe]m|c[ầa]n b[áa]n|gi[áa] sang|nh[ậa]n c[ọo]c|salon for sale|nail salon for sale|business for sale)/i;
 const HIRE_EXPLICIT = /(c[ầa]n (g[ấa]p )?(\d+ )?th[ợo]|tuy[ểe]n (g[ấa]p )?th[ợo]|hiring|need(ed)? (nail )?tech)/i;
+// Dòng tên nhóm Facebook mà bot dán đầu bài ("Cần Thợ Nails/Mua Bán Tiệm Nail Tại Mỹ"): chữ "Cần Thợ" trong tên nhóm
+// không phải lời tuyển — bỏ dòng đó trước khi xét, nếu không bài SANG TIỆM bị coi là bài tuyển (lỗi thật 28/11/2026).
+const GROUP_NAME_LINE = /^[^\n]*mua\s*b[áa]n\s*ti[ệe]m[^\n]*$/gim;
 /** Bài sang / bán tiệm (có thể kèm "cần gấp") — không đưa vào mục Việc làm. */
-export const isSalonSale = (text: string) => SALE.test(text) && !HIRE_EXPLICIT.test(text.replace(SALE, ""));
+export const isSalonSale = (text: string) => {
+  const t = text.replace(GROUP_NAME_LINE, " ");
+  return SALE.test(t) && !HIRE_EXPLICIT.test(t.replace(SALE, ""));
+};
 
 // Bỏ số điện thoại + các khoản KHÔNG phải lương (tiền thuê, giá sang, cọc, diện tích) trước khi tìm lương:
 // "bao lương 3343329402" (SĐT dính chữ), "Rent $5430", "Giá sang $120,000" từng bị hiểu là lương.
@@ -408,6 +414,8 @@ export function safeToolSalary(toolSalary: string, text: string): string | null 
   const phones = (text.match(PHONEISH) || []).map((x) => x.replace(/\D/g, ""));
   if (digits.some((d) => d.length >= 7 || phones.some((ph) => ph.includes(d) && d.length >= 3))) return null;
   if (!digits.every((d) => Number(d) >= 10 && Number(d) <= 20000)) return null;
+  // "$500" cắt từ "Income $500k/năm" (doanh thu tiệm) — số liền chữ k trong bài là nghìn, không phải lương.
+  if (digits.some((d) => new RegExp(String.raw`(?<![\d,.])\$?\s?${d}\s?k\b`, "i").test(text))) return null;
   if (!/(\$|tu[ầa]n|week|th[áa]ng|month|gi[ờo]|hour|hr|ng[àa]y|day|l[ươu][ơo]?ng|chia|\d\s*\/\s*\d)/i.test(v)) return null;
   const bare = v.match(/^(?:bao\s*l[ươ]+ng|l[ươ]+ng|income)\s*:?\s*\$?\s*(\d[\d,.]*)\s*(\+)?$/i);
   if (bare) return `$${Number(bare[1].replace(/[^\d]/g, "")).toLocaleString("en-US")}${bare[2] ? "+" : ""}`;

@@ -2,7 +2,9 @@
 
 // Bản dịch tin nhắn ở trình duyệt: gom các yêu cầu trong 60ms thành 1 lần gọi /api/messages/translate,
 // nhớ kết quả trong phiên (bong bóng chat + dòng xem trước ở danh sách dùng chung).
-//   - người xem tiếng Anh nhận tin tiếng Việt → TỰ dịch, có nút "Show original";
+//   - người xem tiếng Anh nhận tin tiếng Việt → TỰ dịch, có nút "Show original" — TRỪ KHI người xem đọc được tiếng
+//     Việt (trình duyệt có tiếng Việt, hoặc chính họ nhắn tiếng Việt): chủ tiệm Việt để giao diện tiếng Anh từng thấy
+//     tin tiếng Việt của bạn bè bị tự dịch sang tiếng Anh (11/2026) → khi đó chỉ hiện nút "See translation";
 //   - người xem tiếng Việt nhận tin tiếng Anh → nút "Xem bản dịch" (bấm mới dịch).
 import { useEffect, useSyncExternalStore } from "react";
 import type { Locale } from "@/lib/i18n/config";
@@ -69,7 +71,19 @@ export function getTranslation(id: string, lang: Locale): Entry | undefined {
 }
 
 /** Tin này nên dịch tự động cho người xem không (tiếng Việt → người xem tiếng Anh). */
-export const autoTranslates = (text: string | null | undefined, viewer: Locale) => viewer === "en" && detectTextLang(text) === "vi";
+let readsVi: boolean | null = null;
+/** Người xem đọc được tiếng Việt: trình duyệt / điện thoại có tiếng Việt trong danh sách ngôn ngữ, hoặc đã nhắn tiếng Việt. */
+export const viewerReadsVi = () => {
+  if (readsVi === null) readsVi = typeof navigator !== "undefined" && (navigator.languages || [navigator.language]).some((l) => /^vi(-|_|$)/i.test(l || ""));
+  return readsVi;
+};
+/** Gọi khi thấy người xem tự nhắn tiếng Việt → từ đó không tự dịch tin tiếng Việt cho họ nữa. */
+export const markViewerReadsVi = () => {
+  if (viewerReadsVi()) return;
+  readsVi = true;
+  emit();
+};
+export const autoTranslates = (text: string | null | undefined, viewer: Locale) => viewer === "en" && !viewerReadsVi() && detectTextLang(text) === "vi";
 /** Tin này có thể dịch theo yêu cầu (ngôn ngữ đoán được khác ngôn ngữ người xem). */
 export const canTranslate = (text: string | null | undefined, viewer: Locale) => {
   const l = detectTextLang(text);

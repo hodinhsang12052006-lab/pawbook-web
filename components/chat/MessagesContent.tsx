@@ -46,7 +46,8 @@ import { useTr } from "@/lib/i18n/useTr";
 import { useMounted } from "@/lib/useMounted";
 import { clearConversation, nativeHandlesChatAlerts, setActiveConversation } from "@/lib/nativePush";
 import ChatNotifyBanner from "./ChatNotifyBanner";
-import { autoTranslates, getTranslation, requestTranslation, useMessageTranslation, useTranslationVersion } from "./messageTranslation";
+import { detectTextLang } from "@/lib/i18n/detectLang";
+import { autoTranslates, getTranslation, markViewerReadsVi, requestTranslation, useMessageTranslation, useTranslationVersion } from "./messageTranslation";
 // Messenger V2: CSS riêng (mọi quy tắc nằm dưới .pn-msgr). Import ở đây, không ở app/messages/layout.tsx — nhánh
 // đổi route sang app/[lang]/ xoá layout đó; CSS đi cùng component nên không thể bị rơi khi gộp nhánh.
 import "./messenger.css";
@@ -1005,6 +1006,10 @@ export default function MessagesContent({
   // ----- Dữ liệu cho hàng gợi ý trả lời (ChatAssist trong khung soạn tin): chỉ truyền GIÁ TRỊ (boolean / chuỗi) → gửi /
   // nhận tin bình thường không vẽ lại khung soạn tin.
   // Đoạn chat đã qua lại vài lượt (mỗi bên ≥ 3 tin) → hàng "Gợi ý" thu thành 1 nút nhỏ, nhường chỗ cho tin nhắn
+  // Mình nhắn tiếng Việt → mình đọc được tiếng Việt: không tự dịch tin tiếng Việt của người khác sang tiếng Anh nữa.
+  useEffect(() => {
+    if (chatMessages.some((m) => m.senderId === currentUser?.id && m.type === "TEXT" && detectTextLang(m.content) === "vi")) markViewerReadsVi();
+  }, [chatMessages, currentUser?.id]);
   const established = useMemo(() => {
     let mine = 0, theirs = 0;
     for (const m of chatMessages) {

@@ -38,7 +38,7 @@ const QA_IMG = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
 await db.execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: [QA_DESIGN] });
 await db.execute({
   sql: `INSERT INTO "NailDesign" (id, day, market, title, titleEn, description, descriptionEn, skills, difficulty, minutes, priceHint, materials, steps, imageUrl, provider, prompt, status, publishedAt, createdAt)
-        VALUES (?, '2026-10-16', 'US', 'QA Mắt mèo ánh bạc', 'QA Silver cat-eye', 'Mẫu thử', 'Test', 'Gel-X,Design', 2, 70, '$55–70', ?, '[]', ?, 'sample', 'qa', 'published', ?, ?)`,
+        VALUES (?, '2026-10-16', 'US', 'QA Mắt mèo ánh bạc', 'QA Silver cat-eye', 'Mẫu thử', 'Test', 'Gel-X,Design', 2, 70, '$55–70', ?, '[]', ?, 'sample', 'qa [flow:QA003:2026-11-01]', 'published', ?, ?)`,
   args: [QA_DESIGN, JSON.stringify([{ vi: "Gel mắt mèo", en: "Cat-eye gel", qty: "1 lọ" }, { vi: "Nam châm", en: "Magnet", qty: "1 cái" }]), QA_IMG, Date.now(), Date.now()],
 });
 

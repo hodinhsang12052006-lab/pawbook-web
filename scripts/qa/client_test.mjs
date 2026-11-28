@@ -75,7 +75,7 @@ try {
   await db.execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: ["qa-client-look"] });
   await db.execute({
     sql: `INSERT INTO "NailDesign" (id, day, market, title, titleEn, description, descriptionEn, skills, difficulty, minutes, priceHint, materials, steps, imageUrl, palette, shape, finish, provider, prompt, status, publishedAt, createdAt)
-          VALUES ('qa-client-look', '2026-10-23', 'US', 'QA Mẫu khách xem', 'QA client look', 'Mẫu thử', 'Test', 'Gel-X', 1, 45, '$45–55', ?, ?, 'https://res.cloudinary.com/demo/image/upload/sample.jpg', '["#f9c","#fff"]', 'almond', 'glossy', 'sample', 'qa', 'published', ?, ?)`,
+          VALUES ('qa-client-look', '2026-10-23', 'US', 'QA Mẫu khách xem', 'QA client look', 'Mẫu thử', 'Test', 'Gel-X', 1, 45, '$45–55', ?, ?, 'https://res.cloudinary.com/demo/image/upload/sample.jpg', '["#f9c","#fff"]', 'almond', 'glossy', 'sample', 'qa [flow:QA001:2026-11-01]', 'published', ?, ?)`, // catalog chỉ hiện ảnh Flow (lib/flowMarks)
     args: [JSON.stringify([{ vi: "Gel nền", en: "Base gel", qty: "1 lọ" }]), JSON.stringify([{ vi: "Dũa form", en: "Shape" }]), Date.now() + 5000, Date.now()],
   });
   await c.page.goto(BASE_URL + "/designs");

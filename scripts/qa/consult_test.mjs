@@ -57,7 +57,7 @@ for (const d of QA) {
   await db.execute({ sql: `DELETE FROM "NailDesign" WHERE id = ?`, args: [d.id] });
   await db.execute({
     sql: `INSERT INTO "NailDesign" (id, day, market, title, titleEn, description, descriptionEn, skills, difficulty, minutes, priceHint, materials, steps, imageUrl, palette, shape, finish, provider, prompt, status, publishedAt, createdAt)
-          VALUES (?, '2026-10-16', 'US', ?, ?, 'Mẫu thử', 'Test', ?, ?, 60, '$45', '[]', '[]', ?, ?, ?, ?, 'sample', 'qa', 'published', ?, ?)`,
+          VALUES (?, '2026-10-16', 'US', ?, ?, 'Mẫu thử', 'Test', ?, ?, 60, '$45', '[]', '[]', ?, ?, ?, ?, 'sample', 'qa [flow:QA002:2026-11-01]', 'published', ?, ?)`,
     args: [d.id, d.title, d.title, d.skills, d.difficulty, IMG, JSON.stringify(d.palette), d.shape, d.finish, Date.now() + 1000, Date.now()],
   });
 }

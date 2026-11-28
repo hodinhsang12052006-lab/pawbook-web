@@ -103,7 +103,7 @@ export function DesignCard({ d, onOpen, compact = false, eager = false }: { d: D
   useTr(); // render lại khi đổi VI/EN
   const occ = occasionLabel(d.occasion);
   return (
-    <button type="button" onClick={onOpen} className={`group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 text-left transition-all hover:border-pink-400/40 ${compact ? "w-44 flex-shrink-0" : ""}`}>
+    <button type="button" onClick={onOpen} className={`group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 text-left transition-all hover:border-pink-400/40 ${compact ? "w-44 flex-shrink-0" : ""}`}>
       <span className="relative block aspect-square w-full overflow-hidden bg-slate-800">
         <DesignVisual d={d} eager={eager} className="transition-transform duration-300 group-hover:scale-105" />
         <AiBadge d={d} className="absolute left-2 top-2" />
@@ -116,7 +116,7 @@ export function DesignCard({ d, onOpen, compact = false, eager = false }: { d: D
       <span className="flex flex-1 flex-col gap-1 p-3">
         {occ && <span className="truncate text-[10px] font-black uppercase tracking-wider text-pink-300">{occ}</span>}
         <span className="line-clamp-2 text-sm font-bold leading-snug text-white">{designTitle(d)}</span>
-        <span className="mt-auto flex items-center gap-2 pt-1 text-[11px] text-slate-400">
+        <span className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-1 text-[11px] text-slate-400">
           <span>{DIFF()[d.difficulty - 1]}</span>·<span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" /> {d.minutes}{tr(" phút", " min")}</span>
           {!compact && d.priceHint && <>·<span className="font-semibold tabular-nums text-slate-100">{d.priceHint}</span></>}
         </span>

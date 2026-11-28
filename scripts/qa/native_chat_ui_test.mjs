@@ -23,7 +23,7 @@
 import crypto from "node:crypto";
 import { createClient } from "@libsql/client";
 import { chromium, devices } from "playwright";
-import { BASE_URL, Client, Results, SEED_OWNER, SEED_TECH, registerUser } from "./lib.mjs";
+import { BASE_URL, Client, Results, SEED_OWNER, SEED_TECH, registerUser, sendChat } from "./lib.mjs";
 
 const R = new Results("Thông báo chat app Android + bong bóng chat (UI)");
 const TMP = process.env.TEMP || ".";
@@ -287,10 +287,12 @@ try {
     await p.screenshot({ path: TMP + "/native_chat_bubble.png" });
     const text = `QA từ bong bóng ${stamp}`;
     if (ready) {
-      await composer.fill(text);
-      await composer.press("Enter");
+      // Máy chạm: Enter = xuống dòng → gửi bằng nút Gửi (sendChat) và chờ tin thật sự tới máy chủ, không ngủ cố định.
+      const posted = p.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/messages", { timeout: 15000 }).catch(() => null);
+      await sendChat(p, text);
+      await posted;
     }
-    await sleep(2500);
+    await sleep(500);
     const got = (await db.execute({ sql: `SELECT COUNT(*) n FROM "Message" WHERE conversationId = ? AND body = ? AND senderId = ?`, args: [dmId, text, tech.userId] })).rows[0].n;
     R.check("NC7", "Bong bóng: chỉ khung chat (html[data-bubble], không Navbar / thanh dưới / danh sách / nút quay lại / nút gọi) và gửi được tin",
       ready && state.bubbleAttr && !state.header && !state.bnav && !state.list && !state.back && !state.call && state.overlaysMounted === 0 && Number(got) === 1, JSON.stringify({ ready, ...state, got }));

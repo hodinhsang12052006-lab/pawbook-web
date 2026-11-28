@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { realUserWhere } from "@/lib/demo";
 import { localePath } from "@/lib/i18n/config";
 import { activeJobWhere } from "@/lib/jobIngest/ingest";
+import { activeSaleWhere } from "@/lib/salonSale/store";
 
 // Tạo mỗi lần Google đọc (không đóng băng lúc deploy): tin tuyển + mẫu nail mới mỗi ngày phải có mặt ngay
 export const dynamic = "force-dynamic";
@@ -56,11 +57,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Sitemap designs query failed:", e);
   }
 
+  // Tin SANG TIỆM chủ tiệm tự đăng (cùng quy tắc tin tuyển: không khai bài tổng hợp từ nhóm). Bảng chưa có → bỏ qua.
+  let saleUrls: MetadataRoute.Sitemap = [];
+  try {
+    const sales = await prisma.salonSale.findMany({
+      where: { AND: [activeSaleWhere(), { owner: realUserWhere }, { source: null }] },
+      select: { id: true, updatedAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 2000,
+    });
+    saleUrls = sales.flatMap((x) => bilingual(`/salons-for-sale/${x.id}`, { lastModified: x.updatedAt, changeFrequency: "weekly" as const, priority: 0.7 }));
+  } catch {
+    /* bảng SalonSale chưa tạo */
+  }
+
   const now = new Date();
   const staticPages: MetadataRoute.Sitemap = [
     ...bilingual("/", { lastModified: now, changeFrequency: "daily" as const, priority: 1.0 }),
     ...bilingual("/auth/login", { lastModified: now, changeFrequency: "monthly" as const, priority: 0.3 }),
     ...bilingual("/designs", { lastModified: now, changeFrequency: "daily" as const, priority: 0.8 }),
+    ...bilingual("/salons-for-sale", { lastModified: now, changeFrequency: "daily" as const, priority: 0.7 }),
     ...bilingual("/trends", { lastModified: now, changeFrequency: "weekly" as const, priority: 0.6 }),
     ...bilingual("/terms", { lastModified: now, changeFrequency: "yearly" as const, priority: 0.1 }),
     ...bilingual("/privacy", { lastModified: now, changeFrequency: "yearly" as const, priority: 0.1 }),
@@ -69,5 +85,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...bilingual("/auth/register", { lastModified: now, changeFrequency: "monthly" as const, priority: 0.5 }),
   ];
 
-  return [...staticPages, ...jobUrls, ...designUrls];
+  return [...staticPages, ...jobUrls, ...saleUrls, ...designUrls];
 }

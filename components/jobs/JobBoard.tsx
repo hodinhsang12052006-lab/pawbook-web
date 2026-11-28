@@ -13,6 +13,7 @@ import { valueLabel } from "@/lib/i18n/valueLabel";
 import { useTr } from "@/lib/i18n/useTr";
 import { JobAlertButton } from "@/components/jobs/JobAlerts";
 import { useSessionUser } from "@/lib/SessionUserContext";
+import SaleStrip from "@/components/salonSale/SaleStrip";
 import { dt } from "@/lib/i18n/dataEn";
 import VietnameseChip from "@/components/common/LangChip";
 import { hasVietnamese } from "@/lib/i18n/viText";
@@ -571,6 +572,8 @@ export default function JobBoard({ market, state, city, onShowAllStates }: JobBo
   return (
     <div ref={topRef} className="space-y-4 animate-fadeIn">
       <LiveJobsBanner market={market} state={state} totals={totals} />
+      {/* Mục Sang tiệm (bài sang / bán tiệm từ nhóm + chủ tiệm tự đăng) — lối vào từ bảng việc */}
+      {viewer?.role !== "CLIENT" && <SaleStrip market={market} state={state} isOwner={!viewer || viewer.role === "OWNER" || viewer.role === "ADMIN"} />}
 
       <div className="flex flex-wrap items-center gap-2">
       <button

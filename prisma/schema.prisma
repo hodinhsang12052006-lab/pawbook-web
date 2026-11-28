@@ -41,6 +41,7 @@ model User {
   sessionsValidAfter DateTime? // phiên đăng nhập trước mốc này bị huỷ (đổi mật khẩu…) — prisma/sql/2026-10-11b_sessions.sql
 
   jobs              Job[] // Tin tuyển dụng do chủ tiệm (OWNER) đăng
+  salonSales        SalonSale[] // Tin SANG / BÁN tiệm nail (mục Sang tiệm)
   technicianProfile TechnicianProfile? // Hồ sơ tay nghề nếu role = TECHNICIAN
   savedJobs         SavedJob[]         @relation("SavedJobs")
 
@@ -308,6 +309,52 @@ model Job {
 // không SĐT, không email, không mô tả đầy đủ, không dữ liệu ứng viên; chỉ đoạn trích nhà cung cấp trả,
 // link về trang gốc (redirectUrl giữ nguyên), tự hết hạn + tự xoá (lib/jobFeeds/sync.ts).
 // prisma/sql/2026-11-07_external_jobs.sql — bật bằng EXTERNAL_JOBS_ADZUNA=on SAU KHI có giấy phép Adzuna.
+// SANG / BÁN TIỆM NAIL (mục "Sang tiệm") — prisma/sql/2026-11-28_salon_sales.sql. Chủ tiệm tự đăng, hoặc bài sang tiệm từ
+// nhóm cộng đồng PawNail do bot gửi (source "ingest", đứng tên tài khoản hệ thống như tin tuyển tổng hợp).
+model SalonSale {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  title       String
+  salonName   String @default("")
+  description String
+  market      Market
+  state       String
+  city        String  @default("")
+  address     String?
+  zip         String?
+
+  askingPrice    Int? // giá sang (USD / AUD, số nguyên)
+  monthlyRent    Int? // tiền thuê / tháng
+  monthlyRevenue Int? // doanh thu / tháng (bài ghi theo năm / tuần → quy ra tháng)
+  chairs         Int? // ghế spa / pedi
+  tables         Int? // bàn làm tay
+  sqft           Int? // diện tích
+
+  phone     String
+  mediaUrls String @default("[]") // JSON mảng URL ảnh (Cloudinary)
+  status    String @default("active") // active · sold (đã sang) · removed (đã gỡ — giữ dòng để bot không đăng lại)
+
+  source         String? // null = chủ tiệm tự đăng · "ingest" = bài từ nhóm cộng đồng
+  sourceUrl      String?
+  sourceKey      String?
+  sourceFbHash   String?
+  sourcePostedAt DateTime?
+  repostCount    Int       @default(1)
+  lastRepostedAt DateTime?
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([market, state])
+  @@index([status, expiresAt])
+  @@index([ownerId])
+  @@index([phone])
+  @@index([sourceKey])
+}
+
 model ExternalJob {
   id                String   @id @default(cuid())
   provider          String // "adzuna" (nhà cung cấp duy nhất được LƯU; Careerjet chỉ tìm trực tiếp, không lưu)

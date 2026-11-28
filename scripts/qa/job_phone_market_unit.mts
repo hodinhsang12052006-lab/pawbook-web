@@ -83,7 +83,11 @@ ok("FM4", "Ô quốc gia của bot: UK / Anh / England / United Kingdom → ngo�
   ["UK", "Anh", "England", "United Kingdom", "anh quốc"].every(isForeignCountry) && !["Mỹ", "USA", "Úc", "Australia", "", undefined].some((c) => isForeignCountry(c as string)));
 
 // ---------- prepareIngest (thuần — không đọc / ghi DB) ----------
-const { prepareIngest, OUT_OF_MARKET_REASON } = await import("../../lib/jobIngest/ingest");
+const ingestMod = await import("../../lib/jobIngest/ingest");
+const { OUT_OF_MARKET_REASON } = ingestMod;
+// Các bài ở đây là bài TUYỂN (không phải sang tiệm) → kiểu kết quả chỉ "ok" | "skipped" (salon_sale_unit kiểm nhánh "sale").
+type JobPrep = Exclude<ReturnType<typeof ingestMod.prepareIngest>, { status: "sale" }>;
+const prepareIngest = (...a: Parameters<typeof ingestMod.prepareIngest>) => ingestMod.prepareIngest(...a) as JobPrep;
 const none = new Set<string>();
 const now = new Date().toISOString();
 // Đúng như production: tool gửi kèm market US + số đã cắt số 0 + tên Facebook của người đăng

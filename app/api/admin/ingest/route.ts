@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const prep = prepareIngest(input, await blockedPhones(), { assisted: true });
     const p = prep.parsed;
     const base = { isHiring: p.isHiring, discriminatory: p.discriminatory, phoneDisplay: p.phoneDisplay, salonName: p.salonName, address: p.address, city: p.city, state: p.state, zip: p.zip, salaryAmount: p.salaryAmount, salaryType: p.salaryType, skills: p.skills, benefits: p.benefits, isUrgent: p.isUrgent, title: p.title, market: p.market };
-    if (prep.status === "skipped") return NextResponse.json({ ...base, decision: "skipped", reason: prep.reason });
+    if (prep.status !== "ok") return NextResponse.json({ ...base, decision: "skipped", reason: prep.status === "skipped" ? prep.reason : "bài sang / bán tiệm (mục Sang tiệm)" });
     const d = prep.data;
     const r = await commitIngest(prep, { dryRun: true });
     return NextResponse.json({

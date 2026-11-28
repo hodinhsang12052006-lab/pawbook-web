@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     const r = await ingestOne(toInput(body as SyncPost), await blockedPhones());
     await recordIngestHeartbeat([r]); // nhịp tim nguồn tin
     const code = r.status === "created" ? 201 : r.status === "skipped" ? 422 : 200;
-    return NextResponse.json({ status: r.status, job_id: r.jobId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null }, { status: code });
+    return NextResponse.json({ status: r.status, kind: r.kind ?? null, job_id: r.jobId ?? null, sale_id: r.saleId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null }, { status: code });
   }
   const list = (Array.isArray(body) ? body : body.posts) || [];
   if (!Array.isArray(list) || !list.length) return NextResponse.json({ error: "Chưa có bài nào", errorEn: "No posts yet." }, { status: 400 });
@@ -78,6 +78,6 @@ export async function POST(req: Request) {
   const out = await ingestBatch(list.filter((p) => p && typeof p === "object").map(toInput));
   return NextResponse.json({
     created: out.created, bumped: out.bumped, updated: out.updated, skipped: out.skipped,
-    results: out.results.map((r) => ({ i: r.i, status: r.status, job_id: r.jobId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null })),
+    results: out.results.map((r) => ({ i: r.i, status: r.status, kind: r.kind ?? null, job_id: r.jobId ?? null, sale_id: r.saleId ?? null, repost_count: r.repostCount ?? null, reason: r.reason ?? null })),
   });
 }

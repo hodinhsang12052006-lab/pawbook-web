@@ -21,6 +21,8 @@ import { stateFromUsPhone } from "@/lib/jobIngest/areaCodes";
 import { cleanCity, cleanSalonName, findPhone, foreignMarketSignal, hasAuContext, isAdPost, isForeignCountry, isJobSeeking, parseJobPost, safeToolSalary, stateFromAuPhone, stripDiscriminatoryRequirements, type ParsedJob } from "@/lib/jobIngest/parse";
 import { parseMarketPhone } from "@/lib/phoneFormat";
 import { AU_ALL_CODES, US_ALL_CODES } from "@/lib/stateNames";
+import { parseSaleDetails } from "@/lib/salonSale/parse";
+import { commitSale, SALE_INGEST_SOURCE, saleIngestTtlDays, type SaleIngestData } from "@/lib/salonSale/store";
 
 export const INGEST_SOURCE = "ingest";
 /** Admin đăng hộ THEO YÊU CẦU của tiệm (có ghi nhận người yêu cầu) — khác tin tổng hợp từ bài công khai. */
@@ -106,11 +108,12 @@ export interface IngestOpts {
 /** Tiền tố lý do "bỏ qua" của bài ở ngoài Mỹ / Úc (ingestBatch ghi log tổng số theo tiền tố này). */
 export const OUT_OF_MARKET_REASON = "bài ở ngoài Mỹ/Úc";
 // created = tin mới · bumped = tiệm ĐĂNG LẠI (đẩy lên đầu, repostCount+1) · updated = tool gửi lại đúng bài cũ
-export type IngestResult = { status: "created" | "bumped" | "updated" | "skipped"; reason?: string; jobId?: string; repostCount?: number };
+// Bài SANG TIỆM (từ 28/11/2026): vào mục Sang tiệm (bảng SalonSale) → kind "sale" + saleId thay cho jobId.
+export type IngestResult = { status: "created" | "bumped" | "updated" | "skipped"; reason?: string; jobId?: string; saleId?: string; kind?: "job" | "sale"; repostCount?: number };
 
 // Không nhớ id trong bộ nhớ máy chủ: tài khoản hệ thống có thể bị xoá / DB đổi → upsert mỗi lần tạo tin
 // (chỉ khi TẠO tin mới, rẻ) thay vì giữ id cũ gây lỗi khoá ngoại tới khi máy chủ khởi động lại.
-async function ingestOwnerId() {
+export async function ingestOwnerId() {
   const u = await prisma.user.upsert({
     where: { email: INGEST_OWNER_EMAIL },
     update: {},
@@ -157,6 +160,7 @@ export type IngestData = {
 };
 export type PreparedIngest =
   | { status: "ok"; data: IngestData; parsed: ParsedJob; fbHash: string | null; posted: Date }
+  | { status: "sale"; sale: SaleIngestData; parsed: ParsedJob; fbHash: string | null; posted: Date }
   | { status: "skipped"; reason: string; parsed: ParsedJob };
 
 /** Tách + kiểm tra 1 bài (KHÔNG đọc / ghi DB). Trả lý do bỏ qua, hoặc dữ liệu tin sẵn sàng lưu. */
@@ -184,10 +188,12 @@ export function prepareIngest(input: IngestInput, blocked: Set<string>, opts: In
   // Tên tiệm ghi trong bài ("… Nails") đáng tin hơn tên người đăng mà tool gửi kèm; admin sửa tay thì theo admin.
   const salonName = assisted ? clean(input.salonName, 60) || p.salonName || "" : p.salonName || clean(input.salonName, 60);
 
-  if (text && p.isSale) return { status: "skipped", reason: "bài sang / bán tiệm, không phải tuyển thợ", parsed: p };
-  if (text && !p.isHiring && !input.salonName && !assisted) return { status: "skipped", reason: "không phải bài tuyển thợ", parsed: p };
+  // Bài SANG / BÁN tiệm → mục Sang tiệm (không phải tin tuyển). Admin "đăng hộ tin tuyển" dán nhầm bài sang tiệm → bỏ.
+  const sale = !!text && p.isSale;
+  if (sale && assisted) return { status: "skipped", reason: "bài sang / bán tiệm, không phải tuyển thợ (mục Sang tiệm)", parsed: p };
+  if (text && !sale && !p.isHiring && !input.salonName && !assisted) return { status: "skipped", reason: "không phải bài tuyển thợ", parsed: p };
   // Tool gửi kèm tên tiệm nhưng thật ra là bài THỢ TÌM VIỆC ("chủ shop nào cần thợ để lại sđt") → bỏ.
-  if (text && isJobSeeking(text)) return { status: "skipped", reason: "bài thợ tìm việc, không phải tiệm tuyển", parsed: p };
+  if (text && !sale && isJobSeeking(text)) return { status: "skipped", reason: "bài thợ tìm việc, không phải tiệm tuyển", parsed: p };
   if (text && isAdPost(text)) return { status: "skipped", reason: "quảng cáo dịch vụ đăng tin, không phải tiệm tuyển", parsed: p };
   // Bài ở NGOÀI Mỹ / Úc (nhóm nail ở Anh: số 07… / +44, Shenfield, Stratford DLR, postcode…) — không đăng vào thị trường
   // Mỹ / Úc dù tool gửi kèm market / SĐT đã "chuẩn hoá" (tool từng cắt số 0 của số Anh thành số Mỹ của người lạ).
@@ -201,11 +207,35 @@ export function prepareIngest(input: IngestInput, blocked: Set<string>, opts: In
 
   const postedMs = input.postedAt ? new Date(typeof input.postedAt === "number" ? input.postedAt : String(input.postedAt)).getTime() : Date.now();
   const posted = Number.isFinite(postedMs) ? new Date(Math.min(postedMs, Date.now())) : new Date();
-  const expiresAt = new Date(posted.getTime() + ingestTtlDays() * DAY);
-  if (expiresAt.getTime() <= Date.now()) return { status: "skipped", reason: `bài cũ hơn ${ingestTtlDays()} ngày`, parsed: p };
+  const ttlDays = sale ? saleIngestTtlDays() : ingestTtlDays();
+  const expiresAt = new Date(posted.getTime() + ttlDays * DAY);
+  if (expiresAt.getTime() <= Date.now()) return { status: "skipped", reason: `bài cũ hơn ${ttlDays} ngày`, parsed: p };
 
   const sourceKey = crypto.createHash("sha1").update(`${phone}|${norm(text || `${salonName}|${city}`)}`).digest("hex");
   const fbHash = fbKey(input.fbUrl);
+  if (sale) {
+    const d = parseSaleDetails(text);
+    return {
+      status: "sale",
+      sale: {
+        title: `Sang tiệm nail${p.isUrgent ? " gấp" : ""}`,
+        // Tên tiệm chỉ khi bài ghi rõ (không lấy tên người đăng / "Tiệm nail ở …")
+        salonName: p.salonName ? clean(p.salonName, 60) : "",
+        description: text,
+        market, state, city,
+        address: clean(input.address, 160) || p.address,
+        zip: clean(input.zip, 10) || p.zip,
+        phone: phoneDisplay,
+        ...d,
+        source: SALE_INGEST_SOURCE,
+        sourceUrl: clean(input.sourceUrl, 300) || null,
+        sourceKey,
+        sourcePostedAt: posted,
+        expiresAt,
+      },
+      parsed: p, fbHash, posted,
+    };
+  }
   // Lương: ưu tiên bộ tách của PawNail; lương tool gửi kèm chỉ dùng khi trông đúng là lương (không phải mảnh SĐT, tiền thuê…).
   // Admin đăng hộ ghi lương tay → dùng lương admin.
   const adminSalary = assisted ? clean(input.salary, 40) : "";
@@ -286,7 +316,11 @@ export async function ingestOne(input: IngestInput, blocked: Set<string>, opts: 
   if (!opts.assisted && !aggregatedIngestOn()) return { status: "skipped", reason: "đang tạm ngừng nhận tin từ nhóm (INGEST_AGGREGATED=off)" };
   const prep = prepareIngest(input, blocked, opts);
   if (prep.status === "skipped") return { status: "skipped", reason: prep.reason };
-  return commitIngest(prep, { dryRun: opts.dryRun });
+  if (prep.status === "sale") {
+    const r = await commitSale(prep.sale, { fbHash: prep.fbHash, posted: prep.posted, ownerId: ingestOwnerId, dryRun: opts.dryRun });
+    return { ...r, kind: "sale" };
+  }
+  return { ...(await commitIngest(prep, { dryRun: opts.dryRun })), kind: "job" };
 }
 
 export async function ingestBatch(items: IngestInput[], opts: IngestOpts = {}) {

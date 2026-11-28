@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck, Palette, LayoutGrid } from "lucide-react";
+import { MessageCircle, Radar, Wallet, ShoppingBag, PlusCircle, ShieldAlert, ChevronRight, TrendingUp, Sparkles, ScanLine, CalendarCheck, Palette, LayoutGrid, Store } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSessionUser } from "@/lib/SessionUserContext";
 import { useUnreadMessages } from "@/lib/UnreadMessagesContext";
@@ -100,6 +100,7 @@ function useTools(): Tool[] {
         { href: "/consult", label: tr("Phân tích tay & móng", "Hand & nail analysis"), short: tr("Phân tích móng", "Nail analysis"), stat: tr("Chụp tay khách để xem tình trạng móng và mẫu phù hợp", "Snap a client's hand to see nail condition and designs that suit it"), icon: ScanLine, tone: "bg-rose-500/15 text-rose-300" } as Tool]
       : []),
     { href: "/designs", label: tr("Mẫu nail mới", "New nail designs"), stat: tr("Ý tưởng mỗi ngày + vật tư cần chuẩn bị", "Daily ideas + materials to prep"), icon: Sparkles, tone: "bg-pink-500/15 text-pink-300" },
+    { href: "/salons-for-sale", label: tr("Sang tiệm", "Salons for sale"), stat: tr("Tiệm nail đang sang · đăng bán tiệm", "Nail salons for sale · list yours"), icon: Store, tone: "bg-amber-500/15 text-amber-300" },
     { href: "/trends", label: tr("Xu hướng", "Trends"), stat: tr("Mẫu được yêu thích · thợ nổi bật · lương", "Most-loved designs · standout techs · pay"), icon: TrendingUp, tone: "bg-fuchsia-500/15 text-fuchsia-300" },
     { href: "/tools/radar", label: "Nail Radar", stat: radarStat, icon: Radar, tone: "bg-amber-500/15 text-amber-300" },
     { href: "/supply", label: tr("Chợ vật tư", "Supply exchange"), stat: tr("Vật tư tiệm bán lại", "Surplus supplies from salons"), icon: ShoppingBag, tone: "bg-emerald-500/15 text-emerald-300" },

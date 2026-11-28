@@ -309,6 +309,23 @@ model Job {
 // không SĐT, không email, không mô tả đầy đủ, không dữ liệu ứng viên; chỉ đoạn trích nhà cung cấp trả,
 // link về trang gốc (redirectUrl giữ nguyên), tự hết hạn + tự xoá (lib/jobFeeds/sync.ts).
 // prisma/sql/2026-11-07_external_jobs.sql — bật bằng EXTERNAL_JOBS_ADZUNA=on SAU KHI có giấy phép Adzuna.
+// LỊCH LÀM VIỆC trong NHÓM chat (VD "Họp Nội Bộ BitPaw", nhóm nhân viên của tiệm) — prisma/sql/2026-11-29_group_shifts.sql.
+// Không quan hệ Prisma tới Conversation / User (thêm bảng không đụng bảng cũ); quyền kiểm ở API (thành viên nhóm).
+model GroupShift {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String // người làm ca
+  date           String // YYYY-MM-DD (ngày theo lịch, không múi giờ)
+  start          String // HH:MM
+  end            String // HH:MM
+  note           String   @default("")
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, date])
+  @@index([userId, date])
+}
+
 // SANG / BÁN TIỆM NAIL (mục "Sang tiệm") — prisma/sql/2026-11-28_salon_sales.sql. Chủ tiệm tự đăng, hoặc bài sang tiệm từ
 // nhóm cộng đồng PawNail do bot gửi (source "ingest", đứng tên tài khoản hệ thống như tin tuyển tổng hợp).
 model SalonSale {

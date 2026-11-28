@@ -51,6 +51,10 @@ import { autoTranslates, getTranslation, markViewerReadsVi, useMessageTranslatio
 // Messenger V2: CSS riêng (mọi quy tắc nằm dưới .pn-msgr). Import ở đây, không ở app/messages/layout.tsx — nhánh
 // đổi route sang app/[lang]/ xoá layout đó; CSS đi cùng component nên không thể bị rơi khi gộp nhánh.
 import "./messenger.css";
+import GroupInfoSheet from "./GroupInfoSheet";
+import { useGroupMeetingCount } from "./GroupMeeting";
+// Họp nhóm video: tải khi mở (không nằm trong bundle chat)
+const GroupMeeting = dynamic(() => import("./GroupMeeting"), { ssr: false });
 
 // Chưa có tin: CÙNG 1 mảng rỗng (mảng mới mỗi lần render làm khung tin memo vẽ lại vô ích)
 const NO_MESSAGES: MessageType[] = [];
@@ -90,6 +94,9 @@ export default function MessagesContent({
   const [listQuery, setListQuery] = useState("");
 
   const [activeChat, setActiveChat] = useState<ActiveChatType | null>(null);
+  // Nhóm đang mở: bảng thành viên + lịch làm việc, cuộc họp video nhóm
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const [meetingOpen, setMeetingOpen] = useState(false);
 
   const [chatBuckets, setChatBuckets] = useState<Record<string, ChatBucket>>(() => {
     const seed: Record<string, ChatBucket> = {};
@@ -1004,6 +1011,8 @@ export default function MessagesContent({
   // ----- Dữ liệu cho hàng gợi ý trả lời (ChatAssist trong khung soạn tin): chỉ truyền GIÁ TRỊ (boolean / chuỗi) → gửi /
   // nhận tin bình thường không vẽ lại khung soạn tin.
   // Đoạn chat đã qua lại vài lượt (mỗi bên ≥ 3 tin) → hàng "Gợi ý" thu thành 1 nút nhỏ, nhường chỗ cho tin nhắn
+  const activeGroup = activeChat?.isGroup ? conversations.find((c) => c.id === (activeChat.conversationId || activeChat.id)) ?? null : null;
+  const meetingCount = useGroupMeetingCount(activeGroup?.id ?? null, currentUser?.id);
   // Mình nhắn tiếng Việt → mình đọc được tiếng Việt: không tự dịch tin tiếng Việt của người khác sang tiếng Anh nữa.
   // Đánh dấu NGAY lúc vẽ (các dòng tin bên dưới xin dịch trong effect của chúng — chạy trước effect của component cha).
   const iWriteVi = useMemo(() => chatMessages.some((m) => m.senderId === currentUser?.id && m.type === "TEXT" && detectTextLang(m.content) === "vi"), [chatMessages, currentUser?.id]);
@@ -1568,6 +1577,10 @@ export default function MessagesContent({
               onWallpaper={openWallpaper}
               onReport={openReport}
               onToggleBlock={handleToggleBlock}
+              groupMembers={activeGroup?.participants.length}
+              meetingCount={meetingCount}
+              onGroupInfo={() => setGroupInfoOpen(true)}
+              onGroupMeet={() => { setGroupInfoOpen(false); setMeetingOpen(true); }}
             />
 
             <ChatThread
@@ -1768,6 +1781,28 @@ export default function MessagesContent({
           busy={blockActionLoading}
           onCancel={() => { setShowReportModal(false); setReportReason(""); }}
           onSubmit={handleSubmitReport}
+        />
+      )}
+
+      {groupInfoOpen && activeGroup && currentUser?.id && (
+        <GroupInfoSheet
+          convId={activeGroup.id}
+          name={activeGroup.name || tr("Nhóm trò chuyện", "Group chat")}
+          avatarUrl={activeGroup.groupAvatarUrl}
+          members={activeGroup.participants.map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl, role: p.role, lastActiveAt: p.lastActiveAt }))}
+          me={currentUser.id}
+          meetingCount={meetingCount}
+          onMeet={() => { setGroupInfoOpen(false); setMeetingOpen(true); }}
+          onClose={() => setGroupInfoOpen(false)}
+        />
+      )}
+      {meetingOpen && activeGroup && currentUser?.id && (
+        <GroupMeeting
+          convId={activeGroup.id}
+          groupName={activeGroup.name || tr("Nhóm trò chuyện", "Group chat")}
+          me={{ id: currentUser.id, name: currentUser.name ?? null }}
+          members={activeGroup.participants.map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl }))}
+          onClose={() => setMeetingOpen(false)}
         />
       )}
 

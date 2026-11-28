@@ -31,9 +31,14 @@ type Props = {
   onWallpaper: () => void;
   onReport: () => void;
   onToggleBlock: () => void;
+  /** Nhóm: số thành viên, số người đang họp, mở bảng thành viên + lịch, mở cuộc họp nhóm */
+  groupMembers?: number;
+  meetingCount?: number;
+  onGroupInfo?: () => void;
+  onGroupMeet?: () => void;
 };
 
-function ChatHeader({ chat, bubble, locale, typing, connLost, partnerLastActiveAt, phoneVerified, wpSeen, blocked, blockBusy, onBack, onWallpaper, onReport, onToggleBlock }: Props) {
+function ChatHeader({ chat, bubble, locale, typing, connLost, partnerLastActiveAt, phoneVerified, wpSeen, blocked, blockBusy, onBack, onWallpaper, onReport, onToggleBlock, groupMembers, meetingCount = 0, onGroupInfo, onGroupMeet }: Props) {
   useTr(); // render lại khi đổi VI/EN
   const [showChatMenu, setShowChatMenu] = useState(false);
   const { startCall } = useCallManager();
@@ -73,7 +78,7 @@ function ChatHeader({ chat, bubble, locale, typing, connLost, partnerLastActiveA
           <h3 className="flex min-w-0 items-center gap-1 text-sm font-bold text-slate-100">
             {/* Điện thoại: chạm vào tên để xem hồ sơ (chỗ chật, ẩn chữ "Xem hồ sơ" để không đè nút gọi). */}
             {chat.isGroup ? (
-              <span className="truncate">{chat.name}</span>
+              <button type="button" onClick={onGroupInfo} data-group-title className="truncate text-left hover:text-pink-200">{chat.name}</button>
             ) : (
               <Link href={`/profile/${chat.id}`} className="truncate hover:text-pink-200">{chat.name}</Link>
             )}
@@ -88,7 +93,13 @@ function ChatHeader({ chat, bubble, locale, typing, connLost, partnerLastActiveA
                 {tr("Đang soạn tin ", "Typing ")}<TypingDots />
               </span>
             ) : chat.isGroup ? (
-              <span>{tr("Nhóm trò chuyện", "Group chat")}</span>
+              meetingCount > 0 && !bubble ? (
+                <button type="button" onClick={onGroupMeet} data-meeting-live className="flex items-center gap-1.5 font-semibold text-emerald-300 hover:text-emerald-200">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />{tr(`Đang họp · ${meetingCount} người — Tham gia`, `Meeting · ${meetingCount} — Join`)}
+                </button>
+              ) : (
+                <button type="button" onClick={onGroupInfo} className="hover:text-slate-200">{groupMembers ? tr(`${groupMembers} thành viên · Xem lịch làm việc`, `${groupMembers} members · Schedule`) : tr("Nhóm trò chuyện", "Group chat")}</button>
+              )
             ) : (
               <>
                 {partnerOnline ? (
@@ -143,6 +154,18 @@ function ChatHeader({ chat, bubble, locale, typing, connLost, partnerLastActiveA
               title={tr("Cuộc gọi video thời gian thực", "Live video call")}
             >
               <Video className="h-[22px] w-[22px]" />
+            </button>
+          </>
+        )}
+
+        {/* Nhóm: họp video nhóm + thành viên & lịch làm việc (không có trong cửa sổ bong bóng) */}
+        {chat.isGroup && !bubble && (
+          <>
+            <button type="button" onClick={onGroupMeet} data-group-meet-btn className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300" title={tr("Họp nhóm video", "Group video meeting")} aria-label={tr("Họp nhóm video", "Group video meeting")}>
+              <Video className="h-[22px] w-[22px]" />
+            </button>
+            <button type="button" onClick={onGroupInfo} data-group-info-btn className="flex h-10 w-10 items-center justify-center rounded-full text-pink-400 transition-colors hover:bg-white/[0.06] hover:text-pink-300" title={tr("Thành viên & lịch làm việc", "Members & schedule")} aria-label={tr("Thành viên & lịch làm việc", "Members & schedule")}>
+              <Users className="h-5 w-5" />
             </button>
           </>
         )}

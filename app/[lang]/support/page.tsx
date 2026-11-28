@@ -15,7 +15,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 const SUPPORT = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bitpawsoftware.com";
 
-const link = "text-pink-300 underline";
+// break-words: email dài (support@bitpawsoftware.com) xuống dòng khi chữ hệ thống rất to trên máy 360px
+const link = "text-pink-300 underline break-words [overflow-wrap:anywhere]";
 
 // "Support URL" của App Store Connect / Google Play (Apple 1.5: phải có cách liên hệ thật).
 // Mỗi trang 1 ngôn ngữ: /support (tiếng Anh — người duyệt store đọc bản này) và /vi/support.

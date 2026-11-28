@@ -35,6 +35,16 @@ if [ "$SEED" = 1 ]; then
   # lib/prisma dùng TURSO_DATABASE_URL khi có → trỏ vào FILE vừa tạo (libsql đọc được file:)
   env -u TURSO_AUTH_TOKEN TURSO_DATABASE_URL="file:$DBPATH" npx tsx scripts/seed-nail-data.ts >/dev/null
   env -u TURSO_AUTH_TOKEN TURSO_DATABASE_URL="file:$DBPATH" npx tsx scripts/qa/seed_persona.mts
+  # Trang Mẫu nail chỉ hiện ảnh Google Flow (lib/flowMarks PUBLIC_IMAGE_WHERE) → DB QA đánh dấu Flow cho 24 mẫu đã đăng có
+  # ảnh, để bài khách mở mẫu / thêm mẫu vào menu (client_test C7, menu_test M8) có mẫu như production. Chỉ DB QA.
+  QA_DB_FILE="$DBPATH" node -e '
+    const { createClient } = require("@libsql/client");
+    const db = createClient({ url: "file:" + process.env.QA_DB_FILE });
+    (async () => {
+      const rows = (await db.execute("SELECT id FROM \"NailDesign\" WHERE status = '"'"'published'"'"' AND imageUrl IS NOT NULL AND prompt NOT LIKE '"'"'%[flow:%'"'"' ORDER BY publishedAt DESC LIMIT 24")).rows;
+      for (const [i, r] of rows.entries()) await db.execute({ sql: "UPDATE \"NailDesign\" SET prompt = prompt || ? WHERE id = ?", args: [`[flow:Q${String(i + 1).padStart(3, "0")}:2026-11-01]`, r.id] });
+      console.log("• đánh dấu ảnh Flow cho " + rows.length + " mẫu (QA)");
+    })();'
   echo "• đã seed dữ liệu mẫu + persona QA"
 fi
 echo "QA_DB=$DBPATH"

@@ -237,7 +237,8 @@ const failGum = (u, name, onlyVideo = false) =>
 // ============================== setup ==============================
 // Cặp gọi đổi được (VD khách làm nail ↔ chủ tiệm): CALL_EMAIL_A=jessica.client@pawnailjobs.demo CALL_EMAIL_B=owner1.us@… CALL_ONLY=audio,video
 const A = await userCtx(process.env.CALL_EMAIL_A || "owner1.us@pawnailjobs.demo", { label: `A ${process.env.CALL_EMAIL_A ? process.env.CALL_EMAIL_A.split("@")[0] : "owner1"} desktop` });
-const B = await userCtx(process.env.CALL_EMAIL_B || "tech1.us@pawnailjobs.demo", { device: "Pixel 7", label: `B ${process.env.CALL_EMAIL_B ? process.env.CALL_EMAIL_B.split("@")[0] : "tech1"} Pixel7` });
+const B_EMAIL = process.env.CALL_EMAIL_B || "tech1.us@pawnailjobs.demo";
+const B = await userCtx(B_EMAIL, { device: "Pixel 7", label: `B ${process.env.CALL_EMAIL_B ? process.env.CALL_EMAIL_B.split("@")[0] : "tech1"} Pixel7` });
 const C = await userCtx("owner2.us@pawnailjobs.demo", { label: "C owner2 desktop" });
 await B.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: A.me.id, content: "Call test" }, headers: B.h });
 await C.ctx.request.post(BASE_URL + "/api/messages", { data: { receiverId: B.me.id, content: "Busy test" }, headers: C.h });
@@ -546,7 +547,7 @@ if (want("flows")) {
   });
   await reset(A, B, C);
 
-  const B2 = await userCtx("tech1.us@pawnailjobs.demo", { viewport: { width: 1280, height: 800 }, label: "B2 tech1 desktop" });
+  const B2 = await userCtx(B_EMAIL, { viewport: { width: 1280, height: 800 }, label: "B2 tech1 desktop" });
   await step("multi-1", "Same account on 2 devices: the 2nd device opens PawNail AFTER ringing started (as from the push) → it still rings (re-ring)", async () => {
     await B2.page.goto(BASE_URL + "/jobs");
     await dial(A, "audio");
@@ -575,7 +576,7 @@ if (want("flows")) {
   await B2.ctx.close();
 
   const bubbleUa = devices["Pixel 7"].userAgent + " PawNailApp PawNailBubble";
-  const BB = await userCtx("tech1.us@pawnailjobs.demo", { device: "Pixel 7", ua: bubbleUa, label: "B bubble" });
+  const BB = await userCtx(B_EMAIL, { device: "Pixel 7", ua: bubbleUa, label: "B bubble" });
   await step("bubble", "Android chat-bubble WebView (UA PawNailBubble) never rings — only the main app does", async () => {
     await BB.page.goto(BASE_URL + `/messages?to=${A.me.id}`);
     await BB.page.locator("[data-chat-input]").waitFor({ timeout: 30000 });
@@ -614,7 +615,7 @@ const audioGrowsBoth = async () => {
 if (want("multi")) {
   await openChat(A, B.me.id);
   await openChat(B, A.me.id);
-  const B2 = await userCtx("tech1.us@pawnailjobs.demo", { viewport: { width: 1280, height: 800 }, label: "B2 tech1 desktop" });
+  const B2 = await userCtx(B_EMAIL, { viewport: { width: 1280, height: 800 }, label: "B2 tech1 desktop" });
   const chanB = `private-chat-${B.me.id}`;
   await step("multi-4", "Late re-ring: B2 opens PawNail while a re-ring is still in flight, B answers → B2 must NOT ring for the answered call", async () => {
     await B2.page.goto("about:blank");
@@ -1166,7 +1167,7 @@ const lastCallId = (u) => {
 };
 
 if (want("native")) {
-  const N = await androidCtx("tech1.us@pawnailjobs.demo", 4, "B tech1 Android app v4");
+  const N = await androidCtx(B_EMAIL, 4, "B tech1 Android app v4");
   await openChat(A, B.me.id);
   await openChat(N, A.me.id);
   await B.page.goto("about:blank"); // only the app rings for tech1
@@ -1267,7 +1268,7 @@ if (want("native")) {
     await dial(A, "audio");
     await until(async () => (incomingFor(B).length > seen && lastCallId(B) ? true : null), 15000);
     const callId = lastCallId(B);
-    const N2 = await androidCtx("tech1.us@pawnailjobs.demo", 4, "B tech1 Android app v4 (cold)", { action: "answer", callId });
+    const N2 = await androidCtx(B_EMAIL, 4, "B tech1 Android app v4 (cold)", { action: "answer", callId });
     await N2.page.goto(BASE_URL + `/messages?to=${A.me.id}`);
     try {
       const ok = await phaseIs(N2, "connected", 35000).then(() => true).catch(() => false);
@@ -1288,7 +1289,7 @@ if (want("native")) {
       await N2.ctx.close();
     }
   });
-  const O = await androidCtx("tech1.us@pawnailjobs.demo", 3, "B tech1 Android app v3 (old)");
+  const O = await androidCtx(B_EMAIL, 3, "B tech1 Android app v3 (old)");
   await openChat(O, A.me.id);
   await step("native-8", "Old app (versionCode 3, no call methods): call works, no native call method is ever called (no 'not implemented'), hidden → the other side still sees 'left the app'", async () => {
     const before = allErrors.length;
@@ -1307,7 +1308,7 @@ if (want("native")) {
   // allowed): the hidden page must not ring a second time, and rings as soon as it is visible again. Notifications turned
   // off for the app → the app cannot ring → the hidden page rings itself, as before.
   for (const [id, notifOff] of [["native-9", false], ["native-10", true]]) {
-    const H = await androidCtx("tech1.us@pawnailjobs.demo", 4, `B tech1 Android app v4 (push on, notifications ${notifOff ? "OFF" : "on"})`, null, { token: true, notifOff });
+    const H = await androidCtx(B_EMAIL, 4, `B tech1 Android app v4 (push on, notifications ${notifOff ? "OFF" : "on"})`, null, { token: true, notifOff });
     await openChat(H, A.me.id);
     await step(
       id,

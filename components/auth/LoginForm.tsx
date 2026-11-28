@@ -111,7 +111,7 @@ export default function LoginForm() {
         <div>
           <div className="flex items-center justify-between gap-3">
             <label htmlFor="password" className="pn-label">{t("auth.login.passwordLabel")}</label>
-            <Link href="/auth/forgot" className="pn-a" style={{ fontSize: 14, lineHeight: "20px", marginBottom: 6 }}>
+            <Link href="/auth/forgot" className="pn-a" style={{ fontSize: 14, lineHeight: "20px", marginBottom: 6, display: "inline-flex", alignItems: "center", minHeight: 32 }}>
               {t("auth.login.forgotPassword")}
             </Link>
           </div>

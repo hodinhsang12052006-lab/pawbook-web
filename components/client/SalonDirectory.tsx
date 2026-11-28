@@ -123,7 +123,7 @@ export default function SalonDirectory({ market = "US", state = "", limit = 24, 
       {state && !hasLocal && <p className="text-xs text-slate-400">{tr(`Chưa có tiệm tại ${stateName(market, state)} đăng menu — tiệm ở nơi khác:`, `No salons in ${stateName(market, state)} yet. Salons elsewhere:`)}</p>}
       <div className={`grid gap-3 ${cols}`}>
         {items.map((s, i) => (
-          <div key={s.id} className={phoneLimit != null && i >= phoneLimit ? "max-sm:hidden" : undefined}>
+          <div key={s.id} className={`min-w-0${phoneLimit != null && i >= phoneLimit ? " max-sm:hidden" : ""}`}>
             <SalonCard s={s} market={market} />
           </div>
         ))}

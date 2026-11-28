@@ -142,7 +142,7 @@ export function ChallengeBoard({ studio }: { studio: Studio }) {
           </h2>
           <p className="mt-1 text-xs text-slate-500">{t.emoji} {dt(t.title)}{c.posts >= 3 ? ` · ${c.posts}${tr(" bài tham gia", " entries")}` : ""}{tr(" · xếp theo lượt thích thật", " · ranked by real likes")}</p>
         </div>
-        <Link href="/?tab=feed" className="flex-shrink-0 text-xs font-bold text-pink-300 hover:text-pink-200">{tr("Tham gia →", "Join in →")}</Link>
+        <Link href="/?tab=feed" className="inline-flex min-h-[32px] flex-shrink-0 items-center text-xs font-bold text-pink-300 hover:text-pink-200">{tr("Tham gia →", "Join in →")}</Link>
       </div>
       {c.entries.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-slate-400">
